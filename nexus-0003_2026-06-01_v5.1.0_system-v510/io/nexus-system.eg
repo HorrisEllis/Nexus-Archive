@@ -1,0 +1,97 @@
+// nexus-system.eg — Full system wiring: Cortex + Forge + Guardian + Userscript
+// UUID: nexus-system-v1-0-0
+// Everything is in sync.
+// cortex (3748) = source of truth
+// forge (4800) = IDE + pipeline + seam delivery
+// guardian (7820/7821) = agent orchestrator
+// userscript = agent bridge
+// cli = the tool that talks to all of them
+
+compartment "nexus-system" {
+  id = nexus-system-001
+  uuid = nexus-system-001-xxxx
+  version = 1.0.0
+  intent = unified_system_all_layers_in_sync
+
+  invariant SYSTEM_LAWS {
+    axiom NO_SILENT_DROP
+    axiom RECORD_IS_TRUTH
+    axiom EXECUTION_IS_TRACEABLE
+    axiom GAP_IS_FIRST_CLASS
+    axiom GRAMMAR_APPLIES_TO_ITSELF
+  }
+
+  topology {
+    cortex      = 3748 // source of truth — jaa + cobalt + raid + orion
+    forge       = 4800 // ide + pipeline + spec parser
+    guardian    = 7820 // agent api
+    wss         = 7821 // agent bridge
+    dropzone    = 7822 // file server
+    memory      = 7823 // memory api
+  }
+
+  seams {
+    CORTEX_CONTRACT   { between = forge ↔ cortex   protocol = http events = sse }
+    FORGE_CONTRACT    { between = guardian ↔ forge  protocol = http events = sse }
+    BRIDGE_CONTRACT   { between = userscript ↔ guardian protocol = wss }
+    MEMORY_CONTRACT   { between = userscript ↔ memory   protocol = http }
+    SPEC_CONTRACT     { between = spec_parser ↔ seam_delivery protocol = siso }
+    CLI_CONTRACT      { between = cli ↔ all_servers protocol = http cli }
+  }
+}
+
+// ── Data flow: userscript → guardian → cortex → forge → back ─────────────────
+compartment "data-flow" {
+  id = data-flow-001
+  uuid = data-flow-001-xxxx
+  intent = realtime_bidirectional_sync_all_layers
+
+  flow REQUEST_FLOW {
+    forge.pipeline.run
+      -> guardian.api.POST /command
+      -> wss.GUARDIAN_JOB
+      -> userscript.tab_manager.discover_tab
+      -> userscript.job_queue.inject_prompt
+      -> agent.response
+      -> userscript.snr_detector
+      -> if passed
+           userscript.realtime_sync.cortex_logger → cortex.3748/api/event
+           userscript.realtime_sync.forge_sync    → forge.4800/api/queue/progress
+           guardian.api.GUARDIAN_COMPLETE
+           guardian.siso.job.complete → SSE → forge.cockpit
+         if failed
+           build_retry_prompt
+           re_inject
+      record
+  }
+
+  flow SEAM_FLOW {
+    forge.spec_parser.chunker(spec_text)
+      -> chunks
+      -> guardian.job_queue.createQueue
+      -> for each chunk
+           userscript.seam_delivery.inject_chunk
+           agent.response
+           userscript.verdict_detector
+           if pass
+             cortex.3748/api/event type=seam.chunk.verified
+             forge.4800/api/queue/progress state=VERIFIED
+             guardian.7820/sse → cockpit
+           if fail
+             retry
+      record
+  }
+
+  flow CORTEX_SYNC_FLOW {
+    // All events from all layers sync to cortex in realtime
+    any_event
+      -> userscript.realtime_sync.cortex_logger → 3748/api/event
+      -> cortex.jaa.event_log
+      -> cortex.cobalt_bus.ingest
+      -> cortex.sse → all_connected_clients
+      -> forge.console_pane (live tail)
+      -> guardian.cockpit (live tail)
+      -> nexus_cli (live tail)
+      record
+  }
+}

@@ -1,0 +1,79 @@
+// cockpit-forge.eg — AI Self-Modification Engine
+// UUID: cockpit-forge-v1-0-0
+compartment "cockpit-forge" {
+  id = cockpit-forge-001
+  uuid = cockpit-forge-001-xxxx
+  version = 1.0.0
+  intent = ai_self_modification_local_first_guardian_then_ollama_then_fail
+  routing_priority { 1 = guardian_7820 2 = ollama_11434 3 = fail_loud }
+  invariant FORGE_LAWS {
+    axiom NO_SILENT_DROP
+    axiom RECORD_IS_TRUTH
+    if patch_record.inserted == false { gap "patch-not-persisted" { pressure = 1.0 } }
+    if stubs_in_output { gap "stub-violation" { pressure = 0.85 } }
+  }
+}
+compartment "forge-module" {
+  id = forge-module-001
+  uuid = forge-module-001-xxxx
+  intent = full_module_rewrite_jaa_record_before_apply
+  component "rewrite" {
+    input src instruction opts
+    insert jaa.forge_sessions { module = opts.module instruction = instruction strategy = full_rewrite src = src }
+    route = select_route(guardian ollama)
+    prompt = system_nucleus + instruction + src
+    result = stream_inference(route prompt timeout = 120000)
+    if stubs > 0 { gap "stubs-in-output" { pressure = 0.85 } }
+    if no_uuid_comments { gap "missing-hook-uuid" { pressure = 0.7 } }
+    update jaa.forge_sessions set output = result
+    output result
+    record
+  }
+}
+compartment "forge-patch" {
+  id = forge-patch-001
+  uuid = forge-patch-001-xxxx
+  intent = minimal_targeted_patch_preserving_existing_hooks
+  component "patch" {
+    input src patch_spec opts
+    insert jaa.forge_sessions { strategy = minimal_patch src = src instruction = patch_spec }
+    prompt = build_patch_prompt(src patch_spec)
+    result = stream_inference(route prompt)
+    validate result
+    update jaa.forge_sessions set output = result
+    output result
+    record
+  }
+}
+compartment "forge-gate-gen" {
+  id = forge-gate-gen-001
+  uuid = forge-gate-gen-001-xxxx
+  intent = generate_siso_gate_function_body_from_description
+  component "generate" {
+    input description opts
+    prompt = "Generate SISO gate for: " + description
+    result = stream_inference(ollama prompt)
+    output result.gate_fn
+    record
+  }
+}
+compartment "forge-hook-add" {
+  id = forge-hook-add-001
+  uuid = forge-hook-add-001-xxxx
+  intent = add_exported_function_with_hook_uuid_annotation
+  component "add" {
+    input src hook_spec opts
+    prompt = build_hook_prompt(src hook_spec)
+    result = stream_inference(ollama prompt)
+    if not contains_hook_uuid(result) { gap "missing-hook-uuid" { pressure = 0.9 } }
+    output result.src_with_hook
+    record
+  }
+}
+loop FORGE_LOOP {
+  interval = 0
+  on forge.module { signal -> compartment "forge-module" record }
+  on forge.patch  { signal -> compartment "forge-patch" record }
+  on forge.gate   { signal -> compartment "forge-gate-gen" record }
+  on forge.hook   { signal -> compartment "forge-hook-add" record }
+}

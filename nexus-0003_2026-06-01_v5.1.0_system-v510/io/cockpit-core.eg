@@ -1,0 +1,128 @@
+// cockpit-core.eg — SISOKernel + JAA Browser Store + Bayesian Trust
+// UUID: cockpit-core-v1-0-0
+compartment "cockpit-core" {
+  id = cockpit-core-001
+  uuid = cockpit-core-001-xxxx
+  version = 1.0.0
+  intent = siso_kernel_jaa_store_bayesian_trust_zero_deps
+  invariant CORE_LAWS {
+    axiom NO_SILENT_DROP
+    axiom EXECUTION_IS_TRACEABLE
+    axiom RECORD_IS_TRUTH
+    if signature.collision { gap "gate-collision" { pressure = 1.0 } }
+    if jaa.open fails { gap "jaa-failed" { pressure = 1.0 } }
+  }
+}
+compartment "siso-kernel" {
+  id = siso-kernel-001
+  uuid = siso-kernel-001-xxxx
+  intent = o1_gate_dispatch_depth_first_history_500
+  component "gate-registry" {
+    on gate.register {
+      if signature exists { gap "gate-collision" { pressure = 1.0 } }
+      register gate signature matchFn transformFn
+      record
+    }
+  }
+  component "emitter" {
+    input type payload meta
+    event = SISOEvent(type payload meta)
+    enqueue event
+    drain queue
+    record
+  }
+  component "drain" {
+    for each event in queue
+      dispatch event
+      history.push event
+      if history.length > 500 { history.shift }
+    record
+  }
+  component "dispatcher" {
+    input event
+    for each gate in gates
+      if gate.matches(event) { gate.transform(event this) }
+    for each listener in listeners[event.type] { listener(event) }
+    for each listener in listeners[*] { listener(event) }
+    record
+  }
+}
+compartment "jaa-store" {
+  id = jaa-store-001
+  uuid = jaa-store-001-xxxx
+  intent = indexeddb_browser_or_jsonl_node_same_api
+  jaa {
+    tables {
+      ideas          = uuid text phase tension tags compartment ts
+      specs          = uuid ideaUuid name phase sections ts
+      gaps           = uuid path type severity body status ts
+      snapshots      = uuid message branch parentHash ts
+      links          = uuid fromUuid toUuid linkType ts
+      pipelines      = uuid name description tags armed ts
+      pipeline_runs  = uuid pipelineId status startedAt completedAt ts
+      pipeline_steps = uuid runId nodeId status output ts
+      conditions     = uuid pipelineId expression ts
+      schedules      = uuid pipelineId cron enabled ts
+      workflow_runs  = uuid pipelineId status steps startedAt ts
+      api_configs    = uuid name url method headers ts
+      webhooks       = uuid url events secret ts
+      variables      = uuid key value scope ts
+      trust_scores   = uuid alpha beta score variance confidence_n wilsonLower ts
+      snr_records    = uuid sourceId passed posterior ts
+      event_log      = uuid type payload source causedBy ts
+      artifacts      = uuid hash name lang content chatId ts
+      memory_index   = uuid content tags source sourceEventUuid ts
+      tension_records = uuid ideaUuid score components ts
+      ci_runs        = uuid specUuid status output ts
+      snr_samples    = uuid value sourceId context ts
+      forge_sessions = uuid instruction strategy provider ts
+      seam_chunks    = uuid specId index title content status tests ts
+      seam_programs  = uuid source compiled passes ts
+    }
+    backend = indexeddb fallback = jsonl
+    dedup   = uuid
+  }
+}
+compartment "bayesian-trust" {
+  id = bayesian-trust-001
+  uuid = bayesian-trust-001-xxxx
+  intent = beta_distribution_trust_per_source_wilson_lower_routing
+  trust {
+    prior         = Beta(1 1)
+    pass_update   = alpha += 1
+    fail_update   = beta += 1
+    score         = alpha / (alpha + beta)
+    variance      = (alpha * beta) / ((alpha+beta)^2 * (alpha+beta+1))
+    confidence_n  = alpha + beta
+    wilson_lower  = routing_weight_surface
+    decay_halflife = 7_days
+    decay_mode    = read_time_only_never_writes
+    cold_start_floor = 0.2
+  }
+  component "recorder" {
+    input sourceId passed eventData
+    update prior[sourceId]
+    insert jaa.snr_records { sourceId = sourceId passed = passed posterior = score }
+    upsert jaa.trust_scores { uuid = sourceId alpha = alpha beta = beta score = score wilsonLower = wilson_lower }
+    record
+  }
+  component "weight-resolver" {
+    input sourceId
+    get jaa.trust_scores where uuid == sourceId
+    age = now - trust_score.updatedAt
+    decay = exp(-age / decay_halflife)
+    effN = confidence_n * decay
+    wl = wilson_lower(score effN)
+    if wl >= 0.80 { output 1.2 }
+    if wl >= 0.60 { output 1.0 }
+    if wl >= 0.35 { output 0.6 }
+    else          { output 0.2 }
+    record
+  }
+}
+loop CORE_LOOP {
+  interval = 0
+  on gate.emit  { signal -> compartment "siso-kernel" record }
+  on jaa.insert { signal -> compartment "jaa-store" record }
+  on snr.record { signal -> compartment "bayesian-trust" record }
+}

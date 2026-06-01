@@ -1,0 +1,142 @@
+// guardian-extension.eg — Firefox Extension: app.js + cfr.js + ir-layer.js + handshake.js
+// UUID: guardian-extension-v1-0-0
+compartment "guardian-extension" {
+  id = guardian-ext-001
+  uuid = guardian-ext-001-xxxx
+  version = 5.0.0
+  intent = firefox_mv2_extension_all_callto_through_ir_layer
+  boot_sequence {
+    1 = cfr_loads
+    2 = ir_layer_loads
+    3 = background_loads
+    4 = content_scripts_inject
+    5 = app_loadConfig_handshake
+    6 = site_modules_attach
+  }
+  invariant EXT_LAWS {
+    axiom NO_SILENT_DROP
+    axiom EXECUTION_IS_TRACEABLE
+    if cesl.automation_trace missing { gap "trace-missing" { pressure = 1.0 } }
+    if ir.callto bypassed { gap "law-violation" { pressure = 1.0 } }
+  }
+}
+compartment "app-js" {
+  id = guardian-app-001
+  uuid = guardian-app-001-xxxx
+  intent = master_orchestrator_no_module_to_module_imports
+  state {
+    sessions     = Map tabId -> sessionId
+    responseStore = Map identity -> response
+    channel      = BroadcastChannel guardian-bridge
+    nexusChannel = BroadcastChannel nexus-core
+    bridgeUrl    = http://127.0.0.1:3748
+  }
+  component "pulse" {
+    interval = 8000
+    POST /pulse { instanceId = MY_INSTANCE_ID ts = now }
+    record
+  }
+  component "handshake" {
+    POST /guardian/handshake { instanceId = MY_INSTANCE_ID version = 5.0.0 }
+    record
+  }
+  component "callto-router" {
+    input callto
+    POST /callto callto
+    record
+  }
+  component "response-capture" {
+    input tabId text complete
+    responseStore.set(identity(tabId) { text complete ts = now })
+    emit "guardian.response.captured"
+    record
+  }
+}
+compartment "cfr-js" {
+  id = guardian-cfr-001
+  uuid = guardian-cfr-001-xxxx
+  intent = constraint_field_runtime_cesl_rat_drop_in_urck_replacement
+  cfr { ring_buffer = 100000 causal_graph = true macro_detection = true }
+  cesl { invariant = every_browser_action_emits_automation_trace }
+  rat  { format = deterministic_event_sourced_truth }
+  component "trace-emitter" {
+    input browser_action
+    if automation_trace.missing { gap "cesl-violation" { pressure = 1.0 } }
+    emit AutomationTraceEvent { action = browser_action ts = now causalId = uid }
+    record
+  }
+}
+compartment "ir-layer" {
+  id = guardian-ir-001
+  uuid = guardian-ir-001-xxxx
+  intent = all_callto_dispatch_must_go_through_ir_never_bypass
+  route_types {
+    nexus       = POST_nexus_ingestion
+    local       = browser_storage
+    mesh        = broadcast_all_nodes
+    device      = route_specific_instance
+    analyze     = kernel_only_no_outbound
+    pipeline    = sequential_steps
+    conditional = evaluate_rules
+    custom      = user_registered_function
+  }
+  delivery_modes {
+    fire_and_forget  = no_ack
+    at_least_once    = retry_until_ack
+    exactly_once     = dedup_and_ack
+    guarded_pipeline = full_verification
+  }
+  callto_states { created dispatched in_transit acknowledged stored archived failed }
+  component "dispatch" {
+    input callto
+    callto.state = dispatched
+    if callto.route.type == nexus   { POST 3748/api/event callto.payload }
+    if callto.route.type == local   { browser.storage.set callto }
+    if callto.route.type == mesh    { nexusChannel.postMessage callto }
+    if callto.route.type == device  { POST 3748/callto/instanceId callto }
+    callto.state = in_transit
+    emit "ir.callto.dispatched"
+    record
+  }
+}
+compartment "handshake-js" {
+  id = guardian-handshake-001
+  uuid = guardian-handshake-001-xxxx
+  intent = appid_validation_session_tokens_instance_registry
+  session_ttl    = 300000
+  appid_ttl      = 604800000
+  prune_interval = 120000
+  component "register" {
+    route POST /guardian/handshake
+    validate appid
+    issue session_token
+    insert jaa.sessions
+    output { token = token registered = true }
+    record
+  }
+  component "heartbeat" {
+    route POST /guardian/heartbeat
+    validate token
+    update jaa.sessions set lastSeen = now
+    output { ok = true }
+    record
+  }
+  component "appid-manager" {
+    on "appid create" { insert jaa.settings { key = appid value = uid } record }
+    on "appid list"   { query jaa.settings where key starts_with appid record }
+    on "appid revoke" { delete jaa.settings where value == id record }
+    record
+  }
+  component "pruner" {
+    interval = 120000
+    query jaa.sessions where now - lastSeen > session_ttl
+    for each stale in sessions { delete jaa.sessions record }
+    record
+  }
+}
+loop EXTENSION_LOOP {
+  interval = 0
+  on callto.dispatch { signal -> compartment "ir-layer" record }
+  on browser.action  { signal -> compartment "cfr-js" record }
+  on bridge.response { signal -> compartment "app-js" record }
+}

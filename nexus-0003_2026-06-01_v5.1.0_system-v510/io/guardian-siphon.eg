@@ -1,0 +1,76 @@
+// guardian-siphon.eg — Siphon + Pulse + Watchman
+// UUID: guardian-siphon-v1-0-0
+compartment "guardian-siphon-system" {
+  id = guardian-siphon-sys-001
+  uuid = guardian-siphon-sys-001-xxxx
+  version = 1.0.0
+  intent = normalize_bridge_events_track_node_health_emit_gaps
+  jaa_tables {
+    chat_sessions    = uuid sessionUuid provider instanceId startedAt endedAt source causedBy
+    chat_messages    = uuid sessionUuid role text provider complete ts source causedBy
+    chat_completions = uuid sessionUuid text provider complete causedByCallto ts
+    guardian_nodes   = uuid instanceId lastSeen capabilities tabCount listenerCount healthScore
+    guardian_health  = uuid connected listenerCount sessionCount staleNodes lostListeners healthScore ts
+  }
+  invariant SIPHON_LAWS {
+    axiom NO_SILENT_DROP
+    axiom RECORD_IS_TRUTH
+    if chat_message.causedBy missing { gap "orphan-row" { pressure = 0.7 } }
+  }
+}
+compartment "siphon" {
+  id = siphon-001
+  uuid = siphon-001-xxxx
+  intent = watch_event_log_normalize_to_chat_tables
+  component "ingestor" {
+    interval = 2000
+    query jaa.event_log where type starts_with guardian. limit 100
+    for each ev in events
+      if ev.type == guardian.chat.response
+        session = get_or_create_session(ev.instanceId ev.provider)
+        insert jaa.chat_messages { sessionUuid = session.uuid role = assistant text = ev.payload.text provider = ev.payload.provider complete = ev.payload.complete causedBy = ev.uuid }
+        if ev.payload.complete
+          insert jaa.chat_completions { sessionUuid = session.uuid text = ev.payload.text causedByCallto = ev.payload.calltoId causedBy = ev.uuid }
+        record
+  }
+}
+compartment "pulse" {
+  id = pulse-001
+  uuid = pulse-001-xxxx
+  intent = heartbeats_to_live_topology_detect_stale_25s
+  component "topology-builder" {
+    interval = 3000
+    query jaa.event_log where type == guardian.heartbeat limit 50
+    for each hb in heartbeats
+      upsert jaa.guardian_nodes { uuid = hb.payload.instanceId instanceId = hb.payload.instanceId lastSeen = hb.ts capabilities = hb.payload.capabilities }
+      record
+    stale = query jaa.guardian_nodes where now - lastSeen > 25000
+    for each node in stale
+      insert jaa.event_log { type = guardian.node.stale payload = { instanceId = node.instanceId } source = pulse }
+      emit "nexus-core" NEXUS_CORE_OFFLINE
+      record
+  }
+}
+compartment "watchman" {
+  id = watchman-001
+  uuid = watchman-001-xxxx
+  intent = health_score_below_03_emits_gap_and_toast_error
+  component "health-monitor" {
+    interval = 5000
+    nodes = query jaa.guardian_nodes all
+    stale = nodes where now - lastSeen > 25000
+    connected = nodes where now - lastSeen < 25000
+    healthScore = connected.length / max(1 nodes.length)
+    insert jaa.guardian_health { connected = connected.length > 0 listenerCount = sum(connected.listenerCount) staleNodes = stale.map(n => n.instanceId) healthScore = healthScore }
+    if healthScore < 0.3
+      insert jaa.gaps { type = guardian_health_critical severity = high body = "health " + healthScore status = open }
+      emit "toast.error" { msg = "Guardian health critical" }
+      record
+  }
+}
+loop SIPHON_LOOP {
+  interval = 0
+  on guardian.chat.response { signal -> compartment "siphon" record }
+  on guardian.heartbeat     { signal -> compartment "pulse" record }
+  on health.check           { signal -> compartment "watchman" record }
+}

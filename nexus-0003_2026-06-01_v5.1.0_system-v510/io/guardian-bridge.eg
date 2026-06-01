@@ -1,0 +1,274 @@
+// guardian-bridge.eg — Guardian userscript bridge + ChatGPT support + tab discovery
+// UUID: guardian-bridge-v1-0-0
+// The userscript IS the bridge to agents.
+// Guardian = agent orchestrator. Userscript = agent bridge. CLI = tool.
+// Everything synced: forge <-> userscript <-> guardian <-> cortex
+
+compartment "guardian-bridge" {
+  id = guardian-bridge-001
+  uuid = guardian-bridge-001-xxxx
+  version = 8.3.0
+  intent = agent_orchestrator_userscript_is_the_bridge_cli_is_the_tool
+
+  invariant BRIDGE_LAWS {
+    axiom NO_SILENT_DROP
+    axiom EXECUTION_IS_TRACEABLE
+    if wss.7821 disconnected { gap "wss-offline"     { pressure = 0.9 } }
+    if tab.claimed == false   { gap "no-claimed-tab"  { pressure = 0.8 } }
+    if cortex.3748 unreachable { gap "cortex-offline" { pressure = 0.7 } }
+  }
+}
+
+// ── Tab discovery and lock ────────────────────────────────────────────────────
+compartment "tab-manager" {
+  id = tab-manager-001
+  uuid = tab-manager-001-xxxx
+  intent = discover_or_open_agent_tab_lock_for_job_duration
+
+  component "tab-discovery" {
+    input job.provider
+    sigma observe tabs
+
+    if tab.claimed exists
+      use claimed_tab
+      record
+    if tab.unclaimed exists
+      claim unclaimed_tab
+      record
+    else
+      // No tab found — open one relative to the request
+      open_tab { url = provider_url(job.provider) }
+      wait tab.ready
+      claim new_tab
+      record
+
+    output claimed_tab
+    record
+  }
+
+  component "tab-lock" {
+    input job_id tab_id
+    lock tab_id for job_id
+    emit "tab.locked" { jobId = job_id tabId = tab_id }
+    on job.complete
+      release tab_id
+      emit "tab.released" { jobId = job_id }
+      record
+    record
+  }
+}
+
+// ── Job queue with SNR gate ───────────────────────────────────────────────────
+compartment "job-queue" {
+  id = job-queue-001
+  uuid = job-queue-001-xxxx
+  intent = queue_jobs_until_tab_available_then_deliver_through_snr_gate
+
+  states {
+    QUEUED      = created_not_dispatched
+    INJECTING   = prompt_being_injected
+    GENERATING  = agent_responding
+    DETECTING   = sigma_delta_truncation_check
+    VERIFIED    = detection_passed
+    FAILED      = detection_failed
+    RETRYING    = injecting_with_failure_context
+    ESCALATED   = max_retries_exhausted
+  }
+
+  component "dispatcher" {
+    input pending_jobs
+    sigma observe jobs
+
+    for each job in pending_jobs
+      discover_tab(job.provider)
+      if tab.ready
+        inject_prompt(job.prompt job.jobId)
+        update_state INJECTING
+        watch_response(job.jobId)
+        record
+  }
+
+  component "snr-detector" {
+    // Sigma + Delta + Truncation detection
+    input response chunk_profile axioms
+
+    truncation = detect_truncation(response chunk_profile)
+    sigma      = detect_sigma(response chunk_profile)
+    delta      = detect_delta(response chunk_profile axioms)
+    composite  = truncation.score * 0.5 + sigma.score * 0.3 + delta.score * 0.2
+
+    if composite < 0.35 and truncation.truncated == false
+      update_state VERIFIED
+      emit "job.verified" { composite = composite }
+    else
+      build_retry_prompt(response composite truncation sigma delta)
+      update_state RETRYING
+      emit "job.retry" { composite = composite reason = summary }
+
+    record
+  }
+
+  component "escalator" {
+    input job max_retries
+    if job.retries >= max_retries
+      update_state ESCALATED
+      POST 4800/api/gaps {
+        title = "ESCALATED: " + job.chunkTitle
+        pressure = 0.9
+        status = open
+      }
+      emit "job.escalated" { jobId = job.id }
+      record
+  }
+}
+
+// ── Real-time cortex sync ────────────────────────────────────────────────────
+// Every event logged in real-time to cortex + forge + cli simultaneously
+compartment "realtime-sync" {
+  id = realtime-sync-001
+  uuid = realtime-sync-001-xxxx
+  intent = all_data_synced_to_cortex_forge_cli_in_realtime
+
+  pipe sync_stream {
+    buffer_stream events
+    flush on event
+  }
+
+  component "cortex-logger" {
+    input any_event
+    sigma observe event
+
+    // Everything logs to cortex immediately
+    POST 3748/api/event {
+      type = event.type
+      payload = event.data
+      source = guardian.userscript
+    }
+    record
+  }
+
+  component "forge-sync" {
+    // Keep forge IDE in sync with agent chat
+    input job.chunk job.complete gap.detected artifact.stored seam.verified
+
+    POST 4800/api/queue/queueId/progress { state = event.type data = event.data }
+    emit "forge.sync" { event = event }
+    record
+  }
+
+  component "cli-mirror" {
+    // CLI console mirrors all events via SSE
+    input sse.stream
+    sigma observe all_events
+
+    on job.pending    { console.log "PENDING"    jobId record }
+    on job.generating { console.log "GENERATING" jobId record }
+    on job.complete   { console.log "COMPLETE"   chars record }
+    on artifact.stored { console.log "ARTIFACT"  name lang record }
+    on gap.detected   { console.log "GAP"        type score record }
+    on seam.verified  { console.log "SEAM PASS"  chunk record }
+    on input.logged   { console.log "INPUT"      chars record }
+
+    output sse_stream
+    record
+  }
+}
+
+// ── ChatGPT provider support ─────────────────────────────────────────────────
+compartment "chatgpt-bridge" {
+  id = chatgpt-bridge-001
+  uuid = chatgpt-bridge-001-xxxx
+  intent = chatgpt_as_parallel_agent_same_contract_as_claude
+
+  selectors {
+    input     = #prompt-textarea
+    submit    = [data-testid=send-button]
+    output    = [data-message-author-role=assistant] .markdown
+    streaming = [data-is-streaming]
+    complete  = [data-is-streaming=false]
+  }
+
+  component "chatgpt-injector" {
+    input prompt jobId
+    selector input = #prompt-textarea
+    focus input
+    clear input
+    insert_text input prompt
+    emit "inject.complete" { jobId = jobId chars = prompt.length }
+    record
+  }
+
+  component "chatgpt-watcher" {
+    input jobId
+    dom_watch [data-is-streaming]
+
+    on streaming.start
+      emit GUARDIAN_GENERATING { jobId = jobId }
+      record
+    on streaming.stop
+      text = capture selector.output
+      emit GUARDIAN_COMPLETE { jobId = jobId text = text }
+      record
+  }
+}
+
+// ── SEAM delivery with .spec parser integration ───────────────────────────────
+compartment "seam-delivery" {
+  id = seam-delivery-001
+  uuid = seam-delivery-001-xxxx
+  intent = deliver_spec_chunks_to_agent_via_seam_contract_checkpoints
+
+  component "spec-loader" {
+    input spec_text split_on max_size
+    chunks = spec_parser.chunker(spec_text split_on max_size)
+    for each chunk in chunks
+      tests = auto_generate_tests(chunk)
+      contract = build_seam_contract(tests)
+      insert jaa.requests { type = seam_chunk status = pending }
+      record
+    output chunks
+    record
+  }
+
+  component "chunk-injector" {
+    input chunk_idx
+    chunk = get_chunk(chunk_idx)
+    prompt = spec_parser.seam_prompt_builder(chunk chunk_idx total sys_key)
+    discover_tab(provider)
+    inject_prompt(prompt job_id)
+    update jaa.requests set status = injected deliveredAt = now
+    watch_response(job_id)
+    record
+  }
+
+  component "verdict-handler" {
+    input response job_id
+    verdict = spec_parser.verdict_detector(response chunk_idx)
+
+    if verdict == pass
+      update jaa.requests set status = verified verifiedAt = now
+      emit "seam.chunk.verified" { idx = chunk_idx }
+      POST 4800/api/queue/queueId/progress { state = VERIFIED }
+      POST 3748/api/event { type = seam.chunk.verified }
+      if auto_inject
+        inject next_pending_chunk after 2000ms
+      record
+    if verdict == fail
+      build_retry_prompt
+      if retries < max_retries
+        inject retry_prompt
+      else
+        POST 4800/api/gaps { type = seam_fail pressure = 0.9 }
+        POST 3748/api/event { type = seam.chunk.escalated }
+      record
+  }
+}
+
+loop BRIDGE_LOOP {
+  interval = 0
+  on job.pending   { signal -> compartment "job-queue" record }
+  on job.complete  { signal -> compartment "realtime-sync" record }
+  on seam.deliver  { signal -> compartment "seam-delivery" record }
+  on tab.discover  { signal -> compartment "tab-manager" record }
+  on any.event     { signal -> compartment "realtime-sync" record }
+}

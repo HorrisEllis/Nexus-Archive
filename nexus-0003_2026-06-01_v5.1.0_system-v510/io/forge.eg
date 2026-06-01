@@ -1,0 +1,260 @@
+// forge.eg — Forge Engine + Pipeline + IDE + .spec parser
+// UUID: forge-v1-0-0
+// The complete Forge system: self-mod engine, pipeline, IDE, spec-as-container
+compartment "forge" {
+  id = forge-001
+  uuid = forge-001-xxxx
+  version = 1.0.0
+  intent = constraint_first_authoring_and_self_modification_engine
+
+  invariant FORGE_LAWS {
+    axiom NO_SILENT_DROP
+    axiom RECORD_IS_TRUTH
+    axiom EXECUTION_IS_TRACEABLE
+    if ollama.offline and guardian.offline { gap "no-inference" { pressure = 0.9 } }
+  }
+}
+
+// ── Forge self-mod engine ─────────────────────────────────────────────────────
+compartment "forge-engine" {
+  id = forge-engine-001
+  uuid = forge-engine-001-xxxx
+  intent = ai_powered_module_self_modification
+
+  invariant FORGE_ENGINE_LAWS {
+    axiom NO_SILENT_DROP
+    if patch_record.inserted == false { gap "patch-not-persisted" { pressure = 1.0 } }
+  }
+
+  component "forge-module" {
+    input src instruction opts
+    insert jaa.versionium_objects { content = src }
+    route = select_inference_route(guardian ollama)
+    prompt = build_system_nucleus + instruction + src
+    result = stream_inference(route prompt)
+    validate result
+    if result.stubs > 0
+      gap "stubs-in-output" { pressure = 0.85 }
+    insert jaa.versionium_commits { message = instruction }
+    output result.module
+    record
+  }
+
+  component "forge-patch" {
+    input src patch_spec opts
+    insert jaa.versionium_objects { content = src }
+    prompt = build_patch_prompt(src patch_spec)
+    result = stream_inference(guardian prompt)
+    output result.patch
+    record
+  }
+
+  component "forge-gate" {
+    input description opts
+    prompt = "Generate SISO gate: " + description
+    result = stream_inference(ollama prompt)
+    output result.gate_fn
+    record
+  }
+
+  component "forge-hook" {
+    input src hook_spec opts
+    prompt = build_hook_prompt(src hook_spec)
+    result = stream_inference(ollama prompt)
+    output result.src_with_hook
+    record
+  }
+}
+
+// ── Forge pipeline engine ─────────────────────────────────────────────────────
+compartment "forge-pipeline" {
+  id = forge-pipeline-001
+  uuid = forge-pipeline-001-xxxx
+  intent = ordered_node_graph_execution_with_seam_condition_evaluator
+
+  node_types {
+    trigger     = manual cron event condition webhook schedule chain
+    condition   = if_then_else
+    transform   = pure_function
+    api_call    = http_fetch
+    agent_call  = guardian_dispatch
+    store       = jaa_write
+    emit        = siso_bus
+    loop        = array_iteration
+    delay       = wait_ms
+    seam_compile = run_seam_passes
+    gap         = declare_gap
+    notify      = toast_log
+    merge       = join_branches
+    fork        = parallel_branches
+    webhook_out = outbound_http
+  }
+
+  condition_evaluator {
+    operators   = [ === !== < > <= >= && || ! ]
+    ternary     = true
+    dot_paths   = true
+    methods     = [ includes startsWith endsWith length ]
+    max_expr_len = 2048
+    max_depth   = 32
+    eval        = never
+  }
+
+  component "runner" {
+    input pipeline_id payload
+    get jaa.workflow_runs where pipeline_id == pipeline_id
+    insert jaa.workflow_runs { status = running startedAt = now }
+    execute nodes in order
+    on node.complete { update jaa.workflow_runs record }
+    on node.fail     { insert jaa.failures record }
+    on complete      { update jaa.workflow_runs status = complete record }
+  }
+}
+
+// ── .spec parser ──────────────────────────────────────────────────────────────
+// The parser that splits .spec files into SEAM-deliverable chunks
+// Powers: SEAM tab in Guardian userscript + Forge pipeline
+compartment "spec-parser" {
+  id = spec-parser-001
+  uuid = spec-parser-001-xxxx
+  intent = parse_spec_files_into_seam_deliverable_chunks_with_contracts
+
+  component "chunker" {
+    input spec_text split_on max_size custom_pattern
+
+    if split_on == heading
+      chunks = split(spec_text /^#{1,3} /m)
+    if split_on == divider
+      chunks = split(spec_text /^---+$/m)
+    if split_on == phase
+      chunks = split(spec_text /^(Phase|PHASE|Step|STEP) \d/m)
+    if split_on == custom
+      chunks = split(spec_text custom_pattern)
+    else
+      chunks = split_by_size(spec_text max_size)
+
+    for each chunk in chunks
+      title = extract_title(chunk)
+      tests = auto_generate_tests(chunk)
+      profile = build_profile(chunk)
+      insert jaa.requests { type = spec_chunk status = pending }
+
+    output chunks
+    record
+  }
+
+  component "seam-prompt-builder" {
+    input chunk idx total sys_prompt_key
+    prevVerified = count jaa.requests where type == spec_chunk status == verified idx < idx
+    hdr = "SEAM CHUNK " + idx + "/" + total + " " + chunk.title
+    contract = build_seam_contract(chunk.tests)
+    sys = SEAM_SYSTEM_PROMPTS[sys_prompt_key]
+    output sys + hdr + chunk.content + contract
+    record
+  }
+
+  component "verdict-detector" {
+    input response_text chunk_idx
+    sigma observe response_text
+    if response_text matches /SEAM VERDICT: PASS/i
+      update jaa.requests where idx == chunk_idx set status = verified
+      emit "seam.chunk.verified" { idx = chunk_idx }
+    if response_text matches /SEAM VERDICT: FAIL/i
+      update jaa.requests where idx == chunk_idx set status = failed
+      emit "seam.chunk.failed" { idx = chunk_idx }
+    record
+  }
+}
+
+// ── Forge IDE ─────────────────────────────────────────────────────────────────
+compartment "forge-ide" {
+  id = forge-ide-001
+  uuid = forge-ide-001-xxxx
+  version = 1.0.0
+  port { bind = 127.0.0.1 number = 7800 protocol = http }
+  intent = constraint_first_authoring_environment_spec_is_the_container
+
+  spec_container {
+    on spec.load
+      register spec.hooks on siso_bus
+      register spec.surfaces on fs_watcher
+      register spec.gates on causal_nexus
+      record
+  }
+
+  layout IDE_LAYOUT {
+    panel "prose-editor"  { flex = 1 modes = seam prose code spec }
+    panel "code-editor"   { flex = 1 syntax_highlight = true }
+    panel "field-pane"    { width = 340 shows = constraint_field gaps bep_stage }
+    panel "preview-pane"  { width = 340 modes = html field spec build }
+    panel "console-pane"  { height = 200 modes = bus_events cli_repl }
+    panel "topbar"        { height = 40 shows = ollama voice debug_toggle sigma }
+  }
+
+  component "spec-engine" {
+    on file.change
+      update spec/rheon.spec
+      emit "spec.updated"
+      record
+  }
+
+  component "seam-compiler" {
+    input source
+    pass0 = tokenise_and_classify(source)
+    pass1 = build_constraint_field(pass0)
+    pass2 = resolve_gaps_and_bridges(pass1)
+    pass3 = emit_js(pass2)
+    if gap.unresolved and bridge.missing
+      gap "web-type-violation" { pressure = 0.9 }
+    output pass3
+    record
+  }
+
+  component "debug-overlay" {
+    states = active debug isolated disabled
+    on debug.set_state
+      if state == isolated
+        route_to null_bus
+      record
+  }
+}
+
+// ── Forge CLI ─────────────────────────────────────────────────────────────────
+// Same hooks as UI — ME-2: CLI = UI, different surface
+compartment "forge-cli" {
+  id = forge-cli-001
+  uuid = forge-cli-001-xxxx
+  intent = cli_surface_same_hooks_as_ide_ui
+
+  component "commands" {
+    on "forge pipeline list"           { GET /api/pipelines output table record }
+    on "forge pipeline create"         { input name POST /api/pipelines record }
+    on "forge pipeline run"            { input id payload POST /api/pipelines/id/run record }
+    on "forge pipeline add-node"       { input pid type config POST /api/pipelines/pid/nodes record }
+    on "forge pipeline connect"        { input pid from to condition POST /api/pipelines/pid/edges record }
+    on "forge pipeline arm"            { input id PUT /api/pipelines/id/arm record }
+    on "forge pipeline disarm"         { input id PUT /api/pipelines/id/disarm record }
+    on "forge seam compile"            { input file emit "seam.compile" { source = file } record }
+    on "forge seam validate"           { input file emit "seam.validate" { source = file } record }
+    on "forge idea list"               { GET /api/ideas output table record }
+    on "forge idea create"             { input title POST /api/ideas record }
+    on "forge gap list"                { GET /api/gaps output table record }
+    on "forge gap resolve"             { input id resolution POST /api/gaps/id/resolve record }
+    on "forge snapshot create"         { input message POST /api/snapshots record }
+    on "forge guardian dispatch"       { input provider prompt POST /api/guardian/dispatch record }
+    on "forge bus emit"                { input channel payload emit channel payload record }
+    on "forge bus history"             { GET /api/bus/history output table record }
+    on "forge jaa stats"               { GET /api/jaa/stats output summary record }
+    on "forge jaa query"               { input table GET /api/jaa/table output table record }
+    on "forge help"                    { output command_list record }
+    record
+  }
+}
+
+loop FORGE_LOOP {
+  interval = 0
+  on seam.compile   { signal -> compartment "forge-ide" record }
+  on spec.load      { signal -> compartment "forge-ide" record }
+  on pipeline.run   { signal -> compartment "forge-pipeline" record }
+  on forge.patch    { signal -> compartment "forge-engine" record }
+}

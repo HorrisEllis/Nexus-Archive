@@ -1,0 +1,149 @@
+// guardian-server-full.eg — Complete Guardian Server all ports + 3748 bridge + 15-table schema
+// UUID: guardian-server-full-v1-0-0
+compartment "guardian-server-full" {
+  id = guardian-server-full-001
+  uuid = guardian-server-full-001-xxxx
+  version = 9.0.0
+  intent = complete_guardian_server_7820_7821_7822_7823_3748_bridge
+  ports {
+    7820 = { bind = 127.0.0.1 protocol = http  purpose = main_api_cli_cockpit }
+    7821 = { bind = 127.0.0.1 protocol = wss   purpose = provider_connections }
+    7822 = { bind = 0.0.0.0   protocol = http  purpose = dropzone_lan }
+    7823 = { bind = 0.0.0.0   protocol = http  purpose = memory_jaa_lan }
+    3748 = { bind = 127.0.0.1 protocol = http  purpose = nexus_cobalt_bridge }
+  }
+  isolation {
+    G-I1 = cockpit_no_direct_jaa_access
+    G-I2 = cli_no_knowledge_of_cockpit
+    G-I3 = providers_cannot_call_http_routes
+    G-I4 = providers_cannot_read_other_providers_jobs
+    G-I5 = memory_7823_and_api_7820_share_jaastore
+    G-I6 = nexus_writes_fire_and_forget
+    G-I7 = dropzone_7822_independently_startable
+  }
+  siso_channels {
+    guardian.artifact  = GUARDIAN_ARTIFACT to jaa.artifacts dropzone ledger
+    guardian.gap       = GUARDIAN_GAPS to jaa.gaps ledger
+    guardian.job       = GUARDIAN_COMPLETE to jobs PA ledger
+    guardian.pa        = GUARDIAN_PA_SESSION to jaa.pa_sessions
+    guardian.ledger    = GUARDIAN_LEDGER_EVENT to jaa.ledger_entries
+    guardian.file      = GUARDIAN_FILE_UPLOAD to dropzone
+    guardian.download  = GUARDIAN_DOWNLOAD to jaa.downloads
+    guardian.session   = session.name to sessions UPDATE
+    guardian.setting   = settings PUT to UPDATE broadcast
+    guardian.timeline  = any_event to timeline_events
+  }
+}
+compartment "guardian-api-7820" {
+  id = guardian-api-7820-001
+  uuid = guardian-api-7820-001-xxxx
+  port { bind = 127.0.0.1 number = 7820 protocol = http }
+  component "routes" {
+    route POST /command           { input provider command prompt content creates job dispatches record }
+    route GET  /status/:jobId     { get jaa.jobs output json record }
+    route GET  /response/:jobId   { get jaa.jobs output response json record }
+    route GET  /stream/:jobId     { output sse stream job.chunks record }
+    route GET  /jobs              { input status provider limit query jaa.jobs output json record }
+    route DELETE /jobs/:jobId     { archive jaa.jobs record }
+    route GET  /providers         { output provider_status json record }
+    route GET  /artifacts         { input lang chatId account limit after q query jaa.artifacts output json record }
+    route GET  /artifacts/:hash   { get jaa.artifacts output json record }
+    route POST /artifacts         { insert jaa.artifacts emit guardian.artifact record }
+    route DELETE /artifacts/:hash { archive jaa.artifacts record }
+    route PUT  /artifacts/:hash/tags { update jaa.artifacts.tags record }
+    route GET  /gaps              { input type domain status query jaa.gaps output json record }
+    route GET  /gaps/summary      { output gap_summary json record }
+    route GET  /gaps/catalogue    { output gap_taxonomy json record }
+    route POST /gaps/:id/close    { update jaa.gaps status=closed record }
+    route POST /gaps/:id/ignore   { update jaa.gaps status=ignored record }
+    route GET  /ledger            { input category limit query jaa.ledger_entries output json record }
+    route GET  /ledger/metrics    { output ledger_metrics json record }
+    route POST /ledger            { insert jaa.ledger_entries emit guardian.ledger record }
+    route GET  /sessions          { input account provider limit query jaa.sessions output json record }
+    route GET  /sessions/:id      { get jaa.sessions output json record }
+    route POST /sessions/:id/name { update jaa.sessions emit guardian.session record }
+    route GET  /sessions/:id/timeline { get jaa.timeline_events output json record }
+    route GET  /timeline          { input personId channel from to query jaa.timeline_events output json record }
+    route GET  /memory/query      { input q search jaa.memory_index output json record }
+    route GET  /memory/context    { input chatId composite artifacts gaps ledger output json record }
+    route GET  /memory/stats      { output memory_stats json record }
+    route POST /memory/ingest     { input type payload source insert emit guardian.memory record }
+    route GET  /settings          { query jaa.settings output json record }
+    route PUT  /settings/:key     { update jaa.settings emit guardian.setting record }
+    route POST /settings/reset    { reset jaa.settings record }
+    route GET  /pa                { input limit chatId query jaa.pa_sessions output json record }
+    route GET  /pa/:id            { get jaa.pa_sessions output json record }
+    route GET  /cockpit           { output cockpit_html record }
+    route GET  /events            { output sse stream all_guardian_events record }
+    route GET  /health            { output server_health json record }
+    route POST /api/complete      { forward 3748/api/complete record }
+    route GET  /gap-questions     { input status query jaa.gap_questions output json record }
+    record
+  }
+}
+compartment "guardian-wss-7821" {
+  id = guardian-wss-7821-001
+  uuid = guardian-wss-7821-001-xxxx
+  port { bind = 127.0.0.1 number = 7821 protocol = wss }
+  component "provider-channel" {
+    on GUARDIAN_REGISTER      { validate provider tabId emit GUARDIAN_READY insert jaa.sessions record }
+    on GUARDIAN_HEARTBEAT     { emit GUARDIAN_HEARTBEAT_ACK record }
+    on GUARDIAN_DELIVERED     { update jaa.jobs set status = delivered record }
+    on GUARDIAN_CHUNK         { update jaa.jobs set streaming = true broadcast_sse record }
+    on GUARDIAN_COMPLETE      { update jaa.jobs set status = complete emit guardian.job POST 3748/guardian/event record }
+    on GUARDIAN_ARTIFACT      { emit guardian.artifact insert jaa.artifacts record }
+    on GUARDIAN_FILE_UPLOAD   { emit guardian.file save_to_dropzone record }
+    on GUARDIAN_LEDGER_EVENT  { emit guardian.ledger insert jaa.ledger_entries record }
+    on GUARDIAN_ERROR         { update jaa.jobs set status = failed insert jaa.failures record }
+    on GUARDIAN_PA_SESSION    { insert jaa.pa_sessions emit guardian.pa record }
+    on GUARDIAN_GAPS          { for each gap insert jaa.gaps emit guardian.gap record }
+    on GUARDIAN_DOWNLOAD      { insert jaa.downloads emit guardian.download record }
+    on GUARDIAN_SESSION_NAMED { update jaa.sessions emit guardian.session record }
+    on GUARDIAN_QUEUE_EVENT   { forward 4800/api/queue/progress record }
+    on GUARDIAN_INPUT         { insert jaa.ledger_entries emit GUARDIAN_INPUT_ACK channel.keep_open POST 3748/guardian/event record }
+    on GUARDIAN_DONE          { channel.close POST 3748/guardian/event record }
+    record
+  }
+}
+compartment "cobalt-bridge-3748" {
+  id = cobalt-bridge-001
+  uuid = cobalt-bridge-001-xxxx
+  intent = bridge_guardian_events_to_nexus_cortex_3748
+  component "forwarder" {
+    on guardian.job.complete { POST 3748/guardian/event record }
+    on guardian.artifact     { POST 3748/guardian/event record }
+    on guardian.gap          { POST 3748/guardian/event record }
+    on guardian.session      { POST 3748/guardian/event record }
+    on guardian.input        { POST 3748/guardian/event record }
+    record
+  }
+}
+compartment "guardian-schema-15" {
+  id = guardian-schema-15-001
+  uuid = guardian-schema-15-001-xxxx
+  intent = authoritative_15_table_schema_all_fields
+  tables {
+    sessions        = id chat_id chat_url provider account name token_total started_ts updated_ts meta
+    artifacts       = id hash name type lang content context chat_url chat_id account job_id session_id direction provider seen_count ts last_seen tags meta
+    gaps            = id type domain reason description score status job_id chat_id session_id account provider evidence opened_ts closed_ts meta
+    ledger_entries  = id ledger_type category msg meta chat_url account job_id ts
+    timeline_events = id channel person_id event_type payload ts
+    jobs            = id provider command prompt content status response error ts updated_ts
+    downloads       = id filename href chat_url chat_id account job_id ts
+    pa_sessions     = id job_id chat_id tokens pauses entropy hypotheses ts
+    settings        = key value updated_ts
+    gap_questions   = id gap_uuid gap_type subject question context_block priority hint status injected_at answer answered_at resolved_at source caused_by ts
+    chat_sessions   = id session_uuid provider instance_id started_at ended_at source caused_by
+    chat_messages   = id session_uuid role text provider complete ts caused_by
+    chat_completions = id session_uuid text provider complete caused_by_callto ts
+    guardian_nodes  = id instance_id last_seen capabilities tab_count listener_count health_score
+    guardian_health = id connected listener_count session_count stale_nodes lost_listeners health_score ts
+  }
+}
+loop SERVER_LOOP {
+  interval = 0
+  on job.created    { signal -> compartment "guardian-wss-7821" record }
+  on job.complete   { signal -> compartment "cobalt-bridge-3748" record }
+  on gap.detected   { signal -> compartment "cobalt-bridge-3748" record }
+  on guardian.input { signal -> compartment "cobalt-bridge-3748" record }
+}

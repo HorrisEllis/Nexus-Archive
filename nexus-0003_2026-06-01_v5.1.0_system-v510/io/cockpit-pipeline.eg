@@ -1,0 +1,112 @@
+// cockpit-pipeline.eg — Pipeline Engine + 14 Node Types + SEAM Condition Evaluator
+// UUID: cockpit-pipeline-v1-0-0
+compartment "cockpit-pipeline" {
+  id = cockpit-pipeline-001
+  uuid = cockpit-pipeline-001-xxxx
+  version = 1.0.0
+  intent = ordered_node_graph_execution_14_node_types_safe_evaluator
+  node_types {
+    trigger     = manual cron event condition webhook schedule chain
+    condition   = if_then_else_gate
+    transform   = pure_function_over_data
+    api_call    = http_fetch
+    agent_call  = guardian_dispatch
+    store       = jaa_write_operation
+    emit        = siso_bus_event
+    loop        = array_iteration
+    delay       = wait_n_ms
+    seam_compile = run_seam_passes
+    gap         = declare_gap_record
+    notify      = toast_or_log
+    merge       = join_parallel_branches
+    fork        = parallel_branch_execution
+    webhook_out = outbound_http
+  }
+  invariant PIPELINE_LAWS {
+    axiom NO_SILENT_DROP
+    axiom EXECUTION_IS_TRACEABLE
+    if condition.eval fails { gap "condition-eval-error" { pressure = 0.9 } }
+  }
+}
+compartment "condition-evaluator" {
+  id = condition-eval-001
+  uuid = condition-eval-001-xxxx
+  intent = safe_expression_parser_no_eval_2048_chars_max
+  evaluator {
+    operators  = [ === !== < > <= >= && || ! ]
+    ternary    = true
+    dot_paths  = true
+    indexing   = true
+    methods    = [ includes startsWith endsWith indexOf length toString trim toLowerCase toUpperCase ]
+    arithmetic = [ + - * / ]
+    max_expr   = 2048
+    max_depth  = 32
+    no_eval    = true
+  }
+  component "tokenise" {
+    input expr
+    if expr.length > 2048 { gap "expr-too-long" { pressure = 0.8 } }
+    tokens = tokenise(expr)
+    output tokens
+    record
+  }
+  component "parse-eval" {
+    input tokens context
+    tree = parse(tokens)
+    result = evaluate(tree context)
+    output result
+    record
+  }
+}
+compartment "pipeline-runner" {
+  id = pipeline-runner-001
+  uuid = pipeline-runner-001-xxxx
+  intent = execute_pipeline_node_by_node_with_gate_state_transitions
+  component "executor" {
+    input pipeline_id payload
+    insert jaa.workflow_runs { pipelineId = pipeline_id status = running startedAt = now }
+    nodes = get_nodes(pipeline_id)
+    context = { payload = payload outputs = {} }
+    for each node in nodes
+      try
+        result = execute_node(node context)
+        context.outputs[node.id] = result
+        insert jaa.pipeline_steps { nodeId = node.id status = complete output = result }
+        emit "pipeline.node.complete" { nodeId = node.id }
+        record
+      else
+        insert jaa.pipeline_steps { nodeId = node.id status = failed }
+        insert jaa.failures { source = runner error = err }
+        if node.continueOnError == false
+          update jaa.workflow_runs set status = failed
+          break
+    update jaa.workflow_runs set status = complete completedAt = now
+    emit "pipeline.complete" { pipelineId = pipeline_id }
+    record
+  }
+  component "node-dispatch" {
+    input node context
+    if node.type == trigger    { execute_trigger(node context) }
+    if node.type == condition  { condition_evaluator.eval(node.expr context) }
+    if node.type == transform  { apply node.fn context }
+    if node.type == api_call   { fetch node.url node.method node.headers node.body }
+    if node.type == agent_call { POST 7820/command { provider = node.provider prompt = node.prompt } }
+    if node.type == store      { insert jaa[node.table] node.data }
+    if node.type == emit       { emit node.channel node.payload }
+    if node.type == loop       { for each item in context[node.over] execute node.body }
+    if node.type == delay      { wait node.ms }
+    if node.type == seam_compile { compile node.source }
+    if node.type == gap        { insert jaa.gaps node.gap }
+    if node.type == notify     { toast node.message node.level }
+    if node.type == fork       { parallel execute node.branches }
+    if node.type == merge      { join parallel.results }
+    if node.type == webhook_out { POST node.url node.payload }
+    output result
+    record
+  }
+}
+loop PIPELINE_LOOP {
+  interval = 0
+  on pipeline.run   { signal -> compartment "pipeline-runner" record }
+  on condition.eval { signal -> compartment "condition-evaluator" record }
+}

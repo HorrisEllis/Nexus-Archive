@@ -1,0 +1,192 @@
+// cortex.eg — Nexus Cortex: Source of Truth + CLI + Memory
+// UUID: cortex-v1-0-0
+// Port: 3748. The center. All nodes connect here.
+// Cortex = JAA + Cobalt bus + RAID + ORION + admin-server
+// No data is ever lost. No module imports another. JAA is the only shared surface.
+compartment "cortex" {
+  id = cortex-001
+  uuid = cortex-001-xxxx
+  version = 5.0.0
+  port { bind = 127.0.0.1 number = 3748 protocol = http }
+  intent = source_of_truth_all_memory_never_lost
+
+  invariant CORTEX_LAWS {
+    axiom NO_SILENT_DROP
+    axiom RECORD_IS_TRUTH
+    axiom EXECUTION_IS_TRACEABLE
+    axiom GAP_IS_FIRST_CLASS
+    if jaa.open fails { gap "jaa-failed" { pressure = 1.0 } }
+    if cobalt.open fails { gap "cobalt-failed" { pressure = 0.9 } }
+  }
+
+  jaa {
+    tables {
+      event_log          = uuid type payload source causedBy ts
+      bridge_messages    = uuid callto instanceId provider ts
+      agent_calls        = uuid prompt preferredAgent status claimedBy routedTo ts
+      agent_signatures   = uuid agentId pattern confidence ts
+      artifacts          = uuid hash name ext lang confidence content chatId sessionUuid ts
+      gaps               = uuid path type severity body status claimedBy resolvedAt ts
+      failures           = uuid source error stack ts
+      fix_map            = uuid gapUuid gapType strategy action automated status ts
+      memory_index       = uuid content tier tags source ts recalled_at
+      memory_queries     = uuid query result source ts
+      conditioning_log   = uuid agentId instruction ts
+      feedback_scores    = uuid agentId score source ts
+      crystals           = uuid content pattern_type source_ids confidence state ts
+      bep_patterns       = uuid pattern confidence calltoId ts
+      active_traces      = uuid traceId source causedBy ts
+      orion_sessions     = uuid calltoId service events regime features status ts
+      versionium_commits = uuid message branch parentHash objects ts
+      versionium_branches = uuid name head ts
+      versionium_file_index = uuid path hash branch ts
+      versionium_calendar = uuid commitUuid ts label
+      versionium_objects = uuid hash type content ts
+      schedules          = uuid pipelineId cron enabled ts
+      workflow_runs      = uuid pipelineId status startedAt completedAt ts
+      project_registry   = uuid name status lastSeenAt meta ts
+      shape_samples      = uuid calltoId features regime ts
+      poll_log           = uuid moduleId action ts
+      requests           = uuid type path status claimedBy routedTo ts
+      cortex_memory      = uuid content source tier ts
+      gap_questions      = uuid gapUuid gapType subject question contextBlock status answer ts
+      sessions           = uuid name provider chatId chatUrl account ts
+      ledger_entries     = uuid category msg meta ts
+    }
+    persist { backend = jsonl dir = data dedup = none archive = never_delete }
+  }
+}
+
+// ── Cobalt bus ────────────────────────────────────────────────────────────────
+compartment "cobalt-core" {
+  id = cobalt-core-001
+  uuid = cobalt-core-001-xxxx
+  intent = central_event_bus_all_modules_communicate_through_this
+
+  cobalt_bus {
+    ring_buffer = 10000
+    pattern_match = true
+    wildcard = **
+    tick = monotonic
+  }
+  sealed = true
+
+  invariant COBALT_LAWS {
+    axiom NO_SILENT_DROP
+    if signature.collision { gap "gate-collision" { pressure = 1.0 } }
+  }
+}
+
+// ── Poll registry — all modules declared here ─────────────────────────────────
+compartment "poll-registry" {
+  id = poll-registry-001
+  uuid = poll-registry-001-xxxx
+  intent = single_declaration_point_for_all_module_poll_intervals
+
+  modules {
+    bus-log         { pollMs = 1000 reads = event_log }
+    raid            { pollMs = 3000 reads = agent_calls bep_patterns crystals writes = agent_calls }
+    agents          { pollMs = 2000 reads = agent_calls writes = agent_calls event_log }
+    ollama          { pollMs = 2000 reads = agent_calls writes = agent_calls cortex_memory }
+    claude          { pollMs = 3000 reads = agent_calls writes = agent_calls }
+    gap-finder      { pollMs = 2000 reads = project_registry agent_calls failures writes = gaps event_log }
+    healer          { pollMs = 5000 reads = gaps writes = fix_map gaps event_log failures }
+    agent-memory    { pollMs = 4000 reads = agent_calls artifacts writes = cortex_memory memory_index }
+    versionium      { pollMs = 3000 reads = versionium_commits writes = versionium_commits versionium_objects }
+    orion-sensor    { pollMs = 1000 reads = bridge_messages writes = orion_sessions event_log }
+    orion-record    { pollMs = 1000 reads = orion_sessions writes = orion_sessions shape_samples }
+    orion-policy    { pollMs = 2000 reads = orion_sessions writes = orion_sessions event_log }
+    orion-verify    { pollMs = 3000 reads = orion_sessions writes = orion_sessions event_log }
+    gap-ctx-injector { pollMs = 3000 reads = gaps writes = gap_questions event_log }
+  }
+}
+
+// ── Admin server routes (port 3748) ──────────────────────────────────────────
+compartment "admin-server" {
+  id = admin-server-001
+  uuid = admin-server-001-xxxx
+
+  component "routes" {
+    route GET  /health          { output jaa.counts cobalt.stats uptime json record }
+    route GET  /api/ring        { input n output cobalt.ring(n) json record }
+    route GET  /api/gaps        { input status output jaa.gaps json record }
+    route GET  /api/failures    { output jaa.failures json record }
+    route GET  /api/events      { input n output jaa.event_log json record }
+    route GET  /api/memory      { input table n output jaa.table json record }
+    route POST /api/memory/search { input query output jaa.cortex_memory.search json record }
+    route POST /api/memory/forget { input uuid update jaa.cortex_memory tier=forgotten record }
+    route POST /api/event        { input type payload source insert jaa.event_log emit cobalt record }
+    route GET  /api/requests     { output jaa.requests json record }
+    route GET  /api/modules      { output poll_registry.modules json record }
+    route GET  /sse              { output sse stream cobalt_bus.ring live_tail record }
+    record
+  }
+}
+
+// ── RAID — routing and agent intelligence dispatcher ──────────────────────────
+compartment "raid" {
+  id = raid-001
+  uuid = raid-001-xxxx
+  intent = local_first_agent_routing_ollama_before_cloud
+
+  agent_priority = [ ollama claude chatgpt gemini ]
+
+  component "dispatcher" {
+    interval = 3000
+    query jaa.agent_calls where status == pending limit 20
+
+    for each call in pending
+      claim call
+      route = select_agent(call bep_patterns crystals)
+      update jaa.agent_calls set status = routed routedTo = route.agent
+      emit cobalt "agent.call.routed" { callUuid = call.uuid agent = route.agent }
+      record
+  }
+}
+
+// ── ORION pipeline ────────────────────────────────────────────────────────────
+compartment "orion" {
+  id = orion-001
+  uuid = orion-001-xxxx
+  intent = measure_record_policy_verify_agent_behavior
+
+  component "sensor"   { interval = 1000 reads = bridge_messages writes = orion_sessions record }
+  component "record"   { interval = 1000 reads = orion_sessions writes = orion_sessions shape_samples record }
+  component "policy"   { interval = 2000 reads = orion_sessions writes = orion_sessions event_log record }
+  component "verify"   { interval = 3000 reads = orion_sessions writes = orion_sessions event_log record }
+}
+
+// ── CLI (cortex.js) ───────────────────────────────────────────────────────────
+compartment "cortex-cli" {
+  id = cortex-cli-001
+  uuid = cortex-cli-001-xxxx
+  intent = interactive_cli_and_memory_query_no_data_lost
+
+  component "commands" {
+    on "status"           { GET /health output summary record }
+    on "ask"              { input prompt POST /api/event type=agent.call.requested poll output record }
+    on "gaps"             { GET /api/gaps output table record }
+    on "gap show"         { input uuid GET /api/gaps/uuid output page record }
+    on "tail"             { input table n GET /api/memory table=table n=n output table record }
+    on "watch"            { GET /sse output stream record }
+    on "memory search"    { input term POST /api/memory/search query=term output table record }
+    on "memory tail"      { input n GET /api/memory table=cortex_memory n=n output table record }
+    on "memory forget"    { input uuid POST /api/memory/forget uuid=uuid record }
+    on "failures"         { GET /api/failures output table record }
+    on "events"           { input n GET /api/events n=n output table record }
+    on "modules"          { GET /api/modules output table record }
+    on "ring"             { input n GET /api/ring n=n output table record }
+    on "versionium status" { GET /health output versionium summary record }
+    on "versionium log"   { input n GET /api/memory table=versionium_commits n=n output table record }
+    on "orion list"       { GET /api/memory table=orion_sessions output table record }
+    on "gap-questions"    { GET /api/memory table=gap_questions output table record }
+    on "help"             { output command_list record }
+    record
+  }
+}
+
+loop CORTEX_MAIN_LOOP {
+  interval = 0
+  on agent.call.routed { signal -> compartment "raid" record }
+  on system.booted { signal -> compartment "admin-server" record }
+}
