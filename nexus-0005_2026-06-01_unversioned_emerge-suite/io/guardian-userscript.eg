@@ -1,0 +1,140 @@
+// guardian-userscript.eg — Explicit injection + data channel + DOM mapper
+// UUID: guardian-userscript-v1-0-0
+// Source: guardian-claude-v8.3.user.js + GUARDIAN-INTERACTION-CONTRACT
+// Axiom: injection is always explicit and confirmed. Input always logged.
+
+compartment "guardian-userscript" {
+  id      = guardian-userscript-001
+  uuid    = guardian-userscript-001-xxxx
+  version = 8.3.0
+  intent  = explicit_injection_data_channel_dom_mapper_console_sync
+
+  wss_url    = wss://127.0.0.1:7821
+  api_url    = http://127.0.0.1:7820
+  memory_url = http://127.0.0.1:7823
+  cortex_url = http://127.0.0.1:3748
+
+  invariant INJECTION_AXIOMS {
+    axiom NO_SILENT_DROP
+    axiom EXECUTION_IS_TRACEABLE
+    if inject fails { toast error log record }
+    if handshake not confirmed { wait retry record }
+    if channel not acked { do not proceed record }
+  }
+
+  component "explicit-inject" {
+    intent = prompt_injection_is_explicit_never_silent
+
+    on explicitInject(text jobId) {
+      // Step 1: Open data channel — wait for ACK before injecting
+      sendToServer { type = GUARDIAN_INPUT jobId text chatUrl account provider }
+      wait for GUARDIAN_INPUT_ACK { timeout = 10000 }
+      if not acked { toast "Channel not confirmed" error record return }
+
+      // Step 2: GTCI — prepend gap questions if any pending
+      questions = await GET /api/gap-questions?status=pending&limit=3
+      if questions.length > 0
+        context_block = buildGTCIBlock(questions)
+        text = context_block + separator + "PRIMARY REQUEST:" + separator + text
+
+      // Step 3: Inject into DOM
+      input = document.querySelector('[contenteditable="true"]')
+      if not input { gap "no-input-found" { pressure = 0.9 } record return }
+      input.focus()
+      execCommand selectAll
+      execCommand insertText text
+      evLog "inject.text" { chars = text.length }
+
+      // Step 4: Tag request PENDING — DOM mapper takes over
+      sendToServer { type = GUARDIAN_PENDING jobId chatUrl account }
+      taggedJobs.set(jobId { status = PENDING injectedAt = now })
+
+      // Step 5: Submit
+      btn = document.querySelector('button[data-testid="send-button"]:not([disabled])')
+      if btn { btn.click() } else { input.dispatchEvent EnterKey }
+
+      // Step 6: Channel stays open — watcher closes it on GUARDIAN_DONE
+      record
+    }
+  }
+
+  component "dom-mapper" {
+    intent = track_progress_of_tagged_pending_requests
+
+    selectors {
+      assistant_turn = '[data-testid="assistant-message"]'
+      streaming      = '[data-is-streaming]'
+      response_last  = '.font-claude-message:last-of-type'
+      code_block     = 'pre code'
+      artifact       = '[class*="artifact"]'
+    }
+
+    on mutation {
+      if taggedJobs has PENDING
+        el = findResponseEl()
+        text = el.innerText
+        if text != lastText
+          lastText = text
+          sendToServer { type = GUARDIAN_CHUNK jobId text }
+          evLog "dom.mapper.chunk" { chars = text.length }
+          record
+        if stable for stable_count polls
+          sendToServer { type = GUARDIAN_DONE jobId text }
+          channel.close(jobId)
+          taggedJobs.set(jobId { status = COMPLETE })
+          evLog "dom.mapper.complete" { jobId chars = text.length }
+          record
+    }
+  }
+
+  component "console-sync" {
+    intent = mirror_all_events_to_console_panel_in_realtime
+
+    sse = EventSource(cortex_url + "/sse")
+
+    on sse.message {
+      addLog event.type event.payload
+      if type == agent.call.routed { addLog job "RAID → " + agent }
+      if type == gap.found         { addLog gap type currentGaps.unshift(gap) }
+      if type == gap.resolved      { addLog ok "GAP resolved" }
+      if type == job.complete      { addLog ok "Job complete " + chars + "ch" }
+      record
+    }
+
+    on guardian.job.complete { addLog ok "→ " + provider + " complete" evLog record }
+    on guardian.artifact     { addLog out lang + " artifact saved" record }
+  }
+
+  component "tab-discovery" {
+    intent = claim_tab_or_open_new_one_never_block
+
+    on discoverOrOpen(provider) {
+      if isClaimed { output true record }
+      existing = localStorage.get(CLAIM_KEY)
+      if existing { output false comment = "another tab claimed" record }
+      // No tab — open one
+      url = providerUrls[provider]
+      window.open(url "_guardian_" + provider)
+      wait 3000
+      output false
+      record
+    }
+  }
+
+  component "input-logger" {
+    intent = log_every_user_input_to_guardian_api_before_inject
+
+    on before_inject(text jobId) {
+      apiPost "/ledger" { level = INPUT category = INPUT msg = "User input" meta = { jobId chars = text.length preview = text.slice(0 120) } }
+      sendToServer { type = GUARDIAN_INPUT_LOG jobId text = text.slice(0 200) chatUrl account ts = now }
+      evLog "input.logged" { jobId chars = text.length }
+      record
+    }
+  }
+
+  siso_bus {
+    channel  = BroadcastChannel guardian-siso-v8
+    seam     = BroadcastChannel guardian-seam-v1
+    on emit  { sisoChannel.postMessage { type data ts provider } record }
+  }
+}

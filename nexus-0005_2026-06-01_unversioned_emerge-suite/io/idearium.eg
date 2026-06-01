@@ -1,0 +1,96 @@
+// idearium.eg — Idea OS + tension engine + gaps + CLI + API
+// UUID: idearium-v1-0-0
+// Source: Version_full/idearium/ — port 4800, CLI is truth layer
+// §3.1 CLI first. API = projection. UI = projection of API.
+
+compartment "idearium" {
+  id      = idearium-001
+  uuid    = idearium-001-xxxx
+  version = 2.0.0
+  intent  = idea_os_tension_engine_cli_truth_api_projection
+
+  port    = 4800
+  binding = 127.0.0.1
+
+  jaa {
+    backend = json_file
+    dir     = ./data
+    tables  = [ ideas specs gaps snapshots links idea_links ]
+  }
+
+  phases = [ seed expanding tensioned specced building complete archived ]
+
+  tension_engine {
+    gap_density      = 0.30
+    contradiction    = 0.25
+    novelty          = 0.20
+    resource_cost    = 0.15
+    dependency_depth = 0.10
+    output           = 0.0_to_1.0
+  }
+
+  snr_weights {
+    idea.created  = 0.9
+    spec.created  = 0.95
+    spec.built    = 1.0
+    gap.resolved  = 0.85
+    push.complete = 0.95
+    idea.tensioned = 0.7
+    guardian.health = 0.15
+  }
+
+  cli {
+    intent = every_feature_has_a_cli_command_first
+
+    on "idea add <text>"          { insert ideas emit idea.created record }
+    on "idea list"                { query ideas output table record }
+    on "idea show <uuid>"         { get ideas output page record }
+    on "idea phase <uuid> <p>"    { update ideas phase emit idea.phase record }
+    on "idea tension <uuid>"      { compute tension output score record }
+    on "idea link <a> <b>"        { insert idea_links emit idea.linked record }
+    on "idea archive <uuid>"      { update ideas phase=archived emit idea.archived record }
+    on "idea search <term>"       { search ideas output table record }
+    on "idea tree"                { query ideas + idea_links output tree record }
+    on "spec new <idea-uuid>"     { insert specs emit spec.created record }
+    on "spec show <uuid>"         { get specs output page record }
+    on "spec check <uuid>"        { validate specs emit spec.checked record }
+    on "spec build <uuid>"        { build emit spec.built versionium.snapshot record }
+    on "spec list"                { query specs output table record }
+    on "gap list"                 { query gaps output table record }
+    on "gap open <desc>"          { insert gaps emit gap.created record }
+    on "gap resolve <uuid>"       { update gaps status=resolved emit gap.resolved record }
+    on "push <message>"           { insert snapshots emit push.complete record }
+    on "status"                   { output { ideas specs gaps snr } record }
+    on "snr"                      { compute snr from event_log output score record }
+  }
+
+  api {
+    route GET    /api/ideas               { query output json record }
+    route POST   /api/ideas               { insert emit idea.created record }
+    route GET    /api/ideas/:uuid         { get output json record }
+    route PATCH  /api/ideas/:uuid         { update record }
+    route POST   /api/ideas/:uuid/tension { compute output json record }
+    route POST   /api/ideas/:uuid/link    { insert idea_links record }
+    route POST   /api/ideas/:uuid/spec    { insert specs record }
+    route POST   /api/ideas/:uuid/phase   { update record }
+    route DELETE /api/ideas/:uuid         { archive record }
+    route GET    /api/specs               { query output json record }
+    route POST   /api/specs/:uuid/check   { validate record }
+    route POST   /api/specs/:uuid/build   { build emit record }
+    route GET    /api/gaps                { query output json record }
+    route POST   /api/gaps                { insert record }
+    route POST   /api/gaps/:uuid/resolve  { update record }
+    route GET    /api/snr                 { compute output json record }
+    route GET    /api/contract            { output interaction_contract record }
+    route GET    /sse                     { output live_tail events record }
+    route POST   /api/queue/:id/progress  { update queue_progress emit record }
+    route POST   /api/guardian/event      { insert event_log emit siso record }
+  }
+
+  sse_events = [
+    idea.created idea.updated idea.linked idea.tensioned idea.archived
+    spec.created spec.updated spec.checked spec.built
+    gap.created gap.resolved gap.ignored
+    push.complete snr.update idearium.error
+  ]
+}

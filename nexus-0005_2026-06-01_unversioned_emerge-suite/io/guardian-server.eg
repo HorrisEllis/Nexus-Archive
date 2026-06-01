@@ -1,0 +1,85 @@
+// guardian-server.eg — API server all 4 ports + WSS contract
+// UUID: guardian-server-v1-0-0
+// 7820=HTTP 7821=WSS 7822=dropzone 7823=memory
+// Source: guardian-final/server-v9.js + GUARDIAN-INTERACTION-CONTRACT
+
+compartment "guardian-server" {
+  id      = guardian-server-001
+  uuid    = guardian-server-001-xxxx
+  version = 9.0.0
+  intent  = agent_orchestrator_all_ports_wss_contract
+
+  ports {
+    7820 = { binding = 127.0.0.1 protocol = http  purpose = main_api_cli_cockpit }
+    7821 = { binding = 127.0.0.1 protocol = wss   purpose = provider_connections }
+    7822 = { binding = 0.0.0.0   protocol = http  purpose = dropzone_lan }
+    7823 = { binding = 0.0.0.0   protocol = http  purpose = memory_jaa_lan }
+  }
+
+  jaa_store {
+    backend = json_file
+    dir     = ./memory_store
+    tables  = [ sessions artifacts gaps ledger_entries timeline_events jobs downloads pa_sessions settings ]
+  }
+
+  http_api {
+    route POST /command           { input provider command prompt content creates job dispatches via wss record }
+    route GET  /status/:jobId     { output job.status record }
+    route GET  /response/:jobId   { output job.response record }
+    route GET  /stream/:jobId     { output sse job.chunks record }
+    route GET  /jobs              { input status provider limit output jobs record }
+    route GET  /providers         { output provider_connection_status record }
+    route GET  /artifacts         { input lang chatId account limit after q output artifacts record }
+    route POST /artifacts         { input hash name type lang content context insert jaa emit siso record }
+    route GET  /gaps              { output gaps record }
+    route GET  /ledger            { input category limit output ledger_entries record }
+    route POST /ledger            { input level category msg meta insert jaa emit siso record }
+    route GET  /sessions          { output sessions record }
+    route POST /sessions/:id/name { input name update sessions emit siso record }
+    route GET  /memory/query      { input q output memory_index.search(q) record }
+    route GET  /memory/context    { input chatId output composite_context record }
+    route POST /memory/ingest     { input type payload source insert memory emit siso record }
+    route GET  /settings          { output settings record }
+    route PUT  /settings/:key     { input value update settings record }
+    route GET  /cockpit           { output cockpit_html record }
+    route GET  /sse               { output all_events live_tail record }
+    route GET  /health            { output { ok uptime jobs providers wsClients } record }
+    route POST /api/complete      { forward to cortex_3748/api/complete record }
+  }
+
+  wss_contract {
+    server_to_provider = [
+      GUARDIAN_READY GUARDIAN_JOB GUARDIAN_ARTIFACT_SAVED
+      GUARDIAN_FILE_SAVED GUARDIAN_HEARTBEAT_ACK GUARDIAN_INPUT_ACK ERROR
+    ]
+    provider_to_server = [
+      GUARDIAN_REGISTER GUARDIAN_DELIVERED GUARDIAN_CHUNK GUARDIAN_COMPLETE
+      GUARDIAN_ARTIFACT GUARDIAN_FILE_UPLOAD GUARDIAN_LEDGER_EVENT GUARDIAN_ERROR
+      GUARDIAN_HEARTBEAT GUARDIAN_PA_SESSION GUARDIAN_GAPS GUARDIAN_DOM_SYSTEMS
+      GUARDIAN_DOWNLOAD GUARDIAN_SESSION_NAMED GUARDIAN_QUEUE_EVENT
+      GUARDIAN_INPUT GUARDIAN_DONE
+    ]
+    on GUARDIAN_REGISTER  { validate emit GUARDIAN_READY insert session record }
+    on GUARDIAN_HEARTBEAT { emit GUARDIAN_HEARTBEAT_ACK record }
+    on GUARDIAN_INPUT     { insert ledger emit GUARDIAN_INPUT_ACK channel.keep_open record }
+    on GUARDIAN_DONE      { channel.close record }
+    on GUARDIAN_COMPLETE  { update job emit sse forward_to_cortex record }
+    on GUARDIAN_ARTIFACT  { insert artifact emit sse record }
+    on GUARDIAN_GAPS      { insert gaps emit sse record }
+  }
+
+  siso_channels {
+    guardian.artifact = GUARDIAN_ARTIFACT signal → jaa.artifacts + dropzone
+    guardian.gap      = GUARDIAN_GAPS signal → jaa.gaps
+    guardian.job      = GUARDIAN_COMPLETE signal → jobs PA ledger
+    guardian.ledger   = GUARDIAN_LEDGER_EVENT signal → ledger_entries
+    guardian.session  = session.name signal → sessions
+  }
+
+  isolation {
+    G-I1 = cockpit_no_direct_jaa_access
+    G-I2 = cli_no_knowledge_of_cockpit
+    G-I3 = providers_cannot_call_http_routes
+    G-I4 = providers_cannot_read_other_providers_jobs
+  }
+}

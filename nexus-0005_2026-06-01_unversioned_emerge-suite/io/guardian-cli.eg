@@ -1,0 +1,69 @@
+// guardian-cli.eg — CLI first, every feature here before the UI
+// UUID: guardian-cli-v1-0-0
+// Source: guardian-final/guardian-cli.js
+// UI interaction contract declared here — hotswappable
+
+compartment "guardian-cli" {
+  id      = guardian-cli-001
+  uuid    = guardian-cli-001-xxxx
+  version = 1.0.0
+  intent  = cli_is_truth_layer_ui_is_projection_hotswappable
+
+  seam CLI_UI_CONTRACT {
+    version   = 1.0.0
+    name      = guardian-cli
+    uuid      = guardian-cli-contract-0001-2026-jamesbrooks
+    invariant = cli_commands_exist_before_ui_renders_them
+    hotswap   = true
+    replace   = ui_without_touching_cli
+  }
+
+  commands {
+    // Agent dispatch
+    on "guardian /code <provider> <prompt>"   { POST 7820/command command=code record }
+    on "guardian /chat <provider> <prompt>"   { POST 7820/command command=chat record }
+    on "guardian /spec <provider> <file>"     { read_file POST 7820/command command=spec record }
+    on "guardian /ask <provider> <prompt>"    { POST 7820/command command=ask record }
+    on "guardian /paste <provider>"           { stdin POST 7820/command command=paste record }
+    on "guardian /multi <p1> <p2> <prompt>"   { parallel POST 7820/command record }
+
+    // Status
+    on "guardian status <jobId>"              { GET 7820/status/jobId record }
+    on "guardian response <jobId>"            { GET 7820/response/jobId record }
+    on "guardian watch <jobId>"               { SSE 7820/stream/jobId record }
+    on "guardian providers"                   { GET 7820/providers record }
+    on "guardian jobs"                        { GET 7820/jobs record }
+    on "guardian health"                      { GET 7820/health record }
+
+    // Memory
+    on "guardian artifacts"                   { GET 7820/artifacts record }
+    on "guardian artifacts <lang>"            { GET 7820/artifacts?lang=lang record }
+    on "guardian gaps"                        { GET 7820/gaps record }
+    on "guardian ledger"                      { GET 7820/ledger record }
+    on "guardian memory query <q>"            { GET 7820/memory/query?q=q record }
+    on "guardian memory context <chatId>"     { GET 7820/memory/context?chatId=chatId record }
+    on "guardian sessions"                    { GET 7820/sessions record }
+
+    // Settings
+    on "guardian settings"                    { GET 7820/settings record }
+    on "guardian settings set <k> <v>"        { PUT 7820/settings/k value=v record }
+    on "guardian settings reset"              { POST 7820/settings/reset record }
+
+    // Cortex
+    on "guardian cortex status"               { GET 3748/health record }
+    on "guardian cortex tail <table> <n>"     { GET 3748/api/memory?table=table&n=n record }
+    on "guardian cortex search <q>"           { POST 3748/api/memory/search q=q record }
+    on "guardian cortex gaps"                 { GET 3748/api/gaps record }
+
+    // AppID / handshake
+    on "guardian appid create"                { POST 7820/guardian/appid/create record }
+    on "guardian appid list"                  { GET 7820/guardian/appid/list record }
+    on "guardian appid revoke <id>"           { DELETE 7820/guardian/appid/id record }
+  }
+
+  output {
+    format = ansi_table_or_json
+    color  = true
+    error  = stderr exit_code_1
+  }
+}

@@ -1,0 +1,111 @@
+// nexus-core.eg — Source of truth fileserver + all memory
+// UUID: nexus-core-v1-0-0
+// Port 3748. JAA 28 tables. Cobalt bus. FileStore SHA-256. Admin SSE.
+// §2.1 persistence before anything. §3.1 bottom-up boot.
+
+compartment "nexus-core" {
+  id      = nexus-core-001
+  uuid    = nexus-core-001-xxxx
+  version = 5.0.0
+  intent  = source_of_truth_fileserver_all_memory_all_types
+
+  port    = 3748
+  binding = 127.0.0.1
+  protocol = http_sse
+
+  jaa {
+    backend = jsonl
+    tables {
+      event_log         = uuid type payload source causedBy ts
+      bridge_messages   = uuid callto instanceId provider ts
+      agent_calls       = uuid prompt status routedTo claimedBy startedAt ts
+      agent_signatures  = uuid agentId pattern confidence ts
+      artifacts         = uuid hash name ext lang confidence content chatId ts
+      gaps              = uuid path type severity body status claimedBy ts
+      failures          = uuid source error stack ts
+      fix_map           = uuid gapUuid gapType strategy action automated status ts
+      memory_index      = uuid content tags source sourceEventUuid ts
+      memory_queries    = uuid query result ts
+      conditioning_log  = uuid agentId instruction ts
+      feedback_scores   = uuid agentId score source ts
+      crystals          = uuid content pattern_type source_ids confidence state ts
+      bep_patterns      = uuid pattern confidence behaviorGraph calltoId ts
+      active_traces     = uuid traceId source causedBy ts
+      orion_sessions    = uuid calltoId service events regime status ts
+      versionium_commits    = uuid message branch parentHash objects ts
+      versionium_branches   = uuid name head ts
+      versionium_file_index = uuid path hash branch ts
+      versionium_calendar   = uuid commitUuid ts label
+      versionium_objects    = uuid hash type content ts
+      schedules         = uuid pipelineId cron enabled ts
+      workflow_runs     = uuid pipelineId status steps startedAt ts
+      project_registry  = uuid name status lastSeenAt meta ts
+      shape_samples     = uuid calltoId features regime sigma committed ts
+      poll_log          = uuid moduleId action ts
+      requests          = uuid type path status routedTo ts
+      cortex_memory     = uuid content source tier recalled_at ts
+    }
+    persist = append_only_never_delete
+  }
+
+  file_store {
+    backend = sha256_content_addressed
+    dir     = ./store
+    dedup   = content_hash
+    refs    = named_pointers_to_hashes
+  }
+
+  cobalt_bus {
+    pattern_matching = true
+    ring_buffer      = 10000
+    watchdog_silence = 30s
+    ledger           = append_only_deduped
+    registry         = all_nodes_register_here
+  }
+
+  invariant BOOT_ORDER {
+    axiom NO_SILENT_DROP
+    1 = jaaDB.open
+    2 = fileStore.open
+    3 = cobalt.open + register_manifest
+    4 = setDeps_on_modules
+    5 = pollRegistry.start
+    6 = adminServer.start
+    7 = jaaDB.insert event_log system.booted
+    if step fails { HALT loud_specific_message }
+  }
+
+  admin_api {
+    route GET  /health               { output status + jaa.counts + cobalt.stats }
+    route GET  /api/ring             { output cobalt_bus.ring(n) }
+    route GET  /api/gaps             { output jaa.gaps.query(status) }
+    route GET  /api/failures         { output jaa.failures }
+    route GET  /api/events           { output jaa.event_log.tail(n) }
+    route GET  /api/memory           { output jaa[table].tail(n) }
+    route POST /api/memory/search    { input query output jaa.cortex_memory.search(query) }
+    route POST /api/memory/forget    { input uuid update jaa.cortex_memory.tier=forgotten }
+    route POST /api/event            { input type payload insert event_log emit cobalt }
+    route GET  /api/requests         { output jaa.requests }
+    route GET  /sse                  { output cobalt_bus.ring live_tail record }
+    route GET  /api/files            { output fileStore.list }
+    route POST /api/files            { input file store via fileStore output hash ref }
+    route GET  /api/files/:ref       { input ref output fileStore.get(ref) }
+  }
+
+  ui {
+    intent   = dedicated_page_per_record_type_drag_drop_dynamic
+    pages    = [ event_log artifacts gaps failures memory_index agent_calls cortex_memory versionium files ]
+    features = [ drag_drop_upload fluid_search dedicated_record_page tab_per_type realtime_sse ]
+    seam     = HTTP_CONTRACT between cli and ui
+    hotswap  = true
+  }
+}
+
+loop CORTEX_LOOP {
+  interval = 2000
+  sigma observe jaaDB.event_log
+  on new_events { cobalt_bus.ingest events record }
+  on gap.found  { jaaDB.insert gaps gap emit sse record }
+  on sigma > 0.7 { versionium.auto_commit record }
+  on silence > 30s { watchdog.alert record }
+}

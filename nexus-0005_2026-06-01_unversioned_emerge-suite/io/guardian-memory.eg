@@ -1,0 +1,75 @@
+// guardian-memory.eg — JAA store + all memory types + crystal distiller
+// UUID: guardian-memory-v1-0-0
+// Source: guardian-final/guardian-memory.js + nexus-cortex/memory/
+// Three tiers: hot (working) → warm (indexed) → cold (archived)
+
+compartment "guardian-memory" {
+  id      = guardian-memory-001
+  uuid    = guardian-memory-001-xxxx
+  version = 1.0.0
+  intent  = all_memory_types_three_tier_crystal_distiller_jaa_backed
+
+  jaa_store {
+    backend = json_file
+    dir     = ./memory_store
+    dedup   = content_hash
+    tables {
+      artifacts      = id hash name type lang content context chatUrl chatId account jobId ts
+      sessions       = id chatId chatUrl provider account name tokenTotal startedTs updatedTs
+      gaps           = id type domain reason description score status jobId chatId ts
+      ledger_entries = id ledgerType category msg meta chatUrl account jobId ts
+      timeline       = id channel personId eventType payload ts
+      jobs           = id provider command prompt content status response error ts
+      downloads      = id filename href chatUrl chatId account jobId ts
+      pa_sessions    = id jobId chatId tokens pauses entropy hypotheses ts
+      settings       = key value updatedTs
+    }
+  }
+
+  memory_tiers {
+    hot  = { store = jaa_working_memory   ttl = session   purpose = active_context }
+    warm = { store = memory_index         ttl = 30_days   purpose = retrieval }
+    cold = { store = cortex_memory        ttl = permanent  purpose = long_term }
+  }
+
+  ingest_api {
+    port = 7823
+    route POST /ingest { input type payload source route_to_tier record }
+    route GET  /artifacts { input limit query output artifacts record }
+    route POST /artifacts { insert emit siso record }
+    route GET  /memory { input search limit output memory_index.search record }
+    route POST /memory { insert memory_index record }
+    route GET  /crystals { output crystals record }
+    route GET  /gaps { output gaps record }
+    route GET  /ledger { output ledger_entries record }
+    route GET  /files { output file_list record }
+    route POST /upload { input file insert files emit siso record }
+    route GET  /status { output jaa.counts record }
+    route GET  /sse { output live_tail all_tables record }
+  }
+
+  crystal_distiller {
+    intent = distill_hot_memory_to_crystals_on_threshold
+
+    interval = 30000
+    sigma observe memory_index.confidence
+    if confidence >= 0.7 and not yet_crystallized
+      insert crystals { content pattern_type source_ids confidence state = candidate }
+      emit siso "memory.crystal.formed"
+      record
+
+    on crystal.promote { update crystals state = active emit siso record }
+    on crystal.decay   { update crystals state = decayed record }
+  }
+
+  memory_types {
+    ARTIFACT   = code_block or file captured from agent response
+    LEDGER     = upgrade idea event gap system — dual ledger
+    SESSION    = named_conversation_with_arc
+    GAP        = missing_structure detected by gaphunter
+    DOWNLOAD   = file_intercepted from agent response
+    PA_SESSION = prompt_archaeology waveform + hypotheses
+    JOB        = agent_call lifecycle record
+    CRYSTAL    = distilled_recurring_pattern from memory_index
+  }
+}

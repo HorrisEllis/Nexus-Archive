@@ -1,0 +1,145 @@
+// cockpit.eg — UI projection of CLI. SISOKernel + Bayesian trust + pipeline.
+// UUID: cockpit-v1-0-0
+// Source: Version_full/forge-core.js + forge-pipeline.js + forge.js
+// forge-* IS cockpit. Rename mapping per NEXUS-GUARDIAN.spec.
+
+compartment "cockpit" {
+  id      = cockpit-001
+  uuid    = cockpit-001-xxxx
+  version = 10.0.0
+  intent  = ui_projection_of_cli_compiler_test_env_snapshot_system
+
+  connects_to = 3748
+  serves_from = 7820/cockpit
+
+  invariant ME2 {
+    axiom GRAMMAR_APPLIES_TO_ITSELF
+    cli_commands_exist_before_ui_renders_them = true
+    replace_ui_without_touching_cli = true
+  }
+
+  siso_kernel {
+    // Source: forge-core.js SISOKernel class
+    gates     = Map signature → fn
+    listeners = Map type → Set<fn>
+    history   = Ring 500
+    tick      = monotonic
+
+    on gate.register { if collision { gap "gate-collision" { pressure = 1.0 } } record }
+    on emit  { enqueue drain_depth_first dispatch_gates_then_listeners record }
+    on sample { output { tick gates listeners history.slice(-20) } record }
+  }
+
+  jaa_store {
+    // Source: forge-core.js JAAStore — IndexedDB browser or JSONL Node
+    backend = indexeddb fallback = jsonl
+    tables  = [
+      ideas specs gaps snapshots links pipelines pipeline_runs pipeline_steps
+      conditions schedules workflow_runs api_configs webhooks variables
+      trust_scores snr_records event_log artifacts memory_index
+      tension_records ci_runs snr_samples forge_sessions seam_chunks seam_programs
+    ]
+  }
+
+  bayesian_trust {
+    // Source: forge-core.js TrustEngine — Beta(α,β) per source
+    prior          = Beta(1 1)
+    pass_update    = alpha += 1
+    fail_update    = beta  += 1
+    score          = alpha / (alpha + beta)
+    wilson_lower   = routing weight surface
+    decay_halflife = 7_days
+    cold_start     = 0.2
+
+    on record(sourceId passed) {
+      update prior
+      insert jaa.snr_records { sourceId passed posterior = score }
+      upsert jaa.trust_scores { uuid = sourceId alpha beta score wilsonLower }
+      record
+    }
+  }
+
+  pipeline_engine {
+    // Source: forge-pipeline.js — 14 node types + SEAM evaluator
+    node_types = [
+      trigger condition transform api_call agent_call store emit
+      loop delay seam_compile gap notify merge fork
+    ]
+
+    condition_evaluator {
+      // Safe expression parser — no eval()
+      operators  = [ === !== < > <= >= && || ! ]
+      ternary    = true
+      dot_paths  = true
+      methods    = [ includes startsWith endsWith indexOf length toString trim ]
+      max_expr   = 2048
+      max_depth  = 32
+    }
+
+    on run(pipelineId payload) {
+      insert jaa.pipeline_runs { pipelineId status = running }
+      for each node in pipeline
+        try
+          result = execute_node(node context)
+          insert jaa.pipeline_steps { nodeId status = complete output = result }
+          emit "pipeline.node.complete"
+          record
+        else
+          insert jaa.pipeline_steps { nodeId status = failed }
+          if not continueOnError { break record }
+      update jaa.pipeline_runs status = complete
+      emit "pipeline.complete"
+      record
+    }
+  }
+
+  forge_engine {
+    // Source: forge.js — AI self-modification engine
+    routing_priority = [ guardian_http_7820 ollama_11434 fail_loud ]
+
+    on forgeModule(src instruction opts) {
+      insert jaa.forge_sessions { module instruction strategy = full_rewrite src }
+      route = select_route
+      prompt = system_nucleus + instruction + src
+      stream = route.inference(prompt timeout = 120000)
+      validate_no_stubs(stream)
+      update jaa.forge_sessions { output = stream durationMs }
+      record
+    }
+
+    on forgeGate(description opts) {
+      prompt = "Generate SISO gate for: " + description
+      stream = ollama.inference(prompt)
+      output stream.gate_fn
+      record
+    }
+  }
+
+  panels {
+    mode = [ DEEP FAST AUDIT CREATIVE EMERGENCY SILENT ]
+
+    panel-cognition  = cobalt.nodes + kernel events
+    panel-context    = memory.context + open_gaps
+    panel-health     = health + guardian.status + relay.status
+    panel-cobalt     = cobalt.registry
+    panel-spatial    = compartments_map
+    panel-map        = system_topology
+    panel-ia         = intent_graph + routing_decisions
+    panel-tools      = CLI_passthrough + command_palette
+
+    topbar {
+      logo          = "NEXUS ⬡ v10"
+      modes         = mode
+      nexus_pill    = connected_to_3748
+      guardian_pill = connected_to_7820
+      sigma_ring    = live_sigma_score
+    }
+  }
+
+  seam CLI_UI_CONTRACT {
+    version = 1.0.0
+    hotswap = true
+    between = cli and cockpit_ui
+    sync    = sse_all_cli_events_to_ui
+  }
+}

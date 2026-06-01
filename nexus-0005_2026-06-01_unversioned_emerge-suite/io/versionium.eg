@@ -1,0 +1,104 @@
+// versionium.eg — Causal version chain + sigma-triggered auto-commit
+// UUID: versionium-v1-0-0
+// Source: Nexus-Cortex/versionium/index.js + causality.js
+// Reads shape_samples for sigma. Auto-commits on threshold. Content-addressed.
+
+compartment "versionium" {
+  id      = versionium-001
+  uuid    = versionium-001-xxxx
+  version = 1.0.0
+  intent  = causal_version_chain_sigma_triggered_content_addressed
+
+  sigma_threshold = 0.7
+  poll_interval   = 3000
+
+  jaa_tables = [
+    versionium_commits
+    versionium_branches
+    versionium_file_index
+    versionium_calendar
+    versionium_objects
+    shape_samples
+    artifacts
+    event_log
+  ]
+
+  component "auto-commit" {
+    interval = 3000
+    sigma observe jaa.shape_samples
+
+    on sigma_spike(sigma > threshold and not committed) {
+      commitId = "vtm-" + uid.short
+      branch   = "main"
+      parentId = jaa.versionium_branches.find(branch = main).head
+
+      objects = capture_current_artifacts(fileStore fileRefs)
+      insert jaa.versionium_commits {
+        uuid     = commitId
+        message  = "auto-commit σ=" + sigma
+        branch
+        parentHash = parentId
+        objects
+        ts       = now
+      }
+      insert jaa.versionium_calendar { uuid = uid commitUuid = commitId label = regime }
+      update jaa.versionium_branches set head = commitId where branch = main
+      update jaa.shape_samples set committed = true where uuid = sigma_spike.uuid
+      emit "versionium.committed" { commitId parentId sigma }
+      record
+    }
+  }
+
+  component "causality" {
+    // Source: versionium/causality.js
+    on chain(commitId depth) {
+      traverse parents depth times
+      output ancestor_chain
+      record
+    }
+
+    on diff(commitA commitB) {
+      objects_a = resolve(commitA)
+      objects_b = resolve(commitB)
+      output delta(objects_a objects_b)
+      record
+    }
+
+    on rollback(commitId) {
+      insert jaa.versionium_commits {
+        message    = "rollback to " + commitId
+        branch     = main
+        parentHash = current_head
+      }
+      emit "versionium.rolled_back" { to = commitId }
+      record
+    }
+  }
+
+  component "viewer" {
+    intent = timeline_ui_with_spec_parser_integration
+
+    on render {
+      commits = jaa.versionium_commits.tail(50)
+      branches = jaa.versionium_branches.all
+      calendar = jaa.versionium_calendar.tail(30)
+      output timeline_view { commits branches calendar }
+      record
+    }
+
+    on spec.parse(text) {
+      // Parses .spec or .emerge files into chunks for delivery
+      chunks = spec_parser.parse(text splitOn = heading maxSize = 3000)
+      output chunks
+      emit "versionium.spec.parsed" { total = chunks.length }
+      record
+    }
+  }
+
+  loop VERSIONIUM_LOOP {
+    interval = 3000
+    sigma observe jaa.shape_samples
+    on spike { auto_commit record }
+    on spec.built { snapshot emit push.complete record }
+  }
+}
