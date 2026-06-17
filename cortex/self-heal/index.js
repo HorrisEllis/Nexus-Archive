@@ -216,7 +216,12 @@ async function _forgeGap(gap) {
 }
 
 function _applyPatch(modAbsPath, modRelPath, newSrc) {
-  if (!APPLY_PATCH)             return { applied: false, reason: 'apply_disabled — set NEXUS_FORGE_APPLY=true' };
+  if (!APPLY_PATCH) {
+    // §APPLY-DISABLED: audit mode. Log once per gap, don't escalate gap loop.
+    _toCortex?.('self-heal.apply_disabled', { gapUuid: gap?.uuid, gapType: gap?.type,
+      note: 'Set NEXUS_FORGE_APPLY=true to enable live patching' });
+    return { applied: false, reason: 'apply_disabled — set NEXUS_FORGE_APPLY=true' };
+  }
   const tier = _resolveTier(modRelPath);
 
   // §TRUST-08: tier-based dispatch
@@ -305,7 +310,7 @@ async function _tick() {
 
         if (!result.ok) {
           jaaDB.update('gaps', gap.uuid, {
-            status: attempts >= MAX_ATTEMPTS ? 'human_required' : 'forge_failed',
+            status: !APPLY_PATCH ? 'apply_disabled' : attempts >= MAX_ATTEMPTS ? 'human_required' : 'forge_failed',
             forgeReason: result.reason,
           });
 
@@ -327,7 +332,7 @@ async function _tick() {
             });
           }
           jaaDB.insert('event_log', {
-            uuid: uid(), type: 'self-heal.forge_failed',
+            uuid: uid(), type: APPLY_PATCH ? 'self-heal.forge_failed' : 'self-heal.apply_disabled',
             payload: { gapUuid: gap.uuid, gapType: gap.type, reason: result.reason, attempts },
             source: MODULE_ID, causedBy: gap.uuid, ts: Date.now(),
           });

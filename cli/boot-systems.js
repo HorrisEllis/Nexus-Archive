@@ -180,6 +180,11 @@ async function _bootSystems(ledgerWrite, orchPort, connectBridgeSSE, _eventLedge
       systemId: 'emerge',    port: 4242, healthPath: '/status',
       label: 'Emerge IDE',   cmd: path.join(ROOT, 'emerge-ide.js'),                  args: [],
     },
+    {
+      systemId: 'diagnostic', port: 7825, healthPath: '/status',
+      label: 'Diagnostic',    cmd: path.join(ROOT, 'service', 'nexus-diagnostic.js'), args: [],
+      // §MONITOR: boots last — needs all other systems running to monitor them
+    },
   ];
 
   console.log('\n\x1b[1m\x1b[36m── Boot-systems: starting sub-systems one by one ──\x1b[0m');

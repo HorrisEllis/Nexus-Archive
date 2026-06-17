@@ -394,11 +394,14 @@ select option{background:#111}
   position:fixed;inset:0;z-index:9000;
   background:rgba(0,0,6,.97);
   display:none;
-  align-items:center;justify-content:center;
   backdrop-filter:blur(4px);
-  transition:opacity .35s ease;
+  transition:opacity .25s ease;
 }
-#mode-overlay.open{display:flex}
+#mode-overlay.open{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 #mode-overlay.hidden{opacity:0;pointer-events:none}
 #mode-inner{
   display:flex;flex-direction:column;align-items:center;gap:40px;
@@ -637,7 +640,7 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
 <!-- ══════════════════════════════════════════════════════════════════
      MODE SELECTOR OVERLAY
      ══════════════════════════════════════════════════════════════════ -->
-<div id="mode-overlay">
+<div id="mode-overlay" onclick="if(event.target===this)closeModeSelector()">
   <div id="mode-inner">
     <div class="mode-eyebrow">NEXUS · SELECT OPERATING MODE</div>
     <div class="mode-title">Choose your agent</div>
@@ -1171,6 +1174,7 @@ document.addEventListener('keydown',e=>{
   if(e.key>='1'&&e.key<='7')tune(parseInt(e.key)-1);
   if(e.key==='m'||e.key==='M')toggleMenu();
   if(e.key==='Escape'&&menuOpen)toggleMenu();
+  if(e.key==='Escape')closeModeSelector();
   if((e.key==='r'||e.key==='R')&&!menuOpen)openRewind();
 });
 
@@ -1812,19 +1816,19 @@ function selectMode(mode, goToSuite=true) {
   _injectAgentSuiteTab();
   // Only go to suite if user explicitly chose a mode
   if (goToSuite) _bootAgentSuite(mode);
-  // Log to cortex
-  try {
-    fetch('http://127.0.0.1:3748/api/event', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ type:'ui.mode.selected', source:'home-ui',
-        payload:{ mode, provider: MODE_CONFIG[mode]?.provider, ts: Date.now() } })
-    }).catch(()=>{});
-  } catch(_) {}
+  // Log to cortex (§1.2)
+  _logToData('ui.mode.selected', { mode, provider: MODE_CONFIG[mode]?.provider });
 }
 
 function openModeSelector() {
   const ov = document.getElementById('mode-overlay');
   ov.classList.add('open');
+  _logToData('ui.mode-overlay.opened', { ts: Date.now() });
+}
+
+function closeModeSelector() {
+  const ov = document.getElementById('mode-overlay');
+  ov.classList.remove('open');
 }
 
 function _injectAgentSuiteTab() {
@@ -2070,16 +2074,71 @@ function _chunkPrompt(text, maxTokens) {
 })();
 
 
+// ── Failure / event logging ──────────────────────────────────────────────────
+// §1.2 nothing silently fails — all UI errors logged to cortex + local data/
+const _uiLog = [];
+function _logToData(type, payload = {}) {
+  const entry = { type, source: 'home-ui', payload, ts: Date.now() };
+  _uiLog.push(entry);
+  // POST to cortex (fire-and-forget)
+  fetch('http://127.0.0.1:3748/api/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  }).catch(() => {
+    // Cortex offline — store locally in sessionStorage for later replay
+    try {
+      const pending = JSON.parse(sessionStorage.getItem('nexus_ui_log_pending') || '[]');
+      pending.push(entry);
+      if (pending.length > 200) pending.splice(0, pending.length - 200);
+      sessionStorage.setItem('nexus_ui_log_pending', JSON.stringify(pending));
+    } catch(_) {}
+  });
+}
+
+// Replay pending logs when cortex comes back online
+async function _replayPendingLogs() {
+  try {
+    const raw = sessionStorage.getItem('nexus_ui_log_pending');
+    if (!raw) return;
+    const pending = JSON.parse(raw);
+    if (!pending.length) return;
+    // Test cortex is alive
+    const hc = await fetch('http://127.0.0.1:3748/health', { signal: AbortSignal.timeout(1000) });
+    if (!hc.ok) return;
+    // Replay
+    for (const entry of pending) {
+      await fetch('http://127.0.0.1:3748/api/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...entry, replayed: true }),
+      }).catch(() => {});
+    }
+    sessionStorage.removeItem('nexus_ui_log_pending');
+    console.log(`[home-ui] replayed ${pending.length} pending log entries to cortex`);
+  } catch(_) {}
+}
+
+// Global error boundary — catch uncaught UI errors
+window.addEventListener('error', e => {
+  _logToData('ui.error', {
+    message: e.message,
+    filename: e.filename?.replace(/.*nexus-071\//,''),
+    lineno: e.lineno,
+    colno: e.colno,
+  });
+});
+
+window.addEventListener('unhandledrejection', e => {
+  _logToData('ui.unhandled-rejection', {
+    reason: String(e.reason).slice(0, 200),
+  });
+});
+
 // ── Forge Shell tile ─────────────────────────────────────────────────────────
 function openForgeShell() {
-  // Log navigation to cortex
-  try {
-    fetch('http://127.0.0.1:3748/api/event', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ type:'ui.navigation', source:'home-ui',
-        payload:{ target:'forge-shell', ts:Date.now() } })
-    }).catch(()=>{});
-  } catch(_) {}
+  // Log navigation (§1.2)
+  _logToData('ui.navigation', { target: 'forge-shell' });
   window.open('/ui/forge-shell.html','_blank');
 }
 
@@ -2112,7 +2171,9 @@ setInterval(pollHealth,15000);
 setInterval(gdLoadJobs,8000); // poll jobs every 8s for live updates
 setInterval(gdLoadProvs,12000); // poll providers
 setInterval(updateForgeTile,10000); // update forge+agent tiles
+setInterval(_replayPendingLogs,30000); // replay buffered logs when cortex recovers
 updateForgeTile(); // immediate first pass
+_logToData('ui.boot', { version:'1.1.0', ts: Date.now() });
 connectSSE();
 </script>
 </body>

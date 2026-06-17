@@ -219,6 +219,20 @@ async function boot() {
 
     try {
       // ── Health ──────────────────────────────────────────────────────────
+      if (method === 'GET' && path_ === '/api/contract') {
+        return json(res, 200, { ok: true, contract: {
+          id: 'architect-v1', version: '3.0.0', system: 'architect', port: PORT,
+          role: 'Constraint-first authoring — hook registry, SNR gate, blueprint engine',
+          health: { method:'GET', path:'/health' },
+          routes: [
+            { method:'GET',  path:'/health' },
+            { method:'GET',  path:'/api/hooks' },
+            { method:'GET',  path:'/api/blueprints' },
+            { method:'GET',  path:'/api/snr' },
+            { method:'POST', path:'/api/hooks' },
+          ],
+        }});
+      }
       if (method === 'GET' && path_ === '/health') {
         return json(res, 200, { ok: true, system: 'architect', port: PORT, version: '3.0.0',
           uptime: process.uptime(), jaa: jaa.stats(),

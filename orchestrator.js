@@ -2019,7 +2019,7 @@ try {
   try {
     const drift = require('./lib/spec-drift');
     const { jaaDB } = require('./cortex/memory/jaa-db');
-    const result = drift.check({ jaaDB, bus: _bus });
+    const result = drift.check({ jaaDB, bus: nexusBus });
     const issues = (result.drifted||[]).length + (result.missing||[]).length;
     if (issues > 0) {
       console.warn('  [spec-drift] ⚠  ' + issues + ' gap(s) — ' + result.summary);

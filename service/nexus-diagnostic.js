@@ -62,16 +62,20 @@ function uid() { return crypto.randomUUID(); }
 
 const SYSTEMS = {
   // §LEDGER-FIX: paths now match flat JSONL written by ledger-writer + jaaDB
-  // data/<system>/<type>.jsonl — no subdirectory, no NDJSON stream wrappers
-  guardian:    { port: 7820, dataDir: 'data/guardian',    healthPath: '/health' },
-  cortex:      { port: 3748, dataDir: 'cortex/data',      healthPath: '/api/health' },
-  idearium:    { port: 4800, dataDir: 'data/idearium',    healthPath: '/api/health' },
-  orchestrator:{ port: 9000, dataDir: 'data/orchestrator',healthPath: '/health' },
-  emerge:      { port: 4242, dataDir: 'data/emerge',      healthPath: '/health' },
-  // §MONITOR-02: added bridge, architect, diagnostic
-  bridge:      { port: 9999, dataDir: 'data/bridge',      healthPath: '/health' },
-  architect:   { port: 3747, dataDir: 'data/architect',   healthPath: '/api/health' },
-  diagnostic:  { port: 7825, dataDir: 'data/diagnostic',  healthPath: '/status' },
+  guardian:    { port: 7820, dataDir: 'data/guardian',    healthPath: '/health',   label: 'Guardian' },
+  cortex:      { port: 3748, dataDir: 'cortex/data',      healthPath: '/api/health', label: 'Cortex' },
+  idearium:    { port: 4800, dataDir: 'data/idearium',    healthPath: '/api/health', label: 'Idearium' },
+  orchestrator:{ port: 9000, dataDir: 'data/orchestrator',healthPath: '/health',   label: 'Orchestrator' },
+  emerge:      { port: 4242, dataDir: 'data/emerge',      healthPath: '/health',   label: 'Emerge' },
+  bridge:      { port: 9999, dataDir: 'data/bridge',      healthPath: '/health',   label: 'Bridge' },
+  architect:   { port: 3747, dataDir: 'data/architect',   healthPath: '/api/health', label: 'Architect' },
+  diagnostic:  { port: 7825, dataDir: 'data/diagnostic',  healthPath: '/status',   label: 'Diagnostic' },
+  // §MONITOR-03: UI surfaces — probed as virtual systems, no dataDir
+  'forge-shell':{ port: 9000, dataDir: 'data/orchestrator', healthPath: '/ui/forge-shell.html',
+    label: 'Forge Shell', virtual: true,
+    // Forge shell is served by orchestrator — it's healthy when orch is healthy
+    // We track it separately to surface in the diagnostic tile
+  },
 };
 
 // ── CLI dispatch ──────────────────────────────────────────────────────────────
@@ -358,6 +362,270 @@ function startService() {
   // Poll every 15 seconds
   pollAll();
   const pollTimer = setInterval(pollAll, 15000);
+
+  // ── Active remediation loop (§DIAG-ACTIVE) ──────────────────────────────────
+  // Runs every 30s. For each offline system: logs gap + writes to data/diagnostic/
+  // For each stuck queue item: attempts unlock.
+  // For syntax errors found in audit: logs with fix suggestion.
+  // Does NOT restart processes (that's orchestrator's job) but fires HEAL_REQUESTED
+  // on the bus so self-heal can attempt forge patching.
+
+  const _remediationLog = path.join(ROOT, 'data/diagnostic/remediation.jsonl');
+  const _offlineSince   = {}; // track how long each system has been offline
+  const _remediatedGaps = new Set(); // don't spam the same gap
+
+  function _logRemediation(entry) {
+    try {
+      fs.mkdirSync(path.join(ROOT, 'data/diagnostic'), { recursive: true });
+      fs.appendFileSync(_remediationLog, JSON.stringify({ ...entry, ts: Date.now() }) + '\n');
+    } catch(_) {}
+    // Also write to cortex
+    http.request({
+      hostname: '127.0.0.1', port: 3748, path: '/api/event', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }, () => {}).on('error', () => {}).end(JSON.stringify({
+      type: 'diagnostic.remediation', source: 'nexus-diagnostic',
+      payload: entry, ts: Date.now(),
+    }));
+  }
+
+  async function remediationScan() {
+    const issues = [];
+
+    // 1. Systems offline — escalate after 30s, emit HEAL_REQUESTED
+    for (const [name, cfg] of Object.entries(SYSTEMS)) {
+      if (name === 'diagnostic') continue; // don't self-report
+      const state = systemState[name] || {};
+      if (!state.online) {
+        if (!_offlineSince[name]) _offlineSince[name] = Date.now();
+        const offlineMs = Date.now() - _offlineSince[name];
+        const gapKey = `offline:${name}`;
+
+        if (offlineMs > 30000 && !_remediatedGaps.has(gapKey)) {
+          _remediatedGaps.add(gapKey);
+          const gap = {
+            type: 'system_offline', system: name, port: cfg.port,
+            severity: 'high', offlineMs,
+            fix: `Start ${name}: node ${name}/boot.js or node service/${name}-service.js`,
+            body: `${name} offline for ${Math.round(offlineMs/1000)}s — :${cfg.port} not responding`,
+          };
+          issues.push(gap);
+          openGaps.set(gapKey, { uuid: uid(), ...gap, status: 'open', detectedAt: Date.now() });
+          broadcast({ type: 'gap.found', gap: openGaps.get(gapKey) });
+
+          // Emit on nexus-bus if available
+          try {
+            const bus = require('../nexus-bus');
+            bus.emit('HEAL_REQUESTED', {
+              gapType: 'system_offline', modulePath: name,
+              body: gap.body, sigma: 0.8,
+              source: 'diagnostic.remediation', ts: Date.now(),
+            });
+          } catch(_) {}
+
+          _logRemediation({ action: 'gap_escalated', ...gap });
+          console.log(`[diagnostic] ⚠  ${name} offline ${Math.round(offlineMs/1000)}s — gap escalated`);
+        }
+      } else {
+        // Came back online — clear
+        if (_offlineSince[name]) {
+          const wasDown = Date.now() - _offlineSince[name];
+          _logRemediation({ action: 'system_recovered', system: name, downMs: wasDown });
+          console.log(`[diagnostic] ✓  ${name} recovered (was down ${Math.round(wasDown/1000)}s)`);
+          delete _offlineSince[name];
+          _remediatedGaps.delete(`offline:${name}`);
+        }
+      }
+    }
+
+    // 2. High friction systems — log and suggest diagnosis
+    for (const [name] of Object.entries(SYSTEMS)) {
+      const state = systemState[name] || {};
+      if (state.friction > 0.7 && state.online) {
+        const gapKey = `friction:${name}:${Math.floor(Date.now()/60000)}`; // one per minute
+        if (!_remediatedGaps.has(gapKey)) {
+          _remediatedGaps.add(gapKey);
+          _logRemediation({
+            action: 'high_friction_detected',
+            system: name,
+            friction: state.friction,
+            sigma: state.sigma,
+            fix: `node cli/diagnose.js ${name}`,
+          });
+          console.log(`[diagnostic] ⚠  ${name} friction=${state.friction?.toFixed(3)} — logged`);
+        }
+      }
+    }
+
+    // 3. Syntax check on boot errors written to data/diagnostic/
+    // Only run every 5 minutes to avoid performance hit
+    if (!remediationScan._lastSyntax || Date.now() - remediationScan._lastSyntax > 300000) {
+      remediationScan._lastSyntax = Date.now();
+      const { spawnSync } = require('child_process');
+      const criticalFiles = [
+        'orchestrator.js', 'lib/ncp.js', 'lib/request-handler.js',
+        'cortex/boot.js', 'guardian/server.js', 'lib/intent-classifier.js',
+      ];
+      for (const file of criticalFiles) {
+        const fp = path.join(ROOT, file);
+        if (!fs.existsSync(fp)) continue;
+        const r = spawnSync('node', ['--check', fp], { encoding: 'utf8', timeout: 5000 });
+        if (r.status !== 0) {
+          const errLine = (r.stderr || '').split('\n').slice(0,2).join(' ');
+          const gapKey = `syntax:${file}`;
+          if (!_remediatedGaps.has(gapKey)) {
+            _remediatedGaps.add(gapKey);
+            _logRemediation({ action: 'syntax_error', file, error: errLine, severity: 'critical' });
+            console.log(`[diagnostic] ✗  SYNTAX: ${file} — ${errLine.slice(0,80)}`);
+          }
+        }
+      }
+    }
+
+    // 4. Cortex gap load — pull open gaps and re-broadcast any untracked ones
+    try {
+      await new Promise((resolve) => {
+        const req = http.get('http://127.0.0.1:3748/api/gaps?status=open&n=20',
+          { timeout: 2000 }, res => {
+          let b = ''; res.on('data', d => b += d);
+          res.on('end', () => {
+            try {
+              const d = JSON.parse(b);
+              const gaps = Array.isArray(d) ? d : (d.gaps || d.rows || []);
+              for (const g of gaps) {
+                if (!openGaps.has(g.uuid)) {
+                  openGaps.set(g.uuid, g);
+                  broadcast({ type: 'gap.found', gap: g, source: 'cortex_sync', ts: Date.now() });
+                }
+              }
+            } catch {}
+            resolve();
+          });
+        });
+        req.on('error', () => resolve());
+        req.on('timeout', () => { req.destroy(); resolve(); });
+      });
+    } catch(_) {}
+
+    // 5. Forge Shell availability check — it's a UI, not a service
+    // Healthy when orchestrator is healthy and the file exists
+    const forgeFile = path.join(ROOT, 'ui', 'forge-shell.html');
+    const forgeShellExists = fs.existsSync(forgeFile);
+    const orchState = systemState['orchestrator'] || {};
+    const forgeHealthy = forgeShellExists && orchState.online;
+    if (!forgeHealthy) {
+      const gapKey = 'forge-shell:unavailable';
+      if (!_remediatedGaps.has(gapKey)) {
+        _remediatedGaps.add(gapKey);
+        const reason = !forgeShellExists ? 'ui/forge-shell.html missing' : 'orchestrator offline';
+        _logRemediation({ action: 'forge_shell_unavailable', reason, fix: forgeShellExists ? 'Start orchestrator' : 'Deploy ui/forge-shell.html' });
+        console.log(`[diagnostic] ⚠  forge-shell unavailable — ${reason}`);
+      }
+    } else {
+      _remediatedGaps.delete('forge-shell:unavailable');
+    }
+
+    // 6. Run escalation for any high-severity gaps that exceeded safe-fix threshold
+    await _escalateHighSeverityGaps();
+
+    return issues;
+  }
+
+  // ── Escalation bridge — calls escalation ladder for persistent gaps ──────────
+  const _escalationCooldown = new Map(); // gapKey → last escalated ts
+  async function _escalateHighSeverityGaps() {
+    // Pull open high-severity gaps from cortex
+    let gaps = [];
+    try {
+      await new Promise(resolve => {
+        const req = http.get('http://127.0.0.1:3748/api/gaps?status=open&severity=high&n=10',
+          { timeout: 2000 }, res => {
+          let b = ''; res.on('data', d => b += d);
+          res.on('end', () => {
+            try { const d = JSON.parse(b); gaps = Array.isArray(d) ? d : (d.gaps || d.rows || []); } catch {}
+            resolve();
+          });
+        });
+        req.on('error', () => resolve());
+        req.on('timeout', () => { req.destroy(); resolve(); });
+      });
+    } catch(_) {}
+
+    for (const gap of gaps) {
+      // Skip gaps already escalated in the last 5 minutes
+      const lastEsc = _escalationCooldown.get(gap.uuid) || 0;
+      if (Date.now() - lastEsc < 300000) continue;
+
+      // Phase 1: Try RAID routing first — let it decide the best agent
+      let raidDecision = null;
+      try {
+        await new Promise(resolve => {
+          const req = http.get(
+            `http://127.0.0.1:3748/api/raid/decide?intent=${encodeURIComponent(gap.type + ' ' + (gap.path || ''))}`,
+            { timeout: 2000 }, res => {
+            let b = ''; res.on('data', d => b += d);
+            res.on('end', () => {
+              try { raidDecision = JSON.parse(b); } catch {}
+              resolve();
+            });
+          });
+          req.on('error', () => resolve());
+          req.on('timeout', () => { req.destroy(); resolve(); });
+        });
+      } catch(_) {}
+
+      // Phase 2: Dispatch to guardian if RAID has a decision
+      let guardianDispatched = false;
+      if (raidDecision?.agent) {
+        const jobPayload = JSON.stringify({
+          command:  'diagnose_and_repair',
+          provider: raidDecision.agent,
+          prompt:   `NEXUS DIAGNOSTIC ESCALATION\nGap: ${gap.type}\nPath: ${gap.path || '?'}\nBody: ${(gap.body || '').slice(0, 200)}\nSeverity: ${gap.severity}\nAttempts: ${gap.attempts || 0}\n\nAnalyse this gap, identify root cause, propose a concrete fix.`,
+          meta: { gapUuid: gap.uuid, gapType: gap.type, source: 'diagnostic.escalation', raidAgent: raidDecision.agent },
+        });
+
+        guardianDispatched = await new Promise(resolve => {
+          const req = http.request({
+            hostname: '127.0.0.1', port: 7820, path: '/command', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(jobPayload) },
+            timeout: 5000,
+          }, res => {
+            let b = ''; res.on('data', d => b += d);
+            res.on('end', () => {
+              try { const d = JSON.parse(b); resolve(d.jobId || d.ok); } catch { resolve(false); }
+            });
+          });
+          req.on('error', () => resolve(false));
+          req.on('timeout', () => { req.destroy(); resolve(false); });
+          req.write(jobPayload); req.end();
+        });
+      }
+
+      // Phase 3: If RAID/guardian failed, use escalation ladder (self-heal)
+      if (!guardianDispatched) {
+        try {
+          const escModule = require('../cortex/self-heal/escalation');
+          await escModule.escalate(gap);
+          _logRemediation({ action: 'escalation_ladder', gapUuid: gap.uuid, gapType: gap.type });
+        } catch(e) {
+          _logRemediation({ action: 'escalation_failed', gapUuid: gap.uuid, error: e.message });
+          console.warn(`[diagnostic] escalation failed for ${gap.uuid}: ${e.message}`);
+        }
+      } else {
+        _logRemediation({ action: 'guardian_dispatched', gapUuid: gap.uuid, gapType: gap.type,
+          agent: raidDecision?.agent, note: 'RAID→Guardian dispatch' });
+        console.log(`[diagnostic] ↗  gap ${gap.uuid.slice(0,8)} dispatched to guardian via ${raidDecision?.agent}`);
+      }
+
+      _escalationCooldown.set(gap.uuid, Date.now());
+    }
+  }
+
+  // Run remediation scan every 30s (staggered from pollAll)
+  setTimeout(() => {
+    remediationScan();
+    setInterval(remediationScan, 30000);
+  }, 15000);
 
   // Live ledger watching — detect new events within milliseconds
   for (const [name, cfg] of Object.entries(SYSTEMS)) {
