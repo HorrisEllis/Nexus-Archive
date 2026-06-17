@@ -1214,7 +1214,7 @@ async function loadCFR() {
 function connectSSE() {
   if (sseConn) { sseConn.close(); }
   try {
-    sseConn = new EventSource(`${ORCH}/events`);
+    sseConn = new EventSource(`${ORCH}/sse`);
     sseConn.onopen = () => termLog('SSE connected to orchestrator', 'ok');
     sseConn.onmessage = e => {
       try {
