@@ -149,7 +149,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
 
 /* CH1: Overview — system grid */
 #ch-overview{padding:60px 70px 80px;overflow:hidden}
-.sys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;height:100%}
+.sys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-content:start}
 @media(max-width:900px){.sys-grid{grid-template-columns:repeat(2,1fr)}}
 .sys-tile{
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
@@ -175,6 +175,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
 .tile-metrics{display:flex;gap:16px;margin-top:4px}
 .tm-val{font-family:'Space Mono',monospace;font-size:18px;font-weight:700}
 .tm-lbl{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+
+/* Forge tile heartbeat */
+@keyframes forge-pulse{0%{opacity:1;text-shadow:0 0 8px #00e5ff}50%{opacity:.4;text-shadow:none}100%{opacity:1;text-shadow:0 0 8px #00e5ff}}
+#forge-heart{animation:forge-pulse 2.4s ease-in-out infinite;color:#00e5ff}
+#tile-forge{border-color:rgba(0,229,255,.12)}
+#tile-forge:hover{border-color:rgba(0,229,255,.3)}
+#tile-agent{border-color:rgba(167,139,250,.1)}
+#tile-agent:hover{border-color:rgba(167,139,250,.3)}
 
 /* CH2: Guardian */
 #ch-guardian{display:flex;flex-direction:column;padding:60px 70px 110px;gap:16px;overflow:hidden}
@@ -385,10 +393,12 @@ select option{background:#111}
 #mode-overlay{
   position:fixed;inset:0;z-index:9000;
   background:rgba(0,0,6,.97);
-  display:flex;align-items:center;justify-content:center;
+  display:none;
+  align-items:center;justify-content:center;
   backdrop-filter:blur(4px);
   transition:opacity .35s ease;
 }
+#mode-overlay.open{display:flex}
 #mode-overlay.hidden{opacity:0;pointer-events:none}
 #mode-inner{
   display:flex;flex-direction:column;align-items:center;gap:40px;
@@ -827,6 +837,29 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
         <div class="tile-head"><span class="tile-icon">⊕</span><span class="tile-port">diagnostics</span><span class="tile-status" id="ts-dg" class="tile-status" style="color:#8890bb">SYSTEM</span></div>
         <div class="tile-name" style="color:#8890bb">Diagnose</div>
         <div class="tile-desc">Live health checks across all systems. Run at any time.</div>
+        <div class="tile-metrics"></div>
+      </div>
+      <div class="sys-tile" onclick="openForgeShell()" id="tile-forge">
+        <div class="tile-head">
+          <span class="tile-icon" id="forge-heart">✦</span>
+          <span class="tile-port">ui/forge-shell</span>
+          <span class="tile-status online" style="color:#00e5ff;background:rgba(0,229,255,.1)">SHELL</span>
+        </div>
+        <div class="tile-name" style="color:#00e5ff">Forge Shell</div>
+        <div class="tile-desc">Sovereign build surface. Phase map, X-ray topology, terminal, gap feed.</div>
+        <div class="tile-metrics">
+          <div><div class="tm-val" id="tm-forge-phase">10/45</div><div class="tm-lbl">Next Phase</div></div>
+          <div><div class="tm-val" id="tm-forge-gaps">—</div><div class="tm-lbl">Open Gaps</div></div>
+        </div>
+      </div>
+      <div class="sys-tile" onclick="openModeSelector()" id="tile-agent">
+        <div class="tile-head">
+          <span class="tile-icon">⇄</span>
+          <span class="tile-port">agent mode</span>
+          <span class="tile-status" id="ts-agent" style="color:#a78bfa;background:rgba(167,139,250,.1);padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700">—</span>
+        </div>
+        <div class="tile-name" id="tile-agent-name" style="color:#a78bfa">Agent</div>
+        <div class="tile-desc" id="tile-agent-desc">Select operating mode — Orchestrator, Claude, or ChatGPT.</div>
         <div class="tile-metrics"></div>
       </div>
     </div>
@@ -1753,28 +1786,45 @@ let _sessionTokens = 0;
 let _sessionChunks = 0;
 let _activeMode = null;
 
-function selectMode(mode) {
+function selectMode(mode, goToSuite=true) {
   _activeMode = mode;
   localStorage.setItem('nexus_mode', mode);
-  // Hide overlay
+  // Close overlay
   const ov = document.getElementById('mode-overlay');
-  ov.classList.add('hidden');
-  setTimeout(() => ov.style.display = 'none', 400);
-  // Apply to body
+  ov.classList.remove('open');
+  // Apply mode to body
   document.body.setAttribute('data-mode', mode);
   // Update menu badge
   const ind = document.getElementById('mode-indicator');
-  if (ind) ind.textContent = MODE_CONFIG[mode].badge;
-  // Boot agent suite channel
-  _bootAgentSuite(mode);
-  // Ensure agent suite channel is in CH_META and rail
+  if (ind) { ind.textContent = MODE_CONFIG[mode].badge; ind.style.display='inline'; }
+  // Update agent tile if present
+  const agentTile = document.getElementById('tile-agent');
+  if (agentTile) {
+    const cfg = MODE_CONFIG[mode];
+    const nameEl = agentTile.querySelector('.tile-name');
+    if (nameEl) { nameEl.textContent = cfg.name; nameEl.style.color = cfg.color; }
+    const descEl = agentTile.querySelector('.tile-desc');
+    if (descEl) descEl.textContent = cfg.sub.split('·').slice(0,2).join('·').trim();
+    const iconEl = agentTile.querySelector('.tile-icon');
+    if (iconEl) iconEl.textContent = cfg.icon;
+  }
+  // Inject rail tab (silent — don't navigate)
   _injectAgentSuiteTab();
+  // Only go to suite if user explicitly chose a mode
+  if (goToSuite) _bootAgentSuite(mode);
+  // Log to cortex
+  try {
+    fetch('http://127.0.0.1:3748/api/event', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ type:'ui.mode.selected', source:'home-ui',
+        payload:{ mode, provider: MODE_CONFIG[mode]?.provider, ts: Date.now() } })
+    }).catch(()=>{});
+  } catch(_) {}
 }
 
 function openModeSelector() {
   const ov = document.getElementById('mode-overlay');
-  ov.style.display = 'flex';
-  ov.classList.remove('hidden');
+  ov.classList.add('open');
 }
 
 function _injectAgentSuiteTab() {
@@ -2004,19 +2054,56 @@ function _chunkPrompt(text, maxTokens) {
 
 // ── Boot: check stored mode ───────────────────────────────────────────
 (function initMode() {
-  const stored = localStorage.getItem('nexus_mode');
-  if (stored && MODE_CONFIG[stored]) {
-    selectMode(stored);
-  }
   // Add mode indicator to menu button
   const menuBtn = document.getElementById('menu-btn');
   if (menuBtn) {
     const ind = document.createElement('span');
     ind.id = 'mode-indicator';
+    ind.style.display = 'none';
     menuBtn.appendChild(ind);
+  }
+  // Restore stored mode silently — stay on overview, don't open overlay
+  const stored = localStorage.getItem('nexus_mode');
+  if (stored && MODE_CONFIG[stored]) {
+    selectMode(stored, false); // false = don't navigate to suite
   }
 })();
 
+
+// ── Forge Shell tile ─────────────────────────────────────────────────────────
+function openForgeShell() {
+  // Log navigation to cortex
+  try {
+    fetch('http://127.0.0.1:3748/api/event', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ type:'ui.navigation', source:'home-ui',
+        payload:{ target:'forge-shell', ts:Date.now() } })
+    }).catch(()=>{});
+  } catch(_) {}
+  window.open('/ui/forge-shell.html','_blank');
+}
+
+// Update forge tile metrics on each health poll
+async function updateForgeTile() {
+  try {
+    const gaps = await get(`http://127.0.0.1:3748/api/gaps?status=open`);
+    const gapCount = Array.isArray(gaps) ? gaps.length : (gaps?.gaps?.length ?? '—');
+    const el = document.getElementById('tm-forge-gaps');
+    if (el) el.textContent = gapCount;
+  } catch(_) {}
+  // Agent tile — reflect current mode
+  const agentName = document.getElementById('tile-agent-name');
+  const agentDesc = document.getElementById('tile-agent-desc');
+  const agentStatus = document.getElementById('ts-agent');
+  if (_activeMode && MODE_CONFIG[_activeMode]) {
+    const cfg = MODE_CONFIG[_activeMode];
+    if (agentName) { agentName.textContent = cfg.name; agentName.style.color = cfg.color; }
+    if (agentDesc) agentDesc.textContent = cfg.sub.split('·').slice(0,2).join('·').trim();
+    if (agentStatus) { agentStatus.textContent = cfg.badge; agentStatus.style.color = cfg.color; }
+  } else {
+    if (agentStatus) agentStatus.textContent = 'NONE';
+  }
+}
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 buildDiag();
@@ -2024,6 +2111,8 @@ pollHealth();
 setInterval(pollHealth,15000);
 setInterval(gdLoadJobs,8000); // poll jobs every 8s for live updates
 setInterval(gdLoadProvs,12000); // poll providers
+setInterval(updateForgeTile,10000); // update forge+agent tiles
+updateForgeTile(); // immediate first pass
 connectSSE();
 </script>
 </body>
