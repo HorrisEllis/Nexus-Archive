@@ -725,8 +725,9 @@ async function diagIdearium() {
       } catch { return false; }
     }],
     ['ESM: idearium/core loads',                 () => {
+      const corePath = path.join(ROOT, 'idearium', 'core', 'index.js').replace(/\\/g, '/');
       const r = spawnSync('node',['--input-type=module'],{
-        input: "import '/tmp/organize/nexus-final/idearium/core/index.js'; console.log('ok');",
+        input: `import '${corePath}'; console.log('ok');`,
         encoding:'utf8', timeout:5000,
       });
       return r.stdout.includes('ok');

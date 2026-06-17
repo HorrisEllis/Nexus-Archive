@@ -60,6 +60,11 @@ const IO_DIR = path.join(__dirname, 'io');
 
 // ── SISO Bus ──────────────────────────────────────────────────────────────────
 const bus            = new Bus();
+// ── Event ring buffer (replaces bus.log() which Bus doesn't implement) ────────
+const _busLog = [];
+const BUS_LOG_MAX = 200;
+bus.onAny(ev => { _busLog.push(ev); if (_busLog.length > BUS_LOG_MAX) _busLog.shift(); });
+function busLogTail(n) { return _busLog.slice(-n); }
 const compilerStream = bus.stream('compiler');
 const ioStream       = bus.stream('io');
 const llmStream      = bus.stream('llm');
@@ -159,7 +164,7 @@ compilerStream.register(new Gate('compiler.snapshot', () => {
     ts:      Date.now(),
     regime:  'stable',
     schema:  { version: kernel.SCHEMA.version, keywords: kernel.SCHEMA.keywords.size },
-    log:     bus.log().tail(30),
+    log:     busLogTail(30),
     streams: bus.streams(),
   }));
 }));
@@ -227,7 +232,7 @@ const server = http.createServer((req, res) => {
 
   if (url==='/status') {
     res.writeHead(200,{'Content-Type':'application/json'});
-    return res.end(JSON.stringify({ streams: bus.streams(), log: bus.log().tail(20) }));
+    return res.end(JSON.stringify({ streams: bus.streams(), log: busLogTail(20) }));
   }
 
   if (url==='/ollama-status') {
