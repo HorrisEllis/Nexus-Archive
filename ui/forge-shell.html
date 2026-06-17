@@ -646,62 +646,53 @@ const GUARDIAN = 'http://127.0.0.1:7820';
 const CORTEX = 'http://127.0.0.1:3748';
 const DIAG = 'http://127.0.0.1:7825';
 
-// ── Phase map (embedded — truth from the spec, updated each session) ──
+// ── Phase map (v0.7.5 — from nexus-phase-map.md, 2026-06-17) ────────────────
 const PHASES = [
   // COMPLETE
-  { n:0,  name:'Boot Foundation',         status:'complete', desc:'Services boot, SISO wired, bus live.' },
-  { n:1,  name:'Memory Tiers',            status:'complete', desc:'JAA three-tier memory — working/short/long with decay.' },
-  { n:2,  name:'CFR Field',               status:'complete', desc:'Coherence-friction-resonance field + sigma scorer.' },
-  { n:3,  name:'Contracts',               status:'complete', desc:'SEAM pipeline, system contracts, interaction contract.' },
-  { n:4,  name:'RAID v4',                 status:'complete', desc:'Routing and agent intelligence dispatcher.' },
-  { n:5,  name:'Grammar Engine',          status:'complete', desc:'Trie resolve, complete, parseParams (16/16).' },
-  { n:6,  name:'CLI Runtime',             status:'complete', desc:'Qwen 0.5b reasoning layer, nexus REPL.' },
-  { n:7,  name:'Liminal Organ',           status:'complete', desc:'Five zones, interstitial spaces, gap seeding.' },
-  { n:8,  name:'SNR Filter on RAID',      status:'complete', desc:'Signal/noise ratio gate before every dispatch.' },
-  { n:'8.5', name:'Intelligence-RAID Bridge', status:'complete', desc:'BEP patterns feed RAID weight table.' },
-  { n:'8.6', name:'Replay Engine',        status:'complete', desc:'16/16 tests. Deterministic event replay.' },
-  { n:9,  name:'Request Handler',         status:'complete', desc:'Constitutional choke point. Phase A/B/C/D pipeline.' },
-  { n:22, name:'Divergence Watcher',      status:'complete', desc:'σ polled 5s, blackbox recorder, .nex v1.1.' },
-  { n:23, name:'Stale Module Gap',        status:'complete', desc:'Named, typed, severity-graded gap types.' },
-  { n:24, name:'TV Shell: Floating Menu', status:'complete', desc:'Six bugs fixed. Bus.onAny wired. Cortex logging.' },
-  { n:45, name:'Intent Classifier',       status:'complete', desc:'RAID entry gate. INTENT object. Risk levels. Freeze.' },
-  { n:46, name:'Case Library',            status:'complete', desc:'Queryable past executions. Working memory seed.' },
-  { n:25, name:'RAID Compartment Engine', status:'complete', desc:'Constraint frame. Adversary suite. Rewind/delete.' },
-  { n:26, name:'Adversarial Integrity',   status:'complete', desc:'Hash chain on snapshots. Negative crystal promotion.' },
+  { n:'0–9',   name:'Foundation + Organs',        status:'complete', desc:'Seven services online. Memory tiers, intelligence core, replay engine (16/16), CFR field, contracts, SEAM, self-heal, heartbeat v2, auth RSA, snapshot, Bridge circuit breaker, Builder UI, spec-compiler, RAID v6, grammar engine, liminal space, SNR filter, loop-topology, gap-loop.' },
+  { n:22,      name:'Divergence Watcher',          status:'complete', desc:'σ polled 5s. Fires at ≥0.65 or spike +0.20. 90s cooldown. .nex v1.1.' },
+  { n:23,      name:'Stale Module Gap',             status:'complete', desc:'Gap body: [idearium:4800] stale 47s. Severity by criticality + duration.' },
+  { n:24,      name:'TV Shell: Floating Menu',      status:'complete', desc:'Six bugs fixed. bus.onAny fixed. Cortex event logging wired.' },
+  { n:25,      name:'RAID Compartment Engine',      status:'complete', desc:'Isolated working memory sandbox per action. Constraint frame. Adversary suite (6 classes). PASS→commit delta. FAIL→rewind or delete. Crystallization.', deps:['Phase 25 ✓','Phase 26 ✓'] },
+  { n:26,      name:'Adversarial Integrity Layer',  status:'complete', desc:'File integrity hash chain on Cortex snapshots. Negative crystal promotion. Lattice decay enforced.' },
+  { n:45,      name:'Intent Classifier: RAID Gate', status:'complete', desc:'Every request enters RAID through this gate. INTENT object: uuid, domain, verb, objects, constraints, risk_level, confidence, execution_class, source, raw.', deps:['Phase 25 ✓','request-handler ✓','jaa ✓'], unlocks:['46','31'] },
+  { n:46,      name:'Queryable Case Library',       status:'complete', desc:'Every PASS compartment trace indexed by intent signature. Before spawning: RAID queries case library — known-good traces seed working memory.', deps:['Phase 25 ✓','Phase 45 ✓','jaa ✓'], unlocks:['13 enhanced'] },
   // NEXT
-  { n:10, name:'Constitutional AI',       status:'next',
-    desc:'lib/constitutional-ai.js — goal graph, 4 axioms (USER_AUTONOMY, REVERSIBILITY, TRUTH_OVER_COHERENCE, EXPLAINABILITY), cost analysis, identity kernel (read-only until Phase 11).',
-    deps:['request-handler ✓','gap-loop ✓','jaa ✓'],
-    unlocks:['Phase 11','Phase 12','Phase 13']
-  },
-  // TIER 1 PENDING
-  { n:14, name:'Hot Module Loader',       status:'pending', desc:'Drop→QUARANTINE→PROVE→INTEGRATE→MONITOR (60s).', deps:['bus ✓','jaa ✓','snapshot ✓'], unlocks:['16','28','38'] },
-  { n:15, name:'Grammar Engine Wiring',   status:'pending', desc:'Wire grammar into CLI tab completion, component registry, guardian dispatch.', deps:['grammar-engine ✓'], unlocks:['16','31'] },
-  { n:17, name:'Userscript Heartbeat ♥', status:'pending', desc:'♥ in every pill — snaps red on NCP SSE message.', deps:['userscript-claude ✓'] },
-  { n:27, name:'System State VM',         status:'pending', desc:'NEX-VM/1.0. Every .nex file. Auto-suspend at σ≥0.80. 7-day retention.', deps:['Phase 25 ✓','Phase 26 ✓'], unlocks:['28','30'] },
-  { n:31, name:'Grammar ↔ Intent',        status:'pending', desc:'Grammar pre-filter feeds Phase 45 intent classifier. Feedback loop.', deps:['Phase 45 ✓','grammar-engine ✓'], unlocks:['34'] },
-  { n:32, name:'Per-File Sigma Versioning', status:'pending', desc:'Any file: edit, roll back independently. Binary diffs, last 10 versions.', deps:['snapshot ✓','versionium ✓'] },
-  { n:33, name:'PID Isolation + State Cache', status:'pending', desc:'PID tracked, heartbeat dual-check, Cortex shadow every 30s.', deps:['snapshot ✓','heartbeat ✓'], unlocks:['34'] },
-  { n:35, name:'Quick Notes Sync',         status:'pending', desc:'Type in any pill → all others. 300ms debounce. Tag → Idearium.', deps:['jaa ✓','sse ✓'], unlocks:['37'] },
-  { n:36, name:'Dynamic CLI Commands',     status:'pending', desc:'New commands via compiler path, never direct injection.', deps:['grammar-engine ✓'], unlocks:['37','38'] },
-  { n:40, name:'Component Descriptor',     status:'pending', desc:'Atomic unit of reality. One descriptor → every surface.', deps:['compiler ✓','seam-queue ✓'], unlocks:['40.5','41','42','43','44'] },
+  { n:10,      name:'Constitutional AI',            status:'next',
+    desc:'lib/constitutional-ai.js — goal graph (stability, memory budget, release state, strategic direction), 4 axioms (USER_AUTONOMY, REVERSIBILITY, TRUTH_OVER_COHERENCE, EXPLAINABILITY), cost analysis, identity kernel (read-only until Phase 11).',
+    deps:['request-handler ✓','gap-loop ✓','jaa ✓'], unlocks:['11','12','13'] },
+  // TIER 1 — no pending deps
+  { n:14,      name:'Hot Module Loader',            status:'pending', desc:'Drop→QUARANTINE→PROVE(validateInvariants())→INTEGRATE→MONITOR (60s). Snapshot before integrate (§2.1).', deps:['bus ✓','jaa ✓','snapshot ✓'], unlocks:['16','28','38'] },
+  { n:15,      name:'Grammar Engine Wiring',        status:'pending', desc:'Wire grammar into: CLI tab completion, component-registry grammar signatures, guardian dispatch, request-handler Phase B.', deps:['grammar-engine ✓','component-registry ✓','request-handler ✓','nexus-repl ✓'], unlocks:['16','31'] },
+  { n:17,      name:'Userscript Heartbeat ♥',       status:'pending', desc:'♥ in every pill — snaps red on every NCP SSE message. System tile icons flash in TV shell Overview.', deps:['userscript-claude ✓','guardian/server ✓'] },
+  { n:27,      name:'System State VM (NEX-VM/1.0)', status:'pending', desc:'Every .nex: runtime_state + bus_queue + module_states + resume_plan. Auto-suspend at σ≥0.80. 7-day retention. Resume: dep-ordered restart→replay bus_queue→verify σ<0.50 within 60s.', deps:['Phase 25 ✓','Phase 26 ✓','snapshot ✓','divergence-watcher ✓','replay-engine ✓','jaa ✓'], unlocks:['28','30'] },
+  { n:31,      name:'Grammar ↔ Intent',             status:'pending', desc:'Grammar pre-filter feeds Phase 45 intent classifier. grammar.resolve()→{componentId,params,confidence} handed to intent gate. Feedback loop: case library hit/miss rates feed grammar confidence weights.', deps:['Phase 45 ✓','grammar-engine ✓','raid ✓','snr-filter ✓','request-handler ✓'], unlocks:['34'] },
+  { n:32,      name:'Per-File Sigma Versioning',    status:'pending', desc:'Any file: edit any time, roll back independently. Compressed binary diffs, last 10 versions. Rollback: reverse diffs→write→emit→Hot Loader reloads live.', deps:['snapshot ✓','versionium ✓','jaa ✓','divergence-watcher ✓'] },
+  { n:33,      name:'PID Isolation + State Cache',  status:'pending', desc:'PID tracked in process_registry. Heartbeat: process.kill(pid,0) AND HTTP independently. State cache every 5s, Cortex shadow every 30s. L1 in-memory·L2 JAA·L3 Cortex event_log.', deps:['snapshot ✓','jaa ✓','divergence-watcher ✓','heartbeat ✓'], unlocks:['34'] },
+  { n:35,      name:'Quick Notes Sync',             status:'pending', desc:'Type in any pill → all others + TV shell + CLI. 300ms debounce→POST→SSE broadcast→re-render. Tag→Idearium idea. Grammar: "note <text>"→KNOWLEDGE_CAPTURE.', deps:['jaa ✓','guardian/server ✓','sse ✓','userscripts ✓'], unlocks:['37'] },
+  { n:36,      name:'Dynamic CLI Commands',         status:'pending', desc:'New commands via compiler path only — never direct runtime injection (§6.1·§5.3). Flow: grammarEngine.registerCommand(descriptor)→incremental blueprint recompile→new cli-map.json→grammar tree reads updated map.', deps:['grammar-engine ✓','component-registry ✓','nexus-repl ✓','jaa ✓'], unlocks:['37','38'] },
+  { n:40,      name:'Component Descriptor',         status:'pending', desc:'The descriptor is the source of truth. One descriptor produces every surface: CLI command, grammar tree node, UI button, help text, docs section, SEAM chunk, Blueprint UUID.', deps:['emerge/compiler ✓','seam-queue ✓','component-registry ✓','grammar-engine ✓'], unlocks:['40.5','41','42','43','44'] },
   // TIER 2
-  { n:11, name:'Reflection Engine',        status:'pending', desc:'UNRESOLVED is honest uncertainty. Satisfaction score. Self-model via gap system only.', deps:['Phase 10'] },
-  { n:34, name:'API_SURFACE_FAILURE',      status:'pending', desc:'Focal point for 2+ loops sharing api/probe/health. PID check first.', deps:['Phase 31','Phase 33'] },
-  { n:37, name:'Userscript Rebuild',       status:'pending', desc:'All six scripts rebuilt. Unified pill. Tool intercept.', deps:['Phase 35','Phase 36'], unlocks:['39'] },
-  { n:'40.5', name:'Descriptor-Driven CLI', status:'pending', desc:'CLI derived from capabilities. cli-map.json compiled output.', deps:['Phase 40'], unlocks:['44'] },
-  { n:41, name:'Compiler Knowledge Layer', status:'pending', desc:'Six projections from capabilities[]. T1.5 stage. Zero LLM.', deps:['Phase 40'], unlocks:['42','43'] },
-  // TIER 3+
-  { n:12, name:'User Model',               status:'pending', desc:'Hypotheses not profile. Confidence decays 0.1/day.', deps:['Phase 10','Phase 11'] },
-  { n:42, name:'Blueprint: Loop Closes',   status:'pending', desc:'Single authority chain. Runtime reads what compiler produced.', deps:['Phase 40','Phase 41'], unlocks:['43','44'] },
-  { n:13, name:'Autonomous Loop',          status:'pending', desc:'Ollama as brain. Four required: Goal, Budget, Boundary, Exit.', deps:['Phase 10','Phase 11','Phase 12','Phase 46 ✓'] },
-  { n:28, name:'Build From Inside',        status:'pending', desc:'Three modes: in-process hot patch, spec-first, meta layer.', deps:['Phase 14','Phase 27'] },
-  { n:38, name:'Unified Pipeline',         status:'pending', desc:'IDEA→TENSIONED→PROMOTED→SPEC_COMPILING→INTEGRATED state machine.', deps:['Phase 14','Phase 16','Phase 36'] },
-  { n:44, name:'Resolution Spectrum',      status:'pending', desc:'L0=Exact → L5=Autonomous. max_level per capability.', deps:['Phase 40','Phase 40.5','Phase 42'] },
-  { n:39, name:'Realtime Sync',            status:'pending', desc:'Everything visible everywhere. Not polling. nexus watch.', deps:['Phase 37','Phase 38'] },
-  { n:43, name:'Architect as UI Builder',  status:'pending', desc:'UI is a compiler target. TV shell is a dynamic renderer.', deps:['Phase 40','Phase 41','Phase 42'] },
-  { n:29, name:'Topology View',            status:'pending', desc:'Live directed graph above TV shell. Resolution level per node.', deps:['Phase 15','Phase 28'] },
-  { n:30, name:'Time-Travel Debugging',    status:'pending', desc:'Checkpoint ring, fork timeline, diff in topology view.', deps:['Phase 27','Phase 29'] },
+  { n:11,      name:'Reflection Engine',            status:'pending', desc:'UNRESOLVED is honest uncertainty. Every decision: satisfaction (0–1). satisfaction<0.5 for N decisions→lower RAID score+open loop. Self-model updates via gap system only (§5.3).', deps:['Phase 10','request-handler ✓','raid ✓','gap-loop ✓','jaa ✓'], unlocks:['12','13'] },
+  { n:34,      name:'API_SURFACE_FAILURE Resolution', status:'pending', desc:'Focal point label for 2+ open loops sharing {api,probe,health,degraded,unreachable,port}. Current: architect+emerge seeded with lastSeenAt=0. Leverage>1.5→skip to level 3.5.', deps:['Phase 31','Phase 33','loop-topology ✓','gap-loop ✓','escalation ✓'] },
+  { n:37,      name:'Userscript Rebuild + Tool Intercept', status:'pending', desc:'All six userscripts rebuilt. Unified pill: ♥ NEXUS|Jobs|Notes|Spec|Log|Intel|Opts. Tool intercept: AI outputs tool_use→MutationObserver→extract→POST with seam_ts→grammar→RAID→system handles→result injected back.', deps:['Phase 35','Phase 36','guardian/server ✓','ollama ✓','grammar-engine ✓'], unlocks:['39'] },
+  { n:'40.5',  name:'Descriptor-Driven CLI',        status:'pending', desc:'The CLI is not created. It is derived from capabilities. From one capability→every surface simultaneously: CLI, Grammar, UI, Help, Docs, SEAM. cli-map.json compiled output.', deps:['Phase 40','nexus-repl ✓','grammar-engine ✓','component-registry ✓'], unlocks:['44'] },
+  { n:41,      name:'Compiler Knowledge Layer',     status:'pending', desc:'T1.5 stage. Zero LLM. Six projections from capabilities[]: phase map, manifest, CLI map, UI component map, README, axiom index. Understanding loop closes here.', deps:['Phase 40','emerge/compiler ✓','seam-queue ✓','versionium ✓'], unlocks:['42','43'] },
+  // TIER 3
+  { n:12,      name:'User Model: Hypotheses',       status:'pending', desc:'Every observation: {uuid, claim, confidence, evidence_count}. Nothing stored as fact. Confidence decays 0.1/day. Queryable from request-handler Phase B. Never shared.', deps:['Phase 10','Phase 11','bda ✓','jaa ✓'], unlocks:['13'] },
+  { n:16,      name:'Idearium↔Repo↔Spec prereq',    status:'superseded', desc:'Superseded by Phase 38. Kept as dep node for Phase 38 dep chain.', deps:['Phase 14','Phase 15','idearium ✓','architect ✓','versionium ✓'] },
+  { n:42,      name:'Blueprint: Loop Closes',       status:'pending', desc:'Blueprint assembles all projections into single authority chain. Boot sequence: one read, everything known. §6.1 enforcement point. Blueprint sigma degradation triggers recompile before divergence compounds.', deps:['Phase 40','Phase 41','emerge/compiler ✓','jaa ✓','grammar-engine ✓'], unlocks:['43','44'] },
+  // TIER 4
+  { n:13,      name:'Autonomous Loop: Ollama Brain', status:'pending', desc:'Four required: Goal·Budget (hard limit)·Boundary (written, not inferred)·Exit. gap-loop is the spine. Rewind if σ>0.70. Every action carries {autonomous:true, runId, step, causedBy, intent_uuid}.', deps:['Phase 10','Phase 11','Phase 12','Phase 25 ✓','Phase 46 ✓','gap-loop ✓','ollama ✓','snapshot ✓'] },
+  { n:28,      name:'Build From Inside: Live Editor', status:'pending', desc:'Three modes: (1) in-process hot patch — VM snapshot before any edit; (2) spec-first via Phase 38; (3) meta layer via grammar→request-handler→forge→hot-load.', deps:['Phase 14','Phase 27','emerge-ide ✓','architect ✓'], unlocks:['29'] },
+  { n:38,      name:'Unified Pipeline',             status:'pending', desc:'State machine: IDEA→TENSIONED→PROMOTED→SPEC_COMPILING→HOOKED→PROVING→INTEGRATED→MONITORING→COMPLETE|FAILED→REVERTED. All stages rewindable.', deps:['Phase 14','Phase 16','Phase 36','idearium ✓','architect ✓','emerge-ide ✓'], unlocks:['39'] },
+  { n:44,      name:'Resolution Spectrum Slider',   status:'pending', desc:'L0=Exact→L5=Autonomous. max_level per capability set in .spec, projected into descriptor and cli-map. Adjustable at runtime within descriptor ceiling. Every change logged with blueprintUuid+causedBy.', deps:['Phase 40','Phase 40.5','Phase 42','grammar-engine ✓','raid ✓','request-handler ✓'] },
+  // TIER 5
+  { n:39,      name:'Realtime Sync',                status:'pending', desc:'Everything visible everywhere. Not polling. Synchronized: jobs·specs·SEAM chunks·notes·pipeline transitions·sigma·gaps·file versions. nexus watch·nexus watch jobs·nexus watch sigma·nexus watch <regex>.', deps:['Phase 37','Phase 38','guardian/server ✓','orchestrator/sse ✓','nexus-repl ✓'] },
+  { n:43,      name:'Architect as UI Builder',      status:'pending', desc:'UI is a compiler target. TV shell is a dynamic renderer of whatever the blueprint says exists. New system→new spec→compile→TV shell gains a channel. Zero changes to TV shell HTML.', deps:['Phase 40','Phase 41','Phase 42','architect ✓','grammar-engine ✓','emerge-ide ✓'] },
+  { n:29,      name:'Topology View: Live System Graph', status:'pending', desc:'Live directed graph above TV shell. Nodes=modules (color=σ, size=event volume). Resolution level (Phase 44) shown per node. Gap focal points pulse. Click node→TV shell channel. No polling.', deps:['Phase 15','Phase 16','Phase 28','orchestrator/sse ✓','gap-loop ✓'], unlocks:['30'] },
+  // TIER 6
+  { n:30,      name:'Time-Travel Debugging',        status:'pending', desc:'Checkpoint every 10min. Fork a timeline→second runtime on alternate ports. Diff both in topology view. Jump to moment before divergence→replay forward deterministically.', deps:['Phase 27','Phase 29','replay-engine ✓','divergence-watcher ✓'] },
 ];
 
 // ── System definitions from interaction contract ──────────────────────

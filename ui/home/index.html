@@ -183,6 +183,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
 #tile-forge:hover{border-color:rgba(0,229,255,.3)}
 #tile-agent{border-color:rgba(167,139,250,.1)}
 #tile-agent:hover{border-color:rgba(167,139,250,.3)}
+#tile-blueprint{border-color:rgba(83,74,183,.15)}
+#tile-blueprint:hover{border-color:rgba(83,74,183,.4)}
 
 /* CH2: Guardian */
 #ch-guardian{display:flex;flex-direction:column;padding:60px 70px 110px;gap:16px;overflow:hidden}
@@ -864,6 +866,19 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
         <div class="tile-name" id="tile-agent-name" style="color:#a78bfa">Agent</div>
         <div class="tile-desc" id="tile-agent-desc">Select operating mode — Orchestrator, Claude, or ChatGPT.</div>
         <div class="tile-metrics"></div>
+      </div>
+      <div class="sys-tile" onclick="openBlueprintBuilder()" id="tile-blueprint">
+        <div class="tile-head">
+          <span class="tile-icon">⬡</span>
+          <span class="tile-port">ui/blueprint-builder</span>
+          <span class="tile-status" style="color:#534ab7;background:rgba(83,74,183,.15);padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700">BUILD</span>
+        </div>
+        <div class="tile-name" style="color:#a78bfa">Blueprint Builder</div>
+        <div class="tile-desc">Component descriptor · Phase map · CLI projector · Constraint frame · Export.</div>
+        <div class="tile-metrics">
+          <div><div class="tm-val" id="tm-bp-next">10</div><div class="tm-lbl">Next Phase</div></div>
+          <div><div class="tm-val" id="tm-bp-done">18</div><div class="tm-lbl">Complete</div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2137,9 +2152,13 @@ window.addEventListener('unhandledrejection', e => {
 
 // ── Forge Shell tile ─────────────────────────────────────────────────────────
 function openForgeShell() {
-  // Log navigation (§1.2)
   _logToData('ui.navigation', { target: 'forge-shell' });
   window.open('/ui/forge-shell.html','_blank');
+}
+
+function openBlueprintBuilder() {
+  _logToData('ui.navigation', { target: 'blueprint-builder' });
+  tune(7); // Channel 7 is blueprint — opens in the TV shell iframe
 }
 
 // Update forge tile metrics on each health poll
