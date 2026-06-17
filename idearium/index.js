@@ -301,7 +301,7 @@ export class IdeaOS {
   // ─── Contract ───────────────────────────────────────────────────────────────
 
   contract() {
-    const contractPath = join(__dir, '../schemas/interaction-contract.json');
+    const contractPath = join(__dir, 'schemas/interaction-contract.json');
     if (!existsSync(contractPath)) throw new Error('interaction-contract.json not found');
     return JSON.parse(readFileSync(contractPath, 'utf8'));
   }
