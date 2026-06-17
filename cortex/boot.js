@@ -30,7 +30,7 @@ const claudeAgent    = require('./agents/claude');
 const DATA_DIR  = process.env.NEXUS_DATA_DIR  || path.join(__dirname, 'data');
 const STORE_DIR = process.env.NEXUS_STORE_DIR || path.join(__dirname, 'store');
 const PORT      = parseInt(process.env.NEXUS_PORT || '3748');
-const VERSION   = '3.0.0';
+const VERSION   = '3.1.0';
 
 let jaaDB, fileStore, fileRefs, adminServer;
 
@@ -269,6 +269,10 @@ async function bootAsync() {
         { name: 'heartbeat',    path: './heartbeat/index'   },
         { name: 'behavioral-boundary', path: './behavioral-boundary/index' },
         { name: 'liminal-space',        path: './liminal-space/index'        },
+        // Phase 11 — scores decision_log satisfaction, tracks streaks → gaps,
+        // aggregates RAID feedback read-only. Has its own polling loop (init
+        // starts a setInterval), so it belongs here alongside the other organs.
+        { name: 'reflection',    path: '../lib/reflection'   },
       ];
 
       const pollMs = parseInt(process.env.CORTEX_ORGAN_MS || '15000');
@@ -301,6 +305,41 @@ async function bootAsync() {
       }
       if (failed.length > 0) {
         console.warn(`[cortex/boot] organs degraded: ${failed.map(f=>f.name).join(', ')}`);
+      }
+    },
+  });
+
+  // ── Phase 5.3 SOFT: Phase 10/11 constitutional + reflection wiring check ────
+  // constitutional-ai.js has no background loop — it's a synchronous library
+  // request-handler.js already requires lazily on first use, so there's
+  // nothing to start here. reflection.js DOES have a loop and is started
+  // above via the organs array. This phase only verifies both can reach
+  // their dependencies, the same diagnostic role validateWiring() plays
+  // everywhere else in this codebase (called manually/on-demand, not as a
+  // boot gate) — surfaced here once, at boot, so a broken require shows up
+  // in the boot log instead of silently degrading the first real request.
+  seq.phase({ name:'constitutional.reflection.wiring', type:'SOFT',
+    label:'Phase 10 (constitutional-ai) + Phase 11 (reflection) wiring check',
+    fn: async () => {
+      try {
+        const cai = require('../lib/constitutional-ai');
+        const caiChecks = cai.validateWiring();
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.constitutional_ai.wiring', ts: Date.now(),
+          payload: caiChecks, source: 'boot', causedBy: null,
+        });
+      } catch (e) {
+        console.warn(`[cortex/boot] constitutional-ai wiring check failed: ${e.message}`);
+      }
+      try {
+        const refl = require('../lib/reflection');
+        const reflChecks = refl.validateWiring();
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.reflection.wiring', ts: Date.now(),
+          payload: reflChecks, source: 'boot', causedBy: null,
+        });
+      } catch (e) {
+        console.warn(`[cortex/boot] reflection wiring check failed: ${e.message}`);
       }
     },
   });

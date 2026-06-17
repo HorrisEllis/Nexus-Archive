@@ -25,6 +25,8 @@ const SUITES = [
   'uid.test.js',
   'alk.test.js',
   'healer.test.js',
+  'constitutional-ai.test.js',
+  'reflection.test.js',
 ];
 
 let totalPassed = 0;

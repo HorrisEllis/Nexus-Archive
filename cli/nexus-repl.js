@@ -218,7 +218,14 @@ ${$(C.bold, 'Commands')}
   watch               Live event stream (Ctrl+C to stop)
   ui                  Open orchestrator UI in browser
   help                This message
-  chat <prompt>       Talk to Ollama directly (local, no browser tab needed)
+  chat <prompt>       Talk to qwen2.5-coder:1.5b directly (streaming, no browser tab)
+  ask <prompt>        Alias for chat
+  forge <prompt>      Dispatch a forge job via guardian RAID (picks best provider)
+  heal [gap-uuid]     Trigger HEAL_REQUESTED for a gap (no arg = list open gaps)
+  snapshot [msg]      Take a Cortex snapshot
+  describe <comp>     Show component descriptor from registry
+  caps [filter]       List all grammar commands (tab-completable)
+  phases [filter]     Show NEXUS phase map (v0.7.5)
   context             Show current system context (what Ollama knows about NEXUS)
   intents             Show the intent map — every action with CLI/API/purpose
   artifacts [query]   Search built artifacts before generating new ones
@@ -300,40 +307,270 @@ async function dispatch(line) {
       return;
     }
 
-    case 'chat': {
-      // Direct Ollama chat — no NCP, no browser tab required
+    case 'chat': case 'ask': case 'q': {
+      // Direct Qwen/Ollama streaming chat — no NCP, no browser tab required
+      // Default: qwen2.5-coder:1.5b (the NEXUS reasoning layer)
       const chatPrompt = args.join(' ').trim();
-      if (!chatPrompt) { log('Usage: chat <prompt>'); return; }
-      // Health check first — give a useful error if ollama isn't running
+      if (!chatPrompt) { log('Usage: chat <prompt>  — talks to qwen2.5-coder:1.5b directly'); return; }
       try {
         const healthR = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(3000) });
         if (!healthR.ok) throw new Error('not ok');
         const health = await healthR.json();
-        const models = (health.models || []).map(m => m.name);
+        const models = (health.models || []).map(m => m.name || m.model || '').filter(Boolean);
         if (!models.length) {
-          log('✗ Ollama is running but has no models. Run:\n  ollama pull qwen2.5-coder:1.5b\n  ollama pull mistral:7b-instruct-q4_K_M');
+          log('✗ Ollama running but no models. Run: ollama pull qwen2.5-coder:1.5b');
           return;
         }
-        const model = process.env.RHEON_OLLAMA_MODEL_PRIMARY || 'mistral:7b-instruct-q4_K_M';
-        const hasModel = models.some(m => m.startsWith(model.split(':')[0]));
-        const useModel = hasModel ? model : models[0];
-        if (!hasModel) log(`ℹ Model '${model}' not found — using '${useModel}' (available: ${models.slice(0,3).join(', ')})`);
-        log(`→ Ollama [${useModel}]…`);
+        // Prefer qwen2.5-coder, then any qwen, then mistral, then first available
+        const preferred = process.env.NEXUS_OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
+        const useModel  = models.find(m => m === preferred)
+          || models.find(m => m.startsWith('qwen2.5-coder'))
+          || models.find(m => m.startsWith('qwen'))
+          || models.find(m => m.startsWith('mistral'))
+          || models[0];
+        if (useModel !== preferred) log($(C.dim, `ℹ using '${useModel}' (set NEXUS_OLLAMA_MODEL to override)`));
+        process.stdout.write(`${$(C.dim,'→')} ${$(C.cyan, useModel)}${$(C.dim,' ▸')} `);
+
+        // Streaming — tokens appear as they generate
         const r = await fetch('http://127.0.0.1:11434/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: useModel, prompt: chatPrompt, stream: false }),
-          signal: AbortSignal.timeout(120000),
+          body: JSON.stringify({
+            model: useModel,
+            prompt: chatPrompt,
+            system: 'You are NEXUS — a sovereign AI coding assistant. Be concise, technical, and precise. You operate inside NEXUS v0.7.5.',
+            stream: true,
+          }),
+          signal: AbortSignal.timeout(180000),
         });
-        const d = await r.json();
-        log('\n' + (d.response || '(no response)') + '\n');
+        if (!r.ok) throw new Error('Ollama generate failed: ' + r.status);
+        const reader = r.body.getReader();
+        const dec = new TextDecoder();
+        let totalTokens = 0;
+        console.log(''); // newline after the model name
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = dec.decode(value);
+          for (const line of chunk.split('\n').filter(Boolean)) {
+            try {
+              const d = JSON.parse(line);
+              if (d.response) process.stdout.write(d.response);
+              if (d.eval_count) totalTokens = d.eval_count;
+              if (d.done) {
+                console.log(`\n${$(C.dim, `[${totalTokens} tokens · ${useModel}]`)}`);
+                // Log to cortex
+                fetch('http://127.0.0.1:3748/api/event', {
+                  method: 'POST', headers: {'Content-Type':'application/json'},
+                  body: JSON.stringify({ type:'cli.chat', source:'nexus-repl',
+                    payload:{ model:useModel, tokens:totalTokens, promptLen:chatPrompt.length } })
+                }).catch(()=>{});
+              }
+            } catch(_) {}
+          }
+        }
       } catch(e) {
-        if (e.message.includes('ECONNREFUSED') || e.message.includes('fetch') || e.message.includes('timeout')) {
-          log('✗ Ollama not running. Start it with: ollama serve\n  Then pull a model: ollama pull qwen2.5-coder:1.5b');
+        if (e.message?.includes('ECONNREFUSED') || e.message?.includes('fetch failed')) {
+          log(err('Ollama not running. Start: ollama serve'));
+          log($(C.dim, 'Then pull: ollama pull qwen2.5-coder:1.5b'));
         } else {
-          log('✗ Ollama: ' + e.message);
+          log(err('Ollama: ' + e.message));
         }
       }
+      return;
+    }
+
+    case 'describe': case 'desc': {
+      // describe <component-id> — show component descriptor from grammar/registry
+      const compId = args.join(' ').trim();
+      if (!compId) { log('Usage: describe <component-id>\n  e.g. describe cortex.healer'); return; }
+      try {
+        const r = await fetch(`http://127.0.0.1:${PORTS.orchestrator}/api/components/${encodeURIComponent(compId)}`,
+          { signal: AbortSignal.timeout(3000) });
+        if (!r.ok) throw new Error('not found');
+        const d = await r.json();
+        const comp = d.component || d;
+        console.log(`\n${$(C.bold+C.cyan, comp.componentId || compId)}`);
+        console.log(`  ${$(C.dim,'type')}      ${comp.type || '—'}`);
+        console.log(`  ${$(C.dim,'tier')}      ${comp.tier ?? '—'}`);
+        console.log(`  ${$(C.dim,'maxLevel')}  L${comp.resolution?.max_level ?? comp.maxLevel ?? '—'}`);
+        console.log(`  ${$(C.dim,'axioms')}    ${(comp.axioms||[]).join(', ') || '—'}`);
+        console.log(`  ${$(C.dim,'deps')}      ${(comp.deps||[]).join(', ') || '—'}`);
+        if (comp.capabilities?.length) {
+          console.log(`\n  ${$(C.bold,'capabilities:')}`);
+          for (const cap of comp.capabilities) {
+            console.log(`    ${$(C.green, cap.verb)} ${$(C.cyan, cap.noun)}  ${$(C.dim, cap.description || '')}`);
+          }
+        }
+        console.log('');
+      } catch(e) {
+        // Try grammar engine lookup
+        const g = await loadGrammar();
+        if (g) {
+          const resolved = g.resolve(compId);
+          if (resolved) {
+            log(`Grammar: ${resolved.componentId} (matched: "${resolved.matched}")`);
+          } else {
+            log(err(`Component not found: ${compId}`));
+          }
+        } else {
+          log(err(`Component not found: ${compId} (grammar unavailable)`));
+        }
+      }
+      return;
+    }
+
+    case 'caps': case 'capabilities': {
+      // caps [component] — list capabilities from grammar engine
+      const g = await loadGrammar();
+      if (!g) { log(err('Grammar engine unavailable — is orchestrator running?')); return; }
+      const filter = args.join(' ').toLowerCase();
+      const st = g.status();
+      console.log(`\n${$(C.bold+C.cyan,'Grammar tree')}  ${$(C.dim, st.commandCount + ' commands · ' + st.componentCount + ' components')}\n`);
+      // Get full grammar tree from orchestrator
+      try {
+        const r = await fetch(`http://127.0.0.1:${PORTS.orchestrator}/api/components/grammar`,
+          { signal: AbortSignal.timeout(3000) });
+        if (r.ok) {
+          const d = await r.json();
+          const tree = d.tree || {};
+          let count = 0;
+          function walkTree(node, prefix) {
+            if (!node) return;
+            if (node.componentId) {
+              if (!filter || node.componentId.includes(filter) || prefix.includes(filter)) {
+                const params = (node.params||[]).map(p => `<${p.name}${p.required?'':' ?'}>`).join(' ');
+                console.log(`  ${$(C.cyan, prefix.padEnd(30))} ${$(C.dim, '→')} ${$(C.yellow, node.componentId)} ${$(C.dim, params)}`);
+                count++;
+              }
+            }
+            for (const [key, child] of Object.entries(node.children || {})) {
+              walkTree(child, prefix ? prefix + ' ' + key : key);
+            }
+          }
+          walkTree(tree, '');
+          if (!count) log($(C.dim, `No commands matching '${filter}'`));
+        }
+      } catch(e) { log(err(e.message)); }
+      console.log('');
+      return;
+    }
+
+    case 'phases': {
+      // phases [filter] — show phase map from blueprint builder data
+      const filter = args.join(' ').toLowerCase();
+      const PHASE_DATA = [
+        {n:'0–9,22–26,45,46', name:'Foundation + RAID + Intent + Case Library', status:'complete'},
+        {n:'10', name:'Constitutional AI',            status:'next'},
+        {n:'14', name:'Hot Module Loader',            status:'pending'},
+        {n:'15', name:'Grammar Engine Wiring',        status:'pending'},
+        {n:'17', name:'Userscript Heartbeat ♥',       status:'pending'},
+        {n:'27', name:'System State VM',              status:'pending'},
+        {n:'31', name:'Grammar ↔ Intent',             status:'pending'},
+        {n:'32', name:'Per-File Sigma Versioning',    status:'pending'},
+        {n:'33', name:'PID Isolation + State Cache',  status:'pending'},
+        {n:'35', name:'Quick Notes Sync',             status:'pending'},
+        {n:'36', name:'Dynamic CLI Commands',         status:'pending'},
+        {n:'40', name:'Component Descriptor',         status:'pending'},
+        {n:'11', name:'Reflection Engine',            status:'pending'},
+        {n:'34', name:'API_SURFACE_FAILURE',          status:'pending'},
+        {n:'37', name:'Userscript Rebuild',           status:'pending'},
+        {n:'40.5',name:'Descriptor-Driven CLI',       status:'pending'},
+        {n:'41', name:'Compiler Knowledge Layer',     status:'pending'},
+        {n:'12', name:'User Model: Hypotheses',       status:'pending'},
+        {n:'16', name:'Idearium↔Repo prereq',         status:'superseded'},
+        {n:'42', name:'Blueprint: Loop Closes',       status:'pending'},
+        {n:'13', name:'Autonomous Loop',              status:'pending'},
+        {n:'28', name:'Build From Inside',            status:'pending'},
+        {n:'38', name:'Unified Pipeline',             status:'pending'},
+        {n:'44', name:'Resolution Spectrum',          status:'pending'},
+        {n:'39', name:'Realtime Sync',                status:'pending'},
+        {n:'43', name:'Architect as UI Builder',      status:'pending'},
+        {n:'29', name:'Topology View',                status:'pending'},
+        {n:'30', name:'Time-Travel Debugging',        status:'pending'},
+      ];
+      const filtered = filter ? PHASE_DATA.filter(p =>
+        p.name.toLowerCase().includes(filter) || p.n.toString().includes(filter) || p.status.includes(filter)
+      ) : PHASE_DATA;
+      console.log(`\n${$(C.bold+C.cyan,'NEXUS PHASE MAP')}  v0.7.5  ${$(C.dim, filtered.length + '/' + PHASE_DATA.length + ' shown')}\n`);
+      const complete = PHASE_DATA.filter(p=>p.status==='complete').length;
+      const next     = PHASE_DATA.filter(p=>p.status==='next').length;
+      const pending  = PHASE_DATA.filter(p=>p.status==='pending').length;
+      console.log(`  ${$(C.green,'■')} ${complete} complete  ${$(C.cyan,'▶')} ${next} next  ${$(C.dim,'□')} ${pending} pending\n`);
+      for (const p of filtered) {
+        const icon = p.status==='complete' ? $(C.green,'✓') :
+                     p.status==='next'     ? $(C.cyan,'▶') :
+                     p.status==='superseded'? $(C.yellow,'~') : $(C.dim,'·');
+        console.log(`  ${icon} ${String(p.n).padEnd(8)} ${p.name}`);
+      }
+      console.log('');
+      return;
+    }
+
+    case 'forge': {
+      // forge <prompt> — dispatch a forge job to guardian (uses RAID to pick provider)
+      const prompt = args.join(' ').trim();
+      if (!prompt) { log('Usage: forge <prompt>\n  Dispatches a forge job via guardian RAID'); return; }
+      try {
+        const r = await fetch(`http://127.0.0.1:${PORTS.guardian}/command`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ command:'forge', prompt, meta:{ source:'nexus-repl', ts:Date.now() } }),
+          signal: AbortSignal.timeout(10000),
+        });
+        const d = await r.json();
+        if (d.jobId || d.ok) {
+          log(`✓ job dispatched → ${$(C.cyan, d.jobId?.slice(0,16) || '?')} via ${d.provider || 'RAID'}`);
+        } else {
+          log(err(d.error || 'dispatch failed'));
+        }
+      } catch(e) {
+        log(err('Guardian offline: ' + e.message));
+      }
+      return;
+    }
+
+    case 'heal': {
+      // heal <gap-uuid> — trigger HEAL_REQUESTED for a specific gap
+      const gapId = args[0];
+      if (!gapId) {
+        // Show open gaps first
+        const g = await GET(PORTS.cortex, '/api/gaps?status=open&n=10');
+        const gaps = Array.isArray(g.data) ? g.data : (g.data?.gaps || g.data?.rows || []);
+        if (!gaps.length) { log('No open gaps'); return; }
+        console.log(`\n${$(C.bold,'Open gaps:')}`);
+        for (const gap of gaps.slice(0,10)) {
+          const sev = gap.severity === 'high' ? $(C.red, gap.severity) :
+                      gap.severity === 'medium' ? $(C.yellow, gap.severity) : $(C.dim, gap.severity||'?');
+          console.log(`  ${sev.padEnd(16)} ${$(C.dim, gap.uuid?.slice(0,12))}  ${gap.type||''}: ${(gap.body||'').slice(0,60)}`);
+        }
+        console.log(`\n${$(C.dim,'Usage: heal <gap-uuid-prefix>')}`);
+        return;
+      }
+      try {
+        const r = await fetch(`http://127.0.0.1:7825/gaps/${gapId}/fix`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: '{}', signal: AbortSignal.timeout(5000),
+        });
+        const d = await r.json();
+        log(d.ok ? `✓ HEAL_REQUESTED → gap ${gapId.slice(0,12)}` : err(d.error || 'heal failed'));
+      } catch(e) {
+        log(err('Diagnostic service offline: ' + e.message));
+      }
+      return;
+    }
+
+    case 'snapshot': {
+      // snapshot [message] — take a cortex snapshot
+      const msg = args.join(' ') || 'cli-snapshot';
+      try {
+        const r = await fetch(`http://127.0.0.1:${PORTS.cortex}/api/snapshot`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ trigger:'manual', message: msg, source:'nexus-repl' }),
+          signal: AbortSignal.timeout(10000),
+        });
+        const d = await r.json();
+        log(d.snapId ? `✓ snapshot: ${$(C.cyan, d.snapId)} (${d.totalRows||'?'} rows)` : err(d.error || 'snapshot failed'));
+      } catch(e) { log(err('Cortex offline: ' + e.message)); }
       return;
     }
 
@@ -564,14 +801,35 @@ function startRepl() {
     history: HISTORY,
     historySize: 200,
     terminal: true,
+    completer: (line) => {
+      // Static completions always available
+      const STATIC = ['status','jobs','events','gaps','ideas','idea','dispatch',
+        'chat','ask','context','intents','artifacts','chatlog','push','diagnose',
+        'watchdog','watch','bus','ui','help','exit','quit','ledger','snr',
+        'describe','caps','build','phases','forge','heal','snapshot','rewind'];
+      // Grammar completions if loaded
+      if (_grammar) {
+        const grammarSuggs = _grammar.complete(line);
+        if (grammarSuggs.length) {
+          const combined = [...new Set([...grammarSuggs, ...STATIC.filter(s => s.startsWith(line))])];
+          return [combined, line];
+        }
+      }
+      const hits = STATIC.filter(s => s.startsWith(line));
+      return [hits.length ? hits : STATIC, line];
+    },
   });
 
   console.clear();
   console.log(`${$(C.bold+C.green, '⬡  NEXUS CLI REPL')}  ${$(C.dim, 'type help for commands')}\n`);
   console.log(`${$(C.dim, 'orchestrator: http://localhost:'+PORTS.orchestrator)}\n`);
 
-  // Auto-status on start
-  cmdStatus().then(() => rl.prompt()).catch(() => rl.prompt());
+  // Auto-status on start, then load grammar for tab completion
+  cmdStatus()
+    .then(() => loadGrammar())
+    .then(g => { if (g) log($(C.dim, `grammar ready (${g.status().commandCount} commands)`)); })
+    .catch(() => {})
+    .finally(() => rl.prompt());
 
   rl.on('line', async line => {
     if (line.trim()) HISTORY.unshift(line.trim());

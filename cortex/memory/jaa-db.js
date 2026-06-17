@@ -124,6 +124,8 @@ const TABLE_TIERS = {
   fault_taxonomy:      'long',
   reuse_index:         'long',
   failure_modes:       'long',   // escalation level 4 — human action items
+  // Phase 10 — constitutional-ai.js — every axiom check outcome, permanent record
+  constitution_decisions: 'long',
   chat_log:            'short',  // all AI exchanges for context reinjection
   escalation_log:      'long',   // full history of every escalation attempt
   components:          'long',   // component registry — self-describing kernel
