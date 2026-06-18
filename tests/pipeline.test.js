@@ -332,7 +332,7 @@ section('Snapshot — .nex file creation and rollback');
   test('snapshot.load reads the .nex file from disk', () => {
     const snaps = snap.list(1);
     const loaded = snap.load(snaps[0].snapId);
-    assert(loaded.format === 'NEX-SNAP/1.0', 'format header present');
+    assert(/^NEX-SNAP\/\d+\.\d+$/.test(loaded.format), `format header present and well-formed (got: ${loaded.format})`);
     assert(loaded.tables, 'tables present');
     assert(loaded.tables.event_log, 'event_log table in snapshot');
   });

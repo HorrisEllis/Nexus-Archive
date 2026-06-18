@@ -30,7 +30,7 @@ const claudeAgent    = require('./agents/claude');
 const DATA_DIR  = process.env.NEXUS_DATA_DIR  || path.join(__dirname, 'data');
 const STORE_DIR = process.env.NEXUS_STORE_DIR || path.join(__dirname, 'store');
 const PORT      = parseInt(process.env.NEXUS_PORT || '3748');
-const VERSION   = '3.1.0';
+const VERSION   = '3.2.0';
 
 let jaaDB, fileStore, fileRefs, adminServer;
 
@@ -273,6 +273,12 @@ async function bootAsync() {
         // aggregates RAID feedback read-only. Has its own polling loop (init
         // starts a setInterval), so it belongs here alongside the other organs.
         { name: 'reflection',    path: '../lib/reflection'   },
+        // Phase 25 sub-step 5 — runs decay ticks on its own interval. The
+        // crystallize/lattice-update calls themselves happen inline per
+        // compartment resolution (compartment-engine auto-registers this
+        // module directly), but the scheduled decay sweep needs init() to
+        // start its own interval, same pattern as reflection above.
+        { name: 'crystal-lattice', path: '../lib/crystal-lattice' },
       ];
 
       const pollMs = parseInt(process.env.CORTEX_ORGAN_MS || '15000');
@@ -309,17 +315,18 @@ async function bootAsync() {
     },
   });
 
-  // ── Phase 5.3 SOFT: Phase 10/11 constitutional + reflection wiring check ────
-  // constitutional-ai.js has no background loop — it's a synchronous library
-  // request-handler.js already requires lazily on first use, so there's
-  // nothing to start here. reflection.js DOES have a loop and is started
-  // above via the organs array. This phase only verifies both can reach
-  // their dependencies, the same diagnostic role validateWiring() plays
-  // everywhere else in this codebase (called manually/on-demand, not as a
-  // boot gate) — surfaced here once, at boot, so a broken require shows up
-  // in the boot log instead of silently degrading the first real request.
+  // ── Phase 5.3 SOFT: Phase 10/11/12 wiring check ─────────────────────────────
+  // constitutional-ai.js and user-model.js have no background loop — both are
+  // synchronous/on-demand libraries request-handler.js already requires
+  // lazily on first use, so there's nothing to start for either. reflection.js
+  // DOES have a loop and is started above via the organs array. This phase
+  // only verifies all three can reach their dependencies, the same diagnostic
+  // role validateWiring() plays everywhere else in this codebase (called
+  // manually/on-demand, not as a boot gate) — surfaced here once, at boot, so
+  // a broken require shows up in the boot log instead of silently degrading
+  // the first real request.
   seq.phase({ name:'constitutional.reflection.wiring', type:'SOFT',
-    label:'Phase 10 (constitutional-ai) + Phase 11 (reflection) wiring check',
+    label:'Phase 10 (constitutional-ai) + Phase 11 (reflection) + Phase 12 (user-model) + Phase 25 (compartment-engine) wiring check',
     fn: async () => {
       try {
         const cai = require('../lib/constitutional-ai');
@@ -340,6 +347,26 @@ async function bootAsync() {
         });
       } catch (e) {
         console.warn(`[cortex/boot] reflection wiring check failed: ${e.message}`);
+      }
+      try {
+        const um = require('../lib/user-model');
+        const umChecks = um.validateWiring();
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.user_model.wiring', ts: Date.now(),
+          payload: umChecks, source: 'boot', causedBy: null,
+        });
+      } catch (e) {
+        console.warn(`[cortex/boot] user-model wiring check failed: ${e.message}`);
+      }
+      try {
+        const ce = require('../lib/compartment-engine');
+        const ceChecks = ce.validateWiring();
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.compartment_engine.wiring', ts: Date.now(),
+          payload: ceChecks, source: 'boot', causedBy: null,
+        });
+      } catch (e) {
+        console.warn(`[cortex/boot] compartment-engine wiring check failed: ${e.message}`);
       }
     },
   });

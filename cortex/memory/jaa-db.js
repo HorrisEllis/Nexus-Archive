@@ -126,6 +126,12 @@ const TABLE_TIERS = {
   failure_modes:       'long',   // escalation level 4 — human action items
   // Phase 10 — constitutional-ai.js — every axiom check outcome, permanent record
   constitution_decisions: 'long',
+  // Phase 12 — user-model.js — hypothesis store, never stored as fact
+  user_model_hypotheses: 'long',
+  // Phase 25 — compartment-engine.js — every compartment's full lifecycle record
+  compartments: 'long',
+  // Phase 25/26 sub-step 5 — crystal-lattice.js — edge weights between concept/state/compartment-type nodes
+  lattice_edges: 'long',
   chat_log:            'short',  // all AI exchanges for context reinjection
   escalation_log:      'long',   // full history of every escalation attempt
   components:          'long',   // component registry — self-describing kernel

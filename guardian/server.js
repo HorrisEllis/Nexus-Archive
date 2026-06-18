@@ -404,7 +404,58 @@ function dispatchJob(job) {
   return; // pool owns dispatch from here
 }
 
+// ── Ollama is a local module, not a browser-tab provider ─────────────────────
+// Ollama runs as a real HTTP service on this machine (default :11434). It has
+// no DOM, no CORS problem worth dodging, and nothing for a Tampermonkey
+// userscript to inject into. Routing it through the NCP/userscript channel —
+// the same path used for claude/chatgpt/gemini/perplexity tabs — means every
+// ollama job sits in pendingQueue forever waiting for an EventSource that no
+// browser will ever open. Dispatch it directly via ollama-runtime.js instead,
+// then feed the result back through the normal NCP_COMPLETE/NCP_ERROR pipeline
+// so gap analysis, artifact extraction, and chat-log writes all still happen.
+const _ollamaRuntime = (() => { try { return require('../ollama-runtime'); } catch (_) { return null; } })();
+
+const OLLAMA_COMMAND_MODELS = {
+  code:     'qwen2.5-coder:1.5b',
+  seam:     'qwen2.5-coder:1.5b',
+  general:  'mistral:7b-instruct-q4_K_M',
+  analysis: 'mistral:7b-instruct-q4_K_M',
+};
+
+function _dispatchOllamaNative(job) {
+  updateJob(job.id, { status: 'delivered', deliveredAt: Date.now(), startedAt: Date.now() });
+  console.log(`[guardian] dispatched ${job.id} → ollama (native module, no tab needed)`);
+  bus.emit('guardian.job.dispatched', { jobId: job.id, provider: job.provider });
+
+  if (!_ollamaRuntime) {
+    _handleNCPMessage({ type: 'NCP_ERROR', jobId: job.id, provider: job.provider,
+      error: 'ollama-runtime module not found — expected at project root ollama-runtime.js' });
+    return true;
+  }
+
+  const model = OLLAMA_COMMAND_MODELS[job.command] || process.env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
+  let buf = '';
+  try {
+    _ollamaRuntime.streamGenerate(
+      { model, prompt: job.prompt || job.content || '', system: job.systemPrompt,
+        temperature: job.temperature, max_tokens: job.maxTokens },
+      (token) => { buf += token; },
+      () => { _handleNCPMessage({ type: 'NCP_COMPLETE', jobId: job.id, provider: job.provider, text: buf }); },
+      (err)  => { _handleNCPMessage({ type: 'NCP_ERROR', jobId: job.id, provider: job.provider,
+        error: err?.message || String(err) }); },
+    );
+  } catch (err) {
+    _handleNCPMessage({ type: 'NCP_ERROR', jobId: job.id, provider: job.provider, error: err.message });
+  }
+  return true;
+}
+
 function _doDispatch(job) {
+  // ollama / ollama-ncp: skip the userscript channel entirely — see above.
+  if (job.provider === 'ollama' || job.provider === 'ollama-ncp') {
+    return _dispatchOllamaNative(job);
+  }
+
   // NCP: push job via SSE channel instead of WebSocket
   if (!ncp.isConnected(job.provider)) {
     // Queue it — will flush when provider connects via GET /channel
@@ -455,7 +506,7 @@ function _doDispatch(job) {
 // ── NCP message handler — replaces wss.on('connection', ws.on('message')) ────
 function _handleNCPMessage(msg) {
   const { type, jobId, provider, tabId, text, content, lang, hash,
-          gaps, error, gate, chatUrl, account } = msg;
+          gaps, error, gate, chatUrl, chatId, account } = msg;
 
   // ── §5.2 Cortex write — every significant userscript event reaches cortex ──
   // Fire-and-forget: timeout 2s, never block the NCP response.
@@ -533,7 +584,11 @@ function _handleNCPMessage(msg) {
         _baseline.observe({ type: 'GUARDIAN_COMPLETE', latencyMs, error: false, ts: Date.now() });
 
         // §LAW II — log conversation turn before artifact processing
-        if (currentJobId || jobId) {
+        // (jobId is already guaranteed truthy here — the outer `currentJobId`
+        // reference was leftover from the browser-side userscripts, which
+        // declare that variable in their own module scope; it doesn't exist
+        // in this process and was throwing ReferenceError on every completion)
+        if (jobId) {
           const sessionId = chatId || chatUrl || jobId || 'unknown';
           _physQueue.logConversation(sessionId.slice(0, 40), {
             role:      'assistant',

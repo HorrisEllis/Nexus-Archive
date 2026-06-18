@@ -24,7 +24,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { randomUUID } = require('crypto');
+const { randomUUID, createHash } = require('crypto');
 const { jaaDB, uid } = require('../memory/jaa-db');
 
 const MODULE_ID   = 'snapshot';
@@ -49,6 +49,43 @@ function _captureJAA() {
   return tables;
 }
 
+// ── State hash (Phase 25/26 — tamper-evident hash chain) ───────────────────────
+// SHA-256 over the captured table data. Not a cryptographic-determinism
+// guarantee across machines/versions — it only needs to answer "did this
+// snapshot's content change," which a stable in-process JSON.stringify over
+// deterministically-ordered table reads (jaaDB.tail() preserves insertion
+// order) is sufficient for.
+function _computeStateHash(tables) {
+  const serialized = JSON.stringify(tables);
+  return createHash('sha256').update(serialized).digest('hex');
+}
+
+// Most recent snapshot's hash, to chain the new one to it. Returns null for
+// the very first snapshot ever taken — a null prev_snapshot_hash on the
+// oldest record is the expected, correct chain root, not a missing value.
+function _getPrevSnapshotHash() {
+  try {
+    const records = jaaDB.tail('backup_records', 1);
+    return records.length ? (records[0].cortex_state_hash || null) : null;
+  } catch (_) { return null; }
+}
+
+// Verify a single .nex file's stored hash matches its own content, and that
+// its prev_snapshot_hash matches the chain. Returns { valid, reason }.
+// Chain-position checking (whether prevHash actually IS the immediately
+// prior snapshot) is the caller's responsibility — this only checks the
+// two hashes this snapshot carries are internally consistent with content
+// it was given.
+function verifySnapshotIntegrity(nex) {
+  if (!nex || !nex.tables) return { valid: false, reason: 'missing tables payload' };
+  if (!nex.cortex_state_hash) return { valid: false, reason: 'no cortex_state_hash stored — predates Phase 25 hashing or was tampered with' };
+  const recomputed = _computeStateHash(nex.tables);
+  if (recomputed !== nex.cortex_state_hash) {
+    return { valid: false, reason: `hash mismatch — stored ${nex.cortex_state_hash.slice(0,12)}... recomputed ${recomputed.slice(0,12)}...` };
+  }
+  return { valid: true, reason: 'hash matches stored content' };
+}
+
 // ── Create a snapshot ─────────────────────────────────────────────────────────
 function create(opts = {}) {
   _ensureDir();
@@ -66,8 +103,11 @@ function create(opts = {}) {
   );
   const totalRows = Object.values(rowCounts).reduce((s, n) => s + n, 0);
 
+  const cortexStateHash  = _computeStateHash(tables);
+  const prevSnapshotHash = _getPrevSnapshotHash();
+
   const nex = {
-    format:    'NEX-SNAP/1.1',   // 1.1 — supports system_state, blackbox, macro, resume
+    format:    'NEX-SNAP/1.2',   // 1.2 — adds cortex_state_hash + prev_snapshot_hash (Phase 25/26)
     uuid:      snapId,
     ts,
     type,
@@ -77,6 +117,8 @@ function create(opts = {}) {
     rowCounts,
     totalRows,
     tables,
+    cortex_state_hash:  cortexStateHash,
+    prev_snapshot_hash: prevSnapshotHash,
     // Extended fields — populated by divergence-watcher for type:'divergence'
     // All other snapshot types get null placeholders for schema consistency
     system_state:        null,
@@ -108,16 +150,18 @@ function create(opts = {}) {
     has_system_state: !!(opts._extra?.system_state),
     has_blackbox:     !!(opts._extra?.blackbox_pre),
     has_macro:        false,  // updated async when macro compiles
+    cortex_state_hash:  cortexStateHash,
+    prev_snapshot_hash: prevSnapshotHash,
   });
 
   jaaDB.insert('event_log', {
     uuid: uid(), type: 'snapshot.created',
-    payload: { snapId, type, message, totalRows, path: snapPath },
+    payload: { snapId, type, message, totalRows, path: snapPath, cortex_state_hash: cortexStateHash },
     source: MODULE_ID, causedBy: trigger || null, ts,
   });
 
-  console.log(`[${MODULE_ID}] created ${snapId} (${totalRows} rows, ${type})`);
-  return { snapId, snapPath, totalRows, rowCounts };
+  console.log(`[${MODULE_ID}] created ${snapId} (${totalRows} rows, ${type}, hash:${cortexStateHash.slice(0,8)})`);
+  return { snapId, snapPath, totalRows, rowCounts, cortex_state_hash: cortexStateHash };
 }
 
 // ── List snapshots ────────────────────────────────────────────────────────────
@@ -398,7 +442,58 @@ function stop() {
   if (_interval) { clearInterval(_interval); _interval = null; }
 }
 
-module.exports = { init, stop, create, list, load, diff, rollback, bootSnapshot, prune, VERSION, MODULE_ID };
+// ── Chain integrity check — Phase 26: 'nexus integrity check' ──────────────────
+// Walks every snapshot in chronological order, verifying each one's own
+// content hash AND that its prev_snapshot_hash actually matches the
+// snapshot immediately before it in the chain. Returns a report rather than
+// throwing — corruption is data to act on, not a crash.
+function checkChainIntegrity() {
+  const records = jaaDB.tail('backup_records', 100000).slice().sort((a, b) => a.ts - b.ts);
+  const report = { totalChecked: 0, valid: 0, corrupt: [], missingFiles: [], chainBreaks: [] };
+
+  let expectedPrevHash = null;
+  for (const record of records) {
+    report.totalChecked++;
+
+    if (!fs.existsSync(record.snapPath)) {
+      report.missingFiles.push({ snapId: record.snapId, path: record.snapPath });
+      // A missing file breaks the chain for everything after it too, but we
+      // still keep walking — one gap shouldn't hide later corruption.
+      expectedPrevHash = record.cortex_state_hash || null;
+      continue;
+    }
+
+    let nex;
+    try { nex = JSON.parse(fs.readFileSync(record.snapPath, 'utf8')); }
+    catch (e) {
+      report.corrupt.push({ snapId: record.snapId, reason: `unreadable: ${e.message}` });
+      continue;
+    }
+
+    const contentCheck = verifySnapshotIntegrity(nex);
+    if (!contentCheck.valid) {
+      report.corrupt.push({ snapId: record.snapId, reason: contentCheck.reason });
+      expectedPrevHash = nex.cortex_state_hash || expectedPrevHash;
+      continue;
+    }
+
+    if (expectedPrevHash !== null && nex.prev_snapshot_hash !== expectedPrevHash) {
+      report.chainBreaks.push({
+        snapId: record.snapId,
+        expected: expectedPrevHash?.slice(0, 12),
+        found: nex.prev_snapshot_hash?.slice(0, 12) ?? 'null',
+      });
+    } else {
+      report.valid++;
+    }
+
+    expectedPrevHash = nex.cortex_state_hash;
+  }
+
+  return report;
+}
+
+module.exports = { init, stop, create, list, load, diff, rollback, bootSnapshot, prune, verifySnapshotIntegrity, checkChainIntegrity, VERSION, MODULE_ID };
 
 // ── Divergence watcher — re-exported for convenience ─────────────────────────
 module.exports.divergenceWatcher = require('./divergence-watcher');

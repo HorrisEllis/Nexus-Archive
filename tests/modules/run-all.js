@@ -27,6 +27,11 @@ const SUITES = [
   'healer.test.js',
   'constitutional-ai.test.js',
   'reflection.test.js',
+  'user-model.test.js',
+  'snapshot-integrity.test.js',
+  'compartment-engine.test.js',
+  'adversary-suite.test.js',
+  'crystal-lattice.test.js',
 ];
 
 let totalPassed = 0;

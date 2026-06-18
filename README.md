@@ -1,4 +1,12 @@
 # NEXUS SYSTEM — v5.1.0
+
+> **⚠ SUPERSEDED — DO NOT TREAT AS CURRENT**
+> This README describes an earlier intended architecture (Emergence/.eg-exclusive, `nexus-eg/` tree: crystalball, cockpit, siphon, seam, guardian-ext). That architecture is not what exists in this codebase — zero `.eg` files are present; the actual system is plain Node/JS (cortex/, guardian/, idearium/, lib/, etc.). This file has not been kept in sync and should not be read as a description of current state.
+>
+> **Canonical, actively-maintained source of truth: `lib/version.js`** — current system version, per-phase build status, and per-module versions all live there. As of this note: system v0.7.8, Phase 12 (User Model) complete.
+>
+> The content below is preserved as historical record, not deleted, since it may describe a real prior design direction worth understanding — but treat every claim in it (file counts, ports, structure) as potentially describing a different system than the one on disk.
+
 ## Complete Architecture in Emergence
 
 **Author:** James Brooks (Erosmancer)  
