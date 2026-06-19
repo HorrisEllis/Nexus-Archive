@@ -1,0 +1,25 @@
+{
+  "establishedAt": 1781839525843,
+  "eventCount": 10,
+  "latency": {
+    "mean": 0,
+    "sigma": 0,
+    "p95": 0
+  },
+  "errorRate": {
+    "mean": 0.1,
+    "sigma": 0.3
+  },
+  "eventTypes": {
+    "health.fail": 1,
+    "cortex.constitutional_ai.wiring": 1,
+    "cortex.reflection.wiring": 1,
+    "cortex.user_model.wiring": 1,
+    "cortex.compartment_engine.wiring": 1,
+    "snapshot.created": 1,
+    "agent-tools.ready": 1,
+    "system.booted": 1,
+    "cortex.contracts.loaded": 1,
+    "raid.health": 1
+  }
+}

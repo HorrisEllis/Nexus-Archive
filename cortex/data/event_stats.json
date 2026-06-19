@@ -1,8 +1,8 @@
 {
   "stats": {
     "cortex.storage.opened": {
-      "count": 9,
-      "lastTs": 1781621460089,
+      "count": 10,
+      "lastTs": 1781839517694,
       "intervals": [
         2871780,
         1015091,
@@ -11,10 +11,20 @@
         2040545,
         1599394,
         416609,
-        1525372
+        1525372,
+        218057605
       ],
-      "totalMs": 377017948
+      "totalMs": 595075553
     }
   },
-  "baseline": {}
+  "baseline": {
+    "cortex.storage.opened": {
+      "avgIntervalMs": 66119506,
+      "stddevMs": 114333466,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1781839517695
+    }
+  }
 }

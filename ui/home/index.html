@@ -2013,8 +2013,7 @@ async function agentForge() {
     useSnr ? '[SNR FILTER: ON — surface invariants first, LLM last]' : '',
     '',
     prompt,
-  ].filter(Boolean).join('
-');
+  ].filter(Boolean).join('\n');
 
   try {
     if (useSeam && cfg.seam && cfg.chunkSize) {

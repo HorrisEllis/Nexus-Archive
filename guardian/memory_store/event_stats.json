@@ -1,0 +1,21 @@
+{
+  "stats": {
+    "guardian.job.queued": {
+      "count": 2,
+      "lastTs": 1781839541255,
+      "intervals": [
+        97
+      ],
+      "totalMs": 97
+    },
+    "guardian.tab.needed": {
+      "count": 2,
+      "lastTs": 1781839541263,
+      "intervals": [
+        99
+      ],
+      "totalMs": 99
+    }
+  },
+  "baseline": {}
+}
