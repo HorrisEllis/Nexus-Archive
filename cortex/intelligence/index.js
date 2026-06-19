@@ -40,6 +40,16 @@
 'use strict';
 
 const { jaaDB, uid } = require('../memory/jaa-db');
+const { createHash } = require('crypto');
+
+// Stable short hash of a pattern signature — used as a fast, collision-resistant
+// dedup/index key (the raw `signature` string already functions as one, but per
+// request this gives every pattern row a real hash field consistent with the
+// hash-chain conventions used elsewhere in the system, e.g. Phase 26's
+// cortex_state_hash / prev_snapshot_hash chain).
+function _sigHash(sig) {
+  return createHash('sha1').update(sig).digest('hex').slice(0, 16);
+}
 
 const MODULE_ID = 'cortex/intelligence';
 const VERSION   = '1.0.0';
@@ -138,9 +148,23 @@ function init(cfg = {}) {
 
   // Initial build after 10s (let JAA settle from boot)
   setTimeout(() => {
-    _scanPatterns();
     // §PERSIST-03: hydrate in-memory indexes from persisted JAA tables on boot
-    // Healer and reuse engine work immediately — no cold-start amnesia
+    // Healer, reuse engine, and pattern engine all work immediately — no cold-start amnesia
+    //
+    // FIX (Phase 47 / boot-lag gap): _patternIndex previously started as [] every boot
+    // and _scanPatterns() ran BEFORE any hydration occurred — so on every single boot,
+    // every already-crystallised pattern looked "new" to the existing.find() check,
+    // got re-inserted as a duplicate bep_patterns row, and re-logged in full. That's
+    // the source of the 60+ line "pattern crystallised" boot spam and the unbounded
+    // growth of bep_patterns (each boot scans against an ever-larger table). Hydrating
+    // _patternIndex here, before the first _scanPatterns() call, makes the existing
+    // dedup check in _scanPatterns() actually work as designed.
+    const _storedPatterns = jaaDB.query('bep_patterns', () => true, 500);
+    if (_storedPatterns.length) {
+      _patternIndex = _storedPatterns;
+      console.log(`[${MODULE_ID}] seeded _patternIndex: ${_storedPatterns.length} patterns from JAA`);
+    }
+
     const _storedFaults = jaaDB.query('fault_taxonomy', () => true, 500);
     for (const r of _storedFaults) {
       _failureIndex[r.faultClass] = {
@@ -158,6 +182,7 @@ function init(cfg = {}) {
       console.log(`[${MODULE_ID}] seeded _reuseIndex: ${_storedReuse.length} entries from JAA`);
     }
 
+    _scanPatterns();
     _scanFailures();
     _buildReuseIndex();
   }, 10_000);
@@ -246,86 +271,129 @@ async function _scanPatterns() {
 
     // ── Crystallise patterns ──────────────────────────────────────────────────
     // A pattern is crystallised when it has occurred > 3 times with consistent conditions
+    //
+    // FIX (Phase 47): previously `if (!existing) { push new }` had no else branch —
+    // a recurring signature was silently discarded instead of updated, AND (combined
+    // with the boot-hydration gap above) was actually never recognised as existing at
+    // all, so it kept being treated as new and re-logged in full forever. Now:
+    //   - new signature  → full insert + full "pattern crystallised" log line (once)
+    //   - known signature → update count/lastSeen/confidence in place, no detail log;
+    //     a single compact line is emitted only the moment it FIRST crosses the
+    //     crystallisation threshold (the transition, not the steady state)
     const newPatterns = [];
+    const updatedPatterns = [];
+
+    function _upsertPattern(sig, buildPatch) {
+      const hash = _sigHash(sig);
+      const existing = _patternIndex.find(p => p.signature === sig || p.sigHash === hash);
+      if (existing) {
+        const wasCrystallised = !!existing.crystallised;
+        const patch = buildPatch(existing);
+        Object.assign(existing, patch, { lastSeen: now, sigHash: hash }); // backfill sigHash on legacy rows too
+        jaaDB.update('bep_patterns', existing.uuid, {
+          count: existing.count,
+          confidence: existing.confidence,
+          crystallised: existing.crystallised,
+          lastSeen: existing.lastSeen,
+          description: existing.description,
+          sigHash: hash,
+        });
+        updatedPatterns.push(existing);
+        // Only announce the moment a pattern crosses into "crystallised" —
+        // not on every recurring scan once it's already there.
+        if (!wasCrystallised && existing.crystallised) {
+          _log('pattern crystallised: ' + _humanPattern(existing));
+        }
+        return existing;
+      } else {
+        const p = { ...buildPatch(null), sigHash: hash };
+        jaaDB.insert('bep_patterns', p);
+        _patternIndex.push(p);
+        newPatterns.push(p);
+        if (p.crystallised) {
+          _log('pattern crystallised: ' + _humanPattern(p));
+        }
+        return p;
+      }
+    }
 
     // High-frequency co-occurrences → structural pattern
     for (const [pair, count] of Object.entries(coOccur)) {
       if (count < 3) continue;
       const [typeA, typeB] = pair.split('::');
-      const existing = _patternIndex.find(p => p.signature === pair);
-      if (!existing) {
-        newPatterns.push({
-          uuid:        uid(),
-          signature:   pair,
-          patternType: 'co_occurrence',
-          typeA, typeB,
-          count,
-          confidence:  Math.min(1, count / 20),
-          description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
-          actionable:  count >= 5,
-          crystallised:count >= 10,
-          source:      MODULE_ID,
-          ts:          now,
-        });
-      }
+      _upsertPattern(pair, existing => existing ? {
+        count,
+        confidence: Math.min(1, count / 20),
+        description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations (first seen: ${new Date(existing.ts).toISOString()})`,
+        crystallised: count >= 10,
+      } : {
+        uuid:        uid(),
+        signature:   pair,
+        patternType: 'co_occurrence',
+        typeA, typeB,
+        count,
+        confidence:  Math.min(1, count / 20),
+        description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
+        actionable:  count >= 5,
+        crystallised:count >= 10,
+        source:      MODULE_ID,
+        ts:          now,
+      });
     }
 
     // Strong failure precursors → warning pattern
     for (const [precursorType, data] of Object.entries(precursorCounts)) {
       if (data.count < 3) continue;
       const sig = `precursor::${precursorType}`;
-      const existing = _patternIndex.find(p => p.signature === sig);
-      if (!existing) {
-        newPatterns.push({
-          uuid:           uid(),
-          signature:      sig,
-          patternType:    'failure_precursor',
-          precursorType,
-          failureTypes:   Object.keys(data.failureTypes),
-          count:          data.count,
-          confidence:     Math.min(1, data.count / 10),
-          description:    `"${precursorType}" precedes failures ${data.count} times — watch this event type`,
-          actionable:     true,
-          crystallised:   data.count >= 10,
-          topFailureType: Object.entries(data.failureTypes).sort(([,a],[,b])=>b-a)[0]?.[0],
-          source:         MODULE_ID,
-          ts:             now,
-        });
-      }
+      _upsertPattern(sig, existing => existing ? {
+        count: data.count,
+        confidence: Math.min(1, data.count / 10),
+        failureTypes: Object.keys(data.failureTypes),
+        description: `"${precursorType}" precedes failures ${data.count} times (first seen: ${new Date(existing.ts).toISOString()})`,
+        crystallised: data.count >= 10,
+        topFailureType: Object.entries(data.failureTypes).sort(([,a],[,b])=>b-a)[0]?.[0],
+      } : {
+        uuid:           uid(),
+        signature:      sig,
+        patternType:    'failure_precursor',
+        precursorType,
+        failureTypes:   Object.keys(data.failureTypes),
+        count:          data.count,
+        confidence:     Math.min(1, data.count / 10),
+        description:    `"${precursorType}" precedes failures ${data.count} times — watch this event type`,
+        actionable:     true,
+        crystallised:   data.count >= 10,
+        topFailureType: Object.entries(data.failureTypes).sort(([,a],[,b])=>b-a)[0]?.[0],
+        source:         MODULE_ID,
+        ts:             now,
+      });
     }
 
     // Bottleneck signals → recurring open gaps of same type
     for (const [gapType, count] of topGaps) {
       if (count < 2) continue;
       const sig = `bottleneck::${gapType}`;
-      const existing = _patternIndex.find(p => p.signature === sig);
-      if (!existing) {
-        newPatterns.push({
-          uuid:        uid(),
-          signature:   sig,
-          patternType: 'bottleneck',
-          gapType,
-          count,
-          confidence:  Math.min(1, count / 10),
-          description: `Gap type "${gapType}" appears ${count} times — recurring bottleneck`,
-          actionable:  true,
-          crystallised:count >= 5,
-          source:      MODULE_ID,
-          ts:          now,
-        });
-      }
+      _upsertPattern(sig, existing => existing ? {
+        count,
+        confidence: Math.min(1, count / 10),
+        description: `Gap type "${gapType}" appears ${count} times (first seen: ${new Date(existing.ts).toISOString()})`,
+        crystallised: count >= 5,
+      } : {
+        uuid:        uid(),
+        signature:   sig,
+        patternType: 'bottleneck',
+        gapType,
+        count,
+        confidence:  Math.min(1, count / 10),
+        description: `Gap type "${gapType}" appears ${count} times — recurring bottleneck`,
+        actionable:  true,
+        crystallised:count >= 5,
+        source:      MODULE_ID,
+        ts:          now,
+      });
     }
 
-    // Write new patterns to JAA
-    for (const p of newPatterns) {
-      jaaDB.insert('bep_patterns', p);
-      _patternIndex.push(p);
-      if (p.crystallised) {
-        _log('pattern crystallised: ' + _humanPattern(p));
-      }
-    }
-
-    // Refresh in-memory index from JAA
+    // Refresh in-memory index from JAA (keeps it authoritative after inserts+updates)
     _patternIndex = jaaDB.query('bep_patterns', () => true, 200);
 
     // Log scan summary to event_log
@@ -337,6 +405,7 @@ async function _scanPatterns() {
         coOccurrences:    Object.keys(coOccur).length,
         precursors:       Object.keys(precursorCounts).length,
         newPatterns:      newPatterns.length,
+        updatedPatterns:  updatedPatterns.length,
         crystallised:     newPatterns.filter(p => p.crystallised).length,
         topBottleneck:    topGaps[0]?.[0] || null,
       },
@@ -614,14 +683,16 @@ async function _crossLedger() {
 
     // If drift is critical, open a gap
     if (driftScore > 0.7) {
+      const gapHash = _sigHash(`baseline_drift::cortex/intelligence/cross_ledger`);
       const existing = jaaDB.query('gaps',
-        g => g.type === 'baseline_drift' && g.status === 'open', 1
+        g => g.status === 'open' && (g.gapHash === gapHash || (g.type === 'baseline_drift' && g.path === 'cortex/intelligence/cross_ledger')), 1
       );
       if (!existing.length) {
         jaaDB.insert('gaps', {
           uuid:      uid(),
           type:      'baseline_drift',
           path:      'cortex/intelligence/cross_ledger',
+          gapHash,   // same hash convention as bep_patterns.sigHash — stable dedup key
           body:      `System drift detected: score=${driftScore.toFixed(2)}, avgSigma=${avgSigma.toFixed(2)}, avgFriction=${avgFriction.toFixed(2)}, ${recentGaps.length} new gaps in 5min`,
           severity:  driftScore > 0.85 ? 'fatal' : 'high',
           status:    'open',
@@ -631,6 +702,9 @@ async function _crossLedger() {
           meta: { driftScore, avgSigma, avgFriction, recentGaps: recentGaps.length },
         });
         _log(`drift gap opened — score ${driftScore.toFixed(2)}`);
+      } else if (!existing[0].gapHash) {
+        // backfill hash on a legacy gap row that predates this fix
+        jaaDB.update('gaps', existing[0].uuid, { gapHash });
       }
     }
 

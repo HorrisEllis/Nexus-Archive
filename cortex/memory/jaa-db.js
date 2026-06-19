@@ -367,6 +367,22 @@ class JaaDB {
     this._fds = {};
   }
 
+  // ── evict ─────────────────────────────────────────────────────────────────
+  // Public, manual version of the tombstone mechanism _tickDecay() already uses
+  // internally. Needed for one-off cleanup (e.g. flushing duplicate rows that
+  // accumulated in a long-term table — like bep_patterns — before a dedup fix
+  // shipped, since long-term tables have no automatic decay/evictAfterMs at all).
+  // Same shape as the internal tombstone so replay-on-boot handles it identically.
+  evict(table, id, reason = 'manual') {
+    this._requireTable(table);
+    const idx = this._tables[table].findIndex(r => r.uuid === id && !r._evicted);
+    if (idx === -1) return false;
+    const now = Date.now();
+    this._tables[table][idx] = { ...this._tables[table][idx], _evicted: true, _evictedAt: now, _evictReason: reason };
+    this._persist(table, { _mutation: true, uuid: id, _evicted: true, _evictedAt: now, _evictReason: reason });
+    return true;
+  }
+
   // ── insert ────────────────────────────────────────────────────────────────
   insert(table, record) {
     this._requireTable(table);

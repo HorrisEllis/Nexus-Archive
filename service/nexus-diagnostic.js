@@ -52,7 +52,39 @@ function _getSysRuntime(name) {
   return _sysRuntimes[name] || null;
 }
 
+// ── Diagnostic engines: 12-engine composite health pack (entropy_rate, snr_floor,
+//    homeostasis, fault_tree, cascade_risk, fingerprint, ...) ─────────────────
+// FIX: this function was called at two sites (/engines and /tension) but never
+// defined anywhere in the file — a bare `_getDiagEngines()` call threw
+// ReferenceError and crashed the entire diagnostic process (Node exits on an
+// uncaught exception in an http handler), which cascaded into
+// "contract.unreachable" for every other system on the next health pass.
+// Follows the exact same lazy-require/cache-false precedent as _getMetaTel()
+// above: if the engines module isn't present, this returns null instead of
+// throwing, and both existing call sites already null-check it correctly
+// (`if (!de) return 503` / `if (de2) {...}`) — they just needed the function
+// to actually exist. §1.2 (nothing silent): logs once, not per-request.
+let _diagEngines = null;
+let _diagEnginesWarned = false;
+function _getDiagEngines() {
+  if (_diagEngines !== null) return _diagEngines || null;
+  try {
+    _diagEngines = require('../lib/diag-engines/index.js');
+  } catch (_) {
+    _diagEngines = false;
+    if (!_diagEnginesWarned) {
+      _diagEnginesWarned = true;
+      console.warn(`[nexus-diagnostic] diagnostic engines module not found (../lib/diag-engines) — ` +
+        `/engines and the engine summary on /tension will report unavailable instead of crashing. ` +
+        `This is a real gap (Phase 47/CG-class: missing module, not a transient failure) — ` +
+        `build or wire ../lib/diag-engines if the 12-engine composite health pack is needed.`);
+    }
+  }
+  return _diagEngines || null;
+}
+
 const ROOT    = path.join(__dirname, '..');
+
 const PORT    = 7825;
 const PID_FILE = path.join(ROOT, 'data/diagnostic/diagnostic.pid');
 
