@@ -1930,11 +1930,19 @@ try {
   });
 
   // Phase 5 SOFT: open CLI terminal — guarded, fires once only
+  // Controlled by orchestrator.config.json → openTerminalOnBoot (default: false)
+  // The main UI is the intended single entry point now; nexus-repl.js is still
+  // available to run manually (`node cli/nexus-repl.js --repl`) but no longer
+  // auto-launches a separate OS window on every boot.
   let _cliOpened = false;
   ownSeq.phase({ name:'cli.terminal', type:'SOFT',
     label:'Open CLI terminal (nexus-repl.js)',
     fn: async () => {
       if (_cliOpened) return; // guard — never open twice
+      const cfgPath = path.join(ROOT, 'orchestrator.config.json');
+      let cfg = {};
+      try { cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')); } catch (_) {}
+      if (cfg.openTerminalOnBoot !== true) return;  // explicit opt-in only
       _cliOpened = true;
       const VERSION = '3.0.0';
       const spawn = spawnChild;

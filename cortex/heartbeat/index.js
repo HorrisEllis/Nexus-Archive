@@ -169,23 +169,58 @@ async function _apiPulseTick() {
       const { ok, latencyMs } = await _probe(port, api.path, 3000);
       apiResults[api.label] = { ok, latencyMs, ts: now };
 
+      const gapPath = `${system.name}/${api.label}`;
+
       // Only emit gap if system was previously healthy — avoids boot-time noise
       if (!ok && _seenAt[system.name] && (now - _seenAt[system.name]) > 20000) {
-        jaaDB.insert('gaps', {
-          uuid:     uid(),
-          type:     'api_degraded',
-          path:     `${system.name}/${api.label}`,
-          body:     `${system.name} ${api.label} API probe failed (${system.port}${api.path})`,
-          severity: 'high',
-          status:   'open',
-          source:   MODULE_ID,
-          ts:       now,
-        });
+        // Dedup: reuse an existing open gap for this path instead of minting
+        // a new UUID every cycle — otherwise escalation cooldowns (keyed by
+        // gap.uuid) never apply and the same failure spams a fresh "gap" every
+        // pulse tick.
+        const existing = jaaDB.query('gaps',
+          g => g.type === 'api_degraded' && g.path === gapPath && g.status === 'open',
+          1
+        )[0];
+
+        if (existing) {
+          jaaDB.update('gaps', existing.uuid, {
+            attempts: (existing.attempts || 0) + 1,
+            ts:       now,
+            body:     `${system.name} ${api.label} API probe failed (${system.port}${api.path})`,
+          });
+        } else {
+          jaaDB.insert('gaps', {
+            uuid:     uid(),
+            type:     'api_degraded',
+            path:     gapPath,
+            body:     `${system.name} ${api.label} API probe failed (${system.port}${api.path})`,
+            severity: 'high',
+            status:   'open',
+            source:   MODULE_ID,
+            attempts: 0,
+            ts:       now,
+          });
+        }
         jaaDB.insert('event_log', {
           uuid: uid(), type: 'heartbeat.api.degraded',
           payload: { system: system.name, api: api.label, port, path: api.path },
           source: MODULE_ID, causedBy: null, ts: now,
         });
+      } else if (ok) {
+        // Recovery: close any open gap for this path so it stops being
+        // re-escalated and doesn't linger as stale "still degraded" state.
+        const openGap = jaaDB.query('gaps',
+          g => g.type === 'api_degraded' && g.path === gapPath && g.status === 'open',
+          1
+        )[0];
+        if (openGap) {
+          jaaDB.update('gaps', openGap.uuid, { status: 'resolved', resolvedAt: now });
+          jaaDB.insert('event_log', {
+            uuid: uid(), type: 'heartbeat.api.recovered',
+            payload: { system: system.name, api: api.label, port, path: api.path, gapUuid: openGap.uuid },
+            source: MODULE_ID, causedBy: null, ts: now,
+          });
+        }
       }
     }
 

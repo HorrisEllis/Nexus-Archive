@@ -1,6 +1,7 @@
 {
   "_comment": "NEXUS Orchestrator runtime config — edit here, never in orchestrator.js",
   "openUIOnBoot": true,
+  "openTerminalOnBoot": false,
   "uiURL": "http://127.0.0.1:9000",
   "openEmergeOnBoot": false,
   "emerge": {
