@@ -177,6 +177,14 @@ function stop() {
   _interval = null;
 }
 
+let _lastErrLogged = null;
+function _logOnce(key, msg) {
+  if (_lastErrLogged === key) return; // already told you, don't repeat every poll
+  _lastErrLogged = key;
+  console.error(msg);
+}
+function _clearErrLog() { _lastErrLogged = null; }
+
 function _pollCFR() {
   const req = http.request({
     hostname: '127.0.0.1', port: 9999, path: '/cfr/field',
@@ -185,15 +193,37 @@ function _pollCFR() {
     let body = '';
     res.on('data', c => body += c);
     res.on('end', () => {
+      let field;
       try {
         const d = JSON.parse(body);
-        const field = d.field || d.state || d;
-        if (field && typeof field.tension === 'number') influence(field);
-      } catch(_) {}
+        field = d.field || d.state || d;
+      } catch (e) {
+        _logOnce('parse', `[cfr-influence] failed to parse /cfr/field response: ${e.message}`);
+        return;
+      }
+      // §1.2 nothing silent — validate the whole shape influence() actually reads,
+      // not just `tension`. A field missing coherence/friction/entropy/resonance
+      // used to throw deep inside influence() and get swallowed by an empty catch.
+      const required = ['tension', 'coherence', 'friction', 'entropy', 'resonance'];
+      const missing = required.filter(k => typeof field?.[k] !== 'number');
+      if (missing.length) {
+        _logOnce('shape', `[cfr-influence] /cfr/field response missing/non-numeric field(s): ${missing.join(', ')} — skipping this poll`);
+        return;
+      }
+      try {
+        influence(field);
+        _clearErrLog(); // healthy poll — reset suppression so a future failure logs again
+      } catch (e) {
+        // Previously: catch(_) {} — silently swallowed. This is exactly the
+        // axiom §1.2 violation it warns against: a failing influence() pass
+        // means sigma floor / guardian throttle / chaos alerts can silently
+        // stop updating with zero visibility.
+        _logOnce('influence', `[cfr-influence] influence() threw: ${e.message}`);
+      }
     });
   });
   req.setTimeout(2000, () => req.destroy());
-  req.on('error', () => {});
+  req.on('error', (e) => { _logOnce('conn', `[cfr-influence] /cfr/field request failed: ${e.message} (will keep retrying every poll, logged once until it recovers)`); });
   req.end();
 }
 

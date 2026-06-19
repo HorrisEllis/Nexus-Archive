@@ -1,44 +1,97 @@
-# NEXUS patch bundle — pattern dedup, diagnostic crash, redundancy flush
+# NEXUS SYSTEM — v5.1.0
 
-## What's in here
+> **⚠ SUPERSEDED — DO NOT TREAT AS CURRENT**
+> This README describes an earlier intended architecture (Emergence/.eg-exclusive, `nexus-eg/` tree: crystalball, cockpit, siphon, seam, guardian-ext). That architecture is not what exists in this codebase — zero `.eg` files are present; the actual system is plain Node/JS (cortex/, guardian/, idearium/, lib/, etc.). This file has not been kept in sync and should not be read as a description of current state.
+>
+> **Canonical, actively-maintained source of truth: `lib/version.js`** — current system version, per-phase build status, and per-module versions all live there. As of this note: system v0.7.8, Phase 12 (User Model) complete.
+>
+> The content below is preserved as historical record, not deleted, since it may describe a real prior design direction worth understanding — but treat every claim in it (file counts, ports, structure) as potentially describing a different system than the one on disk.
 
-| File | Goes where | What it fixes |
-|---|---|---|
-| `cortex/intelligence/index.js` | `nexus-080/cortex/intelligence/index.js` | Hydrates `_patternIndex` from `bep_patterns` on boot (root cause of the boot-log spam); updates patterns in place on recurrence instead of re-inserting/re-logging; adds a real `sigHash` (sha1) field per pattern, and a `gapHash` field on the drift-gap it opens |
-| `cortex/memory/jaa-db.js` | `nexus-080/cortex/memory/jaa-db.js` | Adds a public `evict(table, uuid, reason)` method (same tombstone mechanism the internal decay tick already used, just exposed) — needed by the flush script below |
-| `service/nexus-diagnostic.js` | `nexus-080/service/nexus-diagnostic.js` | Defines `_getDiagEngines()`, which was called but never defined and was crashing the whole diagnostic process |
-| `flush-redundancy.js` | `nexus-080/cortex/flush-redundancy.js` | One-off cleanup script — dedupes the duplicate `bep_patterns` rows and duplicate open `gaps` rows that already accumulated on disk *before* these fixes existed |
+## Complete Architecture in Emergence
 
-## Install order
+**Author:** James Brooks (Erosmancer)  
+**Language:** Emergence (.eg) — exclusively  
+**Files:** 115  
+**SNR:** 98.4%–100% across all files  
+**Axiom violations:** 0  
 
-1. Copy `cortex/intelligence/index.js`, `cortex/memory/jaa-db.js`, and `service/nexus-diagnostic.js` over your existing files (back up first if you want).
-2. **Before restarting the orchestrator**, run the flush script once to clean up existing duplicate rows — the code fix only stops *new* duplicates, it doesn't retroactively merge what's already on disk:
+---
 
-   ```bash
-   cd nexus-080/cortex
-   node flush-redundancy.js --dry-run     # see what it WOULD do first
-   node flush-redundancy.js               # actually evict the duplicates
-   ```
+> The spec is the container. The .eg file runs the system. No coding syntax exists in this session.
 
-   If your data directory isn't the default `nexus-080/cortex/data`, set it explicitly:
-   ```bash
-   NEXUS_DATA_DIR=/path/to/your/data node flush-redundancy.js --dry-run
-   ```
+---
 
-3. Start the orchestrator as normal (`node orchestrator.js`).
-
-## On the "hashes" question
-
-`bep_patterns` rows now carry a `sigHash` field (`sha1(signature).slice(0,16)`) alongside the existing `signature` string — the signature string was already a perfectly good dedup key, but the hash gives you a fixed-width, fast-to-index field consistent with the hash-chain conventions used elsewhere (Phase 26's `cortex_state_hash`/`prev_snapshot_hash`).
-
-The one gap-opening call inside `cortex/intelligence/index.js` (the `baseline_drift` gap) now carries a matching `gapHash`. **Note:** the heartbeat-side gap dedup described in Phase 23.6 (`{type, path, status:'open'}` before insert) lives in `cortex/heartbeat/index.js`, which wasn't included in the zip I was given — so it doesn't have a `gapHash` field yet. If you want that wired in too, send over `cortex/heartbeat/index.js` and I'll patch it the same way.
-
-## Verifying it worked
-
-After a restart, your boot log should show at most one line per pattern crystallization event ever (not every boot), and:
+## Structure
 
 ```
-[cortex/intelligence] seeded _patternIndex: N patterns from JAA
+nexus-eg/
+├── foundation/          14 files — SISO primitives, Cobalt bus, FileStore, poll registry, admin server
+├── memory/               6 files — JAA-DB (28 tables), agent-memory, continuous-stream, feedback-weighter, fix-map, lattice-index
+├── core/                 7 files — RAID (4 files), translation, manifest-generator, usage
+├── crystalball/          5 files — CrystalBall wiring, BEP engine, lattice-bridge, MCL, MQL (5-lane)
+├── gate/                 3 files — gap-finder, gate-runner, healer
+├── agents/               6 files — dispatcher, ollama, claude, base, chatgpt, gemini
+├── orion/                4 files — sensor, record, policy, verify
+├── versionium/           2 files — core, causality
+├── automation/           2 files — engine, queue-manager
+├── canvas/               9 files — renderer, cfr-physics, cfr-render, cfr-rewind, image-analyzer, node-inspector, rewind-scrubber, nas-router, tauri-ws
+├── guardian-ext/        12 files — app, background, cfr, ir-layer, handshake, content, popup, module-base, claude, chatgpt, instagram, threads
+├── guardian-server/      9 files — server, api-7820, wss-7821, jaa, memory-7823, dropzone-7822, cli, agents, cobalt-bridge
+├── userscript/          16 files — toast, gates, tab-claim, siso-bus, dom-scanner, artifact-store, download-intercept, seam-tab, queue, snr-detector, pa, gap-hunter, greeting, gtci-inject, realtime-sync, tab-discovery
+├── cockpit/              5 files — core (SISOKernel+JAA+Bayesian), pipeline (14 nodes+evaluator), forge (self-mod), cli, ui (v10)
+├── idearium/             5 files — core (IdeaOS+tension+SNR), cli, api, event, gate
+├── siphon/               3 files — siphon, pulse, watchman
+├── seam/                 3 files — spec-parser, verdict-detector, seam-delivery
+└── system/               4 files — boot, topology, data-flows, seam-contracts
 ```
 
-should appear once, early in boot, instead of 60+ "pattern crystallised" lines.
+---
+
+## Ports
+
+| Port | Layer | Purpose |
+|------|-------|---------|
+| 3748 | Cortex | Source of truth — JAA + Cobalt + RAID + ORION |
+| 4800 | Forge/Idearium | IDE + pipeline + spec parser |
+| 7800 | Rheon IDE | Seam language IDE |
+| 7771 | Tauri WS | Desktop Rust bridge |
+| 7820 | Guardian HTTP | Agent API + Cockpit |
+| 7821 | Guardian WSS | Browser userscript bridge |
+| 7822 | Dropzone | File server (LAN) |
+| 7823 | Memory server | JAA query surface (LAN) |
+| 11434 | Ollama | Local LLM |
+
+---
+
+## Laws
+
+```
+LAW_I    Local first — Ollama before cloud
+LAW_II   JAA write before behavior
+LAW_III  No module imports another — JAA only
+LAW_IV   Schema over code
+LAW_V    CLI first — UI is a skin
+LAW_VI   Toast on every failure
+
+§1.1  Nothing exists until proven
+§1.2  Nothing silently fails
+§2.1  Persistence is the golden rule
+§M1   Every module: init(cfg) + stop() only
+§M2   Modules only read/write declared tables
+§M3   Poll interval is module configuration
+§A3   Every row carries causedBy or source
+```
+
+---
+
+## Using the Emerge compiler
+
+```bash
+node emerge-cli.js check foundation/siso-event.eg
+node emerge-cli.js compile foundation/siso-event.eg
+node emerge-cli.js watch          # watch all .eg files
+```
+
+---
+
+*NEXUS SYSTEM v5.1.0 · All Emergence · James Brooks · Portland, Oregon · 2026*
