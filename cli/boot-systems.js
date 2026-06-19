@@ -164,13 +164,8 @@ async function _bootSystems(ledgerWrite, orchPort, connectBridgeSSE, _eventLedge
     {
       systemId: 'idearium',  port: 4800, healthPath: '/health',
       label: 'Idearium',     cmd: path.join(ROOT, 'idearium', 'api', 'index.js'),    args: [],
-      // §B-6: bind to all interfaces so LAN and tunnel access work out of the box.
-      // Override with IDEARIUM_BIND=127.0.0.1 in environment to restrict.
-      // Override with IDEARIUM_NO_TUNNEL=1 to suppress cloudflare tunnel.
-      extraEnv: {
-        IDEARIUM_BIND:      process.env.IDEARIUM_BIND      || '0.0.0.0',
-        IDEARIUM_NO_TUNNEL: process.env.IDEARIUM_NO_TUNNEL || '0',
-      },
+      // Idearium is internal-only — no LAN/remote exposure. The orchestrator
+      // (:9000) is the sole gateway for outside access.
     },
     {
       systemId: 'architect', port: 3747, healthPath: '/health',
