@@ -681,7 +681,7 @@ function _handleNCPMessage(msg) {
             ts:         Date.now(),
             source:     'ncp',
           });
-        } catch(_) {}
+        } catch(e) { console.error(`[guardian] failed to insert chat_log record for job ${jobId}: ${e.message}`); }
 
         bus.emit('guardian.job.complete', { jobId, provider, chars: finalText.length,
           gaps: gaps.length, gapDrift });
@@ -1524,9 +1524,9 @@ const _evLedger = createCFRLedger({
         createdAt: Date.now(),
         ts:       Date.now(),
       });
-    } catch(_) {}
+    } catch(e) { console.error(`[guardian] failed to insert CFR-detected gap into JAA (gap lost): ${e.message}`); }
     // Surface on bus so diagnostic tool sees it
-    try { _origEmit('guardian.cfr.gap', gap); } catch(_) {}
+    try { _origEmit('guardian.cfr.gap', gap); } catch(e) { console.error(`[guardian] failed to broadcast CFR gap on bus: ${e.message}`); }
   },
 });
 _evLedger.open();
@@ -1560,7 +1560,9 @@ const jaa = new JaaStore(STORE_DIR);
 ['seam_sessions','queue_compartments','pa_sessions','jobs','artifacts',
  'gaps','failures','ledger','downloads','sessions','timeline_events',
  'ledger_entries','lab_sessions','lab_results'].forEach(t => {
-  try { jaa._ensureTable?.(t); } catch(_) {}
+  try { jaa._ensureTable?.(t); } catch(e) {
+    console.error(`[guardian] failed to provision table '${t}' at boot — inserts to it will likely fail later: ${e.message}`);
+  }
 });
 
 // ── Lab Manager — §LAB-01 every experiment has a UUID and a hypothesis ────
@@ -2373,7 +2375,7 @@ function handleExtendedRoutes(req, res, url, method) {
         meta:     JSON.stringify({ command: raw, source: body.source || 'cli', ts }),
         ts,
       };
-      try { jaa.insert('ledger', ledgerEntry); } catch(_) {}
+      try { jaa.insert('ledger', ledgerEntry); } catch(e) { console.error(`[guardian §LAW II] failed to write CLI input to ledger before execution: ${e.message}`); }
       bus.emit('guardian.cli.exec', { command: raw, ts });
 
       // Execute the command
@@ -2517,7 +2519,7 @@ function handleExtendedRoutes(req, res, url, method) {
         meta:     JSON.stringify({ command: raw, ok: !error, ts: Date.now() }),
         ts:       Date.now(),
       };
-      try { jaa.insert('ledger', resultEntry); } catch(_) {}
+      try { jaa.insert('ledger', resultEntry); } catch(e) { console.error(`[guardian §LAW II] failed to write CLI result to ledger: ${e.message}`); }
 
       // Broadcast to all SSE clients so UI + terminal see the same output
       cockpitBroadcast({
