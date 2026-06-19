@@ -133,12 +133,12 @@ await test('T-009', 'successful executor -> compartment resolves to PASS', async
   assert.strictEqual(resolved.status, 'PASS');
 });
 
-await test('T-010', 'PASS path trace includes adversary suite + QA/QC + crystal/lattice steps, in order', async () => {
+await test('T-010', 'PASS path trace includes adversary suite + QA/QC + crystal/lattice + case-library steps, in order', async () => {
   reset();
   const c = await ce.spawn({ intent: fakeIntent() });
   const resolved = await ce.execute(c, async () => ({ ok: true }));
   const events = resolved.trace_log.map(t => t.event);
-  assert.deepStrictEqual(events, ['SPAWN', 'EXECUTE_START', 'EXECUTE_COMPLETE', 'ADVERSARY_SUITE', 'QA_QC', 'PASS', 'CRYSTAL_LATTICE_UPDATE']);
+  assert.deepStrictEqual(events, ['SPAWN', 'EXECUTE_START', 'EXECUTE_COMPLETE', 'ADVERSARY_SUITE', 'QA_QC', 'PASS', 'CRYSTAL_LATTICE_UPDATE', 'CASE_LIBRARY_INDEX']);
 });
 
 await test('T-011', 'real adversary suite (sub-step 4) is auto-registered and reports ran:true with no violations for a clean result', async () => {

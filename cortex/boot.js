@@ -326,7 +326,7 @@ async function bootAsync() {
   // a broken require shows up in the boot log instead of silently degrading
   // the first real request.
   seq.phase({ name:'constitutional.reflection.wiring', type:'SOFT',
-    label:'Phase 10 (constitutional-ai) + Phase 11 (reflection) + Phase 12 (user-model) + Phase 25 (compartment-engine) wiring check',
+    label:'Phase 10 (constitutional-ai) + Phase 11 (reflection) + Phase 12 (user-model) + Phase 25 (compartment-engine) + Phase 46 (case-library) + Phase 13 (autonomous-loop) wiring check',
     fn: async () => {
       try {
         const cai = require('../lib/constitutional-ai');
@@ -367,6 +367,26 @@ async function bootAsync() {
         });
       } catch (e) {
         console.warn(`[cortex/boot] compartment-engine wiring check failed: ${e.message}`);
+      }
+      try {
+        const cl = require('../lib/case-library');
+        const clChecks = cl.validateWiring();
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.case_library.wiring', ts: Date.now(),
+          payload: clChecks, source: 'boot', causedBy: null,
+        });
+      } catch (e) {
+        console.warn(`[cortex/boot] case-library wiring check failed: ${e.message}`);
+      }
+      try {
+        const al = require('../lib/autonomous-loop');
+        const alChecks = al.validateWiring();
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.autonomous_loop.wiring', ts: Date.now(),
+          payload: alChecks, source: 'boot', causedBy: null,
+        });
+      } catch (e) {
+        console.warn(`[cortex/boot] autonomous-loop wiring check failed: ${e.message}`);
       }
     },
   });

@@ -32,6 +32,8 @@ const SUITES = [
   'compartment-engine.test.js',
   'adversary-suite.test.js',
   'crystal-lattice.test.js',
+  'case-library.test.js',
+  'autonomous-loop.test.js',
 ];
 
 let totalPassed = 0;

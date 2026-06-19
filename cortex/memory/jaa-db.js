@@ -132,6 +132,10 @@ const TABLE_TIERS = {
   compartments: 'long',
   // Phase 25/26 sub-step 5 — crystal-lattice.js — edge weights between concept/state/compartment-type nodes
   lattice_edges: 'long',
+  // Phase 46 — case-library.js — every PASS compartment trace, indexed by intent signature
+  case_index: 'long',
+  // Phase 13 — autonomous-loop.js — every autonomous run's full lifecycle record
+  autonomous_runs: 'long',
   chat_log:            'short',  // all AI exchanges for context reinjection
   escalation_log:      'long',   // full history of every escalation attempt
   components:          'long',   // component registry — self-describing kernel
