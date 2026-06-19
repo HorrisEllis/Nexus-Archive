@@ -43,19 +43,16 @@ function sigHash(sig) {
   return createHash('sha1').update(sig).digest('hex').slice(0, 16);
 }
 
-async function main() {
-  let jaaDB;
-  try {
-    ({ jaaDB } = require('./memory/jaa-db'));
-  } catch (e) {
-    console.error('Could not require ./memory/jaa-db — run this script from inside nexus-080/cortex/, ' +
-      'or copy it next to your real memory/jaa-db.js.');
-    console.error(e.message);
-    process.exit(1);
-  }
-
-  await jaaDB.open(DATA_DIR);
-  console.log(`[flush] opened JaaDB at ${DATA_DIR}${DRY_RUN ? '  (DRY RUN — nothing will be evicted)' : ''}`);
+// FIX (James, 2026-06-19 — "command to purge redundant gaps and patterns"):
+// this was a manual one-off script only — not reachable from any CLI or API.
+// runFlush() is the same dedup logic, refactored to take an ALREADY-OPEN
+// jaaDB (so a caller like orchestrator.js's CLI can reuse its own existing
+// connection instead of opening a second one) and to return a structured
+// summary instead of only printing to console. main() below is now a thin
+// CLI wrapper around it — `node flush-redundancy.js [--dry-run]` still
+// works exactly as documented above, opening + closing its own connection.
+async function runFlush({ jaaDB, dryRun = false, log = console.log } = {}) {
+  if (!jaaDB) throw new Error('runFlush requires an already-open jaaDB instance');
 
   // ── 1. bep_patterns dedup ──────────────────────────────────────────────────
   const patterns = jaaDB.query('bep_patterns', () => true, 100_000);
@@ -69,6 +66,7 @@ async function main() {
 
   let patternDupesFound = 0;
   let patternRowsEvicted = 0;
+  const patternDetail = [];
 
   for (const [key, rows] of groups) {
     if (rows.length <= 1) continue;
@@ -84,10 +82,11 @@ async function main() {
     const mergedConfidence = Math.max(...rows.map(r => r.confidence || 0));
     const hash = canonical.sigHash || sigHash(canonical.signature || key);
 
-    console.log(`[flush] "${key}" — ${rows.length} rows → keeping ${canonical.uuid} ` +
+    log(`[flush] "${key}" — ${rows.length} rows → keeping ${canonical.uuid} ` +
       `(merged count: ${mergedCount}, evicting ${dupes.length})`);
+    patternDetail.push({ key, rowCount: rows.length, canonical: canonical.uuid, evicted: dupes.length, mergedCount });
 
-    if (!DRY_RUN) {
+    if (!dryRun) {
       jaaDB.update('bep_patterns', canonical.uuid, {
         count: mergedCount,
         lastSeen: mergedLastSeen,
@@ -115,6 +114,7 @@ async function main() {
 
   let gapDupesFound = 0;
   let gapRowsEvicted = 0;
+  const gapDetail = [];
 
   for (const [key, rows] of gapGroups) {
     if (rows.length <= 1) continue;
@@ -125,10 +125,11 @@ async function main() {
     const dupes = rows.slice(1);
     const mergedAttempts = rows.reduce((sum, r) => sum + (r.attempts || 1), 0);
 
-    console.log(`[flush] open gap "${key}" — ${rows.length} duplicate open rows → ` +
+    log(`[flush] open gap "${key}" — ${rows.length} duplicate open rows → ` +
       `keeping ${canonical.uuid} (merged attempts: ${mergedAttempts}, evicting ${dupes.length})`);
+    gapDetail.push({ key, rowCount: rows.length, canonical: canonical.uuid, evicted: dupes.length, mergedAttempts });
 
-    if (!DRY_RUN) {
+    if (!dryRun) {
       jaaDB.update('gaps', canonical.uuid, { attempts: mergedAttempts });
       for (const d of dupes) {
         jaaDB.evict('gaps', d.uuid, 'flush-redundancy: duplicate open gap of ' + canonical.uuid);
@@ -139,15 +140,47 @@ async function main() {
     }
   }
 
-  console.log('');
-  console.log('── flush summary ──────────────────────────────────────────');
-  console.log(`bep_patterns : ${patterns.length} rows scanned, ${patternDupesFound} signatures had dupes, ` +
-    `${patternRowsEvicted} rows ${DRY_RUN ? 'would be evicted' : 'evicted'}`);
-  console.log(`gaps (open)  : ${openGaps.length} rows scanned, ${gapDupesFound} keys had dupes, ` +
-    `${gapRowsEvicted} rows ${DRY_RUN ? 'would be evicted' : 'evicted'}`);
-  if (DRY_RUN) console.log('\nRe-run without --dry-run to actually evict.');
+  const summary = {
+    dryRun,
+    patterns: { scanned: patterns.length, signaturesWithDupes: patternDupesFound, rowsEvicted: patternRowsEvicted, detail: patternDetail },
+    gaps:     { scanned: openGaps.length, keysWithDupes: gapDupesFound, rowsEvicted: gapRowsEvicted, detail: gapDetail },
+  };
+
+  log('');
+  log('── flush summary ──────────────────────────────────────────');
+  log(`bep_patterns : ${summary.patterns.scanned} rows scanned, ${summary.patterns.signaturesWithDupes} signatures had dupes, ` +
+    `${summary.patterns.rowsEvicted} rows ${dryRun ? 'would be evicted' : 'evicted'}`);
+  log(`gaps (open)  : ${summary.gaps.scanned} rows scanned, ${summary.gaps.keysWithDupes} keys had dupes, ` +
+    `${summary.gaps.rowsEvicted} rows ${dryRun ? 'would be evicted' : 'evicted'}`);
+  if (dryRun) log('\nRe-run without --dry-run to actually evict.');
+
+  return summary;
+}
+
+// ── Standalone CLI entrypoint ─────────────────────────────────────────────────
+// Only runs when this file is executed directly (`node flush-redundancy.js`),
+// not when runFlush is required and called in-process by another module.
+async function main() {
+  let jaaDB;
+  try {
+    ({ jaaDB } = require('./memory/jaa-db'));
+  } catch (e) {
+    console.error('Could not require ./memory/jaa-db — run this script from inside nexus-080/cortex/, ' +
+      'or copy it next to your real memory/jaa-db.js.');
+    console.error(e.message);
+    process.exit(1);
+  }
+
+  await jaaDB.open(DATA_DIR);
+  console.log(`[flush] opened JaaDB at ${DATA_DIR}${DRY_RUN ? '  (DRY RUN — nothing will be evicted)' : ''}`);
+
+  await runFlush({ jaaDB, dryRun: DRY_RUN, log: console.log });
 
   await jaaDB.close();
 }
 
-main().catch(e => { console.error('[flush] fatal:', e); process.exit(1); });
+if (require.main === module) {
+  main().catch(e => { console.error('[flush] fatal:', e); process.exit(1); });
+}
+
+module.exports = { runFlush, sigHash };

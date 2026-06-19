@@ -1133,6 +1133,67 @@ class AdminServer {
             }
             break;
           }
+          // FIX (James, 2026-06-19 — "command line tool for ... raid engine"):
+          // there was no plain status read — only the /decide action route.
+          // getState() already existed on the module, just wasn't exposed.
+          // FIX (James, 2026-06-19 — "command to purge redundant gaps and
+          // patterns"): cortex/flush-redundancy.js's dedup logic existed
+          // only as a manual one-off script. POST /api/purge wires it to
+          // this already-open jaaDB connection so it's reachable from the
+          // orchestrator CLI (and any other caller) without a child process.
+          // POST /api/purge  body: { dryRun?: boolean }
+          if (req.method === 'POST' && url.pathname === '/api/purge') {
+            try {
+              const body = await this._body(req).catch(() => ({}));
+              const dryRun = !!(body && body.dryRun);
+              const lines = [];
+              const { runFlush } = require('../flush-redundancy.js');
+              const summary = await runFlush({ jaaDB, dryRun, log: (m) => lines.push(m) });
+              this._json(res, 200, { ok: true, ...summary, log: lines });
+            } catch (e) {
+              this._json(res, 500, { ok: false, error: e.message });
+            }
+            break;
+          }
+          if (this._raid && url.pathname === '/api/raid/status') {
+            try {
+              this._json(res, 200, { ok: true, ...this._raid.getState() });
+            } catch (e) {
+              this._json(res, 500, { ok: false, error: e.message });
+            }
+            break;
+          }
+          // FIX (James, 2026-06-19 — "command line tool for ... compartments"):
+          // compartment-engine.js (Phase 25) had zero HTTP exposure — the
+          // `compartments` JAA table (spawn/execute/resolve lifecycle) was
+          // only readable by requiring the module internals directly.
+          // GET /api/compartments?status=&limit=  — list, newest first
+          // GET /api/compartments/:uuid           — single compartment
+          if (url.pathname === '/api/compartments') {
+            try {
+              const status = url.searchParams.get('status');
+              const limit  = parseInt(url.searchParams.get('limit') || '50', 10);
+              const rows = jaaDB.query('compartments',
+                r => !status || r.status === status, 100_000)
+                .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+                .slice(0, limit);
+              this._json(res, 200, { ok: true, compartments: rows, total: rows.length });
+            } catch (e) {
+              this._json(res, 500, { ok: false, error: e.message });
+            }
+            break;
+          }
+          if (url.pathname.startsWith('/api/compartments/')) {
+            try {
+              const id = url.pathname.slice('/api/compartments/'.length);
+              const row = jaaDB.query('compartments', r => r.uuid === id || r.id === id, 1)[0];
+              if (!row) { this._json(res, 404, { ok: false, error: 'compartment not found', id }); break; }
+              this._json(res, 200, { ok: true, compartment: row });
+            } catch (e) {
+              this._json(res, 500, { ok: false, error: e.message });
+            }
+            break;
+          }
           // Delegate /api/intelligence/* to the registered intelligence module
           if (this._intelligence && url.pathname.startsWith('/api/intelligence')) {
             const body = req.method !== 'GET' ? await this._body(req).catch(() => null) : null;

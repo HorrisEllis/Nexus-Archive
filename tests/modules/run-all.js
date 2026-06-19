@@ -21,6 +21,11 @@ const SUITES = [
   'jaa-db.test.js',
   'queue.test.js',
   'baseline.test.js',
+  'intelligence.test.js',
+  'ollama-runtime.test.js',
+  'flush-redundancy.test.js',
+  'admin-server-routes.test.js',
+  'orchestrator-cli.test.js',
   'interaction-contract.test.js',
   'uid.test.js',
   'alk.test.js',
@@ -34,6 +39,16 @@ const SUITES = [
   'crystal-lattice.test.js',
   'case-library.test.js',
   'autonomous-loop.test.js',
+  // FIX (James, 2026-06-19): these six suites existed, passed standalone,
+  // and were never registered here — `node tests/modules/run-all.js` was
+  // silently skipping all of them. Found while wiring tests for this pass,
+  // not something I broke.
+  'test-component-registry.js',
+  'test-grammar-engine.js',
+  'test-intelligence-bridge.js',
+  'test-liminal-space.js',
+  'test-snr-filter.js',
+  'test-ui-registry.js',
 ];
 
 let totalPassed = 0;
@@ -53,8 +68,13 @@ async function runSuite(file) {
     proc.stderr.on('data', d => { process.stderr.write(d); });
 
     proc.on('close', (code) => {
-      // Parse pass/fail from output
-      const match = out.match(/(\d+) passed\s+(\d+) failed/);
+      // FIX (James, 2026-06-19): two test-file naming conventions in this
+      // codebase use two different summary formats —
+      //   *.test.js    : "16 passed  0 failed"   (whitespace-separated)
+      //   test-*.js    : "16 passed, 0 failed"    (comma-separated)
+      // The old regex only matched the first, so every test-*.js suite
+      // silently reported 0/0 here even though it ran and passed for real.
+      const match = out.match(/(\d+)\s*passed,?\s+(\d+)\s*failed/);
       const p = match ? parseInt(match[1]) : 0;
       const f = match ? parseInt(match[2]) : 0;
       totalPassed += p;

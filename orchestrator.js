@@ -1753,6 +1753,88 @@ async function cliSNR() {
   console.log(`\n  ${col}${bar}${C.r}  ${col}${(v*100).toFixed(1)}% SNR${C.r}\n`);
 }
 
+// ── FIX (James, 2026-06-19 — "command line tool for the intelligence
+// system, raid engine, compartments") ────────────────────────────────────────
+// intelligence/RAID/compartments had zero CLI surface — internal-API-only.
+// These proxy to the routes added in cortex/foundation/admin-server.js.
+
+async function cliIntel(sub='patterns', arg) {
+  if (sub==='patterns') {
+    const d=await GET('cortex','/api/intelligence/patterns');
+    if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+    const list=d.patterns||[];
+    console.log(`\n${C.b}${C.c}PATTERNS (${list.length})${C.r}\n`);
+    for (const p of list) {
+      const cc=p.crystallised?C.g:C.d;
+      console.log(`  ${cc}${p.crystallised?'●':'○'}${C.r}  ${C.d}${(p.patternType||'—').padEnd(18)}${C.r}  ${(p.description||p.signature||'—').slice(0,70)}`);
+    }
+    console.log('');
+  } else if (sub==='failures') {
+    const d=await GET('cortex','/api/intelligence/failures');
+    if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+    const list=d.failures||[];
+    console.log(`\n${C.b}${C.c}FAULT TAXONOMY (${list.length})${C.r}\n`);
+    for (const f of list) console.log(`  ${C.red}✗${C.r}  ${C.d}${(f.faultClass||'—').padEnd(24)}${C.r}  count:${f.count||0}  ${C.d}${(f.precursors||[]).slice(0,3).join(', ')}${C.r}`);
+    console.log('');
+  } else if (sub==='reuse') {
+    const d=await GET('cortex',`/api/intelligence/reuse${arg?`?q=${encodeURIComponent(arg)}`:''}`);
+    if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+    const list=d.results||[];
+    console.log(`\n${C.b}${C.c}REUSE INDEX (${list.length})${C.r}\n`);
+    for (const r of list) console.log(`  ${C.d}${(r.type||'—').padEnd(12)}${C.r}  ${C.c}${(r.lang||'—').padEnd(10)}${C.r}  ${(r.intent||'—').slice(0,50)}`);
+    console.log('');
+  } else {
+    console.log(`Usage: node orchestrator.js intel <patterns|failures|reuse> [query]`);
+  }
+}
+
+async function cliRaid() {
+  const d=await GET('cortex','/api/raid/status');
+  if(d.error){console.log(`${C.red}✗${C.r} Cortex offline or RAID not registered: ${d.error}`);return;}
+  console.log(`\n${C.b}${C.c}RAID${C.r}  ${C.d}v${d.version||'—'}${C.r}\n`);
+  const health=d.health||{};
+  for (const [agent,h] of Object.entries(health)) {
+    console.log(`  ${sysDot(h?.online!==false)}  ${C.b}${agent.padEnd(12)}${C.r}  ${C.d}${JSON.stringify(h).slice(0,60)}${C.r}`);
+  }
+  const weights=d.weights||{};
+  if (Object.keys(weights).length) {
+    console.log(`\n  ${C.d}weights:${C.r}`);
+    for (const [agent,w] of Object.entries(weights)) console.log(`    ${C.m}${agent.padEnd(12)}${C.r}  ${(w*100).toFixed(1)}%`);
+  }
+  console.log('');
+}
+
+async function cliCompartments(sub='list', arg) {
+  if (sub==='show') {
+    if(!arg){console.log(`Usage: node orchestrator.js compartments show <uuid>`);return;}
+    const d=await GET('cortex',`/api/compartments/${arg}`);
+    if(d.error||!d.ok){console.log(`${C.red}✗${C.r} ${d.error||'not found'}`);return;}
+    console.log(`\n${C.b}${C.c}COMPARTMENT ${arg.slice(0,8)}${C.r}\n`);
+    console.log(JSON.stringify(d.compartment, null, 2));
+    console.log('');
+    return;
+  }
+  const statusArg = sub==='list' ? arg : sub; // allow `compartments PASS` shorthand
+  const qs = statusArg ? `?status=${encodeURIComponent(statusArg)}` : '';
+  const d=await GET('cortex',`/api/compartments${qs}`);
+  if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+  const list=d.compartments||[];
+  console.log(`\n${C.b}${C.c}COMPARTMENTS (${list.length})${C.r}\n`);
+  for (const c of list) {
+    const sc=c.status==='PASS'?C.g:c.status==='FAILED-REWOUND'?C.y:c.status==='DELETE'?C.red:C.d;
+    console.log(`  ${C.d}${(c.uuid||'').slice(0,8)}${C.r}  ${sc}${(c.status||'—').padEnd(16)}${C.r}  ${C.d}${(c._declaredDomain||'—')}:${(c._declaredVerb||'—')}${C.r}`);
+  }
+  console.log('');
+}
+
+async function cliPurge(dryRun) {
+  console.log(`\n${C.b}${C.c}PURGE${C.r}  ${C.d}${dryRun?'(dry run — nothing will be evicted)':'redundant gaps + patterns'}${C.r}\n`);
+  const d=await POST('cortex','/api/purge',{dryRun:!!dryRun});
+  if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+  for (const line of d.log||[]) console.log(`  ${C.d}${line}${C.r}`);
+  console.log(`\n${C.g}✓${C.r} patterns: ${d.patterns?.rowsEvicted||0} evicted  ${C.g}✓${C.r} gaps: ${d.gaps?.rowsEvicted||0} evicted${dryRun?`  ${C.y}(dry run)${C.r}`:''}\n`);
+}
+
 function cliHelp() {
   console.log(`
 ${C.b}${C.c}NEXUS ORCHESTRATOR${C.r}  v2.0  port ${PORT}
@@ -1774,6 +1856,10 @@ ${C.b}CLI commands${C.r}
   node orchestrator.js tag <id> <tags>  tag entity
   node orchestrator.js push "message"   idearium snapshot
   node orchestrator.js snr              idearium SNR
+  node orchestrator.js intel <patterns|failures|reuse> [query]   cortex pattern engine
+  node orchestrator.js raid             RAID routing health + weights
+  node orchestrator.js compartments [list|show <uuid>] [status]  compartment-engine lifecycle
+  node orchestrator.js purge [--dry-run] purge redundant gaps + patterns
   node orchestrator.js help             this message
 
 ${C.b}Endpoints${C.r}
@@ -1818,6 +1904,10 @@ else if (cmd==='requests') cliRequests(argv[1]).then(()=>process.exit(0));
 else if (cmd==='tag')      cliTag(argv[1],argv[2]).then(()=>process.exit(0));
 else if (cmd==='push')     cliPush(argv.slice(1).join(' ')).then(()=>process.exit(0));
 else if (cmd==='snr')      cliSNR().then(()=>process.exit(0));
+else if (cmd==='intel')        cliIntel(argv[1],argv[2]).then(()=>process.exit(0));
+else if (cmd==='raid')         cliRaid().then(()=>process.exit(0));
+else if (cmd==='compartments') cliCompartments(argv[1],argv[2]).then(()=>process.exit(0));
+else if (cmd==='purge')        cliPurge(argv.includes('--dry-run')).then(()=>process.exit(0));
 else if (cmd==='help'||cmd==='--help'||cmd==='-h') { cliHelp(); process.exit(0); }
 else {
   // Start server

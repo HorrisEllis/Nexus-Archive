@@ -334,6 +334,116 @@ t('[INV] friction() is always a finite number', () => {
   cleanup(base);
 }, { invariant: true });
 
+// ── §J: gap latch fix (James, 2026-06-19 — "sigma only goes to .3" / gap spam) ─
+// Root cause was: every observe() that crossed sigmaThreshold opened a BRAND
+// NEW gap, even if one was already open for the same deviation episode.
+// Because overallSigma re-derives from a rolling window every call, it
+// oscillates right at the threshold line — one real deviation episode used
+// to produce dozens of near-duplicate gaps. Fix: latch to one open gap per
+// monitor; update in place while still deviating; close on recovery.
+
+t('[FIX] sustained deviation → exactly ONE open gap, not one per observe()', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 5, sigmaThreshold: 0.01, windowSize: 30 });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  // Sustained deviation across many observe() calls — old code: many gaps.
+  feedN(mon, 20, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  assert.strictEqual(mon.gaps().length, 1,
+    `expected exactly 1 open gap during sustained deviation, got ${mon.gaps().length}`);
+  cleanup(base);
+}, { invariant: true });
+
+t('[FIX] latched gap updates occurrences instead of duplicating', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 5, sigmaThreshold: 0.01, windowSize: 30 });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  feedN(mon, 10, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  const gap = mon.gaps()[0];
+  assert(gap, 'expected an open gap');
+  assert(gap.occurrences > 1, `expected occurrences to accumulate, got ${gap.occurrences}`);
+  cleanup(base);
+}, { invariant: true });
+
+t('[FIX] onGap fires once per episode, not once per observe()', () => {
+  let fireCount = 0;
+  const { mon, base } = tmpMonitor({
+    baselineN: 5, sigmaThreshold: 0.01, windowSize: 30,
+    onGap: () => { fireCount++; },
+  });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  feedN(mon, 20, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  assert.strictEqual(fireCount, 1, `onGap should fire exactly once per episode, fired ${fireCount} times`);
+  cleanup(base);
+}, { invariant: true });
+
+t('[FIX] gap closes on recovery — sigma back under threshold', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 5, sigmaThreshold: 0.01, windowSize: 30 });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  feedN(mon, 10, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  assert.strictEqual(mon.gaps().length, 1, 'expected an open gap during deviation');
+  // Recover: push enough clean events that the rolling window (size 30)
+  // fully displaces the errors fed above — errSigma settles back to 0.
+  feedN(mon, 30, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  assert.strictEqual(mon.gaps().length, 0, 'gap should close once the system recovers');
+  cleanup(base);
+}, { invariant: true });
+
+t('[FIX] a new episode after recovery opens a fresh gap (latch resets, not stuck closed)', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 5, sigmaThreshold: 0.01, windowSize: 30 });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  feedN(mon, 10, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  const firstGapUuid = mon.gaps()[0]?.uuid;
+  assert(firstGapUuid, 'expected a first gap to exist before recovery');
+  feedN(mon, 30, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() })); // recover
+  assert.strictEqual(mon.gaps().length, 0, 'should be recovered');
+  feedN(mon, 10, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() })); // deviate again
+  assert.strictEqual(mon.gaps().length, 1, 'should have a new open gap for the second episode');
+  assert.notStrictEqual(mon.gaps()[0].uuid, firstGapUuid, 'second episode should be a distinct gap, not the stale closed one');
+  cleanup(base);
+}, { invariant: true });
+
+// ── §K: deltas() — friction/delta data exposed, not discarded ───────────────
+
+t('[FIX] deltas(): empty array before baseline exists', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 10 });
+  feedN(mon, 3);
+  assert.deepStrictEqual(mon.deltas(), [], 'deltas should be empty before baseline established');
+  cleanup(base);
+}, { invariant: true });
+
+t('[FIX] deltas(): populated with per-axis friction during deviation', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 5, sigmaThreshold: 0.01, windowSize: 30 });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  feedN(mon, 10, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  const deltas = mon.deltas();
+  assert(deltas.length > 0, 'expected at least one friction axis during deviation');
+  for (const d of deltas) {
+    assert('axis' in d, 'delta missing axis');
+    assert('friction' in d, 'delta missing friction');
+    assert('sigma' in d, 'delta missing sigma');
+  }
+  cleanup(base);
+}, { invariant: true });
+
+t('[FIX] stats(): includes deltas and gapOccurrences', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 5, sigmaThreshold: 0.01, windowSize: 30 });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  feedN(mon, 10, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  const s = mon.stats();
+  assert(Array.isArray(s.deltas), 'stats().deltas should be an array');
+  assert(typeof s.gapOccurrences === 'number', 'stats().gapOccurrences should be a number');
+  assert(s.gapOccurrences > 1, `expected gapOccurrences > 1 during sustained deviation, got ${s.gapOccurrences}`);
+  cleanup(base);
+}, { invariant: true });
+
+t('[FIX] closeGap(): clears the latch so recovery is not blocked', () => {
+  const { mon, base } = tmpMonitor({ baselineN: 5, sigmaThreshold: 0.01, windowSize: 30 });
+  feedN(mon, 5, () => ({ type: 'ok', latencyMs: 1, error: false, ts: Date.now() }));
+  feedN(mon, 10, () => ({ type: 'ok', latencyMs: 1, error: true, ts: Date.now() }));
+  const gap = mon.gaps()[0];
+  mon.closeGap(gap.uuid);
+  assert.strictEqual(mon._openDeviationGap, null, 'latch should clear after manual closeGap()');
+  cleanup(base);
+}, { invariant: true });
+
 // ── REPORT ────────────────────────────────────────────────────────────────────
 setTimeout(() => {
   process.stdout.write(`\n  baseline.test.js\n  ${passed} passed  ${failed} failed\n`);

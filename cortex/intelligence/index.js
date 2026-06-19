@@ -66,6 +66,22 @@ let _lastPatternScan  = 0;
 let _lastFailureScan  = 0;
 let _lastReuseBuild   = 0;
 let _lastCrossLedger  = 0;
+// FIX (James, 2026-06-19 — "reuse index build" pattern re-crystallising
+// identically forever): _scanPatterns() used to recompute coOccur/precursor
+// counts from scratch against the same 500-event sliding window on every
+// 60s tick. Several event types here (health check, RAID routing health,
+// API pulse, telemetry frame, reuse index build, etc.) are themselves
+// fixed-interval heartbeat ticks — within any given window they co-occur a
+// roughly constant number of times, so "count" never grew past that window
+// constant, and the crystallised flag flipped true/false/true as the
+// windowed count oscillated right at the threshold, re-announcing the same
+// "pattern crystallised" line on every crossing instead of once.
+// _patternScanCursor is the high-water mark (max event.ts already counted) —
+// each scan only counts NEW co-occurrences/precursors since the cursor and
+// ADDS them to the existing total, so count becomes a true cumulative
+// history instead of a recomputed snapshot, and confidence actually grows
+// toward 1.0 over real history instead of freezing at the window constant.
+let _patternScanCursor = 0;
 
 // In-memory indexes for fast query
 let _reuseIndex  = [];   // { hash, type, lang, intent, artifactId, successRate, usedCount }
@@ -163,6 +179,15 @@ function init(cfg = {}) {
     if (_storedPatterns.length) {
       _patternIndex = _storedPatterns;
       console.log(`[${MODULE_ID}] seeded _patternIndex: ${_storedPatterns.length} patterns from JAA`);
+      // Seed the cursor too — same hydration-gap class as _patternIndex above.
+      // Without this, every restart's first scan would treat ALL history as
+      // "new" again and inflate every count by however many events exist
+      // since epoch, once, on every boot.
+      const maxLastSeen = Math.max(0, ..._storedPatterns.map(p => p.lastSeen || p.ts || 0));
+      if (maxLastSeen > 0) {
+        _patternScanCursor = maxLastSeen;
+        console.log(`[${MODULE_ID}] seeded _patternScanCursor: ${new Date(maxLastSeen).toISOString()}`);
+      }
     }
 
     const _storedFaults = jaaDB.query('fault_taxonomy', () => true, 500);
@@ -221,6 +246,12 @@ async function _scanPatterns() {
         const b = events[j];
         if (!a.ts || !b.ts) continue;
         if (b.ts - a.ts > WINDOW_MS) break;
+        // FIX: only count this pair the first time it can be counted — i.e.
+        // the scan during which the later event (b) first becomes new. Pairs
+        // where both a and b are older than the cursor were already counted
+        // on a prior scan; counting them again is what froze count at the
+        // per-window constant instead of letting it accumulate.
+        if (b.ts <= _patternScanCursor) continue;
         const key = [a.type, b.type].sort().join('::');
         coOccur[key] = (coOccur[key] || 0) + 1;
       }
@@ -229,10 +260,12 @@ async function _scanPatterns() {
     // ── Failure precursor analysis ────────────────────────────────────────────
     // What event types appear in the 30s before a failure/error/gap?
     const failureEvents = events.filter(e =>
-      e.type?.includes('error') || e.type?.includes('fail') ||
-      e.type?.includes('gap.found') || e.type?.includes('collapse') ||
-      e.type?.includes('tidal')
-    );
+      (e.type?.includes('error') || e.type?.includes('fail') ||
+       e.type?.includes('gap.found') || e.type?.includes('collapse') ||
+       e.type?.includes('tidal')) &&
+      e.ts > _patternScanCursor   // FIX: same accumulation issue as co-occurrence —
+    );                            // only tally a failure's precursors once, the
+                                   // scan it first becomes new, not on every overlap.
     const precursorCounts = {};
     for (const failure of failureEvents) {
       const window = events.filter(e =>
@@ -321,23 +354,35 @@ async function _scanPatterns() {
     for (const [pair, count] of Object.entries(coOccur)) {
       if (count < 3) continue;
       const [typeA, typeB] = pair.split('::');
-      _upsertPattern(pair, existing => existing ? {
-        count,
-        confidence: Math.min(1, count / 20),
-        description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations (first seen: ${new Date(existing.ts).toISOString()})`,
-        crystallised: count >= 10,
-      } : {
-        uuid:        uid(),
-        signature:   pair,
-        patternType: 'co_occurrence',
-        typeA, typeB,
-        count,
-        confidence:  Math.min(1, count / 20),
-        description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
-        actionable:  count >= 5,
-        crystallised:count >= 10,
-        source:      MODULE_ID,
-        ts:          now,
+      _upsertPattern(pair, existing => {
+        if (existing) {
+          // FIX: accumulate onto history instead of overwriting with this
+          // scan's windowed count — see _patternScanCursor note above.
+          const merged = (existing.count || 0) + count;
+          return {
+            count: merged,
+            confidence: Math.min(1, merged / 20),
+            description: `"${typeA}" and "${typeB}" co-occur within 5s — ${merged} observations (first seen: ${new Date(existing.ts).toISOString()})`,
+            // FIX: monotonic latch — once crystallised, stays crystallised.
+            // Prevents the windowed count's natural oscillation around the
+            // threshold from repeatedly re-triggering the "just crystallised"
+            // announce log (see _upsertPattern's wasCrystallised check).
+            crystallised: existing.crystallised || merged >= 10,
+          };
+        }
+        return {
+          uuid:        uid(),
+          signature:   pair,
+          patternType: 'co_occurrence',
+          typeA, typeB,
+          count,
+          confidence:  Math.min(1, count / 20),
+          description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
+          actionable:  count >= 5,
+          crystallised:count >= 10,
+          source:      MODULE_ID,
+          ts:          now,
+        };
       });
     }
 
@@ -345,31 +390,43 @@ async function _scanPatterns() {
     for (const [precursorType, data] of Object.entries(precursorCounts)) {
       if (data.count < 3) continue;
       const sig = `precursor::${precursorType}`;
-      _upsertPattern(sig, existing => existing ? {
-        count: data.count,
-        confidence: Math.min(1, data.count / 10),
-        failureTypes: Object.keys(data.failureTypes),
-        description: `"${precursorType}" precedes failures ${data.count} times (first seen: ${new Date(existing.ts).toISOString()})`,
-        crystallised: data.count >= 10,
-        topFailureType: Object.entries(data.failureTypes).sort(([,a],[,b])=>b-a)[0]?.[0],
-      } : {
-        uuid:           uid(),
-        signature:      sig,
-        patternType:    'failure_precursor',
-        precursorType,
-        failureTypes:   Object.keys(data.failureTypes),
-        count:          data.count,
-        confidence:     Math.min(1, data.count / 10),
-        description:    `"${precursorType}" precedes failures ${data.count} times — watch this event type`,
-        actionable:     true,
-        crystallised:   data.count >= 10,
-        topFailureType: Object.entries(data.failureTypes).sort(([,a],[,b])=>b-a)[0]?.[0],
-        source:         MODULE_ID,
-        ts:             now,
+      _upsertPattern(sig, existing => {
+        if (existing) {
+          const merged = (existing.count || 0) + data.count;
+          return {
+            count: merged,
+            confidence: Math.min(1, merged / 10),
+            failureTypes: Object.keys(data.failureTypes),
+            description: `"${precursorType}" precedes failures ${merged} times (first seen: ${new Date(existing.ts).toISOString()})`,
+            crystallised: existing.crystallised || merged >= 10,
+            topFailureType: Object.entries(data.failureTypes).sort(([,a],[,b])=>b-a)[0]?.[0],
+          };
+        }
+        return {
+          uuid:           uid(),
+          signature:      sig,
+          patternType:    'failure_precursor',
+          precursorType,
+          failureTypes:   Object.keys(data.failureTypes),
+          count:          data.count,
+          confidence:     Math.min(1, data.count / 10),
+          description:    `"${precursorType}" precedes failures ${data.count} times — watch this event type`,
+          actionable:     true,
+          crystallised:   data.count >= 10,
+          topFailureType: Object.entries(data.failureTypes).sort(([,a],[,b])=>b-a)[0]?.[0],
+          source:         MODULE_ID,
+          ts:             now,
+        };
       });
     }
 
-    // Bottleneck signals → recurring open gaps of same type
+    // Bottleneck signals → recurring open gaps of same type.
+    // NOT given the accumulate-cursor treatment above: this count is a
+    // snapshot of currently-open gaps of this type, not a historical total —
+    // overwriting is the correct semantic ("is this still a bottleneck right
+    // now"). It still gets a latch, but a softer one: only un-crystallise
+    // once the bottleneck is fully cleared (count hits 0), so it doesn't
+    // flap on minor 4-vs-5 noise the way the sigma/co-occurrence bugs did.
     for (const [gapType, count] of topGaps) {
       if (count < 2) continue;
       const sig = `bottleneck::${gapType}`;
@@ -377,7 +434,7 @@ async function _scanPatterns() {
         count,
         confidence: Math.min(1, count / 10),
         description: `Gap type "${gapType}" appears ${count} times (first seen: ${new Date(existing.ts).toISOString()})`,
-        crystallised: count >= 5,
+        crystallised: count >= 5 || (existing.crystallised && count > 0),
       } : {
         uuid:        uid(),
         signature:   sig,
@@ -393,8 +450,13 @@ async function _scanPatterns() {
       });
     }
 
+
     // Refresh in-memory index from JAA (keeps it authoritative after inserts+updates)
     _patternIndex = jaaDB.query('bep_patterns', () => true, 200);
+
+    // FIX: advance the high-water mark now that this scan's events have been
+    // counted — next scan only considers events newer than this.
+    _patternScanCursor = now;
 
     // Log scan summary to event_log
     jaaDB.insert('event_log', {
@@ -923,4 +985,9 @@ module.exports = {
   getPatterns:  () => _patternIndex,
   getFailures:  () => _failureIndex,
   getReuseIndex:() => _reuseIndex,
+  // Internal, test-exposed — same convention as raid's _decide/_cluster and
+  // compartment-engine's _registerExtensions. Lets the test suite drive a
+  // scan synchronously instead of waiting on PATTERN_SCAN_MS (60s).
+  _scanPatterns,
+  _getPatternScanCursor: () => _patternScanCursor,
 };

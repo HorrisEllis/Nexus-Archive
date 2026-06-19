@@ -37,7 +37,18 @@ async function listModels() {
   });
 }
 
+// FIX (James, 2026-06-19 — "ollama isn't working"): this function had two
+// silent-hang paths. (1) It never checked res.statusCode — Ollama returns a
+// non-200 with a JSON error body (e.g. {"error":"model 'x' not found, try
+// pulling it first"}) for a missing/unpulled model. That JSON line has
+// neither `.response` nor `.done`, so the old code did nothing at all: no
+// token, no onDone, no onError. The job sat "delivered" forever. (2) there
+// was no timeout — if Ollama (or the network) just stops responding mid
+// generation, the request hangs indefinitely with the same dead silence.
+// Both are now real, named errors instead of an indefinite hang.
 function streamGenerate(opts, onToken, onDone, onError) {
+  const fail = (msg) => { if (onError) onError(new Error(msg)); else console.error(new Error(msg)); };
+
   const body = JSON.stringify({
     model: opts.model, prompt: opts.prompt, stream: true,
     system: opts.system || 'You are an expert Emerge language assistant. Emerge is a signal-processing specification language. Respond concisely in Emerge grammar where possible.',
@@ -49,19 +60,57 @@ function streamGenerate(opts, onToken, onDone, onError) {
     path: url.pathname, method: 'POST',
     headers: { 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) },
   }, res => {
+    // FIX: a non-2xx response from Ollama means the request itself was
+    // rejected (bad model name, malformed body, etc.) — the body is a JSON
+    // error object, not a token stream. Surface it instead of trying (and
+    // failing silently) to parse it as generation output.
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      let errBuf = '';
+      res.on('data', c => { errBuf += c; });
+      res.on('end', () => {
+        let detail = errBuf;
+        try { detail = JSON.parse(errBuf).error || errBuf; } catch(_) {}
+        fail(`ollama HTTP ${res.statusCode} for model "${opts.model}": ${detail}`);
+      });
+      return;
+    }
+
     let buf = '';
+    let sawAnyToken = false;
     res.on('data', chunk => {
       buf += chunk.toString();
       const lines = buf.split('\n'); buf = lines.pop();
       for (const line of lines) {
         if (!line.trim()) continue;
-        try { const o = JSON.parse(line); if (o.response) onToken(o.response); if (o.done) onDone(o); }
-        catch(e) {}
+        try {
+          const o = JSON.parse(line);
+          // FIX: Ollama can also stream a 200-status response that turns
+          // into a JSON error line mid-stream — surface that too, instead
+          // of silently dropping it (the old catch(e){} swallowed both a
+          // genuine JSON.parse failure AND a valid-JSON error object).
+          if (o.error) { fail(`ollama generation error for model "${opts.model}": ${o.error}`); return; }
+          if (o.response) { sawAnyToken = true; onToken(o.response); }
+          if (o.done) onDone(o);
+        }
+        catch(e) { /* genuinely malformed line — not the model's error JSON, ignore as before */ }
       }
     });
-    res.on('end', () => onDone({}));
+    res.on('end', () => {
+      if (!sawAnyToken) fail(`ollama closed the stream for model "${opts.model}" with no tokens and no done marker — likely the model failed to load`);
+      else onDone({});
+    });
   });
-  req.on('error', onError || console.error);
+
+  // FIX: idle timeout — fires if the socket goes quiet for too long, at any
+  // point (connecting, waiting on a slow model load, or mid-generation).
+  // Default generous (model load can be slow); callers can override.
+  const timeoutMs = opts.timeoutMs ?? 120_000;
+  req.setTimeout(timeoutMs, () => {
+    req.destroy();
+    fail(`ollama request timed out after ${timeoutMs}ms (model "${opts.model}") — is the ollama service running and the model pulled?`);
+  });
+
+  req.on('error', (err) => fail(`ollama request failed: ${err.message} — is the ollama service running at ${ENDPOINT}?`));
   req.write(body); req.end();
   return () => req.destroy();
 }
