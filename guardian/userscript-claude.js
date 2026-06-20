@@ -186,6 +186,51 @@ function getAccount() {
   }
   return location.hostname;
 }
+
+// ── Usage/quota-limit detection — §US-GAP-01 ─────────────────────────────────
+// §HONEST-NOTE: same caveat as the chatgpt.js mirror of this — claude.ai's
+// limit-banner copy/markup isn't pinned to a verified-current string, this is
+// a layered, drift-tolerant scan (alert/live-region markup first, composer
+// container text second, disabled-composer corroboration third). Extend
+// USAGE_PATTERNS as real copy is observed.
+let usageState = { limited: false, message: null, resetHint: null, detectedAt: null };
+const USAGE_PATTERNS = [
+  /usage limit/i, /message limit/i, /hit (the|your) .*(limit|cap)/i,
+  /reached (the|your) .*(limit|cap)/i, /limit will reset/i, /resets? (on|at|in)/i,
+  /upgrade to (pro|max|team)/i, /approaching your .*limit/i,
+];
+const RESET_HINT_RE = /(reset|resets?)[^.]{0,60}/i;
+function _composerDisabled() {
+  const ta = document.querySelector('div[contenteditable="true"], .ProseMirror, textarea[data-testid]');
+  const btn = document.querySelector('[data-testid="send-button"], button[aria-label*="Send"]');
+  return !!(ta?.getAttribute('contenteditable')==='false' || ta?.getAttribute('aria-disabled')==='true' || btn?.disabled);
+}
+function detectUsageLimit() {
+  try {
+    const regions = [
+      ...document.querySelectorAll('[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]'),
+    ];
+    // Fallback: composer's grandparent container — limit banners render right above/below input
+    const composer = document.querySelector('div[contenteditable="true"], .ProseMirror');
+    if (composer) { const c = composer.closest('form')?.parentElement || composer.parentElement?.parentElement; if (c) regions.push(c); }
+
+    for (const el of regions) {
+      const t = (el.textContent || '').trim();
+      if (!t || t.length > 400) continue; // skip huge unrelated containers
+      if (USAGE_PATTERNS.some(re => re.test(t))) {
+        const resetMatch = t.match(RESET_HINT_RE);
+        usageState = { limited: true, message: t.slice(0,200), resetHint: resetMatch?.[0]||null, detectedAt: Date.now() };
+        return usageState;
+      }
+    }
+    if (_composerDisabled() && usageState.limited === false) {
+      usageState = { limited: 'suspected', message: 'composer disabled, no matching banner text', resetHint: null, detectedAt: Date.now() };
+      return usageState;
+    }
+    if (usageState.limited) usageState = { limited: false, message: null, resetHint: null, detectedAt: Date.now() }; // cleared
+    return usageState;
+  } catch(e) { return usageState; }
+}
 function detectLang(el) {
   const c = el.tagName==='CODE' ? el : el.querySelector('code');
   if (c) { const cl=Array.from(c.classList).find(x=>x.startsWith('language-')); if(cl)return cl.replace('language-',''); }
@@ -656,7 +701,7 @@ function connect() {
     _log('ok', `NCP connected · ${PROVIDER}`, NCP_CHANNEL);
     ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
     if (_hb) clearInterval(_hb);
-    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now() }), HB_MS);
+    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit() }), HB_MS);
     autoClaimIfFree();
     replayPending();
     setTimeout(() => sendDOMMap(), 2000);

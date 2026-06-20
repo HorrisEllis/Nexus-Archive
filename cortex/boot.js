@@ -26,6 +26,8 @@ const versionium     = require('./versionium');
 const agentDispatch  = require('./agents');
 const ollamaAgent    = require('./agents/ollama');
 const claudeAgent    = require('./agents/claude');
+const chatgptAgent   = require('./agents/chatgpt');
+const geminiAgent    = require('./agents/gemini');
 
 const DATA_DIR  = process.env.NEXUS_DATA_DIR  || path.join(__dirname, 'data');
 const STORE_DIR = process.env.NEXUS_STORE_DIR || path.join(__dirname, 'store');
@@ -200,7 +202,7 @@ async function bootAsync() {
       versionium.setDeps({ fileStore, fileRefs });
       agentDispatch.setDeps({
         ollama: ollamaAgent, claude: claudeAgent,
-        chatgpt: null, gemini: null,
+        chatgpt: chatgptAgent, gemini: geminiAgent,
       });
     },
   });

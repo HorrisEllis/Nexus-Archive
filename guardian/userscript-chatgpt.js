@@ -187,6 +187,55 @@ function getAccount() {
   }
   return location.hostname;
 }
+
+// ── Usage/quota-limit detection — §US-GAP-01 ─────────────────────────────────
+// §HONEST-NOTE: chatgpt.com's limit-banner copy and markup change across
+// releases — this isn't pinned to a verified-current selector or exact string,
+// it's a layered, low-confidence-tolerant scan: (1) anything ChatGPT itself
+// marks as an alert/live-region (the one thing accessibility markup makes
+// durable across redesigns), falling back to (2) text scraped from the
+// composer's immediate container, corroborated against (3) the composer
+// actually being disabled. Extend USAGE_PATTERNS as real copy is observed —
+// this is a starting net, not a verified-final one.
+let usageState = { limited: false, message: null, resetHint: null, detectedAt: null };
+const USAGE_PATTERNS = [
+  /usage cap/i, /message cap/i, /hit (the|your) .*(limit|cap)/i,
+  /reached (the|your) .*(limit|cap)/i, /try again (after|in)/i,
+  /upgrade to (plus|go|pro)/i, /limit will reset/i, /come back (later|in)/i,
+];
+const RESET_HINT_RE = /(reset|try again|come back)[^.]{0,60}/i;
+function _composerDisabled() {
+  const ta = document.querySelector('#prompt-textarea, textarea[data-id], [contenteditable="true"][data-id]');
+  const btn = document.querySelector('[data-testid="send-button"], button[data-testid*="send"]');
+  return !!(ta?.disabled || ta?.getAttribute('aria-disabled')==='true' || btn?.disabled);
+}
+function detectUsageLimit() {
+  try {
+    const regions = [
+      ...document.querySelectorAll('[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]'),
+    ];
+    // Fallback: composer's grandparent container — limit banners render right above/below input
+    const composer = document.querySelector('#prompt-textarea, textarea[data-id]');
+    if (composer) { const c = composer.closest('form')?.parentElement; if (c) regions.push(c); }
+
+    for (const el of regions) {
+      const t = (el.textContent || '').trim();
+      if (!t || t.length > 400) continue; // skip huge unrelated containers
+      if (USAGE_PATTERNS.some(re => re.test(t))) {
+        const resetMatch = t.match(RESET_HINT_RE);
+        usageState = { limited: true, message: t.slice(0,200), resetHint: resetMatch?.[0]||null, detectedAt: Date.now() };
+        return usageState;
+      }
+    }
+    // No text match — but if composer's disabled with no other explanation, flag as suspected (lower confidence)
+    if (_composerDisabled() && usageState.limited === false) {
+      usageState = { limited: 'suspected', message: 'composer disabled, no matching banner text', resetHint: null, detectedAt: Date.now() };
+      return usageState;
+    }
+    if (usageState.limited) usageState = { limited: false, message: null, resetHint: null, detectedAt: Date.now() }; // cleared
+    return usageState;
+  } catch(e) { return usageState; }
+}
 function detectLang(el) {
   const c = el.tagName==='CODE' ? el : el.querySelector('code');
   if (c) { const cl=Array.from(c.classList).find(x=>x.startsWith('language-')); if(cl)return cl.replace('language-',''); }
@@ -668,7 +717,7 @@ function connect() {
     _log('ok', `NCP connected · ${PROVIDER}`, NCP_CHANNEL);
     ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
     if (_hb) clearInterval(_hb);
-    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now() }), HB_MS);
+    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit() }), HB_MS);
     autoClaimIfFree();
     replayPending();
     setTimeout(() => sendDOMMap(), 2000);
