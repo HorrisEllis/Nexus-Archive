@@ -478,10 +478,10 @@ function submit() {
 function sendDOMMap() {
   if (!connState === 'ready') return;
   const nodes = Array.from(document.querySelectorAll(
-    '[data-message-author-role], .font-claude-message, [class*="conversation"], [class*="message"]'
+    '.font-claude-message, [class*="conversation"], [class*="message"]'
   )).slice(0,20).map(el => ({
     tag: el.tagName, id: el.id||null,
-    role: el.getAttribute('data-message-author-role')||null,
+    role: el.matches('[data-testid="human-turn-content"], .human-turn')?'user':el.matches('.font-claude-message')?'assistant':null,
     text: (el.innerText||'').slice(0,60),
   }));
   send({ type:'NEXUS_DOM_MAP', provider:PROVIDER, tabId:MY_TAB, nodes,

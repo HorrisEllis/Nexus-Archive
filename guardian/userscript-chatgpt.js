@@ -262,7 +262,7 @@ function _toOrc(system, type, payload = {}) {
 function _toCortex(type, payload = {}) {
   fetch(`${CORTEX_URL}/api/event`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ type, payload: { ...payload, _account:getAccount(), _chatUrl:location.href },
-      source:'userscript-claude', causedBy:currentJobId||null, ts:Date.now() }) }).catch(()=>{});
+      source:'userscript-chatgpt', causedBy:currentJobId||null, ts:Date.now() }) }).catch(()=>{});
 }
 function _toBridge(type, payload = {}) {
   fetch(`${NCP_URL}/result`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
@@ -448,8 +448,7 @@ async function scanArtifacts(jobId) {
 // ── DOM observation ───────────────────────────────────────────────────────────
 function findResponseEl() {
   return document.querySelector(
-    '[data-is-streaming="true"], .font-claude-message:last-child, ' +
-    '[class*="assistant-message"]:last-child .font-claude-message, ' +
+    '[data-is-streaming="true"], [data-message-author-role="assistant"]:last-child, ' +
     '.text-streaming'
   );
 }
@@ -1023,7 +1022,7 @@ async function renderLedger() {
   const a = document.getElementById('__g10ledger__'); if (!a) return;
   a.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:10px 12px">Loading ledger…</div>';
   try {
-    const r = await fetch(`${CORTEX_URL}/api/events?limit=30&source=userscript-claude`, { signal:AbortSignal.timeout(2000) });
+    const r = await fetch(`${CORTEX_URL}/api/events?limit=30&source=userscript-chatgpt`, { signal:AbortSignal.timeout(2000) });
     const d = r.ok ? await r.json() : { rows:[] };
     const rows = (d.rows || d.events || []).slice(0,30);
     if (!rows.length) { a.innerHTML='<div style="color:#1e293b;font-size:9px;padding:20px;text-align:center">No ledger entries</div>'; return; }
@@ -1299,21 +1298,14 @@ const _nexus = {
 // ── Extract all visible messages from the DOM ─────────────────────────────────
 function _nexusGetMessages() {
   const msgs = [];
-  // Claude message selectors
-  const humanEls = document.querySelectorAll(
-    '[data-testid="human-turn-content"], .human-turn, [class*="HumanMessage"]'
-  );
-  const aiEls = document.querySelectorAll(
-    '[data-testid="assistant-turn-content"], .font-claude-message, [class*="AssistantMessage"]'
-  );
-  // Interleave by DOM order
-  const all = [...document.querySelectorAll(
-    '[data-testid="human-turn-content"], [data-testid="assistant-turn-content"], .font-claude-message, .human-turn'
-  )];
+  // ChatGPT message selectors — data-message-author-role is the durable,
+  // well-known attribute chatgpt.com uses for both turns; not a guess fallback,
+  // it's the actual mechanism, same way data-testid is for claude.ai.
+  const all = [...document.querySelectorAll('[data-message-author-role]')];
   for (const el of all) {
     const text = (el.innerText || el.textContent || '').trim();
     if (!text || text.length < 5) continue;
-    const isHuman = el.matches('[data-testid="human-turn-content"], .human-turn, [class*="HumanMessage"]');
+    const isHuman = el.getAttribute('data-message-author-role') === 'user';
     msgs.push({ role: isHuman ? 'user' : 'assistant', text: text.slice(0, 2000) });
   }
   return msgs;
@@ -1418,7 +1410,7 @@ function _nexusCheckOllama() {
 function _nexusAnnotate(role, regime, gapCount) {
   if (role !== 'assistant' || !regime || regime === 'STABLE') return;
   // Find the last assistant message element
-  const aiEls = document.querySelectorAll('[data-testid="assistant-turn-content"], .font-claude-message');
+  const aiEls = document.querySelectorAll('[data-message-author-role="assistant"]');
   if (!aiEls.length) return;
   const last = aiEls[aiEls.length - 1];
   if (last.querySelector('.__nx_badge__')) return; // already annotated
