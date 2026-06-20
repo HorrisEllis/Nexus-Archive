@@ -2159,7 +2159,7 @@ function handleExtendedRoutes(req, res, url, method) {
 
   if (method==='GET' && url.pathname==='/providers') {
     const connected = ncp.getProviders();
-    const out = { claude:'null', chatgpt:'null', gemini:'null', ollama:'null' };
+    const out = { claude:'null', chatgpt:'null', gemini:'null', perplexity:'null', ollama:'null' };
     for (const [p] of Object.entries(out)) {
       if (ncp.isConnected(p)) out[p] = 'connected';
     }

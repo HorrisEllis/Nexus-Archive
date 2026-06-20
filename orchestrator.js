@@ -621,14 +621,29 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── System UIs ───────────────────────────────────────────────────────────
+  // §ROUTER-FIX-2026-06-20: fs.existsSync() is true for directories as well
+  // as files — a request for a directory path (e.g. /ui/agents/chatgpt, a
+  // real dir with no filename) was passing that check, then serveFile()
+  // tried fs.readFile() on a directory (EISDIR) and silently 404'd instead
+  // of falling through to that directory's index.html. Flat files with an
+  // extension (e.g. /ui/forge-shell.html) had the opposite problem — sub
+  // alone *is* the target, but the old code always treated sub as a
+  // directory and looked for 'index.html' underneath it. Check what's
+  // actually at each candidate path by type, not by assuming the shape.
   if (M==='GET' && top==='ui' && sub) {
-    // ORC-10: path traversal guard — validate both sub and rest
-    const fp = _safePath(UI_ROOT, sub, rest || 'index.html');
-    if (!fp) return json(res, 403, { ok:false, error:'forbidden path' });
-    if (fs.existsSync(fp)) return serveFile(res, fp);
-    const idx = _safePath(UI_ROOT, sub, 'index.html');
-    if (idx && fs.existsSync(idx)) return serveFile(res, idx);
-    return json(res, 404, { ok:false, error:`UI not found: ${sub}` });
+    const subPath = rest ? path.join(sub, rest) : sub;
+    const direct = _safePath(UI_ROOT, subPath);
+    if (!direct) return json(res, 403, { ok:false, error:'forbidden path' });
+
+    if (fs.existsSync(direct)) {
+      const st = fs.statSync(direct);
+      if (st.isFile()) return serveFile(res, direct);
+      if (st.isDirectory()) {
+        const idx = _safePath(UI_ROOT, path.join(subPath, 'index.html'));
+        if (idx && fs.existsSync(idx)) return serveFile(res, idx);
+      }
+    }
+    return json(res, 404, { ok:false, error:`UI not found: ${sub}${rest?'/'+rest:''}` });
   }
 
   // ── SSE unified ──────────────────────────────────────────────────────────

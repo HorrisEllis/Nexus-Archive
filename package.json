@@ -1,7 +1,7 @@
 {
   "name": "nexus",
   "version": "0.8.0",
-  "description": "NEXUS \u2014 sovereign AI orchestration platform",
+  "description": "NEXUS — sovereign AI orchestration platform",
   "author": "James Brooks (Erosmancer)",
   "license": "MIT",
   "private": true,
@@ -20,6 +20,7 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "concurrently": "^10.0.3"
+    "concurrently": "^10.0.3",
+    "playwright": "^1.61.0"
   }
 }
