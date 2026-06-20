@@ -1711,19 +1711,6 @@ const jaa = new JaaStore(STORE_DIR);
   }
 });
 
-// ── SEAM watchdog — detects stalled GENERATING chunks / dead provider ──────
-// connections and force-retries through the same lever as the manual
-// POST /seam/retry endpoint. See guardian/lib/seam-watchdog.js for the gap
-// this closes. bus.emit is already wired to write every event to the CFR
-// ledger (above) — no separate ledger call needed here.
-const { createSeamWatchdog } = require('./lib/seam-watchdog');
-const _seamWatchdog = createSeamWatchdog({
-  activeQueues:   _activeQueues,
-  ncpIsConnected: (provider) => ncp.isConnected(provider),
-  busEmit:        (type, data) => bus.emit(type, data),
-});
-_seamWatchdog.start();
-
 // ── Lab Manager — §LAB-01 every experiment has a UUID and a hypothesis ────
 let _lab = null;
 try {
@@ -1826,6 +1813,25 @@ function cockpitBroadcast(data) {
   const msg = `data: ${JSON.stringify(data)}\n\n`;
   for (const r of cockpitClients) { try { r.write(msg); } catch(_) { cockpitClients.delete(r); } }
 }
+
+// ── SEAM watchdog — detects stalled GENERATING chunks / dead provider ──────
+// connections and force-retries through the same lever as the manual
+// POST /seam/retry endpoint. See guardian/lib/seam-watchdog.js for the gap
+// this closes. bus.emit is already wired to write every event to the CFR
+// ledger (above) — no separate ledger call needed here.
+// NOTE: must start after cockpitClients/cockpitBroadcast above — .start()
+// fires a synchronous bus.emit(), and every bus.emit() unconditionally calls
+// cockpitBroadcast() (see SISOStream.emit), which referenced cockpitClients
+// before it existed when this lived earlier in the file (TDZ ReferenceError
+// on boot). Moved here instead of deferring the emit itself, since the next
+// thing added between the old spot and here could hit the same landmine.
+const { createSeamWatchdog } = require('./lib/seam-watchdog');
+const _seamWatchdog = createSeamWatchdog({
+  activeQueues:   _activeQueues,
+  ncpIsConnected: (provider) => ncp.isConnected(provider),
+  busEmit:        (type, data) => bus.emit(type, data),
+});
+_seamWatchdog.start();
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  SISO GATE REGISTRATIONS
