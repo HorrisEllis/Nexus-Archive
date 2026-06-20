@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NEXUS Orchestrator v2.0
 // @namespace    nexus.guardian.orchestrator
-// @version      2.0.0
+// @version      2.1.0
 // @description  Sovereign orchestrator suite. Local-first. Ollama direct. Full JAA
 //               access. No chunking required. Memory, RAID, self-heal, gap detection.
 //               Runs on any tab — acts as a persistent NEXUS control surface.
@@ -45,7 +45,7 @@ let connState = 'disconnected';
 let currentJobId = null, jobActive = false;
 let _watchTimer = null, _watchObs = null, _watchStart = 0;
 let panelOpen = false, activeTab = 'log';
-let isClaimed = false;
+let isClaimed = true; // §FIX 2026-06-20: passive mode removed — every connected tab executes jobs, no single-tab claim gate
 let sessionStart = Date.now(), sessionTokens = 0, sessionJobs = 0;
 let logEntries = [], unreadCount = 0;
 let currentGaps = [], artifactStore = [], _usageHistory = [];
@@ -197,7 +197,7 @@ function detectLang(el) {
 // ── Tab claim — sessionStorage only, GM for persistence across tabs ───────────
 function amIClaimed() { return GM_getValue(TAB_KEY,'') === MY_TAB; }
 function claimTab()   { GM_setValue(TAB_KEY, MY_TAB); isClaimed = true; updatePill(); }
-function releaseTab() { if (amIClaimed()) GM_setValue(TAB_KEY,''); isClaimed = false; updatePill(); }
+function releaseTab() { /* no-op — passive mode removed, tabs stay active */ }
 function autoClaimIfFree() {
   const ex = GM_getValue(TAB_KEY,'');
   if (!ex) { claimTab(); return; }
@@ -563,11 +563,6 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
 
 // ── Job handler ───────────────────────────────────────────────────────────────
 async function handleJob(msg) {
-  if (!isClaimed) {
-    _log('info','Job ignored — PASSIVE', msg.jobId?.slice(0,8));
-    toast('Job ignored — tab not claimed', 'warn', 3000);
-    return;
-  }
   const { jobId, prompt='', content='', command='' } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
@@ -910,12 +905,7 @@ function buildUI() {
   const heart = document.createElement('span'); heart.id='__g10heart__';
   heart.textContent='♥';
   heart.style.cssText='font-size:10px;color:rgba(239,68,68,.3);transition:none;flex-shrink:0;margin-left:2px';
-  const claim = document.createElement('span'); claim.id='__g10claim__'; claim.textContent='PASSIVE';
-  claim.addEventListener('click', e => {
-    e.stopPropagation();
-    isClaimed ? releaseTab() : claimTab();
-    toast(isClaimed ? 'ACTIVE — jobs will execute' : 'PASSIVE — jobs ignored', isClaimed ? 'success' : 'warn', 2500);
-  });
+  const claim = document.createElement('span'); claim.id='__g10claim__'; claim.textContent='ACTIVE'; claim.classList.add('active');
   const badge = document.createElement('span'); badge.id='__g10badge__';
   pill.append(dot, lbl, prov, heart, claim, badge);
 
@@ -1023,7 +1013,7 @@ function setConnState(state) {
 }
 function updatePill() {
   const c = document.getElementById('__g10claim__');
-  if (c) { c.textContent = isClaimed ? 'ACTIVE' : 'PASSIVE'; c.classList.toggle('active', isClaimed); }
+  if (c) { c.textContent = 'ACTIVE'; c.classList.add('active'); }
 }
 function setJobBar(active, prompt, jobId) {
   const bar = document.getElementById('__g10jobbar__'); if (!bar) return;
@@ -1241,7 +1231,7 @@ function renderSys() {
     <div class="g10sys-row"><span class="g10sys-label">Provider</span><span class="g10sys-val">${PROVIDER}</span></div>
     <div class="g10sys-row"><span class="g10sys-label">Tab</span><span class="g10sys-val">${MY_TAB.slice(0,12)}</span></div>
     <div class="g10sys-row"><span class="g10sys-label">State</span><span class="g10sys-val ${connState==='ready'?'g10online':'g10offline'}">${connState.toUpperCase()}</span></div>
-    <div class="g10sys-row"><span class="g10sys-label">Claimed</span><span class="g10sys-val ${isClaimed?'g10online':'g10offline'}">${isClaimed?'ACTIVE':'PASSIVE'}</span></div>
+    <div class="g10sys-row"><span class="g10sys-label">Claimed</span><span class="g10sys-val g10online">ACTIVE</span></div>
   </div>`;
   html += `<div class="g10sys-section">
     <div class="g10sys-title">Session</div>

@@ -409,18 +409,3 @@ function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
 }
 
 module.exports = { createBridgeServer, BRIDGE_PORT };
-
-// ── Self-start when run directly: node bridge/server.js ──────────────────────
-// bridge/server.js is a factory module AND a runnable entry point.
-// concurrently launches it directly, so we need this guard.
-if (require.main === module) {
-  const bridge = createBridgeServer();
-  bridge.start()
-    .then(() => {
-      console.log(`[bridge] ready on :${BRIDGE_PORT}`);
-    })
-    .catch(err => {
-      console.error('[bridge] failed to start:', err.message);
-      process.exit(1);
-    });
-}

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Perplexity v10.0
 // @namespace    nexus.guardian.perplexity
-// @version      10.0.0
+// @version      10.1.0
 // @description  Guardian v10 — Perplexity: protocol parity with Claude/ChatGPT/Gemini
 //               v10 (NCP handshake, IndexedDB kernel, SHA-256 dedup, tab-claim, SEAM
 //               jobs, intelligence injection, usage detection) built around
@@ -45,7 +45,7 @@ let _es = null, _hb = null, _reconnectTimer = null;
 let connState = 'disconnected';
 let currentJobId = null, jobActive = false;
 let _watchTimer = null, _watchObs = null, _watchStart = 0;
-let isClaimed = false;
+let isClaimed = true; // §FIX 2026-06-20: passive mode removed — every connected tab executes jobs, no single-tab claim gate
 let sessionStart = Date.now(), sessionTokens = 0, sessionJobs = 0;
 let logEntries = [], currentGaps = [], artifactStore = [], _usageHistory = [];
 let accountState = null;
@@ -516,7 +516,6 @@ async function _onJobComplete(jobId, text, responseEl, ms, prompt, retryCount, m
 
 // ── Job handler ───────────────────────────────────────────────────────────────
 async function handleJob(msg) {
-  if (!isClaimed) { _log('info','Job ignored — PASSIVE', msg.jobId?.slice(0,8)); toast('Job ignored — tab not claimed', 'warn', 3000); return; }
   const { jobId, prompt='', content='', command='' } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
@@ -545,7 +544,7 @@ async function handleJob(msg) {
 // ── Tab claim ─────────────────────────────────────────────────────────────────
 function amIClaimed() { return GM_getValue(TAB_KEY,'') === MY_TAB; }
 function claimTab()   { GM_setValue(TAB_KEY, MY_TAB); isClaimed = true; updatePill(); }
-function releaseTab() { if (amIClaimed()) GM_setValue(TAB_KEY,''); isClaimed = false; updatePill(); }
+function releaseTab() { /* no-op — passive mode removed, tabs stay active */ }
 function autoClaimIfFree() {
   const ex = GM_getValue(TAB_KEY,'');
   if (!ex) { claimTab(); return; }
@@ -605,15 +604,15 @@ setInterval(() => {
 let _pill = null;
 function updatePill() {
   if (!_pill) return;
-  const col = connState!=='ready' ? '#ff2d55' : isClaimed ? '#00ff88' : '#818cf8';
+  const col = connState!=='ready' ? '#ff2d55' : '#00ff88';
   _pill.style.borderColor = col;
-  _pill.textContent = `⬡ Perplexity · ${connState}${isClaimed ? ' · ACTIVE' : ' · passive'}`;
+  _pill.textContent = `⬡ Perplexity · ${connState} · ACTIVE`;
 }
 function _injectWidget() {
   _pill = document.createElement('div');
   _pill.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#05080f;border:1px solid #818cf8;border-radius:4px;padding:6px 10px;font:10px monospace;color:#e0e8ff;user-select:none;cursor:pointer;opacity:.85';
   _pill.title = `Guardian NCP — Perplexity v${VERSION}\nTab: ${MY_TAB}`;
-  _pill.onclick = () => { if (amIClaimed()) releaseTab(); else claimTab(); };
+  _pill.onclick = () => {}; // passive mode removed — nothing to toggle
   document.body.appendChild(_pill);
   updatePill();
 }
