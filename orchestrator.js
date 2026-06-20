@@ -680,6 +680,24 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (!nexusBus) return json(res,503,{ok:false,error:'not loaded'});
     return json(res,200,{ok:true,...nexusBus.stats(),recent:nexusBus.history(20)});
   }
+  // ── Mutation Contract (seam-component-registry-spec.md §9.5) ────────────
+  // Separate route, separate module — PUT /api/components/:id above remains
+  // the path for full record updates; this is specifically the
+  // comp_properties-only door with audit-first ordering and forbidden-
+  // target enforcement. Not folded into the PUT handler — different
+  // contract, different failure semantics, conflating them would blur the
+  // exact boundary §9.5 exists to draw.
+  if (u.pathname.startsWith('/api/components/') && u.pathname.endsWith('/properties') && M === 'PATCH') {
+    const cseg = u.pathname.split('/').filter(Boolean); // ['api','components', id, 'properties']
+    const compId = cseg[2];
+    let mutationContract;
+    try { mutationContract = require('./lib/mutation-contract'); }
+    catch(e) { return json(res,503,{ok:false,error:'mutation-contract not loaded: '+e.message}); }
+    const body = await readBody(req);
+    if (!body || !body.field) return json(res,400,{ok:false,error:'body.field is required, e.g. "comp_properties.style.color"'});
+    const result = mutationContract.mutateProperty(compId, body.field, body.value, { issuedVia: body.issuedVia || 'api' });
+    return json(res, result.ok ? 200 : 400, result);
+  }
   // ── Component Registry (Phase 63b) ────────────────────────────────────────
   // lib/component-registry.js exports handleRequest specifically to be
   // mounted here ("Mounted on orchestrator. All routes under /api/components."
@@ -2163,6 +2181,17 @@ try {
     console.log('  [component-registry] ' + compReg.list().length + ' components loaded');
   } catch(e) {
     console.warn('  [component-registry] init skipped:', e.message);
+  }
+  // §9.5 mutation contract (seam-component-registry-spec.md) — must init
+  // before any CLI/API mutateProperty() call, or it fails loudly by design
+  // (see lib/mutation-contract.js's audit-first ordering rationale).
+  try {
+    const { jaaDB } = require('./cortex/memory/jaa-db');
+    const mutationContract = require('./lib/mutation-contract');
+    mutationContract.init(jaaDB, nexusBus);
+    console.log('  [mutation-contract] ready');
+  } catch(e) {
+    console.warn('  [mutation-contract] init skipped:', e.message);
   }
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');

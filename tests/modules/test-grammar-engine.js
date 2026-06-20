@@ -166,5 +166,30 @@ test('T-016', 'invalidate() → ready false', () => {
   ge.load(mockTree, mockAliases);
 });
 
+// §PHASE-31 — confidence scoring on resolve()
+test('T-017', 'full match (no remainder) → high confidence 0.95', () => {
+  const r = ge.resolve('cortex gaps list');
+  assert.strictEqual(r.confidence, 0.95);
+});
+
+test('T-018', 'alias match → high confidence 0.95', () => {
+  const r = ge.resolve('gaps');
+  assert.strictEqual(r.confidence, 0.95);
+  const r2 = ge.resolve('gl');
+  assert.strictEqual(r2.confidence, 0.95);
+});
+
+test('T-019', 'partial match (remainder left) → scaled confidence, never as high as a full match', () => {
+  const r = ge.resolve('cortex search --q rate limiting');
+  assert.ok(r.remainder.length > 0, 'expected this fixture to leave a remainder');
+  assert.ok(r.confidence < 0.95, 'partial match must score below a full match');
+  assert.ok(r.confidence >= 0.3, 'partial match must never go below the floor');
+});
+
+test('T-020', 'unknown command → null, not a zero-confidence object (no match is not a low-confidence match)', () => {
+  const r = ge.resolve('nonexistent command here');
+  assert.strictEqual(r, null);
+});
+
 console.log(`\n  grammar-engine: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

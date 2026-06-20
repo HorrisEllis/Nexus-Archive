@@ -45,6 +45,8 @@ const SUITES = [
   // not something I broke.
   'test-component-registry.js',
   'test-grammar-engine.js',
+  'test-grammar-fallback.js',
+  'test-mutation-contract.js',
   'test-intelligence-bridge.js',
   'test-liminal-space.js',
   'test-snr-filter.js',

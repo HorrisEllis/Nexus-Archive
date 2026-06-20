@@ -12,6 +12,13 @@ const { SEAMQueue, STATE }  = require('./lib/seam-queue');
 const { parseSpec, parseSpecFile, extractPrerequisite } = require('./lib/spec-parser');
 const { createQueue }       = require('../lib/queue');
 const { createBaseline }    = require('../lib/baseline');
+// §PHASE-15-CLOSE: /cli/exec previously only matched its own static switch
+// table — any command for a component registered after this file was last
+// edited had no path in. This wires guardian's dispatch into the same
+// grammar-engine + component-registry the CLI and request-handler already
+// read, via the shared lib/grammar-fallback.js resolver — not duplicated
+// inline (§5.7 low coupling, high cohesion).
+const grammarFallback = require('../lib/grammar-fallback');
 
 // Per-kernel baseline monitor — establishes runtime baseline from first 20 events
 // Sigma deviations → gap.found in JAA
@@ -2526,8 +2533,24 @@ function handleExtendedRoutes(req, res, url, method) {
             result = { events: (_evLedger?.recent?.(limit) || []) };
             break;
           }
-          default:
-            error = 'Unknown command: ' + cmd + '. Try: jobs, artifacts, gaps, sessions, providers, health, stats, ledger, settings, set, send, seam, version, bus';
+          default: {
+            // §PHASE-15-CLOSE: single shared resolver (lib/grammar-fallback.js)
+            // instead of inline duplicate logic — see that file for the full
+            // rationale and the explicit non-invocation boundary.
+            const resolution = await grammarFallback.resolveCommand(raw);
+            if (resolution.resolved) {
+              result = {
+                grammarResolved: true,
+                componentId: resolution.componentId,
+                matched: resolution.matched,
+                remainder: resolution.remainder,
+                route: resolution.route,
+                note: resolution.note,
+              };
+            } else {
+              error = 'Unknown command: ' + cmd + '. Try: jobs, artifacts, gaps, sessions, providers, health, stats, ledger, settings, set, send, seam, version, bus';
+            }
+          }
         }
       } catch(e) {
         error = e.message;

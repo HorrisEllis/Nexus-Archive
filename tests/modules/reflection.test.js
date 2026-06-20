@@ -205,6 +205,47 @@ await test('T-015', 'crossing threshold → exactly one CONSTITUTIONAL gap, neve
   assert.ok(/Human.*review/.test(constGap.closure_condition), 'closure requires human review, never automatic');
 });
 
+// §PHASE-31 — grammar misfire tracking (seam-component-registry-spec.md
+// adjacent work: "3 misfires on same pattern → Idearium review")
+await test('T-016a', '3 consecutive low-satisfaction decisions on the SAME grammarComponentId → CAPABILITY gap tagged reviewTarget:idearium', async () => {
+  reset();
+  _decisionLog = [
+    { uuid: 'g1', requestId: 'r1', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null, grammarComponentId: 'cortex.gaps.list', grammarConfidence: 0.95 },
+    { uuid: 'g2', requestId: 'r2', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null, grammarComponentId: 'cortex.gaps.list', grammarConfidence: 0.95 },
+    { uuid: 'g3', requestId: 'r3', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null, grammarComponentId: 'cortex.gaps.list', grammarConfidence: 0.95 },
+  ];
+  await refl.runReflectionPass();
+  const misfireGap = _gaps.find(g => g.path === 'reflection/grammar:cortex.gaps.list');
+  assert.ok(misfireGap, 'a grammar-misfire gap was opened, keyed to the specific componentId');
+  assert.strictEqual(misfireGap.type, 'CAPABILITY');
+  assert.strictEqual(misfireGap.reviewTarget, 'idearium');
+});
+
+await test('T-016b', 'low-satisfaction decisions on DIFFERENT grammarComponentIds do not combine into one streak', async () => {
+  reset();
+  _decisionLog = [
+    { uuid: 'h1', requestId: 'r1', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null, grammarComponentId: 'cortex.gaps.list', grammarConfidence: 0.95 },
+    { uuid: 'h2', requestId: 'r2', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null, grammarComponentId: 'cortex.memory.write', grammarConfidence: 0.95 },
+    { uuid: 'h3', requestId: 'r3', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null, grammarComponentId: 'cortex.gaps.list', grammarConfidence: 0.95 },
+  ];
+  await refl.runReflectionPass();
+  const misfireGap = _gaps.find(g => (g.path || '').startsWith('reflection/grammar:'));
+  assert.ok(!misfireGap, 'two hits on cortex.gaps.list (with one unrelated component in between) must not reach a 3-streak');
+});
+
+await test('T-016c', 'a decision with no grammarComponentId still uses the generic chosen:actor class, unaffected by §PHASE-31 change', async () => {
+  reset();
+  _decisionLog = [
+    { uuid: 'i1', requestId: 'r1', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null },
+    { uuid: 'i2', requestId: 'r2', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null },
+    { uuid: 'i3', requestId: 'r3', chosen: 'UNRESOLVED', outcome: 'UNRESOLVED', actor: 'rh', input: 'x', satisfaction: null },
+  ];
+  await refl.runReflectionPass();
+  const knowledgeGap = _gaps.find(g => g.type === 'KNOWLEDGE');
+  assert.ok(knowledgeGap, 'non-grammar UNRESOLVED streak still opens a KNOWLEDGE gap exactly as before this phase');
+  assert.strictEqual(knowledgeGap.reviewTarget, undefined, 'non-grammar gaps must never get the idearium reviewTarget tag');
+});
+
 await test('T-016', 'accumulator resets after threshold — does not keep growing unbounded', () => {
   reset();
   for (let i = 0; i < 10; i++) refl.trackIdentityEvidence('test-observation-C', 'e' + i);

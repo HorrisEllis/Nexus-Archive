@@ -18,6 +18,13 @@ const readline  = require('readline');
 const http      = require('http');
 const path      = require('path');
 const { randomUUID } = require('crypto');
+// §PHASE-15-CLOSE: grammar-engine was referenced (loadGrammar(), _grammar) in
+// `describe`, `caps`, and the boot sequence below but never required or
+// defined — those commands threw ReferenceError. This mirrors the working
+// pattern already proven in cli/nexus-cli.js: fetch the tree from
+// orchestrator's /api/components/grammar once, cache it, resolve/complete
+// from the cached trie everywhere else.
+const ge = require('../lib/grammar-engine');
 
 // ── Ports ─────────────────────────────────────────────────────────────────────
 const PORTS = {
@@ -263,6 +270,23 @@ async function cmdUI() {
 const HISTORY = [];
 let histIdx = -1;
 
+// ── Grammar engine cache (§PHASE-15-CLOSE) ──────────────────────────────────
+// Lazily fetched once, reused by describe/caps/tab-completion/boot. Failure
+// is non-fatal everywhere it's called — every call site already treats a
+// null return as "grammar unavailable" rather than throwing.
+let _grammar = null;
+async function loadGrammar() {
+  if (_grammar && ge.status().ready) return _grammar;
+  try {
+    await ge.fetch(`http://127.0.0.1:${PORTS.orchestrator}`);
+    _grammar = ge;
+    return _grammar;
+  } catch (e) {
+    _grammar = null;
+    return null;
+  }
+}
+
 async function dispatch(line) {
   const parts = line.trim().split(/\s+/);
   const cmd   = parts[0].toLowerCase();
@@ -426,7 +450,7 @@ async function dispatch(line) {
       if (!g) { log(err('Grammar engine unavailable — is orchestrator running?')); return; }
       const filter = args.join(' ').toLowerCase();
       const st = g.status();
-      console.log(`\n${$(C.bold+C.cyan,'Grammar tree')}  ${$(C.dim, st.commandCount + ' commands · ' + st.componentCount + ' components')}\n`);
+      console.log(`\n${$(C.bold+C.cyan,'Grammar tree')}  ${$(C.dim, st.componentCount + ' commands · ' + st.aliasCount + ' aliases')}\n`);
       // Get full grammar tree from orchestrator
       try {
         const r = await fetch(`http://127.0.0.1:${PORTS.orchestrator}/api/components/grammar`,
@@ -827,7 +851,7 @@ function startRepl() {
   // Auto-status on start, then load grammar for tab completion
   cmdStatus()
     .then(() => loadGrammar())
-    .then(g => { if (g) log($(C.dim, `grammar ready (${g.status().commandCount} commands)`)); })
+    .then(g => { if (g) log($(C.dim, `grammar ready (${g.status().componentCount} commands)`)); })
     .catch(() => {})
     .finally(() => rl.prompt());
 
