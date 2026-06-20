@@ -55,6 +55,13 @@ const STRATEGY = Object.freeze({
 const STRATEGY_ORDER = [STRATEGY.CONTEXT, STRATEGY.SHORTER, STRATEGY.FORENSIC];
 const MAX_RETRIES_PER_STRATEGY = 3;
 
+// Watchdog-forced retries (dead connection / stalled response) are a separate
+// counter from content-strategy retries above — no Detector verdict exists
+// yet when the watchdog fires, so it can't consume a CONTEXT/SHORTER/FORENSIC
+// slot. Capped independently so a provider that's actually dead escalates to
+// a human instead of being retried forever. See guardian/lib/seam-watchdog.js.
+const MAX_WATCHDOG_RETRIES = 3;
+
 // ── QueueCompartment ───────────────────────────────────────────────────────────
 class QueueCompartment {
   /**
@@ -96,6 +103,11 @@ class QueueCompartment {
     this.strategyIdx  = 0;  // which strategy we're on
     this.strategyRetries = 0;  // retries within current strategy
     this.maxRetriesPerStrategy = MAX_RETRIES_PER_STRATEGY;
+
+    // Watchdog-forced retries — see MAX_WATCHDOG_RETRIES above
+    this.watchdogRetries    = 0;
+    this.maxWatchdogRetries = MAX_WATCHDOG_RETRIES;
+    this.stallReason        = null;  // last watchdog trip reason, for audit
 
     this.jobId        = null;  // set when injected
     this.response     = null;  // last response text
@@ -306,6 +318,33 @@ class QueueCompartment {
     });
   }
 
+  /**
+   * Force this compartment out of GENERATING when the provider connection
+   * died or no response ever arrived. This is not a content failure — no
+   * Detector verdict exists yet — so it does not touch the strategy/retries
+   * counters above. It has its own cap (maxWatchdogRetries) so a provider
+   * that's genuinely dead escalates to human review instead of looping.
+   * Called by SEAMQueue#forceRetryActive — see that method and
+   * guardian/lib/seam-watchdog.js for the two callers (manual + automatic).
+   */
+  watchdogRetry(reason) {
+    this.watchdogRetries++;
+    this.stallReason = reason || 'watchdog_timeout';
+
+    if (this.watchdogRetries > this.maxWatchdogRetries) {
+      this._escalate({
+        composite:       null,
+        watchdog:        true,
+        reason:          this.stallReason,
+        watchdogRetries: this.watchdogRetries,
+      });
+      return { escalated: true };
+    }
+
+    this._transition(STATE.RETRYING, { stallReason: this.stallReason });
+    return { escalated: false };
+  }
+
   // ── JAA persistence (§LAW II) ─────────────────────────────────────────────
 
   _jaaInsert() {
@@ -337,6 +376,8 @@ class QueueCompartment {
       jobId:         this.jobId,
       retries:       this.retries,
       strategyIdx:   this.strategyIdx,
+      watchdogRetries: this.watchdogRetries,
+      stallReason:     this.stallReason,
       composite:     this.detection?.composite ?? null,
       passed:        this.detection?.passed    ?? null,
       failureCount:  this.failureLog.length,
@@ -510,6 +551,39 @@ class SEAMQueue {
       strategy:  STRATEGY_ORDER[comp.strategyIdx],
       ts:        Date.now(),
     });
+  }
+
+  /**
+   * Force the currently active compartment out of a stuck or disconnected
+   * state. Single entry point for both POST /seam/retry (manual, human-
+   * triggered) and guardian/lib/seam-watchdog.js (automatic, timer-triggered)
+   * — one signature, no duplicated retry logic between the two callers.
+   * @param {string} [reason]
+   * @returns {{ok:true, escalated:boolean, chunkUuid:string} | {ok:false, error:string}}
+   */
+  forceRetryActive(reason) {
+    const comp = this._active;
+    if (!comp) return { ok: false, error: 'no active compartment' };
+
+    this._active = null;
+    const { escalated } = comp.watchdogRetry(reason);
+
+    this._busEmit('guardian.seam.watchdog.fired', {
+      uuid:            comp.uuid,
+      queueId:         this.uuid,
+      chunkIdx:        comp.chunkIdx,
+      chunkTitle:      comp.chunkTitle,
+      provider:        comp.provider,
+      reason:          reason || 'watchdog_timeout',
+      escalated,
+      watchdogRetries: comp.watchdogRetries,
+      ts:              Date.now(),
+    });
+
+    if (escalated) this._checkComplete();   // queue may now be fully resolved
+    setTimeout(() => this._next(), 100);    // either re-dispatch (RETRYING) or advance past it (ESCALATED)
+
+    return { ok: true, escalated, chunkUuid: comp.uuid };
   }
 
   _checkComplete() {

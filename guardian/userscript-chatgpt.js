@@ -1156,11 +1156,25 @@ function renderSeam() {
 
 async function _refreshSeamQueues(a) {
   const list = a.querySelector('#__g10seam_list__'); if (!list) return;
+
+  let liveQueues = [], sessions = [];
   try {
-    const res = await fetch(`${NCP_URL}/seam/sessions`, { signal: AbortSignal.timeout(3000) });
-    const data = await res.json();
-    _seamQueues = (data.sessions || []).filter(s => s.provider === PROVIDER).slice(0, 8);
+    const [liveRes, sessRes] = await Promise.all([
+      fetch(`${NCP_URL}/seam/queues`,   { signal: AbortSignal.timeout(3000) }),
+      fetch(`${NCP_URL}/seam/sessions`, { signal: AbortSignal.timeout(3000) }),
+    ]);
+    const liveData = await liveRes.json();
+    const sessData = await sessRes.json();
+    liveQueues = (liveData.queues   || []).filter(q => q.provider === PROVIDER);
+    sessions   = (sessData.sessions || []).filter(s => s.provider === PROVIDER);
   } catch (_) { return; } // leave last-known list showing rather than blank it on a transient fetch failure
+
+  // Live (in-memory, still-active) queues carry full compartment detail and
+  // are retry-capable. Once a queue completes it's dropped from the server's
+  // active-queue map — nothing left to retry — so those fall back to the
+  // session summary instead.
+  const liveUuids = new Set(liveQueues.map(q => q.uuid));
+  _seamQueues = [...liveQueues, ...sessions.filter(s => !liveUuids.has(s.uuid))].slice(0, 8);
 
   list.innerHTML = '';
   if (!_seamQueues.length) {
@@ -1170,16 +1184,52 @@ async function _refreshSeamQueues(a) {
   for (const q of _seamQueues) {
     const row = document.createElement('div');
     row.style.cssText = 'border:1px solid #1e1e3a;border-radius:3px;padding:6px 8px;margin-top:6px;font-size:.65rem';
-    const pct = q.status === 'complete'
-      ? Math.round((q.verified || 0) / (q.chunks?.length || 1) * 100)
-      : null;
-    const statusTxt = q.status === 'complete'
-      ? `done — ${q.verified || 0} verified${q.escalated ? `, ${q.escalated} escalated` : ''}`
+
+    const isLive  = liveUuids.has(q.uuid);
+    const active  = isLive ? (q.compartments || []).find(c => c.state === 'GENERATING') : null;
+    const statusTxt = (q.completedAt || q.status === 'complete')
+      ? `done — ${q.stats?.verified ?? q.verified ?? 0} verified${(q.stats?.escalated ?? q.escalated) ? `, ${q.stats?.escalated ?? q.escalated} escalated` : ''}`
       : 'active';
-    row.innerHTML = `<div style="color:#94a3b8;font-weight:600">${q.title || 'Untitled'}</div>
+
+    row.innerHTML = `<div style="color:#94a3b8;font-weight:600">${escHtml(q.title || 'Untitled')}</div>
       <div style="color:#475569;margin-top:2px">#${(q.uuid||'').slice(0,8)} · ${statusTxt}</div>`;
+
+    if (active) {
+      const ageS = Math.round((Date.now() - active.updatedAt) / 1000);
+      const stuckLine = document.createElement('div');
+      stuckLine.style.cssText = 'color:#fbbf24;margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap';
+      stuckLine.innerHTML = `<span>generating "${escHtml(active.chunkTitle || '')}" — ${ageS}s${active.watchdogRetries ? ` · watchdog ${active.watchdogRetries}/${active.maxWatchdogRetries ?? 3}` : ''}</span>`;
+
+      const retryBtn = document.createElement('button');
+      retryBtn.style.cssText = 'background:none;border:1px solid rgba(251,191,36,.4);color:#fbbf24;border-radius:2px;padding:1px 7px;font:inherit;font-size:9px;cursor:pointer';
+      retryBtn.textContent = 'Retry now';
+      retryBtn.onclick = async () => {
+        retryBtn.disabled = true; retryBtn.textContent = '…';
+        try {
+          const r = await fetch(`${NCP_URL}/seam/retry`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ queueId: q.uuid, chunkUuid: active.uuid, reason: 'manual_ui' }),
+          });
+          const d = await r.json();
+          if (d.ok) {
+            toast(d.escalated ? 'Chunk escalated — watchdog limit reached' : 'Retry forced', d.escalated ? 'warn' : 'success', 3000);
+            _log('ok', `SEAM retry forced — ${q.uuid.slice(0,8)}`, d.escalated ? 'escalated to gap' : 'retrying');
+          } else {
+            toast(`Retry failed: ${d.error || 'unknown'}`, 'error', 4000);
+          }
+        } catch (e) {
+          toast(`Retry failed: ${e.message}`, 'error', 4000);
+        } finally {
+          await _refreshSeamQueues(a);
+        }
+      };
+      stuckLine.appendChild(retryBtn);
+      row.appendChild(stuckLine);
+    }
+
     list.appendChild(row);
   }
+
 }
 
 // ── Intelligence tab ──────────────────────────────────────────────────────────

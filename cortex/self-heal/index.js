@@ -83,7 +83,7 @@ const TRUST_TIERS = {
       'cortex/orion/policy.js',
       'cortex/orion/sensor.js',
       // Agent adapters
-      'cortex/agents/ollama/index.js',
+      'guardian/agents/ollama.js',
       'cortex/agents/claude/index.js',
       // Service layer
       'architect/service.js',

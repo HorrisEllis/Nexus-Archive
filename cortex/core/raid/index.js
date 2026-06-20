@@ -365,9 +365,18 @@ async function _dispatch(call, decision) {
     }
   }
 
-  // Guardian NCP path
-  if (decision.agent === 'guardian-claude' || decision.agent === 'guardian-chatgpt') {
-    const prov = decision.agent === 'guardian-claude' ? 'claude' : 'chatgpt';
+  // Guardian path — local agent (ollama, no browser tab) or browser-tab agent
+  // (claude/chatgpt). All three go through Guardian's HTTP /command, not a
+  // direct require() — RAID and Guardian are separate processes; reaching
+  // into another process's module tree by path is not a real call, it's a
+  // second copy of the module running disconnected from the one that's
+  // actually wired to ollama-runtime.js's hardened client. Guardian owns
+  // every local-model touchpoint; RAID asks it, the same way it already
+  // asks for claude/chatgpt tab dispatch below.
+  if (decision.agent === 'ollama' || decision.agent === 'guardian-claude' || decision.agent === 'guardian-chatgpt') {
+    const prov = decision.agent === 'guardian-claude'  ? 'claude'
+               : decision.agent === 'guardian-chatgpt' ? 'chatgpt'
+               : 'ollama';
     await new Promise((res,rej)=>{
       const b=JSON.stringify({ provider:prov, command:call.command||'code', prompt:call.prompt, jobId:call.uuid });
       const req=http.request({ hostname:'127.0.0.1',port:7820,path:'/command',method:'POST',headers:{'Content-Type':'application/json'},timeout:5000 },r=>{ r.resume(); res(); });

@@ -18,7 +18,14 @@ const modules = [
 
   // agents (dispatcher first, then sub-agents)
   { id: 'agents',          mod: require('../agents'),                    pollMs:  2000 },
-  { id: 'ollama',          mod: require('../agents/ollama'),             pollMs:  2000 },
+  // ollama deliberately NOT registered here — see guardian/agents/ollama.js
+  // and guardian/server.js's 'ollama.agent' boot phase. This used to require
+  // cortex/agents/ollama/index.js and call its init() unconditionally on every
+  // cortex boot, which is exactly the "baked in regardless of whether Ollama
+  // is running" problem the 2026-06-20 migration moved this off of Cortex to
+  // fix. This line surviving the rest of that migration meant the old,
+  // non-hardened poller kept running in parallel with the new ping-gated one
+  // — two processes polling the same agent_calls rows for routedTo='ollama'.
   { id: 'claude',          mod: require('../agents/claude'),             pollMs:  3000 },
 
   // gate / healer

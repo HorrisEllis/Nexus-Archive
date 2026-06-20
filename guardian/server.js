@@ -59,6 +59,56 @@ if (_replayed.length) {
   console.log('[guardian] replayed', _replayed.length, 'interrupted queue items');
 }
 
+// ── Shared SEAM queue builder ────────────────────────────────────────────────
+// Both the file-drop watcher below (.spec files landing in data/guardian/input/)
+// and POST /command build a SEAMQueue from spec text. These were two separate
+// call sites that drifted apart — the file-watcher one rotted into a
+// constructor call that always threw (3 positional args against a constructor
+// that destructures a single object) while nothing ever exercised that path to
+// catch it. One function now. Both callers use it — that class of drift can't
+// recur because there's only one place left for it to recur in.
+function _buildSeamQueue(specText, opts = {}) {
+  const {
+    provider     = 'chatgpt',
+    title        = null,
+    splitOn      = 'heading',
+    maxChunkSize = 3000,
+  } = opts;
+
+  const plan = parseSpec(specText, { splitOn, maxChunkSize });
+
+  // §LAW II — SEAMQueue constructor writes seam_session to JAA before this returns
+  const queue = new SEAMQueue({
+    title: title || plan.meta.name || 'Untitled Spec',
+    provider,
+    chunks: [
+      // Chunk 0: prerequisite — INTAKE, no implementation yet
+      { title: '§ Prerequisites', content: plan.prerequisiteBlock, builtPrompt: plan.prerequisiteBlock, axioms: [] },
+      // Chunks 1..N: actual spec content with SEAM contracts
+      ...plan.chunks.map(c => ({ title: c.title, content: c.content, builtPrompt: c.builtPrompt, axioms: plan.axioms })),
+    ],
+    jaa,
+    // bus.emit is wrapped (below, once bus exists) to write every event to the
+    // CFR ledger first — no separate _evLedger.record() call needed here. The
+    // old /command path called both, which double-logged every SEAM event.
+    busEmit: (type, data) => bus.emit(type, data),
+    // ollama/ollama-ncp: native dispatch, no browser tab — see
+    // _dispatchSeamOllamaNative. Every other provider still goes through the
+    // NCP/userscript channel as before.
+    ncpPush: (prov, data) => {
+      if (prov === 'ollama' || prov === 'ollama-ncp') return _dispatchSeamOllamaNative(data);
+      return ncp.push(prov, data);
+    },
+    onComplete: (stats) => {
+      _activeQueues.delete(queue.uuid);
+      bus.emit('guardian.seam.queue.complete', { queueId: queue.uuid, ...stats });
+    },
+  });
+
+  _activeQueues.set(queue.uuid, queue);
+  return { queue, plan };
+}
+
 // ── Watch input/ folder — process .pending files as they arrive ───────────
 // .spec files  → SEAMQueue dispatch
 // .md/.txt     → simple job dispatch
@@ -75,15 +125,10 @@ _physQueue.watchInput(async (data, filename) => {
     const specText = typeof data === 'string' ? data :
       (data._raw || data.content || JSON.stringify(data));
     const provider = data._meta?.provider || data.provider || 'claude';
+    const title    = data._meta?.title    || data.title    || null;
     console.log('[guardian queue] spec arrived:', filename.slice(0, 40));
     try {
-      const { SEAMQueue } = require('./lib/seam-queue');
-      const { parseSpec }  = require('./lib/spec-parser');
-      const plan = parseSpec(specText, { maxChunkSize: 3500 });
-      const queue = new SEAMQueue(queueUid, specText, {
-        provider, plan, source: 'file-queue',
-      });
-      _activeQueues.set(queue.uuid, queue);
+      const { queue } = _buildSeamQueue(specText, { provider, title });
       if (ncp.isConnected(provider)) queue.start();
       else bus.emit('guardian.tab.needed', { provider, jobId: queueUid });
     } catch(e) {
@@ -122,6 +167,24 @@ _physQueue.watchInput(async (data, filename) => {
 // Active SEAM queues — keyed by queueId
 // §LAW II — queue state persisted to JAA, this is a performance index only
 const _activeQueues = new Map();
+
+// Find the queue whose currently-dispatched compartment owns this jobId.
+// Used by NCP_COMPLETE/NCP_ERROR below to close the loop SEAM dispatch opens
+// in seam-queue.js's _dispatch() — a SEAM chunk's jobId is never registered
+// in the `jobs` Map (that's for raw jobs only), so without this, a completed
+// or errored SEAM chunk's result had nowhere to go. The watchdog forcing a
+// retry was the only thing that ever moved a compartment past GENERATING —
+// even a fully successful response was silently dropped. This is what
+// actually closes that loop; the watchdog stays as the safety net for when
+// no response ever arrives at all.
+function _findActiveSeamCompartment(jobId) {
+  if (!jobId) return null;
+  for (const queue of _activeQueues.values()) {
+    if (queue._active && queue._active.jobId === jobId) return queue;
+  }
+  return null;
+}
+
 const { randomUUID } = require('crypto');
 const fs         = require('fs');
 const path       = require('path');
@@ -457,6 +520,41 @@ function _dispatchOllamaNative(job) {
   return true;
 }
 
+// SEAM-queue equivalent of _dispatchOllamaNative above. seam-queue.js's
+// _dispatch() calls whatever ncpPush() it was given with a GUARDIAN_JOB
+// payload shape (jobId/prompt/seam_*), not a `job` object from the `jobs`
+// Map — SEAM chunks were never registered there. This is wired in as the
+// ncpPush passed to SEAMQueue when provider is ollama/ollama-ncp (see
+// _buildSeamQueue below), so a SEAM chunk routed to Ollama skips the
+// browser-tab channel exactly like a raw job does — closing the gap where
+// RAID's LAW_I (ollama first, no tab needed) was never actually true for the
+// one dispatch path (SEAM) that matters most for the work ollama is
+// preferred for (code/spec/forge).
+function _dispatchSeamOllamaNative(data) {
+  console.log(`[guardian] SEAM chunk ${data.jobId} → ollama (native, no tab needed): ${data.seam_title || ''}`);
+  bus.emit('guardian.seam.chunk.dispatched.native', { jobId: data.jobId, queueId: data.seam_queue_id, provider: data.provider, ts: Date.now() });
+
+  if (!_ollamaRuntime) {
+    _handleNCPMessage({ type: 'NCP_ERROR', jobId: data.jobId, provider: data.provider,
+      error: 'ollama-runtime module not found — expected at project root ollama-runtime.js' });
+    return;
+  }
+
+  const model = OLLAMA_COMMAND_MODELS[data.command] || OLLAMA_COMMAND_MODELS.seam || process.env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
+  let buf = '';
+  try {
+    _ollamaRuntime.streamGenerate(
+      { model, prompt: data.prompt || '' },
+      (token) => { buf += token; },
+      () => { _handleNCPMessage({ type: 'NCP_COMPLETE', jobId: data.jobId, provider: data.provider, text: buf }); },
+      (err)  => { _handleNCPMessage({ type: 'NCP_ERROR', jobId: data.jobId, provider: data.provider,
+        error: err?.message || String(err) }); },
+    );
+  } catch (err) {
+    _handleNCPMessage({ type: 'NCP_ERROR', jobId: data.jobId, provider: data.provider, error: err.message });
+  }
+}
+
 function _doDispatch(job) {
   // ollama / ollama-ncp: skip the userscript channel entirely — see above.
   if (job.provider === 'ollama' || job.provider === 'ollama-ncp') {
@@ -583,6 +681,17 @@ function _handleNCPMessage(msg) {
       if (jobId) {
         const finalText = text || content || '';
         const job = jobs.get(jobId);
+
+        // ── SEAM queue routing ────────────────────────────────────────────
+        // A SEAM-dispatched chunk's jobId is never in the `jobs` Map (that's
+        // for raw jobs only) — this is the only place its response goes.
+        // §LAW II: onResponse() writes DETECTING to JAA before evaluating.
+        const seamQueue = _findActiveSeamCompartment(jobId);
+        if (seamQueue) {
+          seamQueue.onResponse(jobId, finalText);
+        }
+        // Fall through — gap/artifact extraction below is generically useful
+        // for SEAM-generated content too, so it still runs either way.
         // Store response text on job so /response/:jobId can serve it
         if (job) { job.responseText = finalText.slice(0, 100000); job.status = 'complete'; }
 
@@ -783,6 +892,14 @@ function _handleNCPMessage(msg) {
     case 'GUARDIAN_ERROR':
     case 'NCP_ERROR': {
       if (jobId) {
+        // ── SEAM queue routing ────────────────────────────────────────────
+        // A provider-side error on a SEAM chunk isn't a content failure (no
+        // Detector verdict to run), so it goes through the same
+        // forceRetryActive() path the watchdog uses, not onResponse().
+        const seamQueue = _findActiveSeamCompartment(jobId);
+        if (seamQueue) {
+          seamQueue.forceRetryActive('provider_error');
+        }
         updateJob(jobId, { status: 'error', error, errorGate: gate, errorAt: Date.now() });
         bus.emit('guardian.job.error', { jobId, error, gate, provider });
         cockpitBroadcast({ type: 'job.error', jobId, error, ts: Date.now() });
@@ -1594,6 +1711,19 @@ const jaa = new JaaStore(STORE_DIR);
   }
 });
 
+// ── SEAM watchdog — detects stalled GENERATING chunks / dead provider ──────
+// connections and force-retries through the same lever as the manual
+// POST /seam/retry endpoint. See guardian/lib/seam-watchdog.js for the gap
+// this closes. bus.emit is already wired to write every event to the CFR
+// ledger (above) — no separate ledger call needed here.
+const { createSeamWatchdog } = require('./lib/seam-watchdog');
+const _seamWatchdog = createSeamWatchdog({
+  activeQueues:   _activeQueues,
+  ncpIsConnected: (provider) => ncp.isConnected(provider),
+  busEmit:        (type, data) => bus.emit(type, data),
+});
+_seamWatchdog.start();
+
 // ── Lab Manager — §LAB-01 every experiment has a UUID and a hypothesis ────
 let _lab = null;
 try {
@@ -2100,25 +2230,28 @@ function handleExtendedRoutes(req, res, url, method) {
   }
 
   if (method==='POST' && url.pathname==='/seam/retry') {
-    // SEAM watchdog — force retry a stuck GENERATING chunk
+    // Manual SEAM watchdog trigger — same path the automatic watchdog uses
+    // (guardian/lib/seam-watchdog.js), via SEAMQueue#forceRetryActive.
     bodyJ(req).then(body => {
       const { queueId, chunkUuid, reason } = body || {};
       const queue = _activeQueues.get(queueId);
       if (!queue) { pRes(res,404,{ok:false,error:'queue not found'}); return; }
       const active = queue._active;
-      if (active && (!chunkUuid || active.uuid === chunkUuid)) {
-        // Release the lock and force retry
-        queue._active = null;
-        try { active._transition('RETRYING', { reason: reason||'watchdog_timeout' }); } catch(_){}
-        setTimeout(() => queue._next(), 100);
-        console.log('[guardian] watchdog retry forced:', chunkUuid, 'queue:', queueId);
-        pRes(res, 200, { ok:true, retried: active.uuid });
-      } else {
+      if (!active || (chunkUuid && active.uuid !== chunkUuid)) {
         pRes(res, 200, { ok:true, msg:'chunk no longer active or mismatch' });
+        return;
       }
+      const result = queue.forceRetryActive(reason || 'manual');
+      console.log('[guardian] watchdog retry forced (manual):', result.chunkUuid, 'queue:', queueId, result.escalated ? '— escalated' : '');
+      pRes(res, 200, { ok:true, retried: result.chunkUuid, escalated: result.escalated });
     }).catch(e => pRes(res,500,{ok:false,error:e.message}));
     return;
   }
+
+  if (method==='GET' && url.pathname==='/seam/watchdog/status') {
+    pRes(res, 200, { ok:true, status: _seamWatchdog.status() }); return true;
+  }
+
 
   if (method==='GET' && url.pathname==='/seam/queues') {
     const queues = [..._activeQueues.values()].map(q => q.toJSON());
@@ -2592,46 +2725,13 @@ function handleExtendedRoutes(req, res, url, method) {
             || body.spec;
           if (!specText) throw new Error('spec content empty');
 
-          const plan = parseSpec(specText, {
+          const provider = body.provider || 'chatgpt';
+
+          const { queue, plan } = _buildSeamQueue(specText, {
+            provider, title: body.title,
             splitOn:      body.splitOn      || 'heading',
             maxChunkSize: body.maxChunkSize || 3000,
           });
-
-          const provider = body.provider || 'chatgpt';
-
-          // §LAW II — SEAMQueue constructor writes seam_session to JAA
-          const queue = new SEAMQueue({
-            title:    plan.meta.name || body.title || 'Untitled Spec',
-            provider,
-            chunks: [
-              // Chunk 0: prerequisite — INTAKE, no implementation yet
-              {
-                title:       '§ Prerequisites',
-                content:     plan.prerequisiteBlock,
-                builtPrompt: plan.prerequisiteBlock,
-                axioms:      [],
-              },
-              // Chunks 1..N: actual spec content with SEAM contracts
-              ...plan.chunks.map(c => ({
-                title:       c.title,
-                content:     c.content,
-                builtPrompt: c.builtPrompt,
-                axioms:      plan.axioms,
-              })),
-            ],
-            jaa,
-            busEmit: (type, data) => {
-              bus.emit(type, data);
-              _evLedger?.record(type, data, { source: 'seam-queue' });
-            },
-            ncpPush: (prov, data) => ncp.push(prov, data),
-            onComplete: (stats) => {
-              _activeQueues.delete(queue.uuid);
-              bus.emit('guardian.seam.queue.complete', { queueId: queue.uuid, ...stats });
-            },
-          });
-
-          _activeQueues.set(queue.uuid, queue);
 
           // §LAW II physical redundancy — write to disk queue before dispatch
           _physQueue.enqueue({
