@@ -865,31 +865,31 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
   <!-- CH1: OVERVIEW -->
   <div class="ch active" id="ch-overview">
     <div class="sys-grid" id="sys-grid">
-      <div class="sys-tile" onclick="tune(1)" id="tile-orch">
+      <div class="sys-tile" onclick="window.open('/ui/orchestrator','_blank')" id="tile-orch">
         <div class="tile-head"><span class="tile-icon">⬡</span><span class="tile-port">:9000</span><span class="tile-status" id="ts-orch">—</span></div>
         <div class="tile-name" style="color:#00e5ff">Orchestrator</div>
         <div class="tile-desc">Root kernel. Unified API, SSE bus, subsystem lifecycle management.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-routes">—</div><div class="tm-lbl">Routes</div></div><div><div class="tm-val" id="tm-uptime">—</div><div class="tm-lbl">Uptime</div></div></div>
       </div>
-      <div class="sys-tile" onclick="tune(2)" id="tile-gd">
+      <div class="sys-tile" onclick="window.open('/ui/guardian','_blank')" id="tile-gd">
         <div class="tile-head"><span class="tile-icon">⚡</span><span class="tile-port">:7820</span><span class="tile-status" id="ts-gd">—</span></div>
         <div class="tile-name" style="color:#ffaa00">Guardian</div>
         <div class="tile-desc">NCP channel server. Routes AI jobs to browser tab providers via SSE.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-jobs">—</div><div class="tm-lbl">Jobs</div></div><div><div class="tm-val" id="tm-provs">—</div><div class="tm-lbl">Providers</div></div></div>
       </div>
-      <div class="sys-tile" onclick="tune(3)" id="tile-cx">
+      <div class="sys-tile" onclick="window.open('/ui/cortex','_blank')" id="tile-cx">
         <div class="tile-head"><span class="tile-icon">◈</span><span class="tile-port">:3748</span><span class="tile-status" id="ts-cx">—</span></div>
         <div class="tile-name" style="color:#00ff88">Cortex</div>
         <div class="tile-desc">Sovereign memory. 28 JAA tables, gap engine, self-heal, RAID routing.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-gaps">—</div><div class="tm-lbl">Open gaps</div></div><div><div class="tm-val" id="tm-events">—</div><div class="tm-lbl">Events</div></div></div>
       </div>
-      <div class="sys-tile" onclick="tune(4)" id="tile-idr">
+      <div class="sys-tile" onclick="window.open('/ui/idearium','_blank')" id="tile-idr">
         <div class="tile-head"><span class="tile-icon">◐</span><span class="tile-port">:4800</span><span class="tile-status" id="ts-idr">—</span></div>
         <div class="tile-name" style="color:#a78bfa">Idearium</div>
         <div class="tile-desc">Idea lattice. Captures, tensions, and promotes ideas to specs.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-ideas">—</div><div class="tm-lbl">Ideas</div></div><div><div class="tm-val" id="tm-specs">—</div><div class="tm-lbl">Specs</div></div></div>
       </div>
-      <div class="sys-tile" onclick="tune(5)" id="tile-br">
+      <div class="sys-tile" onclick="window.open('/ui/bridge','_blank')" id="tile-br">
         <div class="tile-head"><span class="tile-icon">⟁</span><span class="tile-port">:9999</span><span class="tile-status" id="ts-br">—</span></div>
         <div class="tile-name" style="color:#8890bb">Bridge</div>
         <div class="tile-desc">P2P trust relay. Routes inter-system requests with identity + circuit breaker.</div>
@@ -926,7 +926,7 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
           <div><div class="tm-val" id="tm-forge-gaps">—</div><div class="tm-lbl">Open Gaps</div></div>
         </div>
       </div>
-      <div class="sys-tile" onclick="openModeSelector()" id="tile-agent">
+      <div class="sys-tile" onclick="_activeMode ? tuneSuite() : openModeSelector()" id="tile-agent">
         <div class="tile-head">
           <span class="tile-icon">⇄</span>
           <span class="tile-port">agent mode</span>

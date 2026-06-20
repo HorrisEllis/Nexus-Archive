@@ -12,7 +12,9 @@
     "test:int": "node tests/integration.test.js",
     "start": "node orchestrator.js",
     "start:all": "concurrently --names \"ORCH,BRIDGE,CORTEX,GUARDIAN,IDEARIUM,ARCHITECT,DIAG\" --prefix-colors \"cyan,magenta,green,yellow,blue,red,white\" --kill-others-on-fail \"node orchestrator.js\" \"node bridge/server.js\" \"node cortex/boot.js\" \"node guardian/server.js\" \"node idearium/api/index.js\" \"node architect/service.js\" \"node service/nexus-diagnostic.js\"",
-    "start:core": "concurrently --names \"ORCH,BRIDGE,CORTEX,GUARDIAN\" --prefix-colors \"cyan,magenta,green,yellow\" \"node orchestrator.js\" \"node bridge/server.js\" \"node cortex/boot.js\" \"node guardian/server.js\""
+    "start:core": "concurrently --names \"ORCH,BRIDGE,CORTEX,GUARDIAN\" --prefix-colors \"cyan,magenta,green,yellow\" \"node orchestrator.js\" \"node bridge/server.js\" \"node cortex/boot.js\" \"node guardian/server.js\"",
+    "autopilot": "node autopilot.js",
+    "autopilot:status": "node autopilot.js --status-port=7799"
   },
   "engines": {
     "node": ">=18.0.0"
