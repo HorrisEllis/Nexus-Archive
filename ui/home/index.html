@@ -447,7 +447,7 @@ select option{background:#111}
 
 /* ══════════════════════════════════════════════════════════════════════
    MODE SELECTOR — landing overlay
-   Three modes: orchestrator (Ollama) · claude (NCP) · chatgpt (NCP)
+   Five modes: orchestrator (Ollama) · claude/chatgpt/gemini/perplexity (NCP)
    ══════════════════════════════════════════════════════════════════════ */
 #mode-overlay{
   position:fixed;inset:0;z-index:9000;
@@ -476,11 +476,11 @@ select option{background:#111}
   letter-spacing:.06em;color:rgba(255,255,255,.9);text-align:center;
 }
 .mode-cards{
-  display:flex;gap:20px;
+  display:flex;flex-wrap:wrap;gap:20px;
   padding:0 24px;
 }
 .mode-card{
-  flex:1;min-width:0;
+  flex:1 1 280px;min-width:0;
   border:1px solid rgba(255,255,255,.08);
   border-radius:16px;
   padding:32px 28px 28px;
@@ -498,6 +498,8 @@ select option{background:#111}
 .mode-card.m-orch{--mc:#00e5ff;--mg:rgba(0,229,255,.06)}
 .mode-card.m-claude{--mc:#cc44ff;--mg:rgba(204,68,255,.06)}
 .mode-card.m-chatgpt{--mc:#00ff88;--mg:rgba(0,255,136,.06)}
+.mode-card.m-gemini{--mc:#4a9eff;--mg:rgba(74,158,255,.06)}
+.mode-card.m-perplexity{--mc:#818cf8;--mg:rgba(129,140,248,.06)}
 .mode-card:hover{border-color:var(--mc);background:var(--mg);box-shadow:0 0 40px rgba(0,0,0,.4),0 0 0 1px var(--mc) inset,0 16px 40px -8px var(--mg)}
 .mode-card:hover::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,var(--mc) 0%,transparent 70%);opacity:.06}
 .mode-icon{
@@ -555,11 +557,15 @@ select option{background:#111}
 body[data-mode='orchestrator'] #mode-indicator{color:#00e5ff;border-color:rgba(0,229,255,.25)}
 body[data-mode='claude']       #mode-indicator{color:#cc44ff;border-color:rgba(204,68,255,.25)}
 body[data-mode='chatgpt']      #mode-indicator{color:#00ff88;border-color:rgba(0,255,136,.25)}
+body[data-mode='gemini']       #mode-indicator{color:#4a9eff;border-color:rgba(74,158,255,.25)}
+body[data-mode='perplexity']   #mode-indicator{color:#818cf8;border-color:rgba(129,140,248,.25)}
 
 /* ── Mode-specific channel skin ───────────────────────────────────── */
 body[data-mode='claude']  #ch-agent-suite .agent-accent{color:#cc44ff}
 body[data-mode='chatgpt'] #ch-agent-suite .agent-accent{color:#00ff88}
 body[data-mode='orchestrator'] #ch-agent-suite .agent-accent{color:#00e5ff}
+body[data-mode='gemini'] #ch-agent-suite .agent-accent{color:#4a9eff}
+body[data-mode='perplexity'] #ch-agent-suite .agent-accent{color:#818cf8}
 
 /* ── Agent suite channel ──────────────────────────────────────────── */
 #ch-agent-suite{
@@ -656,6 +662,8 @@ body[data-mode='orchestrator'] #ch-agent-suite .agent-accent{color:#00e5ff}
 body[data-mode='claude']  .forge-send:hover{background:rgba(204,68,255,.15);border-color:rgba(204,68,255,.3);color:#cc44ff}
 body[data-mode='chatgpt'] .forge-send:hover{background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.25);color:#00ff88}
 body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3);color:#00e5ff}
+body[data-mode='gemini'] .forge-send:hover{background:rgba(74,158,255,.1);border-color:rgba(74,158,255,.3);color:#4a9eff}
+body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);border-color:rgba(129,140,248,.3);color:#818cf8}
 
 /* Constraint flags */
 .constraint-flags{display:flex;gap:8px;flex-wrap:wrap}
@@ -766,6 +774,44 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
           <div class="mode-trait">SEAM ordering enforced at transport layer</div>
         </div>
         <div class="mode-select-btn">ENTER CHATGPT MODE →</div>
+      </div>
+
+      <div class="mode-card m-gemini" onclick="selectMode('gemini')">
+        <div>
+          <div class="mode-icon">◆</div>
+          <div class="mode-badge" style="margin-top:12px">NCP · TAB REQUIRED</div>
+        </div>
+        <div>
+          <div class="mode-name">GEMINI</div>
+          <div class="mode-sub">Gemini via NCP browser tab. Vision + multimodal. Image generation aware.</div>
+        </div>
+        <div class="mode-traits">
+          <div class="mode-trait">Vision — understands attached images</div>
+          <div class="mode-trait">Detects generated images as artifacts, not text</div>
+          <div class="mode-trait">Vision-bearing jobs flagged for RAID — never silently retried text-only</div>
+          <div class="mode-trait">SEAM chunking available</div>
+          <div class="mode-trait">Usage cap detection</div>
+        </div>
+        <div class="mode-select-btn">ENTER GEMINI MODE →</div>
+      </div>
+
+      <div class="mode-card m-perplexity" onclick="selectMode('perplexity')">
+        <div>
+          <div class="mode-icon">⌖</div>
+          <div class="mode-badge" style="margin-top:12px">NCP · TAB REQUIRED</div>
+        </div>
+        <div>
+          <div class="mode-name">PERPLEXITY</div>
+          <div class="mode-sub">Perplexity via NCP browser tab. Web-grounded. Citations are a first-class artifact, not a footnote.</div>
+        </div>
+        <div class="mode-traits">
+          <div class="mode-trait">Citations persisted independently — survive a failed completion post</div>
+          <div class="mode-trait">Quick / Pro / Research mode detected — timeout scales accordingly</div>
+          <div class="mode-trait">Substantive answer with zero sources flagged as a quality gap</div>
+          <div class="mode-trait">SEAM chunking available</div>
+          <div class="mode-trait">Pro-search usage cap detection</div>
+        </div>
+        <div class="mode-select-btn">ENTER PERPLEXITY MODE →</div>
       </div>
 
     </div>
@@ -935,7 +981,7 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
           <span class="tile-status" id="ts-agent" style="color:#a78bfa;background:rgba(167,139,250,.1);padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700">—</span>
         </div>
         <div class="tile-name" id="tile-agent-name" style="color:#a78bfa">Agent</div>
-        <div class="tile-desc" id="tile-agent-desc">Select operating mode — Orchestrator, Claude, or ChatGPT.</div>
+        <div class="tile-desc" id="tile-agent-desc">Select operating mode — Orchestrator, Claude, ChatGPT, Gemini, or Perplexity.</div>
         <div class="tile-metrics"></div>
       </div>
       <div class="sys-tile" onclick="openBlueprintBuilder()" id="tile-blueprint">
@@ -1954,7 +2000,7 @@ function setRwStatus(msg,cls=''){const el=document.getElementById('rw-status');i
 
 // ══════════════════════════════════════════════════════════════════════
 // MODE SYSTEM
-// Three modes: orchestrator · claude · chatgpt
+// Five modes: orchestrator · claude · chatgpt · gemini · perplexity
 // Stored in localStorage. Affects dispatch, token tracking, SEAM.
 // ══════════════════════════════════════════════════════════════════════
 
@@ -1998,6 +2044,37 @@ const MODE_CONFIG = {
     structuredOutput: true,  // §AGENT-SUITE-CHATGPT — genuinely distinctive, not a shared flag
     badge:      'NCP',
     constraints:['§3.1 BOTTOM-UP','§2.1 DISK FIRST','SEAM CHUNK','STRUCTURED OUTPUT'],
+  },
+  gemini: {
+    name:       'GEMINI',
+    provider:   'gemini',
+    sub:        'NCP browser tab · Vision + multimodal · Image generation aware',
+    icon:       '◆',
+    color:      '#4a9eff',
+    // §HONEST-NOTE: not pinning a specific context-window number here the
+    // way claude/chatgpt do — haven't verified Gemini's current live figure,
+    // and an unverified-but-precise-looking number is worse than an honest gap.
+    tokenLimit: null,
+    chunkSize:  6000,
+    snrDefault: true,
+    seam:       true,
+    vision:     true,        // §AGENT-SUITE-GEMINI — matches userscript-gemini.js's extractMedia()/hasAttachedMedia()
+    badge:      'NCP',
+    constraints:['§3.1 BOTTOM-UP','§2.1 DISK FIRST','SEAM CHUNK','VISION'],
+  },
+  perplexity: {
+    name:       'PERPLEXITY',
+    provider:   'perplexity',
+    sub:        'NCP browser tab · Web-grounded · Citations as first-class artifact',
+    icon:       '⌖',
+    color:      '#818cf8',
+    tokenLimit: null,
+    chunkSize:  6000,
+    snrDefault: true,
+    seam:       true,
+    citations:  true,        // §AGENT-SUITE-PERPLEXITY — matches userscript-perplexity.js's extractCitations()/no_citations gap
+    badge:      'NCP',
+    constraints:['§3.1 BOTTOM-UP','§2.1 DISK FIRST','SEAM CHUNK','CITATIONS'],
   },
 };
 
