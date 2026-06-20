@@ -48,7 +48,11 @@ const ALL_KERNELS = [
   // tells orchestrator.js to skip its internal boot and just be the HTTP/UI
   // front end — autopilot owns spawning every sub-system instead.
   { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' } },
-  { name: 'bridge',       cmd: 'node', args: ['bridge/server.js'] },
+  // §FIX 2026-06-20: bridge/server.js only exports createBridgeServer() — it
+  // has no bootstrap code and never calls .start(), so running it directly
+  // loads, does nothing, and exits 0 immediately. bridge/index.js is the
+  // actual entrypoint: it boots via BootSequence and calls server.start().
+  { name: 'bridge',       cmd: 'node', args: ['bridge/index.js'] },
   { name: 'cortex',       cmd: 'node', args: ['cortex/boot.js'] },
   { name: 'guardian',     cmd: 'node', args: ['guardian/server.js'] },
   { name: 'idearium',     cmd: 'node', args: ['idearium/api/index.js'] },
@@ -123,10 +127,13 @@ function _spawnKernel(kernel, color) {
   s.proc = proc;
   s.status = 'online';
   s.downSince = null;
+  s.sawAddrInUse = false;
 
   const pipe = (stream, isErr) => {
     stream.on('data', d => {
-      for (const line of d.toString().split('\n')) {
+      const text = d.toString();
+      if (isErr && text.includes('EADDRINUSE')) s.sawAddrInUse = true;
+      for (const line of text.split('\n')) {
         if (!line.trim()) continue;
         console.log(`${color}[${kernel.name}]${RESET} ${isErr ? '\x1b[31m' : ''}${line}${isErr ? RESET : ''}`);
       }
@@ -166,6 +173,20 @@ function _spawnKernel(kernel, color) {
       s.status = 'circuit_open';
       _log(`${color}[${kernel.name}]${RESET} \x1b[31m§CIRCUIT BREAKER TRIPPED\x1b[0m — ${s.crashes.length} crashes in ${Math.round(CIRCUIT_WINDOW_MS/60000)}min. ` +
            `Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.`);
+      _writeCircuitGap(kernel.name, s);
+      return;
+    }
+
+    // §FIX 2026-06-20: a port collision (EADDRINUSE) is almost always caused
+    // by an orphaned process from a previous run still holding the port —
+    // exponential backoff just burns 5 minutes restarting into the same wall.
+    // Trip the breaker on the first sighting with a diagnosis a human can
+    // actually act on, instead of waiting for CIRCUIT_MAX_CRASHES retries.
+    if (s.sawAddrInUse) {
+      s.status = 'circuit_open';
+      _log(`${color}[${kernel.name}]${RESET} \x1b[31m§CIRCUIT BREAKER TRIPPED\x1b[0m — port already in use, likely an orphaned process from a ` +
+           `previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. ` +
+           `Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.`);
       _writeCircuitGap(kernel.name, s);
       return;
     }

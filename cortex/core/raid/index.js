@@ -419,6 +419,7 @@ async function _tick() {
       const d = _decide(call, snap, _weights);
       jaaDB.update('agent_calls', call.uuid, { status:'dispatched', routedTo:d.agent, routeReason:d.reason, routeCluster:d.cluster, routedAt:Date.now() });
       jaaDB.insert('event_log', { uuid:uid(), type:'raid.dispatched', payload:JSON.stringify({callUuid:call.uuid,agent:d.agent,reason:d.reason,cluster:d.cluster}), source:MODULE_ID, causedBy:call.uuid, ts:Date.now() });
+      console.log(`[raid] dispatch → ${d.agent} (cluster:${d.cluster}, ${d.reason}) — call ${call.uuid.slice(0,8)}`);
       _dispatch(call, d).catch(err=>{
         jaaDB.update('agent_calls',call.uuid,{status:'failed',error:err.message});
         jaaDB.insert('failures',{uuid:uid(),source:MODULE_ID,error:err.message,stack:err.stack,causedBy:call.uuid,ts:Date.now()});
@@ -447,15 +448,20 @@ function init(cfg={}) {
   _cfg = cfg;
   _loadWeights();
   _initESSBindings();
-  _refreshHealth();
+  const _refreshHealthPromise = _refreshHealth();
   _interval = setInterval(_tick,         _cfg.pollMs??3000); _interval.unref();
   _hTimer   = setInterval(_refreshHealth,HEALTH_INTERVAL);   _hTimer.unref();
   _bTimer   = setInterval(_brainTick,    60000);             _bTimer.unref();
-  console.log(`[raid] v${VERSION} — weights:${_weights.size} ESS:${_ess?'on':'off'}`);
+  console.log(`[raid] v${VERSION} — control layer for ALL agent dispatch (LAW_I local-first, LAW_II memory-before-dispatch)`);
+  console.log(`[raid]   weights:${_weights.size} learned routes · ESS:${_ess?'on':'off'} · SNR pre-filter active`);
+  _refreshHealthPromise.then(() => {
+    const up = ['ollama','guardian-claude','guardian-chatgpt'].filter(k => _health[k]?.online);
+    console.log(`[raid]   agent health probe: ${up.length ? up.join(', ') + ' online' : 'no agents reachable yet'}`);
+  });
 }
 
 function stop() { [_interval,_hTimer,_bTimer].forEach(t=>t&&clearInterval(t)); _interval=_hTimer=_bTimer=null; }
 function setSystemState(s) { _systemState=s||{}; }
 function getState() { return { version:VERSION, health:_health, weights:Object.fromEntries(_weights), essEnabled:!!_ess, weightCount:_weights.size }; }
 
-module.exports = { init, stop, getState, setSystemState, _decide, _cluster, _health, _weights };
+module.exports = { init, stop, getState, setSystemState, _decide, _cluster, _health, _weights, _updateW };

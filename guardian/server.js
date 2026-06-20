@@ -1291,9 +1291,13 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
       catch (e) { return { ok:true, msg:'guardian/agents/ollama.js not found — skipping' }; }
 
       const health = await ollamaAgent.ping();
-      if (!health.online) return { ok:true, msg:'ollama not reachable — agent not started (this is fine)' };
+      if (!health.online) {
+        console.log('[guardian] ⬡ OLLAMA: offline — not reachable on localhost:11434 (agent not started, this is fine)');
+        return { ok:true, msg:'ollama not reachable — agent not started (this is fine)' };
+      }
 
       ollamaAgent.init({ pollMs: 2000 });
+      console.log(`[guardian] ⬡ OLLAMA: online — model=${ollamaAgent.MODEL} — agent started, polling every 2s`);
       return { ok:true, msg:`ollama online — agent started (model=${ollamaAgent.MODEL})` };
     }
   });
@@ -1914,6 +1918,27 @@ bus.register(new SISOGate('guardian.gaps', (data) => {
   }
 }));
 
+// §FIX 2026-06-20 (James — "raid needs to be explicit ... using the
+// intelligence system and guardian"): every SEAM job Guardian runs is real
+// dispatch traffic, but it never touched RAID's agent_calls-driven weight
+// table — RAID's learning stayed permanently cold despite constant real
+// usage. Fire outcomes at cortex's admin server (:3748), which already has
+// RAID registered for the existing /api/raid/decide + /status routes.
+// Fire-and-forget on purpose: a feedback hiccup must never affect or delay
+// the job itself — this is pure learning signal, not part of the job path.
+function _feedRaid(provider, ok, ms) {
+  try {
+    const body = JSON.stringify({ provider, ok: !!ok, ms: Number(ms) || 0, cluster: 'seam' });
+    const req = http.request({
+      hostname: '127.0.0.1', port: 3748, path: '/api/raid/feedback',
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 2000,
+    }, r => r.resume());
+    req.on('error', () => {}); // cortex may be down/restarting — fine, just skip
+    req.on('timeout', () => req.destroy());
+    req.write(body); req.end();
+  } catch (_) {}
+}
+
 bus.register(new SISOGate('guardian.job.complete', (data) => {
   const ts = Date.now();
   const jobId = data.jobId || randomUUID();
@@ -1929,6 +1954,12 @@ bus.register(new SISOGate('guardian.job.complete', (data) => {
       source: 'guardian-ws', started_ts: data.startedTs||ts, completed_ts: ts,
     });
   }
+  const startedTs = existing?.started_ts || data.startedTs || ts;
+  _feedRaid(data.provider || existing?.provider || 'claude', true, ts - startedTs);
+}));
+
+bus.register(new SISOGate('guardian.job.error', (data) => {
+  _feedRaid(data.provider || 'claude', false, 0);
 }));
 
 bus.register(new SISOGate('guardian.pa.session', (data) => {

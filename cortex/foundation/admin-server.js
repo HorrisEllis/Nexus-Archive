@@ -1163,6 +1163,41 @@ class AdminServer {
             }
             break;
           }
+          // ── RAID outcome feedback — POST /api/raid/feedback ──────────────
+          // §FIX 2026-06-20 (James — "raid needs to be explicit ... using
+          // the intelligence system and guardian"): RAID's weight table only
+          // ever learned from agent_calls rows inserted by workflows/
+          // schedules/agent-tools, which in a normal dev session basically
+          // never fire. Almost all real work in NEXUS — every claude/chatgpt/
+          // ollama SEAM job Guardian runs — happens through Guardian's own
+          // queue and never touches agent_calls at all, so RAID's weights
+          // stayed at 0 regardless of how much real traffic the system saw.
+          // Guardian already emits 'guardian.job.complete' / '.error' for
+          // every SEAM job outcome — this route lets those outcomes reach
+          // RAID's actual learning function across the process boundary
+          // (RAID lives in cortex, Guardian is a separate process; this is
+          // the same HTTP seam RAID itself uses to reach Guardian's
+          // /command, just running the other direction).
+          // body: { provider, ok, ms, cluster? } — cluster defaults to
+          // 'seam' (real Guardian-routed traffic), distinct from the
+          // intent-classified clusters (code/spec/etc) RAID's own _decide()
+          // produces for agent_calls-driven dispatch.
+          if (req.method === 'POST' && url.pathname === '/api/raid/feedback') {
+            try {
+              if (!this._raid) { this._json(res, 503, { ok:false, error:'raid not registered' }); break; }
+              const body = await this._body(req).catch(() => ({}));
+              const { provider, ok, ms, cluster } = body || {};
+              if (!provider || typeof ok !== 'boolean') {
+                this._json(res, 400, { ok:false, error:'provider (string) and ok (boolean) required' });
+                break;
+              }
+              this._raid._updateW(cluster || 'seam', provider, ok, Number(ms) || 0);
+              this._json(res, 200, { ok: true });
+            } catch (e) {
+              this._json(res, 500, { ok: false, error: e.message });
+            }
+            break;
+          }
           // FIX (James, 2026-06-19 — "command line tool for ... compartments"):
           // compartment-engine.js (Phase 25) had zero HTTP exposure — the
           // `compartments` JAA table (spawn/execute/resolve lifecycle) was
