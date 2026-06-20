@@ -108,6 +108,12 @@ class QueueCompartment {
     this.watchdogRetries    = 0;
     this.maxWatchdogRetries = MAX_WATCHDOG_RETRIES;
     this.stallReason        = null;  // last watchdog trip reason, for audit
+    // Which kind of RETRYING this is — buildRetryPrompt() needs to know
+    // before it picks a template. A watchdog/manual-retry trip has no
+    // Detector verdict to report (nothing was evaluated — the connection
+    // just died or stalled); a content-failure retry does. Conflating the
+    // two produced "[RETRY 0/9] Detection score: undefined" prompts.
+    this._lastRetryWasWatchdog = false;
 
     this.jobId        = null;  // set when injected
     this.response     = null;  // last response text
@@ -193,6 +199,7 @@ class QueueCompartment {
     });
     this.retries++;
     this.strategyRetries++;
+    this._lastRetryWasWatchdog = false;  // this retry has a real Detector verdict behind it
     this._jaaUpdate();
 
     // Advance strategy if current is exhausted
@@ -217,6 +224,21 @@ class QueueCompartment {
    * gives the AI more information about why it failed.
    */
   buildRetryPrompt() {
+    // Connectivity/stall retry — nothing was evaluated, there's no Detector
+    // verdict, no previous-response excerpt to show. The strategy-based
+    // templates below all assume a content failure happened; using them here
+    // produces "[RETRY 0/9] Detection score: undefined" — true but useless.
+    if (this._lastRetryWasWatchdog) {
+      return [
+        `[RETRY — connection interrupted, no response was received]`,
+        `Reason: ${this.stallReason || 'unknown'}`,
+        `This is not a content failure — nothing about any previous output was evaluated.`,
+        `Resending the original request unchanged. Please respond in full.`,
+        '',
+        this.builtPrompt,
+      ].join('\n');
+    }
+
     const strategy = STRATEGY_ORDER[this.strategyIdx] || STRATEGY.CONTEXT;
     const last     = this.failureLog[this.failureLog.length - 1];
     const det      = last?.detection;
@@ -341,6 +363,7 @@ class QueueCompartment {
       return { escalated: true };
     }
 
+    this._lastRetryWasWatchdog = true;
     this._transition(STATE.RETRYING, { stallReason: this.stallReason });
     return { escalated: false };
   }

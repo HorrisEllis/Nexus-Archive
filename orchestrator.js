@@ -155,6 +155,7 @@ const SYS = {
   emerge:     { port:4242,  host:'127.0.0.1', label:'Emerge IDE',  color:'#3ecf8e' },
   diagnostic: { port:7825,  host:'127.0.0.1', label:'Diagnostic',  color:'#ff6b35', healthPath:'/status' },
   ollama:     { port:11434, host:'127.0.0.1', label:'Ollama',      color:'#e85d3c' },
+  autopilot:  { port:7799,  host:'127.0.0.1', label:'Autopilot',   color:'#fbbf24' },
 };
 
 // ── Channel map ───────────────────────────────────────────────────────────────
@@ -281,6 +282,7 @@ const HEALTH_PATHS = {
   emerge:    '/status',
   architect: '/health',
   ollama:    '/api/tags',
+  autopilot: '/status',
 };
 
 async function allHealth() {
@@ -1470,6 +1472,18 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && !action)                     return json(res,200,await GET('cortex','/health'));
     if (M==='GET'  && action==='contract')         return json(res,200,await GET('cortex','/contract'));
 
+    // Snapshots (cortex/foundation/admin-server.js)
+    if (M==='GET'  && action==='snapshots' && !action2)              return json(res,200,await GET('cortex','/api/snapshots'));
+    if (M==='GET'  && action==='snapshots' && action2==='divergence-watcher') return json(res,200,await GET('cortex','/api/snapshots/divergence-watcher'));
+    if (M==='GET'  && action==='snapshots' && action2==='blackbox')   return json(res,200,await GET('cortex','/api/snapshots/blackbox'));
+    if (M==='GET'  && action==='snapshots' && action2==='macro')      return json(res,200,await GET('cortex','/api/snapshots/macro'));
+    if (M==='GET'  && action==='snapshots' && action2==='diff')       return json(res,200,await GET('cortex',`/api/snapshots/diff${url.search||''}`));
+    if (M==='POST' && action==='snapshots' && action2==='create')     return json(res,200,await POST('cortex','/api/snapshots/create',await readBody(req)));
+    if (M==='POST' && action==='snapshots' && action2==='rollback')   return json(res,200,await POST('cortex','/api/snapshots/rollback',await readBody(req)));
+
+    // Replay inspection
+    if (M==='POST' && action==='replay' && action2==='inspect')       return json(res,200,await POST('cortex','/api/replay/inspect',await readBody(req)));
+
     // SSE proxy
     if (M==='GET' && action==='sse') {
       res.writeHead(200, { 'Content-Type':'text/event-stream','Cache-Control':'no-cache','Access-Control-Allow-Origin':'*' });
@@ -1532,6 +1546,19 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
       req.on('close', () => r.destroy());
       return;
     }
+
+    // CFR-Ω field state (lib/cfr/ledger.js, mounted on Guardian at /cfr/*)
+    if (M==='GET'  && action==='cfr' && uuid==='state') return json(res,200,await GET('guardian','/cfr/state'));
+
+    // Queue control
+    if (M==='POST' && action==='queue' && uuid==='cancel' && op) return json(res,200,await POST('guardian',`/queue/cancel/${op}`,await readBody(req)));
+
+    // SEAM queue — guardian/lib/seam-queue.js + seam-watchdog.js
+    if (M==='GET'  && action==='seam' && uuid==='queues' && !op)   return json(res,200,await GET('guardian','/seam/queues'));
+    if (M==='GET'  && action==='seam' && uuid==='queues' && op)    return json(res,200,await GET('guardian',`/seam/queues/${op}`));
+    if (M==='GET'  && action==='seam' && uuid==='sessions')        return json(res,200,await GET('guardian','/seam/sessions'));
+    if (M==='POST' && action==='seam' && uuid==='retry')           return json(res,200,await POST('guardian','/seam/retry',await readBody(req)));
+    if (M==='GET'  && action==='seam' && uuid==='watchdog' && op==='status') return json(res,200,await GET('guardian','/seam/watchdog/status'));
 
     // Events SSE proxy
     if (M==='GET' && action==='events') {
@@ -1672,6 +1699,19 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // All other emerge routes
     const r = await GET('emerge', p).catch(() => ({ok:false,error:'emerge offline'}));
     return json(res, r.ok ? 200 : (r.error==='emerge offline'?503:500), r);
+  }
+
+  // ── Autopilot proxy ───────────────────────────────────────────────────────
+  // Process supervisor — separate from every system above. Those report
+  // "did my HTTP endpoint respond"; this reports real kernel state (restart
+  // counts, crash history, circuit-breaker trips, downSince) that no health
+  // probe can see. Off when autopilot isn't the thing that booted the stack
+  // (e.g. plain `npm run start:all`) — GET fails clean via sysReq, same as
+  // any other offline system.
+  if (sub === 'autopilot') {
+    const action = seg[2] || '';
+    if (M==='GET' && (!action || action==='status')) return json(res,200,await GET('autopilot','/status'));
+    return json(res,404,{ok:false,error:`autopilot route not found: ${M} /api/autopilot/${action}`});
   }
 
   return json(res,404,{ok:false,error:`route not found: ${M} ${u.pathname}`});

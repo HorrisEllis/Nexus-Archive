@@ -68,7 +68,18 @@ const argv = process.argv.slice(2);
 const onlyArg = argv.find(a => a.startsWith('--only='));
 const statusArg = argv.find(a => a.startsWith('--status-port='));
 const ONLY_NAMES = onlyArg ? new Set(onlyArg.split('=')[1].split(',').map(s => s.trim())) : null;
-const STATUS_PORT = statusArg ? parseInt(statusArg.split('=')[1]) : (parseInt(process.env.AUTOPILOT_STATUS_PORT || '0') || null);
+const DEFAULT_STATUS_PORT = 7799;
+let STATUS_PORT;
+if (statusArg) {
+  STATUS_PORT = parseInt(statusArg.split('=')[1]);
+} else if (process.env.AUTOPILOT_STATUS_PORT !== undefined) {
+  // Explicit env var wins even if it's "0" (opt-out) — `|| DEFAULT` would
+  // silently override 0 since 0 is falsy, defeating the opt-out.
+  STATUS_PORT = parseInt(process.env.AUTOPILOT_STATUS_PORT);
+} else {
+  STATUS_PORT = DEFAULT_STATUS_PORT;
+}
+// --status-port=0 or AUTOPILOT_STATUS_PORT=0 disables it (checked via !STATUS_PORT below).
 
 const KERNELS = ALL_KERNELS.filter(k => !ONLY_NAMES || ONLY_NAMES.has(k.name));
 

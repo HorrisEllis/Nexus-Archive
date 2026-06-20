@@ -1441,12 +1441,14 @@ document.addEventListener('keydown',e=>{
 // ── Health polling ────────────────────────────────────────────────────────────
 const SYSTEMS=[
   {key:'orch',url:`${B.orch}/health`,dot:'sd-orch',tileId:'tile-orch',tileStatus:'ts-orch'},
-  {key:'gd',  url:`${B.gd}/health`, dot:'sd-gd',  tileId:'tile-gd',  tileStatus:'ts-gd'},
-  {key:'cx',  url:`${B.cx}/health`, dot:'sd-cx',  tileId:'tile-cx',  tileStatus:'ts-cx'},
-  {key:'idr', url:`${B.idr}/health`,dot:'sd-idr', tileId:'tile-idr', tileStatus:'ts-idr'},
+  {key:'gd',  url:`${B.orch}/api/guardian/health`, dot:'sd-gd',  tileId:'tile-gd',  tileStatus:'ts-gd'},
+  {key:'cx',  url:`${B.orch}/api/cortex/health`, dot:'sd-cx',  tileId:'tile-cx',  tileStatus:'ts-cx'},
+  {key:'idr', url:`${B.orch}/api/idearium/health`,dot:'sd-idr', tileId:'tile-idr', tileStatus:'ts-idr'},
+  // br/dg: no orchestrator proxy exists for Bridge or Diagnostic yet — direct
+  // port is the only path available right now. Flagged, not silently left.
   {key:'br',  url:`${B.br}/health`, dot:'sd-br',  tileId:'tile-br',  tileStatus:'ts-br'},
-  {key:'arch',url:`${B.arch}/health`,dot:'sd-arch',tileId:'tile-arch',tileStatus:'ts-arch'},
-  {key:'em',  url:`${B.em}/status`, dot:'sd-em',  tileId:'tile-em',  tileStatus:'ts-em'},
+  {key:'arch',url:`${B.orch}/api/architect/health`,dot:'sd-arch',tileId:'tile-arch',tileStatus:'ts-arch'},
+  {key:'em',  url:`${B.orch}/api/emerge/status`, dot:'sd-em',  tileId:'tile-em',  tileStatus:'ts-em'},
   {key:'dg',  url:`${B.dg}/status`, tileId:'tile-dg',  tileStatus:'ts-dg'},
   {key:'forge',url:`${B.orch}/health`,             tileId:'tile-forge',tileStatus:'ts-forge'}, // virtual — served by orch, no health endpoint of its own
 ];
@@ -1465,6 +1467,11 @@ function pulseCard(tileId){
   setTimeout(()=>icon.classList.remove('flash'),600);
 }
 
+// Maps autopilot's kernel names to SYSTEMS' short keys. Emerge isn't in
+// autopilot's supervised kernel set (ALL_KERNELS in autopilot.js) — no entry
+// here means no entry there either, not an oversight on this side.
+const AUTOPILOT_KEY_MAP={orchestrator:'orch',bridge:'br',cortex:'cx',guardian:'gd',idearium:'idr',architect:'arch',diagnostic:'dg'};
+
 async function pollHealth(){
   for(const s of SYSTEMS){
     const d=await get(s.url);
@@ -1479,6 +1486,29 @@ async function pollHealth(){
     if(rdIdx!==undefined){const rd=document.getElementById(`rd-${rdIdx}`);if(rd)rd.classList.toggle('online',up)}
     // Pulse card icon on every successful poll — heartbeat
     if(up)pulseCard(s.tileId);
+  }
+  // Autopilot supervision overlay — a health probe only knows "did the HTTP
+  // endpoint respond". It can't see circuit-broken, mid-restart-with-backoff,
+  // or crash-looping-but-still-up-for-the-moment. Pure addition: if autopilot
+  // isn't running (plain `npm run start:all`, no supervisor), this resolves
+  // null and every tile stays exactly as the probe loop above already set it.
+  const ap=await get(`${B.orch}/api/autopilot/status`).catch(()=>null);
+  if(ap?.kernels){
+    for(const [name,k] of Object.entries(ap.kernels)){
+      const key=AUTOPILOT_KEY_MAP[name];if(!key)continue;
+      const s=SYSTEMS.find(sys=>sys.key===key);if(!s)continue;
+      const ts=document.getElementById(s.tileStatus);
+      const dot=document.getElementById(s.dot);
+      if(k.status==='circuit_open'){
+        if(ts){ts.textContent='CIRCUIT OPEN';ts.className='tile-status offline'}
+        if(dot){dot.classList.remove('on');dot.classList.add('err')}
+      }else if(k.status==='down'&&k.restarts>0){
+        if(ts){ts.textContent=`RESTARTING (${k.restarts})`;ts.className='tile-status offline'}
+      }else if(k.status==='online'&&k.restarts>0&&ts&&ts.textContent==='ONLINE'){
+        // Up right now, but it's crashed before — worth knowing even when green
+        ts.textContent=`ONLINE · ${k.restarts} restart${k.restarts===1?'':'s'}`;
+      }
+    }
   }
   loadMetrics();
 }
@@ -1499,7 +1529,7 @@ async function loadMetrics(){
 
   // ── Guardian ──────────────────────────────────────────────────────────────
   // /health returns { jobs, providers (obj or count), connected }
-  const gd=await get(`${B.gd}/health`);
+  const gd=await get(`${B.orch}/api/guardian/health`);
   if(gd){
     document.getElementById('tm-jobs').textContent=gd.jobs??'—';
     const provCount=typeof gd.providers==='number'
@@ -1509,9 +1539,9 @@ async function loadMetrics(){
   }
 
   // ── Cortex ────────────────────────────────────────────────────────────────
-  const gaps=await get(`${B.cx}/api/gaps?status=open`);
+  const gaps=await get(`${B.orch}/api/cortex/gaps?status=open`);
   if(Array.isArray(gaps))document.getElementById('tm-gaps').textContent=gaps.length;
-  const cxEvt=await get(`${B.cx}/api/events?limit=1`);
+  const cxEvt=await get(`${B.orch}/api/cortex/events?n=1`);
   if(cxEvt){
     const count=Array.isArray(cxEvt)?cxEvt.length:(cxEvt.total??cxEvt.count??'—');
     document.getElementById('tm-events').textContent=count;
@@ -1520,8 +1550,8 @@ async function loadMetrics(){
   // ── Idearium ──────────────────────────────────────────────────────────────
   // /health returns { version, snr, uptime } — no idea counts
   // fetch /api/ideas directly for count
-  const idrIdeas=await get(`${B.idr}/api/ideas`);
-  const idrSpecs=await get(`${B.idr}/api/specs`);
+  const idrIdeas=await get(`${B.orch}/api/idearium/ideas`);
+  const idrSpecs=await get(`${B.orch}/api/idearium/specs`);
   if(idrIdeas){
     const ideas=Array.isArray(idrIdeas)?idrIdeas:(idrIdeas.ideas||[]);
     document.getElementById('tm-ideas').textContent=ideas.length;
@@ -1532,6 +1562,7 @@ async function loadMetrics(){
   }
 
   // ── Bridge ────────────────────────────────────────────────────────────────
+  // No orchestrator proxy exists for Bridge yet — direct call, flagged above.
   // /health returns { ok, requests (stats obj), registry (snap), uptime (secs) }
   const br=await get(`${B.br}/health`);
   if(br){
@@ -1549,7 +1580,7 @@ async function loadMetrics(){
 
   // ── Architect ─────────────────────────────────────────────────────────────
   // /health returns { ok, jaa: {table: rowCount, ...}, hooks: {total, bindings, byType, byStatus} }
-  const arch=await get(`${B.arch}/health`);
+  const arch=await get(`${B.orch}/api/architect/health`);
   if(arch){
     document.getElementById('tm-hooks').textContent=arch.hooks?.total??'—';
     document.getElementById('tm-blueprints').textContent=arch.jaa?.blueprints??0;
@@ -1580,14 +1611,17 @@ function connectSSE(){
     tryConnect();
   }
   connect(`${B.orch}/sse`,addEvent);
-  connect(`${B.cx}/sse`,d=>{addCxEvent(d);addEvent(d)},s=>{
+  // Cortex SSE — proxied through orchestrator, same as Idearium below
+  // (this finishes the Phase 23.5 lockdown — cortex was the one left dialing
+  // direct when idearium got fixed).
+  connect(`${B.orch}/api/cortex/sse`,d=>{addCxEvent(d);addEvent(d)},s=>{
     const el=document.getElementById('log-conn-status');
     if(el)el.textContent=s==='live'?'● live':s;
     if(el)el.style.color=s==='live'?'#00ff88':'rgba(255,170,0,.6)';
   });
-  // Guardian SSE for job updates
+  // Guardian SSE for job updates — proxied through orchestrator
   try{
-    const gdEs=new EventSource(`${B.gd}/events`);
+    const gdEs=new EventSource(`${B.orch}/api/guardian/events`);
     gdEs.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type&&(d.type.includes('job')||d.type.includes('guardian')))gdLoadJobs()}catch(_){}};
   }catch(_){}
   // Idearium SSE for live card refresh — proxied through orchestrator
@@ -1628,9 +1662,26 @@ function flashDot(src){
   }
 }
 
+// Contract-verification trust state — the orchestrator hash-verifies every
+// system's interaction contract ~2s after it registers (lib/contract-handshake.js)
+// and broadcasts system.contract.verified over /sse. This was never tracked
+// anywhere in the UI before — every proxied call above assumes a verified
+// system without ever checking. Minimal surfacing: a border tint on each
+// tile. Not a hard gate (the proxy itself doesn't gate on this either — see
+// note in the chat) — visibility first, enforcement is a separate decision.
+const _verifiedSystems = {};
+const CONTRACT_KEY_MAP = {orchestrator:'orch',guardian:'gd',cortex:'cx',idearium:'idr',architect:'arch',emerge:'em',bridge:'br'};
+
 function addEvent(d){
   evCount++;
   const type=d.type||d.event||'';
+  if (type === 'system.contract.verified') {
+    const sid = d.systemId || d.system || '';
+    _verifiedSystems[sid] = { trust: d.trust, hash: d.hash, ts: Date.now() };
+    const sysEntry = SYSTEMS.find(s => s.key === (CONTRACT_KEY_MAP[sid] || sid));
+    const tile = sysEntry && document.getElementById(sysEntry.tileId);
+    if (tile) tile.style.boxShadow = d.trust === 'VERIFIED' ? '0 0 0 1px rgba(0,255,136,.35) inset' : '0 0 0 1px rgba(255,170,0,.35) inset';
+  }
   const src=d.source||d.system||'';
   flashDot(src||type.split('.')[0]);  // flash the source system's dot + tile icon
   const ts=new Date(d.ts||Date.now()).toISOString().substr(11,8);
@@ -1661,7 +1712,7 @@ function clearLog(){document.getElementById('log-stream').innerHTML='';evCount=0
 let _providerState={};
 
 async function gdLoadProvs(){
-  const d=await get(`${B.gd}/providers`);
+  const d=await get(`${B.orch}/api/guardian/providers`);
   const el=document.getElementById('gd-provs-el');
   const provs=d?.providers||d?.connected||{};
   const names=Object.keys(provs);
@@ -1710,7 +1761,7 @@ async function gdSend(){
   res.style.color='rgba(255,255,255,.5)';
 
   // Check if provider is connected
-  const provs=await get(`${B.gd}/providers`);
+  const provs=await get(`${B.orch}/api/guardian/providers`);
   const connected=Object.keys(provs?.providers||provs?.connected||{});
   const hasProvider=connected.some(n=>n.toLowerCase().includes(pr.toLowerCase()));
 
@@ -1724,7 +1775,7 @@ async function gdSend(){
   }
 
   // Check if this provider is busy (has an active streaming/processing job)
-  const jobs=await get(`${B.gd}/jobs`);
+  const jobs=await get(`${B.orch}/api/guardian/jobs`);
   const jobList=Array.isArray(jobs)?jobs:(jobs?.jobs||[]);
   const busy=jobList.some(j=>j.provider?.toLowerCase().includes(pr.toLowerCase())&&(j.status==='streaming'||j.status==='processing'));
   if(busy){
@@ -1749,7 +1800,7 @@ async function gdSend(){
   res.textContent=`Dispatching [${new Date(jobTs).toISOString().substr(11,8)}]...`;
   res.style.color='rgba(255,255,255,.4)';
 
-  const d=await post(`${B.gd}/command`,{command:'chat',prompt:p,provider:pr,meta:{ts:jobTs,source:'ui',ordered:true,seam_ts:jobTs}});
+  const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:p,provider:pr,meta:{ts:jobTs,source:'ui',ordered:true,seam_ts:jobTs}});
   if(d?.jobId){
     res.textContent=`Job ${d.jobId.slice(0,12)} — ${d.status||'queued'} [${new Date(jobTs).toISOString().substr(11,8)}]`;
     res.style.color='rgba(0,229,255,.6)';
@@ -1769,12 +1820,12 @@ async function routeToProvider(pr){
 }
 
 async function gdCancelJob(jobId){
-  await post(`${B.gd}/queue/cancel/${jobId}`,{});
+  await post(`${B.orch}/api/guardian/queue/cancel/${jobId}`,{});
   gdLoadJobs();
 }
 
 async function gdLoadJobs(){
-  const d=await get(`${B.gd}/jobs`);
+  const d=await get(`${B.orch}/api/guardian/jobs`);
   const el=document.getElementById('gd-jobs-el');
   const jobs=Array.isArray(d)?d:(d?.jobs||[]);
   document.getElementById('gd-job-count').textContent=jobs.length||'0';
@@ -1796,13 +1847,13 @@ async function gdLoadJobs(){
 
 // ── Cortex ────────────────────────────────────────────────────────────────────
 async function cxLoadGaps(){
-  const d=await get(`${B.cx}/api/gaps?status=open`);const el=document.getElementById('cx-gaps-el');
+  const d=await get(`${B.orch}/api/cortex/gaps?status=open`);const el=document.getElementById('cx-gaps-el');
   const gaps=Array.isArray(d)?d:[];
   if(!gaps.length){el.innerHTML='<div style="color:rgba(0,255,136,.4);font-size:11px">No open loops — ecology nominal</div>';return}
   el.innerHTML=gaps.slice(0,20).map(g=>`<div class="gap-row ${g.severity||'low'}"><div class="gap-type-lbl">${g.loop_type||g.type||'gap'}${g.severity?' · '+g.severity:''}</div><div class="gap-body-txt">${(g.body||g.path||'').slice(0,120)}</div></div>`).join('');
 }
 async function cxLoadFails(){
-  const d=await get(`${B.cx}/api/failures`);const el=document.getElementById('cx-fails-el');
+  const d=await get(`${B.orch}/api/cortex/failures`);const el=document.getElementById('cx-fails-el');
   const fails=Array.isArray(d)?d:(d?.failures||[]);
   if(!fails.length){el.innerHTML='<div style="color:rgba(255,255,255,.2);font-size:11px">No failures</div>';return}
   el.innerHTML=fails.slice(0,10).map(f=>`<div class="gap-row high"><div class="gap-type-lbl">${f.source||'unknown'}</div><div class="gap-body-txt">${(f.error||'').slice(0,140)}</div></div>`).join('');
@@ -1810,7 +1861,7 @@ async function cxLoadFails(){
 
 // ── Idearium ──────────────────────────────────────────────────────────────────
 async function idrLoad(sort='createdAt'){
-  const d=await get(`${B.idr}/api/ideas?sort=${sort}`);const el=document.getElementById('idr-feed');
+  const d=await get(`${B.orch}/api/idearium/ideas?sort=${sort}`);const el=document.getElementById('idr-feed');
   const ideas=Array.isArray(d)?d:(d?.ideas||[]);
   if(!ideas.length){el.innerHTML='<div style="color:rgba(255,255,255,.2);font-size:12px">No ideas yet. Type one above.</div>';return}
   const maxT=Math.max(...ideas.map(i=>i.tension||0),1);
@@ -1821,12 +1872,15 @@ async function idrLoad(sort='createdAt'){
 }
 async function idrCreate(){
   const inp=document.getElementById('idr-new');const body=inp.value.trim();if(!body)return;
-  const d=await post(`${B.idr}/api/ideas`,{body,status:'open'});
+  const d=await post(`${B.orch}/api/idearium/ideas`,{body,status:'open'});
   if(d?.uuid||d?.ok){inp.value='';idrLoad('createdAt')}
   else{inp.style.borderColor='#ff3355';setTimeout(()=>inp.style.borderColor='',1500)}
 }
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
+// No orchestrator proxy exists for Bridge yet — direct call. Same gap noted
+// at the SYSTEMS table above; needs a `sub==='bridge'` block in orchestrator.js
+// before this can move off :9999.
 async function brLoad(){
   const h=await get(`${B.br}/health`);
   if(h){document.getElementById('br-reqs').textContent=h.requests??'—';document.getElementById('br-nodes').textContent=h.nodes??'—';document.getElementById('br-health').textContent=h.ok?'OK':'DEGRADED';document.getElementById('br-health').style.color=h.ok?'#00ff88':'#ff3355';document.getElementById('br-uptime').textContent=h.uptimeMs?Math.floor(h.uptimeMs/60000)+'m':'—'}
@@ -1839,11 +1893,11 @@ async function brLoad(){
 // ── Diagnose ──────────────────────────────────────────────────────────────────
 const DIAG=[
   {name:'Orchestrator',port:9000,url:`${B.orch}/health`},
-  {name:'Guardian',    port:7820,url:`${B.gd}/health`},
-  {name:'Cortex',      port:3748,url:`${B.cx}/health`},
-  {name:'Idearium',    port:4800,url:`${B.idr}/health`},
-  {name:'Bridge',      port:9999,url:`${B.br}/health`},
-  {name:'Emerge',      port:4242,url:'http://127.0.0.1:4242/health'},
+  {name:'Guardian',    port:7820,url:`${B.orch}/api/guardian/health`},
+  {name:'Cortex',      port:3748,url:`${B.orch}/api/cortex/health`},
+  {name:'Idearium',    port:4800,url:`${B.orch}/api/idearium/health`},
+  {name:'Bridge',      port:9999,url:`${B.br}/health`}, // no orchestrator proxy yet — direct
+  {name:'Emerge',      port:4242,url:`${B.orch}/api/emerge/status`}, // was hitting :4242/health directly — wrong path (emerge has no /health, only /status) and bypassed the proxy
 ];
 function buildDiag(){
   document.getElementById('diag-rows').innerHTML=DIAG.map((s,i)=>`
@@ -1876,8 +1930,15 @@ async function runDiag(){
 async function loadDiagCFR(){
   const el=document.getElementById('diag-cfr-body');
   const sigma=document.getElementById('diag-cfr-sigma');
-  // Try guardian CFR first, fall back to cortex resilience
-  const d=await get(`${B.gd}/cfr/state`)||await get(`${B.cx}/api/resilience/status`);
+  // Was: guardian cfr/state, fall back to cortex resilience/status. Dropped
+  // the fallback — /api/resilience/status doesn't exist anywhere server-side
+  // (checked admin-server.js and every cortex/*.js route handler). It always
+  // resolved null before; routing it through the proxy would resolve a
+  // truthy {ok:false,error:...} 404 body instead, which is worse — it would
+  // render a fake "sigma=0.000" panel instead of "CFR not responding". This
+  // needs the actual cortex route built, not a proxy entry for a route that
+  // isn't there.
+  const d=await get(`${B.orch}/api/guardian/cfr/state`);
   if(!d){el.innerHTML='<div style="color:rgba(255,255,255,.2);font-size:11px">CFR not responding</div>';return}
   const s=d.sigma?.score??d.sigma??d.score??0;
   if(sigma)sigma.textContent=`σ=${typeof s==='number'?s.toFixed(3):s}`;
@@ -1894,7 +1955,7 @@ async function loadDiagCFR(){
 }
 async function loadDiagGaps(){
   const el=document.getElementById('diag-gaps-body');
-  const d=await get(`${B.cx}/api/gaps?status=open`);
+  const d=await get(`${B.orch}/api/cortex/gaps?status=open`);
   const gaps=Array.isArray(d)?d:[];
   if(!gaps.length){el.innerHTML='<div style="color:rgba(0,255,136,.4);font-size:11px">No open loops</div>';return}
   el.innerHTML=gaps.slice(0,15).map(g=>`<div class="gap-row ${g.severity||'low'}"><div class="gap-type-lbl">${g.loop_type||g.type||'gap'}${g.severity?' · '+g.severity:''}</div><div class="gap-body-txt">${(g.body||g.path||'').slice(0,120)}</div></div>`).join('');
@@ -1902,16 +1963,16 @@ async function loadDiagGaps(){
 async function runDiagEngines(){
   const el=document.getElementById('diag-engines-body');
   el.innerHTML='<div style="color:rgba(255,170,0,.6);font-size:11px">Running diagnostic engines...</div>';
-  const d=await post(`${B.cx}/api/replay/inspect`,{fromTs:Date.now()-300000});
-  const v=await get(`${B.cx}/api/resilience/status`);
+  const d=await post(`${B.orch}/api/cortex/replay/inspect`,{fromTs:Date.now()-300000});
   const rows=[];
   if(d){rows.push({name:'Replay inspect (5m)',val:d.eventCount+' events',ok:true})}
-  if(v){rows.push({name:'Resilience status',val:`σ=${(v.sigma?.score??v.sigma??0).toFixed?.(3)}`,ok:true})}
+  // Resilience status row dropped — /api/resilience/status doesn't exist
+  // server-side (see loadDiagCFR above). Was always a no-op.
   // Topology from gap-loop via cortex event_log
-  const gaps=await get(`${B.cx}/api/gaps?status=open`);
+  const gaps=await get(`${B.orch}/api/cortex/gaps?status=open`);
   const gapCount=Array.isArray(gaps)?gaps.length:0;
   rows.push({name:'Open loops',val:gapCount+' total',ok:gapCount===0});
-  const fails=await get(`${B.cx}/api/failures`);
+  const fails=await get(`${B.orch}/api/cortex/failures`);
   const failCount=Array.isArray(fails)?fails.length:(fails?.failures||[]).length;
   rows.push({name:'Failures',val:failCount+' recent',ok:failCount===0});
   el.innerHTML=rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px"><span style="color:${r.ok?'#00ff88':'#ffaa00'}">${r.ok?'✓':'⚠'}</span><span style="color:rgba(255,255,255,.6)">${r.name}</span><span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">${r.val}</span></div>`).join('');
@@ -1934,27 +1995,32 @@ async function asSend(){
   if(cmd==='help'){out.textContent='Commands: status · gaps · jobs · providers · ideas · clear\nKeys: 1-7 channels · ← → step · M menu · R rewind';return}
   if(cmd==='clear'){out.style.display='none';return}
   if(cmd==='status'){const lines=[];for(const s of SYSTEMS){const d=await get(s.url);lines.push(`${s.key}: ${d?'online':'offline'}`)}out.textContent=lines.join('\n');return}
-  if(cmd==='gaps'){const d=await get(`${B.cx}/api/gaps?status=open`);const g=Array.isArray(d)?d:[];out.textContent=g.length?g.slice(0,8).map(x=>`[${x.severity||'?'}] ${x.loop_type||x.type}: ${(x.body||'').slice(0,80)}`).join('\n'):'No open gaps';return}
-  if(cmd==='jobs'){const d=await get(`${B.gd}/jobs`);const j=Array.isArray(d)?d:(d?.jobs||[]);out.textContent=j.length?j.slice(0,8).map(x=>`[${x.status}] ${x.provider}: ${(x.prompt||'').slice(0,60)}`).join('\n'):'No jobs';return}
-  if(cmd==='providers'){const d=await get(`${B.gd}/providers`);const p=Object.keys(d?.providers||d?.connected||{});out.textContent=p.length?p.map(n=>'● '+n).join('\n'):'No providers connected';return}
-  if(cmd==='ideas'){const d=await get(`${B.idr}/api/ideas?sort=tension`);const i=Array.isArray(d)?d:(d?.ideas||[]);out.textContent=i.length?i.slice(0,8).map(x=>`[${x.status||'?'}] ${(x.title||x.body||'').slice(0,80)}`).join('\n'):'No ideas';return}
+  if(cmd==='gaps'){const d=await get(`${B.orch}/api/cortex/gaps?status=open`);const g=Array.isArray(d)?d:[];out.textContent=g.length?g.slice(0,8).map(x=>`[${x.severity||'?'}] ${x.loop_type||x.type}: ${(x.body||'').slice(0,80)}`).join('\n'):'No open gaps';return}
+  if(cmd==='jobs'){const d=await get(`${B.orch}/api/guardian/jobs`);const j=Array.isArray(d)?d:(d?.jobs||[]);out.textContent=j.length?j.slice(0,8).map(x=>`[${x.status}] ${x.provider}: ${(x.prompt||'').slice(0,60)}`).join('\n'):'No jobs';return}
+  if(cmd==='providers'){const d=await get(`${B.orch}/api/guardian/providers`);const p=Object.keys(d?.providers||d?.connected||{});out.textContent=p.length?p.map(n=>'● '+n).join('\n'):'No providers connected';return}
+  if(cmd==='ideas'){const d=await get(`${B.orch}/api/idearium/ideas?sort=tension`);const i=Array.isArray(d)?d:(d?.ideas||[]);out.textContent=i.length?i.slice(0,8).map(x=>`[${x.status||'?'}] ${(x.title||x.body||'').slice(0,80)}`).join('\n'):'No ideas';return}
   // Try grammar engine via request-handler
+  // NOTE: /api/request doesn't exist on the orchestrator's own router (not a
+  // proxy gap — checked orchestrator.js directly, no route registers it).
+  // Always resolves {ok:false,error:'route not found'}, so this always falls
+  // through to the ollama dispatch below. Pre-existing, separate from the
+  // proxy-routing fix — needs the actual route built.
   const hr=await post(`${B.orch}/api/request`,{prompt:q});
   if(hr?.result?.componentId){out.textContent=`Grammar: ${hr.result.componentId}\nParams: ${JSON.stringify(hr.result.params||{})}\nOutcome: ${hr.outcome}`;return}
   if(hr?.outcome&&hr.outcome!=='RESOLVED'){out.textContent=`${hr.outcome}: ${hr.reason||''}`;return}
   // Forward to ollama via guardian
-  const d=await post(`${B.gd}/command`,{command:'chat',prompt:q,provider:'ollama',meta:{source:'assistant',ts:Date.now()}});
+  const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:q,provider:'ollama',meta:{source:'assistant',ts:Date.now()}});
   out.textContent=d?.jobId?`Dispatched to Ollama — job ${d.jobId.slice(0,12)}\nMonitor on Guardian channel (key 2)`:'Guardian offline. Connect a provider or start Ollama.';
 }
 
 // ── Rewind ────────────────────────────────────────────────────────────────────
 let rwSnapshots=[],rwSelected=null,rwHovered=null,rwAnimFrame=null;
-const CX_SNAP=`${B.cx}/api/snapshots`,CX_ROLLBACK=`${B.cx}/api/snapshots/rollback`;
+const CX_SNAP=`${B.orch}/api/cortex/snapshots`,CX_ROLLBACK=`${B.orch}/api/cortex/snapshots/rollback`;
 function sigmaColor(s,a=1){if(typeof s!=='number')s=0;s=Math.min(1,Math.max(0,s));if(s<.35){const t=s/.35;return`rgba(${Math.round(0)},${Math.round(255-t*25)},${Math.round(136+t*119)},${a})`}else if(s<.7){const t=(s-.35)/.35;return`rgba(${Math.round(t*255)},${Math.round(229-t*59)},${Math.round(255-t*255)},${a})`}else{const t=(s-.7)/.3;return`rgba(255,${Math.round(170-t*170)},${Math.round(t*85)},${a})`}}
 async function openRewind(){document.getElementById('rewind-overlay').classList.add('open');setRwStatus('Loading...','working');await loadRewindData()}
 function closeRewind(){document.getElementById('rewind-overlay').classList.remove('open');if(rwAnimFrame){cancelAnimationFrame(rwAnimFrame);rwAnimFrame=null}}
 async function loadRewindData(){
-  const sd=await get(CX_SNAP);const ed=await get(`${B.cx}/api/events?n=200`);
+  const sd=await get(CX_SNAP);const ed=await get(`${B.orch}/api/cortex/events?n=200`);
   const snaps=sd?.snapshots||sd||[];const events=Array.isArray(ed)?ed:(ed?.events||[]);
   const sigmaEvents=events.filter(e=>e.sigma?.score!==undefined).map(e=>({ts:e.ts,sigma:e.sigma.score,delta:e.delta||0})).sort((a,b)=>a.ts-b.ts);
   rwSnapshots=snaps.map(s=>{let closest=null,minD=Infinity;for(const ev of sigmaEvents){const d=Math.abs(ev.ts-s.ts);if(d<minD){minD=d;closest=ev}}return{...s,sigma:closest?.sigma||0,delta:closest?.delta||0}}).sort((a,b)=>a.ts-b.ts);
@@ -2242,12 +2308,15 @@ async function _refreshAgentSuite() {
   const provPill = document.getElementById('as-provider-pill');
   const provLbl = document.getElementById('as-provider-label');
   if (cfg.provider === 'ollama') {
+    // Ollama has no orchestrator proxy either (like Bridge/Diagnostic) — it's
+    // a local HTTP service, not one of orchestrator's SYS entries with a
+    // dedicated /api/<name>/* block. Direct call, same flagged category.
     const ol = await get('http://127.0.0.1:11434/api/tags').catch(() => null);
     const alive = !!ol;
     if (provPill) provPill.className = 'agent-stat-pill ' + (alive ? 'live' : '');
     if (provLbl) provLbl.textContent = alive ? 'Ollama online' : 'Ollama offline';
   } else {
-    const gd = await get(`${B.gd}/providers`).catch(() => null);
+    const gd = await get(`${B.orch}/api/guardian/providers`).catch(() => null);
     const prov = gd?.providers || gd?.connected || {};
     const channels = gd?.channels || {};
     const connected = Object.keys(prov).some(k => k.startsWith(cfg.provider) && prov[k] === 'connected');
@@ -2287,7 +2356,7 @@ async function _refreshAgentSuite() {
     }
   }
   // Jobs pill
-  const jd = await get(`${B.gd}/jobs`).catch(() => null);
+  const jd = await get(`${B.orch}/api/guardian/jobs`).catch(() => null);
   const jobs = Array.isArray(jd) ? jd : (jd?.jobs || []);
   const pending = jobs.filter(j => j.status === 'queued' || j.status === 'pending').length;
   const jobPill = document.getElementById('as-jobs-pill');
@@ -2295,7 +2364,7 @@ async function _refreshAgentSuite() {
   if (jobPill) jobPill.className = 'agent-stat-pill ' + (pending > 0 ? 'live' : '');
   if (jobLbl) jobLbl.textContent = jobs.length + ' jobs' + (pending ? ', ' + pending + ' pending' : '');
   // Gaps pill
-  const gapD = await get(`${B.cx}/api/gaps?status=open`).catch(() => null);
+  const gapD = await get(`${B.orch}/api/cortex/gaps?status=open`).catch(() => null);
   const gapCount = Array.isArray(gapD) ? gapD.length : (gapD?.gaps || []).length;
   const gapPill = document.getElementById('as-gaps-pill');
   const gapLbl = document.getElementById('as-gaps-label');
@@ -2305,7 +2374,7 @@ async function _refreshAgentSuite() {
   // not an object keyed by id, and isn't provider-filtered server-side —
   // filter to this mode's provider here so Claude's view doesn't show
   // ChatGPT's chunks and vice versa.
-  const sq = await get(`${B.gd}/seam/queues`).catch(() => null);
+  const sq = await get(`${B.orch}/api/guardian/seam/queues`).catch(() => null);
   const allQueues = Array.isArray(sq?.queues) ? sq.queues : [];
   const myQueues = allQueues.filter(q => q.provider === cfg.provider);
   const seam = document.getElementById('as-seam-rows');
@@ -2337,7 +2406,9 @@ async function _refreshAgentSuite() {
     if (chunksEl) chunksEl.textContent = _sessionChunks;
     const snrEl = document.getElementById('tb-snr');
     if (snrEl) {
-      const snrD = await get(`${B.cx}/api/resilience/status`).catch(() => null);
+      // /api/resilience/status doesn't exist server-side (see loadDiagCFR
+      // above) — always resolves null, snrEl correctly falls back to '—'.
+      const snrD = await get(`${B.orch}/api/cortex/resilience/status`).catch(() => null);
       const s = snrD?.sigma?.score ?? snrD?.sigma ?? null;
       snrEl.textContent = s !== null ? s.toFixed(3) : '—';
     }
@@ -2386,7 +2457,7 @@ async function agentForge() {
       // an arbitrary prompt typed here won't have the formal `# heading`
       // structure a real .spec file has; parseSpec() degrades to plain
       // size-based chunking when there's nothing to split on semantically.
-      const d = await post(`${B.gd}/command`, {
+      const d = await post(`${B.orch}/api/guardian/dispatch`, {
         command: 'spec',
         provider: cfg.provider,
         specText: fullPrompt,
@@ -2401,7 +2472,7 @@ async function agentForge() {
         if (status) status.textContent = `✗ SEAM dispatch failed: ${d?.error || 'unknown error'}`;
       }
     } else {
-      const d = await post(`${B.gd}/command`, {
+      const d = await post(`${B.orch}/api/guardian/dispatch`, {
         provider: cfg.provider,
         command: 'forge',
         prompt: fullPrompt,
