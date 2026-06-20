@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEXUS · Blueprint Builder</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans,'Space Grotesk',sans-serif);font-size:14px;color:var(--color-text-primary,#e0e8ff);background:var(--color-background-primary,#0a0a14);height:100vh;overflow:hidden}
+
+.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:48px 1fr;height:100vh}
+
+/* Topbar */
+.topbar{grid-column:1/-1;display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.3)}
+.tab{padding:0 18px;height:48px;display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;border-right:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.4);border-bottom:2px solid transparent;transition:all .15s;font-family:'Space Mono',monospace;letter-spacing:.06em;text-transform:uppercase}
+.tab.active{color:#e0e8ff;border-bottom-color:#534AB7;background:rgba(83,74,183,.08)}
+.tab:hover:not(.active){background:rgba(255,255,255,.04);color:rgba(255,255,255,.7)}
+.tab i{font-size:14px}
+.topbar-title{margin-left:auto;padding-right:16px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.1em}
+
+/* Sidebar */
+.sidebar{border-right:1px solid rgba(255,255,255,.06);overflow-y:auto;padding:12px 0;background:rgba(0,0,0,.2)}
+.sidebar-section{padding:6px 14px;font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.08em;text-transform:uppercase;margin-top:10px;font-family:'Space Mono',monospace}
+.sidebar-item{padding:7px 16px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.5);border-left:2px solid transparent;transition:all .15s}
+.sidebar-item:hover{background:rgba(255,255,255,.04);color:rgba(255,255,255,.8)}
+.sidebar-item.active{background:rgba(83,74,183,.1);color:#e0e8ff;border-left-color:#534AB7}
+.sidebar-item .badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-family:'Space Mono',monospace}
+.sidebar-item i{font-size:14px;flex-shrink:0}
+.new-comp-btn{margin:10px 12px 0;width:calc(100% - 24px);padding:7px;border:1px solid rgba(255,255,255,.1);border-radius:6px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;font-family:'Space Mono',monospace}
+.new-comp-btn:hover{background:rgba(83,74,183,.15);border-color:rgba(83,74,183,.4);color:#e0e8ff}
+
+/* Main */
+.main{overflow-y:auto;background:rgba(0,0,0,.1)}
+.panel{display:none;padding:20px 24px}
+.panel.active{display:block}
+
+/* Fields */
+.field-group{margin-bottom:14px}
+.field-group label{display:block;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-family:'Space Mono',monospace}
+.field-group input,.field-group select,.field-group textarea{width:100%;font-size:13px;padding:7px 10px;border:1px solid rgba(255,255,255,.1);border-radius:6px;background:rgba(255,255,255,.04);color:#e0e8ff;outline:none;transition:border-color .15s;font-family:'Space Grotesk',sans-serif}
+.field-group input:focus,.field-group select:focus,.field-group textarea:focus{border-color:rgba(83,74,183,.6);background:rgba(83,74,183,.06)}
+.field-group select option{background:#111}
+.field-group textarea{resize:vertical;min-height:64px;font-family:'Space Mono',monospace;font-size:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* Section title */
+.section-title{font-size:13px;font-weight:600;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:8px;color:#e0e8ff;text-transform:uppercase;letter-spacing:.08em;font-family:'Space Mono',monospace}
+.section-title i{color:#534AB7}
+
+/* Notice */
+.notice{font-size:11px;color:rgba(255,255,255,.4);padding:9px 12px;background:rgba(83,74,183,.08);border-radius:6px;border-left:2px solid #534AB7;margin-bottom:14px;line-height:1.6}
+.notice code{font-family:'Space Mono',monospace;font-size:10px;color:#a78bfa}
+
+/* Capability cards */
+.cap-card{border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;margin-bottom:8px;background:rgba(255,255,255,.02)}
+.cap-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cap-verb{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(83,74,183,.2);color:#a78bfa;font-weight:600;font-family:'Space Mono',monospace}
+.cap-noun{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(0,255,136,.1);color:#00cc6a;font-weight:600;font-family:'Space Mono',monospace}
+.cap-del{margin-left:auto;cursor:pointer;color:rgba(255,255,255,.2);font-size:16px;line-height:1;transition:color .15s}
+.cap-del:hover{color:#ff3355}
+.cap-meta{font-size:11px;color:rgba(255,255,255,.3);display:flex;gap:12px;font-family:'Space Mono',monospace}
+
+/* Projection boxes */
+.projection-box{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:12px;margin-bottom:12px}
+.proj-label{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px;font-family:'Space Mono',monospace}
+.proj-label i{color:#534AB7}
+.projection-box pre{font-size:11px;font-family:'Space Mono',monospace;color:#c0dd97;white-space:pre-wrap;word-break:break-all;line-height:1.7}
+
+/* Buttons */
+.btn{padding:7px 14px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;font-family:'Space Mono',monospace}
+.btn:hover{background:rgba(255,255,255,.1);color:#e0e8ff}
+.btn.primary{background:rgba(83,74,183,.3);color:#a78bfa;border-color:rgba(83,74,183,.5)}
+.btn.primary:hover{background:rgba(83,74,183,.5);color:#fff}
+.btn.success{background:rgba(0,255,136,.1);color:#00ff88;border-color:rgba(0,255,136,.3)}
+.btn.danger{background:rgba(255,51,85,.1);color:#ff3355;border-color:rgba(255,51,85,.3)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn-sm{padding:3px 9px;font-size:11px;border-radius:4px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);cursor:pointer;font-family:'Space Mono',monospace;transition:all .15s}
+.btn-sm:hover{background:rgba(255,255,255,.1);color:#e0e8ff}
+
+/* Phase map */
+.phase-grid{display:flex;flex-direction:column;gap:6px}
+.phase-row{display:grid;grid-template-columns:60px 1fr auto;align-items:center;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;transition:all .15s}
+.phase-row:hover{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.12)}
+.phase-num{font-size:11px;font-weight:700;color:rgba(255,255,255,.4);font-family:'Space Mono',monospace}
+.phase-name{font-size:12px;color:#e0e8ff}
+.phase-dep{font-size:10px;color:rgba(255,255,255,.25);margin-top:2px;font-family:'Space Mono',monospace}
+.status-pill{font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;font-family:'Space Mono',monospace}
+.s-complete{background:rgba(0,255,136,.1);color:#00ff88;border:1px solid rgba(0,255,136,.2)}
+.s-next{background:rgba(83,74,183,.2);color:#a78bfa;border:1px solid rgba(83,74,183,.4)}
+.s-pending{background:rgba(255,255,255,.04);color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.08)}
+.s-superseded{background:rgba(255,170,0,.08);color:rgba(255,170,0,.5);border:1px solid rgba(255,170,0,.15)}
+
+/* CLI preview */
+.cli-preview{font-family:'Space Mono',monospace;font-size:11px;background:#1a1a14;color:#c0dd97;padding:16px;border-radius:8px;line-height:1.9;border:1px solid rgba(255,255,255,.06)}
+.cli-prompt{color:rgba(255,255,255,.3)}
+.cli-cmd{color:#fac775}
+.cli-comment{color:rgba(255,255,255,.2)}
+.cli-out{color:rgba(192,221,151,.7)}
+
+/* Constraint tags */
+.constraint-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(255,51,85,.08);color:rgba(255,100,120,.8);margin:2px;border:1px solid rgba(255,51,85,.2);font-family:'Space Mono',monospace}
+.tag-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;margin-bottom:10px}
+.tag-x{cursor:pointer;color:rgba(255,255,255,.3);font-size:10px;transition:color .15s}
+.tag-x:hover{color:#ff3355}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:10px 16px;border-radius:8px;font-family:'Space Mono',monospace;font-size:11px;z-index:9999;transition:all .3s;transform:translateY(0);opacity:1}
+.toast.ok{background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3);color:#00ff88}
+.toast.err{background:rgba(255,51,85,.15);border:1px solid rgba(255,51,85,.3);color:#ff3355}
+.toast.info{background:rgba(83,74,183,.2);border:1px solid rgba(83,74,183,.4);color:#a78bfa}
+.toast.hide{opacity:0;transform:translateY(8px)}
+
+/* Status bar */
+.status-bar{position:fixed;bottom:0;left:0;right:0;height:24px;background:rgba(0,0,0,.5);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;padding:0 14px;gap:16px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.25);z-index:100}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.15);flex-shrink:0}
+.sb-dot.on{background:#00ff88;animation:pulse 2.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* Scrollbars */
+*::-webkit-scrollbar{width:3px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="tab active" onclick="switchTab('descriptor')"><i class="ti ti-puzzle"></i>Descriptor</div>
+    <div class="tab" onclick="switchTab('phases')"><i class="ti ti-list-check"></i>Phase Map</div>
+    <div class="tab" onclick="switchTab('cli')"><i class="ti ti-terminal"></i>CLI Projector</div>
+    <div class="tab" onclick="switchTab('constraint')"><i class="ti ti-shield-check"></i>Constraint Frame</div>
+    <div class="tab" onclick="switchTab('export')"><i class="ti ti-file-export"></i>Export</div>
+    <div class="topbar-title">NEXUS · Blueprint Builder v0.7.5</div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">Components</div>
+    <div id="sidebar-items"></div>
+    <button class="new-comp-btn" onclick="newComp()"><i class="ti ti-plus"></i> New component</button>
+  </div>
+
+  <div class="main">
+
+    <!-- DESCRIPTOR TAB -->
+    <div class="panel active" id="panel-descriptor">
+      <div class="section-title"><i class="ti ti-puzzle"></i>Component Descriptor</div>
+      <div class="notice">Every field here projects into CLI, UI, grammar, and docs via blueprint (<code>§6.1</code>). Nothing is hand-registered.</div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label>Component ID</label>
+          <input id="compId" value="cortex.healer" oninput="onDescriptorChange()">
+        </div>
+        <div class="field-group">
+          <label>Type</label>
+          <select id="compType" onchange="onDescriptorChange()">
+            <option>module</option><option>gate</option><option>service</option><option>ui</option><option>config</option><option>type</option>
+          </select>
+        </div>
+      </div>
+      <div class="row3">
+        <div class="field-group">
+          <label>Tier</label>
+          <select id="compTier" onchange="onDescriptorChange()">
+            <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Max resolution level</label>
+          <select id="compMaxLevel" onchange="onDescriptorChange()">
+            <option value="0">L0 — exact</option>
+            <option value="1">L1 — alias</option>
+            <option value="2" selected>L2 — grammar</option>
+            <option value="3">L3 — semantic</option>
+            <option value="4">L4 — LLM</option>
+            <option value="5">L5 — autonomous</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Axioms</label>
+          <input id="compAxioms" value="§1.1, §2.1" oninput="onDescriptorChange()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Aliases (comma separated)</label>
+        <input id="compAliases" value="repair gap, resolve gap, fix gap" oninput="onDescriptorChange()">
+      </div>
+      <div class="field-group">
+        <label>Dependencies</label>
+        <input id="compDeps" value="cortex.gap-finder, cortex.jaa" oninput="onDescriptorChange()">
+      </div>
+
+      <div style="margin:18px 0 10px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;font-family:'Space Mono',monospace">Capabilities</div>
+        <button class="btn-sm" onclick="addCap()"><i class="ti ti-plus"></i> Add</button>
+      </div>
+      <div id="cap-list"></div>
+
+      <div class="btn-row">
+        <button class="btn primary" onclick="saveDescriptor()"><i class="ti ti-device-floppy"></i> Save to Cortex</button>
+        <button class="btn" onclick="loadDescriptors()"><i class="ti ti-refresh"></i> Reload</button>
+      </div>
+    </div>
+
+    <!-- PHASES TAB -->
+    <div class="panel" id="panel-phases">
+      <div class="section-title"><i class="ti ti-list-check"></i>Phase Map — v0.7.5</div>
+      <div class="phase-grid" id="phase-grid"></div>
+    </div>
+
+    <!-- CLI PROJECTOR TAB -->
+    <div class="panel" id="panel-cli">
+      <div class="section-title"><i class="ti ti-terminal"></i>CLI Projector</div>
+      <div class="notice">Derived from <code>capabilities[]</code>. This is what <code>cli-map.json</code> compiles. Never hand-edited (§6.1).</div>
+      <div class="cli-preview" id="cli-preview"></div>
+      <div id="projection-boxes" style="margin-top:14px"></div>
+    </div>
+
+    <!-- CONSTRAINT FRAME TAB -->
+    <div class="panel" id="panel-constraint">
+      <div class="section-title"><i class="ti ti-shield-check"></i>Constraint Frame Composer</div>
+      <div class="notice">Assembled at compartment spawn. Injected as system context. Immutable after execution begins (§6.1 · Phase 25).</div>
+
+      <div class="field-group">
+        <label>Intent (from Phase 45 gate)</label>
+        <div class="row3">
+          <input id="cfDomain" placeholder="domain" value="cortex" oninput="renderCF()">
+          <input id="cfVerb" placeholder="verb" value="heal" oninput="renderCF()">
+          <select id="cfRisk" onchange="renderCF()">
+            <option>READ</option><option>COMPUTE</option><option>LLM_LOCAL</option><option>LLM_REMOTE</option><option>FORGE</option><option>IRREVERSIBLE</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Injected frameworks</label>
+        <div class="tag-list" id="framework-tags">
+          <span class="constraint-tag"><span class="tag-x" onclick="removeTag(this)">✕</span> JAA sole authority</span>
+          <span class="constraint-tag"><span class="tag-x" onclick="removeTag(this)">✕</span> delta-only mutations</span>
+          <span class="constraint-tag"><span class="tag-x" onclick="removeTag(this)">✕</span> deterministic replay</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <input id="newFramework" placeholder="Add framework rule..." style="flex:1;font-size:12px;padding:6px 10px;border:1px solid rgba(255,255,255,.1);border-radius:5px;background:rgba(255,255,255,.04);color:#e0e8ff;outline:none" onkeydown="if(event.key==='Enter')addFramework()">
+          <button class="btn-sm" onclick="addFramework()">Add</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Budget ceiling</label>
+        <div class="row2">
+          <input id="cfBudget" placeholder="token limit" value="2000" oninput="renderCF()">
+          <input id="cfBoundary" placeholder="scope boundary" value="cortex.gap-* only" oninput="renderCF()">
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.07em">Generated constraint_frame</div>
+        <div class="projection-box"><pre id="cf-output"></pre></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="copyCF()"><i class="ti ti-copy"></i> Copy frame</button>
+      </div>
+    </div>
+
+    <!-- EXPORT TAB -->
+    <div class="panel" id="panel-export">
+      <div class="section-title"><i class="ti ti-file-export"></i>Export</div>
+      <div class="notice">All outputs are derived from the descriptor. Drop into your codebase — never hand-edit these files directly (§6.1).</div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.07em">descriptor.json</div>
+        <div class="projection-box"><pre id="export-descriptor" style="max-height:200px;overflow-y:auto"></pre></div>
+        <div class="btn-row">
+          <button class="btn" onclick="copyExport('export-descriptor')"><i class="ti ti-copy"></i> Copy</button>
+          <button class="btn" onclick="downloadExport('descriptor.json','export-descriptor')"><i class="ti ti-download"></i> Download</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.07em">cli-map.json (projection)</div>
+        <div class="projection-box"><pre id="export-cli" style="max-height:160px;overflow-y:auto"></pre></div>
+        <div class="btn-row">
+          <button class="btn" onclick="copyExport('export-cli')"><i class="ti ti-copy"></i> Copy</button>
+          <button class="btn" onclick="downloadExport('cli-map.json','export-cli')"><i class="ti ti-download"></i> Download</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.07em">POST to Cortex</div>
+        <div class="row2" style="margin-bottom:8px">
+          <div class="field-group"><label>Endpoint</label><input id="postUrl" value="http://localhost:3748/api/blueprint/descriptor"></div>
+          <div class="field-group"><label>Auth (optional)</label><input id="postAuth" placeholder="Bearer ..."></div>
+        </div>
+        <button class="btn primary" onclick="postDescriptor()"><i class="ti ti-send"></i> POST descriptor to Cortex</button>
+        <div id="post-result" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span class="sb-dot" id="cortex-dot"></span>
+  <span id="cortex-status">cortex :3748</span>
+  <span style="margin-left:auto" id="save-status"></span>
+</div>
+
+<script>
+'use strict';
+
+const CORTEX = 'http://localhost:3748';
+const LEVEL_LABELS = ['L0 exact','L1 alias','L2 grammar','L3 semantic','L4 LLM','L5 autonomous'];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let components = {};
+let activeCompId = null;
+let saveTimer = null;
+
+// ── Default component factory ─────────────────────────────────────────────────
+function defaultComp(id) {
+  return {
+    uuid: `bp_001.comp.${id}`,
+    componentId: id,
+    type: 'module',
+    tier: 1,
+    maxLevel: 2,
+    axioms: ['§1.1','§2.1'],
+    aliases: [],
+    deps: [],
+    capabilities: []
+  };
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const el = document.getElementById('sidebar-items');
+  const icons = { module:'ti-cpu', gate:'ti-door-enter', service:'ti-server', ui:'ti-layout', config:'ti-settings', type:'ti-forms' };
+  el.innerHTML = Object.keys(components).map(id => {
+    const c = components[id];
+    const icon = icons[c.type] || 'ti-puzzle';
+    return `<div class="sidebar-item ${id===activeCompId?'active':''}" onclick="loadComp('${id}')">
+      <i class="ti ${icon}"></i> ${id}
+      <span class="badge">${(c.capabilities||[]).length}</span>
+    </div>`;
+  }).join('');
+}
+
+function loadComp(id) {
+  if (!components[id]) return;
+  activeCompId = id;
+  const c = components[id];
+  document.getElementById('compId').value = c.componentId || id;
+  document.getElementById('compType').value = c.type || 'module';
+  document.getElementById('compTier').value = c.tier ?? 1;
+  document.getElementById('compMaxLevel').value = c.maxLevel ?? 2;
+  document.getElementById('compAxioms').value = (c.axioms||[]).join(', ');
+  document.getElementById('compAliases').value = (c.aliases||[]).join(', ');
+  document.getElementById('compDeps').value = (c.deps||[]).join(', ');
+  renderCapList();
+  updateProjections();
+  renderSidebar();
+}
+
+function newComp() {
+  const id = `component.${Date.now()}`;
+  components[id] = defaultComp(id);
+  activeCompId = id;
+  loadComp(id);
+  toast('New component created','info');
+}
+
+// ── Get active descriptor ─────────────────────────────────────────────────────
+function getDescriptor() {
+  const id = document.getElementById('compId').value.trim();
+  const caps = getCapabilities();
+  return {
+    uuid: `bp_001.comp.${id}`,
+    componentId: id,
+    type: document.getElementById('compType').value,
+    tier: parseInt(document.getElementById('compTier').value),
+    maxLevel: parseInt(document.getElementById('compMaxLevel').value),
+    axioms: document.getElementById('compAxioms').value.split(',').map(s=>s.trim()).filter(Boolean),
+    aliases: document.getElementById('compAliases').value.split(',').map(s=>s.trim()).filter(Boolean),
+    deps: document.getElementById('compDeps').value.split(',').map(s=>s.trim()).filter(Boolean),
+    capabilities: caps,
+    resolution: { max_level: parseInt(document.getElementById('compMaxLevel').value) }
+  };
+}
+
+function onDescriptorChange() {
+  updateProjections();
+  // Auto-sync to in-memory store
+  const d = getDescriptor();
+  if (activeCompId) {
+    components[activeCompId] = d;
+    renderSidebar();
+  }
+  // Debounce save indicator
+  document.getElementById('save-status').textContent = 'unsaved';
+}
+
+// ── Capabilities ──────────────────────────────────────────────────────────────
+let caps = [
+  { name:'healGap', verb:'heal', noun:'gap', description:'Attempt resolution of an open gap',
+    inputType:'HealGapRequest', outputType:'HealGapResult',
+    params:[{name:'gapId',type:'string',required:true},{name:'force',type:'boolean',required:false}] }
+];
+
+function getCapabilities() {
+  return caps;
+}
+
+function renderCapList() {
+  const el = document.getElementById('cap-list');
+  if (!caps.length) { el.innerHTML = '<div style="color:rgba(255,255,255,.2);font-size:12px;padding:8px 0">No capabilities yet.</div>'; return; }
+  el.innerHTML = caps.map((c,i) => `
+    <div class="cap-card">
+      <div class="cap-card-header">
+        <span class="cap-verb">${c.verb||'?'}</span>
+        <span class="cap-noun">${c.noun||'?'}</span>
+        <span style="font-size:12px;color:rgba(255,255,255,.5);margin-left:4px">${c.name}</span>
+        <span class="cap-del" onclick="removeCap(${i})">×</span>
+      </div>
+      <div class="row3" style="margin-bottom:8px">
+        <div class="field-group" style="margin:0"><label>Name</label><input value="${c.name}" oninput="caps[${i}].name=this.value;updateProjections()"></div>
+        <div class="field-group" style="margin:0"><label>Verb</label><input value="${c.verb}" oninput="caps[${i}].verb=this.value;renderCapList();updateProjections()"></div>
+        <div class="field-group" style="margin:0"><label>Noun</label><input value="${c.noun}" oninput="caps[${i}].noun=this.value;renderCapList();updateProjections()"></div>
+      </div>
+      <div class="row2">
+        <div class="field-group" style="margin:0"><label>Input type</label><input value="${c.inputType||''}" oninput="caps[${i}].inputType=this.value"></div>
+        <div class="field-group" style="margin:0"><label>Output type</label><input value="${c.outputType||''}" oninput="caps[${i}].outputType=this.value"></div>
+      </div>
+      <div class="cap-meta" style="margin-top:6px">
+        <span>${(c.params||[]).length} params</span>
+        <span>→ ${LEVEL_LABELS[parseInt(document.getElementById('compMaxLevel').value)||2]}</span>
+      </div>
+    </div>`).join('');
+}
+
+function addCap() {
+  caps.push({ name:`capability${caps.length+1}`, verb:'action', noun:'target',
+    description:'', inputType:'', outputType:'', params:[] });
+  renderCapList();
+  updateProjections();
+}
+
+function removeCap(i) {
+  caps.splice(i,1);
+  renderCapList();
+  updateProjections();
+}
+
+// ── Projections ───────────────────────────────────────────────────────────────
+function updateProjections() {
+  renderCLIPreview();
+  renderProjectionBoxes();
+  renderExports();
+  renderCF();
+}
+
+function renderCLIPreview() {
+  const el = document.getElementById('cli-preview');
+  const id = document.getElementById('compId').value.trim();
+  const lines = [];
+  lines.push(`<span class="cli-comment"># cli-map.json projection — ${id}</span>`);
+  lines.push(`<span class="cli-comment"># blueprint uuid: bp_001.comp.${id}</span>`);
+  lines.push('');
+  for (const c of caps) {
+    const cmd = `nexus ${c.verb} ${c.noun}`;
+    const params = (c.params||[]).map(p=>p.required?`<${p.name}>`:`[${p.name}]`).join(' ');
+    lines.push(`<span class="cli-prompt">nexus></span> <span class="cli-cmd">${cmd}${params?' '+params:''}</span>`);
+    lines.push(`<span class="cli-out">→ { componentId: "${id}", interface: "${c.name}" }</span>`);
+    lines.push('');
+  }
+  if (!caps.length) lines.push('<span class="cli-comment"># add capabilities to see projections</span>');
+  el.innerHTML = lines.join('\n');
+}
+
+function renderProjectionBoxes() {
+  const el = document.getElementById('projection-boxes');
+  const id = document.getElementById('compId').value.trim();
+  const maxL = parseInt(document.getElementById('compMaxLevel').value)||2;
+  const boxes = caps.map(c => {
+    const cmd = `nexus ${c.verb} ${c.noun}`;
+    return `<div class="projection-box">
+      <div class="proj-label"><i class="ti ti-arrow-right"></i>${c.name}</div>
+      <pre>CLI:     ${cmd}
+Grammar: "${c.verb} ${c.noun}" → ${id}.${c.name}
+UI:      [${c.verb.charAt(0).toUpperCase()+c.verb.slice(1)}] button
+Docs:    ## ${c.name} / ${c.description||'—'}
+SEAM:    { title: '${c.name} implementation', axioms: [...] }
+UUID:    bp_001.cli.${c.verb}-${c.noun}
+maxLevel: ${LEVEL_LABELS[maxL]}</pre>
+    </div>`;
+  });
+  el.innerHTML = boxes.join('') || '<div style="color:rgba(255,255,255,.2);font-size:12px">Add capabilities to see projections.</div>';
+}
+
+function renderExports() {
+  const desc = getDescriptor();
+  document.getElementById('export-descriptor').textContent = JSON.stringify(desc, null, 2);
+
+  const cliMap = {
+    version: '1.0.0',
+    blueprintUuid: `bp_001`,
+    commands: {}
+  };
+  const id = desc.componentId;
+  for (const c of caps) {
+    const key = `${c.verb} ${c.noun}`;
+    cliMap.commands[key] = {
+      componentId: id,
+      blueprintUuid: `bp_001.cli.${c.verb}-${c.noun}`,
+      interface: c.name,
+      params: c.params||[],
+      description: c.description||'',
+      aliases: (desc.aliases||[]),
+      maxLevel: desc.maxLevel
+    };
+  }
+  document.getElementById('export-cli').textContent = JSON.stringify(cliMap, null, 2);
+}
+
+// ── Constraint frame ──────────────────────────────────────────────────────────
+function addFramework() {
+  const inp = document.getElementById('newFramework');
+  const val = inp.value.trim();
+  if (!val) return;
+  const tag = document.createElement('span');
+  tag.className = 'constraint-tag';
+  tag.innerHTML = `<span class="tag-x" onclick="removeTag(this)">✕</span> ${val}`;
+  document.getElementById('framework-tags').appendChild(tag);
+  inp.value = '';
+  renderCF();
+}
+
+function removeTag(el) {
+  el.parentElement.remove();
+  renderCF();
+}
+
+function renderCF() {
+  const domain = document.getElementById('cfDomain').value;
+  const verb = document.getElementById('cfVerb').value;
+  const risk = document.getElementById('cfRisk').value;
+  const budget = document.getElementById('cfBudget').value;
+  const boundary = document.getElementById('cfBoundary').value;
+  const maxL = parseInt(document.getElementById('compMaxLevel').value)||2;
+  const frameworks = [...document.querySelectorAll('#framework-tags .constraint-tag')]
+    .map(t => t.textContent.trim().replace(/^✕\s*/,''));
+  const frame = {
+    uuid: `cf_${Date.now()}`,
+    axioms: ['§1.1','§1.2','§2.1','§4.3','§5.1'],
+    architectural_laws: ['JAA sole authority','delta-only mutations','deterministic replay','no direct Cortex mutation'],
+    risk_ceiling: risk,
+    max_resolution_level: LEVEL_LABELS[maxL],
+    injected_frameworks: frameworks,
+    negative_crystal_ids: [],
+    budget: parseInt(budget)||2000,
+    boundary,
+    intent: { domain, verb }
+  };
+  document.getElementById('cf-output').textContent = JSON.stringify(frame, null, 2);
+}
+
+function copyCF() {
+  navigator.clipboard.writeText(document.getElementById('cf-output').textContent);
+  toast('Constraint frame copied','ok');
+}
+
+// ── Phase map ─────────────────────────────────────────────────────────────────
+const PHASES = [
+  {num:'0–9, 22–26, 45, 46',name:'Foundation + RAID + Intent + Case Library',status:'complete',deps:''},
+  {num:'10',name:'Constitutional AI',status:'next',deps:'request-handler · gap-loop · jaa'},
+  {num:'14',name:'Hot Module Loader',status:'pending',deps:'bus · jaa · snapshot'},
+  {num:'15',name:'Grammar Engine Wiring',status:'pending',deps:'grammar-engine · component-registry'},
+  {num:'17',name:'Userscript Heartbeat Pulse',status:'pending',deps:'userscript-claude · guardian/server'},
+  {num:'27',name:'System State VM (NEX-VM/1.0)',status:'pending',deps:'Phase 25 · Phase 26 · snapshot'},
+  {num:'31',name:'Grammar ↔ Intent',status:'pending',deps:'Phase 45 · grammar-engine · raid'},
+  {num:'32',name:'Per-File Sigma Versioning',status:'pending',deps:'snapshot · versionium · jaa'},
+  {num:'33',name:'PID Isolation + State Cache',status:'pending',deps:'snapshot · jaa · heartbeat'},
+  {num:'35',name:'Quick Notes Sync',status:'pending',deps:'jaa · guardian · sse'},
+  {num:'36',name:'Dynamic CLI from Grammar',status:'pending',deps:'grammar-engine · component-registry'},
+  {num:'40',name:'Component Descriptor — Atomic Unit',status:'pending',deps:'emerge/compiler · seam-queue'},
+  {num:'11',name:'Reflection Engine',status:'pending',deps:'Phase 10 · request-handler · raid'},
+  {num:'34',name:'API_SURFACE_FAILURE Resolution',status:'pending',deps:'Phase 31 · Phase 33'},
+  {num:'37',name:'Userscript Rebuild + Tool Intercept',status:'pending',deps:'Phase 35 · Phase 36'},
+  {num:'40.5',name:'Descriptor-Driven CLI',status:'pending',deps:'Phase 40 · nexus-repl'},
+  {num:'41',name:'Compiler Knowledge Layer',status:'pending',deps:'Phase 40 · emerge/compiler'},
+  {num:'12',name:'User Model: Hypotheses Not Profile',status:'pending',deps:'Phase 10 · Phase 11'},
+  {num:'16',name:'Idearium ↔ Repo ↔ Spec prereq',status:'superseded',deps:'Phase 14 · Phase 15'},
+  {num:'42',name:'Blueprint — Loop Closes',status:'pending',deps:'Phase 40 · Phase 41'},
+  {num:'13',name:'Autonomous Loop: Ollama as Brain',status:'pending',deps:'Phase 10–12 · Phase 25 · Phase 46'},
+  {num:'28',name:'Build From Inside: Live Editor',status:'pending',deps:'Phase 14 · Phase 27'},
+  {num:'38',name:'Unified Pipeline',status:'pending',deps:'Phase 14 · Phase 16 · Phase 36'},
+  {num:'44',name:'Resolution Spectrum Slider',status:'pending',deps:'Phase 40 · Phase 40.5 · Phase 42'},
+  {num:'39',name:'Realtime Sync',status:'pending',deps:'Phase 37 · Phase 38'},
+  {num:'43',name:'Architect as UI Builder',status:'pending',deps:'Phase 40 · Phase 41 · Phase 42'},
+  {num:'29',name:'Topology View: Live System Graph',status:'pending',deps:'Phase 15 · Phase 16 · Phase 28'},
+  {num:'30',name:'Time-Travel Debugging',status:'pending',deps:'Phase 27 · Phase 29'},
+];
+
+function renderPhaseMap() {
+  const el = document.getElementById('phase-grid');
+  el.innerHTML = PHASES.map(p => {
+    const cls = p.status==='complete'?'s-complete':p.status==='next'?'s-next':p.status==='superseded'?'s-superseded':'s-pending';
+    const label = p.status==='complete'?'COMPLETE':p.status==='next'?'BUILD NOW':p.status==='superseded'?'SUPERSEDED':'PENDING';
+    return `<div class="phase-row" title="${p.deps||''}">
+      <span class="phase-num">${p.num}</span>
+      <div><div class="phase-name">${p.name}</div>${p.deps?`<div class="phase-dep">deps: ${p.deps}</div>`:''}</div>
+      <span class="status-pill ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const tabs=['descriptor','phases','cli','constraint','export'];
+    t.classList.toggle('active',tabs[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`panel-${name}`).classList.add('active');
+  if (name==='cli') updateProjections();
+  if (name==='phases') renderPhaseMap();
+  if (name==='export') renderExports();
+}
+
+// ── Cortex storage ────────────────────────────────────────────────────────────
+async function saveDescriptor() {
+  const d = getDescriptor();
+  // Update local state
+  const id = d.componentId;
+  if (activeCompId && activeCompId !== id) {
+    delete components[activeCompId];
+  }
+  activeCompId = id;
+  components[id] = d;
+  renderSidebar();
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    const auth = document.getElementById('postAuth')?.value?.trim();
+    if (auth) headers['Authorization'] = auth;
+    const r = await fetch(`${CORTEX}/api/blueprint/descriptor`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(d)
+    });
+    const res = await r.json();
+    if (res.ok || res.uuid) {
+      toast('Saved to Cortex','ok');
+      document.getElementById('save-status').textContent = 'saved';
+    } else {
+      toast(`Save failed: ${res.error||'unknown'}`, 'err');
+    }
+  } catch (e) {
+    toast('Cortex offline — saved locally only','info');
+    document.getElementById('save-status').textContent = 'local only';
+  }
+}
+
+async function loadDescriptors() {
+  try {
+    const r = await fetch(`${CORTEX}/api/blueprint/descriptors`);
+    const data = await r.json();
+    const list = Array.isArray(data) ? data : (data.descriptors || []);
+    for (const d of list) {
+      components[d.componentId] = d;
+    }
+    if (list.length) {
+      loadComp(list[0].componentId);
+      toast(`Loaded ${list.length} descriptor(s)`,'ok');
+    }
+    renderSidebar();
+  } catch {
+    toast('Cortex offline','err');
+  }
+}
+
+async function postDescriptor() {
+  const d = getDescriptor();
+  const url = document.getElementById('postUrl').value;
+  const auth = document.getElementById('postAuth').value.trim();
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth) headers['Authorization'] = auth;
+  const resultEl = document.getElementById('post-result');
+  resultEl.textContent = 'Posting...';
+  try {
+    const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(d) });
+    const res = await r.json();
+    resultEl.textContent = r.ok ? `✓ ${JSON.stringify(res)}` : `✗ ${res.error||r.status}`;
+    resultEl.style.color = r.ok ? '#00ff88' : '#ff3355';
+  } catch (e) {
+    resultEl.textContent = `✗ ${e.message}`;
+    resultEl.style.color = '#ff3355';
+  }
+}
+
+function copyExport(id) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent);
+  toast('Copied','ok');
+}
+
+function downloadExport(filename, id) {
+  const blob = new Blob([document.getElementById(id).textContent], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+
+// ── Cortex health ─────────────────────────────────────────────────────────────
+async function checkCortex() {
+  try {
+    const r = await fetch(`${CORTEX}/health`, { signal: AbortSignal.timeout(3000) });
+    const ok = r.ok;
+    document.getElementById('cortex-dot').classList.toggle('on', ok);
+    document.getElementById('cortex-status').textContent = ok ? 'cortex :3748 · online' : 'cortex :3748 · offline';
+  } catch {
+    document.getElementById('cortex-dot').classList.remove('on');
+    document.getElementById('cortex-status').textContent = 'cortex :3748 · offline';
+  }
+  // Pull live interaction contract from orchestrator for route validation
+  try {
+    const cr = await fetch('http://localhost:9000/api/contract', { signal: AbortSignal.timeout(3000) });
+    if (cr.ok) { window._nexusContract = await cr.json(); }
+  } catch {}
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='info') {
+  let el = document.getElementById('_toast');
+  if (!el) { el = document.createElement('div'); el.id='_toast'; document.body.appendChild(el); }
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.add('hide'), 2200);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+// Seed with default component
+components['cortex.healer'] = defaultComp('cortex.healer');
+components['cortex.healer'].capabilities = caps;
+components['raid.engine'] = defaultComp('raid.engine');
+components['raid.engine'].type = 'gate';
+activeCompId = 'cortex.healer';
+
+renderSidebar();
+loadComp('cortex.healer');
+updateProjections();
+renderCF();
+checkCortex();
+setInterval(checkCortex, 15000);
+
+// Try to load saved descriptors from Cortex on boot
+loadDescriptors().catch(()=>{});
+</script>
+</body>
+</html>

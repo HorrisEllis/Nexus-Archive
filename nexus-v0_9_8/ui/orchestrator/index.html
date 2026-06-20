@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS ORCHESTRATOR :9000</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:       #09090f;
+    --bg1:      #0e0e1a;
+    --bg2:      #13131f;
+    --bg3:      #1a1a2e;
+    --border:   rgba(120,120,200,.12);
+    --border2:  rgba(120,120,200,.22);
+    --text:     #c8c8e8;
+    --dim:      #6060a0;
+    --accent:   #818cf8;
+    --teal:     #2dd4bf;
+    --green:    #00ff88;
+    --amber:    #ef9f27;
+    --red:      #ff3355;
+    --purple:   #9b7fe8;
+    --blue:     #4a9eff;
+    --mono:     'Space Mono', monospace;
+    --sans:     'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.5;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* ── Layout ── */
+  #shell {
+    display: grid;
+    grid-template-rows: 44px 1fr;
+    grid-template-columns: 220px 1fr 300px;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* ── Top rail ── */
+  #rail {
+    grid-column: 1 / -1;
+    background: var(--bg1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+  }
+  .rail-logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .rail-sep { width: 1px; height: 20px; background: var(--border2); }
+  .rail-status {
+    display: flex; gap: 12px; align-items: center; flex: 1;
+  }
+  .rs-item {
+    display: flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .rs-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--dim); transition: background .4s;
+  }
+  .rs-dot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .rs-dot.err { background: var(--red); }
+  .rail-right {
+    margin-left: auto; display: flex; gap: 10px; align-items: center;
+  }
+  .rail-badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    padding: 2px 8px; border-radius: 20px;
+    background: rgba(129,140,248,.12); color: var(--accent);
+    border: 1px solid rgba(129,140,248,.25);
+  }
+  .rail-badge.green {
+    background: rgba(0,255,136,.1); color: var(--green);
+    border-color: rgba(0,255,136,.25);
+  }
+  #sse-indicator {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--dim); transition: background .3s;
+  }
+  #sse-indicator.on { background: var(--green); animation: ssebeat 2s infinite; }
+  @keyframes ssebeat {
+    0%,100% { opacity: 1; } 50% { opacity: .3; }
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    background: var(--bg1);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px 0;
+  }
+  .sb-section {
+    padding: 0 12px;
+    margin-bottom: 4px;
+  }
+  .sb-label {
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    color: var(--dim); text-transform: uppercase; letter-spacing: .1em;
+    padding: 8px 4px 4px;
+  }
+  .sb-cmd {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    transition: background .15s;
+    border: none; background: none; width: 100%; text-align: left;
+    color: var(--text); font-family: var(--mono); font-size: 10px;
+  }
+  .sb-cmd:hover { background: var(--bg3); }
+  .sb-cmd.active { background: rgba(129,140,248,.1); color: var(--accent); }
+  .sb-cmd .cmd-method {
+    font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px;
+    min-width: 32px; text-align: center; flex-shrink: 0;
+  }
+  .m-get  { background: rgba(45,212,191,.12); color: var(--teal); }
+  .m-post { background: rgba(239,159,39,.12);  color: var(--amber); }
+  .m-patch{ background: rgba(129,140,248,.12); color: var(--accent); }
+  .m-del  { background: rgba(255,51,85,.12);   color: var(--red); }
+  .sb-cmd .cmd-path {
+    font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 1;
+  }
+  .sb-sep { height: 1px; background: var(--border); margin: 6px 12px; }
+
+  /* ── Main panel ── */
+  #main {
+    overflow-y: auto;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Tabs ── */
+  #tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border);
+    background: var(--bg1); padding: 0 16px; flex-shrink: 0;
+  }
+  .tab {
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 10px 14px; cursor: pointer; color: var(--dim);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Tab content ── */
+  .tab-content { display: none; flex: 1; overflow-y: auto; }
+  .tab-content.active { display: flex; flex-direction: column; }
+
+  /* ── API Explorer ── */
+  #explorer { padding: 16px; gap: 12px; }
+
+  .ex-header {
+    font-family: var(--mono); font-size: 11px; color: var(--dim);
+    margin-bottom: 4px;
+  }
+
+  .request-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .req-top {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  #req-method {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer;
+    background: rgba(45,212,191,.12); color: var(--teal);
+    min-width: 60px;
+  }
+  #req-url {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 4px; padding: 6px 10px;
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    outline: none;
+  }
+  #req-url:focus { border-color: var(--accent); }
+  #send-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 4px;
+    padding: 6px 16px; font-family: var(--mono); font-size: 10px;
+    font-weight: 700; cursor: pointer; letter-spacing: .06em;
+    transition: opacity .15s;
+  }
+  #send-btn:hover { opacity: .85; }
+  #send-btn:active { opacity: .7; }
+  .req-body-area {
+    padding: 10px 14px;
+  }
+  #req-body {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 4px; padding: 8px 10px;
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    outline: none; resize: vertical; min-height: 60px;
+    transition: border-color .15s;
+  }
+  #req-body:focus { border-color: var(--accent); }
+  #req-body.hidden { display: none; }
+
+  .res-box {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+  }
+  .res-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 10px;
+  }
+  #res-status {
+    font-weight: 700; padding: 1px 8px; border-radius: 3px;
+    background: var(--bg3);
+  }
+  #res-time { color: var(--dim); margin-left: auto; }
+  #res-body {
+    padding: 12px 14px; font-family: var(--mono); font-size: 11px;
+    line-height: 1.7; white-space: pre-wrap; overflow-x: auto;
+    max-height: 400px; overflow-y: auto; color: var(--teal);
+    min-height: 80px;
+  }
+
+  /* ── Status tab ── */
+  #status-tab { padding: 16px; gap: 12px; }
+
+  .sys-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .sys-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    transition: border-color .3s;
+  }
+  .sys-card.up { border-color: rgba(0,255,136,.2); }
+  .sys-card.down { border-color: rgba(255,51,85,.15); }
+  .sys-card-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .sys-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--dim); flex-shrink: 0;
+    transition: background .4s, box-shadow .4s;
+  }
+  .sys-dot.up { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .sys-dot.down { background: var(--red); }
+  .sys-name {
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    color: var(--text); text-transform: uppercase; letter-spacing: .06em;
+  }
+  .sys-port {
+    font-family: var(--mono); font-size: 9px; color: var(--dim);
+    margin-left: auto;
+  }
+  .sys-status-badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    padding: 1px 6px; border-radius: 10px;
+  }
+  .badge-up   { background: rgba(0,255,136,.1); color: var(--green); }
+  .badge-down { background: rgba(255,51,85,.1);  color: var(--red); }
+  .badge-dim  { background: rgba(96,96,160,.1);  color: var(--dim); }
+  .sys-meta { font-size: 11px; color: var(--dim); }
+
+  /* ── Events tab ── */
+  #events-tab { padding: 0; }
+  #events-feed {
+    font-family: var(--mono); font-size: 10px; line-height: 1.8;
+    padding: 12px 16px; overflow-y: auto; flex: 1;
+  }
+  .ev-row {
+    display: flex; gap: 10px; padding: 3px 0;
+    border-bottom: 1px solid rgba(120,120,200,.04);
+    animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; } }
+  .ev-ts { color: var(--dim); flex-shrink: 0; min-width: 80px; }
+  .ev-sys { min-width: 80px; flex-shrink: 0; }
+  .ev-type { color: var(--accent); flex: 1; }
+  .ev-clear {
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    color: var(--dim); cursor: pointer; padding: 10px 16px;
+    border: none; background: none; text-transform: uppercase;
+  }
+  .ev-clear:hover { color: var(--text); }
+
+  /* ── Grammar tab ── */
+  #grammar-tab { padding: 16px; gap: 10px; }
+  .grammar-search {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; display: flex; gap: 10px;
+  }
+  #grammar-input {
+    flex: 1; background: none; border: none; outline: none;
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+  }
+  #grammar-input::placeholder { color: var(--dim); }
+  #grammar-result {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    font-family: var(--mono); font-size: 11px; line-height: 1.8;
+    min-height: 200px;
+  }
+  .gr-item {
+    display: grid; grid-template-columns: 80px 160px 1fr;
+    gap: 8px; padding: 3px 0;
+    border-bottom: 1px solid rgba(120,120,200,.05);
+  }
+  .gr-method { font-weight: 700; }
+  .gr-path   { color: var(--teal); }
+  .gr-desc   { color: var(--dim); }
+
+  /* ── Components tab ── */
+  #components-tab { padding: 16px; gap: 10px; }
+  .comp-grid {
+    display: grid; gap: 8px;
+  }
+  .comp-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 14px;
+  }
+  .comp-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+  }
+  .comp-id { font-family: var(--mono); font-size: 10px; color: var(--accent); }
+  .comp-ns {
+    font-family: var(--mono); font-size: 9px; color: var(--dim);
+    margin-left: auto;
+  }
+  .comp-desc { font-size: 11px; color: var(--dim); }
+  .comp-route {
+    font-family: var(--mono); font-size: 9px; color: var(--teal);
+    margin-top: 4px;
+  }
+
+  /* ── Right panel: Live SSE ── */
+  #rightpanel {
+    background: var(--bg1);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .rp-head {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    color: var(--dim); text-transform: uppercase; letter-spacing: .08em;
+    flex-shrink: 0;
+  }
+  #sse-log {
+    flex: 1; overflow-y: auto; padding: 8px;
+    font-family: var(--mono); font-size: 10px; line-height: 1.7;
+  }
+  .sse-entry {
+    padding: 4px 8px; border-radius: 4px; margin-bottom: 2px;
+    animation: fadeIn .15s ease;
+    border-left: 2px solid transparent;
+  }
+  .sse-entry.contract  { border-left-color: var(--teal); }
+  .sse-entry.gap       { border-left-color: var(--red); }
+  .sse-entry.health    { border-left-color: var(--green); }
+  .sse-entry.pattern   { border-left-color: var(--purple); }
+  .sse-entry.default   { border-left-color: var(--border2); }
+  .sse-ts  { color: var(--dim); font-size: 9px; }
+  .sse-evt { color: var(--accent); }
+  .sse-data{ color: var(--dim); font-size: 9px; white-space: nowrap;
+             overflow: hidden; text-overflow: ellipsis; }
+  .rp-actions {
+    padding: 10px; border-top: 1px solid var(--border); flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .rp-btn {
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 5px; padding: 6px 10px; font-family: var(--mono);
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text); cursor: pointer;
+    transition: background .15s, color .15s; text-align: left;
+  }
+  .rp-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .rp-btn.danger:hover { background: var(--red); border-color: var(--red); }
+
+  /* ── Contract panel ── */
+  #contract-info {
+    padding: 10px 14px; border-top: 1px solid var(--border);
+    font-family: var(--mono); font-size: 9px; color: var(--dim);
+    flex-shrink: 0;
+  }
+  .ci-row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .ci-val { color: var(--text); }
+
+  /* ── Scrollbars ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* ── Loading shimmer ── */
+  .shimmer {
+    background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px; height: 14px;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* ── Misc ── */
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 8px;
+    font-weight: 700; padding: 1px 6px; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .empty { color: var(--dim); font-family: var(--mono); font-size: 11px; padding: 20px; }
+</style>
+</head>
+<body>
+
+<div id="shell">
+
+  <!-- ── Rail ── -->
+  <div id="rail">
+    <span class="rail-logo">⬡ NEXUS · ORCH</span>
+    <div class="rail-sep"></div>
+    <div class="rail-status">
+      <div class="rs-item"><div class="rs-dot" id="dot-orch"></div>ORCH :9000</div>
+      <div class="rs-item"><div class="rs-dot" id="dot-gd"></div>GD :7820</div>
+      <div class="rs-item"><div class="rs-dot" id="dot-cx"></div>CX :3748</div>
+      <div class="rs-item"><div class="rs-dot" id="dot-idr"></div>IDR :4800</div>
+      <div class="rs-item"><div class="rs-dot" id="dot-br"></div>BR :9999</div>
+      <div class="rs-item"><div class="rs-dot" id="dot-diag"></div>DIAG :7825</div>
+    </div>
+    <div class="rail-right">
+      <div id="sse-indicator"></div>
+      <span class="rail-badge" id="contract-badge">CONTRACT —</span>
+      <span class="rail-badge green" id="uptime-badge">NEXUS v0.8.0</span>
+    </div>
+  </div>
+
+  <!-- ── Sidebar: command list ── -->
+  <div id="sidebar">
+
+    <div class="sb-section">
+      <div class="sb-label">Meta</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/health')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/health</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/status')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/status</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/channels')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/channels</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/api-map')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/api-map</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cli')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/cli</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/contract')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/contract</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/state')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/state</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/intent-map')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/intent-map</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Cortex :3748</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/events?n=20')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/events</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/gaps')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/gaps</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/failures')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/failures</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/memory?table=event_log&n=20')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/memory</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/ring')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/ring</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/modules')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/modules</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/files?n=50')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/files</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/requests')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/requests</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('POST','/api/cortex/event','{"type":"test.ping","payload":{}}')">
+        <span class="cmd-method m-post">POST</span><span class="cmd-path">/cortex/event</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('POST','/api/cortex/memory/search','{"q":"gap"}')">
+        <span class="cmd-method m-post">POST</span><span class="cmd-path">/cortex/memory/search</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/versionium/log?n=20')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/versionium/log</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/cortex/projects')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/cortex/projects</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Guardian :7820</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/health')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/health</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/providers')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/providers</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/jobs?limit=20')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/jobs</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/log')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/log</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/artifacts')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/artifacts</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/ledger')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/ledger</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/memory/stats')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/memory/stats</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/guardian/memory/context')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/guardian/memory/context</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('POST','/api/guardian/dispatch','{"provider":"claude","command":"ping","prompt":"hello"}')">
+        <span class="cmd-method m-post">POST</span><span class="cmd-path">/guardian/dispatch</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Idearium :4800</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/idearium/health')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/idearium/health</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/idearium/ideas')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/idearium/ideas</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/idearium/specs')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/idearium/specs</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/idearium/gaps')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/idearium/gaps</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/idearium/snr')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/idearium/snr</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/idearium/stats')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/idearium/stats</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/idearium/snapshots')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/idearium/snapshots</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('POST','/api/idearium/ideas','{"text":"new idea from orchestrator UI"}')">
+        <span class="cmd-method m-post">POST</span><span class="cmd-path">/idearium/ideas POST</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('POST','/api/idearium/snapshots','{"message":"orch-ui snapshot"}')">
+        <span class="cmd-method m-post">POST</span><span class="cmd-path">/idearium/snapshots</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Bridge :9999</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/bridge/health')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/bridge/health</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/bridge/requests')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/bridge/requests</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/bridge/nodes')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/bridge/nodes</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/bridge/ledger')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/bridge/ledger</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/bridge/trust')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/bridge/trust</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/peers/online')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/peers/online</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Grammar Engine</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/components')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/components</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/components/grammar')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/api/components/grammar</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/components/namespaces')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/components/namespaces</span>
+      </button>
+      <button class="sb-cmd" onclick="setTab('grammar')">
+        <span class="cmd-method m-get pill" style="background:rgba(155,127,232,.15);color:var(--purple)">UI</span>
+        <span class="cmd-path">Grammar Browser →</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">NEXUS Layer</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/nexus/cfr')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/nexus/cfr</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/nexus/bus')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/nexus/bus</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('POST','/api/nexus/query','{"q":"health"}')">
+        <span class="cmd-method m-post">POST</span><span class="cmd-path">/nexus/query</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('POST','/api/nexus/heal','{}')">
+        <span class="cmd-method m-post">POST</span><span class="cmd-path">/nexus/heal</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/nexus/knowledge?n=20')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/nexus/knowledge</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Architect :3747</div>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/architect/spec')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/architect/spec</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/architect/hooks')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/architect/hooks</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/architect/blueprint')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/architect/blueprint</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/architect/gaps')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/architect/gaps</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/architect/snr')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/architect/snr</span>
+      </button>
+      <button class="sb-cmd" onclick="fireCmd('GET','/api/architect/map')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">/architect/map</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Diagnostic :7825</div>
+      <button class="sb-cmd" onclick="diagCmd('/status')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">:7825/status</span>
+      </button>
+      <button class="sb-cmd" onclick="diagCmd('/gaps')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">:7825/gaps</span>
+      </button>
+      <button class="sb-cmd" onclick="diagCmd('/friction')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">:7825/friction</span>
+      </button>
+      <button class="sb-cmd" onclick="diagCmd('/audit')">
+        <span class="cmd-method m-get">GET</span><span class="cmd-path">:7825/audit</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ── Main ── -->
+  <div id="main">
+    <div id="tabs">
+      <div class="tab active" onclick="setTab('explorer')" id="tab-explorer">Explorer</div>
+      <div class="tab" onclick="setTab('status')" id="tab-status">Status</div>
+      <div class="tab" onclick="setTab('events')" id="tab-events">Events</div>
+      <div class="tab" onclick="setTab('grammar')" id="tab-grammar">Grammar</div>
+      <div class="tab" onclick="setTab('components')" id="tab-components">Components</div>
+      <div class="tab" onclick="setTab('ollama')" id="tab-ollama">Ollama</div>
+      <div class="tab" onclick="setTab('diagnostic')" id="tab-diagnostic">Diagnostic</div>
+    </div>
+
+    <!-- Explorer tab -->
+    <div class="tab-content active" id="explorer" style="padding:16px;gap:12px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:2px;">
+        Interaction Contract — all routes are live through :9000
+      </div>
+      <div class="request-box">
+        <div class="req-top">
+          <select id="req-method" onchange="onMethodChange()">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+          <input id="req-url" type="text" value="/health" placeholder="/api/..." spellcheck="false"/>
+          <button id="send-btn" onclick="sendRequest()">SEND</button>
+        </div>
+        <div class="req-body-area" id="body-area" style="display:none;">
+          <textarea id="req-body" placeholder='{"key":"value"}'></textarea>
+        </div>
+      </div>
+
+      <div class="res-box">
+        <div class="res-header">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--dim);">RESPONSE</span>
+          <span id="res-status" class="badge-dim">—</span>
+          <span id="res-time"></span>
+        </div>
+        <pre id="res-body" style="color:var(--dim);">Select a command from the sidebar or type a route above.</pre>
+      </div>
+    </div>
+
+    <!-- Status tab -->
+    <div class="tab-content" id="status-tab">
+      <div style="padding:16px;gap:12px;display:flex;flex-direction:column;">
+        <div class="sys-grid" id="sys-grid">
+          <!-- populated by JS -->
+        </div>
+        <div id="health-raw" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:10px;line-height:1.8;color:var(--dim);min-height:80px;">
+          Fetching health...
+        </div>
+      </div>
+    </div>
+
+    <!-- Events tab -->
+    <div class="tab-content" id="events-tab" style="display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);padding:8px 16px;gap:10px;flex-shrink:0;">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--dim);">CORTEX EVENTS — live tail</span>
+        <span id="event-count" style="font-family:var(--mono);font-size:9px;color:var(--accent);">0 events</span>
+        <button class="ev-clear" onclick="clearEvents()">CLEAR</button>
+        <button class="ev-clear" onclick="loadEvents()">REFRESH</button>
+      </div>
+      <div id="events-feed"></div>
+    </div>
+
+    <!-- Grammar tab -->
+    <div class="tab-content" id="grammar-tab" style="padding:16px;gap:12px;display:none;flex-direction:column;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--dim);">
+        Grammar Engine — reads component registry trie. O(k) command resolution.
+      </div>
+      <div class="grammar-search">
+        <input id="grammar-input" type="text" placeholder="filter commands... (e.g. cortex, gap, guardian)"
+          oninput="filterGrammar(this.value)" spellcheck="false"/>
+      </div>
+      <div id="grammar-result">
+        <div class="shimmer" style="margin-bottom:6px;width:60%"></div>
+        <div class="shimmer" style="margin-bottom:6px;width:80%"></div>
+        <div class="shimmer" style="margin-bottom:6px;width:70%"></div>
+      </div>
+    </div>
+
+    <!-- Components tab -->
+    <div class="tab-content" id="components-tab" style="padding:16px;gap:12px;display:none;flex-direction:column;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--dim);">
+        Component Registry — every NEXUS capability as a typed, hookable unit
+      </div>
+      <div id="comp-list" class="comp-grid"></div>
+    </div>
+
+    <!-- Ollama tab -->
+    <div class="tab-content" id="ollama-tab" style="padding:16px;gap:12px;display:none;flex-direction:column;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--dim);">
+        Ollama — native module dispatch via Guardian. No silent jobs: every dispatch is tracked to a terminal state below.
+      </div>
+      <div class="request-box">
+        <div class="req-top">
+          <input id="ollama-prompt" type="text" placeholder="Prompt to send to Ollama..." spellcheck="false" style="flex:1;"/>
+          <button id="ollama-send-btn" onclick="dispatchOllama()">DISPATCH</button>
+        </div>
+      </div>
+      <div class="res-box">
+        <div class="res-header">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--dim);">JOB STATE</span>
+          <span id="ollama-job-id" class="badge-dim">no job yet</span>
+          <span id="ollama-job-status" class="badge-dim">—</span>
+        </div>
+        <pre id="ollama-raw" style="color:var(--dim);">No dispatch sent yet. Click DISPATCH to send a prompt to /guardian/dispatch (provider=ollama).
+This tab polls /guardian/jobs/{id} every 1.5s until the job reaches a terminal state (complete/failed/timeout) — it will never just sit silent.</pre>
+      </div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--dim);">
+        Known issue from logs: jobs created + dispatched ("native module, no...") with no completion event observed. If polling below also goes silent past 30s with no terminal state, the gap is in Guardian's native-module response handler not emitting a completion event back — that's a Guardian-side fix, not a UI-side one.
+      </div>
+    </div>
+
+    <!-- Diagnostic tab -->
+    <div class="tab-content" id="diagnostic-tab" style="padding:16px;gap:12px;display:none;flex-direction:column;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--dim);">
+        Diagnostic :7825 — raw status pulled live, not cached. Every row shows the real fetch outcome, not a generic label.
+      </div>
+      <div id="diag-grid" class="sys-grid"></div>
+      <div id="diag-raw" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:10px;line-height:1.8;color:var(--dim);min-height:80px;">
+        Fetching diagnostic status...
+      </div>
+      <div class="rp-actions" style="padding:0;">
+        <button class="rp-btn" onclick="diagCmd('/status')">↻ /status</button>
+        <button class="rp-btn" onclick="diagCmd('/gaps')">⊗ /gaps</button>
+        <button class="rp-btn" onclick="diagCmd('/friction')">⚠ /friction</button>
+        <button class="rp-btn" onclick="diagCmd('/audit')">▤ /audit</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right panel ── -->
+  <div id="rightpanel">
+    <div class="rp-head">
+      <div id="sse-indicator" style="width:7px;height:7px;border-radius:50%;background:var(--dim);"></div>
+      SSE · LIVE
+    </div>
+    <div id="sse-log"></div>
+    <div id="contract-info">
+      <div class="ci-row"><span>Contract</span><span class="ci-val" id="ci-version">—</span></div>
+      <div class="ci-row"><span>Routes</span><span class="ci-val" id="ci-routes">—</span></div>
+      <div class="ci-row"><span>Systems</span><span class="ci-val" id="ci-systems">—</span></div>
+      <div class="ci-row"><span>Trust</span><span class="ci-val" id="ci-trust">—</span></div>
+    </div>
+    <div class="rp-actions">
+      <button class="rp-btn" onclick="fireCmd('GET','/health')">↻ Health Check</button>
+      <button class="rp-btn" onclick="fireCmd('GET','/api/cortex/gaps')">⊗ Show Gaps</button>
+      <button class="rp-btn" onclick="fireCmd('POST','/api/nexus/heal','{}')">⚕ Heal Loop</button>
+      <button class="rp-btn danger" onclick="clearSSE()">✕ Clear Feed</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+const BASE = (location.protocol === 'file:') ? 'http://localhost:9000' : location.origin;
+const DIAG = (location.protocol === 'file:') ? 'http://localhost:7825' : (location.origin.replace(/:\d+$/, ':7825'));
+const OPENED_VIA_FILE = location.protocol === 'file:';
+
+// ── API ───────────────────────────────────────────────────────────────────────
+// Classifies a failed fetch instead of collapsing everything into "offline".
+function classifyFetchError(e) {
+  if (OPENED_VIA_FILE) {
+    return `BLOCKED (page opened via file:// — origin is "null"; server must send Access-Control-Allow-Origin or this UI must be served from the orchestrator itself, not opened from disk)`;
+  }
+  if (e.name === 'AbortError') return 'TIMEOUT — no response within window';
+  if (e.message && e.message.includes('Failed to fetch')) return 'UNREACHABLE — connection refused or CORS-blocked';
+  return e.message || 'unknown error';
+}
+
+async function apiFetch(method, path, body, base) {
+  const url = (base || BASE) + path;
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body && method !== 'GET') opts.body = typeof body === 'string' ? body : JSON.stringify(body);
+  const t0 = Date.now();
+  try {
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(_) { data = text; }
+    return { ok: res.ok, status: res.status, data, ms: Date.now() - t0 };
+  } catch(e) {
+    return { ok: false, status: 0, data: { error: classifyFetchError(e) }, ms: Date.now() - t0 };
+  }
+}
+
+function renderFileWarning() {
+  if (!OPENED_VIA_FILE) return;
+  const rail = document.getElementById('rail');
+  if (!rail || document.getElementById('file-warning')) return;
+  const bar = document.createElement('div');
+  bar.id = 'file-warning';
+  bar.style = 'position:fixed;top:44px;left:0;right:0;z-index:999;background:#3a1a1a;color:#ff9d9d;font-family:var(--mono);font-size:10px;padding:5px 16px;border-bottom:1px solid var(--red);';
+  bar.textContent = '⚠ Opened via file:// — every status dot below is unverifiable until you serve this page from the orchestrator (e.g. drop it in orchestrator\'s static dir) or add CORS headers server-side. It is not showing real state right now.';
+  document.body.appendChild(bar);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+const TAB_IDS = ['explorer','status-tab','events-tab','grammar-tab','components-tab','ollama-tab','diagnostic-tab'];
+
+function setTab(id) {
+  const map = { explorer:'explorer', status:'status-tab', events:'events-tab', grammar:'grammar-tab', components:'components-tab', ollama:'ollama-tab', diagnostic:'diagnostic-tab' };
+  const realId = map[id] || id;
+  TAB_IDS.forEach(t => {
+    const el = document.getElementById(t);
+    if (el) { el.style.display = 'none'; el.classList.remove('active'); }
+  });
+  const active = document.getElementById(realId);
+  if (active) { active.style.display = 'flex'; active.classList.add('active'); }
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const tabBtn = document.getElementById('tab-' + id);
+  if (tabBtn) tabBtn.classList.add('active');
+  if (id === 'status')     loadStatus();
+  if (id === 'events')     loadEvents();
+  if (id === 'grammar')    loadGrammar();
+  if (id === 'components') loadComponents();
+  if (id === 'diagnostic') loadDiagnostic();
+}
+
+// ── Explorer ──────────────────────────────────────────────────────────────────
+function onMethodChange() {
+  const m = document.getElementById('req-method').value;
+  const ba = document.getElementById('body-area');
+  ba.style.display = (m === 'POST' || m === 'PATCH') ? '' : 'none';
+}
+
+function fireCmd(method, path, bodyStr) {
+  document.getElementById('req-method').value = method;
+  document.getElementById('req-url').value = path;
+  if (bodyStr) document.getElementById('req-body').value = bodyStr;
+  onMethodChange();
+  setTab('explorer');
+  sendRequest();
+}
+
+function diagCmd(path) {
+  const fullUrl = DIAG + path;
+  document.getElementById('req-method').value = 'GET';
+  document.getElementById('req-url').value = fullUrl;
+  onMethodChange();
+  setTab('explorer');
+  sendRequestRaw(fullUrl, 'GET', null);
+}
+
+async function sendRequest() {
+  const method = document.getElementById('req-method').value;
+  const rawUrl = document.getElementById('req-url').value.trim();
+  const bodyStr = document.getElementById('req-body').value.trim();
+
+  // Handle full URLs (e.g. from diagCmd)
+  if (rawUrl.startsWith('http')) {
+    sendRequestRaw(rawUrl, method, bodyStr);
+    return;
+  }
+  sendRequestRaw(BASE + rawUrl, method, bodyStr);
+}
+
+async function sendRequestRaw(url, method, bodyStr) {
+  const statusEl = document.getElementById('res-status');
+  const bodyEl   = document.getElementById('res-body');
+  const timeEl   = document.getElementById('res-time');
+
+  statusEl.textContent = '...';
+  statusEl.className = 'badge-dim';
+  bodyEl.textContent = 'Sending...';
+  bodyEl.style.color = 'var(--dim)';
+
+  const t0 = Date.now();
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (bodyStr && method !== 'GET') {
+    try { opts.body = JSON.stringify(JSON.parse(bodyStr)); } catch(_) { opts.body = bodyStr; }
+  }
+
+  try {
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    const ms = Date.now() - t0;
+    let pretty;
+    try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch(_) { pretty = text; }
+
+    statusEl.textContent = res.status;
+    statusEl.className = res.ok ? 'badge-up' : 'badge-down';
+    bodyEl.textContent = pretty;
+    bodyEl.style.color = res.ok ? 'var(--teal)' : 'var(--red)';
+    timeEl.textContent = ms + 'ms';
+  } catch(e) {
+    statusEl.textContent = 'ERR';
+    statusEl.className = 'badge-down';
+    bodyEl.textContent = e.message;
+    bodyEl.style.color = 'var(--red)';
+    timeEl.textContent = '';
+  }
+}
+
+// ── Health poll ───────────────────────────────────────────────────────────────
+const SYS_LIST = [
+  { key:'orch', label:'ORCHESTRATOR', port:9000, path:'/health',     dot:'dot-orch' },
+  { key:'gd',   label:'GUARDIAN',     port:7820, path:'/health',     dot:'dot-gd' },
+  { key:'cx',   label:'CORTEX',       port:3748, path:'/health',     dot:'dot-cx' },
+  { key:'idr',  label:'IDEARIUM',     port:4800, path:'/api/health', dot:'dot-idr' },
+  { key:'br',   label:'BRIDGE',       port:9999, path:'/health',     dot:'dot-br' },
+  { key:'diag', label:'DIAGNOSTIC',   port:7825, path:'/status',     dot:'dot-diag' },
+  // The diagnostic service's gap log flags these as offline — adding them here so the
+  // UI checks the SAME services rather than a different subset. Ports are placeholders
+  // (3747 confirmed from the screenshot's sidebar; the other two are guesses — fix the
+  // port numbers below to match your actual service config, don't trust these blindly):
+  { key:'arch', label:'ARCHITECT',    port:3747, path:'/health',     dot:null },
+  { key:'emrg', label:'EMERGE',       port:null, path:'/health',     dot:null }, // ⚠ port unknown — set this
+  { key:'fshl', label:'FORGE-SHELL',  port:null, path:'/health',     dot:null }, // ⚠ port unknown — set this
+];
+
+async function pollDots() {
+  for (const s of SYS_LIST) {
+    if (!s.dot || !s.port) continue; // skip entries with no rail dot or unconfigured port
+    const url = `http://localhost:${s.port}${s.path}`;
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      const up = res.ok;
+      const dot = document.getElementById(s.dot);
+      if (dot) {
+        dot.classList.toggle('on', up);
+        dot.classList.toggle('err', !up);
+        dot.title = up ? 'online' : `HTTP ${res.status}`;
+      }
+    } catch(e) {
+      const dot = document.getElementById(s.dot);
+      if (dot) { dot.classList.remove('on'); dot.classList.add('err'); dot.title = classifyFetchError(e); }
+    }
+  }
+}
+
+// ── Status tab ────────────────────────────────────────────────────────────────
+function makeSysCard(s, data, errReason) {
+  const up = data && !data.error && (data.ok !== false);
+  const reasonLine = up ? (data.status || data.version || '—') : (errReason || data?.error || 'unreachable');
+  return `
+  <div class="sys-card ${up ? 'up' : 'down'}">
+    <div class="sys-card-head">
+      <div class="sys-dot ${up ? 'up' : 'down'}"></div>
+      <span class="sys-name">${s.label}</span>
+      <span class="sys-port">${s.port ? ':' + s.port : '(no port set)'}</span>
+      <span class="sys-status-badge ${up ? 'badge-up' : 'badge-down'}">${up ? 'ONLINE' : 'OFFLINE'}</span>
+    </div>
+    <div class="sys-meta">${reasonLine}</div>
+  </div>`;
+}
+
+async function loadStatus() {
+  const grid = document.getElementById('sys-grid');
+  const raw  = document.getElementById('health-raw');
+  grid.innerHTML = SYS_LIST.map(s => `<div class="sys-card"><div class="shimmer"></div></div>`).join('');
+
+  const results = await Promise.all(SYS_LIST.map(async s => {
+    if (!s.port) return { s, data: { error: 'no port configured' }, ok: false, errReason: 'no port configured' };
+    try {
+      const res = await fetch(`http://localhost:${s.port}${s.path}`, { signal: AbortSignal.timeout(4000) });
+      const d = await res.json().catch(() => ({}));
+      return { s, data: d, ok: res.ok, errReason: res.ok ? null : `HTTP ${res.status}` };
+    } catch(e) {
+      return { s, data: { error: e.message }, ok: false, errReason: classifyFetchError(e) };
+    }
+  }));
+
+  grid.innerHTML = results.map(r => makeSysCard(r.s, r.data, r.errReason)).join('');
+
+  if (OPENED_VIA_FILE) {
+    raw.textContent = 'This page is open via file:// — every result above reflects a CORS-blocked or genuinely failed fetch, not real system state. Serve this file from the orchestrator to get a trustworthy reading.';
+    raw.style.color = 'var(--amber)';
+  } else {
+    const orch = results.find(r => r.s.key === 'orch');
+    if (orch?.ok) {
+      raw.textContent = JSON.stringify(orch.data, null, 2);
+      raw.style.color = 'var(--teal)';
+    } else {
+      raw.textContent = `Orchestrator unreachable: ${orch?.errReason || 'unknown'}`;
+      raw.style.color = 'var(--red)';
+    }
+  }
+}
+
+// ── Diagnostic tab ────────────────────────────────────────────────────────────
+async function loadDiagnostic() {
+  const grid = document.getElementById('diag-grid');
+  const raw  = document.getElementById('diag-raw');
+  grid.innerHTML = `<div class="sys-card"><div class="shimmer"></div></div>`;
+  try {
+    const res = await fetch(`${DIAG}/status`, { signal: AbortSignal.timeout(4000) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    raw.textContent = JSON.stringify(data, null, 2);
+    raw.style.color = 'var(--teal)';
+    const gaps = (data.gaps || data.systems || []);
+    if (Array.isArray(gaps) && gaps.length) {
+      grid.innerHTML = gaps.map(g => `
+        <div class="sys-card ${g.online === false ? 'down' : 'up'}">
+          <div class="sys-card-head">
+            <div class="sys-dot ${g.online === false ? 'down' : 'up'}"></div>
+            <span class="sys-name">${(g.name || g.system || 'unknown').toUpperCase()}</span>
+            <span class="sys-status-badge ${g.online === false ? 'badge-down' : 'badge-up'}">${g.online === false ? 'GAP' : 'OK'}</span>
+          </div>
+          <div class="sys-meta">${g.reason || g.message || ''}</div>
+        </div>`).join('');
+    } else {
+      grid.innerHTML = '';
+    }
+  } catch(e) {
+    grid.innerHTML = '';
+    raw.textContent = `Diagnostic service unreachable: ${classifyFetchError(e)}`;
+    raw.style.color = 'var(--red)';
+  }
+}
+
+// ── Ollama tab ────────────────────────────────────────────────────────────────
+let _ollamaPollTimer = null;
+
+async function dispatchOllama() {
+  const promptEl = document.getElementById('ollama-prompt');
+  const idEl = document.getElementById('ollama-job-id');
+  const statusEl = document.getElementById('ollama-job-status');
+  const rawEl = document.getElementById('ollama-raw');
+  const prompt = promptEl.value.trim();
+  if (!prompt) { rawEl.textContent = 'Enter a prompt first.'; return; }
+
+  idEl.textContent = 'dispatching...';
+  statusEl.textContent = '—';
+  statusEl.className = 'badge-dim';
+  rawEl.textContent = 'Sending to /guardian/dispatch...';
+  rawEl.style.color = 'var(--dim)';
+
+  const res = await apiFetch('POST', '/guardian/dispatch', { provider: 'ollama', path: '/chat', prompt }, BASE.replace(':9000', ':7820'));
+  if (!res.ok) {
+    idEl.textContent = 'dispatch failed';
+    statusEl.textContent = 'ERR';
+    statusEl.className = 'badge-down';
+    rawEl.textContent = JSON.stringify(res.data, null, 2);
+    rawEl.style.color = 'var(--red)';
+    return;
+  }
+
+  const jobId = res.data?.jobId || res.data?.id || res.data?.job?.id;
+  if (!jobId) {
+    idEl.textContent = 'no job id returned';
+    statusEl.textContent = 'UNKNOWN';
+    statusEl.className = 'badge-down';
+    rawEl.textContent = `Dispatch responded but no jobId in payload — can't track completion:\n` + JSON.stringify(res.data, null, 2);
+    rawEl.style.color = 'var(--amber)';
+    return;
+  }
+
+  idEl.textContent = jobId;
+  statusEl.textContent = 'dispatched';
+  statusEl.className = 'badge-dim';
+  rawEl.textContent = 'Job dispatched. Polling /guardian/jobs/' + jobId + ' every 1.5s...';
+
+  if (_ollamaPollTimer) clearInterval(_ollamaPollTimer);
+  let elapsed = 0;
+  _ollamaPollTimer = setInterval(async () => {
+    elapsed += 1500;
+    const jr = await apiFetch('GET', `/guardian/jobs/${jobId}`, null, BASE.replace(':9000', ':7820'));
+    if (!jr.ok) {
+      statusEl.textContent = 'poll failed';
+      statusEl.className = 'badge-down';
+      rawEl.textContent = JSON.stringify(jr.data, null, 2);
+      rawEl.style.color = 'var(--red)';
+      return; // keep polling — transient
+    }
+    const job = jr.data;
+    const state = (job.status || job.state || '').toLowerCase();
+    statusEl.textContent = state || 'unknown';
+    statusEl.className = (state === 'complete' || state === 'completed') ? 'badge-up' : (state === 'failed' ? 'badge-down' : 'badge-dim');
+    rawEl.textContent = JSON.stringify(job, null, 2);
+    rawEl.style.color = (state === 'complete' || state === 'completed') ? 'var(--teal)' : 'var(--dim)';
+
+    if (['complete','completed','failed','timeout','error'].includes(state) || elapsed > 60000) {
+      clearInterval(_ollamaPollTimer);
+      if (elapsed > 60000 && !['complete','completed','failed','timeout','error'].includes(state)) {
+        statusEl.textContent = 'SILENT >60s';
+        statusEl.className = 'badge-down';
+        rawEl.textContent += '\n\n⚠ No terminal state after 60s. This matches the log symptom: dispatched, no completion event. The fix is in Guardian\'s native-module response handler, not here.';
+        rawEl.style.color = 'var(--amber)';
+      }
+    }
+  }, 1500);
+}
+
+// ── Events tab ────────────────────────────────────────────────────────────────
+let _events = [];
+
+function renderEvent(ev) {
+  const ts = new Date(ev.ts || ev.timestamp || Date.now()).toLocaleTimeString();
+  const sys = ev.system || ev.source || '—';
+  const type = ev.type || ev.event || '—';
+  const data = ev.payload ? JSON.stringify(ev.payload).slice(0, 60) : '';
+  return `<div class="ev-row">
+    <span class="ev-ts">${ts}</span>
+    <span class="ev-sys" style="color:var(--purple)">${sys}</span>
+    <span class="ev-type">${type}</span>
+    <span class="ev-data">${data}</span>
+  </div>`;
+}
+
+function clearEvents() { _events = []; document.getElementById('events-feed').innerHTML = ''; document.getElementById('event-count').textContent = '0 events'; }
+
+async function loadEvents() {
+  const feed = document.getElementById('events-feed');
+  feed.innerHTML = '<div class="empty">Loading events...</div>';
+  try {
+    const res = await apiFetch('GET', '/api/cortex/events?n=50');
+    const events = res.data?.events || res.data?.data || [];
+    _events = events;
+    if (!events.length) { feed.innerHTML = '<div class="empty">No events. Cortex may be offline.</div>'; return; }
+    feed.innerHTML = events.map(renderEvent).join('');
+    document.getElementById('event-count').textContent = events.length + ' events';
+  } catch(e) {
+    feed.innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+
+// ── Grammar tab ───────────────────────────────────────────────────────────────
+let _grammarData = null;
+
+async function loadGrammar() {
+  if (_grammarData) { renderGrammar(document.getElementById('grammar-input').value); return; }
+  const el = document.getElementById('grammar-result');
+  el.innerHTML = '<div style="color:var(--dim);font-family:var(--mono);font-size:11px;">Loading grammar from registry...</div>';
+  const res = await apiFetch('GET', '/api/components/grammar');
+  if (res.ok && res.data?.tree) {
+    _grammarData = flattenTree(res.data.tree, res.data.aliases || {});
+    renderGrammar('');
+  } else {
+    // fall back to api-map
+    const r2 = await apiFetch('GET', '/api/api-map');
+    if (r2.ok && r2.data) {
+      _grammarData = extractFromApiMap(r2.data);
+      renderGrammar('');
+    } else {
+      el.innerHTML = '<div style="color:var(--dim);font-family:var(--mono);font-size:11px;">Grammar endpoint offline. Run: node orchestrator.js</div>';
+    }
+  }
+}
+
+function flattenTree(tree, aliases, prefix, acc) {
+  acc = acc || [];
+  prefix = prefix || [];
+  for (const [k, v] of Object.entries(tree)) {
+    const parts = [...prefix, k];
+    if (v.componentId) {
+      acc.push({ path: parts.join(' '), componentId: v.componentId, params: v.params||[], returns: v.returns });
+    }
+    if (v.children && Object.keys(v.children).length) {
+      flattenTree(v.children, aliases, parts, acc);
+    }
+  }
+  return acc;
+}
+
+function extractFromApiMap(data) {
+  const rows = [];
+  for (const [sys, info] of Object.entries(data)) {
+    if (!info?.routes) continue;
+    for (const r of info.routes) {
+      rows.push({ path: `${sys} ${r.p}`, method: r.m, desc: r.d || '' });
+    }
+  }
+  return rows;
+}
+
+function renderGrammar(filter) {
+  const el = document.getElementById('grammar-result');
+  if (!_grammarData) { loadGrammar(); return; }
+  const q = (filter || '').toLowerCase();
+  const filtered = q ? _grammarData.filter(r =>
+    (r.path||'').toLowerCase().includes(q) ||
+    (r.componentId||'').toLowerCase().includes(q) ||
+    (r.method||'').toLowerCase().includes(q) ||
+    (r.desc||'').toLowerCase().includes(q)
+  ) : _grammarData;
+
+  if (!filtered.length) { el.innerHTML = '<div class="empty">No matches.</div>'; return; }
+  el.innerHTML = filtered.slice(0, 200).map(r => {
+    const m = r.method || 'CMD';
+    const cls = m === 'GET' ? 'm-get' : m === 'POST' ? 'm-post' : m === 'PATCH' ? 'm-patch' : m === 'DELETE' ? 'm-del' : 'm-get';
+    return `<div class="gr-item">
+      <span class="gr-method cmd-method ${cls}">${m}</span>
+      <span class="gr-path">${r.path || r.componentId || '—'}</span>
+      <span class="gr-desc">${r.desc || r.returns || (r.params?.map(p=>p.name||p).join(', ')) || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function filterGrammar(val) { renderGrammar(val); }
+
+// ── Components tab ────────────────────────────────────────────────────────────
+async function loadComponents() {
+  const el = document.getElementById('comp-list');
+  el.innerHTML = '<div class="empty">Loading components...</div>';
+  const res = await apiFetch('GET', '/api/components');
+  if (!res.ok || !res.data) {
+    el.innerHTML = '<div class="empty">Component registry offline. Orchestrator must be running.</div>';
+    return;
+  }
+  const comps = res.data?.components || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+  if (!comps.length) { el.innerHTML = '<div class="empty">No components registered.</div>'; return; }
+  el.innerHTML = comps.map(c => `
+    <div class="comp-card">
+      <div class="comp-head">
+        <span class="comp-id">${c.id || c.name || '—'}</span>
+        <span class="comp-ns">${c.namespace || ''} v${c.version || '?'}</span>
+      </div>
+      <div class="comp-desc">${c.description || ''}</div>
+      <div class="comp-route">${c.route?.method || ''} ${c.route?.path || ''}</div>
+    </div>`).join('');
+}
+
+// ── SSE live feed ─────────────────────────────────────────────────────────────
+let _sse = null;
+let _sseFailed = false;
+
+function clearSSE() { document.getElementById('sse-log').innerHTML = ''; }
+
+function sseCategory(type) {
+  if (!type) return 'default';
+  if (type.includes('contract')) return 'contract';
+  if (type.includes('gap') || type.includes('fail')) return 'gap';
+  if (type.includes('health') || type.includes('heartbeat') || type.includes('online')) return 'health';
+  if (type.includes('pattern') || type.includes('crystal')) return 'pattern';
+  return 'default';
+}
+
+function appendSSE(type, data) {
+  const log = document.getElementById('sse-log');
+  const ts = new Date().toLocaleTimeString();
+  const cat = sseCategory(type);
+  const dataStr = typeof data === 'object' ? JSON.stringify(data).slice(0, 80) : String(data||'');
+  const el = document.createElement('div');
+  el.className = `sse-entry ${cat}`;
+  el.innerHTML = `<div class="sse-ts">${ts}</div><div class="sse-evt">${type}</div><div class="sse-data">${dataStr}</div>`;
+  log.prepend(el);
+  // trim
+  while (log.children.length > 80) log.lastChild.remove();
+}
+
+function connectSSE() {
+  if (_sse) return;
+  const ind = document.getElementById('sse-indicator');
+  try {
+    _sse = new EventSource(BASE + '/sse');
+    _sse.onopen = () => { if (ind) { ind.style.background = 'var(--green)'; ind.style.animation = 'ssebeat 2s infinite'; } };
+    _sse.onmessage = e => {
+      try {
+        const d = JSON.parse(e.data);
+        appendSSE(d.type || d.event || 'event', d.payload || d.data || d);
+      } catch(_) { appendSSE('raw', e.data); }
+    };
+    _sse.onerror = () => {
+      if (ind) { ind.style.background = 'var(--red)'; ind.style.animation = ''; }
+      _sse.close(); _sse = null;
+      if (!_sseFailed) setTimeout(connectSSE, 5000);
+    };
+  } catch(e) {
+    if (ind) ind.style.background = 'var(--red)';
+  }
+}
+
+// ── Interaction contract ──────────────────────────────────────────────────────
+async function loadContract() {
+  const res = await apiFetch('GET', '/api/contract');
+  if (res.ok && res.data) {
+    const c = res.data.contract || res.data;
+    document.getElementById('ci-version').textContent = c.version || '—';
+    document.getElementById('ci-routes').textContent = countRoutes(c);
+    document.getElementById('ci-systems').textContent = Object.keys(c.systems || {}).join(', ') || '—';
+    document.getElementById('contract-badge').textContent = 'CONTRACT v' + (c.version || '?');
+    document.getElementById('ci-trust').textContent = 'VERIFIED';
+  }
+}
+
+function countRoutes(c) {
+  if (!c?.systems) return '—';
+  let n = 0;
+  for (const s of Object.values(c.systems)) n += (s.routes || []).length;
+  return n + ' total';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  renderFileWarning();
+  // Health
+  await pollDots();
+  setInterval(pollDots, 15000);
+
+  // SSE
+  connectSSE();
+
+  // Contract
+  await loadContract();
+
+  // Uptime
+  const h = await apiFetch('GET', '/health');
+  if (h.ok && h.data?.uptime) {
+    const s = h.data.uptime;
+    const m = Math.floor(s/60), hr = Math.floor(m/60);
+    document.getElementById('uptime-badge').textContent = hr ? `UP ${hr}h ${m%60}m` : `UP ${m}m`;
+  }
+})();
+
+// Initialise visible tab display state
+document.getElementById('explorer').style.display = 'flex';
+</script>
+</body>
+</html>

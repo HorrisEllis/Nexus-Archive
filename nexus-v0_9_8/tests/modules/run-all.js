@@ -1,0 +1,113 @@
+'use strict';
+/**
+ * tests/modules/run-all.js — Module Test Runner
+ * UUID: test-modules-runner-v1-0000-4000-0000-000000000001
+ *
+ * Runs every per-module fractal adversarial test suite.
+ * Each module test lives at tests/modules/<module>.test.js
+ *
+ * §12.1 Every runtime file has a brutal recursive test suite.
+ * §12.2 Tests are verification, not coverage.
+ *
+ * Run: node tests/modules/run-all.js
+ */
+
+const path = require('path');
+const fs   = require('fs');
+
+const MODULES_DIR = __dirname;
+
+const SUITES = [
+  'jaa-db.test.js',
+  'queue.test.js',
+  'baseline.test.js',
+  'intelligence.test.js',
+  'ollama-runtime.test.js',
+  'flush-redundancy.test.js',
+  'admin-server-routes.test.js',
+  'orchestrator-cli.test.js',
+  'interaction-contract.test.js',
+  'uid.test.js',
+  'alk.test.js',
+  'healer.test.js',
+  'constitutional-ai.test.js',
+  'reflection.test.js',
+  'user-model.test.js',
+  'snapshot-integrity.test.js',
+  'compartment-engine.test.js',
+  'adversary-suite.test.js',
+  'crystal-lattice.test.js',
+  'case-library.test.js',
+  'autonomous-loop.test.js',
+  // FIX (James, 2026-06-19): these six suites existed, passed standalone,
+  // and were never registered here — `node tests/modules/run-all.js` was
+  // silently skipping all of them. Found while wiring tests for this pass,
+  // not something I broke.
+  'test-component-registry.js',
+  'test-grammar-engine.js',
+  'test-grammar-fallback.js',
+  'test-mutation-contract.js',
+  'test-intelligence-bridge.js',
+  'test-liminal-space.js',
+  'test-snr-filter.js',
+  'test-ui-registry.js',
+];
+
+let totalPassed = 0;
+let totalFailed = 0;
+const results = [];
+
+async function runSuite(file) {
+  return new Promise((resolve) => {
+    const { spawn } = require('child_process');
+    const proc = spawn('node', [path.join(MODULES_DIR, file)], {
+      cwd: path.join(__dirname, '../..'),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let out = '';
+    proc.stdout.on('data', d => { out += d; process.stdout.write(d); });
+    proc.stderr.on('data', d => { process.stderr.write(d); });
+
+    proc.on('close', (code) => {
+      // FIX (James, 2026-06-19): two test-file naming conventions in this
+      // codebase use two different summary formats —
+      //   *.test.js    : "16 passed  0 failed"   (whitespace-separated)
+      //   test-*.js    : "16 passed, 0 failed"    (comma-separated)
+      // The old regex only matched the first, so every test-*.js suite
+      // silently reported 0/0 here even though it ran and passed for real.
+      const match = out.match(/(\d+)\s*passed,?\s+(\d+)\s*failed/);
+      const p = match ? parseInt(match[1]) : 0;
+      const f = match ? parseInt(match[2]) : 0;
+      totalPassed += p;
+      totalFailed += f;
+      results.push({ file, passed: p, failed: f, code });
+      resolve();
+    });
+  });
+}
+
+async function main() {
+  console.log('\n══ NEXUS MODULE TESTS — Fractal Adversarial Suite ══\n');
+
+  for (const suite of SUITES) {
+    const fp = path.join(MODULES_DIR, suite);
+    if (!fs.existsSync(fp)) {
+      console.log(`  SKIP (not found): ${suite}`);
+      continue;
+    }
+    await runSuite(suite);
+  }
+
+  console.log('\n══ MODULE TEST RESULTS ══════════════════════════════');
+  for (const r of results) {
+    const status = r.failed === 0 ? '✓' : '✗';
+    console.log(`  ${status} ${r.file.padEnd(40)} ${r.passed} passed  ${r.failed} failed`);
+  }
+  console.log('─'.repeat(55));
+  console.log(`  TOTAL: ${totalPassed} passed  ${totalFailed} failed`);
+
+  if (totalFailed > 0) process.exitCode = 1;
+}
+
+main().catch(e => { console.error(e); process.exitCode = 1; });
