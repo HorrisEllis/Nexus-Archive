@@ -193,17 +193,21 @@ async function boot() {
   // ── Seed built-in hooks (first boot) ────────────────────────────────────
   if (registry.list().length === 0) {
     _seedBuiltinHooks(registry);
-    // Also seed from living hooks registry (hooks/*.hooks.js)
-    if (systemHooks) {
-      const allHooks = systemHooks.allHooks ? systemHooks.allHooks() : [];
-      let seeded = 0;
-      for (const hook of allHooks) {
-        try { registry.register(hook); seeded++; }
-        catch(_) {} // skip duplicates
-      }
-      if (seeded > 0) console.log(`[architect] seeded ${seeded} hooks from living registry`);
-    }
   }
+
+  // ── §FIX-ROADMAP-62: sync from canonical registry, not hooks/*.hooks.js ──
+  // lib/component-registry.js is canonical (decision: runtime+CLI already
+  // depend on it). hooks/*.hooks.js is no longer read here — it drifted
+  // immediately when hand-maintained separately (Addendum #2 audit). The
+  // sync is idempotent and safe to re-run; it only manages hooks it tagged
+  // itself, never built-ins or hand-authored hooks.
+  const { syncFromComponentRegistry } = require('./src/hooks/sync-from-component-registry');
+  syncFromComponentRegistry(registry).catch(e =>
+    console.warn(`[architect] component-registry sync failed: ${e.message}`));
+  const _hookSyncInterval = setInterval(() => {
+    syncFromComponentRegistry(registry).catch(() => {});
+  }, 30000);
+  if (_hookSyncInterval.unref) _hookSyncInterval.unref();
 
   // Phase 5 HARD: HTTP server
   console.log(`[architect] §3.1 Phase 4: HTTP :${PORT}`);

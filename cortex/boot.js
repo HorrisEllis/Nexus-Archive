@@ -145,6 +145,36 @@ async function bootAsync() {
     },
   });
 
+  // ── Phase 1.5 SOFT: Phase 14.x expansion modules ─────────────────────────
+  // sigma-writer (sigma_records producer), gap-ledger (crash durability),
+  // contract-registry-writer (constitutional write-back), diag-engines
+  // (12-engine health pack), open-loop-taxonomy status patch.
+  // Must run after storage.init (jaaDB open) and before organs.init, since
+  // gap-loop's init() wraps jaaDB with gapLedger.wrapJAAGaps() on boot and
+  // needs the expansion module loaded first. SOFT — degraded expansion
+  // modules never block cortex boot.
+  seq.phase({ name:'expansion.boot.14x', type:'SOFT',
+    label:'Phase 14.x expansion boot (sigma-writer, gap-ledger, contract-registry-writer, diag-engines)',
+    fn: async () => {
+      try {
+        const expansion = require('../lib/nexus-expansion-boot');
+        const bus = require('../nexus-bus');
+        const results = await expansion.boot({ jaaDB, bus });
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.expansion.booted', ts: Date.now(),
+          payload: results, source: 'boot', causedBy: null,
+        });
+      } catch (e) {
+        console.warn(`[cortex/boot] expansion 14.x boot degraded: ${e.message}`);
+        jaaDB.insert('event_log', {
+          uuid: uid(), type: 'cortex.expansion.boot.degraded', ts: Date.now(),
+          payload: { error: e.message, stack: e.stack?.split('\n')[1] || '' },
+          source: 'boot', causedBy: null,
+        });
+      }
+    },
+  });
+
   // ── Phase 2 HARD: cobalt core ────────────────────────────────────────────
   seq.phase({ name:'core.init', type:'HARD',
     label:'Cobalt core open + project connect',

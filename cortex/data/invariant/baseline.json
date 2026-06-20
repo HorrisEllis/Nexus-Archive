@@ -1,0 +1,24 @@
+{
+  "establishedAt": 1781882676314,
+  "eventCount": 10,
+  "latency": {
+    "mean": 0,
+    "sigma": 0,
+    "p95": 0
+  },
+  "errorRate": {
+    "mean": 0.1,
+    "sigma": 0.3
+  },
+  "eventTypes": {
+    "health.fail": 1,
+    "cortex.case_library.wiring": 1,
+    "cortex.autonomous_loop.wiring": 1,
+    "snapshot.created": 1,
+    "agent-tools.ready": 1,
+    "system.booted": 1,
+    "cortex.contracts.loaded": 1,
+    "raid.health": 2,
+    "heartbeat.tick": 1
+  }
+}

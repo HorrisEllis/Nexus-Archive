@@ -1163,7 +1163,7 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
         fs.mkdirSync(dir,{recursive:true});
         fs.appendFileSync(rp.join(dir,'events.ndjson'),
           JSON.stringify({type:'guardian.boot',version:'3.5.0',pid:process.pid,ts:Date.now()})+'\n');
-        await nc2.postLedger('guardian.boot', { version:'3.5.0', pid:process.pid });
+        await nc2.postLedger('guardian', 'guardian.boot', { version:'3.5.0', pid:process.pid });
         return { ok: true };
       } catch(e) { return { ok:false, msg:e.message }; }
     }

@@ -59,7 +59,12 @@ const SNR_WINDOW = 50;
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
-const DATA_DIR = join(__dir, '../../data');
+// Was '../../data' — idearium/ -> .. -> nexus/ -> .. -> OUTSIDE the repo
+// entirely. Every "ideas 0 / specs 0" all session was this: loadDB() found
+// no file at the (wrong) resolved path and silently returned freshDB() —
+// never touching the real data at nexus/data/idearium.json. Same off-by-one
+// as the event ledger path, same root cause, fixed together.
+const DATA_DIR = join(__dir, '../data');
 const DB_FILE  = join(DATA_DIR, 'idearium.json');
 
 function ensureDataDir() {
@@ -133,15 +138,20 @@ export class IdeaOS {
     // §LAW II — event ledger: every emit written before routing
     try {
       const _require = createRequire(import.meta.url);
-      const { createEventLedger } = _require('../../lib/event-ledger');
-      this._evLedger = createEventLedger({
+      // §CFR-WIRE-04: this used to require('../../lib/event-ledger') — one
+      // '..' too many (idearium/ -> .. -> nexus/ -> .. -> outside the repo),
+      // so _evLedger was permanently null. Fixed path AND upgraded straight
+      // to the CFR-Ω ledger (sigma/delta/field annotation + /cfr/* routes),
+      // same drop-in surface as cortex/guardian/bridge/orchestrator.
+      const { createCFRLedger } = _require('../lib/cfr/ledger');
+      this._evLedger = createCFRLedger({
         ledgerDir: _require('path').join(_require('path').dirname(
-          _require('url').fileURLToPath(import.meta.url)), '../../data/idearium'),
+          _require('url').fileURLToPath(import.meta.url)), '../data/idearium'),
         systemId: 'idearium',
       });
       this._evLedger.open();
       this._evLedger.startAutoSave(60000);
-    } catch(e) { this._evLedger = null; }
+    } catch(e) { this._evLedger = null; console.error(`[idearium][ERROR] cfr ledger init failed: ${e.message}`); }
 
     this._registerGates();
     this._recalcSNR();
@@ -166,6 +176,7 @@ export class IdeaOS {
     S.register(new GapResolveGate(this));
     S.register(new GapIgnoreGate(this));
     S.register(new SnapshotGate(this));
+    S.register(new SnapshotRestoreGate(this));
     S.register(new SNRSampleGate(this));
     S.register(new ErrorGate(this));
   }
@@ -583,6 +594,17 @@ class SnapshotGate extends Gate {
       tensionMap,
       phaseMap,
       causedBy,
+      // ── Actual state, not just aggregates. Without this, "pull" has
+      // nothing real to restore — a count and a tension map aren't a
+      // working state, they're a summary of one. Deep-cloned so later
+      // mutation of the live db doesn't corrupt history. §7.1 dual ledger:
+      // this is the Upgrade Ledger half — actual restorable truth.
+      state: {
+        ideas: JSON.parse(JSON.stringify(os.db.ideas)),
+        specs: JSON.parse(JSON.stringify(os.db.specs)),
+        gaps:  JSON.parse(JSON.stringify(os.db.gaps)),
+        links: JSON.parse(JSON.stringify(os.db.links)),
+      },
     };
     // snr delta vs last snapshot
     if (os.db.snapshots.length) snap.snrDelta = Math.round((os.snr - (os.db.snapshots[0].snr||0)) * 1000)/1000;
@@ -590,6 +612,32 @@ class SnapshotGate extends Gate {
     saveDB(os.db);
     stream.emit(new Event('idearium.snapshot.committed', { snapshot: snap }));
     os._broadcast({ uuid: randomUUID(), type: 'push.complete', payload: snap, ts: Date.now() });
+  }
+}
+
+// ── Restore (pull) — replaces live ideas/specs/gaps/links with a snapshot's
+// captured state. Auto-pushes a safety snapshot of CURRENT state first —
+// same as git stash before a destructive checkout — so §M1 (nothing ever
+// deleted) holds even though this overwrites the working set.
+class SnapshotRestoreGate extends Gate {
+  constructor(os) { super('idearium.snapshot.restore'); this.os = os; }
+  transform(event, stream) {
+    const { commitId, author = 'cli' } = event.data;
+    const os = this.os;
+    const target = os.db.snapshots.find(s => s.commitId === commitId || s.uuid === commitId);
+    if (!target) { stream.emit(new Event('idearium.error', { op:'snapshot.restore', reason:`snapshot not found: ${commitId}` })); return; }
+    if (!target.state) { stream.emit(new Event('idearium.error', { op:'snapshot.restore', reason:`snapshot ${commitId} predates full-state capture — nothing to restore (old snapshots only have aggregate stats)` })); return; }
+
+    // Safety snapshot of current state before overwriting — pre-restore stash.
+    stream.emit(new Event('idearium.snapshot.commit', { message: `pre-restore snapshot (before pulling ${commitId})`, branch: 'main', author }));
+
+    os.db.ideas = JSON.parse(JSON.stringify(target.state.ideas));
+    os.db.specs = JSON.parse(JSON.stringify(target.state.specs));
+    os.db.gaps  = JSON.parse(JSON.stringify(target.state.gaps));
+    os.db.links = JSON.parse(JSON.stringify(target.state.links));
+    saveDB(os.db);
+    stream.emit(new Event('idearium.snapshot.restored', { commitId: target.commitId }));
+    os._broadcast({ uuid: randomUUID(), type: 'pull.complete', payload: { commitId: target.commitId }, ts: Date.now() });
   }
 }
 

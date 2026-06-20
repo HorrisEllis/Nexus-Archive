@@ -83,7 +83,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
   background:rgba(6,6,16,.88);border:1px solid rgba(255,255,255,.1);
   border-radius:14px;padding:12px 14px;
   backdrop-filter:blur(16px);width:100%;
+  transition:all .25s ease;
 }
+#bot-bar-head{display:flex;align-items:center;justify-content:space-between}
+#bot-bar-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.14em;color:rgba(255,255,255,.25);text-transform:uppercase}
+#fullscreen-btn{
+  background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;
+  color:rgba(255,255,255,.4);font-size:13px;line-height:1;padding:4px 7px;cursor:pointer;
+  transition:all .2s;
+}
+#fullscreen-btn:hover{color:#00e5ff;border-color:rgba(0,229,255,.35);background:rgba(0,229,255,.06)}
+/* ── Fullscreen console mode ── */
+#bot-bar.fullscreen{
+  position:fixed;inset:16px;z-index:250;
+  background:rgba(4,4,12,.97);
+}
+#bot-bar.fullscreen #assistant-out{
+  display:block!important;flex:1;max-height:none;font-size:13px;padding:16px;
+}
+#bot-bar.fullscreen #fullscreen-btn{color:#00e5ff;border-color:rgba(0,229,255,.4)}
 #assistant-row{display:flex;gap:8px;align-items:center}
 #assistant-in{
   flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
@@ -111,8 +129,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
 
 /* System status bar — above assistant */
 #sys-bar{
-  display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;
+  display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;
 }
+.spill-group{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .spill{display:flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.07em;text-transform:uppercase}
 .spill-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.15);flex-shrink:0;transition:all .4s}
 .spill-dot.on{background:#00ff88;animation:dot-live 2.5s ease-in-out infinite}
@@ -294,7 +313,45 @@ select option{background:#111}
 }
 #rewind-btn:hover{background:rgba(0,229,255,.16);border-color:rgba(0,229,255,.4);color:#00e5ff}
 
-/* ── Rewind overlay — full meta layer ── */
+/* ── Inspect button — opposite side of REWIND in sys-bar ── */
+#inspect-btn{
+  pointer-events:auto;
+  margin-right:12px;padding:5px 12px;
+  background:rgba(204,68,255,.08);border:1px solid rgba(204,68,255,.2);
+  border-radius:20px;color:rgba(204,68,255,.8);
+  font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;
+  cursor:pointer;transition:all .2s;flex-shrink:0;
+}
+#inspect-btn:hover{background:rgba(204,68,255,.16);border-color:rgba(204,68,255,.4);color:#cc44ff}
+
+/* ── Inspect overlay — contextual diagnostics for the active channel ── */
+#inspect-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,5,.85);backdrop-filter:blur(16px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+#inspect-overlay.open{opacity:1;pointer-events:auto}
+#inspect-panel{
+  width:min(480px,90vw);max-height:80vh;overflow-y:auto;
+  background:rgba(8,8,20,.95);border:1px solid rgba(204,68,255,.25);
+  border-radius:16px;padding:24px;
+  transform:translateY(12px);transition:transform .25s;
+  box-shadow:0 0 40px rgba(204,68,255,.08);
+}
+#inspect-overlay.open #inspect-panel{transform:translateY(0)}
+#insp-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;color:#cc44ff;display:flex;align-items:center;justify-content:space-between}
+#insp-accent{font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.35);margin-top:2px;margin-bottom:16px}
+#insp-status{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:16px}
+#insp-status .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2)}
+#insp-status .dot.on{background:#00ff88}
+#insp-status .dot.err{background:#ff3355}
+#insp-log{font-family:'Space Mono',monospace;font-size:10px;color:rgba(200,220,210,.7);background:rgba(0,0,0,.3);border-radius:8px;padding:10px;max-height:220px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;margin-bottom:16px}
+#insp-actions{display:flex;gap:8px}
+#insp-actions button{flex:1;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:rgba(255,255,255,.75);font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;transition:all .2s}
+#insp-actions button:hover{background:rgba(255,255,255,.1);color:#fff}
+#insp-close{position:absolute;top:18px;right:18px;background:none;border:none;color:rgba(255,255,255,.4);font-size:16px;cursor:pointer}
+#insp-close:hover{color:#fff}
 #rewind-overlay{
   position:fixed;inset:0;z-index:200;
   background:rgba(0,0,5,.85);backdrop-filter:blur(16px);
@@ -1029,19 +1086,26 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
 
     <!-- System status row -->
     <div id="sys-bar">
-      <div class="spill"><span class="spill-dot" id="sd-orch"></span>ORCH</div>
-      <div class="spill"><span class="spill-dot" id="sd-cx"></span>CX</div>
-      <div class="spill"><span class="spill-dot" id="sd-gd"></span>GD</div>
-      <div class="spill"><span class="spill-dot" id="sd-idr"></span>IDR</div>
-      <div class="spill"><span class="spill-dot" id="sd-br"></span>BR</div>
+      <button id="inspect-btn" onclick="openInspect()">⊕ INSPECT</button>
+      <div class="spill-group">
+        <div class="spill"><span class="spill-dot" id="sd-orch"></span>ORCH</div>
+        <div class="spill"><span class="spill-dot" id="sd-cx"></span>CX</div>
+        <div class="spill"><span class="spill-dot" id="sd-gd"></span>GD</div>
+        <div class="spill"><span class="spill-dot" id="sd-idr"></span>IDR</div>
+        <div class="spill"><span class="spill-dot" id="sd-br"></span>BR</div>
+      </div>
       <button id="rewind-btn" onclick="openRewind()">⟲ REWIND</button>
     </div>
 
     <!-- Assistant -->
     <div id="bot-bar">
+      <div id="bot-bar-head">
+        <span id="bot-bar-label">SYSTEM CONSOLE</span>
+        <button id="fullscreen-btn" onclick="toggleConsoleFullscreen()" title="Fullscreen console (Shift+Enter)">⛶</button>
+      </div>
       <div id="assistant-out"></div>
       <div id="assistant-row">
-        <input id="assistant-in" placeholder="Ask NEXUS anything... or type a command" onkeydown="if(event.key==='Enter')asSend()">
+        <input id="assistant-in" placeholder="Ask NEXUS anything... or type a command" onkeydown="if(event.key==='Enter')asSend();if(event.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen'))toggleConsoleFullscreen()">
         <button id="send-btn" onclick="asSend()">→</button>
       </div>
       <div id="ticker-line">NEXUS v0.6.3 · sovereign cognitive OS · waiting for systems...</div>
@@ -1109,6 +1173,21 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
         </div>
       </div>
       <div id="rw-status"></div>
+    </div>
+  </div>
+
+  <!-- ── INSPECT OVERLAY — contextual diagnostics for the active channel ── -->
+  <div id="inspect-overlay" onclick="if(event.target===this)closeInspect()">
+    <div id="inspect-panel">
+      <button id="insp-close" onclick="closeInspect()">✕</button>
+      <div id="insp-title"><span id="insp-name">CHANNEL</span></div>
+      <div id="insp-accent"></div>
+      <div id="insp-status"><span class="dot" id="insp-dot"></span><span id="insp-status-text">checking...</span></div>
+      <div id="insp-log">No recent events for this channel yet.</div>
+      <div id="insp-actions">
+        <button id="insp-reload" onclick="inspectReload()">↺ Reload panel</button>
+        <button onclick="closeInspect();tune(6)">⊕ Full diagnostics</button>
+      </div>
     </div>
   </div>
 
@@ -1182,16 +1261,72 @@ function tune(n){
   if(n===7){const f=document.getElementById('blueprint-iframe');if(f&&!f.src)f.src='/ui/blueprint-builder/index.html';}
 }
 
+// ── Inspect overlay — contextual diagnostics for whatever channel is active ──
+// Maps CH_META index -> { dotId (its live status dot), srcMatch (for
+// filtering recent log rows), reload (re-fetch that channel's data) }.
+// null fields mean "this channel has no single backing system" (Overview,
+// Log, Diagnose, Blueprint aren't 1:1 with a system dot).
+const CH_INSPECT=[
+  {dotId:null,    srcMatch:'',         reload:null},
+  {dotId:'sd-gd', srcMatch:'guardian', reload:()=>{gdLoadJobs();gdLoadProvs()}},
+  {dotId:'sd-cx', srcMatch:'cortex',   reload:()=>{cxLoadGaps();cxLoadFails()}},
+  {dotId:'sd-idr',srcMatch:'idearium', reload:()=>idrLoad()},
+  {dotId:'sd-br', srcMatch:'bridge',   reload:()=>brLoad()},
+  {dotId:null,    srcMatch:'',         reload:()=>clearLog()},
+  {dotId:null,    srcMatch:'',         reload:()=>{buildDiag();runDiag();loadDiagCFR();loadDiagGaps()}},
+  {dotId:null,    srcMatch:'',         reload:()=>{const f=document.getElementById('blueprint-iframe');if(f&&f.src)f.src=f.src}},
+];
+
+function openInspect(){
+  const meta=CH_META[curCh],info=CH_INSPECT[curCh];
+  document.getElementById('insp-name').textContent=meta.name;
+  document.getElementById('insp-accent').textContent=meta.accent;
+  const dotEl=info.dotId?document.getElementById(info.dotId):null;
+  const statusDot=document.getElementById('insp-dot'),statusText=document.getElementById('insp-status-text');
+  if(dotEl){
+    const isErr=dotEl.classList.contains('err'),isOn=dotEl.classList.contains('on');
+    statusDot.className='dot'+(isErr?' err':isOn?' on':'');
+    statusText.textContent=isErr?'error':isOn?'online':'offline / unknown';
+  }else{
+    statusDot.className='dot';
+    statusText.textContent='n/a — this channel has no single backing system';
+  }
+  const rows=Array.from(document.querySelectorAll('#log-stream .ll'));
+  const filtered=info.srcMatch?rows.filter(r=>r.querySelector('.ll-src')?.textContent?.toLowerCase().includes(info.srcMatch)):rows;
+  const logEl=document.getElementById('insp-log');
+  logEl.textContent=filtered.length?filtered.slice(0,8).map(r=>r.textContent).join('\n'):'No recent events for this channel yet.';
+  document.getElementById('insp-reload').style.display=info.reload?'':'none';
+  document.getElementById('inspect-overlay').classList.add('open');
+}
+function closeInspect(){document.getElementById('inspect-overlay').classList.remove('open')}
+function inspectReload(){const info=CH_INSPECT[curCh];if(info&&info.reload)info.reload()}
+
+// ── Fullscreen system console ────────────────────────────────────────────────
+function toggleConsoleFullscreen(){
+  const bar=document.getElementById('bot-bar');
+  const goingFullscreen=!bar.classList.contains('fullscreen');
+  bar.classList.toggle('fullscreen',goingFullscreen);
+  if(goingFullscreen){
+    document.getElementById('assistant-out').style.display='block';
+    document.getElementById('assistant-in').focus();
+  }
+}
+
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
   if(e.key==='ArrowLeft'||e.key==='[')tune(Math.max(0,curCh-1));
   if(e.key==='ArrowRight'||e.key===']')tune(Math.min(CH_META.length-1,curCh+1));
   if(e.key>='1'&&e.key<='7')tune(parseInt(e.key)-1);
   if(e.key==='m'||e.key==='M')toggleMenu();
+  if(e.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen')){toggleConsoleFullscreen();return}
+  if(e.key==='Escape'&&document.getElementById('inspect-overlay').classList.contains('open')){closeInspect();return}
   if(e.key==='Escape'&&menuOpen)toggleMenu();
   if(e.key==='Escape')closeModeSelector();
   if((e.key==='r'||e.key==='R')&&!menuOpen)openRewind();
+  if((e.key==='i'||e.key==='I')&&!menuOpen)openInspect();
 });
+
+
 
 // ── Health polling ────────────────────────────────────────────────────────────
 const SYSTEMS=[
@@ -1328,6 +1463,20 @@ function connectSSE(){
   try{
     const gdEs=new EventSource(`${B.gd}/events`);
     gdEs.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type&&(d.type.includes('job')||d.type.includes('guardian')))gdLoadJobs()}catch(_){}};
+  }catch(_){}
+  // Idearium SSE for live card refresh — proxied through orchestrator
+  // (Phase 23.5 lockdown: idearium is reached via the orchestrator gateway,
+  // not dialed directly, unlike guardian/cortex above).
+  try{
+    const idrEs=new EventSource(`${B.orch}/api/idearium/sse`);
+    idrEs.onmessage=e=>{
+      try{
+        const d=JSON.parse(e.data);
+        if(d.type==='idea.created'||d.type==='idea.updated'){
+          if(curCh===3)idrLoad();
+        }
+      }catch(_){}
+    };
   }catch(_){}
 }
 // Map source strings to their dot element IDs

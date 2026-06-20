@@ -1,0 +1,1 @@
+{"uuid":"a04cc627-14ef-4c67-96cc-96e295f651d3","type":"decision","actor":"llm","intent":"generate","payload":{"jobId":"e99b2908-0f32-42d9-af2c-ac51a26713b8","provider":"chatgpt","command":"forge","promptHash":"Phase 10 — Constitutional AI\n\nlib/consti"},"outcome":null,"causedBy":null,"reversedBy":null,"sigma":0,"ts":1781893913486}

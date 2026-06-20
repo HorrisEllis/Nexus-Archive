@@ -36,7 +36,8 @@
 // §4.3  Enterprise-grade: friction ledger, blast radius, circuit breaker all consulted
 
 const path = require('path');
-const { jaaDB, uid } = require('./memory/jaa-db');
+const { jaaDB: _rawJaaDB, uid } = require('./memory/jaa-db');
+let jaaDB = _rawJaaDB;
 const taxonomy = require('../lib/open-loop-taxonomy');
 const topology = require('../lib/loop-topology');
 const { LOOP_TYPES, LOOP_STATES, classify, ecology } = taxonomy;
@@ -630,7 +631,25 @@ async function _tick() {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 function init(cfg = {}) {
-  _cfg      = cfg;
+  _cfg = cfg;
+
+  // ── Gap-ledger crash durability (Phase 14.7) ────────────────────────────
+  try {
+    const gapLedger = require('../lib/gap-ledger');
+    const survived = gapLedger.replayGaps();
+    if (survived.length) {
+      console.log(`[${MODULE_ID}] Replaying ${survived.length} gaps from crash ledger`);
+      for (const gap of survived) {
+        const existing = jaaDB.query('gaps', r => r.uuid === gap.uuid, 1)[0];
+        if (!existing) jaaDB.insert('gaps', gap);
+      }
+    }
+    jaaDB = gapLedger.wrapJAAGaps(jaaDB);
+    console.log(`[${MODULE_ID}] gap-ledger wired — durable gap writes active`);
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] gap-ledger not wired — gaps remain in-memory only: ${e.message}`);
+  }
+
   _interval = setInterval(_tick, cfg.pollMs ?? POLL_MS);
   _interval.unref();
   console.log(`[${MODULE_ID}] v${VERSION} — poll:${cfg.pollMs ?? POLL_MS}ms batch:${BATCH_SIZE}`);

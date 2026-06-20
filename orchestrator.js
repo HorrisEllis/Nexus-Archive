@@ -112,10 +112,15 @@ const { buildIntentMap } = require('./lib/intent-map');  // Gap 2: intent-map en
 // ── Hoist all dynamic requires — fixes ReferenceError in ESM-adjacent contexts ──
 // These were previously inside server.listen callback and cli functions.
 // §3.1 load order is law — all imports declared before any logic runs.
-let BootSequence, _bootSystems, createEventLedger, spawnChild;
+let BootSequence, _bootSystems, createCFRLedger, spawnChild;
 try { ({ BootSequence } = require('./lib/boot-sequence')); } catch(e) { console.warn('[orchestrator] boot-sequence not found:', e.message); BootSequence = null; }
 try { ({ _bootSystems } = require('./cli/boot-systems')); } catch(e) { console.warn('[orchestrator] boot-systems not found:', e.message); _bootSystems = null; }
-try { ({ createEventLedger } = require('./lib/event-ledger')); } catch(e) { console.warn('[orchestrator] event-ledger not found:', e.message); createEventLedger = null; }
+// §CFR-WIRE-01: orchestrator now runs the CFR-Ω ledger (sigma/delta/field on
+// every ledgerWrite) instead of the plain event-ledger. ledgerWrite() below is
+// already the single funnel point, so this is a drop-in swap — same .record()/
+// .open()/.startAutoSave()/.getAllBaselines()/.getAllStats()/.scanInvariants()
+// surface, plus .handleCFRRoute() for the /cfr/* debugger routes mounted below.
+try { ({ createCFRLedger } = require('./lib/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
 const nexusBus       = (() => { try { return require('./nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
@@ -327,12 +332,25 @@ const LEDGER_FILE = path.join(LEDGER_DIR, 'orchestrator.jsonl');
 // §LAW II — module-scope event ledger: every ledgerWrite goes here first
 let _eventLedger = null;
 try {
-  if (createEventLedger) {
-    _eventLedger = createEventLedger({ ledgerDir: LEDGER_DIR, systemId:'orchestrator' });
+  if (createCFRLedger) {
+    _eventLedger = createCFRLedger({
+      ledgerDir: LEDGER_DIR,
+      systemId: 'orchestrator',
+      onGap: (gap) => {
+        // §CFR-WIRE-02: mirror cortex/boot.js's gap routing — tension signals
+        // are field observations, not actionable gaps, so they're dropped
+        // here rather than ever reaching a queue that nothing will drain.
+        try {
+          const SIGNAL_TYPES = new Set(['DELTA.TENSION','delta.tension','tension','cfr.tension']);
+          if (SIGNAL_TYPES.has(gap.type)) return;
+          console.warn(`[orchestrator][cfr] ${gap.type}: ${gap.message}`);
+        } catch(_) {}
+      },
+    });
     _eventLedger.open();
     _eventLedger.startAutoSave(60000);
   }
-} catch(e) { console.warn('[orchestrator] event-ledger init failed:', e.message); }
+} catch(e) { console.warn('[orchestrator] cfr ledger init failed:', e.message); }
 
 // In-memory ring (fast reads)
 const LEDGER = { orchestrator:[], cortex:[], guardian:[], idearium:[], emerge:[] };
@@ -618,6 +636,11 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (nexusBus) { nexusBus.handleSSE(req,res); return; }
     res.writeHead(503); return res.end('nexus-bus not loaded');
   }
+  // ── CFR-Ω routes — orchestrator's own field debugger ────────────────────
+  // §CFR-WIRE-03: same handleCFRRoute() contract as cortex/guardian/bridge.
+  if (u.pathname.startsWith('/cfr')) {
+    if (_eventLedger && _eventLedger.handleCFRRoute && _eventLedger.handleCFRRoute(req, res, u)) return;
+  }
   if (M==='POST' && u.pathname==='/api/nexus/query') {
     if (!nexusQuery) return json(res,503,{ok:false,error:'nexus-query not loaded'});
     try { const b=await readBody(req); const r=await nexusQuery.query(b); return json(res,r.ok?200:500,r); }
@@ -641,6 +664,23 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   if (M==='GET'&&u.pathname==='/api/nexus/bus') {
     if (!nexusBus) return json(res,503,{ok:false,error:'not loaded'});
     return json(res,200,{ok:true,...nexusBus.stats(),recent:nexusBus.history(20)});
+  }
+  // ── Component Registry (Phase 63b) ────────────────────────────────────────
+  // lib/component-registry.js exports handleRequest specifically to be
+  // mounted here ("Mounted on orchestrator. All routes under /api/components."
+  // — its own doc comment) but nothing ever called it. require() returns the
+  // same module-cache singleton compReg.init() already initialized at boot
+  // (see "Component Registry + UI Registry init" above) — this does not
+  // create a second instance.
+  if (u.pathname.startsWith('/api/components')) {
+    let compReg;
+    try { compReg = require('./lib/component-registry'); }
+    catch(e) { return json(res,503,{ok:false,error:'component-registry not loaded: '+e.message}); }
+    const cseg = u.pathname.split('/').filter(Boolean); // ['api','components', sub?, rest?]
+    const csub = cseg[2], crest = cseg[3];
+    const cbody = (M==='POST'||M==='PUT') ? await readBody(req) : null;
+    const result = compReg.handleRequest(M, csub, crest, cbody, u.searchParams);
+    return json(res, result._status || (result.ok===false ? 400 : 200), result);
   }
     if (M==='GET' && u.pathname==='/sse') {
     res.writeHead(200, { 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache',
@@ -751,10 +791,17 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     registryUpdate(systemId, { port, meta, registeredAt: Date.now() });
 
     // Component registry — auto-register system components (CR-007)
+    // §FIX: this previously referenced an undefined '_bus' variable, which
+    // threw on every single call (caught + warned, never actually
+    // registering anything) — the registry has been stuck at 0 components
+    // since CR-007 was built, regardless of what any system sent. The third
+    // arg isn't even used internally by onSystemRegister (component-registry
+    // emits via its own module-level _bus set during its own init()), so
+    // there's nothing to pass here.
     if (Array.isArray(body.components) && body.components.length) {
       try {
         const reg = require('./lib/component-registry');
-        reg.onSystemRegister(systemId, body.components, _bus);
+        reg.onSystemRegister(systemId, body.components);
       } catch(e) {
         console.warn('[component-registry] auto-register failed:', e.message);
       }

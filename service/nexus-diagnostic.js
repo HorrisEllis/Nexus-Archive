@@ -64,17 +64,27 @@ function _getSysRuntime(name) {
 // throwing, and both existing call sites already null-check it correctly
 // (`if (!de) return 503` / `if (de2) {...}`) — they just needed the function
 // to actually exist. §1.2 (nothing silent): logs once, not per-request.
+// §FIX-14.8a-CORRECTED: the Phase 14.x expansion shipped lib/diag-engines/index.js,
+// but it exports runAll(snapshot) -> {composite,status,engines,critical} — a
+// different API than what /engines and /tension below actually call
+// (runAllEngines({events,systemStates}) -> {healthScore,alertCount,alerts,
+// engines:{X:{regime}}}). That exact API already exists, fully implemented
+// with all 12 engines, in lib/diagnostic-engines.js — it was just never wired
+// in here. Pointing the loader there fixes the real 503s with zero API risk.
+// lib/diag-engines/ (the JAA-snapshot-based pack) is still installed and
+// reachable via lib/nexus-expansion-boot.js#getDiagEngines() for future use
+// against buildDiagSnapshot(jaaDB, bus) — just not as this endpoint's source.
 let _diagEngines = null;
 let _diagEnginesWarned = false;
 function _getDiagEngines() {
   if (_diagEngines !== null) return _diagEngines || null;
   try {
-    _diagEngines = require('../lib/diag-engines/index.js');
+    _diagEngines = require('../lib/diagnostic-engines.js');
   } catch (_) {
     _diagEngines = false;
     if (!_diagEnginesWarned) {
       _diagEnginesWarned = true;
-      console.warn(`[nexus-diagnostic] diagnostic engines module not found (../lib/diag-engines) — ` +
+      console.warn(`[nexus-diagnostic] diagnostic engines module not found (../lib/diagnostic-engines) — ` +
         `/engines and the engine summary on /tension will report unavailable instead of crashing. ` +
         `This is a real gap (Phase 47/CG-class: missing module, not a transient failure) — ` +
         `build or wire ../lib/diag-engines if the 12-engine composite health pack is needed.`);

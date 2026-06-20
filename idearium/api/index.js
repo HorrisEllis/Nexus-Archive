@@ -37,6 +37,19 @@ function _latticeLink(a, b, w=0.7, t='associated') {
   try { const l=_getLattice(); if(l) { _latticeAdd(a,a); _latticeAdd(b,b); l.connect(a,b,w,t); } } catch(_) {}
 }
 import { getIdeaOS, VERSION } from '../core/index.js';
+import { RepoLayer } from '../repo/index.js';
+import { compileIdeariumSpec } from '../compiler-bridge.js';
+import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
+import path from 'path';
+
+// ── Repo layer singleton — each idea-as-repo lives here, not in a single
+//    hardcoded "Nexus folder". Wired in (previously dead code, zero routes
+//    called it).
+let _repoLayer = null;
+function getRepoLayer() {
+  if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS() });
+  return _repoLayer;
+}
 
 const PORT    = parseInt(process.env.IDEARIUM_PORT   || '4800');
 const BINDING = process.env.IDEARIUM_BIND || '127.0.0.1';
@@ -151,11 +164,14 @@ function matchRoute(method, url) {
     ['GET',    ['api','ideas'],           'idea.list'],
     ['POST',   ['api','ideas'],           'idea.create'],
     ['GET',    ['api','specs'],           'spec.list'],
+    ['POST',   ['api','specs'],           'spec.create'],
     ['GET',    ['api','gaps'],            'gap.list'],
     ['POST',   ['api','gaps'],            'gap.open'],
     ['GET',    ['api','snapshots'],       'snapshot.list'],
     ['POST',   ['api','snapshots'],       'snapshot.push'],
     ['POST',   ['api','cli','exec'],      'cli.exec'],      // unified CLI axiom
+    ['GET',    ['api','repos'],           'repo.list'],
+    ['POST',   ['api','repos'],           'repo.ingest'],
     ['GET',    ['sse'],                   'sse'],
   ];
 
@@ -195,6 +211,11 @@ function matchRoute(method, url) {
     ['POST',   ['api','gaps',     ':uuid','ignore'],      'gap.ignore'],
     ['GET',    ['api','snapshots',':uuid'],               'snapshot.show'],
     ['GET',    ['api','snapshots',':a','diff',':b'],      'snapshot.diff'],
+    ['POST',   ['api','snapshots',':uuid','restore'],     'snapshot.restore'],
+    ['GET',    ['api','repos',    ':uuid'],               'repo.show'],
+    ['POST',   ['api','repos',    ':uuid','fork'],        'repo.fork'],
+    ['DELETE', ['api','repos',    ':uuid'],               'repo.archive'],
+    ['GET',    ['api','repos',    ':uuid','lineage'],     'repo.lineage'],
   ];
 
   for (const [m, pattern, action] of dynRoutes) {
@@ -329,6 +350,13 @@ async function handle(req, res, route, query, body) {
     case 'spec.list':
       return ok(res, { specs: os.specs(query) });
 
+    case 'spec.create': {
+      if (!body.name) return err(res, 400, 'name required');
+      os.emit('idearium.spec.create', { name: body.name, ideaUuid: body.ideaUuid || null, source: 'api' });
+      const spec = os.db.specs[os.db.specs.length - 1];
+      return ok(res, { spec });
+    }
+
     case 'spec.show': {
       const spec = os.spec(params.uuid);
       if (!spec) return err(res, 404, `spec not found: ${params.uuid}`);
@@ -381,11 +409,37 @@ async function handle(req, res, route, query, body) {
         sections: built.length, ts: Date.now(),
       });
 
+      // ── Actually compile — this used to be the gap: spec.build only
+      // flipped a phase field and never touched emerge/compiler, which is
+      // a real, separate, working Tier 0/1 compiler. compileIdeariumSpec()
+      // converts the section-shaped spec into what that compiler expects,
+      // runs it (Cortex preflight → T0 structure → T1 scaffold → writeback),
+      // and also drops a ui-map.json stub for Architect (Phase 43 isn't
+      // built yet — the stub is labeled as such, not presented as real).
+      const outputDir = path.join(os.dataDir || path.join(process.cwd(), 'data'), 'compiled', params.uuid);
+      let compileResult;
+      try {
+        compileResult = await compileIdeariumSpec(checked, outputDir, { tier: 1 });
+      } catch (e) {
+        compileResult = { ok: false, error: e.message, step: 'bridge-call' };
+      }
+
+      if (compileResult.ok) {
+        os.emit('idearium.spec.compiled', {
+          specUuid: params.uuid, outputDir,
+          t0: compileResult.t0?.emitted?.length ?? 0,
+          t1: compileResult.t1?.emitted?.length ?? 0,
+          topology: compileResult.topology || null,
+        });
+      } else {
+        os.emit('idearium.error', { op: 'spec.build.compile', reason: compileResult.error });
+      }
+
       // Notify orchestrator
       import('http').then(({ default: http }) => {
         const payload = JSON.stringify({
           system: 'idearium', type: 'idearium.spec.built',
-          payload: { specUuid: params.uuid, name: spec.name, sections: built.length },
+          payload: { specUuid: params.uuid, name: spec.name, sections: built.length, compiled: !!compileResult.ok },
         });
         const r = http.request({ hostname:'127.0.0.1', port:9000, path:'/api/ledger',
           method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)} }, ()=>{});
@@ -395,6 +449,7 @@ async function handle(req, res, route, query, body) {
       return ok(res, {
         status: 'built', spec: os.spec(params.uuid),
         built, missing, message: `spec ${params.uuid.slice(0,8)} → building`,
+        compiler: compileResult,
       });
     }
 
@@ -459,6 +514,53 @@ async function handle(req, res, route, query, body) {
       if (!diff) return err(res, 404, 'one or both snapshots not found');
       return ok(res, { diff });
     }
+
+    case 'snapshot.restore': {
+      const target = os.db.snapshots.find(s => s.uuid === params.uuid || s.commitId === params.uuid);
+      if (!target) return err(res, 404, `snapshot not found: ${params.uuid}`);
+      if (!target.state) return err(res, 400, `snapshot ${params.uuid} predates full-state capture — nothing to restore`);
+      os.emit('idearium.snapshot.restore', { commitId: target.commitId, author: 'api' });
+      return ok(res, { restored: target.commitId, ideas: target.state.ideas.length, specs: target.state.specs.length, gaps: target.state.gaps.length });
+    }
+
+    // ── Repos ──────────────────────────────────────────────────────────────
+    // Each idea is a repo, not a single hardcoded "Nexus folder". Nexus
+    // itself is just the first ingested repo, not a special case.
+
+    case 'repo.list':
+      return ok(res, { repos: getRepoLayer().list(query) });
+
+    case 'repo.show': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      return ok(res, { repo });
+    }
+
+    case 'repo.ingest': {
+      const { name, files, source, ideaUuid } = body;
+      if (!name) return err(res, 400, 'name required');
+      if (!Array.isArray(files) || files.length === 0) return err(res, 400, 'files[] required (drag-and-drop payload)');
+      const result = getRepoLayer().ingest({ name, files, source: source || 'drop', ideaUuid: ideaUuid || null });
+      if (result.error) return err(res, 400, result.error);
+      return ok(res, result);
+    }
+
+    case 'repo.fork': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const result = getRepoLayer().fork(params.uuid, body.name);
+      if (result.error) return err(res, 400, result.error);
+      return ok(res, result);
+    }
+
+    case 'repo.archive': {
+      const result = getRepoLayer().archive(params.uuid);
+      if (result.error) return err(res, 404, result.error);
+      return ok(res, result);
+    }
+
+    case 'repo.lineage':
+      return ok(res, { lineage: getRepoLayer().lineage(params.uuid) });
 
     // ── Queue / progress push (from forge queue) ──────────────────────────
     case 'idea.progress': {
@@ -556,6 +658,16 @@ export function startAPI() {
 
     const route = matchRoute(req.method, req.url);
     if (!route) {
+      // ── CFR-Ω routes — same handleCFRRoute() contract as the other kernels ──
+      // §CFR-WIRE-05: checked here, not before matchRoute, so existing
+      // idearium routes keep priority and /cfr never shadows anything real.
+      if (req.url.startsWith('/cfr')) {
+        const ledger = os._evLedger;
+        if (ledger && ledger.handleCFRRoute) {
+          const cfrUrl = new URL(req.url, `http://localhost:${PORT}`);
+          if (ledger.handleCFRRoute(req, res, cfrUrl)) return;
+        }
+      }
       return err(res, 404, `${req.method} ${req.url.split('?')[0]} not found`);
     }
 
@@ -678,7 +790,8 @@ function _latticeLink(a, b, w=0.7, t='associated') {
       label:'Register with orchestrator (§AXIOM)',
       fn: async () => {
         const body = JSON.stringify({ systemId:'idearium', port:PORT,
-          meta:{ role:'idea-os', version:VERSION } });
+          meta:{ role:'idea-os', version:VERSION },
+          components: IDEARIUM_COMPONENTS });
         const r = _require('http').request({
           hostname:'127.0.0.1', port:9000, path:'/api/register', method:'POST',
           headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)},
