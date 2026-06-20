@@ -635,8 +635,17 @@ function _handleNCPMessage(msg) {
 
     case 'GUARDIAN_REGISTER':
     case 'NCP_REGISTER': {
-      // Provider registered via GET /channel — already handled by NCP onConnect
-      // Just broadcast ready confirmation
+      // Provider registered via GET /channel — already handled by NCP onConnect.
+      // Propagate claimed/chatId into the NCP client entry NOW so that
+      // GET /providers returns the correct state immediately, without waiting
+      // for the first heartbeat (HB_MS = 8 s). Fixes the UI badge staying at
+      // "NO TAB CONNECTED" or "CONNECTED · PASSIVE" for the first 8 s.
+      if (tabId) {
+        ncp.updateClient(provider, tabId, {
+          claimed: msg.claimed ?? false,
+          chatId:  msg.chatId  ?? null,
+        });
+      }
       ncp.push(provider, { type: 'GUARDIAN_READY', provider, ts: Date.now() });
       bus.emit('guardian.provider.registered', { provider, tabId });
       break;
@@ -1144,7 +1153,7 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
   const nc2 = require('../nexus-connect');
 
   const seq = new BootSequence({
-    systemId: 'guardian', port: HTTP_PORT, version: '3.5.0',
+    systemId: 'guardian', port: HTTP_PORT, version: '3.6.1',
     label: 'Nexus Guardian', maxRetries: 1,
   });
 
@@ -1308,8 +1317,8 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
         const dir = rp.join(__dirname,'..','data','guardian','ledger','boot');
         fs.mkdirSync(dir,{recursive:true});
         fs.appendFileSync(rp.join(dir,'events.ndjson'),
-          JSON.stringify({type:'guardian.boot',version:'3.5.0',pid:process.pid,ts:Date.now()})+'\n');
-        await nc2.postLedger('guardian', 'guardian.boot', { version:'3.5.0', pid:process.pid });
+          JSON.stringify({type:'guardian.boot',version:'3.6.1',pid:process.pid,ts:Date.now()})+'\n');
+        await nc2.postLedger('guardian', 'guardian.boot', { version:'3.6.1', pid:process.pid });
         return { ok: true };
       } catch(e) { return { ok:false, msg:e.message }; }
     }
@@ -2133,7 +2142,7 @@ function handleExtendedRoutes(req, res, url, method) {
     };
     pRes(res, 200, {
       ok: true,
-      guardian:        '3.5.0',
+      guardian:        '3.6.1',
       userscript_claude:  userscriptVersion('userscript-claude.js'),
       userscript_chatgpt: userscriptVersion('userscript-chatgpt.js'),
       spec_parser:     '1.0.0',
@@ -2168,7 +2177,7 @@ function handleExtendedRoutes(req, res, url, method) {
     })();
     pRes(res, 200, {
       ok:              true,
-      version:         '3.5.0',
+      version:         '3.6.1',
       uptime:          process.uptime(),
       pid:             process.pid,
       // Jobs
@@ -2661,7 +2670,7 @@ function handleExtendedRoutes(req, res, url, method) {
               } catch { return null; }
             };
             result = {
-              guardian: '3.5.0',
+              guardian: '3.6.1',
               userscript_claude:  readVer('guardian/userscript-claude.js'),
               userscript_chatgpt: readVer('guardian/userscript-chatgpt.js'),
             };
