@@ -865,31 +865,31 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
   <!-- CH1: OVERVIEW -->
   <div class="ch active" id="ch-overview">
     <div class="sys-grid" id="sys-grid">
-      <div class="sys-tile" onclick="window.open('/ui/orchestrator','_blank')" id="tile-orch">
+      <div class="sys-tile" onclick="tune(8)" id="tile-orch">
         <div class="tile-head"><span class="tile-icon">⬡</span><span class="tile-port">:9000</span><span class="tile-status" id="ts-orch">—</span></div>
         <div class="tile-name" style="color:#00e5ff">Orchestrator</div>
         <div class="tile-desc">Root kernel. Unified API, SSE bus, subsystem lifecycle management.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-routes">—</div><div class="tm-lbl">Routes</div></div><div><div class="tm-val" id="tm-uptime">—</div><div class="tm-lbl">Uptime</div></div></div>
       </div>
-      <div class="sys-tile" onclick="window.open('/ui/guardian','_blank')" id="tile-gd">
+      <div class="sys-tile" onclick="tune(9)" id="tile-gd">
         <div class="tile-head"><span class="tile-icon">⚡</span><span class="tile-port">:7820</span><span class="tile-status" id="ts-gd">—</span></div>
         <div class="tile-name" style="color:#ffaa00">Guardian</div>
         <div class="tile-desc">NCP channel server. Routes AI jobs to browser tab providers via SSE.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-jobs">—</div><div class="tm-lbl">Jobs</div></div><div><div class="tm-val" id="tm-provs">—</div><div class="tm-lbl">Providers</div></div></div>
       </div>
-      <div class="sys-tile" onclick="window.open('/ui/cortex','_blank')" id="tile-cx">
+      <div class="sys-tile" onclick="tune(10)" id="tile-cx">
         <div class="tile-head"><span class="tile-icon">◈</span><span class="tile-port">:3748</span><span class="tile-status" id="ts-cx">—</span></div>
         <div class="tile-name" style="color:#00ff88">Cortex</div>
         <div class="tile-desc">Sovereign memory. 28 JAA tables, gap engine, self-heal, RAID routing.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-gaps">—</div><div class="tm-lbl">Open gaps</div></div><div><div class="tm-val" id="tm-events">—</div><div class="tm-lbl">Events</div></div></div>
       </div>
-      <div class="sys-tile" onclick="window.open('/ui/idearium','_blank')" id="tile-idr">
+      <div class="sys-tile" onclick="tune(11)" id="tile-idr">
         <div class="tile-head"><span class="tile-icon">◐</span><span class="tile-port">:4800</span><span class="tile-status" id="ts-idr">—</span></div>
         <div class="tile-name" style="color:#a78bfa">Idearium</div>
         <div class="tile-desc">Idea lattice. Captures, tensions, and promotes ideas to specs.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-ideas">—</div><div class="tm-lbl">Ideas</div></div><div><div class="tm-val" id="tm-specs">—</div><div class="tm-lbl">Specs</div></div></div>
       </div>
-      <div class="sys-tile" onclick="window.open('/ui/bridge','_blank')" id="tile-br">
+      <div class="sys-tile" onclick="tune(12)" id="tile-br">
         <div class="tile-head"><span class="tile-icon">⟁</span><span class="tile-port">:9999</span><span class="tile-status" id="ts-br">—</span></div>
         <div class="tile-name" style="color:#8890bb">Bridge</div>
         <div class="tile-desc">P2P trust relay. Routes inter-system requests with identity + circuit breaker.</div>
@@ -1084,6 +1084,27 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
       title="Blueprint Builder"></iframe>
   </div>
 
+  <!-- CH9-13: Full standalone system UIs — same lazy-iframe pattern as Blueprint.
+       Reached from the Overview tiles, not the rail — these are the real,
+       dedicated UI for each system (not the thin embedded summary channels
+       above), shown in-page so the menu/top-bar still tracks the channel
+       the way it does everywhere else, instead of popping a new tab. -->
+  <div class="ch" id="ch-orch-full">
+    <iframe src="" id="orch-full-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Orchestrator"></iframe>
+  </div>
+  <div class="ch" id="ch-gd-full">
+    <iframe src="" id="gd-full-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Guardian"></iframe>
+  </div>
+  <div class="ch" id="ch-cx-full">
+    <iframe src="" id="cx-full-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Cortex"></iframe>
+  </div>
+  <div class="ch" id="ch-idr-full">
+    <iframe src="" id="idr-full-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Idearium"></iframe>
+  </div>
+  <div class="ch" id="ch-br-full">
+    <iframe src="" id="br-full-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Bridge"></iframe>
+  </div>
+
 <!-- Top bar — channel name, visible when menu open -->
 <div id="top-bar">
   <span id="ch-name">NEXUS</span>
@@ -1251,6 +1272,11 @@ const CH_META=[
   {id:'ch-log',       name:'EVENT LOG',  accent:'Live SSE stream'},
   {id:'ch-diagnose',  name:'DIAGNOSE',   accent:'System checks · CFR · Gaps'},
   {id:'ch-blueprint', name:'BLUEPRINT',  accent:'Descriptor · Phase map · CLI projector'},
+  {id:'ch-orch-full', name:'ORCHESTRATOR', accent:':9000 · Full UI'},
+  {id:'ch-gd-full',   name:'GUARDIAN',     accent:':7820 · Full UI'},
+  {id:'ch-cx-full',   name:'CORTEX',       accent:':3748 · Full UI'},
+  {id:'ch-idr-full',  name:'IDEARIUM',     accent:':4800 · Full UI'},
+  {id:'ch-br-full',   name:'BRIDGE',       accent:':9999 · Full UI'},
 ];
 let curCh=0;
 let menuOpen=false;
@@ -1272,6 +1298,11 @@ function tune(n){
   if(n===4)brLoad();
   if(n===6){buildDiag();runDiag();loadDiagCFR();loadDiagGaps()}
   if(n===7){const f=document.getElementById('blueprint-iframe');if(f&&!f.src)f.src='/ui/blueprint-builder/index.html';}
+  if(n===8){const f=document.getElementById('orch-full-iframe');if(f&&!f.src)f.src='/ui/orchestrator';}
+  if(n===9){const f=document.getElementById('gd-full-iframe');if(f&&!f.src)f.src='/ui/guardian';}
+  if(n===10){const f=document.getElementById('cx-full-iframe');if(f&&!f.src)f.src='/ui/cortex';}
+  if(n===11){const f=document.getElementById('idr-full-iframe');if(f&&!f.src)f.src='/ui/idearium';}
+  if(n===12){const f=document.getElementById('br-full-iframe');if(f&&!f.src)f.src='/ui/bridge';}
 }
 
 // ── Inspect overlay — contextual diagnostics for whatever channel is active ──
@@ -1288,6 +1319,11 @@ const CH_INSPECT=[
   {dotId:null,    srcMatch:'',         reload:()=>clearLog()},
   {dotId:null,    srcMatch:'',         reload:()=>{buildDiag();runDiag();loadDiagCFR();loadDiagGaps()}},
   {dotId:null,    srcMatch:'',         reload:()=>{const f=document.getElementById('blueprint-iframe');if(f&&f.src)f.src=f.src}},
+  {dotId:null,    srcMatch:'orchestrator', reload:()=>{const f=document.getElementById('orch-full-iframe');if(f&&f.src)f.src=f.src}},
+  {dotId:'sd-gd', srcMatch:'guardian', reload:()=>{const f=document.getElementById('gd-full-iframe');if(f&&f.src)f.src=f.src}},
+  {dotId:'sd-cx', srcMatch:'cortex',   reload:()=>{const f=document.getElementById('cx-full-iframe');if(f&&f.src)f.src=f.src}},
+  {dotId:'sd-idr',srcMatch:'idearium', reload:()=>{const f=document.getElementById('idr-full-iframe');if(f&&f.src)f.src=f.src}},
+  {dotId:'sd-br', srcMatch:'bridge',   reload:()=>{const f=document.getElementById('br-full-iframe');if(f&&f.src)f.src=f.src}},
 ];
 
 function openInspect(){
