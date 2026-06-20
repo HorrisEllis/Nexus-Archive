@@ -53,6 +53,7 @@ function buildSpecFromSession(session) {
 
 const { HookRegistry }          = require('./src/hooks/Registry');
 const { Blueprint, SNRGate, Translate, scanTopology } = require('./src/spec/Blueprint');
+const { createCFRLedger }       = require('../lib/cfr');
 // Living hook registry — the canonical wire map for all NEXUS systems
 const systemHooks = (() => { try { return require('../hooks'); } catch(_) { return null; } })();
 const { createCompileRoutes }   = (() => { try { return require('./compile-route'); } catch(_) { return { createCompileRoutes: null }; } })();
@@ -60,7 +61,9 @@ const { createCompileRoutes }   = (() => { try { return require('./compile-route
 const PORT = process.env.ARCHITECT_PORT || 3747;
 const CORTEX_PORT = process.env.CORTEX_PORT || 3748;
 const ORCH_PORT   = process.env.ORCH_PORT   || 9000;
+const ROOT        = path.join(__dirname, '..');
 const DATA_DIR    = path.join(__dirname, 'data');
+const LEDGER_DIR  = path.join(ROOT, 'data', 'architect');
 
 // ── JAA adapter ─────────────────────────────────────────────────────────────
 // Architect uses a flat-file JSONL store (same pattern as cortex)
@@ -119,8 +122,9 @@ function createJAA(dataDir) {
 }
 
 // ── SISO bus emitter (fires to cortex and orchestrator) ───────────────────
-function createBusEmit(nc) {
+function createBusEmit(cfrLedger) {
   return function busEmit(type, payload = {}) {
+    try { cfrLedger?.record(type, payload, { causedBy: payload?.jobId || null }); } catch(_) {}
     try {
       const req = http.request({
         hostname: '127.0.0.1', port: CORTEX_PORT, path: '/api/event',
@@ -175,8 +179,21 @@ async function boot() {
   console.log('[architect] §3.1 Phase 1: JAA init');
   const jaa = createJAA(DATA_DIR);
 
+  // ── §LEDGER-FIX: CFR ledger — architect had no ledger at all before this.
+  // Writes to the shared data/architect/ dir (not architect/data/, which is
+  // this service's own internal JAA store) — that's the dir nexus-diagnostic.js
+  // and cortex's intelligence layer already expect to read from for every
+  // other system. Same pattern as bridge/index.js and orchestrator.js.
+  fs.mkdirSync(LEDGER_DIR, { recursive: true });
+  const cfrLedger = createCFRLedger({
+    ledgerDir: LEDGER_DIR,
+    systemId:  'architect',
+    onGap: (gap) => { try { console.warn(`[architect][cfr] ${gap.type}: ${gap.message}`); } catch(_) {} },
+  });
+  cfrLedger.open();
+
   // Phase 2 HARD: Bus
-  const busEmit = createBusEmit();
+  const busEmit = createBusEmit(cfrLedger);
 
   // Phase 3 HARD: Hook Registry
   console.log('[architect] §3.1 Phase 2: Hook Registry');
@@ -222,6 +239,11 @@ async function boot() {
     }
 
     try {
+      // ── CFR ledger debugger routes ──────────────────────────────────────
+      if (path_.startsWith('/cfr')) {
+        if (cfrLedger.handleCFRRoute(req, res, url)) return;
+      }
+
       // ── Health ──────────────────────────────────────────────────────────
       if (method === 'GET' && path_ === '/api/contract') {
         return json(res, 200, { ok: true, contract: {

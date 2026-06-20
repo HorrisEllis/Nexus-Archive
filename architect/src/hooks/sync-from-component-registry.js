@@ -128,7 +128,12 @@ async function syncFromComponentRegistry(registry) {
     }
   }
 
-  console.log(`[architect/hooks-sync] ${created} created, ${updated} updated, ${skipped} unchanged, ${failed} failed (${components.length} canonical components)`);
+  // Only log when the sync actually did something. A no-op tick (everything
+  // unchanged) is residue, not an event — logging it every 30s on every
+  // boot is noise, not signal. Result is still returned in full either way.
+  if (created || updated || failed) {
+    console.log(`[architect/hooks-sync] ${created} created, ${updated} updated, ${skipped} unchanged, ${failed} failed (${components.length} canonical components)`);
+  }
   return { ok: true, created, updated, skipped, failed, total: components.length };
 }
 

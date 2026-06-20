@@ -105,12 +105,12 @@ function uid() { return crypto.randomUUID(); }
 const SYSTEMS = {
   // §LEDGER-FIX: paths now match flat JSONL written by ledger-writer + jaaDB
   guardian:    { port: 7820, dataDir: 'data/guardian',    healthPath: '/health',   label: 'Guardian' },
-  cortex:      { port: 3748, dataDir: 'cortex/data',      healthPath: '/api/health', label: 'Cortex' },
-  idearium:    { port: 4800, dataDir: 'data/idearium',    healthPath: '/api/health', label: 'Idearium' },
+  cortex:      { port: 3748, dataDir: 'cortex/data',      healthPath: '/health', label: 'Cortex' },
+  idearium:    { port: 4800, dataDir: 'data/idearium',    healthPath: '/health', label: 'Idearium' },
   orchestrator:{ port: 9000, dataDir: 'data/orchestrator',healthPath: '/health',   label: 'Orchestrator' },
-  emerge:      { port: 4242, dataDir: 'data/emerge',      healthPath: '/health',   label: 'Emerge' },
+  emerge:      { port: 4242, dataDir: 'data/emerge',      healthPath: '/status',  label: 'Emerge' },
   bridge:      { port: 9999, dataDir: 'data/bridge',      healthPath: '/health',   label: 'Bridge' },
-  architect:   { port: 3747, dataDir: 'data/architect',   healthPath: '/api/health', label: 'Architect' },
+  architect:   { port: 3747, dataDir: 'data/architect',   healthPath: '/health', label: 'Architect' },
   diagnostic:  { port: 7825, dataDir: 'data/diagnostic',  healthPath: '/status',   label: 'Diagnostic' },
   // §MONITOR-03: UI surfaces — probed as virtual systems, no dataDir
   'forge-shell':{ port: 9000, dataDir: 'data/orchestrator', healthPath: '/ui/forge-shell.html',
@@ -284,9 +284,9 @@ function startService() {
           let b = '';
           res.on('data', d => b += d);
           res.on('end', () => {
+            online = res.statusCode === 200; // status code is ground truth regardless of body shape
             try {
               const d = JSON.parse(b);
-              online = res.statusCode === 200;
               uptime = d.uptime || 0;
               jobs   = d.jobs   || 0;
             } catch {}
