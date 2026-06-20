@@ -24,7 +24,13 @@ const { dataPoller } = require('./memory/data-poller');
 const workingMemory  = require('./memory/working-memory');
 const versionium     = require('./versionium');
 const agentDispatch  = require('./agents');
-const ollamaAgent    = require('./agents/ollama');
+// Ollama agent moved to guardian/agents/ollama.js (2026-06-20) — Ollama is a
+// local HTTP service, not part of Cortex's intelligence/memory stack, and
+// having it required unconditionally here meant it was "baked in" to every
+// Cortex boot regardless of whether Ollama was running or wanted. Guardian
+// now owns this, started lazily and only if Ollama actually responds to a
+// ping (see guardian/server.js phase 'ollama.agent').
+
 const claudeAgent    = require('./agents/claude');
 const chatgptAgent   = require('./agents/chatgpt');
 const geminiAgent    = require('./agents/gemini');
@@ -201,8 +207,12 @@ async function bootAsync() {
     fn: async () => {
       versionium.setDeps({ fileStore, fileRefs });
       agentDispatch.setDeps({
-        ollama: ollamaAgent, claude: claudeAgent,
-        chatgpt: chatgptAgent, gemini: geminiAgent,
+        claude: claudeAgent, chatgpt: chatgptAgent, gemini: geminiAgent,
+        // ollama intentionally absent — see guardian/agents/ollama.js.
+        // Guardian's own LAW I fallback (guardian/agents/index.js) writes
+        // routedTo:'ollama' rows into the same shared agent_calls table;
+        // Guardian's poller claims those directly, so Cortex's generic
+        // dispatcher never needs to see 'ollama' as a registered sub-agent.
       });
     },
   });

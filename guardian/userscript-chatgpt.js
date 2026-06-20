@@ -626,9 +626,13 @@ async function handleJob(msg) {
     toast('Job ignored — tab not claimed', 'warn', 3000);
     return;
   }
-  const { jobId, prompt='', content='', command='' } = msg;
+  const { jobId, prompt='', content='', command='', seam_chunk_idx, seam_total, seam_title, seam_queue_id } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
+  if (seam_queue_id != null) {
+    _log('job', `SEAM chunk ${seam_chunk_idx+1}/${seam_total}: ${seam_title}`, `queue #${seam_queue_id.slice(0,8)}`);
+    toast(`SEAM ${seam_chunk_idx+1}/${seam_total}: ${seam_title}`, 'job', 3500);
+  }
 
   // §LAW II — write to IDB before any action
   const sessionId = await getSessionId();
@@ -1084,55 +1088,98 @@ function renderArts() {
   }
 }
 
-// ── SEAM tab ──────────────────────────────────────────────────────────────────
-let _seamState = { chunks:[], title:'', parsed:false };
+// ── SEAM tab — real view into guardian's actual SEAM pipeline ────────────────
+// §SEAM-GLUE-FIX: this used to parse pasted text locally (regex on `^#+ `)
+// and Inject each chunk one at a time by hand — a disconnected duplicate of
+// guardian/lib/spec-parser.js + guardian/lib/seam-queue.js, which already do
+// this properly server-side (real chunking, real retry state machine,
+// persisted sessions) and were simply unreachable from here. Submitting now
+// goes through the real POST /command spec pipeline; the chunk-by-chunk
+// dispatch back to this tab needs no new wiring — SEAMQueue already pushes
+// {type:'GUARDIAN_JOB', seam_queue_id, seam_chunk_idx, seam_total, seam_title}
+// and handleJob() already processes any GUARDIAN_JOB it receives.
+let _seamQueues = [];
+let _seamPollTimer = null;
 function renderSeam() {
   const a = document.getElementById('__g10seam__'); if (!a) return;
   a.innerHTML = '';
-  const ta_wrap = document.createElement('div'); ta_wrap.style.cssText='padding:8px 12px';
+
+  const wrap = document.createElement('div'); wrap.style.cssText = 'padding:8px 12px';
   const ta = document.createElement('textarea');
   ta.style.cssText = 'width:100%;background:#030308;border:1px solid #1e1e3a;color:#64748b;padding:6px 8px;font-family:inherit;font-size:.68rem;line-height:1.5;outline:none;resize:none;border-radius:2px;min-height:70px;display:block;box-sizing:border-box';
   ta.placeholder = 'Paste .spec content here…';
-  const parseBtn = document.createElement('button');
-  parseBtn.style.cssText='margin-top:4px;background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:2px;padding:3px 10px;font:inherit;font-size:9px;cursor:pointer';
-  parseBtn.textContent='Parse Spec';
-  parseBtn.onclick = () => {
-    const lines = ta.value.split('\n');
-    const chunks=[]; let cur=null;
-    for (const l of lines) {
-      const h = l.match(/^#+\s+(.*)/);
-      if (h) { if(cur)chunks.push(cur); cur={title:h[1],id:chunks.length,lines:[]}; }
-      else if (cur) cur.lines.push(l);
+
+  const titleIn = document.createElement('input');
+  titleIn.style.cssText = 'width:100%;margin-top:4px;background:#030308;border:1px solid #1e1e3a;color:#94a3b8;padding:4px 8px;font-family:inherit;font-size:.65rem;outline:none;border-radius:2px;box-sizing:border-box';
+  titleIn.placeholder = 'Title (optional)';
+
+  const submitBtn = document.createElement('button');
+  submitBtn.style.cssText = 'margin-top:4px;background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:2px;padding:3px 10px;font:inherit;font-size:9px;cursor:pointer';
+  submitBtn.textContent = 'Submit to SEAM queue';
+  submitBtn.onclick = async () => {
+    const specText = ta.value.trim();
+    if (!specText) { toast('Nothing pasted', 'warn'); return; }
+    submitBtn.disabled = true; submitBtn.textContent = 'Submitting…';
+    try {
+      const res = await fetch(`${NCP_URL}/command`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'spec', provider: PROVIDER, specText, title: titleIn.value.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!data.ok) { toast(`SEAM submit failed: ${data.error || 'unknown error'}`, 'error', 5000); return; }
+      toast(`SEAM queue created — ${data.total} chunks`, 'success', 3000);
+      ta.value = ''; titleIn.value = '';
+      _log('ok', `SEAM queue ${data.queueId?.slice(0,8)} created`, `${data.total} chunks · ${data.title}`);
+      await _refreshSeamQueues(a);
+    } catch (e) {
+      toast(`SEAM submit failed: ${e.message}`, 'error', 5000);
+    } finally {
+      submitBtn.disabled = false; submitBtn.textContent = 'Submit to SEAM queue';
     }
-    if (cur) chunks.push(cur);
-    _seamState.chunks = chunks.map(c=>({...c,content:c.lines.join('\n').trim()}));
-    _seamState.parsed = true;
-    renderSeamChunks(a);
   };
-  ta_wrap.append(ta, parseBtn);
-  a.appendChild(ta_wrap);
-  if (_seamState.parsed) renderSeamChunks(a);
+
+  wrap.append(ta, titleIn, submitBtn);
+  a.appendChild(wrap);
+
+  const list = document.createElement('div');
+  list.id = '__g10seam_list__';
+  list.style.cssText = 'padding:0 12px 12px';
+  a.appendChild(list);
+
+  _refreshSeamQueues(a);
+  if (_seamPollTimer) clearInterval(_seamPollTimer);
+  _seamPollTimer = setInterval(() => {
+    if (document.getElementById('__g10seam__')?.classList.contains('on')) _refreshSeamQueues(a);
+    else { clearInterval(_seamPollTimer); _seamPollTimer = null; }
+  }, 3000);
 }
-function renderSeamChunks(a) {
-  const existing = a.querySelector('.g10seam-area');
-  if (existing) existing.remove();
-  const area = document.createElement('div'); area.className='g10seam-area';
-  for (const chunk of _seamState.chunks) {
-    const div = document.createElement('div'); div.className='g10seam-chunk';
-    const hdr = document.createElement('div'); hdr.className='g10seam-hdr';
-    const title = document.createElement('span'); title.className='g10seam-title'; title.textContent=`#${chunk.id+1} ${chunk.title}`;
-    const btn = document.createElement('button'); btn.className='g10seam-inject';
-    btn.textContent='↗ Inject'; btn.disabled=!!currentJobId||!isClaimed;
-    btn.onclick = () => {
-      const prompt = `[SEAM CHUNK ${chunk.id+1}/${_seamState.chunks.length}] ${chunk.title}\n\n${chunk.content}`;
-      if (!injectText(prompt)) { toast('No input found','error'); return; }
-      send({ type:'GUARDIAN_SEAM_CHUNK', chunkId:chunk.id, title:chunk.title, total:_seamState.chunks.length,
-        jobId:currentJobId||uid(), chatUrl:location.href, account:getAccount() });
-      setTimeout(submit, 300);
-    };
-    hdr.append(title, btn); div.appendChild(hdr); area.appendChild(div);
+
+async function _refreshSeamQueues(a) {
+  const list = a.querySelector('#__g10seam_list__'); if (!list) return;
+  try {
+    const res = await fetch(`${NCP_URL}/seam/sessions`, { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    _seamQueues = (data.sessions || []).filter(s => s.provider === PROVIDER).slice(0, 8);
+  } catch (_) { return; } // leave last-known list showing rather than blank it on a transient fetch failure
+
+  list.innerHTML = '';
+  if (!_seamQueues.length) {
+    list.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:8px 0">No SEAM queues for this provider yet.</div>';
+    return;
   }
-  a.appendChild(area);
+  for (const q of _seamQueues) {
+    const row = document.createElement('div');
+    row.style.cssText = 'border:1px solid #1e1e3a;border-radius:3px;padding:6px 8px;margin-top:6px;font-size:.65rem';
+    const pct = q.status === 'complete'
+      ? Math.round((q.verified || 0) / (q.chunks?.length || 1) * 100)
+      : null;
+    const statusTxt = q.status === 'complete'
+      ? `done — ${q.verified || 0} verified${q.escalated ? `, ${q.escalated} escalated` : ''}`
+      : 'active';
+    row.innerHTML = `<div style="color:#94a3b8;font-weight:600">${q.title || 'Untitled'}</div>
+      <div style="color:#475569;margin-top:2px">#${(q.uuid||'').slice(0,8)} · ${statusTxt}</div>`;
+    list.appendChild(row);
+  }
 }
 
 // ── Intelligence tab ──────────────────────────────────────────────────────────

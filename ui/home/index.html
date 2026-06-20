@@ -788,6 +788,7 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
   <div class="agent-status-row" id="as-status-row">
     <div class="agent-stat-pill" id="as-provider-pill"><span class="asp-dot"></span><span id="as-provider-label">Provider</span></div>
     <div class="agent-stat-pill" id="as-tab-pill"><span class="asp-dot"></span><span id="as-tab-label">NCP Tab</span></div>
+    <div class="agent-stat-pill" id="as-usage-pill" style="display:none"><span class="asp-dot"></span><span id="as-usage-label">Usage</span></div>
     <div class="agent-stat-pill" id="as-jobs-pill"><span class="asp-dot"></span><span id="as-jobs-label">Jobs</span></div>
     <div class="agent-stat-pill" id="as-gaps-pill"><span class="asp-dot"></span><span id="as-gaps-label">Open Gaps</span></div>
   </div>
@@ -855,6 +856,7 @@ body[data-mode='orchestrator'] .forge-send:hover{background:rgba(0,229,255,.1);b
       <button class="forge-send" id="as-forge-btn" onclick="agentForge()">⚡ FORGE</button>
       <div class="cflag" id="as-seam-toggle" data-c="seam-chunk" style="cursor:pointer" onclick="this.classList.toggle('active')">SEAM CHUNK</div>
       <div class="cflag" id="as-snr-toggle" data-c="snr-filter" onclick="this.classList.toggle('active')">SNR FILTER</div>
+      <div class="cflag" id="as-structured-toggle" data-c="structured-output" style="cursor:pointer;display:none" onclick="this.classList.toggle('active')">STRUCTURED OUTPUT</div>
       <span style="flex:1"></span>
       <span id="as-forge-status" style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.2)"></span>
     </div>
@@ -1993,6 +1995,7 @@ const MODE_CONFIG = {
     chunkSize:  4000,       // aggressive splitting
     snrDefault: true,
     seam:       true,
+    structuredOutput: true,  // §AGENT-SUITE-CHATGPT — genuinely distinctive, not a shared flag
     badge:      'NCP',
     constraints:['§3.1 BOTTOM-UP','§2.1 DISK FIRST','SEAM CHUNK','STRUCTURED OUTPUT'],
   },
@@ -2115,6 +2118,13 @@ function _bootAgentSuite(mode) {
   const snr = document.getElementById('as-snr-toggle');
   if (seam) seam.classList.toggle('active', cfg.seam);
   if (snr) snr.classList.toggle('active', cfg.snrDefault);
+  // Structured-output toggle — only visible for modes that actually have the
+  // capability (chatgpt today), not another flag shared identically by all three
+  const structToggle = document.getElementById('as-structured-toggle');
+  if (structToggle) {
+    structToggle.style.display = cfg.structuredOutput ? '' : 'none';
+    structToggle.classList.remove('active'); // off by default — changes response shape, shouldn't be silently on
+  }
   // Phase dots
   const dots = document.getElementById('as-phase-dots');
   if (dots) dots.innerHTML = PHASE_SUMMARY.map(p =>
@@ -2146,6 +2156,33 @@ async function _refreshAgentSuite() {
     const tabLbl = document.getElementById('as-tab-label');
     if (tabPill) tabPill.className = 'agent-stat-pill ' + (connected ? 'live' : '');
     if (tabLbl) tabLbl.textContent = connected ? 'NCP active' : 'NCP waiting';
+    // Usage pill — real signal from the userscript's detectUsageLimit(), riding
+    // the heartbeat through lib/ncp.js's client.usage into this same /providers
+    // response. Only meaningful for NCP-tab providers — hidden otherwise.
+    const usagePill = document.getElementById('as-usage-pill');
+    const usageLbl = document.getElementById('as-usage-label');
+    if (usagePill) {
+      const providerKey = Object.keys(prov).find(k => k.startsWith(cfg.provider));
+      const usage = providerKey ? prov[providerKey]?.usage : null;
+      if (!connected || !usage) {
+        usagePill.style.display = 'none';
+      } else {
+        usagePill.style.display = '';
+        if (usage.limited === true) {
+          usagePill.className = 'agent-stat-pill';
+          usagePill.style.borderColor = '#ff3355'; usagePill.style.color = '#ff3355';
+          if (usageLbl) usageLbl.textContent = usage.resetHint ? `Limited — ${usage.resetHint}` : 'Limited';
+        } else if (usage.limited === 'suspected') {
+          usagePill.className = 'agent-stat-pill';
+          usagePill.style.borderColor = '#ffaa00'; usagePill.style.color = '#ffaa00';
+          if (usageLbl) usageLbl.textContent = 'Usage — unclear';
+        } else {
+          usagePill.className = 'agent-stat-pill live';
+          usagePill.style.borderColor = ''; usagePill.style.color = '';
+          if (usageLbl) usageLbl.textContent = 'Usage OK';
+        }
+      }
+    }
   }
   // Jobs pill
   const jd = await get(`${B.gd}/jobs`).catch(() => null);
@@ -2162,22 +2199,27 @@ async function _refreshAgentSuite() {
   const gapLbl = document.getElementById('as-gaps-label');
   if (gapPill) gapPill.className = 'agent-stat-pill ' + (gapCount > 0 ? '' : 'live');
   if (gapLbl) gapLbl.textContent = gapCount + ' open gaps';
-  // SEAM queue
+  // SEAM queue — /seam/queues returns an array (q.toJSON() per active queue),
+  // not an object keyed by id, and isn't provider-filtered server-side —
+  // filter to this mode's provider here so Claude's view doesn't show
+  // ChatGPT's chunks and vice versa.
   const sq = await get(`${B.gd}/seam/queues`).catch(() => null);
-  const active = sq?.active || 0;
+  const allQueues = Array.isArray(sq?.queues) ? sq.queues : [];
+  const myQueues = allQueues.filter(q => q.provider === cfg.provider);
   const seam = document.getElementById('as-seam-rows');
-  if (seam && active === 0) {
+  if (seam && myQueues.length === 0) {
     seam.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,.2)">No active chunks</div>';
-  } else if (seam && sq?.queues) {
-    seam.innerHTML = Object.entries(sq.queues).slice(0, 8).map(([id, q]) =>
-      `<div class="seam-row">
-        <span class="seam-chunk-id">${id.slice(0,12)}</span>
-        <span class="seam-chunk-type">${q.type || 'seam'}</span>
-        <span class="seam-chunk-body">${(q.title || q.prompt || '').slice(0,60)}</span>
-        <span class="seam-chunk-tokens">${q.tokens || '?'}t</span>
-        <span class="seam-status-dot ${q.status || 'queued'}"></span>
-      </div>`
-    ).join('');
+  } else if (seam) {
+    seam.innerHTML = myQueues.slice(0, 8).map(q => {
+      const stats = q.stats || {};
+      return `<div class="seam-row">
+        <span class="seam-chunk-id">${(q.uuid||'').slice(0,12)}</span>
+        <span class="seam-chunk-type">seam</span>
+        <span class="seam-chunk-body">${(q.title || '').slice(0,60)}</span>
+        <span class="seam-chunk-tokens">${stats.verified||0}/${stats.total||q.total||'?'}</span>
+        <span class="seam-status-dot ${q.completedAt ? 'verified' : (stats.active ? 'generating' : 'queued')}"></span>
+      </div>`;
+    }).join('');
   }
   // Token budget
   if (cfg.tokenLimit) {
@@ -2220,31 +2262,42 @@ async function agentForge() {
     .map(c => c.dataset.comp).join(', ');
   const useSeam = document.getElementById('as-seam-toggle')?.classList.contains('active');
   const useSnr = document.getElementById('as-snr-toggle')?.classList.contains('active');
+  const useStructured = cfg.structuredOutput && document.getElementById('as-structured-toggle')?.classList.contains('active');
 
   const fullPrompt = [
     activeFlags ? `[CONSTRAINTS: ${activeFlags}]` : '',
     activeCtx ? `[CONTEXT COMPONENTS: ${activeCtx}]` : '',
     useSnr ? '[SNR FILTER: ON — surface invariants first, LLM last]' : '',
+    useStructured ? '[OUTPUT FORMAT: respond with a single valid JSON object only — no prose, no markdown fencing, no commentary before or after]' : '',
     '',
     prompt,
   ].filter(Boolean).join('\n');
 
   try {
     if (useSeam && cfg.seam && cfg.chunkSize) {
-      // SEAM chunking — split into chunks and queue
-      const chunks = _chunkPrompt(fullPrompt, cfg.chunkSize);
-      _sessionChunks += chunks.length;
-      let lastJob = null;
-      for (let i = 0; i < chunks.length; i++) {
-        const d = await post(`${B.gd}/command`, {
-          provider: cfg.provider,
-          command: 'forge',
-          prompt: chunks[i],
-          meta: { seam_chunk: i + 1, seam_total: chunks.length, source: 'agent-suite', mode: _activeMode, ts: Date.now() }
-        });
-        if (d?.jobId) lastJob = d.jobId;
+      // §SEAM-GLUE-FIX: this used to call _chunkPrompt() (a local paragraph
+      // splitter) and fire each chunk as an independent /command 'forge' job
+      // — no real verification, no retry, no persisted session, and
+      // seam_chunk/seam_total were decorative metadata on plain jobs, not
+      // real SEAMQueue dispatch. Routes through the real pipeline now —
+      // same one the userscript SEAM tab submits to. splitOn:'size' because
+      // an arbitrary prompt typed here won't have the formal `# heading`
+      // structure a real .spec file has; parseSpec() degrades to plain
+      // size-based chunking when there's nothing to split on semantically.
+      const d = await post(`${B.gd}/command`, {
+        command: 'spec',
+        provider: cfg.provider,
+        specText: fullPrompt,
+        splitOn: 'size',
+        maxChunkSize: cfg.chunkSize,
+        title: prompt.slice(0, 60),
+      });
+      if (d?.ok) {
+        _sessionChunks += (d.total || 1);
+        if (status) status.textContent = `✓ SEAM queue ${d.queueId?.slice(0,8)} — ${d.total} chunks`;
+      } else {
+        if (status) status.textContent = `✗ SEAM dispatch failed: ${d?.error || 'unknown error'}`;
       }
-      if (status) status.textContent = `✓ ${chunks.length} chunk${chunks.length>1?'s':''} queued → job ${lastJob?.slice(0,10)||'?'}`;
     } else {
       const d = await post(`${B.gd}/command`, {
         provider: cfg.provider,
@@ -2262,26 +2315,6 @@ async function agentForge() {
   } finally {
     if (btn) btn.disabled = false;
   }
-}
-
-function _chunkPrompt(text, maxTokens) {
-  // Rough estimate: 1 token ≈ 4 chars
-  const maxChars = maxTokens * 4;
-  if (text.length <= maxChars) return [text];
-  const chunks = [];
-  // Try to split on double-newlines first
-  const paras = text.split(/\n\n+/);
-  let cur = '';
-  for (const p of paras) {
-    if ((cur + p).length > maxChars && cur) {
-      chunks.push(cur.trim());
-      cur = p + '\n\n';
-    } else {
-      cur += p + '\n\n';
-    }
-  }
-  if (cur.trim()) chunks.push(cur.trim());
-  return chunks;
 }
 
 // ── Boot: check stored mode ───────────────────────────────────────────

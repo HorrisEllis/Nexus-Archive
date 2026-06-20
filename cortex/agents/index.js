@@ -36,7 +36,12 @@ function setDeps({ ollama, claude, chatgpt, gemini } = {}) {
 
 async function _tick() {
   try {
-    const routed = jaaDB.query('agent_calls', r => r.status === 'routed', 10);
+    // 'ollama' is excluded here on purpose: that agent now lives in Guardian
+    // (guardian/agents/ollama.js), which polls this same table directly.
+    // Without this exclusion, this generic dispatcher's poll loop would
+    // often win the race, claim the row first, find no 'ollama' sub-agent
+    // registered (see boot.js), and fail it before Guardian ever saw it.
+    const routed = jaaDB.query('agent_calls', r => r.status === 'routed' && r.routedTo !== 'ollama', 10);
     if (!routed.length) return;
 
     for (const call of routed) {

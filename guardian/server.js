@@ -1143,6 +1143,28 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
     }
   });
 
+  // ── PHASE 9.5: Ollama agent — local model, optional, never blocks boot ───
+  // Moved from cortex/boot.js: Ollama is a local HTTP service Guardian talks
+  // to directly (see ollama-runtime.js), not part of Cortex's intelligence
+  // stack. This phase is SOFT and explicitly not "baked in" — it pings
+  // Ollama first and only starts the agent_calls poller if something is
+  // actually listening. No Ollama running → this is a no-op, Guardian boots
+  // exactly the same either way.
+  seq.phase({ name:'ollama.agent', type:'SOFT',
+    label:'Ollama agent (local model, optional)',
+    fn: async () => {
+      let ollamaAgent;
+      try { ollamaAgent = require('./agents/ollama'); }
+      catch (e) { return { ok:true, msg:'guardian/agents/ollama.js not found — skipping' }; }
+
+      const health = await ollamaAgent.ping();
+      if (!health.online) return { ok:true, msg:'ollama not reachable — agent not started (this is fine)' };
+
+      ollamaAgent.init({ pollMs: 2000 });
+      return { ok:true, msg:`ollama online — agent started (model=${ollamaAgent.MODEL})` };
+    }
+  });
+
   // ── PHASE 10: Register with orchestrator ─────────────────────────────────
   seq.phase({ name:'orchestrator.register', type:'SOFT',
     label:'Register with orchestrator (§AXIOM)',

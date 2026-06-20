@@ -2203,6 +2203,22 @@ try {
   // ════════════════════════════════════════════════════════════════════════════
   // START-SYSTEMS SEQUENCE — delegated to cli/boot-systems.js
   // ════════════════════════════════════════════════════════════════════════════
+  // §FIX 2026-06-20 — double-spawn collision: when orchestrator.js is one of
+  // several sibling processes already being spawned by something else
+  // (npm run start:all via concurrently, or autopilot.js), that something
+  // else is ALSO spawning bridge/cortex/guardian/idearium/architect/
+  // diagnostic directly. _bootSystems() below does the exact same thing
+  // internally, so both copies fight over the same ports (3748, 7820, 3747,
+  // 7825, 4800, ...) and every one but the first to bind throws EADDRINUSE.
+  // Plain `node orchestrator.js` (orchestrator as the *only* process) still
+  // wants _bootSystems to run — that's its normal, working boot path. Set
+  // NEXUS_SUPERVISED=1 in the environment of the orchestrator child only
+  // (concurrently's command, or autopilot's spawn env) to skip this and let
+  // the supervisor own spawning every sub-system itself.
+  if (process.env.NEXUS_SUPERVISED) {
+    console.log('[orchestrator] NEXUS_SUPERVISED set — skipping internal _bootSystems (sub-systems are being spawned by the supervisor instead)');
+    return;
+  }
   // _bootSystems hoisted to top-level
   _bootSystems(
     (system, type, payload) => {

@@ -123,6 +123,48 @@ async function pollUntilDone(jobId, timeoutMs = 120_000) {
   console.error('\nTimed out waiting for response');
 }
 
+// ── watch a SEAM queue's chunk-by-chunk progress ──────────────────────────────
+// §NOTE: GET /seam/queues/:id only checks the in-memory _activeQueues map —
+// onComplete() deletes the queue from it, so a 404 here is ambiguous between
+// "never existed" and "just finished." Treat a 404 *after* having seen the
+// queue at least once as completion, not failure — querying too fast after
+// the last chunk verifies will otherwise misreport a successful run as an error.
+async function watchSeam(queueId, timeoutMs = 600_000) {
+  console.log(`\n[watching SEAM queue ${queueId}]\n`);
+  const deadline = Date.now() + timeoutMs;
+  let sawQueue = false;
+  let lastPct = -1;
+
+  while (Date.now() < deadline) {
+    const result = await get(`/seam/queues/${queueId}`).catch(() => null);
+
+    if (!result || !result.ok) {
+      if (sawQueue) {
+        console.log(`\nQueue no longer active — treating as complete. Final state is in JAA: GET ${BASE}/seam/sessions (filter by uuid ${queueId}).`);
+        return;
+      }
+      await new Promise(r => setTimeout(r, 1500));
+      continue;
+    }
+
+    sawQueue = true;
+    const q = result.queue;
+    const pct = q.stats.pct;
+    if (pct !== lastPct) {
+      console.log(`[${pct}%] verified:${q.stats.verified} active:${q.stats.active} retrying:${q.stats.retrying} queued:${q.stats.queued} escalated:${q.stats.escalated}  (${q.stats.total} total)`);
+      lastPct = pct;
+    }
+
+    if (q.completedAt) {
+      console.log(`\nDone — ${q.stats.verified}/${q.stats.total} verified, ${q.stats.escalated} escalated.`);
+      return;
+    }
+
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  console.error('\nTimed out watching SEAM queue');
+}
+
 // ── command: send a job ───────────────────────────────────────────────────────
 
 async function sendCommand(raw) {
@@ -175,6 +217,36 @@ async function sendFile(provider, filePath, extraPrompt) {
   await watchJob(result.jobId);
 }
 
+// §SEAM-GLUE-FIX: sendFile() above sends `content`, which guardian/server.js's
+// /command handler never checks (it only checks body.spec/specText/specFile —
+// see guardian/server.js ~2565) — so /spec was silently falling through to
+// the same single-blob path as /file, never reaching the real parseSpec() +
+// SEAMQueue pipeline that already exists and works. This is the actual SEAM
+// entry point: real chunking, real retry state machine, real session.
+async function sendSpec(provider, filePath, title) {
+  const abs = path.resolve(filePath);
+  if (!fs.existsSync(abs)) {
+    console.error(`File not found: ${abs}`);
+    process.exit(1);
+  }
+
+  const specText = fs.readFileSync(abs, 'utf8');
+
+  const result = await post('/command', {
+    command: 'spec',
+    provider,
+    specText,
+    title: title || path.basename(abs),
+  });
+
+  if (!result.ok) { console.error('Error:', result.error); process.exit(1); }
+  console.log(`SEAM queue: ${result.queueId}`);
+  console.log(`Title: ${result.title}   Provider: ${result.provider}   Chunks: ${result.total}`);
+  if (result.meta?.name) console.log(`Spec: ${result.meta.name}`);
+  console.log(`\nWatch progress:  guardian /seam ${result.queueId}`);
+  console.log(`Or poll:         GET /seam/queues/${result.queueId}`);
+}
+
 // ── command: multi-provider ───────────────────────────────────────────────────
 
 async function sendMulti(providers, prompt) {
@@ -218,7 +290,8 @@ Guardian CLI — route commands to AI tabs via browser userscript
 
 Commands that go to AI:
   /code    <provider> <prompt>       Ask for code
-  /spec    <provider> <file|prompt>  Send a spec file
+  /spec    <provider> <file|prompt>  Send a spec file — real SEAM chunking, not a single blob
+  /seam    <queueId>                 Watch a SEAM queue's chunk-by-chunk progress
   /ask     <provider> <prompt>       General question
   /paste   <provider>                Pipe content: echo "..." | guardian /paste claude
   /multi   <p1> <p2> <prompt>        Send to multiple providers at once
@@ -267,9 +340,9 @@ Examples:
       return;
     }
 
-    // ── /spec with file path ─────────────────────────────────────────────────
+    // ── /spec with file path — real SEAM chunking, not a plain file send ──────
     if (args[0] === '/spec' && args[2] && fs.existsSync(path.resolve(args[2]))) {
-      await sendFile(args[1], args[2], args.slice(3).join(' ') || null);
+      await sendSpec(args[1], args[2], args.slice(3).join(' ') || null);
       return;
     }
 
@@ -309,6 +382,13 @@ Examples:
     if (args[0] === 'watch') {
       if (!args[1]) { console.error('Usage: guardian watch <jobId>'); process.exit(1); }
       await watchJob(args[1]);
+      return;
+    }
+
+    // ── /seam <queueId> — watch a SEAM queue's chunk-by-chunk progress ─────────
+    if (args[0] === '/seam') {
+      if (!args[1]) { console.error('Usage: guardian /seam <queueId>'); process.exit(1); }
+      await watchSeam(args[1]);
       return;
     }
 

@@ -1,2 +1,0 @@
-{"type":"session.start","sessionId":"6a45ac66-2214-4a20-b4db-80dccf07a23b","ts":1781719926627,"meta":{}}
-{"uuid":"03da0dab-7ed2-42ac-93c1-c6a065b3d111","sessionId":"6a45ac66-2214-4a20-b4db-80dccf07a23b","role":"assistant","provider":"ollama","content":"ok","contentLength":2,"truncated":false,"intent":null,"outcome":"complete","gapScore":0,"bdaSignals":{"valence":0.5,"certainty":0.5,"openness":0.5,"tension":0,"selfref":0},"jobId":null,"ts":1781719926640,"meta":{"requestId":"u-6c61bm","outcome":"RESOLVED"}}

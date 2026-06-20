@@ -40,7 +40,14 @@ try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch(_) {}
 
 // ── Kernel set — mirrors package.json's start:all, single source of truth ────
 const ALL_KERNELS = [
-  { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'] },
+  // §FIX 2026-06-20: orchestrator.js normally boots bridge/cortex/guardian/
+  // idearium/architect/diagnostic itself via _bootSystems(). Autopilot is
+  // ALSO spawning all of those as siblings below — without this env var,
+  // both copies fight over the same ports (3748, 7820, 3747, 7825, 4800...)
+  // and every one but the first to bind throws EADDRINUSE. NEXUS_SUPERVISED
+  // tells orchestrator.js to skip its internal boot and just be the HTTP/UI
+  // front end — autopilot owns spawning every sub-system instead.
+  { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' } },
   { name: 'bridge',       cmd: 'node', args: ['bridge/server.js'] },
   { name: 'cortex',       cmd: 'node', args: ['cortex/boot.js'] },
   { name: 'guardian',     cmd: 'node', args: ['guardian/server.js'] },
@@ -98,7 +105,7 @@ function _spawnKernel(kernel, color) {
 
   const proc = spawn(kernel.cmd, kernel.args, {
     cwd: ROOT,
-    env: process.env,
+    env: { ...process.env, ...(kernel.env || {}) },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
