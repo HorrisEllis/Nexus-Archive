@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        home-ui
-    version:     1.2.0
+    version:     1.3.0
     uuid:        nexus-home-ui-v1-1000-2026-0617-jamesbrooks-001
     file:        ui/home/index.html
     serves:      http://127.0.0.1:9000/
@@ -78,16 +78,22 @@ spec:
       source:  home-ui
 
   quick_notes:
-    status: pending
+    status: backend_built
     phase: 35
     description: >
-      Sticky-notes box synced across every panel, the TV shell, and the
-      CLI simultaneously. Thin view over Idearium's idea.create/list
-      surface — not a redundant standalone notes system.
-    flow: "type → 300ms debounce → POST → SSE broadcast → re-render in every connected panel"
-    tag_to_idea: "tagging a note creates an Idearium idea (idearium.spec idea-store module)"
-    grammar: "'note <text>' → KNOWLEDGE_CAPTURE intent"
-    deps: "jaa ✓ · guardian/server ✓ · sse ✓ · userscripts ✓ — fully unblocked"
+      Sticky-notes box synced across every panel via orchestrator's
+      existing /events SSE — the same channel nexus-cli.js already uses
+      for live grammar rebuild, deliberately not a new channel (see the
+      NCP/Bridge/SSE unification discussion this session: these are
+      different failure-mode problems, but local-push-to-trusted-client
+      already had exactly one answer and this reuses it).
+    built:
+      module: "lib/quick-notes.js"
+      routes: "GET/POST /api/notes, DELETE /api/notes/:uuid — wired into orchestrator.js"
+      tag_to_idea: "POST /api/idearium/ideas (verified real, pre-existing proxy respecting Phase 23.5's orchestrator-as-sole-gateway lockdown) — fires only when a note has tags, failure never undoes the saved note"
+      tests: "7/7 PASSING (tests/modules/quick-notes.test.js)"
+    not_built: "Frontend — the 300ms debounce, the actual sticky-notes UI panel, and wiring the panel to listen on /events for notes.created/notes.deleted. Backend is real and tested; nothing renders it yet."
+    grammar: "'note <text>' → KNOWLEDGE_CAPTURE intent — not yet registered into component-registry. Same template as cli/nexus-repl-descriptors.js (Phase 36) once wanted."
     unlocks: "Phase 37 (Userscript Rebuild) — needs this landed alongside Phase 36 first"
 
   axioms:

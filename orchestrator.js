@@ -700,6 +700,24 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     const result = mutationContract.mutateProperty(compId, body.field, body.value, { issuedVia: body.issuedVia || 'api' });
     return json(res, result.ok ? 200 : 400, result);
   }
+  if (u.pathname.startsWith('/api/notes')) {
+    let quickNotes;
+    try { quickNotes = require('./lib/quick-notes'); }
+    catch(e) { return json(res,503,{ok:false,error:'quick-notes not loaded: '+e.message}); }
+    const nseg = u.pathname.split('/').filter(Boolean); // ['api','notes', uuid?]
+    const nuuid = nseg[2];
+    if (M==='GET' && !nuuid)    return json(res,200,{ ok:true, notes: quickNotes.listNotes() });
+    if (M==='POST' && !nuuid) {
+      const body = await readBody(req);
+      const result = await quickNotes.createNote(body || {});
+      return json(res, result.ok ? 200 : 400, result);
+    }
+    if (M==='DELETE' && nuuid) {
+      const result = await quickNotes.deleteNote(nuuid);
+      return json(res, result.ok ? 200 : 404, result);
+    }
+    return json(res,404,{ok:false,error:`notes route not found: ${M} ${u.pathname}`});
+  }
   // ── Component Registry (Phase 63b) ────────────────────────────────────────
   // lib/component-registry.js exports handleRequest specifically to be
   // mounted here ("Mounted on orchestrator. All routes under /api/components."
@@ -2242,6 +2260,20 @@ try {
     console.log('  [grammar-misfire-tracker] ready');
   } catch(e) {
     console.warn('  [grammar-misfire-tracker] init skipped:', e.message);
+  }
+  // Phase 35 — Quick Notes. postIdea reuses the same internal POST() helper
+  // and the already-verified /api/idearium/ideas route (Phase 23.5 lockdown
+  // respected — quick-notes never talks to idearium directly).
+  try {
+    const { jaaDB } = require('./cortex/memory/jaa-db');
+    const quickNotes = require('./lib/quick-notes');
+    quickNotes.init(jaaDB, {
+      broadcast: (payload) => broadcast(JSON.stringify(payload)),
+      postIdea: (body) => POST('idearium', '/api/ideas', body),
+    });
+    console.log('  [quick-notes] ready');
+  } catch(e) {
+    console.warn('  [quick-notes] init skipped:', e.message);
   }
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');

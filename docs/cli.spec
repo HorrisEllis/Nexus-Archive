@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cli
-    version:     1.1.0
+    version:     1.3.0
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-cli-v1-0000-2026-0615-jamesbrooks-001
     purpose: >
@@ -41,6 +41,25 @@ spec:
     - id: nexus-cli
       path: "cli/nexus-cli.js"
       status: built
+      bugs_fixed_this_session: >
+        James reported it was broken last used, several updates ago, never
+        re-tried. Traced the Qwen-reasoning fallback (the actual point of
+        cli-reasoning.js — "couldn't resolve, try thinking") and found two
+        real bugs, both silent, not crashes: (1) read `ge._tree` directly,
+        a property grammar-engine.js never exported — always undefined,
+        silently degraded to `{}`. (2) `comps` was hardcoded `[]` — and
+        even a correct fix couldn't have worked, because
+        component-registry.js's handleRequest had no bulk-list route at
+        all, only single-component GET by id. Fixed all three: added
+        getAliases() to grammar-engine.js (lib/grammar-engine.js, returns
+        a copy, not the live reference — tested), added the missing
+        GET /api/components bulk-list route with namespace/tag/available/q
+        filters (lib/component-registry.js), wired nexus-cli.js to use
+        both instead of the broken/empty values. 21/21 grammar-engine
+        tests passing (+1 new), 18/18 component-registry tests passing
+        (+2 new). The reasoning fallback had zero real context on every
+        call before this — not degraded, completely blind — which is
+        consistent with "broken" rather than just "not great."
       description: >
         Already grammar-engine-driven. Resolves componentId via
         ge.resolve(), dispatches to component.route, tracks history. The
@@ -48,28 +67,37 @@ spec:
 
     - id: nexus-repl
       path: "cli/nexus-repl.js"
-      lines: 858
-      status: phase_36_target
+      lines: 882
+      status: phase_36_in_progress
       description: >
-        Interactive REPL — forge/heal/snapshot/intents/tension/selfheal/
-        chatlog/dispatch/gaps/bus/events. Currently does NOT use
-        grammar-engine at all, unlike nexus-cli.js — confirmed directly
-        in the live file, not assumed. This is the real Phase 36 gap:
-        re-register nexus-repl's existing commands into component-registry
-        so they resolve through grammar-engine, not a rewrite of the
-        commands themselves.
-      phase_36:
-        flow: "grammarEngine.registerCommand(descriptor) → incremental blueprint recompile → new cli-map.json section → grammar tree reads updated map → command available"
-        constraint: "Direct registerCommand() calls bypassing the descriptor→blueprint path are §6.1 violations."
-        why_it_matters_beyond_itself: >
-          Phase 40.5 (Descriptor-Driven CLI) is blocked on this — its
-          automatic CLI projection has nothing to project for nexus-repl's
-          commands until they're grammar-resolved. Confirmed by tracing
-          orchestrator.js's cliDispatch (the actual Guardian-dispatch body
-          builder): manual REPL command, zero grammar-engine resolution,
-          zero componentId in scope. Phase 36 is what makes that not true
-          anymore.
-        deps: "grammar-engine ✓ · component-registry ✓ · nexus-repl ✓ · jaa ✓ — fully unblocked, not waiting on Phase 40"
+        Correction (checked the live file directly, twice — first
+        assessment was also wrong): nexus-repl.js already requires
+        lib/grammar-engine and uses it for tab-completion
+        (_grammar.complete(line)), with a §PHASE-15-CLOSE comment marking
+        where a prior session fixed a ReferenceError from grammar-engine
+        being referenced but never required. What's actually still
+        missing, narrower than originally stated: (1) the main dispatch
+        loop never calls ge.resolve() to route commands — only completion
+        uses grammar-engine, the switch statement is still sole
+        dispatcher; (2) none of nexus-repl's ~25 commands were registered
+        into component-registry, so other consumers (nexus-cli.js, future
+        Phase 40.5 CLI projection) couldn't discover or resolve them.
+      phase_36_built:
+        file: "cli/nexus-repl-descriptors.js"
+        scope: >
+          Only `forge` registered, not all ~25 commands. Checked each
+          command against orchestrator.js's actual proxy routes first —
+          forge has a complete, verified, working path
+          (POST /api/guardian/dispatch → guardian/command). heal
+          (diagnostic :7825/gaps/:id/fix) and snapshot
+          (cortex :3748/api/snapshot) do NOT have an orchestrator-relative
+          proxy route yet — registering them with a route that doesn't
+          actually work would itself be a §1.2 violation. Same template
+          applies once those proxy routes exist.
+        wiring: "registerAll() called once from nexus-repl.js's existing loadGrammar(), fire-and-forget, never blocks the REPL working as it always did."
+        tests: "3/3 PASSING (tests/modules/nexus-repl-descriptors.test.js) — descriptor validated against component-registry's real validate(), not a guessed shape."
+        still_missing: "ge.resolve() is not yet called in the dispatch loop itself — registration makes forge discoverable elsewhere, but nexus-repl's own dispatch still goes through the switch unconditionally, same as before."
+      deps: "grammar-engine ✓ · component-registry ✓ · nexus-repl ✓ · jaa ✓ — unblocked"
 
   notes:
     - "All existing CLI tools remain functional during Phase 36 build"

@@ -191,5 +191,15 @@ test('T-020', 'unknown command → null, not a zero-confidence object (no match 
   assert.strictEqual(r, null);
 });
 
+test('T-021', '§CLI-FIX getAliases() returns a real copy of the alias map, not the live private reference', () => {
+  const aliases = ge.getAliases();
+  assert.strictEqual(typeof aliases, 'object');
+  assert.ok(Object.keys(aliases).length > 0, 'expected at least one alias from this suite\'s fixture load');
+  // Mutating the returned object must not corrupt the engine's internal state.
+  aliases.__poison = 'should not leak back in';
+  const aliasesAgain = ge.getAliases();
+  assert.strictEqual(aliasesAgain.__poison, undefined, 'getAliases() must return a copy, not a live reference');
+});
+
 console.log(`\n  grammar-engine: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

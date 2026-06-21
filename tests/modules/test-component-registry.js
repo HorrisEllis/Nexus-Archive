@@ -246,6 +246,27 @@ test('T-016', 'new system registers 4 components → grammar contains them, no s
   console.log('    → Architecture test PASS: Liminal registered, grammar updated, zero shell code touched');
 });
 
+// ── T-017: §CLI-FIX — bulk list route (didn't exist; cli/nexus-cli.js's
+//    reasoning-layer fallback always got an empty component list) ───────────
+test('T-017', 'GET /api/components (no sub) returns the full live component list', () => {
+  const mockSearchParams = { get: () => null };
+  const result = reg.handleRequest('GET', undefined, undefined, null, mockSearchParams);
+  assert.strictEqual(result.ok, true);
+  assert.ok(Array.isArray(result.components), 'expected components array');
+  // liminal components from T-016 should be in here — same registry instance
+  assert.ok(result.components.some(c => c.id === 'liminal.spaces.list'), 'bulk list missing a known-registered component');
+  // forge.old (deprecated) — list() with no filter still includes it by
+  // default (only buildGrammarTree excludes deprecated, per T-015); bulk
+  // list is a raw view, not the grammar-filtered one.
+});
+
+test('T-017b', 'bulk list respects namespace filter via query params', () => {
+  const mockSearchParams = { get: (k) => (k === 'namespace' ? 'liminal' : null) };
+  const result = reg.handleRequest('GET', undefined, undefined, null, mockSearchParams);
+  assert.ok(result.components.every(c => c.namespace === 'liminal'), 'namespace filter not applied');
+  assert.ok(result.components.length >= 4, 'expected at least the 4 liminal components from T-016');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n  component-registry: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

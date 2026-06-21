@@ -192,9 +192,14 @@ async function exec(input) {
     if (qwenAvail) {
       process.stdout.write(c.dim('  ⟳ thinking…'));
       try {
-        const grammar = ge.status();
-        const tree    = ge._tree || {};
-        const comps   = [];
+        // §CLI-FIX: was `ge._tree || {}` (always undefined, never exported)
+        // and `comps = []` (hardcoded — no bulk-list route existed to fetch
+        // from). Both fixed at the source (lib/grammar-engine.js's new
+        // getAliases(), lib/component-registry.js's new bulk-list route) —
+        // this just calls them instead of silently degrading every time.
+        const tree    = { aliases: ge.getAliases() };
+        const compsR  = await _request('GET', '/api/components');
+        const comps   = compsR.components || [];
         const reasoning = await clr.resolve(trimmed, tree, comps, ORCH_URL);
         process.stdout.write('\r                    \r');
 

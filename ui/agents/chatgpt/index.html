@@ -136,6 +136,42 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
 #submit-btn:disabled{opacity:.4;cursor:default}
 #submit-status{font-size:11px;color:var(--text2);text-align:center;min-height:14px}
 
+#import-btn{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;
+  background:transparent;border:1px solid var(--border2);color:var(--text2);
+  padding:6px 11px;border-radius:6px;cursor:pointer;transition:all .15s;margin-top:6px;
+}
+#import-btn:hover{border-color:rgba(0,255,136,.4);color:var(--green)}
+#import-btn:disabled{opacity:.4;cursor:default}
+
+#import-overlay{
+  position:fixed;inset:0;background:rgba(6,5,10,.85);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;z-index:50;
+}
+#import-overlay.hidden{display:none}
+#import-panel{
+  width:480px;max-height:70vh;display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--border2);border-radius:8px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+#import-panel-head{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+#import-panel-head .ttl{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text)}
+#import-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1}
+#import-close:hover{color:var(--text)}
+#import-list{overflow-y:auto;padding:8px}
+.import-item{
+  padding:10px 12px;border-radius:6px;cursor:pointer;transition:background .15s;
+  display:flex;flex-direction:column;gap:3px;
+}
+.import-item:hover{background:rgba(255,255,255,.04)}
+.import-item .name{font-size:12px;color:var(--text)}
+.import-item .meta{font-family:var(--mono);font-size:10px;color:var(--text3)}
+#import-empty,#import-error{padding:30px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.6}
+#import-error{color:var(--red)}
+
 /* ── Right: chunk ladder (signature element) ── */
 #zone-queue{border-left:1px solid var(--border);background:rgba(255,255,255,.01);display:flex;flex-direction:column}
 .queue-picker{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
@@ -166,6 +202,18 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
 .rung-state.verified{color:var(--green)}
 .rung-state.retrying{color:var(--amber)}
 .rung-state.escalated{color:var(--red)}
+
+.rung-action{margin-top:6px}
+.rung-retry{
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  background:var(--amber-dim);border:1px solid rgba(255,170,0,.4);color:var(--amber);
+  padding:4px 10px;border-radius:14px;cursor:pointer;transition:all .15s;
+}
+.rung-retry:hover{background:rgba(255,170,0,.25)}
+.rung-retry:disabled{opacity:.4;cursor:default}
+.rung-escalated-note{
+  font-size:9.5px;color:var(--text3);line-height:1.4;margin-top:4px;font-style:italic;
+}
 
 .queue-empty{font-size:11px;color:var(--text3);text-align:center;padding:40px 10px;line-height:1.6}
 .queue-summary{
@@ -220,7 +268,10 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
 
       <div>
         <span class="field-label">Spec or prompt</span>
-        <textarea id="spec-input" placeholder="Paste a .spec file's contents, or just write the task. Headings (# like this) become SEAM chunks automatically — plain text gets split by size against ChatGPT's actual chunk limit below."></textarea>
+        <div class="spec-input-row">
+          <textarea id="spec-input" placeholder="Paste a .spec file's contents, or just write the task. Headings (# like this) become SEAM chunks automatically — plain text gets split by size against ChatGPT's actual chunk limit below."></textarea>
+        </div>
+        <button id="import-btn" type="button">⇣ IMPORT FROM IDEARIUM</button>
       </div>
 
       <div>
@@ -268,8 +319,22 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
   </div>
 </div>
 
+<div id="import-overlay" class="hidden">
+  <div id="import-panel">
+    <div id="import-panel-head">
+      <span class="ttl">IMPORT FROM IDEARIUM</span>
+      <button id="import-close">✕</button>
+    </div>
+    <div id="import-list"></div>
+  </div>
+</div>
+
 <script>
 const GD = 'http://127.0.0.1:7820';
+// Idearium is locked down behind orchestrator (Phase 23.5 — orchestrator
+// is the sole gateway), so spec import goes through ORCH, not GD, and not
+// idearium's own :4800 directly — that would bypass the lockdown.
+const ORCH = 'http://127.0.0.1:9000';
 const PROVIDER = 'chatgpt';
 const CHUNK_LIMIT = 4000; // matches MODE_CONFIG.chatgpt.chunkSize in the home shell
 let selectedQueueId = null;
@@ -457,18 +522,113 @@ function renderLadder() {
 
   ladder.innerHTML = (q.compartments || []).map(c => {
     const cls = STATE_CLASS[c.state] || 'queued';
+    const chunkUuid = c.uuid || c.chunkUuid || '';
+    // guardian's /seam/retry only acts on the queue's currently-active
+    // chunk (queue._active) — confirmed directly in guardian/server.js.
+    // A retry button on any other rung would just 404/mismatch silently,
+    // which §1.2 forbids — so only active/retrying rungs (which ARE the
+    // active chunk) get a real button; escalated rungs are past that
+    // point and get an honest note instead of a dead-looking control.
+    let action = '';
+    if ((cls === 'active' || cls === 'retrying') && chunkUuid) {
+      action = `<div class="rung-action"><button class="rung-retry" data-queue="${q.uuid}" data-chunk="${chunkUuid}">FORCE RETRY</button></div>`;
+    } else if (cls === 'escalated') {
+      action = `<div class="rung-escalated-note">No longer the active chunk — guardian's retry only acts on what's currently running. Check guardian's job log or re-dispatch this chunk from scratch.</div>`;
+    }
     return `<div class="rung ${cls}">
       <div class="rung-dot ${cls}"></div>
       <div class="rung-title">#${c.chunkIdx+1} ${c.chunkTitle||''}</div>
       <div class="rung-state ${cls}">${c.state}${c.retries ? ` · retry ${c.retries}` : ''}</div>
+      ${action}
     </div>`;
   }).join('');
+
+  ladder.querySelectorAll('.rung-retry').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const origText = btn.textContent;
+      btn.textContent = 'RETRYING…';
+      const res = await getJSON(`${GD}/seam/retry`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ queueId: btn.dataset.queue, chunkUuid: btn.dataset.chunk, reason: 'manual-ui' }),
+      });
+      if (res?.ok) {
+        refreshQueues();
+      } else {
+        btn.disabled = false;
+        btn.textContent = origText;
+        document.getElementById('submit-status').textContent = `Retry failed: ${res?.error || 'guardian unreachable'}`;
+        document.getElementById('submit-status').style.color = 'var(--red)';
+      }
+    });
+  });
 
   const stats = q.stats || {};
   summary.style.display = '';
   document.getElementById('qs-verified').textContent = `${stats.verified||0} verified`;
   document.getElementById('qs-total').textContent = `${stats.total||q.compartments?.length||0} total`;
 }
+
+// ── Import from Idearium (spec storage) ──────────────────────────────────────
+// Routes verified directly against idearium/api/index.js + orchestrator.js's
+// proxy before writing this: GET /api/idearium/specs → { specs: [...] },
+// GET /api/idearium/specs/:uuid/export → raw markdown text (specToMarkdown
+// output), not JSON — export is the right endpoint for this, not .show,
+// because .show returns the section-structured object, not compiled text.
+const importOverlay = document.getElementById('import-overlay');
+const importList     = document.getElementById('import-list');
+const importBtn       = document.getElementById('import-btn');
+
+function openImportPicker() {
+  importOverlay.classList.remove('hidden');
+  loadSpecList();
+}
+function closeImportPicker() {
+  importOverlay.classList.add('hidden');
+}
+
+async function loadSpecList() {
+  importList.innerHTML = `<div id="import-empty">Loading specs…</div>`;
+  const data = await getJSON(`${ORCH}/api/idearium/specs`);
+  if (data === null) {
+    importList.innerHTML = `<div id="import-error">Couldn't reach idearium via orchestrator. Is orchestrator running on :9000?</div>`;
+    return;
+  }
+  const specs = data.specs || [];
+  if (!specs.length) {
+    importList.innerHTML = `<div id="import-empty">No specs in idearium yet. Create one there first, or just paste/write a spec directly in the box.</div>`;
+    return;
+  }
+  importList.innerHTML = specs.map(s => `
+    <div class="import-item" data-uuid="${s.uuid}">
+      <div class="name">${(s.name || 'untitled').replace(/</g,'&lt;')}</div>
+      <div class="meta">${s.phase || '—'} · ${(s.sections||[]).length} section${(s.sections||[]).length===1?'':'s'} · ${s.uuid.slice(0,8)}</div>
+    </div>
+  `).join('');
+  importList.querySelectorAll('.import-item').forEach(el => {
+    el.addEventListener('click', () => importSpec(el.dataset.uuid, el.querySelector('.name').textContent));
+  });
+}
+
+async function importSpec(uuid, name) {
+  importList.innerHTML = `<div id="import-empty">Importing…</div>`;
+  try {
+    const r = await fetch(`${ORCH}/api/idearium/specs/${uuid}/export`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error(`export failed (${r.status})`);
+    const md = await r.text();
+    document.getElementById('spec-input').value = md;
+    document.getElementById('title-input').value = name || '';
+    updateChunkPreview();
+    closeImportPicker();
+  } catch (e) {
+    importList.innerHTML = `<div id="import-error">Import failed: ${e.message}</div>`;
+  }
+}
+
+importBtn.addEventListener('click', openImportPicker);
+document.getElementById('import-close').addEventListener('click', closeImportPicker);
+importOverlay.addEventListener('click', (e) => { if (e.target === importOverlay) closeImportPicker(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !importOverlay.classList.contains('hidden')) closeImportPicker(); });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 updateChunkPreview();

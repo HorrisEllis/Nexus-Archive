@@ -275,11 +275,23 @@ let histIdx = -1;
 // is non-fatal everywhere it's called — every call site already treats a
 // null return as "grammar unavailable" rather than throwing.
 let _grammar = null;
+let _descriptorsRegistered = false;
 async function loadGrammar() {
   if (_grammar && ge.status().ready) return _grammar;
   try {
     await ge.fetch(`http://127.0.0.1:${PORTS.orchestrator}`);
     _grammar = ge;
+    // Phase 36: register nexus-repl's own commands into component-registry
+    // so other grammar-engine consumers (nexus-cli.js, future Phase 40.5
+    // CLI projection) can discover/resolve them too. Fire-once, fire-and-
+    // forget — registration failing must never block the REPL itself from
+    // working exactly as it did before this existed.
+    if (!_descriptorsRegistered) {
+      _descriptorsRegistered = true;
+      require('./nexus-repl-descriptors')
+        .registerAll(`http://127.0.0.1:${PORTS.orchestrator}`)
+        .catch(() => {});
+    }
     return _grammar;
   } catch (e) {
     _grammar = null;
