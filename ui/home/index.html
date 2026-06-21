@@ -2000,17 +2000,27 @@ async function asSend(){
   if(cmd==='providers'){const d=await get(`${B.orch}/api/guardian/providers`);const p=Object.keys(d?.providers||d?.connected||{});out.textContent=p.length?p.map(n=>'● '+n).join('\n'):'No providers connected';return}
   if(cmd==='ideas'){const d=await get(`${B.orch}/api/idearium/ideas?sort=tension`);const i=Array.isArray(d)?d:(d?.ideas||[]);out.textContent=i.length?i.slice(0,8).map(x=>`[${x.status||'?'}] ${(x.title||x.body||'').slice(0,80)}`).join('\n'):'No ideas';return}
   // Try grammar engine via request-handler
-  // NOTE: /api/request doesn't exist on the orchestrator's own router (not a
-  // proxy gap — checked orchestrator.js directly, no route registers it).
-  // Always resolves {ok:false,error:'route not found'}, so this always falls
-  // through to the ollama dispatch below. Pre-existing, separate from the
-  // proxy-routing fix — needs the actual route built.
   const hr=await post(`${B.orch}/api/request`,{prompt:q});
   if(hr?.result?.componentId){out.textContent=`Grammar: ${hr.result.componentId}\nParams: ${JSON.stringify(hr.result.params||{})}\nOutcome: ${hr.outcome}`;return}
   if(hr?.outcome&&hr.outcome!=='RESOLVED'){out.textContent=`${hr.outcome}: ${hr.reason||''}`;return}
-  // Forward to ollama via guardian
-  const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:q,provider:'ollama',meta:{source:'assistant',ts:Date.now()}});
-  out.textContent=d?.jobId?`Dispatched to Ollama — job ${d.jobId.slice(0,12)}\nMonitor on Guardian channel (key 2)`:'Guardian offline. Connect a provider or start Ollama.';
+  // §FIX 2026-06-21: hr.result.source==='raid' was falling through both
+  // checks above (no componentId — it's not a grammar match; outcome IS
+  // 'RESOLVED' — Phase A passed) and getting silently discarded, then this
+  // function dispatched AGAIN with provider hardcoded to 'ollama' — ignoring
+  // whatever RAID's _decide() actually picked based on health/weights/intent.
+  // Traced directly in lib/request-handler.js's _phaseB: a RAID routing
+  // decision returns {source:'raid', agent, prompt, context, executed:false}
+  // — that's real, considered output, not nothing. Use it.
+  if(hr?.result?.source==='raid'&&hr.result.agent){
+    const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:hr.result.prompt||q,provider:hr.result.agent,meta:{source:'assistant',ts:Date.now(),requestId:hr.requestId}});
+    out.textContent=d?.jobId?`Dispatched to ${hr.result.agent} (RAID pick, cluster: ${hr.result.cluster||'—'}) — job ${d.jobId.slice(0,12)}\nMonitor on Guardian channel (key 2)`:`RAID picked ${hr.result.agent} but guardian is offline.`;
+    return;
+  }
+  // Genuine fallthrough — request-handler itself couldn't route this
+  // (hr.result.source==='unrouted', or /api/request unreachable). Only
+  // NOW is a hardcoded ollama dispatch honest — RAID never got a say.
+  const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:q,provider:'ollama',meta:{source:'assistant',ts:Date.now(),fallback:true}});
+  out.textContent=d?.jobId?`RAID unavailable — direct fallback to Ollama — job ${d.jobId.slice(0,12)}\nMonitor on Guardian channel (key 2)`:'Guardian offline. Connect a provider or start Ollama.';
 }
 
 // ── Rewind ────────────────────────────────────────────────────────────────────

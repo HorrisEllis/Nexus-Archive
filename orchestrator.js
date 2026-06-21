@@ -1519,6 +1519,28 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   }
 
   // ── Guardian proxy ────────────────────────────────────────────────────────
+  // ── Diagnostic proxy ─────────────────────────────────────────────────────
+  // Did not exist before — diagnostic (:7825) was only reachable via one
+  // ad-hoc /engines GET call elsewhere in this file. nexus-repl.js's `heal`
+  // command has been calling diagnostic directly (http://127.0.0.1:7825/
+  // gaps/:id/fix) rather than through orchestrator, which works but bypasses
+  // Phase 23.5-style centralized routing. Adding the proxy so `heal` can be
+  // registered into component-registry (same pattern as forge/snapshot) —
+  // confirmed POST /gaps/:uuid/fix is real, in service/nexus-diagnostic.js.
+  if (sub==='diagnostic') {
+    const action = seg[2] || '';
+    const uuid   = seg[3] || '';
+    const op     = seg[4] || '';
+
+    if (M==='GET'  && !action)             return json(res,200,await GET('diagnostic','/status'));
+    if (M==='GET'  && action==='status')   return json(res,200,await GET('diagnostic','/status'));
+    if (M==='GET'  && action==='self-heal') return json(res,200,await GET('diagnostic','/self-heal'));
+    if (M==='POST' && action==='gaps' && uuid && op==='fix')
+      return json(res,200,await POST('diagnostic',`/gaps/${uuid}/fix`,await readBody(req)));
+
+    return json(res,404,{ok:false,error:`diagnostic route not found: ${M} /api/diagnostic/${action}`});
+  }
+
   if (sub==='guardian') {
     const action = seg[2] || '';
     const uuid   = seg[3] || '';
@@ -2299,6 +2321,21 @@ try {
     }
   } catch(e) {
     console.warn('  [spec-drift] check failed (non-fatal):', e.message);
+  }
+
+  // Living changelog — driven by real .spec version bumps (§5.4), not
+  // hand-written prose per change. Idempotent: only writes when something
+  // actually changed since last boot's snapshot.
+  try {
+    const changelog = require('./lib/changelog');
+    const result = changelog.update();
+    if (result.written) {
+      console.log('  [changelog] ✓  ' + result.entries + ' new entr' + (result.entries===1?'y':'ies') + ' written to CHANGELOG.md');
+    } else {
+      console.log('  [changelog] ✓  no spec changes since last boot');
+    }
+  } catch(e) {
+    console.warn('  [changelog] update failed (non-fatal):', e.message);
   }
 
   // ────────────────────────────────────────────────────────────────────────────

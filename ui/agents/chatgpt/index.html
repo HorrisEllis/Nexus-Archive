@@ -49,6 +49,8 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
 #claim-badge .pulse{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0}
 #claim-badge.live{border-color:rgba(0,255,136,.35);color:var(--green);background:var(--green-dim)}
 #claim-badge.live .pulse{background:var(--green);animation:pulse-live 2s ease-in-out infinite}
+#claim-badge.queued{border-color:rgba(255,170,0,.35);color:var(--amber);background:var(--amber-dim)}
+#claim-badge.queued .pulse{background:var(--amber);animation:pulse-live 2s ease-in-out infinite}
 @keyframes pulse-live{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.5)}50%{box-shadow:0 0 0 4px rgba(0,255,136,0)}}
 
 /* ── Three-zone grid ── */
@@ -371,8 +373,21 @@ async function refreshSession() {
   }
 
   const claimed = !!channel.claimed;
-  claimBadge.className = claimed ? 'live' : '';
-  claimText.textContent = claimed ? 'CLAIMED · ACTIVE' : 'CONNECTED · PASSIVE';
+  // §FIX 2026-06-21: PASSIVE previously just meant "tab connected but not
+  // claimed" — said nothing about whether there's actual work waiting.
+  // Real semantic: PASSIVE should mean "in a queue" — connected, idle,
+  // with jobs pending for this provider. Checked guardian's /jobs?status=
+  // filter is real (guardian/server.js, already proxied through
+  // orchestrator) before wiring this.
+  if (!claimed) {
+    const jobsData = await getJSON(`${GD}/jobs?status=pending&limit=50`);
+    const pending = (jobsData?.jobs || []).filter(j => j.provider === PROVIDER);
+    claimBadge.className = pending.length ? 'queued' : '';
+    claimText.textContent = pending.length ? `PASSIVE · ${pending.length} QUEUED` : 'CONNECTED · PASSIVE';
+  } else {
+    claimBadge.className = 'live';
+    claimText.textContent = 'CLAIMED · ACTIVE';
+  }
 
   document.getElementById('stat-tab').textContent = channel.tabId || '—';
   const chatId = channel.chatId || 'home';

@@ -54,9 +54,10 @@ async function run() {
     server.close();
 
     assert.strictEqual(received.length, DESCRIPTORS.length);
-    assert.strictEqual(received[0].path, '/api/components/register');
-    assert.strictEqual(received[0].method, 'POST');
-    assert.strictEqual(received[0].body.id, 'repl.forge');
+    assert.strictEqual(received.length, 3, 'expected forge, heal, and snapshot');
+    assert.deepStrictEqual(received.map(r => r.body.id).sort(), ['repl.forge', 'repl.heal', 'repl.snapshot']);
+    assert.ok(received.every(r => r.path === '/api/components/register'));
+    assert.ok(received.every(r => r.method === 'POST'));
     assert.ok(results.every(r => r.ok === true));
   });
 

@@ -85,18 +85,35 @@ spec:
       phase_36_built:
         file: "cli/nexus-repl-descriptors.js"
         scope: >
-          Only `forge` registered, not all ~25 commands. Checked each
-          command against orchestrator.js's actual proxy routes first —
-          forge has a complete, verified, working path
-          (POST /api/guardian/dispatch → guardian/command). heal
-          (diagnostic :7825/gaps/:id/fix) and snapshot
-          (cortex :3748/api/snapshot) do NOT have an orchestrator-relative
-          proxy route yet — registering them with a route that doesn't
-          actually work would itself be a §1.2 violation. Same template
-          applies once those proxy routes exist.
+          forge, heal, and snapshot now registered — was only forge.
+          heal and snapshot were blocked on missing orchestrator proxy
+          routes; both added this session (orchestrator.js: new
+          sub==='diagnostic' proxy block for POST /api/diagnostic/gaps/
+          :uuid/fix, confirmed real against service/nexus-diagnostic.js;
+          POST /api/cortex/snapshots/create already existed, just wasn't
+          used by anything registered).
+        live_bug_found_and_fixed: >
+          nexus-repl.js's `snapshot` command was POSTing to
+          cortex/api/snapshot (singular) — that route doesn't exist.
+          Cortex only serves /api/snapshots/create (plural). Confirmed
+          directly in cortex/foundation/admin-server.js before fixing —
+          this 404'd silently every time `snapshot` was run. Fixed in
+          nexus-repl.js, found BEFORE registering the descriptor (so the
+          registry entry points at the real working route, not the bug).
+        caveat: >
+          repl.heal's route has a :uuid placeholder. Checked nexus-cli.js's
+          generic component.route dispatcher directly — it does zero
+          path-parameter substitution, sends route.path as a literal
+          string. So repl.heal is discoverable (grammar/registry/tab-
+          completion) but not yet genuinely dispatchable through the
+          generic exec path the way forge/snapshot are. nexus-repl.js's
+          own `heal` command still works — it calls diagnostic directly
+          with the real gapId substituted, bypassing component.route
+          entirely. Path-param substitution in the generic dispatcher is
+          a real gap, not built here.
         wiring: "registerAll() called once from nexus-repl.js's existing loadGrammar(), fire-and-forget, never blocks the REPL working as it always did."
         tests: "3/3 PASSING (tests/modules/nexus-repl-descriptors.test.js) — descriptor validated against component-registry's real validate(), not a guessed shape."
-        still_missing: "ge.resolve() is not yet called in the dispatch loop itself — registration makes forge discoverable elsewhere, but nexus-repl's own dispatch still goes through the switch unconditionally, same as before."
+        still_missing: "ge.resolve() is not yet called in the dispatch loop — checked first whether this was actually needed: it isn't yet. Unmatched local commands already fall through to guardian's generic /cli/exec endpoint (a real, working route), which itself falls back to dispatchLocal()'s own switch with a real 'unknown command' message. Wiring resolve() into dispatch() would be premature — there's no command yet that exists ONLY via registry (forge/heal/snapshot are all still hardcoded switch cases too), so there's nothing real to test the wiring against without speculative code. Real next step: once a command exists that's registry-only with no switch case, THAT'S when resolve()-based dispatch becomes necessary and testable."
       deps: "grammar-engine ✓ · component-registry ✓ · nexus-repl ✓ · jaa ✓ — unblocked"
 
   notes:

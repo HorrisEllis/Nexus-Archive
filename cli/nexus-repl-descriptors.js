@@ -27,6 +27,15 @@ const http = require('http');
 const MODULE_ID = 'nexus-repl-descriptors';
 const VERSION   = '1.0.0';
 
+// SCOPE UPDATE: heal and snapshot now have real, verified orchestrator-
+// relative proxy routes (added to orchestrator.js this session — see
+// diagnostic proxy block and existing /api/cortex/snapshots/create).
+// snapshot's underlying nexus-repl.js handler was also fixed: it was
+// calling cortex/api/snapshot (singular), which doesn't exist — cortex
+// only serves /api/snapshots/create (plural). Found and fixed before
+// registering this descriptor, not after — registering a broken route
+// would have just made the bug discoverable from more places.
+
 const DESCRIPTORS = [
   {
     id: 'repl.forge',
@@ -41,6 +50,44 @@ const DESCRIPTORS = [
     ],
     returns: { type: 'object', render: 'json' },
     tags: ['cli', 'forge', 'guardian'],
+  },
+  {
+    id: 'repl.heal',
+    namespace: 'repl',
+    name: 'heal',
+    version: '1.0.0',
+    description: 'Trigger HEAL_REQUESTED for a specific gap via diagnostic.',
+    grammar: ['heal'],
+    // CAVEAT, checked directly: nexus-cli.js's generic component.route
+    // dispatcher does zero path-parameter substitution — it sends route.path
+    // as a literal string. A :uuid placeholder here is discoverable (shows
+    // up in grammar/registry/tab-completion) but NOT genuinely dispatchable
+    // through the generic exec path the way forge/snapshot are, until
+    // path-param substitution exists somewhere. nexus-repl.js's own `heal`
+    // command still works fine — it calls diagnostic directly with the real
+    // gapId already substituted, bypassing component.route entirely. Don't
+    // remove that direct call; this registration is for discoverability,
+    // not (yet) for replacing it.
+    route: { method: 'POST', path: '/api/diagnostic/gaps/:uuid/fix' },
+    params: [
+      { name: 'uuid', type: 'string', required: true },
+    ],
+    returns: { type: 'object', render: 'json' },
+    tags: ['cli', 'heal', 'diagnostic', 'gaps'],
+  },
+  {
+    id: 'repl.snapshot',
+    namespace: 'repl',
+    name: 'snapshot',
+    version: '1.0.0',
+    description: 'Take a manual cortex snapshot.',
+    grammar: ['snapshot'],
+    route: { method: 'POST', path: '/api/cortex/snapshots/create' },
+    params: [
+      { name: 'message', type: 'string', required: false },
+    ],
+    returns: { type: 'object', render: 'json' },
+    tags: ['cli', 'snapshot', 'cortex'],
   },
 ];
 

@@ -597,9 +597,14 @@ async function dispatch(line) {
 
     case 'snapshot': {
       // snapshot [message] — take a cortex snapshot
+      // §FIX 2026-06-21: was POSTing to /api/snapshot (singular) — cortex
+      // only serves /api/snapshots/create (plural). Confirmed directly in
+      // cortex/foundation/admin-server.js before fixing — this 404'd
+      // every time, silently, since the catch block below only checks
+      // d.snapId and never surfaces the raw HTTP status.
       const msg = args.join(' ') || 'cli-snapshot';
       try {
-        const r = await fetch(`http://127.0.0.1:${PORTS.cortex}/api/snapshot`, {
+        const r = await fetch(`http://127.0.0.1:${PORTS.cortex}/api/snapshots/create`, {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ trigger:'manual', message: msg, source:'nexus-repl' }),
           signal: AbortSignal.timeout(10000),
