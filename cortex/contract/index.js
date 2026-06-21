@@ -36,6 +36,24 @@ const VERSION   = '1.0.0';
 
 const CONTRACTS = {
 
+  // Co-pilot — guardian/agents/ollama/co-pilot/. Continuous listener +
+  // CLI-tool execution. Highest-risk contract in this file (real command
+  // execution, not just LLM dispatch) — tighter rate limit than ollama's
+  // raw 'tool' allowance, and every call still goes through RAID's
+  // _approveTool() gate on top of this contract check, not instead of it.
+  'copilot': {
+    description: 'NEXUS co-pilot — full-context assistant with RAID-gated CLI execution',
+    allowed_actions: ['chat', 'diagnose', 'tool'],
+    denied_actions:  ['forge'], // co-pilot assists and executes vetted commands; it does not author/dispatch forge jobs itself
+    rate_limits: {
+      '*':    { max: 120, windowMs: 60_000 }, // continuous listener, higher baseline than a request-driven agent
+      'tool': { max: 20,  windowMs: 60_000 }, // tool/CLI execution specifically — much tighter
+    },
+    required_fields: ['uuid', 'prompt'],
+    proof_required:  false,
+    trust_level:     'local',
+  },
+
   // Ollama — local model, trusted but rate-limited
   'ollama': {
     description: 'Local Ollama LLM — primary inference engine',

@@ -1302,6 +1302,34 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
     }
   });
 
+  // ── Co-pilot — continuous bus listener + RAID-gated tool execution ───────
+  seq.phase({ name:'copilot.agent', type:'SOFT',
+    label:'Co-pilot (full-context assistant, RAID-gated CLI)',
+    fn: async () => {
+      let copilot;
+      try { copilot = require('./agents/co-pilot'); }
+      catch (e) { return { ok:true, msg:'guardian/agents/co-pilot not found — skipping' }; }
+
+      // execFn self-calls guardian's own /cli/exec — reuses the existing,
+      // already-tested §LAW II ledger-before-execute path instead of a
+      // second execution mechanism. Same-process HTTP overhead is small
+      // and consistent with how the rest of this codebase already proxies
+      // between its own services rather than refactoring shared internals.
+      const execFn = async (command, opts = {}) => {
+        const r = await fetch(`http://127.0.0.1:${HTTP_PORT}/cli/exec`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command, source: opts.source || 'copilot' }),
+          signal: AbortSignal.timeout(15000),
+        });
+        return r.json();
+      };
+
+      copilot.init({ jaaDB: jaa, bus, execFn });
+      console.log('[guardian] ⬡ COPILOT: listening — bus poll active, RAID gate ' + (copilot.status().raidAvailable ? 'available' : 'UNAVAILABLE (tool calls will fail closed)'));
+      return { ok:true, msg:'co-pilot agent listening' };
+    }
+  });
+
   // ── PHASE 10: Register with orchestrator ─────────────────────────────────
   seq.phase({ name:'orchestrator.register', type:'SOFT',
     label:'Register with orchestrator (§AXIOM)',
@@ -2756,6 +2784,20 @@ function handleExtendedRoutes(req, res, url, method) {
 
       pRes(res, 200, { ok: !error, command: raw, result, error, ts });
     }).catch(e => pRes(res, 400, { ok:false, error: e.message }));
+    return true;
+  }
+
+  // ── POST /copilot/prompt — co-pilot entry point, RAID-gated tool calls ──────
+  if (method === 'POST' && url.pathname === '/copilot/prompt') {
+    bodyJ(req).then(async body => {
+      const { prompt, command, proof, contextOpts } = body || {};
+      if (!prompt) { pRes(res, 400, { ok:false, error:'prompt required' }); return; }
+      let copilot;
+      try { copilot = require('./agents/co-pilot'); }
+      catch (e) { pRes(res, 503, { ok:false, error:'co-pilot agent not loaded: ' + e.message }); return; }
+      const result = await copilot.handlePrompt(prompt, { command, proof, contextOpts });
+      pRes(res, result.ok ? 200 : (result.denied ? 403 : 400), result);
+    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
     return true;
   }
 

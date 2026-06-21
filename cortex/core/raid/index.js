@@ -483,4 +483,74 @@ function stop() { [_interval,_hTimer,_bTimer].forEach(t=>t&&clearInterval(t)); _
 function setSystemState(s) { _systemState=s||{}; }
 function getState() { return { version:VERSION, health:_health, weights:Object.fromEntries(_weights), essEnabled:!!_ess, weightCount:_weights.size }; }
 
-module.exports = { init, stop, getState, setSystemState, _decide, _cluster, _health, _weights, _updateW };
+// ── Tool approval gate ───────────────────────────────────────────────────────
+// _approveTool(): the choke point any module wanting to execute a command
+// (not just dispatch an LLM call) routes through first. Reuses
+// cortex/contract/index.js's existing CONTRACTS — one source of truth for
+// "what is this agent allowed to do," not a second tools.json. Fail-closed:
+// an unregistered source is denied, never default-approved, since this
+// gates real command execution, the highest-risk surface in the system.
+const _toolHealth = {}; // { [source]: { calls: [{ts}], denials: number } }
+
+function _approveTool(source, command, opts = {}) {
+  if (!source || typeof source !== 'string') {
+    return { approved: false, reason: 'source is required' };
+  }
+  let contractModule, contract;
+  try {
+    contractModule = require('../../contract');
+    contract = contractModule.getContract(source);
+  } catch (e) {
+    return { approved: false, reason: `contract lookup failed: ${e.message}` };
+  }
+  // §FIX: getContract() never returns falsy — unregistered sources silently
+  // fall back to CONTRACTS['_default'] (checked directly in
+  // cortex/contract/index.js before writing this). _default already denies
+  // 'tool' in its denied_actions, so the check below still fails closed for
+  // tool calls specifically — but don't claim "no contract" when there IS
+  // one (just a minimal-trust one). Flag explicitly when this is the
+  // fallback, so callers/logs can tell "registered but denied" apart from
+  // "not registered at all."
+  const isUnregistered = !(source.toLowerCase() in (contractModule.CONTRACTS || {}));
+
+  const action = opts.action || 'tool';
+  if (contract.denied_actions?.includes(action)) {
+    return { approved: false, reason: isUnregistered
+      ? `source '${source}' has no contract — fell back to minimal-trust default, which denies '${action}'`
+      : `'${action}' is explicitly denied for ${source}` };
+  }
+  if (!contract.allowed_actions?.includes(action)) {
+    return { approved: false, reason: `'${action}' is not in ${source}'s allowed_actions` };
+  }
+
+  // Rate limiting — same shape as contract.rate_limits, per-source tracked
+  // here rather than in contract.js itself, since this is call-frequency
+  // state, not the static permission definition.
+  const now = Date.now();
+  const health = _toolHealth[source] || (_toolHealth[source] = { calls: [], denials: 0 });
+  const limit = contract.rate_limits?.[action] || contract.rate_limits?.['*'];
+  if (limit) {
+    health.calls = health.calls.filter(c => now - c.ts < limit.windowMs);
+    if (health.calls.length >= limit.max) {
+      health.denials++;
+      return { approved: false, reason: `rate limit exceeded for ${source}/${action} — ${limit.max} per ${limit.windowMs}ms`, retryAfterMs: limit.windowMs - (now - health.calls[0].ts) };
+    }
+  }
+
+  if (contract.proof_required && !opts.proof) {
+    return { approved: false, reason: `${source} requires proof for tool calls, none supplied` };
+  }
+
+  health.calls.push({ ts: now, command: typeof command === 'string' ? command.slice(0, 200) : null });
+  return { approved: true, source, action, trust_level: contract.trust_level };
+}
+
+function _toolHealthSnapshot() {
+  const out = {};
+  for (const [source, h] of Object.entries(_toolHealth)) {
+    out[source] = { recentCalls: h.calls.length, denials: h.denials };
+  }
+  return out;
+}
+
+module.exports = { init, stop, getState, setSystemState, _decide, _cluster, _health, _weights, _updateW, _approveTool, _toolHealthSnapshot };

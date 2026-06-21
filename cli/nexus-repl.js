@@ -543,6 +543,38 @@ async function dispatch(line) {
       return;
     }
 
+    case 'copilot': case 'cp': {
+      // copilot <prompt> — talk to the co-pilot. Use --cmd "<command>" to
+      // make it a RAID-gated tool call instead of a plain chat exchange.
+      const cmdFlagIdx = args.indexOf('--cmd');
+      let prompt, command = null;
+      if (cmdFlagIdx !== -1) {
+        prompt = args.slice(0, cmdFlagIdx).join(' ').trim();
+        command = args.slice(cmdFlagIdx + 1).join(' ').trim();
+      } else {
+        prompt = args.join(' ').trim();
+      }
+      if (!prompt) { log('Usage: copilot <prompt>\n       copilot <prompt> --cmd "<command to run, RAID-gated>"'); return; }
+      try {
+        const r = await fetch(`http://127.0.0.1:${PORTS.guardian}/copilot/prompt`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ prompt, command: command || undefined, contextOpts: { intent: prompt } }),
+          signal: AbortSignal.timeout(20000),
+        });
+        const d = await r.json();
+        if (d.denied) {
+          log(err(`RAID denied this tool call: ${d.reason}`));
+        } else if (d.ok) {
+          if (d.toolResult) log(`✓ tool executed:\n` + JSON.stringify(d.toolResult.result || d.toolResult, null, 2));
+          if (d.context) log($(C.dim, `(context: ${d.context.sections} section(s), ~${d.context.tokensUsed} tokens)`));
+          if (!d.toolResult) log($(C.dim, 'No tool call made — chat-only response (full narration not yet built, see docs/copilot.spec).'));
+        } else {
+          log(err(d.error || 'co-pilot request failed'));
+        }
+      } catch(e) { log(err('Guardian/co-pilot offline: ' + e.message)); }
+      return;
+    }
+
     case 'forge': {
       // forge <prompt> — dispatch a forge job to guardian (uses RAID to pick provider)
       const prompt = args.join(' ').trim();

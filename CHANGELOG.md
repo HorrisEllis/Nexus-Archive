@@ -1,5 +1,14 @@
 # NEXUS Changelog
 
+## 2026-06-21 — auto-generated from spec version bumps
+
+- **cli**: v1.3.0 → v1.4.0. Command-line tools for NEXUS operation, diagnosis, and boot.
+
+## 2026-06-21 — auto-generated from spec version bumps
+
+- **copilot** — new spec, v1.0.0. Full-context assistant: continuous bus listener + RAID-gated CLI tool
+- **raid**: v6.1.0 → v6.2.0. Provider routing. Ollama always first. Claude always last. Weight table learns from outcomes. _decide() is a pure function — same inputs always produce same decision.
+
 ## v0.9.8 (session) — 2026-06-21
 
 ### New: living changelog mechanism
