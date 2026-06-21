@@ -1999,28 +1999,46 @@ async function asSend(){
   if(cmd==='jobs'){const d=await get(`${B.orch}/api/guardian/jobs`);const j=Array.isArray(d)?d:(d?.jobs||[]);out.textContent=j.length?j.slice(0,8).map(x=>`[${x.status}] ${x.provider}: ${(x.prompt||'').slice(0,60)}`).join('\n'):'No jobs';return}
   if(cmd==='providers'){const d=await get(`${B.orch}/api/guardian/providers`);const p=Object.keys(d?.providers||d?.connected||{});out.textContent=p.length?p.map(n=>'● '+n).join('\n'):'No providers connected';return}
   if(cmd==='ideas'){const d=await get(`${B.orch}/api/idearium/ideas?sort=tension`);const i=Array.isArray(d)?d:(d?.ideas||[]);out.textContent=i.length?i.slice(0,8).map(x=>`[${x.status||'?'}] ${(x.title||x.body||'').slice(0,80)}`).join('\n'):'No ideas';return}
-  // Try grammar engine via request-handler
+  // Try grammar engine via request-handler for structured component matches
+  // (kept — co-pilot below doesn't replace grammar-resolved component
+  // dispatch, only the RAID-routing-for-plain-chat path it used to
+  // duplicate).
   const hr=await post(`${B.orch}/api/request`,{prompt:q});
   if(hr?.result?.componentId){out.textContent=`Grammar: ${hr.result.componentId}\nParams: ${JSON.stringify(hr.result.params||{})}\nOutcome: ${hr.outcome}`;return}
   if(hr?.outcome&&hr.outcome!=='RESOLVED'){out.textContent=`${hr.outcome}: ${hr.reason||''}`;return}
-  // §FIX 2026-06-21: hr.result.source==='raid' was falling through both
-  // checks above (no componentId — it's not a grammar match; outcome IS
-  // 'RESOLVED' — Phase A passed) and getting silently discarded, then this
-  // function dispatched AGAIN with provider hardcoded to 'ollama' — ignoring
-  // whatever RAID's _decide() actually picked based on health/weights/intent.
-  // Traced directly in lib/request-handler.js's _phaseB: a RAID routing
-  // decision returns {source:'raid', agent, prompt, context, executed:false}
-  // — that's real, considered output, not nothing. Use it.
-  if(hr?.result?.source==='raid'&&hr.result.agent){
-    const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:hr.result.prompt||q,provider:hr.result.agent,meta:{source:'assistant',ts:Date.now(),requestId:hr.requestId}});
-    out.textContent=d?.jobId?`Dispatched to ${hr.result.agent} (RAID pick, cluster: ${hr.result.cluster||'—'}) — job ${d.jobId.slice(0,12)}\nMonitor on Guardian channel (key 2)`:`RAID picked ${hr.result.agent} but guardian is offline.`;
+  // §FIX 2026-06-21: System Console now talks to the co-pilot
+  // (guardian/agents/co-pilot, built and proven end-to-end this session)
+  // instead of re-implementing grammar/RAID routing logic locally. The
+  // co-pilot already does context-building + RAID-gated dispatch + cortex
+  // memory in one place — this UI shouldn't have its own parallel,
+  // weaker version of that. Plain chat gets a real RAID-routed answer;
+  // anything that looks like a system command gets a RAID-gated tool
+  // call instead of guessed locally.
+  const looksLikeCommand = /^(cortex|guardian|diagnose|gaps|jobs|status|snapshot)\b/i.test(q);
+  const cp = await post(`${B.orch}/api/guardian/copilot/prompt`, {
+    prompt: q,
+    command: looksLikeCommand ? q : undefined,
+    contextOpts: { intent: q },
+  });
+  if (cp === null) {
+    out.textContent = 'Guardian/co-pilot unreachable. Is guardian running on :7820?';
     return;
   }
-  // Genuine fallthrough — request-handler itself couldn't route this
-  // (hr.result.source==='unrouted', or /api/request unreachable). Only
-  // NOW is a hardcoded ollama dispatch honest — RAID never got a say.
-  const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:q,provider:'ollama',meta:{source:'assistant',ts:Date.now(),fallback:true}});
-  out.textContent=d?.jobId?`RAID unavailable — direct fallback to Ollama — job ${d.jobId.slice(0,12)}\nMonitor on Guardian channel (key 2)`:'Guardian offline. Connect a provider or start Ollama.';
+  if (cp.denied) {
+    out.textContent = `RAID denied this: ${cp.reason}`;
+    return;
+  }
+  if (!cp.ok) {
+    out.textContent = `Error: ${cp.error || 'co-pilot request failed'}`;
+    return;
+  }
+  if (cp.toolResult) {
+    out.textContent = JSON.stringify(cp.toolResult.result ?? cp.toolResult, null, 2);
+  } else {
+    out.textContent = cp.context
+      ? `(context built: ${cp.context.sections} section(s), ~${cp.context.tokensUsed} tokens — full narrated response not yet built, see docs/copilot.spec)`
+      : 'No response.';
+  }
 }
 
 // ── Rewind ────────────────────────────────────────────────────────────────────

@@ -25,7 +25,7 @@ let ESSKernel = null;
 try { ESSKernel = require('../../lib/ess').ESSKernel; } catch(_) {}
 
 const MODULE_ID = 'raid';
-const VERSION   = '6.0.0';
+const VERSION   = '6.2.0';
 
 // ── Config (orchestrator.config.json → raid block; live, hot-reloaded) ──────
 function _raidCfg() {

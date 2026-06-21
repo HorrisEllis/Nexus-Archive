@@ -477,7 +477,7 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
   const res = await getJSON(`${GD}/command`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      command: 'spec', provider: PROVIDER, specText: finalSpec, title,
+      command: 'spec', provider: PROVIDER, specText: finalSpec, title, source: 'chatgpt-console',
       splitOn: hasHeadings ? 'heading' : 'size', maxChunkSize: CHUNK_LIMIT,
     }),
   });

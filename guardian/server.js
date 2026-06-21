@@ -2815,6 +2815,30 @@ function handleExtendedRoutes(req, res, url, method) {
 
           const provider = body.provider || 'chatgpt';
 
+          // §FIX 2026-06-21: SEAM queue creation had ZERO gate before this —
+          // straight from HTTP body to queue, no constraint check at all,
+          // unlike tool calls (which already go through RAID's
+          // _approveTool). Provider here is explicitly chosen by the
+          // caller, not RAID-picked — that's correct, the console/CLI
+          // already decided who handles this. But the CONSTRAINT layer
+          // (contract check, rate limit, fail-closed for unknown sources)
+          // should apply regardless of how the target was chosen. Action
+          // 'forge' is the right fit — already in every provider's
+          // contract, no new vocabulary needed.
+          try {
+            const raid = require('../cortex/core/raid');
+            const approval = raid._approveTool(body.source || 'unknown', specText.slice(0, 200), { action: 'forge', proof: body.proof });
+            if (!approval.approved) {
+              pRes(res, 403, { ok: false, error: `RAID denied SEAM queue creation: ${approval.reason}` });
+              return;
+            }
+          } catch (e) {
+            // RAID itself unreachable — fail closed, same posture as the
+            // co-pilot's tool gate, not a silent bypass.
+            pRes(res, 503, { ok: false, error: `RAID approval gate unavailable, refusing to create SEAM queue without it: ${e.message}` });
+            return;
+          }
+
           const { queue, plan } = _buildSeamQueue(specText, {
             provider, title: body.title,
             splitOn:      body.splitOn      || 'heading',

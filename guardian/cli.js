@@ -210,6 +210,7 @@ async function sendFile(provider, filePath, extraPrompt) {
     provider: provider,
     prompt,
     content,
+    source: 'cli',
   });
 
   if (!result.ok) { console.error('Error:', result.error); process.exit(1); }
@@ -237,6 +238,7 @@ async function sendSpec(provider, filePath, title) {
     provider,
     specText,
     title: title || path.basename(abs),
+    source: 'cli',
   });
 
   if (!result.ok) { console.error('Error:', result.error); process.exit(1); }

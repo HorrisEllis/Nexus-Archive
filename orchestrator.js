@@ -1548,6 +1548,14 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     const sub2   = seg[3] || '';
 
     if (M==='GET'  && !action)                      return json(res,200,await GET('guardian','/health'));
+    // §FIX 2026-06-21: SEAM watchdog escalations write to GUARDIAN's own
+    // local gaps table (guardian/lib/seam-queue.js's _escalate()), not
+    // cortex's. The orchestrator's /api/cortex/gaps route only ever
+    // queried cortex — every escalated SEAM stall was invisible through
+    // it. Confirmed directly: guardian exposes its own /gaps and
+    // /gaps/summary on :7820, never proxied until now.
+    if (M==='GET'  && action==='local-gaps' && sub2==='summary') return json(res,200,await GET('guardian','/gaps/summary'));
+    if (M==='GET'  && action==='local-gaps')        return json(res,200,await GET('guardian','/gaps'));
     if (M==='GET'  && action==='contract')          return json(res,200,await GET('guardian','/contract'));
     if (M==='GET'  && action==='health')             return json(res,200,await GET('guardian','/health'));
     if (M==='GET'  && action==='bus')                return json(res,200,await GET('guardian',`/bus?n=${QS.get('n')||100}`));

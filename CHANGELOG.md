@@ -2,6 +2,10 @@
 
 ## 2026-06-21 — auto-generated from spec version bumps
 
+- **seam-queue** — new spec, v1.0.0. SEAM queue — chunked spec dispatch to a browser-tab provider.
+
+## 2026-06-21 — auto-generated from spec version bumps
+
 - **cli**: v1.3.0 → v1.4.0. Command-line tools for NEXUS operation, diagnosis, and boot.
 
 ## 2026-06-21 — auto-generated from spec version bumps

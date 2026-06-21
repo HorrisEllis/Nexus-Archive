@@ -173,6 +173,9 @@
   "seam-component-registry": {
     "version": "1.1.0"
   },
+  "seam-queue": {
+    "version": "1.0.0"
+  },
   "seam": {
     "version": "1.0.0"
   },

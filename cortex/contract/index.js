@@ -54,6 +54,27 @@ const CONTRACTS = {
     trust_level:     'local',
   },
 
+  // Console/CLI sources that submit SEAM queues directly (human-initiated,
+  // not an LLM agent) — distinct trust tier from the agent contracts above.
+  'chatgpt-console': {
+    description: 'ui/agents/chatgpt/index.html — human-operated SEAM submission console',
+    allowed_actions: ['forge', 'tool'],
+    denied_actions:  [],
+    rate_limits: { '*': { max: 30, windowMs: 60_000 } },
+    required_fields: ['uuid'],
+    proof_required:  false,
+    trust_level:     'console',
+  },
+  'cli': {
+    description: 'cli/nexus-repl.js, guardian/cli.js — human-operated command line',
+    allowed_actions: ['forge', 'tool', 'chat', 'diagnose'],
+    denied_actions:  [],
+    rate_limits: { '*': { max: 60, windowMs: 60_000 } },
+    required_fields: ['uuid'],
+    proof_required:  false,
+    trust_level:     'console',
+  },
+
   // Ollama — local model, trusted but rate-limited
   'ollama': {
     description: 'Local Ollama LLM — primary inference engine',
