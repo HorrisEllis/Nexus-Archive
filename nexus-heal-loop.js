@@ -30,9 +30,31 @@
 
 const http = require('http');
 const { randomUUID } = require('crypto');
+const nexusConfig = require('./lib/nexus-config');
 
-const DRY_RUN       = process.env.NEXUS_HEAL_DRY !== 'false'; // default: dry run
-const MAX_ATTEMPTS  = 3;
+function _healCfg() {
+  // config wins; env vars are a fallback only if the config block is absent
+  const cfg = nexusConfig.get();
+  if (cfg.heal) {
+    return {
+      dryRun: cfg.heal.mode !== 'live',
+      maxAttempts: cfg.heal.maxAttempts ?? 3,
+      requireRaidApproval: cfg.heal.requireRaidApproval !== false,
+      autoHealSeverity: cfg.heal.autoHealSeverity || ['low', 'medium'],
+      escalateSeverity: cfg.heal.escalateSeverity || ['high', 'critical'],
+    };
+  }
+  return {
+    dryRun: process.env.NEXUS_HEAL_DRY !== 'false',
+    maxAttempts: 3,
+    requireRaidApproval: false,
+    autoHealSeverity: ['low', 'medium'],
+    escalateSeverity: ['high', 'critical'],
+  };
+}
+
+const DRY_RUN       = _healCfg().dryRun; // snapshot at boot; re-read live in _dispatchToGuardian
+const MAX_ATTEMPTS  = _healCfg().maxAttempts;
 const GUARDIAN_PORT = 7820;
 const CORTEX_PORT   = 3748;
 const ARCH_PORT     = 3747;
@@ -96,9 +118,36 @@ function _buildRepairSpec(gap, classification) {
 
 // ── Dispatch to Guardian forge ────────────────────────────────────────────────
 async function _dispatchToGuardian(gap, repairSpec, provider = 'claude') {
-  if (DRY_RUN) {
+  const live = _healCfg(); // re-read on every dispatch — config changes take effect without restart
+  if (live.dryRun) {
     console.log(`[heal-loop] DRY RUN — would dispatch: ${repairSpec.name}`);
     return { ok: true, dry: true };
+  }
+  if (live.requireRaidApproval) {
+    let raid;
+    try { raid = require('./cortex/core/raid'); } catch (_) { raid = null; }
+    if (raid && typeof raid._decide === 'function') {
+      const decision = raid._decide(
+        { intent: repairSpec.intent || repairSpec.name, preferredAgent: provider },
+        raid._health,
+        raid._weights
+      );
+      if (!decision || !decision.agent) {
+        console.log(`[heal-loop] RAID declined repair dispatch: ${repairSpec.name}`);
+        await _jaaWrite('event_log', {
+          type: 'heal-loop.raid-declined',
+          payload: { gapId: gap.id || gap.uuid, repair: repairSpec.name, decision },
+          source: 'heal-loop',
+        }).catch(() => {});
+        return { ok: false, reason: 'raid_declined', decision };
+      }
+      provider = decision.agent || provider;
+    }
+    // If RAID isn't loaded/reachable, fail closed to manual rather than silently bypassing approval (§1.3 no stubs)
+    else {
+      console.log(`[heal-loop] requireRaidApproval=true but RAID unavailable — escalating instead of dispatching`);
+      return { ok: false, reason: 'raid_unavailable' };
+    }
   }
   return _post(GUARDIAN_PORT, '/command', {
     command:  'forge_repair',

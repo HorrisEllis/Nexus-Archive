@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        home-ui
-    version:     1.1.0
+    version:     1.2.0
     uuid:        nexus-home-ui-v1-1000-2026-0617-jamesbrooks-001
     file:        ui/home/index.html
     serves:      http://127.0.0.1:9000/
@@ -76,6 +76,19 @@ spec:
     ui.navigation:
       payload: { target, ts }
       source:  home-ui
+
+  quick_notes:
+    status: pending
+    phase: 35
+    description: >
+      Sticky-notes box synced across every panel, the TV shell, and the
+      CLI simultaneously. Thin view over Idearium's idea.create/list
+      surface — not a redundant standalone notes system.
+    flow: "type → 300ms debounce → POST → SSE broadcast → re-render in every connected panel"
+    tag_to_idea: "tagging a note creates an Idearium idea (idearium.spec idea-store module)"
+    grammar: "'note <text>' → KNOWLEDGE_CAPTURE intent"
+    deps: "jaa ✓ · guardian/server ✓ · sse ✓ · userscripts ✓ — fully unblocked"
+    unlocks: "Phase 37 (Userscript Rebuild) — needs this landed alongside Phase 36 first"
 
   axioms:
     - §1.2 nothing silent — all UI events logged to cortex

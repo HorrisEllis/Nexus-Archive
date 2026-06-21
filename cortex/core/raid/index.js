@@ -19,12 +19,30 @@ const path = require('path');
 const http = require('http');
 const fs   = require('fs');
 const { jaaDB, uid } = require('../../memory/jaa-db');
+const nexusConfig = require('../../../lib/nexus-config');
 
 let ESSKernel = null;
 try { ESSKernel = require('../../lib/ess').ESSKernel; } catch(_) {}
 
 const MODULE_ID = 'raid';
 const VERSION   = '6.0.0';
+
+// ── Config (orchestrator.config.json → raid block; live, hot-reloaded) ──────
+function _raidCfg() {
+  const cfg = nexusConfig.get();
+  return {
+    healthPollMs: cfg.raid?.healthPollMs ?? HEALTH_INTERVAL_DEFAULT,
+    tickMs: cfg.raid?.tickMs ?? 3000,
+    localFirst: cfg.raid?.localFirst !== false,
+    localFirstFailThreshold: cfg.raid?.localFirstFailThreshold ?? 3,
+    agents: cfg.raid?.agents || null, // null = all agents enabled (back-compat)
+  };
+}
+function _agentEnabled(agent) {
+  const agents = _raidCfg().agents;
+  if (!agents) return true;
+  return agents[agent]?.enabled !== false;
+}
 
 // ── ESS (optional) ────────────────────────────────────────────────────────────
 let _ess = null;
@@ -46,7 +64,7 @@ if (ESSKernel) {
 }
 
 // ── Health cache ──────────────────────────────────────────────────────────────
-const HEALTH_INTERVAL = 10000;
+const HEALTH_INTERVAL_DEFAULT = 10000;
 const HEALTH_TIMEOUT  = 2000;
 
 const _health = {
@@ -210,6 +228,7 @@ const NCP_PROVIDERS = new Set([
 ]);
 
 function _agentAvailable(agent, healthSnap) {
+  if (!_agentEnabled(agent)) return false; // §toggle: orchestrator.config.json → raid.agents.<name>.enabled
   if (agent === 'ollama') return !!healthSnap['ollama']?.online;
   // All other providers: NCP browser tab — check if tab is connected
   const ncpKey = agent.startsWith('guardian-') ? agent : 'guardian-' + agent;
@@ -450,7 +469,7 @@ function init(cfg={}) {
   _initESSBindings();
   const _refreshHealthPromise = _refreshHealth();
   _interval = setInterval(_tick,         _cfg.pollMs??3000); _interval.unref();
-  _hTimer   = setInterval(_refreshHealth,HEALTH_INTERVAL);   _hTimer.unref();
+  _hTimer   = setInterval(_refreshHealth, _raidCfg().healthPollMs);   _hTimer.unref();
   _bTimer   = setInterval(_brainTick,    60000);             _bTimer.unref();
   console.log(`[raid] v${VERSION} — control layer for ALL agent dispatch (LAW_I local-first, LAW_II memory-before-dispatch)`);
   console.log(`[raid]   weights:${_weights.size} learned routes · ESS:${_ess?'on':'off'} · SNR pre-filter active`);

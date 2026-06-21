@@ -130,8 +130,9 @@ const SAFE_MODULES = new Set([
   ...[...TRUST_TIERS[2].modules],
 ]);
 
-const APPLY_PATCH  = process.env.NEXUS_FORGE_APPLY === 'true';
-const MAX_ATTEMPTS = 3;
+const nexusConfig  = require('../../lib/nexus-config');
+const APPLY_PATCH  = nexusConfig.getPath('heal.mode', 'dry') === 'live';
+const MAX_ATTEMPTS = nexusConfig.getPath('heal.maxAttempts', 3);
 
 let _interval = null;
 let _forge    = null;

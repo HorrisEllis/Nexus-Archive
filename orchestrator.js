@@ -2233,6 +2233,16 @@ try {
   } catch(e) {
     console.warn('  [mutation-contract] init skipped:', e.message);
   }
+  // Phase 31 remaining gap — misfire streak tracker, escalates to idearium
+  // at 3 consecutive low-confidence grammar resolutions of the same pattern.
+  try {
+    const { jaaDB } = require('./cortex/memory/jaa-db');
+    const misfireTracker = require('./lib/grammar-misfire-tracker');
+    misfireTracker.init(jaaDB);
+    console.log('  [grammar-misfire-tracker] ready');
+  } catch(e) {
+    console.warn('  [grammar-misfire-tracker] init skipped:', e.message);
+  }
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');
     const uiReg = require('./lib/ui-registry');

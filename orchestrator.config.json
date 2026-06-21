@@ -21,7 +21,27 @@
   "raid": {
     "tickMs": 3000,
     "healthPollMs": 10000,
-    "executionTreeEnabled": true
+    "executionTreeEnabled": true,
+    "isDecisionAuthority": true,
+    "localFirst": true,
+    "localFirstFailThreshold": 3,
+    "agents": {
+      "ollama":            { "enabled": true },
+      "guardian-claude":   { "enabled": true },
+      "guardian-chatgpt":  { "enabled": true },
+      "claude":            { "enabled": true },
+      "chatgpt":           { "enabled": true },
+      "gemini":            { "enabled": true },
+      "perplexity":        { "enabled": true }
+    }
+  },
+  "heal": {
+    "_comment": "Single source of truth for self-healing. Replaces NEXUS_HEAL_DRY and NEXUS_FORGE_APPLY env vars — those are now ignored if this block is present.",
+    "mode": "live",
+    "maxAttempts": 3,
+    "requireRaidApproval": true,
+    "autoHealSeverity": ["low", "medium"],
+    "escalateSeverity": ["high", "critical"]
   },
   "state": {
     "persistPath": "data/NEXUS_STATE.json",
