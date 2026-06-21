@@ -38,6 +38,7 @@ function _latticeLink(a, b, w=0.7, t='associated') {
 }
 import { getIdeaOS, VERSION } from '../core/index.js';
 import { RepoLayer } from '../repo/index.js';
+import { RepoWatcher } from '../repo/watcher.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
 import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
@@ -850,6 +851,29 @@ function _latticeLink(a, b, w=0.7, t='associated') {
           r.setTimeout(2000, () => { r.destroy(); resolve(); }); // resolve on timeout = SSE streaming
           r.on('error', reject); r.end();
         });
+      },
+    });
+
+    // Phase 6.5 SOFT: repo drop-watcher (§FIX 2026-06-21 — RepoWatcher class
+    // existed, had its own doc comment describing exactly this boot wiring,
+    // and was never actually instantiated anywhere in the codebase. Same
+    // singleton RepoLayer the /api/repos routes use — not a second instance
+    // with its own divergent in-memory state.)
+    seq.phase({ name:'repo.watch', type:'SOFT',
+      label:'Start repo drop-watcher (data/drop/ — .zip and .spec containers)',
+      fn: async () => {
+        const watcher = new RepoWatcher({
+          repoLayer: getRepoLayer(),
+          onEvent: (evt) => {
+            const lb = JSON.stringify({ system:'idearium', type: evt.type, payload: evt });
+            const r = _require('http').request({
+              hostname:'127.0.0.1', port:9000, path:'/api/ledger', method:'POST',
+              headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(lb)},
+            });
+            r.on('error', () => {}); r.write(lb); r.end();
+          },
+        });
+        watcher.init();
       },
     });
 

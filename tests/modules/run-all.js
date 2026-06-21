@@ -51,6 +51,15 @@ const SUITES = [
   'test-liminal-space.js',
   'test-snr-filter.js',
   'test-ui-registry.js',
+  // §FIX 2026-06-21: same recurring bug class James fixed once (2026-06-19,
+  // 6 suites) — these existed, passed standalone, were never registered.
+  'grammar-misfire-tracker.test.js',
+  'nexus-repl-descriptors.test.js',
+  'quick-notes.test.js',
+  'changelog.test.js',
+  // new this pass:
+  'spec-container.test.js',
+  'idearium-repo-watcher.test.mjs',
 ];
 
 let totalPassed = 0;
