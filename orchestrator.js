@@ -167,7 +167,7 @@ const CHANNELS = [
   { from:'guardian',  ch:'guardian.session.named',       to:['jaa'],         desc:'Chat session named' },
   { from:'guardian',  ch:'guardian.timeline',            to:['jaa'],         desc:'Timeline event' },
   { from:'guardian',  ch:'guardian.setting.update',      to:['jaa'],         desc:'Setting changed' },
-  { from:'cortex',    ch:'cortex.gap.found',             to:['guardian'],    desc:'Gap → guardian ledger' },
+  { from:'guardian',  ch:'cortex.gap.found',             to:['cortex'],      desc:'Gap → cortex gaps table (was documented backwards — guardian emits via POST /api/event, cortex receives)' },
   { from:'idearium',  ch:'idearium.idea.created',        to:['cortex'],      desc:'Idea → cortex + tagged' },
   { from:'idearium',  ch:'idearium.snapshot.pushed',     to:['cortex'],      desc:'Snapshot → versionium' },
   { from:'alk',       ch:'alk.signal.composite',         to:['cortex'],      desc:'ALK composite → event_log' },

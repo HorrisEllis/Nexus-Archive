@@ -1,0 +1,15 @@
+{
+  "type": "diagnostic",
+  "name": "NEXUS DIAGNOSTIC ESCALATION",
+  "details": {
+    "gap": "seam_orphan_resume",
+    "path": "?",
+    "body": "",
+    "severity": "high",
+    "attempts": 0
+  },
+  "analysis": {
+    "rootCause": "Seam orphan resume operation is failing due to missing or incorrect configuration.",
+    "fixProposal": "Verify that the seam orphan resume configuration is correctly set in the Nexus system. Ensure that all necessary parameters are properly configured and that there are no conflicts with other settings."
+  }
+}

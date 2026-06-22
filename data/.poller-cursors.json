@@ -4,7 +4,7 @@
     "seenIds": []
   },
   "architect:event_log.jsonl": {
-    "lineOffset": 4,
+    "lineOffset": 9,
     "seenIds": []
   }
 }

@@ -35,7 +35,18 @@ const Detector = {
       return { truncated:true, score:1.0, reason:'empty_or_tiny' };
     const lines = response.trim().split('\n');
     const last = lines[lines.length-1]?.trim() || '';
-    if (last.length > 0 && !last.match(/[.!?:)\]'"]$/) && last.length < 80)
+    // The SEAM protocol's own designed terminator — "SEAM VERDICT: PASS" /
+    // "SEAM VERDICT: FAIL", verbatim from the prompt template this detector
+    // is grading against — doesn't end in [.!?:)\]'"] at all, with or
+    // without a trailing emoji (✔️/❌ etc., which models commonly add and
+    // which the old emoji-blind regex also choked on). The old check flagged
+    // every well-formed SEAM VERDICT line as mid_sentence_end unconditionally
+    // — confirmed live: identical composite score across 9 straight retries
+    // on content that varied each time, meaning it was never reading content
+    // at all. A real verdict format gets a real pass here, not a punctuation
+    // guess.
+    const isSeamVerdictLine = /SEAM\s+VERDICT\s*:\s*(PASS|FAIL)\s*[^\w]{0,10}$/i.test(last);
+    if (!isSeamVerdictLine && last.length > 0 && !last.match(/[.!?:)\]'"]$/) && last.length < 80)
       return { truncated:true, score:0.85, reason:'mid_sentence_end' };
     if (response.length < profile.minResponseChars) {
       const ratio = response.length / profile.minResponseChars;

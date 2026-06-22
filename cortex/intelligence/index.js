@@ -755,6 +755,9 @@ async function _crossLedger() {
           type:      'baseline_drift',
           path:      'cortex/intelligence/cross_ledger',
           gapHash,   // same hash convention as bep_patterns.sigHash — stable dedup key
+          quantity:  1, // §needs-2026-06-21: this dedup already checked-before-insert
+                        // (the right pattern — see admin-server.js's cortex.gap.found,
+                        // which now mirrors it) but never counted recurrence. It does now.
           body:      `System drift detected: score=${driftScore.toFixed(2)}, avgSigma=${avgSigma.toFixed(2)}, avgFriction=${avgFriction.toFixed(2)}, ${recentGaps.length} new gaps in 5min`,
           severity:  driftScore > 0.85 ? 'fatal' : 'high',
           status:    'open',
@@ -764,9 +767,15 @@ async function _crossLedger() {
           meta: { driftScore, avgSigma, avgFriction, recentGaps: recentGaps.length },
         });
         _log(`drift gap opened — score ${driftScore.toFixed(2)}`);
-      } else if (!existing[0].gapHash) {
-        // backfill hash on a legacy gap row that predates this fix
-        jaaDB.update('gaps', existing[0].uuid, { gapHash });
+      } else if (existing[0].gapHash) {
+        jaaDB.update('gaps', existing[0].uuid, {
+          quantity: (existing[0].quantity || 1) + 1,
+          lastSeenTs: now,
+          meta: { driftScore, avgSigma, avgFriction, recentGaps: recentGaps.length },
+        });
+      } else {
+        // backfill hash + start counting on a legacy gap row that predates this fix
+        jaaDB.update('gaps', existing[0].uuid, { gapHash, quantity: (existing[0].quantity || 1) + 1, lastSeenTs: now });
       }
     }
 
