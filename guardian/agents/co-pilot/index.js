@@ -35,6 +35,7 @@ let _bus = null;
 let _raid = null;
 let _contextBuilder = null;
 let _ollamaAgent = null;
+let _dispatchAndWait = null; // chatgpt narration — the REAL path: guardian's NCP + userscript-chatgpt.js browser tab, same mechanism /cli/exec's `send` command already uses. NOT guardian/api-dispatch.js (OPENAI_API_KEY) — see §FIX below.
 let _execFn = null; // injected — how to actually run an approved command
 let _listening = false;
 let _eventBuffer = []; // rolling window of recent bus events, for "what just happened" context
@@ -50,6 +51,7 @@ function init(opts = {}) {
   _raid           = opts.raid !== undefined ? opts.raid : safeRequire('../../../cortex/core/raid');
   _contextBuilder = opts.contextBuilder !== undefined ? opts.contextBuilder : safeRequire('../../../lib/context-builder');
   _ollamaAgent    = opts.ollamaAgent !== undefined ? opts.ollamaAgent : safeRequire('../ollama');
+  _dispatchAndWait = opts.dispatchAndWait !== undefined ? opts.dispatchAndWait : null; // no safeRequire default — this isn't a requireable module, guardian/server.js must inject its own dispatchJobAndWait
   _execFn         = opts.execFn !== undefined ? opts.execFn : null; // caller (guardian/server.js) injects the real /cli/exec handler
 
   // §FIX: guardian's SISOStream.on(type, fn) is per-exact-type only — no
@@ -153,13 +155,88 @@ async function handlePrompt(prompt, opts = {}) {
   const response = {
     ok: true,
     requestId,
-    context: context ? { sections: context.sections?.length || 0, tokensUsed: context.tokensUsed } : null,
+    // §FIX: was `context.sections?.length || 0` — context-builder.js returns
+    // `sections: sections.length` (already a count, a number). Calling
+    // .length on a number is undefined, so this always read 0 regardless
+    // of how much context actually got built. Confirmed against the real
+    // file, not assumed.
+    context: context ? { sections: context.sections || 0, tokensUsed: context.tokensUsed } : null,
     toolResult,
+    narration: context ? await _narrate(prompt, context, toolResult, opts.provider) : null,
     recentEvents: recentEvents(5),
   };
 
-  _logDecision(requestId, prompt, { executed: wantsTool, toolResult });
+  _logDecision(requestId, prompt, { executed: wantsTool, toolResult, narration: response.narration?.provider || null });
   return response;
+}
+
+/**
+ * Turns the built context (+ tool result, if any) into an actual narrated
+ * response. LAW I: ollama (local) is tried first unless a specific provider
+ * was requested or ollama isn't running; chatgpt is the explicit fallback,
+ * never silent — every outcome reports which provider answered (or why
+ * neither did), the same honesty rule docs/copilot.spec's not_built list
+ * was flagging before this existed.
+ *
+ * §FIX 2026-06-22 (James): chatgpt here means the REAL mechanism this
+ * system is built around — the logged-in browser tab via
+ * guardian/userscript-chatgpt.js + lib/ncp.js, the same path /cli/exec's
+ * `send <provider> <prompt>` already uses (createJob/dispatchJob). This
+ * used to call guardian/api-dispatch.js's direct OpenAI API instead,
+ * which needs OPENAI_API_KEY — a different mechanism entirely
+ * (cortex/agents/chatgpt's RAID job-queue fallback uses that one on
+ * purpose). Wrong default for an everyday narrator with no API key
+ * configured; the browser tab needs no key at all. Removed, not patched
+ * around.
+ *
+ * Deliberately NOT chatgpt-mode.js here either — chatgpt-mode does its
+ * own Nexus-records retrieval (cortex's /api/search) as its whole
+ * purpose, and ALSO calls api-dispatch.js's API-key path by design for
+ * THAT feature. Co-pilot already built its own context via
+ * lib/context-builder.js; this just needs to narrate it through whichever
+ * tab is actually connected.
+ */
+async function _narrate(prompt, context, toolResult, requestedProvider) {
+  if (!context?.systemPrompt) return null;
+
+  const system = context.systemPrompt +
+    (toolResult ? `\n=== TOOL RESULT ===\n${JSON.stringify(toolResult).slice(0, 1000)}\n` : '');
+  // The NCP/userscript job shape has no separate system-role field — see
+  // handleJob() in guardian/userscript-chatgpt.js, it just concatenates
+  // prompt+content into one message. Building the combined text here
+  // rather than relying on that concatenation's exact field order, so
+  // this doesn't silently break if that ordering ever changes.
+  const combined = `${system}\n\n=== USER ===\n${prompt}`;
+
+  const wantsOllama  = requestedProvider === 'ollama';
+  const wantsChatgpt = requestedProvider === 'chatgpt';
+  const isAuto       = !wantsOllama && !wantsChatgpt; // LAW I default
+
+  if (wantsOllama || isAuto) {
+    if (_ollamaAgent?.generate && _ollamaAgent.isRunning?.()) {
+      try {
+        const text = await _ollamaAgent.generate(system, prompt);
+        return { provider: 'ollama', text };
+      } catch (e) {
+        if (wantsOllama) return { provider: 'ollama', error: e.message };
+        // isAuto: fall through to chatgpt below — LAW I fallback, not a dead end
+      }
+    } else if (wantsOllama) {
+      return { provider: 'ollama', error: 'ollama not running' };
+    }
+  }
+
+  if (wantsChatgpt || isAuto) {
+    if (!_dispatchAndWait) {
+      return { provider: 'chatgpt', error: 'guardian did not inject a dispatcher — co-pilot.init() needs dispatchAndWait wired in' };
+    }
+    const res = await _dispatchAndWait('chatgpt', combined, { command: 'chat' });
+    return res.ok
+      ? { provider: 'chatgpt', text: res.text }
+      : { provider: 'chatgpt', error: res.error };
+  }
+
+  return { provider: requestedProvider, error: `unknown provider: ${requestedProvider}` };
 }
 
 function _logDecision(requestId, prompt, outcome) {

@@ -109,6 +109,121 @@ function _buildSeamQueue(specText, opts = {}) {
   return { queue, plan };
 }
 
+// ── Hook-by-hook build orchestrator — one seam-block hook at a time ────────
+// James, 2026-06-22: "a complete coding suite for ollama using the seam and
+// component system... build small areas at a time to optimize them for
+// small llms." Per his own answer: ollama-first with chatgpt fallback (LAW
+// I, same pattern co-pilot's narrator already uses), one hook at a time.
+//
+// Reuses everything _buildSeamQueue above already proves out — SEAMQueue's
+// retry/escalation state machine, the native-ollama dispatch path (no
+// browser tab needed), §LAW II ledger-before-execute. What's new: each
+// hook gets its OWN single-chunk queue (not one queue for the whole
+// component) so the provider can be chosen and re-chosen per hook — LAW I
+// fallback applied at this orchestration layer, not inside seam-queue.js's
+// own strategy-retry logic (which retries prompting strategy, not
+// provider — deliberately not touched).
+//
+// §FIX caught before shipping: _buildSeamQueue's caller in /command gates
+// queue.start() behind `ncp.isConnected(provider)` — generically, with no
+// ollama special-case. ollama never registers an NCP/SSE client (it's not
+// a browser tab), so that gate would leave an ollama queue stuck in
+// pendingQueue forever, waiting for a connection that will never happen —
+// exactly the bug _dispatchSeamOllamaNative's own header comment says was
+// "closed," but that comment is about the ncpPush dispatch layer, not this
+// caller-side connectivity gate. Not silently patching the existing
+// /command route in this pass (different scope, flagging it instead) —
+// this new orchestrator just never applies that gate to 'ollama': starts
+// unconditionally, matching the documented "no tab needed" intent.
+function _dispatchSingleHookChunk(built, provider, fallbackProvider) {
+  return new Promise((resolve) => {
+    function tryProvider(prov, isLastAttempt) {
+      const queue = new SEAMQueue({
+        title:    built.title,
+        provider: prov,
+        chunks:   [{ title: built.title, content: built.content, builtPrompt: built.builtPrompt, axioms: built.axioms }],
+        jaa,
+        busEmit:  (type, data) => bus.emit(type, data),
+        ncpPush:  (p, data) => {
+          if (p === 'ollama' || p === 'ollama-ncp') return _dispatchSeamOllamaNative(data);
+          return ncp.push(p, data);
+        },
+        onComplete: (stats) => {
+          _activeQueues.delete(queue.uuid);
+          if (stats.verified >= 1) {
+            resolve({ ok: true, hookId: built.hookId, provider: prov, stats });
+          } else if (!isLastAttempt && fallbackProvider && fallbackProvider !== prov) {
+            bus.emit('guardian.seamhook.fallback', { hookId: built.hookId, from: prov, to: fallbackProvider });
+            tryProvider(fallbackProvider, true);
+          } else {
+            resolve({ ok: false, hookId: built.hookId, provider: prov, stats });
+          }
+        },
+      });
+      _activeQueues.set(queue.uuid, queue);
+
+      if (prov === 'ollama' || prov === 'ollama-ncp') {
+        queue.start(); // native dispatch, no tab, no connectivity gate — see comment above
+      } else if (ncp.isConnected(prov)) {
+        queue.start();
+      } else {
+        const pq = pendingQueue.get(prov) || [];
+        pq.push({ _seamQueue: queue });
+        pendingQueue.set(prov, pq);
+      }
+    }
+    tryProvider(provider, !fallbackProvider);
+  });
+}
+
+/**
+ * buildSeamComponentByHook(seam, opts)
+ *   seam: a parsed seam-block component object (seam-block.spec shape,
+ *         hooks: Hook[])
+ *   opts: { provider='ollama', fallbackProvider='chatgpt', stopOnFailure=false,
+ *           onProgress(evt) }
+ *
+ * Sequential — one hook's queue fully resolves (verified or exhausted to
+ * fallback) before the next hook's chunk is even built, so each
+ * subsequent hook's analogues correctly reflect only hooks actually
+ * proven complete so far (see emerge/compiler/seam-hook-chunker.js).
+ */
+async function buildSeamComponentByHook(seam, opts = {}) {
+  const { buildHookNodes, buildHookChunk, markHookComplete } = require('../emerge/compiler/seam-hook-chunker');
+  const provider         = opts.provider || 'ollama';
+  const fallbackProvider = opts.fallbackProvider === null ? null : (opts.fallbackProvider || 'chatgpt');
+
+  const nodes   = buildHookNodes(seam);
+  const results = [];
+
+  for (const node of nodes) {
+    const built  = buildHookChunk(node, nodes, opts);
+    const result = await _dispatchSingleHookChunk(built, provider, fallbackProvider);
+    results.push(result);
+    if (result.ok) markHookComplete(node);
+
+    const progress = { hookId: node.id, ok: result.ok, provider: result.provider,
+      done: results.length, total: nodes.length };
+    bus.emit('guardian.seamhook.build.progress', progress);
+    // §FIX (same one already caught for GUARDIAN_LIVE_CHUNK above):
+    // bus.emit()'s automatic cockpitBroadcast relay only sends
+    // {seq,type,ts,claimed} — no payload. Explicit call needed for the
+    // CLI's /events listener to actually see hookId/ok/provider/done/total.
+    cockpitBroadcast({ type: 'guardian.seamhook.build.progress', ...progress, ts: Date.now() });
+    opts.onProgress?.(progress);
+
+    if (!result.ok && opts.stopOnFailure) break;
+  }
+
+  return {
+    ok:      results.every(r => r.ok),
+    total:   nodes.length,
+    passed:  results.filter(r => r.ok).length,
+    failed:  results.filter(r => !r.ok).length,
+    results,
+  };
+}
+
 // ── Watch input/ folder — process .pending files as they arrive ───────────
 // .spec files  → SEAMQueue dispatch
 // .md/.txt     → simple job dispatch
@@ -167,6 +282,13 @@ _physQueue.watchInput(async (data, filename) => {
 // Active SEAM queues — keyed by queueId
 // §LAW II — queue state persisted to JAA, this is a performance index only
 const _activeQueues = new Map();
+// buildId → { status:'running'|'done', seam, total, done, results, startedAt, finishedAt }
+// Sibling to _activeQueues, not a replacement — buildSeamComponentByHook
+// drives many short-lived single-chunk SEAMQueues internally (one per
+// hook); this map tracks the OVERALL multi-hook build run those queues
+// belong to, since a full build can run well past any single HTTP
+// request's timeout and needs to be pollable.
+const _activeHookBuilds = new Map();
 
 // Find the queue whose currently-dispatched compartment owns this jobId.
 // Used by NCP_COMPLETE/NCP_ERROR below to close the loop SEAM dispatch opens
@@ -474,6 +596,47 @@ function dispatchJob(job) {
   return; // pool owns dispatch from here
 }
 
+// ── dispatchJobAndWait — Promise wrapper around the REAL dispatch path ─────
+// James, 2026-06-22: "remove that garbage OPENAI_API_KEY. use what the
+// system is built for... guardian and userscript!" — correct call. For
+// 'chatgpt' as a co-pilot narration provider, this is supposed to mean
+// the actual logged-in browser tab via NCP (guardian/userscript-chatgpt.js
+// + lib/ncp.js), the same mechanism `send <provider> <prompt>` in
+// /cli/exec already uses (createJob + dispatchJob) — not
+// guardian/api-dispatch.js's direct OpenAI call, which is a SEPARATE
+// mechanism (cortex/agents/chatgpt's RAID job-queue fallback, a paid API
+// key path) that has no business being the default for an everyday
+// narrator. Wrong default, fixed at the source, not patched over.
+//
+// The browser-tab path is async/job-queue shaped, not a single await —
+// createJob() + dispatchJob() return immediately, the real answer arrives
+// later via _handleNCPMessage's GUARDIAN_COMPLETE/GUARDIAN_ERROR cases
+// mutating the job in the `jobs` Map. This wraps that in a Promise so
+// callers like co-pilot's narrator (which already does
+// `await something(...)`) don't need to know any of that.
+function dispatchJobAndWait(provider, prompt, opts = {}) {
+  const timeoutMs = opts.timeoutMs ?? 90000;
+  return new Promise((resolve) => {
+    const job = createJob({ command: opts.command || 'chat', provider, prompt });
+    dispatchJob(job);
+    const startedAt = Date.now();
+    const poll = setInterval(() => {
+      const j = jobs.get(job.id);
+      if (!j) { return; } // shouldn't happen — createJob always sets it before this fires
+      if (j.status === 'complete') {
+        clearInterval(poll);
+        resolve({ ok: true, text: j.responseText || '', jobId: job.id, provider });
+      } else if (j.status === 'error') {
+        clearInterval(poll);
+        resolve({ ok: false, error: j.error || 'job failed', jobId: job.id, provider });
+      } else if (Date.now() - startedAt > timeoutMs) {
+        clearInterval(poll);
+        resolve({ ok: false, error: `timed out after ${timeoutMs}ms waiting for ${provider} tab to respond — is it connected? (GET /providers)`, jobId: job.id, provider });
+      }
+    }, 500);
+  });
+}
+
 // ── Ollama is a local module, not a browser-tab provider ─────────────────────
 // Ollama runs as a real HTTP service on this machine (default :11434). It has
 // no DOM, no CORS problem worth dodging, and nothing for a Tampermonkey
@@ -685,6 +848,27 @@ function _handleNCPMessage(msg) {
       break;
     }
 
+    case 'GUARDIAN_LIVE_CHUNK': {
+      // Phase 69 — live mirror response chunk. No jobId (this isn't a
+      // job — no agent_calls row, no completion state) and no cortex
+      // batching (live conversational mirror, not a SEAM build artifact
+      // stream worth persisting chunk-by-chunk).
+      //
+      // §FIX caught before shipping: bus.emit()'s automatic cockpitBroadcast
+      // relay (SISOStream.emit, ~line 244) only sends
+      // { seq, type, ts, claimed } — no data field. Checked the class
+      // directly rather than assuming bus.emit alone would deliver the
+      // text. Same reason GUARDIAN_CHUNK above makes its own explicit
+      // cockpitBroadcast call instead of relying on bus.emit's relay —
+      // mirroring that, not inventing a different fix.
+      if (text) {
+        const payload = { provider, text, role: msg.role || 'assistant', done: !!msg.done, ts: Date.now() };
+        bus.emit('guardian.live.chunk', payload);
+        cockpitBroadcast({ type: 'guardian.live.chunk', ...payload });
+      }
+      break;
+    }
+
     case 'GUARDIAN_COMPLETE':
     case 'NCP_COMPLETE': {
       if (jobId) {
@@ -749,15 +933,9 @@ function _handleNCPMessage(msg) {
         const gapDrift = GapHunter.drift(gaps);
         if (gaps.length > 0) {
           for (const g of gaps) {
-            // §needs-2026-06-21: reuse g.uuid when the detector already minted
-            // one (liminal-sourced gaps now do, so a hypothesis's basedOn can
-            // resolve across guardian's and cortex's separate gaps tables).
-            // Native gap-hunter detectors (bullet density, etc.) carry no
-            // uuid — fall back to a fresh one, same as before.
-            jaa.insert('gaps', { uuid: g.uuid || require('crypto').randomUUID(),
+            jaa.insert('gaps', { uuid: require('crypto').randomUUID(),
               jobId, provider, type: g.type, domain: g.domain,
               reason: g.reason, description: g.description,
-              kind: g.kind || null, basedOn: g.basedOn || null,
               score: g.score, evidence: g.evidence, ts: Date.now() });
           }
           bus.emit('guardian.gaps', { jobId, gaps, drift: gapDrift, provider });
@@ -844,7 +1022,6 @@ function _handleNCPMessage(msg) {
               payload: {
                 jobId, provider, type: g.type, domain: g.domain,
                 reason: g.reason, description: g.description,
-                uuid: g.uuid || null, kind: g.kind || null, basedOn: g.basedOn || null,
                 score: g.score, evidence: g.evidence, source: 'guardian-gaphunter',
               },
               source: 'guardian-ncp', causedBy: jobId, ts: Date.now(),
@@ -1411,7 +1588,7 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
         return r.json();
       };
 
-      copilot.init({ jaaDB: jaa, bus, execFn });
+      copilot.init({ jaaDB: jaa, bus, execFn, dispatchAndWait: dispatchJobAndWait });
       console.log('[guardian] ⬡ COPILOT: listening — bus poll active, RAID gate ' + (copilot.status().raidAvailable ? 'available' : 'UNAVAILABLE (tool calls will fail closed)'));
       return { ok:true, msg:'co-pilot agent listening' };
     }
@@ -2505,6 +2682,47 @@ function handleExtendedRoutes(req, res, url, method) {
     const streamJobId = url.pathname.slice('/stream/'.length);
     ncp.handleStream(req, res, bodyJ, streamJobId); return true;
   }
+
+  // ── Live mirror session — Phase 69 ───────────────────────────────────────
+  // /chatgpt in cli/co-pilot.js. NOT a job — no jobId, no agent_calls row,
+  // no completion state, no startWatch(). Three thin pushes onto the
+  // existing NCP channel — same primitive every GUARDIAN_* push already
+  // uses (ncp.push, line ~592 et al), same broadcast-to-all-tabs-of-
+  // provider convention GUARDIAN_JOB already relies on. Streamed response
+  // chunks come back over the existing /result POST as a new
+  // GUARDIAN_LIVE_CHUNK type (handled below, alongside GUARDIAN_CHUNK),
+  // which busEmit already relays onto the bus — cli/co-pilot.js's existing
+  // SSE connection to /events just needs to start listening for it, not a
+  // second channel.
+  if (method === 'POST' && url.pathname === '/ncp/live/open') {
+    bodyJ(req).then(body => {
+      const { provider } = body || {};
+      if (!provider) { pRes(res, 400, { ok:false, error:'provider required' }); return; }
+      if (!ncp.isConnected(provider)) { pRes(res, 503, { ok:false, error:`${provider} tab not connected` }); return; }
+      const sent = ncp.push(provider, { type:'GUARDIAN_LIVE_OPEN', provider, ts:Date.now() });
+      pRes(res, 200, { ok:true, sent });
+    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
+    return true;
+  }
+  if (method === 'POST' && url.pathname === '/ncp/live/send') {
+    bodyJ(req).then(body => {
+      const { provider, text } = body || {};
+      if (!provider || !text) { pRes(res, 400, { ok:false, error:'provider and text required' }); return; }
+      if (!ncp.isConnected(provider)) { pRes(res, 503, { ok:false, error:`${provider} tab not connected` }); return; }
+      const sent = ncp.push(provider, { type:'GUARDIAN_LIVE_SEND', text, ts:Date.now() });
+      pRes(res, 200, { ok:true, sent });
+    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
+    return true;
+  }
+  if (method === 'POST' && url.pathname === '/ncp/live/close') {
+    bodyJ(req).then(body => {
+      const { provider } = body || {};
+      if (!provider) { pRes(res, 400, { ok:false, error:'provider required' }); return; }
+      const sent = ncp.push(provider, { type:'GUARDIAN_LIVE_CLOSE', ts:Date.now() });
+      pRes(res, 200, { ok:true, sent });
+    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
+    return true;
+  }
   if (method==='POST' && url.pathname==='/heartbeat') {
     ncp.handleHeartbeat(req, res, bodyJ); return true;
   }
@@ -2829,6 +3047,62 @@ function handleExtendedRoutes(req, res, url, method) {
             }
             break;
           }
+          case 'build': {
+            // build <seam-block.json>              — start, ollama-first/chatgpt-fallback
+            // build <seam-block.json> --provider chatgpt --fallback null  — explicit, no fallback
+            // build status <buildId>               — poll an in-progress or finished build
+            const sub = parts[1];
+            if (sub === 'status') {
+              const buildId = parts[2];
+              const b = buildId && _activeHookBuilds.get(buildId);
+              if (!b) { error = `usage: build status <buildId> — unknown buildId: ${buildId || '(none given)'}`; break; }
+              result = { buildId, status: b.status, total: b.total, done: b.done,
+                passed: b.results.filter(r => r.ok).length, failed: b.results.filter(r => !r.ok).length,
+                results: b.results, startedAt: b.startedAt, finishedAt: b.finishedAt || null };
+              break;
+            }
+
+            const filePath = parts[1];
+            if (!filePath) { error = 'usage: build <seam-block.json> [--provider ollama|chatgpt] [--fallback chatgpt|null] | build status <buildId>'; break; }
+            let seam;
+            try {
+              seam = JSON.parse(require('fs').readFileSync(filePath, 'utf8'));
+            } catch (e) {
+              error = `could not read/parse seam block at ${filePath}: ${e.message}`;
+              break;
+            }
+            if (!Array.isArray(seam.hooks) || !seam.hooks.length) {
+              error = `${filePath} has no hooks[] — nothing to build (seam-block.spec shape required)`;
+              break;
+            }
+
+            const buildId  = require('crypto').randomUUID();
+            const fallback = flags.fallback === 'null' ? null : (flags.fallback || 'chatgpt');
+            const record = { status: 'running', seam: seam.comp_node_id || seam.comp_id || filePath,
+              total: seam.hooks.length, done: 0, results: [], startedAt: Date.now(), finishedAt: null };
+            _activeHookBuilds.set(buildId, record);
+
+            // §LAW II — ledger write happens above (before this switch even
+            // runs) for the raw command itself; this is the long-running
+            // part, deliberately NOT awaited here — see record/poll above.
+            buildSeamComponentByHook(seam, {
+              provider: flags.provider || 'ollama',
+              fallbackProvider: fallback,
+              onProgress: (p) => { record.done = p.done; record.results.push({ hookId: p.hookId, ok: p.ok, provider: p.provider }); },
+            }).then((final) => {
+              record.status = 'done'; record.finishedAt = Date.now();
+              bus.emit('guardian.seamhook.build.complete', { buildId, ...final });
+              cockpitBroadcast({ type: 'guardian.seamhook.build.complete', buildId, ok: final.ok, total: final.total, passed: final.passed, failed: final.failed, ts: Date.now() });
+            }).catch((e) => {
+              record.status = 'done'; record.finishedAt = Date.now(); record.error = e.message;
+              bus.emit('guardian.seamhook.build.complete', { buildId, ok: false, error: e.message });
+              cockpitBroadcast({ type: 'guardian.seamhook.build.complete', buildId, ok: false, error: e.message, ts: Date.now() });
+            });
+
+            result = { ok: true, buildId, total: seam.hooks.length, status: 'started',
+              note: `poll with: build status ${buildId}  — or watch guardian.seamhook.build.progress on /events` };
+            break;
+          }
           case 'version': {
             const readVer = (f) => {
               try {
@@ -2864,7 +3138,7 @@ function handleExtendedRoutes(req, res, url, method) {
                 note: resolution.note,
               };
             } else {
-              error = 'Unknown command: ' + cmd + '. Try: jobs, artifacts, gaps, sessions, providers, health, stats, ledger, settings, set, send, seam, version, bus';
+              error = 'Unknown command: ' + cmd + '. Try: jobs, artifacts, gaps, sessions, providers, health, stats, ledger, settings, set, send, seam, build, version, bus';
             }
           }
         }
@@ -2899,12 +3173,12 @@ function handleExtendedRoutes(req, res, url, method) {
   // ── POST /copilot/prompt — co-pilot entry point, RAID-gated tool calls ──────
   if (method === 'POST' && url.pathname === '/copilot/prompt') {
     bodyJ(req).then(async body => {
-      const { prompt, command, proof, contextOpts } = body || {};
+      const { prompt, command, proof, contextOpts, provider } = body || {};
       if (!prompt) { pRes(res, 400, { ok:false, error:'prompt required' }); return; }
       let copilot;
       try { copilot = require('./agents/co-pilot'); }
       catch (e) { pRes(res, 503, { ok:false, error:'co-pilot agent not loaded: ' + e.message }); return; }
-      const result = await copilot.handlePrompt(prompt, { command, proof, contextOpts });
+      const result = await copilot.handlePrompt(prompt, { command, proof, contextOpts, provider });
       pRes(res, result.ok ? 200 : (result.denied ? 403 : 400), result);
     }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
     return true;
