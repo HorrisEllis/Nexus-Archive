@@ -650,6 +650,44 @@ function init(cfg = {}) {
     console.warn(`[${MODULE_ID}] gap-ledger not wired — gaps remain in-memory only: ${e.message}`);
   }
 
+  // §23.7 — wire closure verifier: when guardian completes a job that was
+  // dispatched for a gap, run verifyClosure to check predicate + artifact.
+  // This is the event that turns "job finished" into "maybe gap resolved."
+  try {
+    const bus = require('../nexus-bus');
+    const gp  = require('../lib/gap-predicate');
+
+    // Register component so system is self-describing
+    gp.registerComponent();
+
+    bus.on('guardian.job.complete', (event) => {
+      const { gapUuid, contractUuid } = event.payload?.meta || event.payload || {};
+      if (!gapUuid) return;
+      try {
+        const gap = jaaDB.query('gaps', g => g.uuid === gapUuid, 1)[0];
+        if (!gap) return;
+        if (gap.status === 'resolved' || gap.status === 'archived') return;
+        gp.verifyClosure(gap, {
+          strategy: event.payload?.command || 'guardian.job.complete',
+          jobId:    event.payload?.jobId || null,
+        });
+      } catch(e) {
+        console.warn(`[${MODULE_ID}] §1.2 closure verify on job.complete failed:`, e.message);
+      }
+    });
+
+    // Also sweep TTL expiries every 5 minutes
+    const TTL_SWEEP_MS = 300000;
+    const _ttlInterval = setInterval(() => {
+      try { gp.sweepExpired(); } catch(_) {}
+    }, TTL_SWEEP_MS);
+    _ttlInterval.unref();
+
+    console.log(`[${MODULE_ID}] gap-lifecycle wired — predicate verification + TTL sweep active`);
+  } catch(e) {
+    console.warn(`[${MODULE_ID}] gap-lifecycle not wired:`, e.message);
+  }
+
   _interval = setInterval(_tick, cfg.pollMs ?? POLL_MS);
   _interval.unref();
   console.log(`[${MODULE_ID}] v${VERSION} — poll:${cfg.pollMs ?? POLL_MS}ms batch:${BATCH_SIZE}`);

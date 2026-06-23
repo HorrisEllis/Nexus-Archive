@@ -162,31 +162,274 @@ function _loadWeights() {
 }
 
 // ── Intent clustering (deterministic, no randomness) ─────────────────────────
-const CLUSTERS = {
-  // Local-first work
+// ── Cluster classification — learned + regex hybrid ───────────────────────────
+// §SELF-IMPROVE: This is the system's primary learning surface.
+//
+// Three layers, evaluated in order:
+//
+//   1. Learned patterns  — Qwen-generated regex fragments, persisted to
+//      raid-clusters.json. Grow over time as the system observes real inputs
+//      and outcomes. Loaded at boot, updated asynchronously after each
+//      _clusterReviewTick(). Never block the hot path.
+//
+//   2. Baseline regex    — the original hand-written CLUSTERS map. Always
+//      present. Fallback when learned patterns are absent or Qwen is offline.
+//      Also the seed that Qwen refines — it starts here and improves.
+//
+//   3. Qwen async path   — called after a regex classification to verify or
+//      override. Qwen's result is stored as a correction sample. After N
+//      corrections for the same cluster, a new learned pattern is generated
+//      and persisted. Qwen never blocks the synchronous _cluster() call —
+//      the regex result is used immediately, Qwen runs in the background.
+//
+// The outcome: _cluster() gets better with every use. After 100 calls the
+// patterns reflect actual system usage, not the original author's assumptions.
+
+const _CLUSTERS_FILE = path.join(__dirname, '../../../data/cortex/ledger/raid-clusters.json');
+
+// Baseline — always present, never modified at runtime
+const CLUSTERS_BASELINE = {
   code:       /\b(code|function|class|module|implement|build|write|create|fix|refactor|typescript|javascript|python|rust|node|patch)\b/i,
   spec:       /\b(spec|design|architecture|system|plan|structure|schema|contract|api|blueprint)\b/i,
   data:       /\b(data|json|csv|sql|database|query|table|migrate|transform|parse)\b/i,
   diagnostic: /\b(error|fail|broken|debug|trace|diagnose|crash|exception|issue|bug|stack)\b/i,
   analysis:   /\b(analyze|analyse|explain|understand|review|audit|check|evaluate|compare|summarize)\b/i,
-
-  // Vision/UI — Gemini primary
   vision:     /\b(image|screenshot|photo|visual|ui|interface|design|layout|render|pixel|svg|canvas|color|theme|mock)\b/i,
-
-  // Research/facts — Perplexity primary
   research:   /\b(research|fact|current|today|news|latest|real.world|source|citation|search|web|grounded|up.to.date)\b/i,
-
-  // Hostile/adversarial — ChatGPT primary
   hostile:    /\b(attack|adversar|hostile|red.team|pentest|bypass|exploit|break|challenge|counter|stress.test|find.flaw|worst.case)\b/i,
-
-  // Forge/SEAM — highest stakes, Claude reserve
   forge:      /\b(forge|seam|patch|repair|self.heal|autonomous|critical.fix|production)\b/i,
 };
 
+// Learned patterns — Qwen-generated, loaded from disk, grow over time
+// Shape: { cluster: string, pattern: string (regex source), weight: number, observations: number }[]
+let _learnedPatterns = [];
+
+// Classification sample buffer — (input, regexCluster, qwenCluster, outcome)
+// Fed to _clusterReviewTick() to generate new patterns
+const _clusterSamples  = [];
+const SAMPLE_BUFFER_MAX = 500;
+const REVIEW_THRESHOLD  = 20; // run a review after this many new samples
+
+function _loadLearnedPatterns() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(_CLUSTERS_FILE, 'utf8'));
+    _learnedPatterns = Array.isArray(raw) ? raw : [];
+    console.log(`[raid] loaded ${_learnedPatterns.length} learned cluster patterns`);
+  } catch (_) {
+    _learnedPatterns = []; // first boot — no patterns yet
+  }
+}
+
+function _saveLearnedPatterns() {
+  try {
+    fs.mkdirSync(path.dirname(_CLUSTERS_FILE), { recursive: true });
+    fs.writeFileSync(_CLUSTERS_FILE, JSON.stringify(_learnedPatterns, null, 2));
+  } catch(e) {
+    console.warn('[raid] failed to save learned patterns:', e.message);
+  }
+}
+
+// Synchronous cluster classification — never blocks
 function _cluster(text) {
   if (!text) return 'general';
-  for (const [name, re] of Object.entries(CLUSTERS)) if (re.test(text)) return name;
+
+  // Layer 1: learned patterns (sorted by weight desc, so high-confidence
+  // learned patterns take precedence over baseline)
+  for (const p of _learnedPatterns.sort((a,b) => (b.weight||0) - (a.weight||0))) {
+    try {
+      if (new RegExp(p.pattern, 'i').test(text)) return p.cluster;
+    } catch(_) {} // malformed pattern — skip, don't crash
+  }
+
+  // Layer 2: baseline regex
+  for (const [name, re] of Object.entries(CLUSTERS_BASELINE)) {
+    if (re.test(text)) return name;
+  }
+
   return 'general';
+}
+
+// ── Qwen async classifier ─────────────────────────────────────────────────────
+// Called after every _cluster() result. Runs in background, never awaited
+// on the hot path. Accumulates corrections into _clusterSamples.
+
+const QWEN_MODEL = process.env.NEXUS_QWEN_MODEL || 'qwen2.5:0.5b';
+const _CLUSTER_NAMES = Object.keys(CLUSTERS_BASELINE).concat(['general']).join(', ');
+
+async function _qwenClassify(text, regexResult) {
+  if (!_health['ollama']?.online) return null; // Ollama offline — skip silently
+
+  const prompt = [
+    'You are the NEXUS RAID cluster classifier. Classify the intent into exactly one cluster.',
+    `Clusters: ${_CLUSTER_NAMES}`,
+    'Rules: code=write/build/fix code. spec=design/architecture. data=database/transform.',
+    'diagnostic=debug/error/crash. analysis=explain/review/audit. vision=UI/image/visual.',
+    'research=facts/current/news. hostile=adversarial/attack. forge=self-heal/patch/production.',
+    'general=anything else.',
+    'Respond with ONLY the cluster name. No explanation.',
+    `Intent: "${text.slice(0, 200)}"`,
+  ].join('\n');
+
+  try {
+    const body = Buffer.from(JSON.stringify({
+      model: QWEN_MODEL, prompt, stream: false,
+      options: { temperature: 0.0, num_predict: 16 },
+    }));
+    const raw = await new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: '127.0.0.1', port: 11434, path: '/api/generate',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': body.length },
+      }, res => {
+        const chunks = [];
+        res.on('data', c => chunks.push(c));
+        res.on('end', () => {
+          try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+          catch(e) { reject(e); }
+        });
+      });
+      req.setTimeout(8000, () => { req.destroy(); reject(new Error('timeout')); });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+
+    const qwenCluster = (raw.response || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+    if (!qwenCluster || !(_CLUSTER_NAMES.includes(qwenCluster))) return null;
+
+    // Record the sample — did Qwen agree with the regex?
+    const correction = qwenCluster !== regexResult;
+    _clusterSamples.push({
+      text: text.slice(0, 200),
+      regexCluster: regexResult,
+      qwenCluster,
+      correction,
+      ts: Date.now(),
+    });
+    if (_clusterSamples.length > SAMPLE_BUFFER_MAX) _clusterSamples.shift();
+
+    // Trigger a review if we've accumulated enough corrections
+    const recentCorrections = _clusterSamples.slice(-REVIEW_THRESHOLD).filter(s => s.correction).length;
+    if (recentCorrections >= Math.floor(REVIEW_THRESHOLD * 0.4)) {
+      // 40% correction rate in recent window → worth reviewing
+      _clusterReviewTick().catch(() => {});
+    }
+
+    return qwenCluster;
+  } catch (_) {
+    return null; // Qwen failed — regex result stands, never crash RAID
+  }
+}
+
+// ── Cluster review tick — Qwen generates new learned patterns ─────────────────
+// Runs asynchronously when correction rate is high enough.
+// Asks Qwen to look at the correction samples and propose new regex fragments
+// that would have classified them correctly.
+
+let _reviewRunning = false;
+
+async function _clusterReviewTick() {
+  if (_reviewRunning || !_health['ollama']?.online) return;
+  if (_clusterSamples.length < 10) return;
+  _reviewRunning = true;
+
+  try {
+    // Take a batch of corrections only
+    const corrections = _clusterSamples.filter(s => s.correction).slice(-30);
+    if (!corrections.length) { _reviewRunning = false; return; }
+
+    const model = _cfg.ollamaModel || 'mistral:7b-instruct-q4_K_M'; // use Mistral for pattern generation — needs more reasoning than 0.5b
+
+    const prompt = [
+      'You are the NEXUS RAID cluster pattern generator.',
+      'The system uses regex patterns to classify intent into routing clusters.',
+      'Here are cases where the current regex was wrong (qwenCluster = correct answer):',
+      JSON.stringify(corrections.map(c => ({
+        text: c.text, regex_said: c.regexCluster, correct: c.qwenCluster,
+      }))),
+      '',
+      'Generate new regex PATTERNS (not full regex, just the word group like: word1|word2|word3)',
+      'that would correctly capture these cases for their correct clusters.',
+      '',
+      `Existing clusters: ${_CLUSTER_NAMES}`,
+      '',
+      'Respond ONLY with valid JSON array:',
+      '[{"cluster":"code","pattern":"deploy|release|ship|pipeline","weight":0.7,"rationale":"..."},...]',
+      'Rules: pattern must be a valid JS regex word group. weight 0.5-0.95. Max 5 entries.',
+      'Only propose patterns for clusters where the regex was wrong.',
+    ].join('\n');
+
+    const body = Buffer.from(JSON.stringify({
+      model, prompt, stream: false,
+      options: { temperature: 0.2, num_predict: 512 },
+    }));
+
+    const raw = await new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: '127.0.0.1', port: 11434, path: '/api/generate',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': body.length },
+      }, res => {
+        const chunks = [];
+        res.on('data', c => chunks.push(c));
+        res.on('end', () => {
+          try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+          catch(e) { reject(e); }
+        });
+      });
+      req.setTimeout(30000, () => { req.destroy(); reject(new Error('timeout')); });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+
+    const text = (raw.response || '').replace(/```json|```/g, '').trim();
+    const proposals = JSON.parse(text);
+
+    if (!Array.isArray(proposals)) { _reviewRunning = false; return; }
+
+    let added = 0;
+    for (const p of proposals) {
+      if (!p.cluster || !p.pattern || typeof p.weight !== 'number') continue;
+      if (!_CLUSTER_NAMES.includes(p.cluster)) continue;
+
+      // Validate the pattern compiles
+      try { new RegExp(p.pattern, 'i'); } catch(_) { continue; }
+
+      // Check if we already have this or a very similar pattern
+      const exists = _learnedPatterns.some(e =>
+        e.cluster === p.cluster && e.pattern === p.pattern
+      );
+      if (exists) {
+        // Reinforce — bump observations count
+        const entry = _learnedPatterns.find(e => e.cluster === p.cluster && e.pattern === p.pattern);
+        if (entry) { entry.observations = (entry.observations || 0) + 1; entry.weight = Math.min(0.95, entry.weight + 0.05); }
+      } else {
+        _learnedPatterns.push({
+          cluster:      p.cluster,
+          pattern:      p.pattern,
+          weight:       Math.min(0.95, Math.max(0.5, p.weight)),
+          observations: corrections.filter(c => c.qwenCluster === p.cluster).length,
+          rationale:    (p.rationale || '').slice(0, 200),
+          addedAt:      Date.now(),
+        });
+        added++;
+      }
+    }
+
+    if (added > 0 || proposals.length > 0) {
+      _saveLearnedPatterns();
+      console.log(`[raid] 🧠 cluster review: ${added} new pattern${added===1?'':'s'} learned · total: ${_learnedPatterns.length} · from ${corrections.length} corrections`);
+    }
+
+    // Clear the reviewed corrections from the buffer
+    _clusterSamples.splice(0, _clusterSamples.length, ..._clusterSamples.filter(s => !s.correction));
+
+  } catch(e) {
+    console.warn('[raid] cluster review failed:', e.message);
+  } finally {
+    _reviewRunning = false;
+  }
 }
 
 // ── Deterministic routing decision ───────────────────────────────────────────
@@ -238,6 +481,13 @@ function _agentAvailable(agent, healthSnap) {
 function _decide(call, healthSnap, weights) {
   const intent    = call.intent || call.prompt || '';
   const cluster   = _cluster(intent);
+
+  // §SELF-IMPROVE: fire Qwen classification async — never blocks routing.
+  // Qwen's result feeds _clusterSamples which drives _clusterReviewTick().
+  // Over time this makes _cluster() smarter without ever slowing dispatch.
+  if (intent && _health['ollama']?.online) {
+    _qwenClassify(intent, cluster).catch(() => {});
+  }
   const preferred = (call.preferredAgent || '').toLowerCase();
 
   // Rule 1: explicit preference + available
@@ -466,6 +716,7 @@ function _initESSBindings() {
 function init(cfg={}) {
   _cfg = cfg;
   _loadWeights();
+  _loadLearnedPatterns(); // §SELF-IMPROVE: load Qwen-learned cluster patterns
   _initESSBindings();
   const _refreshHealthPromise = _refreshHealth();
   _interval = setInterval(_tick,         _cfg.pollMs??3000); _interval.unref();
@@ -481,7 +732,20 @@ function init(cfg={}) {
 
 function stop() { [_interval,_hTimer,_bTimer].forEach(t=>t&&clearInterval(t)); _interval=_hTimer=_bTimer=null; }
 function setSystemState(s) { _systemState=s||{}; }
-function getState() { return { version:VERSION, health:_health, weights:Object.fromEntries(_weights), essEnabled:!!_ess, weightCount:_weights.size }; }
+function getState() {
+  return {
+    version:         VERSION,
+    health:          _health,
+    weights:         Object.fromEntries(_weights),
+    essEnabled:      !!_ess,
+    weightCount:     _weights.size,
+    learnedPatterns: _learnedPatterns.length,
+    clusterSamples:  _clusterSamples.length,
+    correctionRate:  _clusterSamples.length > 0
+      ? (_clusterSamples.filter(s => s.correction).length / _clusterSamples.length).toFixed(3)
+      : null,
+  };
+}
 
 // ── Tool approval gate ───────────────────────────────────────────────────────
 // _approveTool(): the choke point any module wanting to execute a command
@@ -553,4 +817,18 @@ function _toolHealthSnapshot() {
   return out;
 }
 
-module.exports = { init, stop, getState, setSystemState, _decide, _cluster, _health, _weights, _updateW, _approveTool, _toolHealthSnapshot };
+// ── Public decide() — used by guardian and any external caller ─────────────────
+function decide(prompt, opts = {}) {
+  const snap     = Object.fromEntries(Object.entries(_health).map(([k,v])=>[k,{...v}]));
+  const call     = { intent: prompt, preferredAgent: opts.preferredAgent || 'auto' };
+  const decision = _decide(call, snap, _weights);
+  console.log(`[raid] → ${decision.agent} (${decision.reason}) cluster:${decision.cluster} for: "${(prompt||'').slice(0,60)}${(prompt||'').length>60?'…':''}"`);
+  return decision;
+}
+
+module.exports = {
+  init, stop, getState, setSystemState, decide,
+  _decide, _cluster, _health, _weights, _updateW, _approveTool, _toolHealthSnapshot,
+  // §SELF-IMPROVE: exposed for testing and cortex observability
+  _learnedPatterns, _clusterSamples, _clusterReviewTick,
+};
