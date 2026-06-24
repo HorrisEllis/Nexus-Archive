@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mistral Console — NEXUS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --void:    #06050a;
+  --surface: #0e0c15;
+  --panel:   #13111e;
+  --panel2:  #181527;
+  --border:  #211e32;
+  --border2: #2e2a45;
+  --text:    #e0e0f0;
+  --text2:   #8a86a8;
+  --text3:   #4a4768;
+  /* Mistral accent: warm ember — distinct from ChatGPT green / Claude purple */
+  --ember:       #ff7c38;
+  --ember-dim:   rgba(255,124,56,.12);
+  --ember-glow:  rgba(255,124,56,.25);
+  --amber:       #ffaa00;
+  --amber-dim:   rgba(255,170,0,.12);
+  --red:         #ff3355;
+  --red-dim:     rgba(255,51,85,.12);
+  --mono: 'Space Mono', monospace;
+  --ui:   'Space Grotesk', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--void); color: var(--text); font-family: var(--ui); overflow: hidden; font-size: 13px; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 1px; }
+
+/* ── Shell grid ── */
+#shell { display: grid; grid-template-rows: 52px 1fr; height: 100vh; }
+
+/* ── Top bar ── */
+#topbar {
+  display: flex; align-items: center; gap: 14px; padding: 0 18px;
+  background: linear-gradient(180deg, var(--surface), var(--void));
+  border-bottom: 1px solid var(--border);
+}
+.glyph { font-size: 20px; color: var(--ember); text-shadow: 0 0 14px var(--ember-glow); }
+.title { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .14em; color: var(--text); }
+.title b { color: var(--ember); }
+.spacer { flex: 1; }
+
+/* Model badge in topbar */
+#model-badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border2);
+  display: flex; align-items: center; gap: 6px; transition: all .3s;
+  color: var(--text3);
+}
+#model-badge .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+#model-badge.online { border-color: rgba(255,124,56,.35); color: var(--ember); background: var(--ember-dim); }
+#model-badge.online .pulse { background: var(--ember); animation: pulse-ember 2s ease-in-out infinite; }
+#model-badge.busy { border-color: rgba(255,170,0,.35); color: var(--amber); background: var(--amber-dim); }
+#model-badge.busy .pulse { background: var(--amber); animation: pulse-ember 1s ease-in-out infinite; }
+@keyframes pulse-ember { 0%,100% { box-shadow: 0 0 0 0 var(--ember-glow); } 50% { box-shadow: 0 0 0 4px transparent; } }
+
+/* ── Main 3-zone grid ── */
+#main { display: grid; grid-template-columns: 240px 1fr 300px; height: 100%; overflow: hidden; }
+.zone { overflow-y: auto; padding: 18px; }
+.zone-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .16em;
+  color: var(--text3); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.zone-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── Left: engine status ── */
+#zone-engine { border-right: 1px solid var(--border); background: rgba(255,255,255,.01); }
+
+.stat-row { margin-bottom: 14px; }
+.stat-key { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
+.stat-val { font-family: var(--mono); font-size: 12px; color: var(--text); word-break: break-all; }
+.stat-val.dim { color: var(--text2); }
+.stat-val.active { color: var(--ember); }
+
+/* Model selector */
+.model-row { margin-bottom: 18px; }
+select#model-select {
+  width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); padding: 8px 10px; font-family: var(--mono); font-size: 11px;
+  cursor: pointer; outline: none; appearance: none; transition: border-color .2s;
+}
+select#model-select:focus { border-color: rgba(255,124,56,.4); }
+.model-meta { font-size: 10px; color: var(--text3); margin-top: 4px; line-height: 1.5; }
+
+/* Stream live progress */
+#stream-progress { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); display: none; }
+.stream-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+.stream-bar-wrap { height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.stream-bar { height: 100%; width: 0%; background: var(--ember); border-radius: 2px; transition: width .1s; }
+.stream-tokens { font-family: var(--mono); font-size: 10px; color: var(--text2); }
+.stream-preview {
+  margin-top: 10px; font-family: var(--mono); font-size: 10px; color: var(--text2);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 8px; line-height: 1.5; max-height: 80px; overflow: hidden;
+  word-break: break-all; opacity: .8;
+}
+
+/* Model catalog */
+#catalog-section { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); }
+.catalog-item {
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+}
+.catalog-item:last-child { border-bottom: none; }
+.catalog-item:hover .ci-id { color: var(--ember); }
+.ci-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+.ci-dot.present { background: var(--ember); box-shadow: 0 0 5px var(--ember-glow); }
+.ci-body { flex: 1; min-width: 0; }
+.ci-id { font-family: var(--mono); font-size: 10px; color: var(--text2); transition: color .15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ci-best { font-size: 9px; color: var(--text3); margin-top: 1px; }
+.ci-fitness { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+
+/* ── Centre: dispatch ── */
+#zone-dispatch { display: flex; flex-direction: column; gap: 16px; }
+.field-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; display: block; }
+
+textarea#spec-input {
+  width: 100%; min-height: 140px; resize: vertical;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); padding: 12px; font-family: var(--mono); font-size: 12px; line-height: 1.6;
+  outline: none; transition: border-color .2s;
+}
+textarea#spec-input:focus { border-color: rgba(255,124,56,.4); }
+textarea#spec-input::placeholder { color: var(--text3); }
+
+input#title-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); padding: 9px 12px; font-family: var(--ui); font-size: 12px; outline: none;
+  transition: border-color .2s;
+}
+input#title-input:focus { border-color: rgba(255,124,56,.4); }
+
+/* Context chip row */
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-family: var(--mono); font-size: 10px; padding: 5px 10px; border-radius: 20px;
+  border: 1px solid var(--border2); color: var(--text3); cursor: pointer;
+  display: flex; align-items: center; gap: 5px; transition: all .15s;
+  user-select: none;
+}
+.chip .chip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); }
+.chip.active { border-color: rgba(255,124,56,.4); color: var(--ember); background: var(--ember-dim); }
+.chip.active .chip-dot { background: var(--ember); }
+
+/* Command mode chip — routing override */
+.chip.cmd-chip { border-style: dashed; }
+.chip.cmd-chip.active { border-style: solid; }
+
+/* Toggles */
+.toggle-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.toggle {
+  font-family: var(--mono); font-size: 10px; color: var(--text3); cursor: pointer;
+  display: flex; align-items: center; gap: 7px; user-select: none; transition: color .15s;
+}
+.toggle .sw {
+  width: 28px; height: 15px; border-radius: 8px; background: var(--border2);
+  position: relative; flex-shrink: 0; transition: background .2s;
+}
+.toggle .sw::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 11px; height: 11px; border-radius: 50%; background: var(--text3);
+  transition: transform .2s, background .2s;
+}
+.toggle.on { color: var(--ember); }
+.toggle.on .sw { background: var(--ember-dim); border: 1px solid rgba(255,124,56,.4); }
+.toggle.on .sw::after { transform: translateX(13px); background: var(--ember); }
+
+/* Chunk preview */
+#chunk-preview {
+  font-family: var(--mono); font-size: 10.5px; color: var(--text3);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-top: 1px solid var(--border);
+}
+
+/* Model routing hint */
+#routing-hint {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 8px 10px; line-height: 1.6;
+}
+#routing-hint .rh-model { color: var(--ember); }
+
+/* Submit */
+#submit-btn {
+  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .12em;
+  background: var(--ember-dim); border: 1px solid rgba(255,124,56,.5); color: var(--ember);
+  padding: 11px 20px; border-radius: 6px; cursor: pointer; transition: all .15s; width: 100%;
+}
+#submit-btn:hover:not(:disabled) { background: var(--ember-glow); }
+#submit-btn:disabled { opacity: .4; cursor: default; }
+#submit-status { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 6px; min-height: 18px; }
+
+#import-btn {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  background: transparent; border: 1px solid var(--border2); color: var(--text3);
+  padding: 7px 14px; border-radius: 4px; cursor: pointer; transition: all .15s; margin-top: 8px;
+}
+#import-btn:hover { border-color: rgba(255,124,56,.3); color: var(--text2); }
+
+/* ── Right: SEAM queue ladder ── */
+#zone-queue { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+
+.queue-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.queue-pill {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .06em;
+  padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border2);
+  color: var(--text3); cursor: pointer; transition: all .15s;
+}
+.queue-pill.sel { border-color: rgba(255,124,56,.4); color: var(--ember); background: var(--ember-dim); }
+
+.ladder { display: flex; flex-direction: column; gap: 0; flex: 1; }
+
+.rung {
+  position: relative; padding: 10px 0 10px 22px;
+  border-left: 1px solid var(--border); margin-left: 6px;
+}
+.rung-dot {
+  position: absolute; left: -4px; top: 13px;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--border2);
+}
+.rung-dot.queued   { background: var(--text3); }
+.rung-dot.active   { background: var(--amber); box-shadow: 0 0 6px rgba(255,170,0,.6); animation: rung-pulse-amber 1.4s ease-in-out infinite; }
+.rung-dot.verified { background: var(--ember); box-shadow: 0 0 6px var(--ember-glow); }
+.rung-dot.retrying { background: var(--amber); animation: rung-pulse-amber 1.4s ease-in-out infinite; }
+.rung-dot.escalated  { background: var(--red); box-shadow: 0 0 6px rgba(255,51,85,.5); animation: rung-pulse-red 2s ease-in-out infinite; }
+.rung-dot.interrupted { background: var(--red); }
+@keyframes rung-pulse-amber { 0%,100% { box-shadow: 0 0 0 0 rgba(255,170,0,.5); } 50% { box-shadow: 0 0 0 5px rgba(255,170,0,0); } }
+@keyframes rung-pulse-red   { 0%,100% { box-shadow: 0 0 0 0 rgba(255,51,85,.5); }  50% { box-shadow: 0 0 0 5px rgba(255,51,85,0); } }
+.rung.verified::after { content: ''; position: absolute; left: -13px; top: 14px; width: 1px; height: calc(100% - 2px); background: rgba(255,124,56,.3); }
+
+.rung-title { font-size: 11.5px; color: var(--text); font-weight: 500; }
+.rung-state { font-family: var(--mono); font-size: 9.5px; color: var(--text3); margin-top: 2px; letter-spacing: .05em; }
+.rung-state.active    { color: var(--amber); }
+.rung-state.verified  { color: var(--ember); }
+.rung-state.retrying  { color: var(--amber); }
+.rung-state.escalated { color: var(--red); }
+.rung-state.interrupted { color: var(--red); }
+
+.rung-action { margin-top: 6px; }
+.rung-retry {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .04em;
+  background: var(--amber-dim); border: 1px solid rgba(255,170,0,.4); color: var(--amber);
+  padding: 4px 10px; border-radius: 14px; cursor: pointer; transition: all .15s;
+}
+.rung-retry:hover { background: rgba(255,170,0,.25); }
+.rung-retry:disabled { opacity: .4; cursor: default; }
+.rung-escalated-note { font-size: 9.5px; color: var(--text3); line-height: 1.4; margin-top: 4px; font-style: italic; }
+
+.queue-empty { font-size: 11px; color: var(--text3); text-align: center; padding: 40px 10px; line-height: 1.8; }
+.queue-empty .hint { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 8px; }
+
+.queue-summary {
+  margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border);
+  font-family: var(--mono); font-size: 10.5px; color: var(--text2);
+  display: flex; justify-content: space-between;
+}
+
+/* ── Import overlay ── */
+#import-overlay {
+  position: fixed; inset: 0; background: rgba(6,5,10,.85); backdrop-filter: blur(4px);
+  z-index: 100; display: flex; align-items: center; justify-content: center;
+}
+#import-overlay.hidden { display: none; }
+#import-panel {
+  background: var(--panel); border: 1px solid var(--border2); border-radius: 8px;
+  width: 480px; max-height: 70vh; display: flex; flex-direction: column;
+}
+#import-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+}
+#import-panel-head .ttl { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--text2); }
+#import-close {
+  background: transparent; border: none; color: var(--text3); font-size: 14px;
+  cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: color .15s;
+}
+#import-close:hover { color: var(--text); }
+#import-list { padding: 12px 16px; overflow-y: auto; flex: 1; }
+.import-item {
+  padding: 10px 12px; border-radius: 5px; cursor: pointer;
+  border: 1px solid transparent; margin-bottom: 6px; transition: all .15s;
+}
+.import-item:hover { border-color: var(--border2); background: var(--surface); }
+.import-item .name { font-size: 12px; color: var(--text); margin-bottom: 2px; }
+.import-item .meta { font-family: var(--mono); font-size: 9.5px; color: var(--text3); }
+#import-empty, #import-error {
+  font-size: 11px; color: var(--text3); text-align: center; padding: 30px 0; line-height: 1.7;
+}
+#import-error { color: var(--red); }
+</style>
+</head>
+<body>
+<div id="shell">
+  <div id="topbar">
+    <span class="glyph">⬡</span>
+    <span class="title">MISTRAL <b>CONSOLE</b></span>
+    <div class="spacer"></div>
+    <div id="model-badge">
+      <span class="pulse"></span>
+      <span id="badge-text">CHECKING…</span>
+    </div>
+  </div>
+
+  <div id="main">
+    <!-- ENGINE STATUS -->
+    <div class="zone" id="zone-engine">
+      <div class="zone-label">ENGINE</div>
+
+      <div class="model-row">
+        <span class="field-label">Active model</span>
+        <select id="model-select">
+          <option value="">Loading models…</option>
+        </select>
+        <div class="model-meta" id="model-meta">—</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-key">Endpoint</div>
+        <div class="stat-val dim" id="stat-endpoint">:11434</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-key">Status</div>
+        <div class="stat-val" id="stat-status">checking…</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-key">Guardian</div>
+        <div class="stat-val dim" id="stat-guardian">:7820</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-key">Active jobs</div>
+        <div class="stat-val dim" id="stat-jobs">—</div>
+      </div>
+
+      <!-- Live stream indicator -->
+      <div id="stream-progress">
+        <div class="stream-label">GENERATING</div>
+        <div class="stream-bar-wrap"><div class="stream-bar" id="stream-bar"></div></div>
+        <div class="stream-tokens" id="stream-tokens">0 tokens</div>
+        <div class="stream-preview" id="stream-preview"></div>
+      </div>
+
+      <!-- Model catalog (pulled from ollama-runtime MODEL_CATALOG) -->
+      <div id="catalog-section">
+        <div class="zone-label" style="margin-bottom:10px">CATALOG</div>
+        <div id="catalog-list"></div>
+      </div>
+    </div>
+
+    <!-- DISPATCH -->
+    <div class="zone" id="zone-dispatch">
+      <div class="zone-label">DISPATCH</div>
+
+      <div>
+        <span class="field-label">Spec or prompt</span>
+        <textarea id="spec-input" placeholder="Paste a .spec or write the task.&#10;&#10;Headings (# like this) split into SEAM chunks. Commands start with /.&#10;&#10;This routes to Mistral for generation and analysis — Qwen handles co-pilot."></textarea>
+        <button id="import-btn" type="button">⇣ IMPORT FROM IDEARIUM</button>
+      </div>
+
+      <div>
+        <span class="field-label">Title (optional)</span>
+        <input id="title-input" placeholder="Untitled" />
+      </div>
+
+      <div>
+        <span class="field-label">Context components to inject</span>
+        <div class="chip-row" id="ctx-chips">
+          <div class="chip active" data-comp="request-handler"><span class="chip-dot"></span>request-handler</div>
+          <div class="chip active" data-comp="jaa-db"><span class="chip-dot"></span>jaa-db</div>
+          <div class="chip" data-comp="raid"><span class="chip-dot"></span>raid</div>
+          <div class="chip" data-comp="seam-queue"><span class="chip-dot"></span>seam-queue</div>
+          <div class="chip" data-comp="gap-loop"><span class="chip-dot"></span>gap-loop</div>
+          <!-- Components from live registry -->
+          <div id="dynamic-chips"></div>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle on" id="toggle-structured"><span class="sw"></span>Structured JSON output</div>
+        <div class="toggle on" id="toggle-snr"><span class="sw"></span>SNR filter</div>
+        <div class="toggle" id="toggle-batch"><span class="sw"></span>Batch dispatch</div>
+      </div>
+
+      <!-- Model routing hint — shows which model will actually run this -->
+      <div id="routing-hint">
+        Route: <span class="rh-model" id="rh-model">mistral:7b-instruct-q4_K_M</span>
+        <span id="rh-reason" style="color:var(--text3)"> · general</span>
+      </div>
+
+      <div id="chunk-preview">
+        <span><b id="cp-count">1</b> chunk · ~<span id="cp-tokens">0</span> tok/chunk · limit <span id="cp-limit">8000</span></span>
+        <span id="cp-flag" style="color:var(--text3)"></span>
+      </div>
+
+      <button id="submit-btn">SUBMIT TO SEAM QUEUE →</button>
+      <div id="submit-status"></div>
+    </div>
+
+    <!-- SEAM QUEUE / CHUNK LADDER -->
+    <div class="zone" id="zone-queue">
+      <div class="zone-label">QUEUE — LIVE</div>
+      <div class="queue-picker" id="queue-picker"></div>
+      <div class="ladder" id="ladder"></div>
+      <div class="queue-empty" id="queue-empty">
+        No SEAM queues for Mistral yet.
+        <div class="hint">Submit a spec on the left — chunks appear here live as guardian creates the queue and Mistral processes each one locally.</div>
+      </div>
+      <div class="queue-summary" id="queue-summary" style="display:none">
+        <span id="qs-verified">0 verified</span>
+        <span id="qs-total">0 total</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Import overlay -->
+<div id="import-overlay" class="hidden">
+  <div id="import-panel">
+    <div id="import-panel-head">
+      <span class="ttl">IMPORT FROM IDEARIUM</span>
+      <button id="import-close">✕</button>
+    </div>
+    <div id="import-list"></div>
+  </div>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const GD   = 'http://127.0.0.1:7820';
+const ORCH = 'http://127.0.0.1:9000';
+const OLL  = 'http://127.0.0.1:11434'; // direct ollama — only for model listing
+const PROVIDER = 'ollama';
+
+// Mirrors OLLAMA_COMMAND_MODELS in guardian/server.js — must stay in sync
+const COMMAND_MODELS = {
+  code:     'qwen2.5-coder:1.5b',
+  seam:     'qwen2.5-coder:1.5b',
+  general:  'mistral:7b-instruct-q4_K_M',
+  analysis: 'mistral:7b-instruct-q4_K_M',
+};
+
+// Mirrors MODEL_CATALOG in ollama-runtime.js — pulled from server too, but
+// this is the offline-safe version for when ollama is unreachable
+const MODEL_CATALOG = [
+  { id: 'qwen2.5-coder:1.5b',  fitness: 0.78, vram: 1.5,  speed: 0.98, best: ['completion','inline_assist'] },
+  { id: 'qwen2.5-coder:3b',    fitness: 0.83, vram: 3.0,  speed: 0.90, best: ['code_gen','gap_resolution','explanation'] },
+  { id: 'qwen2.5-coder:7b',    fitness: 0.88, vram: 6.5,  speed: 0.75, best: ['full_generation','architecture_review'] },
+  { id: 'qwen2.5-coder:14b',   fitness: 0.94, vram: 12.0, speed: 0.55, best: ['complex_generation','spec_writing'] },
+  { id: 'mistral:7b-instruct-q4_K_M', fitness: 0.85, vram: 5.0, speed: 0.80, best: ['general','analysis','narration'] },
+];
+
+// Chunk limit for local Ollama — higher than ChatGPT since there's no API token cost
+const CHUNK_LIMIT = 8000;
+
+let selectedQueueId = null;
+let allQueues = [];
+let installedModels = []; // models actually present in ollama
+let _engineOnline = false;
+let _streamTokenCount = 0;
+let _streamActive = false;
+const _seamCompleteNotified = new Set();
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+async function getJSON(url, opts) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(4000), ...opts });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) { return null; }
+}
+
+// ── Engine status panel ───────────────────────────────────────────────────────
+async function refreshEngine() {
+  // 1. Ping Ollama directly (:11434/api/tags)
+  let ollamaOk = false;
+  let models = [];
+  try {
+    const r = await fetch(`${OLL}/api/tags`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      const d = await r.json();
+      models = d.models || [];
+      ollamaOk = true;
+    }
+  } catch (_) {}
+
+  _engineOnline = ollamaOk;
+  installedModels = models.map(m => m.name);
+
+  const badge = document.getElementById('model-badge');
+  const badgeText = document.getElementById('badge-text');
+  const statStatus = document.getElementById('stat-status');
+
+  if (!ollamaOk) {
+    badge.className = '';
+    badgeText.textContent = 'OFFLINE';
+    statStatus.textContent = 'unreachable';
+    statStatus.className = 'stat-val';
+    statStatus.style.color = 'var(--red)';
+    document.getElementById('submit-btn').disabled = true;
+    updateModelSelect([]);
+  } else {
+    badge.className = _streamActive ? 'busy' : 'online';
+    badgeText.textContent = _streamActive ? 'GENERATING' : 'ONLINE';
+    statStatus.textContent = 'online (' + installedModels.length + ' models)';
+    statStatus.className = 'stat-val active';
+    statStatus.style.color = '';
+    document.getElementById('submit-btn').disabled = false;
+    updateModelSelect(installedModels);
+    renderCatalog(installedModels);
+  }
+
+  // 2. Guardian health — active SEAM jobs
+  const health = await getJSON(`${GD}/health`);
+  if (health) {
+    const ollamaJobs = (health.seamSessions || []).filter(q => q.provider === PROVIDER);
+    document.getElementById('stat-jobs').textContent = ollamaJobs.length
+      ? ollamaJobs.length + ' active'
+      : 'idle';
+    document.getElementById('stat-guardian').textContent = ':7820 ✓';
+  } else {
+    document.getElementById('stat-guardian').textContent = ':7820 unreachable';
+    document.getElementById('stat-jobs').textContent = '—';
+  }
+}
+
+function updateModelSelect(models) {
+  const sel = document.getElementById('model-select');
+  const current = sel.value;
+
+  if (!models.length) {
+    sel.innerHTML = '<option value="">Ollama offline — no models</option>';
+    return;
+  }
+
+  // Build option list: installed first, catalog as optgroup if extras
+  const installed = models.map(id => `<option value="${id}">${id}</option>`).join('');
+  const catalogNotInstalled = MODEL_CATALOG
+    .filter(m => !models.includes(m.id))
+    .map(m => `<option value="${m.id}" disabled title="Not pulled yet — run: ollama pull ${m.id}">${m.id} (not pulled)</option>`)
+    .join('');
+
+  sel.innerHTML = `<optgroup label="Installed">${installed}</optgroup>`
+    + (catalogNotInstalled ? `<optgroup label="Available (not pulled)">${catalogNotInstalled}</optgroup>` : '');
+
+  // Restore selection if still valid, else pick best default
+  if (current && models.includes(current)) {
+    sel.value = current;
+  } else {
+    // Prefer mistral if installed, else first
+    const pref = models.find(m => m.includes('mistral')) || models[0];
+    sel.value = pref || '';
+  }
+  updateModelMeta();
+  updateRoutingHint();
+}
+
+function updateModelMeta() {
+  const model = document.getElementById('model-select').value;
+  const entry = MODEL_CATALOG.find(m => m.id === model);
+  const meta = document.getElementById('model-meta');
+  if (!entry) { meta.textContent = model ? 'Custom model' : '—'; return; }
+  meta.textContent = `fitness ${entry.fitness} · ${entry.vram}GB · best: ${entry.best.join(', ')}`;
+}
+
+document.getElementById('model-select').addEventListener('change', () => {
+  updateModelMeta();
+  updateRoutingHint();
+});
+
+// ── Model catalog panel ───────────────────────────────────────────────────────
+function renderCatalog(installed) {
+  const el = document.getElementById('catalog-list');
+  el.innerHTML = MODEL_CATALOG.map(m => {
+    const present = installed.includes(m.id);
+    return `<div class="catalog-item" data-id="${m.id}" title="${present ? 'Click to select' : 'Not pulled yet'}">
+      <div class="ci-dot ${present ? 'present' : ''}"></div>
+      <div class="ci-body">
+        <div class="ci-id">${m.id}</div>
+        <div class="ci-best">${m.best.join(' · ')}</div>
+      </div>
+      <div class="ci-fitness">${Math.round(m.fitness * 100)}%</div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.catalog-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const id = item.dataset.id;
+      const sel = document.getElementById('model-select');
+      if ([...sel.options].some(o => o.value === id && !o.disabled)) {
+        sel.value = id;
+        updateModelMeta();
+        updateRoutingHint();
+      }
+    });
+  });
+}
+
+// ── Stream progress ───────────────────────────────────────────────────────────
+// Guardian doesn't stream tokens to the UI yet — this shows simulated progress
+// based on job state polling. When guardian emits streaming events over SSE
+// (bus), this will update in real time.
+function _startStreamIndicator(jobId) {
+  _streamActive = true;
+  _streamTokenCount = 0;
+  document.getElementById('stream-progress').style.display = '';
+  document.getElementById('model-badge').className = 'busy';
+  document.getElementById('badge-text').textContent = 'GENERATING';
+  _tickStream();
+}
+
+function _tickStream() {
+  if (!_streamActive) return;
+  _streamTokenCount += Math.floor(Math.random() * 12) + 4;
+  document.getElementById('stream-tokens').textContent = _streamTokenCount + ' tokens';
+  const bar = document.getElementById('stream-bar');
+  // Asymptote toward 90% while running — snaps to 100% on complete
+  const pct = 90 * (1 - Math.exp(-_streamTokenCount / 800));
+  bar.style.width = pct + '%';
+  setTimeout(_tickStream, 200);
+}
+
+function _endStreamIndicator(result) {
+  _streamActive = false;
+  document.getElementById('stream-bar').style.width = '100%';
+  document.getElementById('stream-tokens').textContent = _streamTokenCount + ' tokens · done';
+  if (result) {
+    document.getElementById('stream-preview').textContent = result.slice(0, 120) + (result.length > 120 ? '…' : '');
+  }
+  document.getElementById('model-badge').className = 'online';
+  document.getElementById('badge-text').textContent = 'ONLINE';
+  setTimeout(() => {
+    document.getElementById('stream-progress').style.display = 'none';
+  }, 4000);
+}
+
+// ── Routing hint ──────────────────────────────────────────────────────────────
+// Shows which model guardian will actually pick for this spec, based on
+// OLLAMA_COMMAND_MODELS in guardian/server.js
+function updateRoutingHint() {
+  const spec = document.getElementById('spec-input').value.trim();
+  const hasCode = /```|function |const |class |import |export |def |fn |struct /.test(spec);
+  const isSeam = /^#/m.test(spec); // heading-split = SEAM mode
+
+  let command, model;
+  if (hasCode || isSeam) {
+    command = isSeam ? 'seam' : 'code';
+    model = COMMAND_MODELS[command];
+  } else {
+    command = 'general';
+    model = document.getElementById('model-select').value || COMMAND_MODELS.general;
+  }
+
+  document.getElementById('rh-model').textContent = model;
+  document.getElementById('rh-reason').textContent = ' · ' + command;
+}
+
+// ── Chunk preview ─────────────────────────────────────────────────────────────
+function updateChunkPreview() {
+  const text = document.getElementById('spec-input').value.trim();
+  document.getElementById('cp-limit').textContent = CHUNK_LIMIT;
+  if (!text) {
+    document.getElementById('cp-count').textContent = '0';
+    document.getElementById('cp-tokens').textContent = '0';
+    document.getElementById('cp-flag').textContent = '';
+    return;
+  }
+  const hasHeadings = /^#+\s+/m.test(text);
+  const estTokens = Math.round(text.length / 4);
+  const chunkCharLimit = CHUNK_LIMIT * 4;
+  const estChunks = hasHeadings
+    ? Math.max(1, (text.match(/^#+\s+/gm) || []).length)
+    : Math.max(1, Math.ceil(text.length / chunkCharLimit));
+  document.getElementById('cp-count').textContent = estChunks;
+  document.getElementById('cp-tokens').textContent = Math.round(estTokens / estChunks);
+  document.getElementById('cp-flag').textContent = hasHeadings ? 'heading-split' : 'size-split';
+  updateRoutingHint();
+}
+
+document.getElementById('spec-input').addEventListener('input', updateChunkPreview);
+
+// ── Dynamic context chips from component registry ─────────────────────────────
+async function loadRegistryChips() {
+  const data = await getJSON(`${ORCH}/api/components/grammar`);
+  if (!data?.components) return;
+  const existing = new Set([...document.querySelectorAll('#ctx-chips .chip')].map(c => c.dataset.comp));
+  const container = document.getElementById('dynamic-chips');
+  const added = [];
+  for (const comp of (data.components || [])) {
+    if (!comp.id || existing.has(comp.id)) continue;
+    const div = document.createElement('div');
+    div.className = 'chip';
+    div.dataset.comp = comp.id;
+    div.innerHTML = `<span class="chip-dot"></span>${comp.name || comp.id}`;
+    div.addEventListener('click', () => div.classList.toggle('active'));
+    added.push(div);
+  }
+  container.append(...added);
+}
+
+// ── Chips / toggles ───────────────────────────────────────────────────────────
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => c.classList.toggle('active')));
+document.querySelectorAll('.toggle').forEach(t => t.addEventListener('click', () => t.classList.toggle('on')));
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const specText = document.getElementById('spec-input').value.trim();
+  const status = document.getElementById('submit-status');
+  const btn = document.getElementById('submit-btn');
+  if (!specText) { status.textContent = 'Nothing to submit'; status.style.color = 'var(--amber)'; return; }
+  if (!_engineOnline) { status.textContent = 'Ollama offline — cannot dispatch'; status.style.color = 'var(--red)'; return; }
+
+  const hasHeadings = /^#+\s+/m.test(specText);
+  const activeCtx = [...document.querySelectorAll('#ctx-chips .chip.active')].map(c => c.dataset.comp);
+  const structured = document.getElementById('toggle-structured').classList.contains('on');
+  const title = document.getElementById('title-input').value.trim() || undefined;
+  const selectedModel = document.getElementById('model-select').value;
+
+  const prefix = [
+    activeCtx.length ? `[CONTEXT COMPONENTS: ${activeCtx.join(', ')}]` : '',
+    structured ? '[OUTPUT FORMAT: respond with a single valid JSON object only — no prose, no markdown fencing]' : '',
+    selectedModel ? `[MODEL PREFERENCE: ${selectedModel}]` : '',
+  ].filter(Boolean).join('\n');
+
+  const finalSpec = prefix ? `${prefix}\n\n${specText}` : specText;
+
+  btn.disabled = true;
+  status.textContent = 'Submitting…';
+  status.style.color = 'var(--text2)';
+
+  // Route through guardian /command with provider=ollama
+  // Guardian's _dispatchSeamOllamaNative handles this — no browser tab needed
+  const res = await getJSON(`${GD}/command`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      command: 'spec',
+      provider: PROVIDER,
+      specText: finalSpec,
+      title,
+      source: 'mistral-console',
+      splitOn: hasHeadings ? 'heading' : 'size',
+      maxChunkSize: CHUNK_LIMIT,
+      model: selectedModel || undefined,
+    }),
+  });
+
+  btn.disabled = false;
+
+  if (res?.ok) {
+    status.textContent = `Queue ${res.queueId?.slice(0,8)} — ${res.total} chunk${res.total !== 1 ? 's' : ''}`;
+    status.style.color = 'var(--ember)';
+    selectedQueueId = res.queueId;
+    _startStreamIndicator(res.queueId);
+    document.getElementById('spec-input').value = '';
+    document.getElementById('title-input').value = '';
+    updateChunkPreview();
+    refreshQueues();
+  } else {
+    status.textContent = `Failed: ${res?.error || 'guardian unreachable — is it running on :7820?'}`;
+    status.style.color = 'var(--red)';
+  }
+});
+
+// ── Queue / chunk ladder ──────────────────────────────────────────────────────
+const STATE_CLASS = {
+  QUEUED: 'queued', INJECTING: 'active', GENERATING: 'active', DETECTING: 'active',
+  VERIFIED: 'verified', RETRYING: 'retrying', ESCALATED: 'escalated',
+  INTERRUPTED: 'interrupted',
+};
+
+async function refreshQueues() {
+  const data = await getJSON(`${GD}/seam/queues`);
+  allQueues = (data?.queues || []).filter(q => q.provider === PROVIDER);
+
+  const picker = document.getElementById('queue-picker');
+  const empty  = document.getElementById('queue-empty');
+  const summary = document.getElementById('queue-summary');
+
+  if (!allQueues.length) {
+    picker.innerHTML = ''; 
+    document.getElementById('ladder').innerHTML = '';
+    summary.style.display = 'none';
+    empty.style.display = '';
+    selectedQueueId = null;
+    return;
+  }
+  empty.style.display = 'none';
+
+  if (!selectedQueueId || !allQueues.some(q => q.uuid === selectedQueueId)) {
+    selectedQueueId = allQueues[allQueues.length - 1].uuid;
+  }
+
+  picker.innerHTML = allQueues.map(q =>
+    `<div class="queue-pill ${q.uuid === selectedQueueId ? 'sel' : ''}" data-id="${q.uuid}">${(q.title || 'untitled').slice(0,16)}</div>`
+  ).join('');
+  picker.querySelectorAll('.queue-pill').forEach(p =>
+    p.addEventListener('click', () => { selectedQueueId = p.dataset.id; renderLadder(); })
+  );
+
+  renderLadder();
+}
+
+function renderLadder() {
+  const q = allQueues.find(q => q.uuid === selectedQueueId);
+  const ladder = document.getElementById('ladder');
+  const summary = document.getElementById('queue-summary');
+  if (!q) { ladder.innerHTML = ''; summary.style.display = 'none'; return; }
+
+  const isRunning = (q.compartments || []).some(c => ['GENERATING','INJECTING','DETECTING'].includes(c.state));
+  if (!isRunning && _streamActive) _endStreamIndicator(null);
+
+  ladder.innerHTML = (q.compartments || []).map(c => {
+    const cls = STATE_CLASS[c.state] || 'queued';
+    const chunkUuid = c.uuid || c.chunkUuid || '';
+    let action = '';
+    if ((cls === 'active' || cls === 'retrying' || cls === 'interrupted') && chunkUuid) {
+      const label = cls === 'interrupted' ? '⚠ RESUME CHUNK' : 'FORCE RETRY';
+      action = `<div class="rung-action"><button class="rung-retry" data-queue="${q.uuid}" data-chunk="${chunkUuid}">${label}</button></div>`;
+    } else if (cls === 'escalated') {
+      action = `<div class="rung-escalated-note">Past active window — re-dispatch this chunk from scratch if needed.</div>`;
+    }
+    return `<div class="rung ${cls}">
+      <div class="rung-dot ${cls}"></div>
+      <div class="rung-title">#${c.chunkIdx+1} ${c.chunkTitle || ''}</div>
+      <div class="rung-state ${cls}">${c.state}${c.retries ? ` · retry ${c.retries}` : ''}</div>
+      ${action}
+    </div>`;
+  }).join('');
+
+  ladder.querySelectorAll('.rung-retry').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const orig = btn.textContent;
+      btn.textContent = 'RETRYING…';
+      const res = await getJSON(`${GD}/seam/retry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ queueId: btn.dataset.queue, chunkUuid: btn.dataset.chunk, reason: 'manual-ui' }),
+      });
+      if (res?.ok) {
+        refreshQueues();
+      } else {
+        btn.disabled = false;
+        btn.textContent = orig;
+        document.getElementById('submit-status').textContent = `Retry failed: ${res?.error || 'guardian unreachable'}`;
+        document.getElementById('submit-status').style.color = 'var(--red)';
+      }
+    });
+  });
+
+  const stats = q.stats || {};
+  summary.style.display = '';
+  document.getElementById('qs-verified').textContent = `${stats.verified || 0} verified`;
+  document.getElementById('qs-total').textContent = `${stats.total || q.compartments?.length || 0} total`;
+
+  // SEAM complete detection
+  const total = stats.total || q.compartments?.length || 0;
+  const allDone = total > 0 && (stats.verified || 0) === total;
+  let banner = document.getElementById('seam-complete-banner');
+  if (allDone) {
+    if (!_seamCompleteNotified.has(q.uuid)) {
+      _seamCompleteNotified.add(q.uuid);
+      _endStreamIndicator(null);
+    }
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'seam-complete-banner';
+      banner.style.cssText = 'margin-top:10px;padding:9px 12px;border-radius:6px;background:var(--ember-dim);border:1px solid rgba(255,124,56,.4);color:var(--ember);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-align:center;';
+      summary.parentNode.insertBefore(banner, summary.nextSibling);
+    }
+    banner.textContent = `✓ SEAM COMPLETE — ${total}/${total} chunks verified.`;
+    banner.style.display = '';
+  } else if (banner) {
+    banner.style.display = 'none';
+  }
+}
+
+// ── Import from Idearium ──────────────────────────────────────────────────────
+const importOverlay = document.getElementById('import-overlay');
+
+function openImportPicker() {
+  importOverlay.classList.remove('hidden');
+  loadSpecList();
+}
+function closeImportPicker() {
+  importOverlay.classList.add('hidden');
+}
+
+async function loadSpecList() {
+  const list = document.getElementById('import-list');
+  list.innerHTML = '<div id="import-empty">Loading specs…</div>';
+  const data = await getJSON(`${ORCH}/api/idearium/specs`);
+  if (!data) {
+    list.innerHTML = '<div id="import-error">Couldn\'t reach idearium. Is orchestrator running on :9000?</div>';
+    return;
+  }
+  const specs = data.specs || [];
+  if (!specs.length) {
+    list.innerHTML = '<div id="import-empty">No specs yet. Create one in Idearium, or paste directly.</div>';
+    return;
+  }
+  list.innerHTML = specs.map(s => `
+    <div class="import-item" data-uuid="${s.uuid}">
+      <div class="name">${(s.name || 'untitled').replace(/</g,'&lt;')}</div>
+      <div class="meta">${s.phase || '—'} · ${(s.sections||[]).length} section${(s.sections||[]).length===1?'':'s'} · ${s.uuid.slice(0,8)}</div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.import-item').forEach(el => {
+    el.addEventListener('click', () => importSpec(el.dataset.uuid, el.querySelector('.name').textContent));
+  });
+}
+
+async function importSpec(uuid, name) {
+  const list = document.getElementById('import-list');
+  list.innerHTML = '<div id="import-empty">Importing…</div>';
+  try {
+    const r = await fetch(`${ORCH}/api/idearium/specs/${uuid}/export`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error(`export failed (${r.status})`);
+    const md = await r.text();
+    document.getElementById('spec-input').value = md;
+    document.getElementById('title-input').value = name || '';
+    updateChunkPreview();
+    closeImportPicker();
+  } catch (e) {
+    list.innerHTML = `<div id="import-error">Import failed: ${e.message}</div>`;
+  }
+}
+
+document.getElementById('import-btn').addEventListener('click', openImportPicker);
+document.getElementById('import-close').addEventListener('click', closeImportPicker);
+importOverlay.addEventListener('click', e => { if (e.target === importOverlay) closeImportPicker(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !importOverlay.classList.contains('hidden')) closeImportPicker(); });
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+updateChunkPreview();
+refreshEngine();
+refreshQueues();
+loadRegistryChips();
+setInterval(refreshEngine, 6000);
+setInterval(refreshQueues, 3000);
+</script>
+</body>
+</html>

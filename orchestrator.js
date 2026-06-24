@@ -167,7 +167,7 @@ const CHANNELS = [
   { from:'guardian',  ch:'guardian.session.named',       to:['jaa'],         desc:'Chat session named' },
   { from:'guardian',  ch:'guardian.timeline',            to:['jaa'],         desc:'Timeline event' },
   { from:'guardian',  ch:'guardian.setting.update',      to:['jaa'],         desc:'Setting changed' },
-  { from:'guardian',  ch:'cortex.gap.found',             to:['cortex'],      desc:'Gap → cortex gaps table (was documented backwards — guardian emits via POST /api/event, cortex receives)' },
+  { from:'cortex',    ch:'cortex.gap.found',             to:['guardian'],    desc:'Gap → guardian ledger' },
   { from:'idearium',  ch:'idearium.idea.created',        to:['cortex'],      desc:'Idea → cortex + tagged' },
   { from:'idearium',  ch:'idearium.snapshot.pushed',     to:['cortex'],      desc:'Snapshot → versionium' },
   { from:'alk',       ch:'alk.signal.composite',         to:['cortex'],      desc:'ALK composite → event_log' },
@@ -504,6 +504,10 @@ const SYSTEM_LOCAL_UI_DIRS = [
   { system:'orchestrator', dir: path.join(ROOT,'ui','orchestrator') },
   { system:'explorer',     dir: path.join(ROOT,'ui') },  // contract-explorer + contract-renderer
   { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostic') },  // §HOTSWAP-03
+  // §HOTSWAP-04: agent consoles — ui/agents/chatgpt, ui/agents/mistral, etc.
+  // Were never in this list so edits never triggered hotswap events.
+  // recursive:true in fs.watch() covers all subdirs so new agents need no change here.
+  { system:'agents',       dir: path.join(ROOT,'ui','agents') },
 ];
 
 // ── UI Hotswap Watcher ───────────────────────────────────────────────────────

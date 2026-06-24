@@ -158,7 +158,6 @@ function analyze(text, opts = {}) {
       const lGaps = liminal.analyzeText(text);
       for (const lg of lGaps) {
         gaps.push({
-          uuid: lg.uuid, kind: lg.kind || null, basedOn: lg.basedOn || null,
           type: lg.type, reason: Array.isArray(lg.reason)?lg.reason[0]:lg.reason,
           score: lg.criticality, domain: lg.domain,
           description: lg.description, question: lg.question,
@@ -170,7 +169,6 @@ function analyze(text, opts = {}) {
         const cGaps = liminal.analyzeCode(text);
         for (const cg of cGaps) {
           gaps.push({
-            uuid: cg.uuid, kind: cg.kind || null, basedOn: cg.basedOn || null,
             type: cg.type, reason: Array.isArray(cg.reason)?cg.reason[0]:cg.reason,
             score: cg.criticality, domain: 'code',
             description: cg.description, evidence: cg.evidence || null,

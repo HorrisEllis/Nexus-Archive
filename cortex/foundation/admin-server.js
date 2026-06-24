@@ -531,57 +531,13 @@ class AdminServer {
                 // record. The raw score is still stored unchanged for audit.
                 const evidenceObj = p.evidence || null;
                 const effScore = effective({ score: p.score || 0, evidence: evidenceObj });
-                const severity = effScore > 0.7 ? 'high' : effScore > 0.4 ? 'medium' : 'low';
-
-                // §needs-2026-06-21 (James): "each point of redundancy needs
-                // to reference the original, with a quantity." This handler
-                // previously did a blind insert on every event — no dedup at
-                // all, unlike cortex/intelligence/index.js's _crossLedger
-                // which already checks-by-gapHash before inserting (see that
-                // file for the established convention this mirrors).
-                // Signature = {type, domain, reason, source}: same detector
-                // finding the same kind of gap, regardless of exact wording
-                // or count in the description. Recurrence across many jobs
-                // is the actual signal worth tracking — that's what
-                // `quantity` measures, not a property of any single event.
-                const gapHash = `${p.type||'unknown'}::${p.domain||''}::${p.reason||''}::${p.source||source||'guardian'}`;
-                const existing = jaaDB.query('gaps',
-                  g => g.gapHash === gapHash && g.status === 'open' && !g.duplicateOf, 50);
-
-                if (existing.length > 0) {
-                  existing.sort((a,b) => (a.ts||0) - (b.ts||0));
-                  const canonical = existing[0];
-                  jaaDB.update('gaps', canonical.uuid, {
-                    quantity: (canonical.quantity || 1) + 1,
-                    lastSeenTs: Date.now(),
-                    // worst-case-visible on recurrence, not averaged — same
-                    // weakest-link spirit as the aggregator itself.
-                    effectiveScore: Math.max(canonical.effectiveScore || 0, effScore),
-                    severity: (Math.max(canonical.effectiveScore || 0, effScore)) > 0.7 ? 'high'
-                            : (Math.max(canonical.effectiveScore || 0, effScore)) > 0.4 ? 'medium' : 'low',
-                  });
-                  jaaDB.insert('gaps', {
-                    uuid: p.uuid || uid(), jobId: p.jobId || null, provider: p.provider || 'unknown',
-                    type: p.type || 'unknown', domain: p.domain || null,
-                    reason: p.reason || null, description: p.description || '',
-                    kind: p.kind || null, basedOn: p.basedOn || null,
-                    score: p.score || 0, evidence: evidenceObj, status: 'duplicate',
-                    duplicateOf: canonical.uuid, gapHash,
-                    effectiveScore: effScore, severity,
-                    source: p.source || source || 'guardian',
-                    causedBy: p.jobId || causedBy || null, ts: Date.now(),
-                  });
-                  return;
-                }
-
                 jaaDB.insert('gaps', {
-                  uuid: p.uuid || uid(), jobId: p.jobId || null, provider: p.provider || 'unknown',
+                  uuid: uid(), jobId: p.jobId || null, provider: p.provider || 'unknown',
                   type: p.type || 'unknown', domain: p.domain || null,
                   reason: p.reason || null, description: p.description || '',
-                  kind: p.kind || null, basedOn: p.basedOn || null,
                   score: p.score || 0, evidence: evidenceObj, status: 'open',
-                  quantity: 1, gapHash,
-                  effectiveScore: effScore, severity,
+                  effectiveScore: effScore,
+                  severity: effScore > 0.7 ? 'high' : effScore > 0.4 ? 'medium' : 'low',
                   source: p.source || source || 'guardian',
                   causedBy: p.jobId || causedBy || null, ts: Date.now(),
                 });
