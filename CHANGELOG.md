@@ -1,5 +1,22 @@
 # NEXUS Changelog
 
+## v1.4.0 — 2026-06-24 — vectra removed, native replacement
+
+- `lib/local-vector-index.js`, new — replaces vectra entirely. Checked every real call site in `lib/vector-memory.js` before building (six methods, not the five a first pass assumed — `getIndexStats()`'s real shape is `{items: N}`, caught by re-checking rather than trusting the first read). Real cosine similarity, hand-verified against known values. Atomic writes. Real persistence across fresh instances. 14/14 tests, no mocking.
+- `vectra` removed from `package.json` — it was the only dependency listed; `dependencies` is now empty.
+- Ran the full `vector-memory.js` pipeline end to end through the new index — real TF-IDF fallback, real ranking, correctly ordered.
+- Found and corrected two false claims about `adm-zip` "being a declared dependency" — one in `idearium/repo/watcher.js`'s header, one in this session's own earlier comment in `lib/spec-container.js`. It's never been in `package.json`. Per the direction to minimize dependencies, it stays optional on purpose — the fallback chain already covers it.
+- Corrected Phase 70 in the roadmap — its userscript-resume claim was stale; `guardian/userscript-chatgpt.js` already has a real, working `§70.2` localStorage resume mechanism. The other two pieces of that phase are still genuinely unbuilt, re-confirmed, not assumed.
+
+## v1.3.0 — 2026-06-24 — drag-and-drop, backend first
+
+- `lib/spec-container.js` gained `extractArchiveFiles()` — same 3-tier fallback the filesystem watcher already used (adm-zip → system `unzip` → opaque record), now shared instead of duplicated. `adm-zip` genuinely isn't installed in this environment, so tier 2 is what actually runs — proven with a real zip built via the CLI, not simulated.
+- New route: `POST /api/repos/spec-container`, body `{content}`. Verifies SHA-256 before trusting anything — same rule the watcher already enforces, now also true for browser drops, which it wasn't before. A tampered hash is rejected and ingests nothing — tested directly.
+- Found while documenting this: the `repo` resource had never been in either copy of `interaction-contract.json` at all — `repo.list`/`ingest`/`fork`/`archive`/`lineage` all predate this session, all undocumented. Added the full block, not just the new endpoint.
+- Found and flagged, not fixed: `ROUTE_CAP` is declared for every action in `idearium/api/index.js` and never actually enforced anywhere — checked, no consumer exists. Added the new action to the map for consistency; didn't take on rebuilding auth enforcement as a side effect of this.
+- Found and fixed, unrelated: `tests/modules/spec-container.test.js` was real, 9/9 passing, and never registered in `run-all.js`. Registered it.
+- UI: one drop zone, real drag-and-drop on the existing spec list. Reads the file, POSTs to the documented endpoint, renders the result. No verification logic in the UI — that's the backend's job entirely, on purpose.
+
 ## v1.2.0 — 2026-06-24 — the file browser, wired to what already existed
 
 - Checked before building: `idearium/api/index.js`'s `spec.build` already compiles a real, fixed `sections[]` model through `emerge/compiler`'s T0/T1 pipeline. Rather than build a second spec format, `descriptor.descriptorFromSections()` turns those same 9 fixed sections into capabilities — the new chunk system builds *into* what already worked, not around it.

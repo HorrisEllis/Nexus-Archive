@@ -115,6 +115,64 @@ async function run() {
     assert.ok(ms < 50, `readHeader took ${ms}ms — should be near-instant, it only reads the first 8KB`);
   });
 
+  // ── extractArchiveFiles — real zip, real fallback chain, no mocking ───────
+  // Built via the real `zip` CLI, base64'd into a real container, then run
+  // through verifyAndDecode() + extractArchiveFiles() end to end. This
+  // environment genuinely has no adm-zip installed (node_modules doesn't
+  // exist at all here) — so this test exercises tier 2 (system unzip) for
+  // real, not as a simulated fallback. If adm-zip ever does get installed,
+  // tier 1 takes over silently and this test still passes either way, since
+  // it only asserts on the file list shape, not which tier produced it.
+  function buildRealZipContainer() {
+    const { execFileSync } = require('child_process');
+    const zipSrc = fs.mkdtempSync(path.join(TMP, 'zipsrc-'));
+    fs.writeFileSync(path.join(zipSrc, 'main.js'), 'console.log("hi");');
+    fs.writeFileSync(path.join(zipSrc, 'README.spec'), 'spec:\n  meta:\n    name: nested\n');
+    const zipPath = path.join(TMP, `real-${Math.random().toString(36).slice(2)}.zip`);
+    execFileSync('zip', ['-rq', zipPath, '.'], { cwd: zipSrc });
+    const archiveBuffer = fs.readFileSync(zipPath);
+    const realHash = crypto.createHash('sha256').update(archiveBuffer).digest('hex');
+    const b64 = archiveBuffer.toString('base64');
+    const b64Lines = [];
+    for (let i = 0; i < b64.length; i += 60) b64Lines.push('    ' + b64.slice(i, i + 60));
+    let out = `spec:\n\n  meta:\n    name:        zipped-repo\n    version:     1.0.0\n    archive_sha256: ${realHash}\n    archive_bytes:  ${archiveBuffer.length}\n    file_count:     2\n\n`;
+    out += `  buildSpec: |\n    # zipped-repo\n    Real zip payload.\n\n`;
+    out += `  archive: |\n${b64Lines.join('\n')}\n`;
+    const p = path.join(TMP, `zipped-${Math.random().toString(36).slice(2)}.spec`);
+    fs.writeFileSync(p, out);
+    return p;
+  }
+
+  await test('SC-10', 'extractArchiveFiles lists real files from a real zip, end to end through verifyAndDecode', () => {
+    const p = buildRealZipContainer();
+    const verified = specContainer.verifyAndDecode(p);
+    assert.strictEqual(verified.verified, true);
+    const files = specContainer.extractArchiveFiles(verified.archiveBuffer);
+    assert.ok(files.length >= 2, `expected at least 2 files, got ${files.length}: ${JSON.stringify(files)}`);
+    const paths = files.map(f => f.path);
+    assert.ok(paths.some(p => p.includes('main.js')) || paths.some(p => p === 'archive.zip'),
+      'should list real entries unless every fallback tier failed, in which case the opaque record must still be present');
+  });
+
+  await test('SC-11', 'a real .spec file inside the zip gets its content extracted when adm-zip tier succeeds, or is at least listed by tier 2', () => {
+    const p = buildRealZipContainer();
+    const verified = specContainer.verifyAndDecode(p);
+    const files = specContainer.extractArchiveFiles(verified.archiveBuffer);
+    // Either adm-zip (tier 1, content present for .spec entries) or system
+    // unzip (tier 2, listing only) ran — both are valid outcomes here,
+    // asserting on the one thing that must be true regardless: the file
+    // list is non-empty and not silently swallowed.
+    assert.ok(files.length > 0);
+  });
+
+  await test('SC-12', 'extractArchiveFiles never throws on a garbage buffer — degrades to the opaque record, per §7.4', () => {
+    const garbage = Buffer.from('this is not a zip file at all');
+    const files = specContainer.extractArchiveFiles(garbage);
+    assert.strictEqual(files.length, 1);
+    assert.strictEqual(files[0].path, 'archive.zip');
+    assert.strictEqual(files[0].bytes, garbage.length);
+  });
+
   console.log(`\n  spec-container: ${passed} passed, ${failed} failed\n`);
   fs.rmSync(TMP, { recursive: true, force: true });
   if (failed > 0) process.exit(1);

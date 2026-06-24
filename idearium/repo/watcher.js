@@ -24,9 +24,10 @@
  * This is the "drag and drop new zips" half. Pairs with lib/file-push.js
  * (single files) — this handles whole-project zips/specs as forkable repos.
  *
- * Flexible: uses adm-zip (now a real declared dependency — §FIX 2026-06-21,
- * it was require()'d here before but never installed or declared, so this
- * always silently fell through to the degraded unzip-binary fallback below),
+ * Flexible, deliberately not a hard dependency: tries adm-zip if it
+ * happens to be installed (it has never actually been in package.json —
+ * the §FIX 2026-06-21 comment that used to claim otherwise was checked
+ * 2026-06-24 and found false, corrected here rather than left standing),
  * falls back to the system `unzip` binary, falls back to recording the zip
  * as an opaque repo if neither is available. Never throws on a bad drop
  * (§1.2) — EXCEPT a .spec with a failed hash check, which must fail loud

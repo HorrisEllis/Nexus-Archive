@@ -50,6 +50,8 @@ const SUITES = [
   'test-intelligence-bridge.js',
   'component-descriptor.test.js',
   'spec-build-group.test.js',
+  'spec-container.test.js',
+  'local-vector-index.test.js',
   'test-liminal-space.js',
   'test-snr-filter.js',
   'test-ui-registry.js',

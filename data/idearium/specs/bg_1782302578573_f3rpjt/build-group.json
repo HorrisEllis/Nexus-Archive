@@ -1,0 +1,31 @@
+{
+  "buildGroupUuid": "bg_1782302578573_f3rpjt",
+  "specUuid": "bp_001.comp.test-spec-build",
+  "componentId": "test.spec_build",
+  "createdAt": 1782302578574,
+  "chunks": [
+    {
+      "chunkUuid": "769a76f3-f4f5-4d06-8a0f-675a944d07b1",
+      "compartmentId": "b57e24a5-c666-4241-8280-d2de8ce86337",
+      "capabilityIndex": 0,
+      "verb": "build",
+      "noun": "chunk0",
+      "intent": "build chunk 0 of the test spec",
+      "hook_ids": [
+        "hook.chunk0"
+      ],
+      "wire_ids": [
+        "wire.chunk0-to-spec"
+      ],
+      "tags": [
+        "registry",
+        "tool"
+      ],
+      "status": "REWOUND",
+      "filePath": null,
+      "failureReason": "compartment ended REWOUND",
+      "createdAt": 1782302578574,
+      "updatedAt": 1782302578575
+    }
+  ]
+}

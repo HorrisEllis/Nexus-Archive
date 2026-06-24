@@ -135,6 +135,7 @@ const ROUTE_CAP = {
   'spec.buildgroup.compress': CAPS.WRITE_IDEAS,
   'spec.buildgroup.expand':   CAPS.WRITE_IDEAS,
   'gap.list':         CAPS.READ_IDEAS,
+  'repo.ingestSpecContainer': CAPS.WRITE_IDEAS,
   'gap.show':         CAPS.READ_IDEAS,
   'gap.open':         CAPS.WRITE_IDEAS,
   'gap.resolve':      CAPS.WRITE_IDEAS,
@@ -177,6 +178,7 @@ function matchRoute(method, url) {
     ['POST',   ['api','cli','exec'],      'cli.exec'],      // unified CLI axiom
     ['GET',    ['api','repos'],           'repo.list'],
     ['POST',   ['api','repos'],           'repo.ingest'],
+    ['POST',   ['api','repos','spec-container'], 'repo.ingestSpecContainer'],
     ['GET',    ['sse'],                   'sse'],
   ];
 
@@ -639,6 +641,53 @@ async function handle(req, res, route, query, body) {
       const result = getRepoLayer().ingest({ name, files, source: source || 'drop', ideaUuid: ideaUuid || null });
       if (result.error) return err(res, 400, result.error);
       return ok(res, result);
+    }
+
+    // ── repo.ingestSpecContainer — the HTTP twin of idearium/repo/watcher.js's
+    // .spec-drop handling. That watcher only sees files placed in data/drop/
+    // on disk; a browser drag-and-drop has no filesystem path, only the raw
+    // file content read into memory. Mirrors the watcher's logic exactly —
+    // verify SHA-256 BEFORE anything is trusted (§1.2), same as the
+    // filesystem path — rather than letting the HTTP path skip verification
+    // the way the old generic repo.ingest above always did for any content
+    // shape. content is the WHOLE uploaded .spec file's text (header +
+    // archive: | block + buildSpec: | block) — exactly what a browser's
+    // FileReader.readAsText() on the dropped file produces.
+    case 'repo.ingestSpecContainer': {
+      if (!body.content || typeof body.content !== 'string') {
+        return err(res, 400, 'content (the full .spec container text) is required');
+      }
+      const specContainer = _require('../../lib/spec-container');
+      const fs   = _require('fs');
+      const os2  = _require('os');
+      const path2 = _require('path');
+      const tmpPath = path2.join(os2.tmpdir(), `upload-${Date.now()}-${Math.random().toString(36).slice(2)}.spec`);
+      let verified;
+      try {
+        fs.writeFileSync(tmpPath, body.content, 'utf8');
+        verified = specContainer.verifyAndDecode(tmpPath);
+      } catch (e) {
+        // §1.2 — never ingest on a failed verify. Same rule the watcher
+        // states explicitly: this is the one case that must NOT degrade
+        // gracefully into "ingest something anyway."
+        return err(res, 400, `spec container verification failed: ${e.message}`);
+      } finally {
+        try { fs.unlinkSync(tmpPath); } catch (_) {}
+      }
+
+      let files;
+      try {
+        files = specContainer.extractArchiveFiles(verified.archiveBuffer);
+      } catch (e) {
+        return err(res, 400, `archive verified but could not be listed: ${e.message}`);
+      }
+
+      const result = getRepoLayer().ingest({
+        name: verified.name, files, source: 'spec-import',
+        specText: verified.buildSpec || `# ${verified.name}\n(container had no buildSpec field)\n`,
+      });
+      if (result.error) return err(res, 400, result.error);
+      return ok(res, { ...result, verified: { name: verified.name, version: verified.version, hash: verified.hash, fileCount: files.length } });
     }
 
     case 'repo.fork': {

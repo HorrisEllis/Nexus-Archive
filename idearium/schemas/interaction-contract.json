@@ -50,6 +50,18 @@
         "ignore":  { "method": "POST",   "path": "/api/gaps/:uuid/ignore",      "body": ["reason"] }
       }
     },
+    "repo": {
+      "table": "repos",
+      "endpoints": {
+        "list":    { "method": "GET",    "path": "/api/repos",                  "params": ["phase"] },
+        "show":    { "method": "GET",    "path": "/api/repos/:uuid" },
+        "ingest":  { "method": "POST",   "path": "/api/repos",                  "body": ["name","files","source","ideaUuid"] },
+        "ingestSpecContainer": { "method": "POST", "path": "/api/repos/spec-container", "body": ["content"] },
+        "fork":    { "method": "POST",   "path": "/api/repos/:uuid/fork",       "body": ["name"] },
+        "archive": { "method": "DELETE", "path": "/api/repos/:uuid" },
+        "lineage": { "method": "GET",    "path": "/api/repos/:uuid/lineage" }
+      }
+    },
     "snapshot": {
       "table": "snapshots",
       "endpoints": {

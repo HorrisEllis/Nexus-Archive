@@ -523,8 +523,10 @@ body{display:flex;flex-direction:column;position:relative}
           <div class="spec-toolbar">
             <input class="search-input" id="spec-search" placeholder="search specs..." oninput="renderSpecList()">
             <button class="mode-btn" onclick="newSpecPrompt()">+ new spec</button>
+            <button class="tb-btn" onclick="document.getElementById('spec-drop-input').click()">drop .spec…</button>
+            <input type="file" id="spec-drop-input" accept=".spec,.spec.md" style="display:none" onchange="dropSpecContainer(this.files)">
           </div>
-          <div class="spec-list" id="spec-list"></div>
+          <div class="spec-list" id="spec-list" ondragover="event.preventDefault()" ondrop="handleSpecDrop(event)"></div>
         </div>
         <div class="right" style="grid-column: 1 / -1; display:none"></div>
         <div class="right">
@@ -2012,6 +2014,48 @@ function selectSpec(uuid) {
 }
 
 let CURRENT_BUILD_GROUP = null;
+
+// §3.1 — backend first, UI last. The verification, decoding, and ingestion
+// all already happened in lib/spec-container.js + idearium/repo/index.js
+// before this function existed. This is deliberately thin: read the file,
+// POST its raw text to the documented contract endpoint
+// (POST /api/repos/spec-container, body: {content} — see
+// idearium/interaction-contract.json's repo.ingestSpecContainer), render
+// the result. No format-sniffing, no hash checking, nothing reimplemented
+// here — if the backend changes how it verifies a container, this function
+// doesn't need to change at all. That's what "interaction contract, not
+// inline" is for: the UI is disposable, the contract is what's durable.
+function handleSpecDrop(event) {
+  event.preventDefault();
+  const file = event.dataTransfer?.files?.[0];
+  if (file) dropSpecContainer([file]);
+}
+
+async function dropSpecContainer(fileList) {
+  const file = fileList?.[0];
+  if (!file) return;
+  try {
+    const content = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsText(file);
+    });
+    const res = await api('/api/repos/spec-container', { method: 'POST', body: JSON.stringify({ content }) });
+    toast(`ingested "${res.verified.name}@${res.verified.version}" — ${res.verified.fileCount} files, hash ${res.verified.hash.slice(0,12)}`, 'ok');
+    if (res.specUuid) {
+      await loadSpecs();
+      selectSpec(res.specUuid);
+    } else {
+      await loadSpecs();
+    }
+  } catch (e) {
+    // The backend's error already says exactly what failed (bad hash,
+    // truncated archive, not a container at all) — §1.2, surface it as-is,
+    // don't paraphrase or generalize it into "something went wrong."
+    toast(`spec import failed: ${e.message}`, 'err');
+  }
+}
 
 function toggleBuildGroupPanel() {
   const panel = document.getElementById('build-group-panel');

@@ -1,0 +1,31 @@
+{
+  "buildGroupUuid": "bg_1782302578552_ygx1mv",
+  "specUuid": "bp_001.comp.test-spec-build",
+  "componentId": "test.spec_build",
+  "createdAt": 1782302578553,
+  "chunks": [
+    {
+      "chunkUuid": "b5dcf682-c4e3-4a5d-9d92-bf20a332ae84",
+      "compartmentId": "b8afcc04-78b8-47a9-941a-b4b5d1855b3e",
+      "capabilityIndex": 0,
+      "verb": "build",
+      "noun": "chunk0",
+      "intent": "build chunk 0 of the test spec",
+      "hook_ids": [
+        "hook.chunk0"
+      ],
+      "wire_ids": [
+        "wire.chunk0-to-spec"
+      ],
+      "tags": [
+        "registry",
+        "tool"
+      ],
+      "status": "RUNNING",
+      "filePath": null,
+      "failureReason": null,
+      "createdAt": 1782302578553,
+      "updatedAt": 1782302578553
+    }
+  ]
+}
