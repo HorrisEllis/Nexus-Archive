@@ -42,7 +42,7 @@ const TAB_KEY = 'guardian_claimed_tab_chatgpt';
 let _es = null, _hb = null, _reconnectTimer = null;
 let connState = 'disconnected';
 let currentJobId = null, jobActive = false;
-let _watchTimer = null, _watchObs = null, _watchStart = 0;
+let _watchTimer = null, _watchObs = null, _watchStart = 0, _watchTimeoutId = null;
 let panelOpen = false, activeTab = 'log';
 let isClaimed = true; // §FIX 2026-06-20: passive mode removed — every connected tab executes jobs, no single-tab claim gate
 let sessionStart = Date.now(), sessionTokens = 0, sessionJobs = 0;
@@ -447,10 +447,27 @@ async function scanArtifacts(jobId) {
 
 // ── DOM observation ───────────────────────────────────────────────────────────
 function findResponseEl() {
-  return document.querySelector(
-    '[data-is-streaming="true"], [data-message-author-role="assistant"]:last-child, ' +
-    '.text-streaming'
-  );
+  // §FIX 2026-06-22: ChatGPT DOM changes frequently. Try multiple known
+  // selector variants, return the last matching element. The original
+  // :last-child constraint dropped valid elements when ChatGPT added wrapper
+  // divs around turns. Broadening here prevents the permanent checkStable loop
+  // where !el fires every 600ms and startWatch never completes.
+  const candidates = [
+    '[data-is-streaming="true"]',
+    '.text-streaming',
+    '[data-message-author-role="assistant"]',
+    'article[data-testid^="conversation-turn"] .whitespace-pre-wrap',
+    '[data-testid^="conversation-turn-"]:last-child',
+    '[class*="agent-turn"] [class*="markdown"]',
+    '[class*="markdown"]:last-of-type',
+  ];
+  for (const sel of candidates) {
+    try {
+      const els = document.querySelectorAll(sel);
+      if (els.length) return els[els.length - 1];
+    } catch(_) {}
+  }
+  return null;
 }
 function _isGenerating() {
   return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
@@ -515,7 +532,7 @@ function detectResponseErrors(text) {
   return issues;
 }
 
-function autoRetry(jobId, text, retryCount) {
+function autoRetry(jobId, text, retryCount, seamMeta = {}) {
   const issue = detectResponseErrors(text)[0];
   if (!issue || retryCount >= 2) return;
   const retryPrompts = {
@@ -531,7 +548,7 @@ function autoRetry(jobId, text, retryCount) {
     if (!injectText(retry)) return;
     _usageHistory[_usageHistory.length-1].retried = true;
     setTimeout(submit, 500);
-    startWatch(jobId, retry, retryCount+1);
+    startWatch(jobId, retry, retryCount+1, seamMeta);
   }, 1000);
 }
 
@@ -539,15 +556,92 @@ function autoRetry(jobId, text, retryCount) {
 function stopWatch() {
   if (_watchObs) { _watchObs.disconnect(); _watchObs = null; }
   if (_watchTimer) { clearTimeout(_watchTimer); _watchTimer = null; }
+  if (_watchTimeoutId) { clearTimeout(_watchTimeoutId); _watchTimeoutId = null; }
   currentJobId = null; jobActive = false;
   setJobBar(false);
 }
 
-function startWatch(jobId, prompt, retryCount = 0) {
+// ── §70.2 SEAM localStorage persistence ──────────────────────────────────────
+// Survives tab refresh. Guardian validates position on reconnect.
+function _seamLsKey(jobId) { return `nexus_seam_job_${jobId}`; }
+function _seamLsSave(jobId, seamMeta, partialText) {
+  try {
+    localStorage.setItem(_seamLsKey(jobId), JSON.stringify({
+      jobId,
+      seam_queue_id:  seamMeta.seam_queue_id  ?? null,
+      seam_chunk_idx: seamMeta.seam_chunk_idx  ?? null,
+      seam_total:     seamMeta.seam_total      ?? null,
+      seam_title:     seamMeta.seam_title      ?? null,
+      partialText:    partialText ? partialText.slice(0, 8000) : null,
+      savedAt:        Date.now(),
+      status:         'in_progress',
+    }));
+  } catch(_) {}
+}
+function _seamLsComplete(jobId) {
+  try { localStorage.removeItem(_seamLsKey(jobId)); } catch(_) {}
+}
+function _seamLsMarkInterrupted(jobId) {
+  try {
+    const raw = localStorage.getItem(_seamLsKey(jobId));
+    if (!raw) return;
+    const rec = JSON.parse(raw);
+    rec.status = 'interrupted'; rec.interruptedAt = Date.now();
+    localStorage.setItem(_seamLsKey(jobId), JSON.stringify(rec));
+  } catch(_) {}
+}
+// On boot: surface any interrupted SEAM jobs to guardian so it can decide to resume
+function _seamLsResumeCheck() {
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('nexus_seam_job_'));
+    for (const k of keys) {
+      const rec = JSON.parse(localStorage.getItem(k) || 'null');
+      if (!rec || rec.status === 'complete') continue;
+      _log('sys', `§70.2 interrupted SEAM found · chunk ${(rec.seam_chunk_idx ?? '?')+1}/${rec.seam_total ?? '?'}`, rec.seam_queue_id?.slice(0,8) ?? '?');
+      send({
+        type: 'GUARDIAN_SEAM_RESUME_NEEDED',
+        jobId: rec.jobId,
+        seam_queue_id: rec.seam_queue_id,
+        seam_chunk_idx: rec.seam_chunk_idx,
+        seam_total: rec.seam_total,
+        partialText: rec.partialText,
+        interruptedAt: rec.interruptedAt ?? rec.savedAt,
+        provider: PROVIDER,
+        chatUrl: location.href,
+        ts: Date.now(),
+      });
+    }
+  } catch(_) {}
+}
+
+function startWatch(jobId, prompt, retryCount = 0, seamMeta = {}) {
   stopWatch();
   currentJobId = jobId; jobActive = true; _watchStart = Date.now();
   setJobBar(true, prompt, jobId);
 
+  // §70.2 — persist in-progress SEAM state immediately so tab refresh can resume
+  if (seamMeta.seam_queue_id != null) _seamLsSave(jobId, seamMeta, null);
+
+  // §FIX 2026-06-22: hard timeout — if ChatGPT never responds within 3 minutes
+  // (DOM selector miss, rate limit, stuck generation), abort the job so guardian
+  // doesn't accumulate indefinitely-pending delivered jobs and keep dispatching
+  // new copies of the same gaps. Without this, a single DOM-selector miss causes
+  // every subsequent job to be created but never completed.
+  const WATCH_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+  if (_watchTimeoutId) clearTimeout(_watchTimeoutId);
+  _watchTimeoutId = setTimeout(() => {
+    if (currentJobId !== jobId) return; // already moved on
+    _log('gap', `§WATCH-TIMEOUT: ${jobId.slice(0,8)}`, `no response after ${WATCH_TIMEOUT_MS/1000}s`);
+    send({ type: 'GUARDIAN_ERROR', jobId, gate: 'startWatch',
+      error: `Watch timed out after ${WATCH_TIMEOUT_MS/1000}s — no response element found or generation stalled`,
+      chatUrl: location.href, account: getAccount() });
+    _toCortex('guardian.watch.timeout', { jobId, provider: PROVIDER, watchMs: WATCH_TIMEOUT_MS });
+    stopWatch();
+    jobActive = false;
+    currentJobId = null;
+  }, WATCH_TIMEOUT_MS);
+
+  let _abruptStopFired = false;
   let lastText = '', stableCount = 0;
   let _lastChunkLen = 0;
 
@@ -560,7 +654,32 @@ function startWatch(jobId, prompt, retryCount = 0) {
       stableCount++;
       if (stableCount >= 3) {
         const ms = Date.now() - _watchStart;
-        _onJobComplete(jobId, text, ms, prompt, retryCount);
+
+        // §74.2 — abrupt-stop: open code fence = artifact boundary still open
+        const openFences = (text.match(/```/g) || []).length % 2 !== 0;
+        const shortBody  = text.length < 120 && !!seamMeta.seam_queue_id;
+        if (!_abruptStopFired && (openFences || shortBody)) {
+          _abruptStopFired = true;
+          _log('gap', `§74.2 abrupt stop · ${jobId.slice(0,8)}`, `${text.length}ch openFence:${openFences}`);
+          // §70.2 — persist partial text before signalling
+          if (seamMeta.seam_queue_id != null) _seamLsSave(jobId, seamMeta, text);
+          send({
+            type: 'GUARDIAN_ABRUPT_STOP', jobId, provider: PROVIDER,
+            chunkLen: text.length, openFence: openFences,
+            seam_queue_id: seamMeta.seam_queue_id ?? null,
+            seam_chunk_idx: seamMeta.seam_chunk_idx ?? null,
+            chatUrl: location.href, ts: Date.now(),
+          });
+          _toCortex('agent.abrupt_stop', {
+            jobId, provider: PROVIDER, chunkLen: text.length,
+            seam_queue_id: seamMeta.seam_queue_id ?? null,
+            seam_chunk_idx: seamMeta.seam_chunk_idx ?? null,
+            causedBy: jobId,
+          });
+          // fall through — guardian sets INTERRUPTED via GUARDIAN_ABRUPT_STOP
+        }
+
+        _onJobComplete(jobId, text, ms, prompt, retryCount, seamMeta);
         return;
       }
     } else {
@@ -569,6 +688,10 @@ function startWatch(jobId, prompt, retryCount = 0) {
         if (delta.length > 10 || /[.!?\n]/.test(delta)) {
           send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, ts:Date.now() });
           _streamToCortex(jobId, delta, text);
+          // §70.2 — periodic localStorage checkpoint every ~1 KB of new text
+          if (seamMeta.seam_queue_id != null && text.length - (_lastChunkLen - delta.length) >= 1000) {
+            _seamLsSave(jobId, seamMeta, text);
+          }
         }
       }
       lastText = text; stableCount = 0;
@@ -586,8 +709,10 @@ function startWatch(jobId, prompt, retryCount = 0) {
   _watchTimer = setTimeout(checkStable, 1500);
 }
 
-async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
-  stopWatch();
+async function _onJobComplete(jobId, text, ms, prompt, retryCount, seamMeta = {}) {
+  stopWatch(); // stopWatch already clears _watchTimeoutId
+  // §70.2 — clear localStorage on clean completion
+  _seamLsComplete(jobId);
   send({ type:'GUARDIAN_LEDGER_WRITE', jobId, category:'UPGRADE',
     msg:`Complete · ${text.length}ch · ${Math.round(ms/1000)}s`,
     meta:{ jobId, chars:text.length, ms, provider:PROVIDER, ts:Date.now() }
@@ -604,7 +729,7 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
   const issues = detectResponseErrors(text);
   if (issues.length) {
     currentGaps = [...issues, ...currentGaps].slice(0,100);
-    if (retryCount === 0) autoRetry(jobId, text, retryCount);
+    if (retryCount === 0) autoRetry(jobId, text, retryCount, seamMeta);
     send({ type:'GUARDIAN_GAPS', jobId, gaps:issues, chatUrl:location.href, account:getAccount() });
     _toCortex('cortex.gap.found', { jobId, gaps:issues, source:'userscript-detector' });
   }
@@ -657,7 +782,7 @@ async function handleJob(msg) {
 
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });
     await dbPut('requests', { uuid:jobId, status:'dispatched', sessionId, dispatchedAt:Date.now() });
-    setTimeout(() => { submit(); startWatch(jobId, text, 0); }, 500);
+    setTimeout(() => { submit(); startWatch(jobId, text, 0, { seam_queue_id, seam_chunk_idx, seam_total, seam_title }); }, 500);
     return true;
   }, { jobId });
 }
@@ -2223,6 +2348,8 @@ async function init() {
   buildUI();
   connect();
   _nexusInit();  // start conversation observer + Ollama fallback
+  // §70.2 — on boot surface any interrupted SEAM jobs from prior tab session
+  setTimeout(_seamLsResumeCheck, 4000);
   _log('sys', `Guardian v${VERSION} — ChatGPT`, `${PROVIDER} · ${location.hostname}`);
   // DOM map on load if enabled
   if (_settings.enableDOMMap) setTimeout(() => sendDOMMap(), 3000);

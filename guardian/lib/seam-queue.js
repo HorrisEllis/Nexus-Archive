@@ -32,6 +32,7 @@
 
 const { randomUUID } = require('crypto');
 const { Detector }   = require('./detector');
+const { MODE, deriveMode } = require('./seam-mode-reducer');
 
 // ── State constants ────────────────────────────────────────────────────────────
 const STATE = Object.freeze({
@@ -368,6 +369,100 @@ class QueueCompartment {
     return { escalated: false };
   }
 
+  // ── Repair actions (NEXUS v3 §6.2 — Phase 71.4) ───────────────────────────
+  // Distinct from watchdogRetry above: watchdogRetry is the system's OWN
+  // automatic response to a stall it detected itself. The three methods below
+  // are invoked from OUTSIDE the compartment's own lifecycle — by a human via
+  // /seam/repair, or later by the Anomaly Engine (Phase 71.3) once it exists.
+  // §1.1 — nothing pretends to work: every one of these writes a JAA row
+  // marking the result as machine-forced, never indistinguishable from a real
+  // Detector pass or a real provider response.
+
+  /**
+   * repair.inject — { type:"repair.inject", inject:"seam.end", seam_id:N }
+   * Forces VERIFIED on a compartment whose real response is known-good
+   * through some out-of-band channel (human confirms it, or a future Anomaly
+   * Engine correlates it from logs) but never reached evaluate() — e.g. the
+   * NCP/userscript bridge delivered the text but the GUARDIAN_COMPLETE
+   * message that should have carried it back was lost.
+   * This does NOT run the Detector — there is no real response to evaluate.
+   * Use forceTransition() instead if you want VERIFIED without claiming a
+   * verdict was reached at all.
+   */
+  injectEvent(eventType, payload = {}) {
+    if (eventType !== 'seam.end') {
+      return { ok: false, error: `injectEvent: unsupported event type "${eventType}" (only "seam.end" implemented)` };
+    }
+    if (this.state === STATE.VERIFIED) {
+      return { ok: false, error: 'compartment already VERIFIED — nothing to inject' };
+    }
+
+    const prev = this.state;
+    this.response  = payload.response || this.response || '[injected — no response text recorded]';
+    this.detection = {
+      passed: true, composite: null, injected: true,
+      reason: payload.reason || 'repair.inject — seam.end forced',
+    };
+
+    this._transition(STATE.VERIFIED, { injectedRepair: true, injectedFrom: prev });
+
+    this._busEmit('guardian.seam.chunk.verified', {
+      uuid: this.uuid, queueId: this.queueId,
+      chunkIdx: this.chunkIdx, chunkTitle: this.chunkTitle,
+      composite: null, injected: true, injectedFrom: prev,
+      provider: this.provider, ts: Date.now(),
+    });
+
+    return { ok: true, action: 'repair.inject', chunkIdx: this.chunkIdx, from: prev, to: STATE.VERIFIED };
+  }
+
+  /**
+   * repair.transition — { type:"repair.transition", to:"<STATE>" }
+   * Forces a direct state transition with no side effects beyond the
+   * transition itself (no Detector run, no NCP push, no response assumed).
+   * Refuses unknown target states rather than silently no-op'ing — §1.1.
+   */
+  forceTransition(to) {
+    if (!Object.values(STATE).includes(to)) {
+      return { ok: false, error: `forceTransition: "${to}" is not a known STATE` };
+    }
+    const prev = this.state;
+    this._transition(to, { forcedRepair: true, forcedFrom: prev });
+    this._busEmit('guardian.seam.repair.transition', {
+      uuid: this.uuid, queueId: this.queueId, chunkIdx: this.chunkIdx,
+      from: prev, to, ts: Date.now(),
+    });
+    return { ok: true, action: 'repair.transition', chunkIdx: this.chunkIdx, from: prev, to };
+  }
+
+  /**
+   * repair.rollback — { type:"repair.rollback", to_event:"chunk.received.N" }
+   * Spec's to_event addresses an event in the causal graph; this system has
+   * no graph yet (that's Phase 71.1+), so the only rollback target that
+   * means anything today is "this compartment's own beginning." Clears
+   * retries/strategy/response/detection and returns it to QUEUED so _next()
+   * picks it up fresh, as if it had never been dispatched.
+   */
+  rollback() {
+    const prev = this.state;
+    this.retries         = 0;
+    this.strategyIdx      = 0;
+    this.strategyRetries  = 0;
+    this.watchdogRetries  = 0;
+    this.stallReason      = null;
+    this.response         = null;
+    this.detection        = null;
+    this.jobId            = null;
+    this.failureLog       = [];
+
+    this._transition(STATE.QUEUED, { rolledBack: true, rolledBackFrom: prev });
+    this._busEmit('guardian.seam.repair.rollback', {
+      uuid: this.uuid, queueId: this.queueId, chunkIdx: this.chunkIdx,
+      from: prev, to: STATE.QUEUED, ts: Date.now(),
+    });
+    return { ok: true, action: 'repair.rollback', chunkIdx: this.chunkIdx, from: prev, to: STATE.QUEUED };
+  }
+
   // ── JAA persistence (§LAW II) ─────────────────────────────────────────────
 
   _jaaInsert() {
@@ -609,6 +704,77 @@ class SEAMQueue {
     return { ok: true, escalated, chunkUuid: comp.uuid };
   }
 
+  /**
+   * repair(action) — single entry point for all four NEXUS v3 §6.2 repair
+   * shapes (Phase 71.4). Compartment-scoped actions (inject/transition/
+   * rollback) need a chunkIdx; system.reset is queue-scoped and has none.
+   * Same pattern as forceRetryActive above: one signature, callable from
+   * POST /seam/repair (human) or, once it exists, the Anomaly Engine (71.3) —
+   * no duplicated dispatch logic between the two callers.
+   *
+   * @param {object} action
+   * @param {"repair.inject"|"repair.transition"|"repair.rollback"|"system.reset"} action.type
+   * @param {number} [action.chunkIdx]  required for all but system.reset
+   * @param {string} [action.inject]    repair.inject — event name, e.g. "seam.end"
+   * @param {string} [action.to]        repair.transition — target STATE
+   * @param {object} [action.payload]   repair.inject — optional response text/reason
+   */
+  repair(action = {}) {
+    const { type, chunkIdx, inject, to, payload } = action;
+
+    if (type === 'system.reset') {
+      const wasActive = this._active;
+      this._active = null;
+      let resetCount = 0;
+      for (const comp of this.compartments) {
+        if (comp.state !== STATE.VERIFIED) { comp.rollback(); resetCount++; }
+      }
+      this._busEmit('guardian.seam.repair.system_reset', {
+        uuid: this.uuid, queueId: this.uuid, resetCount,
+        wasActiveChunk: wasActive ? wasActive.chunkIdx : null, ts: Date.now(),
+      });
+      this.running = true;
+      setTimeout(() => this._next(), 100);
+      return { ok: true, action: 'system.reset', resetCount };
+    }
+
+    if (chunkIdx === undefined || chunkIdx === null) {
+      return { ok: false, error: `repair: action.chunkIdx required for ${type}` };
+    }
+    const comp = this.compartments[chunkIdx];
+    if (!comp) return { ok: false, error: `repair: no compartment at chunkIdx ${chunkIdx}` };
+
+    let result;
+    switch (type) {
+      case 'repair.inject':
+        // If this was the active dispatch, the slot must be released —
+        // otherwise _next() sees _active still set and refuses to advance,
+        // even though the compartment it points at is now VERIFIED. This is
+        // the exact failure shape Phase 71.4 exists to fix.
+        if (this._active === comp) this._active = null;
+        result = comp.injectEvent(inject, payload || {});
+        break;
+      case 'repair.transition':
+        if (this._active === comp) this._active = null;
+        result = comp.forceTransition(to);
+        break;
+      case 'repair.rollback':
+        // If this compartment was the active dispatch, release the slot first
+        // so _next() doesn't think something is still in flight.
+        if (this._active === comp) this._active = null;
+        result = comp.rollback();
+        break;
+      default:
+        return { ok: false, error: `repair: unknown action type "${type}"` };
+    }
+
+    if (result.ok) {
+      this._checkComplete();          // a forced VERIFIED may finish the queue
+      setTimeout(() => this._next(), 100);  // a rollback frees the queue to dispatch again
+    }
+    return result;
+  }
+
   _checkComplete() {
     const done = this.compartments.every(c =>
       c.state === STATE.VERIFIED || c.state === STATE.ESCALATED
@@ -641,7 +807,7 @@ class SEAMQueue {
 
   stats() {
     const cs = this.compartments;
-    return {
+    const raw = {
       total:     cs.length,
       verified:  cs.filter(c => c.state === STATE.VERIFIED).length,
       escalated: cs.filter(c => c.state === STATE.ESCALATED).length,
@@ -650,6 +816,12 @@ class SEAMQueue {
       queued:    cs.filter(c => c.state === STATE.QUEUED).length,
       pct:       Math.round(cs.filter(c => c.state === STATE.VERIFIED).length / cs.length * 100),
     };
+    // Phase 71.1 — derived mode, pure function of the counts above + running.
+    // Read-only projection: nothing here writes to JAA or changes dispatch
+    // behavior. Just names the aggregate state so callers (escalation,
+    // future Anomaly Engine, UI) don't each re-derive "is this stuck" themselves.
+    raw.mode = deriveMode(raw, this.running);
+    return raw;
   }
 
   toJSON() {
@@ -662,4 +834,4 @@ class SEAMQueue {
   }
 }
 
-module.exports = { SEAMQueue, QueueCompartment, STATE, STRATEGY };
+module.exports = { SEAMQueue, QueueCompartment, STATE, STRATEGY, MODE };

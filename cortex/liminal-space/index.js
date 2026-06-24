@@ -60,6 +60,7 @@
 
 const crypto = require('crypto');
 const { jaaDB, uid } = require('../memory/jaa-db');
+const { weakestLink, bottleneck } = require('../../lib/meta/confidence.js');
 
 const MODULE_ID = 'liminal-space';
 const VERSION   = '1.0.0';
@@ -287,11 +288,17 @@ function _checkCrystallisation(focalPoint, newItem) {
   }
 
   for (const [type, items] of Object.entries(byType)) {
-    const count      = items.length;
-    const avgConf    = items.reduce((s,i) => s + (i.confidence||0), 0) / count;
+    const count = items.length;
+    // §needs-2026-06-21: was arithmetic mean — `reduce sum / count`. A single
+    // strong item averaged against several unevidenced/weak ones could clear
+    // CRYSTALLISE_THRESHOLD even though the weakest member never should.
+    // Per James's rule, confidence is the weakest link, not the average.
+    // This will make crystallisation harder to trigger than before — that is
+    // the intended effect, not a regression. See lib/meta/confidence.js.
+    const linkConf = weakestLink(items);
 
     // Path 1: evidence threshold
-    if (count >= CRYSTALLISE_MIN_COUNT && avgConf >= CRYSTALLISE_THRESHOLD) {
+    if (count >= CRYSTALLISE_MIN_COUNT && linkConf >= CRYSTALLISE_THRESHOLD) {
       _crystallise(focalPoint, type, items, 'evidence_threshold');
       continue;
     }
@@ -330,7 +337,11 @@ function _crystallise(focalPoint, type, items, path) {
     type,
     path,                    // how it crystallised
     itemCount:     items.length,
-    avgConfidence: items.reduce((s,i) => s + (i.confidence||0), 0) / items.length,
+    // §needs-2026-06-21: was arithmetic mean of item.confidence. Now the
+    // weakest-link aggregate (see lib/meta/confidence.js) plus the bottleneck
+    // item itself, so a crystal's confidence is auditable, not just a number.
+    confidence:    weakestLink(items),
+    bottleneck:    bottleneck(items),
     summary:       items.map(i => i.text).slice(0,3).join(' | '),
     ts:            now,
   };

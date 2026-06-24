@@ -89,6 +89,21 @@ const DESCRIPTORS = [
     returns: { type: 'object', render: 'json' },
     tags: ['cli', 'snapshot', 'cortex'],
   },
+  {
+    id: 'repl.copilot',
+    namespace: 'repl',
+    name: 'copilot',
+    version: '1.0.0',
+    description: 'Talk to the co-pilot — full context, RAID-gated tool execution.',
+    grammar: ['copilot', 'cp'],
+    route: { method: 'POST', path: '/api/guardian/copilot/prompt' },
+    params: [
+      { name: 'prompt', type: 'string', required: true },
+      { name: 'command', type: 'string', required: false },
+    ],
+    returns: { type: 'object', render: 'json' },
+    tags: ['cli', 'copilot', 'guardian'],
+  },
 ];
 
 function _request(orchestratorUrl, method, path, body) {

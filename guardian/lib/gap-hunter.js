@@ -8,6 +8,7 @@ function _getLiminal() {
   try { _liminal = require('../../lib/meta/liminal/index.js'); } catch(_) { _liminal = false; }
   return _liminal;
 }
+const { weakestLink, bottleneck } = require('../../lib/meta/confidence.js');
 /**
  * guardian/lib/gap-hunter.js — GapHunter v3
  * UUID: guardian-gap-hunter-v1-0000-4000-0000-000000000001
@@ -160,6 +161,7 @@ function analyze(text, opts = {}) {
           type: lg.type, reason: Array.isArray(lg.reason)?lg.reason[0]:lg.reason,
           score: lg.criticality, domain: lg.domain,
           description: lg.description, question: lg.question,
+          evidence: lg.evidence || null,
           source: 'liminal/' + (lg.module||'unknown'),
         });
       }
@@ -169,7 +171,8 @@ function analyze(text, opts = {}) {
           gaps.push({
             type: cg.type, reason: Array.isArray(cg.reason)?cg.reason[0]:cg.reason,
             score: cg.criticality, domain: 'code',
-            description: cg.description, source: 'liminal/code',
+            description: cg.description, evidence: cg.evidence || null,
+            source: 'liminal/code',
           });
         }
       }
@@ -181,12 +184,23 @@ function analyze(text, opts = {}) {
 
 /**
  * Compute overall drift score from a gap array.
- * drift = open gaps weighted by score / total possible
+ *
+ * §needs-2026-06-21 — BEHAVIOR CHANGE, not a tweak: this was
+ * `total/gaps.length` (arithmetic mean). Per James's rule — confidence is
+ * defined by the weakest claim, not diluted by averaging against stronger
+ * ones — this now returns the weakest-link aggregate: min(effective scores),
+ * where an item with no evidence object is discounted before the min is
+ * taken (see lib/meta/confidence.js). The exported name and field (gapDrift)
+ * are unchanged so existing callers in guardian/server.js don't need edits,
+ * but the numbers they receive will now run lower and more conservative than
+ * before, especially for responses mixing well-evidenced and unevidenced
+ * gaps. That is the intended effect, not a regression.
  */
 function drift(gaps) {
-  if (!gaps.length) return 0;
-  const total = gaps.reduce((s, g) => s + (g.score || 0), 0);
-  return parseFloat((total / gaps.length).toFixed(3));
+  return weakestLink(gaps);
 }
 
-module.exports = { analyze, drift, GAP_TYPE, GAP_REASON, DOMAIN };
+// Same computation, named for what it actually is going forward.
+const confidence = drift;
+
+module.exports = { analyze, drift, confidence, bottleneck, GAP_TYPE, GAP_REASON, DOMAIN };

@@ -37,6 +37,27 @@ function _latticeLink(a, b, w=0.7, t='associated') {
   try { const l=_getLattice(); if(l) { _latticeAdd(a,a); _latticeAdd(b,b); l.connect(a,b,w,t); } } catch(_) {}
 }
 import { getIdeaOS, VERSION } from '../core/index.js';
+// ── Spec Engine + Agent Suite (Phase 40) ──────────────────────────────────────
+let _specEngine = null;
+let _agentSuite = null;
+function getSpecEngine() {
+  if (!_specEngine) {
+    import('../spec-engine/index.js').then(m => { _specEngine = m.default || m; }).catch(e => {
+      console.warn('[idearium/api] spec-engine load failed:', e.message);
+    });
+  }
+  return _specEngine;
+}
+function getAgentSuite() {
+  if (!_agentSuite) {
+    import('../agent-suite/index.js').then(m => { _agentSuite = m.default || m; }).catch(e => {
+      console.warn('[idearium/api] agent-suite load failed:', e.message);
+    });
+  }
+  return _agentSuite;
+}
+// Pre-warm on startup
+getSpecEngine(); getAgentSuite();
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
 import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
@@ -172,6 +193,11 @@ function matchRoute(method, url) {
     ['POST',   ['api','cli','exec'],      'cli.exec'],      // unified CLI axiom
     ['GET',    ['api','repos'],           'repo.list'],
     ['POST',   ['api','repos'],           'repo.ingest'],
+    // ── Spec Engine (Phase 40) ─────────────────────────────────────────────
+    ['GET',    ['api','spec-engine','specs'],               'speceng.list'],
+    ['POST',   ['api','spec-engine','specs'],               'speceng.create'],
+    ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
+    ['GET',    ['api','spec-engine','context'],             'speceng.context'],
     ['GET',    ['sse'],                   'sse'],
   ];
 
@@ -213,6 +239,13 @@ function matchRoute(method, url) {
     ['GET',    ['api','snapshots',':a','diff',':b'],      'snapshot.diff'],
     ['POST',   ['api','snapshots',':uuid','restore'],     'snapshot.restore'],
     ['GET',    ['api','repos',    ':uuid'],               'repo.show'],
+    // ── Spec Engine dynamic routes ──────────────────────────────────────────
+    ['GET',    ['api','spec-engine','specs',':uuid'],              'speceng.show'],
+    ['POST',   ['api','spec-engine','specs',':uuid','build'],      'speceng.build'],
+    ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','complete'], 'speceng.chunk.complete'],
+    ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','fail'],     'speceng.chunk.fail'],
+    ['POST',   ['api','spec-engine','specs',':uuid','archive'],    'speceng.archive'],
+    ['POST',   ['api','spec-engine','specs',':uuid','expand'],     'speceng.expand'],
     ['POST',   ['api','repos',    ':uuid','fork'],        'repo.fork'],
     ['DELETE', ['api','repos',    ':uuid'],               'repo.archive'],
     ['GET',    ['api','repos',    ':uuid','lineage'],     'repo.lineage'],
@@ -561,6 +594,142 @@ async function handle(req, res, route, query, body) {
 
     case 'repo.lineage':
       return ok(res, { lineage: getRepoLayer().lineage(params.uuid) });
+
+    // ── Spec Engine handlers (Phase 40) ────────────────────────────────────────
+
+    case 'speceng.list': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      return ok(res, { specs: se.listSpecs() });
+    }
+
+    case 'speceng.create': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      const { name, type, description, agent } = body;
+      if (!name) return err(res, 400, 'name required');
+      try {
+        const manifest = se.createSpec({ name, type, description, agent });
+        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type });
+        return ok(res, { manifest });
+      } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.show': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      try {
+        const manifest = se.loadSpec(params.uuid);
+        return ok(res, { manifest });
+      } catch(e) { return err(res, 404, e.message); }
+    }
+
+    case 'speceng.build': {
+      // Trigger building the next pending chunk via agent suite
+      const se = getSpecEngine();
+      const as = getAgentSuite();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      if (!as) return err(res, 503, 'agent-suite not ready');
+      try {
+        const manifest = se.loadSpec(params.uuid);
+        const chunk = se.nextPendingChunk(params.uuid);
+        if (!chunk) return ok(res, { done: true, message: 'all chunks complete or building' });
+
+        // Get system context for the agent
+        const systemContext = await as.getSystemContext().catch(() => '');
+        const chunkPrompt   = se.buildChunkPrompt(manifest, chunk, systemContext);
+        const preferAgent   = body.agent || manifest.agent || 'ollama';
+
+        se.markChunkBuilding(params.uuid, chunk.uuid, { agent: preferAgent });
+
+        // Dispatch to agent — non-blocking, chunk builds async
+        as.buildChunkWithAgent(chunkPrompt, { preferAgent }).then(async result => {
+          if (result.ok && !result.queued && result.text) {
+            se.completeChunk(params.uuid, chunk.uuid, result.text);
+            const updatedManifest = se.loadSpec(params.uuid);
+            os.emit('idearium.spec-engine.chunk.complete', {
+              specUuid: params.uuid, chunkUuid: chunk.uuid,
+              sectionId: chunk.sectionId, progress: updatedManifest.progress,
+            });
+          } else if (result.queued) {
+            // ChatGPT/Claude — chunk will complete via guardian job callback
+            os.emit('idearium.spec-engine.chunk.queued', {
+              specUuid: params.uuid, chunkUuid: chunk.uuid, jobId: result.jobId, agent: result.agent,
+            });
+          } else {
+            se.failChunk(params.uuid, chunk.uuid, result.error || 'agent dispatch failed');
+          }
+        }).catch(e => se.failChunk(params.uuid, chunk.uuid, e.message));
+
+        return ok(res, {
+          chunkUuid: chunk.uuid, sectionId: chunk.sectionId, sectionTitle: chunk.sectionTitle,
+          agent: preferAgent, status: 'building',
+        });
+      } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.chunk.complete': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      const { content } = body;
+      if (!content) return err(res, 400, 'content required');
+      try {
+        const chunk = se.completeChunk(params.uuid, params.chunkUuid, content);
+        const manifest = se.loadSpec(params.uuid);
+        os.emit('idearium.spec-engine.chunk.complete', {
+          specUuid: params.uuid, chunkUuid: params.chunkUuid,
+          sectionId: chunk.sectionId, progress: manifest.progress,
+        });
+        return ok(res, { chunk, progress: manifest.progress });
+      } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.chunk.fail': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      try {
+        const chunk = se.failChunk(params.uuid, params.chunkUuid, body.reason || 'manual fail');
+        return ok(res, { chunk });
+      } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.archive': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      try {
+        const archivePath = await se.archiveSpec(params.uuid);
+        return ok(res, { archivePath });
+      } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.expand': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      try {
+        const manifest = await se.expandSpec(params.uuid);
+        return ok(res, { manifest });
+      } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.wizard': {
+      // Qwen drives the next wizard question
+      const as = getAgentSuite();
+      if (!as) return err(res, 503, 'agent-suite not ready');
+      try {
+        const { specMeta = {}, answeredSections = {} } = body;
+        const next = await as.getNextWizardQuestion(specMeta, answeredSections);
+        return ok(res, { next, done: next === null });
+      } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.context': {
+      const as = getAgentSuite();
+      if (!as) return err(res, 503, 'agent-suite not ready');
+      try {
+        const context = await as.getSystemContext();
+        return ok(res, { context });
+      } catch(e) { return err(res, 500, e.message); }
+    }
 
     // ── Queue / progress push (from forge queue) ──────────────────────────
     case 'idea.progress': {

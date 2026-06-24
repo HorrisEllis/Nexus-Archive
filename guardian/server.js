@@ -808,8 +808,21 @@ function _handleNCPMessage(msg) {
           });
         } catch(e) { console.error(`[guardian] failed to insert chat_log record for job ${jobId}: ${e.message}`); }
 
-        bus.emit('guardian.job.complete', { jobId, provider, chars: finalText.length,
-          gaps: gaps.length, gapDrift });
+        // §23.7 — include gapUuid and meta in the complete event so gap-loop's
+        // closure verifier can find the gap and run verifyClosure immediately
+        const jobRec2 = jobs.get(jobId);
+        bus.emit('guardian.job.complete', {
+          jobId, provider, chars: finalText.length,
+          gaps: gaps.length, gapDrift,
+          command: jobRec2?.command || null,
+          meta: {
+            gapUuid:     jobRec2?.gapUuid    || null,
+            gapType:     jobRec2?.gapType    || null,
+            raidAgent:   jobRec2?.raidAgent  || provider,
+            source:      jobRec2?.source     || 'guardian',
+            contractUuid:jobRec2?.contractUuid||null,
+          },
+        });
         cockpitBroadcast({ type: 'job.complete', jobId, provider,
           chars: finalText.length, gaps: gaps.length, gapDrift, ts: Date.now() });
 
@@ -987,6 +1000,86 @@ function _handleNCPMessage(msg) {
         _toCortex('guardian.session.named', {
           chatId: msg.chatId, sessionName: msg.sessionName, provider,
         });
+      }
+      break;
+    }
+
+
+    case 'GUARDIAN_ABRUPT_STOP': {
+      // §74.2 — userscript detected open fence or suspiciously short SEAM response.
+      // Route through forceRetryActive so the compartment enters RETRYING (or
+      // ESCALATED if watchdog budget is exhausted) — same path as a watchdog trip.
+      // INTERRUPTED is a recoverable state; ESCALATED is not.
+      if (jobId) {
+        const seamQueue = _findActiveSeamCompartment(jobId);
+        if (seamQueue) {
+          const { escalated } = seamQueue.forceRetryActive('abrupt_stop');
+          console.log(`[guardian §74.2] abrupt stop on ${jobId.slice(0,8)} — escalated:${escalated}`);
+          _toCortex('guardian.abrupt_stop.handled', {
+            jobId,
+            seam_queue_id: msg.seam_queue_id ?? null,
+            seam_chunk_idx: msg.seam_chunk_idx ?? null,
+            escalated,
+            provider: provider || 'unknown',
+            chunkLen: msg.chunkLen ?? 0,
+            openFence: msg.openFence ?? false,
+          });
+        } else {
+          // Non-SEAM job abrupt stop — log as gap, no retry
+          _toCortex('cortex.gap.found', {
+            jobId, provider: provider || 'unknown',
+            type: 'abrupt_stop', score: 0.85,
+            reason: `open fence:${msg.openFence} len:${msg.chunkLen}`,
+            source: 'userscript-detector',
+          });
+        }
+        bus.emit('guardian.abrupt_stop', { jobId, provider, openFence: msg.openFence, ts: Date.now() });
+        cockpitBroadcast({ type: 'job.abrupt_stop', jobId, provider, ts: Date.now() });
+      }
+      break;
+    }
+
+    case 'GUARDIAN_SEAM_RESUME_NEEDED': {
+      // §70.2 — tab refreshed mid-SEAM. userscript found interrupted state in
+      // localStorage. If the queue is still active, forceRetryActive picks up
+      // from the right chunk. If the queue is gone (server restarted), log the
+      // orphan as a gap so it surfaces in the review panel.
+      const { seam_queue_id, seam_chunk_idx, seam_total, partialText, interruptedAt } = msg;
+      if (seam_queue_id) {
+        const seamQueue = _activeQueues.get(seam_queue_id);
+        if (seamQueue) {
+          // Queue still alive — force retry on whatever chunk is active
+          seamQueue.forceRetryActive('tab_resume');
+          console.log(`[guardian §70.2] resume: queue ${seam_queue_id.slice(0,8)} chunk ${(seam_chunk_idx ?? '?')+1}/${seam_total ?? '?'}`);
+          _toCortex('guardian.seam.resumed', {
+            seam_queue_id, seam_chunk_idx, seam_total, provider: provider || 'unknown',
+            interruptedAt, resumedAt: Date.now(),
+          });
+          ncp.push(provider, {
+            type: 'GUARDIAN_SEAM_RESUME_ACK',
+            seam_queue_id, seam_chunk_idx,
+            status: 'retrying',
+            ts: Date.now(),
+          });
+        } else {
+          // Queue gone — server restarted. Surface as orphaned gap.
+          console.log(`[guardian §70.2] orphan resume: queue ${seam_queue_id.slice(0,8)} not in memory — logging gap`);
+          _toCortex('cortex.gap.found', {
+            jobId: seam_queue_id, provider: provider || 'unknown',
+            type: 'seam_orphan_resume',
+            score: 0.9,
+            reason: `tab resumed after server restart, chunk ${(seam_chunk_idx ?? '?')+1}/${seam_total ?? '?'}`,
+            description: 'SEAM queue lost on server restart. Manual re-spec needed.',
+            source: 'guardian-resume',
+          });
+          ncp.push(provider, {
+            type: 'GUARDIAN_SEAM_RESUME_ACK',
+            seam_queue_id, seam_chunk_idx,
+            status: 'orphaned',
+            message: 'Server restarted — queue lost. Re-submit the spec.',
+            ts: Date.now(),
+          });
+        }
       }
       break;
     }
@@ -1299,6 +1392,98 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
       ollamaAgent.init({ pollMs: 2000 });
       console.log(`[guardian] ⬡ OLLAMA: online — model=${ollamaAgent.MODEL} — agent started, polling every 2s`);
       return { ok:true, msg:`ollama online — agent started (model=${ollamaAgent.MODEL})` };
+    }
+  });
+
+  // ── Co-pilot — continuous bus listener + RAID-gated tool execution ───────
+  seq.phase({ name:'copilot.agent', type:'SOFT',
+    label:'Co-pilot (full-context assistant, RAID-gated CLI)',
+    fn: async () => {
+      let copilot;
+      try { copilot = require('./agents/co-pilot'); }
+      catch (e) { return { ok:true, msg:'guardian/agents/co-pilot not found — skipping' }; }
+
+      // execFn self-calls guardian's own /cli/exec — reuses the existing,
+      // already-tested §LAW II ledger-before-execute path instead of a
+      // second execution mechanism. Same-process HTTP overhead is small
+      // and consistent with how the rest of this codebase already proxies
+      // between its own services rather than refactoring shared internals.
+      const execFn = async (command, opts = {}) => {
+        const r = await fetch(`http://127.0.0.1:${HTTP_PORT}/cli/exec`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command, source: opts.source || 'copilot' }),
+          signal: AbortSignal.timeout(15000),
+        });
+        return r.json();
+      };
+
+      copilot.init({ jaaDB: jaa, bus, execFn });
+      console.log('[guardian] ⬡ COPILOT: listening — bus poll active, RAID gate ' + (copilot.status().raidAvailable ? 'available' : 'UNAVAILABLE (tool calls will fail closed)'));
+      return { ok:true, msg:'co-pilot agent listening' };
+    }
+  });
+
+  // ── §23.7 Reflection contracts — guardian polls and dispatches to Mistral ──
+  seq.phase({ name:'reflection-contracts.poll', type:'SOFT',
+    label:'Reflection contracts — poll JAA, dispatch queued contracts to Mistral via Ollama',
+    fn: async () => {
+      const POLL_MS = 30000; // check every 30s
+      const _contractInterval = setInterval(async () => {
+        let queued = [];
+        try { queued = jaa.query('reflection_contracts', r => r.status === 'queued', 5); } catch(_) {}
+        for (const contract of queued) {
+          try {
+            // Mark dispatched immediately to prevent double-dispatch
+            jaa.update('reflection_contracts', contract.uuid, { status: 'dispatched', dispatchedAt: Date.now() });
+            const prompt = [
+              'You are the NEXUS Reflection Engine. Analyse this decision outcome and propose a concrete improvement.',
+              `Decision class: ${contract.decisionClass}`,
+              `Loop type: ${contract.loopType}`,
+              `Satisfaction score: ${contract.score} — ${contract.scoreReason}`,
+              `Decision input: ${contract.decisionInput || '(not recorded)'}`,
+              `Chosen outcome: ${contract.decisionChosen || '(unknown)'}`,
+              `Evidence: ${JSON.stringify(contract.evidence||[]).slice(0,400)}`,
+              '',
+              'Respond ONLY with valid JSON:',
+              '{"diagnosis":"...","proposal":"...","type":"cluster_pattern|idearium_idea|wiring_fix|no_action","cluster":"...","pattern":"...","confidence":0.0}',
+            ].join('\n');
+            const job = createJob({ command: 'diagnose_and_repair', provider: 'ollama', prompt, meta: {
+              source: 'reflection', contractUuid: contract.uuid,
+              decisionClass: contract.decisionClass, loopType: contract.loopType,
+              gapUuid: contract.gapUuid || null, reflectionContract: true,
+            }});
+            dispatchJob(job);
+            console.log(`[guardian] 📋 reflection contract dispatched · ${contract.uuid.slice(0,8)} · ${contract.loopType}`);
+          } catch(e) {
+            try { jaa.update('reflection_contracts', contract.uuid, { status: 'queued', error: e.message }); } catch(_) {}
+          }
+        }
+      }, POLL_MS);
+      _contractInterval.unref();
+      console.log('[guardian] ⬡ REFLECTION-CONTRACTS: polling every 30s — Mistral handles reflection reasoning');
+      return { ok:true, msg:'reflection contract poller active' };
+    }
+  });
+
+  // ── ChatGPT mode — stateless, no listener needed (request/response only) ──
+  seq.phase({ name:'chatgpt-mode.ready', type:'SOFT',
+    label:'ChatGPT mode (Nexus-authority + ChatGPT-reasoning, epistemic tagging)',
+    fn: async () => {
+      let chatgptMode;
+      try { chatgptMode = require('./agents/chatgpt-mode'); }
+      catch (e) { return { ok:true, msg:'guardian/agents/chatgpt-mode not found — skipping' }; }
+
+      const hasKey = !!process.env.OPENAI_API_KEY;
+      // §1.1 — don't claim "ready" if the one thing that makes this work
+      // (an API key for the actual ChatGPT call) isn't present. The route
+      // still registers either way — this just reports honestly so it
+      // shows up in the boot log instead of failing silently on first use.
+      if (!hasKey) {
+        console.log('[guardian] ⬡ CHATGPT-MODE: route active, but OPENAI_API_KEY not set — queries will fail at dispatch time');
+        return { ok:true, msg:'chatgpt-mode loaded — OPENAI_API_KEY missing, dispatch will fail until set' };
+      }
+      console.log('[guardian] ⬡ CHATGPT-MODE: ready — ' + Object.values(chatgptMode.MODE).join('/'));
+      return { ok:true, msg:'chatgpt-mode ready' };
     }
   });
 
@@ -2759,6 +2944,36 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
+  // ── POST /copilot/prompt — co-pilot entry point, RAID-gated tool calls ──────
+  if (method === 'POST' && url.pathname === '/copilot/prompt') {
+    bodyJ(req).then(async body => {
+      const { prompt, command, proof, contextOpts } = body || {};
+      if (!prompt) { pRes(res, 400, { ok:false, error:'prompt required' }); return; }
+      let copilot;
+      try { copilot = require('./agents/co-pilot'); }
+      catch (e) { pRes(res, 503, { ok:false, error:'co-pilot agent not loaded: ' + e.message }); return; }
+      const result = await copilot.handlePrompt(prompt, { command, proof, contextOpts });
+      pRes(res, result.ok ? 200 : (result.denied ? 403 : 400), result);
+    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
+    return true;
+  }
+
+  // ── POST /chatgpt-mode/query — two-layer Nexus(authority)/ChatGPT(reasoning) ──
+  // Same shape as /copilot/prompt above, deliberately — different agent
+  // (guardian/agents/chatgpt-mode.js), same request/response/error pattern.
+  if (method === 'POST' && url.pathname === '/chatgpt-mode/query') {
+    bodyJ(req).then(async body => {
+      const { prompt, mode, maxTokens, model, timeout } = body || {};
+      if (!prompt) { pRes(res, 400, { ok:false, error:'prompt required' }); return; }
+      let chatgptMode;
+      try { chatgptMode = require('./agents/chatgpt-mode'); }
+      catch (e) { pRes(res, 503, { ok:false, error:'chatgpt-mode agent not loaded: ' + e.message }); return; }
+      const result = await chatgptMode.query(prompt, { mode, maxTokens, model, timeout });
+      pRes(res, result.ok ? 200 : 400, result);
+    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
+    return true;
+  }
+
   // ── POST /command — dispatch a job (raw) or SEAM queue (with spec) ──────────
   if (method==='POST' && url.pathname==='/command') {
     bodyJ(req).then(async body => {
@@ -2772,6 +2987,30 @@ function handleExtendedRoutes(req, res, url, method) {
           if (!specText) throw new Error('spec content empty');
 
           const provider = body.provider || 'chatgpt';
+
+          // §FIX 2026-06-21: SEAM queue creation had ZERO gate before this —
+          // straight from HTTP body to queue, no constraint check at all,
+          // unlike tool calls (which already go through RAID's
+          // _approveTool). Provider here is explicitly chosen by the
+          // caller, not RAID-picked — that's correct, the console/CLI
+          // already decided who handles this. But the CONSTRAINT layer
+          // (contract check, rate limit, fail-closed for unknown sources)
+          // should apply regardless of how the target was chosen. Action
+          // 'forge' is the right fit — already in every provider's
+          // contract, no new vocabulary needed.
+          try {
+            const raid = require('../cortex/core/raid');
+            const approval = raid._approveTool(body.source || 'unknown', specText.slice(0, 200), { action: 'forge', proof: body.proof });
+            if (!approval.approved) {
+              pRes(res, 403, { ok: false, error: `RAID denied SEAM queue creation: ${approval.reason}` });
+              return;
+            }
+          } catch (e) {
+            // RAID itself unreachable — fail closed, same posture as the
+            // co-pilot's tool gate, not a silent bypass.
+            pRes(res, 503, { ok: false, error: `RAID approval gate unavailable, refusing to create SEAM queue without it: ${e.message}` });
+            return;
+          }
 
           const { queue, plan } = _buildSeamQueue(specText, {
             provider, title: body.title,

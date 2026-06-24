@@ -452,21 +452,49 @@ function startService() {
             body: `${name} offline for ${Math.round(offlineMs/1000)}s — :${cfg.port} not responding`,
           };
           issues.push(gap);
-          openGaps.set(gapKey, { uuid: uid(), ...gap, status: 'open', detectedAt: Date.now() });
-          broadcast({ type: 'gap.found', gap: openGaps.get(gapKey) });
 
-          // Emit on nexus-bus if available
+          // §23.7 — enrich gap with predicate + dedup check before inserting
+          // enrichGap returns existing_uuid if this gap already exists (same predicate)
+          // In that case: evidence appended, recurrence incremented, no new gap created
+          let gapUuid;
           try {
-            const bus = require('../nexus-bus');
-            bus.emit('HEAL_REQUESTED', {
-              gapType: 'system_offline', modulePath: name,
-              body: gap.body, sigma: 0.8,
-              source: 'diagnostic.remediation', ts: Date.now(),
-            });
-          } catch(_) {}
+            const gp = require('../lib/gap-predicate');
+            const { enriched_gap, existing_uuid } = gp.enrichGap(gap);
+            if (existing_uuid) {
+              gapUuid = existing_uuid;
+              // Gap already exists — don't create a new one, don't re-dispatch
+              // Just update our in-memory map to point at the existing gap
+              if (!openGaps.has(gapKey)) {
+                const jaaDB = require('../cortex/memory/jaa-db').jaaDB;
+                const existing = jaaDB.query('gaps', g => g.uuid === existing_uuid, 1)[0];
+                if (existing) openGaps.set(gapKey, existing);
+              }
+            } else {
+              const finalGap = { uuid: uid(), ...enriched_gap, status: 'open', detectedAt: Date.now() };
+              gapUuid = finalGap.uuid;
+              openGaps.set(gapKey, finalGap);
+              broadcast({ type: 'gap.found', gap: finalGap });
+              // Emit on nexus-bus
+              try {
+                const bus = require('../nexus-bus');
+                bus.emit('HEAL_REQUESTED', {
+                  gapType: 'system_offline', modulePath: name,
+                  body: gap.body, sigma: 0.8,
+                  source: 'diagnostic.remediation', ts: Date.now(),
+                  gapUuid: finalGap.uuid, dedup_key: finalGap.dedup_key,
+                });
+              } catch(_) {}
+            }
+          } catch(e) {
+            // gap-predicate not available — fall back to original behavior
+            const finalGap = { uuid: uid(), ...gap, status: 'open', detectedAt: Date.now() };
+            gapUuid = finalGap.uuid;
+            openGaps.set(gapKey, finalGap);
+            broadcast({ type: 'gap.found', gap: finalGap });
+          }
 
-          _logRemediation({ action: 'gap_escalated', ...gap });
-          console.log(`[diagnostic] ⚠  ${name} offline ${Math.round(offlineMs/1000)}s — gap escalated`);
+          _logRemediation({ action: 'gap_escalated', ...gap, gapUuid });
+          console.log(`[diagnostic] ⚠ ${name} has been offline for ${Math.round(offlineMs/1000)}s — escalating to repair queue`);
         }
       } else {
         // Came back online — clear
@@ -594,9 +622,31 @@ function startService() {
     } catch(_) {}
 
     for (const gap of gaps) {
+      // §23.7 — skip gaps in terminal or investigating states
+      // This is the primary fix for the 300-job flood:
+      // gaps that are already being investigated should NOT be re-dispatched
+      // on every diagnostic sweep. The gap stays open until the artifact appears.
+      if (gap.status === 'investigating' || gap.status === 'resolved' ||
+          gap.status === 'expired'       || gap.status === 'blocked'  ||
+          gap.status === 'archived') continue;
+
       // Skip gaps already escalated in the last 5 minutes
       const lastEsc = _escalationCooldown.get(gap.uuid) || 0;
       if (Date.now() - lastEsc < 300000) continue;
+
+      // §23.7 — check if the gap predicate is still true before dispatching
+      // If the predicate is now false, run closure verifier instead of re-dispatching
+      if (gap.predicate) {
+        try {
+          const gp = require('../lib/gap-predicate');
+          const stillOpen = gp.checkPredicate(gap.predicate);
+          if (!stillOpen) {
+            // Predicate became false — try to close the gap
+            gp.verifyClosure(gap, { strategy: 'diagnostic.sweep' });
+            continue; // don't dispatch a new job — verifier handles it
+          }
+        } catch(_) {}
+      }
 
       // Phase 1: Try RAID routing first — let it decide the best agent
       let raidDecision = null;
@@ -656,7 +706,18 @@ function startService() {
       } else {
         _logRemediation({ action: 'guardian_dispatched', gapUuid: gap.uuid, gapType: gap.type,
           agent: raidDecision?.agent, note: 'RAID→Guardian dispatch' });
-        console.log(`[diagnostic] ↗  gap ${gap.uuid.slice(0,8)} dispatched to guardian via ${raidDecision?.agent}`);
+        const agentLabel = raidDecision?.agent || 'unknown';
+        const gapDesc = gap.body ? gap.body.slice(0, 60) : gap.type;
+        console.log(`[diagnostic] ▶ Sending to ${agentLabel}: ${gap.system ? gap.system + ' — ' : ''}${gapDesc}${gap.body?.length > 60 ? '…' : ''}`);
+
+        // §23.7 — mark gap as 'investigating' so the next diagnostic sweep
+        // does not re-dispatch it. The gap stays investigating until the
+        // closure verifier runs (after guardian.job.complete) and either
+        // resolves it or marks it open for retry.
+        try {
+          const jaaDB = require('../cortex/memory/jaa-db').jaaDB;
+          jaaDB.update('gaps', gap.uuid, { status: 'investigating', investigatingAt: Date.now() });
+        } catch(_) {}
       }
 
       _escalationCooldown.set(gap.uuid, Date.now());

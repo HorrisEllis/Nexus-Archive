@@ -1,5 +1,0 @@
-[2026-06-20T13:51:27.958Z] autopilot starting — supervising: guardian
-[2026-06-20T13:51:27.960Z] [36m[guardian][0m starting — node guardian/server.js
-[2026-06-20T13:51:27.964Z] autopilot status: http://127.0.0.1:7799/status
-[2026-06-20T13:51:33.998Z] autopilot received SIGTERM — stopping all kernels
-[2026-06-20T13:51:34.046Z] [36m[guardian][0m stopped cleanly (autopilot shutdown)
