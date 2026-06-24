@@ -1,5 +1,21 @@
 # NEXUS Changelog
 
+## v1.2.0 — 2026-06-24 — the file browser, wired to what already existed
+
+- Checked before building: `idearium/api/index.js`'s `spec.build` already compiles a real, fixed `sections[]` model through `emerge/compiler`'s T0/T1 pipeline. Rather than build a second spec format, `descriptor.descriptorFromSections()` turns those same 9 fixed sections into capabilities — the new chunk system builds *into* what already worked, not around it.
+- New routes: create/show a build group, build a chunk, compress, expand. A chunk PASS writes back into the spec's real section via the existing `idearium.spec.update` event — `spec.build` didn't need to change.
+- Both copies of `interaction-contract.json` updated to match — confirmed identical before, kept identical after.
+- `buildChunk()` upgraded from an always-throws stub to a real in-memory compartment cache. Works for the life of the process that created the build group. The restart limitation is still real, still in the error message.
+- New panel in the existing Spec Library view: chunk status, intent, hook/wire tags, failure reasons, compress button. Scoped to that view, not the separate Repo tab's file-tree — that's real, separate, larger work.
+- Found and stated, not fixed: `ui/idearium/index.html` and `idearium/ui/index.html` are two manually-synced, byte-identical 80K+ character files. No single source of truth. Re-synced for this change; the structural fragility is still there for the next person to hit.
+- Content per chunk is still typed by hand. No Qwen, no Mistral wiring into this flow yet.
+
+## v1.1.0 — 2026-06-24 — hooks, wires, intent, and the chunked-spec build layer
+
+- **lib/component-descriptor.js → v1.1.0**: `capability.intent` now required. New `capability.endpoints[]` (`hook_type` ∈ api/event_bus/cli/file_watch/sse/websocket/queue, `hook_id`, `intent`) and `capability.wires[]` (`wire_type` ∈ pipeline/data_flow/handshake/interaction_contract, `wire_id`, `intent`, `from`, `to`). Deliberately not named `capability.hooks` — `component-registry.js` already owns that word for something else (lifecycle triggers). New `toCompartmentIntent(descriptor, i)` bridges a capability into the exact shape `compartment-engine.js`'s `spawn()` requires — proven by actually calling `spawn()` with it, not by inspecting the shape.
+- **lib/spec-build-group.js — new**: one spec, N chunks, N real compartments. A failing chunk fails its own compartment without touching the rest — verified with two real compartments, one made to fail on purpose. Chunk content lands on real files at `data/idearium/specs/<build-uuid>/<chunk-uuid>.md`, since Idearium is genuinely flat-file and a second sync layer would just be a second source of truth. Compress/expand are explicit calls only. One real limitation found and stated, not hidden: no resume-by-id in `compartment-engine` yet, so building a chunk after process restart needs the live compartment object, not just its id.
+- 28 new tests (21 + 7), all against real modules — no mocks of `compartment-engine` or `component-registry`. 657/658 full suite, the 1 failure confirmed pre-existing in the original untouched zip.
+
 ## v1.0.0 — 2026-06-24 — built and tested this session, not just claimed
 
 Per §6.1: every line below has a passing test or a direct source check behind it. None of it was written before being verified.

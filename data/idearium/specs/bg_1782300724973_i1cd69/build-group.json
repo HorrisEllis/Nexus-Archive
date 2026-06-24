@@ -1,0 +1,54 @@
+{
+  "buildGroupUuid": "bg_1782300724973_i1cd69",
+  "specUuid": "bp_001.comp.test-spec-build",
+  "componentId": "test.spec_build",
+  "createdAt": 1782300724975,
+  "chunks": [
+    {
+      "chunkUuid": "2f868dd1-3d2d-48fc-9e88-3006ebed139a",
+      "compartmentId": "9dba46c2-9615-4058-ad61-6c602dc34ec0",
+      "capabilityIndex": 0,
+      "verb": "build",
+      "noun": "chunk0",
+      "intent": "build chunk 0 of the test spec",
+      "hook_ids": [
+        "hook.chunk0"
+      ],
+      "wire_ids": [
+        "wire.chunk0-to-spec"
+      ],
+      "tags": [
+        "registry",
+        "tool"
+      ],
+      "status": "RUNNING",
+      "filePath": null,
+      "failureReason": null,
+      "createdAt": 1782300724975,
+      "updatedAt": 1782300724975
+    },
+    {
+      "chunkUuid": "aee7fe12-110c-4122-b2c9-09b8134fa6ec",
+      "compartmentId": "967fa1ce-e477-4777-aeb5-d4faab06726b",
+      "capabilityIndex": 1,
+      "verb": "build",
+      "noun": "chunk1",
+      "intent": "build chunk 1 of the test spec",
+      "hook_ids": [
+        "hook.chunk1"
+      ],
+      "wire_ids": [
+        "wire.chunk1-to-spec"
+      ],
+      "tags": [
+        "registry",
+        "tool"
+      ],
+      "status": "RUNNING",
+      "filePath": null,
+      "failureReason": null,
+      "createdAt": 1782300724975,
+      "updatedAt": 1782300724975
+    }
+  ]
+}

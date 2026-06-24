@@ -129,6 +129,11 @@ const ROUTE_CAP = {
   'spec.check':       CAPS.WRITE_IDEAS,
   'spec.build':       CAPS.WRITE_IDEAS,
   'spec.export':      CAPS.READ_IDEAS,
+  'spec.buildgroup.create':  CAPS.WRITE_IDEAS,
+  'spec.buildgroup.show':    CAPS.READ_IDEAS,
+  'spec.buildgroup.chunk':   CAPS.WRITE_IDEAS,
+  'spec.buildgroup.compress': CAPS.WRITE_IDEAS,
+  'spec.buildgroup.expand':   CAPS.WRITE_IDEAS,
   'gap.list':         CAPS.READ_IDEAS,
   'gap.show':         CAPS.READ_IDEAS,
   'gap.open':         CAPS.WRITE_IDEAS,
@@ -206,6 +211,11 @@ function matchRoute(method, url) {
     ['GET',    ['api','queue',    ':queueId'],           'queue.show'],
     ['POST',   ['api','specs',    ':uuid','build'],       'spec.build'],
     ['GET',    ['api','specs',    ':uuid','export'],      'spec.export'],
+    ['POST',   ['api','specs',    ':uuid','buildgroup'],                              'spec.buildgroup.create'],
+    ['GET',    ['api','specs',    ':uuid','buildgroup',':bgUuid'],                     'spec.buildgroup.show'],
+    ['POST',   ['api','specs',    ':uuid','buildgroup',':bgUuid','chunks',':chunkUuid'],'spec.buildgroup.chunk'],
+    ['POST',   ['api','specs',    ':uuid','buildgroup',':bgUuid','compress'],          'spec.buildgroup.compress'],
+    ['POST',   ['api','specs',    ':uuid','buildgroup',':bgUuid','expand'],            'spec.buildgroup.expand'],
     ['GET',    ['api','gaps',     ':uuid'],               'gap.show'],
     ['POST',   ['api','gaps',     ':uuid','resolve'],     'gap.resolve'],
     ['POST',   ['api','gaps',     ':uuid','ignore'],      'gap.ignore'],
@@ -459,6 +469,92 @@ async function handle(req, res, route, query, body) {
       const md = specToMarkdown(spec);
       res.writeHead(200, { 'Content-Type': 'text/markdown', ...CORS });
       return res.end(md);
+    }
+
+    // ── Build group — chunked, compartment-backed spec building ─────────────
+    // Each of idearium's existing fixed sections (intent, api_callto,
+    // module_hooks, cli_spec, schemas, gap_contract, failure_modes, tests,
+    // phase_map — checked directly in idearium/index.js, not assumed) becomes
+    // one chunk, one real compartment. A PASSed chunk writes back into that
+    // exact section via the existing idearium.spec.update event — spec.build
+    // above and its compileIdeariumSpec() pipeline keep working completely
+    // unmodified, now fed by compartment-built content instead of only
+    // hand-typed form content.
+    case 'spec.buildgroup.create': {
+      const spec = os.spec(params.uuid);
+      if (!spec) return err(res, 404, `spec not found: ${params.uuid}`);
+      const descriptor = _require('../../lib/component-descriptor');
+      const buildGroup  = _require('../../lib/spec-build-group');
+      let group;
+      try {
+        const desc = descriptor.descriptorFromSections(spec.sections, {
+          uuid: `bp_001.comp.idearium-spec-${spec.uuid.slice(0, 8)}`,
+          componentId: `idearium.spec_${spec.uuid.replace(/-/g, '_').slice(0, 16)}`,
+        });
+        group = await buildGroup.createBuildGroup(desc);
+      } catch (e) {
+        return err(res, 400, `could not create build group: ${e.message}`);
+      }
+      return ok(res, { buildGroup: group });
+    }
+
+    case 'spec.buildgroup.show': {
+      const buildGroup = _require('../../lib/spec-build-group');
+      try {
+        return ok(res, { buildGroup: buildGroup.getBuildGroupStatus(params.bgUuid) });
+      } catch (e) {
+        return err(res, 404, e.message);
+      }
+    }
+
+    case 'spec.buildgroup.chunk': {
+      if (!body.content || typeof body.content !== 'string') {
+        return err(res, 400, 'content (string) is required — no Qwen/Mistral wizard wired in yet, content is supplied by the caller for this pass');
+      }
+      const buildGroup = _require('../../lib/spec-build-group');
+      let tracked;
+      try {
+        tracked = await buildGroup.buildChunk(params.bgUuid, params.chunkUuid, () => body.content);
+      } catch (e) {
+        return err(res, 409, e.message);
+      }
+
+      // Write back into idearium's real section model on PASS only —
+      // a FAIL/REWOUND/DELETED chunk must not silently mark a section
+      // complete (§1.2 — that would hide the real failure from spec.check).
+      if (tracked.status === 'PASS') {
+        const spec = os.spec(params.uuid);
+        if (spec) {
+          const sections = spec.sections.map(s =>
+            s.id === tracked.noun
+              ? { ...s, content: body.content, complete: true }
+              : s
+          );
+          os.emit('idearium.spec.update', { uuid: params.uuid, fields: { sections } });
+        }
+      }
+      return ok(res, { chunk: tracked });
+    }
+
+    case 'spec.buildgroup.compress': {
+      const buildGroup = _require('../../lib/spec-build-group');
+      try {
+        const zipPath = buildGroup.compressBuildGroup(params.bgUuid);
+        return ok(res, { zipPath });
+      } catch (e) {
+        return err(res, 404, e.message);
+      }
+    }
+
+    case 'spec.buildgroup.expand': {
+      const buildGroup = _require('../../lib/spec-build-group');
+      if (!body.zipPath) return err(res, 400, 'zipPath is required');
+      try {
+        const dir = buildGroup.expandBuildGroup(body.zipPath, params.bgUuid);
+        return ok(res, { dir });
+      } catch (e) {
+        return err(res, 404, e.message);
+      }
     }
 
     // ── Gaps ───────────────────────────────────────────────────────────────

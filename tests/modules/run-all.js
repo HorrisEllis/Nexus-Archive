@@ -49,6 +49,7 @@ const SUITES = [
   'test-mutation-contract.js',
   'test-intelligence-bridge.js',
   'component-descriptor.test.js',
+  'spec-build-group.test.js',
   'test-liminal-space.js',
   'test-snr-filter.js',
   'test-ui-registry.js',

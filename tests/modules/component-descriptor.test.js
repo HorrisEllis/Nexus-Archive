@@ -26,7 +26,10 @@ function validDescriptor(overrides = {}) {
     type:        'tool',
     tier:        'registry',
     capabilities: [
-      { verb: 'list', noun: 'widgets', params: [{ name: 'limit', type: 'number' }] },
+      {
+        verb: 'list', noun: 'widgets', intent: 'let a caller enumerate existing widgets',
+        params: [{ name: 'limit', type: 'number' }],
+      },
     ],
     ...overrides,
   };
@@ -96,8 +99,8 @@ async function run() {
   await test('CD-11', 'multi-capability descriptor projects to N entries, each individually registry-valid', () => {
     const d = validDescriptor({
       capabilities: [
-        { verb: 'list',   noun: 'widgets' },
-        { verb: 'create', noun: 'widget', params: [{ name: 'name', type: 'string' }] },
+        { verb: 'list',   noun: 'widgets', intent: 'enumerate widgets' },
+        { verb: 'create', noun: 'widget',  intent: 'add a new widget', params: [{ name: 'name', type: 'string' }] },
       ],
     });
     const r = descriptor.projectToComponentRegistry(d);
@@ -128,6 +131,126 @@ async function run() {
     const s = descriptor.getSchema();
     assert.ok(s.requiredFields.includes('capabilities'));
     assert.ok(s.validTypes.includes('tool'));
+  });
+
+  await test('CD-15', 'missing capability intent fails — required, not optional', () => {
+    const d = validDescriptor({ capabilities: [{ verb: 'list', noun: 'widgets' }] });
+    const r = descriptor.validateDescriptor(d);
+    assert.strictEqual(r.ok, false);
+    assert.ok(r.errors.some(e => e.includes('capabilities[0].intent')));
+  });
+
+  await test('CD-16', 'endpoint with unknown hook_type fails', () => {
+    const d = validDescriptor({
+      capabilities: [{
+        verb: 'list', noun: 'widgets', intent: 'enumerate widgets',
+        endpoints: [{ hook_type: 'carrier_pigeon', hook_id: 'ep1', intent: 'notify on change' }],
+      }],
+    });
+    const r = descriptor.validateDescriptor(d);
+    assert.strictEqual(r.ok, false);
+    assert.ok(r.errors.some(e => e.includes('hook_type')));
+  });
+
+  await test('CD-17', 'valid endpoint (api hook_type) passes, and is NOT the same field as component-registry\'s lifecycle hooks[]', () => {
+    const d = validDescriptor({
+      capabilities: [{
+        verb: 'list', noun: 'widgets', intent: 'enumerate widgets',
+        endpoints: [{ hook_type: 'api', hook_id: 'widgets.list.endpoint', intent: 'HTTP surface for listing widgets' }],
+      }],
+    });
+    const r = descriptor.validateDescriptor(d);
+    assert.strictEqual(r.ok, true, r.errors.join('; '));
+    // Confirm this lives under capability.endpoints, not capability.hooks —
+    // the latter would collide with component-registry's lifecycle hooks
+    assert.strictEqual(d.capabilities[0].hooks, undefined);
+  });
+
+  await test('CD-18', 'wire with missing from/to fails — a connection with no endpoints is not a connection', () => {
+    const d = validDescriptor({
+      capabilities: [{
+        verb: 'sync', noun: 'widgets', intent: 'keep widget state consistent',
+        wires: [{ wire_type: 'data_flow', wire_id: 'w1', intent: 'push updates downstream' }],
+      }],
+    });
+    const r = descriptor.validateDescriptor(d);
+    assert.strictEqual(r.ok, false);
+    assert.ok(r.errors.some(e => e.includes('.from')));
+    assert.ok(r.errors.some(e => e.includes('.to')));
+  });
+
+  await test('CD-19', 'valid wire (interaction_contract) passes', () => {
+    const d = validDescriptor({
+      capabilities: [{
+        verb: 'sync', noun: 'widgets', intent: 'keep widget state consistent',
+        wires: [{
+          wire_type: 'interaction_contract', wire_id: 'w.widgets-to-cortex',
+          intent: 'hand widget state changes to cortex for persistence',
+          from: 'test.widget', to: 'cortex.memory',
+        }],
+      }],
+    });
+    const r = descriptor.validateDescriptor(d);
+    assert.strictEqual(r.ok, true, r.errors.join('; '));
+  });
+
+  await test('CD-20', 'hook_type/hook_id and wire_type/wire_id survive projection into comp_properties', () => {
+    const d = validDescriptor({
+      capabilities: [{
+        verb: 'list', noun: 'widgets', intent: 'enumerate widgets',
+        endpoints: [{ hook_type: 'api', hook_id: 'ep.list', intent: 'HTTP listing surface' }],
+        wires:     [{ wire_type: 'pipeline', wire_id: 'w.list-to-cache', intent: 'warm the cache after listing', from: 'test.widget', to: 'cache.layer' }],
+      }],
+    });
+    const r = descriptor.projectToComponentRegistry(d);
+    assert.strictEqual(r.ok, true, r.errors.join('; '));
+    const props = r.projected[0].comp_properties;
+    assert.strictEqual(props.endpoints[0].hook_id, 'ep.list');
+    assert.strictEqual(props.wires[0].wire_id, 'w.list-to-cache');
+    assert.strictEqual(props.intent, 'enumerate widgets');
+    // and the projected entry still passes the REAL registry validator
+    // with these extra fields present — extending comp_properties didn't
+    // break the contract that already worked
+    const real = componentRegistry.validate(r.projected[0]);
+    assert.strictEqual(real.ok, true, real.errors.join('; '));
+  });
+
+  await test('CD-21', 'toCompartmentIntent() produces a shape compartment-engine.spawn() actually accepts — not just plausible-looking', async () => {
+    const compartmentEngine = require('../../lib/compartment-engine');
+    const d = validDescriptor({
+      capabilities: [{ verb: 'list', noun: 'widgets', intent: 'enumerate widgets' }],
+    });
+    const intent = descriptor.toCompartmentIntent(d, 0);
+    assert.ok(intent.uuid, 'toCompartmentIntent must produce a uuid — spawn() throws without one');
+    assert.strictEqual(intent.verb, 'list');
+    assert.strictEqual(intent.domain, 'widgets');
+    // The real assertion: spawn() itself, not an assumption about its shape.
+    // spawn() only throws on missing intent.uuid before touching anything
+    // stateful (JAA/snapshot) — that's the exact line being proven here.
+    let threw = null;
+    try { await compartmentEngine.spawn({ intent }); }
+    catch (e) { threw = e; }
+    assert.ok(
+      threw === null || !threw.message.includes('requires a frozen intent with a uuid'),
+      `spawn() rejected the bridged intent shape: ${threw && threw.message}`
+    );
+  });
+
+  await test('CD-22', 'descriptorFromSections converts idearium\'s real fixed section list into a valid descriptor', () => {
+    const SECTION_IDS = ['intent','api_callto','module_hooks','cli_spec','schemas','gap_contract','failure_modes','tests','phase_map'];
+    const sections = SECTION_IDS.map(id => ({ id, title: id, complete: false, required: true, content: '', checklist: [] }));
+    const d = descriptor.descriptorFromSections(sections, { uuid: 'bp_001.comp.test-idea-spec', componentId: 'idearium.test_idea_spec' });
+    const r = descriptor.validateDescriptor(d);
+    assert.strictEqual(r.ok, true, r.errors.join('; '));
+    assert.strictEqual(d.capabilities.length, 9);
+    assert.ok(d.capabilities.every(c => c.intent && c.intent.length > 0), 'every section-derived capability must have a real intent, not blank');
+  });
+
+  await test('CD-23', 'descriptorFromSections refuses an empty sections array rather than silently producing nothing', () => {
+    let threw = null;
+    try { descriptor.descriptorFromSections([], { uuid: 'bp_001.comp.x', componentId: 'x.y' }); }
+    catch (e) { threw = e; }
+    assert.ok(threw);
   });
 
   console.log(`\n  component-descriptor: ${passed} passed, ${failed} failed\n`);

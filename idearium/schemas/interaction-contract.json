@@ -32,7 +32,12 @@
         "update":  { "method": "PATCH",  "path": "/api/specs/:uuid",            "body": ["name","phase","sections","modules","wired"] },
         "check":   { "method": "POST",   "path": "/api/specs/:uuid/check" },
         "build":   { "method": "POST",   "path": "/api/specs/:uuid/build" },
-        "export":  { "method": "GET",    "path": "/api/specs/:uuid/export" }
+        "export":  { "method": "GET",    "path": "/api/specs/:uuid/export" },
+        "buildGroupCreate": { "method": "POST", "path": "/api/specs/:uuid/buildgroup" },
+        "buildGroupShow":   { "method": "GET",  "path": "/api/specs/:uuid/buildgroup/:bgUuid" },
+        "buildGroupChunk":  { "method": "POST", "path": "/api/specs/:uuid/buildgroup/:bgUuid/chunks/:chunkUuid", "body": ["content"] },
+        "buildGroupCompress": { "method": "POST", "path": "/api/specs/:uuid/buildgroup/:bgUuid/compress" },
+        "buildGroupExpand":   { "method": "POST", "path": "/api/specs/:uuid/buildgroup/:bgUuid/expand" }
       }
     },
     "gap": {
