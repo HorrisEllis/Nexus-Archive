@@ -268,7 +268,20 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
         <div class="stat-val dim" id="stat-age">—</div>
       </div>
 
-      <div class="zone-label" style="margin-top:24px">USAGE</div>
+      <div class="zone-label" style="margin-top:16px">SYSTEM</div>
+      <div class="stat-row">
+        <div class="stat-key">Cortex</div>
+        <div class="stat-val dim" id="stat-cortex">—</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-key">Open Gaps</div>
+        <div class="stat-val" id="stat-gaps">—</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-key">Active Jobs</div>
+        <div class="stat-val" id="stat-jobs">—</div>
+      </div>
+      <div class="zone-label" style="margin-top:16px">USAGE</div>
       <div class="usage-gauge" id="usage-gauge">
         <div class="usage-seg"></div><div class="usage-seg"></div><div class="usage-seg"></div>
         <div class="usage-seg"></div><div class="usage-seg"></div><div class="usage-seg"></div>
@@ -407,7 +420,7 @@ async function refreshSession() {
     claimText.textContent = pending.length ? `${pending.length} QUEUED` : 'CONNECTED';
   } else {
     claimBadge.className = 'live';
-    claimText.textContent = 'CLAIMED · ACTIVE';
+    claimText.textContent = 'ACTIVE';
   }
 
   document.getElementById('stat-tab').textContent = channel.tabId || '—';
@@ -425,6 +438,24 @@ async function refreshSession() {
 
   renderUsage(channel.usage);
 }
+
+// Augment refreshSession with system health
+(async function refreshSysHealth() {
+  try {
+    const [cx, gaps, jobs] = await Promise.all([
+      fetch('http://127.0.0.1:3748/health', {signal:AbortSignal.timeout(2000)}).then(r=>r.json()).catch(()=>null),
+      fetch('http://127.0.0.1:7820/gaps?status=open&limit=50', {signal:AbortSignal.timeout(2000)}).then(r=>r.json()).catch(()=>null),
+      fetch('http://127.0.0.1:7820/jobs?status=delivered&limit=20', {signal:AbortSignal.timeout(2000)}).then(r=>r.json()).catch(()=>null),
+    ]);
+    const cxEl = document.getElementById('stat-cortex');
+    if (cxEl) { cxEl.textContent = cx?.ok ? ':3748 ✓' : ':3748 ✗'; cxEl.style.color = cx?.ok ? 'var(--green)' : 'var(--red)'; }
+    const gapEl = document.getElementById('stat-gaps');
+    if (gapEl) { const n=(gaps?.gaps||[]).length; gapEl.textContent=n; gapEl.style.color=n>5?'var(--red)':n>0?'var(--amber)':'var(--green)'; }
+    const jobEl = document.getElementById('stat-jobs');
+    if (jobEl) { jobEl.textContent=(jobs?.jobs||[]).length; }
+  } catch {}
+  setTimeout(refreshSysHealth, 8000);
+})();
 
 function renderUsage(usage) {
   const segs = [...document.querySelectorAll('.usage-seg')];
