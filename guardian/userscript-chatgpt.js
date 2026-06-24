@@ -42,7 +42,7 @@ const TAB_KEY = 'guardian_claimed_tab_chatgpt';
 let _es = null, _hb = null, _reconnectTimer = null;
 let connState = 'disconnected';
 let currentJobId = null, jobActive = false;
-let _watchTimer = null, _watchObs = null, _watchStart = 0, _watchTimeoutId = null;
+let _watchTimer = null, _watchObs = null, _watchStart = 0;
 let panelOpen = false, activeTab = 'log';
 let isClaimed = true; // §FIX 2026-06-20: passive mode removed — every connected tab executes jobs, no single-tab claim gate
 let sessionStart = Date.now(), sessionTokens = 0, sessionJobs = 0;
@@ -447,27 +447,10 @@ async function scanArtifacts(jobId) {
 
 // ── DOM observation ───────────────────────────────────────────────────────────
 function findResponseEl() {
-  // §FIX 2026-06-22: ChatGPT DOM changes frequently. Try multiple known
-  // selector variants, return the last matching element. The original
-  // :last-child constraint dropped valid elements when ChatGPT added wrapper
-  // divs around turns. Broadening here prevents the permanent checkStable loop
-  // where !el fires every 600ms and startWatch never completes.
-  const candidates = [
-    '[data-is-streaming="true"]',
-    '.text-streaming',
-    '[data-message-author-role="assistant"]',
-    'article[data-testid^="conversation-turn"] .whitespace-pre-wrap',
-    '[data-testid^="conversation-turn-"]:last-child',
-    '[class*="agent-turn"] [class*="markdown"]',
-    '[class*="markdown"]:last-of-type',
-  ];
-  for (const sel of candidates) {
-    try {
-      const els = document.querySelectorAll(sel);
-      if (els.length) return els[els.length - 1];
-    } catch(_) {}
-  }
-  return null;
+  return document.querySelector(
+    '[data-is-streaming="true"], [data-message-author-role="assistant"]:last-child, ' +
+    '.text-streaming'
+  );
 }
 function _isGenerating() {
   return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
@@ -556,7 +539,6 @@ function autoRetry(jobId, text, retryCount, seamMeta = {}) {
 function stopWatch() {
   if (_watchObs) { _watchObs.disconnect(); _watchObs = null; }
   if (_watchTimer) { clearTimeout(_watchTimer); _watchTimer = null; }
-  if (_watchTimeoutId) { clearTimeout(_watchTimeoutId); _watchTimeoutId = null; }
   currentJobId = null; jobActive = false;
   setJobBar(false);
 }
@@ -621,25 +603,6 @@ function startWatch(jobId, prompt, retryCount = 0, seamMeta = {}) {
 
   // §70.2 — persist in-progress SEAM state immediately so tab refresh can resume
   if (seamMeta.seam_queue_id != null) _seamLsSave(jobId, seamMeta, null);
-
-  // §FIX 2026-06-22: hard timeout — if ChatGPT never responds within 3 minutes
-  // (DOM selector miss, rate limit, stuck generation), abort the job so guardian
-  // doesn't accumulate indefinitely-pending delivered jobs and keep dispatching
-  // new copies of the same gaps. Without this, a single DOM-selector miss causes
-  // every subsequent job to be created but never completed.
-  const WATCH_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
-  if (_watchTimeoutId) clearTimeout(_watchTimeoutId);
-  _watchTimeoutId = setTimeout(() => {
-    if (currentJobId !== jobId) return; // already moved on
-    _log('gap', `§WATCH-TIMEOUT: ${jobId.slice(0,8)}`, `no response after ${WATCH_TIMEOUT_MS/1000}s`);
-    send({ type: 'GUARDIAN_ERROR', jobId, gate: 'startWatch',
-      error: `Watch timed out after ${WATCH_TIMEOUT_MS/1000}s — no response element found or generation stalled`,
-      chatUrl: location.href, account: getAccount() });
-    _toCortex('guardian.watch.timeout', { jobId, provider: PROVIDER, watchMs: WATCH_TIMEOUT_MS });
-    stopWatch();
-    jobActive = false;
-    currentJobId = null;
-  }, WATCH_TIMEOUT_MS);
 
   let _abruptStopFired = false;
   let lastText = '', stableCount = 0;
@@ -710,7 +673,7 @@ function startWatch(jobId, prompt, retryCount = 0, seamMeta = {}) {
 }
 
 async function _onJobComplete(jobId, text, ms, prompt, retryCount, seamMeta = {}) {
-  stopWatch(); // stopWatch already clears _watchTimeoutId
+  stopWatch();
   // §70.2 — clear localStorage on clean completion
   _seamLsComplete(jobId);
   send({ type:'GUARDIAN_LEDGER_WRITE', jobId, category:'UPGRADE',
@@ -815,43 +778,78 @@ async function pollSystemStatus() {
 setInterval(pollSystemStatus, 15000);
 
 // ── NCP connection ────────────────────────────────────────────────────────────
+// ── NCP connection ─────────────────────────────────────────────────────────
+// Uses GM_xmlhttpRequest for SSE — required on https:// pages (chatgpt.com)
+// because Chrome blocks EventSource from https:// → http://127.0.0.1.
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
-  if (_es) { try { _es.close(); } catch(_) {} }
-  const params = `tabId=${MY_TAB}&provider=${PROVIDER}`;
-  _log('info', 'NCP connecting…', `${NCP_CHANNEL}?${params}`);
+  if (_es && _es.abort) { try { _es.abort(); } catch(_) {} }
+  const url = `${NCP_CHANNEL}?tabId=${MY_TAB}&provider=${PROVIDER}`;
+  _log('info', 'NCP connecting…', url);
   connState = 'connecting'; setConnState('connecting');
-  _es = new EventSource(`${NCP_CHANNEL}?${params}`);
-  _es.onmessage = e => {
-    try {
-      _handleServerMessage(JSON.parse(e.data));
-      // ♥ pulse on every NCP emit
-      const h = document.getElementById('__g10heart__');
-      if (h) {
-        h.style.color = '#ef4444';
-        h.style.transform = 'scale(1.4)';
-        h.style.transition = 'none';
-        setTimeout(() => { h.style.color = 'rgba(239,68,68,.25)'; h.style.transform = 'scale(1)'; h.style.transition = 'all .4s ease'; }, 150);
+
+  let _buf = '';
+  let _opened = false;
+
+  _es = GM_xmlhttpRequest({
+    method:   'GET',
+    url,
+    headers:  { 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' },
+    responseType: 'stream',
+    onloadstart: (r) => {
+      if (r.status !== 200) {
+        _log('err', `NCP channel returned ${r.status} — retry ${RECONNECT_MS}ms`);
+        connState = 'disconnected'; setConnState('disconnected');
+        _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+        return;
       }
-    } catch(err) { _log('err','NCP parse',err.message); }
-  };
-  _es.onopen = () => {
-    connState = 'ready'; setConnState('ready');
-    _log('ok', `NCP connected · ${PROVIDER}`, NCP_CHANNEL);
-    ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
-    if (_hb) clearInterval(_hb);
-    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
-    autoClaimIfFree();
-    replayPending();
-    setTimeout(() => sendDOMMap(), 2000);
-    pollSystemStatus();
-  };
-  _es.onerror = () => {
-    connState = 'disconnected'; setConnState('disconnected');
-    _log('err', `NCP error — retry ${RECONNECT_MS}ms`);
-    _es.close(); clearInterval(_hb);
-    _reconnectTimer = setTimeout(connect, RECONNECT_MS);
-  };
+      connState = 'ready'; setConnState('ready');
+      _opened = true;
+      _log('ok', `NCP connected · ${PROVIDER}`, url);
+      ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
+      if (_hb) clearInterval(_hb);
+      _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
+      autoClaimIfFree();
+      replayPending();
+      setTimeout(() => sendDOMMap(), 2000);
+      pollSystemStatus();
+    },
+    onprogress: (r) => {
+      const raw = r.responseText || '';
+      const newData = raw.slice(_buf.length);
+      _buf = raw;
+      const lines = newData.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const text = line.slice(5).trim();
+        if (!text) continue;
+        try {
+          const msg = JSON.parse(text);
+          _handleServerMessage(msg);
+          const h = document.getElementById('__g10heart__');
+          if (h) {
+            h.style.color='#ef4444'; h.style.transform='scale(1.4)'; h.style.transition='none';
+            setTimeout(()=>{ h.style.color='rgba(239,68,68,.25)'; h.style.transform='scale(1)'; h.style.transition='all .4s ease'; },150);
+          }
+        } catch(e) { _log('err','NCP parse',e.message); }
+      }
+    },
+    onerror: () => {
+      connState = 'disconnected'; setConnState('disconnected');
+      _log('err', `NCP error — retry ${RECONNECT_MS}ms`);
+      clearInterval(_hb);
+      _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+    },
+    onabort: () => { connState = 'disconnected'; setConnState('disconnected'); clearInterval(_hb); },
+    ontimeout: () => {
+      if (_opened) {
+        connState = 'disconnected'; setConnState('disconnected');
+        clearInterval(_hb);
+        _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+      }
+    },
+    timeout: 0,
+  });
 }
 
 function _handleServerMessage(msg) {

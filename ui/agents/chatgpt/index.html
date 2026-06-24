@@ -404,7 +404,7 @@ async function refreshSession() {
     const jobsData = await getJSON(`${GD}/jobs?status=pending&limit=50`);
     const pending = (jobsData?.jobs || []).filter(j => j.provider === PROVIDER);
     claimBadge.className = pending.length ? 'queued' : '';
-    claimText.textContent = pending.length ? `PASSIVE · ${pending.length} QUEUED` : 'CONNECTED · PASSIVE';
+    claimText.textContent = pending.length ? `${pending.length} QUEUED` : 'CONNECTED';
   } else {
     claimBadge.className = 'live';
     claimText.textContent = 'CLAIMED · ACTIVE';
