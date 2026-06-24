@@ -126,3 +126,72 @@ wiring identity → registry → ledger → router → HTTP server.
 - `lib/version.js services.guardian`: `3.6.0` → `3.6.1`
 - `lib/version.js modules['ncp']`: added at `1.1.0`
 - Guardian internal version strings: `3.5.0` → `3.6.1`
+
+---
+
+## v0.9.9 — Phase 23.7 — Gap Lifecycle: Causal Closure
+**Date:** 2026-06-24
+**Operator:** James Brooks (Erosmancer)
+
+### Core changes
+
+**lib/gap-predicate.js** (NEW)
+Predicate library, dedup key, truth floor, closure verifier, TTL sweep.
+Every gap carries a checkable predicate. Closure requires predicate false AND artifact exists.
+Gap dedup prevents same problem spawning multiple UUIDs.
+
+**cortex/memory/jaa-db.js**
+Added: reflection_contracts, closure_attempts, gap_predicates tables (long tier).
+
+**lib/open-loop-taxonomy.js**
+createLoop() enriches every gap with predicate, artifact_requirement, dedup_key, truth_floor, ttl_ms.
+
+**service/nexus-diagnostic.js**
+Dedup check before gap insert. Gaps marked 'investigating' on dispatch.
+Sweep skips investigating/resolved/expired/blocked gaps. Kills the 300-job flood.
+Predicate check before re-dispatch — if predicate is false, run closure verifier.
+
+**cortex/gap-loop.js**
+Listens for guardian.job.complete (with meta.gapUuid). Runs verifyClosure after every job.
+TTL sweep every 5 minutes. Registers gap-predicate in component registry.
+
+**guardian/server.js**
+createJob() writes to JAA before dispatch (§2.1). Every state transition persisted + emitted.
+job.complete carries meta.gapUuid for closure verifier. Reflection contracts polling phase (every 30s).
+Human-readable log lines. RAID decision captured in job meta.
+
+**cortex/core/raid/index.js**
+Public decide() exported (was missing — caused silent chatgpt fallback on every call).
+Qwen async cluster classification. Learned patterns persisted to raid-clusters.json.
+_clusterReviewTick: Mistral proposes new patterns when correction rate > 40%.
+getState() exposes learnedPatterns count, correctionRate.
+
+**lib/reflection.js**
+Reflection contracts queued to JAA on streak threshold. verifyClosure runs each pass.
+Stale queued contracts retried. getState() exposes contract stats.
+
+**guardian/agents/co-pilot/index.js** (v1.1)
+Real system operator. Reads live state (gaps, jobs, health, providers) before every response.
+Qwen classifies intent. Slash prefix → RAID-gated tool execution.
+Mistral generates reply with system state as context. Honest Ollama-offline fallback.
+Model priority: mistral:7b-instruct-q4_K_M → qwen2.5-coder:1.5b → fallback.
+
+**guardian/userscript-chatgpt.js**
+7-selector findResponseEl. 3-minute hard timeout. Root cause of 300-job flood fixed.
+
+**orchestrator.js**
+ui/agents/ added to hotswap watcher (was missing).
+
+**ui/agents/mistral/index.html** (NEW)
+Mistral/Ollama native console. No tab bridging. Ember accent.
+
+**ui/home/index.html**
+asSend() is now a thin shell. Everything routes through co-pilot. RAID decision shown explicitly.
+
+### Docs added
+- docs/AXIOMS-PHASE-MAP.md — every axiom mapped to every phase, compliance state
+- docs/SYSTEM-MAP.md — service registry, intelligence stack, open loops table
+- docs/WIRES.md — every bus event, HTTP route, JAA write, dispatch chain
+- docs/SESSION-2026-06-24.md — session changelog
+- docs/gap-lifecycle.spec — causal closure specification
+- docs/copilot.spec — co-pilot v1.1 specification

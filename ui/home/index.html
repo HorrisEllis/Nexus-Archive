@@ -1191,7 +1191,7 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
       </div>
       <div id="assistant-out"></div>
       <div id="assistant-row">
-        <input id="assistant-in" placeholder="Ask NEXUS anything... or type a command" onkeydown="if(event.key==='Enter')asSend();if(event.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen'))toggleConsoleFullscreen()">
+        <input id="assistant-in" placeholder="Ask NEXUS anything · /command for tools · /gaps · /jobs · /status" onkeydown="if(event.key==='Enter')asSend();if(event.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen'))toggleConsoleFullscreen()">
         <button id="send-btn" onclick="asSend()">→</button>
       </div>
       <div id="ticker-line">NEXUS v0.6.3 · sovereign cognitive OS · waiting for systems...</div>
@@ -2027,76 +2027,69 @@ document.getElementById('assistant-in').addEventListener('keydown',e=>{
   if(e.key==='ArrowDown'){asIdx=Math.max(asIdx-1,-1);e.target.value=asIdx>=0?asHist[asIdx]:'';e.preventDefault()}
 });
 async function asSend(){
-  const inp=document.getElementById('assistant-in');
-  const q=inp.value.trim();if(!q)return;
-  asHist.unshift(q);asIdx=-1;inp.value='';
-  const out=document.getElementById('assistant-out');
-  out.style.display='block';out.style.color='rgba(200,220,210,.8)';out.textContent='...';
-  const cmd=q.toLowerCase();
-  // Built-in commands
-  if(cmd==='help'){out.textContent='Commands: status · gaps · jobs · providers · ideas · clear\nKeys: 1-7 channels · ← → step · M menu · R rewind';return}
-  if(cmd==='clear'){out.style.display='none';return}
-  if(cmd==='status'){const lines=[];for(const s of SYSTEMS){const d=await get(s.url);lines.push(`${s.key}: ${d?'online':'offline'}`)}out.textContent=lines.join('\n');return}
-  if(cmd==='gaps'){const d=await get(`${B.orch}/api/cortex/gaps?status=open`);const g=Array.isArray(d)?d:[];out.textContent=g.length?g.slice(0,8).map(x=>`[${x.severity||'?'}] ${x.loop_type||x.type}: ${(x.body||'').slice(0,80)}`).join('\n'):'No open gaps';return}
-  if(cmd==='jobs'){const d=await get(`${B.orch}/api/guardian/jobs`);const j=Array.isArray(d)?d:(d?.jobs||[]);out.textContent=j.length?j.slice(0,8).map(x=>`[${x.status}] ${x.provider}: ${(x.prompt||'').slice(0,60)}`).join('\n'):'No jobs';return}
-  if(cmd==='providers'){const d=await get(`${B.orch}/api/guardian/providers`);const p=Object.keys(d?.providers||d?.connected||{});out.textContent=p.length?p.map(n=>'● '+n).join('\n'):'No providers connected';return}
-  if(cmd==='ideas'){const d=await get(`${B.orch}/api/idearium/ideas?sort=tension`);const i=Array.isArray(d)?d:(d?.ideas||[]);out.textContent=i.length?i.slice(0,8).map(x=>`[${x.status||'?'}] ${(x.title||x.body||'').slice(0,80)}`).join('\n'):'No ideas';return}
-  // gpt <prompt> / chatgpt <prompt> — two-layer Nexus(authority)/ChatGPT(reasoning)
-  // mode, see guardian/agents/chatgpt-mode.js. Mirrors cli/co-pilot.js's `gpt`
-  // command for parity across all three console surfaces (this, co-pilot.js,
-  // nexus-repl.js). Prefix the prompt with "MODE: authoritative" (etc, first
-  // line) to force a mode; defaults to synthesis.
-  if(/^(gpt|chatgpt)(\s|$)/i.test(q)){
-    const gptPrompt=q.replace(/^(gpt|chatgpt)\s*/i,'').trim();
-    if(!gptPrompt){out.textContent='Usage: gpt <prompt>\nModes: authoritative · inferred · speculative · synthesis (default) — prefix prompt with "MODE: <mode>"';return}
-    const d=await post(`${B.orch}/api/guardian/chatgpt-mode/query`,{prompt:gptPrompt});
-    if(!d){out.textContent='ChatGPT mode unreachable. Is guardian running on :7820?';return}
-    if(d.ok===false){out.textContent=`✗ ${d.error||'request failed'}`+(d.retrieval?.status==='error'?`\n(retrieval error: ${d.retrieval.error})`:'');return}
-    const retLine=`[${d.mode}] retrieval: ${d.retrieval.status}`+(d.retrieval.itemCount?` (${d.retrieval.itemCount} record(s), source=${d.retrieval.source})`:'');
-    out.textContent=retLine+'\n'+(d.response||'(no response)');
-    return
-  }
-  // Try grammar engine via request-handler for structured component matches
-  // (kept — co-pilot below doesn't replace grammar-resolved component
-  // dispatch, only the RAID-routing-for-plain-chat path it used to
-  // duplicate).
-  const hr=await post(`${B.orch}/api/request`,{prompt:q});
-  if(hr?.result?.componentId){out.textContent=`Grammar: ${hr.result.componentId}\nParams: ${JSON.stringify(hr.result.params||{})}\nOutcome: ${hr.outcome}`;return}
-  if(hr?.outcome&&hr.outcome!=='RESOLVED'){out.textContent=`${hr.outcome}: ${hr.reason||''}`;return}
-  // §FIX 2026-06-21: System Console now talks to the co-pilot
-  // (guardian/agents/co-pilot, built and proven end-to-end this session)
-  // instead of re-implementing grammar/RAID routing logic locally. The
-  // co-pilot already does context-building + RAID-gated dispatch + cortex
-  // memory in one place — this UI shouldn't have its own parallel,
-  // weaker version of that. Plain chat gets a real RAID-routed answer;
-  // anything that looks like a system command gets a RAID-gated tool
-  // call instead of guessed locally.
-  const looksLikeCommand = /^(cortex|guardian|diagnose|gaps|jobs|status|snapshot)\b/i.test(q);
+  const inp = document.getElementById('assistant-in');
+  const q   = inp.value.trim(); if(!q) return;
+  asHist.unshift(q); asIdx=-1; inp.value='';
+
+  const out = document.getElementById('assistant-out');
+  out.style.display='block';
+  out.style.color='rgba(200,220,210,.8)';
+  out.textContent='';
+
+  // clear is the only client-side command — everything else goes to co-pilot
+  if(q.toLowerCase()==='clear'){ out.style.display='none'; return; }
+
+  // Show thinking indicator
+  const thinking = document.createElement('span');
+  thinking.textContent = '…';
+  thinking.style.cssText='opacity:.4;font-style:italic';
+  out.appendChild(thinking);
+
   const cp = await post(`${B.orch}/api/guardian/copilot/prompt`, {
     prompt: q,
-    command: looksLikeCommand ? q : undefined,
     contextOpts: { intent: q },
   });
-  if (cp === null) {
-    out.textContent = 'Guardian/co-pilot unreachable. Is guardian running on :7820?';
+
+  out.textContent = '';
+
+  if(cp === null){
+    out.style.color='rgba(255,100,100,.8)';
+    out.textContent='Guardian unreachable (:7820). Is NEXUS running?';
     return;
   }
-  if (cp.denied) {
-    out.textContent = `RAID denied this: ${cp.reason}`;
+
+  if(!cp.ok){
+    out.style.color='rgba(255,100,100,.8)';
+    out.textContent = cp.denied
+      ? `RAID denied: ${cp.reason}`
+      : `Error: ${cp.error || 'request failed'}`;
     return;
   }
-  if (!cp.ok) {
-    out.textContent = `Error: ${cp.error || 'co-pilot request failed'}`;
-    return;
-  }
-  if (cp.toolResult) {
-    out.textContent = JSON.stringify(cp.toolResult.result ?? cp.toolResult, null, 2);
-  } else {
-    out.textContent = cp.context
-      ? `(context built: ${cp.context.sections} section(s), ~${cp.context.tokensUsed} tokens — full narrated response not yet built, see docs/copilot.spec)`
-      : 'No response.';
+
+  // Main response
+  out.style.color='rgba(200,220,210,.92)';
+  out.textContent = cp.text || 'No response.';
+
+  // RAID decision — always explicit, never hidden
+  if(cp.classification){
+    const c = cp.classification;
+    const raidEl = document.createElement('div');
+    raidEl.style.cssText='font-size:10px;opacity:.45;margin-top:6px;font-family:monospace;border-top:1px solid rgba(255,255,255,.07);padding-top:4px';
+    const parts = [`RAID → ${c.intent}`];
+    if(c.tool) parts.push(`tool:${c.tool}`);
+    if(c.confidence) parts.push(`confidence:${(c.confidence*100).toFixed(0)}%`);
+    if(cp.modelUsed) parts.push(`model:${cp.modelUsed}`);
+    if(cp.systemState) parts.push(`gaps:${cp.systemState.gapCount} jobs:${cp.systemState.jobCount}`);
+    raidEl.textContent = parts.join(' · ');
+    out.appendChild(raidEl);
+  } else if(cp.modelUsed){
+    const m = document.createElement('div');
+    m.style.cssText='font-size:10px;opacity:.35;margin-top:4px;font-family:monospace';
+    m.textContent = `via ${cp.modelUsed}`;
+    out.appendChild(m);
   }
 }
+
 
 // ── Rewind ────────────────────────────────────────────────────────────────────
 let rwSnapshots=[],rwSelected=null,rwHovered=null,rwAnimFrame=null;
