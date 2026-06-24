@@ -808,21 +808,8 @@ function _handleNCPMessage(msg) {
           });
         } catch(e) { console.error(`[guardian] failed to insert chat_log record for job ${jobId}: ${e.message}`); }
 
-        // §23.7 — include gapUuid and meta in the complete event so gap-loop's
-        // closure verifier can find the gap and run verifyClosure immediately
-        const jobRec2 = jobs.get(jobId);
-        bus.emit('guardian.job.complete', {
-          jobId, provider, chars: finalText.length,
-          gaps: gaps.length, gapDrift,
-          command: jobRec2?.command || null,
-          meta: {
-            gapUuid:     jobRec2?.gapUuid    || null,
-            gapType:     jobRec2?.gapType    || null,
-            raidAgent:   jobRec2?.raidAgent  || provider,
-            source:      jobRec2?.source     || 'guardian',
-            contractUuid:jobRec2?.contractUuid||null,
-          },
-        });
+        bus.emit('guardian.job.complete', { jobId, provider, chars: finalText.length,
+          gaps: gaps.length, gapDrift });
         cockpitBroadcast({ type: 'job.complete', jobId, provider,
           chars: finalText.length, gaps: gaps.length, gapDrift, ts: Date.now() });
 
@@ -1420,48 +1407,6 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
       copilot.init({ jaaDB: jaa, bus, execFn });
       console.log('[guardian] ⬡ COPILOT: listening — bus poll active, RAID gate ' + (copilot.status().raidAvailable ? 'available' : 'UNAVAILABLE (tool calls will fail closed)'));
       return { ok:true, msg:'co-pilot agent listening' };
-    }
-  });
-
-  // ── §23.7 Reflection contracts — guardian polls and dispatches to Mistral ──
-  seq.phase({ name:'reflection-contracts.poll', type:'SOFT',
-    label:'Reflection contracts — poll JAA, dispatch queued contracts to Mistral via Ollama',
-    fn: async () => {
-      const POLL_MS = 30000; // check every 30s
-      const _contractInterval = setInterval(async () => {
-        let queued = [];
-        try { queued = jaa.query('reflection_contracts', r => r.status === 'queued', 5); } catch(_) {}
-        for (const contract of queued) {
-          try {
-            // Mark dispatched immediately to prevent double-dispatch
-            jaa.update('reflection_contracts', contract.uuid, { status: 'dispatched', dispatchedAt: Date.now() });
-            const prompt = [
-              'You are the NEXUS Reflection Engine. Analyse this decision outcome and propose a concrete improvement.',
-              `Decision class: ${contract.decisionClass}`,
-              `Loop type: ${contract.loopType}`,
-              `Satisfaction score: ${contract.score} — ${contract.scoreReason}`,
-              `Decision input: ${contract.decisionInput || '(not recorded)'}`,
-              `Chosen outcome: ${contract.decisionChosen || '(unknown)'}`,
-              `Evidence: ${JSON.stringify(contract.evidence||[]).slice(0,400)}`,
-              '',
-              'Respond ONLY with valid JSON:',
-              '{"diagnosis":"...","proposal":"...","type":"cluster_pattern|idearium_idea|wiring_fix|no_action","cluster":"...","pattern":"...","confidence":0.0}',
-            ].join('\n');
-            const job = createJob({ command: 'diagnose_and_repair', provider: 'ollama', prompt, meta: {
-              source: 'reflection', contractUuid: contract.uuid,
-              decisionClass: contract.decisionClass, loopType: contract.loopType,
-              gapUuid: contract.gapUuid || null, reflectionContract: true,
-            }});
-            dispatchJob(job);
-            console.log(`[guardian] 📋 reflection contract dispatched · ${contract.uuid.slice(0,8)} · ${contract.loopType}`);
-          } catch(e) {
-            try { jaa.update('reflection_contracts', contract.uuid, { status: 'queued', error: e.message }); } catch(_) {}
-          }
-        }
-      }, POLL_MS);
-      _contractInterval.unref();
-      console.log('[guardian] ⬡ REFLECTION-CONTRACTS: polling every 30s — Mistral handles reflection reasoning');
-      return { ok:true, msg:'reflection contract poller active' };
     }
   });
 

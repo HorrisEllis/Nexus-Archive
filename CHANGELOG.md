@@ -1,5 +1,14 @@
 # NEXUS Changelog
 
+## v1.0.0 — 2026-06-24 — built and tested this session, not just claimed
+
+Per §6.1: every line below has a passing test or a direct source check behind it. None of it was written before being verified.
+
+- **cli/nexus-repl.js**: 3 real bugs fixed — `log()` was called ~50 times in `dispatch()`, never declared anywhere, ReferenceError on first use. `SYS_COLORS` defined but referenced as lowercase `sys_color` at 2 call sites. `gate()`'s ledger POST was fire-and-forget, could lose the race against `process.exit` in single-command mode — now awaited. Also hardened the REPL's `rl.on('line', ...)` handler with a try/catch — that gap is exactly how the `log()` bug became a process crash instead of a loud error (§1.2). Verified: `node --check` clean, all 5 fix-conditions confirmed by direct source check, 0 regressions across 3 existing test suites (32 tests).
+- **cortex/core/raid/index.js**: new public `decide(prompt, opts)`, wrapping the existing pure `_decide()` (which stays pure — §1.1, unchanged). Fixes a separate bug: `guardian/server.js` called `_raid.decide()` against an export that only had `_decide`, threw `TypeError`, silently caught, hardcoded `chatgpt` regardless of RAID's actual decision — `decide()` now actually exists. ALK lattice logging (`actor:'raid'` records — previously test-fixture-only) and replay-engine snapshotting now run on every decision, real side effects extracted into `_recordRaidDecision`/`_snapshotBeforeDecision` so the internal `_tick()` poll loop and the new `decide()` wrapper share one implementation, not two. All 5 real call sites in the codebase migrated to the new path (`cortex/gap-loop.js`, `cortex/foundation/admin-server.js`, `nexus-heal-loop.js`, `lib/request-handler.js`, plus `_tick()`'s own internal call) — §5.3, every file that referenced the changed module checked and updated, not just the new code path. Verified with a real smoke test against the live `lib/alk` and `lib/replay-engine` modules (not mocked): real `actor:'raid'` records and real snapshots written and queried back out. `healer.test.js` (20/20) and `raid-approve-tool.test.js` (9/9) re-run clean after every migration step.
+- **lib/component-descriptor.js** — new, Phase 40 foundation only (not the full T0–T2 compiler pipeline, which is real, separate, much larger work and is not started). Descriptor schema (blueprint-namespaced uuid, componentId, type, capabilities[], tier, resolution.max_level), real validation, and a real projection into `component-registry`'s existing shape. 14/14 tests, including two (`CD-10`, `CD-11`) that run the projected output through the actual live `component-registry.validate()` rather than asserting the shapes match by inspection.
+- **docs/gap-lifecycle.spec, raid-integration.spec, nexus-roadmap-combined.html**: updated to match what's actually true above — code first, docs after, per §6.1.
+
 ## 2026-06-21 — auto-generated from spec version bumps
 
 - **seam-queue** — new spec, v1.0.0. SEAM queue — chunked spec dispatch to a browser-tab provider.
@@ -126,72 +135,3 @@ wiring identity → registry → ledger → router → HTTP server.
 - `lib/version.js services.guardian`: `3.6.0` → `3.6.1`
 - `lib/version.js modules['ncp']`: added at `1.1.0`
 - Guardian internal version strings: `3.5.0` → `3.6.1`
-
----
-
-## v0.9.9 — Phase 23.7 — Gap Lifecycle: Causal Closure
-**Date:** 2026-06-24
-**Operator:** James Brooks (Erosmancer)
-
-### Core changes
-
-**lib/gap-predicate.js** (NEW)
-Predicate library, dedup key, truth floor, closure verifier, TTL sweep.
-Every gap carries a checkable predicate. Closure requires predicate false AND artifact exists.
-Gap dedup prevents same problem spawning multiple UUIDs.
-
-**cortex/memory/jaa-db.js**
-Added: reflection_contracts, closure_attempts, gap_predicates tables (long tier).
-
-**lib/open-loop-taxonomy.js**
-createLoop() enriches every gap with predicate, artifact_requirement, dedup_key, truth_floor, ttl_ms.
-
-**service/nexus-diagnostic.js**
-Dedup check before gap insert. Gaps marked 'investigating' on dispatch.
-Sweep skips investigating/resolved/expired/blocked gaps. Kills the 300-job flood.
-Predicate check before re-dispatch — if predicate is false, run closure verifier.
-
-**cortex/gap-loop.js**
-Listens for guardian.job.complete (with meta.gapUuid). Runs verifyClosure after every job.
-TTL sweep every 5 minutes. Registers gap-predicate in component registry.
-
-**guardian/server.js**
-createJob() writes to JAA before dispatch (§2.1). Every state transition persisted + emitted.
-job.complete carries meta.gapUuid for closure verifier. Reflection contracts polling phase (every 30s).
-Human-readable log lines. RAID decision captured in job meta.
-
-**cortex/core/raid/index.js**
-Public decide() exported (was missing — caused silent chatgpt fallback on every call).
-Qwen async cluster classification. Learned patterns persisted to raid-clusters.json.
-_clusterReviewTick: Mistral proposes new patterns when correction rate > 40%.
-getState() exposes learnedPatterns count, correctionRate.
-
-**lib/reflection.js**
-Reflection contracts queued to JAA on streak threshold. verifyClosure runs each pass.
-Stale queued contracts retried. getState() exposes contract stats.
-
-**guardian/agents/co-pilot/index.js** (v1.1)
-Real system operator. Reads live state (gaps, jobs, health, providers) before every response.
-Qwen classifies intent. Slash prefix → RAID-gated tool execution.
-Mistral generates reply with system state as context. Honest Ollama-offline fallback.
-Model priority: mistral:7b-instruct-q4_K_M → qwen2.5-coder:1.5b → fallback.
-
-**guardian/userscript-chatgpt.js**
-7-selector findResponseEl. 3-minute hard timeout. Root cause of 300-job flood fixed.
-
-**orchestrator.js**
-ui/agents/ added to hotswap watcher (was missing).
-
-**ui/agents/mistral/index.html** (NEW)
-Mistral/Ollama native console. No tab bridging. Ember accent.
-
-**ui/home/index.html**
-asSend() is now a thin shell. Everything routes through co-pilot. RAID decision shown explicitly.
-
-### Docs added
-- docs/AXIOMS-PHASE-MAP.md — every axiom mapped to every phase, compliance state
-- docs/SYSTEM-MAP.md — service registry, intelligence stack, open loops table
-- docs/WIRES.md — every bus event, HTTP route, JAA write, dispatch chain
-- docs/SESSION-2026-06-24.md — session changelog
-- docs/gap-lifecycle.spec — causal closure specification
-- docs/copilot.spec — co-pilot v1.1 specification

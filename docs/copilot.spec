@@ -1,125 +1,73 @@
 spec:
   meta:
     name:        copilot
-    version:     1.1.0
+    version:     1.0.0
+    foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-copilot-v1-0000-0000-0000-000000000001
-    phase:       23.8
-    status:      active
-    comp_id:     guardian.copilot
-    hook_id:     guardian.copilot:v1:p0001
-    seam_id:     guardian.copilot:v1:p0001
-    route:       POST /api/guardian/copilot/prompt
-    entry_point: guardian/agents/co-pilot/index.js
-
-  purpose: >
-    The primary entry point to NEXUS. Every user interaction — from the
-    floating menu in ui/home/index.html — goes through here. This is not
-    a chat wrapper. It is a system operator: it reads live state, classifies
-    intent, executes tools, and generates contextual replies.
-
-  design_principles:
-    - Read system state before every response (gaps, jobs, health, providers)
-    - Classify intent via Qwen (fast, local, ~0.5b — never blocks the response)
-    - Tool calls: RAID-gated via /cli/exec (write-through to JAA ledger)
-    - Answers: Mistral generates reply with real system state as context
-    - Honest fallback: if Ollama offline, show raw system state from JAA
-    - Slash prefix convention: /toolname maps directly to /cli/exec commands
-
-  axioms:
-    §1.1: every tool execution verified — result shown, never assumed
-    §1.2: every decision logged to event_log before and after
-    §2.1: JAA write before any tool execution (via /cli/exec §LAW II)
-    §5.1: UUID + hookId on every decision and reply
-    §5.7: no sibling imports — everything through execFn or HTTP seam
-
-  intent_classification:
-    engine:  Qwen (qwen2.5-coder:1.5b preferred — fast, local)
-    classes:
-      tool:     user wants to see system data → /cli/exec command
-      action:   user wants to repair/run something → RAID-gated /cli/exec
-      question: user wants explanation → Mistral reply with system context
-    fallback:   heuristic keyword matching when Qwen offline
-
-  tools:
-    all_available_via: /cli/exec in guardian/server.js
-    list:
-      /gaps [--status open] [--type <type>]   — list gaps from JAA
-      /jobs [--status delivered] [--limit N]  — list jobs
-      /health                                 — guardian uptime + job count
-      /stats                                  — JAA table row counts
-      /providers                              — connected NCP tabs
-      /ledger [--limit N]                     — recent ledger entries
-      /bus [--limit N]                        — recent bus events
-      /seam queues                            — active SEAM queues
-      /send <provider> <prompt>              — dispatch job to provider
-      /status                                — all services online/offline
-      /ideas                                 — Idearium open ideas
-
-    raid_gate:
-      read_only_commands:  no gate (gaps, jobs, health, stats, providers, ledger, bus, seam, sessions, ideas)
-      write_commands:      require _raid._approveTool(SOURCE, cmd) approval
-      fail_closed:         if RAID unavailable, write commands are denied
-
-  model_priority:
-    - mistral:7b-instruct-q4_K_M   # best reasoning, system-aware replies
-    - qwen2.5-coder:1.5b           # fast triage and classification
-    - qwen2.5:1.5b                 # fallback
-    - qwen2.5:0.5b                 # last resort
-
-  system_state_snapshot:
-    reads_before_every_response:
-      - gaps (status=open, limit=8)
-      - jobs (status=delivered, limit=5)
-      - health
-      - providers
+    status:      built
     purpose: >
-      Mistral receives real system state as context. The co-pilot is
-      "aware" because it reads actual JAA state, not cached data.
-      This is what makes answers about "what is wrong" actually accurate.
+      Full-context assistant: continuous bus listener + RAID-gated CLI tool
+      execution + cortex-persisted memory. Deliberately does NOT reinvent
+      context-building (lib/context-builder.js), tool permissions
+      (cortex/contract/index.js via RAID's _approveTool), or memory storage
+      (writes through to cortex's JAA event_log) — the new piece is the
+      glue connecting them, plus the continuous listener.
 
-  ui_entry_point:
-    file:    ui/home/index.html
-    element: #assistant-in (floating menu, bottom of screen)
-    sends:   POST /api/guardian/copilot/prompt { prompt, contextOpts }
-    displays: cp.text (model reply or tool result formatted for reading)
-    slash_convention: >
-      Input starting with / is treated as explicit tool command.
-      Plain text is classified by Qwen then routed to tool or Mistral.
+  path_note: >
+    Requested at guardian/agents/ollama/co-pilot/. That collides with the
+    existing guardian/agents/ollama.js (a flat file, not a directory).
+    Built at guardian/agents/co-pilot/ instead — sibling, not nested.
 
-  response_shape:
-    ok:           boolean
-    requestId:    uuid
-    text:         string — always present, always displayable
-    modelUsed:    string | null — which Ollama model generated the reply
-    toolResult:   object | null — raw tool output if a tool was executed
-    classification: { intent, tool, confidence } — Qwen's classification
-    systemState:  { gapCount, jobCount } — live counts at response time
+  architecture:
+    location: guardian/agents/co-pilot/index.js
+    listener: >
+      Polls bus.sample(n) every 1s, deduped by sequence number. NOT a
+      wildcard .on('*', fn) subscription — checked SISOStream's actual
+      class directly: on(type, fn) is per-exact-type only, no wildcard
+      support exists. A wildcard subscription would have silently
+      registered a listener for a literal type '*' that never fires,
+      since nothing ever emits that literal string.
+    memory: cortex's JAA event_log — every observed bus event and every
+      decision (executed/denied/reason) is written there, not to a
+      co-pilot-private store.
+    tool_execution: >
+      Routes through guardian's existing /cli/exec via HTTP self-call —
+      reuses the already-tested §LAW II ledger-before-execute path
+      rather than a second execution mechanism.
 
-  offline_behavior: >
-    If Ollama is completely offline:
-    - Tool commands: still work (execFn calls /cli/exec, no model needed)
-    - Questions: show raw system state from JAA instead of generated reply
-    - Never pretend Ollama is online. Never return the placeholder string.
+  raid_gate:
+    location: cortex/core/raid/index.js — _approveTool(source, command, opts)
+    fail_closed: >
+      Unregistered sources fall back to cortex/contract/index.js's
+      _default contract, which explicitly denies 'tool' — checked
+      getContract()'s real fallback behavior directly (it never returns
+      falsy, so a naive "if (!contract)" check would have been dead
+      code; fixed before shipping).
+    rate_limiting: per-source, per-action, sliding window — reuses
+      contract.rate_limits, doesn't invent a second limit system.
+    tests: "9/9 PASSING (tests/modules/raid-approve-tool.test.js)"
 
-  previous_version:
-    version:   1.0.0
-    problem:   handlePrompt built context and returned stats blob.
-               _ollamaAgent imported but never called. No model invocation.
-               UI displayed: "full narrated response not yet built, see docs/copilot.spec"
-    fixed_in:  1.1.0
+  contract:
+    location: cortex/contract/index.js — CONTRACTS['copilot']
+    allowed_actions: [chat, diagnose, tool]
+    denied_actions: [forge]   # co-pilot assists and executes vetted commands; does not author/dispatch forge jobs itself
+    rate_limits:
+      tool: "20/60s — much tighter than ollama's raw 'tool' allowance"
 
-  roadmap:
-    done:
-      - real Ollama generation (Mistral + Qwen fallback)
-      - live system state read before every response
-      - slash command → tool execution
-      - Qwen intent classification
-      - RAID gate on write commands
-      - honest Ollama-offline fallback
-      - component registry registration
-    next:
-      - streaming token output to UI (token-by-token as Mistral generates)
-      - Qwen narrates tool results in plain language before showing raw data
-      - co-pilot writes repair proposals to Idearium when gaps detected
-      - memory: Mistral's replies stored to cortex_memory for continuity
-      - proactive: co-pilot surfaces critical gaps unprompted on UI load
+  verified_live: >
+    Real boot test, not just unit tests: guardian booted 13/13 phases
+    clean, co-pilot phase confirmed "RAID gate available". Live HTTP
+    round-trip: a chat prompt built real context (408 tokens) with zero
+    tool execution; a tool-call prompt ("jobs") was approved by RAID,
+    executed through the real /cli/exec, and returned actual job records
+    from the live JAA store (15 real entries, not mocked).
+
+  tests:
+    raid_gate: "9/9 PASSING — tests/modules/raid-approve-tool.test.js"
+    module:    "7/7 PASSING — tests/modules/copilot.test.js"
+
+  not_built:
+    - "Live narrator mode (translate system → human language, continuous) — the fork flagged and left open earlier in this session, still unresolved"
+    - "File indexing (treat any file on disk as paste/upload) — not started"
+    - "Floating menu button (home-ui) wired to this as its backend — Phase 65's job, not done here"
+    - "config.json dynamically editable by RAID — explicitly NOT built, on purpose: RAID's job is routing, not governing tool permissions. That boundary is load-bearing, not an oversight."

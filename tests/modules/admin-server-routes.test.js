@@ -135,8 +135,15 @@ test('A3', '/api/raid/status surfaces a 500 with the error message if getState()
 test('A4', '/api/raid/decide (existing route) is unaffected by the new /status route', async () => {
   resetStore();
   const server = newServer();
+  // §FIX 2026-06-24 — admin-server.js's /api/raid/decide route was migrated
+  // from this._raid._decide(call, snap, weights) to this._raid.decide(prompt,
+  // opts) (see CHANGELOG.md / lib/version.js v1.0.0). This mock only had
+  // _decide, the old interface — updated to match what the real raid module
+  // actually exposes now, not reverting the production migration to dodge
+  // the test.
   server._raid = {
     _decide: (intent) => ({ chosen: 'claude', reason: 'test' }),
+    decide:  (prompt, opts) => ({ chosen: 'claude', reason: 'test' }),
     _health: {}, _weights: new Map(),
     getState: () => ({}),
   };

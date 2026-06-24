@@ -1,0 +1,129 @@
+[2026-06-20T13:51:27.958Z] autopilot starting — supervising: guardian
+[2026-06-20T13:51:27.960Z] [36m[guardian][0m starting — node guardian/server.js
+[2026-06-20T13:51:27.964Z] autopilot status: http://127.0.0.1:7799/status
+[2026-06-20T13:51:33.998Z] autopilot received SIGTERM — stopping all kernels
+[2026-06-20T13:51:34.046Z] [36m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T11:17:14.564Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic
+[2026-06-21T11:17:14.567Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-06-21T11:17:14.579Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-06-21T11:17:14.589Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-06-21T11:17:14.597Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-06-21T11:17:14.606Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-06-21T11:17:14.615Z] [31m[architect][0m starting — node architect/service.js
+[2026-06-21T11:17:14.625Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-21T11:17:14.637Z] autopilot status: http://127.0.0.1:7799/status
+[2026-06-21T11:18:14.584Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-06-21T11:18:14.600Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-06-21T11:18:14.601Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-06-21T11:18:14.616Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-06-21T11:18:14.617Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-06-21T11:18:14.632Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-06-21T11:18:14.648Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-06-21T15:56:55.944Z] [37m[diagnostic][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-06-21T15:56:55.966Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-06-21T15:56:56.971Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-21T15:57:57.031Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-06-21T18:02:33.481Z] autopilot received SIGINT — stopping all kernels
+[2026-06-21T18:02:33.508Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T18:02:33.508Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T18:02:33.509Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T18:02:33.509Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T18:02:33.509Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T18:02:33.511Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T18:02:33.538Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T18:08:45.255Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic
+[2026-06-21T18:08:45.258Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-06-21T18:08:45.268Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-06-21T18:08:45.275Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-06-21T18:08:45.283Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-06-21T18:08:45.292Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-06-21T18:08:45.302Z] [31m[architect][0m starting — node architect/service.js
+[2026-06-21T18:08:45.311Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-21T18:08:45.323Z] autopilot status: http://127.0.0.1:7799/status
+[2026-06-21T18:09:45.282Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-06-21T18:09:45.298Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-06-21T18:09:45.298Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-06-21T18:09:45.314Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-06-21T18:09:45.315Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-06-21T18:09:45.330Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-06-21T18:09:45.331Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-06-21T21:15:46.916Z] autopilot received SIGINT — stopping all kernels
+[2026-06-21T21:15:46.924Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:15:46.925Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:15:46.925Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:15:46.928Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:15:46.930Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:15:46.936Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:15:46.942Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:17:50.765Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic
+[2026-06-21T21:17:50.768Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-06-21T21:17:50.777Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-06-21T21:17:50.782Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-06-21T21:17:50.788Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-06-21T21:17:50.795Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-06-21T21:17:50.803Z] [31m[architect][0m starting — node architect/service.js
+[2026-06-21T21:17:50.810Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-21T21:17:50.819Z] autopilot status: http://127.0.0.1:7799/status
+[2026-06-21T21:18:50.787Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-06-21T21:18:50.788Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-06-21T21:18:50.801Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-06-21T21:18:50.802Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-06-21T21:18:50.815Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-06-21T21:18:50.816Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-06-21T21:18:50.829Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-06-21T21:20:19.958Z] autopilot received SIGINT — stopping all kernels
+[2026-06-21T21:20:19.968Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:20:19.975Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:20:19.979Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:20:19.983Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:20:19.989Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:20:19.991Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:20:19.992Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:32:28.643Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic
+[2026-06-21T21:32:28.646Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-06-21T21:32:28.654Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-06-21T21:32:28.659Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-06-21T21:32:28.665Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-06-21T21:32:28.671Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-06-21T21:32:28.676Z] [31m[architect][0m starting — node architect/service.js
+[2026-06-21T21:32:28.684Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-21T21:32:28.695Z] autopilot status: http://127.0.0.1:7799/status
+[2026-06-21T21:33:28.667Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-06-21T21:33:28.668Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-06-21T21:33:28.683Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-06-21T21:33:28.684Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-06-21T21:33:28.684Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-06-21T21:33:28.699Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-06-21T21:33:28.700Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-06-21T21:41:30.078Z] autopilot received SIGINT — stopping all kernels
+[2026-06-21T21:41:30.085Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:41:30.086Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:41:30.088Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:41:30.089Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:41:30.090Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:41:30.092Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:41:30.103Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-06-21T21:41:31.316Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic
+[2026-06-21T21:41:31.319Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-06-21T21:41:31.326Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-06-21T21:41:31.331Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-06-21T21:41:31.338Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-06-21T21:41:31.343Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-06-21T21:41:31.350Z] [31m[architect][0m starting — node architect/service.js
+[2026-06-21T21:41:31.359Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-21T21:41:33.853Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic
+[2026-06-21T21:41:33.856Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-06-21T21:41:33.864Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-06-21T21:41:33.869Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-06-21T21:41:33.875Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-06-21T21:41:33.881Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-06-21T21:41:33.889Z] [31m[architect][0m starting — node architect/service.js
+[2026-06-21T21:41:33.897Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-21T21:41:33.909Z] autopilot status: http://127.0.0.1:7799/status
+[2026-06-21T21:42:33.865Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-06-21T21:42:33.870Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-06-21T21:42:33.886Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-06-21T21:42:33.887Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-06-21T21:42:33.902Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-06-21T21:42:33.903Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-06-21T21:42:33.915Z] [37m[diagnostic][0m stable for 60s — backoff reset

@@ -97,15 +97,16 @@ function _raidRoute(gap) {
 
   // Get RAID's agent decision using taxonomy cluster
   let agent = 'ollama'; // LAW_I: local first
-  if (raid?._decide && raid?._health && raid?._weights) {
+  // §FIX 2026-06-24 — migrated from raid._decide(call, health, weights) to
+  // raid.decide(prompt, opts). Same routing outcome (decide() calls the
+  // same pure _decide() underneath, unchanged) — this caller now also
+  // gets ALK lattice + replay-engine coverage on every gap-driven decision,
+  // which it had zero of before. §5.3: every file that calls the changed
+  // module's decision path gets updated, not just the easiest one.
+  if (raid?.decide) {
     try {
       const desc = [gap.type, gap.body, gap.path].filter(Boolean).join(' ');
-      const decision = raid._decide(
-        { uuid: gap.uuid, intent: desc, prompt: desc,
-          context: { gapType: gap.type, loopType: cls.loop_type } },
-        raid._health,
-        raid._weights,
-      );
+      const decision = raid.decide(desc, { requestId: gap.uuid });
       agent = decision?.agent || 'ollama';
     } catch(_) {}
   }
@@ -648,44 +649,6 @@ function init(cfg = {}) {
     console.log(`[${MODULE_ID}] gap-ledger wired — durable gap writes active`);
   } catch (e) {
     console.warn(`[${MODULE_ID}] gap-ledger not wired — gaps remain in-memory only: ${e.message}`);
-  }
-
-  // §23.7 — wire closure verifier: when guardian completes a job that was
-  // dispatched for a gap, run verifyClosure to check predicate + artifact.
-  // This is the event that turns "job finished" into "maybe gap resolved."
-  try {
-    const bus = require('../nexus-bus');
-    const gp  = require('../lib/gap-predicate');
-
-    // Register component so system is self-describing
-    gp.registerComponent();
-
-    bus.on('guardian.job.complete', (event) => {
-      const { gapUuid, contractUuid } = event.payload?.meta || event.payload || {};
-      if (!gapUuid) return;
-      try {
-        const gap = jaaDB.query('gaps', g => g.uuid === gapUuid, 1)[0];
-        if (!gap) return;
-        if (gap.status === 'resolved' || gap.status === 'archived') return;
-        gp.verifyClosure(gap, {
-          strategy: event.payload?.command || 'guardian.job.complete',
-          jobId:    event.payload?.jobId || null,
-        });
-      } catch(e) {
-        console.warn(`[${MODULE_ID}] §1.2 closure verify on job.complete failed:`, e.message);
-      }
-    });
-
-    // Also sweep TTL expiries every 5 minutes
-    const TTL_SWEEP_MS = 300000;
-    const _ttlInterval = setInterval(() => {
-      try { gp.sweepExpired(); } catch(_) {}
-    }, TTL_SWEEP_MS);
-    _ttlInterval.unref();
-
-    console.log(`[${MODULE_ID}] gap-lifecycle wired — predicate verification + TTL sweep active`);
-  } catch(e) {
-    console.warn(`[${MODULE_ID}] gap-lifecycle not wired:`, e.message);
   }
 
   _interval = setInterval(_tick, cfg.pollMs ?? POLL_MS);

@@ -126,11 +126,14 @@ async function _dispatchToGuardian(gap, repairSpec, provider = 'claude') {
   if (live.requireRaidApproval) {
     let raid;
     try { raid = require('./cortex/core/raid'); } catch (_) { raid = null; }
-    if (raid && typeof raid._decide === 'function') {
-      const decision = raid._decide(
-        { intent: repairSpec.intent || repairSpec.name, preferredAgent: provider },
-        raid._health,
-        raid._weights
+    // §FIX 2026-06-24 — migrated from raid._decide(call, health, weights) to
+    // raid.decide(prompt, opts). Repair dispatch decisions now get ALK +
+    // replay-engine coverage too — previously the heal loop's RAID approval
+    // step was completely unlogged outside this function's own event_log write.
+    if (raid && typeof raid.decide === 'function') {
+      const decision = raid.decide(
+        repairSpec.intent || repairSpec.name,
+        { preferredAgent: provider, requestId: gap.id || gap.uuid }
       );
       if (!decision || !decision.agent) {
         console.log(`[heal-loop] RAID declined repair dispatch: ${repairSpec.name}`);

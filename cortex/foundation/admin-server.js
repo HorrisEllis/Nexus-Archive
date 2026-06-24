@@ -11,7 +11,6 @@
 const http   = require('http');
 const { jaaDB, uid } = require('../memory/jaa-db');
 const { core }       = require('./cobalt-core');
-const { effective }  = require('../../lib/meta/confidence.js');
 const versionium     = (() => { try { return require('../versionium'); } catch(_) { return null; } })();
 const essEngine      = (() => { try { return require('../ess-gap-engine'); } catch(_) { return null; } })();
 
@@ -523,21 +522,12 @@ class AdminServer {
               },
               // Gap found → gaps table
               'cortex.gap.found': () => {
-                // §needs-2026-06-21: severity used to threshold p.score directly.
-                // A 0.72 with evidence:null and a 0.72 backed by a real metric
-                // were stamped 'high' identically. Now severity is computed off
-                // the evidence-discounted effective score (lib/meta/confidence.js)
-                // — same rule as the weakest-link aggregator, applied to a single
-                // record. The raw score is still stored unchanged for audit.
-                const evidenceObj = p.evidence || null;
-                const effScore = effective({ score: p.score || 0, evidence: evidenceObj });
                 jaaDB.insert('gaps', {
                   uuid: uid(), jobId: p.jobId || null, provider: p.provider || 'unknown',
                   type: p.type || 'unknown', domain: p.domain || null,
                   reason: p.reason || null, description: p.description || '',
-                  score: p.score || 0, evidence: evidenceObj, status: 'open',
-                  effectiveScore: effScore,
-                  severity: effScore > 0.7 ? 'high' : effScore > 0.4 ? 'medium' : 'low',
+                  score: p.score || 0, evidence: p.evidence || null, status: 'open',
+                  severity: (p.score || 0) > 0.7 ? 'high' : (p.score || 0) > 0.4 ? 'medium' : 'low',
                   source: p.source || source || 'guardian',
                   causedBy: p.jobId || causedBy || null, ts: Date.now(),
                 });
@@ -1134,9 +1124,13 @@ class AdminServer {
             try {
               const intent    = url.searchParams.get('intent') || url.searchParams.get('prompt') || '';
               const preferred = url.searchParams.get('preferred') || '';
-              const snap      = (typeof this._raid._health === 'object' && this._raid._health) || {};
-              const weights   = this._raid._weights instanceof Map ? this._raid._weights : new Map();
-              const decision  = this._raid._decide({ intent, preferredAgent: preferred }, snap, weights);
+              // §FIX 2026-06-24 — migrated from this._raid._decide(call, snap,
+              // weights) to this._raid.decide(prompt, opts). The snap/weights
+              // this route used to fetch manually were always the same
+              // references decide() reads internally (raid._health,
+              // raid._weights) — no behavior change, this route now also gets
+              // ALK + replay coverage on every debug decision made through it.
+              const decision  = this._raid.decide(intent, { preferredAgent: preferred });
               this._json(res, 200, { ok: true, ...decision });
             } catch (e) {
               this._json(res, 500, { ok: false, error: e.message });

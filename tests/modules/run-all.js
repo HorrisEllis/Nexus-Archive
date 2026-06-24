@@ -48,6 +48,7 @@ const SUITES = [
   'test-grammar-fallback.js',
   'test-mutation-contract.js',
   'test-intelligence-bridge.js',
+  'component-descriptor.test.js',
   'test-liminal-space.js',
   'test-snr-filter.js',
   'test-ui-registry.js',

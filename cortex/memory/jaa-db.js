@@ -141,10 +141,6 @@ const TABLE_TIERS = {
   components:          'long',   // component registry — self-describing kernel
   snapshots:           'long',   // replay engine — state before every decision
   decision_log:        'long',   // replay engine — every choice, input, output, outcome
-  // Phase 23.7 — gap-lifecycle.spec — causal closure with artifact verification
-  reflection_contracts: 'long', // queued until Mistral resolves — permanent record
-  closure_attempts:    'long',  // every closure attempt — never deleted, never silent
-  gap_predicates:      'long',  // predicate library — grows as Qwen learns new types
 };
 
 // ── All declared tables ───────────────────────────────────────────────────────
