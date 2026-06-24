@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        raid
-    version:     6.2.0
+    version:     6.1.0
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-raid-v1-0000-2026-0615-jamesbrooks-001
     purpose: >
@@ -37,14 +37,3 @@ spec:
   invariants:
     LAW_I:   "Ollama always first for non-specialist clusters"
     LAW_III: "Claude always last — reserve, never primary"
-
-  tool_approval_gate:
-    function: "_approveTool(source, command, opts)"
-    purpose: >
-      Choke point for real command execution (not just LLM dispatch).
-      Reuses cortex/contract/index.js's CONTRACTS — one source of truth
-      for agent permissions, not a second tools.json. Fail-closed:
-      unregistered sources fall back to the _default contract, which
-      denies 'tool' explicitly.
-    consumer: guardian/agents/co-pilot — see docs/copilot.spec
-    tests: "9/9 PASSING — tests/modules/raid-approve-tool.test.js"

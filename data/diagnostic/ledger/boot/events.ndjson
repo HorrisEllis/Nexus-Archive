@@ -2,9 +2,3 @@
 {"type":"service.start","port":7825,"pid":21900,"ts":1781931624857,"_ts":1781931624857}
 {"type":"service.start","port":7825,"pid":15756,"ts":1781943582526,"_ts":1781943582526}
 {"type":"service.start","port":7825,"pid":9740,"ts":1781945283737,"_ts":1781945283737}
-{"type":"service.start","port":7825,"pid":22580,"ts":1782040634728,"_ts":1782040634728}
-{"type":"service.start","port":7825,"pid":6020,"ts":1782057417437,"_ts":1782057417437}
-{"type":"service.start","port":7825,"pid":10872,"ts":1782065325467,"_ts":1782065325467}
-{"type":"service.start","port":7825,"pid":12036,"ts":1782076670912,"_ts":1782076670912}
-{"type":"service.start","port":7825,"pid":15268,"ts":1782077548779,"_ts":1782077548780}
-{"type":"service.start","port":7825,"pid":17904,"ts":1782078093992,"_ts":1782078093992}

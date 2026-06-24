@@ -196,8 +196,6 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
 .rung-dot.verified{border-color:var(--green);background:var(--green)}
 .rung-dot.retrying{border-color:var(--amber);background:var(--amber)}
 .rung-dot.escalated{border-color:var(--red);background:var(--red)}
-.rung-dot.interrupted{border-color:var(--red);background:transparent;border-style:dashed;animation:rung-pulse-red 1.2s ease-in-out infinite}
-@keyframes rung-pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(255,51,85,.5)}50%{box-shadow:0 0 0 5px rgba(255,51,85,0)}}
 .rung.verified::after{content:'';position:absolute;left:-13px;top:14px;width:1px;height:calc(100% - 2px);background:var(--green)}
 
 .rung-title{font-size:11.5px;color:var(--text);font-weight:500}
@@ -206,7 +204,6 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
 .rung-state.verified{color:var(--green)}
 .rung-state.retrying{color:var(--amber)}
 .rung-state.escalated{color:var(--red)}
-.rung-state.interrupted{color:var(--red)}
 
 .rung-action{margin-top:6px}
 .rung-retry{
@@ -221,20 +218,6 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
 }
 
 .queue-empty{font-size:11px;color:var(--text3);text-align:center;padding:40px 10px;line-height:1.6}
-.interrupted-banner{
-  margin:0 0 12px;padding:9px 12px;border-radius:6px;
-  background:var(--red-dim);border:1px solid rgba(255,51,85,.4);
-  color:var(--red);font-family:var(--mono);font-size:10.5px;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-}
-.interrupted-banner .ib-text{line-height:1.4;flex:1}
-.interrupted-banner .ib-resume{
-  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;
-  background:var(--red-dim);border:1px solid rgba(255,51,85,.5);color:var(--red);
-  padding:4px 10px;border-radius:14px;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;
-}
-.interrupted-banner .ib-resume:hover{background:rgba(255,51,85,.25)}
-.interrupted-banner .ib-resume:disabled{opacity:.4;cursor:default}
 .queue-summary{
   margin-top:auto;padding-top:14px;border-top:1px solid var(--border);
   font-family:var(--mono);font-size:10.5px;color:var(--text2);display:flex;justify-content:space-between;
@@ -358,10 +341,6 @@ const PROVIDER = 'chatgpt';
 const CHUNK_LIMIT = 4000; // matches MODE_CONFIG.chatgpt.chunkSize in the home shell
 let selectedQueueId = null;
 let allQueues = [];
-// §FIX: nothing previously detected "this SEAM run finished" — the ladder
-// just stopped changing with no signal at all. Tracked per-queue so this
-// fires exactly once when a queue completes, not on every 3s poll after.
-const _seamCompleteNotified = new Set();
 
 async function getJSON(url, opts) {
   try {
@@ -494,7 +473,7 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
   const res = await getJSON(`${GD}/command`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      command: 'spec', provider: PROVIDER, specText: finalSpec, title, source: 'chatgpt-console',
+      command: 'spec', provider: PROVIDER, specText: finalSpec, title,
       splitOn: hasHeadings ? 'heading' : 'size', maxChunkSize: CHUNK_LIMIT,
     }),
   });
@@ -518,7 +497,6 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
 const STATE_CLASS = {
   QUEUED: 'queued', INJECTING: 'active', GENERATING: 'active', DETECTING: 'active',
   VERIFIED: 'verified', RETRYING: 'retrying', ESCALATED: 'escalated',
-  INTERRUPTED: 'interrupted',
 };
 
 async function refreshQueues() {
@@ -567,9 +545,8 @@ function renderLadder() {
     // active chunk) get a real button; escalated rungs are past that
     // point and get an honest note instead of a dead-looking control.
     let action = '';
-    if ((cls === 'active' || cls === 'retrying' || cls === 'interrupted') && chunkUuid) {
-      const btnLabel = cls === 'interrupted' ? '⚠ RESUME CHUNK' : 'FORCE RETRY';
-      action = `<div class="rung-action"><button class="rung-retry" data-queue="${q.uuid}" data-chunk="${chunkUuid}">${btnLabel}</button></div>`;
+    if ((cls === 'active' || cls === 'retrying') && chunkUuid) {
+      action = `<div class="rung-action"><button class="rung-retry" data-queue="${q.uuid}" data-chunk="${chunkUuid}">FORCE RETRY</button></div>`;
     } else if (cls === 'escalated') {
       action = `<div class="rung-escalated-note">No longer the active chunk — guardian's retry only acts on what's currently running. Check guardian's job log or re-dispatch this chunk from scratch.</div>`;
     }
@@ -605,28 +582,6 @@ function renderLadder() {
   summary.style.display = '';
   document.getElementById('qs-verified').textContent = `${stats.verified||0} verified`;
   document.getElementById('qs-total').textContent = `${stats.total||q.compartments?.length||0} total`;
-
-  // §FIX: SEAM-end listener — previously nothing detected completion at
-  // all. Fires once per queue (Set-tracked), not on every poll after.
-  const total = stats.total || q.compartments?.length || 0;
-  const allDone = total > 0 && (stats.verified || 0) === total;
-  let banner = document.getElementById('seam-complete-banner');
-  if (allDone) {
-    if (!_seamCompleteNotified.has(q.uuid)) {
-      _seamCompleteNotified.add(q.uuid);
-      console.log(`[seam] queue ${q.uuid.slice(0,8)} complete — ${total}/${total} verified`);
-    }
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'seam-complete-banner';
-      banner.style.cssText = 'margin-top:10px;padding:9px 12px;border-radius:6px;background:var(--green-dim);border:1px solid rgba(0,255,136,.4);color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-align:center;';
-      summary.parentNode.insertBefore(banner, summary.nextSibling);
-    }
-    banner.textContent = `✓ SEAM COMPLETE — ${total}/${total} chunks verified. Ready for a new spec.`;
-    banner.style.display = '';
-  } else if (banner) {
-    banner.style.display = 'none';
-  }
 }
 
 // ── Import from Idearium (spec storage) ──────────────────────────────────────
@@ -690,92 +645,10 @@ document.getElementById('import-close').addEventListener('click', closeImportPic
 importOverlay.addEventListener('click', (e) => { if (e.target === importOverlay) closeImportPicker(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !importOverlay.classList.contains('hidden')) closeImportPicker(); });
 
-// ── §70.2 localStorage interrupted SEAM check ────────────────────────────────
-// On load: scan for any chunks the userscript marked interrupted in this
-// browser, surface them as banners in the queue zone before guardian even
-// responds. Guardian's /seam/queues is the truth; this is a fast pre-flight.
-function _lsInterruptedCheck() {
-  const keys = Object.keys(localStorage).filter(k => k.startsWith('nexus_seam_job_'));
-  const found = [];
-  for (const k of keys) {
-    try {
-      const rec = JSON.parse(localStorage.getItem(k) || 'null');
-      if (rec && (rec.status === 'interrupted' || rec.status === 'in_progress')) {
-        found.push(rec);
-      }
-    } catch(_) {}
-  }
-  if (!found.length) return;
-  const zone = document.getElementById('zone-queue');
-  const label = zone.querySelector('.zone-label');
-  for (const rec of found) {
-    const div = document.createElement('div');
-    div.className = 'interrupted-banner';
-    div.dataset.jobId = rec.jobId;
-    const chunkStr = rec.seam_chunk_idx != null
-      ? `chunk ${rec.seam_chunk_idx + 1}/${rec.seam_total ?? '?'}`
-      : 'chunk ?';
-    div.innerHTML = `
-      <div class="ib-text">
-        <b>⚠ INTERRUPTED</b> — ${(rec.seam_title || 'untitled').slice(0,30)} · ${chunkStr}<br>
-        <span style="color:var(--text3);font-size:9.5px">${rec.seam_queue_id?.slice(0,8) ?? rec.jobId.slice(0,8)} · ${rec.status}</span>
-      </div>
-      <button class="ib-resume" data-queue="${rec.seam_queue_id ?? ''}" data-job="${rec.jobId}">RESUME →</button>
-    `;
-    div.querySelector('.ib-resume').addEventListener('click', async function() {
-      const btn = this;
-      const queueId = btn.dataset.queue;
-      if (!queueId) {
-        // No queue id — queue likely lost on server restart
-        document.getElementById('submit-status').textContent = 'Queue ID unknown — re-submit the spec.';
-        document.getElementById('submit-status').style.color = 'var(--amber)';
-        return;
-      }
-      btn.disabled = true; btn.textContent = 'RESUMING…';
-      const res = await getJSON(`${GD}/seam/retry`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queueId, reason: 'ui_resume_interrupted' }),
-      });
-      if (res?.ok) {
-        try { localStorage.removeItem(`nexus_seam_job_${btn.dataset.job}`); } catch(_) {}
-        div.remove();
-        refreshQueues();
-        document.getElementById('submit-status').textContent = res.escalated
-          ? '⚠ Chunk escalated — watchdog budget exhausted.'
-          : `✓ Resumed queue ${queueId.slice(0,8)}`;
-        document.getElementById('submit-status').style.color = res.escalated ? 'var(--amber)' : 'var(--green)';
-      } else {
-        btn.disabled = false; btn.textContent = 'RESUME →';
-        document.getElementById('submit-status').textContent = `Resume failed: ${res?.error || 'guardian unreachable'}`;
-        document.getElementById('submit-status').style.color = 'var(--red)';
-      }
-    });
-    zone.insertBefore(div, label.nextSibling);
-  }
-}
-
-// ── §74.2 abrupt-stop visual: mark GENERATING rungs that look stuck ──────────
-// renderLadder() already colours RETRYING amber and ESCALATED red.
-// INTERRUPTED is a new synthetic state emitted by the userscript and handled
-// by guardian — once guardian calls forceRetryActive the compartment moves to
-// RETRYING, so this is just a transient visual between the abrupt-stop event
-// and the next poll cycle.
-function _markStuckRungs() {
-  document.querySelectorAll('.rung.active').forEach(rung => {
-    const stateEl = rung.querySelector('.rung-state');
-    if (!stateEl) return;
-    // If the rung has been GENERATING for more than one poll cycle without
-    // moving, the dot will already pulse amber. Nothing more needed here —
-    // the real signal comes from guardian via STATE_CLASS.INTERRUPTED once
-    // forceRetryActive fires.
-  });
-}
-
 // ── Boot ──────────────────────────────────────────────────────────────────────
 updateChunkPreview();
 refreshSession();
 refreshQueues();
-_lsInterruptedCheck();
 setInterval(refreshSession, 4000);
 setInterval(refreshQueues, 3000);
 </script>

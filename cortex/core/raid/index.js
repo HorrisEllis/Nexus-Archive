@@ -25,7 +25,7 @@ let ESSKernel = null;
 try { ESSKernel = require('../../lib/ess').ESSKernel; } catch(_) {}
 
 const MODULE_ID = 'raid';
-const VERSION   = '6.2.0';
+const VERSION   = '6.0.0';
 
 // ── Config (orchestrator.config.json → raid block; live, hot-reloaded) ──────
 function _raidCfg() {
@@ -273,93 +273,6 @@ function _decide(call, healthSnap, weights) {
   return { agent: 'claude', reason: 'LAW_I:claude_reserve', cluster };
 }
 
-// ── Shared decision-logging side effects — used by decide() AND _tick() ─────
-// §FIX 2026-06-24, second pass — first pass only wired this into the new
-// decide() wrapper and left _tick()'s own internal _decide() call (the
-// real, continuously-running dispatch loop, not a minor path) uncovered.
-// Extracted here so both call decide()'s logic once, not twice — §5.3, a
-// real structural fix touches every call site, not just the one that was
-// easiest to reach first.
-function _recordRaidDecision(requestId, prompt, decision, snapshotId) {
-  try {
-    const alk = require('../../../lib/alk');
-    alk.record({
-      actor:   'raid',
-      intent:  'route',
-      payload: { cluster: decision.cluster, agent: decision.agent, reason: decision.reason },
-    });
-  } catch (_) { /* ALK unavailable — decision still returns */ }
-
-  try {
-    const replay = require('../../../lib/replay-engine');
-    replay.logDecision({
-      requestId:    requestId || null,
-      actor:        'raid',
-      snapshotId:   snapshotId || null,
-      input:        prompt,
-      output:       decision.agent,
-      chosen:       decision.agent,
-      alternatives: (CLUSTER_CHAINS[decision.cluster] || CLUSTER_CHAINS.general).filter(a => a !== decision.agent),
-      cost:         null,
-      outcome:      null,
-    });
-  } catch (_) { /* replay-engine unavailable — decision still returns */ }
-}
-
-function _snapshotBeforeDecision(requestId) {
-  try {
-    const replay = require('../../../lib/replay-engine');
-    const snap = replay.snapshot({ trigger: 'RAID routing decision', actor: 'raid', requestId });
-    return snap?.snapshotId || null;
-  } catch (_) { return null; }
-}
-
-// ── Public decide() — wraps the pure _decide(), owns the side effects ───────
-// §RAID-INTEGRATION 2026-06-24, built per raid-integration.spec's two
-// READY items (ALK logging, replay-engine snapshot) — both verified
-// zero-conflict there because they don't touch the four-line decision
-// rules above. This also fixes a separate, real bug found the same session
-// (SESSION-2026-06-24.md item 2): guardian/server.js calls `_raid.decide()`,
-// but only `_decide` (underscore, internal signature) was ever exported —
-// every call threw TypeError, silently caught, hardcoding 'chatgpt' every
-// time regardless of what RAID would have actually picked. This is the
-// real decide(), not a rename of the old one.
-//
-// _decide() stays exactly as written above — pure, §1.1 DETERMINISTIC,
-// same (call, healthSnap, weights) → same decision, always. Side effects
-// (ALK record, replay-engine snapshot+logDecision) live in
-// _recordRaidDecision/_snapshotBeforeDecision above instead, the same
-// extension-point separation lib/compartment-engine.js already uses for
-// its own sub-steps 4/5 — wrap the call site, don't make the pure function
-// impure. Both side effects are try/catch-isolated: a dead ALK or
-// replay-engine module degrades to "decision made, not logged," never
-// "decision blocked by logging."
-//
-// All 5 real call sites in this codebase now go through this path or
-// _tick()'s matching wiring below — gap-loop.js, admin-server.js,
-// nexus-heal-loop.js, and request-handler.js migrated to call decide()
-// directly; _tick() (this file's own internal poll loop, not a minor path)
-// calls _recordRaidDecision/_snapshotBeforeDecision around its own
-// _decide() call since its `call` shape is a full JAA row, not a prompt
-// string, and forcing it through decide()'s string-shaped signature would
-// have meant reconstructing a prompt from structured data for no reason.
-//
-// NOT done in this pass (raid-integration.spec open_decisions 4.1/4.2,
-// still open): no Mistral reasoning here — this still only calls the
-// existing pure _decide().
-function decide(prompt, opts = {}) {
-  const call = {
-    intent:         opts.intent || prompt || '',
-    prompt,
-    preferredAgent: opts.preferredAgent,
-  };
-
-  const snapshotId = _snapshotBeforeDecision(opts.requestId);
-  const decision    = _decide(call, _health, _weights);
-  _recordRaidDecision(opts.requestId, prompt, decision, snapshotId);
-  return decision;
-}
-
 // ── Ollama brain (analyzes failures, adjusts weights) ────────────────────────
 const _failures = [];
 let _cfg = {};
@@ -522,9 +435,7 @@ async function _tick() {
       jaaDB.update('agent_calls', call.uuid, { status:'processing', claimedBy:MODULE_ID, claimedAt:Date.now() });
       const c = jaaDB.get('agent_calls', call.uuid);
       if (!c || c.claimedBy !== MODULE_ID) continue;
-      const snapshotId = _snapshotBeforeDecision(call.uuid);
       const d = _decide(call, snap, _weights);
-      _recordRaidDecision(call.uuid, call.intent || call.prompt || '', d, snapshotId);
       jaaDB.update('agent_calls', call.uuid, { status:'dispatched', routedTo:d.agent, routeReason:d.reason, routeCluster:d.cluster, routedAt:Date.now() });
       jaaDB.insert('event_log', { uuid:uid(), type:'raid.dispatched', payload:JSON.stringify({callUuid:call.uuid,agent:d.agent,reason:d.reason,cluster:d.cluster}), source:MODULE_ID, causedBy:call.uuid, ts:Date.now() });
       console.log(`[raid] dispatch → ${d.agent} (cluster:${d.cluster}, ${d.reason}) — call ${call.uuid.slice(0,8)}`);
@@ -572,74 +483,4 @@ function stop() { [_interval,_hTimer,_bTimer].forEach(t=>t&&clearInterval(t)); _
 function setSystemState(s) { _systemState=s||{}; }
 function getState() { return { version:VERSION, health:_health, weights:Object.fromEntries(_weights), essEnabled:!!_ess, weightCount:_weights.size }; }
 
-// ── Tool approval gate ───────────────────────────────────────────────────────
-// _approveTool(): the choke point any module wanting to execute a command
-// (not just dispatch an LLM call) routes through first. Reuses
-// cortex/contract/index.js's existing CONTRACTS — one source of truth for
-// "what is this agent allowed to do," not a second tools.json. Fail-closed:
-// an unregistered source is denied, never default-approved, since this
-// gates real command execution, the highest-risk surface in the system.
-const _toolHealth = {}; // { [source]: { calls: [{ts}], denials: number } }
-
-function _approveTool(source, command, opts = {}) {
-  if (!source || typeof source !== 'string') {
-    return { approved: false, reason: 'source is required' };
-  }
-  let contractModule, contract;
-  try {
-    contractModule = require('../../contract');
-    contract = contractModule.getContract(source);
-  } catch (e) {
-    return { approved: false, reason: `contract lookup failed: ${e.message}` };
-  }
-  // §FIX: getContract() never returns falsy — unregistered sources silently
-  // fall back to CONTRACTS['_default'] (checked directly in
-  // cortex/contract/index.js before writing this). _default already denies
-  // 'tool' in its denied_actions, so the check below still fails closed for
-  // tool calls specifically — but don't claim "no contract" when there IS
-  // one (just a minimal-trust one). Flag explicitly when this is the
-  // fallback, so callers/logs can tell "registered but denied" apart from
-  // "not registered at all."
-  const isUnregistered = !(source.toLowerCase() in (contractModule.CONTRACTS || {}));
-
-  const action = opts.action || 'tool';
-  if (contract.denied_actions?.includes(action)) {
-    return { approved: false, reason: isUnregistered
-      ? `source '${source}' has no contract — fell back to minimal-trust default, which denies '${action}'`
-      : `'${action}' is explicitly denied for ${source}` };
-  }
-  if (!contract.allowed_actions?.includes(action)) {
-    return { approved: false, reason: `'${action}' is not in ${source}'s allowed_actions` };
-  }
-
-  // Rate limiting — same shape as contract.rate_limits, per-source tracked
-  // here rather than in contract.js itself, since this is call-frequency
-  // state, not the static permission definition.
-  const now = Date.now();
-  const health = _toolHealth[source] || (_toolHealth[source] = { calls: [], denials: 0 });
-  const limit = contract.rate_limits?.[action] || contract.rate_limits?.['*'];
-  if (limit) {
-    health.calls = health.calls.filter(c => now - c.ts < limit.windowMs);
-    if (health.calls.length >= limit.max) {
-      health.denials++;
-      return { approved: false, reason: `rate limit exceeded for ${source}/${action} — ${limit.max} per ${limit.windowMs}ms`, retryAfterMs: limit.windowMs - (now - health.calls[0].ts) };
-    }
-  }
-
-  if (contract.proof_required && !opts.proof) {
-    return { approved: false, reason: `${source} requires proof for tool calls, none supplied` };
-  }
-
-  health.calls.push({ ts: now, command: typeof command === 'string' ? command.slice(0, 200) : null });
-  return { approved: true, source, action, trust_level: contract.trust_level };
-}
-
-function _toolHealthSnapshot() {
-  const out = {};
-  for (const [source, h] of Object.entries(_toolHealth)) {
-    out[source] = { recentCalls: h.calls.length, denials: h.denials };
-  }
-  return out;
-}
-
-module.exports = { init, stop, getState, setSystemState, decide, _decide, _cluster, _health, _weights, _updateW, _approveTool, _toolHealthSnapshot };
+module.exports = { init, stop, getState, setSystemState, _decide, _cluster, _health, _weights, _updateW };

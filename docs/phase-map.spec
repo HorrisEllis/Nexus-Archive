@@ -9,23 +9,6 @@ spec:
       The canonical record of what's been built and what's next.
       Update this spec every session.
 
-  # ── FLAGGED 2026-06-24, not silently fixed ──────────────────────────────────
-  # Two structural defects found while adding the raid_integration entry below:
-  #   1. phase_9 and phase_10 each appear TWICE under `next:`, with completely
-  #      different content each time ("Request Handler" vs "User Model" for 9;
-  #      "Constitutional AI" vs "nexus-shell.html" for 10). Left both pairs
-  #      in place rather than guessing which one is current — pick one and
-  #      delete the other when you next touch this file.
-  #   2. This file caps at phase_16, but other real specs in this codebase
-  #      already cite higher numbers: gap-lifecycle.spec = phase 23.7,
-  #      lib/compartment-engine.js = "Phase 25," the uploaded roadmap HTML =
-  #      up to Phase 68. This file has not been the source of truth for
-  #      phase numbering for a while. Treat its numbers as unreliable until
-  #      reconciled against those.
-  # raid_integration below is therefore NOT given a numeric phase — assigning
-  # one against a numbering scheme already known to be broken would just be
-  # a third instance of the thing this session has spent itself catching.
-
   complete:
     phase_0: "Kernel — bus, JAA, boot-sequence, auth, contracts, version"
     phase_1: "Persistence — vector-memory, chat-logger, event-ledger, spec-drift"
@@ -135,23 +118,3 @@ spec:
     - "cli.guide — grammar engine, Qwen reasoning, tab completion"
     - "recovery.guide — rebuild from specs if code is lost"
     - "user-model.guide — what guardian knows about you and why"
-
-  raid_integration:
-    phase: UNASSIGNED   # see flag at top of this file — numbering scheme broken, not guessing
-    status: blocked
-    spec_file: raid-integration.spec
-    purpose: >
-      Wire RAID's actual decision pipeline (_cluster → _decide →
-      intelligence-bridge → _dispatch → _updateW, verified against
-      cortex/core/raid/index.js) to ALK, replay-engine, reflection, and
-      compartment-engine — all five named real, none currently connected
-      to RAID except _brainTick's existing async batch use of Ollama.
-    ready_to_build:
-      - "ALK logging inside _decide() — actor:'raid' records, currently test-only"
-      - "replay-engine snapshot around the _decide() call site — header already names this trigger, never wired"
-    blocked_on_open_decision:
-      - "4.1 Mistral fork: live in the hot path (breaks _decide()'s declared determinism, raid/index.js line 11) vs extending _brainTick() (async, determinism intact, tunes weights rather than picking per-call)"
-      - "4.2 reflection write-back: reverses lib/reflection.js's own documented decision — 'no RAID-side change' — confirm before building, don't infer"
-    blocked_regardless:
-      - "compartment-engine full wiring — Phase 25's own sub-steps 4 (adversary suite) and 5 (crystal/lattice updates) don't exist yet; skeleton hookup on _dispatch() is the ceiling right now"
-    full_detail: see raid-integration.spec, Sections 1-4

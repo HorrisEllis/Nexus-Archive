@@ -1124,13 +1124,9 @@ class AdminServer {
             try {
               const intent    = url.searchParams.get('intent') || url.searchParams.get('prompt') || '';
               const preferred = url.searchParams.get('preferred') || '';
-              // §FIX 2026-06-24 — migrated from this._raid._decide(call, snap,
-              // weights) to this._raid.decide(prompt, opts). The snap/weights
-              // this route used to fetch manually were always the same
-              // references decide() reads internally (raid._health,
-              // raid._weights) — no behavior change, this route now also gets
-              // ALK + replay coverage on every debug decision made through it.
-              const decision  = this._raid.decide(intent, { preferredAgent: preferred });
+              const snap      = (typeof this._raid._health === 'object' && this._raid._health) || {};
+              const weights   = this._raid._weights instanceof Map ? this._raid._weights : new Map();
+              const decision  = this._raid._decide({ intent, preferredAgent: preferred }, snap, weights);
               this._json(res, 200, { ok: true, ...decision });
             } catch (e) {
               this._json(res, 500, { ok: false, error: e.message });

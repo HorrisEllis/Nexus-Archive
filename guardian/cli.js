@@ -210,7 +210,6 @@ async function sendFile(provider, filePath, extraPrompt) {
     provider: provider,
     prompt,
     content,
-    source: 'cli',
   });
 
   if (!result.ok) { console.error('Error:', result.error); process.exit(1); }
@@ -238,7 +237,6 @@ async function sendSpec(provider, filePath, title) {
     provider,
     specText,
     title: title || path.basename(abs),
-    source: 'cli',
   });
 
   if (!result.ok) { console.error('Error:', result.error); process.exit(1); }
@@ -294,8 +292,6 @@ Commands that go to AI:
   /code    <provider> <prompt>       Ask for code
   /spec    <provider> <file|prompt>  Send a spec file — real SEAM chunking, not a single blob
   /seam    <queueId>                 Watch a SEAM queue's chunk-by-chunk progress
-  /seam    interrupted               List SEAM chunks in INTERRUPTED state (abrupt stop)
-  /seam    resume <queueId>          Force-retry the active chunk in a stalled queue
   /ask     <provider> <prompt>       General question
   /paste   <provider>                Pipe content: echo "..." | guardian /paste claude
   /multi   <p1> <p2> <prompt>        Send to multiple providers at once
@@ -306,8 +302,6 @@ Server info:
   providers     List which userscripts are connected
   jobs [n]      Show recent jobs (default 20)
   watch <id>    Stream output of a job
-  seam interrupted        List interrupted SEAM chunks needing attention
-  seam resume <queueId>  Force-retry the active chunk in a stalled queue
 
 Options:
   --no-watch    Don't wait for the response after sending
@@ -394,52 +388,6 @@ Examples:
     // ── /seam <queueId> — watch a SEAM queue's chunk-by-chunk progress ─────────
     if (args[0] === '/seam') {
       if (!args[1]) { console.error('Usage: guardian /seam <queueId>'); process.exit(1); }
-
-      // ── seam interrupted — list all INTERRUPTED chunks ────────────────────
-      if (args[1] === 'interrupted') {
-        const result = await get('/seam/queues').catch(e => { console.error(e.message); process.exit(1); });
-        const queues = result.queues || [];
-        const interrupted = [];
-        for (const q of queues) {
-          for (const c of (q.compartments || [])) {
-            if (c.state === 'GENERATING' && c.updatedAt && (Date.now() - c.updatedAt) > 30000) {
-              interrupted.push({ queueId: q.uuid, queueTitle: q.title, chunkIdx: c.chunkIdx,
-                chunkTitle: c.chunkTitle, stuckSecs: Math.round((Date.now() - c.updatedAt)/1000),
-                watchdogRetries: c.watchdogRetries });
-            }
-          }
-        }
-        if (!interrupted.length) {
-          console.log('No interrupted SEAM chunks found (nothing stuck > 30s in GENERATING state).');
-          process.exit(0);
-        }
-        console.log(`
-${interrupted.length} interrupted chunk(s):
-`);
-        for (const c of interrupted) {
-          console.log(`  Queue: ${c.queueId.slice(0,8)}  "${c.queueTitle}"`);
-          console.log(`  Chunk ${c.chunkIdx + 1}: "${c.chunkTitle}"  stuck ${c.stuckSecs}s  watchdog:${c.watchdogRetries}`);
-          console.log(`  Resume: guardian /seam resume ${c.queueId}
-`);
-        }
-        process.exit(0);
-      }
-
-      // ── seam resume <queueId> — force-retry active chunk ─────────────────
-      if (args[1] === 'resume') {
-        const queueId = args[2];
-        if (!queueId) { console.error('Usage: guardian /seam resume <queueId>'); process.exit(1); }
-        const result = await post('/seam/retry', { queueId, reason: 'cli_resume' })
-          .catch(e => { console.error(e.message); process.exit(1); });
-        if (!result.ok) { console.error(`Resume failed: ${result.error || 'unknown'}`); process.exit(1); }
-        if (result.escalated) {
-          console.log(`⚠  Chunk escalated — watchdog budget exhausted. Chunk is now ESCALATED (gap logged).`);
-        } else {
-          console.log(`✓  Retry forced on queue ${queueId.slice(0,8)}.`);
-          console.log(`   Watch progress: guardian /seam ${queueId}`);
-        }
-        process.exit(0);
-      }
       await watchSeam(args[1]);
       return;
     }

@@ -206,36 +206,6 @@ const TOOLS = {
 
   // ── Self-awareness ────────────────────────────────────────────────────────
 
-  'nexus.chatgpt_mode': {
-    description: 'Two-layer Nexus(authority)/ChatGPT(reasoning) query — retrieves relevant Nexus records first, then asks ChatGPT to reason over them with every claim tagged FACT/INFERENCE/HYPOTHESIS/UNKNOWN. See guardian/agents/chatgpt-mode.js.',
-    input_schema: {
-      prompt: { type: 'string', required: true },
-      mode:   { type: 'string', enum: ['authoritative','inferred','speculative','synthesis'], required: false, description: 'defaults to synthesis if omitted' },
-    },
-    fn: async ({ prompt, mode } = {}) => {
-      if (!prompt) return { ok: false, error: 'prompt required' };
-      const http = require('http');
-      const body = JSON.stringify({ prompt, mode });
-      return new Promise(resolve => {
-        const req = http.request({
-          hostname: '127.0.0.1', port: 7820, path: '/chatgpt-mode/query',
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-          timeout: 30000,
-        }, res => {
-          let d = ''; res.on('data', c => d += c);
-          res.on('end', () => {
-            try { resolve(JSON.parse(d)); }
-            catch(e) { resolve({ ok: false, error: 'guardian returned non-JSON: ' + e.message }); }
-          });
-        });
-        req.on('error', e => resolve({ ok: false, error: 'guardian unreachable: ' + e.message }));
-        req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'guardian timeout' }); });
-        req.write(body);
-        req.end();
-      });
-    }},
-
   'nexus.context': {
     description: 'Get full system context: health + recent gaps + recent events + patches',
     input_schema: {},

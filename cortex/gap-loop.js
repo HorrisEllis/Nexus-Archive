@@ -97,16 +97,15 @@ function _raidRoute(gap) {
 
   // Get RAID's agent decision using taxonomy cluster
   let agent = 'ollama'; // LAW_I: local first
-  // §FIX 2026-06-24 — migrated from raid._decide(call, health, weights) to
-  // raid.decide(prompt, opts). Same routing outcome (decide() calls the
-  // same pure _decide() underneath, unchanged) — this caller now also
-  // gets ALK lattice + replay-engine coverage on every gap-driven decision,
-  // which it had zero of before. §5.3: every file that calls the changed
-  // module's decision path gets updated, not just the easiest one.
-  if (raid?.decide) {
+  if (raid?._decide && raid?._health && raid?._weights) {
     try {
       const desc = [gap.type, gap.body, gap.path].filter(Boolean).join(' ');
-      const decision = raid.decide(desc, { requestId: gap.uuid });
+      const decision = raid._decide(
+        { uuid: gap.uuid, intent: desc, prompt: desc,
+          context: { gapType: gap.type, loopType: cls.loop_type } },
+        raid._health,
+        raid._weights,
+      );
       agent = decision?.agent || 'ollama';
     } catch(_) {}
   }

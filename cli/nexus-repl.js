@@ -47,18 +47,6 @@ const err = s => `${C.red}✗${C.reset} ${s}`;
 const SYS_COLORS = { guardian:C.magenta, cortex:C.cyan,
                     idearium:C.blue, emerge:C.green, orchestrator:C.green };
 
-// §FIX 2026-06-24 — log() was called ~50 times throughout this file's
-// dispatch() switch (every case, plus the boot sequence at startRepl) and
-// never declared anywhere — not as a local function, not destructured from
-// console, not imported. Every one of those call sites threw ReferenceError
-// on first use. The REPL's own line handler (`rl.on('line', async line => {
-// await dispatch(...) })`) has no try/catch around that await, so the
-// ReferenceError became an unhandled promise rejection — in modern Node that
-// crashes the process outright, not a soft failure. This is the real fix,
-// not a patch at the call sites: one declaration, every existing call site
-// now resolves correctly, nothing else in this file changes.
-function log(...args) { console.log(...args); }
-
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 function req(port, method, p, body, timeout = 6000) {
   return new Promise(resolve => {
@@ -91,31 +79,21 @@ const GET  = (port, p) => req(port, 'GET', p);
 const POST = (port, p, b) => req(port, 'POST', p, b);
 
 // ── Gate wrapper — logs every step ────────────────────────────────────────────
-// §FIX 2026-06-24 — both ledger POSTs below were fire-and-forget (no await,
-// just a .catch(() => {}) to swallow errors). In the interactive REPL that's
-// harmless — the process stays alive long enough for the POST to land. In
-// single-command mode (`dispatch(cmd).then(() => process.exit(0))`, see this
-// file's entry point) it was a real race: process.exit(0) can fire before
-// the fire-and-forget POST's TCP write even leaves the process, silently
-// dropping the ledger entry for whatever command just ran — exactly the
-// kind of invisible state §2.3 exists to prevent. Fix: await the POST itself
-// (still wrapped in .catch(() => {}) so a dead orchestrator doesn't turn a
-// successful command into a thrown error) before gate() returns or rethrows.
 async function gate(name, fn) {
   const uuid = randomUUID();
   const t0 = Date.now();
   try {
     const result = await fn();
     const ms = Date.now() - t0;
-    // Post to orchestrator ledger — awaited, see §FIX above
-    await POST(PORTS.orchestrator, '/api/ledger', {
+    // Post to orchestrator ledger (fire-and-forget)
+    POST(PORTS.orchestrator, '/api/ledger', {
       system: 'repl', type: `repl.${name}`,
       payload: { uuid, ms, success: true },
     }).catch(() => {});
     return result;
   } catch (e) {
     const ms = Date.now() - t0;
-    await POST(PORTS.orchestrator, '/api/ledger', {
+    POST(PORTS.orchestrator, '/api/ledger', {
       system: 'repl', type: `repl.${name}.failed`,
       payload: { uuid, ms, success: false, error: e.message },
     }).catch(() => {});
@@ -170,7 +148,7 @@ ${$(C.bold, 'SISO BUS LOG')} ${$(C.dim, '('+entries.length+' events · '+gates.l
     console.log('');
     for (const e of entries.slice(0,30)) {
       const ts  = new Date(e.ts||0).toTimeString().slice(0,8);
-      const col = SYS_COLORS[e.system||'orchestrator'] || C.dim;
+      const col = sys_color[e.system||'orchestrator'] || C.dim;
       const clm = e.claimed ? $(C.green,'✓') : $(C.dim,'○');
       console.log(`  ${$(C.dim,ts)}  ${clm}  ${$(col,(e.system||'?').padEnd(12))}  ${$(C.reset,(e.type||'—').padEnd(40))}  ${$(C.dim,e.seq||'')}`);
     }
@@ -201,7 +179,7 @@ async function cmdWatchdog() {
             console.log(`${$(C.bold+C.cyan, '⬡  NEXUS WATCHDOG')}  ${$(C.dim, new Date().toTimeString().slice(0,8))}\n`);
             for (const [name, info] of Object.entries(d.systems)) {
               const dot = info.online ? $(C.green,'●') : $(C.red,'○');
-              const col = SYS_COLORS[name] || C.dim;
+              const col = sys_color[name] || C.dim;
               const ms  = info.ms ? $(C.dim, info.ms+'ms') : '';
               console.log(`  ${dot}  ${$(C.bold+col, name.padEnd(14))}  ${info.online?$(C.dim,'online'):$(C.red,'OFFLINE')}  ${ms}`);
             }
@@ -565,38 +543,6 @@ async function dispatch(line) {
       return;
     }
 
-    case 'copilot': case 'cp': {
-      // copilot <prompt> — talk to the co-pilot. Use --cmd "<command>" to
-      // make it a RAID-gated tool call instead of a plain chat exchange.
-      const cmdFlagIdx = args.indexOf('--cmd');
-      let prompt, command = null;
-      if (cmdFlagIdx !== -1) {
-        prompt = args.slice(0, cmdFlagIdx).join(' ').trim();
-        command = args.slice(cmdFlagIdx + 1).join(' ').trim();
-      } else {
-        prompt = args.join(' ').trim();
-      }
-      if (!prompt) { log('Usage: copilot <prompt>\n       copilot <prompt> --cmd "<command to run, RAID-gated>"'); return; }
-      try {
-        const r = await fetch(`http://127.0.0.1:${PORTS.guardian}/copilot/prompt`, {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ prompt, command: command || undefined, contextOpts: { intent: prompt } }),
-          signal: AbortSignal.timeout(20000),
-        });
-        const d = await r.json();
-        if (d.denied) {
-          log(err(`RAID denied this tool call: ${d.reason}`));
-        } else if (d.ok) {
-          if (d.toolResult) log(`✓ tool executed:\n` + JSON.stringify(d.toolResult.result || d.toolResult, null, 2));
-          if (d.context) log($(C.dim, `(context: ${d.context.sections} section(s), ~${d.context.tokensUsed} tokens)`));
-          if (!d.toolResult) log($(C.dim, 'No tool call made — chat-only response (full narration not yet built, see docs/copilot.spec).'));
-        } else {
-          log(err(d.error || 'co-pilot request failed'));
-        }
-      } catch(e) { log(err('Guardian/co-pilot offline: ' + e.message)); }
-      return;
-    }
-
     case 'forge': {
       // forge <prompt> — dispatch a forge job to guardian (uses RAID to pick provider)
       const prompt = args.join(' ').trim();
@@ -928,18 +874,7 @@ function startRepl() {
 
   rl.on('line', async line => {
     if (line.trim()) HISTORY.unshift(line.trim());
-    // §FIX 2026-06-24 (§1.2) — this await had nothing catching a rejection.
-    // That's exactly how log() being undefined turned into a process crash
-    // instead of a loud, specific, traceable error: dispatch() threw inside
-    // an async arrow handed to an EventEmitter, which Node treats as an
-    // unhandled rejection, which (Node 15+) kills the process by default.
-    // No production command should be able to take the whole REPL down.
-    try {
-      await dispatch(line.trim());
-    } catch (e) {
-      console.log(err(`repl error: ${e.message}`));
-      console.log($(C.dim, e.stack?.split('\n').slice(1,4).join('\n') || ''));
-    }
+    await dispatch(line.trim());
     rl.prompt();
   });
 

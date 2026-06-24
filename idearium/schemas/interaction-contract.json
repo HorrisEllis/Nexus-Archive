@@ -32,12 +32,7 @@
         "update":  { "method": "PATCH",  "path": "/api/specs/:uuid",            "body": ["name","phase","sections","modules","wired"] },
         "check":   { "method": "POST",   "path": "/api/specs/:uuid/check" },
         "build":   { "method": "POST",   "path": "/api/specs/:uuid/build" },
-        "export":  { "method": "GET",    "path": "/api/specs/:uuid/export" },
-        "buildGroupCreate": { "method": "POST", "path": "/api/specs/:uuid/buildgroup" },
-        "buildGroupShow":   { "method": "GET",  "path": "/api/specs/:uuid/buildgroup/:bgUuid" },
-        "buildGroupChunk":  { "method": "POST", "path": "/api/specs/:uuid/buildgroup/:bgUuid/chunks/:chunkUuid", "body": ["content"] },
-        "buildGroupCompress": { "method": "POST", "path": "/api/specs/:uuid/buildgroup/:bgUuid/compress" },
-        "buildGroupExpand":   { "method": "POST", "path": "/api/specs/:uuid/buildgroup/:bgUuid/expand" }
+        "export":  { "method": "GET",    "path": "/api/specs/:uuid/export" }
       }
     },
     "gap": {
@@ -48,18 +43,6 @@
         "open":    { "method": "POST",   "path": "/api/gaps",                   "body": ["type","description","severity","ideaUuid"] },
         "resolve": { "method": "POST",   "path": "/api/gaps/:uuid/resolve",     "body": ["resolution"] },
         "ignore":  { "method": "POST",   "path": "/api/gaps/:uuid/ignore",      "body": ["reason"] }
-      }
-    },
-    "repo": {
-      "table": "repos",
-      "endpoints": {
-        "list":    { "method": "GET",    "path": "/api/repos",                  "params": ["phase"] },
-        "show":    { "method": "GET",    "path": "/api/repos/:uuid" },
-        "ingest":  { "method": "POST",   "path": "/api/repos",                  "body": ["name","files","source","ideaUuid"] },
-        "ingestSpecContainer": { "method": "POST", "path": "/api/repos/spec-container", "body": ["content"] },
-        "fork":    { "method": "POST",   "path": "/api/repos/:uuid/fork",       "body": ["name"] },
-        "archive": { "method": "DELETE", "path": "/api/repos/:uuid" },
-        "lineage": { "method": "GET",    "path": "/api/repos/:uuid/lineage" }
       }
     },
     "snapshot": {

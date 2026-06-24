@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cli
-    version:     1.4.0
+    version:     1.3.0
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-cli-v1-0000-2026-0615-jamesbrooks-001
     purpose: >
@@ -37,18 +37,6 @@ spec:
         Each system: spawn → wait for health → verify contract.
         On failure: run diagnose → log to event ledger → continue.
         Order: bridge → cortex → guardian → idearium → architect → emerge → diagnostic.
-
-    - id: copilot-command
-      path: "cli/nexus-repl.js — case 'copilot'/'cp'"
-      status: built
-      description: >
-        Real entry point to guardian/agents/co-pilot, not previously
-        wired despite the module existing — caught and fixed same
-        session. `copilot <prompt>` for chat, `copilot <prompt> --cmd
-        "<command>"` for a RAID-gated tool call. Registered as
-        repl.copilot in cli/nexus-repl-descriptors.js, real proxy route
-        added at orchestrator.js (POST /api/guardian/copilot/prompt —
-        didn't exist before, verified missing before adding it).
 
     - id: nexus-cli
       path: "cli/nexus-cli.js"

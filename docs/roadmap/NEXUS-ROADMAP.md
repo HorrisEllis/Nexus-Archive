@@ -1,27 +1,8 @@
 # NEXUS ROADMAP
 ## UUID: nexus-roadmap-v1-0000-2026-0611-jamesbrooks-001
 ## Author: James Brooks (Erosmancer)
-## Status: SUPERSEDED — 2026-06-21, see below. Kept per this doc's own
-## append-only principle, not deleted.
+## Status: living — append-only, never frozen
 ## CausedBy: session 2026-06-11, creative UI conversation
-
----
-
-## ⚠ SUPERSEDED — read this first
-
-As of 2026-06-21, **`docs/nexus-roadmap-combined.html` is the canonical
-phase map.** This file predates it and now actively contradicts decisions
-locked since — most importantly §1.2 below ("Remove LAW_I — no single
-primary provider") directly conflicts with `docs/raid.spec`'s
-constraint-then-fitness model, which treats LAW_I (Ollama-first) as a
-real, current, tested invariant, not a thing to remove.
-
-This file is kept as historical record of the 2026-06-11 planning
-session, per its own stated principle ("append-only, nothing deleted,
-only deprecated") — not as something to build against. If a phase here
-isn't in the HTML roadmap and still seems worth doing, it needs to be
-re-evaluated against what's actually been built since, not pulled in
-as-is.
 
 ---
 
@@ -207,52 +188,6 @@ Everything below this line exists and runs.
 - ALK (Associative Lattice Kernel) full integration
 - Bridge OS adversarial test suite expansion
 - Mobile app (Guardian as a native app, not just mobile web)
-
----
-
-## NEXT STEPS — 2026-06-20 (first live Windows run, real SEAM intake verified)
-**Source: real boot log + live screenshots — system actually ran the full SEAM intake
-sequence in a real ChatGPT tab end to end (NEXUS CONTEXT injection → 5 PASS tests →
-SEAM VERDICT: PASS), and the dedicated ChatGPT console showed real session/queue state
-against it. This phase captures what's missing now that the floor is confirmed solid.**
-
-### N.1 Pattern intelligence — currently cortex-only, needs to be a shared spine
-- [ ] Cortex's pattern-crystallisation output ("ACTIVE PATTERNS" — co-occurrence,
-      confidence, observation count) synced into a database idearium and RAID both
-      read from, not just injected one-way into the prompt header
-- [ ] idearium reads pattern data to inform idea→spec promotion
-- [ ] RAID reads pattern data as a scoring input (a pattern that "reliably appears
-      before failures" should lower that path's score before the failure happens)
-- [ ] Single source of truth — cortex still owns crystallisation, this is a real
-      synced read surface, not a second copy
-
-### N.2 Auto-open tab when none is detected
-- [ ] Guardian: if a provider has zero connected tabs past a grace period (boot,
-      or any time a job needs that provider), open one automatically instead of
-      silently queueing and waiting
-- [ ] OS-level tab open (not a Node `child_process` hack) — needs a real, testable
-      mechanism per platform, not assumed to "just work"
-- [ ] Still respects tab-claim — opening a tab doesn't auto-claim it
-
-### N.3 Memory: compartment-based decay instead of plain working memory
-- [ ] Replace/augment cortex's working-memory table with a compartment model:
-      24h decay window, deduplicated on write, only writes that are flagged
-      important/meaningful/novel survive past decay
-- [ ] "Novel" needs a real definition (diff against existing compartments, not a
-      vibe) before this is buildable — flagged here, not assumed
-- [ ] Likely connects to the existing crystal-lattice decay (6h interval) and
-      liminal-space interstitial compartments already running — audit before
-      building a third, parallel decay mechanism
-
-### N.4 ChatGPT console — confirmed working, needs to expand
-- [ ] Repo / spec library import — a real file/repo picker, not paste-only
-- [ ] Surfacing the console from inside the actual chatgpt.com tab (the userscript
-      widget currently has no link to it — you have to already know the NEXUS
-      home-shell URL)
-- [ ] Deeper system hook-in — more of what guardian/cortex actually know, surfaced
-      here instead of paste-and-submit only
-- [ ] Floating CLI/menu widget (the in-page Tampermonkey panel) has an expand bug —
-      reported, not yet root-caused
 
 ---
 

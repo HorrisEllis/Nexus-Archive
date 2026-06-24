@@ -287,21 +287,6 @@ body{display:flex;flex-direction:column;position:relative}
 .section-chip.done{border-color:rgba(52,211,153,.3);color:var(--mint);background:rgba(52,211,153,.06)}
 .section-chip.missing{border-color:rgba(248,113,113,.2);color:var(--coral)}
 .spec-builder{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.build-group-panel{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-.bg-empty{font-size:12px;color:var(--text2);padding:20px;text-align:center}
-.bg-chunk-card{background:var(--bg2);border:1px solid var(--b0);border-radius:6px;padding:10px 12px}
-.bg-chunk-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.bg-chunk-name{font-family:var(--mono);font-size:12px;font-weight:600;flex:1}
-.bg-status{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
-.bg-status.RUNNING{background:rgba(56,189,248,.12);color:var(--blue)}
-.bg-status.PASS{background:rgba(52,211,153,.12);color:var(--mint)}
-.bg-status.FAIL,.bg-status.REWOUND,.bg-status.DELETED{background:rgba(248,113,113,.12);color:var(--coral)}
-.bg-intent{font-size:11px;color:var(--text2);margin-bottom:6px}
-.bg-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
-.bg-tag{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:8px;background:var(--b0);color:var(--text2)}
-.bg-failure{font-size:11px;color:var(--coral);margin-top:4px}
-.bg-content-input{width:100%;min-height:54px;background:var(--bg1);border:1px solid var(--b0);border-radius:4px;color:var(--text1);font-family:var(--mono);font-size:11px;padding:6px;margin-top:6px;resize:vertical}
-.bg-toolbar{display:flex;gap:8px;margin-bottom:6px}
 .builder-section-tabs{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--b0);flex-wrap:wrap;flex-shrink:0}
 .sec-tab{font-family:var(--mono);font-size:9px;padding:4px 8px;border-radius:3px;border:1px solid var(--b1);background:none;color:var(--text3);cursor:pointer}
 .sec-tab.active{color:var(--sky);border-color:var(--b2);background:rgba(56,189,248,.06)}
@@ -523,21 +508,15 @@ body{display:flex;flex-direction:column;position:relative}
           <div class="spec-toolbar">
             <input class="search-input" id="spec-search" placeholder="search specs..." oninput="renderSpecList()">
             <button class="mode-btn" onclick="newSpecPrompt()">+ new spec</button>
-            <button class="tb-btn" onclick="document.getElementById('spec-drop-input').click()">drop .spec…</button>
-            <input type="file" id="spec-drop-input" accept=".spec,.spec.md" style="display:none" onchange="dropSpecContainer(this.files)">
           </div>
-          <div class="spec-list" id="spec-list" ondragover="event.preventDefault()" ondrop="handleSpecDrop(event)"></div>
+          <div class="spec-list" id="spec-list"></div>
         </div>
         <div class="right" style="grid-column: 1 / -1; display:none"></div>
         <div class="right">
-          <div class="ph">
-            <span class="ph-title" id="spec-detail-title">Select a spec</span>
-            <button class="tb-btn" id="build-group-toggle" style="margin-left:auto;display:none" onclick="toggleBuildGroupPanel()">build groups</button>
-          </div>
+          <div class="ph"><span class="ph-title" id="spec-detail-title">Select a spec</span></div>
           <div class="spec-builder" id="spec-builder">
             <div class="detail-empty">← select or create a spec to open the builder</div>
           </div>
-          <div class="build-group-panel" id="build-group-panel" style="display:none"></div>
         </div>
       </div>
     </section>
@@ -2007,140 +1986,6 @@ function selectSpec(uuid) {
   document.getElementById('spec-detail-title').textContent = spec.name;
   BUILDER_ACTIVE_SECTION = (spec.sections||[])[0]?.id || SECTION_IDS[0];
   renderSpecBuilder(spec);
-  document.getElementById('build-group-toggle').style.display = '';
-  document.getElementById('build-group-panel').style.display = 'none';
-  document.getElementById('spec-builder').style.display = '';
-  CURRENT_BUILD_GROUP = null;
-}
-
-let CURRENT_BUILD_GROUP = null;
-
-// §3.1 — backend first, UI last. The verification, decoding, and ingestion
-// all already happened in lib/spec-container.js + idearium/repo/index.js
-// before this function existed. This is deliberately thin: read the file,
-// POST its raw text to the documented contract endpoint
-// (POST /api/repos/spec-container, body: {content} — see
-// idearium/interaction-contract.json's repo.ingestSpecContainer), render
-// the result. No format-sniffing, no hash checking, nothing reimplemented
-// here — if the backend changes how it verifies a container, this function
-// doesn't need to change at all. That's what "interaction contract, not
-// inline" is for: the UI is disposable, the contract is what's durable.
-function handleSpecDrop(event) {
-  event.preventDefault();
-  const file = event.dataTransfer?.files?.[0];
-  if (file) dropSpecContainer([file]);
-}
-
-async function dropSpecContainer(fileList) {
-  const file = fileList?.[0];
-  if (!file) return;
-  try {
-    const content = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = reject;
-      r.readAsText(file);
-    });
-    const res = await api('/api/repos/spec-container', { method: 'POST', body: JSON.stringify({ content }) });
-    toast(`ingested "${res.verified.name}@${res.verified.version}" — ${res.verified.fileCount} files, hash ${res.verified.hash.slice(0,12)}`, 'ok');
-    if (res.specUuid) {
-      await loadSpecs();
-      selectSpec(res.specUuid);
-    } else {
-      await loadSpecs();
-    }
-  } catch (e) {
-    // The backend's error already says exactly what failed (bad hash,
-    // truncated archive, not a container at all) — §1.2, surface it as-is,
-    // don't paraphrase or generalize it into "something went wrong."
-    toast(`spec import failed: ${e.message}`, 'err');
-  }
-}
-
-function toggleBuildGroupPanel() {
-  const panel = document.getElementById('build-group-panel');
-  const builder = document.getElementById('spec-builder');
-  const showing = panel.style.display !== 'none';
-  panel.style.display = showing ? 'none' : '';
-  builder.style.display = showing ? '' : 'none';
-  if (!showing) loadOrCreateBuildGroup();
-}
-
-// §FIX 2026-06-24 — wizard isn't built (no Qwen, no Mistral-driven question
-// flow wired in here yet — see CHANGELOG.md). Content per chunk is typed
-// directly into the textarea below for this pass. That's honest about
-// what exists, not a placeholder pretending the wizard already drives this.
-async function loadOrCreateBuildGroup() {
-  const spec = SPECS.find(s=>s.uuid===SELECTED_SPEC);
-  if (!spec) return;
-  const panel = document.getElementById('build-group-panel');
-  panel.innerHTML = '<div class="bg-empty">loading…</div>';
-  try {
-    if (!CURRENT_BUILD_GROUP) {
-      const res = await api(`/api/specs/${spec.uuid}/buildgroup`, { method: 'POST' });
-      CURRENT_BUILD_GROUP = res.buildGroup.buildGroupUuid;
-    }
-    const res = await api(`/api/specs/${spec.uuid}/buildgroup/${CURRENT_BUILD_GROUP}`);
-    renderBuildGroupPanel(spec, res.buildGroup);
-  } catch (e) {
-    panel.innerHTML = `<div class="bg-empty">could not load build group: ${e.message}</div>`;
-  }
-}
-
-function renderBuildGroupPanel(spec, group) {
-  const panel = document.getElementById('build-group-panel');
-  panel.innerHTML = `
-    <div class="bg-toolbar">
-      <button class="tb-btn" onclick="loadOrCreateBuildGroup()">refresh</button>
-      <button class="tb-btn" onclick="compressGroupUI()">compress to archive</button>
-      <span class="ph-badge" style="margin-left:auto;font-family:var(--mono)">${group.chunks.filter(c=>c.status==='PASS').length}/${group.chunks.length} chunks passed</span>
-    </div>
-    ${group.chunks.map(c => `
-      <div class="bg-chunk-card">
-        <div class="bg-chunk-top">
-          <span class="bg-chunk-name">${c.noun.replace(/_/g,' ')}</span>
-          <span class="bg-status ${c.status}">${c.status}</span>
-        </div>
-        <div class="bg-intent">${c.intent}</div>
-        <div class="bg-tags">
-          ${c.hook_ids.map(h=>`<span class="bg-tag">hook: ${h}</span>`).join('')}
-          ${c.wire_ids.map(w=>`<span class="bg-tag">wire: ${w}</span>`).join('')}
-          ${c.tags.map(t=>`<span class="bg-tag">${t}</span>`).join('')}
-        </div>
-        ${c.failureReason ? `<div class="bg-failure">failed: ${c.failureReason}</div>` : ''}
-        ${c.filePath ? `<div class="bg-intent" style="font-family:var(--mono)">${c.filePath}</div>` : ''}
-        ${c.status === 'RUNNING' ? `
-          <textarea class="bg-content-input" id="bg-input-${c.chunkUuid}" placeholder="write this section's content — no wizard wired in yet, this is typed directly"></textarea>
-          <button class="tb-btn" style="margin-top:6px" onclick="buildChunkUI('${spec.uuid}','${c.chunkUuid}')">build this chunk</button>
-        ` : ''}
-      </div>
-    `).join('')}
-  `;
-}
-
-async function buildChunkUI(specUuid, chunkUuid) {
-  const input = document.getElementById(`bg-input-${chunkUuid}`);
-  const content = input ? input.value : '';
-  if (!content.trim()) { toast('write something first', 'err'); return; }
-  try {
-    await api(`/api/specs/${specUuid}/buildgroup/${CURRENT_BUILD_GROUP}/chunks/${chunkUuid}`, {
-      method: 'POST', body: JSON.stringify({ content }),
-    });
-    await loadOrCreateBuildGroup();
-  } catch (e) {
-    toast(`chunk build failed: ${e.message}`, 'err');
-  }
-}
-
-async function compressGroupUI() {
-  const spec = SPECS.find(s=>s.uuid===SELECTED_SPEC);
-  if (!spec || !CURRENT_BUILD_GROUP) return;
-  try {
-    const res = await api(`/api/specs/${spec.uuid}/buildgroup/${CURRENT_BUILD_GROUP}/compress`, { method: 'POST' });
-    toast(`compressed to ${res.zipPath}`, 'ok');
-  } catch (e) {
-    toast(`compress failed: ${e.message}`, 'err');
-  }
 }
 
 function renderSpecBuilder(spec) {

@@ -23,7 +23,7 @@
 const { jaaDB, uid } = require('../../memory/jaa-db');
 
 const MODULE_ID = 'raid-snr-filter';
-const VERSION   = '1.1.0';
+const VERSION   = '1.0.0';
 
 // ── Check invariants ──────────────────────────────────────────────────────────
 // Returns a known fix if the fault class is covered by a verified patch

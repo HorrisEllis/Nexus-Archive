@@ -493,8 +493,13 @@ function startWatchdog() {
 // ── UI hotswap watcher ────────────────────────────────────────────────────────
 const UI_SYSTEMS = ['cortex','guardian','idearium','emerge','orchestrator'];
 // System-local ui/ dirs (guardian/ui/, cortex/ui/, etc.) — also watched
-// These are the canonical sources. Edit files here → hotswap fires.
-// Run `npm run sync-ui` to mirror them to root ui/<system>/ for orchestrator serving.
+// for hotswap. As of §CONSOLIDATE-2026-06-24 these are the ONLY copies —
+// cortex, guardian, and idearium no longer have a separate root ui/<system>/
+// mirror (archived to .archive-removed-ui-duplicates/, not deleted). The
+// old comment here described an `npm run sync-ui` script meant to keep two
+// copies in sync; that script never existed (checked package.json — it
+// wasn't there), so the two copies just drifted instead. Removing the
+// duplication was the actual fix, not building the missing script.
 const SYSTEM_LOCAL_UI_DIRS = [
   // guardian UI absorbed into main nexus UI — no separate guardian/ui
   { system:'cortex',       dir: path.join(ROOT,'cortex','ui') },
@@ -623,6 +628,25 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── System UIs ───────────────────────────────────────────────────────────
+  // §CONSOLIDATE-2026-06-24: cortex, guardian, and idearium each had two
+  // copies of their UI — a system-local one (cortex/ui/, guardian/ui/,
+  // idearium/ui/) and a root mirror (ui/cortex/, ui/guardian/, ui/idearium/)
+  // that this route used to serve. The `npm run sync-ui` script the old
+  // comments here described as keeping them in sync never existed — checked
+  // package.json directly, no such script, never had one. In practice this
+  // meant the two copies drifted independently: guardian's were 3,903 lines
+  // apart, with the root mirror missing the entire cockpit/Forge IDE surface
+  // (243KB of real UI vs a 17KB placeholder) — every request through this
+  // route for /ui/guardian was serving the placeholder, silently, the whole
+  // time. Fixed by removing the duplication instead of adding the sync tool
+  // that was supposed to exist: these three systems now serve directly from
+  // their real, system-local directory. One file each, not two.
+  const CONSOLIDATED_UI_SOURCES = {
+    cortex:   path.join(ROOT, 'cortex',   'ui'),
+    guardian: path.join(ROOT, 'guardian', 'ui'),
+    idearium: path.join(ROOT, 'idearium', 'ui'),
+  };
+
   // §ROUTER-FIX-2026-06-20: fs.existsSync() is true for directories as well
   // as files — a request for a directory path (e.g. /ui/agents/chatgpt, a
   // real dir with no filename) was passing that check, then serveFile()
@@ -633,15 +657,17 @@ const server = http.createServer(async (req, res) => {
   // directory and looked for 'index.html' underneath it. Check what's
   // actually at each candidate path by type, not by assuming the shape.
   if (M==='GET' && top==='ui' && sub) {
-    const subPath = rest ? path.join(sub, rest) : sub;
-    const direct = _safePath(UI_ROOT, subPath);
+    const subPath  = rest ? path.join(sub, rest) : sub;
+    const uiBase   = CONSOLIDATED_UI_SOURCES[sub] || UI_ROOT;
+    const baseRest = CONSOLIDATED_UI_SOURCES[sub] ? (rest || '') : subPath;
+    const direct = _safePath(uiBase, baseRest);
     if (!direct) return json(res, 403, { ok:false, error:'forbidden path' });
 
     if (fs.existsSync(direct)) {
       const st = fs.statSync(direct);
       if (st.isFile()) return serveFile(res, direct);
       if (st.isDirectory()) {
-        const idx = _safePath(UI_ROOT, path.join(subPath, 'index.html'));
+        const idx = _safePath(uiBase, path.join(baseRest, 'index.html'));
         if (idx && fs.existsSync(idx)) return serveFile(res, idx);
       }
     }
@@ -1548,14 +1574,6 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     const sub2   = seg[3] || '';
 
     if (M==='GET'  && !action)                      return json(res,200,await GET('guardian','/health'));
-    // §FIX 2026-06-21: SEAM watchdog escalations write to GUARDIAN's own
-    // local gaps table (guardian/lib/seam-queue.js's _escalate()), not
-    // cortex's. The orchestrator's /api/cortex/gaps route only ever
-    // queried cortex — every escalated SEAM stall was invisible through
-    // it. Confirmed directly: guardian exposes its own /gaps and
-    // /gaps/summary on :7820, never proxied until now.
-    if (M==='GET'  && action==='local-gaps' && sub2==='summary') return json(res,200,await GET('guardian','/gaps/summary'));
-    if (M==='GET'  && action==='local-gaps')        return json(res,200,await GET('guardian','/gaps'));
     if (M==='GET'  && action==='contract')          return json(res,200,await GET('guardian','/contract'));
     if (M==='GET'  && action==='health')             return json(res,200,await GET('guardian','/health'));
     if (M==='GET'  && action==='bus')                return json(res,200,await GET('guardian',`/bus?n=${QS.get('n')||100}`));
@@ -1564,7 +1582,6 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='jobs')               return json(res,200,await GET('guardian',`/jobs?status=${QS.get('status')||''}&limit=${QS.get('limit')||20}`));
     if (M==='GET'  && action==='log')                return json(res,200,await GET('guardian',`/log?limit=${QS.get('limit')||20}`));
     if (M==='POST' && action==='dispatch')           return json(res,202,await POST('guardian','/command',await readBody(req)));
-    if (M==='POST' && action==='copilot' && sub2==='prompt') return json(res,200,await POST('guardian','/copilot/prompt',await readBody(req)));
     if (M==='GET'  && action==='status' && uuid)     return json(res,200,await GET('guardian',`/status/${uuid}`));
     if (M==='GET'  && action==='response' && uuid)   return json(res,200,await GET('guardian',`/response/${uuid}`));
     if (M==='GET'  && action==='artifacts' && !uuid) return json(res,200,await GET('guardian',`/artifacts?lang=${QS.get('lang')||''}&q=${QS.get('q')||''}`));
@@ -2330,21 +2347,6 @@ try {
     }
   } catch(e) {
     console.warn('  [spec-drift] check failed (non-fatal):', e.message);
-  }
-
-  // Living changelog — driven by real .spec version bumps (§5.4), not
-  // hand-written prose per change. Idempotent: only writes when something
-  // actually changed since last boot's snapshot.
-  try {
-    const changelog = require('./lib/changelog');
-    const result = changelog.update();
-    if (result.written) {
-      console.log('  [changelog] ✓  ' + result.entries + ' new entr' + (result.entries===1?'y':'ies') + ' written to CHANGELOG.md');
-    } else {
-      console.log('  [changelog] ✓  no spec changes since last boot');
-    }
-  } catch(e) {
-    console.warn('  [changelog] update failed (non-fatal):', e.message);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
