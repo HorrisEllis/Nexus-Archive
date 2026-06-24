@@ -504,10 +504,6 @@ const SYSTEM_LOCAL_UI_DIRS = [
   { system:'orchestrator', dir: path.join(ROOT,'ui','orchestrator') },
   { system:'explorer',     dir: path.join(ROOT,'ui') },  // contract-explorer + contract-renderer
   { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostic') },  // §HOTSWAP-03
-  // §HOTSWAP-04: agent consoles — ui/agents/chatgpt, ui/agents/mistral, etc.
-  // Were never in this list so edits never triggered hotswap events.
-  // recursive:true in fs.watch() covers all subdirs so new agents need no change here.
-  { system:'agents',       dir: path.join(ROOT,'ui','agents') },
 ];
 
 // ── UI Hotswap Watcher ───────────────────────────────────────────────────────
@@ -1568,7 +1564,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='jobs')               return json(res,200,await GET('guardian',`/jobs?status=${QS.get('status')||''}&limit=${QS.get('limit')||20}`));
     if (M==='GET'  && action==='log')                return json(res,200,await GET('guardian',`/log?limit=${QS.get('limit')||20}`));
     if (M==='POST' && action==='dispatch')           return json(res,202,await POST('guardian','/command',await readBody(req)));
-    if (M==='POST' && action==='copilot' && sub2==='prompt') return json(res,200,await POST('guardian','/copilot/prompt',await readBody(req)));
+    if (M==='POST' && action==='copilot' && sub2==='prompt') return json(res,200,await POST('guardian','/copilot/prompt',await readBody(req), 120000)); // 120s — Mistral 7b can take 45s+
     if (M==='GET'  && action==='status' && uuid)     return json(res,200,await GET('guardian',`/status/${uuid}`));
     if (M==='GET'  && action==='response' && uuid)   return json(res,200,await GET('guardian',`/response/${uuid}`));
     if (M==='GET'  && action==='artifacts' && !uuid) return json(res,200,await GET('guardian',`/artifacts?lang=${QS.get('lang')||''}&q=${QS.get('q')||''}`));

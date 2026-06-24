@@ -208,11 +208,12 @@ async function _generate(system, prompt, preferSmall = false) {
     try {
       const text = await new Promise((resolve, reject) => {
         let buf = '';
+        const _t = setTimeout(() => reject(new Error(`${model} timed out`)), 90000);
         runtime.streamGenerate(
           { model, prompt, system },
           (tok) => { buf += tok; },
-          ()    => resolve(buf.trim()),
-          (err) => reject(err instanceof Error ? err : new Error(String(err))),
+          ()    => { clearTimeout(_t); resolve(buf.trim()); },
+          (err) => { clearTimeout(_t); reject(err instanceof Error ? err : new Error(String(err))); },
         );
       });
       if (text) return { text, model };
