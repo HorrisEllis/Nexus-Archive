@@ -829,8 +829,8 @@ function injectStyles() {
   s.textContent = `
     @keyframes gfadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     @keyframes gpulse{0%,100%{opacity:1}50%{opacity:.4}}
-    #__g10root__{position:fixed;bottom:16px;right:16px;z-index:2147483647;font-family:'SF Mono','Fira Code',monospace;font-size:11px;user-select:none}
-    #__g10pill__{display:flex;align-items:center;gap:6px;background:rgba(8,8,14,.95);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 12px 5px 8px;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:opacity .2s;margin-left:auto}
+    #__g10root__{position:fixed;bottom:16px;right:16px;z-index:2147483647;font-family:'SF Mono','Fira Code',monospace;font-size:11px;user-select:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+    #__g10pill__{display:flex;align-items:center;gap:6px;background:rgba(8,8,14,.95);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 12px 5px 8px;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:opacity .2s}
     #__g10pill__:hover{opacity:.85}
     #__g10panel__{width:520px;background:rgba(6,6,12,.98);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.07);border-radius:14px;box-shadow:0 12px 60px rgba(0,0,0,.85);overflow:hidden;margin-bottom:8px;display:none;flex-direction:column;max-height:580px;animation:gfadein .14s ease}
     #__g10hdr__{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
@@ -928,7 +928,7 @@ function buildUI() {
   const heart = document.createElement('span'); heart.id='__g10heart__';
   heart.textContent='♥';
   heart.style.cssText='font-size:10px;color:rgba(239,68,68,.3);transition:none;flex-shrink:0;margin-left:2px';
-  const claim = document.createElement('span'); claim.id='__g10claim__'; claim.textContent='ACTIVE'; claim.classList.add('active');
+  const claim = document.createElement('span'); claim.id='__g10claim__'; claim.textContent=''; // will be set by setConnState
   const badge = document.createElement('span'); badge.id='__g10badge__';
   pill.append(dot, lbl, prov, heart, claim, badge);
 
@@ -1025,6 +1025,11 @@ function _setBadge(n) {
   if (b) { b.textContent = n > 99 ? '99+' : n; b.style.display = n > 0 ? 'inline' : 'none'; }
 }
 function setConnState(state) {
+  const claim = document.getElementById('__g10claim__');
+  if (claim) {
+    claim.textContent = state === 'ready' ? 'CONNECTED' : state === 'connecting' ? 'CONNECTING' : 'DISCONNECTED';
+    claim.className = state === 'ready' ? 'active' : '';
+  }
   const COLORS = { connecting:'#f59e0b', handshaking:'#f59e0b', ready:'#22c55e', disconnected:'#ef4444' };
   const LABELS = { connecting:'CONNECTING', handshaking:'HANDSHAKING', ready:'READY', disconnected:'DISCONNECTED' };
   const col = COLORS[state] || '#ef4444';

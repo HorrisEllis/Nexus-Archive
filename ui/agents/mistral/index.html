@@ -150,7 +150,7 @@ input.nx-in:focus{border-color:var(--ac-glow)}
   </div>
 </div>
 <script>
-const GD='http://127.0.0.1:7820',ORCH='http://127.0.0.1:9000',CX='http://127.0.0.1:3748',OL='http://127.0.0.1:11434';
+const GD='http://localhost:7820',ORCH='http://localhost:9000',CX='http://localhost:3748',OL='http://localhost:11434';
 let selModel='mistral:7b-instruct-q4_K_M',_abort=null,_streaming=false;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(5000),...opts});return r.ok?r.json():null;}catch{return null;}}

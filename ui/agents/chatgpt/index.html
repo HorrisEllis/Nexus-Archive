@@ -2,243 +2,76 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ChatGPT Console — NEXUS</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
 :root{
-  --void:#06050a; --surface:#0e0c15; --panel:#13111e; --panel2:#181527;
-  --border:#211e32; --border2:#2e2a45;
-  --text:#e0e0f0; --text2:#8a86a8; --text3:#4a4768;
-  --green:#00ff88; --green-dim:rgba(0,255,136,.12);
-  --amber:#ffaa00; --amber-dim:rgba(255,170,0,.12);
-  --red:#ff3355; --red-dim:rgba(255,51,85,.12);
-  --mono:'Space Mono',monospace; --ui:'Space Grotesk',sans-serif;
+  --void:#06050a;--surface:#0e0c15;--panel2:#060e0a;
+  --border:#101e14;--border2:#1a2e20;
+  --text:#d5f0e0;--text2:#70a888;--text3:#305040;
+  --ac:#00ff88;--ac-dim:rgba(0,255,136,.08);--ac-glow:rgba(0,255,136,.4);
+  --green:#00ff88;--red:#ff3355;--red-dim:rgba(255,51,85,.1);
+  --amber:#ffaa00;--amber-dim:rgba(255,170,0,.1);
+  --mono:'Space Mono',monospace;--ui:'Space Grotesk',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--void);color:var(--text);font-family:var(--ui);overflow:hidden;font-size:13px}
-::-webkit-scrollbar{width:8px;height:8px}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
-::-webkit-scrollbar-track{background:transparent}
-:focus-visible{outline:2px solid var(--green);outline-offset:1px}
-
-#shell{display:grid;grid-template-rows:52px 1fr;height:100vh}
-
-/* ── Top bar ── */
-#topbar{
-  display:flex;align-items:center;gap:14px;padding:0 18px;
-  background:linear-gradient(180deg,var(--surface),var(--void));
-  border-bottom:1px solid var(--border);
-}
-#topbar .glyph{font-size:20px;color:var(--green);text-shadow:0 0 12px rgba(0,255,136,.5)}
-#topbar .title{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.14em;color:var(--text)}
-#topbar .title b{color:var(--green)}
-#topbar .chaturl{
-  font-family:var(--mono);font-size:11px;color:var(--text2);
-  margin-left:8px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;
-  display:flex;align-items:center;gap:6px;
-}
-#topbar .chaturl .seg{color:var(--text3)}
-#topbar .spacer{flex:1}
-#claim-badge{
-  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
-  padding:5px 12px;border-radius:20px;border:1px solid var(--border2);color:var(--text3);
-  display:flex;align-items:center;gap:6px;transition:all .3s;
-}
-#claim-badge .pulse{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0}
-#claim-badge.live{border-color:rgba(0,255,136,.35);color:var(--green);background:var(--green-dim)}
-#claim-badge.live .pulse{background:var(--green);animation:pulse-live 2s ease-in-out infinite}
-#claim-badge.queued{border-color:rgba(255,170,0,.35);color:var(--amber);background:var(--amber-dim)}
-#claim-badge.queued .pulse{background:var(--amber);animation:pulse-live 2s ease-in-out infinite}
-@keyframes pulse-live{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.5)}50%{box-shadow:0 0 0 4px rgba(0,255,136,0)}}
-
-/* ── Three-zone grid ── */
-#main{display:grid;grid-template-columns:240px 1fr 320px;height:100%;overflow:hidden}
-.zone{overflow-y:auto;padding:18px}
-.zone-label{
-  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;
-  color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:8px;
-}
-.zone-label::after{content:'';flex:1;height:1px;background:var(--border)}
-
-/* ── Left: session ── */
-#zone-session{border-right:1px solid var(--border);background:rgba(255,255,255,.01)}
-.stat-row{margin-bottom:16px}
-.stat-key{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
-.stat-val{font-family:var(--mono);font-size:12px;color:var(--text);word-break:break-all}
-.stat-val.dim{color:var(--text2)}
-
-.usage-gauge{display:flex;gap:3px;margin:6px 0 4px}
-.usage-seg{flex:1;height:5px;border-radius:2px;background:var(--border2)}
-.usage-seg.on{background:var(--green)}
-.usage-seg.warn{background:var(--amber)}
-.usage-seg.limit{background:var(--red)}
-.usage-msg{font-size:10.5px;color:var(--text2);line-height:1.4;margin-top:4px}
-
-.hb-row{display:flex;align-items:center;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
-.hb-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
-.hb-dot.alive{background:var(--green);box-shadow:0 0 6px rgba(0,255,136,.6);animation:hb-beat 1.4s ease-in-out infinite}
-@keyframes hb-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
-.hb-txt{font-family:var(--mono);font-size:10.5px;color:var(--text2)}
-
-/* ── Center: dispatch ── */
-#zone-dispatch{display:flex;flex-direction:column;gap:16px}
-.field-label{font-size:11px;color:var(--text2);margin-bottom:6px;display:block}
-textarea#spec-input{
-  width:100%;min-height:140px;resize:vertical;
-  background:var(--surface);border:1px solid var(--border);border-radius:6px;
-  color:var(--text);padding:12px;font-family:var(--mono);font-size:12px;line-height:1.6;
-  outline:none;transition:border-color .2s;
-}
-textarea#spec-input:focus{border-color:rgba(0,255,136,.4)}
-textarea#spec-input::placeholder{color:var(--text3)}
-input#title-input{
-  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
-  color:var(--text);padding:9px 12px;font-family:var(--ui);font-size:12px;outline:none;
-}
-input#title-input:focus{border-color:rgba(0,255,136,.4)}
-
-.chip-row{display:flex;flex-wrap:wrap;gap:6px}
-.chip{
-  font-family:var(--mono);font-size:10.5px;padding:5px 11px;border-radius:20px;
-  border:1px solid var(--border2);color:var(--text2);cursor:pointer;
-  display:flex;align-items:center;gap:6px;transition:all .15s;user-select:none;
-}
-.chip:hover{border-color:var(--text3);color:var(--text)}
-.chip.active{border-color:var(--green);color:var(--green);background:var(--green-dim)}
-.chip-dot{width:4px;height:4px;border-radius:50%;background:currentColor}
-
-.toggle-row{display:flex;flex-wrap:wrap;gap:10px}
-.toggle{
-  display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;
-  font-size:11.5px;color:var(--text2);padding:7px 12px;border:1px solid var(--border);
-  border-radius:6px;transition:all .15s;
-}
-.toggle:hover{border-color:var(--border2)}
-.toggle.on{border-color:rgba(0,255,136,.35);color:var(--green);background:var(--green-dim)}
-.toggle .sw{width:26px;height:14px;border-radius:8px;background:var(--border2);position:relative;flex-shrink:0;transition:background .2s}
-.toggle.on .sw{background:var(--green)}
-.toggle .sw::after{content:'';position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--void);transition:transform .2s}
-.toggle.on .sw::after{transform:translateX(12px)}
-
-#chunk-preview{
-  font-family:var(--mono);font-size:11px;color:var(--text2);
-  padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;
-  display:flex;justify-content:space-between;align-items:center;
-}
-#chunk-preview b{color:var(--green);font-weight:700}
-
-#submit-btn{
-  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;
-  background:var(--green-dim);border:1px solid rgba(0,255,136,.4);color:var(--green);
-  padding:13px;border-radius:6px;cursor:pointer;transition:all .15s;text-align:center;
-}
-#submit-btn:hover{background:rgba(0,255,136,.2)}
-#submit-btn:disabled{opacity:.4;cursor:default}
-#submit-status{font-size:11px;color:var(--text2);text-align:center;min-height:14px}
-
-#import-btn{
-  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;
-  background:transparent;border:1px solid var(--border2);color:var(--text2);
-  padding:6px 11px;border-radius:6px;cursor:pointer;transition:all .15s;margin-top:6px;
-}
-#import-btn:hover{border-color:rgba(0,255,136,.4);color:var(--green)}
-#import-btn:disabled{opacity:.4;cursor:default}
-
-#import-overlay{
-  position:fixed;inset:0;background:rgba(6,5,10,.85);backdrop-filter:blur(4px);
-  display:flex;align-items:center;justify-content:center;z-index:50;
-}
-#import-overlay.hidden{display:none}
-#import-panel{
-  width:480px;max-height:70vh;display:flex;flex-direction:column;
-  background:var(--panel);border:1px solid var(--border2);border-radius:8px;
-  box-shadow:0 20px 60px rgba(0,0,0,.5);
-}
-#import-panel-head{
-  padding:14px 16px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
-#import-panel-head .ttl{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text)}
-#import-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1}
-#import-close:hover{color:var(--text)}
-#import-list{overflow-y:auto;padding:8px}
-.import-item{
-  padding:10px 12px;border-radius:6px;cursor:pointer;transition:background .15s;
-  display:flex;flex-direction:column;gap:3px;
-}
-.import-item:hover{background:rgba(255,255,255,.04)}
-.import-item .name{font-size:12px;color:var(--text)}
-.import-item .meta{font-family:var(--mono);font-size:10px;color:var(--text3)}
-#import-empty,#import-error{padding:30px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.6}
-#import-error{color:var(--red)}
-
-/* ── Right: chunk ladder (signature element) ── */
-#zone-queue{border-left:1px solid var(--border);background:rgba(255,255,255,.01);display:flex;flex-direction:column}
-.queue-picker{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.queue-pill{
-  font-family:var(--mono);font-size:9.5px;padding:4px 9px;border-radius:14px;
-  border:1px solid var(--border2);color:var(--text3);cursor:pointer;
-}
-.queue-pill.sel{border-color:var(--green);color:var(--green)}
-
-.ladder{position:relative;padding-left:18px}
-.ladder::before{content:'';position:absolute;left:5px;top:8px;bottom:8px;width:1px;background:var(--border2)}
-.rung{position:relative;margin-bottom:14px}
-.rung-dot{
-  position:absolute;left:-18px;top:3px;width:11px;height:11px;border-radius:50%;
-  background:var(--void);border:2px solid var(--border2);transition:all .3s;
-}
-.rung-dot.queued{border-color:var(--border2)}
-.rung-dot.active{border-color:var(--amber);background:var(--amber-dim);animation:rung-pulse 1.2s ease-in-out infinite}
-@keyframes rung-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,170,0,.5)}50%{box-shadow:0 0 0 5px rgba(255,170,0,0)}}
-.rung-dot.verified{border-color:var(--green);background:var(--green)}
-.rung-dot.retrying{border-color:var(--amber);background:var(--amber)}
-.rung-dot.escalated{border-color:var(--red);background:var(--red)}
-.rung-dot.interrupted{border-color:var(--red);background:transparent;border-style:dashed;animation:rung-pulse-red 1.2s ease-in-out infinite}
-@keyframes rung-pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(255,51,85,.5)}50%{box-shadow:0 0 0 5px rgba(255,51,85,0)}}
-.rung.verified::after{content:'';position:absolute;left:-13px;top:14px;width:1px;height:calc(100% - 2px);background:var(--green)}
-
-.rung-title{font-size:11.5px;color:var(--text);font-weight:500}
-.rung-state{font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:2px;letter-spacing:.05em}
-.rung-state.active{color:var(--amber)}
-.rung-state.verified{color:var(--green)}
-.rung-state.retrying{color:var(--amber)}
-.rung-state.escalated{color:var(--red)}
-.rung-state.interrupted{color:var(--red)}
-
-.rung-action{margin-top:6px}
-.rung-retry{
-  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;
-  background:var(--amber-dim);border:1px solid rgba(255,170,0,.4);color:var(--amber);
-  padding:4px 10px;border-radius:14px;cursor:pointer;transition:all .15s;
-}
-.rung-retry:hover{background:rgba(255,170,0,.25)}
-.rung-retry:disabled{opacity:.4;cursor:default}
-.rung-escalated-note{
-  font-size:9.5px;color:var(--text3);line-height:1.4;margin-top:4px;font-style:italic;
-}
-
-.queue-empty{font-size:11px;color:var(--text3);text-align:center;padding:40px 10px;line-height:1.6}
-.interrupted-banner{
-  margin:0 0 12px;padding:9px 12px;border-radius:6px;
-  background:var(--red-dim);border:1px solid rgba(255,51,85,.4);
-  color:var(--red);font-family:var(--mono);font-size:10.5px;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-}
-.interrupted-banner .ib-text{line-height:1.4;flex:1}
-.interrupted-banner .ib-resume{
-  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;
-  background:var(--red-dim);border:1px solid rgba(255,51,85,.5);color:var(--red);
-  padding:4px 10px;border-radius:14px;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;
-}
-.interrupted-banner .ib-resume:hover{background:rgba(255,51,85,.25)}
-.interrupted-banner .ib-resume:disabled{opacity:.4;cursor:default}
-.queue-summary{
-  margin-top:auto;padding-top:14px;border-top:1px solid var(--border);
-  font-family:var(--mono);font-size:10.5px;color:var(--text2);display:flex;justify-content:space-between;
-}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+#shell{display:grid;grid-template-rows:48px 1fr;height:100vh}
+#topbar{display:flex;align-items:center;gap:12px;padding:0 16px;background:linear-gradient(180deg,var(--panel2),var(--void));border-bottom:1px solid var(--border)}
+.glyph{font-size:18px;color:var(--ac)}.title{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em}.title b{color:var(--ac)}
+#conn{font-family:var(--mono);font-size:9px;font-weight:700;padding:3px 10px;border-radius:14px;border:1px solid var(--border2);color:var(--text3);margin-left:auto;display:flex;align-items:center;gap:5px}
+#conn .dot{width:5px;height:5px;border-radius:50%;background:var(--text3)}
+#conn.live{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
+#conn.live .dot{background:var(--ac);animation:p 2s ease-in-out infinite}
+@keyframes p{0%,100%{box-shadow:0 0 0 0 var(--ac-glow)}50%{box-shadow:0 0 0 3px transparent}}
+#main{display:grid;grid-template-columns:200px 1fr 240px;height:100%;overflow:hidden}
+.z{overflow-y:auto;padding:14px}.z+.z{border-left:1px solid var(--border)}
+.zl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.16em;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px;text-transform:uppercase}
+.zl::after{content:'';flex:1;height:1px;background:var(--border)}
+.sr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:10px}
+.sk{color:var(--text3);font-size:9px}.sv{font-family:var(--mono);font-size:9px;color:var(--text2)}
+.sv.ok{color:var(--green)}.sv.off{color:var(--red)}.sv.ac{color:var(--ac)}
+.tb{display:flex;align-items:center;gap:7px;width:100%;font-family:var(--mono);font-size:9px;font-weight:600;background:transparent;border:1px solid var(--border2);color:var(--text3);padding:6px 9px;border-radius:4px;cursor:pointer;margin-bottom:4px;text-align:left;transition:all .15s}
+.tb:hover{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
+.to{font-family:var(--mono);font-size:9px;color:var(--text3);padding:5px 7px;background:var(--surface);border:1px solid var(--border);border-radius:3px;max-height:100px;overflow-y:auto;white-space:pre-wrap;line-height:1.4;margin-bottom:6px}
+input.ni{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px 9px;font-family:var(--mono);font-size:9px;outline:none;margin-bottom:5px}
+input.ni:focus{border-color:var(--ac-glow)}
+#zc{display:flex;flex-direction:column;padding:0}
+#msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.msg{padding:8px 10px;border-radius:5px;font-size:11.5px;line-height:1.6}
+.msg.user{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-left:2px solid var(--ac)}
+.msg.assistant{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-left:2px solid rgba(255,255,255,.1)}
+.mr{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:4px;text-transform:uppercase}
+.msg.user .mr{color:var(--ac)}
+.mt{color:var(--text);white-space:pre-wrap;word-break:break-word}
+#inp{padding:10px;border-top:1px solid var(--border);flex-shrink:0}
+.cbar{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
+.cc{font-family:var(--mono);font-size:8.5px;padding:2px 8px;border-radius:10px;border:1px solid var(--border2);color:var(--text3);cursor:pointer;transition:all .15s;user-select:none}
+.cc.on{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
+.ir{display:flex;gap:7px;align-items:flex-end}
+textarea#pi{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:8px 10px;font-family:var(--mono);font-size:10px;line-height:1.5;outline:none;resize:none;min-height:44px;max-height:100px;transition:border-color .2s}
+textarea#pi:focus{border-color:var(--ac-glow)}
+textarea#pi::placeholder{color:var(--text3)}
+#sb{font-family:var(--mono);font-size:10px;font-weight:700;background:var(--ac-dim);border:1px solid var(--ac-glow);color:var(--ac);padding:9px 14px;border-radius:5px;cursor:pointer;white-space:nowrap}
+#sb:hover{background:rgba(0,255,136,.15)}
+#sb:disabled{opacity:.4;cursor:default}
+.ss{font-family:var(--mono);font-size:8px;color:var(--text3);margin-top:5px;display:flex;gap:10px}
+.gi{padding:5px 8px;border-left:2px solid var(--border2);margin-bottom:5px;font-size:10px}
+.gi.high{border-left-color:var(--red)}.gi.medium{border-left-color:var(--amber)}
+.gt{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--text2)}.gb{color:var(--text3);margin-top:1px;font-size:9px;line-height:1.4}
+.art{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:9.5px}
+.an{color:var(--text2);font-family:var(--mono);font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+.adl{font-family:var(--mono);font-size:8px;color:var(--text3);cursor:pointer;padding:1px 5px;border:1px solid var(--border2);border-radius:2px;transition:all .15s}
+.adl:hover{border-color:var(--ac-glow);color:var(--ac)}
+.rung{position:relative;padding-left:16px;margin-bottom:10px}
+.rd{position:absolute;left:0;top:3px;width:8px;height:8px;border-radius:50%;background:var(--void);border:2px solid var(--border2);transition:all .3s}
+.rd.active{border-color:var(--amber);background:var(--amber-dim);animation:rp 1.2s ease-in-out infinite}
+.rd.verified{border-color:var(--green);background:var(--green)}.rd.escalated{border-color:var(--red);background:var(--red)}
+@keyframes rp{0%,100%{box-shadow:0 0 0 0 rgba(255,170,0,.5)}50%{box-shadow:0 0 0 3px transparent}}
+.rt{font-size:10px;color:var(--text);font-weight:500}.rs{font-family:var(--mono);font-size:8.5px;color:var(--text3);margin-top:1px}
+.rs.active{color:var(--amber)}.rs.verified{color:var(--green)}.rs.escalated{color:var(--red)}
+.rb{font-family:var(--mono);font-size:8.5px;background:var(--amber-dim);border:1px solid rgba(255,170,0,.4);color:var(--amber);padding:2px 8px;border-radius:10px;cursor:pointer;margin-top:4px}
 </style>
 </head>
 <body>
@@ -246,569 +79,154 @@ input#title-input:focus{border-color:rgba(0,255,136,.4)}
   <div id="topbar">
     <span class="glyph">◈</span>
     <span class="title">CHAT<b>GPT</b> CONSOLE</span>
-    <div class="chaturl"><span class="seg">chatgpt.com/c/</span><span id="topbar-chatid">—</span></div>
-    <div class="spacer"></div>
-    <div id="claim-badge"><span class="pulse"></span><span id="claim-text">CHECKING…</span></div>
+    <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">128k · structured output · batch dispatch · NCP</span>
+    <div id="conn"><span class="dot"></span><span id="ct">CHECKING</span></div>
   </div>
-
   <div id="main">
-    <!-- SESSION -->
-    <div class="zone" id="zone-session">
-      <div class="zone-label">SESSION</div>
-      <div class="stat-row">
-        <div class="stat-key">Tab</div>
-        <div class="stat-val dim" id="stat-tab">—</div>
+    <div class="z">
+      <div class="zl">System</div>
+      <div class="sr"><span class="sk">Guardian</span><span class="sv" id="sv0">—</span></div>
+      <div class="sr"><span class="sk">Cortex</span><span class="sv" id="sv1">—</span></div>
+      <div class="sr"><span class="sk">Tab</span><span class="sv ac" id="sv2">—</span></div>
+      <div class="sr"><span class="sk">Usage</span><span class="sv" id="sv3">—</span></div>
+      <div class="sr"><span class="sk">Open Gaps</span><span class="sv" id="sv4">—</span></div>
+      <div class="sr"><span class="sk">Active Jobs</span><span class="sv" id="sv5">—</span></div>
+      <div class="sr"><span class="sk">Heartbeat</span><span class="sv" id="sv6">—</span></div>
+      <div class="zl" style="margin-top:14px">Tools</div>
+      <button class="tb" onclick="tool('diagnose')">△ Diagnose</button><div class="to" id="to-diagnose" style="display:none"></div>
+      <button class="tb" onclick="tool('gaps')">◈ Open Gaps</button><div class="to" id="to-gaps" style="display:none"></div>
+      <button class="tb" onclick="tool('jobs')">⚡ Jobs</button><div class="to" id="to-jobs" style="display:none"></div>
+      <button class="tb" onclick="tool('artifacts')">↓ Artifacts</button><div class="to" id="to-artifacts" style="display:none"></div>
+      <button class="tb" onclick="tool('providers')">◦ Providers</button><div class="to" id="to-providers" style="display:none"></div>
+      <div class="zl" style="margin-top:12px">Batch Dispatch</div>
+      <textarea id="batch-in" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:7px;font-family:var(--mono);font-size:9px;resize:none;min-height:52px;outline:none;margin-bottom:5px" placeholder="One task per line → each dispatched as a job"></textarea>
+      <button class="tb" onclick="batch()">▶ Batch Dispatch</button>
+      <div class="to" id="to-batch" style="display:none"></div>
+      <div class="zl" style="margin-top:12px">Repair</div>
+      <input class="ni" id="ri" placeholder="repair prompt…">
+      <button class="tb" onclick="doRepair()">⚡ Dispatch Repair</button>
+      <div class="to" id="to-repair" style="display:none"></div>
+      <div class="zl" style="margin-top:12px">Contract</div>
+      <input class="ni" id="ci" placeholder="contract name…">
+      <button class="tb" onclick="createContract()">📋 Create Contract</button>
+      <div class="to" id="to-contract" style="display:none"></div>
+      <div class="zl" style="margin-top:12px">CLI</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px">
+        <button onclick="cli('gaps')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">gaps</button>
+        <button onclick="cli('jobs')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">jobs</button>
+        <button onclick="cli('health')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">health</button>
+        <button onclick="cli('stats')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">stats</button>
+        <button onclick="cli('seam')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">seam</button>
+        <button onclick="cli('ledger')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">ledger</button>
       </div>
-      <div class="stat-row">
-        <div class="stat-key">chatId</div>
-        <div class="stat-val" id="stat-chatid">—</div>
-      </div>
-      <div class="stat-row">
-        <div class="stat-key">Connected</div>
-        <div class="stat-val dim" id="stat-age">—</div>
-      </div>
+      <input class="ni" id="cli-in" placeholder="custom command…">
+      <button class="tb" onclick="cli(document.getElementById('cli-in').value)">▶ Run</button>
+      <div class="to" id="to-cli" style="display:none"></div>
+    </div>
 
-      <div class="zone-label" style="margin-top:16px">SYSTEM</div>
-      <div class="stat-row">
-        <div class="stat-key">Cortex</div>
-        <div class="stat-val dim" id="stat-cortex">—</div>
+    <div class="z" id="zc">
+      <div id="msgs">
+        <div id="welcome" style="color:var(--text3);font-size:10.5px;text-align:center;padding:24px;line-height:1.8">
+          <div style="font-size:18px;margin-bottom:6px">◈</div>
+          ChatGPT via NCP · 128k context<br>
+          <span style="font-size:9px">Structured JSON output · Batch dispatch · Code interpreter aware</span>
+        </div>
       </div>
-      <div class="stat-row">
-        <div class="stat-key">Open Gaps</div>
-        <div class="stat-val" id="stat-gaps">—</div>
-      </div>
-      <div class="stat-row">
-        <div class="stat-key">Active Jobs</div>
-        <div class="stat-val" id="stat-jobs">—</div>
-      </div>
-      <div class="zone-label" style="margin-top:16px">USAGE</div>
-      <div class="usage-gauge" id="usage-gauge">
-        <div class="usage-seg"></div><div class="usage-seg"></div><div class="usage-seg"></div>
-        <div class="usage-seg"></div><div class="usage-seg"></div><div class="usage-seg"></div>
-      </div>
-      <div class="usage-msg" id="usage-msg">No signal yet</div>
-
-      <div class="hb-row">
-        <div class="hb-dot" id="hb-dot"></div>
-        <div class="hb-txt" id="hb-txt">no heartbeat</div>
+      <div id="inp">
+        <div class="cbar">
+          <div class="cc on" data-c="system">system</div>
+          <div class="cc on" data-c="gaps">gaps</div>
+          <div class="cc" data-c="memory">memory</div>
+          <div class="cc" data-c="artifacts">artifacts</div>
+          <div class="cc" data-c="structured">structured JSON</div>
+        </div>
+        <div class="ir">
+          <textarea id="pi" placeholder="Ask NEXUS via ChatGPT… (Enter to send · Shift+Enter newline)" rows="2"></textarea>
+          <button id="sb" onclick="send()">SEND →</button>
+        </div>
+        <div class="ss"><span id="ss-st">co-pilot → ChatGPT NCP</span><span id="ss-tok">—</span></div>
       </div>
     </div>
 
-    <!-- DISPATCH -->
-    <div class="zone" id="zone-dispatch">
-      <div class="zone-label">DISPATCH</div>
-
-      <div>
-        <span class="field-label">Spec or prompt</span>
-        <div class="spec-input-row">
-          <textarea id="spec-input" placeholder="Paste a .spec file's contents, or just write the task. Headings (# like this) become SEAM chunks automatically — plain text gets split by size against ChatGPT's actual chunk limit below."></textarea>
-        </div>
-        <button id="import-btn" type="button">⇣ IMPORT FROM IDEARIUM</button>
-      </div>
-
-      <div>
-        <span class="field-label">Title (optional)</span>
-        <input id="title-input" placeholder="Untitled" />
-      </div>
-
-      <div>
-        <span class="field-label">Context components to inject</span>
-        <div class="chip-row" id="ctx-chips">
-          <div class="chip active" data-comp="request-handler"><span class="chip-dot"></span>request-handler</div>
-          <div class="chip active" data-comp="jaa-db"><span class="chip-dot"></span>jaa-db</div>
-          <div class="chip" data-comp="raid"><span class="chip-dot"></span>raid</div>
-          <div class="chip" data-comp="seam-queue"><span class="chip-dot"></span>seam-queue</div>
-          <div class="chip" data-comp="gap-loop"><span class="chip-dot"></span>gap-loop</div>
-        </div>
-      </div>
-
-      <div class="toggle-row">
-        <div class="toggle on" id="toggle-structured"><span class="sw"></span>Structured JSON output</div>
-        <div class="toggle on" id="toggle-snr"><span class="sw"></span>SNR filter</div>
-        <div class="toggle" id="toggle-batch"><span class="sw"></span>Batch dispatch</div>
-      </div>
-
-      <div id="chunk-preview">
-        <span><b id="cp-count">1</b> chunk · ~<span id="cp-tokens">0</span> tok/chunk · limit <span id="cp-limit">4000</span></span>
-        <span id="cp-flag" style="color:var(--text3)"></span>
-      </div>
-
-      <button id="submit-btn">SUBMIT TO SEAM QUEUE →</button>
-      <div id="submit-status"></div>
-    </div>
-
-    <!-- QUEUE / CHUNK LADDER -->
-    <div class="zone" id="zone-queue">
-      <div class="zone-label">QUEUE — LIVE</div>
-      <div class="queue-picker" id="queue-picker"></div>
-      <div class="ladder" id="ladder"></div>
-      <div class="queue-empty" id="queue-empty">No SEAM queues for this provider yet. Submit something on the left — chunks will appear here the moment guardian creates the queue, and update live as each one moves through the pipeline.</div>
-      <div class="queue-summary" id="queue-summary" style="display:none">
-        <span id="qs-verified">0 verified</span>
-        <span id="qs-total">0 total</span>
-      </div>
+    <div class="z">
+      <div class="zl">SEAM Queue</div>
+      <div id="qsel" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px"></div>
+      <div id="ladder"></div>
+      <div id="qempty" style="color:var(--text3);font-size:10px;text-align:center;padding:16px">No SEAM queues</div>
+      <div class="zl" style="margin-top:14px">Open Gaps</div>
+      <div id="glist"><div style="color:var(--text3);font-size:9.5px">Loading…</div></div>
+      <div class="zl" style="margin-top:14px">Artifacts</div>
+      <div id="alist"><div style="color:var(--text3);font-size:9.5px">—</div></div>
     </div>
   </div>
 </div>
-
-<div id="import-overlay" class="hidden">
-  <div id="import-panel">
-    <div id="import-panel-head">
-      <span class="ttl">IMPORT FROM IDEARIUM</span>
-      <button id="import-close">✕</button>
-    </div>
-    <div id="import-list"></div>
-  </div>
-</div>
-
 <script>
-const GD = 'http://127.0.0.1:7820';
-// Idearium is locked down behind orchestrator (Phase 23.5 — orchestrator
-// is the sole gateway), so spec import goes through ORCH, not GD, and not
-// idearium's own :4800 directly — that would bypass the lockdown.
-const ORCH = 'http://127.0.0.1:9000';
-const PROVIDER = 'chatgpt';
-const CHUNK_LIMIT = 4000; // matches MODE_CONFIG.chatgpt.chunkSize in the home shell
-let selectedQueueId = null;
-let allQueues = [];
-// §FIX: nothing previously detected "this SEAM run finished" — the ladder
-// just stopped changing with no signal at all. Tracked per-queue so this
-// fires exactly once when a queue completes, not on every 3s poll after.
-const _seamCompleteNotified = new Set();
+const GD='http://localhost:7820',ORCH='http://localhost:9000',CX='http://localhost:3748';
+const PROVIDER='chatgpt';let selQ=null,allQ=[],_streaming=false;
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(6000),...opts});return r.ok?r.json():null;}catch{return null;}}
+async function post(url,body){return api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
+function sv(i,val,ok){const e=document.getElementById('sv'+i);if(e){e.textContent=val;e.className='sv '+(ok===true?'ok':ok===false?'off':'');}}
 
-async function getJSON(url, opts) {
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(4000), ...opts });
-    if (!r.ok) return null;
-    return await r.json();
-  } catch (_) { return null; }
+async function refresh(){
+  const[prov,gaps,jobs]=await Promise.all([api(`${GD}/providers`),api(`${GD}/gaps?status=open&limit=50`),api(`${GD}/jobs?status=delivered&limit=20`)]);
+  const ch=prov?.channels?.[PROVIDER];
+  document.getElementById('conn').className=ch?'live':'';document.getElementById('ct').textContent=ch?'CONNECTED':'NO TAB';
+  sv(2,ch?(ch.tabId||'—').slice(0,12):'—',!!ch);
+  if(ch?.usage){const u=ch.usage;sv(3,u.limited===true?'LIMITED':u.limited==='suspected'?'SUSPECTED':'OK',u.limited!==true);}
+  const hb=ch?Math.round((Date.now()-(ch.lastHeartbeat||0))/1000):null;
+  sv(6,hb!==null?(hb<15?'♥ '+hb+'s':'stale'):'—',hb!==null&&hb<15);
+  await Promise.all([
+    api(`${GD}/health`).then(r=>sv(0,r?.ok?'✓ :7820':'✗ :7820',r?.ok)),
+    api(`${CX}/health`).then(r=>sv(1,r?.ok?'✓ :3748':'✗ :3748',r?.ok)),
+  ]);
+  const ga=gaps?.gaps||[];sv(4,ga.length,ga.length===0);
+  sv(5,(jobs?.jobs||[]).length,(jobs?.jobs||[]).length===0);
+  renderGaps(ga);
+  const arts=await api(`${GD}/artifacts?limit=15`);renderArtifacts(arts?.artifacts||[]);
 }
+function renderGaps(gaps){const el=document.getElementById('glist');if(!gaps.length){el.innerHTML='<div style="color:var(--text3);font-size:9.5px">No open gaps ✓</div>';return;}el.innerHTML=gaps.slice(0,8).map(g=>`<div class="gi ${g.severity||'low'}"><div class="gt">${esc(g.type||'?')}</div><div class="gb">${esc((g.body||'').slice(0,65))}</div></div>`).join('');}
+function renderArtifacts(arts){const el=document.getElementById('alist');if(!arts.length){el.innerHTML='<div style="color:var(--text3);font-size:9.5px">No artifacts</div>';return;}el.innerHTML=arts.slice(0,8).map(a=>`<div class="art"><span class="an">${esc(a.specName||a.lang||'artifact')}</span><span class="adl" onclick="dlArt('${a.hash||a.uuid||''}','${esc(a.specName||'artifact')}')">↓ DL</span></div>`).join('');}
+async function dlArt(hash,name){const r=await api(`${GD}/artifacts/${hash}`);if(!r)return;const b=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name+'.json';a.click();}
 
-// ── Session panel ─────────────────────────────────────────────────────────────
-async function refreshSession() {
-  const data = await getJSON(`${GD}/providers`);
-  const channel = data?.channels?.[PROVIDER];
-  const claimBadge = document.getElementById('claim-badge');
-  const claimText = document.getElementById('claim-text');
-  const hbDot = document.getElementById('hb-dot');
-  const hbTxt = document.getElementById('hb-txt');
-
-  if (!channel) {
-    claimBadge.className = '';
-    claimText.textContent = 'NO TAB CONNECTED';
-    document.getElementById('stat-tab').textContent = '—';
-    document.getElementById('stat-chatid').textContent = '—';
-    document.getElementById('topbar-chatid').textContent = '—';
-    document.getElementById('stat-age').textContent = '—';
-    hbDot.className = 'hb-dot';
-    hbTxt.textContent = 'no heartbeat';
-    renderUsage(null);
-    return;
-  }
-
-  const claimed = !!channel.claimed;
-  // §FIX 2026-06-21: PASSIVE previously just meant "tab connected but not
-  // claimed" — said nothing about whether there's actual work waiting.
-  // Real semantic: PASSIVE should mean "in a queue" — connected, idle,
-  // with jobs pending for this provider. Checked guardian's /jobs?status=
-  // filter is real (guardian/server.js, already proxied through
-  // orchestrator) before wiring this.
-  if (!claimed) {
-    const jobsData = await getJSON(`${GD}/jobs?status=pending&limit=50`);
-    const pending = (jobsData?.jobs || []).filter(j => j.provider === PROVIDER);
-    claimBadge.className = pending.length ? 'queued' : '';
-    claimText.textContent = pending.length ? `${pending.length} QUEUED` : 'CONNECTED';
-  } else {
-    claimBadge.className = 'live';
-    claimText.textContent = 'ACTIVE';
-  }
-
-  document.getElementById('stat-tab').textContent = channel.tabId || '—';
-  const chatId = channel.chatId || 'home';
-  document.getElementById('stat-chatid').textContent = chatId;
-  document.getElementById('topbar-chatid').textContent = chatId;
-
-  const ageS = Math.round((channel.age || 0) / 1000);
-  document.getElementById('stat-age').textContent = ageS < 60 ? `${ageS}s ago` : `${Math.round(ageS/60)}m ago`;
-
-  const hbAgeMs = Date.now() - (channel.lastHeartbeat || 0);
-  const alive = hbAgeMs < 15000;
-  hbDot.className = 'hb-dot' + (alive ? ' alive' : '');
-  hbTxt.textContent = alive ? `♥ ${Math.round(hbAgeMs/1000)}s ago` : `stale (${Math.round(hbAgeMs/1000)}s)`;
-
-  renderUsage(channel.usage);
+async function tool(id){const o=document.getElementById('to-'+id);o.style.display='';o.textContent='⟳ …';
+  if(id==='diagnose'){const r=await api(`${GD}/health`);o.textContent=JSON.stringify({ok:r?.ok,uptime:r?.uptime,jobs:r?.jobs},null,2);}
+  else if(id==='gaps'){const r=await api(`${GD}/gaps?status=open&limit=15`);o.textContent=(r?.gaps||[]).map(g=>`[${g.severity}] ${g.type}: ${(g.body||'').slice(0,60)}`).join('\n')||'None';}
+  else if(id==='jobs'){const r=await api(`${GD}/jobs?limit=15`);o.textContent=(r?.jobs||[]).map(j=>`[${j.status}] ${j.provider}: ${(j.prompt||'').slice(0,55)}`).join('\n')||'None';}
+  else if(id==='artifacts'){const r=await api(`${GD}/artifacts?limit=10`);o.textContent=(r?.artifacts||[]).map(a=>`${a.specName||a.lang||'?'} #${(a.hash||'').slice(0,8)}`).join('\n')||'None';}
+  else if(id==='providers'){const r=await api(`${GD}/providers`);o.textContent=JSON.stringify(Object.entries(r?.channels||{}).map(([k,v])=>({provider:k,tab:(v.tabId||'').slice(0,10),hb:Math.round((Date.now()-(v.lastHeartbeat||0))/1000)+'s'})),null,2);}
 }
+async function batch(){const lines=document.getElementById('batch-in').value.trim().split('\n').map(t=>t.trim()).filter(Boolean);const o=document.getElementById('to-batch');if(!lines.length)return;o.style.display='';o.style.color='var(--amber)';o.textContent=`Dispatching ${lines.length} tasks…`;let ok=0,fail=0;for(const t of lines){const r=await post(`${GD}/command`,{command:'code',provider:PROVIDER,prompt:t,meta:{source:'chatgpt-console',task:'batch'}});r?.jobId?ok++:fail++;}o.style.color=fail?'var(--amber)':'var(--green)';o.textContent=`✓ ${ok} dispatched · ${fail} failed`;}
+async function doRepair(){const p=document.getElementById('ri').value.trim();const o=document.getElementById('to-repair');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ …';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,meta:{source:'chatgpt-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12):'✗ '+(r?.error||'failed');}
+async function createContract(){const n=document.getElementById('ci').value.trim();const o=document.getElementById('to-contract');if(!n)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ …';const r=await post(`${CX}/api/jaa/reflection_contracts`,{uuid:crypto.randomUUID(),decisionClass:n,loopType:'CAPABILITY',status:'queued',agent:'mistral',priority:'normal',createdAt:Date.now(),updatedAt:Date.now()});o.style.color=r?'var(--green)':'var(--red)';o.textContent=r?'✓ contract created':'✗ failed';}
+async function cli(cmd){if(!cmd?.trim())return;const o=document.getElementById('to-cli');o.style.display='';o.textContent='⟳ '+cmd+'…';const r=await post(`${GD}/cli/exec`,{command:cmd.trim(),source:'chatgpt-console'});const d=r?.result??r??{};o.textContent=typeof d==='string'?d:JSON.stringify(d,null,2).slice(0,400);}
 
-// Augment refreshSession with system health
-(async function refreshSysHealth() {
-  try {
-    const [cx, gaps, jobs] = await Promise.all([
-      fetch('http://127.0.0.1:3748/health', {signal:AbortSignal.timeout(2000)}).then(r=>r.json()).catch(()=>null),
-      fetch('http://127.0.0.1:7820/gaps?status=open&limit=50', {signal:AbortSignal.timeout(2000)}).then(r=>r.json()).catch(()=>null),
-      fetch('http://127.0.0.1:7820/jobs?status=delivered&limit=20', {signal:AbortSignal.timeout(2000)}).then(r=>r.json()).catch(()=>null),
-    ]);
-    const cxEl = document.getElementById('stat-cortex');
-    if (cxEl) { cxEl.textContent = cx?.ok ? ':3748 ✓' : ':3748 ✗'; cxEl.style.color = cx?.ok ? 'var(--green)' : 'var(--red)'; }
-    const gapEl = document.getElementById('stat-gaps');
-    if (gapEl) { const n=(gaps?.gaps||[]).length; gapEl.textContent=n; gapEl.style.color=n>5?'var(--red)':n>0?'var(--amber)':'var(--green)'; }
-    const jobEl = document.getElementById('stat-jobs');
-    if (jobEl) { jobEl.textContent=(jobs?.jobs||[]).length; }
-  } catch {}
-  setTimeout(refreshSysHealth, 8000);
-})();
-
-function renderUsage(usage) {
-  const segs = [...document.querySelectorAll('.usage-seg')];
-  const msg = document.getElementById('usage-msg');
-  segs.forEach(s => s.className = 'usage-seg');
-
-  if (!usage) { msg.textContent = 'No signal yet'; return; }
-
-  if (usage.limited === true) {
-    segs.forEach(s => s.classList.add('limit'));
-    msg.textContent = usage.resetHint ? `Limited — ${usage.resetHint}` : (usage.message || 'Limited');
-  } else if (usage.limited === 'suspected') {
-    segs.slice(0, 4).forEach(s => s.classList.add('warn'));
-    msg.textContent = 'Composer disabled, cause unclear';
-  } else {
-    segs.forEach(s => s.classList.add('on'));
-    msg.textContent = 'No limit detected';
-  }
+async function buildCtx(types){const parts=[];
+  if(types.includes('system')){const[h,pr]=await Promise.all([api(`${GD}/health`),api(`${GD}/providers`)]);parts.push(`[NEXUS] Guardian:${h?.ok?'online':'offline'}`);}
+  if(types.includes('gaps')){const r=await api(`${GD}/gaps?status=open&limit=6`);const g=r?.gaps||[];if(g.length)parts.push('[GAPS]\n'+g.map(x=>`[${x.severity}] ${x.type}: ${(x.body||'').slice(0,60)}`).join('\n'));}
+  if(types.includes('memory')){const r=await api(`${CX}/api/jaa/decision_log?limit=5`);const ro=r?.rows||r?.result||[];if(ro.length)parts.push('[DECISIONS]\n'+ro.map(d=>`[${d.chosen}] ${(d.input||'').slice(0,60)}`).join('\n'));}
+  if(types.includes('artifacts')){const r=await api(`${GD}/artifacts?limit=5`);const a=r?.artifacts||[];if(a.length)parts.push('[ARTIFACTS]\n'+a.map(x=>x.specName||x.lang||'?').join(', '));}
+  if(types.includes('structured')){parts.push('[FORMAT: respond with structured JSON only — no prose, no markdown fencing]');}
+  return parts.join('\n\n');
 }
-
-// ── Chunk preview (live, against ChatGPT's real chunk size) ──────────────────
-function updateChunkPreview() {
-  const text = document.getElementById('spec-input').value.trim();
-  const countEl = document.getElementById('cp-count');
-  const tokEl = document.getElementById('cp-tokens');
-  const flagEl = document.getElementById('cp-flag');
-  document.getElementById('cp-limit').textContent = CHUNK_LIMIT;
-
-  if (!text) { countEl.textContent = '0'; tokEl.textContent = '0'; flagEl.textContent = ''; return; }
-
-  const hasHeadings = /^#+\s+/m.test(text);
-  const estTokens = Math.round(text.length / 4);
-  const chunkCharLimit = CHUNK_LIMIT * 4;
-  const estChunks = hasHeadings
-    ? Math.max(1, (text.match(/^#+\s+/gm) || []).length)
-    : Math.max(1, Math.ceil(text.length / chunkCharLimit));
-
-  countEl.textContent = estChunks;
-  tokEl.textContent = Math.round(estTokens / estChunks);
-  flagEl.textContent = hasHeadings ? 'heading-split' : 'size-split';
+async function send(){const prompt=document.getElementById('pi').value.trim();if(!prompt||_streaming)return;
+  const types=[...document.querySelectorAll('.cc.on')].map(c=>c.dataset.c);
+  const ctx=await buildCtx(types);
+  addMsg('user',prompt);document.getElementById('pi').value='';
+  const msgEl=addStream('assistant');_streaming=true;const t0=Date.now();
+  try{const r=await post(`${ORCH}/api/guardian/copilot/prompt`,{prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt});finalStream(msgEl,r?.text||'(no response)');document.getElementById('ss-tok').textContent=r?.modelUsed||'—';document.getElementById('ss-st').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';}
+  catch(e){finalStream(msgEl,'✗ '+e.message);}
+  _streaming=false;
 }
-document.getElementById('spec-input').addEventListener('input', updateChunkPreview);
-
-// ── Chips / toggles ────────────────────────────────────────────────────────────
-document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => c.classList.toggle('active')));
-document.querySelectorAll('.toggle').forEach(t => t.addEventListener('click', () => t.classList.toggle('on')));
-
-// ── Submit ────────────────────────────────────────────────────────────────────
-document.getElementById('submit-btn').addEventListener('click', async () => {
-  const specText = document.getElementById('spec-input').value.trim();
-  const status = document.getElementById('submit-status');
-  const btn = document.getElementById('submit-btn');
-  if (!specText) { status.textContent = 'Nothing to submit'; status.style.color = 'var(--amber)'; return; }
-
-  const hasHeadings = /^#+\s+/m.test(specText);
-  const activeCtx = [...document.querySelectorAll('#ctx-chips .chip.active')].map(c => c.dataset.comp);
-  const structured = document.getElementById('toggle-structured').classList.contains('on');
-  const title = document.getElementById('title-input').value.trim() || undefined;
-
-  const prefix = [
-    activeCtx.length ? `[CONTEXT COMPONENTS: ${activeCtx.join(', ')}]` : '',
-    structured ? '[OUTPUT FORMAT: respond with a single valid JSON object only — no prose, no markdown fencing]' : '',
-  ].filter(Boolean).join('\n');
-  const finalSpec = prefix ? `${prefix}\n\n${specText}` : specText;
-
-  btn.disabled = true; status.textContent = 'Submitting…'; status.style.color = 'var(--text2)';
-  const res = await getJSON(`${GD}/command`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      command: 'spec', provider: PROVIDER, specText: finalSpec, title, source: 'chatgpt-console',
-      splitOn: hasHeadings ? 'heading' : 'size', maxChunkSize: CHUNK_LIMIT,
-    }),
-  });
-  btn.disabled = false;
-
-  if (res?.ok) {
-    status.textContent = `Queue ${res.queueId?.slice(0,8)} — ${res.total} chunks`;
-    status.style.color = 'var(--green)';
-    selectedQueueId = res.queueId;
-    document.getElementById('spec-input').value = '';
-    document.getElementById('title-input').value = '';
-    updateChunkPreview();
-    refreshQueues();
-  } else {
-    status.textContent = `Failed: ${res?.error || 'guardian unreachable'}`;
-    status.style.color = 'var(--red)';
-  }
-});
-
-// ── Queue / chunk ladder ──────────────────────────────────────────────────────
-const STATE_CLASS = {
-  QUEUED: 'queued', INJECTING: 'active', GENERATING: 'active', DETECTING: 'active',
-  VERIFIED: 'verified', RETRYING: 'retrying', ESCALATED: 'escalated',
-  INTERRUPTED: 'interrupted',
-};
-
-async function refreshQueues() {
-  const data = await getJSON(`${GD}/seam/queues`);
-  allQueues = (data?.queues || []).filter(q => q.provider === PROVIDER);
-
-  const picker = document.getElementById('queue-picker');
-  const empty = document.getElementById('queue-empty');
-  const ladder = document.getElementById('ladder');
-  const summary = document.getElementById('queue-summary');
-
-  if (!allQueues.length) {
-    picker.innerHTML = ''; ladder.innerHTML = ''; summary.style.display = 'none';
-    empty.style.display = ''; selectedQueueId = null;
-    return;
-  }
-  empty.style.display = 'none';
-
-  if (!selectedQueueId || !allQueues.some(q => q.uuid === selectedQueueId)) {
-    selectedQueueId = allQueues[allQueues.length - 1].uuid;
-  }
-
-  picker.innerHTML = allQueues.map(q =>
-    `<div class="queue-pill ${q.uuid===selectedQueueId?'sel':''}" data-id="${q.uuid}">${(q.title||'untitled').slice(0,16)}</div>`
-  ).join('');
-  picker.querySelectorAll('.queue-pill').forEach(p =>
-    p.addEventListener('click', () => { selectedQueueId = p.dataset.id; renderLadder(); })
-  );
-
-  renderLadder();
-}
-
-function renderLadder() {
-  const q = allQueues.find(q => q.uuid === selectedQueueId);
-  const ladder = document.getElementById('ladder');
-  const summary = document.getElementById('queue-summary');
-  if (!q) { ladder.innerHTML = ''; summary.style.display = 'none'; return; }
-
-  ladder.innerHTML = (q.compartments || []).map(c => {
-    const cls = STATE_CLASS[c.state] || 'queued';
-    const chunkUuid = c.uuid || c.chunkUuid || '';
-    // guardian's /seam/retry only acts on the queue's currently-active
-    // chunk (queue._active) — confirmed directly in guardian/server.js.
-    // A retry button on any other rung would just 404/mismatch silently,
-    // which §1.2 forbids — so only active/retrying rungs (which ARE the
-    // active chunk) get a real button; escalated rungs are past that
-    // point and get an honest note instead of a dead-looking control.
-    let action = '';
-    if ((cls === 'active' || cls === 'retrying' || cls === 'interrupted') && chunkUuid) {
-      const btnLabel = cls === 'interrupted' ? '⚠ RESUME CHUNK' : 'FORCE RETRY';
-      action = `<div class="rung-action"><button class="rung-retry" data-queue="${q.uuid}" data-chunk="${chunkUuid}">${btnLabel}</button></div>`;
-    } else if (cls === 'escalated') {
-      action = `<div class="rung-escalated-note">No longer the active chunk — guardian's retry only acts on what's currently running. Check guardian's job log or re-dispatch this chunk from scratch.</div>`;
-    }
-    return `<div class="rung ${cls}">
-      <div class="rung-dot ${cls}"></div>
-      <div class="rung-title">#${c.chunkIdx+1} ${c.chunkTitle||''}</div>
-      <div class="rung-state ${cls}">${c.state}${c.retries ? ` · retry ${c.retries}` : ''}</div>
-      ${action}
-    </div>`;
-  }).join('');
-
-  ladder.querySelectorAll('.rung-retry').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      const origText = btn.textContent;
-      btn.textContent = 'RETRYING…';
-      const res = await getJSON(`${GD}/seam/retry`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queueId: btn.dataset.queue, chunkUuid: btn.dataset.chunk, reason: 'manual-ui' }),
-      });
-      if (res?.ok) {
-        refreshQueues();
-      } else {
-        btn.disabled = false;
-        btn.textContent = origText;
-        document.getElementById('submit-status').textContent = `Retry failed: ${res?.error || 'guardian unreachable'}`;
-        document.getElementById('submit-status').style.color = 'var(--red)';
-      }
-    });
-  });
-
-  const stats = q.stats || {};
-  summary.style.display = '';
-  document.getElementById('qs-verified').textContent = `${stats.verified||0} verified`;
-  document.getElementById('qs-total').textContent = `${stats.total||q.compartments?.length||0} total`;
-
-  // §FIX: SEAM-end listener — previously nothing detected completion at
-  // all. Fires once per queue (Set-tracked), not on every poll after.
-  const total = stats.total || q.compartments?.length || 0;
-  const allDone = total > 0 && (stats.verified || 0) === total;
-  let banner = document.getElementById('seam-complete-banner');
-  if (allDone) {
-    if (!_seamCompleteNotified.has(q.uuid)) {
-      _seamCompleteNotified.add(q.uuid);
-      console.log(`[seam] queue ${q.uuid.slice(0,8)} complete — ${total}/${total} verified`);
-    }
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'seam-complete-banner';
-      banner.style.cssText = 'margin-top:10px;padding:9px 12px;border-radius:6px;background:var(--green-dim);border:1px solid rgba(0,255,136,.4);color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-align:center;';
-      summary.parentNode.insertBefore(banner, summary.nextSibling);
-    }
-    banner.textContent = `✓ SEAM COMPLETE — ${total}/${total} chunks verified. Ready for a new spec.`;
-    banner.style.display = '';
-  } else if (banner) {
-    banner.style.display = 'none';
-  }
-}
-
-// ── Import from Idearium (spec storage) ──────────────────────────────────────
-// Routes verified directly against idearium/api/index.js + orchestrator.js's
-// proxy before writing this: GET /api/idearium/specs → { specs: [...] },
-// GET /api/idearium/specs/:uuid/export → raw markdown text (specToMarkdown
-// output), not JSON — export is the right endpoint for this, not .show,
-// because .show returns the section-structured object, not compiled text.
-const importOverlay = document.getElementById('import-overlay');
-const importList     = document.getElementById('import-list');
-const importBtn       = document.getElementById('import-btn');
-
-function openImportPicker() {
-  importOverlay.classList.remove('hidden');
-  loadSpecList();
-}
-function closeImportPicker() {
-  importOverlay.classList.add('hidden');
-}
-
-async function loadSpecList() {
-  importList.innerHTML = `<div id="import-empty">Loading specs…</div>`;
-  const data = await getJSON(`${ORCH}/api/idearium/specs`);
-  if (data === null) {
-    importList.innerHTML = `<div id="import-error">Couldn't reach idearium via orchestrator. Is orchestrator running on :9000?</div>`;
-    return;
-  }
-  const specs = data.specs || [];
-  if (!specs.length) {
-    importList.innerHTML = `<div id="import-empty">No specs in idearium yet. Create one there first, or just paste/write a spec directly in the box.</div>`;
-    return;
-  }
-  importList.innerHTML = specs.map(s => `
-    <div class="import-item" data-uuid="${s.uuid}">
-      <div class="name">${(s.name || 'untitled').replace(/</g,'&lt;')}</div>
-      <div class="meta">${s.phase || '—'} · ${(s.sections||[]).length} section${(s.sections||[]).length===1?'':'s'} · ${s.uuid.slice(0,8)}</div>
-    </div>
-  `).join('');
-  importList.querySelectorAll('.import-item').forEach(el => {
-    el.addEventListener('click', () => importSpec(el.dataset.uuid, el.querySelector('.name').textContent));
-  });
-}
-
-async function importSpec(uuid, name) {
-  importList.innerHTML = `<div id="import-empty">Importing…</div>`;
-  try {
-    const r = await fetch(`${ORCH}/api/idearium/specs/${uuid}/export`, { signal: AbortSignal.timeout(5000) });
-    if (!r.ok) throw new Error(`export failed (${r.status})`);
-    const md = await r.text();
-    document.getElementById('spec-input').value = md;
-    document.getElementById('title-input').value = name || '';
-    updateChunkPreview();
-    closeImportPicker();
-  } catch (e) {
-    importList.innerHTML = `<div id="import-error">Import failed: ${e.message}</div>`;
-  }
-}
-
-importBtn.addEventListener('click', openImportPicker);
-document.getElementById('import-close').addEventListener('click', closeImportPicker);
-importOverlay.addEventListener('click', (e) => { if (e.target === importOverlay) closeImportPicker(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !importOverlay.classList.contains('hidden')) closeImportPicker(); });
-
-// ── §70.2 localStorage interrupted SEAM check ────────────────────────────────
-// On load: scan for any chunks the userscript marked interrupted in this
-// browser, surface them as banners in the queue zone before guardian even
-// responds. Guardian's /seam/queues is the truth; this is a fast pre-flight.
-function _lsInterruptedCheck() {
-  const keys = Object.keys(localStorage).filter(k => k.startsWith('nexus_seam_job_'));
-  const found = [];
-  for (const k of keys) {
-    try {
-      const rec = JSON.parse(localStorage.getItem(k) || 'null');
-      if (rec && (rec.status === 'interrupted' || rec.status === 'in_progress')) {
-        found.push(rec);
-      }
-    } catch(_) {}
-  }
-  if (!found.length) return;
-  const zone = document.getElementById('zone-queue');
-  const label = zone.querySelector('.zone-label');
-  for (const rec of found) {
-    const div = document.createElement('div');
-    div.className = 'interrupted-banner';
-    div.dataset.jobId = rec.jobId;
-    const chunkStr = rec.seam_chunk_idx != null
-      ? `chunk ${rec.seam_chunk_idx + 1}/${rec.seam_total ?? '?'}`
-      : 'chunk ?';
-    div.innerHTML = `
-      <div class="ib-text">
-        <b>⚠ INTERRUPTED</b> — ${(rec.seam_title || 'untitled').slice(0,30)} · ${chunkStr}<br>
-        <span style="color:var(--text3);font-size:9.5px">${rec.seam_queue_id?.slice(0,8) ?? rec.jobId.slice(0,8)} · ${rec.status}</span>
-      </div>
-      <button class="ib-resume" data-queue="${rec.seam_queue_id ?? ''}" data-job="${rec.jobId}">RESUME →</button>
-    `;
-    div.querySelector('.ib-resume').addEventListener('click', async function() {
-      const btn = this;
-      const queueId = btn.dataset.queue;
-      if (!queueId) {
-        // No queue id — queue likely lost on server restart
-        document.getElementById('submit-status').textContent = 'Queue ID unknown — re-submit the spec.';
-        document.getElementById('submit-status').style.color = 'var(--amber)';
-        return;
-      }
-      btn.disabled = true; btn.textContent = 'RESUMING…';
-      const res = await getJSON(`${GD}/seam/retry`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queueId, reason: 'ui_resume_interrupted' }),
-      });
-      if (res?.ok) {
-        try { localStorage.removeItem(`nexus_seam_job_${btn.dataset.job}`); } catch(_) {}
-        div.remove();
-        refreshQueues();
-        document.getElementById('submit-status').textContent = res.escalated
-          ? '⚠ Chunk escalated — watchdog budget exhausted.'
-          : `✓ Resumed queue ${queueId.slice(0,8)}`;
-        document.getElementById('submit-status').style.color = res.escalated ? 'var(--amber)' : 'var(--green)';
-      } else {
-        btn.disabled = false; btn.textContent = 'RESUME →';
-        document.getElementById('submit-status').textContent = `Resume failed: ${res?.error || 'guardian unreachable'}`;
-        document.getElementById('submit-status').style.color = 'var(--red)';
-      }
-    });
-    zone.insertBefore(div, label.nextSibling);
-  }
-}
-
-// ── §74.2 abrupt-stop visual: mark GENERATING rungs that look stuck ──────────
-// renderLadder() already colours RETRYING amber and ESCALATED red.
-// INTERRUPTED is a new synthetic state emitted by the userscript and handled
-// by guardian — once guardian calls forceRetryActive the compartment moves to
-// RETRYING, so this is just a transient visual between the abrupt-stop event
-// and the next poll cycle.
-function _markStuckRungs() {
-  document.querySelectorAll('.rung.active').forEach(rung => {
-    const stateEl = rung.querySelector('.rung-state');
-    if (!stateEl) return;
-    // If the rung has been GENERATING for more than one poll cycle without
-    // moving, the dot will already pulse amber. Nothing more needed here —
-    // the real signal comes from guardian via STATE_CLASS.INTERRUPTED once
-    // forceRetryActive fires.
-  });
-}
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-updateChunkPreview();
-refreshSession();
-refreshQueues();
-_lsInterruptedCheck();
-setInterval(refreshSession, 4000);
-setInterval(refreshQueues, 3000);
+function addMsg(role,text){const m=document.getElementById('msgs');const w=document.getElementById('welcome');if(w)w.remove();const el=document.createElement('div');el.className='msg '+role;el.innerHTML=`<div class="mr">${role}</div><div class="mt">${esc(text)}</div>`;m.appendChild(el);m.scrollTop=m.scrollHeight;return el;}
+function addStream(role){const m=document.getElementById('msgs');const w=document.getElementById('welcome');if(w)w.remove();const el=document.createElement('div');el.className='msg '+role;el.innerHTML=`<div class="mr">${role}</div><div class="mt"><span style="display:inline-block;width:6px;height:12px;background:var(--ac);animation:bl .7s step-end infinite;vertical-align:text-bottom"></span></div>`;m.appendChild(el);m.scrollTop=m.scrollHeight;return el;}
+function finalStream(el,text){const t=el.querySelector('.mt');if(t)t.innerHTML=esc(text);}
+const SC={QUEUED:'',INJECTING:'active',GENERATING:'active',DETECTING:'active',VERIFIED:'verified',RETRYING:'active',ESCALATED:'escalated'};
+async function refreshQ(){const d=await api(`${GD}/seam/queues`);allQ=(d?.queues||[]).filter(q=>q.provider===PROVIDER);const sel=document.getElementById('qsel');const emp=document.getElementById('qempty');const lad=document.getElementById('ladder');if(!allQ.length){sel.innerHTML='';lad.innerHTML='';emp.style.display='';return;}emp.style.display='none';if(!selQ||!allQ.some(q=>q.uuid===selQ))selQ=allQ[allQ.length-1].uuid;sel.innerHTML=allQ.map(q=>`<div style="font-family:var(--mono);font-size:8.5px;padding:2px 7px;border-radius:10px;border:1px solid ${q.uuid===selQ?'var(--ac-glow)':'var(--border2)'};color:${q.uuid===selQ?'var(--ac)':'var(--text3)'};cursor:pointer" onclick="selQ='${q.uuid}';renderL()">${esc((q.title||'untitled').slice(0,12))}</div>`).join('');renderL();}
+function renderL(){const q=allQ.find(q=>q.uuid===selQ);const lad=document.getElementById('ladder');if(!q){lad.innerHTML='';return;}lad.innerHTML=(q.compartments||[]).map((c,i,a)=>{const cls=SC[c.state]||'';return`<div class="rung">${i<a.length-1?'<div style="position:absolute;left:3px;top:12px;bottom:-10px;width:1px;background:var(--border2)"></div>':''}<div class="rd ${cls}"></div><div class="rt">#${c.chunkIdx+1} ${esc(c.chunkTitle||'')}</div><div class="rs ${cls}">${c.state}</div></div>`;}).join('');}
+document.getElementById('pi').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+document.querySelectorAll('.cc').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+refresh();refreshQ();setInterval(refresh,6000);setInterval(refreshQ,3000);
 </script>
 </body>
 </html>

@@ -2,159 +2,87 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Claude Console — NEXUS</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 :root{
-  --void:#06050a; --surface:#0e0c15; --panel:#13111e; --panel2:#181527;
-  --border:#1e1a2e; --border2:#2a2545;
-  --text:#e0dff5; --text2:#8a86a8; --text3:#4a4768;
-  --ac:#cc44ff; --ac-dim:rgba(204,68,255,.1); --ac-glow:rgba(204,68,255,.4);
-  --green:#00ff88; --green-dim:rgba(0,255,136,.08);
-  --amber:#ffaa00; --amber-dim:rgba(255,170,0,.1);
-  --red:#ff3355; --red-dim:rgba(255,51,85,.1);
-  --mono:'Space Mono',monospace; --ui:'Space Grotesk',sans-serif;
+  --void:#06050a;--surface:#0e0c15;--panel2:#0d0a18;
+  --border:#1e1a2e;--border2:#2a2545;
+  --text:#e0dff5;--text2:#8a86a8;--text3:#4a4768;
+  --ac:#cc44ff;--ac-dim:rgba(204,68,255,.1);--ac-glow:rgba(204,68,255,.4);
+  --green:#00ff88;--red:#ff3355;--red-dim:rgba(255,51,85,.1);
+  --amber:#ffaa00;--amber-dim:rgba(255,170,0,.1);
+  --mono:'Space Mono',monospace;--ui:'Space Grotesk',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--void);color:var(--text);font-family:var(--ui);overflow:hidden;font-size:13px}
-::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-
-#shell{display:grid;grid-template-rows:52px 1fr;height:100vh}
-
-/* topbar */
-#topbar{display:flex;align-items:center;gap:14px;padding:0 20px;
-  background:linear-gradient(180deg,var(--surface),var(--void));
-  border-bottom:1px solid var(--border)}
-.glyph{font-size:22px;color:var(--ac);text-shadow:0 0 16px var(--ac-glow)}
-.title{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.16em}
-.title b{color:var(--ac)}
-#conn-badge{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
-  padding:4px 12px;border-radius:20px;border:1px solid var(--border2);color:var(--text3);
-  display:flex;align-items:center;gap:6px;margin-left:auto;transition:all .3s}
-#conn-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0}
-#conn-badge.live{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
-#conn-badge.live .dot{background:var(--ac);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--ac-glow)}50%{box-shadow:0 0 0 4px transparent}}
-
-/* four-zone layout */
-#main{display:grid;grid-template-columns:220px 1fr 280px 260px;height:100%;overflow:hidden}
-.zone{overflow-y:auto;padding:16px}
-.zone-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.18em;
-  color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
-.zone-label::after{content:'';flex:1;height:1px;background:var(--border)}
-.zone+.zone{border-left:1px solid var(--border)}
-
-/* system panel */
-.sys-row{display:flex;justify-content:space-between;align-items:center;
-  padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px}
-.sys-key{color:var(--text3);font-size:10px}
-.sys-val{font-family:var(--mono);font-size:10px;color:var(--text2)}
-.sys-val.ok{color:var(--green)} .sys-val.off{color:var(--red)}
-.sys-val.ac{color:var(--ac)}
-
-/* chat mirror */
-#chat-mirror{display:flex;flex-direction:column;gap:0}
-.msg{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px;line-height:1.6}
-.msg.user{background:rgba(204,68,255,.04);border-left:2px solid var(--ac)}
-.msg.assistant{border-left:2px solid rgba(255,255,255,.08)}
-.msg-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
-  color:var(--text3);margin-bottom:4px;text-transform:uppercase}
-.msg.user .msg-role{color:var(--ac)}
-.msg.assistant .msg-role{color:var(--text3)}
-.msg-text{color:var(--text);white-space:pre-wrap;word-break:break-word}
-.msg.streaming .msg-text::after{content:'▋';animation:blink .8s step-end infinite;color:var(--ac)}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-
-/* spec dispatch */
-textarea#spec-in{width:100%;min-height:120px;resize:vertical;
-  background:var(--surface);border:1px solid var(--border);border-radius:6px;
-  color:var(--text);padding:10px;font-family:var(--mono);font-size:11px;line-height:1.6;
-  outline:none;transition:border-color .2s}
-textarea#spec-in:focus{border-color:var(--ac-glow)}
-textarea#spec-in::placeholder{color:var(--text3)}
-.field-label{font-size:10px;color:var(--text2);margin-bottom:5px;display:block}
-.chip-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
-.chip{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:14px;
-  border:1px solid var(--border2);color:var(--text3);cursor:pointer;transition:all .15s}
-.chip:hover{border-color:var(--text3);color:var(--text2)}
-.chip.on{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
-.toggle-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-.tog{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:10.5px;color:var(--text2);
-  padding:6px 10px;border:1px solid var(--border);border-radius:6px;transition:all .15s;user-select:none}
-.tog.on{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
-.tog .sw{width:22px;height:12px;border-radius:6px;background:var(--border2);position:relative;flex-shrink:0;transition:background .2s}
-.tog.on .sw{background:var(--ac)}
-.tog .sw::after{content:'';position:absolute;top:2px;left:2px;width:8px;height:8px;
-  border-radius:50%;background:var(--void);transition:transform .2s}
-.tog.on .sw::after{transform:translateX(10px)}
-#chunk-info{font-family:var(--mono);font-size:10px;color:var(--text3);
-  padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:5px;
-  display:flex;justify-content:space-between;margin-bottom:10px}
-#chunk-info b{color:var(--ac)}
-.submit-btn{width:100%;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;
-  background:var(--ac-dim);border:1px solid var(--ac-glow);color:var(--ac);
-  padding:12px;border-radius:6px;cursor:pointer;transition:all .15s;text-align:center}
-.submit-btn:hover{background:rgba(204,68,255,.2)}
-.submit-btn:disabled{opacity:.4;cursor:default}
-#dispatch-status{font-size:10.5px;color:var(--text2);text-align:center;margin-top:5px;min-height:14px}
-
-/* SEAM ladder — right zone */
-.rung{position:relative;padding-left:18px;margin-bottom:12px}
-.rung-line{position:absolute;left:4px;top:14px;bottom:-12px;width:1px;background:var(--border2)}
-.rung-dot{position:absolute;left:0;top:3px;width:9px;height:9px;border-radius:50%;
-  background:var(--void);border:2px solid var(--border2);transition:all .3s}
-.rung-dot.active{border-color:var(--amber);background:var(--amber-dim);animation:rdpulse 1.2s ease-in-out infinite}
-.rung-dot.verified{border-color:var(--green);background:var(--green)}
-.rung-dot.retrying{border-color:var(--amber);background:var(--amber)}
-.rung-dot.escalated{border-color:var(--red);background:var(--red)}
-@keyframes rdpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,170,0,.5)}50%{box-shadow:0 0 0 4px transparent}}
-.rung-title{font-size:11px;color:var(--text);font-weight:500}
-.rung-state{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px;letter-spacing:.04em}
-.rung-state.active{color:var(--amber)} .rung-state.verified{color:var(--green)}
-.rung-state.retrying{color:var(--amber)} .rung-state.escalated{color:var(--red)}
-.rung-ids{font-family:var(--mono);font-size:8px;color:var(--text3);margin-top:3px;opacity:.5;line-height:1.5}
-.retry-btn{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;
-  background:var(--amber-dim);border:1px solid rgba(255,170,0,.4);color:var(--amber);
-  padding:3px 9px;border-radius:12px;cursor:pointer;margin-top:5px;transition:all .15s}
-.retry-btn:hover{background:rgba(255,170,0,.2)}
-.retry-btn:disabled{opacity:.4;cursor:default}
-.queue-empty{font-size:10.5px;color:var(--text3);text-align:center;padding:30px 8px;line-height:1.6}
-.queue-sel{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
-.qpill{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:12px;
-  border:1px solid var(--border2);color:var(--text3);cursor:pointer;transition:all .15s}
-.qpill.sel{border-color:var(--ac-glow);color:var(--ac)}
-
-/* gaps panel in chat zone bottom */
-.gap-item{padding:7px 10px;border-left:2px solid var(--border2);margin-bottom:6px;font-size:10.5px}
-.gap-item.high{border-left-color:var(--red)} .gap-item.medium{border-left-color:var(--amber)}
-.gap-item.low{border-left-color:var(--text3)}
-.gap-type{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text2)}
-.gap-body{color:var(--text3);margin-top:2px;font-size:10px;line-height:1.4}
-.gap-ids{font-family:var(--mono);font-size:8px;color:var(--text3);margin-top:3px;opacity:.5}
-
-/* context memory */
-.mem-hit{padding:6px 8px;border-radius:4px;border-left:2px solid var(--text3);
-  margin-bottom:6px;font-size:10.5px;background:rgba(0,0,0,.2)}
-.mem-score{font-family:var(--mono);font-size:9px;margin-bottom:3px}
-.mem-text{color:var(--text3);line-height:1.4}
-
-/* tool buttons */
-.tool-btn{display:flex;align-items:center;gap:8px;width:100%;
-  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;
-  background:transparent;border:1px solid var(--border2);color:var(--text3);
-  padding:8px 12px;border-radius:5px;cursor:pointer;margin-bottom:6px;
-  text-align:left;transition:all .15s}
-.tool-btn:hover{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
-.tool-btn .icon{font-size:14px;flex-shrink:0}
-.tool-out{font-family:var(--mono);font-size:9.5px;color:var(--text3);
-  padding:6px 8px;background:var(--surface);border:1px solid var(--border);
-  border-radius:4px;max-height:100px;overflow-y:auto;white-space:pre-wrap;line-height:1.4;margin-bottom:8px}
-
-input.nx-in{width:100%;background:var(--surface);border:1px solid var(--border);
-  border-radius:5px;color:var(--text);padding:7px 10px;font-family:var(--mono);
-  font-size:10px;outline:none;margin-bottom:6px;transition:border-color .2s}
-input.nx-in:focus{border-color:var(--ac-glow)}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+#shell{display:grid;grid-template-rows:48px 1fr;height:100vh}
+#topbar{display:flex;align-items:center;gap:12px;padding:0 16px;background:linear-gradient(180deg,var(--panel2),var(--void));border-bottom:1px solid var(--border)}
+.glyph{font-size:18px;color:var(--ac)}
+.title{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em}.title b{color:var(--ac)}
+#conn{font-family:var(--mono);font-size:9px;font-weight:700;padding:3px 10px;border-radius:14px;border:1px solid var(--border2);color:var(--text3);margin-left:auto;display:flex;align-items:center;gap:5px}
+#conn .dot{width:5px;height:5px;border-radius:50%;background:var(--text3)}
+#conn.live{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
+#conn.live .dot{background:var(--ac);animation:p 2s ease-in-out infinite}
+@keyframes p{0%,100%{box-shadow:0 0 0 0 var(--ac-glow)}50%{box-shadow:0 0 0 3px transparent}}
+#main{display:grid;grid-template-columns:200px 1fr 240px;height:100%;overflow:hidden}
+.z{overflow-y:auto;padding:14px}.z+.z{border-left:1px solid var(--border)}
+.zl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.16em;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px;text-transform:uppercase}
+.zl::after{content:'';flex:1;height:1px;background:var(--border)}
+.sr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:10px}
+.sk{color:var(--text3);font-size:9px}.sv{font-family:var(--mono);font-size:9px;color:var(--text2)}
+.sv.ok{color:var(--green)}.sv.off{color:var(--red)}.sv.ac{color:var(--ac)}
+.tb{display:flex;align-items:center;gap:7px;width:100%;font-family:var(--mono);font-size:9px;font-weight:600;background:transparent;border:1px solid var(--border2);color:var(--text3);padding:6px 9px;border-radius:4px;cursor:pointer;margin-bottom:4px;text-align:left;transition:all .15s}
+.tb:hover{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
+.to{font-family:var(--mono);font-size:9px;color:var(--text3);padding:5px 7px;background:var(--surface);border:1px solid var(--border);border-radius:3px;max-height:100px;overflow-y:auto;white-space:pre-wrap;line-height:1.4;margin-bottom:6px}
+input.ni{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px 9px;font-family:var(--mono);font-size:9px;outline:none;margin-bottom:5px}
+input.ni:focus{border-color:var(--ac-glow)}
+/* center — chat layout */
+#zc{display:flex;flex-direction:column;padding:0}
+#msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.msg{padding:8px 10px;border-radius:5px;font-size:11.5px;line-height:1.6}
+.msg.user{background:rgba(204,68,255,.06);border:1px solid rgba(204,68,255,.15);border-left:2px solid var(--ac)}
+.msg.assistant{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-left:2px solid rgba(255,255,255,.1)}
+.msg.system{background:rgba(0,0,0,.3);border:1px solid var(--border);font-family:var(--mono);font-size:9.5px;color:var(--text3)}
+.mr{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:4px;text-transform:uppercase}
+.msg.user .mr{color:var(--ac)}.msg.assistant .mr{color:rgba(255,255,255,.3)}
+.mt{color:var(--text);white-space:pre-wrap;word-break:break-word}
+.sc{display:inline-block;width:6px;height:12px;background:var(--ac);animation:bl .7s step-end infinite;vertical-align:text-bottom;margin-left:1px}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
+#inp{padding:10px;border-top:1px solid var(--border);flex-shrink:0}
+.cbar{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
+.cc{font-family:var(--mono);font-size:8.5px;padding:2px 8px;border-radius:10px;border:1px solid var(--border2);color:var(--text3);cursor:pointer;transition:all .15s;user-select:none}
+.cc:hover{border-color:var(--ac-glow);color:var(--ac)}.cc.on{border-color:var(--ac-glow);color:var(--ac);background:var(--ac-dim)}
+.ir{display:flex;gap:7px;align-items:flex-end}
+textarea#pi{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:8px 10px;font-family:var(--mono);font-size:10px;line-height:1.5;outline:none;resize:none;min-height:44px;max-height:100px;transition:border-color .2s}
+textarea#pi:focus{border-color:var(--ac-glow)}
+textarea#pi::placeholder{color:var(--text3)}
+#sb{font-family:var(--mono);font-size:10px;font-weight:700;background:var(--ac-dim);border:1px solid var(--ac-glow);color:var(--ac);padding:9px 14px;border-radius:5px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+#sb:hover{background:rgba(204,68,255,.2)}
+#sb:disabled{opacity:.4;cursor:default}
+.ss{font-family:var(--mono);font-size:8px;color:var(--text3);margin-top:5px;display:flex;gap:10px}
+/* right — tools */
+.gi{padding:5px 8px;border-left:2px solid var(--border2);margin-bottom:5px;font-size:10px}
+.gi.high{border-left-color:var(--red)}.gi.medium{border-left-color:var(--amber)}
+.gt{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--text2)}
+.gb{color:var(--text3);margin-top:1px;font-size:9px;line-height:1.4}
+.gx{font-family:var(--mono);font-size:8px;color:var(--text3);margin-top:3px;padding:2px 5px;border:1px solid var(--border2);border-radius:2px;cursor:pointer;display:inline-block;transition:all .15s}
+.gx:hover{border-color:var(--ac-glow);color:var(--ac)}
+.art{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:9.5px}
+.art-name{color:var(--text2);font-family:var(--mono);font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+.art-dl{font-family:var(--mono);font-size:8px;color:var(--text3);cursor:pointer;padding:1px 5px;border:1px solid var(--border2);border-radius:2px;transition:all .15s;flex-shrink:0}
+.art-dl:hover{border-color:var(--ac-glow);color:var(--ac)}
+.rung{position:relative;padding-left:16px;margin-bottom:10px}
+.rd{position:absolute;left:0;top:3px;width:8px;height:8px;border-radius:50%;background:var(--void);border:2px solid var(--border2);transition:all .3s}
+.rd.active{border-color:var(--amber);background:var(--amber-dim);animation:rp 1.2s ease-in-out infinite}
+.rd.verified{border-color:var(--green);background:var(--green)}.rd.escalated{border-color:var(--red);background:var(--red)}
+@keyframes rp{0%,100%{box-shadow:0 0 0 0 rgba(255,170,0,.5)}50%{box-shadow:0 0 0 3px transparent}}
+.rt{font-size:10px;color:var(--text);font-weight:500}.rs{font-family:var(--mono);font-size:8.5px;color:var(--text3);margin-top:1px}
+.rs.active{color:var(--amber)}.rs.verified{color:var(--green)}.rs.escalated{color:var(--red)}
+.ri{font-family:var(--mono);font-size:7.5px;color:var(--text3);margin-top:2px;opacity:.45;line-height:1.4}
+.rb{font-family:var(--mono);font-size:8.5px;background:var(--amber-dim);border:1px solid rgba(255,170,0,.4);color:var(--amber);padding:2px 8px;border-radius:10px;cursor:pointer;margin-top:4px;transition:all .15s}
+.rb:disabled{opacity:.4;cursor:default}
 </style>
 </head>
 <body>
@@ -162,437 +90,211 @@ input.nx-in:focus{border-color:var(--ac-glow)}
   <div id="topbar">
     <span class="glyph">✦</span>
     <span class="title">CLAUDE <b>CONSOLE</b></span>
-    <span style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-left:4px">200k ctx · SNR · SEAM · constitutional</span>
-    <div id="conn-badge"><span class="dot"></span><span id="conn-txt">CHECKING</span></div>
+    <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">200k ctx · SNR · SEAM · constitutional · NCP</span>
+    <div id="conn"><span class="dot"></span><span id="ct">CHECKING</span></div>
   </div>
-
   <div id="main">
 
-    <!-- ZONE 1: System + Tools -->
-    <div class="zone" id="zone-sys">
-      <div class="zone-label">System</div>
+    <!-- LEFT: system + tools -->
+    <div class="z">
+      <div class="zl">System</div>
+      <div class="sr"><span class="sk">Guardian</span><span class="sv" id="sv0">—</span></div>
+      <div class="sr"><span class="sk">Cortex</span><span class="sv" id="sv1">—</span></div>
+      <div class="sr"><span class="sk">Orchestrator</span><span class="sv" id="sv2">—</span></div>
+      <div class="sr"><span class="sk">Tab</span><span class="sv ac" id="sv3">—</span></div>
+      <div class="sr"><span class="sk">Chat ID</span><span class="sv" id="sv4">—</span></div>
+      <div class="sr"><span class="sk">Heartbeat</span><span class="sv" id="sv5">—</span></div>
+      <div class="sr"><span class="sk">Open Gaps</span><span class="sv" id="sv6">—</span></div>
+      <div class="sr"><span class="sk">Reflect Contracts</span><span class="sv" id="sv7">—</span></div>
+      <div class="sr"><span class="sk">Active Jobs</span><span class="sv" id="sv8">—</span></div>
 
-      <div id="sys-rows">
-        <div class="sys-row"><span class="sys-key">Guardian</span><span class="sys-val" id="sv-guardian">—</span></div>
-        <div class="sys-row"><span class="sys-key">Cortex</span><span class="sys-val" id="sv-cortex">—</span></div>
-        <div class="sys-row"><span class="sys-key">Orchestrator</span><span class="sys-val" id="sv-orch">—</span></div>
-        <div class="sys-row"><span class="sys-key">Idearium</span><span class="sys-val" id="sv-idea">—</span></div>
-        <div class="sys-row"><span class="sys-key">Ollama</span><span class="sys-val" id="sv-ollama">—</span></div>
-        <div class="sys-row"><span class="sys-key">Tab</span><span class="sys-val ac" id="sv-tab">—</span></div>
-        <div class="sys-row"><span class="sys-key">Chat ID</span><span class="sys-val" id="sv-chat">—</span></div>
-        <div class="sys-row"><span class="sys-key">Open Gaps</span><span class="sys-val" id="sv-gaps">—</span></div>
-        <div class="sys-row"><span class="sys-key">Reflection</span><span class="sys-val" id="sv-reflect">—</span></div>
+      <div class="zl" style="margin-top:14px">Tools</div>
+      <button class="tb" onclick="tool('diagnose')">△ Diagnose System</button>
+      <div class="to" id="to-diagnose" style="display:none"></div>
+      <button class="tb" onclick="tool('gaps')">◈ Open Gaps</button>
+      <div class="to" id="to-gaps" style="display:none"></div>
+      <button class="tb" onclick="tool('reflect')">⬡ Reflection Contracts</button>
+      <div class="to" id="to-reflect" style="display:none"></div>
+      <button class="tb" onclick="tool('memory')">◦ Cortex Memory</button>
+      <div class="to" id="to-memory" style="display:none"></div>
+      <button class="tb" onclick="tool('jobs')">⚡ Active Jobs</button>
+      <div class="to" id="to-jobs" style="display:none"></div>
+      <button class="tb" onclick="tool('artifacts')">↓ Artifacts</button>
+      <div class="to" id="to-artifacts" style="display:none"></div>
+
+      <div class="zl" style="margin-top:12px">Repair</div>
+      <input class="ni" id="ri" placeholder="problem to fix via Mistral…">
+      <button class="tb" onclick="doRepair()">⚡ Dispatch Repair</button>
+      <div class="to" id="to-repair" style="display:none"></div>
+
+      <div class="zl" style="margin-top:12px">Contract</div>
+      <input class="ni" id="ci" placeholder="contract name…">
+      <button class="tb" onclick="createContract()">📋 Create Contract</button>
+      <div class="to" id="to-contract" style="display:none"></div>
+
+      <div class="zl" style="margin-top:12px">CLI</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px">
+        <button onclick="cli('gaps')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">gaps</button>
+        <button onclick="cli('jobs')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">jobs</button>
+        <button onclick="cli('health')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">health</button>
+        <button onclick="cli('stats')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">stats</button>
+        <button onclick="cli('providers')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">providers</button>
+        <button onclick="cli('ledger')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">ledger</button>
+        <button onclick="cli('seam')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">seam</button>
+        <button onclick="cli('version')" class="tb" style="padding:2px 6px;margin:0;font-size:8px">version</button>
       </div>
-
-      <div class="zone-label" style="margin-top:18px">Tools</div>
-
-      <button class="tool-btn" onclick="toolDiagnose()"><span class="icon">△</span>Diagnose System</button>
-      <div class="tool-out" id="tool-diagnose-out" style="display:none"></div>
-
-      <button class="tool-btn" onclick="toolGaps()"><span class="icon">◈</span>Load Open Gaps</button>
-      <div class="tool-out" id="tool-gaps-out" style="display:none"></div>
-
-      <button class="tool-btn" onclick="toolReflect()"><span class="icon">⬡</span>Reflection Contracts</button>
-      <div class="tool-out" id="tool-reflect-out" style="display:none"></div>
-
-      <button class="tool-btn" onclick="toolMemory()"><span class="icon">◦</span>Cortex Memory</button>
-      <div class="tool-out" id="tool-memory-out" style="display:none"></div>
-
-      <div class="zone-label" style="margin-top:12px">Repair</div>
-      <input class="nx-in" id="repair-in" placeholder="describe problem to fix via Mistral…">
-      <button class="tool-btn" onclick="toolRepair()" style="margin-top:0"><span class="icon">⚡</span>Dispatch Repair</button>
-      <div class="tool-out" id="tool-repair-out" style="display:none"></div>
+      <input class="ni" id="cli-in" placeholder="custom command…">
+      <button class="tb" onclick="cli(document.getElementById('cli-in').value)">▶ Run</button>
+      <div class="to" id="to-cli" style="display:none"></div>
     </div>
 
-    <!-- ZONE 2: Dispatch + Chat mirror -->
-    <div class="zone" id="zone-dispatch">
-      <div class="zone-label">Dispatch</div>
-
-      <span class="field-label">Spec or prompt — headings become SEAM chunks</span>
-      <textarea id="spec-in" placeholder="Paste a .spec or write a task. Headings (# Title) split into SEAM chunks automatically. Claude gets 200k context — fewer chunks needed than ChatGPT."></textarea>
-
-      <div class="chip-row" id="ctx-chips" style="margin-top:8px">
-        <div class="chip on" data-c="request-handler">request-handler</div>
-        <div class="chip on" data-c="jaa-db">jaa-db</div>
-        <div class="chip" data-c="raid">raid</div>
-        <div class="chip" data-c="reflection">reflection</div>
-        <div class="chip" data-c="gap-predicate">gap-predicate</div>
-      </div>
-
-      <div class="toggle-row">
-        <div class="tog on" id="tog-snr"><span class="sw"></span>SNR filter</div>
-        <div class="tog on" id="tog-const"><span class="sw"></span>Constitutional</div>
-        <div class="tog" id="tog-mem"><span class="sw"></span>Memory inject</div>
-      </div>
-
-      <div id="chunk-info">
-        <span><b id="ci-count">1</b> chunk · ~<b id="ci-tok">0</b> tok · 200k limit</span>
-        <span id="ci-flag" style="color:var(--text3)"></span>
-      </div>
-
-      <button class="submit-btn" id="submit-btn">SUBMIT TO SEAM QUEUE →</button>
-      <div id="dispatch-status"></div>
-
-      <!-- Chat mirror -->
-      <div class="zone-label" style="margin-top:20px">Chat Mirror</div>
-      <div id="chat-mirror">
-        <div style="color:var(--text3);font-size:10.5px;text-align:center;padding:20px">
-          Conversation will mirror here as Claude responds
+    <!-- CENTER: chat -->
+    <div class="z" id="zc">
+      <div id="msgs">
+        <div id="welcome" style="color:var(--text3);font-size:10.5px;text-align:center;padding:24px;line-height:1.8">
+          <div style="font-size:18px;margin-bottom:6px">✦</div>
+          Claude via NCP · 200k context<br>
+          <span style="font-size:9px">SNR filter · Constitutional AI · SEAM chunking</span>
         </div>
       </div>
+      <div id="inp">
+        <div class="cbar">
+          <div class="cc on" data-c="system">system</div>
+          <div class="cc on" data-c="gaps">gaps</div>
+          <div class="cc" data-c="memory">memory</div>
+          <div class="cc" data-c="reflection">reflection</div>
+          <div class="cc" data-c="artifacts">artifacts</div>
+          <div class="cc" data-c="components">components</div>
+        </div>
+        <div class="ir">
+          <textarea id="pi" placeholder="Ask NEXUS via Claude… (Enter to send · Shift+Enter newline)" rows="2"></textarea>
+          <button id="sb" onclick="send()">SEND →</button>
+        </div>
+        <div class="ss"><span id="ss-model">via co-pilot → Claude NCP</span><span id="ss-tok">0 tok</span><span id="ss-st">—</span></div>
+      </div>
     </div>
 
-    <!-- ZONE 3: SEAM queue ladder -->
-    <div class="zone" id="zone-queue">
-      <div class="zone-label">SEAM Queue</div>
-      <div class="queue-sel" id="queue-sel"></div>
+    <!-- RIGHT: SEAM queue + gaps + artifacts -->
+    <div class="z">
+      <div class="zl">SEAM Queue</div>
+      <div id="qsel" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px"></div>
       <div id="ladder"></div>
-      <div class="queue-empty" id="queue-empty">
-        No SEAM queues yet.<br>Submit a spec to create one.
-      </div>
-      <div id="queue-summary" style="display:none;font-family:var(--mono);font-size:10px;
-        color:var(--text3);margin-top:auto;padding-top:12px;border-top:1px solid var(--border);
-        display:flex;justify-content:space-between">
-        <span id="qs-done">0 verified</span><span id="qs-total">0 total</span>
-      </div>
-    </div>
+      <div id="qempty" style="color:var(--text3);font-size:10px;text-align:center;padding:16px">No SEAM queues</div>
 
-    <!-- ZONE 4: Gaps + Memory -->
-    <div class="zone" id="zone-intel">
-      <div class="zone-label">Open Gaps</div>
-      <div id="gaps-list">
-        <div style="color:var(--text3);font-size:10.5px">Loading…</div>
-      </div>
+      <div class="zl" style="margin-top:14px">Open Gaps</div>
+      <div id="glist"><div style="color:var(--text3);font-size:9.5px">Loading…</div></div>
 
-      <div class="zone-label" style="margin-top:18px">Cortex Memory</div>
-      <div id="memory-list">
-        <div style="color:var(--text3);font-size:10.5px">—</div>
-      </div>
-
-      <div class="zone-label" style="margin-top:18px">Reflection</div>
-      <div id="reflect-list">
-        <div style="color:var(--text3);font-size:10.5px">—</div>
-      </div>
+      <div class="zl" style="margin-top:14px">Artifacts</div>
+      <div id="alist"><div style="color:var(--text3);font-size:9.5px">—</div></div>
     </div>
 
   </div>
 </div>
-
 <script>
-const GD   = 'http://127.0.0.1:7820';
-const ORCH = 'http://127.0.0.1:9000';
-const CX   = 'http://127.0.0.1:3748';
-const PROVIDER = 'claude';
-const CHUNK_LIMIT = 16000; // Claude 200k — much larger chunks
-let selectedQueueId = null, allQueues = [];
-const _notified = new Set();
+const GD='http://localhost:7820',ORCH='http://localhost:9000',CX='http://localhost:3748';
+const PROVIDER='claude';
+let selQ=null,allQ=[],_streaming=false;
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(6000),...opts});return r.ok?r.json():null;}catch{return null;}}
+async function post(url,body){return api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
 
-async function api(url, opts) {
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(5000), ...opts });
-    return r.ok ? r.json() : null;
-  } catch { return null; }
-}
-async function post(url, body) {
-  return api(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-}
-
-// ── System health ─────────────────────────────────────────────────────────────
-async function refreshSystem() {
-  const [prov, gaps, reflect] = await Promise.all([
-    api(`${GD}/providers`),
-    api(`${GD}/gaps?status=open&limit=100`),
-    api(`${CX}/api/jaa/reflection_contracts?limit=50`),
+async function refresh(){
+  const[prov,gaps,reflect,jobs,arts]=await Promise.all([
+    api(`${GD}/providers`),api(`${GD}/gaps?status=open&limit=50`),
+    api(`${CX}/api/jaa/reflection_contracts?limit=30`),
+    api(`${GD}/jobs?status=delivered&limit=20`),api(`${GD}/artifacts?limit=20`),
   ]);
+  const ch=prov?.channels?.[PROVIDER];
+  const conn=document.getElementById('conn');
+  conn.className=ch?'live':'';document.getElementById('ct').textContent=ch?'CONNECTED':'NO TAB';
+  sv(3,ch?(ch.tabId||'—').slice(0,12):'—',!!ch);
+  sv(4,ch?ch.chatId||'—':'—',false);
+  const hb=ch?Math.round((Date.now()-(ch.lastHeartbeat||0))/1000):null;
+  sv(5,hb!==null?(hb<15?'♥ '+hb+'s':'stale '+hb+'s'):'—',hb!==null&&hb<15);
+  await Promise.all([
+    api(`${GD}/health`).then(r=>sv(0,r?.ok?'✓':' ✗',r?.ok)),
+    api(`${CX}/health`).then(r=>sv(1,r?.ok?'✓ :3748':'✗ :3748',r?.ok)),
+    api(`${ORCH}/health`).then(r=>sv(2,r?.ok?'✓ :9000':'✗ :9000',r?.ok)),
+  ]);
+  const ga=gaps?.gaps||[];sv(6,ga.length,ga.length===0);
+  const rc=reflect?.rows||reflect?.result||[];sv(7,rc.filter(c=>c.status==='queued').length+' queued',false);
+  const jb=jobs?.jobs||[];sv(8,jb.length,jb.length===0);
+  renderGaps(ga);renderArtifacts(arts?.artifacts||[]);
+}
+function sv(i,val,ok){const e=document.getElementById('sv'+i);if(e){e.textContent=val;e.className='sv '+(ok===true?'ok':ok===false?'off':'');}}
 
-  const ch = prov?.channels?.[PROVIDER];
-  const badge = document.getElementById('conn-badge');
-  const txt   = document.getElementById('conn-txt');
-
-  if (ch) {
-    badge.className = 'live';
-    txt.textContent = 'CONNECTED';
-    document.getElementById('sv-tab').textContent  = (ch.tabId||'—').slice(0,12);
-    document.getElementById('sv-chat').textContent = ch.chatId||'—';
-  } else {
-    badge.className = '';
-    txt.textContent = 'NO TAB';
-    document.getElementById('sv-tab').textContent  = '—';
-    document.getElementById('sv-chat').textContent = '—';
-  }
-
-  // Service health
-  const services = [
-    ['sv-guardian','Guardian','7820',`${GD}/health`],
-    ['sv-cortex','Cortex','3748',`${CX}/health`],
-    ['sv-orch','Orchestrator','9000',`${ORCH}/health`],
-    ['sv-idea','Idearium','4800','http://127.0.0.1:4800/health'],
-    ['sv-ollama','Ollama','11434','http://127.0.0.1:11434/api/tags'],
-  ];
-  await Promise.all(services.map(async ([id,,port,url]) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    try {
-      const r = await fetch(url, { signal:AbortSignal.timeout(2000) });
-      el.className = 'sys-val ok'; el.textContent = port+' ✓';
-    } catch {
-      el.className = 'sys-val off'; el.textContent = port+' ✗';
-    }
-  }));
-
-  // Gap count
-  const gapCount = (gaps?.gaps||[]).length;
-  const gapEl = document.getElementById('sv-gaps');
-  gapEl.textContent = gapCount;
-  gapEl.className = `sys-val ${gapCount > 5 ? 'off' : gapCount > 0 ? '' : 'ok'}`;
-
-  // Reflection contracts
-  const contracts = reflect?.rows || reflect?.result || [];
-  const queued = contracts.filter(c => c.status === 'queued').length;
-  document.getElementById('sv-reflect').textContent = `${queued} queued`;
-
-  // Render gaps in intel zone
-  renderGaps(gaps?.gaps || []);
+function renderGaps(gaps){
+  const el=document.getElementById('glist');
+  if(!gaps.length){el.innerHTML='<div style="color:var(--text3);font-size:9.5px">No open gaps ✓</div>';return;}
+  el.innerHTML=gaps.slice(0,8).map(g=>`<div class="gi ${g.severity||'low'}"><div class="gt">${esc(g.type||'?')}</div><div class="gb">${esc((g.body||'').slice(0,65))}</div><span class="gx" onclick="askGap('${esc(g.type||'')}','${esc((g.body||'').slice(0,50))}')">Ask →</span></div>`).join('');
+}
+function renderArtifacts(arts){
+  const el=document.getElementById('alist');
+  if(!arts.length){el.innerHTML='<div style="color:var(--text3);font-size:9.5px">No artifacts</div>';return;}
+  el.innerHTML=arts.slice(0,8).map(a=>`<div class="art"><span class="art-name">${esc(a.specName||a.lang||'artifact')}</span><span class="art-dl" onclick="dlArtifact('${a.hash||a.uuid||''}','${esc(a.specName||'artifact')}')">↓ DL</span></div>`).join('');
+}
+async function dlArtifact(hash,name){
+  const r=await api(`${GD}/artifacts/${hash}`);if(!r)return;
+  const blob=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'.json';a.click();
 }
 
-function renderGaps(gaps) {
-  const el = document.getElementById('gaps-list');
-  if (!gaps.length) { el.innerHTML = '<div style="color:var(--text3);font-size:10.5px">No open gaps ✓</div>'; return; }
-  el.innerHTML = gaps.slice(0,10).map(g => `
-    <div class="gap-item ${g.severity||'low'}">
-      <div class="gap-type">${esc(g.type||g.loop_type||'?')}</div>
-      <div class="gap-body">${esc((g.body||'').slice(0,80))}</div>
-      <div class="gap-ids">${(g.uuid||'').slice(0,12)} · ${g.status||''} · ${g.severity||''}</div>
-    </div>`).join('');
+// Tools
+async function tool(id){
+  const o=document.getElementById('to-'+id);o.style.display='';o.textContent='⟳ …';
+  if(id==='diagnose'){const r=await api(`${GD}/health`);o.textContent=JSON.stringify(r?.ok?{ok:true,uptime:r.uptime,jobs:r.jobs}:{ok:false},null,2).slice(0,300);}
+  else if(id==='gaps'){const r=await api(`${GD}/gaps?status=open&limit=15`);o.textContent=(r?.gaps||[]).map(g=>`[${g.severity}] ${g.type}: ${(g.body||'').slice(0,60)}`).join('\n')||'None';}
+  else if(id==='reflect'){const r=await api(`${CX}/api/jaa/reflection_contracts?limit=15`);o.textContent=(r?.rows||r?.result||[]).map(c=>`[${c.status}] ${c.decisionClass||'?'} ${(c.uuid||'').slice(0,8)}`).join('\n')||'None';}
+  else if(id==='memory'){const r=await api(`${CX}/api/jaa/decision_log?limit=10`);o.textContent=(r?.rows||r?.result||[]).map(d=>`[${d.chosen}] ${(d.input||'').slice(0,60)}`).join('\n')||'None';}
+  else if(id==='jobs'){const r=await api(`${GD}/jobs?limit=15`);o.textContent=(r?.jobs||[]).map(j=>`[${j.status}] ${j.provider}: ${(j.prompt||'').slice(0,55)}`).join('\n')||'None';}
+  else if(id==='artifacts'){const r=await api(`${GD}/artifacts?limit=10`);o.textContent=(r?.artifacts||[]).map(a=>`${a.specName||a.lang||'?'} #${(a.hash||'').slice(0,8)}`).join('\n')||'None';}
 }
+async function doRepair(){const p=document.getElementById('ri').value.trim();const o=document.getElementById('to-repair');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ dispatching…';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,meta:{source:'claude-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12)+' → '+r.provider:'✗ '+(r?.error||'failed');}
+async function createContract(){const n=document.getElementById('ci').value.trim();const o=document.getElementById('to-contract');if(!n)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ creating…';const r=await post(`${CX}/api/jaa/reflection_contracts`,{uuid:crypto.randomUUID(),decisionClass:n,loopType:'CAPABILITY',status:'queued',agent:'mistral',priority:'normal',createdAt:Date.now(),updatedAt:Date.now()});o.style.color=r?'var(--green)':'var(--red)';o.textContent=r?'✓ contract created':'✗ failed (check cortex)';}
+async function cli(cmd){if(!cmd?.trim())return;const o=document.getElementById('to-cli');o.style.display='';o.textContent='⟳ '+cmd+'…';const r=await post(`${GD}/cli/exec`,{command:cmd.trim(),source:'claude-console'});const d=r?.result??r??{};o.textContent=typeof d==='string'?d:JSON.stringify(d,null,2).slice(0,400);}
 
-// ── Tools ─────────────────────────────────────────────────────────────────────
-async function toolDiagnose() {
-  const out = document.getElementById('tool-diagnose-out');
-  out.style.display = ''; out.textContent = '⟳ running diagnostic…';
-  const r = await post(`${GD}/cli/exec`, { command:'health', source:'claude-console' });
-  const d = r?.result ?? r ?? {};
-  out.textContent = JSON.stringify(d, null, 2).slice(0, 500);
+// Chat (routes through co-pilot which dispatches to Claude via NCP)
+async function buildCtx(types){
+  const parts=[];
+  if(types.includes('system')){const[h,pr]=await Promise.all([api(`${GD}/health`),api(`${GD}/providers`)]);parts.push(`[NEXUS] Guardian:${h?.ok?'online':'offline'} Providers:${Object.keys(pr?.channels||{}).join(',')||'none'}`);}
+  if(types.includes('gaps')){const r=await api(`${GD}/gaps?status=open&limit=6`);const g=r?.gaps||[];if(g.length)parts.push('[GAPS]\n'+g.map(x=>`[${x.severity}] ${x.type}: ${(x.body||'').slice(0,70)}`).join('\n'));}
+  if(types.includes('memory')){const r=await api(`${CX}/api/jaa/decision_log?limit=5`);const ro=r?.rows||r?.result||[];if(ro.length)parts.push('[DECISIONS]\n'+ro.map(d=>`[${d.chosen}] ${(d.input||'').slice(0,60)}`).join('\n'));}
+  if(types.includes('reflection')){const r=await api(`${CX}/api/jaa/reflection_contracts?limit=5`);const ro=r?.rows||r?.result||[];if(ro.length)parts.push('[REFLECTION]\n'+ro.map(c=>`[${c.status}] ${c.decisionClass||'?'}`).join('\n'));}
+  if(types.includes('artifacts')){const r=await api(`${GD}/artifacts?limit=5`);const a=r?.artifacts||[];if(a.length)parts.push('[ARTIFACTS]\n'+a.map(x=>x.specName||x.lang||'?').join(', '));}
+  if(types.includes('components')){const r=await api(`${ORCH}/api/components?limit=10`);const c=r?.components||[];if(c.length)parts.push('[COMPONENTS]\n'+c.map(x=>x.id||x.name||'?').join(', '));}
+  return parts.join('\n\n');
 }
-
-async function toolGaps() {
-  const out = document.getElementById('tool-gaps-out');
-  out.style.display = ''; out.textContent = '⟳ loading gaps…';
-  const r = await api(`${GD}/gaps?status=open&limit=20`);
-  const gaps = r?.gaps || [];
-  out.textContent = gaps.length
-    ? gaps.map(g => `[${g.severity||'?'}] ${g.type}: ${(g.body||'').slice(0,60)}`).join('\n')
-    : 'No open gaps';
+async function send(){
+  const prompt=document.getElementById('pi').value.trim();if(!prompt||_streaming)return;
+  const types=[...document.querySelectorAll('.cc.on')].map(c=>c.dataset.c);
+  const ctx=await buildCtx(types);
+  addMsg('user',prompt);document.getElementById('pi').value='';
+  const msgEl=addStream('assistant');
+  _streaming=true;
+  const t0=Date.now();
+  // Route through co-pilot (which handles NCP dispatch to Claude)
+  try{
+    const r=await post(`${ORCH}/api/guardian/copilot/prompt`,{prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,contextOpts:{intent:prompt}});
+    finalStream(msgEl,r?.text||'(no response from co-pilot)');
+    document.getElementById('ss-tok').textContent=r?.modelUsed||'co-pilot';
+    document.getElementById('ss-st').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
+  }catch(e){finalStream(msgEl,'✗ '+e.message);}
+  _streaming=false;
 }
+function askGap(t,b){document.getElementById('pi').value=`Analyze gap and suggest fix:\nType: ${t}\nBody: ${b}`;send();}
+function addMsg(role,text){const m=document.getElementById('msgs');const w=document.getElementById('welcome');if(w)w.remove();const el=document.createElement('div');el.className='msg '+role;el.innerHTML=`<div class="mr">${role}</div><div class="mt">${esc(text)}</div>`;m.appendChild(el);m.scrollTop=m.scrollHeight;return el;}
+function addStream(role){const m=document.getElementById('msgs');const w=document.getElementById('welcome');if(w)w.remove();const el=document.createElement('div');el.className='msg '+role;el.innerHTML=`<div class="mr">${role}</div><div class="mt"><span class="sc"></span></div>`;m.appendChild(el);m.scrollTop=m.scrollHeight;return el;}
+function finalStream(el,text){const t=el.querySelector('.mt');if(t)t.innerHTML=esc(text);}
 
-async function toolReflect() {
-  const out = document.getElementById('tool-reflect-out');
-  out.style.display = ''; out.textContent = '⟳ loading contracts…';
-  const r = await api(`${CX}/api/jaa/reflection_contracts?limit=20`);
-  const rows = r?.rows || r?.result || [];
-  if (!rows.length) { out.textContent = 'No reflection contracts'; return; }
-  out.textContent = rows.map(c => `[${c.status}] ${c.decisionClass||'?'} · ${(c.uuid||'').slice(0,8)}`).join('\n');
-  document.getElementById('reflect-list').innerHTML = rows.slice(0,8).map(c => `
-    <div style="padding:5px 8px;border-left:2px solid ${c.status==='resolved'?'var(--green)':c.status==='dispatched'?'var(--amber)':'var(--border2)'};margin-bottom:5px">
-      <div style="font-family:var(--mono);font-size:9px;color:var(--text2)">${esc(c.decisionClass||c.loopType||'?')}</div>
-      <div style="font-size:9px;color:var(--text3)">${c.status} · ${(c.uuid||'').slice(0,10)}</div>
-    </div>`).join('');
-}
+// SEAM
+const SC={QUEUED:'',INJECTING:'active',GENERATING:'active',DETECTING:'active',VERIFIED:'verified',RETRYING:'active',ESCALATED:'escalated'};
+async function refreshQ(){const d=await api(`${GD}/seam/queues`);allQ=(d?.queues||[]).filter(q=>q.provider===PROVIDER);const sel=document.getElementById('qsel');const emp=document.getElementById('qempty');const lad=document.getElementById('ladder');if(!allQ.length){sel.innerHTML='';lad.innerHTML='';emp.style.display='';return;}emp.style.display='none';if(!selQ||!allQ.some(q=>q.uuid===selQ))selQ=allQ[allQ.length-1].uuid;sel.innerHTML=allQ.map(q=>`<div style="font-family:var(--mono);font-size:8.5px;padding:2px 7px;border-radius:10px;border:1px solid ${q.uuid===selQ?'var(--ac-glow)':'var(--border2)'};color:${q.uuid===selQ?'var(--ac)':'var(--text3)'};cursor:pointer" onclick="selQ='${q.uuid}';renderL()">${esc((q.title||'untitled').slice(0,12))}</div>`).join('');renderL();}
+function renderL(){const q=allQ.find(q=>q.uuid===selQ);const lad=document.getElementById('ladder');if(!q){lad.innerHTML='';return;}lad.innerHTML=(q.compartments||[]).map((c,i,a)=>{const cls=SC[c.state]||'';return`<div class="rung">${i<a.length-1?'<div style="position:absolute;left:3px;top:12px;bottom:-10px;width:1px;background:var(--border2)"></div>':''}<div class="rd ${cls}"></div><div class="rt">#${c.chunkIdx+1} ${esc(c.chunkTitle||'')}</div><div class="rs ${cls}">${c.state}${c.retries?' · retry '+c.retries:''}</div>${c.seam_id?`<div class="ri">${c.seam_id.slice(0,28)}</div>`:''}</div>`;}).join('');}
 
-async function toolMemory() {
-  const out = document.getElementById('tool-memory-out');
-  out.style.display = ''; out.textContent = '⟳ querying cortex…';
-  const r = await api(`${CX}/api/jaa/decision_log?limit=10`);
-  const rows = r?.rows || r?.result || [];
-  out.textContent = rows.length
-    ? rows.map(d => `[${(d.chosen||'?')}] ${(d.input||'').slice(0,60)}`).join('\n')
-    : 'No decision log rows';
-  document.getElementById('memory-list').innerHTML = rows.slice(0,6).map(d => `
-    <div class="mem-hit">
-      <div class="mem-score" style="color:${d.satisfaction>0.7?'var(--green)':d.satisfaction>0.4?'var(--amber)':'var(--text3)'}">
-        ${d.chosen||'?'} · satisfaction:${d.satisfaction??'—'}
-      </div>
-      <div class="mem-text">${esc((d.input||'').slice(0,80))}</div>
-    </div>`).join('');
-}
+document.getElementById('pi').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+document.querySelectorAll('.cc').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
 
-async function toolRepair() {
-  const prompt = document.getElementById('repair-in').value.trim();
-  const out = document.getElementById('tool-repair-out');
-  if (!prompt) return;
-  out.style.display = ''; out.style.color = 'var(--amber)'; out.textContent = '⟳ dispatching…';
-  const r = await post(`${GD}/command`, {
-    command:'diagnose_and_repair', provider:'ollama', prompt,
-    meta:{source:'claude-console', task:'repair'},
-  });
-  out.style.color = r?.jobId ? 'var(--green)' : 'var(--red)';
-  out.textContent = r?.jobId
-    ? `✓ ${r.jobId.slice(0,12)} → ${r.provider||'ollama'}`
-    : `✗ ${r?.error||'dispatch failed'}`;
-}
-
-// ── Chunk preview ─────────────────────────────────────────────────────────────
-document.getElementById('spec-in').addEventListener('input', () => {
-  const text = document.getElementById('spec-in').value.trim();
-  const hasH = /^#+\s+/m.test(text);
-  const est  = Math.max(1, hasH ? (text.match(/^#+\s+/gm)||[]).length : Math.ceil(text.length/(CHUNK_LIMIT*4)));
-  const tok  = Math.round(text.length/4/est);
-  document.getElementById('ci-count').textContent = est;
-  document.getElementById('ci-tok').textContent   = tok.toLocaleString();
-  document.getElementById('ci-flag').textContent  = hasH ? 'heading-split' : 'size-split';
-});
-
-document.querySelectorAll('.chip').forEach(c => c.addEventListener('click',()=>c.classList.toggle('on')));
-document.querySelectorAll('.tog').forEach(t => t.addEventListener('click',()=>t.classList.toggle('on')));
-
-// ── Submit ────────────────────────────────────────────────────────────────────
-document.getElementById('submit-btn').addEventListener('click', async () => {
-  const specText = document.getElementById('spec-in').value.trim();
-  const status   = document.getElementById('dispatch-status');
-  const btn      = document.getElementById('submit-btn');
-  if (!specText) { status.textContent='Nothing to submit'; status.style.color='var(--amber)'; return; }
-
-  const ctx      = [...document.querySelectorAll('#ctx-chips .chip.on')].map(c=>c.dataset.c);
-  const snr      = document.getElementById('tog-snr').classList.contains('on');
-  const memInj   = document.getElementById('tog-mem').classList.contains('on');
-  const prefix   = [
-    ctx.length ? `[NEXUS CONTEXT COMPONENTS: ${ctx.join(', ')}]` : '',
-    snr ? '[SNR FILTER: active — only high-signal content]' : '',
-    memInj ? '[MEMORY INJECTION: cortex memory included in context]' : '',
-  ].filter(Boolean).join('\n');
-
-  btn.disabled=true; status.textContent='Submitting…'; status.style.color='var(--text2)';
-  const r = await post(`${GD}/command`, {
-    command:'spec', provider:PROVIDER,
-    specText: prefix ? `${prefix}\n\n${specText}` : specText,
-    title: undefined,
-    source:'claude-console',
-    splitOn:/^#+\s+/m.test(specText)?'heading':'size',
-    maxChunkSize: CHUNK_LIMIT,
-  });
-  btn.disabled=false;
-  if (r?.ok) {
-    status.textContent=`Queue ${r.queueId?.slice(0,8)} — ${r.total} chunks`;
-    status.style.color='var(--green)';
-    selectedQueueId=r.queueId;
-    document.getElementById('spec-in').value='';
-    refreshQueues();
-  } else {
-    status.textContent=`Failed: ${r?.error||'guardian unreachable'}`;
-    status.style.color='var(--red)';
-  }
-});
-
-// ── SEAM ladder ───────────────────────────────────────────────────────────────
-const STATE_CLS = {
-  QUEUED:'queued',INJECTING:'active',GENERATING:'active',DETECTING:'active',
-  VERIFIED:'verified',RETRYING:'retrying',ESCALATED:'escalated',
-};
-
-async function refreshQueues() {
-  const d = await api(`${GD}/seam/queues`);
-  allQueues = (d?.queues||[]).filter(q=>q.provider===PROVIDER);
-
-  const sel=document.getElementById('queue-sel');
-  const emp=document.getElementById('queue-empty');
-  const lad=document.getElementById('ladder');
-  const sum=document.getElementById('queue-summary');
-
-  if (!allQueues.length){sel.innerHTML='';lad.innerHTML='';sum.style.display='none';emp.style.display='';return;}
-  emp.style.display='none';
-  if (!selectedQueueId||!allQueues.some(q=>q.uuid===selectedQueueId))
-    selectedQueueId=allQueues[allQueues.length-1].uuid;
-
-  sel.innerHTML=allQueues.map(q=>
-    `<div class="qpill ${q.uuid===selectedQueueId?'sel':''}" data-id="${q.uuid}">${esc((q.title||'untitled').slice(0,14))}</div>`
-  ).join('');
-  sel.querySelectorAll('.qpill').forEach(p=>p.addEventListener('click',()=>{selectedQueueId=p.dataset.id;renderLadder();}));
-  renderLadder();
-}
-
-function renderLadder() {
-  const q=allQueues.find(q=>q.uuid===selectedQueueId);
-  const lad=document.getElementById('ladder');
-  const sum=document.getElementById('queue-summary');
-  if (!q){lad.innerHTML='';sum.style.display='none';return;}
-
-  lad.innerHTML=(q.compartments||[]).map((c,i,arr)=>{
-    const cls=STATE_CLS[c.state]||'queued';
-    const seam = c.seam_id||c.uuid||'';
-    const comp = c.comp_id||'';
-    let action='';
-    if ((cls==='active'||cls==='retrying')&&c.uuid){
-      action=`<button class="retry-btn" data-q="${q.uuid}" data-c="${c.uuid}">Force Retry</button>`;
-    } else if (cls==='escalated'){
-      action=`<div style="font-size:9px;color:var(--text3);margin-top:3px;font-style:italic">Escalated — re-dispatch needed</div>`;
-    }
-    return `<div class="rung">
-      ${i<arr.length-1?'<div class="rung-line"></div>':''}
-      <div class="rung-dot ${cls}"></div>
-      <div class="rung-title">#${c.chunkIdx+1} ${esc(c.chunkTitle||'')}</div>
-      <div class="rung-state ${cls}">${c.state}${c.retries?` · retry ${c.retries}`:''}</div>
-      ${seam?`<div class="rung-ids">${seam.slice(0,28)}${comp?' · '+comp.slice(0,20):''}</div>`:''}
-      ${action}
-    </div>`;
-  }).join('');
-
-  lad.querySelectorAll('.retry-btn').forEach(b=>b.addEventListener('click',async()=>{
-    b.disabled=true; b.textContent='Retrying…';
-    const r=await post(`${GD}/seam/retry`,{queueId:b.dataset.q,chunkUuid:b.dataset.c,reason:'manual-claude-console'});
-    if(r?.ok){refreshQueues();}else{b.disabled=false;b.textContent='Force Retry';}
-  }));
-
-  const st=q.stats||{};
-  const total=st.total||q.compartments?.length||0;
-  const done=st.verified||0;
-  document.getElementById('queue-summary').style.display='flex';
-  document.getElementById('qs-done').textContent=`${done} verified`;
-  document.getElementById('qs-total').textContent=`${total} total`;
-
-  if(total>0&&done===total&&!_notified.has(q.uuid)){
-    _notified.add(q.uuid);
-    let b=document.getElementById('seam-done');
-    if(!b){b=document.createElement('div');b.id='seam-done';
-      b.style.cssText='margin-top:10px;padding:8px 12px;border-radius:5px;background:var(--green-dim);border:1px solid rgba(0,255,136,.3);color:var(--green);font-family:var(--mono);font-size:10px;font-weight:700;text-align:center';
-      document.getElementById('queue-summary').after(b);}
-    b.textContent=`✓ COMPLETE — ${total}/${total} chunks verified`;
-  }
-}
-
-// ── Chat mirror (SSE from guardian events) ─────────────────────────────────────
-function appendMsg(role, text, streaming=false) {
-  const mirror = document.getElementById('chat-mirror');
-  const first  = mirror.querySelector('[data-placeholder]');
-  if (first) first.remove();
-  const msg = document.createElement('div');
-  msg.className = `msg ${role}${streaming?' streaming':''}`;
-  msg.innerHTML = `<div class="msg-role">${role}</div><div class="msg-text">${esc(text)}</div>`;
-  mirror.appendChild(msg);
-  mirror.scrollTop = mirror.scrollHeight;
-  return msg;
-}
-
-// Poll for new artifacts/jobs to mirror
-let _lastJobTs = 0;
-async function pollChat() {
-  const r = await api(`${GD}/artifacts?limit=10&after=${_lastJobTs}`);
-  const arts = r?.artifacts || [];
-  for (const a of arts) {
-    if (a.provider !== PROVIDER) continue;
-    if (a.ts <= _lastJobTs) continue;
-    _lastJobTs = Math.max(_lastJobTs, a.ts);
-    appendMsg('assistant', a.text||a.content||'(artifact)', false);
-  }
-}
-
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-refreshSystem();
-refreshQueues();
-setInterval(refreshSystem, 5000);
-setInterval(refreshQueues, 3000);
-setInterval(pollChat, 4000);
+refresh();refreshQ();setInterval(refresh,6000);setInterval(refreshQ,3000);
 </script>
 </body>
 </html>
