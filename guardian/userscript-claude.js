@@ -40,6 +40,14 @@ const TAB_KEY = 'guardian_claimed_tab_claude';
 // ── Runtime state ─────────────────────────────────────────────────────────────
 let _es = null, _hb = null, _reconnectTimer = null;
 let connState = 'disconnected';
+// §23.12 — incremented every time connect() starts a new attempt. Every
+// callback below checks its own captured generation against this before
+// touching connState — a stale connection's onerror/onabort/ontimeout
+// firing after a newer connect() has already succeeded must not be allowed
+// to overwrite state the newer connection already set. This was the
+// client-side half of the "flickering" bug — the server-side half was the
+// identical shape of race in lib/ncp.js's close handler.
+let _connGen = 0;
 let currentJobId = null, jobActive = false;
 let _watchTimer = null, _watchObs = null, _watchStart = 0;
 let panelOpen = false, activeTab = 'log';
@@ -464,6 +472,62 @@ async function scanArtifacts(jobId) {
   }
 }
 
+// §23.10 — captures Claude's extended-thinking block, when present, and feeds
+// it into the ledger the same way artifacts and gaps already are. James:
+// "I want the system to learn how you think, and improve itself." Reasoning
+// content lives in the DOM whether the expandable section is open or closed
+// (it's a CSS visibility toggle, not a conditional render) so this reads
+// .innerText directly rather than needing to click anything open first.
+//
+// §HONEST-NOTE: claude.ai's thinking-block markup is not something this
+// codebase has verified against the live DOM — these are best-guess
+// selectors based on how Anthropic's UI has named similar expandable
+// reasoning sections. If none match, this silently captures nothing (no
+// false data, per §1.1) and logs a one-time hint to check selectors against
+// the actual page. Confirm/adjust THINKING_SELECTORS by inspecting the live
+// page if this never fires.
+const THINKING_SELECTORS = [
+  '[data-testid="thinking"]', '[data-testid*="thinking"]',
+  '.thinking-block', '[class*="thinking"]',
+  'details:has(summary)', // generic expandable fallback — filtered by summary text below
+];
+let _thinkingSelectorWarned = false;
+const _seenThinkingHashes = new Set();
+
+async function scanThinking(jobId) {
+  let nodes = [];
+  for (const sel of THINKING_SELECTORS) {
+    try { nodes = [...document.querySelectorAll(sel)]; if (nodes.length) break; } catch (_) {}
+  }
+  // Generic <details> fallback — only keep ones whose <summary> mentions thinking/reasoning
+  if (nodes.length && nodes[0].tagName === 'DETAILS') {
+    nodes = nodes.filter(d => /think|reason/i.test(d.querySelector('summary')?.textContent || ''));
+  }
+  if (!nodes.length) {
+    if (!_thinkingSelectorWarned) {
+      _thinkingSelectorWarned = true;
+      _log('warn', 'No thinking block found', 'THINKING_SELECTORS may need updating against the live DOM — see scanThinking() comment');
+    }
+    return;
+  }
+  for (const node of nodes) {
+    const content = (node.innerText || node.textContent || '').trim();
+    if (content.length < 30) continue;
+    const hash = await sha256(content);
+    if (_seenThinkingHashes.has(hash)) continue;
+    _seenThinkingHashes.add(hash);
+    send({ type:'GUARDIAN_THINKING_CAPTURED', jobId, content: content.slice(0, 8000), hash,
+      chatUrl: location.href, account: getAccount() });
+    _toCortex('guardian.thinking.captured', { jobId, hash, chars: content.length });
+    _log('ok', `Thinking captured`, `${content.length}ch`);
+    thinkingStore.push({ jobId, hash, content: content.slice(0,2000), ts: Date.now() });
+    if (thinkingStore.length > 100) thinkingStore.shift();
+    if (panelOpen && activeTab==='think') renderThinking();
+  }
+}
+let thinkingStore = [];
+
+
 // ── DOM observation ───────────────────────────────────────────────────────────
 function findResponseEl() {
   return document.querySelector(
@@ -606,6 +670,7 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
 
   const usage = recordUsage(jobId, text, ms);
   await scanArtifacts(jobId);
+  await scanThinking(jobId);
 
   // Update IDB request status
   await dbPut('requests', { uuid:jobId, status:'fulfilled', completedAt:Date.now(), sessionId:await getSessionId() });
@@ -705,6 +770,7 @@ setInterval(pollSystemStatus, 15000);
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
   if (_es && _es.abort) { try { _es.abort(); } catch(_) {} }
+  const myGen = ++_connGen; // §23.12 — this attempt's identity
   const url = `${NCP_CHANNEL}?tabId=${MY_TAB}&provider=${PROVIDER}`;
   _log('info', 'NCP connecting…', url);
   connState = 'connecting'; setConnState('connecting');
@@ -712,37 +778,66 @@ function connect() {
   let _buf = '';
   let _opened = false;
 
+  // §23.16 — WATCHDOG. connect() previously relied entirely on onerror/
+  // onabort/onprogress firing, with `timeout: 0` (explicitly no timeout,
+  // since SSE is meant to be long-held). If GM_xmlhttpRequest ever fails
+  // to fire ANY callback at all — a silent CORS rejection some extension
+  // versions swallow, a proxy/firewall edge case, whatever the specific
+  // cause — there was no mechanism to ever notice or recover. The pill
+  // would sit on "CONNECTING" forever. This doesn't try to identify every
+  // possible silent-failure mode; it just guarantees forward progress: if
+  // this exact attempt hasn't opened within 10s, force a reconnect.
+  setTimeout(() => {
+    if (myGen !== _connGen) return; // superseded by a later attempt already
+    if (_opened) return;            // this attempt succeeded, nothing to do
+    _log('warn', 'NCP watchdog — no response in 10s, forcing reconnect', url);
+    try { _es.abort(); } catch(_) {}
+    connState = 'disconnected'; setConnState('disconnected');
+    _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+  }, 10000);
+
   _es = GM_xmlhttpRequest({
     method:   'GET',
     url,
     headers:  { 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' },
     responseType: 'stream',
     onloadstart: (r) => {
-      if (r.status !== 200) {
-        _log('err', `NCP channel returned ${r.status} — retry ${RECONNECT_MS}ms`);
-        connState = 'disconnected'; setConnState('disconnected');
-        _reconnectTimer = setTimeout(connect, RECONNECT_MS);
-        return;
-      }
-      // Connected — register and start heartbeat
-      connState = 'ready'; setConnState('ready');
-      _opened = true;
-      _log('ok', `NCP connected · ${PROVIDER}`, url);
-      ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
-      if (_hb) clearInterval(_hb);
-      _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
-      autoClaimIfFree();
-      replayPending();
-      setTimeout(() => sendDOMMap(), 2000);
-      pollSystemStatus();
+      // §FIX — status is NOT available here. loadstart fires the instant the
+      // request begins sending, before any response headers exist, so r.status
+      // is always 0 at this point regardless of whether the server will answer.
+      // The original code checked r.status!==200 here, which made every single
+      // connection attempt — server up or down — tear itself down and retry on
+      // a 3s loop before a real response could ever arrive. Real status check
+      // moved to the first onprogress call below, where headers are guaranteed
+      // to already be received.
     },
     onprogress: (r) => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
+      if (!_opened) {
+        if (r.status !== 200) {
+          _log('err', `NCP channel returned ${r.status} — retry ${RECONNECT_MS}ms`);
+          connState = 'disconnected'; setConnState('disconnected');
+          try { _es.abort(); } catch(_) {}
+          _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+          return;
+        }
+        // Connected — register and start heartbeat
+        connState = 'ready'; setConnState('ready');
+        _opened = true;
+        _log('ok', `NCP connected · ${PROVIDER}`, url);
+        ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
+        if (_hb) clearInterval(_hb);
+        _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
+        autoClaimIfFree();
+        replayPending();
+        setTimeout(() => sendDOMMap(), 2000);
+        pollSystemStatus();
+      }
       // SSE arrives as chunked text — parse line by line
       const raw = r.responseText || '';
       const newData = raw.slice(_buf.length);
       _buf = raw;
-      const lines = newData.split('
-');
+      const lines = newData.split('\n');
       for (const line of lines) {
         if (!line.startsWith('data:')) continue;
         const text = line.slice(5).trim();
@@ -760,16 +855,21 @@ function connect() {
       }
     },
     onerror: () => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
       connState = 'disconnected'; setConnState('disconnected');
       _log('err', `NCP error — retry ${RECONNECT_MS}ms`);
       clearInterval(_hb);
       _reconnectTimer = setTimeout(connect, RECONNECT_MS);
     },
     onabort: () => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore — this fires for the OLD
+      // connection precisely because connect() just called _es.abort() on it
+      // to start a NEW one; the new one already set connState, don't undo it.
       connState = 'disconnected'; setConnState('disconnected');
       clearInterval(_hb);
     },
     ontimeout: () => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
       // SSE streams don't timeout — this fires if connection drops silently
       if (_opened) {
         _log('warn', 'NCP stream ended — reconnecting');
@@ -958,6 +1058,7 @@ function buildUI() {
   const TAB_LIST = [
     ['log','Log'], ['ledger','Ledger'], ['gaps','Gaps'], ['arts','Arts'],
     ['seam','SEAM'], ['intel','Intel'], ['nexus','NEXUS'], ['sys','Sys'], ['opts','Opts'],
+    ['think','Think'],
   ];
   for (const [id,label] of TAB_LIST) {
     const t = document.createElement('div');
@@ -977,13 +1078,14 @@ function buildUI() {
   const nexusArea  = document.createElement('div'); nexusArea.id='__g10nexus__'; nexusArea.style.cssText='display:none;overflow-y:auto;max-height:460px;padding:0';
   const sysArea    = document.createElement('div'); sysArea.id='__g10sys__';     sysArea.style.display='none';
   const optsArea   = document.createElement('div'); optsArea.id='__g10opts__';   optsArea.style.display='none';
+  const thinkArea  = document.createElement('div'); thinkArea.id='__g10think__'; thinkArea.style.cssText='display:none;overflow-y:auto;max-height:460px';
 
   const footer = document.createElement('div'); footer.className='g10footer';
   const fL = document.createElement('span'); fL.id='__g10fl__'; fL.textContent=`${NCP_URL} · claude`;
   const fR = document.createElement('span'); fR.textContent=`v${VERSION}`;
   footer.append(fL, fR);
 
-  panel.append(hdr, jobBar, tabs, logArea, ledgerArea, gapsArea, artsArea, seamArea, intelArea, nexusArea, sysArea, optsArea, footer);
+  panel.append(hdr, jobBar, tabs, logArea, ledgerArea, gapsArea, artsArea, seamArea, intelArea, nexusArea, sysArea, optsArea, thinkArea, footer);
 
   pill.addEventListener('click', () => {
     panelOpen = !panelOpen;
@@ -997,7 +1099,7 @@ function buildUI() {
 const AREAS = {
   log:'__g10log__', ledger:'__g10ledger__', gaps:'__g10gaps__',
   arts:'__g10arts__', seam:'__g10seam__', intel:'__g10intel__',
-  nexus:'__g10nexus__', sys:'__g10sys__', opts:'__g10opts__',
+  nexus:'__g10nexus__', sys:'__g10sys__', opts:'__g10opts__', think:'__g10think__',
 };
 function switchTab(id) {
   activeTab = id;
@@ -1018,6 +1120,7 @@ function renderActiveTab() {
   if (activeTab==='nexus')  renderNexus();
   if (activeTab==='sys')    renderSys();
   if (activeTab==='opts')   renderOpts();
+  if (activeTab==='think')  renderThinking();
 }
 
 function _setBadge(n) {
@@ -1136,7 +1239,36 @@ function renderArts() {
   }
 }
 
-// ── SEAM tab — live queue system with seam_id, comp_id, retry logic ────────
+// ── Think tab — captured reasoning, one expandable row per job ────────────────
+// Same expand/collapse pattern as Arts above: click the header, content
+// appears underneath. This is the literal "expandable section" — collapsed
+// rows are just job id + timestamp + char count; the captured thinking text
+// only renders once you expand a row, same as artifacts.
+let _thinkExpanded = new Set();
+function renderThinking() {
+  const a = document.getElementById('__g10think__'); if (!a) return;
+  if (!thinkingStore.length) {
+    a.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:20px;text-align:center">No thinking captured yet — see scanThinking() if this never fills in; THINKING_SELECTORS may need updating against the live DOM.</div>';
+    return;
+  }
+  a.innerHTML = '';
+  for (const t of [...thinkingStore].reverse()) {
+    const div = document.createElement('div'); div.className='g10art';
+    const exp = _thinkExpanded.has(t.hash);
+    div.innerHTML = `<div class="g10art-hdr">
+      <span class="g10art-lang">#${(t.jobId||'').slice(0,8)}</span>
+      <span class="g10art-sz">${t.content.length}ch</span>
+      <span class="g10art-hash">${new Date(t.ts).toLocaleTimeString()}</span>
+      <span style="color:#334155;margin-left:auto">${exp?'▲':'▼'}</span>
+    </div>${exp ? `<div class="g10art-pre">${escHtml(t.content.slice(0,2000))}${t.content.length>2000?'…':''}</div>` : ''}`;
+    div.addEventListener('click', () => {
+      if (exp) _thinkExpanded.delete(t.hash); else _thinkExpanded.add(t.hash);
+      renderThinking();
+    });
+    a.appendChild(div);
+  }
+}
+
 // Each queue is a SEAM delivery contract. Each chunk has seam_id, comp_id,
 // contract_id. This tab is the ground truth for what's building, what failed,
 // and what needs retry. Not a paste box — a live system view.
@@ -1286,8 +1418,7 @@ async function _refreshSeamQueues(a) {
         const st = c.state || 'QUEUED';
         const col = st==='VERIFIED'?'#34d399':st==='GENERATING'||st==='INJECTING'?'#fbbf24':st==='ESCALATED'||st==='FAILED'?'#f87171':'#334466';
         const chip = document.createElement('div');
-        chip.title = `${c.chunkTitle||'chunk'} · ${st}${c.seam_id?'
-seam: '+c.seam_id:''}`;
+        chip.title = `${c.chunkTitle||'chunk'} · ${st}${c.seam_id?'\nseam: '+c.seam_id:''}`;
         chip.style.cssText = `width:8px;height:8px;border-radius:1px;background:${col};cursor:pointer;opacity:.8`;
         chip.onclick = () => _log('sys', `Chunk: ${c.chunkTitle}`, `state:${st} seam:${(c.seam_id||'').slice(0,20)} idx:${c.chunkIdx}`);
         grid.appendChild(chip);
@@ -1645,11 +1776,21 @@ function _nexusStartObserver() {
 //   - Ollama direct: query Qwen/Mistral locally
 // Not copy-paste. Built around what Claude actually needs to know.
 
-function renderNexus() {
-  const el = document.getElementById('__g10nexus__');
-  if (!el) return;
-  el.innerHTML = '';
-
+// §23.15 — RECURSIVE QA FINDING: this was a second `function renderNexus()`
+// declared later in the file (now at the live renderNexus below). Function
+// declarations hoist; the later one silently won, which means EVERYTHING
+// in this function — CLI runner, gap diagnostic, component registry
+// search, raw cortex-memory-table browser, repair dispatch — has been
+// completely unreachable dead code, with no error, no warning, since
+// whichever session introduced the second renderNexus. Renamed to a named
+// sub-panel and spliced into the live version below instead of either
+// silently losing this functionality or guessing it was meant to be
+// deleted. Its own Ollama-direct box (queryOllama(), __nx_oll_in__) is
+// removed here — the live renderNexus already has one
+// (_nexusOllamaQuery/__nx_query__) and keeping both would just be the same
+// box twice. queryOllama() itself is removed below since this was its only
+// caller — not left as a second piece of new dead code from this same fix.
+function _renderNexusTools(el) {
   const pad = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)';
   const sectionTitle = (t) => `<div style="font:9px monospace;color:#334466;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">${t}</div>`;
 
@@ -1721,23 +1862,6 @@ function renderNexus() {
     </div>
     <div id="__nx_repair_out__" style="margin-top:4px;font:8px monospace;color:#334466">—</div>`;
   el.appendChild(repairDiv);
-
-  // ── Ollama direct ──────────────────────────────────────────────────────────
-  const ollamaDiv = document.createElement('div');
-  ollamaDiv.style.cssText = 'padding:8px 12px';
-  ollamaDiv.innerHTML = sectionTitle('OLLAMA DIRECT') + `
-    <div style="display:flex;gap:4px;margin-bottom:4px">
-      <select id="__nx_model__" style="background:#030308;border:1px solid #1e1e3a;color:#64748b;padding:3px 6px;font:9px monospace;border-radius:2px;outline:none">
-        <option>mistral:7b-instruct-q4_K_M</option>
-        <option>qwen2.5-coder:1.5b</option>
-      </select>
-    </div>
-    <textarea id="__nx_oll_in__" placeholder="Ask Ollama directly — gets full system context"
-      style="width:100%;background:#030308;border:1px solid #1e1e3a;color:#94a3b8;padding:6px 8px;font:10px monospace;resize:none;border-radius:2px;min-height:52px;outline:none;box-sizing:border-box"></textarea>
-    <button onclick="queryOllama()"
-      style="margin-top:4px;background:none;border:1px solid rgba(255,124,56,.3);color:#ff7c38;border-radius:2px;padding:3px 10px;font:9px monospace;cursor:pointer">↗ Ask Mistral</button>
-    <div id="__nx_oll_out__" style="margin-top:6px;font:10px monospace;color:#5a7a96;line-height:1.5;max-height:120px;overflow-y:auto">—</div>`;
-  el.appendChild(ollamaDiv);
 
   // Auto-load gaps on open
   loadGaps('open');
@@ -1853,19 +1977,11 @@ async function dispatchRepair(prompt) {
 }
 
 // ── Ollama direct query ───────────────────────────────────────────────────────
-async function queryOllama() {
-  const prompt = document.getElementById('__nx_oll_in__')?.value?.trim(); if (!prompt) return;
-  const model  = document.getElementById('__nx_model__')?.value || 'qwen2.5-coder:1.5b';
-  const out    = document.getElementById('__nx_oll_out__');
-  if (!out) return;
-  out.style.color = '#818cf8'; out.textContent = `⟳ ${model}…`;
-  _nexusOllamaQuery(prompt, (err, text) => {
-    if (!document.getElementById('__nx_oll_out__')) return;
-    const o = document.getElementById('__nx_oll_out__');
-    if (err) { o.style.color='#f87171'; o.textContent='✗ '+err; }
-    else      { o.style.color='#b8cfe0'; o.textContent=text.slice(0,600); }
-  }, model);
-}
+// §23.15 — queryOllama() removed here. Its only caller was the duplicate
+// Ollama-direct panel removed above in _renderNexusTools — it wrapped the
+// same _nexusOllamaQuery() helper the live panel's button already calls,
+// so nothing unique was lost, just a second box that would have shown the
+// same thing twice.
 
 // ══ NEXUS HOOKS — Memory · RAID · Self-Heal ═════════════════════════════════
 // The userscript is now a full NEXUS agent.
@@ -2371,6 +2487,12 @@ function renderNexus() {
   qo.style.cssText='margin-top:4px;font:9px monospace;color:#334466;line-height:1.5;min-height:16px';
   qb.onclick=()=>{const q=document.getElementById('__nx_query__')?.value?.trim();if(!q)return;qo.style.color='#818cf8';qo.textContent='⟳';_nexusOllamaQuery(q,(err,text)=>{const o=document.getElementById('__nx_qout__');if(!o)return;if(err){o.style.color='#ff2d55';o.textContent='✗ '+err;}else{o.style.color='#b8cfe0';o.textContent=text.slice(0,400);}});};
   qdiv.append(qi,qb,qo);el.appendChild(qdiv);
+
+  // §23.15 — CLI runner, gap diagnostic, component registry search, raw
+  // cortex-memory-table browser, repair dispatch. Restored here — see
+  // _renderNexusTools' own comment for why these were completely
+  // unreachable before this fix.
+  _renderNexusTools(el);
 }
 
 function _nexusRefreshAll() {

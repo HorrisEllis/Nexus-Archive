@@ -41,6 +41,11 @@ const TAB_KEY = 'guardian_claimed_tab_chatgpt';
 // ── Runtime state ─────────────────────────────────────────────────────────────
 let _es = null, _hb = null, _reconnectTimer = null;
 let connState = 'disconnected';
+// §23.12 — see the Claude userscript's §23.12 comment for the full explanation. Same race,
+// same fix: a stale connection's onerror/onabort/ontimeout firing after a
+// newer connect() already succeeded must not overwrite state the newer
+// connection already set.
+let _connGen = 0;
 let currentJobId = null, jobActive = false;
 let _watchTimer = null, _watchObs = null, _watchStart = 0;
 let panelOpen = false, activeTab = 'log';
@@ -594,12 +599,29 @@ function _seamLsMarkInterrupted(jobId) {
   } catch(_) {}
 }
 // On boot: surface any interrupted SEAM jobs to guardian so it can decide to resume
+// §23.16 — these are keyed by jobId, which is different on every retry, so
+// multiple stale entries can point at the same seam_queue_id (exactly what
+// produced the repeated "interrupted SEAM found" spam — 3 separate jobId
+// keys for queue 83036522, 3 more for 05b25fc0, each logged and sent
+// separately). Deduped by queue here (most recent record wins), and every
+// key gets removed once its info is sent — this record's only job is
+// surviving a page reload long enough to report state once, not living in
+// localStorage forever afterward.
 function _seamLsResumeCheck() {
   try {
     const keys = Object.keys(localStorage).filter(k => k.startsWith('nexus_seam_job_'));
+    const byQueue = new Map(); // seam_queue_id -> { key, rec }
     for (const k of keys) {
-      const rec = JSON.parse(localStorage.getItem(k) || 'null');
-      if (!rec || rec.status === 'complete') continue;
+      let rec; try { rec = JSON.parse(localStorage.getItem(k) || 'null'); } catch(_) { rec = null; }
+      if (!rec || rec.status === 'complete') { try { localStorage.removeItem(k); } catch(_) {} continue; }
+      const qid = rec.seam_queue_id || k; // fall back to key itself if no queue id recorded
+      const existing = byQueue.get(qid);
+      const recTs = rec.interruptedAt ?? rec.savedAt ?? 0;
+      if (!existing || recTs > (existing.rec.interruptedAt ?? existing.rec.savedAt ?? 0)) {
+        byQueue.set(qid, { key: k, rec });
+      }
+    }
+    for (const [, { key, rec }] of byQueue) {
       _log('sys', `§70.2 interrupted SEAM found · chunk ${(rec.seam_chunk_idx ?? '?')+1}/${rec.seam_total ?? '?'}`, rec.seam_queue_id?.slice(0,8) ?? '?');
       send({
         type: 'GUARDIAN_SEAM_RESUME_NEEDED',
@@ -614,6 +636,10 @@ function _seamLsResumeCheck() {
         ts: Date.now(),
       });
     }
+    // Clean up ALL nexus_seam_job_ keys after this pass — sent or stale,
+    // their job (surviving the reload) is done either way. Anything still
+    // genuinely in-progress will write a fresh entry on its own.
+    for (const k of keys) { try { localStorage.removeItem(k); } catch(_) {} }
   } catch(_) {}
 }
 
@@ -805,6 +831,7 @@ setInterval(pollSystemStatus, 15000);
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
   if (_es && _es.abort) { try { _es.abort(); } catch(_) {} }
+  const myGen = ++_connGen; // §23.12 — this attempt's identity
   const url = `${NCP_CHANNEL}?tabId=${MY_TAB}&provider=${PROVIDER}`;
   _log('info', 'NCP connecting…', url);
   connState = 'connecting'; setConnState('connecting');
@@ -812,30 +839,55 @@ function connect() {
   let _buf = '';
   let _opened = false;
 
+  // §23.16 — see the Claude userscript's §23.16 comment for the full explanation. Same fix:
+  // guarantees recovery even if GM_xmlhttpRequest never fires any callback
+  // for some silent failure mode, instead of relying entirely on
+  // onerror/onabort/onprogress with no timeout fallback.
+  setTimeout(() => {
+    if (myGen !== _connGen) return;
+    if (_opened) return;
+    _log('warn', 'NCP watchdog — no response in 10s, forcing reconnect', url);
+    try { _es.abort(); } catch(_) {}
+    connState = 'disconnected'; setConnState('disconnected');
+    _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+  }, 10000);
+
   _es = GM_xmlhttpRequest({
     method:   'GET',
     url,
     headers:  { 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' },
     responseType: 'stream',
     onloadstart: (r) => {
-      if (r.status !== 200) {
-        _log('err', `NCP channel returned ${r.status} — retry ${RECONNECT_MS}ms`);
-        connState = 'disconnected'; setConnState('disconnected');
-        _reconnectTimer = setTimeout(connect, RECONNECT_MS);
-        return;
-      }
-      connState = 'ready'; setConnState('ready');
-      _opened = true;
-      _log('ok', `NCP connected · ${PROVIDER}`, url);
-      ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
-      if (_hb) clearInterval(_hb);
-      _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
-      autoClaimIfFree();
-      replayPending();
-      setTimeout(() => sendDOMMap(), 2000);
-      pollSystemStatus();
+      // §FIX — status is NOT available here. loadstart fires the instant the
+      // request begins sending, before any response headers exist, so r.status
+      // is always 0 at this point regardless of whether the server will answer.
+      // The original code checked r.status!==200 here, which made every single
+      // connection attempt — server up or down — tear itself down and retry on
+      // a 3s loop before a real response could ever arrive. Real status check
+      // moved to the first onprogress call below, where headers are guaranteed
+      // to already be received.
     },
     onprogress: (r) => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
+      if (!_opened) {
+        if (r.status !== 200) {
+          _log('err', `NCP channel returned ${r.status} — retry ${RECONNECT_MS}ms`);
+          connState = 'disconnected'; setConnState('disconnected');
+          try { _es.abort(); } catch(_) {}
+          _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+          return;
+        }
+        connState = 'ready'; setConnState('ready');
+        _opened = true;
+        _log('ok', `NCP connected · ${PROVIDER}`, url);
+        ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
+        if (_hb) clearInterval(_hb);
+        _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
+        autoClaimIfFree();
+        replayPending();
+        setTimeout(() => sendDOMMap(), 2000);
+        pollSystemStatus();
+      }
       const raw = r.responseText || '';
       const newData = raw.slice(_buf.length);
       _buf = raw;
@@ -856,13 +908,18 @@ function connect() {
       }
     },
     onerror: () => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
       connState = 'disconnected'; setConnState('disconnected');
       _log('err', `NCP error — retry ${RECONNECT_MS}ms`);
       clearInterval(_hb);
       _reconnectTimer = setTimeout(connect, RECONNECT_MS);
     },
-    onabort: () => { connState = 'disconnected'; setConnState('disconnected'); clearInterval(_hb); },
+    onabort: () => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
+      connState = 'disconnected'; setConnState('disconnected'); clearInterval(_hb);
+    },
     ontimeout: () => {
+      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
       if (_opened) {
         connState = 'disconnected'; setConnState('disconnected');
         clearInterval(_hb);
@@ -1698,9 +1755,13 @@ function _nexusStartObserver() {
 //   - Component registry
 // Built around ChatGPT's actual strengths: structured output, batch, code.
 
-function renderNexus() {
-  const el = document.getElementById('__g10nexus__'); if (!el) return;
-  el.innerHTML = '';
+// §23.15 — RECURSIVE QA FINDING, same as the Claude userscript: a second
+// `function renderNexus()` declared later in this file silently shadowed
+// this one via hoisting. CLI runner, gap diagnostic, batch dispatch,
+// component registry search, and the raw cortex-memory browser were all
+// completely unreachable dead code. Renamed and spliced into the live
+// renderNexus below instead of silently dropping it.
+function _renderNexusTools(el) {
   const pad = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)';
   const sT = t => `<div style="font:9px monospace;color:#334466;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">${t}</div>`;
 
@@ -1817,8 +1878,7 @@ async function dispatchBatch() {
   const inp = document.getElementById('__nx_batch_in__');
   const out = document.getElementById('__nx_batch_out__');
   if (!inp||!out) return;
-  const tasks = inp.value.trim().split('
-').map(t=>t.trim()).filter(Boolean);
+  const tasks = inp.value.trim().split('\n').map(t=>t.trim()).filter(Boolean);
   if (!tasks.length) return;
   out.style.color='#fbbf24'; out.textContent=`Dispatching ${tasks.length} tasks…`;
   let ok=0, fail=0;
@@ -2386,6 +2446,11 @@ function renderNexus() {
   qo.style.cssText='margin-top:4px;font:9px monospace;color:#334466;line-height:1.5;min-height:16px';
   qb.onclick=()=>{const q=document.getElementById('__nx_query__')?.value?.trim();if(!q)return;qo.style.color='#818cf8';qo.textContent='⟳';_nexusOllamaQuery(q,(err,text)=>{const o=document.getElementById('__nx_qout__');if(!o)return;if(err){o.style.color='#ff2d55';o.textContent='✗ '+err;}else{o.style.color='#b8cfe0';o.textContent=text.slice(0,400);}});};
   qdiv.append(qi,qb,qo);el.appendChild(qdiv);
+
+  // §23.15 — CLI runner, gap diagnostic, batch dispatch, component
+  // registry search, raw cortex-memory browser. Restored — see
+  // _renderNexusTools' own comment.
+  _renderNexusTools(el);
 }
 
 function _nexusRefreshAll() {
