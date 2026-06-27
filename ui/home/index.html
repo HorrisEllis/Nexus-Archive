@@ -1662,6 +1662,12 @@ function tune(n){
   curCh = n;
   const chName = CH_META[n]?.name || 'Unknown';
   // Post to co-pilot setCurrentChannel (via guardian server.js route)
+  // KNOWN GAP, 2026-06-27: this still points at the old embedded co-pilot
+  // route. copilot/server.js (the new sovereign system, :3750) has no
+  // channel-tracking endpoint at all — checked its full route list directly,
+  // not assumed. Left on the old path on purpose rather than guessing at a
+  // fake equivalent; needs a real decision on whether channel-change
+  // tracking moves to the sovereign system before this can be repointed.
   fetch(`${B.orch}/api/guardian/copilot/channel`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ channelId: chId, channelName: chName }),
@@ -2756,7 +2762,9 @@ async function asSend(){
   // Pass current channel context + live UI state to co-pilot
   let uiSnapshot = null;
   try { uiSnapshot = JSON.parse(window.NEXUS_UI_STATE.snapshot()); } catch(_) {}
-  const cp = await post(`${B.orch}/api/guardian/copilot/prompt`, {
+  // 2026-06-27: co-pilot is sovereign now (copilot/server.js, :3750) — was
+  // /api/guardian/copilot/prompt. Response field is 'text', handled below.
+  const cp = await post(`${B.orch}/api/copilot/prompt`, {
     prompt: q,
     channel: CH_META[curCh]?.id || 'ch-overview',
     channelName: CH_META[curCh]?.name || 'Overview',
@@ -2768,7 +2776,7 @@ async function asSend(){
 
   if(cp === null){
     out.style.color='rgba(255,100,100,.8)';
-    out.textContent='Guardian unreachable (:7820). Is NEXUS running?';
+    out.textContent='Co-pilot unreachable (:3750 via orchestrator). Is NEXUS running?';
     return;
   }
 

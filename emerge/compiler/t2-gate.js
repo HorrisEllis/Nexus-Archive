@@ -33,9 +33,10 @@ const fs     = require('fs');
 const path   = require('path');
 const http   = require('http');
 const crypto = require('crypto');
+const t2Bridge = require('../../lib/t2-compartment-bridge');
 
 const MODULE_ID = 't2-gate';
-const VERSION   = '1.0.0';
+const VERSION   = '1.1.0';
 
 const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_PORT || '7820');
 const MAX_TOKENS    = parseInt(process.env.T2_MAX_TOKENS || '800');
@@ -186,7 +187,7 @@ async function dispatch(compileResult, opts = {}) {
   }
 
   const results = [];
-  let completed = 0, failed = 0;
+  let completed = 0, failed = 0, reused = 0;
 
   const _progress = (node, status, detail) => {
     console.log(`[${MODULE_ID}] ${node.name} → ${status}${detail ? ': ' + detail : ''}`);
@@ -233,38 +234,51 @@ async function dispatch(compileResult, opts = {}) {
     ].join('\n');
 
     try {
-      // Dispatch to guardian → seam-queue → Ollama
-      _progress(node, 'dispatching', `provider=${provider}`);
+      _progress(node, 'checking case-library', `signature lookup before dispatch`);
 
-      const dispatchR = await _postGuardian('/command', {
-        content:  seamText,
-        provider: provider,
-        title:    `T2: ${modName}`,
-        command:  'seam',
-      });
+      // The real SEAM dispatch — unchanged from before, just handed to the
+      // bridge as the executor instead of being called unconditionally.
+      // Only runs if case-library doesn't have a reusable 'full' tier hit.
+      const dispatchFn = async () => {
+        _progress(node, 'dispatching', `provider=${provider}`);
+        const dispatchR = await _postGuardian('/command', {
+          content:  seamText,
+          provider: provider,
+          title:    `T2: ${modName}`,
+          command:  'seam',
+        });
+        if (!dispatchR.body?.ok && !dispatchR.body?.queued) {
+          return { ok: false, error: `dispatch failed: ${JSON.stringify(dispatchR.body).slice(0, 100)}` };
+        }
+        const queueId = dispatchR.body?.queueId || dispatchR.body?.queue?.uuid;
+        _progress(node, 'generating', `queueId=${queueId?.slice(0, 8)}`);
+        const waitResult = await _waitForQueue(queueId);
+        if (!waitResult.ok) return { ok: false, error: waitResult.error };
+        return { ok: true, response: waitResult.response };
+      };
 
-      if (!dispatchR.body?.ok && !dispatchR.body?.queued) {
-        throw new Error(`dispatch failed: ${JSON.stringify(dispatchR.body).slice(0, 100)}`);
-      }
+      const bridgeResult = await t2Bridge.buildChunk(node, parsedSpec, dispatchFn, { outputDir });
 
-      const queueId = dispatchR.body?.queueId || dispatchR.body?.queue?.uuid;
-      _progress(node, 'generating', `queueId=${queueId?.slice(0, 8)}`);
-
-      // Wait for completion
-      const result = await _waitForQueue(queueId);
-
-      if (!result.ok) {
+      if (!bridgeResult.ok) {
         failed++;
-        results.push({ node: modName, status: 'failed', error: result.error });
-        _progress(node, 'failed', result.error);
+        results.push({ node: modName, status: bridgeResult.tier === 'blocked' ? 'blocked' : 'failed', error: bridgeResult.error, tier: bridgeResult.tier });
+        _progress(node, bridgeResult.tier === 'blocked' ? 'blocked' : 'failed', bridgeResult.error);
         continue;
       }
 
-      // Write implementation to disk
-      const outPath = _writeImpl(outputDir, modName, result.response);
+      if (bridgeResult.reused) reused++;
+
+      // Write implementation to disk — same as before, content now may have
+      // come from case-library reuse instead of a fresh Ollama dispatch.
+      const responseText = bridgeResult.result?.response ?? bridgeResult.result;
+      const outPath = _writeImpl(outputDir, modName, responseText);
       completed++;
-      results.push({ node: modName, status: 'complete', outPath, chars: result.response.length });
-      _progress(node, 'complete', outPath);
+      results.push({
+        node: modName, status: 'complete', outPath,
+        chars: typeof responseText === 'string' ? responseText.length : null,
+        tier: bridgeResult.tier, reused: bridgeResult.reused,
+      });
+      _progress(node, 'complete', `${outPath}${bridgeResult.reused ? ' (reused, no dispatch)' : ''}`);
 
       // Register with Cortex (non-fatal)
       try {
@@ -285,6 +299,7 @@ async function dispatch(compileResult, opts = {}) {
     dispatched: t2Nodes.length,
     completed,
     failed,
+    reused,
     skipped: t2Nodes.length - completed - failed,
     results,
     provider,

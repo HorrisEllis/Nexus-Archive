@@ -348,16 +348,18 @@ async function _tick() {
     // emitting self-heal.forge_failed, which the healer saw as cortex instability,
     // which triggered more snapshots, which caused more API probe failures.
     // Category fix: self-heal only accepts gaps with an infra/code source.
-    const SEMANTIC_GAP_TYPES = new Set([
-      'obligation','assumption','logical','contradiction','evidential',
-      'temporal','definitional','reference','communication',
-    ]);
+    // 2026-06-27: now reads from lib/semantic-gap-types.js — was duplicated
+    // here and was about to drift from a second copy needed in
+    // service/nexus-diagnostic.js for the same reason. One source now.
+    // Added 'hierarchy' to the shared set — confirmed looping in a real
+    // boot log alongside the original list.
+    const { isSemanticGap } = require('../../lib/semantic-gap-types');
     const gaps = jaaDB.query('gaps', r =>
       (r.status === 'needs_manual' || r.status === 'forge_failed') &&
       (r.attempts || 0) < MAX_ATTEMPTS &&
       (r.severity === 'high' || r.severity === 'medium') &&
       (!r.lastForgeAt || Date.now() - r.lastForgeAt > 60_000) &&
-      !SEMANTIC_GAP_TYPES.has(r.type),  // ← exclude semantic gaps
+      !isSemanticGap(r),  // ← exclude semantic gaps
       5
     );
     if (!gaps.length) return;

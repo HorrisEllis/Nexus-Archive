@@ -191,7 +191,11 @@ function _render(data, renderHint) {
 async function _talkToCopilot(prompt, command) {
   try {
     const t0 = Date.now();
-    const d  = await _request('POST', '/api/guardian/copilot/prompt', {
+    // 2026-06-27: co-pilot is sovereign now (copilot/server.js, :3750) —
+    // was /api/guardian/copilot/prompt (the old embedded route). Response
+    // field is 'text', not 'response' — verified directly against
+    // copilot/server.js's /api/prompt handler, not assumed.
+    const d  = await _request('POST', '/api/copilot/prompt', {
       prompt, command: command || undefined, contextOpts: { intent: prompt },
     });
     const ms = Date.now() - t0;
@@ -203,16 +207,17 @@ async function _talkToCopilot(prompt, command) {
       if (d.toolResult) {
         console.log(c.g('  ✓ tool executed:'));
         console.log('    ' + JSON.stringify(d.toolResult.result || d.toolResult, null, 2).split('\n').join('\n    '));
-      } else if (d.response) {
-        console.log('  ' + d.response);
+      } else if (d.text || d.response) {
+        console.log('  ' + (d.text || d.response));
       } else {
         console.log(c.dim('  No tool call made — chat-only response.'));
       }
       if (d.context) console.log(c.dim(`  (context: ${d.context.sections} section(s), ~${d.context.tokensUsed} tokens)`));
+      if (d.modelUsed) console.log(c.dim(`  model: ${d.modelUsed}`));
       console.log(c.dim(`  ${ms}ms`));
     }
   } catch(e) {
-    console.log(c.r(`  error: Guardian/co-pilot offline: ${e.message}`));
+    console.log(c.r(`  error: co-pilot offline: ${e.message}`));
   }
 }
 
@@ -463,8 +468,9 @@ async function start() {
   // nothing before the prompt appeared if the orchestrator was slow or
   // unreachable. Neither depends on the other's result, so run them
   // together. This does NOT touch the copilot/cp command's own request —
-  // that one talks straight to /api/guardian/copilot/prompt and was never
-  // gated on grammar or registration succeeding in the first place.
+  // that one talks straight to /api/copilot/prompt (sovereign co-pilot,
+  // :3750, as of 2026-06-27) and was never gated on grammar or
+  // registration succeeding in the first place.
   const [grammarResult] = await Promise.allSettled([
     (async () => {
       const r = await ge.fetch(ORCH_URL);

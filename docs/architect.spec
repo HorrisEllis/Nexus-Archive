@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        architect
-    version:     2.0.0
+    version:     3.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3747
     uuid:        nexus-architect-v2-0000-2026-0625-jamesbrooks-001
@@ -16,6 +16,13 @@ spec:
         - CLI-first: every feature available as a CLI command before UI exists
         - API contract: every route declared before implementation
         - Interaction contract: published and hash-verified by orchestrator
+
+  changelog:
+    - version: 3.0.0
+      date:    2026-06-27
+      change: "Both the spec (was 2.0.0) and lib/version.js's registry (was 1.0.0) were stale — architect/service.js itself already self-reports 3.0.0 in every HTTP response and event payload. This was the registry's bug, not just the spec's; fixed both to match the real running service. Service code untouched."
+      flag: "This spec's own uuid field still reads 'nexus-architect-v2-...' — a v2-labeled UUID on a v3.0.0 spec. Not changed here; UUIDs are identifiers, not version labels, and rewriting one retroactively could break something referencing it. Flagging for a decision, not deciding it."
+      evidence: "boot log 2026-06-27T08:57:45Z (architect: spec@2.0.0 ≠ code@1.0.0); architect/service.js lines 145, 250, 263, 619-620 (version: '3.0.0')"
 
   build_order:
     §3.1 bottom-up only:

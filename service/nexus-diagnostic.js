@@ -709,6 +709,25 @@ function startService() {
       }
     }
 
+    // §FIX-2026-0627 — semantic gap types dispatched here via
+    // /diagnose_and_repair only ever get a text analysis back (§23.10) —
+    // gap-loop's closure verifier never marks a paragraph of analysis as
+    // resolved, so the same gap redispatches every sweep, forever.
+    // cortex/self-heal hit the identical problem (§FIX-24.3) and excluded
+    // these types from its own query; same shared list here so the two
+    // definitions can't drift apart.
+    const { isSemanticGap } = require('../lib/semantic-gap-types');
+    const semanticCount = gaps.filter(isSemanticGap).length;
+    if (semanticCount) {
+      gaps = gaps.filter(g => !isSemanticGap(g));
+      require('../lib/component-ledger').write({
+        system: 'diagnostic', component: 'service.nexus-diagnostic', action: 'semantic_gaps_excluded',
+        status: 'loop_prevention', tags: [],
+        detail: `${semanticCount} semantic gap(s) excluded from diagnose_and_repair dispatch this sweep — would have redispatched forever`,
+        causedBy: null,
+      });
+    }
+
     for (const gap of gaps) {
       // §23.7 — skip gaps in terminal or investigating states
       // This is the primary fix for the 300-job flood:

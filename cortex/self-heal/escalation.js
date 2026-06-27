@@ -56,7 +56,7 @@
 const { jaaDB, uid } = require('../memory/jaa-db');
 
 const MODULE_ID = 'escalation';
-const VERSION   = '1.0.0';
+const VERSION   = '1.1.0';
 
 // ── Friction thresholds ───────────────────────────────────────────────────────
 const FRICTION = {

@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cortex
-    version:     3.0.0
+    version:     3.2.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3748
     uuid:        nexus-cortex-v3-0000-2026-0615-jamesbrooks-001
@@ -9,6 +9,12 @@ spec:
       The memory and brain of NEXUS. Everything that needs to be
       remembered, learned, healed, or routed passes through Cortex.
       Six organs boot in sequence. The event bus connects them all.
+
+  changelog:
+    - version: 3.2.0
+      date:    2026-06-27
+      change: "Spec was stale at 3.0.0 while code and lib/version.js registry had already moved to 3.2.0 — confirmed against a real boot log (cortex code@3.2.0, spec@3.0.0 reported by lib/spec-drift.js). Spec bumped to match; code was already correct, untouched."
+      evidence: "boot log 2026-06-27T08:57:45Z, /home/claude/nexus run; lib/version.js services.cortex; cortex/boot.js VERSION const"
 
   core:
     schemas:

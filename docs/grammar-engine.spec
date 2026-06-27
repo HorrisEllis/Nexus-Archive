@@ -10,6 +10,12 @@ spec:
       Grammar owned by registry. Engine reads. Never writes.
       §CR-006: CLI does not own grammar. Registry does.
 
+  changelog:
+    - version: 1.3.0
+      date:    2026-06-27
+      change: "This spec's own version number was correct and untouched. lib/version.js's registry and lib/grammar-engine.js's own internal VERSION constant were both stale at 1.2.0 despite the file already having the real component-registry-grammar-tree + trie capability this spec describes. Bumped the registry and the file's constant up to meet the spec — the only one of the 7 boot-log discrepancies that went this direction instead of the spec catching up to code."
+      evidence: "boot log 2026-06-27T08:57:45Z (grammar-engine: spec@1.3.0 ≠ code@1.2.0); lib/grammar-engine.js header comment + buildTrie() (lines 7-9, 64); CHANGELOG.md lines 36, 116"
+
   exports:
     - "fetch(orchestratorUrl) → { ok, componentCount }"
     - "load(tree, aliases) → { ok, componentCount }  (test/offline use)"

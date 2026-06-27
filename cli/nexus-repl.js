@@ -32,6 +32,7 @@ const PORTS = {
   bridge:       parseInt(process.env.BRIDGE_PORT       || '9999'),
   cortex: 3748, guardian: 7820,
   idearium:     4800, emerge: 4242, ollama: 11434,
+  copilot: 3750, // 2026-06-27: sovereign co-pilot, was embedded in guardian
 };
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -556,7 +557,7 @@ async function dispatch(line) {
       }
       if (!prompt) { log('Usage: copilot <prompt>\n       copilot <prompt> --cmd "<command to run, RAID-gated>"'); return; }
       try {
-        const r = await fetch(`http://127.0.0.1:${PORTS.guardian}/copilot/prompt`, {
+        const r = await fetch(`http://127.0.0.1:${PORTS.copilot}/api/prompt`, {
           method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ prompt, command: command || undefined, contextOpts: { intent: prompt } }),
           signal: AbortSignal.timeout(20000),
@@ -567,11 +568,15 @@ async function dispatch(line) {
         } else if (d.ok) {
           if (d.toolResult) log(`✓ tool executed:\n` + JSON.stringify(d.toolResult.result || d.toolResult, null, 2));
           if (d.context) log($(C.dim, `(context: ${d.context.sections} section(s), ~${d.context.tokensUsed} tokens)`));
-          if (!d.toolResult) log($(C.dim, 'No tool call made — chat-only response (full narration not yet built, see docs/copilot.spec).'));
+          // 2026-06-27: was unconditionally "not yet built" even when the
+          // sovereign co-pilot's /api/prompt was already returning real
+          // chat text in `d.text` — printing it now instead of hiding it.
+          if (!d.toolResult && (d.text || d.response)) log(d.text || d.response);
+          else if (!d.toolResult) log($(C.dim, 'No tool call made — chat-only response.'));
         } else {
           log(err(d.error || 'co-pilot request failed'));
         }
-      } catch(e) { log(err('Guardian/co-pilot offline: ' + e.message)); }
+      } catch(e) { log(err('co-pilot offline: ' + e.message)); }
       return;
     }
 
