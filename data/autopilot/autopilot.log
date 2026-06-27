@@ -20,3 +20,14 @@
 [2026-06-27T12:32:46.770Z] [36m[eravos][0m stable for 60s — backoff reset
 [2026-06-27T12:32:46.786Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
 [2026-06-27T12:32:46.787Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-06-27T12:41:52.640Z] autopilot received SIGINT — stopping all kernels
+[2026-06-27T12:41:52.653Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.658Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.659Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.659Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.659Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.669Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.669Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.687Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.697Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-06-27T12:41:52.712Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
