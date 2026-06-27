@@ -263,6 +263,17 @@ const server = http.createServer((req, res) => {
 // 1. Start the server
 server.listen(PORT, () => {
   console.log(`\n⬡  EMERGE IDE\n`);
+  // Register with orchestrator
+  try {
+    const http = require('http');
+    let _rc = []; try { _rc = require('./emerge/registry-components'); } catch(_) {}
+    const body = JSON.stringify({ systemId:'emerge', port:PORT, version:'1.0.0', components:_rc });
+    const req = http.request({ hostname:'127.0.0.1', port:9000, path:'/api/register', method:'POST',
+      headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}, timeout:3000
+    }, () => { console.log('[emerge] registered with orchestrator'); });
+    req.on('error', () => {});
+    req.write(body); req.end();
+  } catch(_) {}
   console.log(`   http://localhost:${PORT}`);
   console.log(`   model: ${DEF_MODEL}`);
   console.log(`   spec:  ${kernel.SCHEMA.keywords.size} keywords, ${kernel.SCHEMA.axioms.size} axioms`);

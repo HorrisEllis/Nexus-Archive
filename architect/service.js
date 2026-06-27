@@ -141,11 +141,12 @@ function createBusEmit(cfrLedger) {
 
 // ── Register with orchestrator ────────────────────────────────────────────
 function registerWithOrchestrator() {
+  let _rc = []; try { _rc = require('./registry-components'); } catch(_) {}
   const body = JSON.stringify({
     systemId: 'architect', port: PORT, version: '3.0.0',
     label: 'Architect', healthPath: '/health',
     uuid: 'architect-service-v1-0000-4000',
-    hooks: [], timestamp: Date.now(),
+    hooks: [], timestamp: Date.now(), components: _rc,
   });
   const req = http.request({
     hostname: '127.0.0.1', port: ORCH_PORT, path: '/api/register',

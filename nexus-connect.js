@@ -233,9 +233,9 @@ async function recall(opts = {}) {
 
 // ── Register with orchestrator (all systems call this on boot) ───────────────
 // §AXIOM: all systems connect to orchestrator first, then to bus/kernel
-async function registerWithOrchestrator(systemId, port, meta = {}) {
+async function registerWithOrchestrator(systemId, port, meta = {}, components = []) {
   const r = await _req('orchestrator', 'POST', '/api/register', {
-    systemId, port, meta, ts: Date.now(),
+    systemId, port, meta, ts: Date.now(), components,
   }, 5000);
   if (r.ok) {
     console.log(`[nexus-connect §AXIOM] ${systemId} registered with orchestrator`);

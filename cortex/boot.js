@@ -58,8 +58,7 @@ async function bootAsync() {
   seq.phase({ name:'orchestrator.register', type:'SOFT',
     label:'Register with orchestrator (§AXIOM)',
     fn: async () => {
-      const r = await nc.registerWithOrchestrator('cortex', PORT,
-        { role:'source-of-truth', version:VERSION });
+      const r = await nc.registerWithOrchestrator('cortex', PORT, {}, (() => { try { return require('./registry-components'); } catch(_) { return []; } })());
       if (r.ok) nc.startHeartbeat('cortex', PORT);
     },
   });

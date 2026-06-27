@@ -54,7 +54,7 @@ async function bootBridge() {
     fn: async () => {
       const r = await nc.registerWithOrchestrator('bridge', BRIDGE_PORT, {
         role: 'trust-relay', version: VERSION,
-      });
+      }, (() => { try { return require('./registry-components'); } catch(_) { return []; } })());
       if (r.ok) nc.startHeartbeat('bridge', BRIDGE_PORT);
     },
   });

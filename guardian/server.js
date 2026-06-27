@@ -1501,7 +1501,8 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
   seq.phase({ name:'orchestrator.register', type:'SOFT',
     label:'Register with orchestrator (§AXIOM)',
     fn: async () => {
-      const r = await nc2.registerWithOrchestrator('guardian', HTTP_PORT);
+      let _rc=[]; try{_rc=require('./registry-components');}catch(_){}
+      const r = await nc2.registerWithOrchestrator('guardian', HTTP_PORT, {}, _rc);
       if (!r || !r.ok) return { ok:true, msg:'standalone — orchestrator offline' };
       return { ok: true };
     }
