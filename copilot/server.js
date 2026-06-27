@@ -34,6 +34,7 @@ const _cw          = require('../lib/cortex-write')('copilot');
 const _lifeline    = require('./lifeline');
 const _axiomMgr    = require('./axiom-manager');
 const _modBuilder  = require('./module-builder');
+const _rDiagnose   = require('./recursive-diagnose');
 const SYSTEM_ID = 'copilot';
 const VERSION   = '2.0.0';
 
@@ -312,6 +313,21 @@ const server = http.createServer(async (req, res) => {
       const result = _axiomMgr.remove(body.id, { confirm: body.confirm });
       json(res, 200, { ok:true, ...result });
     } catch(e) { json(res, 400, { ok:false, error: e.message }); }
+    return;
+  }
+
+  // POST /api/diagnose — start recursive fractal diagnosis
+  if (method === 'POST' && p === '/api/diagnose') {
+    const body = await readBody(req);
+    const topic = body.topic || 'system health';
+    const result = await _rDiagnose.start(topic, { requestId: body.requestId });
+    json(res, 200, result);
+    return;
+  }
+
+  // GET /api/diagnose/list — list past diagnosis sessions
+  if (method === 'GET' && p === '/api/diagnose/list') {
+    json(res, 200, { ok:true, sessions: _rDiagnose.list() });
     return;
   }
 

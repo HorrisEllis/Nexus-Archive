@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        replay-engine
-    version:     1.1.0
+    version:     1.0.0
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-replay-engine-v1-0000-2026-0615-jamesbrooks-001
     purpose: >
@@ -11,12 +11,6 @@ spec:
       Every input, output, choice, alternative, cost, outcome logged.
       Replay from any point. Sandbox. Compare. Merge or discard.
       Every replay is training data for the pattern engine.
-
-  changelog:
-    - version: 1.1.0
-      date:    2026-06-27
-      change: "Spec was stale at 1.0.0. lib/version.js's registry had already moved to 1.1.0 (Phase 8.6 — 16/16 tests, orchestrator boot wiring) but lib/replay-engine.js's own internal VERSION constant had never been bumped to match. Fixed both the spec and the file's own constant together."
-      evidence: "boot log 2026-06-27T08:57:45Z (replay-engine: spec@1.0.0 ≠ code@1.1.0); lib/version.js modules['replay-engine']"
 
   snapshot_trigger:
     before_every:

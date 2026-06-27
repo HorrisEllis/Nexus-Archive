@@ -28,7 +28,7 @@ const { randomUUID, createHash } = require('crypto');
 const { jaaDB, uid } = require('../memory/jaa-db');
 
 const MODULE_ID   = 'snapshot';
-const VERSION     = '1.2.0';
+const VERSION     = '1.0.0';
 const SNAP_DIR    = process.env.NEXUS_SNAP_DIR || path.join(__dirname, '..', '..', 'data', 'snapshots');
 
 // Tables excluded from snapshots (transient / too large)

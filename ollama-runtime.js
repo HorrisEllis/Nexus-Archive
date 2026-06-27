@@ -125,32 +125,8 @@ const MODEL_CATALOG = [
   { id:'gemma3:4b',          fitness:0.81, vram:3.8, speed:0.85, best:['chat','voice_response'] },
 ];
 
-const hardwareBudget = require('./lib/hardware-budget');
-
 function bestFor(task) {
-  // 2026-06-27: was a pure fitness-maximizing pick with zero regard for
-  // whether the machine could run the result — would have reached for
-  // deepseek-coder-v2:16b (14GB) for any 'architecture'/'large_generation'
-  // task, on hardware confirmed to have 16GB total RAM. Now filtered by
-  // real available RAM first (lib/hardware-budget.js), fitness only breaks
-  // ties among models that actually fit.
-  const picked = hardwareBudget.pickSafeModel(MODEL_CATALOG, task);
-  if (picked.model) return picked.model;
-
-  // Nothing safe fits — fall back to the smallest catalog entry rather than
-  // the old unconditional top-fitness pick, and say why out loud (§1.2).
-  // Smallest-by-vram, not first-in-list, so the fallback is still the least
-  // risky option available, not an arbitrary one.
-  const smallest = [...MODEL_CATALOG].sort((a, b) => a.vram - b.vram)[0];
-  console.warn(`[ollama-runtime] ${picked.reason} — falling back to smallest available: ${smallest.id} (${smallest.vram}GB)`);
-  return smallest;
+  return MODEL_CATALOG.filter(m=>m.best.some(b=>b.includes(task))).sort((a,b)=>b.fitness-a.fitness)[0] || MODEL_CATALOG[0];
 }
 
-module.exports = {
-  ping, listModels, streamGenerate, bestFor, MODEL_CATALOG,
-  // exposed directly — there's no model-pull route anywhere in this codebase
-  // yet (checked ollama/server.js, none exists), so canPullModel has nothing
-  // to wire into today. Exported so whoever builds that route doesn't have
-  // to rediscover this constraint from scratch.
-  hardwareBudget,
-};
+module.exports = { ping, listModels, streamGenerate, bestFor, MODEL_CATALOG };

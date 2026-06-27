@@ -1165,7 +1165,15 @@ function autoUploadBlocks(text, provider, jobId) {
 const ncp = createNCPServer({
   onMessage: (msg) => _handleNCPMessage(msg),
   onConnect: ({ provider, tabId }) => {
-    console.log(`[guardian] NCP connected: provider=${provider} tab=${tabId}`);
+    // Rate-limit: log only first connect or after 30s gap per provider
+    const _now = Date.now();
+    if (!_ncpLastLog) global._ncpLastLog = {};
+    const _key = provider + ':' + tabId;
+    const _last = global._ncpLastLog[_key] || 0;
+    if (_now - _last > 30000) {
+      console.log(`[guardian] NCP connected: provider=${provider} tab=${tabId}`);
+      global._ncpLastLog[_key] = _now;
+    }
     bus.emit('guardian.provider.connected', { provider, tabId });
     flushQueuedJobs(provider);
   },

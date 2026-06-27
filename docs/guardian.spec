@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.6.1
+    version:     3.6.0
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
@@ -10,12 +10,6 @@ spec:
       AI providers. Everything else requests work through Guardian.
       NCP connects browser tabs. SEAM compresses intent before sending.
       No API keys. No external inference calls. Browser tabs only.
-
-  changelog:
-    - version: 3.6.1
-      date:    2026-06-27
-      change: "Spec was stale at 3.6.0 while code and registry had already moved to 3.6.1 (GUARDIAN_REGISTER propagating claimed+chatId immediately, per v0.9.8 changelog). Spec bumped to match; code already correct."
-      evidence: "boot log 2026-06-27T08:57:45Z; lib/version.js services.guardian; guardian/server.js self-reported version field (3 call sites)"
 
   core:
     schemas:

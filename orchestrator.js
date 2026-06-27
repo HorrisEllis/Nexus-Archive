@@ -155,21 +155,9 @@ const SYS = {
   emerge:     { port:4242,  host:'127.0.0.1', label:'Emerge IDE',  color:'#3ecf8e' },
   diagnostic: { port:7825,  host:'127.0.0.1', label:'Diagnostic',  color:'#ff6b35', healthPath:'/status' },
   eravos:    { port:3751, host:'127.0.0.1', label:'ERAVOS',       color:'#a78bfa', healthPath:'/health' },
-  // 2026-06-27 FIX: 'ollama' was defined twice in this object — this entry
-  // (port 3749, the sovereign bridge) and a second one further down
-  // (port 11434, the real native Ollama desktop app). JS object literals let
-  // the later key silently win, so every orchestrator call meant for the
-  // bridge — including the contract-verification check — was actually
-  // hitting the native app's raw API instead. That app has no
-  // NEXUS-shaped /api/contract route, returns its own 404 page, which is
-  // exactly the "Not found is not valid JSON" error seen in a real boot log.
-  // The bridge's own /health already reports the real native app's status
-  // honestly (_ollamaOnline, queue depth, stats) — healthPath:'/health'
-  // below is a strict upgrade over the old healthPath:'/api/tags', not a
-  // regression. The native port (11434) doesn't need its own SYS entry —
-  // ollama-runtime.js already talks to it directly, outside this table.
   ollama:    { port:3749, host:'127.0.0.1', label:'Ollama Bridge',color:'#00ff88', healthPath:'/health' },
   copilot:   { port:3750, host:'127.0.0.1', label:'Co-pilot',    color:'#cc44ff', healthPath:'/health' },
+  ollama:     { port:11434, host:'127.0.0.1', label:'Ollama',      color:'#e85d3c' },
   autopilot:  { port:7799,  host:'127.0.0.1', label:'Autopilot',   color:'#fbbf24' },
 };
 
@@ -296,7 +284,7 @@ const HEALTH_PATHS = {
   idearium:  '/health',
   emerge:    '/status',
   architect: '/health',
-  ollama:    '/health', // was '/api/tags' (the native app's route) — now resolves to the bridge, matches its real route
+  ollama:    '/api/tags',
   autopilot: '/status',
 };
 
@@ -504,6 +492,10 @@ function startWatchdog() {
     setInterval(systemWatchdog, WATCHDOG_INTERVAL);
   }, 2000);
 }
+
+// ── Serve control panel ──────────────────────────────────────────────────────
+// Control panel accessible at :9000/ui/control-panel/
+// comp_id: nexus.ui.control-panel / orchestrator.js
 
 // ── Contract poller — meta-system watches all system input/output folders ────────
 // comp_id: nexus.lib.contract-poller / lib/contract-poller.js
@@ -1656,25 +1648,6 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     }
 
     return json(res,404,{ok:false,error:`guardian route not found: ${M} /api/guardian/${action}`});
-  }
-
-  // ── Co-pilot proxy ─────────────────────────────────────────────────────────
-  // 2026-06-27: co-pilot is sovereign now (copilot/server.js, :3750, SYS.copilot
-  // already pointed there). cli/co-pilot.js still called the old embedded route
-  // (/api/guardian/copilot/prompt) — repointed below. Response shape verified
-  // directly against copilot/server.js's /api/prompt handler before wiring
-  // this: both its fast (intuition) and slow (analysis) paths return
-  // { ok, requestId, sessionId, text, modelUsed, ... } — note 'text', not
-  // 'response' — checked, not assumed, since guessing the field name wrong
-  // here would silently show blank replies instead of erroring loudly (§1.2).
-  if (sub==='copilot') {
-    const action = seg[2] || '';
-    if (M==='POST' && action==='prompt')        return json(res,200,await POST('copilot','/api/prompt',await readBody(req)));
-    if (M==='GET'  && action==='stream')        return json(res,200,await GET('copilot','/api/stream'));
-    if (M==='POST' && action==='stream')        return json(res,200,await POST('copilot','/api/stream/ingest',await readBody(req)));
-    if (M==='GET'  && action==='sessions')      return json(res,200,await GET('copilot','/api/sessions'));
-    if (M==='GET'  && action==='health')        return json(res,200,await GET('copilot','/health'));
-    return json(res,404,{ok:false,error:`copilot route not found: ${M} /api/copilot/${action}`});
   }
 
   // ── Architect proxy ───────────────────────────────────────────────────────
