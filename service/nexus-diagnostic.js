@@ -108,13 +108,13 @@ const SYSTEMS = {
   cortex:      { port: 3748, dataDir: 'cortex/data',      healthPath: '/health', label: 'Cortex' },
   idearium:    { port: 4800, dataDir: 'data/idearium',    healthPath: '/health', label: 'Idearium' },
   orchestrator:{ port: 9000, dataDir: 'data/orchestrator',healthPath: '/health',   label: 'Orchestrator' },
-  emerge:      { port: 4242, dataDir: 'data/emerge',      healthPath: '/status',  label: 'Emerge' },
+  emerge:      { port: 4242, dataDir: 'data/emerge',      healthPath: '/status',  label: 'Emerge', optional: true },
   bridge:      { port: 9999, dataDir: 'data/bridge',      healthPath: '/health',   label: 'Bridge' },
   architect:   { port: 3747, dataDir: 'data/architect',   healthPath: '/health', label: 'Architect' },
   diagnostic:  { port: 7825, dataDir: 'data/diagnostic',  healthPath: '/status',   label: 'Diagnostic' },
   // §MONITOR-03: UI surfaces — probed as virtual systems, no dataDir
   'forge-shell':{ port: 9000, dataDir: 'data/orchestrator', healthPath: '/ui/forge-shell.html',
-    label: 'Forge Shell', virtual: true,
+    label: 'Forge Shell', virtual: true, optional: true,
     // Forge shell is served by orchestrator — it's healthy when orch is healthy
     // We track it separately to surface in the diagnostic tile
   },
@@ -494,7 +494,7 @@ function startService() {
           }
 
           _logRemediation({ action: 'gap_escalated', ...gap, gapUuid });
-          console.log(`[diagnostic] ⚠ ${name} has been offline for ${Math.round(offlineMs/1000)}s — escalating to repair queue`);
+          if (!SYSTEMS[sys]?.optional) console.log(`[diagnostic] ⚠ ${name} has been offline for ${Math.round(offlineMs/1000)}s — escalating to repair queue`);
         }
       } else {
         // Came back online — clear

@@ -1,9 +1,0 @@
-NEXUS DIAGNOSTIC ESCALATION
-Gap: rca_finding
-Path: semantic-gap-forge-loop
-Body: [RCA] Semantic gaps routed to forge — infinite retry loop: Self-heal is receiving obligation/assumption/logical gap types from the diagnostic engine. These are semantic gaps (LLM output quality) with 
-Severity: high
-Attempts: 0
-
-Analyse this gap, identify root cause, propose a concrete fix.
-Note: This analysis is not automatically applied. No code runs as a result of your response.

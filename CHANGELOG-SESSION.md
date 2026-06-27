@@ -442,3 +442,54 @@ The compiler ran T0 (scaffold) → T1 (wiring) → produced `executionPlan.t2` (
 | 71.4 | Full self-heal controller rebuild | Architecture defined |
 | ERAVOS | Nexus component → canvas hook bridge | NexusBridge ready |
 
+
+---
+
+## Session Continuation — 2026-06-27 (afternoon)
+
+### Three Sovereign Systems Added
+
+**ERAVOS** (`eravos/` — port 3751)
+- Moved from `ui/eravos/` to `eravos/ui/` — now a peer system not a UI folder
+- `eravos/server.js` — HTTP :3751, organism spawn/remove/list, wire connect/disconnect,
+  catalog, pack install, organism-queue poll, transport play/stop, SSE events
+- `eravos/registry-components.js` — 9 components declared on boot
+- Wired into autopilot kernel set, orchestrator health map
+- Home UI canvas channel now points to `http://127.0.0.1:3751/`
+
+**Ollama Bridge** (`ollama/` — port 3749)
+- Sovereign system, isolated from Guardian
+- Guardian down → Ollama keeps running
+- MAX_CONCURRENT=3, job queue with backpressure
+- Every job carries `contractId, componentId, hookId, requestId, sessionId` for CFR
+- Health monitor polls :11434 every 10s, broadcasts on stream
+- Every completed job writes to Cortex `chat_log` via `/api/memory/insert`
+- `ollama/server.js`, `ollama/registry-components.js`
+
+**Co-pilot** (`copilot/` — port 3750)
+- Separated from Guardian — no longer lives in `guardian/agents/co-pilot/`
+- **Continuous stream architecture**: on boot subscribes to Cortex SSE + Guardian SSE
+  Every event from every system ingested into rolling 500-event buffer
+- **Dual cognition (S7)**:
+  - INTUITION: `_intuit()` — reads live stream, answers instantly, no model
+  - ANALYSIS: `_assemble7Layer()` + Ollama dispatch — 7-layer context + model
+- Sessions tracked, all exchanges persisted to Cortex `chat_log`
+- `POST /api/stream/ingest` — any system can push events into co-pilot stream
+- `copilot/server.js`, `copilot/registry-components.js`
+
+### Files Relocated (architecture alignment)
+- `ui/agents/*` → `guardian/ui/agents/` — agent consoles belong with Guardian
+- `ui/emerge-ide.html` → `emerge/ui/index.html` — IDE belongs with Emerge
+- Guardian now serves `guardian/ui/` at `/guardian-ui/` route
+- Home UI canvas iframe → `http://127.0.0.1:3751/` (ERAVOS sovereign)
+
+### Noise Reduction Fixes
+- `guardian/server.js` — bullet density gap threshold 0.5 → 0.75 (assumption floods)
+- `lib/cfr/delta.js` — dom_map tension dampened (-0.6), was causing false 0.82 readings
+- `service/nexus-diagnostic.js` — emerge + forge-shell marked `optional: true`,
+  escalation logs suppressed for optional systems
+
+### Test Status
+- 630/630 module tests
+- 187/187 brutal tests
+- All new system files syntax-verified

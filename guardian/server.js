@@ -1994,7 +1994,7 @@ function gaphunterAnalyze(text, opts = {}) {
   const min = opts.minScore ?? 0.25;
   const lastLine = lines[lines.length-1]?.trim()||'';
 
-  if (bd > 0.5 && Math.min(0.95,bd) >= min) gaps.push({ type:GAP_TYPE.ASSUMPTION, domain:DOMAIN.COMMUNICATION, reason:GAP_REASON.COMPRESSION, description:`High bullet density (${(bd*100).toFixed(0)}%) — reasoning compressed, load-bearing assumptions hidden`, score:Math.min(0.95,bd), evidence:{metric:bd,pattern:'bullet_density'} });
+  if (bd > 0.75 && Math.min(0.95,bd) >= min) gaps.push({ type:GAP_TYPE.ASSUMPTION, domain:DOMAIN.COMMUNICATION, reason:GAP_REASON.COMPRESSION, description:`High bullet density (${(bd*100).toFixed(0)}%) — reasoning compressed, load-bearing assumptions hidden`, score:Math.min(0.95,bd), evidence:{metric:bd,pattern:'bullet_density'} });
   if (ld < 0.35 && Math.min(0.9,1-ld) >= min) gaps.push({ type:GAP_TYPE.OBLIGATION, domain:DOMAIN.COMMUNICATION, reason:GAP_REASON.STRUCTURAL_LIMIT, description:`Low lexical diversity (${ld}) — formulaic or repetitive phrasing`, score:Math.min(0.9,1-ld), evidence:{metric:ld,pattern:'lexical_diversity'} });
   if (H < 3.2 && wc > 80) { const sc=parseFloat(((4-H)/4).toFixed(3)); if (sc>=min) gaps.push({ type:GAP_TYPE.TEMPORAL, domain:DOMAIN.AI_ML, reason:GAP_REASON.COMPRESSION, description:`Low entropy H=${H} — pre-planned or template content`, score:sc, evidence:{metric:H,pattern:'entropy'} }); }
   if (hedgeRate > 0.04 && Math.min(0.85,hedgeRate*10) >= min) gaps.push({ type:GAP_TYPE.ASSUMPTION, domain:DOMAIN.EPISTEMOLOGICAL, reason:GAP_REASON.AVOIDANCE, description:`High hedge density (${(hedgeRate*100).toFixed(1)}%) — epistemic evasion`, score:Math.min(0.85,hedgeRate*10), evidence:{metric:hedgeRate,pattern:'hedge_rate'} });
@@ -3354,6 +3354,18 @@ function handleExtendedRoutes(req, res, url, method) {
         ? require('fs').readFileSync(cockpitPath, 'utf8')
         : buildCockpitHTML();
     res.writeHead(200,{'Content-Type':'text/html','Access-Control-Allow-Origin':'*'}); res.end(cockpitHtml); return true;
+  }
+
+  // Guardian sovereign UI — serve guardian/ui/ at /guardian-ui/
+  if (method==='GET' && url.pathname.startsWith('/guardian-ui/')) {
+    const rel = url.pathname.replace('/guardian-ui/', '');
+    const assetPath = require('path').join(__dirname, 'ui', rel || 'index.html');
+    try {
+      const data = require('fs').readFileSync(assetPath);
+      const ext  = require('path').extname(assetPath);
+      const mime = {'.js':'application/javascript','.css':'text/css','.html':'text/html','.json':'application/json'}[ext]||'text/plain';
+      res.writeHead(200,{'Content-Type':mime,'Access-Control-Allow-Origin':'*'}); res.end(data); return true;
+    } catch(e) { pRes(res,404,{error:'not found'}); return true; }
   }
 
   // Static UI assets

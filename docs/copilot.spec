@@ -2,135 +2,212 @@ spec:
   meta:
     name:        copilot
     version:     2.0.0
-    uuid:        nexus-copilot-v2-0000-0000-0000-000000000001
-    phase:       24.0
+    foundation:  nexus-system-foundation@1.0.0
+    port:        3750
+    uuid:        nexus-copilot-v2-0000-2026-0627-jamesbrooks-001
     status:      active
-    comp_id:     guardian.copilot
-    hook_id:     guardian.copilot:v2:p0001
-    seam_id:     guardian.copilot:v2:p0001
-    route:       POST /api/guardian/copilot/prompt
-    entry_point: guardian/agents/co-pilot/index.js
-    context_lib: lib/copilot-context.js
+    purpose: >
+      Sovereign co-pilot system. Separated from Guardian.
+      Receives intent, assembles context, routes to RAID, returns response.
+      Guardian is dispatch. Co-pilot is intelligence. They are separate.
+      If Guardian goes down, the co-pilot can still answer from Cortex memory.
+      Every exchange is tracked hook-to-hook through CFR.
 
-  purpose: >
-    The primary entry point to NEXUS. Every user interaction goes through here.
-    v2: complete system awareness via 7 sensing layers assembled concurrently
-    before every response. Mistral receives the full live snapshot — every
-    answer is grounded in reality, not assumption.
+  core:
+    schemas:
+      CopilotRequest:
+        uuid:        string   # requestId — propagates through all hops
+        sessionId:   string   # user session
+        prompt:      string
+        channel:     string   # which UI channel sent this
+        channelName: string
+        uiState:     object   # NEXUS_UI_STATE snapshot from browser
+        ts:          number
 
-  design_principles:
-    - 7 sensing layers assembled concurrently before every response
-    - Each layer has its own timeout — one stalled layer never blocks the rest
-    - Mistral receives full snapshot — complete context for every answer
-    - Token-by-token streaming emitted to bus (copilot.token)
-    - Repair proposals: high-severity gaps written to Idearium automatically
-    - Honest fallback: if Ollama offline, show raw snapshot from live state
-    - Cortex health fix: checks status === 'ok' (not r?.ok which was always false)
+      CopilotResponse:
+        requestId:   string
+        ok:          boolean
+        text:        string
+        modelUsed:   string   # 'data-only' | 'ollama' | 'claude' | 'chatgpt' etc
+        intent:      string   # classified intent
+        fromGrammar: boolean
+        componentId: string   # which component handled it
+        hookId:      string   # which hook
+        tokensUsed:  number
+        contextLayers: number # 0-7
+        ui:          object   # optional UI instructions (spotlight, navigate)
+        ts:          number
 
-  seven_layers:
-    L0_live_event_bus:
-      sources: [GET /bus?n=30]
-      provides: recent event types, gate states, sequence numbers
-      budget_tokens: 200
+      CopilotSession:
+        sessionId:   string
+        userId:      string
+        channel:     string
+        startedAt:   number
+        exchanges:   number
+        lastActive:  number
 
-    L1_process_telemetry:
-      sources: [GET /health (guardian)]
-      provides: uptime, job count, heap usage, version
-      budget_tokens: 120
+    axioms:
+      - AX-001  validate all inputs
+      - AX-002  no silent failures
+      - AX-003  write to Cortex before responding
+      - AX-005  event bus — results posted, not returned directly
+      - AX-007  self-describing
 
-    L2_provider_health:
-      sources: [GET /providers, GET :3748/health, GET :9000/health, GET :11434/api/tags]
-      provides: NCP tab status + heartbeat, cortex/orch health, Ollama models
-      budget_tokens: 180
-      bug_fix: >
-        cortex returns { status: 'ok' } not { ok: true }.
-        All consoles now check r?.status === 'ok' || r?.ok === true.
+    constants:
+      CONTEXT_LAYERS:         7
+      TOKEN_FIRST_THRESHOLD:  0.6   # grammar confidence above this = no Ollama
+      SESSION_TIMEOUT_MS:     3600000
+      MAX_PROMPT_LENGTH:      8000
+      DATA_ANSWER_FAST_PATH:  true  # attempt data answer before any model
 
-    L3_structural_integrity:
-      sources: [GET /gaps?status=open, GET /seam/queues, GET :3748/api/jaa/reflection_contracts]
-      provides: open gaps by severity, SEAM queue depth, reflection contract counts
-      budget_tokens: 300
+  events:
+    emits:
+      - 'copilot.booted'
+      - 'copilot.prompt.received'     # before any processing
+      - 'copilot.intent.classified'   # after RAID classification
+      - 'copilot.answer.data-only'    # answered without a model
+      - 'copilot.answer.model'        # answered via model
+      - 'copilot.action.dispatched'   # action intent routed to tool
+      - 'copilot.navigate'            # UI navigation command
+      - 'copilot.spotlight'           # UI spotlight command
+      - 'copilot.error'
+    handles:
+      - 'ollama.job.complete'         # model response arrives back
+      - 'cortex.raid.decide.result'   # RAID tells copilot where to route
+      - 'orchestrator.shutdown'
 
-    L4_cfr_field:
-      sources: [GET :3748/cfr/health, GET :3748/cfr/deltas]
-      provides: regime, sigma score, coherence, friction, entropy, recent deltas
-      budget_tokens: 200
+  routes:
+    - method: POST  path: /api/prompt
+      body: "CopilotRequest"
+      returns: "CopilotResponse"
+      description: "Primary entry. All co-pilot interactions."
 
-    L5_memory_artifacts:
-      sources: [GET :3748/api/jaa/chat_log, GET :3748/api/jaa/decision_log,
-                GET /artifacts, GET :4800/api/ideas]
-      provides: recent exchanges, decisions, artifact names, open ideas
-      budget_tokens: 280
+    - method: POST  path: /api/channel
+      body: "{ sessionId, channel, channelName, uiState }"
+      returns: "{ ok }"
+      description: "Update current channel context for session"
 
-    L6_predictive_intent:
-      sources: [GET :3748/api/intelligence/patterns, event buffer, GET /jobs]
-      provides: crystallized patterns, session velocity (jobs/10min), intent hint
-      budget_tokens: 180
+    - method: GET   path: /api/sessions
+      returns: "{ sessions: CopilotSession[] }"
 
-  tools:
-    added_in_v2: [patterns, cfr, artifacts]
-    all_via: /cli/exec in guardian/server.js
-    list:
-      /gaps [--status open] [--severity high]
-      /jobs [--status delivered] [--limit N]
-      /health
-      /stats
-      /providers
-      /ledger [--limit N]
-      /bus [--limit N]
-      /seam queues
-      /send <provider> <prompt>
-      /status
-      /ideas
-      /patterns
-      /cfr
-      /artifacts [--limit N]
+    - method: GET   path: /api/sessions/:sessionId
+      returns: "CopilotSession + recent exchanges from Cortex chat_log"
 
-  agent_console_routing:
-    v1_problem: >
-      Claude/ChatGPT/Gemini consoles all routed through copilot/prompt
-      (Ollama/Mistral) regardless of whether a NCP tab was connected.
-      Sending to Claude console → Mistral responds, not Claude.
-    v2_fix: >
-      Each console now checks providers first.
-      If tab connected: dispatch via POST /command + poll /jobs until complete.
-      If no tab: fall back to co-pilot/prompt (Mistral) with honest message.
+    - method: GET   path: /api/context/:sessionId
+      returns: "Assembled 7-layer context snapshot for session"
 
-  response_shape:
-    ok:             boolean
-    requestId:      uuid
-    text:           string — always present, always displayable
-    modelUsed:      string | null
-    classification: { intent, tool, confidence }
-    contextLayers:  number — how many layers successfully assembled
-    tokensUsed:     number — approximate tokens in snapshot
+    - method: GET   path: /health
+    - method: GET   path: /contract
+    - method: GET   path: /events
 
-  streaming:
-    bus_event:      copilot.token { token: string, model: string }
-    purpose:        token-by-token for streaming UI (future UI wires to this)
+  handshake:
+    components:
+      - id: 'copilot.prompt'
+        uuid: 'nexus-copilot-comp-prompt-v2-001'
+        grammar: ['ask', 'copilot', 'cp']
+        route: { method: POST, path: '/api/prompt' }
+        hooks:
+          in:
+            - id: 'copilot.prompt.receive'
+              intent: ['ask', 'build', 'diagnose', 'navigate', 'note', 'tool', 'action']
+              contract: 'nexus-interaction-contract-v1::copilot'
+              tags: ['copilot', 'user-intent', 'entry-point']
+          out:
+            - id: 'copilot.prompt.to-raid'
+              wires_to: ['cortex.raid.receive']
+              tags: ['classification', 'routing']
+            - id: 'copilot.prompt.to-ollama'
+              wires_to: ['ollama.jobs.dispatch.receive']
+              tags: ['synthesis', 'model']
+            - id: 'copilot.prompt.to-cortex-memory'
+              wires_to: ['cortex.memory.chat_log.write']
+              tags: ['persist', 'memory']
+            - id: 'copilot.prompt.reply'
+              wires_to: ['ui.copilot.receive']
+              tags: ['response', 'terminal']
 
-  repair_proposals:
-    trigger:        high-severity gaps in snapshot
-    target:         POST :4800/api/ideas
-    compartment:    copilot-repairs
-    async:          true — never blocks response
+  modules:
+    - id: intent-classifier
+      path: copilot/intent-classifier.js
+      description: >
+        Token-first fast path before any model.
+        Greeting RE, slash commands, single-word tools, grammar trie.
+        Falls through to RAID classify() for everything else.
+        Returns: { intent, tool, confidence, fromGrammar, componentId }
 
-  bugs_fixed:
-    - cortex health offline: r?.ok always false → now checks r?.status === 'ok'
-    - claude/chatgpt consoles routed to Mistral instead of NCP tab
-    - event buffer: 200 → 500, poll interval 1000ms → 800ms
+    - id: context-assembler
+      path: copilot/context-assembler.js
+      description: >
+        7-layer context. L0 bus events, L1 telemetry, L2 provider health,
+        L3 gaps + SEAM, L4 CFR-Ω, L5 memory + artifacts, L6 predictive intent.
+        Reads from Cortex (:3748) not Guardian.
+        User model hypotheses, recent notes, chat_log session history.
+        Returns assembled text block injected into model system prompt.
 
-  roadmap:
-    done_v2:
-      - 7-layer context snapshot
-      - concurrent layer assembly with per-layer timeouts
-      - token streaming to bus
-      - repair proposals to Idearium
-      - cortex health fix
-      - NCP routing fix in all agent consoles
-    next:
-      - streaming token output to agent console UI (wire copilot.token → SSE)
-      - layer caching: L5/L6 cached 30s (expensive reads)
-      - user model injection (phase 12 context)
-      - Qwen narrates tool results in plain language
-      - proactive surfacing: co-pilot pushes critical alerts on load without prompt
+    - id: data-answerer
+      path: copilot/data-answerer.js
+      description: >
+        Answers from live API reads without any model.
+        Greetings, status, gap count, sigma, provider list, pattern summary,
+        recent notes, RCA findings, current channel state.
+        TOKEN_FIRST_THRESHOLD: if grammar confidence >= 0.6, answer here.
+        Never calls Ollama for questions answerable from the field.
+
+    - id: action-router
+      path: copilot/action-router.js
+      description: >
+        Routes action intents to the right component via RAID.
+        'build X' → emerge.compiler via ollama
+        'diagnose' → cortex.intelligence.rca
+        'note: X' → cortex.memory.user_notes + idearium.idea
+        'navigate X' → emits copilot.navigate event → UI shell
+        'spotlight X' → emits copilot.spotlight event → UI spotlight module
+        Every dispatch carries full wire context for CFR.
+
+    - id: session-manager
+      path: copilot/session-manager.js
+      description: >
+        One session per browser tab / terminal connection.
+        Reads chat_log from Cortex to rebuild session history.
+        SESSION_TIMEOUT_MS: idle sessions expire.
+        On new session: reads user_model_hypotheses for personalization.
+
+    - id: memory-writer
+      path: copilot/memory-writer.js
+      description: >
+        All writes go to Cortex via POST :3748/api/memory/insert.
+        Tables: chat_log, user_model_hypotheses, user_notes.
+        Every write carries: requestId, sessionId, componentId, hookId.
+        Fallback: buffer locally if Cortex offline, flush on reconnect.
+
+    - id: server
+      path: copilot/server.js
+      description: >
+        HTTP server on :3750.
+        SSE /events stream.
+        Registers with orchestrator on boot.
+
+  what_leaves_guardian:
+    remove:
+      - "guardian/agents/co-pilot/index.js"       # moves to copilot/
+      - "guardian/agents/co-pilot/context.js"     # moves to copilot/context-assembler.js
+    guardian_keeps:
+      - "POST /command → SEAM queue dispatch"
+      - "POST /build → T2 gate"
+      - "NCP channel management"
+      - "Job queue + SSE to browser tabs"
+    orchestrator_update:
+      - "POST /api/guardian/copilot/prompt → proxies to :3750/api/prompt"
+      - "Existing clients still work. No breaking change."
+
+  tests:
+    - 'POST /api/prompt "hello" → 200 + text, modelUsed: data-only'
+    - 'POST /api/prompt "/gaps" → 200 + gap count, zero model calls'
+    - 'POST /api/prompt "build X" → 200 + dispatched to emerge.compiler'
+    - 'POST /api/prompt "go to guardian" → 200 + ui.navigate in response'
+    - 'POST /api/prompt "note: X" → 200 + written to cortex.memory'
+    - 'chat_log written to Cortex on every exchange'
+    - 'user_model_hypotheses updated on channel visit'
+    - 'session survives Guardian restart'
+    - 'context-assembler reads from :3748 not :7820'
+    - 'wire context (requestId, componentId, hookId) on every CFR entry'

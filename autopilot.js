@@ -58,6 +58,9 @@ const ALL_KERNELS = [
   { name: 'idearium',     cmd: 'node', args: ['idearium/api/index.js'] },
   { name: 'architect',    cmd: 'node', args: ['architect/service.js'] },
   { name: 'diagnostic',   cmd: 'node', args: ['service/nexus-diagnostic.js'] },
+  { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'] },
+  { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true },
+  { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true },
 ];
 
 // ── Restart policy ────────────────────────────────────────────────────────────

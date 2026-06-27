@@ -1,2 +1,1 @@
 {"uuid":"26a21767-e525-4d07-934d-3b8a7902f56a","system":"idearium","component":"idearium.spec.check","action":"registered","status":"ok","tags":["idearium"],"detail":"Validate spec completeness before build","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782519624715}
-{"uuid":"033445d2-225c-4096-bdda-7f6afba0abd5","system":"idearium","component":"idearium.spec.check","action":"registered","status":"ok","tags":["idearium"],"detail":"Validate spec completeness before build","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782534013889}
