@@ -271,6 +271,17 @@ let _currentChannelName = 'Overview';
 
 const GD_URL = 'http://127.0.0.1:7820';
 const CX_URL = 'http://127.0.0.1:3748';
+
+// Write to Cortex's sovereign memory store — not Guardian's local JAA.
+// Cortex is the memory. Guardian is dispatch. They are separate.
+async function _cortexInsert(table, row) {
+  try {
+    await _post(`${CX_URL}/api/memory/insert`, { table, row });
+  } catch(_) {
+    // Fallback: write to Guardian's JAA if Cortex offline
+    if (_jaa) try { _jaa.insert(table, row); } catch(_) {}
+  }
+}
 const OR_URL = 'http://127.0.0.1:9000';
 
 async function _fetch(url, ms=2000) {
@@ -847,9 +858,7 @@ async function handlePrompt(prompt, opts={}) {
   const dataAnswer = await _tryDataAnswer(prompt, classification, channel, uiState);
   if (dataAnswer) {
     // We answered without Ollama — log and return
-    if (_jaa) {
-      try {
-        _jaa.insert('chat_log', {
+    try { _cortexInsert('chat_log', {
           uuid: crypto.randomUUID(), jobId: requestId, provider: 'copilot',
           prompt: prompt.slice(0,2000), response: dataAnswer.slice(0,5000),
           intent: classification.intent, tool: null, channel,
@@ -857,7 +866,6 @@ async function handlePrompt(prompt, opts={}) {
           ts: now, source: 'copilot',
         });
       } catch(_) {}
-    }
     if (um?.recordIntent) um.recordIntent('question', prompt, channel);
     const uiInstructions = _buildUIInstructions(prompt, classification, dataAnswer, channel);
     return { ok:true, requestId, text: dataAnswer, modelUsed:'data-only',
@@ -942,9 +950,7 @@ async function handlePrompt(prompt, opts={}) {
   _logEvent('copilot.reply', { requestId, modelUsed, channel });
 
   // §LAW II — log co-pilot conversation turn to chat_log
-  if (_jaa) {
-    try {
-      _jaa.insert('chat_log', {
+  try { _cortexInsert('chat_log', {
         uuid:      crypto.randomUUID(),
         jobId:     requestId,
         provider:  'copilot',
@@ -961,7 +967,6 @@ async function handlePrompt(prompt, opts={}) {
         source: 'copilot',
       });
     } catch(_) {}
-  }
 
   // Build UI instructions — spotlight, steps, tension — based on what the user asked
   const uiInstructions = _buildUIInstructions(prompt, classification, snapshotText, channel);

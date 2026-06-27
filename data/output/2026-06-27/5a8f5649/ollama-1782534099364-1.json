@@ -1,0 +1,11 @@
+{
+  "NEXUS DIAGNOSTIC ESCALATION": {
+    "Gap": {
+      "pattern_precursor": "precursor::cortex.storage.opened",
+      "Path": "precursor::cortex.storage.opened",
+      "Body": "Precursor (100%, 12×): \"cortex.storage.opened\" precedes failures 12 times (first seen: 2026-06-27T00:21:22.077Z)",
+      "Severity": "high",
+      "Attempts": 0
+    }
+  }
+}

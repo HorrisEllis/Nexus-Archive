@@ -1,0 +1,9 @@
+NEXUS DIAGNOSTIC ESCALATION
+Gap: pattern_precursor
+Path: precursor::heartbeat.pulse
+Body: Precursor (100%, 102×): "heartbeat.pulse" precedes failures 102 times (first seen: 2026-06-27T04:21:14.367Z)
+Severity: high
+Attempts: 0
+
+Analyse this gap, identify root cause, propose a concrete fix.
+Note: this analysis is not automatically applied. No code runs as a result of your response.

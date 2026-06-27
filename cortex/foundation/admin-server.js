@@ -402,6 +402,23 @@ class AdminServer {
           break;
         }
 
+        // ── POST /api/memory/insert — write a row to any JAA table ─────────
+        // Used by co-pilot and other services to persist to Cortex memory
+        // instead of their own local JAA. Cortex is the sovereign memory store.
+        case route === 'POST /api/memory/insert': {
+          try {
+            const { table, row } = body;
+            if (!table || !row) { res.end(JSON.stringify({ok:false,error:'table and row required'})); break; }
+            if (!ALL_TABLES.includes(table)) {
+              // Provision unknown table (matches jaa-db behaviour for undeclared tables)
+              console.warn(`[cortex/memory] provisioning undeclared table: ${table}`);
+            }
+            const inserted = jaaDB.insert(table, { uuid: row.uuid || require('crypto').randomUUID(), ...row });
+            res.end(JSON.stringify({ok:true, uuid: inserted?.uuid || row.uuid}));
+          } catch(e) { res.end(JSON.stringify({ok:false,error:e.message})); }
+          break;
+        }
+
         // ── POST /api/memory/search ───────────────────────────────────────
         case route === 'POST /api/memory/search': {
           this._readBody(req, (body) => {

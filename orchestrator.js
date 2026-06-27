@@ -1484,6 +1484,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='tags')             return json(res,200,await GET('cortex',`/api/tags?entityId=${QS.get('entityId')||''}`));
     if (M==='POST' && action==='tags')             return json(res,200,await POST('cortex','/api/tags',await readBody(req)));
     if (M==='GET'  && action==='memory' && !action2) return json(res,200,await GET('cortex',`/api/memory?table=${QS.get('table')||'event_log'}&n=${QS.get('n')||50}`));
+    if (M==='POST' && action==='memory' && action2==='insert') return json(res,200,await POST('cortex','/api/memory/insert',await readBody(req)));
     if (M==='POST' && action==='memory' && action2==='search') return json(res,200,await POST('cortex','/api/memory/search',await readBody(req)));
     if (M==='POST' && action==='memory' && action2==='forget') return json(res,200,await POST('cortex','/api/memory/forget',await readBody(req)));
     if (M==='GET'  && action==='requests')         return json(res,200,await GET('cortex','/api/requests'));

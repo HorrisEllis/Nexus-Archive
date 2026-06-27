@@ -1,16 +1,16 @@
 {
-  "establishedAt": 1782519633915,
-  "eventCount": 10,
+  "establishedAt": 1782534391282,
+  "eventCount": 20,
   "latency": {
-    "mean": 0,
-    "sigma": 0,
-    "p95": 0
+    "mean": 6182.65,
+    "sigma": 4054.3536,
+    "p95": 13726
   },
   "errorRate": {
     "mean": 0,
     "sigma": 0
   },
   "eventTypes": {
-    "health.ok": 10
+    "GUARDIAN_COMPLETE": 20
   }
 }

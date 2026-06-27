@@ -69,10 +69,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
   padding:7px 14px;border-radius:14px;border:none;
   background:transparent;color:rgba(255,255,255,.4);
   font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.07em;
-  cursor:pointer;transition:all .2s;white-space:nowrap;position:relative;
+  cursor:pointer;transition:color .15s,background .15s,transform .08s,box-shadow .15s;
+  white-space:nowrap;position:relative;-webkit-user-select:none;user-select:none;
 }
-.ch-btn:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.8)}
-.ch-btn.on{background:rgba(255,255,255,.1);color:#fff}
+.ch-btn:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);transform:translateY(-1px);}
+.ch-btn:active{transform:translateY(1px) scale(0.97);background:rgba(var(--ac-rgb),.12);color:var(--ac);transition-duration:.04s;}
+.ch-btn.on{background:rgba(var(--ac-rgb),.12);color:var(--ac);box-shadow:0 0 0 1px rgba(var(--ac-rgb),.25);}
+.ch-btn.spotlight-rail{
+  color:var(--ac) !important;background:rgba(var(--ac-rgb),.15) !important;
+  box-shadow:0 0 0 1px rgba(var(--ac-rgb),.4), 0 0 14px rgba(var(--ac-rgb),.2) !important;
+  animation:rail-pulse 1.8s ease-in-out infinite;
+}
+@keyframes rail-pulse{
+  0%,100%{box-shadow:0 0 0 1px rgba(var(--ac-rgb),.3);}
+  50%{box-shadow:0 0 0 2px rgba(var(--ac-rgb),.6), 0 0 20px rgba(var(--ac-rgb),.25);}
+}
 .ch-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2);flex-shrink:0;transition:all .4s}
 .ch-dot.online{background:var(--ok);animation:dot-live 2.5s ease-in-out infinite}
 @keyframes dot-live{0%,100%{opacity:.4}50%{opacity:1;box-shadow:0 0 5px var(--ok)}}
@@ -173,15 +184,39 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
 .sys-tile{
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
   border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:10px;
-  cursor:pointer;transition:all .3s;position:relative;overflow:hidden;
+  cursor:pointer;transition:border-color .15s,box-shadow .2s,transform .1s,filter .12s;
+  position:relative;overflow:hidden;-webkit-user-select:none;user-select:none;
 }
+/* Spotlight — pressure. The tile feels physical. */
 .sys-tile::after{
   content:'';position:absolute;inset:0;border-radius:14px;opacity:0;
-  transition:opacity .3s;pointer-events:none;
-  background:radial-gradient(ellipse at 30% 30%,rgba(255,255,255,.06),transparent 70%);
+  transition:opacity .2s;pointer-events:none;
+  background:radial-gradient(ellipse at 30% 30%,rgba(255,255,255,.08),transparent 65%);
 }
-.sys-tile:hover{border-color:rgba(255,255,255,.15);transform:translateY(-2px)}
+.sys-tile:hover{
+  border-color:rgba(var(--ac-rgb),.35);
+  transform:translateY(-1px) scale(1.004);
+  box-shadow:0 0 0 1px rgba(var(--ac-rgb),.12), 0 8px 28px rgba(0,0,0,.4);
+  filter:brightness(1.06);
+}
 .sys-tile:hover::after{opacity:1}
+.sys-tile:active{
+  transform:translateY(1px) scale(0.996) !important;
+  box-shadow:0 0 0 2px rgba(var(--ac-rgb),.3), inset 0 1px 4px rgba(0,0,0,.3) !important;
+  filter:brightness(1.12) !important;
+  transition-duration:.04s !important;
+}
+/* Spotlight — co-pilot directs attention here */
+.sys-tile.spotlight{
+  border-color:var(--ac) !important;
+  box-shadow:0 0 0 2px var(--ac), 0 0 32px rgba(var(--ac-rgb),.35) !important;
+  filter:brightness(1.1);
+  animation:spotlight-pulse 2s ease-in-out infinite;
+}
+@keyframes spotlight-pulse{
+  0%,100%{box-shadow:0 0 0 2px var(--ac), 0 0 20px rgba(var(--ac-rgb),.25);}
+  50%{box-shadow:0 0 0 3px var(--ac), 0 0 44px rgba(var(--ac-rgb),.55), 0 0 70px rgba(var(--ac-rgb),.1);}
+}
 .sys-tile.online{border-color:rgba(255,255,255,.1)}
 .tile-head{display:flex;align-items:center;justify-content:space-between}
 .tile-icon{font-size:20px}
@@ -263,6 +298,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
   /* Online green and error red — stable, never animate */
   --ok:#00ff88;
   --ok-dim:rgba(0,255,136,.12);
+  --ac-rgb:0,212,255;
   --ok-border:rgba(0,255,136,.25);
   --err:#ff3355;
   --err-dim:rgba(255,51,85,.12);
@@ -1128,13 +1164,13 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
         <div class="tile-desc">Live health checks across all systems. Run at any time.</div>
         <div class="tile-metrics"></div>
       </div>
-      <div class="sys-tile" id="tile-arch">
+      <div class="sys-tile" id="tile-arch" onclick="window.open('http://127.0.0.1:3747', '_blank')">
         <div class="tile-head"><span class="tile-icon">▲</span><span class="tile-port">:3747</span><span class="tile-status" id="ts-arch">—</span></div>
         <div class="tile-name" style="color:#ff8844">Architect</div>
         <div class="tile-desc">Hook registry, SNR gate, blueprint engine, topology scanner.</div>
         <div class="tile-metrics"><div><div class="tm-val" id="tm-hooks">—</div><div class="tm-lbl">Hooks</div></div><div><div class="tm-val" id="tm-blueprints">—</div><div class="tm-lbl">Blueprints</div></div></div>
       </div>
-      <div class="sys-tile" id="tile-em">
+      <div class="sys-tile" id="tile-em" onclick="tuneById('ch-emerge')">
         <div class="tile-head"><span class="tile-icon">◆</span><span class="tile-port">:4242</span><span class="tile-status" id="ts-em">—</span></div>
         <div class="tile-name" style="color:#44ddaa">Emerge IDE</div>
         <div class="tile-desc">SEAM compiler + codegen. Spec-driven .eg / .emerge editing.</div>
@@ -1153,14 +1189,14 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
           <div><div class="tm-val" id="tm-forge-gaps">—</div><div class="tm-lbl">Open Gaps</div></div>
         </div>
       </div>
-      <div class="sys-tile" onclick="goToActiveMode()" id="tile-agent">
+      <div class="sys-tile" onclick="openModeSelector()" id="tile-agent">
         <div class="tile-head">
           <span class="tile-icon">⇄</span>
           <span class="tile-port">agent mode</span>
           <span class="tile-status" id="ts-agent" style="color:#a78bfa;background:rgba(167,139,250,.1);padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700">—</span>
         </div>
-        <div class="tile-name" id="tile-agent-name" style="color:#a78bfa">Agent</div>
-        <div class="tile-desc" id="tile-agent-desc">Select operating mode — Orchestrator, Claude, ChatGPT, Gemini, or Perplexity.</div>
+        <div class="tile-name" id="tile-agent-name" style="color:#a78bfa">AGENTS</div>
+        <div class="tile-desc" id="tile-agent-desc">Choose AI provider — Claude, ChatGPT, Mistral, Gemini, Perplexity, or Orchestrator.</div>
         <div class="tile-metrics"></div>
       </div>
       <div class="sys-tile" onclick="openBlueprintBuilder()" id="tile-blueprint">
@@ -1333,6 +1369,26 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
   </div>
   <div class="ch" id="ch-chatgpt-agent">
     <iframe src="" id="chatgpt-agent-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="ChatGPT Console"></iframe>
+  </div>
+
+  <!-- CH: CLAUDE AGENT -->
+  <div class="ch" id="ch-claude-agent">
+    <iframe src="" id="claude-agent-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Claude Console"></iframe>
+  </div>
+
+  <!-- CH: MISTRAL AGENT -->
+  <div class="ch" id="ch-mistral-agent">
+    <iframe src="" id="mistral-agent-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Mistral Console"></iframe>
+  </div>
+
+  <!-- CH: GEMINI AGENT -->
+  <div class="ch" id="ch-gemini-agent">
+    <iframe src="" id="gemini-agent-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Gemini Console"></iframe>
+  </div>
+
+  <!-- CH: PERPLEXITY AGENT -->
+  <div class="ch" id="ch-perplexity-agent">
+    <iframe src="" id="perplexity-agent-iframe" style="width:100%;height:100%;border:none;background:#0a0a14" title="Perplexity Console"></iframe>
   </div>
 
   <!-- CH: CAUSAL GRAPH — live force graph of event causality + CFR sigma -->
@@ -1578,7 +1634,11 @@ const CH_META=[
   {id:'ch-cx-full',   name:'CORTEX',       accent:':3748 · Full UI'},
   {id:'ch-idr-full',  name:'IDEARIUM',     accent:':4800 · Full UI'},
   {id:'ch-br-full',   name:'BRIDGE',       accent:':9999 · Full UI'},
-  {id:'ch-chatgpt-agent', name:'CHATGPT',  accent:'Dispatch console · SEAM · Live queue'},
+  {id:'ch-chatgpt-agent',   name:'CHATGPT',    accent:'Dispatch console · SEAM · Live queue'},
+  {id:'ch-claude-agent',     name:'CLAUDE',      accent:'200k · SNR · SEAM · constitutional · NCP'},
+  {id:'ch-mistral-agent',    name:'MISTRAL',     accent:'Local · Ollama · Enterprise · NCP'},
+  {id:'ch-gemini-agent',     name:'GEMINI',      accent:'Vision · multimodal · NCP'},
+  {id:'ch-perplexity-agent', name:'PERPLEXITY',  accent:'Web-grounded · citations · NCP'},
   {id:'ch-causal',       name:'CAUSAL GRAPH', accent:'Event causality · CFR sigma · Live force graph'},
   {id:'ch-conversations',name:'CONVERSATIONS',accent:'Co-pilot log · Intent · Model · Channel'},
   {id:'ch-canvas',       name:'CANVAS',       accent:'ERAVOS spatial canvas · NEXUS organisms · Wires'},
@@ -1625,6 +1685,10 @@ function tune(n){
   if(chId==='ch-idr-full'){const f=document.getElementById('idr-full-iframe');if(f&&!f.src.endsWith('/idearium'))f.src='/ui/idearium';}
   if(chId==='ch-br-full'){const f=document.getElementById('br-full-iframe');if(f&&!f.src.endsWith('/bridge'))f.src='/ui/bridge';}
   if(chId==='ch-chatgpt-agent'){const f=document.getElementById('chatgpt-agent-iframe');if(f&&!f.src.endsWith('agents/chatgpt/index.html'))f.src='/ui/agents/chatgpt/index.html';}
+  if(chId==='ch-claude-agent'){const f=document.getElementById('claude-agent-iframe');if(f&&!f.src.endsWith('agents/claude/index.html'))f.src='/ui/agents/claude/index.html';}
+  if(chId==='ch-mistral-agent'){const f=document.getElementById('mistral-agent-iframe');if(f&&!f.src.endsWith('agents/mistral/index.html'))f.src='/ui/agents/mistral/index.html';}
+  if(chId==='ch-gemini-agent'){const f=document.getElementById('gemini-agent-iframe');if(f&&!f.src.endsWith('agents/gemini/index.html'))f.src='/ui/agents/gemini/index.html';}
+  if(chId==='ch-perplexity-agent'){const f=document.getElementById('perplexity-agent-iframe');if(f&&!f.src.endsWith('agents/perplexity/index.html'))f.src='/ui/agents/perplexity/index.html';}
   if(chId==='ch-causal'){cgLoad();}
   if(chId==='ch-conversations'){convLoad();}
   if(chId==='ch-canvas'){const f=document.getElementById('canvas-iframe');if(f&&!f.src)f.src='/ui/eravos/index.html';}
@@ -2271,7 +2335,7 @@ async function runDiagEngines(){
   const fails=await get(`${B.orch}/api/cortex/failures`);
   const failCount=Array.isArray(fails)?fails.length:(fails?.failures||[]).length;
   rows.push({name:'Failures',val:failCount+' recent',ok:failCount===0});
-  el.innerHTML=rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px"><span style="color:${r.ok?'#00ff88':'#ffaa00'}">${r.ok?'✓':'⚠'}</span><span style="color:rgba(255,255,255,.6)">${r.name}</span><span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">${r.val}</span></div>`).join('');
+  el.innerHTML=rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px"><span style="color:${r.ok?'#00ff88':'#ffaa00'}">${r.ok?'✓':'⚠'}</span><span style="color:rgba(255,255,255,.6)">${r.name}</span><span style="margin-left:auto;font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(255,255,255,.3)">${r.val}</span></div>`).join('');
 }
 
 // ── Assistant with grammar engine ─────────────────────────────────────────────
@@ -2543,7 +2607,7 @@ async function convLoad() {
   const filter = document.getElementById('conv-filter')?.value || '';
   const list   = document.getElementById('conv-list');
   if (!list) return;
-  list.innerHTML = '<div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);padding:16px">Loading…</div>';
+  list.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(255,255,255,.2);padding:16px">Loading…</div>';
 
   try {
     const url = `http://127.0.0.1:${P.orch}/api/memory?table=chat_log&limit=40`;
@@ -2554,7 +2618,7 @@ async function convLoad() {
     document.getElementById('conv-count').textContent = `${rows.length} exchanges`;
 
     if (!rows.length) {
-      list.innerHTML = '<div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);padding:16px">No conversations yet. Try asking co-pilot something.</div>';
+      list.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(255,255,255,.2);padding:16px">No conversations yet. Try asking co-pilot something.</div>';
       return;
     }
 
@@ -2589,7 +2653,7 @@ async function convLoad() {
       list.appendChild(card);
     });
   } catch(e) {
-    list.innerHTML = `<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--err);padding:16px">Error: ${e.message}</div>`;
+    list.innerHTML = `<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:var(--err);padding:16px">Error: ${e.message}</div>`;
   }
 }
 
@@ -2729,6 +2793,22 @@ const CP = (() => {
       const el = _el(name);
       if (!el) continue;
       el.classList.add('copilot-spotlight');
+      // Physical spotlight: add pressure glow classes to tiles and rail buttons
+      if (el.classList.contains('sys-tile')) el.classList.add('spotlight');
+      if (el.classList.contains('ch-btn')) el.classList.add('spotlight-rail');
+      // Also spotlight the matching rail button if a tile was targeted
+      if (el.id && el.id.startsWith('tile-')) {
+        const tileMap = {
+          'tile-gd':'ch-guardian','tile-cx':'ch-cortex','tile-idr':'ch-idearium',
+          'tile-br':'ch-bridge','tile-arch':'ch-architect','tile-em':'ch-emerge',
+          'tile-dg':'ch-diagnose','tile-orch':'ch-orch-full',
+        };
+        const chanId = tileMap[el.id];
+        if (chanId) {
+          const railBtn = document.querySelector(`.ch-btn[onclick*="${chanId}"]`);
+          if (railBtn) { railBtn.classList.add('spotlight-rail'); _spotlitEls.push(railBtn); }
+        }
+      }
       // Ensure element has position:relative for badge positioning
       if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
       _spotlitEls.push(el);
@@ -2741,7 +2821,11 @@ const CP = (() => {
 
   function clearSpotlight() {
     if (_spotlightTimer) { clearTimeout(_spotlightTimer); _spotlightTimer = null; }
-    for (const el of _spotlitEls) el.classList.remove('copilot-spotlight');
+    for (const el of _spotlitEls) {
+      el.classList.remove('copilot-spotlight');
+      el.classList.remove('spotlight');
+      el.classList.remove('spotlight-rail');
+    }
     _spotlitEls = [];
     clearBadges();
   }
@@ -3253,16 +3337,12 @@ function selectMode(mode, goToSuite=true) {
   // Update menu badge
   const ind = document.getElementById('mode-indicator');
   if (ind) { ind.textContent = MODE_CONFIG[mode].badge; ind.style.display='inline'; }
-  // Update agent tile if present
+  // Tile stays as AGENTS — just update the status badge to show active mode
   const agentTile = document.getElementById('tile-agent');
   if (agentTile) {
     const cfg = MODE_CONFIG[mode];
-    const nameEl = agentTile.querySelector('.tile-name');
-    if (nameEl) { nameEl.textContent = cfg.name; nameEl.style.color = cfg.color; }
-    const descEl = agentTile.querySelector('.tile-desc');
-    if (descEl) descEl.textContent = cfg.sub.split('·').slice(0,2).join('·').trim();
-    const iconEl = agentTile.querySelector('.tile-icon');
-    if (iconEl) iconEl.textContent = cfg.icon;
+    const statusEl = document.getElementById('ts-agent');
+    if (statusEl) { statusEl.textContent = cfg.badge; statusEl.style.color = cfg.color; }
   }
   // Inject rail tab (silent — don't navigate)
   _injectAgentSuiteTab();
@@ -3322,8 +3402,17 @@ function tuneById(id) {
 
 function goToActiveMode() {
   if (!_activeMode) { openModeSelector(); return; }
-  if (_activeMode === 'chatgpt') { tuneById('ch-chatgpt-agent'); return; }
-  tuneSuite();
+  const agentChannels = {
+    chatgpt:     'ch-chatgpt-agent',
+    claude:      'ch-claude-agent',
+    mistral:     'ch-mistral-agent',
+    gemini:      'ch-gemini-agent',
+    perplexity:  'ch-perplexity-agent',
+    orchestrator: 'ch-agent-suite',
+  };
+  const ch = agentChannels[_activeMode];
+  if (ch) tuneById(ch);
+  else tuneSuite();
 }
 
 function _bootAgentSuite(mode) {

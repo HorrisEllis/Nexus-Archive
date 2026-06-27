@@ -1,0 +1,11 @@
+{
+  "NEXUS DIAGNOSTIC ESCALATION": {
+    "Gap": {
+      "pattern_precursor": "intelligence.cross_ledger_analysis",
+      "Path": "precursor::intelligence.cross_ledger_analysis",
+      "Body": "Precursor (100%, 12×): 'intelligence.cross_ledger_analysis' precedes failures 12 times (first seen: 2026-06-27T04:31:14.409Z)",
+      "Severity": "high",
+      "Attempts": 0
+    }
+  }
+}
