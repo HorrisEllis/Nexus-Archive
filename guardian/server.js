@@ -92,13 +92,7 @@ function _buildSeamQueue(specText, opts = {}) {
     // CFR ledger first — no separate _evLedger.record() call needed here. The
     // old /command path called both, which double-logged every SEAM event.
     busEmit: (type, data) => bus.emit(type, data),
-    // ollama/ollama-ncp: native dispatch, no browser tab — see
-    // _dispatchSeamOllamaNative. Every other provider still goes through the
-    // NCP/userscript channel as before.
-    ncpPush: (prov, data) => {
-      if (prov === 'ollama' || prov === 'ollama-ncp') return _dispatchSeamOllamaNative(data);
-      return ncp.push(prov, data);
-    },
+    ncpPush: (prov, data) => ncp.push(prov, data),
     onComplete: (stats) => {
       _activeQueues.delete(queue.uuid);
       bus.emit('guardian.seam.queue.complete', { queueId: queue.uuid, ...stats });
@@ -278,7 +272,6 @@ const NEXUS_URL     = process.env.NEXUS_URL || 'http://127.0.0.1:3748';
 // Non-fatal: cortex unreachable -> fall back. LAW I lives in RAID.
 const _RAID_AGENT_TO_PROVIDER = {
   'ollama':             'ollama',
-  'ollama-ncp':         'ollama-ncp',
   'guardian-claude':    'claude',
   'guardian-chatgpt':   'chatgpt',
   'guardian-gemini':    'gemini',
@@ -474,93 +467,13 @@ function dispatchJob(job) {
   return; // pool owns dispatch from here
 }
 
-// ── Ollama is a local module, not a browser-tab provider ─────────────────────
-// Ollama runs as a real HTTP service on this machine (default :11434). It has
-// no DOM, no CORS problem worth dodging, and nothing for a Tampermonkey
-// userscript to inject into. Routing it through the NCP/userscript channel —
-// the same path used for claude/chatgpt/gemini/perplexity tabs — means every
-// ollama job sits in pendingQueue forever waiting for an EventSource that no
-// browser will ever open. Dispatch it directly via ollama-runtime.js instead,
-// then feed the result back through the normal NCP_COMPLETE/NCP_ERROR pipeline
-// so gap analysis, artifact extraction, and chat-log writes all still happen.
-const _ollamaRuntime = (() => { try { return require('../ollama-runtime'); } catch (_) { return null; } })();
+// Ollama dispatch removed — all ollama work goes through ollama/server.js (:3749)
 
-const OLLAMA_COMMAND_MODELS = {
-  code:     'qwen2.5-coder:1.5b',
-  seam:     'qwen2.5-coder:1.5b',
-  general:  'mistral:7b-instruct-q4_K_M',
-  analysis: 'mistral:7b-instruct-q4_K_M',
-};
 
-function _dispatchOllamaNative(job) {
-  updateJob(job.id, { status: 'delivered', deliveredAt: Date.now(), startedAt: Date.now() });
-  console.log(`[guardian] dispatched ${job.id} → ollama (native module, no tab needed)`);
-  bus.emit('guardian.job.dispatched', { jobId: job.id, provider: job.provider });
 
-  if (!_ollamaRuntime) {
-    _handleNCPMessage({ type: 'NCP_ERROR', jobId: job.id, provider: job.provider,
-      error: 'ollama-runtime module not found — expected at project root ollama-runtime.js' });
-    return true;
-  }
 
-  const model = OLLAMA_COMMAND_MODELS[job.command] || process.env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
-  let buf = '';
-  try {
-    _ollamaRuntime.streamGenerate(
-      { model, prompt: job.prompt || job.content || '', system: job.systemPrompt,
-        temperature: job.temperature, max_tokens: job.maxTokens },
-      (token) => { buf += token; },
-      () => { _handleNCPMessage({ type: 'NCP_COMPLETE', jobId: job.id, provider: job.provider, text: buf }); },
-      (err)  => { _handleNCPMessage({ type: 'NCP_ERROR', jobId: job.id, provider: job.provider,
-        error: err?.message || String(err) }); },
-    );
-  } catch (err) {
-    _handleNCPMessage({ type: 'NCP_ERROR', jobId: job.id, provider: job.provider, error: err.message });
-  }
-  return true;
-}
-
-// SEAM-queue equivalent of _dispatchOllamaNative above. seam-queue.js's
-// _dispatch() calls whatever ncpPush() it was given with a GUARDIAN_JOB
-// payload shape (jobId/prompt/seam_*), not a `job` object from the `jobs`
-// Map — SEAM chunks were never registered there. This is wired in as the
-// ncpPush passed to SEAMQueue when provider is ollama/ollama-ncp (see
-// _buildSeamQueue below), so a SEAM chunk routed to Ollama skips the
-// browser-tab channel exactly like a raw job does — closing the gap where
-// RAID's LAW_I (ollama first, no tab needed) was never actually true for the
-// one dispatch path (SEAM) that matters most for the work ollama is
-// preferred for (code/spec/forge).
-function _dispatchSeamOllamaNative(data) {
-  console.log(`[guardian] SEAM chunk ${data.jobId} → ollama (native, no tab needed): ${data.seam_title || ''}`);
-  bus.emit('guardian.seam.chunk.dispatched.native', { jobId: data.jobId, queueId: data.seam_queue_id, provider: data.provider, ts: Date.now() });
-
-  if (!_ollamaRuntime) {
-    _handleNCPMessage({ type: 'NCP_ERROR', jobId: data.jobId, provider: data.provider,
-      error: 'ollama-runtime module not found — expected at project root ollama-runtime.js' });
-    return;
-  }
-
-  const model = OLLAMA_COMMAND_MODELS[data.command] || OLLAMA_COMMAND_MODELS.seam || process.env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
-  let buf = '';
-  try {
-    _ollamaRuntime.streamGenerate(
-      { model, prompt: data.prompt || '' },
-      (token) => { buf += token; },
-      () => { _handleNCPMessage({ type: 'NCP_COMPLETE', jobId: data.jobId, provider: data.provider, text: buf }); },
-      (err)  => { _handleNCPMessage({ type: 'NCP_ERROR', jobId: data.jobId, provider: data.provider,
-        error: err?.message || String(err) }); },
-    );
-  } catch (err) {
-    _handleNCPMessage({ type: 'NCP_ERROR', jobId: data.jobId, provider: data.provider, error: err.message });
-  }
-}
 
 function _doDispatch(job) {
-  // ollama / ollama-ncp: skip the userscript channel entirely — see above.
-  if (job.provider === 'ollama' || job.provider === 'ollama-ncp') {
-    return _dispatchOllamaNative(job);
-  }
-
   // NCP: push job via SSE channel instead of WebSocket
   if (!ncp.isConnected(job.provider)) {
     // Queue it — will flush when provider connects via GET /channel
@@ -577,7 +490,6 @@ function _doDispatch(job) {
       chatgpt:    'https://chatgpt.com/',
       gemini:     'https://gemini.google.com/',
       perplexity: 'https://www.perplexity.ai/',
-      ollama:     null,  // local — no tab needed
     };
     const url = provUrls[job.provider];
     if (url) {
@@ -1384,104 +1296,18 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
   // Ollama first and only starts the agent_calls poller if something is
   // actually listening. No Ollama running → this is a no-op, Guardian boots
   // exactly the same either way.
-  seq.phase({ name:'ollama.agent', type:'SOFT',
-    label:'Ollama agent (local model, optional)',
-    fn: async () => {
-      let ollamaAgent;
-      try { ollamaAgent = require('./agents/ollama'); }
-      catch (e) { return { ok:true, msg:'guardian/agents/ollama.js not found — skipping' }; }
+  // [DISABLED] ollama.agent — Ollama not used outside Nexus; removing prevents
+  // the ollama-ncp SSE crash loop that spams "NCP connected / §FLAPPING" on boot.
+  // seq.phase({ name:'ollama.agent', ... });
 
-      const health = await ollamaAgent.ping();
-      if (!health.online) {
-        console.log('[guardian] ⬡ OLLAMA: offline — not reachable on localhost:11434 (agent not started, this is fine)');
-        return { ok:true, msg:'ollama not reachable — agent not started (this is fine)' };
-      }
+  // [DISABLED] copilot.agent — Co-pilot removed; was broken (_ensureProfile not defined)
+  // and unused outside Nexus. HTTP routes at /copilot/* remain so the API surface
+  // doesn't break anything that pokes those endpoints directly.
+  // seq.phase({ name:'copilot.agent', ... });
 
-      ollamaAgent.init({ pollMs: 2000 });
-      console.log(`[guardian] ⬡ OLLAMA: online — model=${ollamaAgent.MODEL} — agent started, polling every 2s`);
-      return { ok:true, msg:`ollama online — agent started (model=${ollamaAgent.MODEL})` };
-    }
-  });
-
-  // ── Co-pilot — continuous bus listener + RAID-gated tool execution ───────
-  seq.phase({ name:'copilot.agent', type:'SOFT',
-    label:'Co-pilot (full-context assistant, RAID-gated CLI)',
-    fn: async () => {
-      let copilot;
-      try { copilot = require('./agents/co-pilot'); }
-      catch (e) { return { ok:true, msg:'guardian/agents/co-pilot not found — skipping' }; }
-
-      // execFn self-calls guardian's own /cli/exec — reuses the existing,
-      // already-tested §LAW II ledger-before-execute path instead of a
-      // second execution mechanism. Same-process HTTP overhead is small
-      // and consistent with how the rest of this codebase already proxies
-      // between its own services rather than refactoring shared internals.
-      const execFn = async (command, opts = {}) => {
-        const r = await fetch(`http://127.0.0.1:${HTTP_PORT}/cli/exec`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command, source: opts.source || 'copilot' }),
-          signal: AbortSignal.timeout(15000),
-        });
-        return r.json();
-      };
-
-      copilot.init({ jaaDB: jaa, bus, execFn });
-      console.log('[guardian] ⬡ COPILOT: listening — bus poll active, RAID gate ' + (copilot.status().raidAvailable ? 'available' : 'UNAVAILABLE (tool calls will fail closed)'));
-
-      // Phase 67: Start MCP Tool Bridge — exposes NEXUS routes as Claude-callable tools
-      try {
-        const mcp = require('../lib/mcp-server');
-        mcp.start();
-        console.log('[guardian] ⬡ MCP: ' + mcp.status().tools + ' tools on :7821');
-      } catch(e) {
-        console.warn('[guardian] MCP server failed to start: ' + e.message);
-      }
-
-      return { ok:true, msg:'co-pilot agent listening' };
-    }
-  });
-
-  // ── §23.7 Reflection contracts — guardian polls and dispatches to Mistral ──
-  seq.phase({ name:'reflection-contracts.poll', type:'SOFT',
-    label:'Reflection contracts — poll JAA, dispatch queued contracts to Mistral via Ollama',
-    fn: async () => {
-      const POLL_MS = 30000; // check every 30s
-      const _contractInterval = setInterval(async () => {
-        let queued = [];
-        try { queued = jaa.query('reflection_contracts', r => r.status === 'queued', 5); } catch(_) {}
-        for (const contract of queued) {
-          try {
-            // Mark dispatched immediately to prevent double-dispatch
-            jaa.update('reflection_contracts', contract.uuid, { status: 'dispatched', dispatchedAt: Date.now() });
-            const prompt = [
-              'You are the NEXUS Reflection Engine. Analyse this decision outcome and propose a concrete improvement.',
-              `Decision class: ${contract.decisionClass}`,
-              `Loop type: ${contract.loopType}`,
-              `Satisfaction score: ${contract.score} — ${contract.scoreReason}`,
-              `Decision input: ${contract.decisionInput || '(not recorded)'}`,
-              `Chosen outcome: ${contract.decisionChosen || '(unknown)'}`,
-              `Evidence: ${JSON.stringify(contract.evidence||[]).slice(0,400)}`,
-              '',
-              'Respond ONLY with valid JSON:',
-              '{"diagnosis":"...","proposal":"...","type":"cluster_pattern|idearium_idea|wiring_fix|no_action","cluster":"...","pattern":"...","confidence":0.0}',
-            ].join('\n');
-            const job = createJob({ command: 'diagnose_and_repair', provider: 'ollama', prompt, meta: {
-              source: 'reflection', contractUuid: contract.uuid,
-              decisionClass: contract.decisionClass, loopType: contract.loopType,
-              gapUuid: contract.gapUuid || null, reflectionContract: true,
-            }});
-            dispatchJob(job);
-            console.log(`[guardian] 📋 reflection contract dispatched · ${contract.uuid.slice(0,8)} · ${contract.loopType}`);
-          } catch(e) {
-            try { jaa.update('reflection_contracts', contract.uuid, { status: 'queued', error: e.message }); } catch(_) {}
-          }
-        }
-      }, POLL_MS);
-      _contractInterval.unref();
-      console.log('[guardian] ⬡ REFLECTION-CONTRACTS: polling every 30s — Mistral handles reflection reasoning');
-      return { ok:true, msg:'reflection contract poller active' };
-    }
-  });
+  // [DISABLED] §23.7 Reflection contracts — depends on Ollama (dispatches to provider:'ollama').
+  // Removed along with the Ollama agent; nothing to dispatch to.
+  // seq.phase({ name:'reflection-contracts.poll', ... });
 
   // ── ChatGPT mode — stateless, no listener needed (request/response only) ──
   seq.phase({ name:'chatgpt-mode.ready', type:'SOFT',
@@ -2963,33 +2789,7 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
-  // ── POST /copilot/prompt — co-pilot entry point, RAID-gated tool calls ──────
-  if (method === 'POST' && url.pathname === '/copilot/prompt') {
-    bodyJ(req).then(async body => {
-      const { prompt, command, proof, contextOpts, channel, channelName, uiState } = body || {};
-      if (!prompt) { pRes(res, 400, { ok:false, error:'prompt required' }); return; }
-      let copilot;
-      try { copilot = require('./agents/co-pilot'); }
-      catch (e) { pRes(res, 503, { ok:false, error:'co-pilot agent not loaded: ' + e.message }); return; }
-      const result = await copilot.handlePrompt(prompt, { command, proof, contextOpts, channel, channelName, uiState });
-      pRes(res, result.ok ? 200 : (result.denied ? 403 : 400), result);
-    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
-    return true;
-  }
-
-  // ── POST /copilot/channel — notify co-pilot of channel change (user model) ─
-  if (method === 'POST' && url.pathname === '/copilot/channel') {
-    bodyJ(req).then(body => {
-      const { channelId, channelName } = body || {};
-      if (!channelId) { pRes(res, 400, { ok:false, error:'channelId required' }); return; }
-      try {
-        const copilot = require('./agents/co-pilot');
-        if (copilot.setCurrentChannel) copilot.setCurrentChannel(channelId, channelName || channelId);
-      } catch(_) {}
-      pRes(res, 200, { ok:true, channelId, channelName });
-    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
-    return true;
-  }
+  // /copilot/prompt and /copilot/channel removed — sovereign copilot service at :3750 handles these.
 
   // ── POST /hot-load — Phase 14/28: Build from inside ─────────────────────────
   // Load or replace a module in the running system without restart.
@@ -3181,22 +2981,7 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
-  // ── POST /copilot/observe — interaction observation from UI ───────────────
-  // UI sends confusion signals (repeated clicks, back-navigation).
-  // Co-pilot records in user model without any user typing.
-  if (method === 'POST' && url.pathname === '/copilot/observe') {
-    bodyJ(req).then(body => {
-      const { type, element, channel } = body || {};
-      try {
-        const um = require('../lib/user-model');
-        if (type === 'confusion' && element && um.recordError) {
-          um.recordError(`ui_confusion:${element}`, channel || 'unknown', 'low');
-        }
-      } catch(_) {}
-      pRes(res, 200, { ok:true });
-    }).catch(() => pRes(res, 200, { ok:true })); // always 200 — observation is best-effort
-    return true;
-  }
+  // /copilot/observe removed — sovereign copilot service at :3750 handles this.
 
   // ── POST /chatgpt-mode/query — two-layer Nexus(authority)/ChatGPT(reasoning) ──
   // Same shape as /copilot/prompt above, deliberately — different agent

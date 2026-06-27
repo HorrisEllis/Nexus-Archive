@@ -445,6 +445,32 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /api/channel — notify co-pilot of UI channel change (user model tracking)
+  if (method === 'POST' && p === '/api/channel') {
+    const body = await readBody(req);
+    const { channelId, channelName } = body || {};
+    if (!channelId) { json(res, 400, { ok:false, error:'channelId required' }); return; }
+    // Update any active sessions to the new channel
+    for (const s of _sessions.values()) s.channel = channelId;
+    broadcast('copilot.channel.changed', { channelId, channelName });
+    json(res, 200, { ok:true, channelId, channelName });
+    return;
+  }
+
+  // POST /api/observe — UI confusion/interaction signals (fire-and-forget)
+  if (method === 'POST' && p === '/api/observe') {
+    const body = await readBody(req);
+    const { type, element, channel } = body || {};
+    try {
+      const um = require('../lib/user-model');
+      if (type === 'confusion' && element && um.recordError) {
+        um.recordError(`ui_confusion:${element}`, channel || 'unknown', 'low');
+      }
+    } catch(_) {}
+    json(res, 200, { ok:true });
+    return;
+  }
+
   // POST /api/stream/ingest — other systems push events here
   if (method === 'POST' && p === '/api/stream/ingest') {
     const body = await readBody(req);

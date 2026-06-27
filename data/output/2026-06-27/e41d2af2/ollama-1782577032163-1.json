@@ -1,0 +1,25 @@
+{
+  "type": "diagnostic",
+  "title": "NEXUS RAID Health Failure Escalation",
+  "details": {
+    "gap": {
+      "pattern_precursor": "raid.health",
+      "path": "precursor::raid.health",
+      "body": "Precursor (100%, 80×): 'raid.health' precedes failures 80 times (first seen: 2026-06-27T15:36:00.815Z)",
+      "severity": "high",
+      "attempts": 0
+    }
+  },
+  "actions": [
+    {
+      "type": "recommendation",
+      "title": "Review RAID Health Configuration",
+      "description": "Check the RAID health configuration and ensure it is set to a suitable level."
+    },
+    {
+      "type": "action",
+      "title": "Monitor RAID Health Regularly",
+      "description": "Set up regular monitoring of RAID health to detect any issues early."
+    }
+  ]
+}

@@ -826,9 +826,15 @@ function startService() {
           });
         } catch (_) {}
 
+        // Route: ollama jobs go directly to ollama/server.js (:3749).
+        // All other agents (claude, chatgpt, …) go to guardian (:7820).
+        const isOllama = raidDecision.agent === 'ollama';
+        const dispatchPort = isOllama ? 3749 : 7820;
+        const dispatchPath = isOllama ? '/api/jobs' : '/command';
+
         guardianDispatched = await new Promise(resolve => {
           const req = http.request({
-            hostname: '127.0.0.1', port: 7820, path: '/command', method: 'POST',
+            hostname: '127.0.0.1', port: dispatchPort, path: dispatchPath, method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(jobPayload) },
             timeout: 5000,
           }, res => {

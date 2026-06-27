@@ -1,1 +1,7 @@
 {"type":"service.start","port":7825,"pid":1389,"ts":1782519629364,"_ts":1782519629364}
+{"type":"service.start","port":7825,"pid":11764,"ts":1782574550308,"_ts":1782574550308}
+{"type":"service.start","port":7825,"pid":11368,"ts":1782577006377,"_ts":1782577006377}
+{"type":"service.start","port":7825,"pid":9976,"ts":1782577123277,"_ts":1782577123277}
+{"type":"service.start","port":7825,"pid":18948,"ts":1782577449996,"_ts":1782577449997}
+{"type":"service.start","port":7825,"pid":19624,"ts":1782577932709,"_ts":1782577932711}
+{"type":"service.start","port":7825,"pid":14300,"ts":1782579298059,"_ts":1782579298060}
