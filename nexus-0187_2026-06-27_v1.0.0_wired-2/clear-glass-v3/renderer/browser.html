@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clear Glass</title>
+<style>
+  :root {
+    --bg-0:     #08080d;
+    --bg-1:     #0e0e18;
+    --bg-2:     #14141f;
+    --bg-3:     #1a1a28;
+    --glass:    rgba(255,255,255,0.03);
+    --border:   rgba(255,255,255,0.06);
+    --accent:   #00f5ff;
+    --accent2:  #7c5cfc;
+    --green:    #00ff9d;
+    --red:      #ff4466;
+    --text:     #c8cad4;
+    --text-dim: #5a5d72;
+    --text-bright: #eef0f8;
+    --mono:     'JetBrains Mono', 'Fira Code', monospace;
+    --chrome-h: 52px;
+    --copilot-w: 340px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-app-region: no-drag;
+  }
+
+  /* ── Chrome bar ────────────────────────────────────────────────────── */
+  #chrome {
+    height: var(--chrome-h);
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+    position: relative;
+    z-index: 100;
+  }
+
+  #chrome > * { -webkit-app-region: no-drag; }
+
+  .nav-btn {
+    width: 28px; height: 28px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .nav-btn:hover { background: var(--bg-3); color: var(--text-bright); }
+  .nav-btn:active { transform: scale(0.94); }
+
+  #url-bar {
+    flex: 1;
+    height: 32px;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 12px;
+    color: var(--text-bright);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 0;
+  }
+  #url-bar:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,245,255,0.08); }
+
+  #agent-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    background: rgba(0,245,255,0.08);
+    border: 1px solid rgba(0,245,255,0.2);
+    border-radius: 4px;
+    color: var(--accent);
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  #picker-btn {
+    width: 28px; height: 28px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    position: relative;
+  }
+  #picker-btn.active {
+    background: rgba(0,245,255,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(0,245,255,0.3);
+  }
+  #picker-btn:hover { background: var(--bg-3); color: var(--text-bright); }
+
+  #copilot-toggle {
+    width: 28px; height: 28px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  #copilot-toggle.active {
+    background: rgba(124,92,252,0.12);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+  #copilot-toggle:hover { background: var(--bg-3); color: var(--text-bright); }
+
+  /* ── Status strip ───────────────────────────────────────────────────── */
+  #status-strip {
+    height: 24px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    display: inline-block;
+    margin-right: 4px;
+  }
+  .status-dot.ok      { background: var(--green); box-shadow: 0 0 4px var(--green); }
+  .status-dot.warn    { background: #ffaa00; }
+  .status-dot.error   { background: var(--red); }
+
+  /* ── Main layout ─────────────────────────────────────────────────────── */
+  #layout {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── Webview area ────────────────────────────────────────────────────── */
+  #webview-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  webview {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: flex;
+  }
+
+  /* Loading bar */
+  #load-bar {
+    position: absolute;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    width: 0%;
+    transition: width 0.3s, opacity 0.3s;
+    z-index: 10;
+    opacity: 0;
+  }
+  #load-bar.loading { opacity: 1; }
+
+  /* ── Co-pilot pane ───────────────────────────────────────────────────── */
+  #copilot-pane {
+    width: var(--copilot-w);
+    background: var(--bg-1);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: width 0.2s, opacity 0.2s;
+    overflow: hidden;
+  }
+
+  #copilot-pane.hidden {
+    width: 0;
+    opacity: 0;
+    border-left: none;
+  }
+
+  #copilot-header {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #copilot-header h2 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex: 1;
+  }
+
+  #copilot-model {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent2);
+    opacity: 0.8;
+  }
+
+  #copilot-clear {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  #copilot-clear:hover { color: var(--text); background: var(--glass); }
+
+  #copilot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .msg {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  .msg.user {
+    background: rgba(124,92,252,0.12);
+    border: 1px solid rgba(124,92,252,0.2);
+    color: var(--text-bright);
+    align-self: flex-end;
+    max-width: 90%;
+  }
+
+  .msg.assistant {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11.5px;
+  }
+
+  .msg.thinking {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 11px;
+    padding: 6px 10px;
+    background: none;
+    border: none;
+  }
+
+  .msg code {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--bg-0);
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  #copilot-input-wrap {
+    padding: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #copilot-context-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .ctx-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0,245,255,0.06);
+    border: 1px solid rgba(0,245,255,0.15);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .ctx-tag:hover { background: rgba(0,245,255,0.12); }
+  .ctx-tag.active { background: rgba(0,245,255,0.18); border-color: var(--accent); }
+
+  #copilot-textarea {
+    width: 100%;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text-bright);
+    font-family: inherit;
+    font-size: 12px;
+    resize: none;
+    outline: none;
+    min-height: 60px;
+    max-height: 120px;
+    line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+  #copilot-textarea:focus { border-color: var(--accent2); }
+  #copilot-textarea::placeholder { color: var(--text-dim); }
+
+  #copilot-send {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  #copilot-send:hover  { opacity: 0.9; }
+  #copilot-send:active { transform: scale(0.96); }
+
+  /* ── DOM Archaeology panel ───────────────────────────────────────────── */
+  #dom-panel {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%;
+    height: 240px;
+    background: var(--bg-1);
+    border-top: 1px solid var(--border);
+    display: none;
+    flex-direction: column;
+    z-index: 50;
+  }
+  #dom-panel.visible { display: flex; }
+
+  #dom-panel-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  #dom-panel-header h3 {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    flex: 1;
+  }
+
+  #dom-search {
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+    width: 180px;
+  }
+  #dom-search:focus { border-color: var(--accent); }
+
+  #dom-panel-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+  }
+
+  #dom-tree {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text);
+    white-space: pre;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .dom-node { padding: 1px 0; cursor: pointer; }
+  .dom-node:hover { color: var(--accent); }
+  .dom-tag  { color: #ff79c6; }
+  .dom-id   { color: var(--accent); }
+  .dom-cls  { color: #8be9fd; }
+  .dom-text { color: var(--text-dim); }
+
+  /* ── Picks sidebar ───────────────────────────────────────────────────── */
+  #picks-panel {
+    position: absolute;
+    bottom: 0; right: calc(var(--copilot-w) + 0px);
+    width: 220px;
+    max-height: 300px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+    display: none;
+    flex-direction: column;
+    z-index: 60;
+    overflow: hidden;
+  }
+  #picks-panel.visible { display: flex; }
+
+  #picks-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+  }
+  #picks-header span { flex: 1; }
+
+  #picks-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pick-item {
+    padding: 5px 8px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .pick-item:hover { border-color: var(--accent); color: var(--accent); }
+  .pick-item .pick-tag  { color: #ff79c6; }
+  .pick-item .pick-name { color: var(--text-dim); font-size: 9px; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Chrome bar -->
+<div id="chrome">
+  <button class="nav-btn" id="btn-back"    title="Back">←</button>
+  <button class="nav-btn" id="btn-forward" title="Forward">→</button>
+  <button class="nav-btn" id="btn-reload"  title="Reload">↺</button>
+
+  <input id="url-bar" type="text" placeholder="Navigate to..." spellcheck="false" autocomplete="off">
+
+  <div id="agent-badge" title="Agent context">default</div>
+
+  <button class="nav-btn" id="btn-dom"    title="DOM Archaeology">⛏</button>
+  <button id="picker-btn"                 title="Element Picker">◎</button>
+  <button class="nav-btn" id="btn-mesh" title="Agent Mesh">⬡</button>
+  <button class="nav-btn" id="btn-diag" title="Diagnostics">⚕</button>
+  <button id="copilot-toggle" class="active" title="Co-pilot">✦</button>
+</div>
+
+<!-- Status strip -->
+<div id="status-strip">
+  <span><span class="status-dot" id="dot-nexus"></span>NEXUS</span>
+  <span><span class="status-dot" id="dot-sse"></span>SSE</span>
+  <span><span class="status-dot" id="dot-tls"></span>JA4</span>
+  <span id="status-agent">Agent: default</span>
+  <span id="status-url" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+  <span id="status-health">Health: 100</span>
+  <span id="status-cookies">Cookies: 0</span>
+</div>
+
+<!-- Main layout -->
+<div id="layout">
+  <!-- Webview -->
+  <div id="webview-wrap">
+    <div id="load-bar"></div>
+    <webview id="wv" src="about:blank" allowpopups webpreferences="contextIsolation=yes"></webview>
+  </div>
+
+  <!-- Co-pilot pane -->
+  <div id="copilot-pane">
+    <div id="copilot-header">
+      <h2>✦ Co-pilot</h2>
+      <span id="copilot-model">Cortex</span>
+      <button id="copilot-clear" title="Clear history">✕</button>
+    </div>
+
+    <div id="copilot-messages">
+      <div class="msg assistant">
+        Co-pilot online. I can see this page's DOM, navigate, pick elements, and build onto Clear Glass. What would you like to do?
+      </div>
+    </div>
+
+    <div id="copilot-input-wrap">
+      <div id="copilot-context-bar">
+        <span class="ctx-tag active" id="ctx-dom"  title="Include DOM context">DOM</span>
+        <span class="ctx-tag"        id="ctx-picks" title="Include picked elements">Picks</span>
+        <span class="ctx-tag"        id="ctx-cookies" title="Include cookie info">Cookies</span>
+      </div>
+      <textarea id="copilot-textarea" placeholder="Ask Co-pilot..." rows="3"></textarea>
+      <button id="copilot-send">Send ↵</button>
+    </div>
+  </div>
+</div>
+
+<!-- DOM Archaeology panel -->
+<div id="dom-panel">
+  <div id="dom-panel-header">
+    <h3>⛏ DOM Archaeology</h3>
+    <input id="dom-search" type="text" placeholder="selector or text...">
+    <button id="dom-refresh" class="nav-btn" title="Refresh tree" style="width:22px;height:22px;font-size:11px;">↺</button>
+    <button id="dom-panel-close">✕</button>
+  </div>
+  <div id="dom-tree"><span style="color:var(--text-dim)">Loading DOM...</span></div>
+</div>
+
+<!-- Picks panel -->
+<div id="picks-panel">
+  <div id="picks-header"><span>Picked Elements</span></div>
+  <div id="picks-list"><span style="color:var(--text-dim);font-size:10px;padding:8px;">No picks yet. Use ◎ to pick.</span></div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const cg  = window.ClearGlass;
+  const params = new URLSearchParams(window.location.search);
+  const agentId = params.get('agentId') || 'default';
+  const ssePort = params.get('ssePort') || 7701;
+
+  // ── State ──────────────────────────────────────────────────────────
+  let pickerActive = false;
+  let picks = [];
+  let domPanelVisible = false;
+  let copilotVisible  = true;
+  let ctxDom     = true;
+  let ctxPicks   = false;
+  let ctxCookies = false;
+
+  // ── Elements ───────────────────────────────────────────────────────
+  const wv             = document.getElementById('wv');
+  const urlBar         = document.getElementById('url-bar');
+  const agentBadge     = document.getElementById('agent-badge');
+  const loadBar        = document.getElementById('load-bar');
+  const pickerBtn      = document.getElementById('picker-btn');
+  const copilotToggle  = document.getElementById('copilot-toggle');
+  const copilotPane    = document.getElementById('copilot-pane');
+  const copilotMsgs    = document.getElementById('copilot-messages');
+  const copilotInput   = document.getElementById('copilot-textarea');
+  const copilotSend    = document.getElementById('copilot-send');
+  const domPanel       = document.getElementById('dom-panel');
+  const domTree        = document.getElementById('dom-tree');
+  const domSearch      = document.getElementById('dom-search');
+  const picksPanel     = document.getElementById('picks-panel');
+  const picksList      = document.getElementById('picks-list');
+  const statusUrl      = document.getElementById('status-url');
+  const statusHealth   = document.getElementById('status-health');
+  const statusCookies  = document.getElementById('status-cookies');
+  const statusAgent    = document.getElementById('status-agent');
+
+  // Update agent display
+  agentBadge.textContent = agentId;
+  statusAgent.textContent = `Agent: ${agentId}`;
+
+  // ── Webview events ─────────────────────────────────────────────────
+  wv.addEventListener('did-start-loading', () => {
+    loadBar.style.width = '40%';
+    loadBar.classList.add('loading');
+  });
+
+  wv.addEventListener('did-stop-loading', () => {
+    loadBar.style.width = '100%';
+    setTimeout(() => { loadBar.classList.remove('loading'); loadBar.style.width = '0'; }, 300);
+    updateUrl();
+    updateCookieCount();
+  });
+
+  wv.addEventListener('did-navigate', updateUrl);
+  wv.addEventListener('did-navigate-in-page', updateUrl);
+  wv.addEventListener('page-title-updated', (e) => { document.title = e.title + ' — Clear Glass'; });
+
+  wv.addEventListener('did-fail-load', (e) => {
+    if (e.errorCode === -3) return; // Aborted — normal
+    addMsg('assistant', `Navigation failed: ${e.errorDescription}`);
+  });
+
+  wv.addEventListener('dom-ready', () => {
+    if (domPanelVisible) refreshDomTree();
+  });
+
+  function updateUrl() {
+    const url = wv.getURL();
+    urlBar.value = url;
+    statusUrl.textContent = url;
+  }
+
+  async function updateCookieCount() {
+    try {
+      const res = await cg.cookies.save({ agentId, getCount: true });
+      // Just show the URL domain as proxy
+      statusCookies.textContent = `URL: ${new URL(wv.getURL()).hostname || '-'}`;
+    } catch {}
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────
+  urlBar.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    let url = urlBar.value.trim();
+    if (!url) return;
+    if (!url.includes('://') && !url.startsWith('about:')) {
+      url = url.includes('.') ? 'https://' + url : `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+    }
+    wv.loadURL(url);
+  });
+
+  document.getElementById('btn-back').addEventListener('click', () => wv.canGoBack() && wv.goBack());
+  document.getElementById('btn-forward').addEventListener('click', () => wv.canGoForward() && wv.goForward());
+  document.getElementById('btn-reload').addEventListener('click', () => wv.reload());
+
+  // ── Element picker ─────────────────────────────────────────────────
+  pickerBtn.addEventListener('click', async () => {
+    pickerActive = !pickerActive;
+    pickerBtn.classList.toggle('active', pickerActive);
+
+    if (pickerActive) {
+      await wv.executeJavaScript(PICKER_SCRIPT);
+    } else {
+      await wv.executeJavaScript(`if (window.__cgPicker) window.__cgPicker.destroy();`).catch(() => {});
+    }
+  });
+
+  // Listen for pick results from webview
+  wv.addEventListener('ipc-message', (e) => {
+    if (e.channel === 'dom:pick-result') {
+      const pick = { ...e.args[0], pickId: 'pick-' + Date.now(), name: `pick-${picks.length + 1}` };
+      picks.push(pick);
+      renderPicks();
+      picksPanel.classList.add('visible');
+      pickerActive = false;
+      pickerBtn.classList.remove('active');
+      addMsg('assistant', `Picked: <code>${pick.tag}${pick.id_attr ? '#' + pick.id_attr : ''}${pick.classes ? '.' + pick.classes.split(' ')[0] : ''}</code> — registered as "${pick.name}"`);
+    }
+  });
+
+  const PICKER_SCRIPT = `
+(function() {
+  if (window.__cgPicker) window.__cgPicker.destroy();
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;cursor:crosshair;';
+  document.body.appendChild(overlay);
+  const hl = document.createElement('div');
+  hl.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;border:2px solid #00f5ff;background:rgba(0,245,255,0.06);box-shadow:0 0 12px #00f5ff44;transition:all .06s;';
+  document.body.appendChild(hl);
+  let last = null;
+  overlay.onmousemove = (e) => {
+    overlay.style.pointerEvents = 'none';
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    overlay.style.pointerEvents = 'all';
+    if (!el || el === last) return; last = el;
+    const r = el.getBoundingClientRect();
+    hl.style.cssText += ';top:'+r.top+'px;left:'+r.left+'px;width:'+r.width+'px;height:'+r.height+'px;';
+  };
+  overlay.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    overlay.style.pointerEvents = 'none';
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    overlay.style.pointerEvents = 'all';
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const data = {
+      tag: el.tagName.toLowerCase(),
+      id_attr: el.id,
+      classes: el.className,
+      text: el.innerText?.slice(0,100),
+      href: el.href,
+      value: el.value,
+      rect: {top:r.top,left:r.left,width:r.width,height:r.height},
+    };
+    try { require('electron').ipcRenderer.sendToHost('dom:pick-result', data); } catch {}
+    try { window.postMessage({ __cgBridge: true, channel: 'dom:pick-result', payload: data }, '*'); } catch {}
+    window.__cgPicker.destroy();
+  };
+  window.__cgPicker = {
+    destroy() { overlay.remove(); hl.remove(); window.__cgPicker = null; }
+  };
+})();
+  `;
+
+  function renderPicks() {
+    if (!picks.length) {
+      picksList.innerHTML = '<span style="color:var(--text-dim);font-size:10px;padding:8px;">No picks yet.</span>';
+      return;
+    }
+    picksList.innerHTML = picks.map(p => `
+      <div class="pick-item" data-name="${p.name}">
+        <span class="pick-tag">&lt;${p.tag}&gt;</span>${p.id_attr ? ' #' + p.id_attr : ''}
+        <div class="pick-name">${p.name} · ${p.text?.slice(0,30) || ''}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── Co-pilot ───────────────────────────────────────────────────────
+  copilotToggle.addEventListener('click', () => {
+    copilotVisible = !copilotVisible;
+    copilotPane.classList.toggle('hidden', !copilotVisible);
+    copilotToggle.classList.toggle('active', copilotVisible);
+  });
+
+  document.getElementById('copilot-clear').addEventListener('click', () => {
+    copilotMsgs.innerHTML = '';
+    addMsg('assistant', 'History cleared. Ready.');
+  });
+
+  // Context toggles
+  document.getElementById('ctx-dom').addEventListener('click', (e) => {
+    ctxDom = !ctxDom; e.target.classList.toggle('active', ctxDom);
+  });
+  document.getElementById('ctx-picks').addEventListener('click', (e) => {
+    ctxPicks = !ctxPicks; e.target.classList.toggle('active', ctxPicks);
+  });
+  document.getElementById('ctx-cookies').addEventListener('click', (e) => {
+    ctxCookies = !ctxCookies; e.target.classList.toggle('active', ctxCookies);
+  });
+
+  copilotInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendCopilot();
+    }
+  });
+  copilotSend.addEventListener('click', sendCopilot);
+
+  async function sendCopilot() {
+    const text = copilotInput.value.trim();
+    if (!text) return;
+
+    copilotInput.value = '';
+    addMsg('user', text);
+    addMsg('thinking', '⋯');
+
+    // Build context
+    let domContext = null;
+    if (ctxDom) {
+      try {
+        domContext = await wv.executeJavaScript('window.__cgDomMesh?.getTree(3)', true);
+      } catch {}
+    }
+
+    let systemExtra = '';
+    if (ctxPicks && picks.length) {
+      systemExtra += `\n## Picked Elements\n${JSON.stringify(picks, null, 2).slice(0, 1000)}`;
+    }
+
+    try {
+      const res = await cg.copilot.send({ message: text, agentId, domContext, systemExtra });
+      removeThinking();
+
+      // Format response with code blocks
+      const formatted = res.text
+        .replace(/```driver[\s\S]*?```/g, m => `<span style="color:var(--accent);font-family:var(--mono);font-size:10px;">[driver command sent]</span>`)
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      addMsg('assistant', formatted, true);
+
+      // Execute any driver commands
+      for (const cmd of res.commands || []) {
+        try {
+          await cg.driver.exec({ ...cmd, agentId });
+        } catch (err) {
+          addMsg('assistant', `Command error: ${err.message}`);
+        }
+      }
+    } catch (err) {
+      removeThinking();
+      addMsg('assistant', `Error: ${err.message}`);
+    }
+  }
+
+  function addMsg(role, content, html = false) {
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    if (html) div.innerHTML = content;
+    else div.textContent = content;
+    copilotMsgs.appendChild(div);
+    copilotMsgs.scrollTop = copilotMsgs.scrollHeight;
+  }
+
+  function removeThinking() {
+    copilotMsgs.querySelectorAll('.thinking').forEach(el => el.remove());
+  }
+
+  // ── DOM Archaeology ────────────────────────────────────────────────
+  document.getElementById('btn-dom').addEventListener('click', () => {
+    domPanelVisible = !domPanelVisible;
+    domPanel.classList.toggle('visible', domPanelVisible);
+    if (domPanelVisible) refreshDomTree();
+  });
+
+  document.getElementById('dom-panel-close').addEventListener('click', () => {
+    domPanelVisible = false;
+    domPanel.classList.remove('visible');
+  });
+
+  document.getElementById('dom-refresh').addEventListener('click', refreshDomTree);
+
+  domSearch.addEventListener('input', debounce(async () => {
+    const q = domSearch.value.trim();
+    if (!q) { refreshDomTree(); return; }
+    try {
+      const res = await wv.executeJavaScript(`window.__cgDomMesh?.query(${JSON.stringify(q)})`, true);
+      renderDomResult(res);
+    } catch {}
+  }, 300));
+
+  async function refreshDomTree() {
+    domTree.textContent = 'Loading...';
+    try {
+      const tree = await wv.executeJavaScript('window.__cgDomMesh?.getTree(4)', true);
+      if (!tree) {
+        // Inject mesh first
+        await wv.executeJavaScript(DOM_MESH_SCRIPT, true);
+        const tree2 = await wv.executeJavaScript('window.__cgDomMesh?.getTree(4)', true);
+        renderDomNode(tree2, domTree, 0);
+      } else {
+        renderDomNode(tree, domTree, 0);
+      }
+    } catch (err) {
+      domTree.textContent = 'Error: ' + err.message;
+    }
+  }
+
+  function renderDomNode(node, container, depth) {
+    if (!node || depth > 5) return;
+    container.innerHTML = '';
+    renderNodeRecursive(node, container, depth);
+  }
+
+  function renderNodeRecursive(node, container, depth) {
+    if (!node) return;
+    const indent = '  '.repeat(depth);
+    const div = document.createElement('div');
+    div.className = 'dom-node';
+
+    const id  = node.id_attr  ? `<span class="dom-id"> #${node.id_attr}</span>` : '';
+    const cls = node.classes?.length ? `<span class="dom-cls"> .${node.classes.slice(0,2).join('.')}</span>` : '';
+    const txt = node.text    ? `<span class="dom-text"> "${node.text.slice(0,40)}"</span>` : '';
+
+    div.innerHTML = `${indent}<span class="dom-tag">&lt;${node.tag}&gt;</span>${id}${cls}${txt}`;
+    div.addEventListener('click', () => {
+      if (node.id_attr) wv.executeJavaScript(`window.__cgDomMesh?.highlight('#${node.id_attr}')`, true).catch(() => {});
+    });
+    container.appendChild(div);
+
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) renderNodeRecursive(child, container, depth + 1);
+    }
+  }
+
+  function renderDomResult(nodes) {
+    domTree.innerHTML = '';
+    if (!nodes?.length) { domTree.textContent = 'No matches'; return; }
+    for (const node of nodes) renderNodeRecursive(node, domTree, 0);
+  }
+
+  // ── SSE subscription ───────────────────────────────────────────────
+  function connectSSE() {
+    const es = new EventSource(`http://127.0.0.1:${ssePort}/events?replay=5`);
+
+    // ── Live status dots driven by SSE — never hardcoded ──────────────
+    es.addEventListener('nexus.status', (e) => {
+      const d = JSON.parse(e.data);
+      document.getElementById('dot-nexus').className = 'status-dot ' + (d.connected ? 'ok' : 'error');
+    });
+
+    es.addEventListener('tls.tunnel', (e) => {
+      document.getElementById('dot-tls').className = 'status-dot ok';
+    });
+
+    es.addEventListener('tls.error', (e) => {
+      document.getElementById('dot-tls').className = 'status-dot warn';
+    });
+
+    // ── Context events ────────────────────────────────────────────────
+    es.addEventListener('context.rate-limited', (e) => {
+      const d = JSON.parse(e.data);
+      if (d.agentId === agentId) {
+        addMsg('assistant', `⚠ Rate limit on ${agentId} — RAID rerouting.`);
+      }
+    });
+
+    es.addEventListener('context.fp.switched', (e) => {
+      const d = JSON.parse(e.data);
+      if (d.agentId === agentId) {
+        addMsg('assistant', `Fingerprint switched → ${d.mode} (${d.ua.slice(0, 60)}...)`);
+      }
+    });
+
+    // ── DOM picks ─────────────────────────────────────────────────────
+    es.addEventListener('dom.picked', (e) => {
+      const d = JSON.parse(e.data);
+      picks.push(d);
+      renderPicks();
+    });
+
+    // ── Driver events ─────────────────────────────────────────────────
+    es.addEventListener('driver.error', (e) => {
+      const d = JSON.parse(e.data);
+      addMsg('assistant', `Driver error [${d.action}]: ${d.error}`);
+    });
+
+    // ── URL listener hits ─────────────────────────────────────────────
+    es.addEventListener('url.match', (e) => {
+      const d = JSON.parse(e.data);
+      if (d.agentId === agentId || d.agentId === '*') {
+        addMsg('assistant', `🎯 URL match [${d.label}]: ${d.url.slice(0, 80)}`);
+      }
+    });
+
+    // ── Agent mesh events ──────────────────────────────────────────────
+    es.addEventListener('mesh.task.complete', (e) => {
+      const d = JSON.parse(e.data);
+      addMsg('assistant', `✦ Mesh [${d.agentKey}] complete: ${d.responseSnippet?.slice(0, 100) || '(done)'}`);
+    });
+
+    es.addEventListener('mesh.task.error', (e) => {
+      const d = JSON.parse(e.data);
+      addMsg('assistant', `✦ Mesh [${d.agentKey}] error: ${d.error}`);
+    });
+
+    // ── Diagnostic events ──────────────────────────────────────────────
+    es.addEventListener('diag.run.complete', (e) => {
+      const d = JSON.parse(e.data);
+      const icon = d.success ? '✓' : '✗';
+      addMsg('assistant', `${icon} Diagnostic [${d.label}]: ${d.passed}/${d.total} passed`);
+    });
+
+    es.addEventListener('diag.step.fail', (e) => {
+      const d = JSON.parse(e.data);
+      addMsg('assistant', `⚠ Step failed: ${d.label} — ${d.error}`);
+    });
+
+    es.addEventListener('diag.screenshot.saved', (e) => {
+      const d = JSON.parse(e.data);
+      addMsg('assistant', `📸 Screenshot saved: ${d.file.split('/').pop()}`);
+    });
+
+    es.onerror = () => {
+      document.getElementById('dot-sse').className = 'status-dot error';
+      setTimeout(connectSSE, 3000);
+    };
+
+    es.onopen = () => {
+      document.getElementById('dot-sse').className = 'status-dot ok';
+    };
+  }
+
+  // ── Mesh button ────────────────────────────────────────────────────
+  document.getElementById('btn-mesh')?.addEventListener('click', async () => {
+    const agents = await cg.driver.exec({ action: 'eval', agentId, code: 'null' })
+      .catch(() => ({ result: null }));
+    // Surface mesh info in co-pilot
+    addMsg('assistant', `Agent Mesh — use Co-pilot to spawn agents:\n"spawn claude agent"\n"route this prompt to perplexity"\n"enqueue task to all agents"`);
+  });
+
+  // ── Diag button ────────────────────────────────────────────────────
+  document.getElementById('btn-diag')?.addEventListener('click', async () => {
+    addMsg('assistant', `Running NEXUS UI audit...`);
+    try {
+      const res = await cg.copilot.send({
+        message: 'Run the NEXUS UI audit diagnostic now.',
+        agentId,
+        systemExtra: 'Execute: driver.exec({ action: "diag.nexus", agentId })',
+      });
+    } catch (err) {
+      addMsg('assistant', `Diag error: ${err.message}`);
+    }
+  });
+
+  connectSSE();
+
+  // ── Inline DOM mesh script (injected into webview) ─────────────────
+  const DOM_MESH_SCRIPT = `(function(){if(window.__cgDomMesh)return;const mesh=new Map();let c=0;function nid(el){if(!el.__cgId)el.__cgId='cg-'+(++c);return el.__cgId;}function meta(el){const r=el.getBoundingClientRect?el.getBoundingClientRect():{};return{id:el.__cgId||null,tag:el.tagName?.toLowerCase()||'#text',id_attr:el.id||null,classes:el.className&&typeof el.className==='string'?el.className.trim().split(/\\s+/).filter(Boolean):[],text:el.innerText?.slice(0,200)||null,rect:{top:r.top,left:r.left,width:r.width,height:r.height},visible:r.width>0&&r.height>0,children:el.childElementCount||0};}function ser(el,d=0,max=4){if(!el||el.nodeType!==1)return null;const m=meta(el);m.id=nid(el);if(d<max){m.children=[];for(const c of el.children){const s=ser(c,d+1,max);if(s)m.children.push(s);}}else m.children=el.childElementCount;return m;}window.__cgDomMesh={query(s){return[...document.querySelectorAll(s)].map(el=>({...meta(el),id:nid(el)}));},getTree(max=4){return ser(document.documentElement,0,max);},highlight(s,c='#00f5ff'){document.querySelectorAll('[data-cgh]').forEach(e=>{e.style.outline='';delete e.dataset.cgh;});document.querySelectorAll(s).forEach(e=>{e.style.outline='2px solid '+c;e.dataset.cgh='1';});},};})();`;
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+})();
+</script>
+</body>
+</html>

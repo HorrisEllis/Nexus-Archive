@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Clear Glass — API Settings</title>
+<style>
+  :root {
+    --bg-0: #08080d; --bg-1: #0e0e18; --bg-2: #14141f;
+    --border: rgba(255,255,255,0.06); --accent: #00f5ff;
+    --accent2: #7c5cfc; --text: #c8cad4; --text-dim: #5a5d72;
+    --text-bright: #eef0f8; --mono: 'JetBrains Mono', monospace;
+    --green: #00ff9d;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg-0); color:var(--text); font-family:-apple-system,sans-serif; font-size:13px; padding:24px; }
+  h1 { font-size:16px; color:var(--text-bright); margin-bottom:24px; font-weight:600; }
+  h1 span { color:var(--accent); }
+  .section { margin-bottom:24px; }
+  .section h2 { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.1em; margin-bottom:12px; }
+  .field { margin-bottom:12px; }
+  label { display:block; font-size:11px; color:var(--text-dim); margin-bottom:4px; }
+  input, select {
+    width:100%; background:var(--bg-1); border:1px solid var(--border);
+    border-radius:6px; padding:8px 10px; color:var(--text-bright);
+    font-family:var(--mono); font-size:12px; outline:none;
+    transition:border-color .15s;
+  }
+  input:focus, select:focus { border-color:var(--accent); }
+  select option { background:var(--bg-2); }
+  .row { display:flex; gap:12px; }
+  .row .field { flex:1; }
+  .toggle { display:flex; align-items:center; gap:10px; }
+  .toggle input[type=checkbox] { width:auto; }
+  .btn {
+    background:linear-gradient(135deg,var(--accent2),var(--accent));
+    border:none; border-radius:6px; color:#fff;
+    font-size:12px; font-weight:600; padding:8px 20px;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .btn:hover { opacity:.9; }
+  #status { margin-top:12px; font-size:11px; color:var(--green); display:none; }
+</style>
+</head>
+<body>
+<h1>Clear Glass — <span>API Settings</span></h1>
+
+<div class="section">
+  <h2>Anthropic / Co-pilot</h2>
+  <div class="field">
+    <label>API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-...">
+  </div>
+  <div class="row">
+    <div class="field">
+      <label>Model</label>
+      <select id="model">
+        <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+        <option value="claude-opus-4-6">claude-opus-4-6</option>
+        <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Max Tokens</label>
+      <input type="number" id="maxTokens" value="4096" min="256" max="16384">
+    </div>
+  </div>
+  <div class="field">
+    <label>Endpoint</label>
+    <input type="text" id="endpoint" value="https://api.anthropic.com/v1/messages">
+  </div>
+</div>
+
+<div class="section">
+  <h2>NEXUS Bus</h2>
+  <div class="row">
+    <div class="field">
+      <label>Bus URL</label>
+      <input type="text" id="nexusBus" value="http://localhost:7700">
+    </div>
+    <div class="field">
+      <label>SSE Port</label>
+      <input type="number" id="ssePort" value="7701">
+    </div>
+    <div class="field">
+      <label>IPC Port</label>
+      <input type="number" id="ipcPort" value="7702">
+    </div>
+  </div>
+  <div class="field toggle">
+    <input type="checkbox" id="useCortex" checked>
+    <label for="useCortex">Use Cortex (prefer NEXUS over direct API)</label>
+  </div>
+  <div class="field toggle">
+    <input type="checkbox" id="raidEnabled" checked>
+    <label for="raidEnabled">RAID fallback routing enabled</label>
+  </div>
+</div>
+
+<button class="btn" id="save">Save Settings</button>
+<div id="status">✓ Settings saved</div>
+
+<script>
+(function() {
+  const cg = window.ClearGlass;
+
+  async function load() {
+    const s = await cg.api.get();
+    document.getElementById('model').value      = s.model || 'claude-sonnet-4-6';
+    document.getElementById('maxTokens').value  = s.maxTokens || 4096;
+    document.getElementById('endpoint').value   = s.endpoint || '';
+    document.getElementById('nexusBus').value   = s.nexusBus || 'http://localhost:7700';
+    document.getElementById('ssePort').value    = s.ssePort || 7701;
+    document.getElementById('ipcPort').value    = s.ipcPort || 7702;
+    document.getElementById('useCortex').checked   = s.useCortex !== false;
+    document.getElementById('raidEnabled').checked = s.raidEnabled !== false;
+  }
+
+  document.getElementById('save').addEventListener('click', async () => {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const payload = {
+      model:       document.getElementById('model').value,
+      maxTokens:   parseInt(document.getElementById('maxTokens').value),
+      endpoint:    document.getElementById('endpoint').value,
+      nexusBus:    document.getElementById('nexusBus').value,
+      ssePort:     parseInt(document.getElementById('ssePort').value),
+      ipcPort:     parseInt(document.getElementById('ipcPort').value),
+      useCortex:   document.getElementById('useCortex').checked,
+      raidEnabled: document.getElementById('raidEnabled').checked,
+    };
+    if (apiKey) payload.apiKey = apiKey;
+
+    await cg.api.set(payload);
+    const st = document.getElementById('status');
+    st.style.display = 'block';
+    setTimeout(() => { st.style.display = 'none'; }, 2000);
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>

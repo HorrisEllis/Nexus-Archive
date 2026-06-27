@@ -1,0 +1,21 @@
+{
+  "name": "nexus-wired",
+  "version": "1.0.0",
+  "description": "NEXUS wired ecosystem — ErosmancerOS + Clear Glass v3 + COS",
+  "author": "James Brooks (Erosmancer)",
+  "private": true,
+  "scripts": {
+    "test":             "node test/integration.test.js && cd clear-glass-v3 && node test/bus.test.js && node test/watchdog.test.js",
+    "test:integration": "node test/integration.test.js",
+    "test:cg":          "cd clear-glass-v3 && node test/bus.test.js && node test/watchdog.test.js",
+    "wire":             "node wire/nexus-wire.js",
+    "cos":              "node cos/src/api/server.js",
+    "cg":               "cd clear-glass-v3 && npm start",
+    "eros":             "cd erosmancer-os && npx tsx src/api/server.ts"
+  },
+  "dependencies": {
+    "express":    "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "uuid":       "^9.0.0"
+  }
+}
