@@ -1,1 +1,2 @@
 {"uuid":"77986870-b117-47bf-9196-ed8ea64b10e4","system":"idearium","component":"idearium.queue.progress","action":"registered","status":"ok","tags":["idearium"],"detail":"Record progress against a queue item","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782519624719}
+{"uuid":"1e9d5bf4-e2ca-4bfe-ae8f-7efb08f717ff","system":"idearium","component":"idearium.queue.progress","action":"registered","status":"ok","tags":["idearium"],"detail":"Record progress against a queue item","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782563506983}

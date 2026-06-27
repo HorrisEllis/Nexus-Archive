@@ -1,0 +1,11 @@
+{
+  "seam:ollama": {
+    "successCount": 28,
+    "failCount": 0,
+    "totalMs": 61,
+    "successRate": 1,
+    "avgMs": 2,
+    "callCount": 28,
+    "lastUsed": 1782563824737
+  }
+}

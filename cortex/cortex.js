@@ -1,11 +1,10 @@
-{
-  "patch": {
-    "modules/cortex.js": [
-      {
-        "oldCode": "// Old code here\nfunction someFunction() {\n  return 'Hello, world!';\n}\n",
-        "newCode": "// New code here\nfunction someFunction() {\n  if (Date.now() - this.lastSeenTime > 949000) {\n    // Handle stale module\n    console.log('Module is stale; replacing with new version.');\n    return this.replaceWithNewVersion();\n  }\n  return 'Hello, world!';\n}\n",
-        "lastSeenTime": 1687492099010
-      }
-    ]
+```
+function someFunction() {
+  if (Date.now() - this.lastSeenTime > 949000) {
+    // Handle stale module
+    console.log('Module is stale; replacing with new version.');
+    return this.replaceWithNewVersion();
   }
+  return 'Hello, world!';
 }
+```

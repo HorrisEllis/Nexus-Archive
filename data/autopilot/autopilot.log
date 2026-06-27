@@ -1,0 +1,22 @@
+[2026-06-27T12:31:46.679Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot
+[2026-06-27T12:31:46.683Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-06-27T12:31:46.692Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-06-27T12:31:46.700Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-06-27T12:31:46.708Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-06-27T12:31:46.717Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-06-27T12:31:46.725Z] [31m[architect][0m starting — node architect/service.js
+[2026-06-27T12:31:46.736Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-06-27T12:31:46.745Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-06-27T12:31:46.755Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-06-27T12:31:46.766Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-06-27T12:31:46.781Z] autopilot status: http://127.0.0.1:7799/status
+[2026-06-27T12:32:46.707Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.708Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.723Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.724Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.738Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.754Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.755Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.770Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.786Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-06-27T12:32:46.787Z] [32m[copilot][0m stable for 60s — backoff reset

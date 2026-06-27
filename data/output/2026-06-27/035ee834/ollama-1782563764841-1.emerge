@@ -1,0 +1,9 @@
+NEXUS DIAGNOSTIC ESCALATION
+Gap: pattern_precursor
+Path: precursor::ledger.cortex.patched
+Body: Precursor (100%, 54×): "ledger.cortex.patched" precedes failures 54 times (first seen: 2026-06-27T12:34:47.545Z)
+Severity: high
+Attempts: 0
+
+Analyse this gap, identify root cause, propose a concrete fix.
+Note: this analysis is not automatically applied. No code runs as a result of your response.
