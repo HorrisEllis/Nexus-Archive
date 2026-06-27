@@ -494,7 +494,7 @@ function startService() {
           }
 
           _logRemediation({ action: 'gap_escalated', ...gap, gapUuid });
-          if (!SYSTEMS[sys]?.optional) console.log(`[diagnostic] ⚠ ${name} has been offline for ${Math.round(offlineMs/1000)}s — escalating to repair queue`);
+          if (!SYSTEMS[name]?.optional) console.log(`[diagnostic] ⚠ ${name} has been offline for ${Math.round(offlineMs/1000)}s — escalating to repair queue`);
         }
       } else {
         // Came back online — clear

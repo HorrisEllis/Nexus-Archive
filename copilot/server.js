@@ -124,44 +124,15 @@ async function _post(url, body) {
   return _fetch(url, { method: 'POST', body });
 }
 
-// ── INTUITION — fast path from stream + patterns ──────────────────────────────
-function _intuit(prompt, session) {
-  const lower = prompt.toLowerCase().trim();
+// ── Dual Cognition — loaded as sovereign modules ─────────────────────────────
+// comp_id: nexus.copilot.routing / copilot/server.js
+const _intuition   = require('./intuition');
+const _analysis    = require('./analysis');
+const _adversarial = require('./adversarial');
 
-  // Greeting
-  if (/^(hi|hello|hey|sup|yo)\b/.test(lower))
-    return { text: 'Online. What do you need?', modelUsed: 'data-only', intent: 'greeting' };
+// Start adversarial probing (pings intuition + analysis every 60s)
+_adversarial.start(() => _stream.slice(-30));
 
-  // Status from live stream
-  if (/^\/?(status|health)\b/.test(lower)) {
-    const recent = _stream.slice(-20).map(e => e.type).filter(Boolean);
-    const errors = recent.filter(t => t.includes('error') || t.includes('fail')).length;
-    const text = errors > 3
-      ? `Stream shows ${errors} errors in last 20 events. System under stress.`
-      : `Stream active. Last ${recent.length} events nominal.`;
-    return { text, modelUsed: 'data-only', intent: 'status' };
-  }
-
-  // Stream summary
-  if (/stream|what.*happening|what.*going on|recent events/.test(lower)) {
-    const recent = _stream.slice(-10);
-    if (!recent.length) return { text: 'Stream empty — no events yet.', modelUsed: 'data-only', intent: 'stream' };
-    const summary = recent.slice(-5).map(e => `  ${e.type || '?'}`).join('\n');
-    return { text: `Last ${recent.length} events:\n${summary}`, modelUsed: 'data-only', intent: 'stream' };
-  }
-
-  // Pattern summary from stream
-  const types = {};
-  for (const e of _stream) { types[e.type] = (types[e.type] || 0) + 1; }
-  const top = Object.entries(types).sort((a,b)=>b[1]-a[1]).slice(0,3);
-
-  if (/pattern|what.*see|dominant|frequent/.test(lower) && top.length) {
-    return { text: `Top stream patterns:\n${top.map(([t,n])=>`  ${t}: ${n}×`).join('\n')}`,
-      modelUsed: 'data-only', intent: 'patterns' };
-  }
-
-  return null; // fall through to analysis
-}
 
 // ── ANALYSIS — 7-layer context + model ───────────────────────────────────────
 async function _assemble7Layer(prompt, session) {
@@ -328,9 +299,9 @@ const server = http.createServer(async (req, res) => {
 
     broadcast('copilot.prompt.received', { prompt: prompt.slice(0,100), channel, sessionId });
 
-    // INTUITION — fast path
-    const intuition = _intuit(prompt, session);
-    if (intuition) {
+    // INTUITION — fast path (comp_id: nexus.copilot.intuition)
+    const intuition = await _intuition.answer(prompt, session, _stream);
+    if (intuition?.text) {
       const row = { uuid: crypto.randomUUID(), requestId, sessionId,
         prompt: prompt.slice(0,500), response: intuition.text,
         modelUsed: intuition.modelUsed, intent: intuition.intent,
@@ -341,12 +312,16 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // ANALYSIS — assemble context + model
+    // ANALYSIS — 7-layer context + model (comp_id: nexus.copilot.analysis)
     let text = '';
     let modelUsed = 'none';
     try {
-      const context = await _assemble7Layer(prompt, session);
-      broadcast('copilot.context.assembled', { layers: context.split('\n').length });
+      const aResult = await _analysis.answer(prompt, session, _stream, {
+        intent: 'ask', requestId, sessionId: session.sessionId
+      });
+      text      = aResult?.text || '';
+      modelUsed = aResult?.modelUsed || 'none';
+      broadcast('copilot.context.assembled', { layers: aResult?.contextLayers || 0, source: aResult?.source });
 
       // Dispatch to Ollama sovereign system
       const ollamaResult = await _dispatchToOllama(prompt, context, {

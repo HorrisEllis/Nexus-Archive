@@ -493,6 +493,14 @@ function startWatchdog() {
   }, 2000);
 }
 
+// ── Contract poller — meta-system watches all system input/output folders ────────
+// comp_id: nexus.lib.contract-poller / lib/contract-poller.js
+try {
+  const contractPoller = require('./lib/contract-poller');
+  contractPoller.start();
+  console.log('[orchestrator] contract-poller started');
+} catch(e) { console.warn('[orchestrator] contract-poller not available:', e.message); }
+
 // ── UI hotswap watcher ────────────────────────────────────────────────────────
 const UI_SYSTEMS = ['cortex','guardian','idearium','emerge','orchestrator'];
 // System-local ui/ dirs (guardian/ui/, cortex/ui/, etc.) — also watched
