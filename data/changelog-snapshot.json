@@ -32,9 +32,6 @@
   "case-library": {
     "version": "1.0.0"
   },
-  "cfr-contract-wire": {
-    "version": "1.0.0"
-  },
   "cfr": {
     "version": "1.0.0"
   },
@@ -56,20 +53,11 @@
   "context-builder": {
     "version": "1.0.0"
   },
-  "contract-queue": {
-    "version": "1.0.0"
-  },
   "contracts": {
-    "version": "1.0.0"
-  },
-  "copilot-expansion": {
     "version": "1.0.0"
   },
   "copilot": {
     "version": "2.0.0"
-  },
-  "cortex-dual-cognition": {
-    "version": "1.0.0"
   },
   "cortex": {
     "version": "3.0.0"
@@ -170,9 +158,6 @@
   "nexus": {
     "version": "2.0.0"
   },
-  "ollama": {
-    "version": "1.0.0"
-  },
   "orchestrator": {
     "version": "2.0.0"
   },
@@ -231,9 +216,6 @@
     "version": "1.0.0"
   },
   "topo-kernel": {
-    "version": "1.0.0"
-  },
-  "ui-location": {
     "version": "1.0.0"
   },
   "ui-registry": {

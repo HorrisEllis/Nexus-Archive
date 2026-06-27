@@ -364,16 +364,26 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // ANALYSIS — 7-layer context + model (comp_id: nexus.copilot.analysis)
+    // ANALYSIS — 7-layer context + LIFELINE (Ollama primary, Guardian fallback)
+    // comp_id: nexus.copilot.analysis / copilot/server.js
     let text = '';
     let modelUsed = 'none';
     try {
-      const aResult = await _analysis.answer(prompt, session, _stream, {
-        intent: 'ask', requestId, sessionId: session.sessionId
-      });
-      text      = aResult?.text || '';
-      modelUsed = aResult?.modelUsed || 'none';
-      broadcast('copilot.context.assembled', { layers: aResult?.contextLayers || 0, source: aResult?.source });
+      // Assemble context first
+      const context = await _analysis.assembleContext(prompt, _stream, session);
+      broadcast('copilot.context.assembled', { layers: context.split('\n').length });
+
+      // Route through LIFELINE — not directly to Ollama
+      const lifeResult = await _lifeline.route(
+        `${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
+        { requestId, sessionId: session.sessionId, intent: 'ask', channel }
+      );
+      text      = lifeResult?.text || '';
+      modelUsed = lifeResult?.provider_used || 'none';
+      if (lifeResult?.escalated) {
+        broadcast('copilot.lifeline.escalated', { provider: lifeResult.provider_used });
+      }
+      const aResult = { contextLayers: context.split('\n').length, source: 'lifeline' };
 
       // Dispatch to Ollama sovereign system
       const ollamaResult = await _dispatchToOllama(prompt, context, {

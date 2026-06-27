@@ -2,15 +2,6 @@
 
 ## 2026-06-27 — auto-generated from spec version bumps
 
-- **cfr-contract-wire** — new spec, v1.0.0. CFR tracks contracts through wires, hook to hook.
-- **contract-queue** — new spec, v1.0.0. Every request between systems is a contract.
-- **copilot-expansion** — new spec, v1.0.0. Everything NEXUS can do, co-pilot can access.
-- **cortex-dual-cognition** — new spec, v1.0.0. Cortex is the brain. Intelligence is the nervous system.
-- **ollama** — new spec, v1.0.0. Sovereign Ollama bridge. Local model dispatch, isolated from Guardian.
-- **ui-location** — new spec, v1.0.0. Defines where each system's UI lives, who serves it, and
-
-## 2026-06-27 — auto-generated from spec version bumps
-
 - **alk-perception** — new spec, v1.0.0. Composite behavioral state classifier. Maps NEXUS telemetry to: COGNITIVE_LOAD, GENUINE_FLOW, CONCEALMENT, STRESS_ACUTE, SOCIAL_MASK, GENUINE_ENGAGEMENT. path: lib/meta/alk-perception/index.js
 - **api-dispatch** — new spec, v1.0.0. Direct REST API dispatch for guardian. Complements NCP browser tabs.
 - **architect** — new spec, v2.0.0. Spec builder, architecture viewer, and template library.
