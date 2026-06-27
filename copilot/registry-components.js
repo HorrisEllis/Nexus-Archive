@@ -1,41 +1,40 @@
 'use strict';
-module.exports = {
-  systemId:'copilot', version:'2.0.0', port:3750,
-  label:'COPILOT', purpose:'Sovereign co-pilot. Continuous stream of consciousness.',
-  components:[
-    { id:'copilot.prompt', uuid:'nexus-copilot-comp-prompt-v2-001',
-      grammar:['ask','copilot','cp'],
-      route:{ method:'POST', path:'/api/prompt' },
-      description:'Primary entry. All co-pilot interactions.',
-      hooks:{
-        in:[{ id:'copilot.prompt.receive',
-              intent:['ask','build','diagnose','navigate','note','tool','action'],
-              contract:'nexus-interaction-contract-v1::copilot',
-              tags:['copilot','user-intent','entry-point'] }],
-        out:[
-          { id:'copilot.prompt.to-ollama',     wires_to:['ollama.jobs.dispatch.receive'],    tags:['model'] },
-          { id:'copilot.prompt.to-cortex',     wires_to:['cortex.memory.chat_log.write'],   tags:['persist'] },
-          { id:'copilot.prompt.reply',          wires_to:['ui.copilot.receive'],              tags:['response'] },
-        ]
-      }
-    },
-    { id:'copilot.stream.query', uuid:'nexus-copilot-comp-stream-v2-001',
-      grammar:['stream','copilot stream','cs'],
-      route:{ method:'GET', path:'/api/stream' },
-      description:'Query the continuous event stream' },
-    { id:'copilot.stream.ingest', uuid:'nexus-copilot-comp-ingest-v2-001',
-      grammar:['stream ingest'],
-      route:{ method:'POST', path:'/api/stream/ingest' },
-      description:'Push events into co-pilot stream from any system' },
-    { id:'copilot.sessions', uuid:'nexus-copilot-comp-sessions-v2-001',
-      grammar:['copilot sessions'],
-      route:{ method:'GET', path:'/api/sessions' },
-      description:'Active co-pilot sessions' },
-  ],
+const NS='copilot',V='2.0.0';
+function _c(id,method,path,desc,opts={}){
+  return{id:`${NS}.${id}`,namespace:NS,name:id,version:V,
+    grammar:opts.grammar||[NS+' '+id.replace(/\./g,' ')],
+    route:{method,path},description:desc,
+    params:opts.params||[],tags:[NS,...(opts.tags||[])],
+    permissions:opts.permissions||['system'],hooks:opts.hooks||{}};
+}
+const components=[
+  _c('prompt','POST','/api/prompt','Primary entry — all co-pilot interactions',{
+    grammar:['ask','copilot','cp'],
+    hooks:{
+      in:[{id:'copilot.prompt.receive',intent:['ask','build','diagnose','navigate','note','tool','action'],contract:'nexus-interaction-contract-v1::copilot',tags:['entry-point']}],
+      out:[{id:'copilot.prompt.to-ollama',wires_to:['ollama.jobs.dispatch.receive'],tags:['model']},
+           {id:'copilot.prompt.reply',wires_to:['ui.copilot.receive'],tags:['response']}]
+    }
+  }),
+  _c('stream.query','GET','/api/stream','Query the continuous event stream',{grammar:['stream','cs']}),
+  _c('stream.ingest','POST','/api/stream/ingest','Push events into co-pilot stream'),
+  _c('sessions','GET','/api/sessions','Active co-pilot sessions'),
+  _c('axioms.list','GET','/api/axioms','List all axioms',{grammar:['axioms','list axioms']}),
+  _c('axioms.add','POST','/api/axioms/add','Add a runtime axiom',{grammar:['add axiom']}),
+  _c('axioms.remove','POST','/api/axioms/remove','Remove a runtime axiom',{grammar:['remove axiom']}),
+  _c('lifeline.health','GET','/api/lifeline/health','Lifeline provider health',{grammar:['lifeline health']}),
+  _c('build','POST','/api/build','Build a new module from description',{grammar:['build','co-pilot build']}),
+  _c('diagnose','POST','/api/diagnose','Start recursive fractal diagnosis',{grammar:['diagnose','recursive diagnose']}),
+  _c('diagnose.list','GET','/api/diagnose/list','List past diagnosis sessions'),
+  _c('health','GET','/health','Co-pilot health'),
+  _c('contract','GET','/contract','Co-pilot interaction contract'),
+];
+module.exports={
+  systemId:NS,version:V,port:3750,
+  label:'COPILOT',purpose:'Sovereign co-pilot. Continuous stream. Dual cognition.',
+  components,
   events:{
-    emits:['copilot.booted','copilot.prompt.received','copilot.context.assembled',
-           'copilot.answered','copilot.stream.event'],
-    handles:['ollama.job.complete','cortex.pattern.crystallized',
-             'guardian.gap.opened','orchestrator.shutdown'],
+    emits:['copilot.booted','copilot.prompt.received','copilot.context.assembled','copilot.answered','copilot.stream.event','copilot.build.started','copilot.build.complete'],
+    handles:['ollama.job.complete','cortex.pattern.crystallized','orchestrator.shutdown'],
   },
 };

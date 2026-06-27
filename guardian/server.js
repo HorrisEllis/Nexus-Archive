@@ -1167,7 +1167,7 @@ const ncp = createNCPServer({
   onConnect: ({ provider, tabId }) => {
     // Rate-limit: log only first connect or after 30s gap per provider
     const _now = Date.now();
-    if (!_ncpLastLog) global._ncpLastLog = {};
+    if (!global._ncpLastLog) global._ncpLastLog = {};
     const _key = provider + ':' + tabId;
     const _last = global._ncpLastLog[_key] || 0;
     if (_now - _last > 30000) {

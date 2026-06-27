@@ -1,6 +1,6 @@
 # NEXUS — Complete Phase Map
 **Author:** James Brooks (Erosmancer)
-**Last updated:** 2026-06-27
+**Last updated:** 2026-06-27 (session 2)
 **Status:** Living document — append-only, never shrink
 
 This is the canonical record of everything built, everything in progress,
@@ -25,10 +25,10 @@ and everything remaining. Updated every session. §AX-10.
 | 1 | Persistence — vector-memory, chat-logger, event-ledger, spec-drift | ✅ | sigma-writer wired |
 | 2 | Organs — gap-finder, healer, self-heal, escalation, orion, RAID, heartbeat, intelligence, behavioral-boundary | ✅ | All boot-verified |
 | 3 | Meta layer — topo-kernel, telemetry-codec, liminal, bda, spatial, alk-perception | ✅ | Library only, not a service |
-| 4 | Component registry | 🔄 | Built, 0 entries at boot (no registry-components.js per system except Idearium) |
-| 5 | Grammar engine | 🔄 | Built, 0 components to resolve against |
+| 4 | Component registry | ✅ | Built + populated 2026-06-27. 82+ components at boot. |
+| 5 | Grammar engine | 🔄 | Engine built. Components now feeding it via registry-components.js |
 | 6 | CLI runtime | 🔄 | nexus-cli.js + cli-reasoning.js, Qwen 0.5b |
-| 7 | Hook registry | 🔄 | 22 hook types, 47 hooks replayed, 0 live wires |
+| 7 | Hook registry | 🔄 | 164 hooks replayed at boot. 0 live wires still. |
 | 8 | Bridge — P2P trust relay, circuit breaker | ✅ | :9999 |
 
 ---
@@ -41,9 +41,9 @@ and everything remaining. Updated every session. §AX-10.
 | 10 | Constitutional AI | ✅ | 3/3 wiring checks at boot |
 | 11 | Reflection Engine | 🔄 | Built. Not all paths score decisions |
 | 12 | User Model — hypotheses not profile | 🔄 | Built. _getJaa readiness check fixed 2026-06-27 |
-| 13 | Autonomous Loop — Ollama as brain | 🔄 | Built. Sigma safety check real now (sigma-writer wired) |
+| 13 | Autonomous Loop — Ollama as brain | 🔄 | Built. Sigma safety check real now |
 | 14 | Hot Module Loader | ✅ | QUARANTINE→PROVE→INTEGRATE→MONITOR |
-| 15 | Grammar Engine — CLI + Component System | 🔄 | Engine built, components missing |
+| 15 | Grammar Engine — CLI + Component System | 🔄 | Components now declared. Grammar trie populating. |
 
 ---
 
@@ -71,14 +71,14 @@ and everything remaining. Updated every session. §AX-10.
 |-------|------|--------|-------|
 | 33 | PID Isolation + In-memory Cache + Redundant State | ✅ | Autopilot handles PID isolation |
 | 34 | API_SURFACE_FAILURE diagnosis + auto-resolution | ⬛ | |
-| 36 | Dynamic CLI commands from grammar engine | 🔄 | Grammar engine ready, 0 components |
+| 36 | Dynamic CLI commands from grammar engine | 🔄 | Grammar engine ready, components now feeding it |
 | 38 | Unified pipeline — Idearium + Repo + Spec + Architect + Emerge | 🔄 | Parts exist, not unified |
-| 40 | Component Descriptor — atomic unit of reality | 🔄 | registry-components.js pattern built (Idearium model) |
+| 40 | Component Descriptor — atomic unit of reality | ✅ | registry-components.js pattern built, all systems declared |
 | 41 | Compiler knowledge layer — six projections | 🔄 | descriptor-projector.js built |
-| 42 | Blueprint — the loop closes, system reads itself | 🔄 | blueprint.js exists, not populated |
+| 42 | Blueprint — the loop closes, system reads itself | 🔄 | blueprint.js exists, now has data to work with |
 | 45 | Intent Classifier — RAID entry gate | ✅ | Qwen async classification |
 | 46 | Queryable Case Library | ✅ | case-library.js, T2 compartment bridge |
-| 47 | Pattern Engine — novelty-aware + self-wired | 🔄 | BEP patterns, cursor fixed 2026-06-19 |
+| 47 | Pattern Engine — novelty-aware + self-wired | 🔄 | BEP patterns. 367 patterns seeded. |
 | 48 | CFR ↔ Decision Pipeline + RAID self-stabilization | 🔴 | CFR sigma never consulted by RAID _decide() |
 | 49 | Agent Reachability — self-healing connections | 🔄 | RAID health probe, not self-healing |
 | 50 | Pattern Graph — event causality over static sigma | 🔄 | compound.js built, not wired to RAID |
@@ -91,12 +91,12 @@ and everything remaining. Updated every session. §AX-10.
 |-------|------|--------|-------|
 | 60 | Retire ui-map.json stub — query Architect blueprint API | ⬛ | |
 | 61 | Backfill hooks/*.hooks.js — full SEAM coverage | ⬛ | |
-| 62 | One registry, not three — decision gate | 🔄 | Component registry exists, not populated |
+| 62 | One registry, not three — decision gate | ✅ | 82+ components registered at boot |
 | 63 | kg-builder nodes resolve to registry component IDs | ⬛ | |
-| 64 | Grammar engine reads unified registry hooks | ⬛ | |
+| 64 | Grammar engine reads unified registry hooks | 🔄 | Components declared, wires not yet |
 | 66 | .spec container import — Idearium spec library + CI/CD | ✅ | |
 | 67 | MCP Tool Bridge | ✅ | :7821, 17 tools |
-| 68 | Co-pilot — sovereign, stream-of-consciousness | 🔄 | :3750, lifeline wired 2026-06-27 |
+| 68 | Co-pilot — sovereign, stream-of-consciousness | ✅ | :3750, lifeline wired, dual cognition |
 | 71 | Causal Event Graph Kernel — gap map formalization | ✅ | CFR-Ω, CausalGraph, compound.js |
 | 73 | T2 Compartment Bridge — cross-project chunk reuse | ✅ | nexus-phase73-t2-compartment-bridge |
 
@@ -106,63 +106,82 @@ and everything remaining. Updated every session. §AX-10.
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| S1 | Co-pilot independence — extract from Guardian | ✅ | :3750 sovereign, 2026-06-27 |
-| S2 | Component registry coverage — every module hooks to co-pilot | 🔴 | Root cause: no registry-components.js per system |
+| S1 | Co-pilot independence — extract from Guardian | ✅ | :3750 sovereign |
+| S2 | Component registry coverage — every module hooks to co-pilot | ✅ | All systems now declare components on boot |
 | S3 | Synthesis layer — one reconstruction view over causal graph + snapshots + ledgers | ⬛ | |
 | S4 | Action-intent wiring | 🔄 | co-pilot classifies 'action', nothing dispatches |
 | S5 | Uniform session ledger — every co-pilot input logged | 🔄 | chat_log to Cortex, not uniform |
 | S6 | lib/causal/compound.js — formal adoption | ✅ | compound.js built, ripple/wave/tidal |
-| S7 | Dual cognition — INTUITION + MASTERMIND | 🔄 | Built in Cortex, not fully wired |
+| S7 | Dual cognition — INTUITION + MASTERMIND | 🔄 | Built in Cortex + co-pilot, not fully wired |
 
 ---
 
-## NEW — BUILT 2026-06-27
+## BUILT 2026-06-27 (session 1)
 
 ### Sovereign Systems
-
 | # | Name | Status | Location | Notes |
 |---|------|--------|----------|-------|
-| 74 | ERAVOS sovereign system | ✅ | eravos/ :3751 | Moved from ui/eravos/, organisms + wires + audio |
-| 75 | Ollama Bridge sovereign system | ✅ | ollama/ :3749 | Isolated from Guardian, queue + health monitor |
-| 76 | Co-pilot sovereign system | ✅ | copilot/ :3750 | Separated from Guardian, continuous stream |
+| 74 | ERAVOS sovereign system | ✅ | eravos/ :3751 | Moved from ui/eravos/ |
+| 75 | Ollama Bridge sovereign system | ✅ | ollama/ :3749 | Isolated from Guardian |
+| 76 | Co-pilot sovereign system | ✅ | copilot/ :3750 | Separated from Guardian |
 
 ### Co-pilot Modules
-
 | # | Name | Status | Location | Notes |
 |---|------|--------|----------|-------|
-| 77 | INTUITION faculty | ✅ | copilot/intuition.js | Fast path, patterns + crystals + sigma |
-| 78 | ANALYSIS faculty | ✅ | copilot/analysis.js | 7-layer context assembly |
-| 79 | ADVERSARIAL faculty | ✅ | copilot/adversarial.js | Ping-pong probe every 60s |
-| 80 | LIFELINE router | ✅ | copilot/lifeline.js | Ollama primary, Guardian fallback on confidence < 0.75 |
-| 81 | AXIOM MANAGER | ✅ | copilot/axiom-manager.js | Add/remove/list/freeze axioms, 3 tiers |
-| 82 | MODULE BUILDER | ✅ | copilot/module-builder.js | Co-pilot builds its own modules, QC pipeline |
+| 77 | INTUITION faculty | ✅ | copilot/intuition.js | Fast path |
+| 78 | ANALYSIS faculty | ✅ | copilot/analysis.js | 7-layer context |
+| 79 | ADVERSARIAL faculty | ✅ | copilot/adversarial.js | Ping-pong every 60s |
+| 80 | LIFELINE router | ✅ | copilot/lifeline.js | Ollama primary, Guardian fallback |
+| 81 | AXIOM MANAGER | ✅ | copilot/axiom-manager.js | 3 tiers, add/remove/freeze |
+| 82 | MODULE BUILDER | ✅ | copilot/module-builder.js | QC pipeline, bottom-up |
 | 83 | CLI axiom | ✅ | cli/axiom.js | nexus axiom list/add/remove/freeze/check |
 
 ### Cortex Intelligence
-
 | # | Name | Status | Location | Notes |
 |---|------|--------|----------|-------|
-| 84 | INTUITION faculty (Cortex) | ✅ | cortex/intelligence/intuition.js | Reads BEP patterns, sigma, fault taxonomy, liminal |
-| 85 | MASTERMIND faculty | ✅ | cortex/intelligence/mastermind.js | Bidirectional causal, sigma trajectory, prediction, counterfactual |
-| 86 | DEDUP engine | ✅ | cortex/intelligence/dedup.js | Reference-based, original has cause/effect/reason |
+| 84 | INTUITION faculty (Cortex) | ✅ | cortex/intelligence/intuition.js | BEP + sigma + fault taxonomy |
+| 85 | MASTERMIND faculty | ✅ | cortex/intelligence/mastermind.js | Causal, prediction, counterfactual |
+| 86 | DEDUP engine | ✅ | cortex/intelligence/dedup.js | Reference-based, original preserved |
 
 ### Infrastructure
-
 | # | Name | Status | Location | Notes |
 |---|------|--------|----------|-------|
-| 87 | CONTRACT QUEUE | ✅ | lib/contract-queue.js | Every inter-system request is a contract, disk-first |
-| 88 | CONTRACT POLLER | ✅ | lib/contract-poller.js | Meta-system, scans input/output folders every 15s |
-| 89 | CORTEX WRITE-THROUGH | ✅ | lib/cortex-write.js | All writes to Cortex, buffer to disk if offline |
-| 90 | TV SHELL rename | ✅ | ui/tv-shell/ | Home shell + spotlight module + menu module |
+| 87 | CONTRACT QUEUE | ✅ | lib/contract-queue.js | Disk-first, every request a contract |
+| 88 | CONTRACT POLLER | ✅ | lib/contract-poller.js | Stuck detection every 15s |
+| 89 | CORTEX WRITE-THROUGH | ✅ | lib/cortex-write.js | Buffer if Cortex offline |
+| 90 | TV SHELL rename | ✅ | ui/tv-shell/ | + spotlight module + menu module |
 | 91 | THEMES folder | ✅ | ui/themes/ | nexus-dark.css + nexus-light.css |
-| 92 | SPOTLIGHT sovereign | ✅ | ui/tv-shell/spotlight/ | spotlight.js + spotlight.css, HTTP API planned |
-| 93 | MENU sovereign | ✅ | ui/tv-shell/menu.js | Floating menu as module, CLI → co-pilot :3750 |
+| 92 | SPOTLIGHT sovereign | ✅ | ui/tv-shell/spotlight/ | js + css |
+| 93 | MENU sovereign | ✅ | ui/tv-shell/menu.js | CLI → co-pilot :3750 |
 
-### Bug Fixes
+---
 
+## BUILT 2026-06-27 (session 2)
+
+### Phase 96 — Registry-Components (ROOT CAUSE FIX) ✅
+| File | Components | Notes |
+|------|-----------|-------|
+| guardian/registry-components.js | 33 | Jobs, SEAM, NCP, artifacts, gaps, co-pilot proxy |
+| cortex/registry-components.js | 39 | Memory, CFR, intelligence, RAID, snapshots, search |
+| architect/registry-components.js | 17 | Hooks, blueprint, wires |
+| emerge/registry-components.js | 9 | Compile, hot-load, codegen |
+| bridge/registry-components.js | 11 | Relay, nodes, trust, circuit |
+| nexus-connect.js | — | components[] param added to registerWithOrchestrator() |
+
+**Result:** 82 components registered at boot (verified in live log). Grammar trie populating. OL-1 closed. S2 closed.
+
+### Additional Builds (session 2)
+| # | Name | Status | Location | Notes |
+|---|------|--------|----------|-------|
+| 94a | RECURSIVE DIAGNOSE | ✅ | copilot/recursive-diagnose.js | Fractal, writes to file in real-time |
+| 94b | CONTROL PANEL | ✅ | ui/control-panel/index.html | Toggle switches, dropdowns, values per system |
+| F10 | NCP connected spam | ✅ | guardian/server.js | Rate-limited to once per 30s per tab |
+| F11 | Co-pilot → lifeline in analysis path | ✅ | copilot/server.js | Was calling Ollama directly, now uses lifeline |
+
+### Bug Fixes (session 1)
 | # | Fix | Status |
 |---|-----|--------|
-| F1 | diagnostic: `sys is not defined` crash | ✅ |
+| F1 | diagnostic: `sys is not defined` | ✅ |
 | F2 | user-model: `jaa.query is not a function` | ✅ |
 | F3 | ollama-bridge: `ERR_INVALID_URL: 0.0.0.0:11434` | ✅ |
 | F4 | eravos + copilot: 0 components registered | ✅ |
@@ -174,242 +193,184 @@ and everything remaining. Updated every session. §AX-10.
 
 ---
 
-## OPEN LOOPS (carried forward — must be named, not forgotten)
+## OPEN LOOPS (updated — carried forward)
 
-| # | Loop | Blocking | Priority |
-|---|------|----------|----------|
-| OL-1 | Component registry 0 entries — no registry-components.js for guardian/cortex/architect/emerge/bridge | Nothing can route to components. Grammar trie empty. Blueprint empty. | CRITICAL |
-| OL-2 | CFR sigma → RAID _decide() not wired | RAID never penalizes high-sigma components. Sigma is computed but ignored by routing. | HIGH |
-| OL-3 | Compartment engine not sovereign module | Referenced everywhere, no standalone compartment-engine.js as a service | HIGH |
-| OL-4 | RAID routes to providers not components | Decision is {agent} not {agent, componentId, hookId}. Component routing impossible until OL-1 fixed. | HIGH |
-| OL-5 | UI channels not sovereign HTML | index.html still 4000+ lines. Channels are divs not iframes with own documents. | MEDIUM |
-| OL-6 | Co-pilot session continuity | Each session starts cold. No chat_log history injected on boot. | MEDIUM |
-| OL-7 | ui/eravos/ still exists as copy | Can delete after confirming eravos:3751 works | LOW |
-| OL-8 | guardian/ui/index.html is old Forge IDE | 3677 lines, superseded, not served, not deleted | LOW |
-| OL-9 | guardian/New folder/ dead code | Should be deleted | LOW |
-| OL-10 | Spec drift: 7 systems drifted, 9 unspecced | cortex, guardian, architect, escalation, snapshot, grammar-engine, replay-engine | MEDIUM |
-| OL-11 | action-intent wiring (S4) | Co-pilot classifies 'action' intent correctly, nothing dispatches it anywhere | HIGH |
-| OL-12 | cortex/intelligence modules not exposed via HTTP | INTUITION, MASTERMIND, DEDUP built but no HTTP routes in admin-server | MEDIUM |
-| OL-13 | Counterfactual engine not built | cortex/intelligence/counterfactual.js — spec written, not built | MEDIUM |
-| OL-14 | Relational field query surface | GET /api/field/nodes, /edges, /new-pathways — not built | MEDIUM |
-| OL-15 | Capability registry | lib/capability-registry.js — co-pilot needs to know every NEXUS capability | MEDIUM |
-| OL-16 | Contract progress tracking + fulfillment check | Phase 6 of copilot-expansion.spec — not built | MEDIUM |
-| OL-17 | First-principles logic reinforcement in RAID | RAID routes by intent cluster, not first-principles validation | MEDIUM |
-| OL-18 | Sigma capped at 0.05 in practice | 6,012 readings, max ever 0.05. computeSigma() or sigma-writer needs investigation | HIGH |
-| OL-19 | Co-pilot not integrated into userscripts | Guardian userscripts don't talk to co-pilot :3750 | MEDIUM |
-| OL-20 | guardian/agents/co-pilot/index.js still 996 lines | Deprecated but not removed. Guardian still proxies to it. | LOW |
+| # | Loop | Blocking | Priority | Status |
+|---|------|----------|----------|--------|
+| OL-1 | Component registry 0 entries | — | CRITICAL | ✅ CLOSED — 82 components at boot |
+| OL-2 | CFR sigma → RAID _decide() not wired | RAID routing not causal-aware | HIGH | 🔴 OPEN |
+| OL-3 | Compartment engine not sovereign module | — | HIGH | 🔴 OPEN |
+| OL-4 | RAID routes to providers not components | Needs OL-1 first | HIGH | 🔄 UNBLOCKED — OL-1 done |
+| OL-5 | UI channels not sovereign HTML | index.html 4000+ lines | MEDIUM | 🔴 OPEN |
+| OL-6 | Co-pilot session continuity | Cold start each time | MEDIUM | 🔴 OPEN |
+| OL-7 | ui/eravos/ still exists as copy | — | LOW | 🔴 OPEN |
+| OL-8 | guardian/ui/index.html old Forge IDE | — | LOW | 🔴 OPEN |
+| OL-9 | guardian/New folder/ dead code | — | LOW | 🔴 OPEN |
+| OL-10 | Spec drift: 10 unspecced modules | — | MEDIUM | 🔴 OPEN |
+| OL-11 | action-intent wiring (S4) | Nothing dispatches 'action' | HIGH | 🔴 OPEN |
+| OL-12 | Cortex intelligence not via HTTP | INTUITION/MASTERMIND not queryable | MEDIUM | 🔴 OPEN |
+| OL-13 | Counterfactual engine not built | counterfactual.js spec exists | MEDIUM | 🔴 OPEN |
+| OL-14 | Relational field query surface | /api/field/* not built | MEDIUM | 🔴 OPEN |
+| OL-15 | Capability registry | co-pilot can't discover all NEXUS can do | MEDIUM | 🔴 OPEN |
+| OL-16 | Contract progress tracking | fulfillment check not built | MEDIUM | 🔴 OPEN |
+| OL-17 | RAID first-principles reinforcement | RAID doesn't validate against axioms | MEDIUM | 🔴 OPEN |
+| OL-18 | Sigma capped at 0.05 in practice | autonomous loop halt never fires | HIGH | 🔴 OPEN |
+| OL-19 | Co-pilot not in userscripts | userscripts still use Guardian co-pilot | MEDIUM | 🔴 OPEN |
+| OL-20 | guardian/agents/co-pilot/index.js deprecated | 996 lines, still proxied | LOW | 🔴 OPEN |
+| OL-21 | NCP ollama-ncp tab reconnects every 2s | SSE error loop, RECONNECT_MS=3000 | MEDIUM | 🔄 MITIGATED — log rate-limited |
+| OL-22 | Co-pilot timeout on long prompts | No streaming, polls for result | MEDIUM | 🔴 OPEN |
+| OL-23 | Control panel settings not hot-applied | /api/settings route not on systems | LOW | 🔴 OPEN |
+| OL-24 | Ollama contract unreachable | /contract route returns 404 on ollama | LOW | 🔴 OPEN |
 
 ---
 
 ## PENDING PHASES (everything still to build)
 
-### Phase 94 — Meta Observer Layer
-**What:** One layer above Orchestrator. Full system diagnostics, controls per system,
-event ledgers per system, snapshots, health, performance metrics, recent activity.
-Reads from everything, controls everything, owned by nothing.
-**Location:** `meta/` sovereign system, new port (proposed: :9001)
-**UI:** `ui/meta/index.html` — disposable, reads from meta API
-**Includes:**
-- Full system diagnostics (all systems, all subsystems)
-- Per-system controls (restart, pause, drain queue)
-- Per-system event ledgers (live + historical)
-- Snapshot browser + one-click rollback
-- Health matrix (all systems × all subsystems)
-- Performance metrics (sigma trajectory, delta types, latency)
-- Recent activity feed (last 100 events across all systems)
-- CFR graph viewer (live relational field)
-- Contract queue viewer (all pending + stuck contracts)
+### Phase 94 — Meta Observer Layer ⬛
+One layer above Orchestrator. Full system diagnostics, controls per system,
+event ledgers, snapshots, health matrix, performance metrics, recent activity.
+`meta/` sovereign system :9001. UI: `ui/meta/index.html` — disposable, reads meta API.
+**Note:** Control panel (94b) built as lightweight version. Meta Observer is the full sovereign system.
 
-### Phase 95 — RAID First-Principles Reinforcement
-**What:** RAID validates every routing decision against first principles before dispatch.
-Not just intent cluster weights — axiom compliance check, architecture alignment,
-constitutional gate. SNR filter already does invariant-first but RAID's _decide()
-doesn't re-validate the output against axioms.
-**Files:** cortex/core/raid/index.js + cortex/core/raid/snr-filter.js
-**Adds:**
-- Post-decision axiom check before dispatch (constitutional-ai.check())
-- First-principles validation: does this decision follow §AX-1..§AX-14?
-- Reject routing if it would violate immutable laws
-- Log every validation to constitution_decisions JAA table
+### Phase 95 — RAID First-Principles Reinforcement ⬛
+Post-decision axiom check before dispatch. constitutional-ai.check() on every routing decision.
+Reject routing that violates immutable laws. Log to constitution_decisions JAA table.
 
-### Phase 96 — Registry-Components for All Systems (ROOT CAUSE FIX)
-**What:** Every system declares its components on boot. This is OL-1.
-Single most impactful phase — fixes grammar trie, blueprint, RAID component routing,
-co-pilot capability discovery, all at once.
-**Files:** guardian/registry-components.js, cortex/registry-components.js,
-architect/registry-components.js, emerge/registry-components.js,
-bridge/registry-components.js
-**Unlocks:** OL-1, OL-2, OL-4, S2, Phase 15
+### Phase 97 — CFR → RAID Wire (OL-2) ⬛
+RAID _decide() reads CFR sigma per (cluster × componentId). High sigma = penalize.
+**Deps:** Phase 96 ✅ (done — componentIds now available)
 
-### Phase 97 — CFR → RAID Wire (OL-2)
-**What:** RAID _decide() reads CFR sigma per (cluster × componentId).
-High sigma = penalize routing to that component.
-**File:** cortex/core/raid/index.js
-**Deps:** Phase 96 (need componentIds to key sigma by)
+### Phase 98 — HTTP Routes for Cortex Intelligence (OL-12) ⬛
+GET /api/intelligence/intuition, /mastermind, /predict, /confidence, /dedup/check.
+Co-pilot calls Cortex instead of duplicating the logic.
 
-### Phase 98 — HTTP Routes for Cortex Intelligence
-**What:** INTUITION, MASTERMIND, DEDUP exposed via cortex admin-server.
-Co-pilot reads these instead of doing its own context assembly.
-**Routes:**
-- GET /api/intelligence/intuition?q=text
-- GET /api/intelligence/mastermind?q=text
-- GET /api/intelligence/predict
-- GET /api/intelligence/confidence?q=text
-- GET /api/intelligence/dedup/check
+### Phase 99 — Counterfactual + Relational Field ⬛
+cortex/intelligence/counterfactual.js + GET /api/field/nodes, /edges, /new-pathways.
 
-### Phase 99 — Cortex Intelligence: Counterfactual + Relational Field
-**What:** cortex/intelligence/counterfactual.js + relational field query surface.
-What-if / if-then prediction. Bidirectional causal chain walk.
-GET /api/field/nodes, /edges, /new-pathways.
+### Phase 100 — Capability Registry (OL-15) ⬛
+lib/capability-registry.js. Every NEXUS capability indexed. Co-pilot reads it.
+**Deps:** Phase 96 ✅
+
+### Phase 101 — Contract Progress Tracking (OL-16) ⬛
+Full progress state per contract. Fulfillment check on recovery.
+Last-interaction map: fromSystem → toSystem → why → ts → progress.
+
+### Phase 102 — Action-Intent Wiring (S4, OL-11) ⬛
+Wire action intent → module-builder → contract → relevant system.
+
+### Phase 103 — Session Continuity ⬛
+Inject last N chat_log entries on session start. Co-pilot remembers.
+
+### Phase 104 — Co-pilot in Userscripts (OL-19) ⬛
+Guardian userscripts route to :3750. Diagnose + repair from NCP stream.
+
+### Phase 105 — File Integrity + Delta Types ⬛
+lib/cfr/integrity.js. Boot-time hash check. Named delta types.
+
+### Phase 106 — Sigma Investigation (OL-18) ⬛
+Max sigma ever = 0.05. computeSigma() + sigma-writer need reading before fixing.
+
+### Phase 107 — UI Channels as Sovereign HTML (OL-5) ⬛
+index.html shrinks to <200 lines. Channels become iframes.
+
+### Phase 108 — Spotlight HTTP API ⬛
+POST /api/ui/spotlight/on. Any system directs UI without HTML.
+
+### Phase 109 — Epistemic Branch Runtime (EBR) ⬛
+Clone state → apply hypothesis → simulate → compare → crystallise only if passes.
+The cognitive CI/CD pipeline. Snapshot engine (branch) + module-builder (mutate) + adversarial (evaluate).
+
+### Phase 110 — Dual Cognition Full Wire ⬛
+Cortex INTUITION/MASTERMIND via HTTP. Co-pilot calls Cortex, not its own copies.
+RAID uses INTUITION for fast routing. Adversarial pings Cortex, not co-pilot.
 **Deps:** Phase 98
 
-### Phase 100 — Capability Registry
-**What:** lib/capability-registry.js — every NEXUS capability indexed with description,
-examples, when-to-use. Co-pilot reads this to know what it can do.
-POST /api/build → module-builder checks capability-registry first.
-**Deps:** Phase 96
+### Phase 111 — Spec Drift Repair (OL-10) ⬛
+Fix 7 drifted specs. Write 9 missing ones.
 
-### Phase 101 — Contract Progress Tracking + Fulfillment Check
-**What:** contracts carry full progress state. On recovery, check if already fulfilled.
-Last-interaction map: fromSystem → toSystem, why, ts, progress.
-**Files:** lib/contract-queue.js (extend), lib/contract-poller.js (extend)
+### Phase 112 — Streaming Co-pilot Responses (OL-22) ⬛
+SSE stream from copilot/server.js on prompt response.
+Token-by-token delivery. Removes timeout risk on long analyses.
 
-### Phase 102 — Action-Intent Wiring (S4)
-**What:** Co-pilot classifies 'action' intent. Nothing dispatches it.
-Wire: action intent → module-builder → contract → relevant system.
-**File:** copilot/server.js + copilot/module-builder.js
+### Phase 113 — NCP Reconnection Backoff (OL-21) ⬛
+Exponential backoff in userscripts. RECONNECT_MS starts at 3s, backs off to 30s.
+Reduces SSE reconnection flood from ollama-ncp tab.
 
-### Phase 103 — Session Continuity (co-pilot)
-**What:** On session start, inject last N chat_log entries as context.
-Co-pilot remembers prior conversation.
-**File:** copilot/server.js session-manager
+### Phase 114 — /api/settings Hot-Apply (OL-23) ⬛
+Each system implements POST /api/settings to accept runtime config from control panel.
+Guardian: ncp_log_rate_ms, seam thresholds. Cortex: sigma thresholds, gap batch.
+Co-pilot: lifeline confidence, stream size. Ollama: max_concurrent, timeout.
 
-### Phase 104 — Co-pilot in Userscripts
-**What:** Guardian userscripts route to co-pilot :3750 not Guardian internal co-pilot.
-Enable: diagnose, repair, learn from NCP delivery stream.
-**Files:** guardian/userscript-claude.js, guardian/userscript-chatgpt.js
-
-### Phase 105 — File Integrity + Delta Types
-**What:** lib/cfr/integrity.js — boot-time hash check of all .js files vs baseline.
-Delta types: FILE_MODIFIED, FILE_ADDED, FILE_DELETED, HASH_MISMATCH, LATENCY_SPIKE,
-THROUGHPUT_DROP, PATTERN_BROKEN, INVARIANT_DRIFT, NEW_PATHWAY, PATHWAY_LOST.
-**Files:** lib/cfr/integrity.js
-
-### Phase 106 — Sigma Investigation (OL-18)
-**What:** 6,012 sigma readings, max ever 0.05. Should reach 0.15 threshold.
-Investigate computeSigma() in lib/cfr/sigma.js and what sigma-writer feeds it.
-**Files:** lib/cfr/sigma.js, lib/sigma-writer.js
-
-### Phase 107 — UI Channels as Sovereign HTML (OL-5)
-**What:** Each TV shell channel is its own HTML document loaded in iframe.
-index.html shrinks from 4000+ lines to <200.
-**Phases:** Per DECOMP.md — extract, then sovereign, then shell shrinks
-
-### Phase 108 — Spotlight HTTP API
-**What:** POST /api/ui/spotlight/on { target: 'guardian' }
-Any system can direct the UI without touching HTML.
-Orchestrator receives, broadcasts via SSE, spotlight.js subscribes.
-**Files:** orchestrator.js + ui/tv-shell/spotlight/spotlight.js
-
-### Phase 109 — Epistemic Branch Runtime (EBR)
-**What:** The cognitive CI/CD pipeline from the session document.
-Clone system state → apply hypothesis → run simulation → compare → crystallize only if passes.
-Maps to: snapshot engine (branch) + module-builder (mutate) + adversarial (evaluate).
-**This is the architecture for how co-pilot proves ideas before they become real.**
-**Deps:** Phase 96, 98, 99
-
-### Phase 110 — Dual Cognition Full Wire
-**What:** Cortex INTUITION and MASTERMIND exposed properly.
-Co-pilot uses Cortex intelligence API instead of its own copies.
-Adversarial pings both from Cortex, not co-pilot.
-RAID uses INTUITION for fast routing decisions.
-**Deps:** Phase 98
-
-### Phase 111 — Spec Drift Repair (OL-10)
-**What:** Fix the 7 drifted specs + write the 9 missing ones.
-cortex, guardian, architect, escalation, snapshot, grammar-engine, replay-engine.
-Plus: gap-finder, divergence-watcher, macro-compiler, ncp, grammar-fallback,
-mutation-contract, open-loop-taxonomy, loop-topology, gap-loop.
+### Phase 115 — S3 Synthesis Layer ⬛
+One unified reconstruction view over: causal graph + snapshots + ledgers + patterns.
+Single query: "what happened between T1 and T2?" → complete causal narrative.
 
 ---
 
 ## BUILD ORDER (bottom-up, §3.1)
 
-**Right now, highest leverage:**
+**Highest leverage right now (Phase 96 done — next priorities):**
 
-1. **Phase 96** — registry-components.js per system. One act fixes OL-1, OL-2, OL-4, S2, Phase 15. 150 components registered. Grammar trie populated. Blueprint compiled.
-2. **Phase 97** — CFR → RAID wire. Routing becomes causal-aware.
-3. **Phase 98** — HTTP routes for Cortex intelligence. Co-pilot stops duplicating.
-4. **Phase 106** — Sigma investigation. Autonomous loop safety check becomes real.
-5. **Phase 94** — Meta observer layer. Full system visibility.
-6. **Phase 95** — RAID first-principles reinforcement.
-7. **Phase 109** — Epistemic Branch Runtime (the big one).
+1. **Phase 97** — CFR → RAID wire. Now unblocked. Routing becomes causal-aware.
+2. **Phase 106** — Sigma investigation. Autonomous loop safety check becomes real. Critical.
+3. **Phase 98** — Cortex intelligence via HTTP. Co-pilot stops duplicating.
+4. **Phase 102** — Action-intent wiring. Co-pilot can actually DO things.
+5. **Phase 113** — NCP reconnection backoff. Terminal noise reduction.
+6. **Phase 112** — Streaming responses. Co-pilot timeout eliminated.
+7. **Phase 94** — Meta Observer Layer. Full system visibility.
+8. **Phase 109** — Epistemic Branch Runtime. The big one.
 
-**Financial leverage (demonstrable, portfolio-worthy):**
-- Phase 94 (meta observer) — visual proof the system governs itself
+**Financial leverage:**
+- Phase 94 (meta observer) — visual proof of self-governance
 - Phase 109 (EBR) — self-testing cognitive architecture, nothing like it exists
-- Phase 80/LIFELINE + Phase 83/axiom CLI — co-pilot that manages its own laws
+- Phase 68/LIFELINE combination — co-pilot that manages its own laws + escalates intelligently
 
 ---
 
-## CHANGELOG (this session — 2026-06-27)
+## CHANGELOG (session 2 — 2026-06-27)
 
 ### Added
-- `eravos/server.js` + `eravos/registry-components.js` — ERAVOS sovereign :3751
-- `ollama/server.js` + `ollama/registry-components.js` — Ollama Bridge sovereign :3749
-- `copilot/server.js` + `copilot/registry-components.js` — Co-pilot sovereign :3750
-- `copilot/intuition.js` — INTUITION fast path
-- `copilot/analysis.js` — ANALYSIS 7-layer context
-- `copilot/adversarial.js` — ADVERSARIAL probe + ping-pong
-- `copilot/lifeline.js` — Ollama primary, Guardian fallback on confidence < 0.75
-- `copilot/axiom-manager.js` — add/remove/list/freeze axioms, 3 tiers
-- `copilot/module-builder.js` — co-pilot builds its own modules, QC pipeline
-- `cli/axiom.js` — CLI surface for axiom management
-- `cortex/intelligence/intuition.js` — Cortex INTUITION faculty
-- `cortex/intelligence/mastermind.js` — Cortex MASTERMIND faculty (bidirectional causal, prediction, counterfactual)
-- `cortex/intelligence/dedup.js` — deduplication engine, reference-based
-- `lib/contract-queue.js` — every inter-system request is a contract, disk-first
-- `lib/contract-poller.js` — meta-system poller, stuck contracts → gap → re-dispatch
-- `lib/cortex-write.js` — write-through adapter, buffer to disk if Cortex offline
-- `ui/tv-shell/menu.js` — floating menu as sovereign module
-- `ui/tv-shell/spotlight/spotlight.js` + `spotlight.css` — sovereign spotlight
-- `ui/themes/nexus-dark.css` + `nexus-light.css` — CSS variable system
-- `docs/cortex-dual-cognition.spec` — dual cognition architecture spec
-- `docs/copilot-expansion.spec` — co-pilot expansion spec
-- `docs/contract-queue.spec` — contract queue + progress tracking spec
-- `docs/ollama.spec` — Ollama sovereign system spec
-- `docs/copilot.spec` — co-pilot sovereign system spec
-- `docs/ui-location.spec` — UI location architecture spec
-- `skills/james-brooks/SKILL.md` — updated with financial context, 14 axioms, session close protocol
-- `skills/nexus-session-changelog/SKILL.md` — changelog generation skill
+- `guardian/registry-components.js` — 33 components declared
+- `cortex/registry-components.js` — 39 components declared
+- `architect/registry-components.js` — 17 components declared
+- `emerge/registry-components.js` — 9 components declared
+- `bridge/registry-components.js` — 11 components declared
+- `copilot/recursive-diagnose.js` — fractal diagnosis, writes to file in real-time
+- `ui/control-panel/index.html` — runtime control panel with toggles/values per system
 
 ### Changed
-- `autopilot.js` — eravos, ollama-bridge, copilot added to kernel set
-- `orchestrator.js` — new systems + proxy routes + contract-poller started
-- `guardian/server.js` — bullet density threshold 0.5→0.75, /guardian-ui/ route
-- `lib/cfr/delta.js` — dom_map tension dampened
-- `service/nexus-diagnostic.js` — optional flag for emerge/forge-shell, sys→name fix
-- `lib/user-model.js` — _getJaa readiness check, _ensureProfile defined
-- `cortex/boot.js` — buffer import phase 4.5 added
-- `ui/tv-shell/index.html` — menu.js + spotlight.js loaded, comp_id comments, theme linked
-- `ui/home/index.html` — synced with tv-shell
+- `nexus-connect.js` — components[] param added to registerWithOrchestrator()
+- `guardian/server.js` — NCP connected log rate-limited (30s per tab), registry-components wired
+- `cortex/boot.js` — registry-components wired to registration
+- `architect/service.js` — registry-components wired to registration
+- `bridge/index.js` — registry-components wired to registration
+- `emerge-ide.js` — registry-components wired to registration
+- `copilot/server.js` — analysis path now uses lifeline (Ollama→Guardian), recursive-diagnose routes added
+- `orchestrator.js` — contract-poller started, control panel noted
 
-### Fixed (see Bug Fixes table above)
+### Fixed
+- F10: NCP connected spam — rate-limited to once per 30s per tab
+- F11: Co-pilot analysis bypassed lifeline — fixed, now routes through Ollama→Guardian
 
-### Open Loops
-See OPEN LOOPS table above — 20 named loops, numbered, carried forward.
+### Open Loops Updated
+- OL-1 ✅ CLOSED — 82 components registered at boot
+- S2 ✅ CLOSED — all systems declare components
+- OL-4 🔄 UNBLOCKED — was blocked on OL-1
+- OL-21 🔄 MITIGATED — NCP log rate-limited, root cause (SSE reconnect loop) still exists
+- OL-22, OL-23, OL-24 NEW — identified this session
 
 ### Compounding Summary
-NEXUS now has three fully sovereign systems (ERAVOS, Ollama, Co-pilot) that can survive
-individual system failures. Co-pilot has dual cognition (INTUITION fast path + ANALYSIS
-with LIFELINE), adversarial self-testing, the ability to manage its own axioms via CLI,
-and the scaffold to build its own modules with QC gates. Every inter-system request is
-now a contract written to disk before dispatch. Cortex INTUITION and MASTERMIND read
-from crystallised patterns and causal chains to answer questions without model calls.
+The component registry has data for the first time. 82 components registered at boot
+(verified in live log). Grammar trie is populating. Blueprint has content to compile.
+RAID can now route to components not just providers — the decision schema upgrade
+(Phase 97) is the next step to make this real. Co-pilot's analysis now routes through
+LIFELINE properly (Ollama → Guardian if low confidence). The control panel gives runtime
+control over all six systems without restart. Recursive diagnosis writes fractal analysis
+to disk in real-time so long-running diagnoses don't time out.
 
 ### Next Phase
-**Phase 96: registry-components.js per system.**
-This is the root cause of OL-1 through OL-4. Build guardian/registry-components.js first
-(it has the most capabilities and drives the most routing). Then cortex, emerge, architect,
-bridge. Each file is ~50 lines following the Idearium model. One session fixes
-the component registry, grammar trie, blueprint, and unblocks RAID component routing.
+**Phase 97: CFR → RAID wire.**
+RAID _decide() needs to read CFR sigma per (cluster × componentId).
+Now unblocked — componentIds exist in the registry.
+High sigma component → routing penalty → system routes around failures automatically.
+This closes the feedback loop: events → sigma → routing decisions → better outcomes.

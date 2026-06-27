@@ -195,6 +195,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Contract — required for orchestrator verification
+  if (p === '/contract') {
+    json(res, 200, require('./registry-components'));
+    return;
+  }
+
   // Health
   if (p === '/health') {
     json(res, 200, { ok: _ollamaOnline, system: SYSTEM_ID, version: VERSION,
