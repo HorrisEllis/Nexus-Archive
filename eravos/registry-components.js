@@ -17,6 +17,9 @@ module.exports = {
   components: [
     {
       id:       'eravos.canvas',
+      namespace: 'eravos',
+      name:      'eravos.canvas',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-canvas-v1-001',
       grammar:  ['eravos', 'canvas', 'open canvas'],
       route:    { method:'GET', path:'/' },
@@ -27,6 +30,9 @@ module.exports = {
     },
     {
       id:       'eravos.organism.spawn',
+      namespace: 'eravos',
+      name:      'eravos.organism.spawn',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-spawn-v1-001',
       grammar:  ['eravos spawn', 'spawn organism', 'eo spawn'],
       route:    { method:'POST', path:'/api/organisms' },
@@ -43,6 +49,9 @@ module.exports = {
     },
     {
       id:       'eravos.organism.list',
+      namespace: 'eravos',
+      name:      'eravos.organism.list',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-list-v1-001',
       grammar:  ['eravos organisms', 'eo list', 'eravos list'],
       route:    { method:'GET', path:'/api/organisms' },
@@ -50,6 +59,9 @@ module.exports = {
     },
     {
       id:       'eravos.wire.connect',
+      namespace: 'eravos',
+      name:      'eravos.wire.connect',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-wire-v1-001',
       grammar:  ['eravos wire', 'ew connect'],
       route:    { method:'POST', path:'/api/wires' },
@@ -61,6 +73,9 @@ module.exports = {
     },
     {
       id:       'eravos.catalog.list',
+      namespace: 'eravos',
+      name:      'eravos.catalog.list',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-catalog-v1-001',
       grammar:  ['eravos catalog', 'ec list'],
       route:    { method:'GET', path:'/api/catalog' },
@@ -68,6 +83,9 @@ module.exports = {
     },
     {
       id:       'eravos.pack.install',
+      namespace: 'eravos',
+      name:      'eravos.pack.install',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-pack-v1-001',
       grammar:  ['eravos install', 'ep install'],
       route:    { method:'POST', path:'/api/pack/install' },
@@ -81,6 +99,9 @@ module.exports = {
     },
     {
       id:       'eravos.transport.play',
+      namespace: 'eravos',
+      name:      'eravos.transport.play',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-play-v1-001',
       grammar:  ['eravos play', 'play'],
       route:    { method:'POST', path:'/api/transport/play' },
@@ -88,6 +109,9 @@ module.exports = {
     },
     {
       id:       'eravos.transport.stop',
+      namespace: 'eravos',
+      name:      'eravos.transport.stop',
+      version:   '3.0.0',
       uuid:     'nexus-eravos-comp-stop-v1-001',
       grammar:  ['eravos stop', 'stop'],
       route:    { method:'POST', path:'/api/transport/stop' },

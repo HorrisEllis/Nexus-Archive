@@ -227,6 +227,18 @@ async function bootAsync() {
     },
   });
 
+  // ── Phase 4.5: Import buffered data from offline systems ────────────────────
+  seq.phase({ name:'buffer.import', type:'SOFT',
+    label:'Import buffered rows from data/<system>/*.buffer.jsonl',
+    fn: async () => {
+      try {
+        const { importBufferedData } = require('../lib/cortex-write');
+        const total = await importBufferedData(jaaDB);
+        if (total > 0) console.log(`[cortex/boot] imported ${total} buffered rows from offline systems`);
+      } catch(_) {}
+    }
+  });
+
   // ── Phase 5 HARD: admin server ───────────────────────────────────────────
   seq.phase({ name:'server.start', type:'HARD',
     label:'HTTP admin server on :' + PORT,

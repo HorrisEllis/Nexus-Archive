@@ -24,6 +24,7 @@ const ORCH_URL = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000';
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
 
+const _cw = require('../lib/cortex-write')('eravos');
 const SYSTEM_ID = 'eravos';
 const VERSION   = '3.0.0';
 

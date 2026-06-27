@@ -30,6 +30,7 @@ const OR_URL   = process.env.ORCH_URL       || 'http://127.0.0.1:9000';
 const OL_URL   = process.env.OLLAMA_URL     || 'http://127.0.0.1:3749';
 const IDR_URL  = process.env.IDEARIUM_URL   || 'http://127.0.0.1:4800';
 
+const _cw = require('../lib/cortex-write')('copilot');
 const SYSTEM_ID = 'copilot';
 const VERSION   = '2.0.0';
 
@@ -284,6 +285,12 @@ const server = http.createServer(async (req, res) => {
     res.write(`data: ${JSON.stringify({ type:'copilot.connected', streamDepth: _stream.length })}\n\n`);
     _sseClients.add(res);
     req.on('close', () => _sseClients.delete(res));
+    return;
+  }
+
+  // Contract — required for orchestrator verification
+  if (p === '/contract') {
+    json(res, 200, require('./registry-components'));
     return;
   }
 

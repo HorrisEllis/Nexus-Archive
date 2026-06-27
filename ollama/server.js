@@ -17,7 +17,8 @@ const fs     = require('fs');
 const path   = require('path');
 
 const PORT         = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
-const OLLAMA_HOST  = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
+const _rawOllamaHost = process.env.OLLAMA_HOST || '127.0.0.1:11434';
+const OLLAMA_HOST = _rawOllamaHost.startsWith('http') ? _rawOllamaHost : `http://${_rawOllamaHost}`;
 const ORCH_URL     = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000';
 const CX_URL       = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
 const DATA_DIR     = path.join(__dirname, '..', 'data', 'ollama');
@@ -27,6 +28,7 @@ const FALLBACK_MODEL = process.env.OLLAMA_FALLBACK_MODEL || 'mistral:7b';
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
 
+const _cw = require('../lib/cortex-write')('ollama');
 const SYSTEM_ID = 'ollama';
 const VERSION   = '1.0.0';
 

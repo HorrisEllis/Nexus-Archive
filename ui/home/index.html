@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NEXUS</title>
+<link rel="stylesheet" href="/ui/themes/nexus-dark.css">
 <link rel="stylesheet" href="/ui/tv-shell/spotlight/spotlight.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -1620,7 +1621,8 @@ const PROVIDER_URLS={
   ollama:      'http://localhost:11434',
 };
 
-// ── Channel meta ──────────────────────────────────────────────────────────────
+// comp_id: nexus.ui.tv-shell.channel-meta
+  // ── Channel meta ──────────────────────────────────────────────────────────────
 const CH_META=[
   {id:'ch-overview',  name:'NEXUS',      accent:'Overview'},
   {id:'ch-guardian',  name:'GUARDIAN',   accent:':7820 · NCP'},
@@ -1798,7 +1800,8 @@ document.addEventListener('keydown',e=>{
 
 
 
-// ── Health polling ────────────────────────────────────────────────────────────
+// comp_id: nexus.ui.tv-shell.health
+  // ── Health polling ────────────────────────────────────────────────────────────
 const SYSTEMS=[
   {key:'orch',url:`${B.orch}/health`,dot:'sd-orch',tileId:'tile-orch',tileStatus:'ts-orch'},
   {key:'gd',  url:`${B.orch}/api/guardian/health`, dot:'sd-gd',  tileId:'tile-gd',  tileStatus:'ts-gd'},
@@ -2714,7 +2717,9 @@ window.NEXUS_UI_STATE = {
   }),
 };
 
-// ── Co-pilot UI Runtime ─────────────────────────────────────────────────────
+// comp_id: nexus.ui.tv-shell.copilot-runtime
+  // file: ui/tv-shell/spotlight/spotlight.js (external)
+  // ── Co-pilot UI Runtime ─────────────────────────────────────────────────────
 // Loaded from: /ui/tv-shell/spotlight/spotlight.js (served by orchestrator)
 // window.CP and window.Spotlight are set by that module.
 // Stub defined here so inline code is safe before the module loads.
@@ -3543,7 +3548,8 @@ connectSSE();
 </div>
 
 <script>
-// ── Spec wizard state ─────────────────────────────────────────────────────────
+// comp_id: nexus.ui.tv-shell.spec-wizard
+  // ── Spec wizard state ─────────────────────────────────────────────────────────
 let _wizAgent   = 'ollama';
 let _wizSpecUuid = null;
 let _wizBuildInterval = null;
