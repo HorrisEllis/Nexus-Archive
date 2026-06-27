@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NEXUS — Diagnostic Suite</title>
+<style>
+  :root{
+    --bg:#06060a; --panel:#0d0d14; --border:rgba(255,255,255,.08);
+    --text:#d8d8e0; --dim:#5a5a68; --accent:#00e5ff; --green:#00ff88;
+    --amber:#ffaa00; --red:#ff3355; --purple:#cc44ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;font-size:12px}
+  header{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+  header h1{font-size:14px;margin:0;letter-spacing:.08em;color:var(--accent)}
+  header .sub{color:var(--dim);font-size:10px}
+  header .refresh{margin-left:auto;color:var(--dim);font-size:10px}
+  main{display:grid;grid-template-columns:280px 1fr;gap:0;min-height:calc(100vh - 50px)}
+  nav{border-right:1px solid var(--border);padding:14px;overflow-y:auto}
+  .svc-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:11px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex-shrink:0}
+  .dot.up{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .dot.down{background:var(--red)}
+  .section-title{color:var(--dim);font-size:9px;letter-spacing:.1em;margin:18px 0 8px;text-transform:uppercase}
+  .comp-group{margin-bottom:4px}
+  .comp-sys{color:var(--purple);font-size:10px;padding:6px 4px;cursor:pointer;display:flex;justify-content:space-between}
+  .comp-item{padding:4px 8px 4px 16px;font-size:10px;color:var(--dim);cursor:pointer;border-radius:3px}
+  .comp-item:hover, .comp-item.active{background:rgba(255,255,255,.06);color:var(--text)}
+  .panels{padding:18px;overflow-y:auto}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px}
+  .panel h2{font-size:11px;letter-spacing:.06em;color:var(--accent);margin:0 0 10px;text-transform:uppercase}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  table{width:100%;border-collapse:collapse;font-size:10px}
+  th{text-align:left;color:var(--dim);font-weight:normal;padding:4px 6px;border-bottom:1px solid var(--border)}
+  td{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text)}
+  .tag{display:inline-block;background:rgba(255,255,255,.06);border-radius:3px;padding:1px 6px;margin-right:4px;font-size:9px;color:var(--dim)}
+  .badge{padding:1px 7px;border-radius:10px;font-size:9px}
+  .badge.ok{background:rgba(0,255,136,.12);color:var(--green)}
+  .badge.warn{background:rgba(255,170,0,.12);color:var(--amber)}
+  .badge.bad{background:rgba(255,51,85,.12);color:var(--red)}
+  .empty{color:var(--dim);font-size:10px;padding:10px 0}
+  .fric-bar{height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;width:100px;display:inline-block;vertical-align:middle;margin-right:8px}
+  .fric-fill{height:100%}
+  .stat{font-size:22px;color:var(--accent)}
+  .stat-label{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NEXUS DIAGNOSTIC SUITE</h1>
+  <span class="sub">component map · activity ledger · RAID · pattern engine · CFR · gaps</span>
+  <span class="refresh" id="refresh-indicator">refreshing every 8s…</span>
+</header>
+
+<main>
+  <nav>
+    <div class="section-title">Services</div>
+    <div id="svc-list"></div>
+
+    <div class="section-title">Component map</div>
+    <div id="comp-tree"><div class="empty">loading…</div></div>
+  </nav>
+
+  <div class="panels">
+
+    <div class="panel" id="panel-component">
+      <h2>Component activity — <span id="comp-selected">select a component</span></h2>
+      <div id="comp-activity"><div class="empty">Click a component on the left to see its recent ledger entries (lib/component-ledger.js — physically partitioned per component/system/day, mirrored here for querying).</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel" id="panel-raid">
+        <h2>RAID engine</h2>
+        <div id="raid-status"><div class="empty">loading…</div></div>
+      </div>
+      <div class="panel" id="panel-ollama">
+        <h2>Ollama</h2>
+        <div id="ollama-status"><div class="empty">loading…</div></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-pattern">
+      <h2>Pattern engine — crystallised patterns</h2>
+      <div id="pattern-list"><div class="empty">loading…</div></div>
+    </div>
+
+    <div class="panel" id="panel-cfr">
+      <h2>CFR — sigma + friction</h2>
+      <div class="grid2">
+        <div>
+          <div class="stat" id="cfr-coercions">—</div>
+          <div class="stat-label">non-string event.type coercions (lib/cfr/sigma.js)</div>
+        </div>
+        <div id="cfr-friction"><div class="empty">loading…</div></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-gaps">
+      <h2>Open gaps</h2>
+      <div id="gaps-list"><div class="empty">loading…</div></div>
+    </div>
+
+    <div class="panel" id="snapshots">
+      <h2>Snapshots</h2>
+      <div id="snapshots-list"><div class="empty">loading…</div></div>
+    </div>
+
+    <div class="panel" id="panel-diagnostic-contracts">
+      <h2>Diagnostic contracts — diagnose_and_repair, tracked</h2>
+      <div id="diag-contracts-list"><div class="empty">loading…</div></div>
+    </div>
+
+    <div class="panel" id="panel-ledger">
+      <h2>Global ledger tail</h2>
+      <div id="ledger-tail"><div class="empty">loading…</div></div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const ORCH = location.origin.includes(':9000') ? location.origin : 'http://127.0.0.1:9000';
+const CORTEX = 'http://127.0.0.1:3748';
+const GUARDIAN = 'http://127.0.0.1:7820';
+const OLLAMA = 'http://127.0.0.1:11434';
+
+async function get(url, opts={}) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(opts.timeout || 4000) });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) { return null; }
+}
+
+const SERVICES = [
+  { label:'ORCHESTRATOR', url: ORCH + '/health' },
+  { label:'GUARDIAN',     url: GUARDIAN + '/health' },
+  { label:'CORTEX',       url: CORTEX + '/health' },
+  { label:'IDEARIUM',     url: 'http://127.0.0.1:4800/api/health' },
+  { label:'BRIDGE',       url: 'http://127.0.0.1:9999/health' },
+  { label:'ARCHITECT',    url: 'http://127.0.0.1:3747/health' },
+  { label:'DIAGNOSTIC',   url: 'http://127.0.0.1:7825/status' },
+  { label:'OLLAMA',       url: OLLAMA + '/api/tags' },
+];
+
+async function refreshServices() {
+  const list = document.getElementById('svc-list');
+  list.innerHTML = '';
+  for (const s of SERVICES) {
+    const data = await get(s.url, { timeout: 2500 });
+    const row = document.createElement('div');
+    row.className = 'svc-row';
+    row.innerHTML = `<span class="dot ${data ? 'up' : 'down'}"></span>${s.label}`;
+    list.appendChild(row);
+  }
+}
+
+let _selectedComponent = null;
+
+async function refreshComponentMap() {
+  const tree = document.getElementById('comp-tree');
+  const data = await get(ORCH + '/api/components');
+  const comps = data?.components || [];
+  if (!comps.length) { tree.innerHTML = '<div class="empty">no components registered (or registry unreachable)</div>'; return; }
+  const bySystem = {};
+  for (const c of comps) {
+    const sys = c.namespace || 'unknown';
+    (bySystem[sys] = bySystem[sys] || []).push(c);
+  }
+  tree.innerHTML = '';
+  for (const [sys, items] of Object.entries(bySystem).sort()) {
+    const group = document.createElement('div');
+    group.className = 'comp-group';
+    const head = document.createElement('div');
+    head.className = 'comp-sys';
+    head.innerHTML = `<span>${sys}</span><span style="color:var(--dim)">${items.length}</span>`;
+    group.appendChild(head);
+    for (const c of items) {
+      const item = document.createElement('div');
+      item.className = 'comp-item' + (c.id === _selectedComponent ? ' active' : '');
+      item.textContent = c.id;
+      item.onclick = () => selectComponent(c.id);
+      group.appendChild(item);
+    }
+    tree.appendChild(group);
+  }
+}
+
+async function selectComponent(id) {
+  _selectedComponent = id;
+  document.getElementById('comp-selected').textContent = id;
+  document.querySelectorAll('.comp-item').forEach(el => el.classList.toggle('active', el.textContent === id));
+  const data = await get(ORCH + '/api/component-ledger?component=' + encodeURIComponent(id) + '&n=50');
+  const rows = data?.rows || [];
+  const target = document.getElementById('comp-activity');
+  if (!rows.length) { target.innerHTML = '<div class="empty">no ledger entries yet for this component</div>'; return; }
+  target.innerHTML = `<table><tr><th>time</th><th>action</th><th>status</th><th>tags</th><th>detail</th></tr>` +
+    rows.slice().reverse().map(r => `<tr>
+      <td>${new Date(r.ts).toLocaleTimeString()}</td>
+      <td>${esc(r.action)}</td>
+      <td>${esc(r.status)}</td>
+      <td>${(r.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td>
+      <td style="color:var(--dim)">${esc((r.detail||'').slice(0,80))}</td>
+    </tr>`).join('') + `</table>`;
+}
+
+async function refreshRaid() {
+  const data = await get(CORTEX + '/api/raid/status');
+  const el = document.getElementById('raid-status');
+  if (!data) { el.innerHTML = '<div class="empty">cortex unreachable</div>'; return; }
+  el.innerHTML = `<pre style="white-space:pre-wrap;font-size:10px;color:var(--dim);margin:0">${esc(JSON.stringify(data, null, 1)).slice(0,1200)}</pre>`;
+}
+
+async function refreshOllama() {
+  const data = await get(OLLAMA + '/api/tags');
+  const el = document.getElementById('ollama-status');
+  if (!data) { el.innerHTML = '<div class="empty badge bad">offline</div>'; return; }
+  const models = (data.models || []).map(m => m.name);
+  el.innerHTML = `<span class="badge ok">online</span> ${models.length} model(s)<br>` +
+    models.map(m => `<span class="tag">${esc(m)}</span>`).join('');
+}
+
+async function refreshPatterns() {
+  const data = await get(CORTEX + '/api/intelligence/patterns');
+  const el = document.getElementById('pattern-list');
+  const patterns = data?.patterns || data?.rows || [];
+  if (!patterns.length) { el.innerHTML = '<div class="empty">none yet, or intelligence unreachable</div>'; return; }
+  el.innerHTML = `<table><tr><th>pattern</th><th>count</th><th>confidence</th></tr>` +
+    patterns.slice(0,20).map(p => `<tr>
+      <td>${esc(p.description || p.signature || '?')}</td>
+      <td>${p.count ?? '?'}</td>
+      <td>${p.confidence != null ? Math.round(p.confidence*100)+'%' : '?'}</td>
+    </tr>`).join('') + `</table>`;
+}
+
+async function refreshCfr() {
+  const data = await get(ORCH + '/api/diagnostics/cfr');
+  document.getElementById('cfr-coercions').textContent = data?.sigmaCoercions ?? '—';
+  const el = document.getElementById('cfr-friction');
+  const friction = data?.friction || [];
+  if (!friction.length) { el.innerHTML = '<div class="empty">no friction recorded</div>'; return; }
+  el.innerHTML = friction.slice(0,10).map(f => {
+    const pct = Math.round((f.friction||0)*100);
+    const color = pct >= 70 ? 'var(--red)' : pct >= 40 ? 'var(--amber)' : 'var(--green)';
+    return `<div style="margin-bottom:6px"><span class="fric-bar"><span class="fric-fill" style="width:${pct}%;background:${color}"></span></span>${esc(f.faultClass)} — ${pct}%${f.failureMode ? ' <span class="badge bad">FAILURE MODE</span>' : ''}</div>`;
+  }).join('');
+}
+
+async function refreshGaps() {
+  const data = await get(CORTEX + '/api/gaps?status=open&n=30');
+  const el = document.getElementById('gaps-list');
+  const gaps = Array.isArray(data) ? data : (data?.gaps || data?.rows || []);
+  if (!gaps.length) { el.innerHTML = '<div class="empty">no open gaps</div>'; return; }
+  el.innerHTML = `<table><tr><th>type</th><th>severity</th><th>tension</th><th>recurrence</th><th>age</th></tr>` +
+    gaps.slice(0,30).map(g => {
+      const ageMin = g.createdAt ? Math.round((Date.now()-g.createdAt)/60000) : '?';
+      return `<tr><td>${esc(g.type)}</td><td>${esc(g.severity||'—')}</td><td>${g.tension!=null?g.tension:'—'}</td><td>${g.recurrence_count||0}</td><td>${ageMin}min</td></tr>`;
+    }).join('') + `</table>`;
+}
+
+async function refreshLedgerTail() {
+  const data = await get(ORCH + '/api/component-ledger?n=40');
+  const el = document.getElementById('ledger-tail');
+  const rows = data?.rows || [];
+  if (!rows.length) { el.innerHTML = '<div class="empty">no ledger entries yet</div>'; return; }
+  el.innerHTML = `<table><tr><th>time</th><th>system</th><th>component</th><th>action</th><th>status</th></tr>` +
+    rows.slice().reverse().slice(0,40).map(r => `<tr>
+      <td>${new Date(r.ts).toLocaleTimeString()}</td>
+      <td>${esc(r.system)}</td>
+      <td>${esc(r.component)}</td>
+      <td>${esc(r.action)}</td>
+      <td>${esc(r.status)}</td>
+    </tr>`).join('') + `</table>`;
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function refreshSnapshots() {
+  const data = await get(CORTEX + '/api/snapshots?n=20');
+  const el = document.getElementById('snapshots-list');
+  const snaps = data?.snapshots || [];
+  if (!snaps.length) { el.innerHTML = '<div class="empty">no snapshots yet</div>'; return; }
+  el.innerHTML = `<table><tr><th>id</th><th>rows</th><th>trigger</th><th>hash</th><th>time</th></tr>` +
+    snaps.map(s => `<tr>
+      <td>${esc(s.id || s.uuid)}</td>
+      <td>${s.rows ?? '?'}</td>
+      <td>${esc(s.trigger || s.type || '—')}</td>
+      <td style="color:var(--dim)">${esc((s.hash||'').slice(0,10))}</td>
+      <td>${s.ts ? new Date(s.ts).toLocaleString() : '—'}</td>
+    </tr>`).join('') + `</table>`;
+}
+
+async function refreshDiagContracts() {
+  const data = await get(ORCH + '/api/jaa/diagnostic_contracts?limit=100');
+  // §23.13 — falls back to direct cortex access if orchestrator hasn't
+  // proxied this yet in your build; the route lives on cortex (:3748).
+  const data2 = data || await get(CORTEX + '/api/jaa/diagnostic_contracts?limit=100');
+  const el = document.getElementById('diag-contracts-list');
+  const rows = data2?.rows || [];
+  if (!rows.length) { el.innerHTML = '<div class="empty">none tracked yet</div>'; return; }
+  const byStatus = {};
+  for (const c of rows) byStatus[c.status] = (byStatus[c.status] || 0) + 1;
+  const statusBar = Object.entries(byStatus).map(([s,n]) =>
+    `<span class="badge ${s==='closed'?'ok':s==='no_action_taken'?'warn':''}">${esc(s)}: ${n}</span>`).join(' ');
+  el.innerHTML = `<div style="margin-bottom:10px">${statusBar}</div>` +
+    `<table><tr><th>gap type</th><th>system</th><th>status</th><th>agent</th><th>age</th></tr>` +
+    rows.slice().reverse().slice(0,40).map(c => {
+      const ageMin = c.createdAt ? Math.round((Date.now()-c.createdAt)/60000) : '?';
+      return `<tr><td>${esc(c.gapType)}</td><td>${esc(c.system||'—')}</td><td>${esc(c.status)}</td><td>${esc(c.agent||'—')}</td><td>${ageMin}min</td></tr>`;
+    }).join('') + `</table>`;
+}
+
+async function refreshAll() {
+  await Promise.all([
+    refreshServices(), refreshComponentMap(), refreshRaid(), refreshOllama(),
+    refreshPatterns(), refreshCfr(), refreshGaps(), refreshLedgerTail(), refreshSnapshots(),
+    refreshDiagContracts(),
+  ]);
+  if (_selectedComponent) selectComponent(_selectedComponent);
+}
+
+refreshAll();
+setInterval(refreshAll, 8000);
+
+// Jump to #snapshots (or any panel id) if linked in with a hash — this page
+// has no router, just anchor ids on each panel, since nexus-monitor's
+// "Open Snapshots" button links here as http://...:9000/ui/diagnostics#snapshots
+if (location.hash) {
+  setTimeout(() => {
+    const target = document.querySelector(location.hash);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 300);
+}
+</script>
+</body>
+</html>

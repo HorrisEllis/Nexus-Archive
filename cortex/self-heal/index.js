@@ -140,11 +140,66 @@ let _cfg      = {};
 
 function _getForge() {
   if (_forge) return _forge;
+  // §FIX-24.1: forge is no longer a system — it routes directly to ollama-runtime.
+  // cockpit/forge previously tried guardian /command first, which required a live
+  // guardian connection and blocked self-heal. Self-heal now uses a lightweight
+  // inline forge adapter that calls ollama-runtime directly (LAW_I: local first).
+  // Guardian is NOT a dependency of self-heal.
   try {
-    _forge = require('../../cockpit/forge');
-    console.log(`[${MODULE_ID}] forge loaded — LLM patching enabled`);
-  } catch (_) {
+    const ollamaRuntime = require('../../ollama-runtime');
+    _forge = {
+      forgePatch: async (src, patchSpec, opts) => {
+        const { gapType = 'unknown', gapPath = '' } = patchSpec;
+        const system = [
+          'You are a NEXUS self-heal engine. You patch Node.js modules to fix detected gaps.',
+          'Return ONLY the complete corrected module source code. No explanation. No markdown.',
+          'Axioms: §1.2 nothing silently fails. §2.1 write before act. §1.3 no stubs.',
+        ].join(' ');
+        const prompt = [
+          `Gap type: ${gapType}`,
+          `Module: ${gapPath}`,
+          `Instruction: ${patchSpec.instruction || 'fix the gap described'}`,
+          '',
+          'Current source:',
+          '```',
+          (src || '').slice(0, 3000),
+          '```',
+          '',
+          'Return ONLY the corrected source:',
+        ].join('\n');
+
+        const models = ['qwen2.5-coder:1.5b', 'mistral:7b-instruct-q4_K_M'];
+        const store = opts?.store || { insert: () => {} };
+        const t0 = Date.now();
+
+        for (const model of models) {
+          try {
+            const text = await new Promise((resolve, reject) => {
+              let buf = '';
+              const t = setTimeout(() => reject(new Error(`${model} timeout`)), 90000);
+              ollamaRuntime.streamGenerate(
+                { model, prompt, system },
+                tok => { buf += tok; },
+                ()  => { clearTimeout(t); resolve(buf.trim()); },
+                e   => { clearTimeout(t); reject(e); }
+              );
+            });
+            if (text) {
+              const t1 = Date.now();
+              store.insert('forge_patches', { model, gapType, gapPath, result: 'generated', ts: t1 });
+              return { src: text, model, provider: `ollama/${model}`, durationMs: t1 - t0, error: null };
+            }
+          } catch(e) {
+            console.warn(`[self-heal/forge] ${model} failed: ${e.message}`);
+          }
+        }
+        return { src: null, error: 'all ollama models failed — is ollama running?' };
+      },
+    };
+    console.log(`[${MODULE_ID}] forge loaded — direct ollama-runtime (no guardian dependency)`);
+  } catch(e) {
     _forge = null;
+    console.warn(`[${MODULE_ID}] forge unavailable: ${e.message}`);
   }
   return _forge;
 }
@@ -216,7 +271,9 @@ async function _forgeGap(gap) {
   return { ok: true, src: rec.src, modRelPath, modAbsPath, provider: rec.provider, durationMs: rec.durationMs };
 }
 
-function _applyPatch(modAbsPath, modRelPath, newSrc) {
+function _applyPatch(modAbsPath, modRelPath, newSrc, gap) {
+  // §FIX-24.7: gap is now an explicit parameter — was referenced as free variable
+  // causing 'gap is not defined' when called from snapshot_then_apply branch
   if (!APPLY_PATCH) {
     // §APPLY-DISABLED: audit mode. Log once per gap, don't escalate gap loop.
     _toCortex?.('self-heal.apply_disabled', { gapUuid: gap?.uuid, gapType: gap?.type,
@@ -231,12 +288,12 @@ function _applyPatch(modAbsPath, modRelPath, newSrc) {
     const { jaaDB, uid: _uid } = require('../memory/jaa-db');
     jaaDB.insert('forge_patches', {
       uuid:      _uid(),
-      gapUuid:   gap.uuid,
+      gapUuid:   gap?.uuid,
       modPath:   modRelPath,
       tier:      3,
       action:    'propose',
       status:    'proposed',
-      body:      gap.body,
+      body:      gap?.body,
       source:    MODULE_ID,
       ts:        Date.now(),
     });
@@ -284,11 +341,23 @@ function _applyPatch(modAbsPath, modRelPath, newSrc) {
 
 async function _tick() {
   try {
+    // §FIX-24.3: Semantic/communication gap types (obligation, assumption, logical,
+    // contradiction, evidential, temporal) are detected in LLM output quality —
+    // they have no module path and cannot be patched by forge. Self-heal was
+    // receiving these, calling forgePatch() with no valid source file, failing,
+    // emitting self-heal.forge_failed, which the healer saw as cortex instability,
+    // which triggered more snapshots, which caused more API probe failures.
+    // Category fix: self-heal only accepts gaps with an infra/code source.
+    const SEMANTIC_GAP_TYPES = new Set([
+      'obligation','assumption','logical','contradiction','evidential',
+      'temporal','definitional','reference','communication',
+    ]);
     const gaps = jaaDB.query('gaps', r =>
       (r.status === 'needs_manual' || r.status === 'forge_failed') &&
       (r.attempts || 0) < MAX_ATTEMPTS &&
       (r.severity === 'high' || r.severity === 'medium') &&
-      (!r.lastForgeAt || Date.now() - r.lastForgeAt > 60_000),
+      (!r.lastForgeAt || Date.now() - r.lastForgeAt > 60_000) &&
+      !SEMANTIC_GAP_TYPES.has(r.type),  // ← exclude semantic gaps
       5
     );
     if (!gaps.length) return;
@@ -337,6 +406,13 @@ async function _tick() {
             payload: { gapUuid: gap.uuid, gapType: gap.type, reason: result.reason, attempts },
             source: MODULE_ID, causedBy: gap.uuid, ts: Date.now(),
           });
+          try {
+            require('../../lib/component-ledger').write({
+              system: 'cortex', component: 'cortex.self-heal',
+              action: APPLY_PATCH ? 'forge_failed' : 'apply_disabled', status: 'failed',
+              tags: [gap.type], detail: result.reason, causedBy: gap.uuid,
+            });
+          } catch (_) {}
           continue;
         }
 
@@ -356,7 +432,7 @@ async function _tick() {
           causedBy: gap.uuid,
         });
 
-        const applyResult = _applyPatch(result.modAbsPath, result.modRelPath, result.src);
+        const applyResult = _applyPatch(result.modAbsPath, result.modRelPath, result.src, gap);
 
         if (patchRow?.uuid) {
           jaaDB.update('forge_patches', patchRow.uuid, {
@@ -382,6 +458,13 @@ async function _tick() {
           },
           source: MODULE_ID, causedBy: gap.uuid, ts: Date.now(),
         });
+        try {
+          require('../../lib/component-ledger').write({
+            system: 'cortex', component: 'cortex.self-heal', action: 'patched',
+            status: applyResult.applied ? 'applied' : 'patch_ready', tags: [gap.type],
+            detail: `${result.modRelPath} via ${result.provider} (${result.durationMs}ms)`, causedBy: gap.uuid,
+          });
+        } catch (_) {}
 
         console.log(
           `[${MODULE_ID}] ${gap.type} → ${result.modRelPath} ` +
@@ -414,6 +497,18 @@ function init(cfg = {}) {
   _getForge();
   _interval = setInterval(_tick, _cfg.pollMs ?? 15_000);
   _interval.unref();
+
+  // §23.9 — register as a real component, same reason as healer above.
+  try {
+    require('../memory/jaa-db'); // ensure jaa loaded before registry tries to use it
+    require('../../lib/component-registry').register({
+      id: 'cortex.self-heal', namespace: 'cortex', name: 'Self-Heal', version: VERSION,
+      description: 'Activation layer — forges code patches for needs_manual/forge_failed gaps, escalates exhausted attempts.',
+      grammar: ['self-heal status', 'forge gap'], route: null, comp_type: 'engine',
+      events: { emits: ['self-heal.patched', 'self-heal.escalated', 'self-heal.forge_failed'], listensTo: ['HEAL_REQUESTED'] },
+      registeredBy: MODULE_ID,
+    });
+  } catch (_) {}
 
   // §ESCALATE-09: subscribe to HEAL_REQUESTED on nexus-bus
   try {

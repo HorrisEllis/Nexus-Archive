@@ -1419,6 +1419,16 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
 
       copilot.init({ jaaDB: jaa, bus, execFn });
       console.log('[guardian] ⬡ COPILOT: listening — bus poll active, RAID gate ' + (copilot.status().raidAvailable ? 'available' : 'UNAVAILABLE (tool calls will fail closed)'));
+
+      // Phase 67: Start MCP Tool Bridge — exposes NEXUS routes as Claude-callable tools
+      try {
+        const mcp = require('../lib/mcp-server');
+        mcp.start();
+        console.log('[guardian] ⬡ MCP: ' + mcp.status().tools + ' tools on :7821');
+      } catch(e) {
+        console.warn('[guardian] MCP server failed to start: ' + e.message);
+      }
+
       return { ok:true, msg:'co-pilot agent listening' };
     }
   });
@@ -2947,14 +2957,235 @@ function handleExtendedRoutes(req, res, url, method) {
   // ── POST /copilot/prompt — co-pilot entry point, RAID-gated tool calls ──────
   if (method === 'POST' && url.pathname === '/copilot/prompt') {
     bodyJ(req).then(async body => {
-      const { prompt, command, proof, contextOpts } = body || {};
+      const { prompt, command, proof, contextOpts, channel, channelName, uiState } = body || {};
       if (!prompt) { pRes(res, 400, { ok:false, error:'prompt required' }); return; }
       let copilot;
       try { copilot = require('./agents/co-pilot'); }
       catch (e) { pRes(res, 503, { ok:false, error:'co-pilot agent not loaded: ' + e.message }); return; }
-      const result = await copilot.handlePrompt(prompt, { command, proof, contextOpts });
+      const result = await copilot.handlePrompt(prompt, { command, proof, contextOpts, channel, channelName, uiState });
       pRes(res, result.ok ? 200 : (result.denied ? 403 : 400), result);
     }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
+    return true;
+  }
+
+  // ── POST /copilot/channel — notify co-pilot of channel change (user model) ─
+  if (method === 'POST' && url.pathname === '/copilot/channel') {
+    bodyJ(req).then(body => {
+      const { channelId, channelName } = body || {};
+      if (!channelId) { pRes(res, 400, { ok:false, error:'channelId required' }); return; }
+      try {
+        const copilot = require('./agents/co-pilot');
+        if (copilot.setCurrentChannel) copilot.setCurrentChannel(channelId, channelName || channelId);
+      } catch(_) {}
+      pRes(res, 200, { ok:true, channelId, channelName });
+    }).catch(e => pRes(res, 500, { ok:false, error: e.message }));
+    return true;
+  }
+
+  // ── POST /hot-load — Phase 14/28: Build from inside ─────────────────────────
+  // Load or replace a module in the running system without restart.
+  // §2.1: snapshots before integrate. Rollback if σ > 0.70 after monitorMs.
+  if (method === 'POST' && url.pathname === '/hot-load') {
+    bodyJ(req).then(async body => {
+      const { modulePath, src, invariants: _inv, monitorMs = 60000 } = body || {};
+      if (!modulePath) { pRes(res, 400, { ok: false, error: 'modulePath required' }); return; }
+      try {
+        const hl = require('../lib/hot-loader');
+        if (!hl._inited) { hl.init({ bus, jaaDB: jaa }); hl._inited = true; }
+        // RAID gate — hot-load is a live code change, requires approval
+        const approval = raid._approveTool('guardian.hot-load', `hot-load:${modulePath}`,
+          { action: 'hot_patch', proof: body.proof });
+        if (!approval.approved) { pRes(res, 403, { ok: false, denied: true, reason: approval.reason }); return; }
+        const result = await hl.load({ modulePath, src, monitorMs });
+        pRes(res, result.ok ? 200 : 400, result);
+      } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
+    }).catch(e => pRes(res, 500, { ok: false, error: e.message }));
+    return true;
+  }
+
+  // ── GET /hot-load/status — in-flight hot loads ────────────────────────────
+  if (method === 'GET' && url.pathname === '/hot-load/status') {
+    try {
+      const hl = require('../lib/hot-loader');
+      pRes(res, 200, { ok: true, ...hl.status() });
+    } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
+    return true;
+  }
+
+  // ── Organism delivery queue — ERAVOS polls this to get newly-built organisms ──
+  // NEXUS builds an organism zip via /build, puts it here.
+  // ERAVOS polls /api/guardian/organism-queue every 5s.
+  // On pickup, ERAVOS fetches the zip and installs it live.
+  const _organismQueue = new Map(); // id → { id, zip, manifest, builtAt }
+
+  if (method === 'GET' && url.pathname === '/api/guardian/organism-queue') {
+    const items = [..._organismQueue.values()].map(o => ({ id: o.id, label: o.label, builtAt: o.builtAt }));
+    pRes(res, 200, { ok: true, organisms: items });
+    return true;
+  }
+
+  if (method === 'GET' && url.pathname.startsWith('/api/guardian/organism-queue/') && url.pathname.endsWith('/zip')) {
+    const id = url.pathname.split('/')[4];
+    const item = _organismQueue.get(id);
+    if (!item) { pRes(res, 404, { ok: false, error: 'not found' }); return true; }
+    res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Length': item.zip.length });
+    res.end(item.zip);
+    return true;
+  }
+
+  if (method === 'POST' && url.pathname.startsWith('/api/guardian/organism-queue/') && url.pathname.endsWith('/ack')) {
+    const id = url.pathname.split('/')[4];
+    _organismQueue.delete(id);
+    pRes(res, 200, { ok: true });
+    return true;
+  }
+
+  // ── POST /build — THE BUILD ROUTE ──────────────────────────────────────────
+  // The loop closes here. spec → T0 scaffold → T1 wiring → T2 Ollama → files.
+  // This is what NEXUS was always supposed to do.
+  //
+  // Body: { specPath, outputDir, provider='ollama', dryRun=false }
+  // Or:   { specText, name, outputDir, provider='ollama' }
+  if (method === 'POST' && url.pathname === '/build') {
+    bodyJ(req).then(async body => {
+      const { specPath, specText, name, outputDir, provider='ollama', dryRun=false, verbose=false } = body || {};
+
+      if (!specPath && !specText) {
+        pRes(res, 400, { ok:false, error:'specPath or specText required' });
+        return;
+      }
+
+      // RAID gate — building touches the filesystem
+      const approval = raid._approveTool('guardian.build', 'emerge-compiler',
+        { action:'build', proof:body.proof });
+      if (!approval.approved) {
+        pRes(res, 403, { ok:false, denied:true, reason:approval.reason });
+        return;
+      }
+
+      try {
+        const t2 = require('../emerge/compiler/t2-gate');
+        const outDir = outputDir || require('path').join(require('path').dirname(require.main?.filename || __dirname), 'output', name || 'build-' + Date.now());
+
+        // If specText provided, write to temp file
+        let resolvedSpecPath = specPath;
+        if (specText && !specPath) {
+          const tmpPath = require('path').join(require('os').tmpdir(), `nexus-spec-${Date.now()}.spec`);
+          require('fs').writeFileSync(tmpPath, specText, 'utf8');
+          resolvedSpecPath = tmpPath;
+        }
+
+        const onProgress = (node, status, detail) => {
+          bus.emit('guardian.build.progress', { node: node?.name, status, detail, ts: Date.now() });
+        };
+
+        const result = await t2.run(resolvedSpecPath, outDir, { provider, dryRun, verbose, onProgress });
+        pRes(res, result.ok ? 200 : 500, {
+          ok:      result.ok,
+          stage:   result.stage,
+          summary: result.summary,
+          t2:      result.t2Result,
+          outputDir: outDir,
+        });
+      } catch(e) {
+        pRes(res, 500, { ok:false, error:e.message });
+      }
+    }).catch(e => pRes(res, 500, { ok:false, error:e.message }));
+    return true;
+  }
+
+  // ── POST /blueprint/compile — Phase 42: compile system blueprint ──────────
+  if (method === 'POST' && url.pathname === '/blueprint/compile') {
+    (async () => {
+      try {
+        const bp = require('../lib/blueprint');
+        bp.init({ bus, jaaDB: jaa });
+        const result = await bp.compile();
+        pRes(res, result.ok ? 200 : 500, result.ok
+          ? { ok:true, sigma:result.sigma, components:result.blueprint.registry.components, gaps:result.gaps.length, uuid:result.blueprint.uuid }
+          : { ok:false, error:result.error });
+      } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
+    })();
+    return true;
+  }
+
+  // ── GET /blueprint — load current blueprint ───────────────────────────────
+  if (method === 'GET' && url.pathname === '/blueprint') {
+    try {
+      const bp = require('../lib/blueprint');
+      const b = bp.load();
+      pRes(res, b ? 200 : 404, b || { ok:false, error:'No blueprint compiled yet. POST /blueprint/compile first.' });
+    } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
+    return true;
+  }
+
+  // ── POST /autonomous/run — Phase 13: run autonomous loop ─────────────────
+  if (method === 'POST' && url.pathname === '/autonomous/run') {
+    bodyJ(req).then(async body => {
+      const { goal, budget, boundary, exit: exitCond, source } = body || {};
+      if (!goal || !budget || !boundary || !exitCond) {
+        pRes(res, 400, { ok:false, error:'goal, budget, boundary, and exit are all required — none inferred' });
+        return;
+      }
+      // RAID gate
+      const approval = raid._approveTool('guardian.autonomous', 'autonomous-loop',
+        { action:'autonomous', proof:body.proof });
+      if (!approval.approved) { pRes(res, 403, { ok:false, denied:true, reason:approval.reason }); return; }
+      try {
+        const al = require('../lib/autonomous-loop');
+        al.init({ bus, jaaDB:jaa, raid });
+        const result = await al.run({ goal, budget, boundary, exit:exitCond, source:source||'api' });
+        pRes(res, result.ok ? 200 : 400, result);
+      } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
+    }).catch(e => pRes(res, 500, { ok:false, error:e.message }));
+    return true;
+  }
+
+  // ── GET /autonomous/status ────────────────────────────────────────────────
+  if (method === 'GET' && url.pathname === '/autonomous/status') {
+    try {
+      const al = require('../lib/autonomous-loop');
+      pRes(res, 200, { ok:true, ...al.status() });
+    } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
+    return true;
+  }
+
+  // ── GET /mcp/status — MCP server status ─────────────────────────────────────
+  if (method === 'GET' && url.pathname === '/mcp/status') {
+    try {
+      const mcp = require('../lib/mcp-server');
+      pRes(res, 200, { ok: true, ...mcp.status() });
+    } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
+    return true;
+  }
+
+  // ── GET /mcp/tools — list MCP tools ─────────────────────────────────────────
+  if (method === 'GET' && url.pathname === '/mcp/tools') {
+    try {
+      const mcp = require('../lib/mcp-server');
+      pRes(res, 200, {
+        ok: true,
+        tools: mcp.TOOLS.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
+        total: mcp.TOOLS.length,
+      });
+    } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
+    return true;
+  }
+
+  // ── POST /copilot/observe — interaction observation from UI ───────────────
+  // UI sends confusion signals (repeated clicks, back-navigation).
+  // Co-pilot records in user model without any user typing.
+  if (method === 'POST' && url.pathname === '/copilot/observe') {
+    bodyJ(req).then(body => {
+      const { type, element, channel } = body || {};
+      try {
+        const um = require('../lib/user-model');
+        if (type === 'confusion' && element && um.recordError) {
+          um.recordError(`ui_confusion:${element}`, channel || 'unknown', 'low');
+        }
+      } catch(_) {}
+      pRes(res, 200, { ok:true });
+    }).catch(() => pRes(res, 200, { ok:true })); // always 200 — observation is best-effort
     return true;
   }
 

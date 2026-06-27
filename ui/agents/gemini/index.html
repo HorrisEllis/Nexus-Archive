@@ -182,7 +182,7 @@ async function refreshSys(){
   document.getElementById('sv-chat').textContent=ch?ch.chatId||'—':'—';
   await Promise.all([
     api(`${GD}/health`).then(r=>{const e=document.getElementById('sv-gd');e.className='sys-val '+(r?.ok?'ok':'off');e.textContent=r?.ok?'✓ :7820':'✗ :7820';}),
-    api(`${CX}/health`).then(r=>{const e=document.getElementById('sv-cx');e.className='sys-val '+(r?.ok?'ok':'off');e.textContent=r?.ok?'✓ :3748':'✗ :3748';})
+    api(`${CX}/health`).then(r=>{const ok=r?.status==='ok'||r?.ok===true;const e=document.getElementById('sv-cx');e.className='sys-val '+(ok?'ok':'off');e.textContent=ok?'✓ :3748':'✗ :3748';})
   ]);
   const ga=gaps?.gaps||[];
   document.getElementById('sv-gaps').textContent=ga.length;

@@ -155,9 +155,24 @@ function _humanPattern(p) {
 function init(cfg = {}) {
   _cfg = cfg;
 
+  // §23.9 — register as a real component. The pattern engine reads
+  // event_log (everything every ledger write reaches) and writes bep_patterns
+  // — it's the consumer end of the whole ledger system. Worth being visible
+  // and discoverable the same way every producer it reads from now is.
+  try {
+    require('../../lib/component-registry').register({
+      id: 'cortex.intelligence', namespace: 'cortex', name: 'Pattern Engine', version: '1.0.0',
+      description: 'Scans event_log/failures/gaps for recurring patterns; crystallises confident ones into bep_patterns.',
+      grammar: ['pattern scan', 'intelligence status'], route: null, comp_type: 'engine',
+      events: { emits: ['pattern.crystallised'], listensTo: [] },
+      registeredBy: 'intelligence',
+    });
+  } catch (_) {}
+
   // Stagger scans — don't all fire at once on boot
   _intervals.push(setInterval(_scanPatterns,   PATTERN_SCAN_MS));
   _intervals.push(setInterval(_scanFailures,   FAILURE_SCAN_MS));
+  _intervals.push(setInterval(_scanRCA,         RCA_SCAN_MS));     // §FIX-24.3: effector — turns patterns into actionable RCA
   _intervals.push(setInterval(_buildReuseIndex,REUSE_INDEX_MS));
   _intervals.push(setInterval(_crossLedger,    CROSS_LEDGER_MS));
   _intervals.forEach(i => i.unref());
@@ -209,6 +224,7 @@ function init(cfg = {}) {
 
     _scanPatterns();
     _scanFailures();
+    setTimeout(_scanRCA, 5000); // first RCA after patterns have a chance to load
     _buildReuseIndex();
   }, 10_000);
 
@@ -336,6 +352,12 @@ async function _scanPatterns() {
         // not on every recurring scan once it's already there.
         if (!wasCrystallised && existing.crystallised) {
           _log('pattern crystallised: ' + _humanPattern(existing));
+          try {
+            require('../../lib/component-ledger').write({
+              system: 'cortex', component: 'cortex.intelligence', action: 'pattern_crystallised',
+              status: 'crystallised', tags: ['recurring'], detail: _humanPattern(existing), causedBy: existing.uuid,
+            });
+          } catch (_) {}
         }
         return existing;
       } else {
@@ -345,6 +367,12 @@ async function _scanPatterns() {
         newPatterns.push(p);
         if (p.crystallised) {
           _log('pattern crystallised: ' + _humanPattern(p));
+          try {
+            require('../../lib/component-ledger').write({
+              system: 'cortex', component: 'cortex.intelligence', action: 'pattern_crystallised',
+              status: 'crystallised', tags: ['new'], detail: _humanPattern(p), causedBy: p.uuid,
+            });
+          } catch (_) {}
         }
         return p;
       }
@@ -457,6 +485,29 @@ async function _scanPatterns() {
     // FIX: advance the high-water mark now that this scan's events have been
     // counted — next scan only considers events newer than this.
     _patternScanCursor = now;
+
+    // §Phase-47 self-wired: crystallised precursor patterns open gaps automatically.
+    // A high-confidence precursor with no open gap → open one so escalation acts on it.
+    const highConfPrecursors = _patternIndex.filter(p =>
+      p.crystallised && p.patternType === 'failure_precursor' &&
+      p.confidence >= 0.8 && (now - (p.lastSeen || 0)) < 300_000
+    );
+    for (const pattern of highConfPrecursors.slice(0, 3)) {
+      try {
+        const sig = pattern.signature || pattern.uuid;
+        const existing = jaaDB.query('gaps',
+          g => g.type === 'pattern_precursor' && g.path === sig && g.status === 'open', 1
+        );
+        if (!existing.length) {
+          jaaDB.insert('gaps', {
+            uuid: uid(), type: 'pattern_precursor', path: sig,
+            body: `Precursor (${Math.round((pattern.confidence||0)*100)}%, ${pattern.count||0}×): ${(pattern.description||sig).slice(0,150)}`,
+            severity: (pattern.confidence||0) >= 0.9 ? 'high' : 'medium',
+            status: 'open', source: MODULE_ID, ts: now,
+          });
+        }
+      } catch(_) {}
+    }
 
     // Log scan summary to event_log
     jaaDB.insert('event_log', {
@@ -888,6 +939,13 @@ function handleRequest(method, pathname, searchParams, body, json) {
     return true;
   }
 
+  // GET /api/intelligence/rca — root cause analysis findings
+  if (method === 'GET' && pathname === '/api/intelligence/rca') {
+    const limit = parseInt(searchParams?.get('limit') || '10', 10);
+    json(200, { ok: true, findings: getRCAFindings(limit) });
+    return true;
+  }
+
   // GET /api/intelligence/status
   if (method === 'GET' && pathname === '/api/intelligence/status') {
     json(200, {
@@ -978,10 +1036,190 @@ function _err(where, e) {
   } catch(_) {}
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// §4 — PATTERN EFFECTOR (RCA Engine)
+// The missing half of the intelligence engine.
+// Pattern crystallization was a sensor with no effector — it saw everything,
+// acted on nothing. This module reads crystallized patterns and produces
+// structured root cause analysis, then writes actionable findings back to
+// the system (as cortex_memory entries and event_log RCA events).
+//
+// §11.1 Every cause is as important as the conditions of its effect.
+// §6.1  Documentation generated from proof — RCA written from pattern evidence.
+// §2.3  All state observable — every RCA is queryable at /api/intelligence/rca
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Known causal chains — maps event type sequences to their root cause.
+// When the pattern engine sees these, it should produce this diagnosis.
+const CAUSAL_CHAINS = [
+  {
+    id: 'semantic-gap-forge-loop',
+    name: 'Semantic gaps routed to forge — infinite retry loop',
+    signature: ['self-heal: forge failed', 'gap detected'],
+    rootCause: 'Self-heal is receiving obligation/assumption/logical gap types from the diagnostic engine. These are semantic gaps (LLM output quality) with no module path — forge cannot patch them. Each forge attempt fails, emits self-heal.forge_failed, healer escalates, diagnostic opens a new gap, loop repeats.',
+    fix: 'Exclude SEMANTIC_GAP_TYPES from self-heal._tick() query. Route semantic gaps to co-pilot/Mistral remediation instead.',
+    severity: 'high',
+    systems: ['cortex', 'guardian'],
+  },
+  {
+    id: 'snapshot-io-block',
+    name: 'Divergence snapshot blocks event loop — cortex appears offline',
+    signature: ['snapshot taken', 'self-heal: forge failed'],
+    rootCause: '_captureJAA() reads up to 10k rows per table (21k+ total) synchronously. Divergence snapshots triggered this full dump, blocking the Node.js event loop for hundreds of milliseconds. The orchestrator watchdog declares cortex offline during the IO. This triggers escalation, which triggers more snapshots.',
+    fix: 'Divergence snapshots skip _captureJAA(). Full JAA dumps for manual/pre_forge only.',
+    severity: 'high',
+    systems: ['cortex'],
+  },
+  {
+    id: 'cortex-timeout-cascade',
+    name: 'postEvent blocking — guardian cortex timeout storm',
+    signature: ['API probe failure', 'ledger: cortex forge failed'],
+    rootCause: 'nexus-connect.postEvent() awaited a 5s cortex HTTP write on every guardian.job.complete, guardian.gaps, etc. When cortex was briefly busy (pattern scan, snapshot, GC), every guardian event stacked for 5s. Cortex appeared offline. Watchdog fired. More escalation. More events. Cascade.',
+    fix: 'postEvent() is now fire-and-forget at 1200ms. Caller never blocks on telemetry.',
+    severity: 'medium',
+    systems: ['guardian', 'cortex'],
+  },
+  {
+    id: 'api-probe-precursor',
+    name: 'API probe failure is symptom, not cause',
+    signature: ['API probe failure'],
+    rootCause: 'heartbeat.api.degraded fires when cortex /api/events or /api/self-heal/status does not respond within 3s. This is a symptom of cortex being offline or IO-blocked, not the cause. The real cause is upstream (forge loop, snapshot IO, or event loop block).',
+    fix: 'Trace what cortex was doing in the 5s before each API probe failure. Check forge_patches table, pre_forge snapshots, and the forge_failed event timeline.',
+    severity: 'info',
+    systems: ['cortex'],
+  },
+];
+
+// RCA scan — runs after pattern scan, produces structured findings
+let _lastRCAScan = 0;
+const RCA_SCAN_MS = 120_000; // every 2 min
+
+async function _scanRCA() {
+  try {
+    const now = Date.now();
+    _lastRCAScan = now;
+
+    // Read crystallized patterns from last hour
+    const recentPatterns = (_patternIndex || [])
+      .filter(p => p.crystallised && (now - (p.ts || 0)) < 3600_000);
+
+    if (!recentPatterns.length) return;
+
+    const activeEventTypes = new Set(
+      recentPatterns.flatMap(p => [p.typeA, p.typeB, p.precursorType].filter(Boolean))
+    );
+
+    const findings = [];
+
+    for (const chain of CAUSAL_CHAINS) {
+      // Check if any signature events are present in recent patterns
+      const matchScore = chain.signature.filter(sig => {
+        // Match against human-readable labels and raw event types
+        return recentPatterns.some(p =>
+          _humanPattern(p).includes(sig) ||
+          [p.typeA, p.typeB, p.precursorType].some(t => t && (
+            t === sig || (EVENT_LABELS[t] || '') === sig
+          ))
+        );
+      }).length;
+
+      if (matchScore >= Math.min(2, chain.signature.length)) {
+        findings.push({
+          ...chain,
+          matchScore,
+          totalSignatureEvents: chain.signature.length,
+          confidence: matchScore / chain.signature.length,
+          detectedAt: now,
+        });
+      }
+    }
+
+    if (!findings.length) return;
+
+    // Write RCA findings to cortex_memory (queryable, persistent)
+    for (const finding of findings) {
+      // Don't re-write a finding we wrote in the last hour
+      const existing = jaaDB.query('cortex_memory',
+        r => r.key === `rca:${finding.id}` && (now - (r.ts || 0)) < 3600_000, 1
+      );
+      if (existing.length) continue;
+
+      jaaDB.insert('cortex_memory', {
+        uuid: uid(),
+        key: `rca:${finding.id}`,
+        type: 'rca_finding',
+        severity: finding.severity,
+        name: finding.name,
+        rootCause: finding.rootCause,
+        fix: finding.fix,
+        systems: finding.systems,
+        confidence: finding.confidence,
+        source: MODULE_ID,
+        ts: now,
+      });
+
+      jaaDB.insert('event_log', {
+        uuid: uid(),
+        type: 'intelligence.rca_finding',
+        payload: {
+          id: finding.id,
+          name: finding.name,
+          severity: finding.severity,
+          confidence: finding.confidence,
+          rootCause: finding.rootCause.slice(0, 200),
+          fix: finding.fix.slice(0, 200),
+        },
+        source: MODULE_ID,
+        causedBy: null,
+        ts: now,
+      });
+
+      _log(`RCA: [${finding.severity}] ${finding.name} (confidence: ${(finding.confidence*100).toFixed(0)}%)`);
+      _log(`  root cause: ${finding.rootCause.slice(0, 120)}`);
+      _log(`  fix: ${finding.fix.slice(0, 120)}`);
+    }
+
+    // Surface findings to co-pilot — write to gaps table so they appear in /gaps
+    const criticalFindings = findings.filter(f => f.severity === 'high' && f.confidence >= 0.5);
+    for (const finding of criticalFindings) {
+      const existing = jaaDB.query('gaps',
+        g => g.type === 'rca_finding' && g.path === finding.id && g.status === 'open', 1
+      );
+      if (!existing.length) {
+        jaaDB.insert('gaps', {
+          uuid: uid(),
+          type: 'rca_finding',
+          path: finding.id,
+          body: `[RCA] ${finding.name}: ${finding.rootCause.slice(0, 200)}`,
+          severity: finding.severity,
+          status: 'open',
+          source: MODULE_ID,
+          ts: now,
+          meta: { fix: finding.fix, systems: finding.systems },
+        });
+      }
+    }
+
+  } catch(e) {
+    _err('_scanRCA', e);
+  }
+}
+
+// Query RCA findings (for /api/intelligence/rca endpoint)
+function getRCAFindings(limit = 10) {
+  try {
+    return jaaDB.query('cortex_memory',
+      r => r.type === 'rca_finding',
+      limit * 3
+    ).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, limit);
+  } catch(_) { return []; }
+}
+
 module.exports = {
   init, stop,
   getContext,
   handleRequest,
+  getRCAFindings,
   getPatterns:  () => _patternIndex,
   getFailures:  () => _failureIndex,
   getReuseIndex:() => _reuseIndex,

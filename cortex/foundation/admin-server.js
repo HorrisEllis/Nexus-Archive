@@ -9,7 +9,7 @@
 // No kernel bus bridging in v5.0. JAA is the source of truth.
 
 const http   = require('http');
-const { jaaDB, uid } = require('../memory/jaa-db');
+const { jaaDB, uid, ALL_TABLES } = require('../memory/jaa-db');
 const { core }       = require('./cobalt-core');
 const { effective }  = require('../../lib/meta/confidence.js');
 const versionium     = (() => { try { return require('../versionium'); } catch(_) { return null; } })();
@@ -828,6 +828,57 @@ class AdminServer {
           this._sseClients.add(res);
           req.on('close', () => this._sseClients.delete(res));
           return; // keep open
+        }
+
+        // ── Generic JAA table access (Phase 23.13) ────────────────────────────
+        // Already assumed to exist by guardian/userscript-claude.js and
+        // userscript-chatgpt.js (GET, for the NEXUS tab's table viewer) and
+        // ui/agents/chatgpt/index.html's manual "create contract" button
+        // (POST to reflection_contracts) — none of them had a real backend.
+        // GET was a 404 every time the userscript's NEXUS tab tried to show
+        // table contents; POST silently failed every time someone clicked
+        // "create contract" in the console. Built now because the
+        // diagnostic-contracts work right after this needs the same
+        // generic read/write surface, and three already-broken call sites
+        // is reason enough on its own.
+        //
+        // §WHITELIST — table name comes straight off the URL from a client.
+        // Validated against jaa-db's own ALL_TABLES, the same list the
+        // database itself uses internally, not a separate hand-maintained
+        // copy that could drift from it.
+        case url.pathname.startsWith('/api/jaa/') && req.method === 'GET': {
+          const table = url.pathname.slice('/api/jaa/'.length).split('/')[0];
+          if (!ALL_TABLES.includes(table)) {
+            this._json(res, 404, { ok: false, error: `unknown table: ${table}` });
+            break;
+          }
+          try {
+            const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 200);
+            const rows = jaaDB.query(table, () => true, limit);
+            this._json(res, 200, { ok: true, table, rows, count: rows.length });
+          } catch (e) {
+            this._json(res, 500, { ok: false, error: e.message });
+          }
+          break;
+        }
+        case url.pathname.startsWith('/api/jaa/') && req.method === 'POST': {
+          const table = url.pathname.slice('/api/jaa/'.length).split('/')[0];
+          if (!ALL_TABLES.includes(table)) {
+            this._json(res, 404, { ok: false, error: `unknown table: ${table}` });
+            break;
+          }
+          this._readBody(req, (body) => {
+            let parsed;
+            try { parsed = JSON.parse(body || '{}'); } catch (_) { return this._json(res, 400, { ok: false, error: 'bad json' }); }
+            try {
+              const row = { uuid: parsed.uuid || uid(), ...parsed, ts: parsed.ts || Date.now() };
+              jaaDB.insert(table, row);
+              this._json(res, 200, { ok: true, table, row });
+            } catch (e) {
+              this._json(res, 500, { ok: false, error: e.message });
+            }
+          });
+          break;
         }
 
         // ── 404 ───────────────────────────────────────────────────────────

@@ -108,6 +108,8 @@ button.primary { background:var(--signal); border-color:var(--signal); color:#00
   <button onclick="doCheck()">check</button>
   <button class="primary" onclick="doCompile()">compile ⌘↵</button>
   <button onclick="doSnapshot()">snapshot</button>
+  <button class="primary" onclick="doHotLoad()" title="Phase 28: hot-patch the running module without restart">⚡ hot-load</button>
+  <button onclick="doHotLoad(true)" title="Spec-first: send to FORGE then hot-load" style="font-size:10px">⬡ spec-load</button>
   <span class="dot" id="conn-dot" title="bus connection"></span>
 </div>
 
@@ -199,6 +201,7 @@ button.primary { background:var(--signal); border-color:var(--signal); color:#00
 'use strict';
 // ════════════════════════════════════════════════════════════════════════════
 // EMERGE IDE — client runtime v2
+const GUARDIAN = window.NEXUS_PORTS ? `http://127.0.0.1:${window.NEXUS_PORTS.guardian}` : "http://127.0.0.1:7820";
 // ════════════════════════════════════════════════════════════════════════════
 
 const S = {
@@ -341,6 +344,68 @@ function doSnapshot() {
   post('/snapshot', {}).catch(() => log('snapshot: server offline','e'));
   log('snapshot taken', 's');
 }
+
+// ── Phase 28: Hot-load — Build From Inside ────────────────────────────────────
+// Mode 1 (default): hot-patch the running module directly via Guardian.
+//   Snapshot before integrate. Rollback if σ > 0.70 during monitor window.
+// Mode 2 (specFirst): route through FORGE first, then hot-load the patch.
+// Keyboard shortcut: Ctrl+Shift+S = hot-load, Ctrl+Shift+F = spec-first.
+async function doHotLoad(specFirst = false) {
+  const src      = document.getElementById('editor').value.trim();
+  const filename = S.filename || '';
+  if (!src) { log('editor is empty', 'e'); return; }
+  if (!filename) { log('open a file first — hot-load needs the module path', 'e'); return; }
+
+  // Mode 2: spec-first — route through FORGE for AI-generated patch
+  if (specFirst) {
+    log('spec-first: sending to FORGE via co-pilot…', 's');
+    try {
+      const r = await post(`${GUARDIAN}/copilot/prompt`, {
+        prompt: 'FORGE: patch this module. File: ' + filename + '\\n\\nSOURCE:\\n' + src.slice(0,3000) + '\\n\\nReturn ONLY the corrected source code.',
+        channel: 'emerge-ide', channelName: 'Emerge IDE',
+      });
+      if (r?.text && r.text.length > 50) {
+        // Strip markdown fences if present
+        const patched = r.text.replace(/^```[a-z]*\n?/m, '').replace(/```\s*$/m, '').trim();
+        document.getElementById('editor').value = patched;
+        log(`FORGE patch applied (${patched.split('\n').length} lines) — review then hot-load to deploy`, 's');
+      } else {
+        log('FORGE: no patch generated', 'w');
+      }
+    } catch(e) { log('FORGE unreachable: ' + e.message, 'e'); }
+    return;
+  }
+
+  // Mode 1: direct hot-load
+  log(`hot-loading ${filename}…`, 's');
+  try {
+    const r = await post(`${GUARDIAN}/hot-load`, {
+      modulePath: filename,
+      src,
+      monitorMs: 60000,
+      proof: { source: 'emerge-ide', session: 'user' },
+    });
+    if (r?.ok) {
+      log(`⚡ hot-load: ${r.loadId?.slice(0,8)} — monitoring 60s (σ-gated rollback)`, 's');
+      // Poll status
+      setTimeout(async () => {
+        try {
+          const status = await fetch(`${GUARDIAN}/hot-load/status`).then(r=>r.json());
+          const load = status.loads?.find(l => l.loadId === r.loadId);
+          if (load) log(`hot-load ${load.loadId?.slice(0,8)}: ${load.state}`, load.state==='idle'?'s':load.state==='rolled_back'?'e':'w');
+        } catch(_) {}
+      }, 65000);
+    } else {
+      log(`hot-load failed: ${r?.error || r?.reason || 'unknown'}`, 'e');
+    }
+  } catch(e) { log('hot-load: Guardian unreachable: ' + e.message, 'e'); }
+}
+
+// Keyboard shortcuts for hot-load
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'S') { e.preventDefault(); doHotLoad(false); }
+  if (e.ctrlKey && e.shiftKey && e.key === 'F') { e.preventDefault(); doHotLoad(true); }
+});
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 function chatKey(e) {

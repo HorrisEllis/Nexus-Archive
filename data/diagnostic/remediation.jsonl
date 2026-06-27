@@ -1,0 +1,10 @@
+{"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1782519644526}
+{"action":"guardian_dispatched","gapUuid":"fdfba6cf-412e-43e4-bd90-0423cbc6d9b1","gapType":"rca_finding","agent":"chatgpt","note":"RAID→Guardian dispatch","ts":1782519644632}
+{"action":"guardian_dispatched","gapUuid":"80d6eb55-0b7c-4be2-9601-e08f32d20c14","gapType":"rca_finding","agent":"claude","note":"RAID→Guardian dispatch","ts":1782519644668}
+{"action":"gap_escalated","type":"system_offline","system":"forge-shell","port":9000,"severity":"high","offlineMs":30185,"fix":"Start forge-shell: node forge-shell/boot.js or node service/forge-shell-service.js","body":"forge-shell offline for 30s — :9000 not responding","gapUuid":"2deab46a-99be-42ad-998e-1b9ec547a249","ts":1782519674523}
+{"action":"guardian_dispatched","gapUuid":"65bbb744-3c09-4d1b-a9fe-c521e6bd4435","gapType":"pattern_precursor","agent":"chatgpt","note":"RAID→Guardian dispatch","ts":1782519704528}
+{"action":"guardian_dispatched","gapUuid":"3f193dad-ac81-4a7f-a885-db5c39850781","gapType":"pattern_precursor","agent":"claude","note":"RAID→Guardian dispatch","ts":1782519704576}
+{"action":"guardian_dispatched","gapUuid":"118dbea7-bcd7-46ea-9809-8dd08462d5eb","gapType":"pattern_precursor","agent":"chatgpt","note":"RAID→Guardian dispatch","ts":1782519704617}
+{"action":"guardian_dispatched","gapUuid":"fdfba6cf-412e-43e4-bd90-0423cbc6d9b1","gapType":"rca_finding","agent":"chatgpt","note":"RAID→Guardian dispatch","ts":1782519944709}
+{"action":"guardian_dispatched","gapUuid":"80d6eb55-0b7c-4be2-9601-e08f32d20c14","gapType":"rca_finding","agent":"claude","note":"RAID→Guardian dispatch","ts":1782519944742}
+{"action":"guardian_dispatched","gapUuid":"65bbb744-3c09-4d1b-a9fe-c521e6bd4435","gapType":"pattern_precursor","agent":"chatgpt","note":"RAID→Guardian dispatch","ts":1782520004532}

@@ -58,6 +58,7 @@ const E = {
   CORTEX:     'cortex.ready',
   T0_DONE:    'compiler.t0.done',
   T1_DONE:    'compiler.t1.done',
+  T1_5_DONE:  'compiler.t1_5.done',  // Phase 40 T1.5: descriptor projections
   COMPLETE:   'compiler.complete',
   ERROR:      'compiler.error',
   SKIPPED:    'compiler.skipped',

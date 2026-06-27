@@ -145,6 +145,16 @@ const TABLE_TIERS = {
   reflection_contracts: 'long', // queued until Mistral resolves — permanent record
   closure_attempts:    'long',  // every closure attempt — never deleted, never silent
   gap_predicates:      'long',  // predicate library — grows as Qwen learns new types
+  // Phase 23.9 — per-component, per-system ledger (lib/component-ledger.js).
+  // Physically partitioned on disk by day/session; this is the JAA mirror
+  // for cross-partition querying. Supersedes Phase 23.8's engine_ledger
+  // (RAID/reflection only, no physical partitioning) — same idea, generalized
+  // to every component instead of two engines.
+  component_ledger:   'long',
+  // Phase 23.13 — diagnose_and_repair, formalized as a real tracked
+  // contract instead of a bare job nobody could see the lifecycle of.
+  // queued -> dispatched -> diagnosed -> closed | no_action_taken.
+  diagnostic_contracts: 'long',
 };
 
 // ── All declared tables ───────────────────────────────────────────────────────
@@ -155,13 +165,29 @@ class JaaDB {
   constructor({ dir = './data' } = {}) {
     this._dir    = dir;
     this._tables = {};
+    // §23.18 — id index per table. update()/evict() were doing
+    // this._tables[table].findIndex(r => r.uuid === id) — an O(n) linear
+    // scan, on EVERY update, against a table that only ever grows. With
+    // the gap-flood volume this session (event_log alone was 3000+ rows
+    // many turns ago, before things got dramatically worse), every single
+    // status transition, recurrence-count increment, and tension
+    // escalation was scanning further into an ever-growing array. This is
+    // the actual mechanical reason cortex's /api/event handler started
+    // timing out guardian's postEvent calls at 5000ms — not a network
+    // issue, a data-structure one. It's also very likely why "JAA database
+    // open + FileStore init" took 6+ seconds on boot several turns ago and
+    // was never explained at the time: boot replay applies mutation
+    // records with the identical findIndex pattern, against an array that
+    // grows with every line replayed — O(n²) over the whole replay, not
+    // O(n). Same fix, same map, used in three places.
+    this._byId   = {};
     this._rowId  = 1;
     this._ready  = false;
     this._fds    = {};
     this._bootTs = Date.now();
     this._pid    = process.pid;
 
-    ALL_TABLES.forEach(t => { this._tables[t] = []; });
+    ALL_TABLES.forEach(t => { this._tables[t] = []; this._byId[t] = new Map(); });
   }
 
   // ── open — replay persisted data, open append streams ─────────────────────
@@ -193,15 +219,16 @@ class JaaDB {
             // Tombstone { _mutation:true, _evicted:true } must PATCH the row
             // Checking _evicted first would discard tombstones — real bug fixed here
             if (row._mutation) {
-              const idx = this._tables[table].findIndex(r => r.uuid === row.uuid);
-              if (idx >= 0) {
-                this._tables[table][idx] = { ...this._tables[table][idx], ...row };
+              const existing = this._byId[table].get(row.uuid);
+              if (existing) {
+                Object.assign(existing, row);
               }
               continue;
             }
             // Skip non-mutation rows that are themselves eviction records
             if (row._evicted) continue;
             this._tables[table].push(row);
+            if (row.uuid) this._byId[table].set(row.uuid, row);
             if (row._rowId && row._rowId >= this._rowId) {
               this._rowId = row._rowId + 1;
             }
@@ -379,10 +406,10 @@ class JaaDB {
   // Same shape as the internal tombstone so replay-on-boot handles it identically.
   evict(table, id, reason = 'manual') {
     this._requireTable(table);
-    const idx = this._tables[table].findIndex(r => r.uuid === id && !r._evicted);
-    if (idx === -1) return false;
+    const existing = this._byId[table].get(id);
+    if (!existing || existing._evicted) return false;
     const now = Date.now();
-    this._tables[table][idx] = { ...this._tables[table][idx], _evicted: true, _evictedAt: now, _evictReason: reason };
+    Object.assign(existing, { _evicted: true, _evictedAt: now, _evictReason: reason });
     this._persist(table, { _mutation: true, uuid: id, _evicted: true, _evictedAt: now, _evictReason: reason });
     return true;
   }
@@ -396,6 +423,7 @@ class JaaDB {
       _ts:    Date.now(),
     };
     this._tables[table].push(row);
+    if (row.uuid) this._byId[table].set(row.uuid, row);
     this._persist(table, row);
 
     // Vector memory: fire-and-forget embed (non-blocking, graceful)
@@ -410,22 +438,18 @@ class JaaDB {
   // ── update ────────────────────────────────────────────────────────────────
   update(table, id, patch) {
     this._requireTable(table);
-    const idx = this._tables[table].findIndex(r => r.uuid === id);
-    if (idx === -1) return null;
-    const updated = {
-      ...this._tables[table][idx],
-      ...patch,
-      _updatedAt: Date.now(),
-    };
-    this._tables[table][idx] = updated;
-    this._persist(table, { _mutation: true, uuid: id, ...patch, _updatedAt: updated._updatedAt });
-    return updated;
+    const existing = this._byId[table].get(id);
+    if (!existing) return null;
+    Object.assign(existing, patch, { _updatedAt: Date.now() });
+    this._persist(table, { _mutation: true, uuid: id, ...patch, _updatedAt: existing._updatedAt });
+    return existing;
   }
 
   // ── get ───────────────────────────────────────────────────────────────────
   get(table, id) {
     this._requireTable(table);
-    return this._tables[table].find(r => r.uuid === id && !r._evicted) || null;
+    const row = this._byId[table].get(id);
+    return (row && !row._evicted) ? row : null;
   }
 
   // ── query ─────────────────────────────────────────────────────────────────
@@ -494,6 +518,7 @@ class JaaDB {
     if (!this._tables[table]) {
       console.warn(`[JaaDB] warning: undeclared table '${table}' — provisioning`);
       this._tables[table] = [];
+      this._byId[table] = new Map();  // §FIX: provision _byId alongside _tables
       if (this._ready) {
         this._fds[table] = fs.createWriteStream(this._tableFile(table), { flags: 'a' });
         this._fds[table].on('error', (e) => { if (e.code !== 'ENOENT') console.error(`[JaaDB] stream error on '${table}':`, e.code); });

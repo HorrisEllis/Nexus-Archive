@@ -19,6 +19,18 @@ function init(cfg = {}) {
   _cfg      = cfg;
   _interval = setInterval(_tick, _cfg.pollMs ?? 5000);
   _interval.unref();
+  // §23.9 — register as a real component (was an unregistered internal organ
+  // before this — invisible to the CLI grammar, topology view, and the
+  // registration-time ledger entry every other component gets for free).
+  try {
+    require('../../lib/component-registry').register({
+      id: 'cortex.healer', namespace: 'cortex', name: 'Healer', version: '1.0.0',
+      description: 'Reads pending gaps, prescribes a fix strategy, applies it or escalates to self-heal/forge.',
+      grammar: ['healer status', 'healer tick'], route: null, comp_type: 'engine',
+      events: { emits: ['healer.resolved', 'healer.escalated'], listensTo: [] },
+      registeredBy: MODULE_ID,
+    });
+  } catch (_) {}
 }
 
 function stop() {
@@ -123,6 +135,13 @@ async function _tick() {
           causedBy: gap.uuid,
           ts:       Date.now(),
         });
+        try {
+          require('../../lib/component-ledger').write({
+            system: 'cortex', component: 'cortex.healer',
+            action: fix.automated ? 'resolved' : 'escalated', status: fix.automated ? 'resolved' : 'needs_manual',
+            tags: [gap.type, fix.strategy].filter(Boolean), detail: fix.action, causedBy: gap.uuid,
+          });
+        } catch (_) {}
 
       } catch (err) {
         jaaDB.update('gaps', gap.uuid, { status: 'pending' }); // return to queue

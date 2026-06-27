@@ -125,14 +125,15 @@ function _req(system, method, path, body, timeout = 5000) {
 /** POST event — orchestrator first (source of truth), cortex second */
 async function postEvent(type, payload, opts = {}) {
   const { causedBy = null, source = process.env.NEXUS_SYSTEM_ID || 'unknown' } = opts;
-  // Orchestrator is source of truth — always first
-  _req('orchestrator', 'POST', '/api/ledger', {
-    system: source, type, payload,
-  }).catch(() => {});
-  // Cortex event_log — detailed record
-  const r = await _req('cortex', 'POST', '/api/event', { type, payload, causedBy, source, ts: Date.now() });
-  if (!r.ok) console.warn(`[nexus-connect] postEvent failed: ${r.error || r.status} type=${type}`);
-  return r;
+  // §FIX-24.1: postEvent is now fully fire-and-forget.
+  // The previous implementation awaited the cortex write (5s timeout by default).
+  // When cortex is briefly offline (pattern crystallization, snapshot, GC), every
+  // guardian.job.complete/gaps/dispatched call blocked for 5s, cascading into
+  // the "cortex timeout" storm visible in the logs. These are telemetry writes —
+  // they MUST NOT block the caller. Use 1200ms timeout. Never await. Never throw.
+  _req('orchestrator', 'POST', '/api/ledger', { system: source, type, payload }, 1200).catch(() => {});
+  _req('cortex', 'POST', '/api/event', { type, payload, causedBy, source, ts: Date.now() }, 1200).catch(() => {});
+  return { ok: true, async: true }; // fire-and-forget — caller must not rely on this result
 }
 
 /** POST to orchestrator ledger ring */

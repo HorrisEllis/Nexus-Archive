@@ -190,7 +190,7 @@ const _CLUSTERS_FILE = path.join(__dirname, '../../../data/cortex/ledger/raid-cl
 // Baseline — always present, never modified at runtime
 const CLUSTERS_BASELINE = {
   code:       /\b(code|function|class|module|implement|build|write|create|fix|refactor|typescript|javascript|python|rust|node|patch)\b/i,
-  spec:       /\b(spec|design|architecture|system|plan|structure|schema|contract|api|blueprint)\b/i,
+  spec:       /\b(spec|design|architecture|plan|structure|schema|contract|api|blueprint)\b/i,
   data:       /\b(data|json|csv|sql|database|query|table|migrate|transform|parse)\b/i,
   diagnostic: /\b(error|fail|broken|debug|trace|diagnose|crash|exception|issue|bug|stack)\b/i,
   analysis:   /\b(analyze|analyse|explain|understand|review|audit|check|evaluate|compare|summarize)\b/i,
@@ -516,7 +516,8 @@ function _decide(call, healthSnap, weights) {
     // Skip agents with very poor track record (but not Claude — it's the reserve)
     if (agent !== 'claude' && callCount >= 5 && successRate < 0.2) continue;
 
-    return { agent, reason: 'cluster_chain:' + cluster, cluster };
+    const lawIPrefix = agent === 'ollama' ? 'LAW_I:' : '';
+    return { agent, reason: `${lawIPrefix}cluster_chain:${cluster}`, cluster };
   }
 
   // Absolute fallback: claude (always reserve)
@@ -688,10 +689,24 @@ async function _tick() {
       const d = _decide(call, snap, _weights);
       jaaDB.update('agent_calls', call.uuid, { status:'dispatched', routedTo:d.agent, routeReason:d.reason, routeCluster:d.cluster, routedAt:Date.now() });
       jaaDB.insert('event_log', { uuid:uid(), type:'raid.dispatched', payload:JSON.stringify({callUuid:call.uuid,agent:d.agent,reason:d.reason,cluster:d.cluster}), source:MODULE_ID, causedBy:call.uuid, ts:Date.now() });
+      // §23.8 — explicit ledger entry, not just a buried event_log row.
+      try {
+        require('../../../lib/component-ledger').write({
+          system: 'raid', component: 'raid.router', action: 'route_decided', status: 'dispatched',
+          tags: [d.cluster, d.agent], detail: d.reason, causedBy: call.uuid,
+        });
+      } catch (_) {}
       console.log(`[raid] dispatch → ${d.agent} (cluster:${d.cluster}, ${d.reason}) — call ${call.uuid.slice(0,8)}`);
       _dispatch(call, d).catch(err=>{
         jaaDB.update('agent_calls',call.uuid,{status:'failed',error:err.message});
         jaaDB.insert('failures',{uuid:uid(),source:MODULE_ID,error:err.message,stack:err.stack,causedBy:call.uuid,ts:Date.now()});
+        // §23.8 — explicit, loud: a dispatch RAID just decided on actually failed.
+        try {
+          require('../../../lib/component-ledger').write({
+            system: 'raid', component: 'raid.router', action: 'route_decided', status: 'failed',
+            tags: [d.cluster, d.agent], detail: err.message, causedBy: call.uuid,
+          });
+        } catch (_) {}
         _failures.push({uuid:call.uuid,cluster:d.cluster,agent:d.agent,error:err.message});
         _updateW(d.cluster,d.agent,false,0);
       });

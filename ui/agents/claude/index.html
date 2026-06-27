@@ -213,7 +213,7 @@ async function refresh(){
   sv(5,hb!==null?(hb<15?'♥ '+hb+'s':'stale '+hb+'s'):'—',hb!==null&&hb<15);
   await Promise.all([
     api(`${GD}/health`).then(r=>sv(0,r?.ok?'✓':' ✗',r?.ok)),
-    api(`${CX}/health`).then(r=>sv(1,r?.ok?'✓ :3748':'✗ :3748',r?.ok)),
+    api(`${CX}/health`).then(r=>{const ok=r?.status==='ok'||r?.ok===true;sv(1,ok?'✓ :3748':'✗ :3748',ok);}),
     api(`${ORCH}/health`).then(r=>sv(2,r?.ok?'✓ :9000':'✗ :9000',r?.ok)),
   ]);
   const ga=gaps?.gaps||[];sv(6,ga.length,ga.length===0);
@@ -264,6 +264,7 @@ async function buildCtx(types){
   if(types.includes('components')){const r=await api(`${ORCH}/api/components?limit=10`);const c=r?.components||[];if(c.length)parts.push('[COMPONENTS]\n'+c.map(x=>x.id||x.name||'?').join(', '));}
   return parts.join('\n\n');
 }
+async function pollJob(jobId,ms=120000){const t0=Date.now();while(Date.now()-t0<ms){await new Promise(r=>setTimeout(r,1500));const d=await api(`${GD}/jobs?limit=80`);const j=(d?.jobs||[]).find(x=>x.id===jobId);if(j&&(j.status==='complete'||j.status==='done'))return j;if(j&&j.status==='error')return j;}return null;}
 async function send(){
   const prompt=document.getElementById('pi').value.trim();if(!prompt||_streaming)return;
   const types=[...document.querySelectorAll('.cc.on')].map(c=>c.dataset.c);
@@ -272,12 +273,26 @@ async function send(){
   const msgEl=addStream('assistant');
   _streaming=true;
   const t0=Date.now();
-  // Route through co-pilot (which handles NCP dispatch to Claude)
   try{
-    const r=await post(`${ORCH}/api/guardian/copilot/prompt`,{prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,contextOpts:{intent:prompt}});
-    finalStream(msgEl,r?.text||'(no response from co-pilot)');
-    document.getElementById('ss-tok').textContent=r?.modelUsed||'co-pilot';
-    document.getElementById('ss-st').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
+    const prov=await api(`${GD}/providers`);
+    const tabLive=!!prov?.channels?.[PROVIDER];
+    if(tabLive){
+      const fullPrompt=ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt;
+      const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:fullPrompt,meta:{source:'claude-console',chatMode:true}});
+      if(r?.jobId){
+        document.getElementById('ss-tok').textContent='→ Claude tab';
+        const job=await pollJob(r.jobId);
+        const text=job?.response||job?.responseText||job?.result||'(no response — check Claude tab)';
+        finalStream(msgEl,text);
+        document.getElementById('ss-tok').textContent='Claude NCP';
+        document.getElementById('ss-st').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
+      } else {finalStream(msgEl,'✗ dispatch failed: '+(r?.error||'unknown'));}
+    } else {
+      const r=await post(`${ORCH}/api/guardian/copilot/prompt`,{prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,contextOpts:{intent:prompt}});
+      finalStream(msgEl,r?.text||'(no Claude tab — start userscript. Co-pilot fallback: Ollama offline)');
+      document.getElementById('ss-tok').textContent=r?.modelUsed?`co-pilot · ${r.modelUsed}`:'co-pilot (no Claude tab)';
+      document.getElementById('ss-st').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
+    }
   }catch(e){finalStream(msgEl,'✗ '+e.message);}
   _streaming=false;
 }

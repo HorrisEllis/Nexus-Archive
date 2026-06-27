@@ -40,14 +40,6 @@ const TAB_KEY = 'guardian_claimed_tab_claude';
 // ── Runtime state ─────────────────────────────────────────────────────────────
 let _es = null, _hb = null, _reconnectTimer = null;
 let connState = 'disconnected';
-// §23.12 — incremented every time connect() starts a new attempt. Every
-// callback below checks its own captured generation against this before
-// touching connState — a stale connection's onerror/onabort/ontimeout
-// firing after a newer connect() has already succeeded must not be allowed
-// to overwrite state the newer connection already set. This was the
-// client-side half of the "flickering" bug — the server-side half was the
-// identical shape of race in lib/ncp.js's close handler.
-let _connGen = 0;
 let currentJobId = null, jobActive = false;
 let _watchTimer = null, _watchObs = null, _watchStart = 0;
 let panelOpen = false, activeTab = 'log';
@@ -358,40 +350,16 @@ async function pullCortexContext(prompt) {
 
 // ── NCP post helper ───────────────────────────────────────────────────────────
 async function ncpPost(url, data) {
-  // GM_xmlhttpRequest — bypasses Mixed Content block from https://claude.ai
   try {
-    const r = await gmFetch(url, {
-      method: 'POST',
+    const res = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
       body: JSON.stringify({ ...data, chatUrl: location.href, account: getAccount() }),
     });
-    return r.ok ? r.json() : null;
+    return res.ok ? await res.json() : null;
   } catch(_) { return null; }
 }
 
 function send(obj) { ncpPost(NCP_RESULT, obj).catch(()=>{}); }
-
-// ── GM fetch — bypasses Mixed Content for all HTTP calls from https:// pages ──
-// Every call to 127.0.0.1 must go through GM_xmlhttpRequest.
-// Regular fetch() is blocked by Chrome from https://claude.ai → http://127.0.0.1
-function gmFetch(url, opts = {}) {
-  return new Promise((resolve) => {
-    GM_xmlhttpRequest({
-      method:  opts.method || 'GET',
-      url,
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-      data:    opts.body || undefined,
-      timeout: opts.timeout || 8000,
-      onload:  (r) => {
-        try { resolve({ ok: r.status < 400, status: r.status, json: () => JSON.parse(r.responseText) }); }
-        catch { resolve({ ok: false, status: r.status, json: () => ({}) }); }
-      },
-      onerror:   () => resolve({ ok: false, status: 0, json: () => ({}) }),
-      ontimeout: () => resolve({ ok: false, status: 0, json: () => ({}) }),
-    });
-  });
-}
-function gmGet(url)       { return gmFetch(url); }
-function gmPost(url, body) { return gmFetch(url, { method:'POST', body: typeof body === 'string' ? body : JSON.stringify(body) }); }
 function sendLedger(category, msg, meta={}) {
   send({ type:'GUARDIAN_LEDGER_EVENT', level:category, category, msg, meta,
     chatUrl:location.href, account:getAccount(), requestId:currentJobId });
@@ -471,62 +439,6 @@ async function scanArtifacts(jobId) {
     if (panelOpen && activeTab==='arts') renderArts();
   }
 }
-
-// §23.10 — captures Claude's extended-thinking block, when present, and feeds
-// it into the ledger the same way artifacts and gaps already are. James:
-// "I want the system to learn how you think, and improve itself." Reasoning
-// content lives in the DOM whether the expandable section is open or closed
-// (it's a CSS visibility toggle, not a conditional render) so this reads
-// .innerText directly rather than needing to click anything open first.
-//
-// §HONEST-NOTE: claude.ai's thinking-block markup is not something this
-// codebase has verified against the live DOM — these are best-guess
-// selectors based on how Anthropic's UI has named similar expandable
-// reasoning sections. If none match, this silently captures nothing (no
-// false data, per §1.1) and logs a one-time hint to check selectors against
-// the actual page. Confirm/adjust THINKING_SELECTORS by inspecting the live
-// page if this never fires.
-const THINKING_SELECTORS = [
-  '[data-testid="thinking"]', '[data-testid*="thinking"]',
-  '.thinking-block', '[class*="thinking"]',
-  'details:has(summary)', // generic expandable fallback — filtered by summary text below
-];
-let _thinkingSelectorWarned = false;
-const _seenThinkingHashes = new Set();
-
-async function scanThinking(jobId) {
-  let nodes = [];
-  for (const sel of THINKING_SELECTORS) {
-    try { nodes = [...document.querySelectorAll(sel)]; if (nodes.length) break; } catch (_) {}
-  }
-  // Generic <details> fallback — only keep ones whose <summary> mentions thinking/reasoning
-  if (nodes.length && nodes[0].tagName === 'DETAILS') {
-    nodes = nodes.filter(d => /think|reason/i.test(d.querySelector('summary')?.textContent || ''));
-  }
-  if (!nodes.length) {
-    if (!_thinkingSelectorWarned) {
-      _thinkingSelectorWarned = true;
-      _log('warn', 'No thinking block found', 'THINKING_SELECTORS may need updating against the live DOM — see scanThinking() comment');
-    }
-    return;
-  }
-  for (const node of nodes) {
-    const content = (node.innerText || node.textContent || '').trim();
-    if (content.length < 30) continue;
-    const hash = await sha256(content);
-    if (_seenThinkingHashes.has(hash)) continue;
-    _seenThinkingHashes.add(hash);
-    send({ type:'GUARDIAN_THINKING_CAPTURED', jobId, content: content.slice(0, 8000), hash,
-      chatUrl: location.href, account: getAccount() });
-    _toCortex('guardian.thinking.captured', { jobId, hash, chars: content.length });
-    _log('ok', `Thinking captured`, `${content.length}ch`);
-    thinkingStore.push({ jobId, hash, content: content.slice(0,2000), ts: Date.now() });
-    if (thinkingStore.length > 100) thinkingStore.shift();
-    if (panelOpen && activeTab==='think') renderThinking();
-  }
-}
-let thinkingStore = [];
-
 
 // ── DOM observation ───────────────────────────────────────────────────────────
 function findResponseEl() {
@@ -670,7 +582,6 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
 
   const usage = recordUsage(jobId, text, ms);
   await scanArtifacts(jobId);
-  await scanThinking(jobId);
 
   // Update IDB request status
   await dbPut('requests', { uuid:jobId, status:'fulfilled', completedAt:Date.now(), sessionId:await getSessionId() });
@@ -763,123 +674,44 @@ async function pollSystemStatus() {
 }
 setInterval(pollSystemStatus, 15000);
 
-// ── NCP connection ─────────────────────────────────────────────────────────
-// Uses GM_xmlhttpRequest for SSE — required on https:// pages (claude.ai)
-// because Chrome blocks EventSource from https:// → http://127.0.0.1 (Mixed Content).
-// GM_xmlhttpRequest bypasses this restriction via the Tampermonkey extension context.
+// ── NCP connection ────────────────────────────────────────────────────────────
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
-  if (_es && _es.abort) { try { _es.abort(); } catch(_) {} }
-  const myGen = ++_connGen; // §23.12 — this attempt's identity
-  const url = `${NCP_CHANNEL}?tabId=${MY_TAB}&provider=${PROVIDER}`;
-  _log('info', 'NCP connecting…', url);
+  if (_es) { try { _es.close(); } catch(_) {} }
+  const params = `tabId=${MY_TAB}&provider=${PROVIDER}`;
+  _log('info', 'NCP connecting…', `${NCP_CHANNEL}?${params}`);
   connState = 'connecting'; setConnState('connecting');
-
-  let _buf = '';
-  let _opened = false;
-
-  // §23.16 — WATCHDOG. connect() previously relied entirely on onerror/
-  // onabort/onprogress firing, with `timeout: 0` (explicitly no timeout,
-  // since SSE is meant to be long-held). If GM_xmlhttpRequest ever fails
-  // to fire ANY callback at all — a silent CORS rejection some extension
-  // versions swallow, a proxy/firewall edge case, whatever the specific
-  // cause — there was no mechanism to ever notice or recover. The pill
-  // would sit on "CONNECTING" forever. This doesn't try to identify every
-  // possible silent-failure mode; it just guarantees forward progress: if
-  // this exact attempt hasn't opened within 10s, force a reconnect.
-  setTimeout(() => {
-    if (myGen !== _connGen) return; // superseded by a later attempt already
-    if (_opened) return;            // this attempt succeeded, nothing to do
-    _log('warn', 'NCP watchdog — no response in 10s, forcing reconnect', url);
-    try { _es.abort(); } catch(_) {}
+  _es = new EventSource(`${NCP_CHANNEL}?${params}`);
+  _es.onmessage = e => {
+    try {
+      _handleServerMessage(JSON.parse(e.data));
+      // ♥ pulse on every NCP emit
+      const h = document.getElementById('__g10heart__');
+      if (h) {
+        h.style.color = '#ef4444';
+        h.style.transform = 'scale(1.4)';
+        h.style.transition = 'none';
+        setTimeout(() => { h.style.color = 'rgba(239,68,68,.25)'; h.style.transform = 'scale(1)'; h.style.transition = 'all .4s ease'; }, 150);
+      }
+    } catch(err) { _log('err','NCP parse',err.message); }
+  };
+  _es.onopen = () => {
+    connState = 'ready'; setConnState('ready');
+    _log('ok', `NCP connected · ${PROVIDER}`, NCP_CHANNEL);
+    ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
+    if (_hb) clearInterval(_hb);
+    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
+    autoClaimIfFree();
+    replayPending();
+    setTimeout(() => sendDOMMap(), 2000);
+    pollSystemStatus();
+  };
+  _es.onerror = () => {
     connState = 'disconnected'; setConnState('disconnected');
+    _log('err', `NCP error — retry ${RECONNECT_MS}ms`);
+    _es.close(); clearInterval(_hb);
     _reconnectTimer = setTimeout(connect, RECONNECT_MS);
-  }, 10000);
-
-  _es = GM_xmlhttpRequest({
-    method:   'GET',
-    url,
-    headers:  { 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' },
-    responseType: 'stream',
-    onloadstart: (r) => {
-      // §FIX — status is NOT available here. loadstart fires the instant the
-      // request begins sending, before any response headers exist, so r.status
-      // is always 0 at this point regardless of whether the server will answer.
-      // The original code checked r.status!==200 here, which made every single
-      // connection attempt — server up or down — tear itself down and retry on
-      // a 3s loop before a real response could ever arrive. Real status check
-      // moved to the first onprogress call below, where headers are guaranteed
-      // to already be received.
-    },
-    onprogress: (r) => {
-      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
-      if (!_opened) {
-        if (r.status !== 200) {
-          _log('err', `NCP channel returned ${r.status} — retry ${RECONNECT_MS}ms`);
-          connState = 'disconnected'; setConnState('disconnected');
-          try { _es.abort(); } catch(_) {}
-          _reconnectTimer = setTimeout(connect, RECONNECT_MS);
-          return;
-        }
-        // Connected — register and start heartbeat
-        connState = 'ready'; setConnState('ready');
-        _opened = true;
-        _log('ok', `NCP connected · ${PROVIDER}`, url);
-        ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
-        if (_hb) clearInterval(_hb);
-        _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
-        autoClaimIfFree();
-        replayPending();
-        setTimeout(() => sendDOMMap(), 2000);
-        pollSystemStatus();
-      }
-      // SSE arrives as chunked text — parse line by line
-      const raw = r.responseText || '';
-      const newData = raw.slice(_buf.length);
-      _buf = raw;
-      const lines = newData.split('\n');
-      for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        const text = line.slice(5).trim();
-        if (!text) continue;
-        try {
-          const msg = JSON.parse(text);
-          _handleServerMessage(msg);
-          // ♥ pulse
-          const h = document.getElementById('__g10heart__');
-          if (h) {
-            h.style.color='#ef4444'; h.style.transform='scale(1.4)'; h.style.transition='none';
-            setTimeout(()=>{ h.style.color='rgba(239,68,68,.25)'; h.style.transform='scale(1)'; h.style.transition='all .4s ease'; },150);
-          }
-        } catch(e) { _log('err','NCP parse',e.message); }
-      }
-    },
-    onerror: () => {
-      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
-      connState = 'disconnected'; setConnState('disconnected');
-      _log('err', `NCP error — retry ${RECONNECT_MS}ms`);
-      clearInterval(_hb);
-      _reconnectTimer = setTimeout(connect, RECONNECT_MS);
-    },
-    onabort: () => {
-      if (myGen !== _connGen) return; // §23.12 — superseded, ignore — this fires for the OLD
-      // connection precisely because connect() just called _es.abort() on it
-      // to start a NEW one; the new one already set connState, don't undo it.
-      connState = 'disconnected'; setConnState('disconnected');
-      clearInterval(_hb);
-    },
-    ontimeout: () => {
-      if (myGen !== _connGen) return; // §23.12 — superseded, ignore
-      // SSE streams don't timeout — this fires if connection drops silently
-      if (_opened) {
-        _log('warn', 'NCP stream ended — reconnecting');
-        connState = 'disconnected'; setConnState('disconnected');
-        clearInterval(_hb);
-        _reconnectTimer = setTimeout(connect, RECONNECT_MS);
-      }
-    },
-    timeout: 0, // no timeout — SSE is a long-held connection
-  });
+  };
 }
 
 function _handleServerMessage(msg) {
@@ -929,8 +761,8 @@ function injectStyles() {
   s.textContent = `
     @keyframes gfadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     @keyframes gpulse{0%,100%{opacity:1}50%{opacity:.4}}
-    #__g10root__{position:fixed;bottom:16px;right:16px;z-index:2147483647;font-family:'SF Mono','Fira Code',monospace;font-size:11px;user-select:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-    #__g10pill__{display:flex;align-items:center;gap:6px;background:rgba(8,8,14,.95);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 12px 5px 8px;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:opacity .2s}
+    #__g10root__{position:fixed;bottom:16px;right:16px;z-index:2147483647;font-family:'SF Mono','Fira Code',monospace;font-size:11px;user-select:none}
+    #__g10pill__{display:flex;align-items:center;gap:6px;background:rgba(8,8,14,.95);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 12px 5px 8px;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:opacity .2s;margin-left:auto}
     #__g10pill__:hover{opacity:.85}
     #__g10panel__{width:520px;background:rgba(6,6,12,.98);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.07);border-radius:14px;box-shadow:0 12px 60px rgba(0,0,0,.85);overflow:hidden;margin-bottom:8px;display:none;flex-direction:column;max-height:580px;animation:gfadein .14s ease}
     #__g10hdr__{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
@@ -1028,7 +860,7 @@ function buildUI() {
   const heart = document.createElement('span'); heart.id='__g10heart__';
   heart.textContent='♥';
   heart.style.cssText='font-size:10px;color:rgba(239,68,68,.3);transition:none;flex-shrink:0;margin-left:2px';
-  const claim = document.createElement('span'); claim.id='__g10claim__'; claim.textContent=''; // will be set by setConnState
+  const claim = document.createElement('span'); claim.id='__g10claim__'; claim.textContent='ACTIVE'; claim.classList.add('active');
   const badge = document.createElement('span'); badge.id='__g10badge__';
   pill.append(dot, lbl, prov, heart, claim, badge);
 
@@ -1058,7 +890,6 @@ function buildUI() {
   const TAB_LIST = [
     ['log','Log'], ['ledger','Ledger'], ['gaps','Gaps'], ['arts','Arts'],
     ['seam','SEAM'], ['intel','Intel'], ['nexus','NEXUS'], ['sys','Sys'], ['opts','Opts'],
-    ['think','Think'],
   ];
   for (const [id,label] of TAB_LIST) {
     const t = document.createElement('div');
@@ -1078,14 +909,13 @@ function buildUI() {
   const nexusArea  = document.createElement('div'); nexusArea.id='__g10nexus__'; nexusArea.style.cssText='display:none;overflow-y:auto;max-height:460px;padding:0';
   const sysArea    = document.createElement('div'); sysArea.id='__g10sys__';     sysArea.style.display='none';
   const optsArea   = document.createElement('div'); optsArea.id='__g10opts__';   optsArea.style.display='none';
-  const thinkArea  = document.createElement('div'); thinkArea.id='__g10think__'; thinkArea.style.cssText='display:none;overflow-y:auto;max-height:460px';
 
   const footer = document.createElement('div'); footer.className='g10footer';
   const fL = document.createElement('span'); fL.id='__g10fl__'; fL.textContent=`${NCP_URL} · claude`;
   const fR = document.createElement('span'); fR.textContent=`v${VERSION}`;
   footer.append(fL, fR);
 
-  panel.append(hdr, jobBar, tabs, logArea, ledgerArea, gapsArea, artsArea, seamArea, intelArea, nexusArea, sysArea, optsArea, thinkArea, footer);
+  panel.append(hdr, jobBar, tabs, logArea, ledgerArea, gapsArea, artsArea, seamArea, intelArea, nexusArea, sysArea, optsArea, footer);
 
   pill.addEventListener('click', () => {
     panelOpen = !panelOpen;
@@ -1099,7 +929,7 @@ function buildUI() {
 const AREAS = {
   log:'__g10log__', ledger:'__g10ledger__', gaps:'__g10gaps__',
   arts:'__g10arts__', seam:'__g10seam__', intel:'__g10intel__',
-  nexus:'__g10nexus__', sys:'__g10sys__', opts:'__g10opts__', think:'__g10think__',
+  nexus:'__g10nexus__', sys:'__g10sys__', opts:'__g10opts__',
 };
 function switchTab(id) {
   activeTab = id;
@@ -1120,7 +950,6 @@ function renderActiveTab() {
   if (activeTab==='nexus')  renderNexus();
   if (activeTab==='sys')    renderSys();
   if (activeTab==='opts')   renderOpts();
-  if (activeTab==='think')  renderThinking();
 }
 
 function _setBadge(n) {
@@ -1128,11 +957,6 @@ function _setBadge(n) {
   if (b) { b.textContent = n > 99 ? '99+' : n; b.style.display = n > 0 ? 'inline' : 'none'; }
 }
 function setConnState(state) {
-  const claim = document.getElementById('__g10claim__');
-  if (claim) {
-    claim.textContent = state === 'ready' ? 'CONNECTED' : state === 'connecting' ? 'CONNECTING' : 'DISCONNECTED';
-    claim.className = state === 'ready' ? 'active' : '';
-  }
   const COLORS = { connecting:'#f59e0b', handshaking:'#f59e0b', ready:'#22c55e', disconnected:'#ef4444' };
   const LABELS = { connecting:'CONNECTING', handshaking:'HANDSHAKING', ready:'READY', disconnected:'DISCONNECTED' };
   const col = COLORS[state] || '#ef4444';
@@ -1239,89 +1063,55 @@ function renderArts() {
   }
 }
 
-// ── Think tab — captured reasoning, one expandable row per job ────────────────
-// Same expand/collapse pattern as Arts above: click the header, content
-// appears underneath. This is the literal "expandable section" — collapsed
-// rows are just job id + timestamp + char count; the captured thinking text
-// only renders once you expand a row, same as artifacts.
-let _thinkExpanded = new Set();
-function renderThinking() {
-  const a = document.getElementById('__g10think__'); if (!a) return;
-  if (!thinkingStore.length) {
-    a.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:20px;text-align:center">No thinking captured yet — see scanThinking() if this never fills in; THINKING_SELECTORS may need updating against the live DOM.</div>';
-    return;
-  }
-  a.innerHTML = '';
-  for (const t of [...thinkingStore].reverse()) {
-    const div = document.createElement('div'); div.className='g10art';
-    const exp = _thinkExpanded.has(t.hash);
-    div.innerHTML = `<div class="g10art-hdr">
-      <span class="g10art-lang">#${(t.jobId||'').slice(0,8)}</span>
-      <span class="g10art-sz">${t.content.length}ch</span>
-      <span class="g10art-hash">${new Date(t.ts).toLocaleTimeString()}</span>
-      <span style="color:#334155;margin-left:auto">${exp?'▲':'▼'}</span>
-    </div>${exp ? `<div class="g10art-pre">${escHtml(t.content.slice(0,2000))}${t.content.length>2000?'…':''}</div>` : ''}`;
-    div.addEventListener('click', () => {
-      if (exp) _thinkExpanded.delete(t.hash); else _thinkExpanded.add(t.hash);
-      renderThinking();
-    });
-    a.appendChild(div);
-  }
-}
-
-// Each queue is a SEAM delivery contract. Each chunk has seam_id, comp_id,
-// contract_id. This tab is the ground truth for what's building, what failed,
-// and what needs retry. Not a paste box — a live system view.
+// ── SEAM tab — real view into guardian's actual SEAM pipeline ────────────────
+// §SEAM-GLUE-FIX: same fix as chatgpt.js — see that file for the full
+// rationale. Submits to the real POST /command spec pipeline instead of
+// parsing pasted text locally; dispatch back to this tab needs no new
+// wiring, SEAMQueue already pushes type:'GUARDIAN_JOB' and handleJob()
+// already processes it.
 let _seamQueues = [];
 let _seamPollTimer = null;
-
 function renderSeam() {
   const a = document.getElementById('__g10seam__'); if (!a) return;
   a.innerHTML = '';
 
-  // ── Submit new spec ───────────────────────────────────────────────────────
-  const submitWrap = document.createElement('div');
-  submitWrap.style.cssText = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05)';
-  submitWrap.innerHTML = `
-    <div style="font:9px monospace;color:#334466;letter-spacing:.08em;margin-bottom:6px">SUBMIT SPEC → SEAM QUEUE</div>
-    <textarea id="__g10seam_ta__" placeholder="Paste .spec content — headings become SEAM chunks automatically"
-      style="width:100%;background:#030308;border:1px solid #1e1e3a;color:#64748b;padding:6px 8px;font:10px monospace;resize:none;border-radius:2px;min-height:60px;outline:none;box-sizing:border-box"></textarea>
-    <input id="__g10seam_title__" placeholder="Title (optional)"
-      style="width:100%;margin-top:3px;background:#030308;border:1px solid #1e1e3a;color:#94a3b8;padding:4px 8px;font:9px monospace;outline:none;border-radius:2px;box-sizing:border-box">
-    <div style="display:flex;gap:6px;margin-top:4px">
-      <button id="__g10seam_submit__"
-        style="background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:2px;padding:3px 10px;font:9px monospace;cursor:pointer;flex:1">
-        ▶ SUBMIT TO SEAM QUEUE
-      </button>
-      <button onclick="_refreshSeamQueues(document.getElementById('__g10seam__'))"
-        style="background:none;border:1px solid rgba(255,255,255,.1);color:#334466;border-radius:2px;padding:3px 8px;font:9px monospace;cursor:pointer">
-        ↺
-      </button>
-    </div>`;
-  a.appendChild(submitWrap);
+  const wrap = document.createElement('div'); wrap.style.cssText = 'padding:8px 12px';
+  const ta = document.createElement('textarea');
+  ta.style.cssText = 'width:100%;background:#030308;border:1px solid #1e1e3a;color:#64748b;padding:6px 8px;font-family:inherit;font-size:.68rem;line-height:1.5;outline:none;resize:none;border-radius:2px;min-height:70px;display:block;box-sizing:border-box';
+  ta.placeholder = 'Paste .spec content here…';
 
-  document.getElementById('__g10seam_submit__').onclick = async () => {
-    const specText = document.getElementById('__g10seam_ta__')?.value?.trim();
-    if (!specText) { toast('Nothing to submit', 'warn'); return; }
-    const btn = document.getElementById('__g10seam_submit__');
-    btn.disabled = true; btn.textContent = '⟳ Submitting…';
+  const titleIn = document.createElement('input');
+  titleIn.style.cssText = 'width:100%;margin-top:4px;background:#030308;border:1px solid #1e1e3a;color:#94a3b8;padding:4px 8px;font-family:inherit;font-size:.65rem;outline:none;border-radius:2px;box-sizing:border-box';
+  titleIn.placeholder = 'Title (optional)';
+
+  const submitBtn = document.createElement('button');
+  submitBtn.style.cssText = 'margin-top:4px;background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:2px;padding:3px 10px;font:inherit;font-size:9px;cursor:pointer';
+  submitBtn.textContent = 'Submit to SEAM queue';
+  submitBtn.onclick = async () => {
+    const specText = ta.value.trim();
+    if (!specText) { toast('Nothing pasted', 'warn'); return; }
+    submitBtn.disabled = true; submitBtn.textContent = 'Submitting…';
     try {
-      const r = await gmPost(`${NCP_URL}/command`, {
-        command:'spec', provider:PROVIDER,
-        specText, title: document.getElementById('__g10seam_title__')?.value?.trim() || undefined,
+      const res = await fetch(`${NCP_URL}/command`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'spec', provider: PROVIDER, specText, title: titleIn.value.trim() || undefined }),
       });
-      const d = r.json();
-      if (!d.ok) { toast(`SEAM failed: ${d.error||'unknown'}`, 'error', 5000); return; }
-      toast(`Queue created — ${d.total} chunks`, 'success', 3000);
-      document.getElementById('__g10seam_ta__').value = '';
-      document.getElementById('__g10seam_title__').value = '';
-      _log('ok', `SEAM queue ${(d.queueId||'').slice(0,8)} · ${d.total} chunks`, d.title||'');
-      setTimeout(() => _refreshSeamQueues(a), 800);
-    } catch(e) { toast(`SEAM failed: ${e.message}`, 'error', 5000); }
-    finally { btn.disabled=false; btn.textContent='▶ SUBMIT TO SEAM QUEUE'; }
+      const data = await res.json();
+      if (!data.ok) { toast(`SEAM submit failed: ${data.error || 'unknown error'}`, 'error', 5000); return; }
+      toast(`SEAM queue created — ${data.total} chunks`, 'success', 3000);
+      ta.value = ''; titleIn.value = '';
+      _log('ok', `SEAM queue ${data.queueId?.slice(0,8)} created`, `${data.total} chunks · ${data.title}`);
+      await _refreshSeamQueues(a);
+    } catch (e) {
+      toast(`SEAM submit failed: ${e.message}`, 'error', 5000);
+    } finally {
+      submitBtn.disabled = false; submitBtn.textContent = 'Submit to SEAM queue';
+    }
   };
 
-  // ── Queue list ────────────────────────────────────────────────────────────
+  wrap.append(ta, titleIn, submitBtn);
+  a.appendChild(wrap);
+
   const list = document.createElement('div');
   list.id = '__g10seam_list__';
   list.style.cssText = 'padding:0 12px 12px';
@@ -1330,122 +1120,82 @@ function renderSeam() {
   _refreshSeamQueues(a);
   if (_seamPollTimer) clearInterval(_seamPollTimer);
   _seamPollTimer = setInterval(() => {
-    if (document.getElementById('__g10seam__')?.style.display !== 'none') _refreshSeamQueues(a);
+    if (document.getElementById('__g10seam__')?.classList.contains('on')) _refreshSeamQueues(a);
     else { clearInterval(_seamPollTimer); _seamPollTimer = null; }
-  }, 2500);
+  }, 3000);
 }
 
 async function _refreshSeamQueues(a) {
-  const list = a?.querySelector('#__g10seam_list__'); if (!list) return;
+  const list = a.querySelector('#__g10seam_list__'); if (!list) return;
+
   let liveQueues = [], sessions = [];
   try {
     const [liveRes, sessRes] = await Promise.all([
-      gmGet(`${NCP_URL}/seam/queues`),
-      gmGet(`${NCP_URL}/seam/sessions`),
+      fetch(`${NCP_URL}/seam/queues`,   { signal: AbortSignal.timeout(3000) }),
+      fetch(`${NCP_URL}/seam/sessions`, { signal: AbortSignal.timeout(3000) }),
     ]);
-    const liveData = liveRes.ok ? liveRes.json() : {};
-    const sessData = sessRes.ok ? sessRes.json() : {};
+    const liveData = await liveRes.json();
+    const sessData = await sessRes.json();
     liveQueues = (liveData.queues   || []).filter(q => q.provider === PROVIDER);
     sessions   = (sessData.sessions || []).filter(s => s.provider === PROVIDER);
   } catch (_) { return; }
 
+  // Live (in-memory, still-active) queues carry full compartment detail and
+  // are retry-capable. Once a queue completes it's dropped from the server's
+  // active-queue map — nothing left to retry — so those fall back to the
+  // session summary instead.
   const liveUuids = new Set(liveQueues.map(q => q.uuid));
-  _seamQueues = [...liveQueues, ...sessions.filter(s => !liveUuids.has(s.uuid))].slice(0, 12);
+  _seamQueues = [...liveQueues, ...sessions.filter(s => !liveUuids.has(s.uuid))].slice(0, 8);
 
   list.innerHTML = '';
   if (!_seamQueues.length) {
-    list.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:12px 0;text-align:center">No SEAM queues — submit a spec above</div>';
+    list.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:8px 0">No SEAM queues for this provider yet.</div>';
     return;
   }
-
   for (const q of _seamQueues) {
-    const isLive = liveUuids.has(q.uuid);
-    const comps  = q.compartments || [];
-    const done   = comps.filter(c => c.state === 'VERIFIED').length;
-    const total  = q.total || comps.length || q.totalChunks || '?';
-    const active = comps.find(c => c.state === 'GENERATING' || c.state === 'INJECTING');
-    const failed = comps.filter(c => c.state === 'ESCALATED' || c.state === 'FAILED');
-    const pct    = total > 0 ? Math.round(done / total * 100) : 0;
-    const isDone = q.completedAt || q.status === 'complete' || done === total;
-
     const row = document.createElement('div');
-    row.style.cssText = 'border:1px solid rgba(255,255,255,.06);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:.66rem';
-    if (active) row.style.borderColor = 'rgba(251,191,36,.2)';
-    if (isDone)  row.style.borderColor = 'rgba(52,211,153,.15)';
-    if (failed.length) row.style.borderColor = 'rgba(248,113,113,.2)';
+    row.style.cssText = 'border:1px solid #1e1e3a;border-radius:3px;padding:6px 8px;margin-top:6px;font-size:.65rem';
 
-    // Header: title + ids
-    row.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px">
-        <div>
-          <div style="color:#94a3b8;font-weight:600;font-size:10px">${escHtml(q.title||'Untitled')}</div>
-          <div style="color:#1e293b;font-size:8px;margin-top:2px;line-height:1.6">
-            queue: ${(q.uuid||'').slice(0,12)}<br>
-            ${q.seam_id ? 'seam: '+escHtml(q.seam_id.slice(0,24)) : ''}
-            ${q.comp_id ? ' · comp: '+escHtml(q.comp_id.slice(0,20)) : ''}
-          </div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;margin-left:8px">
-          <div style="font:9px monospace;color:${isDone?'#34d399':active?'#fbbf24':'#475569'}">${isDone?'✓ DONE':active?'⟳ BUILDING':'⏸ QUEUED'}</div>
-          <div style="font:8px monospace;color:#334466;margin-top:2px">${done}/${total} chunks</div>
-        </div>
-      </div>`;
+    const isLive  = liveUuids.has(q.uuid);
+    const active  = isLive ? (q.compartments || []).find(c => c.state === 'GENERATING') : null;
+    const statusTxt = (q.completedAt || q.status === 'complete')
+      ? `done — ${q.stats?.verified ?? q.verified ?? 0} verified${(q.stats?.escalated ?? q.escalated) ? `, ${q.stats?.escalated ?? q.escalated} escalated` : ''}`
+      : 'active';
 
-    // Progress bar
-    if (typeof total === 'number' && total > 0) {
-      row.innerHTML += `<div style="height:2px;background:rgba(255,255,255,.05);border-radius:1px;margin-bottom:6px">
-        <div style="height:100%;width:${pct}%;background:${isDone?'#34d399':active?'#fbbf24':'#818cf8'};border-radius:1px;transition:width .4s"></div>
-      </div>`;
-    }
+    row.innerHTML = `<div style="color:#94a3b8;font-weight:600">${escHtml(q.title || 'Untitled')}</div>
+      <div style="color:#475569;margin-top:2px">#${(q.uuid||'').slice(0,8)} · ${statusTxt}</div>`;
 
-    // Active chunk detail
     if (active) {
-      const ageS = Math.round((Date.now() - (active.updatedAt||Date.now())) / 1000);
-      row.innerHTML += `<div style="color:#fbbf24;font-size:9px;margin-bottom:5px">
-        ⟳ "${escHtml(active.chunkTitle||`chunk ${(active.chunkIdx||0)+1}`)}" — ${ageS}s
-        ${active.watchdogRetries ? ` · watchdog ${active.watchdogRetries}/${active.maxWatchdogRetries||3}` : ''}
-        <div style="color:#1e293b;font-size:8px;margin-top:2px">
-          seam_id: ${escHtml((active.seam_id||active.uuid||'').slice(0,30))}
-        </div>
-      </div>`;
-    }
+      const ageS = Math.round((Date.now() - active.updatedAt) / 1000);
+      const stuckLine = document.createElement('div');
+      stuckLine.style.cssText = 'color:#fbbf24;margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap';
+      stuckLine.innerHTML = `<span>generating "${escHtml(active.chunkTitle || '')}" — ${ageS}s${active.watchdogRetries ? ` · watchdog ${active.watchdogRetries}/${active.maxWatchdogRetries ?? 3}` : ''}</span>`;
 
-    // Chunk grid — all chunks with state
-    if (comps.length) {
-      const grid = document.createElement('div');
-      grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px';
-      for (const c of comps) {
-        const st = c.state || 'QUEUED';
-        const col = st==='VERIFIED'?'#34d399':st==='GENERATING'||st==='INJECTING'?'#fbbf24':st==='ESCALATED'||st==='FAILED'?'#f87171':'#334466';
-        const chip = document.createElement('div');
-        chip.title = `${c.chunkTitle||'chunk'} · ${st}${c.seam_id?'\nseam: '+c.seam_id:''}`;
-        chip.style.cssText = `width:8px;height:8px;border-radius:1px;background:${col};cursor:pointer;opacity:.8`;
-        chip.onclick = () => _log('sys', `Chunk: ${c.chunkTitle}`, `state:${st} seam:${(c.seam_id||'').slice(0,20)} idx:${c.chunkIdx}`);
-        grid.appendChild(chip);
-      }
-      row.appendChild(grid);
-    }
-
-    // Failed chunks with retry
-    if (failed.length && isLive) {
-      for (const fc of failed) {
-        const retryRow = document.createElement('div');
-        retryRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:4px';
-        retryRow.innerHTML = `<span style="color:#f87171;font-size:9px">✗ ${escHtml(fc.chunkTitle||'chunk')} (${fc.state})</span>`;
-        const retryBtn = document.createElement('button');
-        retryBtn.textContent = 'Retry';
-        retryBtn.style.cssText = 'background:none;border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:2px;padding:1px 7px;font:8px monospace;cursor:pointer';
-        retryBtn.onclick = async () => {
-          retryBtn.disabled=true; retryBtn.textContent='⟳';
-          const r = await gmPost(`${NCP_URL}/seam/retry`, { queueId:q.uuid, chunkIdx:fc.chunkIdx });
-          const d = r.json();
-          _log(d.ok?'ok':'err', `Retry ${(q.uuid).slice(0,8)} chunk ${fc.chunkIdx}`, d.ok?'retrying':d.error);
-          retryBtn.disabled=false; retryBtn.textContent='Retry';
-          setTimeout(() => _refreshSeamQueues(a), 1000);
-        };
-        retryRow.appendChild(retryBtn);
-        row.appendChild(retryRow);
-      }
+      const retryBtn = document.createElement('button');
+      retryBtn.style.cssText = 'background:none;border:1px solid rgba(251,191,36,.4);color:#fbbf24;border-radius:2px;padding:1px 7px;font:inherit;font-size:9px;cursor:pointer';
+      retryBtn.textContent = 'Retry now';
+      retryBtn.onclick = async () => {
+        retryBtn.disabled = true; retryBtn.textContent = '…';
+        try {
+          const r = await fetch(`${NCP_URL}/seam/retry`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ queueId: q.uuid, chunkUuid: active.uuid, reason: 'manual_ui' }),
+          });
+          const d = await r.json();
+          if (d.ok) {
+            toast(d.escalated ? 'Chunk escalated — watchdog limit reached' : 'Retry forced', d.escalated ? 'warn' : 'success', 3000);
+            _log('ok', `SEAM retry forced — ${q.uuid.slice(0,8)}`, d.escalated ? 'escalated to gap' : 'retrying');
+          } else {
+            toast(`Retry failed: ${d.error || 'unknown'}`, 'error', 4000);
+          }
+        } catch (e) {
+          toast(`Retry failed: ${e.message}`, 'error', 4000);
+        } finally {
+          await _refreshSeamQueues(a);
+        }
+      };
+      stuckLine.appendChild(retryBtn);
+      row.appendChild(stuckLine);
     }
 
     list.appendChild(row);
@@ -1457,7 +1207,7 @@ async function renderIntel() {
   const a = document.getElementById('__g10intel__'); if (!a) return;
   a.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:10px 12px">Loading intelligence context…</div>';
   try {
-    const r = await gmFetch(`${CORTEX_URL}/api/intelligence/status`, { timeout: 2000 });
+    const r = await fetch(`${CORTEX_URL}/api/intelligence/status`, { signal:AbortSignal.timeout(2000) });
     const status = r.ok ? await r.json() : null;
     const ctx    = _intelligenceCtx;
     let html = '';
@@ -1524,6 +1274,7 @@ function renderSys() {
     <div class="g10sys-row"><span class="g10sys-label">Provider</span><span class="g10sys-val">${PROVIDER}</span></div>
     <div class="g10sys-row"><span class="g10sys-label">Tab</span><span class="g10sys-val">${MY_TAB.slice(0,12)}</span></div>
     <div class="g10sys-row"><span class="g10sys-label">State</span><span class="g10sys-val ${connState==='ready'?'g10online':'g10offline'}">${connState.toUpperCase()}</span></div>
+    <div class="g10sys-row"><span class="g10sys-label">Claimed</span><span class="g10sys-val g10online">ACTIVE</span></div>
   </div>`;
   html += `<div class="g10sys-section">
     <div class="g10sys-title">Session</div>
@@ -1765,223 +1516,168 @@ function _nexusStartObserver() {
   _nexus.observer.observe(target, { childList: true, subtree: true, characterData: false });
 }
 
-// ── Render NEXUS tab — full system operator for Claude ───────────────────────
-// Claude-specific toolset:
-//   - CLI runner: all guardian /cli/exec commands
-//   - Gap diagnostic: live open gaps with details
-//   - Component routing: query component registry
-//   - Cortex memory: read JAA tables, query patterns
-//   - Repair dispatch: send a job to fix a specific gap
-//   - Intelligence: pattern crystallisation, failure taxonomy
-//   - Ollama direct: query Qwen/Mistral locally
-// Not copy-paste. Built around what Claude actually needs to know.
+// ── Render NEXUS tab ──────────────────────────────────────────────────────────
+function renderNexus() {
+  const el = document.getElementById('__g10nexus__');
+  if (!el) return;
 
-// §23.15 — RECURSIVE QA FINDING: this was a second `function renderNexus()`
-// declared later in the file (now at the live renderNexus below). Function
-// declarations hoist; the later one silently won, which means EVERYTHING
-// in this function — CLI runner, gap diagnostic, component registry
-// search, raw cortex-memory-table browser, repair dispatch — has been
-// completely unreachable dead code, with no error, no warning, since
-// whichever session introduced the second renderNexus. Renamed to a named
-// sub-panel and spliced into the live version below instead of either
-// silently losing this functionality or guessing it was meant to be
-// deleted. Its own Ollama-direct box (queryOllama(), __nx_oll_in__) is
-// removed here — the live renderNexus already has one
-// (_nexusOllamaQuery/__nx_query__) and keeping both would just be the same
-// box twice. queryOllama() itself is removed below since this was its only
-// caller — not left as a second piece of new dead code from this same fix.
-function _renderNexusTools(el) {
-  const pad = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)';
-  const sectionTitle = (t) => `<div style="font:9px monospace;color:#334466;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">${t}</div>`;
+  const msgs    = _nexusGetMessages();
+  const signals = _nexus.signals.slice(-5);
+  const context = _nexus.context || [];
+  const ollamaStatus = _nexus.ollamaOk === null ? '...' : _nexus.ollamaOk ? '✓ online' : '✗ offline';
+  const ollamaCol    = _nexus.ollamaOk ? '#00ff88' : _nexus.ollamaOk === false ? '#ff2d55' : '#818cf8';
 
-  // ── CLI runner ─────────────────────────────────────────────────────────────
-  const cliDiv = document.createElement('div');
-  cliDiv.style.cssText = pad;
-  cliDiv.innerHTML = sectionTitle('CLI COMMANDS') + `
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
-      ${['gaps','jobs','health','stats','providers','ledger','seam','version'].map(cmd =>
-        `<button onclick="runCLI('${cmd}')" style="background:none;border:1px solid rgba(129,140,248,.2);color:#818cf8;border-radius:2px;padding:2px 8px;font:8px monospace;cursor:pointer">${cmd}</button>`
-      ).join('')}
-    </div>
-    <div style="display:flex;gap:4px">
-      <input id="__nx_cli_in__" placeholder="custom command (e.g. gaps --status open --limit 5)"
-        style="flex:1;background:#030308;border:1px solid #1e1e3a;color:#94a3b8;padding:4px 8px;font:9px monospace;outline:none;border-radius:2px;box-sizing:border-box">
-      <button onclick="runCLI(document.getElementById('__nx_cli_in__').value)"
-        style="background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:2px;padding:3px 8px;font:9px monospace;cursor:pointer">▶ Run</button>
-    </div>
-    <div id="__nx_cli_out__" style="margin-top:6px;background:#030308;border:1px solid #0d1117;border-radius:2px;padding:6px 8px;font:9px monospace;color:#475569;max-height:140px;overflow-y:auto;white-space:pre-wrap;line-height:1.5;min-height:28px">—</div>`;
-  el.appendChild(cliDiv);
+  el.innerHTML = '';
 
-  // ── Gap diagnostic ─────────────────────────────────────────────────────────
-  const gapsDiv = document.createElement('div');
-  gapsDiv.style.cssText = pad;
-  gapsDiv.innerHTML = sectionTitle('GAP DIAGNOSTIC') + `
-    <div style="display:flex;gap:4px;margin-bottom:6px">
-      ${[['open','open'],['investigating','inv'],['blocked','blocked'],['expired','exp']].map(([s,l]) =>
-        `<button onclick="loadGaps('${s}')" style="background:none;border:1px solid rgba(255,255,255,.08);color:#475569;border-radius:2px;padding:2px 8px;font:8px monospace;cursor:pointer">${l}</button>`
-      ).join('')}
-      <button onclick="loadGaps('open')" style="margin-left:auto;background:none;border:1px solid rgba(255,255,255,.06);color:#334466;border-radius:2px;padding:2px 6px;font:8px monospace;cursor:pointer">↺</button>
-    </div>
-    <div id="__nx_gaps_out__" style="font:9px monospace;color:#475569;max-height:180px;overflow-y:auto">Loading…</div>`;
-  el.appendChild(gapsDiv);
+  const pad = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06)';
+  const dim = 'color:#334466;font-size:9px';
+  const bright = 'color:#b8cfe0;font-size:10px';
 
-  // ── Component routing ──────────────────────────────────────────────────────
-  const compDiv = document.createElement('div');
-  compDiv.style.cssText = pad;
-  compDiv.innerHTML = sectionTitle('COMPONENT REGISTRY') + `
-    <div style="display:flex;gap:4px">
-      <input id="__nx_comp_in__" placeholder="search components (e.g. gap, raid, copilot)"
-        style="flex:1;background:#030308;border:1px solid #1e1e3a;color:#94a3b8;padding:4px 8px;font:9px monospace;outline:none;border-radius:2px;box-sizing:border-box">
-      <button onclick="searchComponents(document.getElementById('__nx_comp_in__').value)"
-        style="background:none;border:1px solid rgba(0,229,255,.2);color:#00e5ff;border-radius:2px;padding:3px 8px;font:9px monospace;cursor:pointer">Search</button>
-    </div>
-    <div id="__nx_comp_out__" style="margin-top:6px;font:9px monospace;color:#475569;max-height:120px;overflow-y:auto">—</div>`;
-  el.appendChild(compDiv);
+  // ── Status bar ───────────────────────────────────────────────────────────────
+  const status = document.createElement('div');
+  status.style.cssText = pad + ';display:flex;gap:12px;align-items:center;flex-wrap:wrap';
+  status.innerHTML =
+    '<span style="' + dim + ';text-transform:uppercase;letter-spacing:.08em">NEXUS</span>' +
+    '<span style="font:9px monospace;color:' + ollamaCol + '">ollama ' + ollamaStatus + '</span>' +
+    '<span style="' + dim + '">' + msgs.length + ' messages</span>' +
+    '<span style="' + dim + '">' + signals.length + ' signals</span>' +
+    '<span style="' + dim + '">' + context.length + ' context hits</span>' +
+    '<button style="margin-left:auto;background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:3px;padding:2px 8px;font:9px monospace;cursor:pointer" ' +
+    'onclick="_nexusCheckOllama()">↺ ping ollama</button>';
+  el.appendChild(status);
 
-  // ── Cortex memory ──────────────────────────────────────────────────────────
-  const memDiv = document.createElement('div');
-  memDiv.style.cssText = pad;
-  memDiv.innerHTML = sectionTitle('CORTEX MEMORY') + `
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
-      ${['decision_log','event_log','reflection_contracts','bep_patterns','gaps'].map(t =>
-        `<button onclick="queryMemory('${t}')" style="background:none;border:1px solid rgba(255,255,255,.07);color:#334466;border-radius:2px;padding:2px 7px;font:8px monospace;cursor:pointer">${t}</button>`
-      ).join('')}
-    </div>
-    <div id="__nx_mem_out__" style="font:9px monospace;color:#475569;max-height:140px;overflow-y:auto">—</div>`;
-  el.appendChild(memDiv);
-
-  // ── Repair dispatch ────────────────────────────────────────────────────────
-  const repairDiv = document.createElement('div');
-  repairDiv.style.cssText = pad;
-  repairDiv.innerHTML = sectionTitle('REPAIR DISPATCH') + `
-    <div style="display:flex;gap:4px">
-      <input id="__nx_repair_in__" placeholder="describe the problem to fix (sent to Mistral via RAID)"
-        style="flex:1;background:#030308;border:1px solid #1e1e3a;color:#94a3b8;padding:4px 8px;font:9px monospace;outline:none;border-radius:2px;box-sizing:border-box">
-      <button onclick="dispatchRepair(document.getElementById('__nx_repair_in__').value)"
-        style="background:none;border:1px solid rgba(255,124,56,.3);color:#ff7c38;border-radius:2px;padding:3px 8px;font:9px monospace;cursor:pointer">⬡ Fix</button>
-    </div>
-    <div id="__nx_repair_out__" style="margin-top:4px;font:8px monospace;color:#334466">—</div>`;
-  el.appendChild(repairDiv);
-
-  // Auto-load gaps on open
-  loadGaps('open');
-}
-
-// ── CLI runner ────────────────────────────────────────────────────────────────
-async function runCLI(cmd) {
-  const out = document.getElementById('__nx_cli_out__');
-  if (!out) return;
-  if (!cmd?.trim()) return;
-  out.style.color = '#475569'; out.textContent = `⟳ ${cmd}…`;
-  try {
-    const r = await gmPost(`${NCP_URL}/cli/exec`, { command: cmd.trim(), source: 'userscript.claude' });
-    const d = r.json();
-    const result = d.result ?? d;
-    out.style.color = '#94a3b8';
-    out.textContent = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-    _log('sys', `CLI: ${cmd}`, typeof result === 'object' ? Object.keys(result).join(', ') : '');
-  } catch(e) {
-    out.style.color = '#f87171'; out.textContent = `✗ ${e.message}`;
-  }
-}
-
-// ── Gap diagnostic ────────────────────────────────────────────────────────────
-async function loadGaps(status = 'open') {
-  const out = document.getElementById('__nx_gaps_out__'); if (!out) return;
-  out.innerHTML = '<div style="color:#334466">Loading…</div>';
-  try {
-    const r = await gmGet(`${NCP_URL}/gaps?status=${status}&limit=20`);
-    const d = r.json();
-    const gaps = d.gaps || [];
-    if (!gaps.length) { out.innerHTML = `<div style="color:#1e293b">No ${status} gaps</div>`; return; }
-    out.innerHTML = gaps.map(g => `
-      <div style="border-left:2px solid ${g.severity==='high'?'#f87171':g.severity==='medium'?'#fbbf24':'#334466'};padding:4px 8px;margin-bottom:5px">
-        <div style="color:#94a3b8;font-size:10px;font-weight:600">${escHtml(g.type||g.loop_type||'unknown')}</div>
-        <div style="color:#334466;font-size:8px;margin-top:2px">${escHtml((g.body||'').slice(0,90))}</div>
-        <div style="color:#1e293b;font-size:8px;margin-top:2px">
-          ${g.uuid?.slice(0,12)||''} · ${g.status||''} · ${g.severity||''}
-          ${g.dedup_key ? ' · dedup:'+g.dedup_key.slice(0,8) : ''}
-          ${g.seam_id ? ' · seam:'+escHtml(g.seam_id.slice(0,20)) : ''}
-        </div>
-      </div>`).join('');
-  } catch(e) {
-    out.innerHTML = `<div style="color:#f87171">✗ ${e.message}</div>`;
-  }
-}
-
-// ── Component registry search ─────────────────────────────────────────────────
-async function searchComponents(query) {
-  const out = document.getElementById('__nx_comp_out__'); if (!out) return;
-  out.innerHTML = '<div style="color:#334466">Searching…</div>';
-  try {
-    const r = await gmGet(`${ORCH_URL}/api/components${query ? `?q=${encodeURIComponent(query)}` : ''}`);
-    const d = r.json();
-    const comps = d.components || d.result?.components || [];
-    if (!comps.length) { out.innerHTML = '<div style="color:#1e293b">No components found</div>'; return; }
-    out.innerHTML = comps.slice(0,8).map(c => `
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)">
-        <span style="color:#94a3b8;font-size:9px">${escHtml(c.id||c.name||'?')}</span>
-        <span style="color:#334466;font-size:8px">${escHtml(c.version||'')} · ${escHtml(c.comp_type||c.type||'')}</span>
-      </div>`).join('');
-  } catch(e) {
-    out.innerHTML = `<div style="color:#f87171">✗ ${e.message}</div>`;
-  }
-}
-
-// ── Cortex memory query ───────────────────────────────────────────────────────
-async function queryMemory(table) {
-  const out = document.getElementById('__nx_mem_out__'); if (!out) return;
-  out.innerHTML = `<div style="color:#334466">Querying ${table}…</div>`;
-  try {
-    const r = await gmGet(`${CORTEX_URL}/api/jaa/${table}?limit=10`);
-    const d = r.json();
-    const rows = d.rows || d.result || d.data || (Array.isArray(d) ? d : []);
-    if (!rows.length) { out.innerHTML = `<div style="color:#1e293b">No rows in ${table}</div>`; return; }
-    out.innerHTML = `<div style="color:#334466;font-size:8px;margin-bottom:4px">${table} · ${rows.length} rows</div>` +
-      rows.slice(0,8).map(r => {
-        const key = r.uuid||r.id||'?';
-        const label = r.type||r.decisionClass||r.body||r.text||r.prompt||'';
-        return `<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);display:flex;gap:6px">
-          <span style="color:#1e293b;font-size:8px;flex-shrink:0">${String(key).slice(0,10)}</span>
-          <span style="color:#475569;font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(String(label).slice(0,70))}</span>
-        </div>`;
-      }).join('');
-  } catch(e) {
-    out.innerHTML = `<div style="color:#f87171">✗ ${e.message}</div>`;
-  }
-}
-
-// ── Repair dispatch ───────────────────────────────────────────────────────────
-async function dispatchRepair(prompt) {
-  const out = document.getElementById('__nx_repair_out__'); if (!out) return;
-  if (!prompt?.trim()) return;
-  out.style.color = '#fbbf24'; out.textContent = '⟳ Dispatching repair job…';
-  try {
-    const r = await gmPost(`${NCP_URL}/command`, {
-      command:'diagnose_and_repair', provider:'ollama',
-      prompt: prompt.trim(),
-      meta: { source:'userscript.claude', task:'repair' },
-    });
-    const d = r.json();
-    if (d.jobId) {
-      out.style.color = '#34d399';
-      out.textContent = `✓ Job dispatched: ${d.jobId.slice(0,12)} → ${d.provider||'ollama'}`;
-      _log('ok', 'Repair dispatched', prompt.slice(0,60));
-    } else {
-      out.style.color = '#f87171';
-      out.textContent = `✗ ${d.error||'dispatch failed'}`;
+  // ── BDA Signals ───────────────────────────────────────────────────────────────
+  if (signals.length) {
+    const sdiv = document.createElement('div');
+    sdiv.style.cssText = pad;
+    sdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">BDA SIGNALS</div>';
+    const latest = signals[signals.length - 1];
+    const axes = ['valence','certainty','openness','tension','selfref'];
+    const sigRow = document.createElement('div');
+    sigRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+    for (const ax of axes) {
+      const v = latest[ax] ?? 0;
+      const pct = Math.round(v * 100);
+      const col = ax === 'tension' ? (pct > 60 ? '#ff2d55' : '#818cf8') :
+                  ax === 'valence' ? (pct > 50 ? '#00ff88' : '#ff6b35') : '#818cf8';
+      const chip = document.createElement('div');
+      chip.style.cssText = 'font:9px monospace;color:' + col + ';border:1px solid ' + col + ';border-radius:3px;padding:2px 6px;opacity:.8';
+      chip.textContent = ax + ':' + pct + '%';
+      sigRow.appendChild(chip);
     }
-  } catch(e) {
-    out.style.color = '#f87171'; out.textContent = `✗ ${e.message}`;
+    // Regime
+    if (latest.regime) {
+      const reg = document.createElement('div');
+      reg.style.cssText = 'margin-top:5px;font:9px monospace;color:#ff6b35';
+      reg.textContent = 'regime: ' + latest.regime;
+      sdiv.appendChild(sigRow);
+      sdiv.appendChild(reg);
+    } else {
+      sdiv.appendChild(sigRow);
+    }
+    el.appendChild(sdiv);
+  }
+
+  // ── Semantic context from NEXUS memory ───────────────────────────────────────
+  if (context.length) {
+    const cdiv = document.createElement('div');
+    cdiv.style.cssText = pad;
+    cdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">RELEVANT MEMORY</div>';
+    for (const hit of context.slice(0, 4)) {
+      const pct = Math.round((hit.snr || hit.similarity || 0) * 100);
+      const col = pct >= 85 ? '#00ff88' : pct >= 72 ? '#00d4ff' : '#818cf8';
+      const row = document.createElement('div');
+      row.style.cssText = 'margin-bottom:4px;padding:5px 8px;background:rgba(0,0,0,.3);border-radius:3px;border-left:2px solid ' + col;
+      row.innerHTML =
+        '<div style="font:9px monospace;color:' + col + '">' + pct + '% · ' + (hit.type || hit.table || '?') + '</div>' +
+        '<div style="font:10px monospace;color:#5a7a96;margin-top:2px;line-height:1.4">' +
+        (hit.text || '').slice(0, 100) + '</div>';
+      cdiv.appendChild(row);
+    }
+    // Inject context button
+    const injectBtn = document.createElement('button');
+    injectBtn.style.cssText = 'margin-top:6px;background:none;border:1px solid rgba(0,212,255,.3);color:#00d4ff;border-radius:3px;padding:3px 10px;font:9px monospace;cursor:pointer;width:100%';
+    injectBtn.textContent = '⬡ inject context into next prompt';
+    injectBtn.onclick = () => _nexusInjectContext();
+    cdiv.appendChild(injectBtn);
+    el.appendChild(cdiv);
+  }
+
+  // ── Ollama quick-query ────────────────────────────────────────────────────────
+  const qdiv = document.createElement('div');
+  qdiv.style.cssText = pad;
+  qdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">OLLAMA DIRECT</div>';
+  const qInput = document.createElement('textarea');
+  qInput.id = '__nx_query__';
+  qInput.placeholder = 'Ask Ollama directly (qwen2.5-coder:1.5b)…';
+  qInput.style.cssText = 'width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.07);color:#b8cfe0;font:10px monospace;padding:6px 8px;border-radius:3px;resize:none;height:52px;outline:none;box-sizing:border-box';
+  const qBtn = document.createElement('button');
+  qBtn.textContent = '↗ ask ollama';
+  qBtn.style.cssText = 'margin-top:4px;background:none;border:1px solid rgba(0,255,136,.3);color:#00ff88;border-radius:3px;padding:3px 10px;font:9px monospace;cursor:pointer';
+  const qOut = document.createElement('div');
+  qOut.id = '__nx_qout__';
+  qOut.style.cssText = 'margin-top:6px;font:10px monospace;color:#5a7a96;line-height:1.5;min-height:20px';
+  qBtn.onclick = () => {
+    const q = document.getElementById('__nx_query__')?.value?.trim();
+    if (!q) return;
+    qOut.style.color = '#818cf8'; qOut.textContent = '⟳ querying ollama…';
+    _nexusOllamaQuery(q, (err, text) => {
+      const out = document.getElementById('__nx_qout__');
+      if (!out) return;
+      if (err) { out.style.color='#ff2d55'; out.textContent='✗ ' + err; }
+      else      { out.style.color='#b8cfe0'; out.textContent = text.slice(0, 400); }
+    });
+  };
+  qdiv.append(qInput, qBtn, qOut);
+  el.appendChild(qdiv);
+
+  // ── Recent conversation summary ────────────────────────────────────────────
+  if (msgs.length) {
+    const mdiv = document.createElement('div');
+    mdiv.style.cssText = 'padding:8px 12px';
+    mdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">CONVERSATION (' + msgs.length + ')</div>';
+    for (const m of msgs.slice(-4)) {
+      const row = document.createElement('div');
+      row.style.cssText = 'margin-bottom:3px;display:flex;gap:6px';
+      const role = document.createElement('span');
+      role.style.cssText = 'font:8px monospace;color:' + (m.role==='user'?'#00d4ff':'#00ff88') + ';width:52px;flex-shrink:0;padding-top:1px';
+      role.textContent = m.role.toUpperCase();
+      const text = document.createElement('span');
+      text.style.cssText = 'font:10px monospace;color:#334466;line-height:1.4';
+      text.textContent = m.text.slice(0, 80) + (m.text.length > 80 ? '…' : '');
+      row.append(role, text);
+      mdiv.appendChild(row);
+    }
+    el.appendChild(mdiv);
   }
 }
 
-// ── Ollama direct query ───────────────────────────────────────────────────────
-// §23.15 — queryOllama() removed here. Its only caller was the duplicate
-// Ollama-direct panel removed above in _renderNexusTools — it wrapped the
-// same _nexusOllamaQuery() helper the live panel's button already calls,
-// so nothing unique was lost, just a second box that would have shown the
-// same thing twice.
+// ── Inject NEXUS context into the Claude input field ─────────────────────────
+function _nexusInjectContext() {
+  if (!_nexus.context?.length) return;
+  const lines = ['[NEXUS CONTEXT — relevant past work]'];
+  for (const hit of _nexus.context.slice(0, 3)) {
+    const pct = Math.round((hit.snr || hit.similarity || 0) * 100);
+    lines.push('[' + pct + '% match · ' + (hit.type || '?') + '] ' + (hit.text || '').slice(0, 200));
+  }
+  lines.push('[END NEXUS CONTEXT]');
+  const ctx = lines.join('\n');
+  // Find Claude's input
+  const inp = document.querySelector('[contenteditable="true"][data-placeholder]') ||
+              document.querySelector('div[contenteditable="true"]');
+  if (!inp) return;
+  inp.focus();
+  const existing = inp.innerText || '';
+  document.execCommand('selectAll', false, null);
+  document.execCommand('insertText', false, ctx + (existing ? '\n\n' + existing : ''));
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function _nexusInit() {
+  _nexus.sessionId = MY_TAB + '-' + Date.now().toString(36);
+  _nexusCheckOllama();
+  setTimeout(_nexusStartObserver, 2000); // wait for DOM to settle
+}
 
 // ══ NEXUS HOOKS — Memory · RAID · Self-Heal ═════════════════════════════════
 // The userscript is now a full NEXUS agent.
@@ -2487,12 +2183,6 @@ function renderNexus() {
   qo.style.cssText='margin-top:4px;font:9px monospace;color:#334466;line-height:1.5;min-height:16px';
   qb.onclick=()=>{const q=document.getElementById('__nx_query__')?.value?.trim();if(!q)return;qo.style.color='#818cf8';qo.textContent='⟳';_nexusOllamaQuery(q,(err,text)=>{const o=document.getElementById('__nx_qout__');if(!o)return;if(err){o.style.color='#ff2d55';o.textContent='✗ '+err;}else{o.style.color='#b8cfe0';o.textContent=text.slice(0,400);}});};
   qdiv.append(qi,qb,qo);el.appendChild(qdiv);
-
-  // §23.15 — CLI runner, gap diagnostic, component registry search, raw
-  // cortex-memory-table browser, repair dispatch. Restored here — see
-  // _renderNexusTools' own comment for why these were completely
-  // unreachable before this fix.
-  _renderNexusTools(el);
 }
 
 function _nexusRefreshAll() {

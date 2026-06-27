@@ -661,16 +661,39 @@ function init(cfg = {}) {
     gp.registerComponent();
 
     bus.on('guardian.job.complete', (event) => {
-      const { gapUuid, contractUuid } = event.payload?.meta || event.payload || {};
+      const { gapUuid, contractUuid, diagnosisOnly } = event.payload?.meta || event.payload || {};
       if (!gapUuid) return;
       try {
         const gap = jaaDB.query('gaps', g => g.uuid === gapUuid, 1)[0];
         if (!gap) return;
         if (gap.status === 'resolved' || gap.status === 'archived') return;
-        gp.verifyClosure(gap, {
+        const result = gp.verifyClosure(gap, {
           strategy: event.payload?.command || 'guardian.job.complete',
           jobId:    event.payload?.jobId || null,
         });
+        // §23.10 — if this job was tagged diagnosis-only and didn't resolve,
+        // say so plainly instead of letting it read identically to a real
+        // repair attempt that failed. Those are different situations.
+        if (!result.resolved && diagnosisOnly) {
+          console.log(`[${MODULE_ID}] gap ${gapUuid.slice(0,8)} still open — last attempt was diagnosis-only, no repair action was wired for this gap type`);
+        }
+        // §23.13 — advance the diagnostic contract, if this completion
+        // belongs to one. diagnosed() first (the model answered, regardless
+        // of outcome), then close() — resolved:true only when verifyClosure
+        // actually proved it via a real artifact, never this listener's
+        // own assessment.
+        if (contractUuid) {
+          try {
+            const dc = require('../lib/diagnostic-contract');
+            dc.diagnosed(contractUuid, { diagnosis: event.payload?.text || '' });
+            dc.close(contractUuid, {
+              resolved: !!result.resolved,
+              reason: result.resolved ? (result.reason || 'verified closed') : (result.reason || 'no artifact found — diagnosis only'),
+            });
+          } catch (e) {
+            console.warn(`[${MODULE_ID}] §1.2 diagnostic-contract advance failed:`, e.message);
+          }
+        }
       } catch(e) {
         console.warn(`[${MODULE_ID}] §1.2 closure verify on job.complete failed:`, e.message);
       }

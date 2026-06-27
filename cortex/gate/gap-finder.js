@@ -22,6 +22,18 @@ function init(cfg = {}) {
   _cfg      = cfg;
   _interval = setInterval(_tick, _cfg.pollMs ?? 2000);
   _interval.unref();
+  // §23.9 — register as a real component. This is where gaps are born —
+  // everything downstream (healer, self-heal, escalation, reflection) is
+  // a consumer of what this module finds, worth being visible the same way.
+  try {
+    require('../../lib/component-registry').register({
+      id: 'cortex.gap-finder', namespace: 'cortex', name: 'Gap Finder', version: '1.1.0',
+      description: 'Polls system state for stale modules, deviations, and structural problems; writes deduplicated gaps.',
+      grammar: ['gap scan', 'gap-finder status'], route: null, comp_type: 'engine',
+      events: { emits: ['gap.found'], listensTo: [] },
+      registeredBy: MODULE_ID,
+    });
+  } catch (_) {}
 }
 
 function stop() {
@@ -134,6 +146,12 @@ async function _tick() {
         causedBy: null,
         ts:       now,
       });
+      try {
+        require('../../lib/component-ledger').write({
+          system: 'cortex', component: 'cortex.gap-finder', action: 'gap_found',
+          status: gap.severity || 'medium', tags: [gap.type], detail: gap.body, causedBy: row.uuid,
+        });
+      } catch (_) {}
     }
 
     jaaDB.insert('poll_log', {

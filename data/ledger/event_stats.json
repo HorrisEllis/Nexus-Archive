@@ -1,0 +1,485 @@
+{
+  "stats": {
+    "orchestrator.boot.started": {
+      "count": 1,
+      "lastTs": 1782519618434,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.phase.ok": {
+      "count": 7,
+      "lastTs": 1782519618647,
+      "intervals": [
+        1,
+        12,
+        166,
+        3,
+        1,
+        26
+      ],
+      "totalMs": 209
+    },
+    "orchestrator.ui.opened": {
+      "count": 1,
+      "lastTs": 1782519618497,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.booted": {
+      "count": 1,
+      "lastTs": 1782519618607,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.systems.sequence.started": {
+      "count": 1,
+      "lastTs": 1782519618609,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.system.starting": {
+      "count": 7,
+      "lastTs": 1782519629279,
+      "intervals": [
+        1636,
+        2593,
+        1606,
+        1609,
+        1614,
+        1612
+      ],
+      "totalMs": 10670
+    },
+    "orchestrator.boot.complete": {
+      "count": 1,
+      "lastTs": 1782519618659,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "system.registered": {
+      "count": 16,
+      "lastTs": 1782519632949,
+      "intervals": [
+        7,
+        65,
+        1832,
+        174,
+        1829,
+        1261,
+        835,
+        30,
+        1137,
+        862,
+        4,
+        1464,
+        2002,
+        2755,
+        1
+      ],
+      "totalMs": 14258
+    },
+    "orchestrator.pulse": {
+      "count": 143,
+      "lastTs": 1782519974701,
+      "intervals": [
+        3921,
+        160,
+        1829,
+        4090,
+        3921,
+        160,
+        1830,
+        4090,
+        3921,
+        159,
+        1830,
+        4089,
+        3923,
+        158,
+        1830,
+        4090,
+        3921,
+        160,
+        1830,
+        4090,
+        3921,
+        164,
+        1824,
+        4090,
+        3921,
+        161,
+        1828,
+        4091,
+        3920,
+        160,
+        1830,
+        4090,
+        3921,
+        160,
+        1829,
+        4090,
+        3921,
+        161,
+        1828,
+        4090,
+        3922,
+        160,
+        1829,
+        4089,
+        3923,
+        159,
+        1832,
+        4086,
+        3924,
+        158,
+        1831,
+        4087,
+        3923,
+        160,
+        1831,
+        4086,
+        3924,
+        159,
+        1831,
+        4086,
+        3925,
+        159,
+        1833,
+        4083,
+        3925,
+        158,
+        1832,
+        4085,
+        3925,
+        165,
+        1825,
+        4086,
+        3925,
+        160,
+        1830,
+        4085,
+        3928,
+        158,
+        1830,
+        4089,
+        3919,
+        162,
+        1831,
+        4086,
+        3922,
+        160,
+        1832,
+        4087,
+        3921,
+        161,
+        1831,
+        4087,
+        3921,
+        161,
+        1830,
+        4088,
+        3922,
+        160,
+        1830,
+        4087
+      ],
+      "totalMs": 355966
+    },
+    "bridge.boot.started": {
+      "count": 1,
+      "lastTs": 1782519618762,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.registered": {
+      "count": 1,
+      "lastTs": 1782519618768,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.phase.ok": {
+      "count": 8,
+      "lastTs": 1782519618807,
+      "intervals": [
+        14,
+        3,
+        0,
+        1,
+        5,
+        0,
+        5
+      ],
+      "totalMs": 28
+    },
+    "bridge.booted": {
+      "count": 1,
+      "lastTs": 1782519618806,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.boot.complete": {
+      "count": 1,
+      "lastTs": 1782519618808,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.system.online": {
+      "count": 1,
+      "lastTs": 1782519619443,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "cortex.boot.started": {
+      "count": 1,
+      "lastTs": 1782519620595,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "cortex.registered": {
+      "count": 1,
+      "lastTs": 1782519620601,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "cortex.phase.ok": {
+      "count": 15,
+      "lastTs": 1782519622276,
+      "intervals": [
+        615,
+        2,
+        795,
+        1,
+        1,
+        13,
+        1,
+        235,
+        2,
+        6,
+        1,
+        0,
+        0,
+        0
+      ],
+      "totalMs": 1672
+    },
+    "cortex.system.online": {
+      "count": 1,
+      "lastTs": 1782519622038,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "cortex.boot.complete": {
+      "count": 1,
+      "lastTs": 1782519622285,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.seam.watchdog.started": {
+      "count": 1,
+      "lastTs": 1782519623314,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.boot.started": {
+      "count": 1,
+      "lastTs": 1782519623315,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.phase.ok": {
+      "count": 14,
+      "lastTs": 1782519623865,
+      "intervals": [
+        17,
+        1,
+        0,
+        5,
+        1,
+        100,
+        3,
+        0,
+        9,
+        404,
+        0,
+        5,
+        2
+      ],
+      "totalMs": 547
+    },
+    "guardian.system.online": {
+      "count": 1,
+      "lastTs": 1782519623643,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.phase.failed": {
+      "count": 1,
+      "lastTs": 1782519623856,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.registered": {
+      "count": 1,
+      "lastTs": 1782519623861,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.boot": {
+      "count": 1,
+      "lastTs": 1782519623864,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.boot.complete": {
+      "count": 1,
+      "lastTs": 1782519623866,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.boot.started": {
+      "count": 1,
+      "lastTs": 1782519624662,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.phase.ok": {
+      "count": 8,
+      "lastTs": 1782519624727,
+      "intervals": [
+        10,
+        8,
+        11,
+        29,
+        2,
+        3,
+        1
+      ],
+      "totalMs": 64
+    },
+    "idearium.booted": {
+      "count": 1,
+      "lastTs": 1782519624725,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.boot.complete": {
+      "count": 1,
+      "lastTs": 1782519624728,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.system.online": {
+      "count": 1,
+      "lastTs": 1782519625253,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "architect.system.online": {
+      "count": 1,
+      "lastTs": 1782519626862,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "emerge.system.online": {
+      "count": 1,
+      "lastTs": 1782519628476,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "diagnostic.system.online": {
+      "count": 1,
+      "lastTs": 1782519630137,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.systems.sequence.complete": {
+      "count": 1,
+      "lastTs": 1782519630939,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.job.queued": {
+      "count": 14,
+      "lastTs": 1782519944743,
+      "intervals": [
+        1,
+        20,
+        1,
+        59864,
+        3,
+        46,
+        1,
+        32,
+        5,
+        240096,
+        1,
+        27,
+        1
+      ],
+      "totalMs": 300098
+    },
+    "guardian.tab.needed": {
+      "count": 7,
+      "lastTs": 1782519944746,
+      "intervals": [
+        20,
+        59866,
+        46,
+        39,
+        240095,
+        31
+      ],
+      "totalMs": 300097
+    },
+    "guardian.cli.exec": {
+      "count": 2,
+      "lastTs": 1782519949362,
+      "intervals": [
+        25
+      ],
+      "totalMs": 25
+    }
+  },
+  "baseline": {
+    "cortex.phase.ok": {
+      "avgIntervalMs": 185,
+      "stddevMs": 290,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1782519622270
+    },
+    "guardian.phase.ok": {
+      "avgIntervalMs": 15,
+      "stddevMs": 30,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1782519623454
+    },
+    "system.registered": {
+      "avgIntervalMs": 797,
+      "stddevMs": 715,
+      "consistency": 0.10212968060540772,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1782519625861
+    },
+    "orchestrator.pulse": {
+      "avgIntervalMs": 2500,
+      "stddevMs": 1618,
+      "consistency": 0.3529038182733273,
+      "count": 140,
+      "sampleSize": 100,
+      "computedAt": 1782519968624
+    },
+    "guardian.job.queued": {
+      "avgIntervalMs": 6664,
+      "stddevMs": 18809,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1782519704618
+    }
+  }
+}

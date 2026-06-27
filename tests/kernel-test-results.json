@@ -1,10 +1,15 @@
 {
-  "run_at": "2026-06-13T23:10:46.769Z",
-  "total": 142,
-  "passed": 142,
-  "failed": 0,
-  "pass_rate": "1.000",
-  "failures": [],
+  "run_at": "2026-06-25T08:27:24.532Z",
+  "total": 102,
+  "passed": 101,
+  "failed": 1,
+  "pass_rate": "0.990",
+  "failures": [
+    {
+      "name": "real .eg files: found 0 files in emerge/io",
+      "error": "no .eg files found"
+    }
+  ],
   "log": [
     {
       "status": "PASS",
@@ -387,168 +392,9 @@
       "name": "emitFiles: missing template does not throw"
     },
     {
-      "status": "PASS",
-      "name": "real .eg files: found 124 files in emerge/io"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — agents/agent-base.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — agents/agent-base.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — agents/agent-chatgpt.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — agents/agent-chatgpt.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — agents/agent-claude.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — agents/agent-claude.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — agents/agent-gemini.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — agents/agent-gemini.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — agents/agent-ollama.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — agents/agent-ollama.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — agents/agents-dispatcher.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — agents/agents-dispatcher.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — automation/automation-engine.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — automation/automation-engine.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — automation/automation-queue.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — automation/automation-queue.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/canvas-renderer.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/canvas-renderer.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/cfr-physics.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/cfr-physics.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/cfr-render.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/cfr-render.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/cfr-rewind.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/cfr-rewind.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/image-analyzer.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/image-analyzer.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/nas-router.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/nas-router.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/node-inspector.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/node-inspector.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/rewind-scrubber.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/rewind-scrubber.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — canvas/tauri-ws.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — canvas/tauri-ws.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — cockpit/cockpit-cli.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — cockpit/cockpit-cli.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — cockpit/cockpit-core.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — cockpit/cockpit-core.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: compiles without throw — cockpit/cockpit-forge.eg"
-    },
-    {
-      "status": "PASS",
-      "name": "real .eg: snr > 0 — cockpit/cockpit-forge.eg"
+      "status": "FAIL",
+      "name": "real .eg files: found 0 files in emerge/io",
+      "error": "no .eg files found"
     },
     {
       "status": "PASS",

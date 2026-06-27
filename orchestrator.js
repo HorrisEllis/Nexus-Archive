@@ -1565,6 +1565,11 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='log')                return json(res,200,await GET('guardian',`/log?limit=${QS.get('limit')||20}`));
     if (M==='POST' && action==='dispatch')           return json(res,202,await POST('guardian','/command',await readBody(req)));
     if (M==='POST' && action==='copilot' && sub2==='prompt') return json(res,200,await POST('guardian','/copilot/prompt',await readBody(req), 120000)); // 120s — Mistral 7b can take 45s+
+    if (M==='POST' && action==='copilot' && sub2==='channel') return json(res,200,await POST('guardian','/copilot/channel',await readBody(req), 2000));
+    if (M==='POST' && action==='copilot' && sub2==='observe') return json(res,200,await POST('guardian','/copilot/observe',await readBody(req), 1000));
+    // Phase 67: MCP routes
+    if (M==='GET' && action==='mcp' && sub2==='status') return json(res,200,await GET('guardian','/mcp/status'));
+    if (M==='GET' && action==='mcp' && sub2==='tools') return json(res,200,await GET('guardian','/mcp/tools'));
   // ── Spec Engine proxy (Phase 40) ──────────────────────────────────────────
   if (action==='spec-engine') {
     const ideariumPath = '/' + ['api','spec-engine',...segs.slice(3)].join('/');

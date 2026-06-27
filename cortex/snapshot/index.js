@@ -95,7 +95,15 @@ function create(opts = {}) {
   const message = opts.message || '';
   const trigger = opts.trigger || null;
 
-  const tables = _captureJAA();
+  // §FIX-24.1: Divergence snapshots only capture divergence context — not a full
+  // JAA dump. The full dump reads up to 10k rows per table (21k+ rows), blocks
+  // the event loop for hundreds of milliseconds, and caused cortex to appear
+  // offline to the watchdog while the IO completed. Divergence snapshots carry
+  // all their useful data in _extra (sigma, system_state, blackbox_pre/post,
+  // resume) — the table dump adds nothing but latency.
+  // Full JAA dumps: manual and pre_forge only.
+  const SKIP_JAA = new Set(['divergence', 'pre_divergence', 'auto']);
+  const tables = SKIP_JAA.has(type) ? {} : _captureJAA();
 
   // Count meaningful rows
   const rowCounts = Object.fromEntries(

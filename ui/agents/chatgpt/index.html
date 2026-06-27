@@ -178,7 +178,7 @@ async function refresh(){
   sv(6,hb!==null?(hb<15?'♥ '+hb+'s':'stale'):'—',hb!==null&&hb<15);
   await Promise.all([
     api(`${GD}/health`).then(r=>sv(0,r?.ok?'✓ :7820':'✗ :7820',r?.ok)),
-    api(`${CX}/health`).then(r=>sv(1,r?.ok?'✓ :3748':'✗ :3748',r?.ok)),
+    api(`${CX}/health`).then(r=>{const ok=r?.status==='ok'||r?.ok===true;sv(1,ok?'✓ :3748':'✗ :3748',ok);}),
   ]);
   const ga=gaps?.gaps||[];sv(4,ga.length,ga.length===0);
   sv(5,(jobs?.jobs||[]).length,(jobs?.jobs||[]).length===0);
@@ -209,12 +209,24 @@ async function buildCtx(types){const parts=[];
   if(types.includes('structured')){parts.push('[FORMAT: respond with structured JSON only — no prose, no markdown fencing]');}
   return parts.join('\n\n');
 }
+async function pollJob(jobId,ms=120000){const t0=Date.now();while(Date.now()-t0<ms){await new Promise(r=>setTimeout(r,1500));const d=await api(`${GD}/jobs?limit=80`);const j=(d?.jobs||[]).find(x=>x.id===jobId);if(j&&(j.status==='complete'||j.status==='done'))return j;if(j&&j.status==='error')return j;}return null;}
 async function send(){const prompt=document.getElementById('pi').value.trim();if(!prompt||_streaming)return;
   const types=[...document.querySelectorAll('.cc.on')].map(c=>c.dataset.c);
   const ctx=await buildCtx(types);
   addMsg('user',prompt);document.getElementById('pi').value='';
   const msgEl=addStream('assistant');_streaming=true;const t0=Date.now();
-  try{const r=await post(`${ORCH}/api/guardian/copilot/prompt`,{prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt});finalStream(msgEl,r?.text||'(no response)');document.getElementById('ss-tok').textContent=r?.modelUsed||'—';document.getElementById('ss-st').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';}
+  try{
+    const prov=await api(`${GD}/providers`);const tabLive=!!prov?.channels?.[PROVIDER];
+    if(tabLive){
+      const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,meta:{source:'chatgpt-console',chatMode:true}});
+      if(r?.jobId){document.getElementById('ss-tok').textContent='→ ChatGPT tab';const job=await pollJob(r.jobId);finalStream(msgEl,job?.response||job?.responseText||'(no response — check ChatGPT tab)');document.getElementById('ss-tok').textContent='ChatGPT NCP';}
+      else{finalStream(msgEl,'✗ dispatch failed: '+(r?.error||'unknown'));}
+    } else {
+      const r=await post(`${ORCH}/api/guardian/copilot/prompt`,{prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt});
+      finalStream(msgEl,r?.text||'(no ChatGPT tab — start userscript)');document.getElementById('ss-tok').textContent=r?.modelUsed||'co-pilot (no tab)';
+    }
+    document.getElementById('ss-st').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
+  }
   catch(e){finalStream(msgEl,'✗ '+e.message);}
   _streaming=false;
 }

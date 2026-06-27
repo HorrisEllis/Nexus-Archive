@@ -582,15 +582,22 @@ test('_decide with Ollama online → LAW_I routes to ollama', () => {
   assert.ok(d.reason.startsWith('LAW_I'));
 });
 
-test('_decide with Ollama offline (3+ fails) → guardian-claude', () => {
+test('_decide with Ollama offline (3+ fails) → claude (via the guardian-claude health key)', () => {
   const health = {
     ollama:             { online: false, consecutiveFails: 3 },
     'guardian-claude':  { online: true,  consecutiveFails: 0 },
     'guardian-chatgpt': { online: false, consecutiveFails: 0 },
   };
   const d = _decide({ prompt: 'build code' }, health, new Map());
-  assert.strictEqual(d.agent, 'guardian-claude');
-  assert.ok(d.reason.includes('guardian_claude'));
+  // §FIX — the chain's agent identifier is the bare name ('claude'), which is
+  // what actually gets dispatched (service/nexus-diagnostic.js passes this
+  // straight through as the job's provider field; Guardian's userscripts
+  // register as provider=claude, never provider=guardian-claude).
+  // 'guardian-claude' is correctly a healthSnap lookup key, not a valid
+  // dispatch target — _agentAvailable('claude', ...) checks that key to
+  // determine claude is reachable, then returns the bare name.
+  assert.strictEqual(d.agent, 'claude');
+  assert.ok(d.reason.includes('cluster_chain'));
 });
 
 test('_decide with guardian-claude online but ollama still used (LAW_I)', () => {
@@ -925,7 +932,10 @@ test('LAW_I: bypass only when consecutiveFails >= 3', () => {
   // 3 fails — LAW_I bypass allowed
   const health3 = { ollama: { online: false, consecutiveFails: 3 }, 'guardian-claude': { online: true, consecutiveFails: 0 } };
   const d3 = _decide({ prompt: 'test' }, health3, new Map());
-  assert.strictEqual(d3.agent, 'guardian-claude');
+  // §FIX — see the other corrected test above for the full trace; bare
+  // 'claude' is what actually gets dispatched, 'guardian-claude' is the
+  // healthSnap key that determined claude is reachable.
+  assert.strictEqual(d3.agent, 'claude');
 });
 
 test('LAW_I: guardian before API (free > paid)', () => {

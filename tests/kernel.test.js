@@ -14,7 +14,7 @@ const fs     = require('fs');
 const os     = require('os');
 
 // ── Load kernel ───────────────────────────────────────────────────────────────
-const KERNEL_PATH = path.resolve(__dirname, '../emerge/emerge-kernel.js');
+const KERNEL_PATH = path.resolve(__dirname, '../emerge-kernel.js');
 if (!fs.existsSync(KERNEL_PATH)) {
   console.error('[FATAL] emerge-kernel.js not found at', KERNEL_PATH);
   process.exit(1);
@@ -733,7 +733,7 @@ test('emitFiles: missing template does not throw', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 section('BLOCK 9 — REAL .eg FILES integration');
 
-const IO_DIR = path.resolve(__dirname, '../emerge/io');
+const IO_DIR = path.resolve(__dirname, '../io');
 
 if (fs.existsSync(IO_DIR)) {
   const egFiles = [];

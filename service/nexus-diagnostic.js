@@ -601,8 +601,78 @@ function startService() {
     return issues;
   }
 
+  // §23.10 — gaps come from (at least) two unrelated taxonomies sharing the
+  // same 'gaps' table: system/structural gaps (stale_module, cluster_misfire,
+  // seam_orphan_resume — carry path/body/severity, defined in gap-lifecycle.spec)
+  // and GapHunter's epistemic gaps (assumption/obligation/contradiction/logical
+  // — carry description/question/evidence/domain, defined in guardian/lib/
+  // gap-hunter.js, inserted with NO path/body/severity field at all — see
+  // guardian/server.js's SISOGate('guardian.gaps', ...) insert). This function
+  // templated path/body/severity unconditionally, so every epistemic gap sent
+  // to Ollama read as "Path: ?  Body:  Severity: undefined" — confirmed
+  // directly in the Jobs tab screenshot, where Ollama's only honest move was
+  // to echo the empty shape back. Building the right prompt for the shape
+  // that's actually there, instead of one template for both.
+  function _buildDiagnosticPrompt(gap) {
+    const isEpistemic = (gap.description !== undefined || gap.question !== undefined || gap.evidence !== undefined)
+      && gap.path === undefined && gap.body === undefined;
+
+    if (isEpistemic) {
+      const evidence = (() => {
+        try { return typeof gap.evidence === 'string' ? gap.evidence : JSON.stringify(gap.evidence); }
+        catch { return String(gap.evidence); }
+      })();
+      return [
+        'NEXUS DIAGNOSTIC ESCALATION — epistemic gap (GapHunter)',
+        `Gap type: ${gap.type}`,
+        `Domain: ${gap.domain || 'unspecified'}`,
+        `Description: ${gap.description || '(none recorded)'}`,
+        gap.question ? `Open question: ${gap.question}` : null,
+        evidence && evidence !== '{}' && evidence !== 'null' ? `Evidence: ${evidence.slice(0, 300)}` : null,
+        `Score: ${gap.score ?? 'unscored'}`,
+        '',
+        'This is a gap detected in an AI response\'s text (an unstated assumption, unmet obligation, or similar) — not a code or file path issue.',
+        'Analyse what the underlying response was missing and propose what should have been said or checked instead.',
+        'Note: this analysis is not automatically applied. No code runs as a result of your response.',
+      ].filter(Boolean).join('\n');
+    }
+
+    return `NEXUS DIAGNOSTIC ESCALATION\nGap: ${gap.type}\nPath: ${gap.path || '?'}\nBody: ${(gap.body || '').slice(0, 200)}\nSeverity: ${gap.severity || 'unspecified'}\nAttempts: ${gap.attempts || 0}\n\nAnalyse this gap, identify root cause, propose a concrete fix.\nNote: this analysis is not automatically applied. No code runs as a result of your response.`;
+  }
+
   // ── Escalation bridge — calls escalation ladder for persistent gaps ──────────
   const _escalationCooldown = new Map(); // gapKey → last escalated ts
+  let _warnedMissingContractModule = false; // §23.20 — warn once, not every sweep
+  // §23.18 — "the system needs to prioritize guardian and cortex more than
+  // anything when it comes to diagnosing the system." gap-loop's own
+  // topology:watch has logged "Stabilize guardian first. Cascade will
+  // self-resolve downstream." on every single run shown this entire
+  // conversation — DEPENDENCY_CASCADE leverage climbing from 1.5 to 19,
+  // loops affected from 11 to 133 — and nothing downstream of that log
+  // line ever actually changed dispatch order. The insight existed; the
+  // action never happened. This is the action.
+  //
+  // Two-tier: gaps whose type/path/system point at guardian, cortex, or
+  // the NCP connection between them are infrastructure-health gaps — the
+  // actual cause. obligation/assumption/seam_orphan_resume/logical/etc are
+  // epistemic gaps GapHunter finds IN AI RESPONSE TEXT while Guardian is
+  // dispatching jobs — produced BY Guardian while it's struggling, not
+  // the reason it's struggling. Dispatching those first while an
+  // infrastructure gap sits in the same queue spends every cycle on the
+  // symptom while the cause waits its turn.
+  const GUARDIAN_CORTEX_PATTERN = /guardian|cortex|ncp[._]|\bncp\b/i;
+  function _isInfraGap(gap) {
+    // §23.18 — gap.source deliberately excluded. It's almost always
+    // 'guardian.lib.gap-hunter' for every epistemic gap (obligation,
+    // assumption, logical, etc) because that's where the DETECTING code
+    // lives, not what the gap is about — including it made every
+    // epistemic gap match "guardian" too, which would have defeated the
+    // entire point of this distinction. type/path/system/body are what
+    // actually describe the gap's subject.
+    const haystack = `${gap.type||''} ${gap.path||''} ${gap.system||''} ${gap.body||''}`;
+    return GUARDIAN_CORTEX_PATTERN.test(haystack);
+  }
+
   async function _escalateHighSeverityGaps() {
     // Pull open high-severity gaps from cortex
     let gaps = [];
@@ -621,14 +691,37 @@ function startService() {
       });
     } catch(_) {}
 
+    // §23.18 — infra gaps (guardian/cortex/ncp) first, everything else after.
+    // Stable sort: within each tier, original order (severity/recency from
+    // cortex's own query) is preserved — this only changes WHICH tier goes
+    // first, not the ordering within a tier.
+    if (gaps.length > 1) {
+      const infra = gaps.filter(_isInfraGap);
+      const other = gaps.filter(g => !_isInfraGap(g));
+      if (infra.length) {
+        gaps = [...infra, ...other];
+        require('../lib/component-ledger').write({
+          system: 'diagnostic', component: 'service.nexus-diagnostic', action: 'priority_reordered',
+          status: 'guardian_cortex_first', tags: infra.map(g => g.type),
+          detail: `${infra.length} infra gap(s) moved ahead of ${other.length} epistemic gap(s) this sweep`,
+          causedBy: null,
+        });
+      }
+    }
+
     for (const gap of gaps) {
       // §23.7 — skip gaps in terminal or investigating states
       // This is the primary fix for the 300-job flood:
       // gaps that are already being investigated should NOT be re-dispatched
       // on every diagnostic sweep. The gap stays open until the artifact appears.
+      // §23.21 — added failure_mode: the same flood pattern recurred through
+      // a sibling code path (the escalation-ladder fallback, Phase 3 below)
+      // that this earlier fix didn't cover — that branch never updated gap
+      // status at all, so it was exempt from this skip-filter by construction,
+      // not by oversight in this particular line.
       if (gap.status === 'investigating' || gap.status === 'resolved' ||
           gap.status === 'expired'       || gap.status === 'blocked'  ||
-          gap.status === 'archived') continue;
+          gap.status === 'archived'      || gap.status === 'failure_mode') continue;
 
       // Skip gaps already escalated in the last 5 minutes
       const lastEsc = _escalationCooldown.get(gap.uuid) || 0;
@@ -669,12 +762,69 @@ function startService() {
       // Phase 2: Dispatch to guardian if RAID has a decision
       let guardianDispatched = false;
       if (raidDecision?.agent) {
+        // §23.10 — HONEST NAME CHECK: this command is called diagnose_and_repair
+        // but nothing downstream of the model's response ever executes a repair.
+        // _dispatchOllamaNative() in guardian/server.js streams the response into
+        // the job's text field and chat_log — full stop. gap-loop.js's closure
+        // verifier (correctly) only marks a gap resolved when verifyArtifact()
+        // finds a real artifact; a paragraph of analysis is not one, so it
+        // never does, so the gap stays open, so the next diagnostic sweep
+        // dispatches the identical job again. That's not a bug in the verifier
+        // — it's doing exactly what gap-lifecycle.spec says. The gap is that
+        // "repair" was never wired to anything. Tagging this explicitly so
+        // it's visible as diagnosis-only in the ledger, not indistinguishable
+        // from a real attempted-and-failed repair.
+
+        // §23.13 — diagnose_and_repair as a real tracked contract, not a
+        // bare job. queued here; dispatched() once the HTTP POST to
+        // guardian actually succeeds below; diagnosed()/close() happen in
+        // cortex/gap-loop.js's guardian.job.complete listener, once the
+        // model has actually answered and verifyClosure has actually run.
+        //
+        // §23.20 — this require was unguarded. A deployment that copies
+        // service/nexus-diagnostic.js without also copying the new
+        // lib/diagnostic-contract.js (an easy thing to miss — they're in
+        // different directories) crashed this entire function with
+        // MODULE_NOT_FOUND, every single sweep, hitting the 6-crashes-in-
+        // 5-minutes circuit breaker and taking the whole diagnostic
+        // service offline. Contract tracking is a real feature but it is
+        // not load-bearing for the escalation dispatch itself — diagnosis
+        // and dispatch must keep working even if this one enhancement
+        // can't load. Logged loudly once, not every sweep, so it's
+        // findable without being noise.
+        let contract = null;
+        try {
+          contract = require('../lib/diagnostic-contract').create({
+            gapUuid: gap.uuid, gapType: gap.type, system: gap.system || null,
+            tags: ['diagnostic.escalation', raidDecision.agent],
+            detail: `escalated gap, severity ${gap.severity || 'unspecified'}`,
+          });
+        } catch (e) {
+          if (!_warnedMissingContractModule) {
+            _warnedMissingContractModule = true;
+            console.error(`[diagnostic] §1.2 lib/diagnostic-contract failed to load (${e.message}) — ` +
+              `contract tracking disabled for this run, escalation dispatch continues without it. ` +
+              `If this is MODULE_NOT_FOUND, the file likely wasn't copied alongside this one.`);
+          }
+        }
+
         const jobPayload = JSON.stringify({
           command:  'diagnose_and_repair',
           provider: raidDecision.agent,
-          prompt:   `NEXUS DIAGNOSTIC ESCALATION\nGap: ${gap.type}\nPath: ${gap.path || '?'}\nBody: ${(gap.body || '').slice(0, 200)}\nSeverity: ${gap.severity}\nAttempts: ${gap.attempts || 0}\n\nAnalyse this gap, identify root cause, propose a concrete fix.`,
-          meta: { gapUuid: gap.uuid, gapType: gap.type, source: 'diagnostic.escalation', raidAgent: raidDecision.agent },
+          prompt:   _buildDiagnosticPrompt(gap),
+          meta: {
+            gapUuid: gap.uuid, gapType: gap.type, source: 'diagnostic.escalation',
+            raidAgent: raidDecision.agent, diagnosisOnly: true,
+            contractUuid: contract?.uuid || null,
+          },
         });
+        try {
+          require('../lib/component-ledger').write({
+            system: 'diagnostic', component: 'service.nexus-diagnostic', action: 'diagnose_dispatched',
+            status: 'diagnosis_only', tags: [gap.type, 'no-repair-action'],
+            detail: `prose analysis only — no artifact-producing action wired for ${gap.type}`, causedBy: gap.uuid,
+          });
+        } catch (_) {}
 
         guardianDispatched = await new Promise(resolve => {
           const req = http.request({
@@ -684,7 +834,13 @@ function startService() {
           }, res => {
             let b = ''; res.on('data', d => b += d);
             res.on('end', () => {
-              try { const d = JSON.parse(b); resolve(d.jobId || d.ok); } catch { resolve(false); }
+              try {
+                const d = JSON.parse(b);
+                if (contract?.uuid && d.jobId) {
+                  try { require('../lib/diagnostic-contract').dispatched(contract.uuid, { agent: raidDecision.agent, jobId: d.jobId }); } catch (_) {}
+                }
+                resolve(d.jobId || d.ok);
+              } catch { resolve(false); }
             });
           });
           req.on('error', () => resolve(false));
@@ -697,8 +853,40 @@ function startService() {
       if (!guardianDispatched) {
         try {
           const escModule = require('../cortex/self-heal/escalation');
-          await escModule.escalate(gap);
+          const result = await escModule.escalate(gap);
           _logRemediation({ action: 'escalation_ladder', gapUuid: gap.uuid, gapType: gap.type });
+
+          // §23.21 — THE SPAM FIX. This branch never updated gap status, so
+          // the gap stayed 'open' and got re-fetched by the NEXT sweep's
+          // `status=open` query, re-attempted, forever — regardless of what
+          // the escalation ladder's own per-type friction state said. With
+          // ~38 open obligation gaps alone, every sweep was re-running this
+          // whole branch for all of them, every 15-30s, indefinitely. The
+          // ladder's friction tracking is per-TYPE ('obligation'), not
+          // per-gap-instance, so it can say "already in failure mode" for
+          // the bucket while this code kept re-presenting the same
+          // individual gaps as if they'd never been seen.
+          //
+          // Once a type hits FAILURE_MODE, there is nothing more this loop
+          // can usefully do to any individual gap of that type — repeating
+          // the attempt every sweep was pure waste, and was very likely
+          // *part of* why cortex was timing out: each attempt that reaches
+          // level 2 takes a real snapshot.
+          try {
+            const jaaDB = require('../cortex/memory/jaa-db').jaaDB;
+            if (result?.alreadyFailureMode) {
+              // The bucket is saturated — this individual gap can't be
+              // usefully re-attempted until a human or a forge patch
+              // clears it. Mark it so, don't re-fetch it every sweep.
+              jaaDB.update('gaps', gap.uuid, { status: 'failure_mode', failureModeAt: Date.now() });
+            } else {
+              // A real escalation attempt happened (levels 0-3.5) — same
+              // 'investigating' convention the successful-dispatch branch
+              // already uses, so the existing TTL/predicate sweep picks it
+              // up the same way.
+              jaaDB.update('gaps', gap.uuid, { status: 'investigating', investigatingAt: Date.now() });
+            }
+          } catch(_) {}
         } catch(e) {
           _logRemediation({ action: 'escalation_failed', gapUuid: gap.uuid, error: e.message });
           console.warn(`[diagnostic] escalation failed for ${gap.uuid}: ${e.message}`);

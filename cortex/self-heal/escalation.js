@@ -155,6 +155,17 @@ function logEscalation(gap, level, result) {
   try { jaaDB.insert('escalation_log', record); } catch(_) {
     jaaDB.insert('event_log', record); // fallback if table not provisioned yet
   }
+  // §23.9 — single chokepoint: every escalation level passes through here,
+  // so wiring the ledger here covers all 5 levels without touching each
+  // level function individually.
+  try {
+    require('../../lib/component-ledger').write({
+      system: 'cortex', component: 'cortex.self-heal-escalation',
+      action: `level_${level}`, status: result.outcome,
+      tags: [gap.type], detail: result.strategy ? `${result.strategy} — ${result.reason || result.note || ''}`.trim() : result.reason,
+      causedBy: gap.uuid,
+    });
+  } catch (_) {}
   return record;
 }
 
@@ -590,4 +601,31 @@ module.exports = {
   level3_deepScan, level3_5_agentConsult, level4_failureMode,
   FRICTION, FRICTION_COST,
   MODULE_ID, VERSION,
+  wireAnomalyTrigger,
 };
+
+// ── Phase 71.4: Anomaly → Escalation trigger ──────────────────────────────────
+// Closes the loop: 71.2 Expectation → 71.3 Anomaly → 71.4 Escalation.
+// Listeners relay events only — interpretation stays in reducer + anomaly engine.
+// §6.2 four action shapes confirmed: inject=level1_safeFix, transition=level0,
+// rollback=snapshot-on-failure, reset=friction-zero-after-healthy.
+function wireAnomalyTrigger(bus, jaaDB_ref) {
+  if (!bus?.on) return;
+  bus.on('anomaly.detected', async ({ anomalyUuid, type, severity, sessionId }) => {
+    try {
+      const uid_fn = () => require('crypto').randomUUID();
+      const existing = jaaDB_ref?.query?.('gaps',
+        g => g.meta?.anomalyUuid === anomalyUuid && g.status === 'open', 1);
+      if (existing?.length) return;
+      const gap = {
+        uuid: uid_fn(), type: 'causal_anomaly', path: `seam/${sessionId}`,
+        body: `[71.4] Anomaly: ${type} session=${sessionId}`,
+        severity: severity || 'medium', status: 'open', source: MODULE_ID, ts: Date.now(),
+        meta: { anomalyUuid, anomalyType: type, sessionId },
+      };
+      if (jaaDB_ref?.insert) try { jaaDB_ref.insert('gaps', gap); } catch(_) {}
+      await escalate(gap, jaaDB_ref);
+    } catch(e) { console.warn(`[${MODULE_ID}] anomaly trigger: ${e.message}`); }
+  });
+  console.log(`[${MODULE_ID}] 71.4 wired — escalation on anomaly.detected`);
+}
