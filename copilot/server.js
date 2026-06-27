@@ -30,7 +30,10 @@ const OR_URL   = process.env.ORCH_URL       || 'http://127.0.0.1:9000';
 const OL_URL   = process.env.OLLAMA_URL     || 'http://127.0.0.1:3749';
 const IDR_URL  = process.env.IDEARIUM_URL   || 'http://127.0.0.1:4800';
 
-const _cw = require('../lib/cortex-write')('copilot');
+const _cw          = require('../lib/cortex-write')('copilot');
+const _lifeline    = require('./lifeline');
+const _axiomMgr    = require('./axiom-manager');
+const _modBuilder  = require('./module-builder');
 const SYSTEM_ID = 'copilot';
 const VERSION   = '2.0.0';
 
@@ -282,6 +285,55 @@ const server = http.createServer(async (req, res) => {
   // Sessions
   if (method === 'GET' && p === '/api/sessions') {
     json(res, 200, { ok:true, sessions: [..._sessions.values()] });
+    return;
+  }
+
+  // GET /api/axioms
+  if (method === 'GET' && p === '/api/axioms') {
+    const tier = url.searchParams.get('tier');
+    json(res, 200, { ok:true, axioms: _axiomMgr.list({ tier }), summary: _axiomMgr.summary() });
+    return;
+  }
+
+  // POST /api/axioms/add
+  if (method === 'POST' && p === '/api/axioms/add') {
+    const body = await readBody(req);
+    try {
+      const axiom = _axiomMgr.add(body.id, body.text, { reason: body.reason });
+      json(res, 200, { ok:true, axiom });
+    } catch(e) { json(res, 400, { ok:false, error: e.message }); }
+    return;
+  }
+
+  // POST /api/axioms/remove
+  if (method === 'POST' && p === '/api/axioms/remove') {
+    const body = await readBody(req);
+    try {
+      const result = _axiomMgr.remove(body.id, { confirm: body.confirm });
+      json(res, 200, { ok:true, ...result });
+    } catch(e) { json(res, 400, { ok:false, error: e.message }); }
+    return;
+  }
+
+  // GET /api/lifeline/health
+  if (method === 'GET' && p === '/api/lifeline/health') {
+    const h = await _lifeline.health();
+    json(res, 200, { ok:true, ...h });
+    return;
+  }
+
+  // POST /api/build — user asks co-pilot to build a module
+  if (method === 'POST' && p === '/api/build') {
+    const body      = await readBody(req);
+    const sessionId = body.sessionId || req.headers['x-session-id'];
+    if (!body.description) { json(res, 400, { ok:false, error:'description required' }); return; }
+    broadcast('copilot.build.started', { description: body.description.slice(0,100) });
+    _modBuilder.build(body.description, { requestId: body.requestId, sessionId, skipGaps: body.skipGaps })
+      .then(result => {
+        broadcast('copilot.build.complete', { ok: result.ok, passed: result.passed });
+        json(res, 200, result);
+      })
+      .catch(e => json(res, 500, { ok:false, error: e.message }));
     return;
   }
 
