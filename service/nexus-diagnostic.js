@@ -183,13 +183,6 @@ function startService() {
   fs.mkdirSync(path.join(ROOT, 'data/diagnostic/invariant'),{ recursive: true });
   fs.writeFileSync(PID_FILE, String(process.pid));
 
-  // Purge stale baseline invariants on every boot so cold-start noise
-  // doesn't lock in a bad baseline that triggers permanent GAP spam.
-  for (const [name, cfg] of Object.entries(SYSTEMS)) {
-    const invFile = path.join(ROOT, cfg.dataDir, 'invariant', 'baseline.json');
-    try { fs.unlinkSync(invFile); } catch (_) {}
-  }
-
   // Diagnostic ICO kernel
   const ico = createICO({
     name: 'diagnostic',
@@ -204,8 +197,8 @@ function startService() {
       ledgerDir:    path.join(ROOT, cfg.dataDir),   // §LEDGER-FIX: dataDir is now the source
       failuresDir:  path.join(ROOT, cfg.dataDir, 'failures'),
       invariantDir: path.join(ROOT, cfg.dataDir, 'invariant'),
-      baselineN:    30,
-      sigmaThreshold: 0.6,
+      baselineN:    10,
+      sigmaThreshold: 0.25,
       onGap: (gap) => {
         gap.system = name;
         openGaps.set(gap.uuid, gap);
@@ -1598,6 +1591,159 @@ function startService() {
       return;
     }
 
+  // ── Component + SEAM map routes ───────────────────────────────────────────
+  // GET /components — all registered components across every system
+  if (url.pathname === '/components') {
+    try {
+      const map = _buildSeamMap();
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({
+        ok: true, ts: map.ts,
+        summary: map.summary,
+        systems: Object.fromEntries(
+          Object.entries(map.systems).map(([ns, r]) => [ns, {
+            count: (r.components||[]).length,
+            error: r.error || null,
+            meta:  r.meta || null,
+          }])
+        ),
+        components: map.components.map(c => ({
+          id: c.id, namespace: c.namespace, name: c.name,
+          version: c.version, description: c.description,
+          route: c.route, tags: c.tags,
+          hasHooks: !!(c.hooks && (c.hooks.in?.length || c.hooks.out?.length)),
+          hookCount: { in: (c.hooks?.in||[]).length, out: (c.hooks?.out||[]).length },
+        })),
+      }));
+    } catch(e) {
+      res.writeHead(500, CORS);
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
+  // GET /components/wires — all declared SEAM wires + validation
+  if (url.pathname === '/components/wires') {
+    try {
+      const map = _buildSeamMap();
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({
+        ok: true, ts: map.ts,
+        summary: {
+          total:   map.wires.length,
+          valid:   map.wires.filter(w=>w.status==='valid').length,
+          broken:  map.brokenWires.length,
+          orphaned: map.orphanedInHooks.length,
+        },
+        wires:            map.wires,
+        brokenWires:      map.brokenWires,
+        orphanedInHooks:  map.orphanedInHooks,
+      }));
+    } catch(e) {
+      res.writeHead(500, CORS);
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
+  // GET /seam/map — full topology: components, hooks, wires, gaps
+  if (url.pathname === '/seam/map') {
+    try {
+      const map = _buildSeamMap();
+      // Enrich with live system health from monitors
+      const liveHealth = {};
+      for (const [name, cfg] of Object.entries(SYSTEMS)) {
+        liveHealth[name] = { online: !!cfg._online, friction: cfg._friction || 0 };
+      }
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({
+        ok: true, ts: map.ts,
+        summary:          map.summary,
+        systems:          map.systems,
+        wires:            map.wires,
+        brokenWires:      map.brokenWires,
+        orphanedInHooks:  map.orphanedInHooks,
+        missingRegistries:map.missingRegistries,
+        liveHealth,
+      }));
+    } catch(e) {
+      res.writeHead(500, CORS);
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
+  // GET /seam/health — wire health scored: broken, missing endpoints, orphans
+  if (url.pathname === '/seam/health') {
+    try {
+      const map = _buildSeamMap();
+      const total    = map.wires.length || 1;
+      const wireScore = map.wires.filter(w=>w.status==='valid').length / total;
+      const regScore  = (Object.keys(_REGISTRY_PATHS).length - map.missingRegistries.length)
+                        / Object.keys(_REGISTRY_PATHS).length;
+      const score = Math.round(((wireScore * 0.6) + (regScore * 0.4)) * 100);
+
+      const alerts = [];
+      for (const w of map.brokenWires) {
+        alerts.push({ severity: 'high', type: 'broken_wire',
+          message: `${w.from} → ${w.to}: ${w.issue}`, wire: w });
+      }
+      for (const r of map.missingRegistries) {
+        alerts.push({ severity: 'medium', type: 'missing_registry',
+          message: `${r.ns}: ${r.error}` });
+      }
+      for (const h of map.orphanedInHooks) {
+        alerts.push({ severity: 'low', type: 'orphaned_hook',
+          message: `${h.hookId} on ${h.componentId} — no wire points to this IN hook` });
+      }
+
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({
+        ok: true, ts: map.ts,
+        score,
+        regime: score >= 80 ? 'healthy' : score >= 50 ? 'degraded' : 'critical',
+        summary: map.summary,
+        alerts,
+        wireIntegrity: Math.round(wireScore * 100),
+        registryIntegrity: Math.round(regScore * 100),
+      }));
+    } catch(e) {
+      res.writeHead(500, CORS);
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
+    // ── File + registry + SEAM integrity ──────────────────────────────────────
+    if (url.pathname === '/integrity') {
+      try {
+        const fi = require('../lib/file-integrity');
+        const result = fi.check();
+        res.writeHead(200, CORS);
+        res.end(JSON.stringify({ ok: true, ...result }));
+      } catch(e) { res.writeHead(500, CORS); res.end(JSON.stringify({ ok: false, error: e.message })); }
+      return;
+    }
+    if (url.pathname === '/integrity/snapshot') {
+      try {
+        const fi = require('../lib/file-integrity');
+        const snap = fi.snapshot();
+        res.writeHead(200, CORS);
+        res.end(JSON.stringify({ ok: true, entries: snap, count: snap.length, ts: Date.now() }));
+      } catch(e) { res.writeHead(500, CORS); res.end(JSON.stringify({ ok: false, error: e.message })); }
+      return;
+    }
+    if (url.pathname === '/integrity/accept' && req.method === 'POST') {
+      try {
+        const fi = require('../lib/file-integrity');
+        const entries = fi.acceptBaseline();
+        broadcast({ type: 'integrity.baseline.accepted', count: entries.length, ts: Date.now() });
+        res.writeHead(200, CORS);
+        res.end(JSON.stringify({ ok: true, accepted: entries.length, ts: Date.now() }));
+      } catch(e) { res.writeHead(500, CORS); res.end(JSON.stringify({ ok: false, error: e.message })); }
+      return;
+    }
+
     res.writeHead(404, CORS);
     res.end(JSON.stringify({ ok: false, error: 'not found' }));
   });
@@ -1653,3 +1799,151 @@ async function runAudit() {
   }
   return { ts: Date.now(), syntaxFails, totalIssues: issues.length, issues };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// lib/component-seam-map.js — Component + SEAM map for diagnostic service
+// Injected at end of nexus-diagnostic.js — aggregates all registry-components
+// files and validates declared SEAM wires. Exposes:
+//   GET /components        — all registered components across all systems
+//   GET /components/wires  — all declared SEAM wires + validation status
+//   GET /seam/map          — full topology: components, hooks, wires, gaps
+//   GET /seam/health       — wire health: broken wires, missing endpoints, orphaned hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _REGISTRY_PATHS = {
+  cortex:       path.join(ROOT, 'cortex/registry-components.js'),
+  guardian:     path.join(ROOT, 'guardian/registry-components.js'),
+  architect:    path.join(ROOT, 'architect/registry-components.js'),
+  bridge:       path.join(ROOT, 'bridge/registry-components.js'),
+  emerge:       path.join(ROOT, 'emerge/registry-components.js'),
+  copilot:      path.join(ROOT, 'copilot/registry-components.js'),
+  idearium:     path.join(ROOT, 'idearium/registry-components.js'),
+  ollama:       path.join(ROOT, 'ollama/registry-components.js'),
+  'clear-glass':path.join(ROOT, 'clear-glass/registry-components.js'),
+};
+
+function _loadAllRegistries() {
+  const all = {};
+  for (const [ns, p] of Object.entries(_REGISTRY_PATHS)) {
+    try {
+      if (!fs.existsSync(p)) { all[ns] = { error: 'registry-components.js not found', components: [] }; continue; }
+      const m = require(p);
+      const comps = Array.isArray(m) ? m : (m.components || []);
+      all[ns] = { components: comps, count: comps.length, meta: Array.isArray(m) ? null : { systemId: m.systemId, version: m.version, port: m.port, events: m.events } };
+    } catch(e) {
+      all[ns] = { error: e.message, components: [] };
+    }
+  }
+  return all;
+}
+
+function _extractWires(registries) {
+  const wires = [];
+  const hookIndex = {}; // hookId -> { componentId, ns, type: 'in'|'out' }
+
+  for (const [ns, reg] of Object.entries(registries)) {
+    for (const comp of (reg.components || [])) {
+      const hooks = comp.hooks || {};
+      for (const hookIn of (hooks.in || [])) {
+        hookIndex[hookIn.id] = { componentId: comp.id, ns, type: 'in', intent: hookIn.intent, tags: hookIn.tags };
+      }
+      for (const hookOut of (hooks.out || [])) {
+        hookIndex[hookOut.id] = { componentId: comp.id, ns, type: 'out', tags: hookOut.tags };
+        for (const target of (hookOut.wires_to || [])) {
+          wires.push({
+            from:       comp.id,
+            fromNs:     ns,
+            hookId:     hookOut.id,
+            to:         target,      // hookId of the receiving end
+            toNs:       target.split('.')[0],
+            tags:       hookOut.tags || [],
+          });
+        }
+      }
+    }
+  }
+  return { wires, hookIndex };
+}
+
+function _validateWires(wires, hookIndex) {
+  const results = [];
+  for (const wire of wires) {
+    const targetHook = hookIndex[wire.to];
+    const status = targetHook
+      ? (targetHook.type === 'in' ? 'valid' : 'wrong_direction')
+      : 'broken';  // wires_to points at a hook that doesn't exist in any registry
+    results.push({
+      ...wire,
+      status,
+      targetComponent: targetHook?.componentId || null,
+      issue: status === 'broken'
+        ? `Target hook "${wire.to}" not declared in any registry-components.js`
+        : status === 'wrong_direction'
+        ? `Wire points to an OUT hook — should point to an IN hook`
+        : null,
+    });
+  }
+  return results;
+}
+
+function _buildSeamMap() {
+  const registries = _loadAllRegistries();
+  const { wires, hookIndex } = _extractWires(registries);
+  const validatedWires = _validateWires(wires, hookIndex);
+
+  const allComponents = [];
+  for (const [ns, reg] of Object.entries(registries)) {
+    for (const c of (reg.components || [])) {
+      allComponents.push({ ...c, _ns: ns, _registryError: reg.error || null });
+    }
+  }
+
+  const broken   = validatedWires.filter(w => w.status !== 'valid');
+  const valid    = validatedWires.filter(w => w.status === 'valid');
+
+  // Orphaned hooks: IN hooks that no wire points to
+  const wiredTargets = new Set(validatedWires.map(w => w.to));
+  const orphanedInHooks = Object.entries(hookIndex)
+    .filter(([id, h]) => h.type === 'in' && !wiredTargets.has(id))
+    .map(([id, h]) => ({ hookId: id, componentId: h.componentId, ns: h.ns, intent: h.intent }));
+
+  // Missing registries
+  const missingRegistries = Object.entries(registries)
+    .filter(([, r]) => r.error)
+    .map(([ns, r]) => ({ ns, error: r.error }));
+
+  return {
+    ts: Date.now(),
+    summary: {
+      totalComponents:   allComponents.length,
+      totalWires:        validatedWires.length,
+      validWires:        valid.length,
+      brokenWires:       broken.length,
+      orphanedInHooks:   orphanedInHooks.length,
+      missingRegistries: missingRegistries.length,
+      systemsWithRegistry: Object.keys(registries).filter(ns => !registries[ns].error).length,
+    },
+    systems:           registries,
+    components:        allComponents,
+    wires:             validatedWires,
+    brokenWires:       broken,
+    orphanedInHooks,
+    missingRegistries,
+    hookIndex,
+  };
+}
+
+// Attach routes to the diagnostic HTTP server — called from startService()
+// These are appended here; the server's request handler checks them after
+// all existing routes so there are no conflicts.
+const _origStartService = startService;
+function startService() {
+  // Run original
+  _origStartService.apply(this, arguments);
+}
+
+// Export the map builder so orchestrator/copilot can consume it too
+module.exports.buildSeamMap    = _buildSeamMap;
+module.exports.loadRegistries  = _loadAllRegistries;
+module.exports.extractWires    = _extractWires;
+module.exports.validateWires   = _validateWires;

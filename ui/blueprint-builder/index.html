@@ -118,6 +118,35 @@ body{font-family:var(--font-sans,'Space Grotesk',sans-serif);font-size:14px;colo
 .sb-dot.on{background:#00ff88;animation:pulse 2.5s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
 
+/* CLI Commands panel */
+.cmd-card{border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;margin-bottom:8px;background:rgba(0,0,0,.2)}
+.cmd-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cmd-keyword{font-family:"Space Mono",monospace;font-size:12px;padding:3px 9px;border-radius:4px;background:rgba(0,245,255,.08);color:#00e5ff;border:1px solid rgba(0,245,255,.2)}
+.cmd-del{margin-left:auto;cursor:pointer;color:rgba(255,255,255,.2);font-size:16px;line-height:1;transition:color .15s}
+.cmd-del:hover{color:#ff3355}
+.cmd-scope{font-size:10px;padding:2px 7px;border-radius:3px;background:rgba(255,170,0,.08);color:#ffaa00;border:1px solid rgba(255,170,0,.2);font-family:"Space Mono",monospace}
+
+/* Tension panel */
+.tension-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.tension-card{border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;background:rgba(0,0,0,.2)}
+.tension-card .tc-label{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:"Space Mono",monospace}
+.tension-card .tc-val{font-size:22px;font-weight:700;font-family:"Space Mono",monospace}
+.tension-card .tc-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden}
+.tension-card .tc-fill{height:100%;border-radius:2px;transition:width .5s,background .5s}
+.gap-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,.06);border-radius:6px;margin-bottom:6px;font-size:11px}
+.gap-sev{font-family:"Space Mono",monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.gap-sev.high{background:rgba(255,51,85,.15);color:#ff3355;border:1px solid rgba(255,51,85,.3)}
+.gap-sev.medium{background:rgba(255,170,0,.1);color:#ffaa00;border:1px solid rgba(255,170,0,.25)}
+.gap-sev.low{background:rgba(255,255,255,.04);color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.08)}
+.gap-type{font-family:"Space Mono",monospace;font-size:10px;color:rgba(255,255,255,.5);min-width:120px}
+.gap-body{flex:1;color:rgba(255,255,255,.6)}
+.gap-sys{font-size:9px;color:rgba(255,255,255,.2);margin-left:auto;font-family:"Space Mono",monospace}
+.regime-badge{display:inline-block;font-family:"Space Mono",monospace;font-size:10px;padding:3px 10px;border-radius:10px;font-weight:700;margin-bottom:12px}
+.regime-stable{background:rgba(0,255,136,.1);color:#00ff88;border:1px solid rgba(0,255,136,.2)}
+.regime-resonant{background:rgba(0,229,255,.1);color:#00e5ff;border:1px solid rgba(0,229,255,.2)}
+.regime-turbulent{background:rgba(255,170,0,.1);color:#ffaa00;border:1px solid rgba(255,170,0,.2)}
+.regime-chaotic{background:rgba(255,51,85,.15);color:#ff3355;border:1px solid rgba(255,51,85,.3)}
+
 /* Scrollbars */
 *::-webkit-scrollbar{width:3px}
 *::-webkit-scrollbar-track{background:transparent}
@@ -133,6 +162,8 @@ body{font-family:var(--font-sans,'Space Grotesk',sans-serif);font-size:14px;colo
     <div class="tab" onclick="switchTab('cli')"><i class="ti ti-terminal"></i>CLI Projector</div>
     <div class="tab" onclick="switchTab('constraint')"><i class="ti ti-shield-check"></i>Constraint Frame</div>
     <div class="tab" onclick="switchTab('export')"><i class="ti ti-file-export"></i>Export</div>
+    <div class="tab" onclick="switchTab('commands')"><i class="ti ti-terminal-2"></i>CLI Commands</div>
+    <div class="tab" onclick="switchTab('tension')"><i class="ti ti-activity"></i>Tension</div>
     <div class="topbar-title">NEXUS · Blueprint Builder v0.7.5</div>
   </div>
 
@@ -302,6 +333,109 @@ body{font-family:var(--font-sans,'Space Grotesk',sans-serif);font-size:14px;colo
 
   </div>
 </div>
+
+    <!-- CLI COMMANDS TAB -->
+    <div class="panel" id="panel-commands">
+      <div class="section-title"><i class="ti ti-terminal-2"></i>Custom CLI Commands</div>
+      <div class="notice">Define per-component CLI commands. Each generates a <code>cli-map.json</code> entry, grammar alias, and hook declaration. Scope controls which systems can invoke this command.</div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:11px;color:rgba(255,255,255,.4);font-family:'Space Mono',monospace">
+          Component: <strong id="cmd-comp-label" style="color:#a78bfa">—</strong>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm" onclick="addCommand()"><i class="ti ti-plus"></i> Add Command</button>
+          <button class="btn-sm" onclick="importCommandsFromCaps()"><i class="ti ti-download"></i> Import from Capabilities</button>
+        </div>
+      </div>
+
+      <div id="cmd-list"></div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.07em">Generated cli-map.json fragment</div>
+        <div class="projection-box"><pre id="cmd-cli-output" style="max-height:200px;overflow-y:auto"></pre></div>
+        <div class="btn-row">
+          <button class="btn" onclick="copyCommands()"><i class="ti ti-copy"></i> Copy cli-map fragment</button>
+          <button class="btn primary" onclick="registerCommands()"><i class="ti ti-send"></i> Register to Orchestrator</button>
+        </div>
+        <div id="cmd-register-result" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace"></div>
+      </div>
+    </div>
+
+    <!-- TENSION TAB -->
+    <div class="panel" id="panel-tension">
+      <div class="section-title"><i class="ti ti-activity"></i>Tension · Sigma · Gaps</div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div id="tension-regime" class="regime-badge regime-stable">STABLE</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace">
+          Live CFR field · <span id="tension-seq" style="color:rgba(255,255,255,.5)">seq 0</span>
+        </div>
+        <button class="btn-sm" onclick="loadTension()" style="margin-left:auto"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+
+      <!-- CFR dimensions -->
+      <div class="tension-grid" id="tension-grid">
+        <div class="tension-card">
+          <div class="tc-label">Coherence</div>
+          <div class="tc-val" id="tc-coherence" style="color:#00ff88">—</div>
+          <div class="tc-bar"><div class="tc-fill" id="tcb-coherence" style="width:0%;background:#00ff88"></div></div>
+        </div>
+        <div class="tension-card">
+          <div class="tc-label">Friction</div>
+          <div class="tc-val" id="tc-friction" style="color:#ffaa00">—</div>
+          <div class="tc-bar"><div class="tc-fill" id="tcb-friction" style="width:0%;background:#ffaa00"></div></div>
+        </div>
+        <div class="tension-card">
+          <div class="tc-label">Entropy</div>
+          <div class="tc-val" id="tc-entropy" style="color:#ff3355">—</div>
+          <div class="tc-bar"><div class="tc-fill" id="tcb-entropy" style="width:0%;background:#ff3355"></div></div>
+        </div>
+        <div class="tension-card">
+          <div class="tc-label">Resonance</div>
+          <div class="tc-val" id="tc-resonance" style="color:#00e5ff">—</div>
+          <div class="tc-bar"><div class="tc-fill" id="tcb-resonance" style="width:0%;background:#00e5ff"></div></div>
+        </div>
+        <div class="tension-card">
+          <div class="tc-label">Sigma score</div>
+          <div class="tc-val" id="tc-sigma" style="color:#a78bfa">—</div>
+          <div class="tc-bar"><div class="tc-fill" id="tcb-sigma" style="width:0%;background:#a78bfa"></div></div>
+        </div>
+        <div class="tension-card">
+          <div class="tc-label">Open Gaps</div>
+          <div class="tc-val" id="tc-gaps" style="color:#e0e8ff">—</div>
+          <div class="tc-bar"><div class="tc-fill" id="tcb-gaps" style="width:0%;background:#534AB7"></div></div>
+        </div>
+      </div>
+
+      <!-- Gap list -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;font-family:'Space Mono',monospace">Open Gaps</div>
+        <select id="gap-filter" onchange="loadTension()" style="font-size:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:4px;color:#e0e8ff;padding:3px 6px;outline:none">
+          <option value="">All severities</option>
+          <option value="high">High only</option>
+          <option value="medium">Medium+</option>
+        </select>
+      </div>
+      <div id="gap-list"><div style="color:rgba(255,255,255,.2);font-size:12px;padding:8px 0">Loading...</div></div>
+
+      <!-- File integrity -->
+      <div style="margin-top:16px">
+        <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;font-family:'Space Mono',monospace;margin-bottom:8px">File + Registry Integrity</div>
+        <div id="integrity-row" style="font-family:'Space Mono',monospace;font-size:11px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <span style="color:rgba(255,255,255,.3)">Loading...</span>
+        </div>
+        <div id="integrity-changes" style="margin-top:8px"></div>
+      </div>
+
+      <!-- Seam health -->
+      <div style="margin-top:16px">
+        <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;font-family:'Space Mono',monospace;margin-bottom:8px">SEAM Wire Health</div>
+        <div id="seam-health-row" style="display:flex;gap:12px;font-family:'Space Mono',monospace;font-size:11px;flex-wrap:wrap">
+          <span style="color:rgba(255,255,255,.3)">Loading...</span>
+        </div>
+      </div>
+    </div>
 
 <!-- Status bar -->
 <div class="status-bar">
@@ -740,6 +874,329 @@ function toast(msg, type='info') {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>el.classList.add('hide'), 2200);
 }
+
+// ── CLI Commands (per-component) ──────────────────────────────────────────────
+let commands = []; // array of { keyword, description, scope, params, hook, method, path }
+
+const CMD_SCOPES = ['system','user','copilot','guardian','all'];
+
+function renderCommandList() {
+  const compId = document.getElementById('compId').value.trim();
+  document.getElementById('cmd-comp-label').textContent = compId || '—';
+  const el = document.getElementById('cmd-list');
+  if (!commands.length) {
+    el.innerHTML = '<div style="color:rgba(255,255,255,.2);font-size:12px;padding:8px 0">No commands yet. Add one or import from capabilities.</div>';
+    renderCommandOutput();
+    return;
+  }
+  el.innerHTML = commands.map((cmd, i) => `
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-keyword">nexus ${cmd.keyword || '?'}</span>
+        <span class="cmd-scope">${cmd.scope || 'system'}</span>
+        <span class="cmd-del" onclick="removeCommand(${i})">×</span>
+      </div>
+      <div class="row3" style="margin-bottom:8px">
+        <div class="field-group" style="margin:0">
+          <label>Keyword</label>
+          <input value="${cmd.keyword||''}" placeholder="verb noun" oninput="commands[${i}].keyword=this.value;renderCommandList()">
+        </div>
+        <div class="field-group" style="margin:0">
+          <label>Scope</label>
+          <select onchange="commands[${i}].scope=this.value;renderCommandList()">
+            ${CMD_SCOPES.map(s=>`<option ${cmd.scope===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field-group" style="margin:0">
+          <label>HTTP Method</label>
+          <select onchange="commands[${i}].method=this.value">
+            ${['POST','GET','PUT','DELETE'].map(m=>`<option ${cmd.method===m?'selected':''}>${m}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="row2" style="margin-bottom:8px">
+        <div class="field-group" style="margin:0">
+          <label>Route path</label>
+          <input value="${cmd.path||''}" placeholder="/api/component/action" oninput="commands[${i}].path=this.value">
+        </div>
+        <div class="field-group" style="margin:0">
+          <label>Hook ID</label>
+          <input value="${cmd.hook||''}" placeholder="${compId}.cmd.${(cmd.keyword||'').replace(/ /g,'.')}" oninput="commands[${i}].hook=this.value">
+        </div>
+      </div>
+      <div class="field-group" style="margin:0">
+        <label>Description</label>
+        <input value="${cmd.description||''}" placeholder="What does this command do?" oninput="commands[${i}].description=this.value;renderCommandOutput()">
+      </div>
+      <div style="margin-top:8px">
+        <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:5px;font-family:'Space Mono',monospace">PARAMS (name:type:required)</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px" id="params-${i}">
+          ${(cmd.params||[]).map((p,pi)=>`<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(83,74,183,.12);color:#a78bfa;border:1px solid rgba(83,74,183,.2);font-family:'Space Mono',monospace;cursor:pointer" onclick="removeParam(${i},${pi})">${p.name}:${p.type}${p.required?'*':''} ×</span>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px">
+          <input id="param-name-${i}" placeholder="name" style="flex:1;font-size:11px;padding:4px 8px;border:1px solid rgba(255,255,255,.1);border-radius:4px;background:rgba(255,255,255,.04);color:#e0e8ff;outline:none">
+          <select id="param-type-${i}" style="font-size:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:4px;color:#e0e8ff;padding:4px 6px;outline:none">
+            <option>string</option><option>number</option><option>boolean</option><option>uuid</option><option>json</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:rgba(255,255,255,.4)">
+            <input type="checkbox" id="param-req-${i}"> req
+          </label>
+          <button class="btn-sm" onclick="addParam(${i})">+ Param</button>
+        </div>
+      </div>
+    </div>`).join('');
+  renderCommandOutput();
+}
+
+function addCommand() {
+  const compId = document.getElementById('compId').value.trim();
+  commands.push({
+    keyword: `${compId.split('.').pop()} action`,
+    description: '',
+    scope: 'system',
+    method: 'POST',
+    path: `/api/${compId.replace(/\./g,'/')}/action`,
+    hook: `${compId}.cmd.action`,
+    params: [],
+  });
+  renderCommandList();
+}
+
+function removeCommand(i) { commands.splice(i,1); renderCommandList(); }
+
+function addParam(i) {
+  const name = document.getElementById(`param-name-${i}`)?.value?.trim();
+  const type = document.getElementById(`param-type-${i}`)?.value || 'string';
+  const req  = document.getElementById(`param-req-${i}`)?.checked || false;
+  if (!name) return;
+  if (!commands[i].params) commands[i].params = [];
+  commands[i].params.push({ name, type, required: req });
+  renderCommandList();
+}
+
+function removeParam(ci, pi) { commands[ci].params.splice(pi,1); renderCommandList(); }
+
+function importCommandsFromCaps() {
+  const compId = document.getElementById('compId').value.trim();
+  const imported = caps.map(c => ({
+    keyword: `${c.verb} ${c.noun}`,
+    description: c.description || '',
+    scope: 'system',
+    method: 'POST',
+    path: `/api/${compId.replace(/\./g,'/')}/${c.name}`,
+    hook: `${compId}.${c.name}`,
+    params: (c.params||[]).map(p=>({name:p.name,type:p.type||'string',required:!!p.required})),
+  }));
+  commands = imported;
+  renderCommandList();
+  toast(`Imported ${imported.length} command(s) from capabilities`, 'ok');
+}
+
+function renderCommandOutput() {
+  const compId = document.getElementById('compId').value.trim();
+  const map = { version: '1.0.0', componentId: compId, commands: {} };
+  for (const cmd of commands) {
+    const key = cmd.keyword || '?';
+    map.commands[key] = {
+      componentId: compId,
+      hookId: cmd.hook || `${compId}.cmd.${key.replace(/ /g,'.')}`,
+      description: cmd.description || '',
+      scope: cmd.scope || 'system',
+      route: { method: cmd.method || 'POST', path: cmd.path || '' },
+      params: cmd.params || [],
+      grammar: [key, ...((cmd.keyword||'').split(' ').reverse())],
+    };
+  }
+  const el = document.getElementById('cmd-cli-output');
+  if (el) el.textContent = JSON.stringify(map, null, 2);
+}
+
+function copyCommands() {
+  const el = document.getElementById('cmd-cli-output');
+  navigator.clipboard.writeText(el?.textContent || '');
+  toast('cli-map fragment copied','ok');
+}
+
+async function registerCommands() {
+  const compId = document.getElementById('compId').value.trim();
+  const resultEl = document.getElementById('cmd-register-result');
+  if (!commands.length) { toast('No commands to register','err'); return; }
+  resultEl.textContent = 'Registering...';
+  const payload = {
+    componentId: compId,
+    commands: commands.map(cmd => ({
+      keyword: cmd.keyword,
+      hookId: cmd.hook || `${compId}.cmd.${(cmd.keyword||'').replace(/ /g,'.')}`,
+      description: cmd.description,
+      scope: cmd.scope,
+      route: { method: cmd.method, path: cmd.path },
+      params: cmd.params,
+    })),
+  };
+  try {
+    const r = await fetch('http://localhost:9000/api/components/commands', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const res = await r.json();
+    resultEl.textContent = res.ok ? `✓ Registered ${commands.length} command(s)` : `✗ ${res.error||r.status}`;
+    resultEl.style.color = res.ok ? '#00ff88' : '#ff3355';
+    if (res.ok) toast('Commands registered','ok');
+  } catch(e) {
+    resultEl.textContent = `✗ Orchestrator offline — ${e.message}`;
+    resultEl.style.color = '#ff3355';
+  }
+}
+
+// ── Tension / Sigma / Gaps ────────────────────────────────────────────────────
+const DIAG_URL  = 'http://localhost:7825';
+const CORTEX_URL = 'http://localhost:3748';
+const ORCH_URL   = 'http://localhost:9000';
+
+async function loadTension() {
+  try {
+    // CFR field
+    const cfrR = await fetch(`${DIAG_URL}/cfr/field`, { signal: AbortSignal.timeout(3000) }).catch(()=>null)
+                 || await fetch(`${CORTEX_URL}/cfr/field`, { signal: AbortSignal.timeout(3000) }).catch(()=>null);
+    if (cfrR?.ok) {
+      const d = await cfrR.json();
+      const f = d.field || d.state || d;
+      setTensionCard('coherence', f.coherence, '#00ff88', true);
+      setTensionCard('friction',  f.friction,  '#ffaa00', false);
+      setTensionCard('entropy',   f.entropy,   '#ff3355', false);
+      setTensionCard('resonance', f.resonance, '#00e5ff', false);
+      const regime = f.regime || 'stable';
+      const rb = document.getElementById('tension-regime');
+      rb.textContent = regime.toUpperCase();
+      rb.className = `regime-badge regime-${regime}`;
+    }
+
+    // Sigma via CFR state
+    const stateR = await fetch(`${DIAG_URL}/cfr/state`, { signal: AbortSignal.timeout(3000) }).catch(()=>null)
+                   || await fetch(`${ORCH_URL}/api/guardian/cfr/state`, { signal: AbortSignal.timeout(3000) }).catch(()=>null);
+    if (stateR?.ok) {
+      const d = await stateR.json();
+      const sigma = d.cfr?.sigma?.score ?? d.sigma?.score ?? d.sigma ?? 0;
+      setTensionCard('sigma', sigma, '#a78bfa', false);
+      const seqEl = document.getElementById('tension-seq');
+      if (seqEl) seqEl.textContent = `seq ${d.seq ?? '—'}`;
+    }
+
+    // Gaps
+    const filter = document.getElementById('gap-filter')?.value || '';
+    const gapUrl = filter
+      ? `${ORCH_URL}/api/cortex/gaps?status=open&severity=${filter}`
+      : `${ORCH_URL}/api/cortex/gaps?status=open`;
+    const gapR = await fetch(gapUrl, { signal: AbortSignal.timeout(3000) }).catch(()=>null);
+    if (gapR?.ok) {
+      const gaps = await gapR.json();
+      const arr = Array.isArray(gaps) ? gaps : (gaps.gaps || []);
+      setTensionCard('gaps', arr.length, '#534AB7', false, arr.length > 5 ? 1 : arr.length/10);
+      renderGapList(arr);
+    }
+
+    // File + registry + SEAM integrity
+    const intR = await fetch(`${DIAG_URL}/integrity`, { signal: AbortSignal.timeout(5000) }).catch(()=>null);
+    if (intR?.ok) {
+      const ir = await intR.json();
+      const ir_row = document.getElementById('integrity-row');
+      const ir_chg = document.getElementById('integrity-changes');
+      if (ir_row) {
+        const sigColor = ir.sigma >= 0.7 ? '#ff3355' : ir.sigma >= 0.4 ? '#ffaa00' : '#00ff88';
+        ir_row.innerHTML = `
+          <span style="color:${sigColor};font-weight:700;font-family:'Space Mono',monospace">σ ${(ir.sigma||0).toFixed(3)}</span>
+          <span style="color:rgba(255,255,255,.3)">${ir.ok ? '✓ clean' : `${ir.changes?.length||0} change(s)`}</span>
+          ${ir.changes?.some(c=>c.category==='registry') ? '<span style="color:#ffaa00;font-size:10px">⚡ registry</span>' : ''}
+          ${ir.changes?.some(c=>c.category==='wires')    ? '<span style="color:#ff3355;font-size:10px">🔗 wires</span>' : ''}
+          ${ir.changes?.some(c=>c.category==='file')     ? `<span style="color:rgba(255,255,255,.4);font-size:10px">${ir.changes.filter(c=>c.category==='file').length} file(s)</span>` : ''}`;
+      }
+      if (ir_chg && ir.changes?.length) {
+        ir_chg.innerHTML = ir.changes.slice(0,6).map(c => `
+          <div style="display:flex;gap:8px;padding:4px 0;border-bottom:0.5px solid rgba(255,255,255,.06);font-size:10px;font-family:'Space Mono',monospace">
+            <span style="color:${c.category==='wires'?'#ff3355':c.category==='registry'?'#ffaa00':'rgba(255,255,255,.4)'}">[${c.category}]</span>
+            <span style="color:rgba(255,255,255,.5);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.key}</span>
+            <span style="color:rgba(255,255,255,.2)">${c.prevHash?.slice(0,6)}→${c.currHash?.slice(0,6)}</span>
+          </div>`).join('');
+      } else if (ir_chg) {
+        ir_chg.innerHTML = '';
+      }
+    }
+
+    // SEAM wire health
+    const seamR = await fetch(`${DIAG_URL}/seam/health`, { signal: AbortSignal.timeout(3000) }).catch(()=>null);
+    if (seamR?.ok) {
+      const sh = await seamR.json();
+      const hr = document.getElementById('seam-health-row');
+      if (hr) {
+        const scoreColor = sh.score >= 80 ? '#00ff88' : sh.score >= 50 ? '#ffaa00' : '#ff3355';
+        hr.innerHTML = `
+          <span style="color:${scoreColor};font-weight:700">${sh.score}/100</span>
+          <span style="color:rgba(255,255,255,.3)">regime: <span style="color:#e0e8ff">${sh.regime||'—'}</span></span>
+          <span style="color:rgba(255,255,255,.3)">wires: <span style="color:#00ff88">${sh.summary?.validWires||0} valid</span></span>
+          <span style="color:rgba(255,255,255,.3)">broken: <span style="color:#ff3355">${sh.summary?.brokenWires||0}</span></span>
+          <span style="color:rgba(255,255,255,.3)">orphaned hooks: <span style="color:#ffaa00">${sh.summary?.orphanedInHooks||0}</span></span>`;
+      }
+    }
+  } catch(e) {
+    console.warn('[tension] load error:', e.message);
+  }
+}
+
+function setTensionCard(key, val, color, invertBar = false, rawBar = null) {
+  const valEl  = document.getElementById(`tc-${key}`);
+  const barEl  = document.getElementById(`tcb-${key}`);
+  if (!valEl || !barEl) return;
+  const num = typeof val === 'number' ? val : parseFloat(val) || 0;
+  valEl.textContent = Number.isInteger(num) ? num : num.toFixed(3);
+  valEl.style.color = color;
+  const pct = rawBar !== null ? rawBar * 100 : Math.min(100, Math.round((invertBar ? (1-num) : num) * 100));
+  barEl.style.width = pct + '%';
+  barEl.style.background = color;
+}
+
+function renderGapList(gaps) {
+  const el = document.getElementById('gap-list');
+  if (!el) return;
+  if (!gaps.length) {
+    el.innerHTML = '<div style="color:rgba(0,255,136,.4);font-size:12px;padding:8px 0">No open gaps — ecology nominal</div>';
+    return;
+  }
+  el.innerHTML = gaps.slice(0,20).map(g => {
+    const sev = g.severity || 'low';
+    const type = g.loop_type || g.type || g.gapType || 'gap';
+    const body = (g.body || g.path || g.detail || '').slice(0,100);
+    const sys  = g.system || g.source || '';
+    return `<div class="gap-row">
+      <span class="gap-sev ${sev}">${sev}</span>
+      <span class="gap-type">${type}</span>
+      <span class="gap-body">${body}</span>
+      <span class="gap-sys">${sys}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Extend switchTab to handle new tabs ───────────────────────────────────────
+const _origSwitchTab = switchTab;
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const tabs=['descriptor','phases','cli','constraint','export','commands','tension'];
+    t.classList.toggle('active',tabs[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const panel = document.getElementById(`panel-${name}`);
+  if (panel) panel.classList.add('active');
+  if (name==='cli') updateProjections();
+  if (name==='phases') renderPhaseMap();
+  if (name==='export') renderExports();
+  if (name==='commands') { renderCommandList(); }
+  if (name==='tension') loadTension();
+}
+
+// Poll tension every 15s when on that tab
+setInterval(()=>{
+  if (document.getElementById('panel-tension')?.classList.contains('active')) loadTension();
+}, 15000);
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 // Seed with default component

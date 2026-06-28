@@ -33,6 +33,7 @@ const SYSTEM_SECRETS = {
   emerge:       process.env.BRIDGE_SECRET_EMERGE       || 'nexus-emerge-internal-v1',
   ollama:       null,  // no secret — ollama is local-only, no auth
   copilot:      process.env.BRIDGE_SECRET_COPILOT    || 'nexus-copilot-internal-v1',
+  'tv-shell':   process.env.BRIDGE_SECRET_TV_SHELL   || 'nexus-tv-shell-internal-v1',
   architect:    process.env.BRIDGE_SECRET_ARCHITECT   || 'nexus-architect-internal-v1',
   diagnostic:   process.env.BRIDGE_SECRET_DIAGNOSTIC  || 'nexus-diagnostic-internal-v1',
   bridge:       process.env.BRIDGE_SECRET_BRIDGE      || 'nexus-bridge-internal-v1',

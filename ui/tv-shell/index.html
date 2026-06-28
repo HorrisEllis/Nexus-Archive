@@ -1477,6 +1477,7 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
     <div id="bot-bar">
       <div id="bot-bar-head">
         <span id="bot-bar-label">SYSTEM CONSOLE</span>
+        <button id="copilot-mode-btn" onclick="toggleCopilotMode()" title="Switch between co-pilot (Bridge :9999) and system console" style="background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:rgba(255,255,255,.35);font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;cursor:pointer;letter-spacing:.08em;transition:all .2s;margin-right:4px">✦ CO-PILOT</button>
         <button id="fullscreen-btn" onclick="toggleConsoleFullscreen()" title="Fullscreen console (Shift+Enter)">⛶</button>
       </div>
       <div id="cp-guide"></div>
@@ -2342,6 +2343,65 @@ async function runDiagEngines(){
   el.innerHTML=rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px"><span style="color:${r.ok?'#00ff88':'#ffaa00'}">${r.ok?'✓':'⚠'}</span><span style="color:rgba(255,255,255,.6)">${r.name}</span><span style="margin-left:auto;font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(255,255,255,.3)">${r.val}</span></div>`).join('');
 }
 
+// ── Co-pilot mode toggle ───────────────────────────────────────────────────────
+// Two modes: 'system' (grammar engine → Guardian copilot) | 'copilot' (Bridge :9999)
+let _asMode = 'system'; // default
+let _bridgeToken = null;
+
+async function _getBridgeToken() {
+  if (_bridgeToken) return _bridgeToken;
+  try {
+    const r = await fetch(`${B.br}/bridge/handshake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemId: 'tv-shell', secret: 'nexus-tv-shell-internal-v1', port: 0 }),
+      signal: AbortSignal.timeout(4000),
+    });
+    const d = await r.json();
+    if (d.ok && d.token) { _bridgeToken = d.token; return _bridgeToken; }
+  } catch(_) {}
+  return null;
+}
+
+async function _bridgeDispatch(target, type, payload, timeout=30000) {
+  const token = await _getBridgeToken();
+  if (!token) throw new Error('Bridge handshake failed — is Bridge :9999 running?');
+  const r = await fetch(`${B.br}/bridge/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-bridge-token': token },
+    body: JSON.stringify({ type, source: 'tv-shell', target, payload, tags: ['tv-shell', target] }),
+    signal: AbortSignal.timeout(timeout),
+  });
+  if (!r.ok) throw new Error(`Bridge ${target} HTTP ${r.status}`);
+  const data = await r.json();
+  if (!data.ok) throw new Error(data.error || 'Bridge error');
+  return data.result?.response ?? data.result ?? data;
+}
+
+function toggleCopilotMode() {
+  _asMode = _asMode === 'system' ? 'copilot' : 'system';
+  const btn = document.getElementById('copilot-mode-btn');
+  const lbl = document.getElementById('bot-bar-label');
+  const inp = document.getElementById('assistant-in');
+  if (_asMode === 'copilot') {
+    btn.style.color = 'var(--ac)';
+    btn.style.borderColor = 'var(--ac-border-hi)';
+    btn.style.background = 'var(--ac-ghost)';
+    if (lbl) lbl.textContent = '✦ CO-PILOT';
+    if (inp) inp.placeholder = 'Ask co-pilot via Bridge :9999 — sees DOM, can navigate, build, dispatch…';
+    _logToData('ui.copilot-mode.enabled', { ts: Date.now() });
+    // Invalidate cached token so we always try a fresh handshake on first use
+    _bridgeToken = null;
+  } else {
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    btn.style.background = '';
+    if (lbl) lbl.textContent = 'SYSTEM CONSOLE';
+    if (inp) inp.placeholder = 'Ask NEXUS anything · /command for tools · /gaps · /jobs · /status';
+    _logToData('ui.copilot-mode.disabled', { ts: Date.now() });
+  }
+}
+
 // ── Assistant with grammar engine ─────────────────────────────────────────────
 const asHist=[];let asIdx=-1;
 document.getElementById('assistant-in').addEventListener('keydown',e=>{
@@ -2744,7 +2804,7 @@ async function asSend(){
   out.style.color='rgba(200,220,210,.8)';
   out.textContent='';
 
-  // clear is the only client-side command — everything else goes to co-pilot
+  // clear is the only client-side command — everything else routes based on mode
   if(q.toLowerCase()==='clear'){ out.style.display='none'; return; }
 
   // Show thinking indicator
@@ -2753,6 +2813,40 @@ async function asSend(){
   thinking.style.cssText='opacity:.4;font-style:italic';
   out.appendChild(thinking);
 
+  // ── Co-pilot mode: route through Bridge :9999 → copilot :3750 ──────────────
+  if (_asMode === 'copilot') {
+    try {
+      let uiSnapshot = null;
+      try { uiSnapshot = JSON.parse(window.NEXUS_UI_STATE.snapshot()); } catch(_) {}
+      const result = await _bridgeDispatch('copilot', 'copilot.prompt', {
+        prompt: q,
+        channel: CH_META[curCh]?.id || 'ch-overview',
+        channelName: CH_META[curCh]?.name || 'Overview',
+        uiState: uiSnapshot,
+        source: 'tv-shell',
+      }, 60000);
+      out.textContent = '';
+      const text = result?.text || result?.response || JSON.stringify(result).slice(0, 400);
+      out.style.color = 'rgba(0,229,255,.92)';
+      out.textContent = text;
+      // Model tag
+      if (result?.modelUsed) {
+        const m = document.createElement('div');
+        m.style.cssText='font-size:10px;opacity:.35;margin-top:4px;font-family:monospace';
+        m.textContent = `✦ via ${result.modelUsed} (bridge)`;
+        out.appendChild(m);
+      }
+      _logToData('ui.copilot.response', { promptLen: q.length, hasText: !!text });
+    } catch(err) {
+      out.textContent = '';
+      out.style.color = 'rgba(255,100,100,.8)';
+      out.textContent = `Co-pilot bridge error: ${err.message}`;
+      _logToData('ui.copilot.error', { error: err.message });
+    }
+    return;
+  }
+
+  // ── System mode: grammar engine → Guardian copilot ──────────────────────────
   // Pass current channel context + live UI state to co-pilot
   let uiSnapshot = null;
   try { uiSnapshot = JSON.parse(window.NEXUS_UI_STATE.snapshot()); } catch(_) {}
