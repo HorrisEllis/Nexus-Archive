@@ -819,7 +819,24 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
   win.on('maximize',   () => emit('window.maximized', { agentId, maximized: true }));
   win.on('unmaximize', () => emit('window.maximized', { agentId, maximized: false }));
 
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    // Force-open renderer DevTools in detached window for debugging
+    win.webContents.openDevTools({ mode: 'detach' });
+  });
+
+  // F12 / Ctrl+Shift+I toggles renderer DevTools
+  win.webContents.on('before-input-event', (event, input) => {
+    const devToolsKey =
+      input.key === 'F12' ||
+      (input.control && input.shift && ['i','j'].includes(input.key.toLowerCase()));
+    if (devToolsKey) {
+      win.webContents.isDevToolsOpened()
+        ? win.webContents.closeDevTools()
+        : win.webContents.openDevTools({ mode: 'detach' });
+      event.preventDefault();
+    }
+  });
   win.on('close', e => {
     // §axiom: tray-first — but now genuinely controllable via Nexus options
     // instead of hardcoded. If the option is off, this is a real close.

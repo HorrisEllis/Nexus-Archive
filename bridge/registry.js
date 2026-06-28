@@ -56,6 +56,7 @@ const SYSTEM_DEFS = {
   idearium:     { port: parseInt(process.env.IDEARIUM_PORT     || '4800'), health: '/health',   weight: 1.0, fallback: [] },
   emerge:       { port: parseInt(process.env.EMERGE_PORT       || '4242'), health: '/status',   weight: 0.8, fallback: [] },
   ollama:       { port: parseInt(process.env.OLLAMA_PORT       || '11434'), health: '/api/tags', weight: 0.7, fallback: [] },
+  copilot:      { port: parseInt(process.env.COPILOT_PORT      || '3750'),  health: '/health',   weight: 1.0, fallback: ['ollama'] },
 };
 
 const DEGRADED_THRESHOLD = 0.5;

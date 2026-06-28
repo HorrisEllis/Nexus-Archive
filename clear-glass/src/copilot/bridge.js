@@ -64,6 +64,7 @@ class CoPilotBridge {
 
     this._connectStream();
     this._bridgeBrowserEvents();
+    this._bridgeHandshake();  // establish trust token with Bridge :9999
   }
 
   // ── Primary: send message ────────────────────────────────────────────────
@@ -77,9 +78,8 @@ class CoPilotBridge {
     }
 
     let result;
-    const copilotUrl = this.settings.copilotUrl('/api/prompt');
     try {
-      result = await this._callNexusCopilot({ message, agentId, domContext, systemExtra, msgId, copilotUrl });
+      result = await this._callNexusCopilot({ message, agentId, domContext, systemExtra, msgId });
     } catch (err) {
       console.warn('[CoPilot] NEXUS offline, falling back:', err.message);
       result = await this._callFallback({ message, agentId, domContext, msgId });
@@ -317,24 +317,18 @@ You are fully in control. Issue tool calls as \`\`\`driver JSON blocks.
 ${buildToolsPrompt()}${domSection}`;
   }
 
-  // ── Call NEXUS copilot ────────────────────────────────────────────────
-  async _callNexusCopilot({ message, agentId, domContext, systemExtra, msgId, copilotUrl }) {
+  // ── Call NEXUS copilot — routed through Bridge :9999 ─────────────────
+  async _callNexusCopilot({ message, agentId, domContext, systemExtra, msgId }) {
     const cgContext = this._buildCgContext(agentId, domContext);
-    const res = await fetch(copilotUrl, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        prompt:      message,
-        channel:     'clear-glass',
-        sessionId:   agentId,
-        requestId:   msgId,
-        source:      'clear-glass',
-        systemExtra: cgContext + (systemExtra ? '\n\n' + systemExtra : ''),
-      }),
-      timeout: 60000,
-    });
-    if (!res.ok) throw new Error(`NEXUS copilot HTTP ${res.status}`);
-    const data = await res.json();
+    const result = await this._bridgeDispatch('copilot', 'copilot.prompt', {
+      prompt:      message,
+      channel:     'clear-glass',
+      sessionId:   agentId,
+      requestId:   msgId,
+      source:      'clear-glass',
+      systemExtra: cgContext + (systemExtra ? '\n\n' + systemExtra : ''),
+    }, 60000);
+    const data = result?.response || result || {};
     return {
       text:          data.text || data.response || '',
       modelUsed:     data.modelUsed || data.provider_used || 'nexus',
@@ -366,23 +360,18 @@ ${buildToolsPrompt()}${domSection}`;
     return { text: data.content?.[0]?.text || '', modelUsed: 'claude-fallback' };
   }
 
-  // ── Guardian direct calls ─────────────────────────────────────────────
+  // ── Guardian — routed through Bridge :9999 ───────────────────────────
   async _guardianDispatch({ provider, prompt, sessionId }) {
-    const url = this.settings.guardianUrl('/command');
-    const res = await fetch(url, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ provider, prompt, sessionId: sessionId || randomUUID(),
-        source: 'clear-glass-copilot' }),
-      timeout: 30000,
-    });
-    return res.ok ? res.json() : { error: `Guardian dispatch failed: ${res.status}` };
+    return this._bridgeDispatch('guardian', 'guardian.command', {
+      provider, prompt,
+      sessionId: sessionId || randomUUID(),
+      source: 'clear-glass-copilot',
+    }, 30000);
   }
 
   async _guardianFetch(path) {
     try {
-      const res = await fetch(this.settings.guardianUrl(path), { timeout: 5000 });
-      return res.ok ? res.json() : { error: `Guardian ${path} failed: ${res.status}` };
+      return await this._bridgeDispatch('guardian', 'guardian.fetch', { path }, 5000);
     } catch (err) {
       return { error: err.message };
     }
@@ -414,34 +403,32 @@ ${buildToolsPrompt()}${domSection}`;
 
   // ── Other endpoints ───────────────────────────────────────────────────
   async build({ description, sessionId, requestId }) {
-    const res = await fetch(this.settings.copilotUrl('/api/build'), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description, sessionId, requestId: requestId || randomUUID() }),
-      timeout: 120000,
-    });
-    if (!res.ok) throw new Error(`Build HTTP ${res.status}`);
-    return res.json();
+    return this._bridgeDispatch('copilot', 'copilot.build', {
+      description, sessionId, requestId: requestId || randomUUID(),
+    }, 120000);
   }
 
   async diagnose({ topic, requestId }) {
-    const res = await fetch(this.settings.copilotUrl('/api/diagnose'), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: topic || 'system health', requestId: requestId || randomUUID() }),
-      timeout: 60000,
-    });
-    if (!res.ok) throw new Error(`Diagnose HTTP ${res.status}`);
-    return res.json();
+    return this._bridgeDispatch('copilot', 'copilot.diagnose', {
+      topic: topic || 'system health', requestId: requestId || randomUUID(),
+    }, 60000);
   }
 
   async health() {
     try {
-      const res = await fetch(this.settings.copilotUrl('/health'), { timeout: 3000 });
-      return res.ok ? { ok: true, ...(await res.json()) } : { ok: false, error: `HTTP ${res.status}` };
+      return await this._bridgeDispatch('copilot', 'copilot.health', {}, 3000);
     } catch (e) { return { ok: false, error: e.message }; }
   }
 
   async guardianHealth() {
     return this._guardianFetch('/health');
+  }
+
+  // ── Ollama — routed through Bridge :9999 ──────────────────────────────
+  async ollamaGenerate({ model, prompt, sessionId }) {
+    return this._bridgeDispatch('ollama', 'ollama.generate', {
+      model: model || 'llama3', prompt, sessionId: sessionId || randomUUID(),
+    }, 120000);
   }
 
   // ── Parse tool calls from response ────────────────────────────────────
@@ -459,6 +446,63 @@ ${buildToolsPrompt()}${domSection}`;
       try { commands.push(JSON.parse(m[1].trim())); } catch (_) {}
     }
     return commands;
+  }
+
+  // ── Bridge handshake — establish trust token with Bridge :9999 ─────────
+  async _bridgeHandshake() {
+    const bridgeUrl = this.settings.bridgeUrl('/bridge/handshake');
+    const secret    = process.env.BRIDGE_SECRET_COPILOT || 'nexus-copilot-internal-v1';
+    const port      = this.settings.get().copilotPort || 3750;
+    try {
+      const res = await fetch(bridgeUrl, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ systemId: 'copilot', secret, port }),
+        timeout: 5000,
+      });
+      if (!res.ok) {
+        console.warn(`[CoPilot/Bridge] Handshake HTTP ${res.status} — will retry`);
+        setTimeout(() => this._bridgeHandshake(), 10000);
+        return;
+      }
+      const { token } = await res.json();
+      this._bridgeToken = token;
+      await this.settings.setBridgeToken(token);
+      console.log('[CoPilot/Bridge] Bridge handshake OK — token issued');
+      this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
+    } catch (err) {
+      console.warn('[CoPilot/Bridge] Handshake failed:', err.message, '— retry in 10s');
+      setTimeout(() => this._bridgeHandshake(), 10000);
+    }
+  }
+
+  // ── Bridge dispatch — route a request through Bridge :9999 ────────────
+  async _bridgeDispatch(target, type, payload, timeout = 30000) {
+    const token = this._bridgeToken || this.settings.getBridgeToken();
+    if (!token) {
+      // Not handshaked yet — attempt handshake then retry once
+      await this._bridgeHandshake();
+      if (!this._bridgeToken) throw new Error('[CoPilot/Bridge] No bridge token — handshake pending');
+    }
+    const res = await fetch(this.settings.bridgeUrl('/bridge/request'), {
+      method:  'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'x-bridge-token': this._bridgeToken,
+      },
+      body: JSON.stringify({
+        type,
+        source:  'clear-glass',
+        target,
+        payload,
+        tags:    ['clear-glass', target],
+      }),
+      timeout,
+    });
+    if (!res.ok) throw new Error(`[Bridge] ${target} dispatch HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(`[Bridge] ${target} error: ${data.error || 'unknown'}`);
+    return data.result?.response ?? data.result ?? data;
   }
 
   // ── NEXUS copilot stream connection ───────────────────────────────────

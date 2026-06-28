@@ -183,6 +183,13 @@ function startService() {
   fs.mkdirSync(path.join(ROOT, 'data/diagnostic/invariant'),{ recursive: true });
   fs.writeFileSync(PID_FILE, String(process.pid));
 
+  // Purge stale baseline invariants on every boot so cold-start noise
+  // doesn't lock in a bad baseline that triggers permanent GAP spam.
+  for (const [name, cfg] of Object.entries(SYSTEMS)) {
+    const invFile = path.join(ROOT, cfg.dataDir, 'invariant', 'baseline.json');
+    try { fs.unlinkSync(invFile); } catch (_) {}
+  }
+
   // Diagnostic ICO kernel
   const ico = createICO({
     name: 'diagnostic',
@@ -197,8 +204,8 @@ function startService() {
       ledgerDir:    path.join(ROOT, cfg.dataDir),   // §LEDGER-FIX: dataDir is now the source
       failuresDir:  path.join(ROOT, cfg.dataDir, 'failures'),
       invariantDir: path.join(ROOT, cfg.dataDir, 'invariant'),
-      baselineN:    10,
-      sigmaThreshold: 0.25,
+      baselineN:    30,
+      sigmaThreshold: 0.6,
       onGap: (gap) => {
         gap.system = name;
         openGaps.set(gap.uuid, gap);

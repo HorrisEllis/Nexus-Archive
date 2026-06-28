@@ -36,6 +36,9 @@ const DEFAULTS = {
   raidEnabled:      true,   // enable RAID routing in NEXUS
   copilotChannel:   'clear-glass', // channel name for copilot sessions
 
+  // ── Bridge auth token (issued after handshake) ───────────────────────
+  bridgeToken: '',
+
   // ── Fallback only — used when NEXUS copilot is unreachable ────────────
   // (Set these in NEXUS copilot's own config, not here.)
   fallbackApiKey:  '',
@@ -77,15 +80,36 @@ class ApiSettings {
   nexusUrl(path = '') {
     return `http://127.0.0.1:${this.data.orchestratorPort}${path}`;
   }
-  copilotUrl(path = '') {
+  // Direct URLs — used internally for health checks only
+  copilotDirectUrl(path = '') {
     return `http://127.0.0.1:${this.data.copilotPort}${path}`;
   }
-  guardianUrl(path = '') {
+  guardianDirectUrl(path = '') {
     return `http://127.0.0.1:${this.data.guardianPort}${path}`;
+  }
+  ollamaDirectUrl(path = '') {
+    return `http://127.0.0.1:${this.data.ollamaPort}${path}`;
   }
   cortexUrl(path = '') {
     return `http://127.0.0.1:${this.data.cortexPort}${path}`;
   }
+  // Bridge-routed URLs — all traffic for copilot/guardian/ollama goes through :9999
+  bridgeUrl(path = '') {
+    return `http://127.0.0.1:${this.data.bridgePort}${path}`;
+  }
+  copilotUrl(path = '') {
+    // Route through bridge: POST /bridge/request { target:'copilot', payload:{ path, ... } }
+    // Kept for legacy call-sites — bridge.js overrides this with dispatch()
+    return this.bridgeUrl(path);
+  }
+  guardianUrl(path = '') {
+    return this.bridgeUrl(path);
+  }
+  ollamaUrl(path = '') {
+    return this.bridgeUrl(path);
+  }
+  getBridgeToken() { return this.data.bridgeToken || ''; }
+  async setBridgeToken(token) { return this.set({ bridgeToken: token }); }
 }
 
 module.exports = ApiSettings;
