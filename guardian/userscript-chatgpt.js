@@ -28,7 +28,10 @@ const ORCH_URL    = 'http://127.0.0.1:9000';
 const BRIDGE_URL  = 'http://127.0.0.1:9999';
 const PROVIDER    = 'chatgpt';
 const VERSION    = '10.0.0';
-const RECONNECT_MS = 3000;
+// §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
+const RECONNECT_MIN_MS = 3000;
+const RECONNECT_MAX_MS = 30000;
+let _reconnectAttempts = 0;
 const HB_MS        = 8000;
 
 // ── Tab identity (sessionStorage only — intentionally ephemeral) ──────────────
@@ -692,6 +695,7 @@ setInterval(pollSystemStatus, 15000);
 // ── NCP connection ────────────────────────────────────────────────────────────
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+  _reconnectAttempts = 0; // §P113: reset backoff on successful connect
   if (_es) { try { _es.close(); } catch(_) {} }
   const params = `tabId=${MY_TAB}&provider=${PROVIDER}`;
   _log('info', 'NCP connecting…', `${NCP_CHANNEL}?${params}`);
@@ -723,9 +727,11 @@ function connect() {
   };
   _es.onerror = () => {
     connState = 'disconnected'; setConnState('disconnected');
-    _log('err', `NCP error — retry ${RECONNECT_MS}ms`);
+    _reconnectAttempts++;
+    const _delay = Math.min(RECONNECT_MIN_MS * Math.pow(2, _reconnectAttempts - 1), RECONNECT_MAX_MS);
+    _log('err', `NCP error — retry ${_delay}ms (attempt ${_reconnectAttempts})`);
     _es.close(); clearInterval(_hb);
-    _reconnectTimer = setTimeout(connect, RECONNECT_MS);
+    _reconnectTimer = setTimeout(connect, _delay);
   };
 }
 

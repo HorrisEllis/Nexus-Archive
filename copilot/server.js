@@ -1,21 +1,16 @@
 'use strict';
 /**
  * copilot/server.js — Sovereign Co-pilot System
- * UUID: nexus-copilot-server-v2-0000-2026-0627-jamesbrooks-001
+ * UUID: nexus-copilot-server-v3-0000-2026-0628-jamesbrooks-001
  * Port: 3750
  *
- * Co-pilot is separate from Guardian.
- * It receives intent, assembles context, routes to RAID, returns response.
- * It runs a CONTINUOUS STREAM — every event in the system feeds into it.
- * Every bus event, every ledger entry, every gap, every pattern,
- * every autopilot action — streams in as consciousness.
- * The co-pilot synthesizes from this stream, not from one-shot queries.
- *
- * Dual cognition (S7):
- *   INTUITION  — Pattern engine (Phase 47) + crystal lattice + user model
- *                Fast, associative, gut-sense. Fires before any model.
- *   ANALYSIS   — CFR causal kernel (Phase 71) + vector memory + compound engine
- *                Slow, derivation-based. Fires for complex reasoning.
+ * P73–73.6  — copilot-context.js now wires all 7 sensing layers into every
+ *             prompt (was using bespoke 5-layer assembler in analysis.js).
+ * P103      — Session continuity: last N chat_log injected at session start.
+ * P110      — Dual cognition full wire: Cortex /api/intelligence/intuition
+ *             and /api/intelligence/mastermind queried before Ollama dispatch.
+ * P112      — Streaming /api/prompt/stream SSE endpoint — token-by-token via
+ *             Ollama streamed jobs; timeout eliminated.
  */
 
 const http   = require('http');
@@ -30,7 +25,7 @@ const OR_URL   = process.env.ORCH_URL       || 'http://127.0.0.1:9000';
 const OL_URL   = process.env.OLLAMA_URL     || 'http://127.0.0.1:3749';
 const IDR_URL  = process.env.IDEARIUM_URL   || 'http://127.0.0.1:4800';
 
-const _cw          = require('../lib/cortex-write')('copilot');
+const _cw = require('../lib/cortex-write')('copilot');
 
 // Blueprint index — component awareness substrate (§BP-01)
 let _blueprintIndex = null;
@@ -39,15 +34,21 @@ function _getBP() {
   try { _blueprintIndex = require('../lib/blueprint-index'); return _blueprintIndex; } catch(_) { return null; }
 }
 
-// Auto-build on startup (disk read is instant if already built by orchestrator)
+// §P73: copilot-context — 7-layer sensing (L0 bus → L6 predictive intent)
+let _copilotContext = null;
+function _getCopilotContext() {
+  if (_copilotContext) return _copilotContext;
+  try { _copilotContext = require('../lib/copilot-context'); return _copilotContext; } catch(_) { return null; }
+}
+
 setImmediate(() => {
   try {
     const bi = _getBP();
     if (!bi?.load()) {
       const r = bi?.build();
-      if (r?.ok) console.log(`[copilot] blueprint-index built at startup: ${r.index?.totalComponents} components`);
+      if (r?.ok) console.log(`[copilot] blueprint-index built: ${r.index?.totalComponents} components`);
     } else {
-      console.log('[copilot] blueprint-index loaded from disk');
+      console.log('[copilot] blueprint-index loaded');
     }
   } catch(e) { console.warn('[copilot] blueprint-index startup failed:', e.message); }
 });
@@ -56,24 +57,19 @@ const _lifeline    = require('./lifeline');
 const _modBuilder  = require('./module-builder');
 const _rDiagnose   = require('./recursive-diagnose');
 const SYSTEM_ID = 'copilot';
-const VERSION   = '2.0.0';
+const VERSION   = '3.0.0';
 
 // ── CONTINUOUS STREAM — the co-pilot's consciousness ─────────────────────────
-// Every event that arrives here is added to a rolling 500-event buffer.
-// When the co-pilot answers a question, it reads from this buffer.
-// The stream IS the context. Not a query. A living feed.
 const _stream = [];
 const MAX_STREAM = 500;
 
 function streamIngest(event) {
   _stream.push({ ...event, ingestedAt: Date.now() });
   if (_stream.length > MAX_STREAM) _stream.shift();
-  // Broadcast to connected UIs
   broadcast('copilot.stream.event', { type: event.type, ts: event.ts || Date.now() });
 }
 
 // Subscribe to Cortex SSE for live events
-let _cortexSSE = null;
 function _connectCortexStream() {
   try {
     const u = new URL(`${CX_URL}/events`);
@@ -94,7 +90,6 @@ function _connectCortexStream() {
     });
     req.on('error', () => setTimeout(_connectCortexStream, 5000));
     req.end();
-    _cortexSSE = req;
   } catch(_) { setTimeout(_connectCortexStream, 5000); }
 }
 
@@ -144,76 +139,69 @@ async function _fetch(url, opts = {}) {
   });
 }
 
-async function _post(url, body) {
-  return _fetch(url, { method: 'POST', body });
+async function _post(url, body, timeoutMs = 10000) {
+  return _fetch(url, { method: 'POST', body, timeout: timeoutMs });
 }
 
-// ── Dual Cognition — loaded as sovereign modules ─────────────────────────────
-// comp_id: nexus.copilot.routing / copilot/server.js
+// ── Dual Cognition modules ─────────────────────────────────────────────────────
 const _intuition   = require('./intuition');
 const _analysis    = require('./analysis');
 const _adversarial = require('./adversarial');
 
-// Start adversarial probing (pings intuition + analysis every 60s)
 _adversarial.start(() => _stream.slice(-30));
 
-
-// ── ANALYSIS — 7-layer context + model ───────────────────────────────────────
-async function _assemble7Layer(prompt, session) {
-  const layers = [];
-
-  // L0 stream — recent events from consciousness
-  const streamSummary = _stream.slice(-30).map(e => `${e.type}`).join(', ');
-  layers.push(`[STREAM] Recent: ${streamSummary.slice(0, 300)}`);
-
-  // L1 telemetry
+// ── §P110: Cortex dual cognition — INTUITION + MASTERMIND via HTTP ────────────
+// Cortex runs its own intelligence layer (Phase 84/85). Before dispatching to
+// Ollama, we query Cortex for a fast intuition answer and a causal mastermind
+// reading. Either can satisfy the prompt without a model call.
+async function _queryCortexIntuition(prompt, sessionId) {
   try {
-    const h = await _fetch(`${OR_URL}/health`);
-    layers.push(`[HEALTH] online:${h.online}/${h.total}`);
-  } catch(_) {}
+    const r = await _fetch(`${CX_URL}/api/intelligence/intuition`, {
+      method: 'POST',
+      body: { prompt, sessionId },
+      timeout: 2000,
+    });
+    if (r?.ok && r?.text) return r;
+    return null;
+  } catch(_) { return null; }
+}
 
-  // L2 provider health
+async function _queryCortexMastermind(prompt, contextLayers, sessionId) {
   try {
-    const p = await _fetch(`${GD_URL}/providers`);
-    layers.push(`[PROVIDERS] ${JSON.stringify(p.providers || []).slice(0, 100)}`);
-  } catch(_) {}
+    const r = await _fetch(`${CX_URL}/api/intelligence/mastermind`, {
+      method: 'POST',
+      body: { prompt, context: contextLayers, sessionId },
+      timeout: 4000,
+    });
+    if (r?.ok && r?.analysis) return r;
+    return null;
+  } catch(_) { return null; }
+}
 
-  // L3 gaps
+// ── §P103: Session continuity — inject last N exchanges on session start ───────
+// Fetches chat_log from Cortex and appends to the 7-layer context so the
+// co-pilot remembers what was said earlier in the session.
+async function _injectSessionHistory(session, contextText) {
+  if (!session?.sessionId || session.exchanges > 1) return contextText;
   try {
-    const g = await _fetch(`${CX_URL}/api/gaps?status=open&severity=high&limit=5`);
-    const gaps = g.gaps || g.rows || [];
-    if (gaps.length) layers.push(`[GAPS] ${gaps.length} high: ${gaps.map(g=>g.type||'?').join(', ')}`);
-  } catch(_) {}
-
-  // L4 CFR field
-  try {
-    const cfr = await _fetch(`${CX_URL}/cfr/health`);
-    layers.push(`[CFR] sigma:${cfr.cfr?.sigma?.toFixed(2)} regime:${cfr.cfr?.regime}`);
-  } catch(_) {}
-
-  // L5 session chat history from Cortex
-  if (session?.sessionId) {
-    try {
-      const mem = await _fetch(`${CX_URL}/api/memory?table=chat_log&n=5`);
-      const rows = mem.rows || [];
-      if (rows.length) layers.push(`[MEMORY] ${rows.length} recent exchanges`);
-    } catch(_) {}
-  }
-
-  // L6 patterns
-  try {
-    const pat = await _fetch(`${CX_URL}/api/intelligence/patterns?limit=3`);
-    const patterns = pat.patterns || [];
-    if (patterns.length) layers.push(`[PATTERNS] ${patterns.map(p=>p.precursor+'('+p.count+'×)').join(', ').slice(0,150)}`);
-  } catch(_) {}
-
-  return layers.join('\n');
+    const mem = await _fetch(
+      `${CX_URL}/api/memory?table=chat_log&n=8&sessionId=${encodeURIComponent(session.sessionId)}`,
+      { timeout: 2000 }
+    );
+    const rows = mem?.rows || [];
+    if (!rows.length) return contextText;
+    const history = rows
+      .slice(-5)
+      .map(r => `  U: ${(r.prompt || '').slice(0, 80)}\n  A: ${(r.response || '').slice(0, 120)}`)
+      .join('\n');
+    return contextText + `\n\n=== SESSION HISTORY (last ${rows.length} exchanges) ===\n${history}`;
+  } catch(_) { return contextText; }
 }
 
 // ── Dispatch to Ollama sovereign system ───────────────────────────────────────
 async function _dispatchToOllama(prompt, context, opts = {}) {
   return _post(`${OL_URL}/api/jobs`, {
-    prompt:      `${context}\n\nUSER: ${prompt}`,
+    prompt:      `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
     model:       opts.model || 'mistral:7b',
     intent:      opts.intent || 'ask',
     componentId: 'copilot.prompt',
@@ -221,6 +209,7 @@ async function _dispatchToOllama(prompt, context, opts = {}) {
     requestId:   opts.requestId,
     sessionId:   opts.sessionId,
     contractId:  'nexus-interaction-contract-v1::copilot',
+    stream:      opts.stream || false,
   });
 }
 
@@ -251,7 +240,7 @@ function broadcast(type, payload) {
   for (const c of _sseClients) { try { c.write(msg); } catch(_) { _sseClients.delete(c); } }
 }
 
-// ── HTTP server ───────────────────────────────────────────────────────────────
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
 function json(res, status, data) {
   res.writeHead(status, { 'Content-Type':'application/json',
     'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'*',
@@ -266,6 +255,52 @@ async function readBody(req) {
   });
 }
 
+// ── §P112: SSE streaming helpers ──────────────────────────────────────────────
+function sseHeaders(res) {
+  res.writeHead(200, {
+    'Content-Type':                'text/event-stream',
+    'Cache-Control':               'no-cache',
+    'Connection':                  'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type,X-Session-Id',
+    'X-Accel-Buffering':           'no',
+  });
+}
+
+function sseSend(res, event, data) {
+  try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch(_) {}
+}
+
+// Poll Ollama job and stream token chunks to SSE response
+async function _streamOllamaJob(jobId, res, sessionId) {
+  let lastText = '';
+  const MAX_WAIT = 90; // seconds
+  for (let i = 0; i < MAX_WAIT; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const status = await _fetch(`${OL_URL}/api/jobs/${jobId}`, { timeout: 3000 });
+      const job = status?.job;
+      if (!job) continue;
+
+      // Stream any new text as a delta chunk
+      if (job.result && job.result.length > lastText.length) {
+        const delta = job.result.slice(lastText.length);
+        lastText = job.result;
+        sseSend(res, 'chunk', { delta, total: lastText.length });
+      }
+
+      if (job.status === 'complete') {
+        return { text: job.result || lastText, modelUsed: job.model || 'ollama', done: true };
+      }
+      if (job.status === 'failed') {
+        return { text: lastText, modelUsed: 'ollama', done: true, failed: true };
+      }
+    } catch(_) {}
+  }
+  return { text: lastText, modelUsed: 'ollama', done: true, timedOut: true };
+}
+
+// ── HTTP server ───────────────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
   const url    = new URL(req.url, `http://localhost:${PORT}`);
   const method = req.method;
@@ -273,7 +308,7 @@ const server = http.createServer(async (req, res) => {
 
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
-  // SSE
+  // SSE — event stream for UI
   if (p === '/events') {
     res.writeHead(200, { 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache',
       'Connection':'keep-alive', 'Access-Control-Allow-Origin':'*' });
@@ -283,56 +318,44 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Contract — required for orchestrator verification
-  if (p === '/contract') {
-    json(res, 200, require('./registry-components'));
-    return;
-  }
+  if (p === '/contract') { json(res, 200, require('./registry-components')); return; }
 
-  // Health
   if (p === '/health') {
     json(res, 200, { ok:true, system:SYSTEM_ID, version:VERSION, port:PORT,
-      streamDepth: _stream.length, sessions: _sessions.size, ts:Date.now() });
+      streamDepth: _stream.length, sessions: _sessions.size,
+      phases: { p73:'wired', p103:'wired', p110:'wired', p112:'wired' }, ts:Date.now() });
     return;
   }
 
-  // Stream snapshot
   if (method === 'GET' && p === '/api/stream') {
     const n = parseInt(url.searchParams.get('n') || '50');
     json(res, 200, { ok:true, events: _stream.slice(-n), total: _stream.length });
     return;
   }
 
-  // Sessions
   if (method === 'GET' && p === '/api/sessions') {
     json(res, 200, { ok:true, sessions: [..._sessions.values()] });
     return;
   }
 
-
-  // POST /api/diagnose — start recursive fractal diagnosis
   if (method === 'POST' && p === '/api/diagnose') {
     const body = await readBody(req);
-    const topic = body.topic || 'system health';
-    const result = await _rDiagnose.start(topic, { requestId: body.requestId });
+    const result = await _rDiagnose.start(body.topic || 'system health', { requestId: body.requestId });
     json(res, 200, result);
     return;
   }
 
-  // GET /api/diagnose/list — list past diagnosis sessions
   if (method === 'GET' && p === '/api/diagnose/list') {
     json(res, 200, { ok:true, sessions: _rDiagnose.list() });
     return;
   }
 
-  // GET /api/lifeline/health
   if (method === 'GET' && p === '/api/lifeline/health') {
     const h = await _lifeline.health();
     json(res, 200, { ok:true, ...h });
     return;
   }
 
-  // POST /api/build — user asks co-pilot to build a module
   if (method === 'POST' && p === '/api/build') {
     const body      = await readBody(req);
     const sessionId = body.sessionId || req.headers['x-session-id'];
@@ -347,7 +370,86 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /api/prompt — the main entry point
+  // ── §P112: POST /api/prompt/stream — SSE streaming response ─────────────────
+  if (method === 'POST' && p === '/api/prompt/stream') {
+    const body      = await readBody(req);
+    const prompt    = body.prompt || '';
+    const channel   = body.channel || 'unknown';
+    const sessionId = body.sessionId || req.headers['x-session-id'] || crypto.randomUUID();
+    const requestId = crypto.randomUUID();
+    const session   = _getSession(sessionId, channel);
+    session.exchanges++;
+
+    if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
+
+    sseHeaders(res);
+    sseSend(res, 'start', { requestId, sessionId });
+
+    // Fast path — intuition (no model needed)
+    const intuition = await _intuition.answer(prompt, session, _stream);
+    if (intuition?.text) {
+      sseSend(res, 'chunk', { delta: intuition.text, total: intuition.text.length });
+      sseSend(res, 'done', { requestId, sessionId, modelUsed: intuition.modelUsed,
+        intent: intuition.intent, source: intuition.source });
+      res.end();
+      await _persist('chat_log', { uuid: crypto.randomUUID(), requestId, sessionId,
+        prompt: prompt.slice(0,500), response: intuition.text, modelUsed: intuition.modelUsed,
+        intent: intuition.intent, channel, componentId:'copilot.prompt', hookId:'copilot.prompt.reply',
+        contextLayers: 1, fromStream: true, ts: Date.now() });
+      return;
+    }
+
+    // §P73: 7-layer context assembly via copilot-context
+    let contextText = '';
+    const cc = _getCopilotContext();
+    if (cc) {
+      try {
+        const snap = await cc.assemble({ eventBuffer: _stream, intent: prompt });
+        contextText = snap.text;
+        sseSend(res, 'context', { layers: Object.keys(snap.layers).length, tokens: snap.tokensUsed });
+      } catch(e) {
+        contextText = await _analysis.assembleContext(prompt, _stream, session);
+      }
+    } else {
+      contextText = await _analysis.assembleContext(prompt, _stream, session);
+    }
+
+    // §P103: inject session history on first exchange
+    contextText = await _injectSessionHistory(session, contextText);
+
+    // §P110: query Cortex MASTERMIND for causal context before model call
+    const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0, 500), sessionId);
+    if (mastermind?.analysis) {
+      contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0, 400)}`;
+    }
+
+    // Dispatch to Ollama with stream flag
+    try {
+      const ollamaResult = await _dispatchToOllama(prompt, contextText, {
+        intent: 'ask', requestId, sessionId, stream: true });
+
+      if (ollamaResult?.jobId) {
+        const result = await _streamOllamaJob(ollamaResult.jobId, res, sessionId);
+        sseSend(res, 'done', { requestId, sessionId, modelUsed: result.modelUsed,
+          contextLayers: 7, timedOut: result.timedOut || false });
+        res.end();
+        await _persist('chat_log', { uuid: crypto.randomUUID(), requestId, sessionId,
+          prompt: prompt.slice(0,500), response: result.text.slice(0,2000),
+          modelUsed: result.modelUsed, intent: 'ask', channel,
+          componentId:'copilot.prompt', hookId:'copilot.prompt.reply',
+          contextLayers: 7, fromStream: true, ts: Date.now() });
+      } else {
+        sseSend(res, 'error', { error: 'Ollama job dispatch failed' });
+        res.end();
+      }
+    } catch(e) {
+      sseSend(res, 'error', { error: e.message });
+      res.end();
+    }
+    return;
+  }
+
+  // ── POST /api/prompt — standard JSON response ─────────────────────────────
   if (method === 'POST' && p === '/api/prompt') {
     const body      = await readBody(req);
     const prompt    = body.prompt || '';
@@ -374,54 +476,58 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // ANALYSIS — 7-layer context + LIFELINE (Ollama primary, Guardian fallback)
-    // comp_id: nexus.copilot.analysis / copilot/server.js
+    // §P110: Cortex INTUITION fast path (L2 dual cognition)
+    const cortexIntuition = await _queryCortexIntuition(prompt, sessionId);
+    if (cortexIntuition?.text && (cortexIntuition?.confidence || 0) > 0.75) {
+      const row = { uuid: crypto.randomUUID(), requestId, sessionId,
+        prompt: prompt.slice(0,500), response: cortexIntuition.text,
+        modelUsed: 'cortex.intuition', intent: cortexIntuition.intent || 'ask',
+        channel, componentId:'copilot.prompt', hookId:'copilot.prompt.reply',
+        contextLayers: 2, fromStream: true, source: 'cortex.intuition', ts: Date.now() };
+      await _persist('chat_log', row);
+      json(res, 200, { ok:true, requestId, sessionId, text: cortexIntuition.text,
+        modelUsed: 'cortex.intuition', channel, source: 'cortex.intuition' });
+      return;
+    }
+
+    // §P73: 7-layer context via copilot-context.js
+    let contextText = '';
+    const cc = _getCopilotContext();
+    if (cc) {
+      try {
+        const snap = await cc.assemble({ eventBuffer: _stream, intent: prompt });
+        contextText = snap.text;
+        broadcast('copilot.context.assembled', { layers: Object.keys(snap.layers).length, tokens: snap.tokensUsed });
+      } catch(e) {
+        contextText = await _analysis.assembleContext(prompt, _stream, session);
+        broadcast('copilot.context.assembled', { layers: 7, fallback: true });
+      }
+    } else {
+      contextText = await _analysis.assembleContext(prompt, _stream, session);
+      broadcast('copilot.context.assembled', { layers: 7, noCopilotContext: true });
+    }
+
+    // §P103: session history injection (first exchange only)
+    contextText = await _injectSessionHistory(session, contextText);
+
+    // §P110: Cortex MASTERMIND causal enrichment
+    const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0, 500), sessionId);
+    if (mastermind?.analysis) {
+      contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0, 400)}`;
+      broadcast('copilot.mastermind.enriched', { sessionId });
+    }
+
+    // Route through LIFELINE — Ollama primary, Guardian fallback
     let text = '';
     let modelUsed = 'none';
     try {
-      // Assemble context first
-      const context = await _analysis.assembleContext(prompt, _stream, session);
-      broadcast('copilot.context.assembled', { layers: context.split('\n').length });
-
-      // Route through LIFELINE — not directly to Ollama
       const lifeResult = await _lifeline.route(
-        `${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
+        `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
         { requestId, sessionId: session.sessionId, intent: 'ask', channel }
       );
       text      = lifeResult?.text || '';
       modelUsed = lifeResult?.provider_used || 'none';
-      if (lifeResult?.escalated) {
-        broadcast('copilot.lifeline.escalated', { provider: lifeResult.provider_used });
-      }
-      const aResult = { contextLayers: context.split('\n').length, source: 'lifeline' };
-
-      // Dispatch to Ollama sovereign system
-      const ollamaResult = await _dispatchToOllama(prompt, context, {
-        intent: 'ask', requestId, sessionId });
-
-      if (ollamaResult?.ok && ollamaResult?.jobId) {
-        // Poll for result (Ollama is async)
-        let attempts = 0;
-        while (attempts < 30) {
-          await new Promise(r => setTimeout(r, 1000));
-          try {
-            const job = await _fetch(`${OL_URL}/api/jobs/${ollamaResult.jobId}`);
-            if (job.job?.status === 'complete') {
-              text = job.job.result || '';
-              modelUsed = job.job.model || 'ollama';
-              break;
-            }
-            if (job.job?.status === 'failed') {
-              text = `Model failed: ${job.job.error || 'unknown'}`;
-              break;
-            }
-          } catch(_) {}
-          attempts++;
-        }
-        if (!text) text = 'Model timed out.';
-      } else {
-        text = ollamaResult?.error || 'Ollama bridge unavailable.';
-      }
+      if (lifeResult?.escalated) broadcast('copilot.lifeline.escalated', { provider: lifeResult.provider_used });
     } catch(e) {
       text = `Analysis failed: ${e.message}`;
     }
@@ -439,19 +545,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /api/channel — notify co-pilot of UI channel change (user model tracking)
   if (method === 'POST' && p === '/api/channel') {
     const body = await readBody(req);
     const { channelId, channelName } = body || {};
     if (!channelId) { json(res, 400, { ok:false, error:'channelId required' }); return; }
-    // Update any active sessions to the new channel
     for (const s of _sessions.values()) s.channel = channelId;
     broadcast('copilot.channel.changed', { channelId, channelName });
     json(res, 200, { ok:true, channelId, channelName });
     return;
   }
 
-  // POST /api/observe — UI confusion/interaction signals (fire-and-forget)
   if (method === 'POST' && p === '/api/observe') {
     const body = await readBody(req);
     const { type, element, channel } = body || {};
@@ -465,7 +568,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /api/stream/ingest — other systems push events here
   if (method === 'POST' && p === '/api/stream/ingest') {
     const body = await readBody(req);
     if (body.type) streamIngest(body);
@@ -491,9 +593,8 @@ function register() {
 }
 
 server.listen(PORT, () => {
-  console.log(`[copilot] :${PORT} — sovereign co-pilot, stream-of-consciousness`);
+  console.log(`[copilot] :${PORT} — v${VERSION} — P73/P103/P110/P112 wired`);
   setTimeout(register, 1000);
-  // Connect to live event streams
   setTimeout(_connectCortexStream, 2000);
   setTimeout(_connectGuardianStream, 3000);
 });

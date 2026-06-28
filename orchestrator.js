@@ -2164,7 +2164,16 @@ if (nexusBus) {
   if (nexusCFR)       nexusCFR.init({ bus: nexusBus, pollMs: 5000 });
   if (nexusHealLoop)  nexusHealLoop.attachToBus(nexusBus);
   if (nexusKnowledge) nexusKnowledge.seedSystemFacts();
-  console.log('[orchestrator] nexus interconnect: bus+cfr+heal+knowledge active');
+  // §P106: wire sigma-writer so sigma_records table actually gets populated.
+  // Previously zero call sites for sigma_records insert anywhere in the codebase.
+  // autonomous-loop.js sigma halt checks this table — without data it always
+  // returns null and logs a degraded-monitoring warning, never halts a run.
+  try {
+    const sigmaWriter = require('./lib/sigma-writer');
+    sigmaWriter.init({ compositeIntervalMs: 30000 });
+    console.log('[orchestrator] §P106: sigma-writer wired — sigma_records now populates');
+  } catch(e) { console.warn('[orchestrator] sigma-writer init failed:', e.message); }
+  console.log('[orchestrator] nexus interconnect: bus+cfr+heal+knowledge+sigma active');
 }
 
 const BIND_HOST = process.env.NEXUS_BIND_HOST || '127.0.0.1'; // §REMOTE-15

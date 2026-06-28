@@ -26,6 +26,13 @@ const components=[
   _c('build','POST','/api/build','Build a new module from description',{grammar:['build','co-pilot build']}),
   _c('diagnose','POST','/api/diagnose','Start recursive fractal diagnosis',{grammar:['diagnose','recursive diagnose']}),
   _c('diagnose.list','GET','/api/diagnose/list','List past diagnosis sessions'),
+  _c('prompt.stream','POST','/api/prompt/stream','Streaming SSE prompt — token-by-token, no timeout (P112)',{
+    grammar:['stream ask','cp stream'],
+    hooks:{
+      in:[{id:'copilot.prompt.stream.receive',intent:['ask'],tags:['streaming','sse']}],
+      out:[{id:'copilot.prompt.stream.chunk',wires_to:['ui.copilot.stream'],tags:['streaming']}],
+    }
+  }),
   _c('health','GET','/health','Co-pilot health'),
   _c('contract','GET','/contract','Co-pilot interaction contract'),
 ];

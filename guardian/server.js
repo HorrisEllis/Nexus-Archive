@@ -3145,14 +3145,22 @@ function handleExtendedRoutes(req, res, url, method) {
       const parsed = parseCommand(body.raw);
       let _rawProvider = body.provider || parsed.provider || null;
 
-      // §RAID: if no explicit provider, let RAID decide (LAW_I: Ollama first)
+      // §RAID + §P97: if no explicit provider, let RAID decide (LAW_I: Ollama first)
+      // CFR sigma floor is consulted — chaotic regime deprioritises slower providers.
       if (!_rawProvider || _rawProvider === 'auto') {
         try {
           const _raid = require('../cortex/core/raid/index');
           const _prompt = body.prompt || parsed.prompt || '';
-          const _decision = _raid.decide(_prompt, { preferredAgent: 'auto' });
+          // §P97: read CFR field state for sigma-aware routing
+          let _cfrCtx = {};
+          try {
+            const _cfrInfl = require('../nexus-cfr-influence');
+            _cfrCtx = { sigmaFloor: _cfrInfl.getSigmaFloor?.() || 0,
+                        regime: _cfrInfl.getState?.()?.regime || 'stable' };
+          } catch(_) {}
+          const _decision = _raid.decide(_prompt, { preferredAgent: 'auto', cfrCtx: _cfrCtx });
           _rawProvider = _decision.agent;
-          console.log(`[guardian] RAID → ${_rawProvider} (${_decision.reason})`);
+          console.log(`[guardian] RAID → ${_rawProvider} (${_decision.reason}) σfloor:${_cfrCtx.sigmaFloor}`);
         } catch(_) {
           _rawProvider = 'chatgpt'; // RAID not started — fallback
         }
