@@ -149,10 +149,13 @@ async function _dispatchToGuardian(gap, repairSpec, provider = 'claude') {
       return { ok: false, reason: 'raid_unavailable' };
     }
   }
-  return _post(GUARDIAN_PORT, '/command', {
+  // forge_repair routes directly to ollama-bridge (:3749) — NOT guardian NCP.
+  // Guardian NCP queues for browser tabs ("ollama userscript") which don't exist.
+  // Ollama-bridge is a sovereign HTTP service, always reachable at :3749.
+  const OLLAMA_BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
+  return _post(OLLAMA_BRIDGE_PORT, '/generate', {
     command:  'forge_repair',
-    provider,
-    spec:     JSON.stringify(repairSpec, null, 2),
+    prompt:   JSON.stringify(repairSpec, null, 2),
     gapId:    gap.id || gap.uuid,
     priority: gap.severity === 'critical' ? 'high' : 'normal',
     meta: {
@@ -160,6 +163,7 @@ async function _dispatchToGuardian(gap, repairSpec, provider = 'claude') {
       gapType:     gap.type,
       gapPath:     gap.path,
       autoAttempt: (_attempts.get(gap.id || gap.uuid) || 0) + 1,
+      source:      'heal-loop',
     },
   });
 }

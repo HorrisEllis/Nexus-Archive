@@ -727,7 +727,7 @@ select option{background:#111}
   border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);
   margin-left:6px;vertical-align:middle;
 }
-body[data-mode='orchestrator'] #mode-indicator{color:var(--ac);border-color:var(--ac-border)}
+body[data-mode='mistral'] #mode-indicator{color:var(--ac);border-color:var(--ac-border)}
 body[data-mode='claude']       #mode-indicator{color:#cc44ff;border-color:rgba(204,68,255,.25)}
 body[data-mode='chatgpt']      #mode-indicator{color:var(--ok);border-color:var(--ok-border)}
 body[data-mode='gemini']       #mode-indicator{color:#4a9eff;border-color:rgba(74,158,255,.25)}
@@ -736,7 +736,7 @@ body[data-mode='perplexity']   #mode-indicator{color:#818cf8;border-color:rgba(1
 /* ── Mode-specific channel skin ───────────────────────────────────── */
 body[data-mode='claude']  #ch-agent-suite .agent-accent{color:#cc44ff}
 body[data-mode='chatgpt'] #ch-agent-suite .agent-accent{color:var(--ok)}
-body[data-mode='orchestrator'] #ch-agent-suite .agent-accent{color:var(--ac)}
+body[data-mode='mistral'] #ch-agent-suite .agent-accent{color:var(--ac)}
 body[data-mode='gemini'] #ch-agent-suite .agent-accent{color:#4a9eff}
 body[data-mode='perplexity'] #ch-agent-suite .agent-accent{color:#818cf8}
 
@@ -875,7 +875,7 @@ body[data-mode='perplexity'] #ch-agent-suite .agent-accent{color:#818cf8}
 .forge-send:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25)}
 body[data-mode='claude']  .forge-send:hover{background:rgba(204,68,255,.15);border-color:rgba(204,68,255,.3);color:#cc44ff}
 body[data-mode='chatgpt'] .forge-send:hover{background:var(--ok-dim);border-color:var(--ok-border);color:var(--ok)}
-body[data-mode='orchestrator'] .forge-send:hover{background:var(--ac-ghost);border-color:var(--ac-border-hi);color:var(--ac)}
+body[data-mode='mistral'] .forge-send:hover{background:var(--ac-ghost);border-color:var(--ac-border-hi);color:var(--ac)}
 body[data-mode='gemini'] .forge-send:hover{background:rgba(74,158,255,.1);border-color:rgba(74,158,255,.3);color:#4a9eff}
 body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);border-color:rgba(129,140,248,.3);color:#818cf8}
 
@@ -930,32 +930,32 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
     </div>
     <div class="mode-cards">
 
-      <!-- ORCHESTRATOR / OLLAMA -->
-      <div class="mode-card m-orch" onclick="selectMode('orchestrator')">
+      <!-- MISTRAL / LOCAL -->
+      <div class="mode-card m-orch" onclick="selectMode('mistral')">
         <div>
           <div class="mode-icon">⬡</div>
           <div class="mode-badge" style="margin-top:12px">LOCAL FIRST</div>
         </div>
         <div>
-          <div class="mode-name">ORCHESTRATOR</div>
-          <div class="mode-sub">Ollama on :11434. Zero token cost. Full system access. Sovereign. No external dependencies.</div>
+          <div class="mode-name">MISTRAL</div>
+          <div class="mode-sub">Mistral 7B via Ollama Bridge :3749. Zero token cost. Full system access. Sovereign. No external dependencies.</div>
         </div>
         <div class="mode-traits">
-          <div class="mode-trait">Qwen 2.5 Coder 1.5b — reasoning layer</div>
-          <div class="mode-trait">Mistral 7B — general dispatch</div>
+          <div class="mode-trait">Mistral 7B Instruct — primary reasoning</div>
+          <div class="mode-trait">Qwen 2.5 Coder — code generation fallback</div>
           <div class="mode-trait">All 28 JAA tables accessible</div>
           <div class="mode-trait">Unlimited context — no chunking required</div>
           <div class="mode-trait">SEAM pipeline available but optional</div>
           <div class="mode-trait">SNR filter off — full signal</div>
         </div>
-        <div class="mode-select-btn">ENTER ORCHESTRATOR MODE →</div>
+        <div class="mode-select-btn">ENTER MISTRAL MODE →</div>
       </div>
 
       <!-- CLAUDE -->
       <div class="mode-card m-claude" onclick="selectMode('claude')">
         <div>
           <div class="mode-icon">✦</div>
-          <div class="mode-badge" style="margin-top:12px">NCP · TAB REQUIRED</div>
+          <div class="mode-badge" style="margin-top:12px">NCP · CLEAR GLASS</div>
         </div>
         <div>
           <div class="mode-name">CLAUDE</div>
@@ -976,7 +976,7 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
       <div class="mode-card m-chatgpt" onclick="selectMode('chatgpt')">
         <div>
           <div class="mode-icon">◈</div>
-          <div class="mode-badge" style="margin-top:12px">NCP · TAB REQUIRED</div>
+          <div class="mode-badge" style="margin-top:12px">NCP · CLEAR GLASS</div>
         </div>
         <div>
           <div class="mode-name">CHATGPT</div>
@@ -996,7 +996,7 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
       <div class="mode-card m-gemini" onclick="selectMode('gemini')">
         <div>
           <div class="mode-icon">◆</div>
-          <div class="mode-badge" style="margin-top:12px">NCP · TAB REQUIRED</div>
+          <div class="mode-badge" style="margin-top:12px">NCP · CLEAR GLASS</div>
         </div>
         <div>
           <div class="mode-name">GEMINI</div>
@@ -1015,7 +1015,7 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
       <div class="mode-card m-perplexity" onclick="selectMode('perplexity')">
         <div>
           <div class="mode-icon">⌖</div>
-          <div class="mode-badge" style="margin-top:12px">NCP · TAB REQUIRED</div>
+          <div class="mode-badge" style="margin-top:12px">NCP · CLEAR GLASS</div>
         </div>
         <div>
           <div class="mode-name">PERPLEXITY</div>
@@ -1198,7 +1198,7 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
           <span class="tile-status" id="ts-agent" style="color:#a78bfa;background:rgba(167,139,250,.1);padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700">—</span>
         </div>
         <div class="tile-name" id="tile-agent-name" style="color:#a78bfa">AGENTS</div>
-        <div class="tile-desc" id="tile-agent-desc">Choose AI provider — Claude, ChatGPT, Mistral, Gemini, Perplexity, or Orchestrator.</div>
+        <div class="tile-desc" id="tile-agent-desc">Choose AI provider — Mistral (local), Claude, ChatGPT, Gemini, or Perplexity.</div>
         <div class="tile-metrics"></div>
       </div>
       <div class="sys-tile" onclick="openBlueprintBuilder()" id="tile-blueprint">
@@ -1224,9 +1224,9 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
         <div class="box-head">Dispatch
           <div style="display:flex;gap:6px;align-items:center">
             <select id="gd-prov" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:#e0e8ff;font-family:'Space Mono',monospace;font-size:10px;padding:3px 6px;outline:none">
+              <option value="mistral">Mistral (local)</option>
               <option value="claude">Claude</option>
               <option value="chatgpt">ChatGPT</option>
-              <option value="ollama">Ollama</option>
               <option value="gemini">Gemini</option>
               <option value="perplexity">Perplexity</option>
             </select>
@@ -1612,14 +1612,35 @@ async function get(url){try{const r=await fetch(url,{signal:AbortSignal.timeout(
 async function post(url,body){try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(8000)});return await r.json()}catch{return null}}
 async function del(url){try{const r=await fetch(url,{method:'DELETE',signal:AbortSignal.timeout(3000)});return await r.json()}catch{return null}}
 
-// ── Provider URLs for window.open when no tab connected ───────────────────────
+// ── Provider URLs for Clear Glass when no tab connected ───────────────────────
 const PROVIDER_URLS={
   claude:      'https://claude.ai/new',
   chatgpt:     'https://chatgpt.com',
   gemini:      'https://gemini.google.com',
   perplexity:  'https://www.perplexity.ai',
-  ollama:      'http://localhost:11434',
+  mistral:     'https://chat.mistral.ai',
+  ollama:      'http://127.0.0.1:11434',
 };
+
+// openClearGlass — opens Clear Glass sovereign browser at the given URL
+// Routes through the orchestrator's clear-glass launch endpoint if available,
+// falls back to window.open (development mode without Electron)
+function openClearGlass(url) {
+  // Try orchestrator IPC to launch Clear Glass with URL
+  fetch(`http://127.0.0.1:9000/api/clear-glass/open`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ url }),
+  }).catch(() => {
+    // Clear Glass not running via orchestrator — try direct Electron IPC
+    if (window.__CLEAR_GLASS_IPC) {
+      window.__CLEAR_GLASS_IPC.openURL(url);
+    } else {
+      // Dev fallback: open in current browser
+      window.open(url, '_blank');
+    }
+  });
+}
 
 // comp_id: nexus.ui.tv-shell.channel-meta
   // ── Channel meta ──────────────────────────────────────────────────────────────
@@ -1680,7 +1701,23 @@ function tune(n){
   if(chId==='ch-cortex'){cxLoadGaps();cxLoadFails()}
   if(chId==='ch-idearium')idrLoad('createdAt');
   if(chId==='ch-bridge')brLoad();
-  if(chId==='ch-diagnose'){buildDiag();runDiag();loadDiagCFR();loadDiagGaps()}
+  if(chId==='ch-diagnose'){
+    // Load sovereign diagnostics UI from /ui/diagnostics/index.html
+    let diagFrame=document.getElementById('diag-full-iframe');
+    if(!diagFrame){
+      const diagCh=document.getElementById('ch-diagnose');
+      // Check if we need to inject the iframe (first time)
+      if(diagCh && !diagCh.querySelector('iframe')){
+        diagFrame=document.createElement('iframe');
+        diagFrame.id='diag-full-iframe';
+        diagFrame.src='/ui/diagnostics/index.html';
+        diagFrame.style.cssText='width:100%;height:100%;border:none;background:#0a0a14';
+        diagFrame.title='Diagnostics';
+        diagCh.appendChild(diagFrame);
+      }
+    }
+    buildDiag();runDiag();loadDiagCFR();loadDiagGaps()
+  }
   if(chId==='ch-blueprint'){const f=document.getElementById('blueprint-iframe');if(f&&!f.src.endsWith('blueprint-builder/index.html'))f.src='/ui/blueprint-builder/index.html';}
   if(chId==='ch-orch-full'){const f=document.getElementById('orch-full-iframe');if(f&&!f.src.endsWith('/orchestrator'))f.src='/ui/orchestrator';}
   if(chId==='ch-gd-full'){const f=document.getElementById('gd-full-iframe');if(f&&!f.src.endsWith('/guardian'))f.src='/ui/guardian';}
@@ -1833,7 +1870,7 @@ function pulseCard(tileId){
 // Maps autopilot's kernel names to SYSTEMS' short keys. Emerge isn't in
 // autopilot's supervised kernel set (ALL_KERNELS in autopilot.js) — no entry
 // here means no entry there either, not an oversight on this side.
-const AUTOPILOT_KEY_MAP={orchestrator:'orch',bridge:'br',cortex:'cx',guardian:'gd',idearium:'idr',architect:'arch',diagnostic:'dg'};
+const AUTOPILOT_KEY_MAP={mistral:'orch',bridge:'br',cortex:'cx',guardian:'gd',idearium:'idr',architect:'arch',diagnostic:'dg'};
 
 async function pollHealth(){
   for(const s of SYSTEMS){
@@ -1975,6 +2012,9 @@ function connectSSE(){
     tryConnect();
   }
   connect(`${B.orch}/sse`,addEvent);
+  // Listen for clear-glass.open events from orchestrator SSE
+  // When the UI calls openClearGlass(), orchestrator broadcasts this SSE event
+  // and Clear Glass (Electron) picks it up to open the URL in a new tab
   // Cortex SSE — proxied through orchestrator, same as Idearium below
   // (this finishes the Phase 23.5 lockdown — cortex was the one left dialing
   // direct when idearium got fixed).
@@ -2114,7 +2154,7 @@ function updateProviderStatusLine(){
 
 function gdOpenNewTab(provider){
   const url=PROVIDER_URLS[provider||'claude'];
-  if(url)window.open(url,'_blank');
+  if(url)openClearGlass(url);
 }
 
 async function gdSend(){
@@ -2130,11 +2170,11 @@ async function gdSend(){
   const hasProvider=connected.some(n=>n.toLowerCase().includes(pr.toLowerCase()));
 
   if(!hasProvider){
-    // EVENT-DRIVEN: open the tab immediately, don't just show a message
+    // Open Clear Glass browser with the provider URL (no bare Chrome tabs)
     const url=PROVIDER_URLS[pr];
-    res.textContent=`No ${pr} tab connected — opening now. Install the userscript then Send again.`;
+    res.textContent=`No ${pr} tab connected — opening Clear Glass. Install userscript then Send again.`;
     res.style.color='rgba(255,170,0,.7)';
-    if(url) window.open(url,'_blank');
+    if(url) openClearGlass(url);
     return;
   }
 
@@ -2901,10 +2941,10 @@ function setRwStatus(msg,cls=''){const el=document.getElementById('rw-status');i
 // ══════════════════════════════════════════════════════════════════════
 
 const MODE_CONFIG = {
-  orchestrator: {
-    name:       'ORCHESTRATOR',
-    provider:   'ollama',
-    sub:        'Ollama :11434 · Local · Zero token cost · Full JAA access',
+  mistral: {
+    name:       'MISTRAL',
+    provider:   'mistral',
+    sub:        'Ollama Bridge :3749 · Local · Zero token cost · Full JAA access',
     icon:       '⬡',
     color:      '#00e5ff',
     tokenLimit: null,       // unlimited
@@ -3077,7 +3117,7 @@ function goToActiveMode() {
     mistral:     'ch-mistral-agent',
     gemini:      'ch-gemini-agent',
     perplexity:  'ch-perplexity-agent',
-    orchestrator: 'ch-agent-suite',
+    mistral:      'ch-agent-suite',
   };
   const ch = agentChannels[_activeMode];
   if (ch) tuneById(ch);
@@ -3466,7 +3506,7 @@ connectSSE();
 
       <div class="swiz-label" style="margin-top:8px">PRIMARY AGENT</div>
       <div class="swiz-agent-grid" id="swiz-agent-grid">
-        <div class="swiz-agent m-ollama selected" onclick="selectWizAgent('ollama',this)">
+        <div class="swiz-agent m-ollama selected" onclick="selectWizAgent('mistral',this)">
           <div class="swiz-agent-name">⬡ MISTRAL</div>
           <div class="swiz-agent-badge">LOCAL · NO TOKEN COST</div>
           <div class="swiz-agent-traits">

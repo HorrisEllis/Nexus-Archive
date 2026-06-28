@@ -1579,9 +1579,62 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='jobs')               return json(res,200,await GET('guardian',`/jobs?status=${QS.get('status')||''}&limit=${QS.get('limit')||20}`));
     if (M==='GET'  && action==='log')                return json(res,200,await GET('guardian',`/log?limit=${QS.get('limit')||20}`));
     if (M==='POST' && action==='dispatch')           return json(res,202,await POST('guardian','/command',await readBody(req)));
+    if (M==='POST' && action==='blueprint' && sub2==='compile')  return json(res,200,await POST('guardian','/blueprint/compile', await readBody(req), 120000));
+    if (M==='GET'  && action==='blueprint')                       return json(res,200,GET_cached('guardian', '/blueprint'));
+    // Blueprint index — live system component/CLI/SEAM map (§BP-01)
+    if (M==='POST' && action==='blueprint' && sub2==='index') {
+      try {
+        const bi  = require('./lib/blueprint-index');
+        const res2 = bi.build({ bus: { emit: (type, data) => broadcast(JSON.stringify({ type, ...data, ts: Date.now() })) } });
+        return json(res, 200, { ok: res2.ok, built: res2.ok,
+          totalComponents: res2.index?.totalComponents,
+          systemCount: res2.index?.systemCount,
+          errors: res2.index?.errors?.length || 0,
+          buildMs: res2.index?.buildMs,
+        });
+      } catch(e) { return json(res, 500, { ok: false, error: e.message }); }
+    }
+    if (M==='GET' && action==='blueprint' && sub2==='index') {
+      try {
+        const bi = require('./lib/blueprint-index');
+        const idx = bi.load();
+        if (!idx) return json(res, 404, { ok: false, error: 'blueprint-index not built — POST /api/blueprint/index first' });
+        return json(res, 200, { ok: true, index: idx });
+      } catch(e) { return json(res, 500, { ok: false, error: e.message }); }
+    }
+    // Blueprint index — per-system component query
+    if (M==='GET' && action==='blueprint' && sub2==='systems') {
+      try {
+        const bi = require('./lib/blueprint-index');
+        const idx = bi.load();
+        if (!idx) return json(res, 404, { ok:false, error:'not built' });
+        return json(res, 200, { ok:true, systems: idx.systems, totalComponents: idx.totalComponents });
+      } catch(e) { return json(res, 500, { ok:false, error: e.message }); }
+    }
+    // CLI map — grammar lookup endpoint
+    if (M==='GET' && action==='blueprint' && sub2==='cli') {
+      try {
+        const bi = require('./lib/blueprint-index');
+        const idx = bi.load();
+        if (!idx) return json(res, 404, { ok:false, error:'not built' });
+        const q = url.searchParams.get('q') || '';
+        const cmds = q
+          ? idx.allCLI.filter(c => c.command.includes(q) || c.aliases.some(a=>a.includes(q)) || c.systemId.includes(q))
+          : idx.allCLI;
+        return json(res, 200, { ok:true, commands: cmds, total: cmds.length });
+      } catch(e) { return json(res, 500, { ok:false, error: e.message }); }
+    }
     if (M==='POST' && action==='copilot' && sub2==='prompt')  return json(res,200,await POST('copilot','/api/prompt',  await readBody(req), 120000)); // sovereign copilot :3750
     if (M==='POST' && action==='copilot' && sub2==='channel') return json(res,200,await POST('copilot','/api/channel', await readBody(req), 2000));
     if (M==='POST' && action==='copilot' && sub2==='observe') return json(res,200,await POST('copilot','/api/observe', await readBody(req), 1000));
+    // Clear Glass launch — UI calls this when no NCP tab is connected
+    if (M==='POST' && action==='clear-glass' && sub2==='open') {
+      const body = await readBody(req);
+      const targetUrl = body.url || 'https://claude.ai/new';
+      // Emit to all SSE clients so Clear Glass (if running) picks it up
+      broadcastSSE({ type: 'clear-glass.open', url: targetUrl, ts: Date.now(), source: 'nexus-ui' });
+      return json(res, 200, { ok: true, url: targetUrl, note: 'Clear Glass launch dispatched via SSE' });
+    }
     // Phase 67: MCP routes
     if (M==='GET' && action==='mcp' && sub2==='status') return json(res,200,await GET('guardian','/mcp/status'));
     if (M==='GET' && action==='mcp' && sub2==='tools') return json(res,200,await GET('guardian','/mcp/tools'));
@@ -2294,6 +2347,12 @@ try {
     const compReg = require('./lib/component-registry');
     compReg.init(jaaDB, nexusBus);
     console.log('  [component-registry] ' + compReg.list().length + ' components loaded');
+    // Auto-build blueprint-index right after registry is ready (§BP-01)
+    try {
+      const bi = require('./lib/blueprint-index');
+      const biR = bi.build({ bus: nexusBus });
+      console.log(`  [blueprint-index] ${biR.index?.totalComponents} components indexed across ${biR.index?.systemCount} systems`);
+    } catch(be) { console.warn('  [blueprint-index] init skipped:', be.message); }
   } catch(e) {
     console.warn('  [component-registry] init skipped:', e.message);
   }

@@ -352,7 +352,48 @@ const PROVIDER_ALIASES = {
   'perplexity.ai':       'perplexity',
   'localhost':           'ollama',
   '127.0.0.1':          'ollama',
+  'chat.mistral.ai':     'mistral',
 };
+
+// ── Mistral dispatch — routes to ollama-bridge at :3749 ──────────────────────
+// Mistral jobs don't go through NCP/browser tabs; they hit the sovereign
+// ollama-bridge HTTP service directly, same as forge_repair jobs.
+async function _dispatchToMistral(job) {
+  const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
+  const model = process.env.MISTRAL_MODEL || 'mistral:7b-instruct-q4_K_M';
+  const http2 = require('http');
+  return new Promise(resolve => {
+    const body = JSON.stringify({
+      prompt:   job.prompt || job.content || '',
+      model,
+      command:  job.command || 'chat',
+      jobId:    job.id,
+      meta:     { source: 'guardian-mistral', jobId: job.id },
+    });
+    const req = http2.request({
+      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/generate',
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 120000,
+    }, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try {
+          const d = JSON.parse(raw);
+          updateJob(job.id, { status: 'complete', response: d.response || d.text || raw, completedAt: Date.now() });
+          bus.emit('guardian.job.complete', { jobId: job.id, provider: 'mistral', chars: (d.response||'').length });
+          resolve({ ok: true, text: d.response || d.text || '' });
+        } catch(e) {
+          updateJob(job.id, { status: 'error', error: 'parse error: ' + e.message });
+          resolve({ ok: false, error: e.message });
+        }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); updateJob(job.id, { status: 'error', error: 'mistral timeout' }); resolve({ ok:false, error:'timeout' }); });
+    req.on('error', e => { updateJob(job.id, { status: 'error', error: e.message }); resolve({ ok:false, error: e.message }); });
+    req.write(body); req.end();
+  });
+}
 
 // ── job store ─────────────────────────────────────────────────────────────────
 
@@ -474,6 +515,26 @@ function dispatchJob(job) {
 
 
 function _doDispatch(job) {
+  // Mistral routes directly to ollama-bridge — no NCP browser tab needed
+  if (job.provider === 'mistral') {
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log('[guardian] mistral job → ollama-bridge :3749');
+    _dispatchToMistral(job).catch(e => {
+      updateJob(job.id, { status: 'error', error: e.message });
+      bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'mistral' });
+    });
+    return true;
+  }
+  // Ollama provider also routes to bridge (legacy path)
+  if (job.provider === 'ollama') {
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log('[guardian] ollama job → ollama-bridge :3749');
+    _dispatchToMistral({ ...job, provider: 'ollama' }).catch(e => {
+      updateJob(job.id, { status: 'error', error: e.message });
+      bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'ollama' });
+    });
+    return true;
+  }
   // NCP: push job via SSE channel instead of WebSocket
   if (!ncp.isConnected(job.provider)) {
     // Queue it — will flush when provider connects via GET /channel
@@ -490,6 +551,7 @@ function _doDispatch(job) {
       chatgpt:    'https://chatgpt.com/',
       gemini:     'https://gemini.google.com/',
       perplexity: 'https://www.perplexity.ai/',
+      mistral:    'https://chat.mistral.ai/',
     };
     const url = provUrls[job.provider];
     if (url) {
@@ -3139,9 +3201,9 @@ function handleExtendedRoutes(req, res, url, method) {
 
   // Cockpit
   if (method==='GET' && (url.pathname==='/'||url.pathname==='/cockpit'||url.pathname==='/cockpit/')) {
-    // Prefer guardian/ui/index.html (Forge IDE) over cockpit.html
-    const forgeIdePath = require('path').join(__dirname, 'ui', 'index.html');
-    const cockpitPath  = require('path').join(__dirname, '..', 'ui', 'cockpit.html');
+    // Serve from root /ui/guardian/index.html (sovereign UI source of truth)
+    const forgeIdePath = require('path').join(__dirname, '..', 'ui', 'guardian', 'index.html');
+    const cockpitPath  = require('path').join(__dirname, '..', 'ui', 'home', 'index.html');
     const cockpitHtml  = require('fs').existsSync(forgeIdePath)
       ? require('fs').readFileSync(forgeIdePath, 'utf8')
       : require('fs').existsSync(cockpitPath)

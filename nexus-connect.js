@@ -65,6 +65,8 @@ const PORTS = {
   emerge:       parseInt(process.env.EMERGE_PORT        || '4242'),
   diagnostic:   parseInt(process.env.DIAGNOSTIC_PORT   || '7825'),
   ollama:       parseInt(process.env.OLLAMA_PORT        || '11434'),
+  'ollama-bridge': parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749'),
+  copilot:      parseInt(process.env.COPILOT_PORT        || '3750'),
 };
 
 const HEALTH_PATHS = {

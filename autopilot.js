@@ -61,6 +61,16 @@ const ALL_KERNELS = [
   { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'] },
   { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true },
   { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true },
+  // Clear Glass sovereign browser — Electron + inline wire bridge.
+  // Registers itself AND ErosmancerOS with the orchestrator on boot.
+  // optional: true — missing Electron install won't trip the circuit breaker.
+  // One-time: run `npm install` inside clear-glass/ before first boot.
+  // Windows needs electron.cmd; Unix uses the symlink — detect at runtime.
+  { name: 'clear-glass',
+    cmd: process.platform === 'win32'
+      ? 'node_modules\\.bin\\electron.cmd'
+      : 'node_modules/.bin/electron',
+    args: ['.'], cwd: 'clear-glass', optional: true },
 ];
 
 // ── Restart policy ────────────────────────────────────────────────────────────
@@ -122,9 +132,11 @@ function _spawnKernel(kernel, color) {
   _log(`${color}[${kernel.name}]${RESET} starting — ${kernel.cmd} ${kernel.args.join(' ')}`);
 
   const proc = spawn(kernel.cmd, kernel.args, {
-    cwd: ROOT,
+    cwd: kernel.cwd ? require('path').join(ROOT, kernel.cwd) : ROOT,
     env: { ...process.env, ...(kernel.env || {}) },
     stdio: ['ignore', 'pipe', 'pipe'],
+    // .cmd files on Windows must run through the shell
+    shell: process.platform === 'win32' && kernel.cmd.endsWith('.cmd'),
   });
 
   s.proc = proc;

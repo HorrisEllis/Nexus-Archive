@@ -1,1 +1,0 @@
-{"uuid":"f0957a19-b00b-43fa-a69f-3385501e2bc7","system":"bridge","component":"bridge.node.trust","action":"registered","status":"ok","tags":["bridge","trust"],"detail":"Set trust score for a node","causedBy":"bridge","contractUuid":null,"session":null,"ts":1782574550346}

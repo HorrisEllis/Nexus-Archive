@@ -2,6 +2,10 @@
 
 ## 2026-06-27 — auto-generated from spec version bumps
 
+- **nexus-improvement-roadmap** — new spec, v1.0.0. All 30 improvements from the combined what-if loop (two rounds,
+
+## 2026-06-27 — auto-generated from spec version bumps
+
 - **cfr-contract-wire** — new spec, v1.0.0. CFR tracks contracts through wires, hook to hook.
 - **contract-queue** — new spec, v1.0.0. Every request between systems is a contract.
 - **copilot-expansion** — new spec, v1.0.0. Everything NEXUS can do, co-pilot can access.

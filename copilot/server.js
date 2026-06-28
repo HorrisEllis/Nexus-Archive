@@ -31,8 +31,28 @@ const OL_URL   = process.env.OLLAMA_URL     || 'http://127.0.0.1:3749';
 const IDR_URL  = process.env.IDEARIUM_URL   || 'http://127.0.0.1:4800';
 
 const _cw          = require('../lib/cortex-write')('copilot');
+
+// Blueprint index — component awareness substrate (§BP-01)
+let _blueprintIndex = null;
+function _getBP() {
+  if (_blueprintIndex) return _blueprintIndex;
+  try { _blueprintIndex = require('../lib/blueprint-index'); return _blueprintIndex; } catch(_) { return null; }
+}
+
+// Auto-build on startup (disk read is instant if already built by orchestrator)
+setImmediate(() => {
+  try {
+    const bi = _getBP();
+    if (!bi?.load()) {
+      const r = bi?.build();
+      if (r?.ok) console.log(`[copilot] blueprint-index built at startup: ${r.index?.totalComponents} components`);
+    } else {
+      console.log('[copilot] blueprint-index loaded from disk');
+    }
+  } catch(e) { console.warn('[copilot] blueprint-index startup failed:', e.message); }
+});
+
 const _lifeline    = require('./lifeline');
-const _axiomMgr    = require('./axiom-manager');
 const _modBuilder  = require('./module-builder');
 const _rDiagnose   = require('./recursive-diagnose');
 const SYSTEM_ID = 'copilot';
@@ -289,32 +309,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /api/axioms
-  if (method === 'GET' && p === '/api/axioms') {
-    const tier = url.searchParams.get('tier');
-    json(res, 200, { ok:true, axioms: _axiomMgr.list({ tier }), summary: _axiomMgr.summary() });
-    return;
-  }
-
-  // POST /api/axioms/add
-  if (method === 'POST' && p === '/api/axioms/add') {
-    const body = await readBody(req);
-    try {
-      const axiom = _axiomMgr.add(body.id, body.text, { reason: body.reason });
-      json(res, 200, { ok:true, axiom });
-    } catch(e) { json(res, 400, { ok:false, error: e.message }); }
-    return;
-  }
-
-  // POST /api/axioms/remove
-  if (method === 'POST' && p === '/api/axioms/remove') {
-    const body = await readBody(req);
-    try {
-      const result = _axiomMgr.remove(body.id, { confirm: body.confirm });
-      json(res, 200, { ok:true, ...result });
-    } catch(e) { json(res, 400, { ok:false, error: e.message }); }
-    return;
-  }
 
   // POST /api/diagnose — start recursive fractal diagnosis
   if (method === 'POST' && p === '/api/diagnose') {
