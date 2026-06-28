@@ -1936,11 +1936,11 @@ function _buildSeamMap() {
 // Attach routes to the diagnostic HTTP server — called from startService()
 // These are appended here; the server's request handler checks them after
 // all existing routes so there are no conflicts.
-const _origStartService = startService;
-function startService() {
-  // Run original
-  _origStartService.apply(this, arguments);
-}
+// §FIX 2026-06-28: removed const _origStartService re-assignment — was a TDZ
+// crash because `const` is not hoisted but the function reference was used at
+// module init time (line 130 calls startService() before this block).
+// The original startService() defined above is used directly at init.
+// This block is now a no-op export placeholder.
 
 // Export the map builder so orchestrator/copilot can consume it too
 module.exports.buildSeamMap    = _buildSeamMap;

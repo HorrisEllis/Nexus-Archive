@@ -191,9 +191,32 @@ function _render(data, renderHint) {
 async function _talkToCopilot(prompt, command) {
   try {
     const t0 = Date.now();
-    const d  = await _request('POST', '/api/guardian/copilot/prompt', {
-      prompt, command: command || undefined, contextOpts: { intent: prompt },
+    // §MIG-01 fix 2026-06-28: was calling /api/guardian/copilot/prompt through
+    // orchestrator — that proxy route was removed. Co-pilot is now its own
+    // sovereign system at :3750. Call it directly.
+    const CP_URL = process.env.COPILOT_URL || 'http://127.0.0.1:3750';
+    const resp = await new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        prompt:    rest,
+        channel:   'cli',
+        sessionId: _sessionId || 'cli-session',
+      });
+      const u   = new URL(`${CP_URL}/api/prompt`);
+      const req = require('http').request({
+        hostname: u.hostname, port: u.port || 3750,
+        path: u.pathname, method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        timeout: 30000,
+      }, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ text: d }); } });
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('copilot timeout')); });
+      req.write(body); req.end();
     });
+    const d = resp;
     const ms = Date.now() - t0;
     if (d.denied) {
       console.log(c.r(`  ✗ RAID denied this: ${d.reason}`));

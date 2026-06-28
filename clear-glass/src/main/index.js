@@ -443,6 +443,21 @@ async function bootstrap() {
     sse:         { emit: (t, d) => emit(t, d) },
     postEvent:   (type, data) => _postEvent(type, data),
   });
+  // §P-CG-01: auto-boot all NCP provider tabs as hidden background windows.
+  // Each provider (claude, chatgpt, gemini, perplexity) gets its own
+  // persistent session partition + Guardian userscript injected via
+  // executeJavaScript — replacing Tampermonkey + manual tab management.
+  // Staggered 1.5s apart to avoid fingerprint/auth collisions.
+  // Do NOT await — we boot async in the background so the rest of the app
+  // continues without waiting for the provider pages to fully load.
+  providerHost.autoBootAll({ show: false }).then(results => {
+    const ok  = results.filter(r => r.ok).length;
+    const bad = results.filter(r => !r.ok).map(r => r.providerId);
+    console.log(`[ClearGlass] NCP auto-boot: ${ok}/${results.length} providers started${bad.length ? ` (failed: ${bad.join(', ')})` : ''}`);
+    _postEvent('clear-glass.providers.booted', { ok, total: results.length, failed: bad });
+  }).catch(e => {
+    console.warn('[ClearGlass] NCP auto-boot failed:', e.message);
+  });
 
   // 8.9. Userscript manager
   userscripts = new UserscriptManager({

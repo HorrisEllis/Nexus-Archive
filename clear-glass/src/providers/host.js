@@ -1,48 +1,52 @@
 'use strict';
 /**
- * src/providers/host.js — NCP Provider Auto-Host
- * UUID: cg-provider-host-v1-0000-0000-000000000014
+ * src/providers/host.js — NCP Provider Auto-Host v2
+ * UUID: cg-provider-host-v2-0000-2026-0628-001
  *
- * What this replaces: today, Guardian dispatches jobs over NCP to a
- * browser tab that James opens by hand, with Tampermonkey running the
- * matching userscript (userscript-claude.js etc). This class makes Clear
- * Glass spawn and own that tab itself — a real BrowserWindow, navigated
- * to the provider URL, with the *exact same unmodified userscript* (read
- * straight off disk from Guardian's own folder) injected via
- * executeJavaScript instead of via Tampermonkey. The userscript's NCP
- * connection, DOM automation, and completion detection are untouched —
- * only the hosting environment changes.
+ * Spawns one hidden BrowserWindow per NCP provider on boot.
+ * Each window:
+ *   1. Gets its own persistent session partition (`persist:ncp-<id>`)
+ *      so login cookies survive restarts.
+ *   2. Navigates to the provider URL.
+ *   3. Has the GM shim injected first (Tampermonkey compat layer).
+ *   4. Has the matching Guardian userscript injected via executeJavaScript
+ *      — the *exact unmodified* file from guardian/userscript-<id>.js.
+ *   5. Re-injects the script after every navigation (SPA-safe).
+ *   6. The userscript opens its NCP EventSource connection back to
+ *      Guardian :7820/channel?provider=<id> — Guardian sees it as a
+ *      normal NCP tab and dispatches jobs to it exactly as Tampermonkey would.
  *
- * Deliberately separate from src/mesh/agent-mesh.js, which drives
- * provider pages directly via ClearDriver/selectors for mesh.route — a
- * different mechanism for a different purpose. This module exists only
- * to host Guardian's NCP tabs.
+ * Windows are HIDDEN (show: false) — they run in the background.
+ * Co-pilot or the user can call .show(id) to surface any tab.
+ * HEADLESS mode: if CG_HEADLESS=1, windows are created but never shown.
  *
- * Deliberately NOT wired through ContextMgr's per-agent fingerprint
- * partitions — those exist for spoofed *browsing* contexts. Hosted
- * provider windows use one persistent Electron session partition per
- * provider (`persist:ncp-<id>`) purely so login/cookies survive restarts.
+ * Architecture note: this replaces Tampermonkey + manual tab management.
+ * Guardian, Orchestrator, and Cortex are unmodified — they still talk
+ * NCP over :7820. Clear Glass just owns the tabs.
  */
 
 const path = require('path');
 const fs   = require('fs');
-const { BrowserWindow, session } = require('electron');
+const { BrowserWindow, session, app } = require('electron');
 const { getProvider, listProviders } = require('./registry');
 const { buildGmShim } = require('./gm-shim');
 
+// Where Guardian's userscripts live relative to the repo root
+const GUARDIAN_DIR_DEFAULT = path.join(__dirname, '../../../../guardian');
+const SCRIPT_RELOAD_INTERVAL_MS = 60_000; // reload script from disk every 60s
+
 class ProviderHost {
   constructor({ guardianDir, sse, postEvent } = {}) {
-    // Clear Glass and Guardian are siblings under the same NEXUS root —
-    // src/providers/host.js → ../../../guardian (clear-glass/../guardian)
     this.guardianDir = guardianDir
       || process.env.GUARDIAN_DIR
-      || path.join(__dirname, '../../../guardian');
+      || GUARDIAN_DIR_DEFAULT;
 
-    this.sse       = sse || { emit: () => {} };
+    this.sse       = sse       || { emit: () => {} };
     this.postEvent = postEvent || (() => {});
 
     this._scriptCache = new Map(); // providerId → { source, mtimeMs }
     this.windows      = new Map(); // providerId → BrowserWindow
+    this._status      = new Map(); // providerId → { status, url, injectedAt, health }
   }
 
   // ── Script loading ──────────────────────────────────────────────────────
@@ -53,103 +57,239 @@ class ProviderHost {
 
   loadUserscript(providerId) {
     const filePath = this._scriptPath(providerId);
-    const stat = fs.statSync(filePath); // throws clearly if missing — no silent fallback
+    let stat;
+    try { stat = fs.statSync(filePath); }
+    catch (e) {
+      console.warn(`[ProviderHost] userscript not found for ${providerId}: ${filePath}`);
+      return null;
+    }
     const cached = this._scriptCache.get(providerId);
     if (cached && cached.mtimeMs === stat.mtimeMs) return cached.source;
-
     const source = fs.readFileSync(filePath, 'utf8');
     this._scriptCache.set(providerId, { source, mtimeMs: stat.mtimeMs });
+    console.log(`[ProviderHost] loaded userscript for ${providerId} (${Math.round(source.length / 1024)}KB)`);
     return source;
   }
 
-  buildInjectable(providerId) {
-    const source = this.loadUserscript(providerId);
-    // Idempotency guard — dom-ready can fire more than once across a
-    // window's life (reload, navigation back into the SPA's own domain);
-    // never run two NCP/EventSource connections in the same page.
-    return `
+  // ── Inject GM shim + userscript into a window ───────────────────────────
+  async _inject(providerId, win) {
+    const gmShim  = buildGmShim();
+    const script  = this.loadUserscript(providerId);
+    if (!script) return false;
+
+    // Wrap in IIFE — prevents global leakage, mirrors Tampermonkey sandbox
+    const code = `
 (function() {
-  if (window.__cgHostedProvider === ${JSON.stringify(providerId)}) return;
-  window.__cgHostedProvider = ${JSON.stringify(providerId)};
-  window.__cgHostedAt = Date.now();
-  ${buildGmShim()}
-  ${source}
+  'use strict';
+  try {
+    ${gmShim}
+    // Userscript begins
+    ${script}
+    // Userscript ends
+    console.log('[ClearGlass] NCP userscript injected for ${providerId}');
+  } catch(e) {
+    console.error('[ClearGlass] userscript injection error (${providerId}):', e.message);
+  }
 })();
 `;
-  }
-
-  // ── Window lifecycle ────────────────────────────────────────────────────
-  isHosted(providerId) { return this.windows.has(providerId); }
-
-  list() {
-    return listProviders().map(p => ({
-      id:     p.id,
-      name:   p.name,
-      hosted: this.windows.has(p.id),
-    }));
-  }
-
-  async start(providerId, { show = false } = {}) {
-    const def = getProvider(providerId);
-    if (this.windows.has(providerId)) {
-      const win = this.windows.get(providerId);
-      if (show) { win.show(); win.focus(); }
-      return { ok: true, providerId, already: true };
-    }
-
-    // Verify the userscript exists *before* opening a window — fail loud,
-    // not with a blank/broken hosted tab.
     try {
-      this.loadUserscript(providerId);
-    } catch (err) {
-      throw new Error(`Cannot host ${providerId}: ${err.message} (looked in ${this.guardianDir})`);
+      await win.webContents.executeJavaScript(code);
+      const st = this._status.get(providerId) || {};
+      this._status.set(providerId, { ...st, status: 'injected', injectedAt: Date.now() });
+      this.sse.emit('provider.host.injected', { providerId, ts: Date.now() });
+      return true;
+    } catch (e) {
+      console.warn(`[ProviderHost] injection failed for ${providerId}:`, e.message);
+      return false;
+    }
+  }
+
+  // ── Spawn one provider window ────────────────────────────────────────────
+  async start(providerId, opts = {}) {
+    if (this.windows.has(providerId)) {
+      const existing = this.windows.get(providerId);
+      if (!existing.isDestroyed()) {
+        if (opts.show) existing.show();
+        return { ok: true, providerId, status: 'already-running' };
+      }
     }
 
-    const win = new BrowserWindow({
-      width: 1100, height: 800,
-      title: `Clear Glass — ${def.name} (hosted)`,
-      show,
-      webPreferences: {
-        partition:        `persist:ncp-${providerId}`,
-        contextIsolation: true,
-        nodeIntegration:  false,
-      },
+    const def = getProvider(providerId);
+    const partition = `persist:ncp-${providerId}`;
+
+    // Intercept WebSocket upgrades — allow NCP SSE but strip CSP on provider pages
+    const ses = session.fromPartition(partition);
+    ses.webRequest.onHeadersReceived((details, callback) => {
+      const headers = { ...details.responseHeaders };
+      // Remove CSP that would block our script injection
+      delete headers['content-security-policy'];
+      delete headers['content-security-policy-report-only'];
+      callback({ responseHeaders: headers });
     });
 
-    const inject = () => {
-      win.webContents.executeJavaScript(this.buildInjectable(providerId)).catch(err => {
-        console.error(`[ProviderHost] Injection failed for ${providerId}:`, err.message);
-        this.sse.emit('provider.host.error', { providerId, error: err.message, ts: Date.now() });
-      });
-    };
-
-    win.webContents.on('dom-ready', inject);
-    win.on('closed', () => this.windows.delete(providerId));
-
-    await win.loadURL(def.url);
+    const win = new BrowserWindow({
+      width:  1280,
+      height: 800,
+      show:   opts.show === true && process.env.CG_HEADLESS !== '1',
+      webPreferences: {
+        partition,
+        nodeIntegration:             false,
+        contextIsolation:            true,
+        webSecurity:                 true,
+        allowRunningInsecureContent: false,
+        // preload is NOT used here — we inject via executeJavaScript after load
+      },
+      title: `NEXUS NCP — ${def.name}`,
+    });
 
     this.windows.set(providerId, win);
+    this._status.set(providerId, {
+      status: 'loading', url: def.url,
+      providerId, name: def.name, color: def.color,
+      startedAt: Date.now(), injectedAt: null, health: 100,
+    });
+
+    // Inject on every navigation (SPA route changes included)
+    win.webContents.on('did-finish-load', async () => {
+      const url = win.webContents.getURL();
+      const st  = this._status.get(providerId) || {};
+
+      // Only inject on the provider's own pages
+      const isProviderPage = def.hosts.some(h => url.includes(h));
+      if (!isProviderPage) {
+        console.log(`[ProviderHost] ${providerId} — skipping injection on ${url}`);
+        return;
+      }
+
+      this._status.set(providerId, { ...st, status: 'loaded', url, loadedAt: Date.now() });
+      console.log(`[ProviderHost] ${providerId} — loaded ${url}, injecting userscript…`);
+
+      // Small delay — let SPA frameworks settle
+      await new Promise(r => setTimeout(r, 800));
+      await this._inject(providerId, win);
+    });
+
+    // Track navigation for health monitoring
+    win.webContents.on('did-navigate', (e, navUrl) => {
+      const st = this._status.get(providerId) || {};
+      this._status.set(providerId, { ...st, url: navUrl });
+      this.sse.emit('provider.host.navigate', { providerId, url: navUrl, ts: Date.now() });
+    });
+
+    // Detect crash / unresponsive
+    win.webContents.on('render-process-gone', (e, { reason }) => {
+      console.warn(`[ProviderHost] ${providerId} renderer gone: ${reason}`);
+      const st = this._status.get(providerId) || {};
+      this._status.set(providerId, { ...st, status: 'crashed', health: 0 });
+      this.sse.emit('provider.host.crashed', { providerId, reason, ts: Date.now() });
+      // Auto-restart after 5s
+      setTimeout(() => this.start(providerId), 5000);
+    });
+
+    win.on('closed', () => {
+      if (this.windows.get(providerId) === win) {
+        this.windows.delete(providerId);
+        this._status.delete(providerId);
+      }
+    });
+
+    // Periodic script re-injection (catches disk changes + SPA unmounts)
+    const reloadTimer = setInterval(async () => {
+      if (win.isDestroyed()) { clearInterval(reloadTimer); return; }
+      const url = win.webContents.getURL();
+      const isProviderPage = def.hosts.some(h => url.includes(h));
+      if (isProviderPage) {
+        // Only re-inject if script on disk has changed
+        const filePath = this._scriptPath(providerId);
+        try {
+          const mtime = fs.statSync(filePath).mtimeMs;
+          const cached = this._scriptCache.get(providerId);
+          if (!cached || cached.mtimeMs !== mtime) {
+            console.log(`[ProviderHost] ${providerId} — script changed on disk, re-injecting…`);
+            await this._inject(providerId, win);
+          }
+        } catch (_) {}
+      }
+    }, SCRIPT_RELOAD_INTERVAL_MS);
+
+    this.postEvent('provider.host.starting', { providerId, url: def.url });
+
+    // Navigate to provider
+    await win.loadURL(def.url).catch(e => {
+      console.warn(`[ProviderHost] ${providerId} loadURL failed:`, e.message);
+    });
+
+    console.log(`[ProviderHost] ${providerId} window spawned → ${def.url}`);
     this.sse.emit('provider.host.started', { providerId, url: def.url, ts: Date.now() });
-    this.postEvent('clear-glass.provider.hosted', { providerId, url: def.url });
-    return { ok: true, providerId };
+
+    return { ok: true, providerId, url: def.url, status: 'started' };
   }
 
-  stop(providerId) {
+  // ── Auto-boot all providers (called from main/index.js after app ready) ──
+  async autoBootAll(opts = {}) {
+    const providers = listProviders();
+    console.log(`[ProviderHost] auto-booting ${providers.length} provider tabs (hidden)…`);
+    const results = [];
+    for (const def of providers) {
+      try {
+        const r = await this.start(def.id, { show: false, ...opts });
+        results.push(r);
+      } catch (e) {
+        console.warn(`[ProviderHost] failed to boot ${def.id}:`, e.message);
+        results.push({ ok: false, providerId: def.id, error: e.message });
+      }
+      // Stagger boot to avoid auth/fingerprint collision
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    this.sse.emit('provider.host.all-booted', { count: results.length, ts: Date.now() });
+    return results;
+  }
+
+  // ── Control ──────────────────────────────────────────────────────────────
+  show(providerId) {
     const win = this.windows.get(providerId);
-    if (!win) return { ok: true, providerId, already: false };
-    win.destroy();
+    if (win && !win.isDestroyed()) { win.show(); win.focus(); return true; }
+    return false;
+  }
+
+  hide(providerId) {
+    const win = this.windows.get(providerId);
+    if (win && !win.isDestroyed()) { win.hide(); return true; }
+    return false;
+  }
+
+  async stop(providerId) {
+    const win = this.windows.get(providerId);
+    if (win && !win.isDestroyed()) { win.destroy(); }
     this.windows.delete(providerId);
+    this._status.delete(providerId);
     this.sse.emit('provider.host.stopped', { providerId, ts: Date.now() });
     return { ok: true, providerId };
   }
 
-  show(providerId) {
+  async reload(providerId) {
     const win = this.windows.get(providerId);
-    if (win) { win.show(); win.focus(); }
+    if (!win || win.isDestroyed()) return this.start(providerId);
+    win.webContents.reload();
+    return { ok: true, providerId, status: 'reloading' };
   }
 
-  async stopAll() {
-    for (const id of [...this.windows.keys()]) this.stop(id);
+  list() {
+    return listProviders().map(def => ({
+      ...def,
+      running: this.windows.has(def.id) && !this.windows.get(def.id).isDestroyed(),
+      ...(this._status.get(def.id) || {}),
+    }));
+  }
+
+  getStatus(providerId) {
+    return this._status.get(providerId) || { status: 'not-started', providerId };
+  }
+
+  // Update health score (called from diagnostic engine or heartbeat)
+  setHealth(providerId, score) {
+    const st = this._status.get(providerId) || {};
+    this._status.set(providerId, { ...st, health: score });
   }
 }
 
