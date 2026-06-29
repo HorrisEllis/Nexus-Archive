@@ -503,13 +503,33 @@ const server = http.createServer(async (req, res) => {
         return { ok: true, output: r.text || r.result || JSON.stringify(r) };
       }
       if (agent === 'claude' || agent === 'chatgpt') {
-        // §topology fix 2026-06-29 — was 'dispatch_not_wired' for both.
-        // Handshake = GET /providers (guardian's NCP connection table),
-        // checked BEFORE dispatch, not assumed. A dispatch into a provider
-        // that isn't actually connected is exactly the kind of "looks
-        // wired, isn't" failure this whole session has been hunting.
         const provCheck = await _fetch(`${GD_URL}/providers`, { method: 'GET', timeout: 3000 }).catch(() => null);
         const connected = provCheck?.providers?.[agent]?.connected ?? provCheck?.[agent]?.connected;
+
+        // §Phase-120 2026-06-29 — dual-sided handoff event. One row carrying
+        // both sides' variables at the moment of crossing, not two separately-
+        // correlated logs. traceToRoot() on a downstream failure now walks a
+        // chain where every handoff link shows what RAID assumed vs what
+        // guardian actually had — that gap is where bugs live.
+        const handoffEvent = {
+          type:    'handoff.copilot_to_guardian',
+          causedBy: null, // wired by _emitUIEvent's lastEventId chain if called from UI
+          from: {
+            agent,
+            cfrSigmaFloor: ctx?.cfrSigmaFloor ?? 0,
+            cfrRegime:     ctx?.cfrRegime     ?? 'stable',
+            requestId,
+          },
+          to: {
+            connected:     !!connected,
+            providerShape: provCheck ? (provCheck.providers ? 'nested' : 'flat') : 'unreachable',
+          },
+          ts: Date.now(),
+        };
+        _fetch(`${GD_URL}/api/guardian/cfr/event`, {
+          method: 'POST', body: handoffEvent, timeout: 1000,
+        }).catch(() => {}); // fire-and-forget, never block dispatch on telemetry
+
         if (!connected) {
           return { ok: false, error: `guardian reports '${agent}' not connected via NCP — handshake failed before dispatch`, errorType: 'ncp_not_connected' };
         }

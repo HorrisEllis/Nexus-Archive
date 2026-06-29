@@ -516,6 +516,8 @@
   .queue-item .q-status.error   { color: #ff4466; }
   .queue-empty { padding: 16px; text-align: center; font-size: 11px; color: var(--text-dim); }
 
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   webview {
     width: 100%;
     height: 100%;
@@ -984,9 +986,13 @@
 
 <!-- Main layout -->
 <div id="layout">
-  <!-- Webview -->
-  <div id="webview-wrap">
-    <div id="load-bar"></div>
+  <!-- Tab bar -->
+  <div id="tab-bar" style="display:flex;align-items:center;background:#0e0e18;border-bottom:1px solid rgba(255,255,255,.08);padding:0 6px;height:34px;flex-shrink:0;overflow-x:auto;overflow-y:hidden;gap:2px;">
+    <div id="tab-list" style="display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;min-width:0;"></div>
+    <button id="btn-new-tab" title="New tab" style="flex-shrink:0;background:none;border:none;color:#6a6d82;font-size:16px;padding:0 8px;cursor:pointer;line-height:34px;">+</button>
+  </div>
+
+  <!-- Webview -->\n  <div id=\"webview-wrap\">\n    <div id=\"load-bar\"></div>
     <webview id="wv" src="about:blank" allowpopups webpreferences="contextIsolation=yes"></webview>
   </div>
 
@@ -1222,7 +1228,7 @@
 
   wv.addEventListener('did-navigate', updateUrl);
   wv.addEventListener('did-navigate-in-page', updateUrl);
-  wv.addEventListener('page-title-updated', (e) => { document.title = e.title + ' — Clear Glass'; });
+  // page-title-updated handled by tab system below — removed duplicate here
 
   wv.addEventListener('did-fail-load', (e) => {
     if (e.errorCode === -3) return; // Aborted — normal
@@ -1269,8 +1275,108 @@
     if (e.key !== 'Enter') return;
     const url = normalizeUrl(urlBar.value);
     if (!url) return;
+    _tabs.setUrl(_tabs.activeId, url);
     wv.loadURL(url);
   });
+
+  // ── Tab system ───────────────────────────────────────────────────────────
+  // Lightweight multi-tab using the single webview — tabs track their own
+  // url/title/loading state, switching loads the stored URL into the webview.
+  // Not a multi-webview system (that requires BrowserView/WebContentsView
+  // per tab, a main-process change) — this is the renderer-only version
+  // that makes the UI work without architectural changes.
+  const _tabs = (() => {
+    let tabs = [{ id: 1, url: initialUrl || 'about:blank', title: 'New tab', loading: false }];
+    let activeId = 1;
+    let nextId = 2;
+    const list = document.getElementById('tab-list');
+
+    function render() {
+      list.innerHTML = tabs.map(t => `
+        <div class="tab-item${t.id === activeId ? ' active' : ''}" data-tid="${t.id}" style="
+          display:flex;align-items:center;gap:5px;padding:0 10px 0 12px;height:28px;
+          border-radius:6px 6px 0 0;font-size:11px;cursor:pointer;white-space:nowrap;
+          background:${t.id===activeId?'#14141f':'transparent'};
+          color:${t.id===activeId?'#d8dae4':'#6a6d82'};
+          border:${t.id===activeId?'1px solid rgba(255,255,255,.08)':'1px solid transparent'};
+          border-bottom:${t.id===activeId?'1px solid #14141f':'none'};
+          min-width:80px;max-width:180px;
+        ">
+          ${t.loading ? '<span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #00f5ff;border-top-color:transparent;animation:spin .6s linear infinite;flex-shrink:0"></span>' : ''}
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+          <span class="tab-close" data-tid="${t.id}" style="opacity:.4;font-size:13px;padding:0 2px;flex-shrink:0" title="Close tab">✕</span>
+        </div>`).join('');
+
+      list.querySelectorAll('.tab-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.classList.contains('tab-close')) return;
+          switchTo(parseInt(el.dataset.tid));
+        });
+      });
+      list.querySelectorAll('.tab-close').forEach(el => {
+        el.addEventListener('click', (e) => { e.stopPropagation(); closeTab(parseInt(el.dataset.tid)); });
+      });
+    }
+
+    function switchTo(id) {
+      const t = tabs.find(x => x.id === id);
+      if (!t) return;
+      activeId = id;
+      wv.loadURL(t.url || 'about:blank');
+      urlBar.value = t.url || '';
+      render();
+    }
+
+    function newTab(url) {
+      const id = nextId++;
+      tabs.push({ id, url: url || 'about:blank', title: 'New tab', loading: false });
+      switchTo(id);
+    }
+
+    function closeTab(id) {
+      if (tabs.length === 1) { tabs[0].url = 'about:blank'; wv.loadURL('about:blank'); urlBar.value=''; render(); return; }
+      const idx = tabs.findIndex(t => t.id === id);
+      tabs = tabs.filter(t => t.id !== id);
+      if (activeId === id) switchTo(tabs[Math.max(0, idx - 1)].id);
+      else render();
+    }
+
+    function setUrl(id, url) {
+      const t = tabs.find(x => x.id === id);
+      if (t) { t.url = url; render(); }
+    }
+
+    function setTitle(id, title) {
+      const t = tabs.find(x => x.id === id);
+      if (t) { t.title = title || 'New tab'; render(); }
+    }
+
+    function setLoading(id, loading) {
+      const t = tabs.find(x => x.id === id);
+      if (t) { t.loading = loading; render(); }
+    }
+
+    render();
+    return { tabs, get activeId(){ return activeId; }, newTab, closeTab, setUrl, setTitle, setLoading, render };
+  })();
+
+  document.getElementById('btn-new-tab').addEventListener('click', () => _tabs.newTab());
+
+  // Wire webview events into tab state
+  wv.addEventListener('page-title-updated', (e) => {
+    _tabs.setTitle(_tabs.activeId, e.title);
+    document.title = e.title + ' — Clear Glass';
+  });
+
+  wv.addEventListener('did-start-loading', () => _tabs.setLoading(_tabs.activeId, true));
+  wv.addEventListener('did-stop-loading',  () => {
+    _tabs.setLoading(_tabs.activeId, false);
+    const url = wv.getURL();
+    _tabs.setUrl(_tabs.activeId, url);
+    urlBar.value = url;
+  });
+
+
 
   // Carried-over URL from openAgentWindow/openBackgroundTab (new-agent,
   // bg-tab, or defaultStartUrl) — webview queues loadURL fine pre-ready.

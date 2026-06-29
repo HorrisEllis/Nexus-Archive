@@ -46,8 +46,49 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     set: (payload) => ipcRenderer.invoke('api:set', payload),
   },
 
-  // ── Nexus options (window behavior, defaults — Cortex/copilot can also
-  //    set these remotely via the bus; this is the same store) ───────────
+  // ── Window controls ───────────────────────────────────────────────────
+  // browser.html calls cg.window.* — these handlers exist in ipc/bridge.js
+  // but were never exposed through the preload. Root cause of every window
+  // control button being a silent no-op.
+  window: {
+    minimize:     (agentId)  => ipcRenderer.invoke('window:minimize', { agentId }),
+    maximize:     (agentId)  => ipcRenderer.invoke('window:maximize', { agentId }),
+    hide:         (agentId)  => ipcRenderer.invoke('window:hide', { agentId }),
+    open:         (payload)  => ipcRenderer.invoke('window:open', payload),
+    openSettings: ()         => ipcRenderer.invoke('window:openSettings'),
+    closeSettings:()         => ipcRenderer.invoke('window:closeSettings'),
+    list:         ()         => ipcRenderer.invoke('window:list'),
+    focus:        (agentId)  => ipcRenderer.invoke('window:focus', { agentId }),
+  },
+
+  // ── Providers (NCP hosted tabs) ───────────────────────────────────────
+  // ipc/bridge.js has providers:list/start/stop/show but preload never
+  // exposed them. Every provider button in browser.html was broken.
+  providers: {
+    list:  ()              => ipcRenderer.invoke('providers:list'),
+    start: (providerId, opts) => ipcRenderer.invoke('providers:start', { providerId, ...opts }),
+    stop:  (providerId)   => ipcRenderer.invoke('providers:stop', { providerId }),
+    show:  (providerId)   => ipcRenderer.invoke('providers:show', { providerId }),
+  },
+
+  // ── Bookmarks ─────────────────────────────────────────────────────────
+  bookmarks: {
+    add:    (payload) => ipcRenderer.invoke('bookmarks:add', payload),
+    remove: (payload) => ipcRenderer.invoke('bookmarks:remove', payload),
+    list:   (payload) => ipcRenderer.invoke('bookmarks:list', payload),
+    check:  (payload) => ipcRenderer.invoke('bookmarks:check', payload),
+    visit:  (payload) => ipcRenderer.invoke('bookmarks:visit', payload),
+  },
+
+  // ── Rewind (session snapshots) ────────────────────────────────────────
+  rewind: {
+    list:     (agentId, limit) => ipcRenderer.invoke('rewind:list', { agentId, limit }),
+    snapshot: (agentId, opts)  => ipcRenderer.invoke('rewind:snapshot', { agentId, ...opts }),
+    restore:  (payload)        => ipcRenderer.invoke('rewind:restore', payload),
+    clear:    (agentId)        => ipcRenderer.invoke('rewind:clear', { agentId }),
+  },
+
+  // ── Options ───────────────────────────────────────────────────────────
   options: {
     get: ()        => ipcRenderer.invoke('options:get'),
     set: (payload) => ipcRenderer.invoke('options:set', payload),
