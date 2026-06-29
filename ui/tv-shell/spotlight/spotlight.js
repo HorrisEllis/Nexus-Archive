@@ -291,6 +291,20 @@ const CP = (() => {
     'tile-dg','tile-arch','tile-em','tile-forge','tile-agent',
     'rail-0','rail-1','rail-2','rail-3','rail-4','rail-5','rail-6','rail-7'];
 
+  // §sensation 2026-06-29 — every click is now a real event_log row, not just
+  // an in-memory array. lastEventId chains causedBy so confusion (below)
+  // traces back to the exact clicks that caused it — traceToRoot-able.
+  // Dead-link fix applied same session: guardian/server.js now proxies
+  // /api/guardian/cfr/{state,event} to cortex:3748 — both this call and
+  // pollCFR()'s below now reach something real.
+  let _lastEventId = null;
+  function _emitUIEvent(type, payload) {
+    return fetch(`${B.orch}/api/guardian/cfr/event`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, source: 'tv-ui.spotlight', payload, causedBy: _lastEventId }),
+    }).then(r => r.json()).then(d => { if (d?.id) _lastEventId = d.id; return d; }).catch(() => null);
+  }
+
   function _wireObservation() {
     for (const id of OBS_TARGETS) {
       const el = document.getElementById(id);
@@ -298,6 +312,7 @@ const CP = (() => {
       el.addEventListener('click', () => {
         const now = Date.now();
         _recentClicks.push({ id, ts: now });
+        _emitUIEvent('ui.tile.click', { id, channel: CH_META[curCh]?.id || 'unknown' });
         // Keep last 20 clicks
         if (_recentClicks.length > 20) _recentClicks.shift();
         // Detect confusion: same element clicked 3+ times in 10s

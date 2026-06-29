@@ -33,12 +33,11 @@ const { DEFAULT_RING_CAP } = require('../foundation/constants.js');
 
 class Stream {
   /**
-   * @param {{ log?: StreamLog, parentStreamId?: number, ringCap?: number, onGateError?: function }} opts
+   * @param {{ log?: StreamLog, parentStreamId?: number, ringCap?: number }} opts
    */
-  constructor({ log = null, parentStreamId = null, ringCap = DEFAULT_RING_CAP, onGateError = null } = {}) {
+  constructor({ log = null, parentStreamId = null, ringCap = DEFAULT_RING_CAP } = {}) {
     this.gates          = new Map();    // signature → Gate
     this.pending        = [];           // unclaimed events
-    this._onGateError   = onGateError;
     this.eventCount     = 0;
     this.log            = log;
     this.streamId       = log ? log.nextStreamId() : null;
@@ -124,24 +123,9 @@ class Stream {
     // SSE broadcast (COS extension)
     this._broadcastSSE(stamped);
 
-    // Gate dispatch — depth-first, synchronous (SISO core contract).
-    // §2026-06-29: this used to call gate.transform() bare — a throw inside
-    // any gate (CreateCompartmentGate, ProcessSpawnGate, etc.) propagated
-    // straight out of emit() with no trace, taking down whatever process
-    // called emit(). Same bug class as the unawaited HTTP handlers in
-    // bridge/server.js and the missing try/catch in copilot/eravos/ollama —
-    // a synchronous fault with no local net.
+    // Gate dispatch — depth-first, synchronous (SISO core contract)
     if (gate) {
-      try {
-        gate.transform(event, this);
-      } catch (err) {
-        if (this._onGateError) {
-          try { this._onGateError(err, { gate: gate.signature, type: event.type }); }
-          catch (_) {}
-        } else {
-          console.error(`[siso/Stream] gate '${gate.signature}' threw on '${event.type}':`, err.message);
-        }
-      }
+      gate.transform(event, this);
     } else {
       this.pending.push(event);
     }

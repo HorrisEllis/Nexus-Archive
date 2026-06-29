@@ -30,11 +30,10 @@ const { randomUUID } = require('crypto');
 const { buildToolsPrompt } = require('./tools');
 
 class CoPilotBridge {
-  constructor({ sse, apiSettings, postEvent, errorLog = null }) {
+  constructor({ sse, apiSettings, postEvent }) {
     this.sse         = sse;
     this.settings    = apiSettings; // ApiSettings instance — has .copilotUrl(), .guardianUrl() etc.
     this.postEvent   = postEvent || (() => {});
-    this.errorLog    = errorLog;   // optional createErrorLog() instance — file:line on every failure
 
     this._busEmit    = null;  // injected by main
     this._domGet     = null;  // injected by main
@@ -91,33 +90,9 @@ class CoPilotBridge {
 
     // Execute all tool calls
     for (const cmd of commands) {
-      const _t0 = Date.now();
-      await this._executeCommand(cmd, agentId).then(result => {
-        // Record successful CFR in ledger
-        try {
-          const { getLedger } = require('../ledger/engine');
-          getLedger().recordCfr({
-            requestId: msgId,
-            tool:      cmd.action,
-            agentId,
-            durationMs: Date.now() - _t0,
-            result:    typeof result === 'object' ? result : { value: result },
-          });
-        } catch (_) {}
-      }).catch(err => {
+      await this._executeCommand(cmd, agentId).catch(err => {
         console.warn(`[CoPilot] Command failed [${cmd.action}]:`, err.message);
         this.sse.emit('copilot.tool.error', { action: cmd.action, error: err.message, agentId });
-        // Record failed CFR in ledger
-        try {
-          const { getLedger } = require('../ledger/engine');
-          getLedger().recordCfr({
-            requestId: msgId,
-            tool:      cmd.action,
-            agentId,
-            durationMs: Date.now() - _t0,
-            error:     err,
-          });
-        } catch (_) {}
       });
     }
 
@@ -474,41 +449,19 @@ ${buildToolsPrompt()}${domSection}`;
   }
 
   // ── Bridge handshake — establish trust token with Bridge :9999 ─────────
-  // BUG FIX: "Premature close" was caused by node-fetch v2 sending
-  // Connection: close by default. The Bridge HTTP server closes the TCP
-  // connection as soon as it calls res.end(), and node-fetch then tries to
-  // read the response body from an already-closed socket → "Premature close".
-  // Fix: send Connection: keep-alive so the socket stays open long enough
-  // for node-fetch to read the response, then use AbortController for timeout
-  // (node-fetch v2 'timeout' option is deprecated and unreliable).
   async _bridgeHandshake() {
     const bridgeUrl = this.settings.bridgeUrl('/bridge/handshake');
     const secret    = process.env.BRIDGE_SECRET_COPILOT || 'nexus-copilot-internal-v1';
     const port      = this.settings.get().copilotPort || 3750;
-
-    const controller = new AbortController();
-    const _timeout   = setTimeout(() => controller.abort(), 5000);
-
     try {
       const res = await fetch(bridgeUrl, {
         method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Connection':   'keep-alive',   // ← fix: keep socket open for response read
-        },
+        headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ systemId: 'copilot', secret, port }),
-        signal:  controller.signal,
+        timeout: 5000,
       });
-      clearTimeout(_timeout);
-
       if (!res.ok) {
-        const errBody = await res.text().catch(() => '');
-        console.warn(`[CoPilot/Bridge] Handshake HTTP ${res.status} — will retry. Body: ${errBody.slice(0, 100)}`);
-        // Record in ledger
-        try { const { getLedger } = require('../ledger/engine'); getLedger().recordError(
-          new Error(`Bridge handshake HTTP ${res.status}`),
-          { file: 'src/copilot/bridge.js', context: { bridgeUrl, status: res.status } }
-        ); } catch (_) {}
+        console.warn(`[CoPilot/Bridge] Handshake HTTP ${res.status} — will retry`);
         setTimeout(() => this._bridgeHandshake(), 10000);
         return;
       }
@@ -517,45 +470,10 @@ ${buildToolsPrompt()}${domSection}`;
       await this.settings.setBridgeToken(token);
       console.log('[CoPilot/Bridge] Bridge handshake OK — token issued');
       this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
-
-      // Emit causal event — handshake established
-      this._emitCausal('copilot.handshake.ok', { bridgeUrl, port }).catch(() => {});
-
     } catch (err) {
-      clearTimeout(_timeout);
-      const isAbort = err.name === 'AbortError';
-      const msg = isAbort ? 'Bridge handshake timeout (5s)' : err.message;
-      console.warn(`[CoPilot/Bridge] Handshake failed: ${msg} — retry in 10s`);
-      // Record in ledger
-      try { const { getLedger } = require('../ledger/engine'); getLedger().recordError(
-        new Error(msg),
-        { file: 'src/copilot/bridge.js', context: { bridgeUrl, isAbort } }
-      ); } catch (_) {}
+      console.warn('[CoPilot/Bridge] Handshake failed:', err.message, '— retry in 10s');
       setTimeout(() => this._bridgeHandshake(), 10000);
     }
-  }
-
-  // ── Causal emit helper — POST to bridge/causal/emit ──────────────────
-  async _emitCausal(action, output = {}, opts = {}) {
-    const bridgeBase = this.settings.get().bridgeUrl || 'http://127.0.0.1:9999';
-    const url = `${bridgeBase}/bridge/causal/emit`;
-    const body = {
-      source:      'clear-glass',
-      action,
-      sessionId:   opts.sessionId || null,
-      causalEdges: opts.causalEdges || [],
-      input:       opts.input || {},
-      output,
-      stateDiff:   opts.stateDiff || {},
-      tags:        opts.tags || ['copilot'],
-    };
-    try {
-      await fetch(url, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Connection': 'keep-alive' },
-        body:    JSON.stringify(body),
-      });
-    } catch (_) { /* causal emit is fire-and-forget, never blocks */ }
   }
 
   // ── Bridge dispatch — route a request through Bridge :9999 ────────────

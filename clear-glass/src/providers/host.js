@@ -180,7 +180,8 @@ class ProviderHost {
     win.webContents.on('render-process-gone', (e, { reason }) => {
       console.warn(`[ProviderHost] ${providerId} renderer gone: ${reason}`);
       const st = this._status.get(providerId) || {};
-      this._status.set(providerId, { ...st, status: 'crashed', health: 0 });
+      const crashCount = (st.crashCount || 0) + 1;
+      this._status.set(providerId, { ...st, status: 'crashed', health: 0, crashCount, lastCrashAt: Date.now() });
       this.sse.emit('provider.host.crashed', { providerId, reason, ts: Date.now() });
       // Auto-restart after 5s
       setTimeout(() => this.start(providerId), 5000);
@@ -290,6 +291,31 @@ class ProviderHost {
   setHealth(providerId, score) {
     const st = this._status.get(providerId) || {};
     this._status.set(providerId, { ...st, health: score });
+  }
+
+  // §pressure-system 2026-06-29 — same field shape as spotlight.js's
+  // updateTensionField(): a crashed tab is high pressure regardless of
+  // recorded health (same as an offline system in the tile tension model),
+  // repeated crashes escalate it further (crashCount, 5min decay window —
+  // same "3 in 10s" escalation idea as spotlight's confusion detector,
+  // different timescale because tab crashes are rarer than clicks), a
+  // loaded tab's pressure tracks the inverse of its health score.
+  getPressure(providerId) {
+    const st = this._status.get(providerId);
+    if (!st) return { pressure: 0, status: 'not-started' };
+    const recentCrash = st.lastCrashAt && (Date.now() - st.lastCrashAt) < 300_000;
+    const crashEscalation = recentCrash ? Math.min(0.3, (st.crashCount || 0) * 0.1) : 0;
+    let pressure;
+    if (st.status === 'crashed') pressure = Math.min(1, 0.7 + crashEscalation);
+    else if (st.status === 'loaded') pressure = Math.min(1, (1 - (st.health ?? 1)) * 0.6 + crashEscalation);
+    else pressure = 0.1 + crashEscalation; // injected/not-started — mild ambient pressure
+    return { pressure: Number(pressure.toFixed(3)), status: st.status, crashCount: st.crashCount || 0 };
+  }
+
+  getAllPressure() {
+    const out = {};
+    for (const def of listProviders()) out[def.id] = this.getPressure(def.id);
+    return out;
   }
 }
 

@@ -38,13 +38,10 @@ class EventBus {
   /**
    * @param {{ ringCap?: number, logLevel?: string }} opts
    *   logLevel: 'OFF' | 'EVENTS' | 'DEEP' | 'DATA' (default: 'EVENTS')
-   *   onGateError: optional (err, {gate,type}) => void — wire to an
-   *     error-log so a throwing gate gets a file:line trace instead of
-   *     crashing whatever process called emit().
    */
-  constructor({ ringCap = DEFAULT_RING_CAP, logLevel = 'EVENTS', onGateError = null } = {}) {
+  constructor({ ringCap = DEFAULT_RING_CAP, logLevel = 'EVENTS' } = {}) {
     this._log    = new StreamLog(logLevel);
-    this._stream = new Stream({ log: this._log, ringCap, onGateError });
+    this._stream = new Stream({ log: this._log, ringCap });
   }
 
   // ── Emit ──────────────────────────────────────────────────────────────────

@@ -77,6 +77,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `meta-layer.spec` | 1.2.0 | — | not yet checked against live code this pass |
 | `nexus-analysis-module-foundation.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `nexus-cli.spec` | 1.0.0 | — | not yet checked against live code this pass |
+| `nexus-decomposition-architecture.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — consolidates this session's full design arc (component/seam/wire/variable/UI/event/handoff/hot-swap). Status: proposed, not yet built — see build_order. |
 | `nexus-improvement-roadmap.spec` | 1.0.0 | 2026-06-29 | ⚠ PARTIAL — IMP-02 corrected proposed→built (lib/file-integrity.js, verified). Other 29 items still uniformly 'proposed', not re-audited. |
 | `nexus-organisms.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `nexus-shell-ui.spec` | 1.0.0 | — | not yet checked against live code this pass |

@@ -1,4 +1,0 @@
-{"uuid":"5396638a-4894-4b35-ba54-e8a5f04cfee3","system":"test","component":"test.event.check","action":"registered","status":"ok","tags":[],"detail":"Test event emission","causedBy":null,"contractUuid":null,"session":null,"ts":1782738219086}
-{"uuid":"85055e64-0c4b-46e9-a64e-ccc1056b9fa0","system":"test","component":"test.event.check","action":"registered","status":"ok","tags":[],"detail":"Test event emission","causedBy":null,"contractUuid":null,"session":null,"ts":1782738233278}
-{"uuid":"2079579a-3c17-45be-a2aa-3cd377967a4b","system":"test","component":"test.event.check","action":"registered","status":"ok","tags":[],"detail":"Test event emission","causedBy":null,"contractUuid":null,"session":null,"ts":1782738695171}
-{"uuid":"17addc24-c18e-46da-bf88-39ffa50cc8a0","system":"test","component":"test.event.check","action":"registered","status":"ok","tags":[],"detail":"Test event emission","causedBy":null,"contractUuid":null,"session":null,"ts":1782739325532}

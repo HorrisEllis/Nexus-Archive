@@ -276,7 +276,8 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     const row = { id: uid(), type: body.type || 'unknown',
       payload: JSON.stringify(body.payload || {}),
-      source: body.source || 'unknown', ts: body.ts || Date.now() };
+      source: body.source || 'unknown', ts: body.ts || Date.now(),
+      causedBy: body.causedBy || null }; // §sensation 2026-06-29 — was missing
     jaaDB.insert('event_log', row);
     json(res, 200, { ok: true, id: row.id });
     return;

@@ -324,3 +324,89 @@ implement" contract (§5.1's cross-reference). Two additions this session:
   hooks.js` file matching the schema in `hooks/idearium.hooks.js` — required
   now, not optional, since `interaction_contract.required_fields` includes
   `hooks` as of foundation spec v1.1.0.
+
+## Part 7 — Session 9: Idearium-as-GitHub
+
+**Proposal:** idearium as a git-like repo per sovereign system (manifest,
+versions, branches), backed up to Cortex, watched by Versionium/file-
+integrity/sigma, with a "nexus repo" landing UI (bug tracking, roadmap,
+progress per system), COS as pre-commit test env, chunked/parallel builds,
+and agent-chat session logging for idea tracking.
+
+**Found, real:** idearium's `SnapshotGate`/`SnapshotRestoreGate` already do
+commit/restore with full state capture, parent pointers, branch labels,
+auto-stash-before-restore (`git stash`-equivalent) — closer to git than
+expected. COS's birth→gate-gauntlet→integration lifecycle is structurally
+the right pre-commit test environment. `lib/contract-queue.js` already
+gives parallel/resumable job dispatch — torrent-style swarm distribution
+should be scoped against what that already covers before being built fresh.
+
+**Found, not real:** "Versionium" (causal version control, temporal replay,
+sigma-gated auto-commit per `docs/specs/VERSIONIUM.spec.md`) has no
+implementation — `lib/version.js` is a flat version-string registry, not
+that. idearium's `branch` field doesn't fork — `parentId` always points at
+the most recent snapshot regardless of declared branch; it's a label on a
+linear chain, not a DAG. No continuous watchdog on sigma/file-integrity
+exists (file-integrity runs at boot only).
+
+**Open structural question, not resolved:** Cortex (backup), Idearium (own),
+file-integrity/sigma (watch) are three plausible write authorities for "what
+changed and when" on the same systems — same shape as the unresolved
+`cortex_memory`/`event_log` dual-ownership from session 8. Needs one named
+owner before this gets built further, per §10.3.
+
+**Built — the manifest projector**, the agreed first piece:
+`lib/system-manifest.js`. `buildManifest(systemId)` aggregates
+`registry-components.js` + `hooks/<system>.hooks.js` into one document —
+components (with grammar/tags/hooks in/out), wires (event-bus/stream hooks),
+APIs, CLI phrases, SEAM-tracked IDs, and named errors rather than silent
+failure (§1.2) for any system whose registry can't be loaded. Tested live
+against cortex/guardian/idearium/copilot/emerge — all five returned clean,
+real counts (e.g. idearium: 43 components, 4 hooks, 84 CLI phrases).
+Expected idearium's ESM `export`/`export default` registry to fail `require()`
+— it didn't, Node's loader handled it without error in practice; noted here
+rather than left as an assumed problem that turned out not to bite.
+
+## Part 8 — Session 10: Universal hot-swap, next session's starting spec
+
+**The mechanism already exists.** `lib/hot-loader.js`'s `load({modulePath,
+src, invariants, monitorMs, rollback})` does drop→quarantine→PROVE
+(invariants)→integrate (snapshot first, §2.1)→monitor (60s sigma watch)→
+rollback, already generic over any file path — not scoped to one module
+type. Phase 14, marked complete, verified real this session by reading it
+directly. What's missing is purely the *addressing* layer:
+
+1. **Component→file mapping** — add a `file` field to component
+   declarations (`registry-components.js`), surfaced through
+   `lib/system-manifest.js`. Without this, `hot-loader.load()` has no way
+   to resolve a dropped file to the component (and its invariants) it
+   represents.
+2. **A watcher** — nothing currently calls `hot-loader.load()`
+   automatically. A drop-folder or drag-and-drop UI target resolves the
+   dropped file to a component via the mapping, then calls `load()` with
+   that component's declared invariants. Checked: doesn't exist yet.
+3. **UI components join the same pattern.** Proven already in
+   `ui/tv-shell/spotlight/` and `menu.js` — own `.js`/`.css`, zero coupling,
+   HTTP-callable. Extend with: (a) an `.html` fragment per component
+   folder, not just JS/CSS — today Spotlight/Menu share the shell's HTML;
+   (b) every component gets this folder shape, not just the two built so
+   far; (c) `ui/themes/{nexus-dark,nexus-light}.css` already exists exactly
+   as the root-level themes folder this asks for (Phase 91) — nothing new
+   needed there, just confirmed real.
+4. **The interaction contract is the addressing scheme** — once a
+   component declares its file(s), the contract already carries everything
+   `load()`'s PROVE step needs (hooks, grammar, routes) to know what to
+   test before integrating. No new schema, just using what's there.
+
+**End state, one sentence:** every component anywhere in Nexus — backend or
+UI — is one folder with its file(s), one registry entry pointing at that
+folder, one hot-load path that can safely swap it. Backend and frontend
+stop being different cases of the same idea.
+
+**Build order for next session, bottom-up per §3.1:** (1) add `file` to the
+component schema + a handful of real components as proof, not all 185 at
+once; (2) extend `system-manifest.js` to surface it; (3) build the watcher
+against that small proof set; (4) only then extend to UI components,
+starting with Spotlight (already has the JS/CSS half, needs HTML split out
+and a registry entry); (5) generalize to the rest once the proof set is
+verified working end-to-end, same test-first discipline as RAID.

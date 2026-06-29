@@ -1238,19 +1238,10 @@
   });
 
   wv.addEventListener('dom-ready', () => {
-    if (!_wvReady) {
-      _wvReady = true;
-      if (_wvPending) {
-        const url = _wvPending;
-        _wvPending = null;
-        try { wv.loadURL(url); } catch (e) {
-          _ledgerError('wv.loadURL (pending flush) failed', 'renderer/browser.html', { url, error: e.message });
-        }
-      }
-    }
-    // Refresh DOM panel if open
     if (domPanelVisible) refreshDomTree();
   });
+
+  function updateUrl() {
     const url = wv.getURL();
     urlBar.value = url;
     statusUrl.textContent = url;
@@ -1278,53 +1269,19 @@
     if (e.key !== 'Enter') return;
     const url = normalizeUrl(urlBar.value);
     if (!url) return;
-    _wvNavigate(url);
+    wv.loadURL(url);
   });
 
-  // ── Webview ready guard ─────────────────────────────────────────────
-  // BUG FIX: wv.loadURL() is a native Electron webview method that only
-  // exists after the webview element fires 'dom-ready'. Calling it before
-  // that fires throws "wv.loadURL is not a function" (browser.html:1279).
-  // Solution: buffer any pending URL and flush it the moment dom-ready fires.
-  let _wvReady    = false;
-  let _wvPending  = null;   // buffered URL to load on dom-ready
-
-  function _wvNavigate(url) {
-    if (!url) return;
-    if (_wvReady) {
-      try {
-        wv.loadURL(url);
-      } catch (e) {
-        _ledgerError('wv.loadURL failed', 'renderer/browser.html', { url, error: e.message });
-      }
-    } else {
-      _wvPending = url; // buffer — will fire on dom-ready
-    }
-  }
-
-  // ── Ledger error reporter — POST to IPC bridge ───────────────────────
-  // ipcPort is on window.location.search (set by main/index.js openAgentWindow)
-  const ipcPort = params.get('ipcPort') || 7702;
-  function _ledgerError(message, file, context) {
-    try {
-      fetch(`http://127.0.0.1:${ipcPort}/ledger/error`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, file, context }),
-      }).catch(() => {});
-    } catch (_) {}
-  }
-
   // Carried-over URL from openAgentWindow/openBackgroundTab (new-agent,
-  // bg-tab, or defaultStartUrl) — buffered if webview not yet ready.
+  // bg-tab, or defaultStartUrl) — webview queues loadURL fine pre-ready.
   if (initialUrl) {
     const norm = normalizeUrl(initialUrl);
-    if (norm) _wvNavigate(norm);
+    if (norm) wv.loadURL(norm);
   }
 
-  document.getElementById('btn-back').addEventListener('click', () => _wvReady && wv.canGoBack() && wv.goBack());
-  document.getElementById('btn-forward').addEventListener('click', () => _wvReady && wv.canGoForward() && wv.goForward());
-  document.getElementById('btn-reload').addEventListener('click', () => _wvReady && wv.reload());
+  document.getElementById('btn-back').addEventListener('click', () => wv.canGoBack() && wv.goBack());
+  document.getElementById('btn-forward').addEventListener('click', () => wv.canGoForward() && wv.goForward());
+  document.getElementById('btn-reload').addEventListener('click', () => wv.reload());
 
   // ── Window controls ─────────────────────────────────────────────────
   document.getElementById('btn-minimize').addEventListener('click', () => cg.window.minimize(agentId));
@@ -1830,7 +1787,7 @@
         btn.title = bk.url;
         btn.textContent = bk.title || bk.url;
         btn.addEventListener('click', () => {
-          _wvNavigate(bk.url);
+          wv.loadURL(bk.url);
           cg.bookmarks.visit({ id: bk.id });
         });
         list.appendChild(btn);

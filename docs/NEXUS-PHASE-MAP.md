@@ -368,6 +368,90 @@ Co-pilot: lifeline confidence, stream size. Ollama: max_concurrent, timeout.
 One unified reconstruction view over: causal graph + snapshots + ledgers + patterns.
 Single query: "what happened between T1 and T2?" → complete causal narrative.
 
+### Phase 116 — Per-Concern File Splitting + Component→File Mapping ⬛
+Sharpened 2026-06-29: not a registry field pointing into an existing
+monolith — that just labels the haystack. Split each system's monolith by
+concern first: `cli.js` (command parsing/dispatch only), `api.js` (route
+handlers only) — one small file per concern. One real system first
+(guardian/server.js is the biggest, ~4000 lines, the clearest case), prove
+it splits clean with tests still passing, *then* the registry's `file`
+field points at something real, and *then* generalize to per-component
+splitting and the other 8 systems.
+**Deps:** none — this is the foundation the rest of the decomposition arc stands on.
+
+### Phase 117 — Seam / Role-Confidence Tracker ⬛
+`docs/seam-component-registry.spec`'s confirmed→drifting→violated state machine —
+schema real, zero code anywhere. Tracks per-component outcomes the way RAID's
+`_health` tracks per-agent outcomes today. Spec layer: `seam`.
+**Deps:** Phase 116 (needs a file to attribute outcomes to).
+
+### Phase 118 — Hot-Swap Watcher ⬛
+Nothing calls `lib/hot-loader.js`'s `load()` automatically today — the mechanism
+(quarantine→prove→integrate→monitor→rollback) is real and complete (Phase 14);
+only the trigger is missing. Drop-folder or drag-and-drop target, resolves via
+Phase 116's mapping, calls `load()` with the component's declared invariants.
+**Deps:** Phase 116.
+
+### Phase 119 — UI Component Folder Decomposition ⬛
+Every UI component gets its own `.html` alongside the `.js`/`.css` Spotlight and
+Menu already prove. Apply to the 8 channels `DECOMP.md` already planned
+(causal, log, diagnose, rewind, overview, conversations, guardian, cortex, idearium,
+bridge) — none built past Menu/Spotlight. `ui/themes/` already exists (Phase 91).
+**Deps:** Phase 116 (UI components use the same `file`/`dir` field, pointing at a folder).
+
+### Phase 120 — Dual-Sided Handoff Events ⬛
+One event row per handoff carrying both sides' variables at the moment of
+crossing — RAID's `agent/cluster/cfrSigmaFloor/reason` and guardian's
+`connected/jobId/queuePosition` in a single causally-chained row, not two
+separately-correlated logs. Wire into the RAID→guardian path built this session.
+**Deps:** none — the path it wires into already exists and is tested.
+
+### Phase 121 — Idearium-as-GitHub Hardening ⬛
+Two real gaps found this session: `branch` field doesn't fork — `parentId`
+always points at the most recent snapshot regardless of declared branch, so
+it's a label on a linear chain, not a DAG. And "Versionium" (causal version
+control, temporal replay, sigma-gated auto-commit) has no implementation —
+`lib/version.js` is a flat version string, not that.
+**Deps:** none, but resolve the Cortex/Idearium/file-integrity write-authority
+question (§10.3) first — same shape as the unresolved `cortex_memory`/`event_log`
+dual-ownership from session 8.
+
+### Phase 122 — Clear-Glass Auto-Ingestion Pipeline ⬛
+Listen for downloads/artifacts/code/thinking across hosted provider tabs, land
+in Cortex (new JAA table, not `chat_log`), queue via `lib/contract-queue.js`.
+Open question carried from when this was scoped: auto-attempt
+`module-builder.build()` on ingestion, or hold for a human/co-pilot decision —
+auto-build is write-capable, same blast-radius question as build-from-inside.
+
+### Phase 123 — Idearium Brainstorm Section ⬛
+A pre-seed phase (or parallel `brainstorms` store) for free-form exploration,
+distinct from idearium's `seed→expanding→tensioned→specced→building→complete`
+pipeline — forcing raw brainstorming into the `Idea` schema loses the length
+and mess that makes it useful. Promotes to a seed idea the same way an idea
+promotes to a spec today (one phase earlier in the same pattern).
+
+### Phase 124 — Variable-Level Causal Tracer ⬛
+A general tool (AST walker, not a registry projector) producing the
+variable→function→component→system trace proven by hand this session for
+`_cfr.sigma`. That trace found the dead-link bug a system-level map couldn't
+see. Separate undertaking from the file/component decomposition work — named
+so it isn't lost, not yet scoped as a build.
+
+### Phase 125 — CFR as Universal Relational Field ⬛
+Generalize CFR's sigma/regime/coherence-friction-resonance-entropy substrate —
+already proven twice this session (Spotlight's tile tension, clear-glass's
+provider pressure) — to every relationship in NEXUS, UI included.
+**Unblocked 2026-06-29** — rfr2 uploaded, real, staged at `unintegrated/rfr2-nexus/` (11 modules, see its README for which phase cites which folder). Major correction:
+`rfr2/packages/nexus` and `Causal-Nexus.zip` share the exact same Project
+UUID (`eecaa718-c6a6-4433-b02a-11ecbefd4740`) — they're the same project, not
+two sources needing a diff. Every "needs a diff between rfr2 and Causal-Nexus"
+caveat on Phases 27/30/95/99/105/109 had a false premise. The six folders
+those phases cite (clip/context/adapter-sandbox/observer/enforcement/query)
+are all real — confirmed present. Still not integrated, and `lib/cfr/graph.js`
+vs this package's `causality` module still needs a real diff (that one IS
+two different things). package.json says v5.0.1, Project.spec.md claims
+1.0.0 — another version drift, consistent with the pattern.
+
 ---
 
 ## IMP-SERIES (improvement roadmap, summary only — full detail in `nexus-improvement-roadmap.spec` + `NEXUS-IMPROVEMENT-MAP.md`)
@@ -388,19 +472,32 @@ until it is. Don't carry it forward as fact.
 
 ## BUILD ORDER (bottom-up, §3.1)
 
-**Highest leverage right now (Phase 96 done — next priorities):**
+**Carried over from before this session, still real priorities:**
+1. **Phase 106** — Sigma investigation. Autonomous loop safety check becomes real. Critical.
+2. **Phase 102** — Action-intent wiring. Co-pilot can actually DO things.
+3. **Phase 113** — NCP reconnection backoff. Terminal noise reduction.
+4. **Phase 109** — Epistemic Branch Runtime. The big one. Unblocked, Phase 98 confirmed done.
+5. **Phase 110 (remainder)** — wire RAID→`/api/intelligence/intuition` and adversarial→Cortex-query.
 
-1. **Phase 97** — CFR → RAID wire. Now unblocked. Routing becomes causal-aware.
-2. **Phase 106** — Sigma investigation. Autonomous loop safety check becomes real. Critical.
-3. ~~Phase 98 — Cortex intelligence via HTTP.~~ ✅ done 2026-06-29, found already built.
-4. **Phase 102** — Action-intent wiring. Co-pilot can actually DO things.
-5. **Phase 113** — NCP reconnection backoff. Terminal noise reduction.
-6. ~~Phase 112 — Streaming responses.~~ ✅ done 2026-06-29, found already built.
-7. **Phase 94** — Meta Observer Layer. Full system visibility.
-8. **Phase 109** — Epistemic Branch Runtime. The big one. Unblocked now that Phase 98 is confirmed done.
-9. **Phase 110 (remainder)** — wire RAID→`/api/intelligence/intuition` and adversarial→Cortex-query. Co-pilot half already done.
-10. ~~Phase 61 — Backfill hooks/*.hooks.js.~~ ✅ done 2026-06-29, all 10 systems now covered.
-11. ~~Phase 36 (CLI-authoring shortcut)~~ — built 2026-06-29, code-verified, awaiting a live boot to runtime-verify.
+**This session's decomposition arc — bottom-up per its own spec, small proof set before generalizing:**
+6. **Phase 116** — Component→file mapping. Everything below depends on this.
+7. **Phase 117** — Seam/role-confidence tracker.
+8. **Phase 118** — Hot-swap watcher.
+9. **Phase 119** — UI component folder decomposition, starting with Spotlight.
+10. **Phase 120** — Dual-sided handoff events (small, wires into already-tested code).
+
+**Captured this session, not yet sequenced against the above — real, just not urgent:**
+- **Phase 121** — Idearium-as-GitHub hardening (branch/DAG fix, Versionium).
+- **Phase 122** — Clear-glass auto-ingestion.
+- **Phase 123** — Idearium brainstorm section.
+- **Phase 124** — Variable-level causal tracer (general tool).
+- **Phase 125** — CFR as universal field (blocked on rfr2's actual source).
+
+**Already done this session, struck from prior lists:**
+- ~~Phase 97~~ ✅ RAID core engine built, 21/21 against pre-existing tests.
+- ~~Phase 98 / Phase 112~~ ✅ done, found already built.
+- ~~Phase 61 / Phase 36~~ ✅ hooks backfill, CLI-authoring shortcut.
+- ~~Phase 94 (partial)~~ — scope grew substantially via `META-SYSTEM-AND-SUBSYSTEM-SPECS.md`; not closed, just better specified.
 
 **Financial leverage:**
 - Phase 94 (meta observer) — visual proof of self-governance

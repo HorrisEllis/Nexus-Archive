@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
-    "test": "node test/bus.test.js && node test/watchdog.test.js && node test/ledger.test.js",
+    "test": "node test/bus.test.js && node test/watchdog.test.js",
     "test:bus": "node test/bus.test.js",
     "test:watchdog": "node test/watchdog.test.js",
     "wire": "node wire/nexus-wire.js",

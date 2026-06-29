@@ -32,11 +32,6 @@ const _cw = require('../lib/cortex-write')('ollama');
 const SYSTEM_ID = 'ollama';
 const VERSION   = '1.0.0';
 
-const { createErrorLog } = require('../lib/error-log');
-const errorLog = createErrorLog({ logDir: path.join(DATA_DIR, 'errors'), systemId: SYSTEM_ID });
-errorLog.open();
-errorLog.attachGlobalHandlers();
-
 // ── Job queue ─────────────────────────────────────────────────────────────────
 const _queue    = [];    // waiting
 const _running  = new Map(); // jobId → job
@@ -188,8 +183,6 @@ const server = http.createServer(async (req, res) => {
   const method = req.method;
   const p      = url.pathname;
 
-  try {
-
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
   // SSE
@@ -199,13 +192,6 @@ const server = http.createServer(async (req, res) => {
     res.write(`data: ${JSON.stringify({ type:'ollama.connected', ts:Date.now() })}\n\n`);
     _sseClients.add(res);
     req.on('close', () => _sseClients.delete(res));
-    return;
-  }
-
-  // Errors — same diagnostic surface as bridge/clear-glass/copilot/eravos
-  if (p === '/errors/tail') {
-    const n = parseInt(url.searchParams.get('n') || '20');
-    json(res, 200, { ok: true, errors: errorLog.tail(n) });
     return;
   }
 
@@ -300,11 +286,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   res.writeHead(404); res.end('Not found');
-
-  } catch (err) {
-    errorLog.record(err, { context: { route: `${method} ${p}` } });
-    if (!res.headersSent) json(res, 500, { ok: false, error: err.message });
-  }
 });
 
 // ── Register with orchestrator ────────────────────────────────────────────────

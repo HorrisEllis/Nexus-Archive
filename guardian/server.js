@@ -2889,6 +2889,39 @@ function handleExtendedRoutes(req, res, url, method) {
   // On pickup, ERAVOS fetches the zip and installs it live.
   const _organismQueue = new Map(); // id → { id, zip, manifest, builtAt }
 
+  // §dead-link fix 2026-06-29 — tv-ui's spotlight.js has been calling these
+  // two routes since before this session; neither existed anywhere on
+  // guardian. pollCFR() swallowed the failure silently (.catch(()=>null)),
+  // so the tension field has been running on stale defaults, not live CFR
+  // sigma. Plain proxy to cortex:3748, same shape cortex already returns —
+  // checked directly, GET /cfr/field returns {ok, sigma, coherence,
+  // friction, entropy, regime, ts}, exactly what pollCFR expects.
+  if (method === 'GET' && url.pathname === '/api/guardian/cfr/state') {
+    const req2 = http.request({ hostname: '127.0.0.1', port: 3748, path: '/cfr/field', method: 'GET', timeout: 3000 }, r => {
+      let buf = ''; r.on('data', c => buf += c);
+      r.on('end', () => { res.writeHead(r.statusCode || 200, { 'Content-Type': 'application/json' }); res.end(buf); });
+    });
+    req2.on('error', () => { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'cortex unreachable' })); });
+    req2.on('timeout', () => req2.destroy());
+    req2.end();
+    return;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/guardian/cfr/event') {
+    bodyJ(req).then(body => {
+      const payload = JSON.stringify(body);
+      const req2 = http.request({ hostname: '127.0.0.1', port: 3748, path: '/api/event', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }, timeout: 3000 }, r => {
+        let buf = ''; r.on('data', c => buf += c);
+        r.on('end', () => { res.writeHead(r.statusCode || 200, { 'Content-Type': 'application/json' }); res.end(buf); });
+      });
+      req2.on('error', () => { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'cortex unreachable' })); });
+      req2.on('timeout', () => req2.destroy());
+      req2.write(payload); req2.end();
+    }).catch(() => { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'invalid JSON body' })); });
+    return;
+  }
+
   if (method === 'GET' && url.pathname === '/api/guardian/organism-queue') {
     const items = [..._organismQueue.values()].map(o => ({ id: o.id, label: o.label, builtAt: o.builtAt }));
     pRes(res, 200, { ok: true, organisms: items });
