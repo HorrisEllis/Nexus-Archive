@@ -16,9 +16,17 @@ spec:
       - Idea:    "{ uuid, text, phase, tags, specRef, gapScore, weight, ts }"
       - Project: "{ uuid, name, phase, specFile, artifacts[], gaps[], ts }"
     phases: [seed, expanding, tensioned, specced, building, complete]
+    axioms: [AX-001, AX-002, AX-003, AX-007]
     constants:
       LATTICE_THRESHOLD:  0.65   # minimum edge weight to cluster
       PHASE_TRANSITIONS:  "seed→expanding→tensioned→specced→building→complete"
+
+  # ── AX-008 (foundation addendum v1.1.0) ────────────────────────────────────
+  # 🔴 OPEN — checked idearium/registry-components.js directly: zero
+  # hooks.out wires_to[] entries anywhere in the file. Every idea, project,
+  # and lattice edge idearium produces is currently invisible to copilot by
+  # construction. Needs at least one wire — idearium.idea.created or
+  # idearium.phase.transitioned → copilot.* would close this.
 
   events:
     emits:

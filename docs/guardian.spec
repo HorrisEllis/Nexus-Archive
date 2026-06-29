@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.6.0
+    version:     3.6.1
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
