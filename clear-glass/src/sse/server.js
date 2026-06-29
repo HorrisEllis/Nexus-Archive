@@ -15,7 +15,7 @@ const express = require('express');
 const { on }  = require('../core/bus');
 
 class SseServer {
-  constructor({ port, moduleId, moduleUuid, cfrLedger = null, errorLog = null }) {
+  constructor({ port, moduleId, moduleUuid }) {
     this.port       = port;
     this.moduleId   = moduleId;
     this.moduleUuid = moduleUuid;
@@ -25,8 +25,6 @@ class SseServer {
     this.log        = [];
     this.MAX_LOG    = 1000;
     this._unsub     = null;
-    this.cfrLedger  = cfrLedger;
-    this.errorLog   = errorLog;
   }
 
   async start() {
@@ -42,22 +40,6 @@ class SseServer {
 
     this.app.get('/health', (req, res) => {
       res.json({ ok: true, clients: this.clients.size, module: this.moduleId });
-    });
-
-    // ── Diagnostic surface — same /cfr/* contract as bridge/cortex/guardian.
-    // GET /cfr/health gives sigma/regime for THIS process; GET /errors/tail
-    // gives the last N entries from this process's own error log, with
-    // file:line, instead of having to grep scrollback.
-    this.app.use((req, res, next) => {
-      if (!this.cfrLedger || !req.path.startsWith('/cfr')) return next();
-      const url = new URL(req.url, 'http://localhost');
-      if (this.cfrLedger.handleCFRRoute(req, res, url)) return;
-      next();
-    });
-    this.app.get('/errors/tail', (req, res) => {
-      if (!this.errorLog) return res.status(404).json({ ok: false, error: 'error log not wired' });
-      const n = parseInt(req.query.n || '20');
-      res.json({ ok: true, errors: this.errorLog.tail(n) });
     });
 
     this.app.get('/events', (req, res) => {

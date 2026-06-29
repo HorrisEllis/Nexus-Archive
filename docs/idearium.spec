@@ -16,9 +16,21 @@ spec:
       - Idea:    "{ uuid, text, phase, tags, specRef, gapScore, weight, ts }"
       - Project: "{ uuid, name, phase, specFile, artifacts[], gaps[], ts }"
     phases: [seed, expanding, tensioned, specced, building, complete]
+    axioms: [AX-001, AX-002, AX-003, AX-007, AX-008]
     constants:
       LATTICE_THRESHOLD:  0.65   # minimum edge weight to cluster
       PHASE_TRANSITIONS:  "seed→expanding→tensioned→specced→building→complete"
+
+  # ── AX-008 (foundation addendum v1.1.0) ────────────────────────────────────
+  # ✅ CLOSED 2026-06-29 — idearium/index.js's _broadcast() pushes every
+  # os.emit() to all SSE clients on GET /sse. copilot/server.js had an
+  # IDR_URL constant declared since at least v3 but never connected to it —
+  # scoped, never wired. Added _connectIdeariumStream() (same pattern as
+  # _connectCortexStream/_connectGuardianStream), wired into copilot's boot
+  # sequence, and added hooks/idearium.hooks.js's 4th entry
+  # (idearium-to-copilot, seam:idearium-copilot-bridge) so the wire is
+  # registry-visible, not just code. idea/project/lattice activity now
+  # reaches copilot live.
 
   events:
     emits:

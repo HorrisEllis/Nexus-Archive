@@ -11,14 +11,14 @@
  *             and /api/intelligence/mastermind queried before Ollama dispatch.
  * P112      — Streaming /api/prompt/stream SSE endpoint — token-by-token via
  *             Ollama streamed jobs; timeout eliminated.
+ * AX-008    — Idearium SSE wired in. Was the one sovereign system whose
+ *             activity never reached copilot. Fixed 2026-06-29.
  */
 
 const http   = require('http');
 const crypto = require('crypto');
 const path   = require('path');
 const fs     = require('fs');
-
-const { createErrorLog } = require('../lib/error-log');
 
 const PORT     = parseInt(process.env.COPILOT_PORT || '3750');
 const GD_URL   = process.env.GUARDIAN_URL   || 'http://127.0.0.1:7820';
@@ -28,17 +28,6 @@ const OL_URL   = process.env.OLLAMA_URL     || 'http://127.0.0.1:3749';
 const IDR_URL  = process.env.IDEARIUM_URL   || 'http://127.0.0.1:4800';
 
 const _cw = require('../lib/cortex-write')('copilot');
-
-// §2026-06-29: the request handler below had no top-level try/catch, so a
-// ReferenceError thrown by a regex helper (AWARE_RE, fixed in intuition.js)
-// took the whole process down instead of returning a 500 — visible in
-// autopilot.log as a bare crash/restart with no file:line trace. Both
-// problems get fixed together: the missing regexes, and the missing net.
-const errorLog = createErrorLog({
-  logDir: path.join(__dirname, '../data/copilot/errors'), systemId: 'copilot',
-});
-errorLog.open();
-errorLog.attachGlobalHandlers();
 
 // Blueprint index — component awareness substrate (§BP-01)
 let _blueprintIndex = null;
@@ -128,6 +117,38 @@ function _connectGuardianStream() {
     req.on('error', () => setTimeout(_connectGuardianStream, 5000));
     req.end();
   } catch(_) { setTimeout(_connectGuardianStream, 5000); }
+}
+
+// §AX-008 fix 2026-06-29: Subscribe to Idearium SSE — was scoped (IDR_URL has
+// existed since at least v3) but never connected. idearium/index.js broadcasts
+// every os.emit() (idea.create, idea.phase, spec.create, gap.open, ...) to all
+// SSE clients on /sse — same shape as Guardian/Cortex's /events, different
+// path. Closes AX-008: idearium's idea/project/lattice activity was invisible
+// to copilot by construction; this is the missing wire. See hooks/idearium.hooks.js.
+function _connectIdeariumStream() {
+  try {
+    const u = new URL(`${IDR_URL}/sse`);
+    const req = http.request({ hostname: u.hostname, port: u.port || 4800,
+      path: u.pathname, headers: { Accept: 'text/event-stream' } }, res => {
+      let buf = '';
+      res.on('data', chunk => {
+        buf += chunk.toString();
+        const parts = buf.split('\n\n');
+        buf = parts.pop() || '';
+        for (const part of parts) {
+          const line = part.split('\n').find(l => l.startsWith('data:'));
+          if (!line) continue;
+          try {
+            const ev = JSON.parse(line.slice(5));
+            streamIngest({ ...ev, system: ev.system || 'idearium' });
+          } catch(_) {}
+        }
+      });
+      res.on('end', () => setTimeout(_connectIdeariumStream, 2000));
+    });
+    req.on('error', () => setTimeout(_connectIdeariumStream, 5000));
+    req.end();
+  } catch(_) { setTimeout(_connectIdeariumStream, 5000); }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -319,8 +340,6 @@ const server = http.createServer(async (req, res) => {
   const method = req.method;
   const p      = url.pathname;
 
-  try {
-
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
   // SSE — event stream for UI
@@ -330,12 +349,6 @@ const server = http.createServer(async (req, res) => {
     res.write(`data: ${JSON.stringify({ type:'copilot.connected', streamDepth: _stream.length })}\n\n`);
     _sseClients.add(res);
     req.on('close', () => _sseClients.delete(res));
-    return;
-  }
-
-  if (p === '/errors/tail') {
-    const n = parseInt(url.searchParams.get('n') || '20');
-    json(res, 200, { ok: true, errors: errorLog.tail(n) });
     return;
   }
 
@@ -470,6 +483,42 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── §15.1-15.3: POST /api/prompt/fulfill — adaptive iteration ─────────────
+  // Built 2026-06-29 against AXIOMS-v3.0.md Group 15. Routes through RAID,
+  // classifies failures via the fault taxonomy, scores via reflection,
+  // re-routes away from what just failed, learns across requests (RAID's
+  // _weights persists between calls). dispatchFn here only knows how to
+  // reach ollama — claude/chatgpt via Guardian's NCP is not wired. That
+  // boundary is real and stated in the response, not papered over (§1.1).
+  if (method === 'POST' && p === '/api/prompt/fulfill') {
+    const body      = await readBody(req);
+    const prompt    = body.prompt || '';
+    const requestId = crypto.randomUUID();
+    const events    = [];
+
+    const dispatchFn = async (agent, promptText, ctx) => {
+      if (agent !== 'ollama') {
+        return { ok: false, error: `agent '${agent}' has no dispatch path wired in this endpoint yet — only ollama does`, errorType: 'dispatch_not_wired' };
+      }
+      const r = await _dispatchToOllama(promptText, '', { requestId, intent: 'ask' });
+      if (!r?.ok) return { ok: false, error: r?.error || 'ollama dispatch failed', errorType: 'ollama_dispatch_failed' };
+      return { ok: true, output: r.text || r.result || JSON.stringify(r) };
+    };
+
+    const { fulfill } = require('./adaptive-fulfillment');
+    const outcome = await fulfill(prompt, dispatchFn, {
+      maxAttempts: body.maxAttempts || 3,
+      context: { cfrSigmaFloor: 0, cfrRegime: 'stable' },
+      onAttempt: (rec) => {
+        events.push(rec);
+        broadcast('copilot.fulfillment.attempt', rec);
+      },
+    });
+
+    json(res, outcome.ok ? 200 : 502, { ...outcome, requestId, events });
+    return;
+  }
+
   // ── POST /api/prompt — standard JSON response ─────────────────────────────
   if (method === 'POST' && p === '/api/prompt') {
     const body      = await readBody(req);
@@ -597,11 +646,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   res.writeHead(404); res.end('Not found');
-
-  } catch (err) {
-    errorLog.record(err, { context: { route: `${method} ${p}` } });
-    if (!res.headersSent) json(res, 500, { ok: false, error: err.message });
-  }
 });
 
 // ── Register with orchestrator ────────────────────────────────────────────────
@@ -619,10 +663,11 @@ function register() {
 }
 
 server.listen(PORT, () => {
-  console.log(`[copilot] :${PORT} — v${VERSION} — P73/P103/P110/P112 wired`);
+  console.log(`[copilot] :${PORT} — v${VERSION} — P73/P103/P110/P112/AX-008 wired`);
   setTimeout(register, 1000);
   setTimeout(_connectCortexStream, 2000);
   setTimeout(_connectGuardianStream, 3000);
+  setTimeout(_connectIdeariumStream, 4000);
 });
 
 module.exports = { server, streamIngest };

@@ -547,6 +547,12 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`[cortex] :${PORT} — v${VERSION} — memory+cfr+raid+intelligence active`);
   setTimeout(_register, 1500);
   setInterval(_pollOrchestrator, 5000);
+  // §Phase-97 fix 2026-06-29: this boot log has claimed "raid active" since
+  // before cortex/core/raid/index.js existed. It does now — start its
+  // health poll so _health stops sitting at boot-time defaults.
+  try { require('./core/raid').startHealthPoll(15000); } catch(e) {
+    console.warn(`[cortex] RAID health poll failed to start: ${e.message}`);
+  }
 });
 
 module.exports = { server, jaaDB };

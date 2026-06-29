@@ -1,4 +1,7 @@
 # AXIOMS v1.0
+> **⚠️ SUPERSEDED 2026-06-29.** Consolidated into `docs/AXIOMS-v3.0.md` along
+> with v2.0. Kept here as historical record only.
+
 **James Brooks · System Design Laws**
 *Immutable laws for every project, every system, every collaboration.*
 

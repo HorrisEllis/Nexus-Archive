@@ -1,4 +1,8 @@
 # AXIOMS v2.0
+> **⚠️ SUPERSEDED 2026-06-29.** Consolidated into `docs/AXIOMS-v3.0.md`,
+> which adds Group 15 (Adaptive Fulfillment) and several individual laws
+> from this conversation. Kept here as historical record only.
+
 **James Brooks · System Design Laws**
 *Immutable laws for every project, every system, every collaboration.*
 *v2.0 — updated to reflect NEXUS build session. Session-established rules promoted to law.*

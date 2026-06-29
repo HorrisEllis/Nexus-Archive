@@ -28,11 +28,6 @@ const _cw = require('../lib/cortex-write')('eravos');
 const SYSTEM_ID = 'eravos';
 const VERSION   = '3.0.0';
 
-const { createErrorLog } = require('../lib/error-log');
-const errorLog = createErrorLog({ logDir: path.join(DATA_DIR, 'errors'), systemId: SYSTEM_ID });
-errorLog.open();
-errorLog.attachGlobalHandlers();
-
 // ── In-memory organism state ──────────────────────────────────────────────────
 const _mounted    = new Map();   // id → organism descriptor
 const _wires      = new Map();   // wireId → { from, to }
@@ -88,8 +83,6 @@ const server = http.createServer(async (req, res) => {
   const method = req.method;
   const p      = url.pathname;
 
-  try {
-
   // CORS preflight
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
@@ -112,13 +105,6 @@ const server = http.createServer(async (req, res) => {
       organisms: _mounted.size, wires: _wires.size, queue: _queue.length,
       ts: Date.now(),
     });
-    return;
-  }
-
-  // Errors — same diagnostic surface as bridge/clear-glass/copilot
-  if (p === '/errors/tail') {
-    const n = parseInt(url.searchParams.get('n') || '20');
-    json(res, 200, { ok: true, errors: errorLog.tail(n) });
     return;
   }
 
@@ -249,11 +235,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   res.writeHead(404); res.end('Not found');
-
-  } catch (err) {
-    errorLog.record(err, { context: { route: `${method} ${p}` } });
-    if (!res.headersSent) json(res, 500, { ok: false, error: err.message });
-  }
 });
 
 // ── Register with orchestrator ────────────────────────────────────────────────

@@ -1,7 +1,9 @@
 # NEXUS — Axioms Mapped to Phase Map
 **Author:** James Brooks (Erosmancer)
 **Generated:** 2026-06-24
-**Source:** AXIOMS-v1.0.md + nexus-roadmap-combined_5_.html
+**Source:** AXIOMS-v3.0.md (consolidated 2026-06-29 from v1.0 + v2.0 — same
+§ numbering preserved, so every mapping below still holds; v3.0 only adds
+§3.3, §6.3, §12.6, and Group 15) + nexus-roadmap-combined_5_.html
 **Purpose:** Every axiom mapped to every phase it governs. Every phase mapped to its axiom violations and compliance state. The honest answer to "what does this system actually satisfy right now."
 
 ---

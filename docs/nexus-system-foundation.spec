@@ -29,9 +29,10 @@ spec:
 
   meta:
     name:        nexus-system-foundation
-    version:     1.0.0
+    version:     1.1.0
     author:      james-brooks
     created_at:  2026-06-15T00:00:00Z
+    updated_at:  2026-06-29T00:00:00Z
     status:      canonical
     uuid:        nexus-system-foundation-v1-0000-2026-0615-jamesbrooks-001
     purpose: >
@@ -39,6 +40,13 @@ spec:
       Not a module — a contract. Every system spec imports this.
       The foundation ensures every system is modular, replaceable,
       and connected through the event bus rather than direct coupling.
+    changelog:
+      - "1.1.0 (2026-06-29): promoted AX-008/AX-009 from the v1.1.0 addendum
+         (now folded in, superseded as a standalone file). Added AX-010
+         (drift-accounting as standing discipline). Added hooks to
+         interaction_contract.required_fields — the hooks/wires/seams
+         registry existed as a separate system; it's part of the same
+         self-description envelope as routes/events/components now."
     applies_to:
       - cortex
       - guardian
@@ -85,6 +93,38 @@ spec:
       - id: AX-007
         statement: "Every system is self-describing. It declares its components on register."
         enforced_in: [handshake]
+
+      - id: AX-008
+        statement: >
+          Every component's hook graph must reach copilot.* within N hops,
+          either directly (hooks.out wires_to a copilot.* id) or
+          transitively (wires_to a component that itself reaches copilot.*).
+          Promoted here from nexus-system-foundation-addendum-v1.1.0.spec —
+          that file is now folded in, not a second living copy.
+        enforced_in: [handshake, enforcement]
+
+      - id: AX-009
+        statement: >
+          A second handshake path exists for known-but-foreign sovereign
+          projects (kern-v2's Ed25519 + grammar-intersection model,
+          re-scoped from "untrusted mesh peer"). Explicitly not a
+          replacement for bridge/identity.js's shared-secret model among
+          NEXUS's own 9 trusted services — different threat model, both
+          valid. Also promoted from the v1.1.0 addendum.
+        enforced_in: [handshake]
+
+      - id: AX-010
+        statement: >
+          Spec is living, code drifts — the discipline is catching it, not
+          preventing it. Every system's .spec is compared against its live
+          state (registry-components.js, hooks/<system>.hooks.js, version
+          strings) on a recurring basis. Drift is logged as an event
+          (AX-002) and corrected in the spec or the code — never silently
+          absorbed by treating the spec as decorative. Session 3-6 found
+          drift this way repeatedly (component counts, phase statuses, a
+          missing RAID engine); this axiom names that as the system's own
+          standing discipline, not just this conversation's.
+        enforced_in: [event_bus, ci]
 
     required_exports:
       description: >
@@ -266,6 +306,10 @@ spec:
         - routes         # all HTTP routes with method/path/description
         - events         # all events this system emits
         - components     # all components this system registers (for CLI)
+        - hooks           # this system's entries in hooks/<system>.hooks.js —
+                          # added 1.1.0. The hook/wire/seam registry existed
+                          # since before this spec did; it just was never
+                          # part of the same self-description envelope.
         - schemas        # all data shapes this system produces
         - axioms         # which axioms this system enforces
 
