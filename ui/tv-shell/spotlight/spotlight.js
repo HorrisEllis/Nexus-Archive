@@ -259,7 +259,42 @@ const CP = (() => {
 
   let _healthMap = {};  // latest health state from pollHealth()
 
-  async function pollCFR() {
+  // §relational-field 2026-06-29 — tension on the WIRE between two systems,
+  // not just each tile's own health. Existing updateTensionField() above is
+  // per-node; this is per-edge. Uses hooks/index.js's real wire data — no
+  // new registry, just a new read of one that already exists.
+  // ⚠️ NOT WIRED: /api/hooks/summary doesn't exist anywhere. Checked —
+  // orchestrator only proxies architect's OWN /api/hooks (a different,
+  // older registry), and hooks/index.js's summary()/SYSTEMS data is never
+  // exposed over HTTP to the browser at all. wireRelationalTension() below
+  // is real and correct against whatever wire list it's given — but
+  // nothing currently fetches one for it. Needs a small new cortex or
+  // guardian route exposing hooks/index.js before this runs for real.
+  let _hooksCache = null;
+  async function _getHooks() {
+    if (_hooksCache) return _hooksCache;
+    try {
+      const d = await fetch(`${B.orch}/api/hooks/summary`, { signal: AbortSignal.timeout(3000) }).then(r => r.json());
+      _hooksCache = d;
+    } catch(_) { _hooksCache = null; }
+    return _hooksCache;
+  }
+
+  // Relational tension between two systems = max of their own tensions,
+  // boosted if the wire connecting them is NOT seam-tracked (an
+  // undeclared/unmonitored connection is itself a pressure source — same
+  // idea as a confirmed→drifting→violated seam, just not yet built as a
+  // continuous tracker; this is the field-level proxy for it today).
+  function wireRelationalTension(fromId, toId, healthMap, wires) {
+    const baseFrom = (healthMap[fromId]?.health ?? 1);
+    const baseTo   = (healthMap[toId]?.health ?? 1);
+    const nodeTension = 1 - Math.min(baseFrom, baseTo);
+    const wire = (wires || []).find(w => w.from?.surface === fromId && w.to?.surface === toId);
+    const undeclaredBoost = !wire ? 0.15 : (wire.seam ? 0 : 0.08);
+    return Math.min(1, nodeTension + undeclaredBoost);
+  }
+
+
     try {
       const d = await fetch(`${B.orch}/api/guardian/cfr/state`, { signal: AbortSignal.timeout(3000) })
         .then(r => r.ok ? r.json() : null).catch(() => null);

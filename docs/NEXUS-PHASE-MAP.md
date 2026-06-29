@@ -369,15 +369,19 @@ One unified reconstruction view over: causal graph + snapshots + ledgers + patte
 Single query: "what happened between T1 and T2?" → complete causal narrative.
 
 ### Phase 116 — Per-Concern File Splitting + Component→File Mapping ⬛
-Sharpened 2026-06-29: not a registry field pointing into an existing
-monolith — that just labels the haystack. Split each system's monolith by
-concern first: `cli.js` (command parsing/dispatch only), `api.js` (route
-handlers only) — one small file per concern. One real system first
-(guardian/server.js is the biggest, ~4000 lines, the clearest case), prove
-it splits clean with tests still passing, *then* the registry's `file`
-field points at something real, and *then* generalize to per-component
-splitting and the other 8 systems.
-**Deps:** none — this is the foundation the rest of the decomposition arc stands on.
+**Map done 2026-06-29, plan corrected by what it found.** guardian/server.js
+is 4,263 lines, ~96 route handlers, only 4 matches for any CLI-parsing
+logic — it's almost entirely API surface, not a cli.js+api.js mix. The
+original framing doesn't fit this file. Real split for guardian: by
+*domain* (jobs, providers, NCP, organism-queue, ...), not cli-vs-api.
+Also found: route-matching style is inconsistent within the file
+(`method === 'GET'` in 18 places, `method==='GET'` in 46 more) — any
+automated split needs to handle both, not assume one.
+**Corrected next step:** prove the cli.js/api.js split pattern on a smaller
+system that actually has both concerns mixed, before touching guardian —
+splitting the busiest, most load-bearing file first, without room to
+verify nothing broke, is the one place "small and verified" doesn't apply.
+**Deps:** none for the proof system; guardian itself waits for full room.
 
 ### Phase 117 — Seam / Role-Confidence Tracker ⬛
 `docs/seam-component-registry.spec`'s confirmed→drifting→violated state machine —
