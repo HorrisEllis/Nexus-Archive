@@ -45,9 +45,23 @@ const {
   ProcessStdinGate,
 } = require('./gates/process.js');
 
+const path = require('path');
+const { createErrorLog } = require('../../lib/error-log');
+
 // ─── createHost ───────────────────────────────────────────────────────────────
 
 function createHost(opts = {}) {
+  // 0. Error log — cos has its own audit trail (StreamLog), but no failure
+  // trail. A gate that throws used to propagate bare out of bus.emit() and
+  // could crash whatever process embeds the host. Now it's caught (see
+  // siso/Stream.js) and recorded here with file:line instead.
+  const errorLog = createErrorLog({
+    logDir: opts.errorLogDir || path.join(__dirname, '../../data/cos/errors'),
+    systemId: 'cos',
+  });
+  errorLog.open();
+  errorLog.attachGlobalHandlers();
+
   // 1. State store
   const store = new StateStore(opts.stateFile);
   store.load();
@@ -56,6 +70,7 @@ function createHost(opts = {}) {
   const bus = createEventBus({
     ringCap:  opts.ringCap,
     logLevel: opts.logLevel || 'EVENTS',
+    onGateError: (err, ctx) => errorLog.record(err, { context: ctx }),
   });
 
   // 3. System map
@@ -115,6 +130,7 @@ function createHost(opts = {}) {
     store,
     bus,
     sysmap,
+    errorLog,
     version: COS_VERSION,
   };
 

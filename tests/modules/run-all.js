@@ -51,6 +51,13 @@ const SUITES = [
   'test-liminal-space.js',
   'test-snr-filter.js',
   'test-ui-registry.js',
+  // Session 9 additions — RAID core, adaptive fulfillment, Living Glass
+  'raid.test.js',
+  'adaptive-fulfillment.test.js',
+  'living-glass.test.js',
+  // Session 10 additions — error log, bridge handshake resilience
+  'error-log.test.js',
+  'bridge-handshake.test.js',
 ];
 
 let totalPassed = 0;

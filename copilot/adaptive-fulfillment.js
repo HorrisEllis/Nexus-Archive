@@ -87,6 +87,11 @@ async function fulfill(prompt, dispatchFn, opts = {}) {
     let dispatchResult;
     try {
       dispatchResult = await dispatchFn(decision.agent, prompt, opts.context || {});
+      // §1.2 — a dispatchFn that returns undefined/null is a §1.3 violation,
+      // but we must not crash — record it as a failure with a clear reason.
+      if (!dispatchResult || typeof dispatchResult !== 'object') {
+        dispatchResult = { ok: false, error: `dispatchFn returned ${dispatchResult} instead of {ok, ...}`, errorType: 'bad_dispatch_return' };
+      }
     } catch (e) {
       dispatchResult = { ok: false, error: e.message, errorType: 'dispatch_threw' };
     }

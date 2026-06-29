@@ -154,6 +154,7 @@ const SYS = {
   architect:  { port:3747,  host:'127.0.0.1', label:'Architect',   color:'#ef9f27' },
   emerge:     { port:4242,  host:'127.0.0.1', label:'Emerge IDE',  color:'#3ecf8e' },
   diagnostic: { port:7825,  host:'127.0.0.1', label:'Diagnostic',  color:'#ff6b35', healthPath:'/status' },
+  'living-glass': { port:7800, host:'127.0.0.1', label:'Living Glass', color:'#00ff88', healthPath:'/health' },
   eravos:     { port:3751, host:'127.0.0.1', label:'ERAVOS',        color:'#a78bfa', healthPath:'/health' },
   ollama:     { port:3749, host:'127.0.0.1', label:'Ollama Bridge', color:'#00ff88', healthPath:'/health' },
   copilot:    { port:3750, host:'127.0.0.1', label:'Co-pilot',      color:'#cc44ff', healthPath:'/health' },

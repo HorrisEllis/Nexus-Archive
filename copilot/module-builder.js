@@ -99,14 +99,9 @@ Map this to:
 3. Which NEXUS system it belongs to (guardian/cortex/copilot/eravos/idearium/architect/emerge/bridge/ollama)
 4. What existing NEXUS capabilities it should use
 5. Any gaps or questions before building
-6. Scope: "cli" if this is just asking for a new CLI command / shortcut /
-   alias for something co-pilot can already do (no new logic, no new route,
-   no new system) — vs "module" if it needs actual new code built.
-   When in doubt between the two, prefer "module" — "cli" should be the
-   narrow case, not the default.
 
 Respond as JSON only:
-{ "name": string, "purpose": string, "targetSystem": string, "usesCapabilities": string[], "gaps": string[], "ready": boolean, "scope": "cli" | "module", "grammarAliases": string[] }`;
+{ "name": string, "purpose": string, "targetSystem": string, "usesCapabilities": string[], "gaps": string[], "ready": boolean }`;
 
   const result = await lifeline.route(mapPrompt, { requestId, intent: 'map', ...opts });
 
@@ -123,64 +118,6 @@ Respond as JSON only:
   }
 
   return { ok: true, plan, confidence: result.confidence, requestId };
-}
-
-/**
- * §Phase-36 / capability_cli_authoring fix, 2026-06-29.
- * map() classified this as scope:'cli' — a shortcut for something co-pilot
- * can already do, not a new module. Register a component directly instead
- * of running the full spec→QC→build pipeline. componentRegistry.register()
- * already auto-projects (.cli, .grammar, Phase 40 T1.5) and emits
- * component.registered, which grammar-engine.js already rebuilds its trie
- * from live — both of those were already wired. This function is the only
- * piece that was actually missing: the short-circuit itself.
- * Route points at copilot's own /api/prompt with the original description
- * as the default prompt param, so invoking the new command just re-asks
- * co-pilot the same thing — it's a saved shortcut, not new logic.
- */
-async function registerCliCommand(plan, description, opts = {}) {
-  const requestId = opts.requestId || crypto.randomUUID();
-  if (!plan?.name) {
-    return { ok: false, error: 'No name in plan — cannot register a CLI command', requestId };
-  }
-
-  const componentRegistry = require('../lib/component-registry');
-  const projector         = require('../lib/descriptor-projector');
-
-  const aliases = Array.isArray(plan.grammarAliases) && plan.grammarAliases.length
-    ? plan.grammarAliases
-    : [plan.name.replace(/_/g, ' ')];
-
-  const component = {
-    id:           `copilot.cli.${plan.name}`,
-    namespace:    'copilot',
-    name:         plan.name,
-    version:      '1.0.0',
-    description:  plan.purpose || description,
-    grammar:      aliases,
-    route:        { method: 'POST', path: '/api/prompt' },
-    params:       [{ name: 'prompt', type: 'string', required: false, default: description }],
-    registeredBy: 'copilot',
-    tags:         ['copilot', 'cli-authored'],
-  };
-
-  const reg = componentRegistry.register(component);
-  if (!reg.ok) {
-    return { ok: false, error: 'Component registration failed', details: reg.errors, requestId };
-  }
-
-  let projections = null;
-  try { projections = projector.project(component); } catch(_) {}
-
-  return {
-    ok: true,
-    skippedFullPipeline: true,
-    component,
-    cli: projections?.cli || null,
-    grammar: projections?.grammar || null,
-    message: `Registered "${plan.name}" as a CLI command — try: ${aliases[0]}`,
-    requestId,
-  };
 }
 
 /**
@@ -333,12 +270,6 @@ async function build(description, opts = {}) {
   const plan = mapped.plan;
   console.log(`[module-builder] mapped: ${plan.name} → ${plan.targetSystem}`);
 
-  // §Phase-36 short-circuit: "just a CLI command" skips spec/QC/build entirely.
-  if (plan.scope === 'cli') {
-    console.log(`[module-builder] scope:cli — registering directly, no spec pipeline`);
-    return await registerCliCommand(plan, description, { ...opts, requestId });
-  }
-
   if (plan.gaps?.length && !opts.skipGaps) {
     return {
       ok: false,
@@ -431,4 +362,4 @@ Return the fixed spec only, starting with "spec:"`;
   };
 }
 
-module.exports = { build, map, generateSpec, runQC, registerCliCommand, MODULE_ID, VERSION };
+module.exports = { build, map, generateSpec, runQC, MODULE_ID, VERSION };

@@ -26,13 +26,6 @@ const components=[
   _c('build','POST','/api/build','Build a new module from description',{grammar:['build','co-pilot build']}),
   _c('diagnose','POST','/api/diagnose','Start recursive fractal diagnosis',{grammar:['diagnose','recursive diagnose']}),
   _c('diagnose.list','GET','/api/diagnose/list','List past diagnosis sessions'),
-  _c('prompt.fulfill','POST','/api/prompt/fulfill','Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)',{
-    grammar:['fulfill','cp fulfill'],
-    hooks:{
-      in:[{id:'copilot.prompt.fulfill.receive',intent:['ask','build','diagnose'],contract:'nexus-interaction-contract-v1::copilot',tags:['entry-point','adaptive']}],
-      out:[{id:'copilot.fulfillment.attempt',wires_to:['cortex.intelligence.event'],tags:['learning']}]
-    }
-  }),
   _c('prompt.stream','POST','/api/prompt/stream','Streaming SSE prompt — token-by-token, no timeout (P112)',{
     grammar:['stream ask','cp stream'],
     hooks:{
