@@ -77,6 +77,9 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `meta-layer.spec` | 1.2.0 | — | not yet checked against live code this pass |
 | `nexus-analysis-module-foundation.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `nexus-cli.spec` | 1.0.0 | — | not yet checked against live code this pass |
+| `eravos-agnostic-canvas.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — organism/wire/pack/transport already domain-agnostic by construction; proposes CFR field, causal graph, and component/seam map all become organism types in the existing canvas instead of four separate renderers. |
+| `cortex-intelligence.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — Phase 84/85 corrected: INTUITION/MASTERMIND are inline functions in cortex/boot.js, not separate files, simpler than billed. Closing-the-gap path scoped small (wiring, not building); counterfactual half is Phase 109, not a MASTERMIND patch. |
+| `versionium.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — no implementation exists under this name (lib/version.js is a flat string). Real shape built from primitives already proven this session: idearium's commit graph (branch/parentId bug still open), file-integrity's hashing, rfr2-nexus's compress/clip/context (diff vs replay-engine.js still undone). |
 | `nexus-decomposition-architecture.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — consolidates this session's full design arc (component/seam/wire/variable/UI/event/handoff/hot-swap). Status: proposed, not yet built — see build_order. |
 | `nexus-improvement-roadmap.spec` | 1.0.0 | 2026-06-29 | ⚠ PARTIAL — IMP-02 corrected proposed→built (lib/file-integrity.js, verified). Other 29 items still uniformly 'proposed', not re-audited. |
 | `nexus-organisms.spec` | 1.0.0 | — | not yet checked against live code this pass |
