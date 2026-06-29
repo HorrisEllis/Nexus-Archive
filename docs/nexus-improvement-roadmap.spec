@@ -26,15 +26,9 @@ spec:
     'IMP-02':
       name: 'Standing spec-vs-code structural diff'
       leverage_tier: 1
-      status: built  # corrected 2026-06-28 — was 'proposed', spec itself had drifted from code
-      maps_to: 'lib/file-integrity.js — FNV-1a content hash of every system''s registry-components.js, checked on boot. Maps to IMP-02 + Phase 105 by its own header comment.'
-      deps: ['lib/file-integrity.js', 'component-registry']
-      note: >
-        Original maps_to (spec-drift.js extended) was never built this way —
-        file-integrity.js solves it independently. The other 29 IMP-* entries
-        in this spec are still uniformly status:proposed and have not been
-        re-audited against code — that was checked for IMP-02 only, on direct
-        evidence, not assumed for the rest.
+      status: proposed
+      maps_to: 'lib/spec-drift.js extended to diff spec.handshake.components against registry-components.js exports per system, on boot'
+      deps: ['lib/spec-drift.js', 'component-registry']
 
     'IMP-03':
       name: 'Spec-linter as eravos organism'

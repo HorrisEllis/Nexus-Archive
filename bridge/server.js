@@ -78,7 +78,10 @@ function _cors(res) {
 // ── Route handlers ────────────────────────────────────────────────────────────
 
 async function handleHandshake(req, res, { identity, registry }) {
-  const body = await _readBody(req);
+  let body;
+  try { body = await _readBody(req); }
+  catch (e) { return _json(res, 400, { ok: false, error: `bad request body: ${e.message}` }); }
+
   const { systemId, secret, port } = body;
   if (!systemId) return _json(res, 400, { ok: false, error: 'systemId required' });
 
@@ -317,7 +320,7 @@ function handleContract(req, res) {
 
 // ── createBridgeServer ────────────────────────────────────────────────────────
 
-function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
+function createBridgeServer({ identity, registry, router, ledger, cfrLedger, errorLog }) {
   const deps = { identity, registry, router, ledger };
   _cfrLedger = cfrLedger || null;
 
@@ -331,42 +334,42 @@ function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
     try {
       // ── Routes ──────────────────────────────────────────────────────────
       if (pathname === '/health' && method === 'GET')
-        return handleHealth(req, res, deps);
+        return await handleHealth(req, res, deps);
 
       if (pathname === '/bridge/handshake' && method === 'POST')
-        return handleHandshake(req, res, deps);
+        return await handleHandshake(req, res, deps);
 
       if (pathname === '/bridge/request' && method === 'POST')
-        return handleRequest(req, res, deps);
+        return await handleRequest(req, res, deps);
 
       if (pathname === '/bridge/event' && method === 'POST')
-        return handleEvent(req, res, deps);
+        return await handleEvent(req, res, deps);
 
       if (pathname === '/bridge/requests' && method === 'GET')
-        return handleRequests(req, res, deps);
+        return await handleRequests(req, res, deps);
 
       if (/^\/bridge\/requests\/[^/]+$/.test(pathname) && method === 'GET') {
         const uuid = pathname.split('/').pop();
-        return handleRequestById(req, res, uuid, deps);
+        return await handleRequestById(req, res, uuid, deps);
       }
 
       if (pathname === '/bridge/registry' && method === 'GET')
-        return handleRegistry(req, res, deps);
+        return await handleRegistry(req, res, deps);
 
       if (pathname === '/bridge/circuits' && method === 'GET')
-        return handleCircuits(req, res, deps);
+        return await handleCircuits(req, res, deps);
 
       if (pathname === '/bridge/revoke' && method === 'POST')
-        return handleRevoke(req, res, deps);
+        return await handleRevoke(req, res, deps);
 
       if (pathname === '/bridge/stats' && method === 'GET')
-        return handleStats(req, res, deps);
+        return await handleStats(req, res, deps);
 
       if (pathname === '/bridge/broadcast' && method === 'POST')
-        return handleBroadcast(req, res, deps);
+        return await handleBroadcast(req, res, deps);
 
       if (pathname === '/bridge/tags' && method === 'POST')
-        return handleTags(req, res, deps);
+        return await handleTags(req, res, deps);
 
       if (pathname === '/bridge/contract' && method === 'GET')
         return handleContract(req, res);
@@ -387,6 +390,7 @@ function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
 
     } catch(e) {
       console.error(`[bridge/server §1.2] ${method} ${pathname}:`, e.message);
+      errorLog?.record(e, { context: { route: `${method} ${pathname}` } });
       _json(res, 500, { ok: false, error: e.message });
     }
   });

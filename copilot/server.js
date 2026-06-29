@@ -18,6 +18,8 @@ const crypto = require('crypto');
 const path   = require('path');
 const fs     = require('fs');
 
+const { createErrorLog } = require('../lib/error-log');
+
 const PORT     = parseInt(process.env.COPILOT_PORT || '3750');
 const GD_URL   = process.env.GUARDIAN_URL   || 'http://127.0.0.1:7820';
 const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
@@ -26,6 +28,17 @@ const OL_URL   = process.env.OLLAMA_URL     || 'http://127.0.0.1:3749';
 const IDR_URL  = process.env.IDEARIUM_URL   || 'http://127.0.0.1:4800';
 
 const _cw = require('../lib/cortex-write')('copilot');
+
+// §2026-06-29: the request handler below had no top-level try/catch, so a
+// ReferenceError thrown by a regex helper (AWARE_RE, fixed in intuition.js)
+// took the whole process down instead of returning a 500 — visible in
+// autopilot.log as a bare crash/restart with no file:line trace. Both
+// problems get fixed together: the missing regexes, and the missing net.
+const errorLog = createErrorLog({
+  logDir: path.join(__dirname, '../data/copilot/errors'), systemId: 'copilot',
+});
+errorLog.open();
+errorLog.attachGlobalHandlers();
 
 // Blueprint index — component awareness substrate (§BP-01)
 let _blueprintIndex = null;
@@ -306,6 +319,8 @@ const server = http.createServer(async (req, res) => {
   const method = req.method;
   const p      = url.pathname;
 
+  try {
+
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
   // SSE — event stream for UI
@@ -315,6 +330,12 @@ const server = http.createServer(async (req, res) => {
     res.write(`data: ${JSON.stringify({ type:'copilot.connected', streamDepth: _stream.length })}\n\n`);
     _sseClients.add(res);
     req.on('close', () => _sseClients.delete(res));
+    return;
+  }
+
+  if (p === '/errors/tail') {
+    const n = parseInt(url.searchParams.get('n') || '20');
+    json(res, 200, { ok: true, errors: errorLog.tail(n) });
     return;
   }
 
@@ -576,6 +597,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   res.writeHead(404); res.end('Not found');
+
+  } catch (err) {
+    errorLog.record(err, { context: { route: `${method} ${p}` } });
+    if (!res.headersSent) json(res, 500, { ok: false, error: err.message });
+  }
 });
 
 // ── Register with orchestrator ────────────────────────────────────────────────

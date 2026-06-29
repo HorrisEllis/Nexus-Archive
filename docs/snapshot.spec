@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        snapshot
-    version:     1.2.0
+    version:     1.0.0
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-snapshot-v1-0000-2026-0615-jamesbrooks-001
     purpose: >

@@ -1,12 +1,3 @@
-> **⚠️ SUPERSEDED 2026-06-28 (session 3).** This file is retired as a living
-> document. `docs/NEXUS-PHASE-MAP.md` is now the single living changelog/
-> phase-map. Its own "Open Gaps Carried Forward" table below was audited
-> against live code this session — see `NEXUS-PHASE-MAP.md`'s "CHANGELOG
-> (session 3 — 2026-06-28): Consolidation" section for resolution status of
-> every gap (F010–F012, GAP-001 through GAP-004, GAP-SEAM, GAP-FIELD-RESTORE,
-> GAP-NODE-LEDGER-SEED). Kept below as historical record only — do not treat
-> anything in this file as current without checking that section first.
-
 # SESSION CHANGELOG — 2026-06-11
 **Session:** NEXUS v3.0.0 Full Build
 **Operator:** James Brooks (Erosmancer)

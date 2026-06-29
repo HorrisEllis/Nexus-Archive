@@ -30,10 +30,11 @@ const { randomUUID } = require('crypto');
 const { buildToolsPrompt } = require('./tools');
 
 class CoPilotBridge {
-  constructor({ sse, apiSettings, postEvent }) {
+  constructor({ sse, apiSettings, postEvent, errorLog = null }) {
     this.sse         = sse;
     this.settings    = apiSettings; // ApiSettings instance — has .copilotUrl(), .guardianUrl() etc.
     this.postEvent   = postEvent || (() => {});
+    this.errorLog    = errorLog;   // optional createErrorLog() instance — file:line on every failure
 
     this._busEmit    = null;  // injected by main
     this._domGet     = null;  // injected by main
@@ -472,6 +473,7 @@ ${buildToolsPrompt()}${domSection}`;
       this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
     } catch (err) {
       console.warn('[CoPilot/Bridge] Handshake failed:', err.message, '— retry in 10s');
+      this.errorLog?.record(err, { context: { phase: 'bridge.handshake', bridgeUrl, port } });
       setTimeout(() => this._bridgeHandshake(), 10000);
     }
   }

@@ -44,6 +44,9 @@ const { randomUUID } = require('crypto');
 
 // ── SISO bus — must be first ───────────────────────────────────────────────
 const { createBus, emit, on, Event } = require('../core/bus');
+const path_ = require('path');
+const { createCFRLedger } = require('../../../lib/cfr');
+const { createErrorLog }  = require('../../../lib/error-log');
 
 const MODULE_ID   = 'clear-glass';
 const MODULE_UUID = randomUUID();
@@ -118,6 +121,18 @@ let _heartbeatInterval = null;
 const windows        = new Map(); // agentId → BrowserWindow (visible)
 const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service tabs)
 
+// ── Local-first event ledger + error log ──────────────────────────────────
+// §LAW II: no event acts on the system without first being written. Before
+// this, _postEvent fired straight at orchestrator/cortex over HTTP and
+// swallowed the result with .catch(() => {}) — if either was down or
+// flapping, the event (and any forwarding failure) vanished with zero local
+// trace. clear-glass now keeps its own copy of both, same as bridge/
+// guardian/orchestrator/idearium/architect, then best-effort forwards.
+const LEDGER_DIR = path_.join(__dirname, '../../../data/clear-glass/ledger');
+const ERROR_DIR  = path_.join(__dirname, '../../../data/clear-glass/errors');
+const cfrLedger  = createCFRLedger({ ledgerDir: LEDGER_DIR, systemId: MODULE_ID });
+const errorLog   = createErrorLog({ logDir: ERROR_DIR, systemId: MODULE_ID });
+
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
 app.disableHardwareAcceleration();
@@ -190,12 +205,19 @@ async function _registerWithNexus() {
 }
 
 // ── NEXUS event emit — matches nc.postEvent() exactly ─────────────────────
-// Fire-and-forget. Never blocks caller.
+// Local write happens first and always succeeds (in-process, no network).
+// Remote forward to orchestrator/cortex stays fire-and-forget, but its
+// failure is now itself logged instead of silently eaten.
 function _postEvent(type, payload) {
+  const row = cfrLedger.record(type, payload, { source: MODULE_ID });
   _ncReq(NEXUS_PORTS.orchestrator, 'POST', '/api/ledger',
-    { system: MODULE_ID, type, payload }, 1200).catch(() => {});
+    { system: MODULE_ID, type, payload }, 1200)
+    .catch(err => errorLog.record(err, { causedBy: row?.uuid,
+      context: { forward: 'orchestrator', type } }));
   _ncReq(NEXUS_PORTS.cortex, 'POST', '/api/event',
-    { type, payload, source: MODULE_ID, ts: Date.now() }, 1200).catch(() => {});
+    { type, payload, source: MODULE_ID, ts: Date.now() }, 1200)
+    .catch(err => errorLog.record(err, { causedBy: row?.uuid,
+      context: { forward: 'cortex', type } }));
 }
 
 // ── Heartbeat — matches nc.startHeartbeat() exactly ───────────────────────
@@ -361,6 +383,15 @@ async function _startWire() {
 async function bootstrap() {
   console.log(`[ClearGlass v${CG_VERSION}] Boot — ${MODULE_UUID}`);
 
+  // -1. Ledger + error log — open FIRST. Every phase below records its own
+  // success/failure into these instead of console-only logging.
+  cfrLedger.open();
+  errorLog.open();
+  errorLog.attachGlobalHandlers();
+  console.log(`[ClearGlass] ledger → ${LEDGER_DIR}/event_log.jsonl`);
+  console.log(`[ClearGlass] errors → ${ERROR_DIR}/error_log.jsonl`);
+  cfrLedger.record('clear-glass.boot.start', { uuid: MODULE_UUID, version: CG_VERSION });
+
   // 0. SISO bus
   const bus = createBus('EVENTS');
   console.log('[ClearGlass] SISO bus →E→E→');
@@ -472,6 +503,7 @@ async function bootstrap() {
     sse:         { emit: (t, d) => emit(t, d) },
     apiSettings,
     postEvent:   _postEvent,
+    errorLog,
   });
 
   // 10. Agent mesh — Claude, ChatGPT, Gemini, Perplexity, Mistral, Grok
@@ -531,7 +563,7 @@ async function bootstrap() {
   });
 
   // 13. SSE server — subscribes to bus, broadcasts all events
-  sse = new SseServer({ port: SSE_PORT, moduleId: MODULE_ID, moduleUuid: MODULE_UUID });
+  sse = new SseServer({ port: SSE_PORT, moduleId: MODULE_ID, moduleUuid: MODULE_UUID, cfrLedger, errorLog });
   await sse.start();
   // The orchestrator's contract-handshake polls /contract on the *registered*
   // port (SSE_PORT — see _registerWithNexus below), not the IPC port. /contract
@@ -982,6 +1014,8 @@ function closeSettingsWindow() {
 async function shutdown() {
   emit('lifecycle.shutdown', { uuid: MODULE_UUID });
   _postEvent('clear-glass.shutdown', { uuid: MODULE_UUID });
+  cfrLedger.close();
+  errorLog.close();
 
   if (_heartbeatInterval) clearInterval(_heartbeatInterval);
 

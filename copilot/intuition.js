@@ -36,6 +36,14 @@ const PATTERN_RE = /^(patterns?|what patterns|dominant|frequent|what do you see)
 const GAPS_RE = /^\/?(gaps?)\s*$|^(any gaps|open gaps|how many gaps|gap count)\b/i;
 const SIGMA_RE = /^(sigma|cfr|field state|what'?s sigma)\b/i;
 
+// Self-awareness / system-map fast-paths — referenced below but were never
+// defined (§2026-06-29 crash: ReferenceError: AWARE_RE is not defined,
+// killed copilot/server.js on every "what do you know" / "system map" style
+// prompt). Restored from the intent described in the comments at their
+// call sites further down this file.
+const AWARE_RE = /^(what do you know|what'?s your context|self.?aware|what can you (see|do)|describe yourself)\b/i;
+const SYSTEMS_RE = /^\/?(systems?|system map|blueprint|what'?s running|list systems)\b/i;
+
 /**
  * Attempt to answer from patterns, crystals, stream, user model.
  * Returns { text, modelUsed, intent, source } or null if can't answer confidently.

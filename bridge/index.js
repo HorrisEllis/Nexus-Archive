@@ -30,6 +30,7 @@ const nc   = require('../nexus-connect');
 const { BootSequence }     = require('../lib/boot-sequence');
 const { createBridgeLedger }   = require('./ledger');
 const { createCFRLedger }      = require('../lib/cfr');
+const { createErrorLog }       = require('../lib/error-log');
 const { createBridgeIdentity } = require('./identity');
 const { createBridgeRegistry } = require('./registry');
 const { createBridgeRouter }   = require('./router');
@@ -40,7 +41,7 @@ const DATA_DIR   = path.join(ROOT, 'data', 'bridge');
 const LEDGER_DIR = process.env.BRIDGE_LEDGER_DIR || path.join(DATA_DIR, 'ledger');
 const VERSION    = '3.0.0';
 
-let ledger, identity, registry, router, server, cfrLedger;
+let ledger, identity, registry, router, server, cfrLedger, errorLog;
 
 async function bootBridge() {
   const seq = new BootSequence({
@@ -70,6 +71,12 @@ async function bootBridge() {
       // CFR-Ω field ledger — powers /cfr/* routes (CFR FIELD panel)
       cfrLedger = createCFRLedger({ ledgerDir: path.join(LEDGER_DIR, 'cfr'), systemId: 'bridge' });
       cfrLedger.open();
+
+      // Error log — every route exception gets file:line, not just a
+      // console line that scrolls off.
+      errorLog = createErrorLog({ logDir: path.join(LEDGER_DIR, 'errors'), systemId: 'bridge' });
+      errorLog.open();
+      errorLog.attachGlobalHandlers();
     },
   });
 
@@ -109,7 +116,7 @@ async function bootBridge() {
   seq.phase({ name: 'server.start', type: 'HARD',
     label: `HTTP server on :${BRIDGE_PORT}`,
     fn: async () => {
-      server = createBridgeServer({ identity, registry, router, ledger, cfrLedger });
+      server = createBridgeServer({ identity, registry, router, ledger, cfrLedger, errorLog });
       await server.start();
     },
   });
