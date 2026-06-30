@@ -17,9 +17,10 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { v4: uuidv4 } = require('uuid');
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture }) {
     this.port        = port;
     this.sse         = sse;
+    this.errorCapture = errorCapture;
     this.ctxMgr      = ctxMgr;
     this.vault       = vault;
     this.apiSettings = apiSettings;
@@ -166,6 +167,18 @@ class IpcBridge {
       }
     });
     ipcMain.handle('copilot:send',   async (e, d) => rendererEmit('copilot.message', d));
+    // §fix 2026-06-30 — the actual ask: "where are the errors, useless."
+    // Renderer-process errors (window.onerror, unhandledrejection in
+    // browser.html) now report here, captured the same way as main-process
+    // errors, logged to the same file, pushed through the same SSE event.
+    ipcMain.handle('errors:report', async (e, d) => {
+      if (this.errorCapture) return this.errorCapture.captureFromRenderer(d);
+      return { ok: false, error: 'errorCapture not initialized' };
+    });
+    ipcMain.handle('errors:recent', async (e, { n } = {}) => {
+      if (!this.errorCapture) return { ok: false, error: 'errorCapture not initialized', errors: [] };
+      return { ok: true, errors: this.errorCapture.getRecent(n || 50) };
+    });
     ipcMain.handle('context:switch', async (e, d) => rendererEmit('context.switch', d));
     ipcMain.handle('api:get',        async ()    => this.apiSettings?.getPublic());
     ipcMain.handle('api:set',        async (e, d) => this.apiSettings?.set(d));

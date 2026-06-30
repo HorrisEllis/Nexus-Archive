@@ -1126,3 +1126,43 @@ corrected, same as every other self-caught error this engagement has
 surfaced — the discipline is naming the mistake, not just fixing it quietly.
 
 64/64 tests passing across 7 suites.
+
+---
+
+## CHANGELOG (session 15 — 2026-06-30): Real error capture built, hardcoded guardian paths removed
+
+**"Where are the errors" — found the actual gap.** `clear-glass/src/
+diagnostic/engine.js` is a Playwright-style test runner (scripted assertion
+sequences, only reports failures from tests explicitly triggered) — it has
+zero passive error-catching. `lib/error-log.js`, referenced in an earlier
+session's notes as universal error logging, doesn't exist anywhere in this
+tree. Every error this session — bridge handshake failures, the crash loop —
+only ever existed as scattered `console.error` calls.
+
+Built `clear-glass/src/diagnostic/error-capture.js` for real: catches
+`uncaughtException`/`unhandledRejection` in the main process, accepts
+renderer-side `window.onerror`/`unhandledrejection` via a new IPC route,
+logs every error to a real `.jsonl` file, keeps a 200-entry ring buffer,
+and broadcasts each one over SSE as `error.captured` — live, not polled.
+The bridge handshake failure from the previous round now routes through
+this same pipe specifically, so that exact error is no longer
+console-only. Renderer errors trigger an immediate visible toast, not just
+a log line. 9 new tests (`error-capture.test.js`) — including one that
+caught a real bug before shipping: `captureFromRenderer()` wasn't
+returning its result, meaning every renderer-reported error round-tripped
+back as `undefined` over IPC. Fixed, reverified.
+
+**"Strip it of the userscripts, not supposed to be baked in" — found three
+real instances of the same coupling, all removed.** `clear-glass/src/
+providers/host.js`, and two separate construction sites in `main/index.js`
+(`ProviderHost` and `UserscriptManager`), each independently hardcoded
+`path.join(__dirname, '../../../../guardian')` or `'../../../guardian'` —
+a silent assumption that clear-glass and guardian are checked out as
+sibling folders in one exact nesting. That's clear-glass reaching across
+into another system's internal file layout by relative path, not a config
+default. All three fixed: `guardianDir` is now required, either passed
+explicitly or via `GUARDIAN_DIR` env var — no fallback that assumes a
+specific repo layout. Logs a clear warning if unconfigured instead of
+silently resolving to a guess.
+
+73/73 tests passing across 8 suites.

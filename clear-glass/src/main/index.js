@@ -108,7 +108,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -457,8 +457,13 @@ async function bootstrap() {
   await rewind.init();
 
   // 8.8. Provider host — NCP auto-host (Guardian userscripts in CG webviews)
+  // §fix 2026-06-30 — "strip it of the userscripts, not supposed to be
+  // baked in." Was: `process.env.GUARDIAN_DIR || path.join(__dirname,
+  // '../../../guardian')` — a second, independent copy of the same
+  // hardcoded sibling-folder assumption removed from providers/host.js
+  // above. No fallback now; GUARDIAN_DIR must be set explicitly.
   providerHost = new ProviderHost({
-    guardianDir: process.env.GUARDIAN_DIR || require('path').join(__dirname, '../../../guardian'),
+    guardianDir: process.env.GUARDIAN_DIR || null,
     sse:         { emit: (t, d) => emit(t, d) },
     postEvent:   (type, data) => _postEvent(type, data),
   });
@@ -479,8 +484,10 @@ async function bootstrap() {
   });
 
   // 8.9. Userscript manager
+  // §fix 2026-06-30 — third real instance of the same hardcoded path,
+  // independent from ProviderHost's. No fallback now.
   userscripts = new UserscriptManager({
-    guardianDir: process.env.GUARDIAN_DIR || require('path').join(__dirname, '../../../guardian'),
+    guardianDir: process.env.GUARDIAN_DIR || null,
     driver,
     sse: { emit: (t, d) => emit(t, d) },
   });
@@ -552,6 +559,17 @@ async function bootstrap() {
   // 13. SSE server — subscribes to bus, broadcasts all events
   sse = new SseServer({ port: SSE_PORT, moduleId: MODULE_ID, moduleUuid: MODULE_UUID });
   await sse.start();
+
+  // 13.5. Error capture — was MISSING entirely. diagnostic/engine.js is a
+  // test runner, not an error monitor; lib/error-log.js (referenced in an
+  // earlier session's notes) doesn't exist anywhere in this tree. Every
+  // error this session — bridge handshake failures, the crash loop — only
+  // ever existed as scattered console.error calls nobody could see live.
+  const { ErrorCapture } = require('../diagnostic/error-capture');
+  errorCapture = new ErrorCapture({ sse });
+  errorCapture.init();
+  errorCapture.installMainProcessHandlers();
+
   // The orchestrator's contract-handshake polls /contract on the *registered*
   // port (SSE_PORT — see _registerWithNexus below), not the IPC port. /contract
   // only existed on the IPC server until now, so every verification attempt
@@ -572,6 +590,7 @@ async function bootstrap() {
   ipcBridge = new IpcBridge({
     port:        IPC_PORT,
     sse,
+    errorCapture,
     ctxMgr,
     vault,
     apiSettings,

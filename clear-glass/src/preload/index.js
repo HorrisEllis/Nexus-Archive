@@ -47,7 +47,12 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     set: (payload) => ipcRenderer.invoke('api:set', payload),
   },
 
-  // ── Window controls ───────────────────────────────────────────────────
+  // ── Errors — was missing entirely, the actual gap behind "where are
+  //    the errors" ──────────────────────────────────────────────────────
+  errors: {
+    report: (payload) => ipcRenderer.invoke('errors:report', payload),
+    recent: (n)       => ipcRenderer.invoke('errors:recent', { n }),
+  },
   // browser.html calls cg.window.* — these handlers exist in ipc/bridge.js
   // but were never exposed through the preload. Root cause of every window
   // control button being a silent no-op.

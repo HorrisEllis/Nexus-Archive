@@ -513,6 +513,21 @@ ${buildToolsPrompt()}${domSection}`;
       // attempt, to rule out (or confirm) that this is specific to fetch()'s
       // implementation rather than the network path itself.
       console.error(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake error detail — code:${err.code} name:${err.name} cause:${err.cause?.code || err.cause?.message || 'none'} message:"${err.message}"`);
+      // §fix 2026-06-30 — this specific failure (the one this round's fix
+      // is in direct response to) now reaches the error-capture system,
+      // not just console. Emitted on the same 'error.captured' event type
+      // ErrorCapture uses, so it shows in the same UI surface as every
+      // other captured error — no separate, second error channel.
+      if (this.sse) {
+        try {
+          this.sse.emit('error.captured', {
+            id: `err-${Date.now()}-bridge-handshake`, ts: Date.now(), isoTime: new Date().toISOString(),
+            source: 'main-process', type: 'bridgeHandshakeFailure',
+            message: err.message, stack: err.stack, code: err.code, name: err.name,
+            extra: { cause: err.cause?.code || err.cause?.message || null },
+          });
+        } catch (_) {}
+      }
 
       let httpFallbackResult = null;
       try {

@@ -42,15 +42,22 @@ function _log(...args)   { console.log(`[${new Date().toISOString()}] [${_SRC}]`
 function _logError(...args) { console.error(`[${new Date().toISOString()}] [${_SRC}]`, ...args); }
 function _logWarn(...args)  { console.warn(`[${new Date().toISOString()}] [${_SRC}]`, ...args); }
 
-// Where Guardian's userscripts live relative to the repo root
-const GUARDIAN_DIR_DEFAULT = path.join(__dirname, '../../../../guardian');
+// §fix 2026-06-30 — "strip it of the userscripts, not supposed to be baked
+// in." This relative path (`../../../../guardian`) hardcoded an assumption
+// that clear-glass and guardian are checked out as sibling folders inside
+// the same parent repo, in this exact nesting — clear-glass reaching across
+// into another system's internal source layout by relative path. That's
+// real coupling, not a config default. Removed the silent fallback;
+// guardianDir is now required, either explicitly passed in or via
+// GUARDIAN_DIR env var. No assumed sibling-folder structure.
 const SCRIPT_RELOAD_INTERVAL_MS = 60_000; // reload script from disk every 60s
 
 class ProviderHost {
   constructor({ guardianDir, sse, postEvent } = {}) {
-    this.guardianDir = guardianDir
-      || process.env.GUARDIAN_DIR
-      || GUARDIAN_DIR_DEFAULT;
+    this.guardianDir = guardianDir || process.env.GUARDIAN_DIR || null;
+    if (!this.guardianDir) {
+      _logWarn('[ProviderHost] no guardianDir configured (pass guardianDir or set GUARDIAN_DIR env var) — userscript loading will fail until configured. This is intentional: clear-glass no longer assumes guardian lives at a hardcoded relative path.');
+    }
 
     this.sse       = sse       || { emit: () => {} };
     this.postEvent = postEvent || (() => {});

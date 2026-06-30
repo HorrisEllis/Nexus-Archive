@@ -1303,6 +1303,25 @@
   // wrapper is set up earlier in this script than toast() is defined).
   while (toastQueue.length) toast(...toastQueue.shift());
 
+  // §fix 2026-06-30 — "the whole point of the diagnostic UI was to find
+  // the errors, where are they." Real answer: nothing was ever wired to
+  // catch them. window.onerror and unhandledrejection now both report to
+  // the new errors:report IPC route (clear-glass/src/diagnostic/
+  // error-capture.js), which logs to disk, keeps a 200-entry buffer, and
+  // broadcasts over SSE — AND shows a visible error toast immediately,
+  // so a renderer-side crash is never silent again.
+  window.addEventListener('error', (e) => {
+    const payload = { type: 'window.onerror', message: e.message, stack: e.error?.stack, url: location.href, agentId };
+    _cgCall('errors', 'report', payload).catch(() => {});
+    toast(`Error: ${e.message}`, 'error', 8000);
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    const reason = e.reason instanceof Error ? e.reason : new Error(String(e.reason));
+    const payload = { type: 'unhandledrejection', message: reason.message, stack: reason.stack, url: location.href, agentId };
+    _cgCall('errors', 'report', payload).catch(() => {});
+    toast(`Unhandled rejection: ${reason.message}`, 'error', 8000);
+  });
+
   // _cgCall stays available for any new code — same interface, now backed
   // by the Proxy above so both styles produce the same visible-error behavior.
   const _debug = new URLSearchParams(location.search).get('debug') === '1';
