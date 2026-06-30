@@ -1166,25 +1166,40 @@
   'use strict';
 
   const _rawCg = window.ClearGlass;
+  const toastQueue = []; // toast() not defined yet — queued, flushed once it exists below
 
-  // §fix 2026-06-29 — 23+ call sites across this file call cg.namespace.method()
-  // directly, unguarded. Patching every one individually is exactly the kind
-  // of multi-spot edit that caused the \n corruption bug last time. Instead:
-  // wrap the whole thing in a Proxy. Every cg.X.Y() call, anywhere in this
-  // file, now safely no-ops with a visible toast instead of throwing
-  // "Cannot read properties of undefined" — without touching the 23 call sites.
+  // §fix 2026-06-29, take 2 — the Proxy-wrapping approach below broke
+  // everything: contextBridge.exposeInMainWorld freezes/locks property
+  // descriptors on window.ClearGlass for security (non-configurable,
+  // non-writable). A Proxy is NOT allowed to return a different value for
+  // a non-configurable property than the target itself has — JS throws
+  // "proxy did not return its actual value" the instant anything reads
+  // cg.options. That's exactly the Security-tab error from the screenshot.
+  // Fix: build a plain NEW object instead of proxying the original. This
+  // never touches ClearGlass's own (locked) property descriptors at all —
+  // it just copies function references into a fresh object we own, then
+  // proxies THAT (normal, unfrozen, no invariant violation possible).
   function _wrapNamespace(nsName, nsObj) {
-    return new Proxy(nsObj || {}, {
+    const wrapped = {};
+    if (nsObj) {
+      for (const method of Object.keys(nsObj)) {
+        const real = nsObj[method];
+        if (typeof real !== 'function') continue;
+        wrapped[method] = (...args) => Promise.resolve().then(() => real.apply(nsObj, args)).catch(err => {
+          const msg = `cg.${nsName}.${method} failed: ${err?.message || err}`;
+          console.error('[ClearGlass]', msg, err);
+          toastQueue.push([msg, 'error', 6000]);
+          throw err;
+        });
+      }
+    }
+    // Proxy the wrapped object too — so a method that exists on neither
+    // the real namespace NOR our wrapped copy (e.g. cg.bookmarks.list when
+    // bookmarks exists but list doesn't) also rejects cleanly instead of
+    // being undefined and throwing "X is not a function" at the call site.
+    return new Proxy(wrapped, {
       get(target, method) {
-        const real = target[method];
-        if (typeof real === 'function') {
-          return (...args) => Promise.resolve().then(() => real(...args)).catch(err => {
-            const msg = `cg.${nsName}.${method} failed: ${err?.message || err}`;
-            console.error('[ClearGlass]', msg, err);
-            toastQueue.push([msg, 'error', 6000]);
-            throw err;
-          });
-        }
+        if (method in target) return target[method];
         return (...args) => {
           const msg = `cg.${nsName}.${method} not available`;
           console.error('[ClearGlass]', msg);
@@ -1195,13 +1210,31 @@
     });
   }
 
-  const cg = _rawCg
-    ? new Proxy(_rawCg, { get(t, ns) { return _wrapNamespace(ns, t[ns]); } })
-    : new Proxy({}, { get(t, ns) { return _wrapNamespace(ns, {}); } });
+  const _ownedCg = {};
+  if (_rawCg) {
+    for (const ns of Object.keys(_rawCg)) {
+      _ownedCg[ns] = _wrapNamespace(ns, _rawCg[ns]);
+    }
+  }
 
-  // toast() isn't defined yet at this point in the file (declared further
-  // down) — queue any pre-toast errors and flush once it exists.
-  const toastQueue = [];
+  // Any namespace a call site references that ClearGlass never exposed at
+  // all (not even an empty one) needs a graceful fallback too. This Proxy
+  // wraps `_ownedCg` — a plain object WE created above, with normal
+  // configurable/writable properties — never the original frozen
+  // ClearGlass object. That's the actual fix: proxy something we own.
+  const cg = new Proxy(_ownedCg, {
+    get(target, ns) {
+      if (ns in target) return target[ns];
+      return new Proxy({}, {
+        get: () => (...args) => {
+          const msg = `cg.${ns} not available — namespace missing from window.ClearGlass entirely`;
+          console.error('[ClearGlass]', msg);
+          toastQueue.push([msg, 'error']);
+          return Promise.reject(new Error(msg));
+        },
+      });
+    },
+  });
 
   const params = new URLSearchParams(window.location.search);
   const agentId = params.get('agentId') || 'default';
