@@ -1042,3 +1042,46 @@ useful when run standalone (which is how Clear Glass is being tested here).
 That's a real gap worth naming as its own thing — standalone-mode behavior
 hasn't had the same test discipline as the rest of this build — not a
 case for starting over.
+
+---
+
+## CHANGELOG (session 13 — 2026-06-30): The actual crash, found
+
+Every prior session's UI debugging assumed Clear Glass was a live, connected
+process showing stale data. **A full `npm run start:all` boot log proved
+that assumption wrong.** The real state: `[clear-glass] exited code=0
+signal=null — crashes in window: 1/6` through `6/6`, circuit breaker
+tripped, app not running at all. Every screenshot debugged in sessions
+11-12 was very likely a cached/stale window, not a live one — explains why
+fixes that tested correct in isolation never visibly changed anything.
+
+**Root cause, traced to one line:** `clear-glass/src/main/index.js`'s
+`if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }` —
+zero logging before exit. A lock failure is indistinguishable in any log
+from a real crash, except there's no error anywhere because there isn't
+one; Electron is doing exactly what that line says. The actual mechanism:
+autopilot's exponential backoff (1s → 2s → 4s → 8s → 16s) is uniform across
+all 11 supervised kernels, but Electron's OS-level process teardown on
+Windows measurably lags a plain `node` process's exit — the previous failed
+instance's lock file hadn't released before the next restart attempt fired,
+so every restart immediately self-terminated against its own predecessor.
+Faster backoff intervals failed faster; the circuit breaker tripped on
+schedule, every time, by design — not randomly.
+
+**Fixed two ways, not one:**
+- `requestSingleInstanceLock()` failure now logs loudly (timestamped,
+  source-tagged) and exits with code 1, not silent code 0 — this alone
+  ensures the *next* time this fires, the log says why instead of leaving
+  a 6-line mystery.
+- `autopilot.js` gained a per-kernel `minRestartDelay` floor, applied to
+  clear-glass specifically (3000ms) — `Math.max(kernel.minRestartDelay,
+  s.backoffMs)`, only ever raises the delay, never shortens the normal
+  exponential curve once backoffMs naturally exceeds the floor. Addresses
+  the actual race instead of just diagnosing it better.
+
+6 new tests (`autopilot-restart-delay.test.js`) reproduce the real backoff
+sequence from the log (`[1000, 2000, 4000, 8000, 16000]`) and prove the
+fixed delays never drop below the floor, plus a falsy-zero edge case
+(`minRestartDelay: 0` must mean "no floor," not "floor of zero" — a subtle
+bug shape that would have looked like it worked while doing nothing). 56/56
+tests passing across 6 suites.

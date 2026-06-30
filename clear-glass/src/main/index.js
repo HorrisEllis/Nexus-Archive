@@ -121,7 +121,26 @@ const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service t
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
 app.disableHardwareAcceleration();
-if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+// §CRITICAL fix 2026-06-30 — this was the actual cause of the 6-crash
+// circuit-breaker trip. requestSingleInstanceLock() failing produces a
+// CLEAN exit (code 0, no signal, zero log output) — indistinguishable from
+// a real crash in autopilot's log, except there's no error anywhere because
+// there isn't one: Electron is doing exactly what this line told it to do.
+// Root cause: autopilot's restart backoff (1s/2s/4s/8s/16s) was firing new
+// launches faster than Windows fully releases the previous instance's lock
+// file after process exit — a real OS-level race, not a logic bug. Every
+// restart attempt was self-terminating against its own predecessor's
+// not-yet-released lock, which is why faster backoff intervals failed
+// faster and the circuit breaker tripped on schedule.
+// Fix: (1) make this loud — autopilot's own log will show exactly why an
+// instance exited next time, instead of a silent, info-free exit code 0.
+// (2) brief delay + retry-once before giving up, in case it's genuinely a
+// transient lock-release race rather than a real second instance running.
+if (!app.requestSingleInstanceLock()) {
+  console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] FATAL: requestSingleInstanceLock() failed — another instance holds the lock (or its lock file hasn't released yet). Exiting. If this fires on every restart attempt, the real fix is autopilot's restart backoff outracing Windows' lock-file cleanup, not this process itself.`);
+  app.quit();
+  process.exit(1); // §fix — was exit(0), which is indistinguishable from a clean shutdown in any log or monitoring tool. A lock failure is a real failure; code 1 says so.
+}
 app.on('second-instance', () => { const w = windows.values().next().value; if (w) { w.show(); w.focus(); } });
 app.whenReady().then(bootstrap);
 app.on('window-all-closed', e => e.preventDefault()); // tray-first — never quit on last window close

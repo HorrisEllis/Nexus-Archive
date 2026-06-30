@@ -70,7 +70,18 @@ const ALL_KERNELS = [
     cmd: process.platform === 'win32'
       ? 'node_modules\\.bin\\electron.cmd'
       : 'node_modules/.bin/electron',
-    args: ['.'], cwd: 'clear-glass', optional: true },
+    args: ['.'], cwd: 'clear-glass', optional: true,
+    // §CRITICAL fix 2026-06-30 — root cause of a real 6-crash circuit-
+    // breaker trip, traced from a live boot log: requestSingleInstanceLock()
+    // was failing on every restart because Windows hadn't finished
+    // releasing the previous Electron instance's lock file before
+    // autopilot's 1s/2s/4s backoff fired the next attempt. Electron/OS-
+    // level process teardown (especially on Windows) is measurably slower
+    // than a plain `node` process exiting — the uniform BACKOFF_BASE_MS=1000
+    // that works fine for every other kernel here was too aggressive
+    // specifically for this one. minRestartDelay enforces a floor
+    // independent of the exponential backoff curve.
+    minRestartDelay: 3000 },
 ];
 
 // ── Restart policy ────────────────────────────────────────────────────────────
@@ -217,7 +228,13 @@ function _spawnKernel(kernel, color) {
     }
 
     s.restarts++;
-    const delay = s.backoffMs;
+    // §CRITICAL fix 2026-06-30 — minRestartDelay enforces a floor for
+    // kernels whose OS-level process teardown lags the generic exponential
+    // backoff (Electron on Windows, specifically — see clear-glass's kernel
+    // definition above for the full trace). Math.max with backoffMs so the
+    // floor only ever raises the delay, never shortens the normal
+    // exponential curve once it's already past the floor.
+    const delay = kernel.minRestartDelay ? Math.max(kernel.minRestartDelay, s.backoffMs) : s.backoffMs;
     s.backoffMs = Math.min(s.backoffMs * 2, BACKOFF_MAX_MS);
     _log(`${color}[${kernel.name}]${RESET} restarting in ${Math.round(delay/1000)}s (attempt ${s.restarts})`);
     setTimeout(() => _spawnKernel(kernel, color), delay).unref?.();
