@@ -992,7 +992,9 @@
     <button id="btn-new-tab" title="New tab" style="flex-shrink:0;background:none;border:none;color:#6a6d82;font-size:16px;padding:0 8px;cursor:pointer;line-height:34px;">+</button>
   </div>
 
-  <!-- Webview -->\n  <div id=\"webview-wrap\">\n    <div id=\"load-bar\"></div>
+  <!-- Webview -->
+  <div id="webview-wrap">
+    <div id="load-bar"></div>
     <webview id="wv" src="about:blank" allowpopups webpreferences="contextIsolation=yes"></webview>
   </div>
 
@@ -1163,7 +1165,44 @@
 (function() {
   'use strict';
 
-  const cg  = window.ClearGlass;
+  const _rawCg = window.ClearGlass;
+
+  // §fix 2026-06-29 — 23+ call sites across this file call cg.namespace.method()
+  // directly, unguarded. Patching every one individually is exactly the kind
+  // of multi-spot edit that caused the \n corruption bug last time. Instead:
+  // wrap the whole thing in a Proxy. Every cg.X.Y() call, anywhere in this
+  // file, now safely no-ops with a visible toast instead of throwing
+  // "Cannot read properties of undefined" — without touching the 23 call sites.
+  function _wrapNamespace(nsName, nsObj) {
+    return new Proxy(nsObj || {}, {
+      get(target, method) {
+        const real = target[method];
+        if (typeof real === 'function') {
+          return (...args) => Promise.resolve().then(() => real(...args)).catch(err => {
+            const msg = `cg.${nsName}.${method} failed: ${err?.message || err}`;
+            console.error('[ClearGlass]', msg, err);
+            toastQueue.push([msg, 'error', 6000]);
+            throw err;
+          });
+        }
+        return (...args) => {
+          const msg = `cg.${nsName}.${method} not available`;
+          console.error('[ClearGlass]', msg);
+          toastQueue.push([msg, 'error']);
+          return Promise.reject(new Error(msg));
+        };
+      },
+    });
+  }
+
+  const cg = _rawCg
+    ? new Proxy(_rawCg, { get(t, ns) { return _wrapNamespace(ns, t[ns]); } })
+    : new Proxy({}, { get(t, ns) { return _wrapNamespace(ns, {}); } });
+
+  // toast() isn't defined yet at this point in the file (declared further
+  // down) — queue any pre-toast errors and flush once it exists.
+  const toastQueue = [];
+
   const params = new URLSearchParams(window.location.search);
   const agentId = params.get('agentId') || 'default';
   const ssePort = params.get('ssePort') || 7701;
@@ -1204,8 +1243,50 @@
   agentBadge.textContent = agentId;
   statusAgent.textContent = `Agent: ${agentId}`;
 
+  // ── Toast system ──────────────────────────────────────────────────────────
+  // Injects a lightweight toast container. Call toast(msg, type) from anywhere.
+  // type: 'info' | 'error' | 'success' | 'warn'
+  const _toastContainer = (() => {
+    const el = document.createElement('div');
+    el.id = 'cg-toast-container';
+    el.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    document.body.appendChild(el);
+    return el;
+  })();
+
+  function toast(msg, type = 'info', durationMs = 3500) {
+    const colors = { info:'#00f5ff', error:'#ff4466', success:'#00ff9d', warn:'#ffb454' };
+    const el = document.createElement('div');
+    el.style.cssText = `background:#0e0e18;border:1px solid ${colors[type]||colors.info};color:${colors[type]||colors.info};padding:8px 14px;border-radius:8px;font-size:11px;font-family:ui-monospace,monospace;max-width:320px;word-break:break-all;opacity:0;transition:opacity .15s;pointer-events:auto;cursor:pointer;`;
+    el.textContent = msg;
+    el.onclick = () => el.remove();
+    _toastContainer.appendChild(el);
+    requestAnimationFrame(() => { el.style.opacity = '1'; });
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 200); }, durationMs);
+    return el;
+  }
+
+  // Flush any cg.* errors that happened before toast() existed (the Proxy
+  // wrapper is set up earlier in this script than toast() is defined).
+  while (toastQueue.length) toast(...toastQueue.shift());
+
+  // _cgCall stays available for any new code — same interface, now backed
+  // by the Proxy above so both styles produce the same visible-error behavior.
+  const _debug = new URLSearchParams(location.search).get('debug') === '1';
+  function _cgCall(namespace, method, ...args) {
+    if (_debug) console.log(`[cg.${namespace}.${method}]`, args);
+    return cg[namespace][method](...args);
+  }
+
+  if (!_rawCg) {
+    console.error('[ClearGlass] window.ClearGlass is undefined — preload bridge did not attach. This page must be loaded inside the Clear Glass Electron shell, not a plain browser tab.');
+    toast('ClearGlass bridge missing — preload did not attach. Every button will show an error toast until this is fixed.', 'error', 10000);
+  }
+
+
+
   // Apply Nexus options that affect initial render (autoOpenCopilotPane)
-  cg.options.get().then(opts => {
+  _cgCall('options','get').then(opts => {
     if (opts && opts.autoOpenCopilotPane === false) {
       copilotVisible = false;
       copilotPane.classList.add('hidden');
@@ -1390,9 +1471,9 @@
   document.getElementById('btn-reload').addEventListener('click', () => wv.reload());
 
   // ── Window controls ─────────────────────────────────────────────────
-  document.getElementById('btn-minimize').addEventListener('click', () => cg.window.minimize(agentId));
-  document.getElementById('btn-maximize').addEventListener('click', () => cg.window.maximize(agentId));
-  document.getElementById('btn-close-tray').addEventListener('click', () => cg.window.hide(agentId));
+  document.getElementById('btn-minimize').addEventListener('click', () => _cgCall('window','minimize',agentId));
+  document.getElementById('btn-maximize').addEventListener('click', () => _cgCall('window','maximize',agentId));
+  document.getElementById('btn-close-tray').addEventListener('click', () => _cgCall('window','hide',agentId));
 
   // ── Options panel ────────────────────────────────────────────────────
   const optionsPanel      = document.getElementById('options-panel');
@@ -1472,7 +1553,7 @@
     catch (err) { addMsg('assistant', `Failed to save default URL: ${err.message}`); }
   });
 
-  document.getElementById('opt-link-api-settings').addEventListener('click', () => cg.window.openSettings());
+  document.getElementById('opt-link-api-settings').addEventListener('click', () => _cgCall('window','openSettings'));
   document.getElementById('opt-link-nexus-audit').addEventListener('click', () => {
     cg.diag.nexus({ agentId });
     addMsg('assistant', 'NEXUS UI Audit dispatched — results will land on the bus.');

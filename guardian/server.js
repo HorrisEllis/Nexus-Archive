@@ -1058,6 +1058,33 @@ function _handleNCPMessage(msg) {
       break;
     }
 
+    case 'GUARDIAN_REPLAY': {
+      // Userscript signals it replayed a job result. Acknowledgment only.
+      // Without this case the message fell through to 'unhandled' and caused
+      // log spam + confused the flapping detector into thinking the tab was
+      // misbehaving when it was actually working correctly.
+      if (jobId && jobs.has(jobId)) {
+        const job = jobs.get(jobId);
+        job.status = 'complete';
+        bus.emit('guardian.job.complete', { jobId, provider, replay: true });
+      }
+      console.log(`[guardian] GUARDIAN_REPLAY ack from ${provider}: ${jobId}`);
+      break;
+    }
+
+    case 'guardian.job.dispatched': {
+      // Userscript echoing back that it dispatched the job. Acknowledgment only.
+      console.log(`[guardian] job.dispatched ack from ${provider}: ${jobId}`);
+      break;
+    }
+
+    case 'guardian.job.complete': {
+      // Userscript echoing back job completion. Real completion already handled
+      // via GUARDIAN_COMPLETE above. Acknowledge and discard.
+      console.log(`[guardian] job.complete ack from ${provider}: ${jobId}`);
+      break;
+    }
+
     default:
       // Unknown but don't spam the bus — log at debug level only
       if (type && !type.startsWith('GUARDIAN_LEDGER')) {
