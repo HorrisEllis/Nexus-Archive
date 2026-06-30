@@ -1,6 +1,6 @@
 # NEXUS — Complete Phase Map
 **Author:** James Brooks (Erosmancer)
-**Last updated:** 2026-06-29 (session 8 — axioms consolidated, spec registry, adaptive fulfillment)
+**Last updated:** 2026-06-30 (session 11 — Clear Glass debugging, tree-sync verification, phase-map document audit)
 **Status:** Living document — append-only, never shrink. As of session 3,
 this is the **only** living changelog/phase-map document. `SESSION-CHANGELOG.md`
 and the session's `MASTER-SESSION-SPEC.md` are folded in below and retired —
@@ -938,3 +938,55 @@ through Guardian's NCP is not wired here, and the endpoint says so in its
 response rather than pretending. New component registered
 (`copilot.prompt.fulfill`) and hooked (`hooks/copilot.hooks.js`, +2 entries,
 registry now 80 hooks across 10 systems, was 78).
+
+---
+
+## CHANGELOG (session 11 — 2026-06-30): Clear Glass debugging, phase-map document audit
+
+**Clear Glass UI fixes** — full trace, not patches. `Health: 100` and
+`Cookies: 0` were both stubs (hardcoded / wrong-method-discarded-result
+respectively); both fixed for real and test-covered (13 new tests,
+`clear-glass-indicators.test.js`). Bridge handshake's "Premature close" was
+chased 5 layers deep through correct code before the actual bug surfaced —
+`fetch()`'s `timeout` option doesn't exist on the spec, was silently dead;
+replaced with `AbortController`. ChatGPT NCP flapping confirmed environmental
+(tab genuinely reconnecting every few seconds), not a code bug — ruled out
+both the flap-detector and the client reconnect logic by direct simulation
+and code trace before concluding that. One real architectural lesson logged:
+never `Proxy` a `contextBridge`-exposed object directly — frozen property
+descriptors make that throw; copy into an owned plain object first, proxy
+that instead. Full detail: `docs/META-SYSTEM-AND-SUBSYSTEM-SPECS.md` §9.
+
+**Tree-sync verified, not assumed.** A 3-fix sync package was checked
+file-by-file against a freshly re-uploaded tree before applying anything —
+2 of 3 fixes were already present and byte-identical, only
+`clear-glass/siso/package.json` was genuinely missing. Applied, then proven
+by loading the real modules end-to-end (`idearium/index.js`'s actual import
+chain), not just confirming file existence. All 50 prior-session tests
+reran clean against the new tree first.
+
+**Phase-map document audit — consolidation requested, findings below.**
+Five phase-map-shaped files exist in `docs/`. Read every one before
+touching anything:
+- `phase-map.spec` — dead ancestor, stops at phase 6, predates AX-
+  numbering. Superseded by this file. Left in place untouched as historical
+  record (same pattern as `SESSION-CHANGELOG.md`'s superseded banner),
+  not deleted, not merged further — there's nothing in it not already
+  captured here in a more current form.
+- `diagnostic-phase-map.spec` — different category, one service's
+  detect→remediate pipeline (`service/nexus-diagnostic.js`), not a
+  build/feature map. Correctly out of scope, left untouched.
+- `AXIOMS-PHASE-MAP.md` — legitimate sibling document (axiom-to-phase
+  compliance, not duplicate phase content). Not a merge target.
+- An uploaded HTML phase-map widget was checked against this file's
+  current state and confirmed stale — still showed Phases 113 and 120 as
+  pending, both already closed as of session 9-10. Needs regenerating
+  *from* this document, not merged *into* it; doing so was out of scope
+  this pass since the underlying data (this file) is what's authoritative.
+- Foundation specs (`nexus-system-foundation.spec` + its addendum +
+  the analysis-module specialization) were checked and confirmed already
+  correctly consolidated as of session 8 — AX-008/009/010 present in the
+  base spec, addendum carries its superseded banner, specialization is a
+  clean non-overlapping `extends:`. Nothing further to merge; confirmed
+  clean rather than assumed clean, since "looks done" and "verified done"
+  are different claims and this session has been about not conflating them.
