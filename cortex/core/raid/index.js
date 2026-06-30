@@ -52,10 +52,12 @@ const VERSION   = '6.2.0';
 // provider=guardian-claude. 'guardian-claude' is a healthSnap lookup key,
 // never a valid dispatch target.
 const HEALTH_KEY = {
-  claude:  'guardian-claude',
-  chatgpt: 'guardian-chatgpt',
-  ollama:  'ollama',
-};
+  claude:     'guardian-claude',
+  chatgpt:    'guardian-chatgpt',
+  gemini:     'guardian-gemini',     // §P49 — was never polled or dispatchable;
+  perplexity: 'guardian-perplexity', // guardian has real NCP connections for both
+  ollama:     'ollama',              // (boot log: gemini=10.1.0 perplexity=10.1.0
+};                                    // registered alongside claude/chatgpt)
 
 // ── _cluster — deterministic, zero-LLM intent bucketing ──────────────────────
 const CLUSTER_KEYWORDS = {
@@ -123,8 +125,12 @@ function _decide(call, health, weights) {
   // Computed chain (replaces the retired hardcoded CLUSTER_CHAINS, per
   // docs/raid.spec v6.1 note) — today this is one fixed order because
   // role_confidence data doesn't exist yet to differentiate by cluster.
-  // Becomes per-cluster once that lands; flagged, not silently faked.
-  const chain = ['ollama', 'claude', 'chatgpt'];
+  // §P49 — gemini/perplexity added as real chain candidates now that
+  // they're actually polled (see _pollHealth). Appended after chatgpt,
+  // not reordered ahead of it — no fitness data exists yet to justify
+  // a different position; docs/raid.spec's "specialist clusters" are
+  // still unenumerated, same caveat _fitness() already documents.
+  const chain = ['ollama', 'claude', 'chatgpt', 'gemini', 'perplexity'];
   const survivors = chain.filter(name => _agentAvailable(name, health, { tightened }));
 
   if (survivors.length === 1) {
@@ -148,9 +154,11 @@ function _decide(call, health, weights) {
 // own fixtures). This is the module's own live copy for production callers
 // (lib/request-handler.js does `raid._health`, `raid._weights` directly).
 const _health = {
-  ollama:            { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
-  'guardian-claude':  { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
-  'guardian-chatgpt': { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
+  ollama:              { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
+  'guardian-claude':   { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
+  'guardian-chatgpt':  { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
+  'guardian-gemini':   { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 }, // §P49
+  'guardian-perplexity':{ online: false, consecutiveFails: 0, callCount: 0, successRate: 1 }, // §P49
 };
 
 function _httpGetJson(url, timeoutMs = 2000) {
@@ -179,8 +187,17 @@ async function _pollHealth() {
   _health.ollama.consecutiveFails = ol?.ok ? 0 : (_health.ollama.consecutiveFails + 1);
 
   const gd = await _httpGetJson(`${GD_URL}/health`);
-  const providers = gd?.connectedProviders || {};
-  for (const name of ['claude', 'chatgpt']) {
+  // §P49 — guardian's /health actually returns the field as `providers`
+  // (see guardian/server.js's /health handler), not `connectedProviders`.
+  // This was reading the wrong key the entire time: gd.connectedProviders
+  // was always undefined, so `providers[name]` was always falsy and every
+  // agent — including claude/chatgpt, not just gemini/perplexity — was
+  // marked online:false regardless of guardian's actual NCP connections.
+  const providers = gd?.providers || {};
+  // §P49 — gemini/perplexity were real, guardian-connected NCP providers
+  // (boot log shows them registered: gemini=10.1.0 perplexity=10.1.0) that
+  // RAID never asked guardian about even before this fix.
+  for (const name of ['claude', 'chatgpt', 'gemini', 'perplexity']) {
     const key = HEALTH_KEY[name];
     const online = !!providers[name];
     _health[key].online = online;

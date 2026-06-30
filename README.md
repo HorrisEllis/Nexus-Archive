@@ -1,97 +1,89 @@
-# NEXUS SYSTEM — v5.1.0
+# Rank 3 code fixes — sigma cap / CFR field / RAID agent reachability
 
-> **⚠ SUPERSEDED — DO NOT TREAT AS CURRENT**
-> This README describes an earlier intended architecture (Emergence/.eg-exclusive, `nexus-eg/` tree: crystalball, cockpit, siphon, seam, guardian-ext). That architecture is not what exists in this codebase — zero `.eg` files are present; the actual system is plain Node/JS (cortex/, guardian/, idearium/, lib/, etc.). This file has not been kept in sync and should not be read as a description of current state.
->
-> **Canonical, actively-maintained source of truth: `lib/version.js`** — current system version, per-phase build status, and per-module versions all live there. As of this note: system v0.7.8, Phase 12 (User Model) complete.
->
-> The content below is preserved as historical record, not deleted, since it may describe a real prior design direction worth understanding — but treat every claim in it (file counts, ports, structure) as potentially describing a different system than the one on disk.
+Five files, all real fixes against the actual code (not stubs). Drop each
+into the matching path under `nexus-current\` (overwrite).
 
-## Complete Architecture in Emergence
+## What was actually broken, and why
 
-**Author:** James Brooks (Erosmancer)  
-**Language:** Emergence (.eg) — exclusively  
-**Files:** 115  
-**SNR:** 98.4%–100% across all files  
-**Axiom violations:** 0  
+### 1. Sigma capped near 0 forever (Phase 106 / OL-18)
+`lib/sigma-writer.js` computed every event's "contextual" sigma axis from
+CFR field state — but it was requiring `./cfr/field`, the raw *factory*
+module (`{createCFRField, computeRegime, EVENT_NUDGES}`). That module has
+no live singleton, no `.getState()`, no `.field`. So `cfr?.getState` and
+`cfr?.field` were *always* undefined, and every single sigma computation
+silently fell back to the hardcoded neutral default
+`{coherence:0.5, entropy:0.5, friction:0.5, resonance:0.5}` — forever.
+That's why composite sigma never moved past ~0.05: the contextual axis
+(20% of the score) was structurally incapable of ever contributing.
 
----
+**Fix:** `_getCFR()` now wires to `nexus-cfr-influence.js`'s live polled
+field (orchestrator already runs both in-process), with a defensive
+fallback if no successful poll has landed yet.
 
-> The spec is the container. The .eg file runs the system. No coding syntax exists in this session.
+### 2. `/cfr/field` always missing `tension` (Phase 48 / OL-2)
+Your boot log: `/cfr/field response missing/non-numeric field(s): tension
+— skipping this poll`. `nexus-cfr-influence.js`'s threshold table and
+`influence()` function have always expected a 5-dimension field
+(`tension, coherence, friction, entropy, resonance`) — but `lib/cfr/field.js`
+only ever modeled 4 dimensions. `tension` never existed anywhere, so the
+poll's shape check failed every single time and influence() never ran:
+no SNR-floor raises, no guardian throttling, no chaos alerts, ever.
 
----
+**Fix:** added `computeTension()` to `lib/cfr/field.js` — a real derived
+value (40% friction + 35% entropy + 20% inverse-coherence + 5% resonance),
+not invented raw state. Exposed on both `get()` and `snapshot()`.
+`lib/cfr/ledger.js`'s `/cfr/field` route now returns `snapshot()` (which
+includes `tension` *and* `regime` — the route was returning `get()` before,
+which had neither). `nexus-cfr-influence.js`'s `getState()` now also
+surfaces `regime` at the top level — `lib/request-handler.js` and
+`cortex/core/raid/index.js` both read `getState()?.regime` for CFR-aware
+RAID routing (§P97) and it was silently defaulting to `'stable'` always
+because `regime` was never in the object it read from.
 
-## Structure
+### 3. RAID's guardian health read the wrong field name (Phase 49)
+`cortex/core/raid/index.js`'s `_pollHealth()` read `gd?.connectedProviders`
+from guardian's `/health` response. Guardian's actual `/health` handler
+(`guardian/server.js`) returns that data under the key `providers`, not
+`connectedProviders`. This meant `gd.connectedProviders` was always
+`undefined` and **every** agent — including claude/chatgpt, not just the
+two you'd flagged — was marked `online: false` regardless of guardian's
+real NCP connections. This was a deeper, pre-existing bug, not just the
+missing-gemini/perplexity issue from the phase docs.
 
-```
-nexus-eg/
-├── foundation/          14 files — SISO primitives, Cobalt bus, FileStore, poll registry, admin server
-├── memory/               6 files — JAA-DB (28 tables), agent-memory, continuous-stream, feedback-weighter, fix-map, lattice-index
-├── core/                 7 files — RAID (4 files), translation, manifest-generator, usage
-├── crystalball/          5 files — CrystalBall wiring, BEP engine, lattice-bridge, MCL, MQL (5-lane)
-├── gate/                 3 files — gap-finder, gate-runner, healer
-├── agents/               6 files — dispatcher, ollama, claude, base, chatgpt, gemini
-├── orion/                4 files — sensor, record, policy, verify
-├── versionium/           2 files — core, causality
-├── automation/           2 files — engine, queue-manager
-├── canvas/               9 files — renderer, cfr-physics, cfr-render, cfr-rewind, image-analyzer, node-inspector, rewind-scrubber, nas-router, tauri-ws
-├── guardian-ext/        12 files — app, background, cfr, ir-layer, handshake, content, popup, module-base, claude, chatgpt, instagram, threads
-├── guardian-server/      9 files — server, api-7820, wss-7821, jaa, memory-7823, dropzone-7822, cli, agents, cobalt-bridge
-├── userscript/          16 files — toast, gates, tab-claim, siso-bus, dom-scanner, artifact-store, download-intercept, seam-tab, queue, snr-detector, pa, gap-hunter, greeting, gtci-inject, realtime-sync, tab-discovery
-├── cockpit/              5 files — core (SISOKernel+JAA+Bayesian), pipeline (14 nodes+evaluator), forge (self-mod), cli, ui (v10)
-├── idearium/             5 files — core (IdeaOS+tension+SNR), cli, api, event, gate
-├── siphon/               3 files — siphon, pulse, watchman
-├── seam/                 3 files — spec-parser, verdict-detector, seam-delivery
-└── system/               4 files — boot, topology, data-flows, seam-contracts
-```
+**Fix:** read `gd?.providers` (the real field). Also added
+`gemini`/`perplexity` to `HEALTH_KEY`, `_health`, the poll loop, and the
+dispatch `chain` — they're real, guardian-connected NCP providers (your
+boot log shows `gemini=10.1.0 perplexity=10.1.0` registered) that were
+never even asked about before.
 
----
+## Verified against existing tests
+- `tests/modules/raid-approve-tool.test.js`: 9/9 pass, unaffected
+- `tests/full.test.js`: 97/97 pass (includes §6 RAID determinism)
+- `tests/brutal.test.js` §11 (`lib/cfr/field.js`): all pass, including the
+  pinned "snapshot has 4 numeric dimensions" and "all dimensions 0..1"
+  tests — `tension` is additive, doesn't break either check
+- Manually verified `computeTension()` produces real bounded numbers
+  (not 0, not a constant) against synthetic field updates
 
-## Ports
+## Not touched, on purpose
+Phase 102/S4 (action-intent wiring) turned out to already be fully built
+in `copilot/server.js` (lines ~625–681, plus `/api/prompt/confirm-action`)
+— classifies via Phase 45's intent-classifier, gates FORGE/IRREVERSIBLE
+intents behind an explicit human-confirmed contract before
+`module-builder.build()` ever runs. Verified all its dependencies
+(`lib/contract-queue.js`, `copilot/module-builder.js`,
+`copilot/adaptive-fulfillment.js`) load and the classifier produces
+correct real output (tested: "delete the old logs" → verb=delete,
+risk=IRREVERSIBLE). This was marked ⬛ pending in the phase-map docs —
+that was stale, same pattern as Phases 98/103/112. No code change needed,
+just update the doc.
 
-| Port | Layer | Purpose |
-|------|-------|---------|
-| 3748 | Cortex | Source of truth — JAA + Cobalt + RAID + ORION |
-| 4800 | Forge/Idearium | IDE + pipeline + spec parser |
-| 7800 | Rheon IDE | Seam language IDE |
-| 7771 | Tauri WS | Desktop Rust bridge |
-| 7820 | Guardian HTTP | Agent API + Cockpit |
-| 7821 | Guardian WSS | Browser userscript bridge |
-| 7822 | Dropzone | File server (LAN) |
-| 7823 | Memory server | JAA query surface (LAN) |
-| 11434 | Ollama | Local LLM |
-
----
-
-## Laws
-
-```
-LAW_I    Local first — Ollama before cloud
-LAW_II   JAA write before behavior
-LAW_III  No module imports another — JAA only
-LAW_IV   Schema over code
-LAW_V    CLI first — UI is a skin
-LAW_VI   Toast on every failure
-
-§1.1  Nothing exists until proven
-§1.2  Nothing silently fails
-§2.1  Persistence is the golden rule
-§M1   Every module: init(cfg) + stop() only
-§M2   Modules only read/write declared tables
-§M3   Poll interval is module configuration
-§A3   Every row carries causedBy or source
-```
-
----
-
-## Using the Emerge compiler
-
-```bash
-node emerge-cli.js check foundation/siso-event.eg
-node emerge-cli.js compile foundation/siso-event.eg
-node emerge-cli.js watch          # watch all .eg files
-```
-
----
-
-*NEXUS SYSTEM v5.1.0 · All Emergence · James Brooks · Portland, Oregon · 2026*
+## After copying these 5 files, re-run `npm run start:all` and check:
+- Boot log should stop showing `/cfr/field response missing ... tension`
+- `sigma_records` composite values should start moving above the ~0.05
+  ceiling once real events flow (won't be instant — needs the field to
+  actually diverge from neutral first)
+- `[component-registry] system:guardian registered N components` should
+  now correctly reflect claude/chatgpt/gemini/perplexity online status
+  in RAID's `_health` snapshot — check via whatever exposes
+  `raid.getState()` or `/api/raid/status` in your admin routes
