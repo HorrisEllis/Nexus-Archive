@@ -150,7 +150,17 @@ function _spawnKernel(kernel, color) {
       if (isErr && text.includes('EADDRINUSE')) s.sawAddrInUse = true;
       for (const line of text.split('\n')) {
         if (!line.trim()) continue;
-        console.log(`${color}[${kernel.name}]${RESET} ${isErr ? '\x1b[31m' : ''}${line}${isErr ? RESET : ''}`);
+        // §timestamping fix 2026-06-30 — every console line from a child
+        // system now carries [ISO timestamp] [system:entrypoint-file]
+        // before the line, not just [system]. Without the timestamp,
+        // reconstructing event order across a multi-system log dump
+        // (like the screenshot's console output) required guessing —
+        // lines from different systems interleave with no way to tell
+        // which happened first. Source file makes it traceable to the
+        // exact entrypoint per Phase 116's component→file mapping intent.
+        const ts = new Date().toISOString();
+        const srcFile = kernel.args?.[0] || kernel.name;
+        console.log(`[${ts}] ${color}[${kernel.name}:${srcFile}]${RESET} ${isErr ? '\x1b[31m' : ''}${line}${isErr ? RESET : ''}`);
       }
     });
   };

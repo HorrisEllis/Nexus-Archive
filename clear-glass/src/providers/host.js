@@ -31,6 +31,17 @@ const { BrowserWindow, session, app } = require('electron');
 const { getProvider, listProviders } = require('./registry');
 const { buildGmShim } = require('./gm-shim');
 
+// §timestamping fix 2026-06-30 — file-scoped, not a global console mutation.
+// Mutating console.log globally here would re-prefix every OTHER module's
+// logs in the same Electron process too (main/index.js, registry.js,
+// everything) — caught that before shipping it. Instead: a local _log()
+// this file's 11 call sites are mechanically rewritten to use, via sed,
+// not hand-edited one at a time (same risk as the cg.* fix history).
+const _SRC = 'clear-glass/src/providers/host.js';
+function _log(...args)   { console.log(`[${new Date().toISOString()}] [${_SRC}]`, ...args); }
+function _logError(...args) { console.error(`[${new Date().toISOString()}] [${_SRC}]`, ...args); }
+function _logWarn(...args)  { console.warn(`[${new Date().toISOString()}] [${_SRC}]`, ...args); }
+
 // Where Guardian's userscripts live relative to the repo root
 const GUARDIAN_DIR_DEFAULT = path.join(__dirname, '../../../../guardian');
 const SCRIPT_RELOAD_INTERVAL_MS = 60_000; // reload script from disk every 60s
@@ -60,14 +71,14 @@ class ProviderHost {
     let stat;
     try { stat = fs.statSync(filePath); }
     catch (e) {
-      console.warn(`[ProviderHost] userscript not found for ${providerId}: ${filePath}`);
+      _logWarn(`[ProviderHost] userscript not found for ${providerId}: ${filePath}`);
       return null;
     }
     const cached = this._scriptCache.get(providerId);
     if (cached && cached.mtimeMs === stat.mtimeMs) return cached.source;
     const source = fs.readFileSync(filePath, 'utf8');
     this._scriptCache.set(providerId, { source, mtimeMs: stat.mtimeMs });
-    console.log(`[ProviderHost] loaded userscript for ${providerId} (${Math.round(source.length / 1024)}KB)`);
+    _log(`[ProviderHost] loaded userscript for ${providerId} (${Math.round(source.length / 1024)}KB)`);
     return source;
   }
 
@@ -86,9 +97,9 @@ class ProviderHost {
     // Userscript begins
     ${script}
     // Userscript ends
-    console.log('[ClearGlass] NCP userscript injected for ${providerId}');
+    console.log('[ClearGlass] NCP userscript injected');
   } catch(e) {
-    console.error('[ClearGlass] userscript injection error (${providerId}):', e.message);
+    console.error('[ClearGlass] userscript injection error:', e.message);
   }
 })();
 `;
@@ -99,7 +110,7 @@ class ProviderHost {
       this.sse.emit('provider.host.injected', { providerId, ts: Date.now() });
       return true;
     } catch (e) {
-      console.warn(`[ProviderHost] injection failed for ${providerId}:`, e.message);
+      _logWarn(`[ProviderHost] injection failed for ${providerId}:`, e.message);
       return false;
     }
   }
@@ -157,12 +168,12 @@ class ProviderHost {
       // Only inject on the provider's own pages
       const isProviderPage = def.hosts.some(h => url.includes(h));
       if (!isProviderPage) {
-        console.log(`[ProviderHost] ${providerId} — skipping injection on ${url}`);
+        _log(`[ProviderHost] ${providerId} — skipping injection on ${url}`);
         return;
       }
 
       this._status.set(providerId, { ...st, status: 'loaded', url, loadedAt: Date.now() });
-      console.log(`[ProviderHost] ${providerId} — loaded ${url}, injecting userscript…`);
+      _log(`[ProviderHost] ${providerId} — loaded ${url}, injecting userscript…`);
 
       // Small delay — let SPA frameworks settle
       await new Promise(r => setTimeout(r, 800));
@@ -178,7 +189,7 @@ class ProviderHost {
 
     // Detect crash / unresponsive
     win.webContents.on('render-process-gone', (e, { reason }) => {
-      console.warn(`[ProviderHost] ${providerId} renderer gone: ${reason}`);
+      _logWarn(`[ProviderHost] ${providerId} renderer gone: ${reason}`);
       const st = this._status.get(providerId) || {};
       const crashCount = (st.crashCount || 0) + 1;
       this._status.set(providerId, { ...st, status: 'crashed', health: 0, crashCount, lastCrashAt: Date.now() });
@@ -206,7 +217,7 @@ class ProviderHost {
           const mtime = fs.statSync(filePath).mtimeMs;
           const cached = this._scriptCache.get(providerId);
           if (!cached || cached.mtimeMs !== mtime) {
-            console.log(`[ProviderHost] ${providerId} — script changed on disk, re-injecting…`);
+            _log(`[ProviderHost] ${providerId} — script changed on disk, re-injecting…`);
             await this._inject(providerId, win);
           }
         } catch (_) {}
@@ -217,10 +228,10 @@ class ProviderHost {
 
     // Navigate to provider
     await win.loadURL(def.url).catch(e => {
-      console.warn(`[ProviderHost] ${providerId} loadURL failed:`, e.message);
+      _logWarn(`[ProviderHost] ${providerId} loadURL failed:`, e.message);
     });
 
-    console.log(`[ProviderHost] ${providerId} window spawned → ${def.url}`);
+    _log(`[ProviderHost] ${providerId} window spawned → ${def.url}`);
     this.sse.emit('provider.host.started', { providerId, url: def.url, ts: Date.now() });
 
     return { ok: true, providerId, url: def.url, status: 'started' };
@@ -229,14 +240,14 @@ class ProviderHost {
   // ── Auto-boot all providers (called from main/index.js after app ready) ──
   async autoBootAll(opts = {}) {
     const providers = listProviders();
-    console.log(`[ProviderHost] auto-booting ${providers.length} provider tabs (hidden)…`);
+    _log(`[ProviderHost] auto-booting ${providers.length} provider tabs (hidden)…`);
     const results = [];
     for (const def of providers) {
       try {
         const r = await this.start(def.id, { show: false, ...opts });
         results.push(r);
       } catch (e) {
-        console.warn(`[ProviderHost] failed to boot ${def.id}:`, e.message);
+        _logWarn(`[ProviderHost] failed to boot ${def.id}:`, e.message);
         results.push({ ok: false, providerId: def.id, error: e.message });
       }
       // Stagger boot to avoid auth/fingerprint collision
