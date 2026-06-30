@@ -453,13 +453,33 @@ ${buildToolsPrompt()}${domSection}`;
     const bridgeUrl = this.settings.bridgeUrl('/bridge/handshake');
     const secret    = process.env.BRIDGE_SECRET_COPILOT || 'nexus-copilot-internal-v1';
     const port      = this.settings.get().copilotPort || 3750;
+
+    // §fix 2026-06-30 — `timeout: 5000` below was dead code. The global
+    // fetch() (Node's native fetch, same one Electron uses) does NOT
+    // support a `timeout` option — it's silently ignored, not an error.
+    // Direct testing confirmed bridge/identity.js's handshake logic is
+    // correct (verified both in-process and via real HTTP against a live
+    // bridge instance — resolves cleanly, 200 OK, valid token, no hang).
+    // The "Premature close" errors are a transport-layer symptom: most
+    // likely autopilot restarting bridge mid-request during its own
+    // backoff/crash cycle (visible in the same log dump as repeated
+    // "[bridge] stable for 60s — backoff reset" lines, meaning bridge
+    // WAS unstable before that point). A real AbortController timeout
+    // at least bounds how long a hung/dying connection blocks retries,
+    // and distinguishes "nothing listening" from "connection died
+    // mid-response" in the log, which the prior single catch-all
+    // err.message did not.
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 5000);
+
     try {
       const res = await fetch(bridgeUrl, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ systemId: 'copilot', secret, port }),
-        timeout: 5000,
+        signal:  controller.signal,
       });
+      clearTimeout(timeoutId);
       if (!res.ok) {
         console.warn(`[CoPilot/Bridge] Handshake HTTP ${res.status} — will retry`);
         setTimeout(() => this._bridgeHandshake(), 10000);
@@ -471,7 +491,17 @@ ${buildToolsPrompt()}${domSection}`;
       console.log('[CoPilot/Bridge] Bridge handshake OK — token issued');
       this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
     } catch (err) {
-      console.warn('[CoPilot/Bridge] Handshake failed:', err.message, '— retry in 10s');
+      clearTimeout(timeoutId);
+      // Distinguish failure modes — was bridge unreachable, or did the
+      // connection die partway through? ECONNREFUSED = nothing listening
+      // (bridge not booted yet, normal during startup). AbortError = our
+      // own 5s timeout fired (bridge accepted but never responded).
+      // Anything else (including "Premature close") = the connection was
+      // torn down mid-response — consistent with bridge restarting.
+      const cause = err.code === 'ECONNREFUSED' ? 'bridge not listening yet'
+        : err.name === 'AbortError' ? 'no response within 5s'
+        : `connection closed mid-response (${err.message}) — bridge may be restarting`;
+      console.warn(`[CoPilot/Bridge] Handshake failed: ${cause} — retry in 10s`);
       setTimeout(() => this._bridgeHandshake(), 10000);
     }
   }

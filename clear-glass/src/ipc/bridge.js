@@ -12,7 +12,7 @@
 
 const http    = require('http');
 const express = require('express');
-const { ipcMain } = require('electron');
+const { ipcMain, session } = require('electron');
 const { emit, on, Event, getBus } = require('../core/bus');
 const { v4: uuidv4 } = require('uuid');
 
@@ -147,6 +147,24 @@ class IpcBridge {
     ipcMain.handle('driver:exec',    async (e, d) => rendererEmit('driver.exec', d));
     ipcMain.handle('cookies:save',   async (e, d) => rendererEmit('cookie.save', d));
     ipcMain.handle('cookies:restore',async (e, d) => rendererEmit('cookie.restore', d));
+    // §fix 2026-06-30 — found while auditing the screenshot's dead "Cookies: 0"
+    // indicator: updateCookieCount() in browser.html called cg.cookies.save()
+    // (wrong method — save persists, doesn't count) then discarded the result
+    // entirely and wrote the page URL hostname into the cookie-count label.
+    // No cookies:count handler existed anywhere — this capability was a stub.
+    // Real implementation: session.cookies.get({url}) for the agent's actual
+    // partition, per Electron's documented cookie API.
+    ipcMain.handle('cookies:count', async (e, { url, agentId } = {}) => {
+      try {
+        if (!url) return { ok: false, error: 'url required', count: 0 };
+        const partition = `persist:ncp-${agentId || 'default'}`;
+        const ses = session.fromPartition(partition);
+        const cookies = await ses.cookies.get({ url });
+        return { ok: true, count: cookies.length };
+      } catch (err) {
+        return { ok: false, error: err.message, count: 0 };
+      }
+    });
     ipcMain.handle('copilot:send',   async (e, d) => rendererEmit('copilot.message', d));
     ipcMain.handle('context:switch', async (e, d) => rendererEmit('context.switch', d));
     ipcMain.handle('api:get',        async ()    => this.apiSettings?.getPublic());

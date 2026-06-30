@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   cookies: {
     save:    (payload) => ipcRenderer.invoke('cookies:save', payload),
     restore: (payload) => ipcRenderer.invoke('cookies:restore', payload),
+    count:   (payload) => ipcRenderer.invoke('cookies:count', payload),
   },
 
   // ── Co-pilot ─────────────────────────────────────────────────────────
