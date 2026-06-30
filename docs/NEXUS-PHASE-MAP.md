@@ -1085,3 +1085,44 @@ fixed delays never drop below the floor, plus a falsy-zero edge case
 (`minRestartDelay: 0` must mean "no floor," not "floor of zero" — a subtle
 bug shape that would have looked like it worked while doing nothing). 56/56
 tests passing across 6 suites.
+
+---
+
+## CHANGELOG (session 14 — 2026-06-30): UI relational wire-pressure system, wired for real
+
+`wireRelationalTension()` in `ui/tv-shell/spotlight/spotlight.js` had
+correct math and zero data behind it — flagged honestly at the time
+(`/api/hooks/summary doesn't exist anywhere`). Built the missing route for
+real this session, then proved it live:
+
+- `cortex/boot.js` — new `GET /hooks/summary`, serving `hooks/index.js`'s
+  real wire data directly (80 hooks, 10 systems, confirmed by booting the
+  actual server and curling it — not just reading the route's code).
+- `guardian/server.js` — new `GET /api/guardian/hooks/summary` proxy, same
+  pattern as the existing `cfr/state` proxy. **Full chain proven with two
+  real running processes** — browser-facing route → guardian → cortex →
+  `hooks/index.js` — not just unit-tested in isolation.
+- `spotlight.js` — `_getHooks()` now points at the real route, refreshes
+  every 30s (wires change rarely, no need for health-poll frequency), and
+  pressure changes >0.05 push through the same `_emitUIEvent` sensation
+  pipe as everything else — a wire-pressure shift is now a real,
+  causally-chained ledger event, not a number that silently updates in
+  memory. Only emits on real change, not every tick, per §13.3's anti-spam
+  discipline.
+
+8 new tests (`wire-pressure.test.js`) cover the formula's edge cases —
+seam-tracked vs undeclared vs declared-unmonitored wire ordering, direction-
+specificity (A→B ≠ B→A), the 1.0 clamp under stacked factors — plus one
+test pinned against the exact response shape captured from the live curl
+during this session, not fabricated.
+
+**One real mistake, caught by the verification step, not by luck.** An edit
+to `wireRelationalTension()`'s surrounding code accidentally dropped the
+`async function pollCFR() {` declaration wrapping the adjacent CFR-polling
+block, leaving an orphaned `await` outside any function — `node --check`
+caught it immediately, before it shipped. Fixed, re-verified, brace-balance
+double-checked on top of the syntax check. Logged here rather than silently
+corrected, same as every other self-caught error this engagement has
+surfaced — the discipline is naming the mistake, not just fixing it quietly.
+
+64/64 tests passing across 7 suites.

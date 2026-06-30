@@ -2934,6 +2934,23 @@ function handleExtendedRoutes(req, res, url, method) {
     return;
   }
 
+  // §pressure-system fix 2026-06-30 — proxy for the hooks/wires relational
+  // pressure feed, same shape as cfr/state above. This is what
+  // wireRelationalTension() in spotlight.js has been calling with no real
+  // endpoint behind it. Cortex now serves the real data (hooks/index.js,
+  // 80 hooks/10 systems); this just makes it reachable from the browser
+  // the same way cfr/state is.
+  if (method === 'GET' && url.pathname === '/api/guardian/hooks/summary') {
+    const req2 = http.request({ hostname: '127.0.0.1', port: 3748, path: '/hooks/summary', method: 'GET', timeout: 3000 }, r => {
+      let buf = ''; r.on('data', c => buf += c);
+      r.on('end', () => { res.writeHead(r.statusCode || 200, { 'Content-Type': 'application/json' }); res.end(buf); });
+    });
+    req2.on('error', () => { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'cortex unreachable' })); });
+    req2.on('timeout', () => req2.destroy());
+    req2.end();
+    return;
+  }
+
   if (method === 'POST' && url.pathname === '/api/guardian/cfr/event') {
     bodyJ(req).then(body => {
       const payload = JSON.stringify(body);

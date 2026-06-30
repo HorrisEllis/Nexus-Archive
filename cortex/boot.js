@@ -271,6 +271,29 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Hooks/wires summary — relational pressure feed ────────────────────────
+  // §pressure-system fix 2026-06-30 — this is the route
+  // ui/tv-shell/spotlight/spotlight.js's wireRelationalTension() has been
+  // calling since it was written, with no real endpoint behind it
+  // (logged honestly as dead in the code at the time). hooks/index.js's
+  // data was always real — 80 hooks across 10 systems — it just was never
+  // exposed over HTTP. This is the missing piece, not new data.
+  if (p === '/hooks/summary' && method === 'GET') {
+    try {
+      const hooks = require('../hooks/index.js');
+      json(res, 200, {
+        ok: true,
+        summary: hooks.summary(),
+        wires: hooks.allHooks()
+          .filter(h => h.type === 'event-bus' || h.type === 'stream')
+          .map(h => ({ id: h.id, from: h.from, to: h.to, type: h.type, seam: h.seam, status: h.status })),
+      });
+    } catch (e) {
+      json(res, 500, { ok: false, error: `hooks/index.js failed to load: ${e.message}` });
+    }
+    return;
+  }
+
   // ── Events ──────────────────────────────────────────────────────────────
   if (p === '/api/event' && method === 'POST') {
     const body = await readBody(req);

@@ -259,26 +259,43 @@ const CP = (() => {
 
   let _healthMap = {};  // latest health state from pollHealth()
 
-  // §relational-field 2026-06-29 — tension on the WIRE between two systems,
-  // not just each tile's own health. Existing updateTensionField() above is
-  // per-node; this is per-edge. Uses hooks/index.js's real wire data — no
-  // new registry, just a new read of one that already exists.
-  // ⚠️ NOT WIRED: /api/hooks/summary doesn't exist anywhere. Checked —
-  // orchestrator only proxies architect's OWN /api/hooks (a different,
-  // older registry), and hooks/index.js's summary()/SYSTEMS data is never
-  // exposed over HTTP to the browser at all. wireRelationalTension() below
-  // is real and correct against whatever wire list it's given — but
-  // nothing currently fetches one for it. Needs a small new cortex or
-  // guardian route exposing hooks/index.js before this runs for real.
+  // §relational-field 2026-06-30 — WIRED FOR REAL. Route now exists:
+  // cortex serves /hooks/summary (real hooks/index.js data, 80 hooks/10
+  // systems), guardian proxies it at /api/guardian/hooks/summary, same
+  // pattern as cfr/state. Refreshed every 30s (wires change rarely — no
+  // need to poll as often as health/cfr) and pushed through the same
+  // sensation event pipe (_emitUIEvent) so a wire-pressure change is a
+  // real, causally-chained event in the ledger, not just a number that
+  // silently updates in memory.
   let _hooksCache = null;
+  let _lastWirePressure = {}; // "from→to" -> last emitted pressure, to avoid re-emitting unchanged values
   async function _getHooks() {
-    if (_hooksCache) return _hooksCache;
     try {
-      const d = await fetch(`${B.orch}/api/hooks/summary`, { signal: AbortSignal.timeout(3000) }).then(r => r.json());
-      _hooksCache = d;
-    } catch(_) { _hooksCache = null; }
+      const d = await fetch(`${B.orch}/api/guardian/hooks/summary`, { signal: AbortSignal.timeout(3000) })
+        .then(r => r.ok ? r.json() : null).catch(() => null);
+      if (d?.ok) _hooksCache = d;
+    } catch(_) { /* keep stale cache rather than null it out on a transient failure */ }
     return _hooksCache;
   }
+
+  async function pollWirePressure() {
+    const hooksData = await _getHooks();
+    if (!hooksData?.wires) return;
+    for (const wire of hooksData.wires) {
+      const fromId = wire.from?.surface, toId = wire.to?.surface;
+      if (!fromId || !toId || fromId === '*' || toId === 'browser-tab') continue; // skip non-system endpoints
+      const pressure = wireRelationalTension(fromId, toId, _healthMap, hooksData.wires);
+      const key = `${fromId}→${toId}`;
+      // Only emit on real change — pushing through the event bus on every
+      // 30s tick even when nothing moved would just be noise, the same
+      // anti-pattern §13.3's fault taxonomy exists to name and avoid.
+      if (_lastWirePressure[key] === undefined || Math.abs(_lastWirePressure[key] - pressure) > 0.05) {
+        _lastWirePressure[key] = pressure;
+        _emitUIEvent('wire.pressure.changed', { from: fromId, to: toId, pressure, seamTracked: !!wire.seam });
+      }
+    }
+  }
+  setInterval(() => pollWirePressure().catch(() => {}), 30000);
 
   // Relational tension between two systems = max of their own tensions,
   // boosted if the wire connecting them is NOT seam-tracked (an
@@ -294,7 +311,7 @@ const CP = (() => {
     return Math.min(1, nodeTension + undeclaredBoost);
   }
 
-
+  async function pollCFR() {
     try {
       const d = await fetch(`${B.orch}/api/guardian/cfr/state`, { signal: AbortSignal.timeout(3000) })
         .then(r => r.ok ? r.json() : null).catch(() => null);
