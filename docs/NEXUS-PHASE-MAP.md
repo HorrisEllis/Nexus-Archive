@@ -990,3 +990,55 @@ touching anything:
   clean non-overlapping `extends:`. Nothing further to merge; confirmed
   clean rather than assumed clean, since "looks done" and "verified done"
   are different claims and this session has been about not conflating them.
+
+---
+
+## CHANGELOG (session 12 — 2026-06-30): Health/Cookies still-static root cause, missing timestamps
+
+A new screenshot showed `Health: 100` and `Cookies: 0` still frozen despite
+session 11's fix. Traced precisely rather than re-guessed:
+
+**Real bug, found and fixed:** session 11's fix only ever *wrote* to
+`statusHealth` inside the `nexus.status` SSE event handler — correct when
+the event arrives, but the event requires orchestrator to be running. The
+attached boot log showed `[ClearGlass §AXIOM] orchestrator offline —
+running standalone` — meaning the event genuinely never fires in this
+exact session, and the indicator was permanently stuck at the **raw HTML's
+hardcoded `Health: 100`**, looking confidently correct while being entirely
+fake. Same root shape as the original bug, just one layer further back —
+fixed the *symptom* (writing real data when it arrives) without fixing the
+*default* (what to show when it doesn't). Fixed: initial markup now reads
+`Health: —` / `Cookies: —` (honest unknown, not a fake number), and an 8s
+timeout flips both the health text and the NEXUS status dot to an explicit
+"offline" state with a tooltip explaining why, if no event arrives.
+
+**Second real bug, same screenshot:** `updateCookieCount()` had exactly one
+call site, inside `did-stop-loading`/`did-navigate` handlers — meaning a
+tab that opens at `about:blank` and is never explicitly navigated (the
+default "New tab" case, exactly what the screenshot shows) never calls it
+at all, ever. Fixed: an initial call now fires on boot when there's no
+`initialUrl` to load, instead of relying solely on a navigation event that
+may never come.
+
+**Third finding, not a bug — a missing diagnostic.** The pasted log showed
+~90 "Handshake failed: bridge not listening yet — retry in 10s" lines with
+**no timestamps at all**, making it look like a tight spam loop. Checked
+the retry code directly: genuinely `setTimeout(..., 10000)`, confirmed
+correct both call sites. The "spam" appearance was an artifact of
+`clear-glass/src/copilot/bridge.js` never having gotten the per-file
+timestamping treatment session 11 applied to `providers/host.js` — fixed,
+all 5 log lines in that file now timestamped and source-tagged the same
+way. The underlying behavior (retry every 10s while bridge is down) was
+correct the whole time; it just wasn't legible in the log.
+
+**Honest assessment on "should this be rebuilt":** every bug found this
+round and session 11 was a real, traceable, fixable defect in specific
+functions — not a structural problem with the architecture. The component/
+hook/wire registry, RAID's core engine, the pressure system, the tab
+system, the preload bridge — all independently test-verified and working.
+What's been recurring is a narrower pattern: UI code paths that only get
+exercised when the full NEXUS stack is running, silently doing nothing
+useful when run standalone (which is how Clear Glass is being tested here).
+That's a real gap worth naming as its own thing — standalone-mode behavior
+hasn't had the same test discipline as the rest of this build — not a
+case for starting over.

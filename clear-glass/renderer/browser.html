@@ -980,8 +980,8 @@
   <span><span class="status-dot" id="dot-tls"></span>JA4</span>
   <span id="status-agent">Agent: default</span>
   <span id="status-url" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-  <span id="status-health">Health: 100</span>
-  <span id="status-cookies">Cookies: 0</span>
+  <span id="status-health">Health: —</span>
+  <span id="status-cookies">Cookies: —</span>
 </div>
 
 <!-- Main layout -->
@@ -1503,6 +1503,14 @@
   if (initialUrl) {
     const norm = normalizeUrl(initialUrl);
     if (norm) wv.loadURL(norm);
+  } else {
+    // §fix 2026-06-30, round 2 — found via screenshot: a fresh tab opened
+    // with NO initialUrl (the default "New tab" case) sits at about:blank
+    // forever and never fires did-stop-loading/did-navigate, which were
+    // the ONLY two call sites for updateCookieCount(). Result: the cookie
+    // indicator stayed stuck at its initial state permanently for any tab
+    // that's never explicitly navigated — exactly the screenshot's tab.
+    updateCookieCount();
   }
 
   document.getElementById('btn-back').addEventListener('click', () => wv.canGoBack() && wv.goBack());
@@ -1876,8 +1884,27 @@
   function connectSSE() {
     es = new EventSource(`http://127.0.0.1:${ssePort}/events?replay=5`);
 
+    // §fix 2026-06-30, round 2 — found via a real boot log: orchestrator
+    // offline (standalone Clear Glass) means nexus.status NEVER fires, so
+    // statusHealth/statusCookies stayed at whatever was hardcoded in the
+    // raw HTML forever — "Health: 100" looking confidently wrong instead
+    // of honestly unknown. Initial markup now says "—" (fixed above); this
+    // timeout makes the "—" SAY something after a few seconds of silence,
+    // instead of being indistinguishable from "still loading."
+    const _healthTimeout = setTimeout(() => {
+      statusHealth.textContent = 'Health: offline';
+      statusHealth.style.color = 'var(--red, #ff4466)';
+      statusHealth.title = 'No nexus.status event received — orchestrator unreachable or NEXUS not running';
+      const dot = document.getElementById('dot-nexus');
+      if (dot) {
+        dot.className = 'status-dot error';
+        dot.parentElement.title = 'orchestrator unreachable — no nexus.status event in 8s';
+      }
+    }, 8000);
+
     // ── Live status dots driven by SSE — never hardcoded ──────────────
     es.addEventListener('nexus.status', (e) => {
+      clearTimeout(_healthTimeout);
       const d = JSON.parse(e.data);
       const dot = document.getElementById('dot-nexus');
       dot.className = 'status-dot ' + (d.all ? 'ok' : 'error');

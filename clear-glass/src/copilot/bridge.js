@@ -81,7 +81,7 @@ class CoPilotBridge {
     try {
       result = await this._callNexusCopilot({ message, agentId, domContext, systemExtra, msgId });
     } catch (err) {
-      console.warn('[CoPilot] NEXUS offline, falling back:', err.message);
+      console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot] NEXUS offline, falling back:`, err.message);
       result = await this._callFallback({ message, agentId, domContext, msgId });
     }
 
@@ -91,7 +91,7 @@ class CoPilotBridge {
     // Execute all tool calls
     for (const cmd of commands) {
       await this._executeCommand(cmd, agentId).catch(err => {
-        console.warn(`[CoPilot] Command failed [${cmd.action}]:`, err.message);
+        console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot] Command failed [${cmd.action}]:`, err.message);
         this.sse.emit('copilot.tool.error', { action: cmd.action, error: err.message, agentId });
       });
     }
@@ -481,14 +481,14 @@ ${buildToolsPrompt()}${domSection}`;
       });
       clearTimeout(timeoutId);
       if (!res.ok) {
-        console.warn(`[CoPilot/Bridge] Handshake HTTP ${res.status} — will retry`);
+        console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake HTTP ${res.status} — will retry`);
         setTimeout(() => this._bridgeHandshake(), 10000);
         return;
       }
       const { token } = await res.json();
       this._bridgeToken = token;
       await this.settings.setBridgeToken(token);
-      console.log('[CoPilot/Bridge] Bridge handshake OK — token issued');
+      console.log(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Bridge handshake OK — token issued`);
       this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
     } catch (err) {
       clearTimeout(timeoutId);
@@ -501,7 +501,7 @@ ${buildToolsPrompt()}${domSection}`;
       const cause = err.code === 'ECONNREFUSED' ? 'bridge not listening yet'
         : err.name === 'AbortError' ? 'no response within 5s'
         : `connection closed mid-response (${err.message}) — bridge may be restarting`;
-      console.warn(`[CoPilot/Bridge] Handshake failed: ${cause} — retry in 10s`);
+      console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake failed: ${cause} — retry in 10s`);
       setTimeout(() => this._bridgeHandshake(), 10000);
     }
   }
