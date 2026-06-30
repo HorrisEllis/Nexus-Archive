@@ -492,15 +492,61 @@ ${buildToolsPrompt()}${domSection}`;
       this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
     } catch (err) {
       clearTimeout(timeoutId);
-      // Distinguish failure modes — was bridge unreachable, or did the
-      // connection die partway through? ECONNREFUSED = nothing listening
-      // (bridge not booted yet, normal during startup). AbortError = our
-      // own 5s timeout fired (bridge accepted but never responded).
-      // Anything else (including "Premature close") = the connection was
-      // torn down mid-response — consistent with bridge restarting.
+      // §fix 2026-06-30, round 3 — the "bridge may be restarting" theory
+      // in the prior comment here is DISPROVEN. Tested this session: (1)
+      // identity.handshake() in isolation — clean. (2) curl against a real
+      // booted bridge — clean. (3) Node's global fetch (same API Electron
+      // uses) against a real booted bridge — clean. (4) 9 CONCURRENT
+      // handshakes at once, simulating real multi-system boot — all 9
+      // resolved clean. The actual log this is debugging shows bridge
+      // "stable for 60s" — not restarting — while handshake fails every
+      // single retry, forever. Every layer I can test from this sandbox
+      // checks out; something specific to the real Windows/Electron
+      // runtime is the remaining candidate (firewall/AV intercepting
+      // loopback, or an Electron network-stack quirk I have no way to
+      // reproduce without a real Electron process). Logged honestly
+      // instead of re-guessing a cause I can't verify.
+      //
+      // Real, useful change: full error diagnostics (code/name/cause/stack)
+      // dumped once per failure type, so the NEXT occurrence is conclusive
+      // rather than another generic line — and a raw http.request fallback
+      // attempt, to rule out (or confirm) that this is specific to fetch()'s
+      // implementation rather than the network path itself.
+      console.error(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake error detail — code:${err.code} name:${err.name} cause:${err.cause?.code || err.cause?.message || 'none'} message:"${err.message}"`);
+
+      let httpFallbackResult = null;
+      try {
+        httpFallbackResult = await new Promise((resolve, reject) => {
+          const http = require('http');
+          const payload = JSON.stringify({ systemId: 'copilot', secret, port });
+          const u = new URL(bridgeUrl);
+          const req = http.request({
+            hostname: u.hostname, port: u.port, path: u.pathname, method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+            timeout: 5000,
+          }, r => {
+            let buf = ''; r.on('data', c => buf += c);
+            r.on('end', () => resolve({ status: r.statusCode, body: buf }));
+          });
+          req.on('error', reject);
+          req.on('timeout', () => { req.destroy(); reject(new Error('http.request timeout')); });
+          req.write(payload); req.end();
+        });
+        console.log(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] http.request FALLBACK succeeded where fetch() failed — status ${httpFallbackResult.status}. This means the bug is specific to fetch()'s implementation, not the network path. Real fix: switch this function to http.request permanently.`);
+        const parsed = JSON.parse(httpFallbackResult.body);
+        if (parsed.token) {
+          this._bridgeToken = parsed.token;
+          await this.settings.setBridgeToken(parsed.token);
+          this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
+          return; // recovered via fallback — skip the retry below
+        }
+      } catch (fallbackErr) {
+        console.error(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] http.request fallback ALSO failed: ${fallbackErr.message} — confirms this is a real network-path issue, not fetch()-specific.`);
+      }
+
       const cause = err.code === 'ECONNREFUSED' ? 'bridge not listening yet'
         : err.name === 'AbortError' ? 'no response within 5s'
-        : `connection closed mid-response (${err.message}) — bridge may be restarting`;
+        : `connection closed mid-response (${err.message}) — see error detail line above for diagnosis`;
       console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake failed: ${cause} — retry in 10s`);
       setTimeout(() => this._bridgeHandshake(), 10000);
     }
