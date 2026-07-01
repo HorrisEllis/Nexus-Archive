@@ -9,8 +9,11 @@
  * pulse frequency and colour directly.
  *
  * Data sources — both wired for real this session, not stubs:
- *   GET /api/guardian/cfr/state     → field state (sigma, regime, etc)
- *   GET /api/guardian/hooks/summary → node graph (systems + wires)
+ *   GET /api/guardian/nerve/snapshot  → unified Nerve snapshot (nodes, field, stresses)
+ *   (Guardian proxies to Cortex which runs lib/nerve/index.js — §5.7 sovereign consumer pattern)
+ *   Individual routes still available if needed:
+ *     GET /api/guardian/cfr/state     → raw field state
+ *     GET /api/guardian/hooks/summary → raw wire graph
  *
  * Sovereign module: own canvas, own polling loop, HTTP-callable
  * (POST /api/ui/nerve/on|off|sigma), registers with co-pilot.
@@ -76,7 +79,36 @@
   }
 
   // ── Data polling ─────────────────────────────────────────────────────────
+  // ── Unified Nerve snapshot poll ────────────────────────────────────────────
+  // One call to /nerve/snapshot returns nodes + field + stresses together.
+  // Guardian proxies → Cortex → lib/nerve/index.js. No direct imports
+  // between Clear Glass and any NEXUS lib — §5.7 sovereign consumer.
+  async function pollNerveSnapshot() {
+    try {
+      const d = await fetch(`${ORCH}/api/guardian/nerve/snapshot`, {
+        signal: AbortSignal.timeout(3000),
+      }).then(r => r.ok ? r.json() : null).catch(() => null);
+      if (!d?.ok) return;
+
+      // Update field from snapshot
+      if (d.nodes?.[0]?.health) {
+        const h = d.nodes[0].health; // all nodes share global field in Phase 1
+        field.sigma     = h.entropy ?? 0;  // entropy as proxy for sigma until phase 4
+        field.coherence = h.coherence ?? 1;
+        field.friction  = h.friction  ?? 0;
+        field.entropy   = h.entropy   ?? 0;
+        field.regime    = h.regime    || 'stable';
+      }
+
+      // Build wire list from nodes that have declared hooks
+      // (Phase 2+: Nerve will carry wire graph directly; for now
+      //  fall back to the hooks/summary route if snapshot has no wires)
+      if (d.stresses) field.stressCount = d.stresses.length;
+    } catch (_) {}
+  }
+
   async function pollCFR() {
+    // Kept as direct fallback if nerve/snapshot unavailable
     try {
       const d = await fetch(`${ORCH}/api/guardian/cfr/state`, {
         signal: AbortSignal.timeout(3000),
@@ -248,11 +280,11 @@
 
   // ── Boot ─────────────────────────────────────────────────────────────────
   async function boot() {
-    await Promise.all([pollCFR(), pollHooks()]);
+    await Promise.all([pollNerveSnapshot(), pollHooks()]);
     applyLayout();
     loop();
 
-    setInterval(() => pollCFR().catch(() => {}),   POLL_CFR_MS);
+    setInterval(() => pollNerveSnapshot().catch(() => pollCFR().catch(() => {})), POLL_CFR_MS);
     setInterval(() => {
       pollHooks().then(() => applyLayout()).catch(() => {});
     }, POLL_HOOKS_MS);

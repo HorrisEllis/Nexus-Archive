@@ -328,6 +328,23 @@ const HOOKS = [
     seam: null,
     status: "active",
     updatedAt: "2026-06-29T00:00:00Z"
+  },
+
+  // §Phase-0 nerve-pulse 2026-07-01
+  {
+    id:        'ol-hook-heartbeat-0099',
+    name:      'ollama-heartbeat',
+    intent:    'Signal ollama-bridge liveness to orchestrator every 10s for Nerve presence tracking',
+    type:      'api',
+    direction: 'unidirectional',
+    from:      { surface: 'ollama', layer: 2, port: 3749 },
+    to:        { surface: 'orchestrator', layer: 0, port: 9000 },
+    config:    { path: '/api/heartbeat', method: 'POST', intervalMs: 10000 },
+    contract:  { axioms: ['§2.3'], sideEffects: ['orchestrator.lastSeen updated'], idempotent: true },
+    references: { files: ['ollama/server.js → register() → startHeartbeat()', 'nexus-connect.js → startHeartbeat'] },
+    seam:      null,
+    status:    'active',
+    updatedAt: '2026-07-01T00:00:00Z',
   }
 ];
 module.exports = {

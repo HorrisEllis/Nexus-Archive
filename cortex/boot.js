@@ -260,6 +260,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── CFR field ───────────────────────────────────────────────────────────
+
+  // ── Nerve snapshot — §5.7 sovereign consumer pattern ─────────────────────────
+  // Clear Glass (the browser) fetches this URL as any browser consumer fetches
+  // /cfr/field — no direct import between sibling systems. Versionium owns
+  // snapshot/commit/replay; this route exposes Nerve's attention-layer read
+  // surface over HTTP so the expression layer (alk-gl.js) can pull it without
+  // any module coupling between Clear Glass and lib/nerve/.
+  if (p === '/nerve/snapshot' && method === 'GET') {
+    try {
+      const nerve = require('../lib/nerve/index.js');
+      json(res, 200, { ok: true, ...nerve.getSnapshot() });
+    } catch (e) {
+      json(res, 500, { ok: false, error: 'nerve read failed: ' + e.message });
+    }
+    return;
+  }
+
   if (p === '/cfr/health' || p === '/cfr/field') {
     if (method === 'POST') {
       const body = await readBody(req);

@@ -2951,6 +2951,20 @@ function handleExtendedRoutes(req, res, url, method) {
     return;
   }
 
+  // §5.7 sovereign consumer — nerve/snapshot proxied same way as cfr/state.
+  // Clear Glass fetches /api/guardian/nerve/snapshot; guardian proxies to
+  // cortex; cortex calls lib/nerve/index.js. No sibling imports anywhere.
+  if (method === 'GET' && url.pathname === '/api/guardian/nerve/snapshot') {
+    const req2 = http.request({ hostname: '127.0.0.1', port: 3748, path: '/nerve/snapshot', method: 'GET', timeout: 3000 }, r => {
+      let buf = ''; r.on('data', c => buf += c);
+      r.on('end', () => { res.writeHead(r.statusCode || 200, { 'Content-Type': 'application/json' }); res.end(buf); });
+    });
+    req2.on('error', () => { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'cortex unreachable' })); });
+    req2.on('timeout', () => req2.destroy());
+    req2.end();
+    return;
+  }
+
   if (method === 'POST' && url.pathname === '/api/guardian/cfr/event') {
     bodyJ(req).then(body => {
       const payload = JSON.stringify(body);

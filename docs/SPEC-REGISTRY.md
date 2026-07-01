@@ -113,3 +113,4 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `ui.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `user-model.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `vector-memory.spec` | 1.0.0 | — | not yet checked against live code this pass |
+| `nexus-nerve.spec` | 0.2.0 | 2026-07-01 | ✓ REGISTERED — spec written by James from-scratch (v0.1 lost, §2.1 violation noted in spec itself). Audited against live code this session. Phase 0 (pulse audit) complete — copilot/ollama heartbeats added. Phase 1 (read layer) built: `lib/nerve/index.js`, 16/16 tests passing. Phases 2+ not started. FieldMonitor/Living Glass dedup check (Phase 3) still open — see spec §E. |

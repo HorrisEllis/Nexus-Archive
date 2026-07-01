@@ -301,7 +301,15 @@ function register() {
     hostname: u.hostname, port: u.port||9000, path: u.pathname, method:'POST',
     headers: { 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) },
     timeout: 4000,
-  }, () => console.log('[ollama-bridge] registered'));
+  }, () => {
+    console.log('[ollama-bridge] registered');
+    // §Phase-0 nerve-pulse 2026-07-01 — same gap as copilot: registered once,
+    // then invisible to nexus-bus._sources. Nerve needs recurring presence data.
+    try {
+      const { startHeartbeat } = require('../nexus-connect');
+      startHeartbeat(SYSTEM_ID, PORT);
+    } catch (_) {}
+  });
   r.on('error', () => setTimeout(register, 5000));
   r.write(body); r.end();
 }

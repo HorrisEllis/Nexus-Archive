@@ -692,7 +692,21 @@ function register() {
   const u = new URL(`${OR_URL}/api/register`);
   const r = http.request({ hostname:u.hostname, port:u.port||9000, path:u.pathname,
     method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)},
-    timeout:4000 }, () => console.log('[copilot] registered'));
+    timeout:4000 }, () => {
+    console.log('[copilot] registered');
+    // §Phase-0 nerve-pulse 2026-07-01 — start recurring heartbeat so this
+    // system appears in nexus-bus._sources and Nerve's presence layer can
+    // track it. Without this, copilot registered once and was then invisible
+    // to the bus's per-source emitCount/lastSeen map that the Nerve read
+    // layer reads. startHeartbeat pings /api/heartbeat every 10s, unref'd
+    // so it doesn't block process exit. Confirmed absent before this add —
+    // grep for 'startHeartbeat\|createPulse' in copilot/server.js returned
+    // zero matches per the Phase 0 audit this session.
+    try {
+      const { startHeartbeat } = require('../nexus-connect');
+      startHeartbeat(SYSTEM_ID, PORT);
+    } catch (_) { /* nexus-connect optional — never crash the server over a heartbeat */ }
+  });
   r.on('error', () => setTimeout(register, 5000));
   r.write(body); r.end();
 }

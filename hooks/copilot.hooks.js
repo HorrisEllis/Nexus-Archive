@@ -635,6 +635,24 @@ const HOOKS = [
     seam: null,
     status: "active",
     updatedAt: "2026-06-29T00:00:00Z"
+  },
+
+  // §Phase-0 nerve-pulse 2026-07-01 — presence signal added so Nerve's
+  // per-source lastSeen/emitCount tracking has something real to read.
+  {
+    id:        'cp-hook-heartbeat-0099',
+    name:      'copilot-heartbeat',
+    intent:    'Signal copilot liveness to orchestrator every 10s so nexus-bus._sources tracks real presence for the Nerve attention layer',
+    type:      'api',
+    direction: 'unidirectional',
+    from:      { surface: 'copilot', layer: 2, port: 3750 },
+    to:        { surface: 'orchestrator', layer: 0, port: 9000 },
+    config:    { path: '/api/heartbeat', method: 'POST', intervalMs: 10000 },
+    contract:  { axioms: ['§2.3'], sideEffects: ['orchestrator.lastSeen updated', 'nexus-bus._sources.emitCount++'], idempotent: true },
+    references: { files: ['copilot/server.js → register() → startHeartbeat()', 'nexus-connect.js → startHeartbeat'] },
+    seam:      null,
+    status:    'active',
+    updatedAt: '2026-07-01T00:00:00Z',
   }
 ];
 module.exports = {
