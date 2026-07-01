@@ -1,6 +1,6 @@
 # NEXUS — Complete Phase Map
 **Author:** James Brooks (Erosmancer)
-**Last updated:** 2026-06-29 (session 8 — axioms consolidated, spec registry, adaptive fulfillment)
+**Last updated:** 2026-06-30 (session 11 — Clear Glass debugging, tree-sync verification, phase-map document audit)
 **Status:** Living document — append-only, never shrink. As of session 3,
 this is the **only** living changelog/phase-map document. `SESSION-CHANGELOG.md`
 and the session's `MASTER-SESSION-SPEC.md` are folded in below and retired —
@@ -938,3 +938,231 @@ through Guardian's NCP is not wired here, and the endpoint says so in its
 response rather than pretending. New component registered
 (`copilot.prompt.fulfill`) and hooked (`hooks/copilot.hooks.js`, +2 entries,
 registry now 80 hooks across 10 systems, was 78).
+
+---
+
+## CHANGELOG (session 11 — 2026-06-30): Clear Glass debugging, phase-map document audit
+
+**Clear Glass UI fixes** — full trace, not patches. `Health: 100` and
+`Cookies: 0` were both stubs (hardcoded / wrong-method-discarded-result
+respectively); both fixed for real and test-covered (13 new tests,
+`clear-glass-indicators.test.js`). Bridge handshake's "Premature close" was
+chased 5 layers deep through correct code before the actual bug surfaced —
+`fetch()`'s `timeout` option doesn't exist on the spec, was silently dead;
+replaced with `AbortController`. ChatGPT NCP flapping confirmed environmental
+(tab genuinely reconnecting every few seconds), not a code bug — ruled out
+both the flap-detector and the client reconnect logic by direct simulation
+and code trace before concluding that. One real architectural lesson logged:
+never `Proxy` a `contextBridge`-exposed object directly — frozen property
+descriptors make that throw; copy into an owned plain object first, proxy
+that instead. Full detail: `docs/META-SYSTEM-AND-SUBSYSTEM-SPECS.md` §9.
+
+**Tree-sync verified, not assumed.** A 3-fix sync package was checked
+file-by-file against a freshly re-uploaded tree before applying anything —
+2 of 3 fixes were already present and byte-identical, only
+`clear-glass/siso/package.json` was genuinely missing. Applied, then proven
+by loading the real modules end-to-end (`idearium/index.js`'s actual import
+chain), not just confirming file existence. All 50 prior-session tests
+reran clean against the new tree first.
+
+**Phase-map document audit — consolidation requested, findings below.**
+Five phase-map-shaped files exist in `docs/`. Read every one before
+touching anything:
+- `phase-map.spec` — dead ancestor, stops at phase 6, predates AX-
+  numbering. Superseded by this file. Left in place untouched as historical
+  record (same pattern as `SESSION-CHANGELOG.md`'s superseded banner),
+  not deleted, not merged further — there's nothing in it not already
+  captured here in a more current form.
+- `diagnostic-phase-map.spec` — different category, one service's
+  detect→remediate pipeline (`service/nexus-diagnostic.js`), not a
+  build/feature map. Correctly out of scope, left untouched.
+- `AXIOMS-PHASE-MAP.md` — legitimate sibling document (axiom-to-phase
+  compliance, not duplicate phase content). Not a merge target.
+- An uploaded HTML phase-map widget was checked against this file's
+  current state and confirmed stale — still showed Phases 113 and 120 as
+  pending, both already closed as of session 9-10. Needs regenerating
+  *from* this document, not merged *into* it; doing so was out of scope
+  this pass since the underlying data (this file) is what's authoritative.
+- Foundation specs (`nexus-system-foundation.spec` + its addendum +
+  the analysis-module specialization) were checked and confirmed already
+  correctly consolidated as of session 8 — AX-008/009/010 present in the
+  base spec, addendum carries its superseded banner, specialization is a
+  clean non-overlapping `extends:`. Nothing further to merge; confirmed
+  clean rather than assumed clean, since "looks done" and "verified done"
+  are different claims and this session has been about not conflating them.
+
+---
+
+## CHANGELOG (session 12 — 2026-06-30): Health/Cookies still-static root cause, missing timestamps
+
+A new screenshot showed `Health: 100` and `Cookies: 0` still frozen despite
+session 11's fix. Traced precisely rather than re-guessed:
+
+**Real bug, found and fixed:** session 11's fix only ever *wrote* to
+`statusHealth` inside the `nexus.status` SSE event handler — correct when
+the event arrives, but the event requires orchestrator to be running. The
+attached boot log showed `[ClearGlass §AXIOM] orchestrator offline —
+running standalone` — meaning the event genuinely never fires in this
+exact session, and the indicator was permanently stuck at the **raw HTML's
+hardcoded `Health: 100`**, looking confidently correct while being entirely
+fake. Same root shape as the original bug, just one layer further back —
+fixed the *symptom* (writing real data when it arrives) without fixing the
+*default* (what to show when it doesn't). Fixed: initial markup now reads
+`Health: —` / `Cookies: —` (honest unknown, not a fake number), and an 8s
+timeout flips both the health text and the NEXUS status dot to an explicit
+"offline" state with a tooltip explaining why, if no event arrives.
+
+**Second real bug, same screenshot:** `updateCookieCount()` had exactly one
+call site, inside `did-stop-loading`/`did-navigate` handlers — meaning a
+tab that opens at `about:blank` and is never explicitly navigated (the
+default "New tab" case, exactly what the screenshot shows) never calls it
+at all, ever. Fixed: an initial call now fires on boot when there's no
+`initialUrl` to load, instead of relying solely on a navigation event that
+may never come.
+
+**Third finding, not a bug — a missing diagnostic.** The pasted log showed
+~90 "Handshake failed: bridge not listening yet — retry in 10s" lines with
+**no timestamps at all**, making it look like a tight spam loop. Checked
+the retry code directly: genuinely `setTimeout(..., 10000)`, confirmed
+correct both call sites. The "spam" appearance was an artifact of
+`clear-glass/src/copilot/bridge.js` never having gotten the per-file
+timestamping treatment session 11 applied to `providers/host.js` — fixed,
+all 5 log lines in that file now timestamped and source-tagged the same
+way. The underlying behavior (retry every 10s while bridge is down) was
+correct the whole time; it just wasn't legible in the log.
+
+**Honest assessment on "should this be rebuilt":** every bug found this
+round and session 11 was a real, traceable, fixable defect in specific
+functions — not a structural problem with the architecture. The component/
+hook/wire registry, RAID's core engine, the pressure system, the tab
+system, the preload bridge — all independently test-verified and working.
+What's been recurring is a narrower pattern: UI code paths that only get
+exercised when the full NEXUS stack is running, silently doing nothing
+useful when run standalone (which is how Clear Glass is being tested here).
+That's a real gap worth naming as its own thing — standalone-mode behavior
+hasn't had the same test discipline as the rest of this build — not a
+case for starting over.
+
+---
+
+## CHANGELOG (session 13 — 2026-06-30): The actual crash, found
+
+Every prior session's UI debugging assumed Clear Glass was a live, connected
+process showing stale data. **A full `npm run start:all` boot log proved
+that assumption wrong.** The real state: `[clear-glass] exited code=0
+signal=null — crashes in window: 1/6` through `6/6`, circuit breaker
+tripped, app not running at all. Every screenshot debugged in sessions
+11-12 was very likely a cached/stale window, not a live one — explains why
+fixes that tested correct in isolation never visibly changed anything.
+
+**Root cause, traced to one line:** `clear-glass/src/main/index.js`'s
+`if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }` —
+zero logging before exit. A lock failure is indistinguishable in any log
+from a real crash, except there's no error anywhere because there isn't
+one; Electron is doing exactly what that line says. The actual mechanism:
+autopilot's exponential backoff (1s → 2s → 4s → 8s → 16s) is uniform across
+all 11 supervised kernels, but Electron's OS-level process teardown on
+Windows measurably lags a plain `node` process's exit — the previous failed
+instance's lock file hadn't released before the next restart attempt fired,
+so every restart immediately self-terminated against its own predecessor.
+Faster backoff intervals failed faster; the circuit breaker tripped on
+schedule, every time, by design — not randomly.
+
+**Fixed two ways, not one:**
+- `requestSingleInstanceLock()` failure now logs loudly (timestamped,
+  source-tagged) and exits with code 1, not silent code 0 — this alone
+  ensures the *next* time this fires, the log says why instead of leaving
+  a 6-line mystery.
+- `autopilot.js` gained a per-kernel `minRestartDelay` floor, applied to
+  clear-glass specifically (3000ms) — `Math.max(kernel.minRestartDelay,
+  s.backoffMs)`, only ever raises the delay, never shortens the normal
+  exponential curve once backoffMs naturally exceeds the floor. Addresses
+  the actual race instead of just diagnosing it better.
+
+6 new tests (`autopilot-restart-delay.test.js`) reproduce the real backoff
+sequence from the log (`[1000, 2000, 4000, 8000, 16000]`) and prove the
+fixed delays never drop below the floor, plus a falsy-zero edge case
+(`minRestartDelay: 0` must mean "no floor," not "floor of zero" — a subtle
+bug shape that would have looked like it worked while doing nothing). 56/56
+tests passing across 6 suites.
+
+---
+
+## CHANGELOG (session 14 — 2026-06-30): UI relational wire-pressure system, wired for real
+
+`wireRelationalTension()` in `ui/tv-shell/spotlight/spotlight.js` had
+correct math and zero data behind it — flagged honestly at the time
+(`/api/hooks/summary doesn't exist anywhere`). Built the missing route for
+real this session, then proved it live:
+
+- `cortex/boot.js` — new `GET /hooks/summary`, serving `hooks/index.js`'s
+  real wire data directly (80 hooks, 10 systems, confirmed by booting the
+  actual server and curling it — not just reading the route's code).
+- `guardian/server.js` — new `GET /api/guardian/hooks/summary` proxy, same
+  pattern as the existing `cfr/state` proxy. **Full chain proven with two
+  real running processes** — browser-facing route → guardian → cortex →
+  `hooks/index.js` — not just unit-tested in isolation.
+- `spotlight.js` — `_getHooks()` now points at the real route, refreshes
+  every 30s (wires change rarely, no need for health-poll frequency), and
+  pressure changes >0.05 push through the same `_emitUIEvent` sensation
+  pipe as everything else — a wire-pressure shift is now a real,
+  causally-chained ledger event, not a number that silently updates in
+  memory. Only emits on real change, not every tick, per §13.3's anti-spam
+  discipline.
+
+8 new tests (`wire-pressure.test.js`) cover the formula's edge cases —
+seam-tracked vs undeclared vs declared-unmonitored wire ordering, direction-
+specificity (A→B ≠ B→A), the 1.0 clamp under stacked factors — plus one
+test pinned against the exact response shape captured from the live curl
+during this session, not fabricated.
+
+**One real mistake, caught by the verification step, not by luck.** An edit
+to `wireRelationalTension()`'s surrounding code accidentally dropped the
+`async function pollCFR() {` declaration wrapping the adjacent CFR-polling
+block, leaving an orphaned `await` outside any function — `node --check`
+caught it immediately, before it shipped. Fixed, re-verified, brace-balance
+double-checked on top of the syntax check. Logged here rather than silently
+corrected, same as every other self-caught error this engagement has
+surfaced — the discipline is naming the mistake, not just fixing it quietly.
+
+64/64 tests passing across 7 suites.
+
+---
+
+## CHANGELOG (session 15 — 2026-06-30): Real error capture built, hardcoded guardian paths removed
+
+**"Where are the errors" — found the actual gap.** `clear-glass/src/
+diagnostic/engine.js` is a Playwright-style test runner (scripted assertion
+sequences, only reports failures from tests explicitly triggered) — it has
+zero passive error-catching. `lib/error-log.js`, referenced in an earlier
+session's notes as universal error logging, doesn't exist anywhere in this
+tree. Every error this session — bridge handshake failures, the crash loop —
+only ever existed as scattered `console.error` calls.
+
+Built `clear-glass/src/diagnostic/error-capture.js` for real: catches
+`uncaughtException`/`unhandledRejection` in the main process, accepts
+renderer-side `window.onerror`/`unhandledrejection` via a new IPC route,
+logs every error to a real `.jsonl` file, keeps a 200-entry ring buffer,
+and broadcasts each one over SSE as `error.captured` — live, not polled.
+The bridge handshake failure from the previous round now routes through
+this same pipe specifically, so that exact error is no longer
+console-only. Renderer errors trigger an immediate visible toast, not just
+a log line. 9 new tests (`error-capture.test.js`) — including one that
+caught a real bug before shipping: `captureFromRenderer()` wasn't
+returning its result, meaning every renderer-reported error round-tripped
+back as `undefined` over IPC. Fixed, reverified.
+
+**"Strip it of the userscripts, not supposed to be baked in" — found three
+real instances of the same coupling, all removed.** `clear-glass/src/
+providers/host.js`, and two separate construction sites in `main/index.js`
+(`ProviderHost` and `UserscriptManager`), each independently hardcoded
+`path.join(__dirname, '../../../../guardian')` or `'../../../guardian'` —
+a silent assumption that clear-glass and guardian are checked out as
+sibling folders in one exact nesting. That's clear-glass reaching across
+into another system's internal file layout by relative path, not a config
+default. All three fixed: `guardianDir` is now required, either passed
+explicitly or via `GUARDIAN_DIR` env var — no fallback that assumes a
+specific repo layout. Logs a clear warning if unconfigured instead of
+silently resolving to a guess.
+
+73/73 tests passing across 8 suites.

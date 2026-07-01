@@ -229,7 +229,7 @@ function _pollCFR() {
 
 // ── Expose state ──────────────────────────────────────────────────────────────
 
-function getState()     { return { ...state, field: _field, regime: _field?.regime || 'stable' }; } // §P48
+function getState()     { return { ...state, field: _field }; }
 function getSigmaFloor(){ return state.sigmaFloor; }
 function isThrottled()  { return state.guardianThrottled; }
 

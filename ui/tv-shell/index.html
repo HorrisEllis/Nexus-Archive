@@ -1441,6 +1441,19 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
     <iframe id="canvas-iframe" src="" style="width:100%;height:100%;border:none;background:#06060e" title="NEXUS Canvas"></iframe>
   </div>
 
+  <!-- CH: NERVE — CFR field mapped onto the live node graph -->
+  <div class="ch" id="ch-nerve" style="padding:0;overflow:hidden;">
+    <div id="nerve-root" style="position:relative;width:100%;height:100%;background:#08080d;">
+      <canvas id="nerve-canvas" style="display:block;width:100%;height:100%;"></canvas>
+      <div id="nerve-hud" style="position:absolute;bottom:10px;left:12px;display:flex;gap:16px;font-family:ui-monospace,monospace;font-size:10px;color:rgba(216,218,228,.4);pointer-events:none;letter-spacing:.04em;">
+        <span id="nerve-regime" style="text-transform:uppercase;font-weight:600;color:rgba(0,245,255,.6)">stable</span>
+        <span id="nerve-sigma">σ 0.000</span>
+        <span id="nerve-nodes-count">— nodes</span>
+        <span id="nerve-wires-count">— wires</span>
+      </div>
+    </div>
+  </div>
+
   <!-- CH: EMERGE IDE — Phase 28: Build From Inside -->
   <div class="ch" id="ch-emerge">
     <iframe id="emerge-iframe" src="" style="width:100%;height:100%;border:none;background:#0d0d0f" title="Emerge IDE"></iframe>
@@ -1502,6 +1515,7 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
       <button class="ch-btn" id="rail-8" onclick="tuneById('ch-causal')"><span class="ch-dot"></span>◈ Causal</button>
       <button class="ch-btn" id="rail-9" onclick="tuneById('ch-conversations')"><span class="ch-dot"></span>⌂ Log</button>
       <button class="ch-btn" id="rail-10" onclick="tuneById('ch-canvas')"><span class="ch-dot"></span>⬡ Canvas</button>
+      <button class="ch-btn" id="rail-nerve" onclick="tuneById('ch-nerve')"><span class="ch-dot" id="nerve-dot"></span>⬡ Nerve</button>
       <button class="ch-btn" id="rail-11" onclick="tuneById('ch-emerge')"><span class="ch-dot"></span>⚡ IDE</button>
     </div>
 
@@ -3830,5 +3844,10 @@ async function wizOpenSpec(uuid) {
 }
 </script>
   <script src="/ui/tv-shell/spotlight/spotlight.js"></script>
+  <script>
+    // Nerve canvas — set ORCH before loading so nerve.js can call the real routes
+    window.__NEXUS_ORCH__ = (typeof B !== 'undefined' && B.orch) ? B.orch : 'http://127.0.0.1:9000';
+  </script>
+  <script src="/ui/tv-shell/nerve/nerve.js"></script>
 </body>
 </html>
