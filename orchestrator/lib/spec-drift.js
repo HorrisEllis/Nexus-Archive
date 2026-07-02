@@ -36,7 +36,7 @@ const crypto = require('crypto');
 
 const MODULE_ID = 'spec-drift';
 const VERSION   = '1.1.0';
-const DOCS_DIR  = path.join(__dirname, '..', 'docs');
+const DOCS_DIR  = path.join(__dirname, '..', '..', 'docs');
 
 // ── Extract version from a .spec file ────────────────────────────────────────
 function _specVersion(specPath) {
@@ -92,7 +92,7 @@ function _loadSpecs() {
 // ── Load code versions from lib/version.js ───────────────────────────────────
 function _loadCodeVersions() {
   try {
-    const V = require('./version');
+    const V = require('../../lib/version');
     const versions = {};
     // Services
     for (const [k, v] of Object.entries(V.services || {})) {
