@@ -27,7 +27,7 @@ function makeFixture() {
   fs.mkdirSync(path.join(dir, 'lib'));
   fs.mkdirSync(path.join(dir, 'data'));
   fs.writeFileSync(path.join(dir, 'lib', 'changelog.js'),
-    fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'changelog.js'), 'utf8')
+    fs.readFileSync(path.join(__dirname, '..', '..', 'orchestrator', 'lib', 'changelog.js'), 'utf8')
       .replace("path.join(__dirname, '..', 'docs')", "process.env.TEST_DOCS_DIR")
       .replace("path.join(__dirname, '..', 'data', 'changelog-snapshot.json')", "process.env.TEST_SNAPSHOT_PATH")
       .replace("path.join(__dirname, '..', 'CHANGELOG.md')", "process.env.TEST_CHANGELOG_PATH")

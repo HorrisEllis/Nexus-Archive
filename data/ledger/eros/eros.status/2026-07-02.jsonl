@@ -1,2 +1,0 @@
-{"uuid":"a9ac0ddf-fd85-4ba1-bb77-ecaf44561f95","system":"eros","component":"eros.status","action":"registered","status":"ok","tags":["eros"],"detail":"Full OS status — bridge, nodes, queue, routing","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492353}
-{"uuid":"b8a96c4e-78fd-41a4-afbe-81c3b0567c0b","system":"eros","component":"eros.status","action":"updated","status":"ok","tags":["eros"],"detail":"Full OS status — bridge, nodes, queue, routing","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329646}

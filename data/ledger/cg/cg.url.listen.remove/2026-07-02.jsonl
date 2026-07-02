@@ -1,2 +1,0 @@
-{"uuid":"03b4d01a-fb9b-46c2-961c-b4bd41f23bec","system":"cg","component":"cg.url.listen.remove","action":"registered","status":"ok","tags":["cg","listener"],"detail":"Remove URL pattern listener by ID","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492290}
-{"uuid":"0346bfff-ad16-49c1-8c19-8d04af0e4c35","system":"cg","component":"cg.url.listen.remove","action":"updated","status":"ok","tags":["cg","listener"],"detail":"Remove URL pattern listener by ID","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329564}

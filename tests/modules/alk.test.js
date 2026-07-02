@@ -19,9 +19,9 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alk-test-'));
 process.env.NEXUS_DATA_ROOT = tmpDir;
 
 // Re-require with temp dir
-Object.keys(require.cache).forEach(k => { if (k.includes('/lib/alk')) delete require.cache[k]; });
-const alk = require(path.join(__dirname, '../../lib/alk'));
-const { DispatchPool } = require(path.join(__dirname, '../../lib/dispatch-pool'));
+Object.keys(require.cache).forEach(k => { if (k.includes('/meta/alk')) delete require.cache[k]; });
+const alk = require(path.join(__dirname, '../../meta/alk'));
+const { DispatchPool } = require(path.join(__dirname, '../../guardian/lib/dispatch-pool'));
 
 let passed = 0, failed = 0;
 const invariants = [];
@@ -210,7 +210,7 @@ t('stats: returns total, reversed, byActor, byIntent', () => {
 
 // ── §H: Dispatch Pool contract ────────────────────────────────────────────────
 t('pool: exports DispatchPool class + pool singleton', () => {
-  const dp = require(path.join(__dirname, '../../lib/dispatch-pool'));
+  const dp = require(path.join(__dirname, '../../guardian/lib/dispatch-pool'));
   assert.strictEqual(typeof dp.DispatchPool, 'function');
   assert(dp.pool instanceof dp.DispatchPool);
 }, { invariant: true });

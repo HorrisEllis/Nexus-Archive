@@ -1,2 +1,0 @@
-{"uuid":"55627233-1e77-4296-8eb2-a8f960db8c10","system":"guardian","component":"guardian.job.response","action":"registered","status":"ok","tags":["guardian"],"detail":"Full response for a job","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493429}
-{"uuid":"1740fee2-74ac-475f-b436-5e4e103ec623","system":"guardian","component":"guardian.job.response","action":"updated","status":"ok","tags":["guardian"],"detail":"Full response for a job","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329414}

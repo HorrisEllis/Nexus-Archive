@@ -333,6 +333,15 @@ function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
       if (pathname === '/health' && method === 'GET')
         return handleHealth(req, res, deps);
 
+      if (pathname === '/contract' && method === 'GET') {
+        const fs = require('fs'), path = require('path');
+        try {
+          const c = fs.readFileSync(path.join(__dirname, '..', 'interaction-contract.json'), 'utf8');
+          res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(c);
+        } catch(e) { res.writeHead(500); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
+        return;
+      }
+
       if (pathname === '/bridge/handshake' && method === 'POST')
         return handleHandshake(req, res, deps);
 

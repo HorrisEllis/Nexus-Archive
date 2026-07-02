@@ -1,2 +1,0 @@
-{"uuid":"de177eb2-9ce0-49e3-9630-006ddc36c4e0","system":"guardian","component":"guardian.health","action":"registered","status":"ok","tags":["guardian"],"detail":"Guardian health, job counts, provider status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493420}
-{"uuid":"275f5007-438a-4d83-b203-61f77b8435b2","system":"guardian","component":"guardian.health","action":"updated","status":"ok","tags":["guardian"],"detail":"Guardian health, job counts, provider status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329365}

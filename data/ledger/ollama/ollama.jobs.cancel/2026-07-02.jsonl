@@ -1,2 +1,0 @@
-{"uuid":"54eed2b0-e94c-4cfb-b9cf-f875efaead84","system":"ollama","component":"ollama.jobs.cancel","action":"registered","status":"ok","tags":["ollama"],"detail":"Cancel a queued job","causedBy":"ollama","contractUuid":null,"session":null,"ts":1782957492968}
-{"uuid":"fdf414c1-6fac-4d60-91f8-19f661a5afc9","system":"ollama","component":"ollama.jobs.cancel","action":"updated","status":"ok","tags":["ollama"],"detail":"Cancel a queued job","causedBy":"ollama","contractUuid":null,"session":null,"ts":1782961330080}

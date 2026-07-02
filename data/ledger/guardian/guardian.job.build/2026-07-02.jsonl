@@ -1,2 +1,0 @@
-{"uuid":"82ecdbc9-7088-4c1f-ad3e-edeb9b11deae","system":"guardian","component":"guardian.job.build","action":"registered","status":"ok","tags":["guardian","build"],"detail":"Full T0→T1→T2 build pipeline from spec","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493427}
-{"uuid":"56b5587a-2b58-431b-8c74-9c27ccb0667a","system":"guardian","component":"guardian.job.build","action":"updated","status":"ok","tags":["guardian","build"],"detail":"Full T0→T1→T2 build pipeline from spec","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329407}

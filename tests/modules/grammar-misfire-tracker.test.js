@@ -59,8 +59,8 @@ async function run() {
   // group gets its own module-level _jaa/_ideariumUrl, same pattern
   // case-library.test.js already uses for jaa-db.
   function freshTracker() {
-    delete require.cache[require.resolve('../../lib/grammar-misfire-tracker')];
-    return require('../../lib/grammar-misfire-tracker');
+    delete require.cache[require.resolve('../../orchestrator/lib/grammar-misfire-tracker')];
+    return require('../../orchestrator/lib/grammar-misfire-tracker');
   }
 
   await test('MFT-01', 'first two misfires on same pattern do not escalate', async () => {

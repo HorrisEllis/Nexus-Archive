@@ -1,2 +1,0 @@
-{"uuid":"667eea0f-5593-4fec-a303-96db199e3624","system":"cg","component":"cg.context.list","action":"registered","status":"ok","tags":["cg","context"],"detail":"List agent contexts with health scores","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492273}
-{"uuid":"4186ffc3-fadf-40f0-ab9c-32d5e9c590ec","system":"cg","component":"cg.context.list","action":"updated","status":"ok","tags":["cg","context"],"detail":"List agent contexts with health scores","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329510}

@@ -247,35 +247,18 @@ function spawnProcess(opts) {
     });
 
     if (!clean) {
-      // Track crash times for loop detection — using THIS compartment's
-      // own configured thresholds, not a flat global default. Every
-      // archetype declares its own crashLoopLimit/crashLoopWindowMs
-      // (test-runner wants 1, scheduler wants 5/300000ms) — falling back
-      // to the old global constants only if watchdog config is missing.
-      const comp = store.getCompartment(compartmentId);
-      const wd = (comp && comp.watchdog) || {};
-      const windowMs = wd.crashLoopWindowMs || CRASH_LOOP_WINDOW_MS;
-      const limit = wd.crashLoopLimit || CRASH_LOOP_LIMIT;
-
+      // Track crash times for loop detection
       const now = Date.now();
-      record.crashTimes = record.crashTimes.filter(t => now - t < windowMs);
+      record.crashTimes = record.crashTimes.filter(t => now - t < CRASH_LOOP_WINDOW_MS);
       record.crashTimes.push(now);
       record.crashCount++;
 
-      if (record.crashCount >= limit) {
+      if (record.crashCount >= CRASH_LOOP_LIMIT) {
         bus.emit(WATCHDOG.PROCESS_CRASH_LOOP, {
           compartmentId,
           name,
           restartCount: record.crashCount,
         });
-
-        // Previously this just fired the event and stopped there — the
-        // compartment would keep getting manually restarted forever past
-        // its own configured limit. Now it actually dispatches onAnomaly.
-        if (comp && wd.enabled) {
-          const { dispatchAnomaly } = require('../watchdog/actions.js');
-          dispatchAnomaly({ store, sysmap, bus }, comp, 'crash-loop', `${record.crashCount} crashes within ${windowMs}ms`);
-        }
       }
     }
 

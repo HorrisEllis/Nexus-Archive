@@ -1,0 +1,16 @@
+{
+  "id": "bridge-v1",
+  "version": "3.0.0",
+  "namespace": "bridge",
+  "ports": { "http": 9999 },
+  "uuid": "bridge-contract-v1-0000-2026-0702-jamesbrooks-001",
+  "role": "Trust relay — identity, routing, durable request queue",
+  "health": { "method": "GET", "path": "/health", "returns": { "ok": true } },
+  "routes": [
+    { "method": "GET",  "path": "/health",           "description": "Health check" },
+    { "method": "POST", "path": "/bridge/handshake", "description": "Identity handshake" },
+    { "method": "POST", "path": "/bridge/request",   "description": "Route a request" },
+    { "method": "GET",  "path": "/bridge/status",    "description": "Bridge status" }
+  ],
+  "axioms": ["§2.1", "LAW_I", "LAW_III"]
+}

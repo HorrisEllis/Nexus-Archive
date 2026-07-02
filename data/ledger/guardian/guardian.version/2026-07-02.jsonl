@@ -1,2 +1,0 @@
-{"uuid":"347ed0f4-0c42-4870-a085-1c2cb924c93f","system":"guardian","component":"guardian.version","action":"registered","status":"ok","tags":["guardian"],"detail":"Guardian + userscript versions","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493422}
-{"uuid":"b0c18693-532b-4174-9a33-f22e52e8271f","system":"guardian","component":"guardian.version","action":"updated","status":"ok","tags":["guardian"],"detail":"Guardian + userscript versions","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329371}

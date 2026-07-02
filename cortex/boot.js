@@ -253,7 +253,19 @@ const server = http.createServer(async (req, res) => {
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
   // ── Health ──────────────────────────────────────────────────────────────
-  if (p === '/health' || p === '/api/health') {
+  // ── Contract — orchestrator polls this to verify cortex is spec-compliant ──
+  if (p === '/contract' && method === 'GET') {
+    try {
+      const c = require('fs').readFileSync(require('path').join(__dirname, 'interaction-contract.json'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(c);
+    } catch(e) {
+      json(res, 500, { ok: false, error: 'interaction-contract.json missing' });
+    }
+    return;
+  }
+
+    if (p === '/health' || p === '/api/health') {
     json(res, 200, { ok: true, system: SYSTEM, version: VERSION, port: PORT,
       field: _field, uptime: process.uptime(), ts: Date.now() });
     return;

@@ -1,2 +1,0 @@
-{"uuid":"c875c2d8-2d08-4332-a962-8bd10a3f4945","system":"guardian","component":"guardian.queue.enqueue","action":"registered","status":"ok","tags":["guardian"],"detail":"Enqueue item to physical queue","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493436}
-{"uuid":"11c8f26e-ccec-4502-b262-7832f0a56d57","system":"guardian","component":"guardian.queue.enqueue","action":"updated","status":"ok","tags":["guardian"],"detail":"Enqueue item to physical queue","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329435}

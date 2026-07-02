@@ -53,7 +53,7 @@ function buildSpecFromSession(session) {
 
 const { HookRegistry }          = require('./src/hooks/Registry');
 const { Blueprint, SNRGate, Translate, scanTopology } = require('./src/spec/Blueprint');
-const { createCFRLedger }       = require('../lib/cfr');
+const { createCFRLedger }       = require('../meta/cfr');
 // Living hook registry — the canonical wire map for all NEXUS systems
 const systemHooks = (() => { try { return require('../hooks'); } catch(_) { return null; } })();
 const { createCompileRoutes }   = (() => { try { return require('./compile-route'); } catch(_) { return { createCompileRoutes: null }; } })();
@@ -260,7 +260,18 @@ async function boot() {
           ],
         }});
       }
-      if (method === 'GET' && path_ === '/health') {
+  
+    // ── Contract endpoint — orchestrator polls this for spec compliance ──────
+    if (method === 'GET' && path_ === '/contract') {
+      const fs = require('fs'), path = require('path');
+      try {
+        const c = fs.readFileSync(path.join(__dirname, 'interaction-contract.json'), 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(c);
+      } catch(e) { res.writeHead(500); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
+      return;
+    }
+
+        if (method === 'GET' && path_ === '/health') {
         return json(res, 200, { ok: true, system: 'architect', port: PORT, version: '3.0.0',
           uptime: process.uptime(), jaa: jaa.stats(),
           hooks: registry.summary(), ts: Date.now() });
@@ -461,7 +472,7 @@ async function boot() {
       if (path_ === '/api/alk/record' && method === 'POST') {
         try {
           const body = await readBody(req);
-          const alk  = require('../lib/alk');
+          const alk  = require('../meta/alk');
           const node = alk.record({ actor: body.actor || 'user', intent: body.intent || 'interact', payload: body.payload || {}, causedBy: body.causedBy || null });
           busEmit('alk.decision.recorded', { uuid: node.uuid, intent: node.intent });
           return json(res, 201, { ok: true, uuid: node.uuid });

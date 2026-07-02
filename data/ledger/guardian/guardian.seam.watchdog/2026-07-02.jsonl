@@ -1,2 +1,0 @@
-{"uuid":"f00f54ec-863e-4e78-8e5d-9ca1cf9e3dc8","system":"guardian","component":"guardian.seam.watchdog","action":"registered","status":"ok","tags":["guardian"],"detail":"SEAM watchdog + stall detection","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493435}
-{"uuid":"6f27333b-80c1-4c84-a148-d836f39dd95e","system":"guardian","component":"guardian.seam.watchdog","action":"updated","status":"ok","tags":["guardian"],"detail":"SEAM watchdog + stall detection","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329430}

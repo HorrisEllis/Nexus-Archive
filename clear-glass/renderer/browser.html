@@ -3,6 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- §security 2026-07-02 — CSP for renderer process. Electron warns on no-CSP.
+     script-src 'self' 'unsafe-inline': needed for inline <script> blocks in this file.
+     unsafe-eval explicitly excluded: no eval() usage, no dynamic code generation.
+     connect-src covers localhost SSE/IPC connections (127.0.0.1 ports).
+     img-src * data: allows favicon fetching and data URIs for tab icons. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline';
+               style-src 'self' 'unsafe-inline';
+               connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:*;
+               img-src 'self' data: https: http:;
+               frame-src 'none'">
 <title>Clear Glass</title>
 <style>
   :root {
@@ -127,45 +139,6 @@
     flex-direction: column; z-index: 70; overflow: hidden;
   }
   #userscript-panel.visible { display: flex; }
-
-  /* §NEW 2026-07-02: Customize Toolbar + Extensions panels — same shape
-     as #userscript-panel above, generalized into a reusable class since
-     we now have three of these. */
-  .side-panel {
-    position: absolute; bottom: 0; right: 0;
-    width: 320px; max-height: 420px;
-    background: var(--bg-1); border: 1px solid var(--border);
-    border-radius: 8px 0 0 0; display: none;
-    flex-direction: column; z-index: 70; overflow: hidden;
-  }
-  .side-panel.visible { display: flex; }
-  .side-panel .panel-hdr {
-    padding: 10px 12px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 6px;
-  }
-  .side-panel .panel-hdr span { flex:1; font-size:10px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.1em; }
-  .side-panel .panel-hdr button { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px; }
-  .side-panel .opt-section { overflow-y: auto; }
-  .toggle-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 7px 10px; border-bottom: 1px solid var(--border);
-    font-family: var(--mono); font-size: 11px;
-  }
-  .toggle-row:last-child { border-bottom: none; }
-  .toggle-row .tr-icon  { width: 16px; text-align: center; color: var(--text-dim); }
-  .toggle-row .tr-label { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .toggle-row input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
-  .ext-item {
-    display: flex; flex-direction: column; gap: 2px;
-    padding: 8px 10px; border-bottom: 1px solid var(--border);
-    font-family: var(--mono); font-size: 10px;
-  }
-  .ext-item:last-child { border-bottom: none; }
-  .ext-item .ei-name { color: var(--text); font-weight: 600; }
-  .ext-item .ei-meta  { color: var(--text-dim); display:flex; justify-content:space-between; align-items:center; }
-  .ext-item .ei-unload { background:none; border:none; color: var(--text-dim); cursor: pointer; font-size: 10px; }
-  .ext-item .ei-unload:hover { color: #ef4444; }
-  .empty-note { padding: 14px; font-size: 10px; color: var(--text-dim); text-align: center; }
   #userscript-header {
     padding: 10px 12px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 6px;
@@ -1197,44 +1170,7 @@
     <h4>System</h4>
     <button class="opt-link-btn" id="opt-link-api-settings">API Settings…</button>
     <button class="opt-link-btn" id="opt-link-nexus-audit">Run NEXUS UI Audit</button>
-    <button class="opt-link-btn" id="opt-link-customize-toolbar">Customize Toolbar…</button>
-    <button class="opt-link-btn" id="opt-link-extensions">Extensions…</button>
   </div>
-</div>
-
-<!-- §NEW 2026-07-02: Customize Toolbar — visual editor over the existing
-     pin system (SPOTLIGHT_COMMANDS / applyToolbarPins / pinnedToolbarButtons),
-     which was already fully wired but only reachable via the Ctrl+K palette.
-     This is the discoverable, Firefox-Customize-style version of the same
-     mechanism — not a new state model, just a real settings UI for it. -->
-<div id="customize-panel" class="side-panel">
-  <div class="panel-hdr">
-    <span>Customize Toolbar</span>
-    <button id="customize-close">✕</button>
-  </div>
-  <div class="opt-section" style="font-size:11px;color:var(--text-dim);padding:0 14px 10px;">
-    Toggle which buttons stay on the main bar. Everything else is still
-    reachable from the command palette (⊕ / Ctrl+K).
-  </div>
-  <div id="customize-list" class="opt-section"></div>
-</div>
-
-<!-- §NEW 2026-07-02: Extensions panel — WebExtension support via
-     Electron's native session.loadExtension(). No prior groundwork
-     existed for this before today. -->
-<div id="extensions-panel" class="side-panel">
-  <div class="panel-hdr">
-    <span>Extensions</span>
-    <button id="extensions-close">✕</button>
-  </div>
-  <div class="opt-section" style="padding:0 14px 10px;">
-    <button class="opt-link-btn" id="ext-load-btn">Load unpacked extension…</button>
-    <div style="font-size:10px;color:var(--text-dim);margin-top:6px;line-height:1.5;">
-      Select a folder containing manifest.json. Loads into the default
-      session (applies browser-wide, not per-agent-tab). Persists across restarts.
-    </div>
-  </div>
-  <div id="extensions-list" class="opt-section"></div>
 </div>
 
 <script>
@@ -1316,9 +1252,6 @@
   const agentId = params.get('agentId') || 'default';
   const ssePort = params.get('ssePort') || 7701;
   const initialUrl = params.get('url') || '';
-  // §NEW 2026-07-02: local new-tab page — see renderer/newtab.html. Resolved
-  // relative to this file's own location so it works regardless of install path.
-  const NEWTAB_URL = new URL('newtab.html', window.location.href).href;
 
   // ── State ──────────────────────────────────────────────────────────
   let pickerActive = false;
@@ -1444,14 +1377,7 @@
 
   wv.addEventListener('did-fail-load', (e) => {
     if (e.errorCode === -3) return; // Aborted — normal
-    if (!e.isMainFrame) return;     // don't hijack the tab over a failed subresource/iframe
     addMsg('assistant', `Navigation failed: ${e.errorDescription}`);
-    // §BUGFIX 2026-07-02: this used to just post a co-pilot message while the
-    // webview stayed on the failed page — which renders as a plain black
-    // screen for a refused connection (e.g. defaultStartUrl pointing at an
-    // orchestrator that isn't running). Fall back to the local new-tab page
-    // so the user always sees something, not a dead black rectangle.
-    if (wv.getURL() !== NEWTAB_URL) wv.loadURL(NEWTAB_URL);
   });
 
   wv.addEventListener('console-message', (e) => {
@@ -1511,7 +1437,7 @@
   // per tab, a main-process change) — this is the renderer-only version
   // that makes the UI work without architectural changes.
   const _tabs = (() => {
-    let tabs = [{ id: 1, url: initialUrl || NEWTAB_URL, title: 'New tab', loading: false }];
+    let tabs = [{ id: 1, url: initialUrl || 'about:blank', title: 'New tab', loading: false }];
     let activeId = 1;
     let nextId = 2;
     const list = document.getElementById('tab-list');
@@ -1554,12 +1480,12 @@
 
     function newTab(url) {
       const id = nextId++;
-      tabs.push({ id, url: url || NEWTAB_URL, title: 'New tab', loading: false });
+      tabs.push({ id, url: url || 'about:blank', title: 'New tab', loading: false });
       switchTo(id);
     }
 
     function closeTab(id) {
-      if (tabs.length === 1) { tabs[0].url = NEWTAB_URL; wv.loadURL(NEWTAB_URL); urlBar.value=''; render(); return; }
+      if (tabs.length === 1) { tabs[0].url = 'about:blank'; wv.loadURL('about:blank'); urlBar.value=''; render(); return; }
       const idx = tabs.findIndex(t => t.id === id);
       tabs = tabs.filter(t => t.id !== id);
       if (activeId === id) switchTo(tabs[Math.max(0, idx - 1)].id);
@@ -1607,7 +1533,17 @@
   // bg-tab, or defaultStartUrl) — webview queues loadURL fine pre-ready.
   if (initialUrl) {
     const norm = normalizeUrl(initialUrl);
-    if (norm) wv.loadURL(norm);
+    if (norm) {
+      // §fix 2026-07-02 — wv.loadURL is not a function until Electron's
+      // dom-ready fires on the webview element. getElementById finds the
+      // node but the Electron API methods aren't attached until after that
+      // event. Guard: call immediately if already ready, otherwise wait.
+      if (typeof wv.loadURL === 'function') {
+        wv.loadURL(norm);
+      } else {
+        wv.addEventListener('dom-ready', () => wv.loadURL(norm), { once: true });
+      }
+    }
   } else {
     // §fix 2026-06-30, round 2 — found via screenshot: a fresh tab opened
     // with NO initialUrl (the default "New tab" case) sits at about:blank
@@ -1709,81 +1645,6 @@
   document.getElementById('opt-link-nexus-audit').addEventListener('click', () => {
     cg.diag.nexus({ agentId });
     addMsg('assistant', 'NEXUS UI Audit dispatched — results will land on the bus.');
-  });
-
-  // ── Customize Toolbar — §NEW 2026-07-02 ─────────────────────────────────
-  // Visual layer over the pre-existing pin system (SPOTLIGHT_COMMANDS /
-  // applyToolbarPins / pinnedToolbarButtons) — that system already worked,
-  // it just had no UI besides the Ctrl+K palette. This makes it discoverable.
-  function renderCustomizeList() {
-    const pinnedSet = new Set(currentPinned);
-    const list = document.getElementById('customize-list');
-    list.innerHTML = SPOTLIGHT_COMMANDS.filter(c => c.pinnable).map(c => `
-      <label class="toggle-row">
-        <span class="tr-icon">${c.icon}</span>
-        <span class="tr-label">${c.label}</span>
-        <input type="checkbox" data-toggle-id="${c.id}" ${pinnedSet.has(c.id) ? 'checked' : ''}>
-      </label>`).join('');
-    list.querySelectorAll('input[data-toggle-id]').forEach(input => {
-      input.addEventListener('change', async () => {
-        const id = input.dataset.toggleId;
-        const next = input.checked
-          ? [...new Set([...currentPinned, id])]
-          : currentPinned.filter(x => x !== id);
-        try { await cg.options.set({ pinnedToolbarButtons: next }); applyToolbarPins(next); }
-        catch (err) { addMsg('assistant', `Failed to save toolbar pins: ${err.message}`); input.checked = !input.checked; }
-      });
-    });
-  }
-  document.getElementById('opt-link-customize-toolbar').addEventListener('click', () => {
-    document.getElementById('options-panel')?.classList.remove('visible');
-    renderCustomizeList();
-    document.getElementById('customize-panel').classList.add('visible');
-  });
-  document.getElementById('customize-close').addEventListener('click', () =>
-    document.getElementById('customize-panel').classList.remove('visible'));
-
-  // ── Extensions — §NEW 2026-07-02 ────────────────────────────────────────
-  async function renderExtensionsList() {
-    const list = document.getElementById('extensions-list');
-    list.innerHTML = '<div class="empty-note">Loading…</div>';
-    try {
-      const { extensions: exts } = await cg.extensions.list();
-      if (!exts.length) { list.innerHTML = '<div class="empty-note">No extensions loaded.</div>'; return; }
-      list.innerHTML = exts.map(e => `
-        <div class="ext-item">
-          <span class="ei-name">${e.name}</span>
-          <span class="ei-meta"><span>v${e.version}</span><button class="ei-unload" data-unload="${e.id}">Remove</button></span>
-        </div>`).join('');
-      list.querySelectorAll('[data-unload]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          await cg.extensions.unload(btn.dataset.unload);
-          renderExtensionsList();
-        });
-      });
-    } catch (err) {
-      list.innerHTML = `<div class="empty-note">Failed to load: ${err.message}</div>`;
-    }
-  }
-  document.getElementById('opt-link-extensions').addEventListener('click', () => {
-    document.getElementById('options-panel')?.classList.remove('visible');
-    renderExtensionsList();
-    document.getElementById('extensions-panel').classList.add('visible');
-  });
-  document.getElementById('extensions-close').addEventListener('click', () =>
-    document.getElementById('extensions-panel').classList.remove('visible'));
-  document.getElementById('ext-load-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('ext-load-btn');
-    const prevText = btn.textContent;
-    btn.textContent = 'Loading…'; btn.disabled = true;
-    try {
-      const res = await cg.extensions.pickAndLoad();
-      if (res.ok) addMsg('assistant', `Extension loaded: ${res.extension.name} v${res.extension.version}`);
-      else if (res.error !== 'cancelled') addMsg('assistant', `Failed to load extension: ${res.error}`);
-      renderExtensionsList();
-    } finally {
-      btn.textContent = prevText; btn.disabled = false;
-    }
   });
 
   // Clear bookmarks for this agent

@@ -1,2 +1,0 @@
-{"uuid":"128820e0-5506-436f-9df9-32c8f008f9f2","system":"eros","component":"eros.node.get","action":"registered","status":"ok","tags":["eros","registry"],"detail":"Get node by UUID","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492363}
-{"uuid":"c27ffb4a-7d53-4d9f-a58e-10d4d4ba8162","system":"eros","component":"eros.node.get","action":"updated","status":"ok","tags":["eros","registry"],"detail":"Get node by UUID","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329680}

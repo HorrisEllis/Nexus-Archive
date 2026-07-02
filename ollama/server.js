@@ -68,6 +68,13 @@ async function _dispatch(job) {
   job.startedAt = Date.now();
   broadcast('ollama.job.started', { uuid: job.uuid, model: job.model });
 
+  // §seam-integration 2026-07-02 — SEAM Detector now lives in lib/seam/
+  // which makes it accessible to any provider, not just guardian/NCP paths.
+  // Ollama uses the Detector directly for response quality scoring without
+  // requiring the full state machine (which needs a jaa + ncpPush context).
+  let _detector = null;
+  try { _detector = require('../lib/seam/detector.js').Detector; } catch(_) {}
+
   const model = job.model || DEFAULT_MODEL;
   const body  = JSON.stringify({ model, prompt: job.prompt, stream: false,
     options: { num_predict: job.maxTokens || 2048, temperature: 0.2 } });
@@ -89,6 +96,17 @@ async function _dispatch(job) {
           job.status      = 'complete';
           job.completedAt = Date.now();
           job.durationMs  = job.completedAt - job.startedAt;
+
+          // SEAM quality check — same Detector used by guardian for NCP responses
+          if (_detector && job.result) {
+            const profile    = _detector.profile(job.result);
+            const truncation = _detector.truncation(job.result, profile);
+            const sigma      = _detector.sigma(job.result, profile);
+            const delta      = _detector.delta(job.result, job.prompt || '', job.axioms || []);
+            job.seamScore    = { truncated: truncation.truncated, composite: sigma.composite, passed: !truncation.truncated && sigma.composite < 0.35 };
+            if (!job.seamScore.passed) broadcast('ollama.seam.quality_low', { uuid: job.uuid, score: job.seamScore });
+          }
+
           _statsToday.completed++;
           broadcast('ollama.job.complete', { uuid: job.uuid, durationMs: job.durationMs,
             model, componentId: job.componentId, hookId: job.hookId,

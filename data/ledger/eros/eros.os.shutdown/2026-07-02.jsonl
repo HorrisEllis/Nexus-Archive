@@ -1,2 +1,0 @@
-{"uuid":"088be3df-caf8-4f6a-99eb-913541c91231","system":"eros","component":"eros.os.shutdown","action":"registered","status":"ok","tags":["eros"],"detail":"Shutdown OS cleanly","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492356}
-{"uuid":"adc43e4b-f5ec-4104-9ccb-778ab5244367","system":"eros","component":"eros.os.shutdown","action":"updated","status":"ok","tags":["eros"],"detail":"Shutdown OS cleanly","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329654}

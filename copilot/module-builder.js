@@ -15,7 +15,7 @@
 const crypto  = require('crypto');
 const fs      = require('fs');
 const path    = require('path');
-const cq      = require('../lib/contract-queue');
+const cq      = require('../copilot/lib/contract-queue');
 const lifeline = require('./lifeline');
 const axiomMgr = require('./axiom-manager');
 
@@ -145,7 +145,7 @@ async function registerCliCommand(plan, description, opts = {}) {
   }
 
   const componentRegistry = require('../lib/component-registry');
-  const projector         = require('../lib/descriptor-projector');
+  const projector         = require('../copilot/lib/descriptor-projector');
 
   const aliases = Array.isArray(plan.grammarAliases) && plan.grammarAliases.length
     ? plan.grammarAliases

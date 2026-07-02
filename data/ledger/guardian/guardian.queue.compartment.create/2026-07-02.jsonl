@@ -1,2 +1,0 @@
-{"uuid":"3d766056-eb8a-45ce-a286-3bce10bcee27","system":"guardian","component":"guardian.queue.compartment.create","action":"registered","status":"ok","tags":["guardian"],"detail":"Create job compartment","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493438}
-{"uuid":"ec46f620-4067-40a6-aadc-25521dabdb15","system":"guardian","component":"guardian.queue.compartment.create","action":"updated","status":"ok","tags":["guardian"],"detail":"Create job compartment","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329440}

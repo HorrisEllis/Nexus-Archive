@@ -1,2 +1,0 @@
-{"uuid":"f487c3f1-8e4c-4662-abdd-88fe7f44f4b8","system":"cg","component":"cg.cookie.health","action":"registered","status":"ok","tags":["cg","cookie","raid"],"detail":"Check token validity heuristic for RAID","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492281}
-{"uuid":"076a052d-35d0-4fce-8875-fcede97fab5f","system":"cg","component":"cg.cookie.health","action":"updated","status":"ok","tags":["cg","cookie","raid"],"detail":"Check token validity heuristic for RAID","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329527}

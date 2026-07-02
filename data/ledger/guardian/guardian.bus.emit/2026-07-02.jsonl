@@ -1,2 +1,0 @@
-{"uuid":"35738a4f-05a1-4f0a-a8cb-e0dd7dca1edd","system":"guardian","component":"guardian.bus.emit","action":"registered","status":"ok","tags":["guardian"],"detail":"Emit event onto bus","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493424}
-{"uuid":"c81cd527-58e4-4678-a0cd-72bde91022da","system":"guardian","component":"guardian.bus.emit","action":"updated","status":"ok","tags":["guardian"],"detail":"Emit event onto bus","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329384}

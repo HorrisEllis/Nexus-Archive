@@ -1,2 +1,0 @@
-{"uuid":"259bc944-d281-4f04-9cb5-51c88585559b","system":"eros","component":"eros.tab.attach","action":"registered","status":"ok","tags":["eros","tab"],"detail":"Attach CDP session to existing tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492360}
-{"uuid":"731af7e4-d51d-4fe8-a4f7-124fe6af0a29","system":"eros","component":"eros.tab.attach","action":"updated","status":"ok","tags":["eros","tab"],"detail":"Attach CDP session to existing tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329665}

@@ -40,7 +40,7 @@ function _getBP() {
 let _copilotContext = null;
 function _getCopilotContext() {
   if (_copilotContext) return _copilotContext;
-  try { _copilotContext = require('../lib/copilot-context'); return _copilotContext; } catch(_) { return null; }
+  try { _copilotContext = require('../copilot/lib/copilot-context'); return _copilotContext; } catch(_) { return null; }
 }
 
 setImmediate(() => {
@@ -664,7 +664,7 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     const { type, element, channel } = body || {};
     try {
-      const um = require('../lib/user-model');
+      const um = require('../copilot/lib/user-model');
       if (type === 'confusion' && element && um.recordError) {
         um.recordError(`ui_confusion:${element}`, channel || 'unknown', 'low');
       }

@@ -1,2 +1,0 @@
-{"uuid":"40bb2583-bece-4e71-952f-f45194e91f3f","system":"eros","component":"eros.cmd.type","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP type into node","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492366}
-{"uuid":"9318a39a-ae5f-4725-97b8-6e3038aac7e7","system":"eros","component":"eros.cmd.type","action":"updated","status":"ok","tags":["eros","driver"],"detail":"CDP type into node","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329692}

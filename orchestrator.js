@@ -107,7 +107,7 @@ const http   = require('http');
 const fs     = require('fs');
 const path   = require('path');
 const { URL } = require('url');
-const { buildIntentMap } = require('./lib/intent-map');  // Gap 2: intent-map endpoint
+const { buildIntentMap } = require('./orchestrator/lib/intent-map');  // Gap 2: intent-map endpoint
 
 // ── Hoist all dynamic requires — fixes ReferenceError in ESM-adjacent contexts ──
 // These were previously inside server.listen callback and cli functions.
@@ -120,7 +120,7 @@ try { ({ _bootSystems } = require('./cli/boot-systems')); } catch(e) { console.w
 // already the single funnel point, so this is a drop-in swap — same .record()/
 // .open()/.startAutoSave()/.getAllBaselines()/.getAllStats()/.scanInvariants()
 // surface, plus .handleCFRRoute() for the /cfr/* debugger routes mounted below.
-try { ({ createCFRLedger } = require('./lib/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
+try { ({ createCFRLedger } = require('./meta/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
 const nexusBus       = (() => { try { return require('./nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
@@ -136,7 +136,7 @@ const PORT    = parseInt(process.env.ORCHESTRATOR_PORT || '9000');
 // lib/pulse.js is optional — if it doesn't exist yet, pulse is a no-op.
 let _orchPulse = null;
 try {
-  const { createPulse } = require('./lib/pulse');
+  const { createPulse } = require('./orchestrator/lib/pulse');
   // Pulse is started after server binds (in server.listen callback)
   module._createPulse = createPulse;
 } catch(_) {
@@ -499,7 +499,7 @@ function startWatchdog() {
 // ── Contract poller — meta-system watches all system input/output folders ────────
 // comp_id: nexus.lib.contract-poller / lib/contract-poller.js
 try {
-  const contractPoller = require('./lib/contract-poller');
+  const contractPoller = require('./orchestrator/lib/contract-poller');
   contractPoller.start();
   console.log('[orchestrator] contract-poller started');
 } catch(e) { console.warn('[orchestrator] contract-poller not available:', e.message); }
@@ -707,7 +707,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     const cseg = u.pathname.split('/').filter(Boolean); // ['api','components', id, 'properties']
     const compId = cseg[2];
     let mutationContract;
-    try { mutationContract = require('./lib/mutation-contract'); }
+    try { mutationContract = require('./orchestrator/lib/mutation-contract'); }
     catch(e) { return json(res,503,{ok:false,error:'mutation-contract not loaded: '+e.message}); }
     const body = await readBody(req);
     if (!body || !body.field) return json(res,400,{ok:false,error:'body.field is required, e.g. "comp_properties.style.color"'});
@@ -716,7 +716,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   }
   if (u.pathname.startsWith('/api/notes')) {
     let quickNotes;
-    try { quickNotes = require('./lib/quick-notes'); }
+    try { quickNotes = require('./orchestrator/lib/quick-notes'); }
     catch(e) { return json(res,503,{ok:false,error:'quick-notes not loaded: '+e.message}); }
     const nseg = u.pathname.split('/').filter(Boolean); // ['api','notes', uuid?]
     const nuuid = nseg[2];
@@ -879,7 +879,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // Skip self-verification: orchestrator knows its own contract without HTTP round-trip
     if (systemId === 'orchestrator') {
       try {
-        const hs = require('./lib/contract-handshake');
+        const hs = require('./orchestrator/lib/contract-handshake');
         const { getVersionedContract } = require('./contracts/nexus-interaction-contract');
         const full = getVersionedContract();
         const orchContract = full?.systems?.orchestrator || full;
@@ -895,7 +895,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // have finished binding its HTTP server yet (especially on Windows)
     setTimeout(async () => {
       try {
-        const hs = require('./lib/contract-handshake');
+        const hs = require('./orchestrator/lib/contract-handshake');
         const entry = await hs.verifySystem(systemId, '127.0.0.1', port, {
           jaaInsert: null, // cortex not guaranteed up during early boot
           onResult: (e) => {
@@ -924,7 +924,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // GET  /api/peer/list      — all known peers
   // GET  /api/remote/:peerId/* — proxy a request to a remote peer's system
   if (top === 'api' && sub === 'peer') {
-    const relay = require('./lib/peer-relay');
+    const relay = require('./orchestrator/lib/peer-relay');
     if (M === 'POST' && rest === 'announce') {
       const body = await readBody(req);
       const result = await relay.handleAnnounce(body, {
@@ -948,7 +948,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
 
   // ── Remote proxy — /api/remote/:peerId/* → remote orchestrator ────────────
   if (top === 'api' && sub === 'remote' && rest) {
-    const relay  = require('./lib/peer-relay');
+    const relay  = require('./orchestrator/lib/peer-relay');
     const parts  = u.pathname.split('/').filter(Boolean);
     // parts: ['api', 'remote', ':peerId', ...rest]
     const peerId     = parts[2];
@@ -962,7 +962,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // POST /api/push/peer/:peerId — push file to a connected remote peer
   // GET  /api/push/routes       — list all file type routes
   if (top === 'api' && sub === 'push') {
-    const filePush = require('./lib/file-push');
+    const filePush = require('./orchestrator/lib/file-push');
 
     if (M === 'GET' && rest === 'routes') {
       return json(res, 200, { ok: true, routes: filePush.ROUTES });
@@ -1105,7 +1105,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // GET /api/meta/classify  — ALK perception of current system state
   // GET /api/meta/gaps?text= — run Liminal gap detection on text
   if (top === 'api' && sub === 'meta') {
-    const meta = (() => { try { return require('./lib/meta'); } catch(_) { return null; } })();
+    const meta = (() => { try { return require('./meta'); } catch(_) { return null; } })();
     if (!meta) return json(res, 503, { ok:false, error:'meta layer not loaded' });
 
     if (M === 'GET' && !rest) {
@@ -1168,25 +1168,11 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
 
   // ── Guardian capabilities — /api/guardian/capabilities ─────────────────
   // Lists all available AI providers and their strengths
-  //
-  // §API-01 2026-07-02: this used to require('./guardian/api-dispatch')
-  // directly into the orchestrator process, which meant provider-key checks
-  // ran against orchestrator's env instead of guardian's. Guardian now
-  // exposes GET /api/capabilities itself; this just proxies to it.
   if (top === 'api' && sub === 'guardian' && rest === 'capabilities') {
     try {
-      const http = require('http');
-      const r = await new Promise((resolve) => {
-        const req2 = http.request({ hostname:'127.0.0.1', port:7820, path:'/api/capabilities', method:'GET', timeout:4000 }, gres => {
-          let d=''; gres.on('data', c=>d+=c);
-          gres.on('end', () => { try { resolve({ ok: gres.statusCode<400, data: JSON.parse(d) }); } catch(e) { resolve({ ok:false, error:e.message }); } });
-        });
-        req2.on('timeout', () => { req2.destroy(); resolve({ ok:false, error:'guardian timeout' }); });
-        req2.on('error', e => resolve({ ok:false, error:e.message }));
-        req2.end();
-      });
-      if (!r.ok) return json(res, 502, { ok:false, error: r.error || 'guardian unreachable' });
-      return json(res, 200, { ok:true, providers: r.data?.providers || [] });
+      const ad = require('./guardian/api-dispatch');
+      const caps = ad.capabilities();
+      return json(res, 200, { ok:true, providers: caps });
     } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
   }
 
@@ -1236,7 +1222,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
 
   // ── Contract trust map ────────────────────────────────────────────────────
   if (top === 'api' && sub === 'trust') {
-    const hs = require('./lib/contract-handshake');
+    const hs = require('./orchestrator/lib/contract-handshake');
     return json(res, 200, { ok: true, trust: hs.getTrustMap(), all: hs.getAllEntries().map(e => ({
       systemId: e.systemId, trust: e.trust, hash: e.hash, routeCount: e.routeCount,
       checkedAt: e.checkedAt, latencyMs: e.latencyMs, driftReason: e.driftReason,
@@ -1383,7 +1369,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   if (M==='POST' && sub==='request') {
     const body = await readBody(req);
     try {
-      const handler = require('./lib/request-handler');
+      const handler = require('./orchestrator/lib/request-handler');
       const result  = await handler.handle(body, { costCeiling: body.costCeiling });
       return json(res, 200, result);
     } catch(e) {
@@ -1856,6 +1842,62 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     return json(res,404,{ok:false,error:`autopilot route not found: ${M} /api/autopilot/${action}`});
   }
 
+  // ── /api/system/* — routes moved from guardian (own lib, no guardian proxy) ──
+  if (u.pathname.startsWith('/api/system/')) {
+    const seg = u.pathname.split('/').filter(Boolean); // ['api','system',action,sub]
+    const action = seg[2] || '';
+    const sub    = seg[3] || '';
+
+    // hot-load
+    if (M==='POST' && action==='hot-load') {
+      const body = await readBody(req);
+      const { modulePath, src, monitorMs = 60000 } = body || {};
+      if (!modulePath) return json(res, 400, { ok:false, error:'modulePath required' });
+      try {
+        const hl = require('./orchestrator/lib/hot-loader');
+        if (!hl._inited) { hl.init({ bus: nexusBus, jaaDB: null }); hl._inited = true; }
+        const result = await hl.load({ modulePath, src, monitorMs });
+        return json(res, result.ok ? 200 : 400, result);
+      } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
+    }
+    if (M==='GET' && action==='hot-load' && sub==='status') {
+      try { const hl = require('./orchestrator/lib/hot-loader'); return json(res, 200, { ok:true, ...hl.status() }); }
+      catch(e) { return json(res, 500, { ok:false, error:e.message }); }
+    }
+
+    // autonomous loop
+    if (M==='POST' && action==='autonomous') {
+      const body = await readBody(req);
+      const { goal, budget, boundary, exit: exitCond, source } = body || {};
+      if (!goal || !budget || !boundary || !exitCond)
+        return json(res, 400, { ok:false, error:'goal, budget, boundary, exit required' });
+      try {
+        const al = require('./orchestrator/lib/autonomous-loop');
+        al.init({ bus: nexusBus, jaaDB: null, raid: null });
+        const result = await al.run({ goal, budget, boundary, exit:exitCond, source:source||'api' });
+        return json(res, result.ok ? 200 : 400, result);
+      } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
+    }
+    if (M==='GET' && action==='autonomous' && sub==='status') {
+      try { const al = require('./orchestrator/lib/autonomous-loop'); return json(res, 200, { ok:true, ...al.status() }); }
+      catch(e) { return json(res, 500, { ok:false, error:e.message }); }
+    }
+
+    // mcp
+    if (M==='GET' && action==='mcp' && (!sub || sub==='status')) {
+      try { const mcp = require('./orchestrator/lib/mcp-server'); return json(res, 200, { ok:true, ...mcp.status() }); }
+      catch(e) { return json(res, 500, { ok:false, error:e.message }); }
+    }
+    if (M==='GET' && action==='mcp' && sub==='tools') {
+      try {
+        const mcp = require('./orchestrator/lib/mcp-server');
+        return json(res, 200, { ok:true, tools: mcp.TOOLS.map(t=>({ name:t.name, description:t.description })), total:mcp.TOOLS.length });
+      } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
+    }
+
+    return json(res,404,{ok:false,error:`system route not found: ${M} ${u.pathname}`});
+  }
+
   return json(res,404,{ok:false,error:`route not found: ${M} ${u.pathname}`});
 });
 
@@ -2183,7 +2225,7 @@ if (nexusBus) {
   // autonomous-loop.js sigma halt checks this table — without data it always
   // returns null and logs a degraded-monitoring warning, never halts a run.
   try {
-    const sigmaWriter = require('./lib/sigma-writer');
+    const sigmaWriter = require('./orchestrator/lib/sigma-writer');
     sigmaWriter.init({ compositeIntervalMs: 30000 });
     console.log('[orchestrator] §P106: sigma-writer wired — sigma_records now populates');
   } catch(e) { console.warn('[orchestrator] sigma-writer init failed:', e.message); }
@@ -2384,7 +2426,7 @@ try {
   // (see lib/mutation-contract.js's audit-first ordering rationale).
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');
-    const mutationContract = require('./lib/mutation-contract');
+    const mutationContract = require('./orchestrator/lib/mutation-contract');
     mutationContract.init(jaaDB, nexusBus);
     console.log('  [mutation-contract] ready');
   } catch(e) {
@@ -2394,7 +2436,7 @@ try {
   // at 3 consecutive low-confidence grammar resolutions of the same pattern.
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');
-    const misfireTracker = require('./lib/grammar-misfire-tracker');
+    const misfireTracker = require('./orchestrator/lib/grammar-misfire-tracker');
     misfireTracker.init(jaaDB);
     console.log('  [grammar-misfire-tracker] ready');
   } catch(e) {
@@ -2405,7 +2447,7 @@ try {
   // respected — quick-notes never talks to idearium directly).
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');
-    const quickNotes = require('./lib/quick-notes');
+    const quickNotes = require('./orchestrator/lib/quick-notes');
     quickNotes.init(jaaDB, {
       broadcast: (payload) => broadcast(JSON.stringify(payload)),
       postIdea: (body) => POST('idearium', '/api/ideas', body),
@@ -2416,7 +2458,7 @@ try {
   }
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');
-    const uiReg = require('./lib/ui-registry');
+    const uiReg = require('./orchestrator/lib/ui-registry');
     uiReg.init((type, payload) => {
       broadcast(JSON.stringify({ type, ...payload }));
     }, jaaDB);
@@ -2427,7 +2469,7 @@ try {
   // Spec drift check — opens gaps for any spec/code version mismatch
   // SOFT: drift is a gap, not a crash. Boot continues regardless.
   try {
-    const drift = require('./lib/spec-drift');
+    const drift = require('./orchestrator/lib/spec-drift');
     const { jaaDB } = require('./cortex/memory/jaa-db');
     const result = drift.check({ jaaDB, bus: nexusBus });
     const issues = (result.drifted||[]).length + (result.missing||[]).length;
@@ -2444,7 +2486,7 @@ try {
   // hand-written prose per change. Idempotent: only writes when something
   // actually changed since last boot's snapshot.
   try {
-    const changelog = require('./lib/changelog');
+    const changelog = require('./orchestrator/lib/changelog');
     const result = changelog.update();
     if (result.written) {
       console.log('  [changelog] ✓  ' + result.entries + ' new entr' + (result.entries===1?'y':'ies') + ' written to CHANGELOG.md');

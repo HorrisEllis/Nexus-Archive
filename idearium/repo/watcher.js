@@ -98,7 +98,7 @@ export class RepoWatcher {
     const fallbackName = path.basename(specPath, '.spec');
     let verified;
     try {
-      const { verifyAndDecode } = require('../../lib/spec-container.js');
+      const { verifyAndDecode } = require('../../idearium/lib/spec-container.js');
       verified = verifyAndDecode(specPath);
     } catch (e) {
       // Hash mismatch, corrupt archive, missing archive block, or this is a

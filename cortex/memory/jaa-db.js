@@ -20,14 +20,7 @@
  */
 
 const path = require('path');
-// §MOVED 2026-07-02: jaa-store.js used to live in guardian/, a private
-// system folder — cortex requiring it directly meant cortex depended on
-// guardian's internals rather than a shared library. It's a generic
-// flat-file JSON store both systems use; moved to lib/ where shared code
-// belongs. Cross-system data/state still goes through APIs — this is a
-// storage *engine* class, not guardian functionality, so there's no HTTP
-// endpoint to proxy it through (it's synchronous, in-process, per-caller).
-const { JaaStore } = require('../../lib/jaa-store');
+const { JaaStore } = require('../../guardian/jaa-store');
 
 const DATA_DIR = path.join(__dirname, '../../data/cortex/memory');
 

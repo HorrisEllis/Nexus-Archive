@@ -1,2 +1,0 @@
-{"uuid":"b0ef8ab1-7682-4574-8107-df0de6df903c","system":"cg","component":"cg.context.switch","action":"registered","status":"ok","tags":["cg","context"],"detail":"Switch active agent context","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492273}
-{"uuid":"3241a958-446a-44ef-a960-1f0aee9a184f","system":"cg","component":"cg.context.switch","action":"updated","status":"ok","tags":["cg","context"],"detail":"Switch active agent context","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329508}

@@ -1,2 +1,0 @@
-{"uuid":"e5db60ec-d047-4aae-8b40-7e4eff15d170","system":"eros","component":"eros.routing.snapshot","action":"registered","status":"ok","tags":["eros","routing"],"detail":"Current routing state + session map","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492380}
-{"uuid":"6177fdbe-bf0e-4cc0-b845-bb40001bf97c","system":"eros","component":"eros.routing.snapshot","action":"updated","status":"ok","tags":["eros","routing"],"detail":"Current routing state + session map","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329735}

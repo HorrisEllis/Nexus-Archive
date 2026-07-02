@@ -1,11 +1,11 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_89f7694a",
+  "uuid": "bpi_70ddb755",
   "version": "1.0.0",
-  "builtAt": 1782961329148,
+  "builtAt": 1782640602231,
   "builtBy": "blueprint-index",
   "systemCount": 11,
-  "totalComponents": 135,
+  "totalComponents": 133,
   "systems": [
     {
       "systemId": "orchestrator",
@@ -1537,7 +1537,7 @@
       "systemId": "copilot",
       "label": "Co-pilot",
       "port": 3750,
-      "componentCount": 15,
+      "componentCount": 13,
       "components": [
         {
           "id": "copilot.prompt",
@@ -1708,38 +1708,6 @@
           ],
           "grammar": [
             "copilot diagnose list"
-          ]
-        },
-        {
-          "id": "copilot.prompt.fulfill",
-          "name": "prompt.fulfill",
-          "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
-          "route": {
-            "method": "POST",
-            "path": "/api/prompt/fulfill"
-          },
-          "tags": [
-            "copilot"
-          ],
-          "grammar": [
-            "fulfill",
-            "cp fulfill"
-          ]
-        },
-        {
-          "id": "copilot.prompt.stream",
-          "name": "prompt.stream",
-          "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
-          "route": {
-            "method": "POST",
-            "path": "/api/prompt/stream"
-          },
-          "tags": [
-            "copilot"
-          ],
-          "grammar": [
-            "stream ask",
-            "cp stream"
           ]
         },
         {
@@ -1946,38 +1914,6 @@
           ]
         },
         {
-          "command": "prompt-fulfill",
-          "aliases": [
-            "fulfill",
-            "cp fulfill"
-          ],
-          "usage": "prompt-fulfill",
-          "method": "POST",
-          "path": "/api/prompt/fulfill",
-          "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
-          "componentId": "copilot.prompt.fulfill",
-          "systemId": "copilot",
-          "tags": [
-            "copilot"
-          ]
-        },
-        {
-          "command": "prompt-stream",
-          "aliases": [
-            "stream ask",
-            "cp stream"
-          ],
-          "usage": "prompt-stream",
-          "method": "POST",
-          "path": "/api/prompt/stream",
-          "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
-          "componentId": "copilot.prompt.stream",
-          "systemId": "copilot",
-          "tags": [
-            "copilot"
-          ]
-        },
-        {
           "command": "health",
           "aliases": [
             "copilot health"
@@ -2046,62 +1982,6 @@
               ],
               "tags": [
                 "response"
-              ]
-            }
-          ]
-        },
-        {
-          "componentId": "copilot.prompt.fulfill",
-          "in": [
-            {
-              "id": "copilot.prompt.fulfill.receive",
-              "intent": [
-                "ask",
-                "build",
-                "diagnose"
-              ],
-              "contract": "nexus-interaction-contract-v1::copilot",
-              "tags": [
-                "entry-point",
-                "adaptive"
-              ]
-            }
-          ],
-          "out": [
-            {
-              "id": "copilot.fulfillment.attempt",
-              "wires_to": [
-                "cortex.intelligence.event"
-              ],
-              "tags": [
-                "learning"
-              ]
-            }
-          ]
-        },
-        {
-          "componentId": "copilot.prompt.stream",
-          "in": [
-            {
-              "id": "copilot.prompt.stream.receive",
-              "intent": [
-                "ask"
-              ],
-              "contract": null,
-              "tags": [
-                "streaming",
-                "sse"
-              ]
-            }
-          ],
-          "out": [
-            {
-              "id": "copilot.prompt.stream.chunk",
-              "wires_to": [
-                "ui.copilot.stream"
-              ],
-              "tags": [
-                "streaming"
               ]
             }
           ]
@@ -2228,32 +2108,6 @@
           ],
           "contract": null,
           "hookId": null
-        },
-        {
-          "componentId": "copilot.prompt.fulfill",
-          "label": "prompt.fulfill",
-          "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
-          "intents": [
-            "ask",
-            "build",
-            "diagnose",
-            "fulfill",
-            "cp fulfill"
-          ],
-          "contract": "nexus-interaction-contract-v1::copilot",
-          "hookId": "copilot.prompt.fulfill.receive"
-        },
-        {
-          "componentId": "copilot.prompt.stream",
-          "label": "prompt.stream",
-          "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
-          "intents": [
-            "ask",
-            "stream ask",
-            "cp stream"
-          ],
-          "contract": null,
-          "hookId": "copilot.prompt.stream.receive"
         },
         {
           "componentId": "copilot.health",
@@ -6903,38 +6757,6 @@
       ]
     },
     {
-      "command": "prompt-fulfill",
-      "aliases": [
-        "fulfill",
-        "cp fulfill"
-      ],
-      "usage": "prompt-fulfill",
-      "method": "POST",
-      "path": "/api/prompt/fulfill",
-      "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
-      "componentId": "copilot.prompt.fulfill",
-      "systemId": "copilot",
-      "tags": [
-        "copilot"
-      ]
-    },
-    {
-      "command": "prompt-stream",
-      "aliases": [
-        "stream ask",
-        "cp stream"
-      ],
-      "usage": "prompt-stream",
-      "method": "POST",
-      "path": "/api/prompt/stream",
-      "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
-      "componentId": "copilot.prompt.stream",
-      "systemId": "copilot",
-      "tags": [
-        "copilot"
-      ]
-    },
-    {
       "command": "health",
       "aliases": [
         "copilot health"
@@ -8436,62 +8258,6 @@
       ]
     },
     {
-      "componentId": "copilot.prompt.fulfill",
-      "in": [
-        {
-          "id": "copilot.prompt.fulfill.receive",
-          "intent": [
-            "ask",
-            "build",
-            "diagnose"
-          ],
-          "contract": "nexus-interaction-contract-v1::copilot",
-          "tags": [
-            "entry-point",
-            "adaptive"
-          ]
-        }
-      ],
-      "out": [
-        {
-          "id": "copilot.fulfillment.attempt",
-          "wires_to": [
-            "cortex.intelligence.event"
-          ],
-          "tags": [
-            "learning"
-          ]
-        }
-      ]
-    },
-    {
-      "componentId": "copilot.prompt.stream",
-      "in": [
-        {
-          "id": "copilot.prompt.stream.receive",
-          "intent": [
-            "ask"
-          ],
-          "contract": null,
-          "tags": [
-            "streaming",
-            "sse"
-          ]
-        }
-      ],
-      "out": [
-        {
-          "id": "copilot.prompt.stream.chunk",
-          "wires_to": [
-            "ui.copilot.stream"
-          ],
-          "tags": [
-            "streaming"
-          ]
-        }
-      ]
-    },
-    {
       "componentId": "ollama.jobs.dispatch",
       "in": [
         {
@@ -9157,32 +8923,6 @@
       ],
       "contract": null,
       "hookId": null
-    },
-    {
-      "componentId": "copilot.prompt.fulfill",
-      "label": "prompt.fulfill",
-      "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
-      "intents": [
-        "ask",
-        "build",
-        "diagnose",
-        "fulfill",
-        "cp fulfill"
-      ],
-      "contract": "nexus-interaction-contract-v1::copilot",
-      "hookId": "copilot.prompt.fulfill.receive"
-    },
-    {
-      "componentId": "copilot.prompt.stream",
-      "label": "prompt.stream",
-      "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
-      "intents": [
-        "ask",
-        "stream ask",
-        "cp stream"
-      ],
-      "contract": null,
-      "hookId": "copilot.prompt.stream.receive"
     },
     {
       "componentId": "copilot.health",
@@ -11214,11 +10954,6 @@
         "componentId": "copilot.prompt",
         "systemId": "copilot",
         "description": "Primary entry — all co-pilot interactions"
-      },
-      {
-        "componentId": "copilot.prompt.stream",
-        "systemId": "copilot",
-        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
       }
     ],
     "cp": [
@@ -11238,11 +10973,6 @@
         "componentId": "copilot.stream.ingest",
         "systemId": "copilot",
         "description": "Push events into co-pilot stream"
-      },
-      {
-        "componentId": "copilot.prompt.stream",
-        "systemId": "copilot",
-        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
       }
     ],
     "cs": [
@@ -11459,48 +11189,6 @@
         "componentId": "copilot.diagnose.list",
         "systemId": "copilot",
         "description": "List past diagnosis sessions"
-      }
-    ],
-    "fulfill": [
-      {
-        "componentId": "copilot.prompt.fulfill",
-        "systemId": "copilot",
-        "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)"
-      }
-    ],
-    "cp fulfill": [
-      {
-        "componentId": "copilot.prompt.fulfill",
-        "systemId": "copilot",
-        "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)"
-      }
-    ],
-    "prompt-fulfill": [
-      {
-        "componentId": "copilot.prompt.fulfill",
-        "systemId": "copilot",
-        "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)"
-      }
-    ],
-    "stream ask": [
-      {
-        "componentId": "copilot.prompt.stream",
-        "systemId": "copilot",
-        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
-      }
-    ],
-    "cp stream": [
-      {
-        "componentId": "copilot.prompt.stream",
-        "systemId": "copilot",
-        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
-      }
-    ],
-    "prompt-stream": [
-      {
-        "componentId": "copilot.prompt.stream",
-        "systemId": "copilot",
-        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
       }
     ],
     "copilot health": [
@@ -13526,5 +13214,5 @@
     ]
   },
   "errors": [],
-  "buildMs": 11
+  "buildMs": 9
 }

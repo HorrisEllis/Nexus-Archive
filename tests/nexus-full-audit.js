@@ -60,7 +60,7 @@ const criticalFiles = [
   'lib/blueprint.js', 'lib/autonomous-loop.js',
   'lib/hot-loader.js', 'lib/mcp-server.js', 'lib/mcp-stdio.js',
   'lib/user-model.js', 'lib/descriptor-projector.js', 'lib/cli-map.js',
-  'lib/causal/anomaly.js',
+  'meta/causal/anomaly.js',
   'lib/cfr/sigma.js', 'lib/cfr/ledger.js', 'lib/cfr/graph.js',
   'idearium/index.js', 'architect/service.js',
   'ui/home/index.html', 'ui/emerge-ide.html',
@@ -87,7 +87,7 @@ const jsFiles = [
   'lib/blueprint.js', 'lib/autonomous-loop.js', 'lib/hot-loader.js',
   'lib/mcp-server.js', 'lib/mcp-stdio.js', 'lib/user-model.js',
   'lib/descriptor-projector.js', 'lib/cli-map.js',
-  'lib/causal/anomaly.js', 'lib/cfr/sigma.js',
+  'meta/causal/anomaly.js', 'lib/cfr/sigma.js',
   'idearium/index.js', 'architect/service.js',
   'ui/eravos/catalog/catalog.js', 'ui/eravos/catalog/catalog-ui.js',
   'ui/eravos/pack/pack-loader.js', 'ui/eravos/bridge/nexus-bridge.js',
@@ -113,7 +113,7 @@ t('copilot has token-first _tryDataAnswer', () => read('guardian/agents/co-pilot
 t('copilot grammar engine wired', () => read('guardian/agents/co-pilot/index.js').includes('_ensureGrammar'));
 t('t2-gate imports pipeline', () => read('emerge/compiler/t2-gate.js').includes("require('./pipeline')"));
 t('t2-gate posts to guardian /command', () => read('emerge/compiler/t2-gate.js').includes("'/command'"));
-t('expectation engine wires anomaly engine', () => read('bridge/causal/expectation.js').includes("require('../../../lib/causal/anomaly')"));
+t('expectation engine wires anomaly engine', () => read('bridge/causal/expectation.js').includes("require('../../../meta/causal/anomaly')"));
 t('escalation has wireAnomalyTrigger (Phase 71.4)', () => read('cortex/self-heal/escalation.js').includes('wireAnomalyTrigger'));
 t('component-registry seeds DESCRIPTOR_FIELDS (Phase 40)', () => read('lib/component-registry.js').includes('DESCRIPTOR_FIELDS'));
 t('component-registry auto-projects on register (Phase 40 T1.5)', () => read('lib/component-registry.js').includes('descriptor-projector'));
@@ -215,9 +215,9 @@ t('71.2 ExpectationEngine has define/observe', () => {
   const s = read('bridge/causal/expectation.js');
   return s.includes('define(sessionId') && s.includes('observe(sessionId');
 });
-t('71.3 anomaly engine classify()', () => read('lib/causal/anomaly.js').includes('function classify'));
+t('71.3 anomaly engine classify()', () => read('meta/causal/anomaly.js').includes('function classify'));
 t('71.3 anomaly types cover all 6', () => {
-  const s = read('lib/causal/anomaly.js');
+  const s = read('meta/causal/anomaly.js');
   return ['missing_event','unexpected_event','timeout','state_violation','causal_gap','path_mismatch'].every(t => s.includes(t));
 });
 t('71.4 wireAnomalyTrigger closes the loop', () => {

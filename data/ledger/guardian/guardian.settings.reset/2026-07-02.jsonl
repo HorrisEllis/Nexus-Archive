@@ -1,2 +1,0 @@
-{"uuid":"04c354be-8a1a-4703-a72c-283b5f312eac","system":"guardian","component":"guardian.settings.reset","action":"registered","status":"ok","tags":["guardian"],"detail":"Reset settings to defaults","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493442}
-{"uuid":"6c1cd35b-51ea-4450-a9a5-7d8c5586bff7","system":"guardian","component":"guardian.settings.reset","action":"updated","status":"ok","tags":["guardian"],"detail":"Reset settings to defaults","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329460}

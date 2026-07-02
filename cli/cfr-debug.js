@@ -27,11 +27,11 @@ const fs        = require('fs');
 const path      = require('path');
 const http      = require('http');
 const readline  = require('readline');
-const { createCFRField }          = require('../lib/cfr/field');
-const { computeSigma }            = require('../lib/cfr/sigma');
-const { computeDelta }            = require('../lib/cfr/delta');
-const { CausalGraph }             = require('../lib/cfr/graph');
-const { createContractVerifier, loadContracts } = require('../lib/cfr/contract-verifier');
+const { createCFRField }          = require('../meta/cfr/field');
+const { computeSigma }            = require('../meta/cfr/sigma');
+const { computeDelta }            = require('../meta/cfr/delta');
+const { CausalGraph }             = require('../meta/cfr/graph');
+const { createContractVerifier, loadContracts } = require('../meta/cfr/contract-verifier');
 
 // ── ANSI colors ───────────────────────────────────────────────────────────────
 const C = {

@@ -1,2 +1,0 @@
-{"uuid":"2111f714-e4f4-4259-8e7c-823091b864e8","system":"guardian","component":"guardian.bus.log","action":"registered","status":"ok","tags":["guardian"],"detail":"Recent SISO bus log","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493423}
-{"uuid":"ce00393e-8672-40cb-b768-7316a1727695","system":"guardian","component":"guardian.bus.log","action":"updated","status":"ok","tags":["guardian"],"detail":"Recent SISO bus log","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329380}

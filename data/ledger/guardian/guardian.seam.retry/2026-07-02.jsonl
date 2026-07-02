@@ -1,2 +1,0 @@
-{"uuid":"672b252f-5feb-4127-8634-9ac6ff52eb44","system":"guardian","component":"guardian.seam.retry","action":"registered","status":"ok","tags":["guardian"],"detail":"Retry a failed SEAM chunk","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493434}
-{"uuid":"5b463ee1-bda5-4b0e-8d9f-eeb5d5f167c8","system":"guardian","component":"guardian.seam.retry","action":"updated","status":"ok","tags":["guardian"],"detail":"Retry a failed SEAM chunk","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329427}

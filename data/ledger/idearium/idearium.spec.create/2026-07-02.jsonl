@@ -1,2 +1,0 @@
-{"uuid":"eb0199aa-2622-4d4d-8270-abd9112916ee","system":"idearium","component":"idearium.spec.create","action":"registered","status":"ok","tags":["idearium"],"detail":"Create a new spec from an idea","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782957492060}
-{"uuid":"fe9589a5-a072-4903-8003-cd010e1aed78","system":"idearium","component":"idearium.spec.create","action":"updated","status":"ok","tags":["idearium"],"detail":"Create a new spec from an idea","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782961329277}

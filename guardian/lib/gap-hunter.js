@@ -5,10 +5,10 @@
 let _liminal = null;
 function _getLiminal() {
   if (_liminal !== null) return _liminal;
-  try { _liminal = require('../../lib/meta/liminal/index.js'); } catch(_) { _liminal = false; }
+  try { _liminal = require('../../meta/liminal/index.js'); } catch(_) { _liminal = false; }
   return _liminal;
 }
-const { weakestLink, bottleneck } = require('../../lib/meta/confidence.js');
+const { weakestLink, bottleneck } = require('../../meta/confidence.js');
 /**
  * guardian/lib/gap-hunter.js — GapHunter v3
  * UUID: guardian-gap-hunter-v1-0000-4000-0000-000000000001

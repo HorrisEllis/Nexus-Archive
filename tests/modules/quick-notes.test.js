@@ -39,8 +39,8 @@ function makeMockJaa() {
 
 async function run() {
   function fresh() {
-    delete require.cache[require.resolve('../../lib/quick-notes')];
-    return require('../../lib/quick-notes');
+    delete require.cache[require.resolve('../../orchestrator/lib/quick-notes')];
+    return require('../../orchestrator/lib/quick-notes');
   }
 
   await test('QN-01', 'create note succeeds and broadcasts', async () => {

@@ -31,15 +31,15 @@ const http   = require('http');
 const crypto = require('crypto');
 
 const { createICO }      = require('../lib/ico');
-const { createContractVerifier, loadContracts } = require('../lib/cfr/contract-verifier');
-const { createCFRField, computeRegime }         = require('../lib/cfr/field');
+const { createContractVerifier, loadContracts } = require('../meta/cfr/contract-verifier');
+const { createCFRField, computeRegime }         = require('../meta/cfr/field');
 const { createBaseline } = require('../lib/baseline');
 const { sigma, mean }    = require('../lib/baseline');
 // ── Meta layer: telemetry codec replaces hand-rolled stats where available ────
 let _metaTelemetry = null;
 function _getMetaTel() {
   if (_metaTelemetry !== null) return _metaTelemetry;
-  try { _metaTelemetry = require('../lib/meta/telemetry-codec/index.js'); } catch(_) { _metaTelemetry = false; }
+  try { _metaTelemetry = require('../meta/telemetry-codec/index.js'); } catch(_) { _metaTelemetry = false; }
   return _metaTelemetry;
 }
 // Per-system TelemetryRuntime instances — keyed by system name
@@ -458,7 +458,7 @@ function startService() {
           // In that case: evidence appended, recurrence incremented, no new gap created
           let gapUuid;
           try {
-            const gp = require('../lib/gap-predicate');
+            const gp = require('../meta/gap/predicate');
             const { enriched_gap, existing_uuid } = gp.enrichGap(gap);
             if (existing_uuid) {
               gapUuid = existing_uuid;
@@ -731,7 +731,7 @@ function startService() {
       // If the predicate is now false, run closure verifier instead of re-dispatching
       if (gap.predicate) {
         try {
-          const gp = require('../lib/gap-predicate');
+          const gp = require('../meta/gap/predicate');
           const stillOpen = gp.checkPredicate(gap.predicate);
           if (!stillOpen) {
             // Predicate became false — try to close the gap

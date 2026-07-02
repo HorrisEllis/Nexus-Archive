@@ -1,0 +1,17 @@
+{
+  "id": "architect-v1",
+  "version": "1.0.0",
+  "namespace": "architect",
+  "ports": { "http": 3747 },
+  "uuid": "architect-contract-v1-0000-2026-0702-jamesbrooks-001",
+  "role": "Constraint-first authoring, hook registry, SNR gate, blueprint engine",
+  "health": { "method": "GET", "path": "/health", "returns": { "ok": true } },
+  "routes": [
+    { "method": "GET",  "path": "/health",             "description": "Health check" },
+    { "method": "GET",  "path": "/api/hooks",          "description": "Hook registry" },
+    { "method": "POST", "path": "/api/hooks/sync",     "description": "Sync hooks from registry" },
+    { "method": "GET",  "path": "/api/specs",          "description": "Spec list" },
+    { "method": "POST", "path": "/api/specs/compile",  "description": "Compile a spec" }
+  ],
+  "axioms": ["§3.1", "§5.7"]
+}

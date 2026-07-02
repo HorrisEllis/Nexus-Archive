@@ -4,12 +4,12 @@ const http       = require('http');
 // NCP — NEXUS Channel Protocol (replaces WebSocket entirely)
 // Zero external dependencies. SSE server→browser, fetch() browser→server.
 // See lib/ncp.js for protocol spec.
-const { createNCPServer }    = require('../lib/ncp');
-const { createCFRLedger } = require('../lib/cfr/ledger');
-const { Detector }          = require('./lib/detector');
-const GapHunter             = require('./lib/gap-hunter');
-const { SEAMQueue, STATE }  = require('./lib/seam-queue');
-const { parseSpec, parseSpecFile, extractPrerequisite } = require('./lib/spec-parser');
+const { createNCPServer }    = require('../guardian/lib/ncp');
+const { createCFRLedger } = require('../meta/cfr/ledger');
+const { Detector }          = require('../lib/seam/detector.js');
+const GapHunter             = require('../meta/gap/hunter');
+const { SEAMQueue, STATE }  = require('../lib/seam/queue.js');
+const { parseSpec, parseSpecFile, extractPrerequisite } = require('../lib/seam/spec-parser.js');
 const { createQueue }       = require('../lib/queue');
 const { createBaseline }    = require('../lib/baseline');
 // §PHASE-15-CLOSE: /cli/exec previously only matched its own static switch
@@ -18,7 +18,7 @@ const { createBaseline }    = require('../lib/baseline');
 // grammar-engine + component-registry the CLI and request-handler already
 // read, via the shared lib/grammar-fallback.js resolver — not duplicated
 // inline (§5.7 low coupling, high cohesion).
-const grammarFallback = require('../lib/grammar-fallback');
+const grammarFallback = require('../guardian/lib/grammar-fallback');
 
 // Per-kernel baseline monitor — establishes runtime baseline from first 20 events
 // Sigma deviations → gap.found in JAA
@@ -67,18 +67,6 @@ if (_replayed.length) {
 // that destructures a single object) while nothing ever exercised that path to
 // catch it. One function now. Both callers use it — that class of drift can't
 // recur because there's only one place left for it to recur in.
-//
-// §SCOPE 2026-07-02: this queue is co-pilot's spec-build queue — it exists to
-// chunk a spec, dispatch each chunk to a real browser-tab provider (claude/
-// chatgpt/gemini/perplexity via NCP) or sovereign HTTP model, and verify each
-// chunk before advancing. It is not a general-purpose job bus. emerge's T2
-// gate used to piggyback on it for ollama codegen (POST /command with
-// provider:'ollama'), which meant an ollama job sat here waiting for an NCP
-// browser tab that could never connect — Ollama has no browser tab. That
-// path now goes straight to ollama-bridge (see emerge/compiler/t2-gate.js).
-// The one legitimate non-co-pilot caller left is t2-gate's chatgpt/claude
-// branch, because those genuinely are browser-tab providers this queue was
-// built for.
 function _buildSeamQueue(specText, opts = {}) {
   const {
     provider     = 'chatgpt',
@@ -261,7 +249,7 @@ class SISOStream {
 const bus = new SISOStream();
 
 // ── Jaa pure-JS store (zero native deps) ────────────────────────────────────────────
-const { JaaStore } = require('../lib/jaa-store.js');
+const { JaaStore } = require('./jaa-store.js');
 
 // ── config ────────────────────────────────────────────────────────────────────
 
@@ -367,76 +355,44 @@ const PROVIDER_ALIASES = {
   'chat.mistral.ai':     'mistral',
 };
 
-// ── Mistral / Ollama dispatch — routes to ollama-bridge at :3749 ─────────────
-// Mistral and ollama-provider jobs don't go through NCP/browser tabs; they
-// hit the sovereign ollama-bridge HTTP service directly, same as forge_repair
-// jobs in nexus-heal-loop.js.
-//
-// §BUGFIX 2026-07-02: this used to POST to '/generate' — a route that never
-// existed on ollama-bridge (see ollama/server.js's real route table: only
-// /api/jobs, /api/jobs/:id, /api/queue, /api/models, /health). Every mistral
-// and guardian-side ollama dispatch has been silently 404ing and falling
-// into the JSON-parse-error branch since whenever that path was written.
-// Rewritten against the bridge's actual contract: POST /api/jobs returns
-// {jobId} immediately (the bridge queues it), then poll GET /api/jobs/:id
-// until status is 'complete' | 'failed' or timeoutMs elapses.
+// ── Mistral dispatch — routes to ollama-bridge at :3749 ──────────────────────
+// Mistral jobs don't go through NCP/browser tabs; they hit the sovereign
+// ollama-bridge HTTP service directly, same as forge_repair jobs.
 async function _dispatchToMistral(job) {
   const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
-  const model = job.provider === 'ollama'
-    ? (process.env.OLLAMA_MODEL  || 'llama3.1:8b')
-    : (process.env.MISTRAL_MODEL || 'mistral:7b-instruct-q4_K_M');
-  const timeoutMs = 120000;
+  const model = process.env.MISTRAL_MODEL || 'mistral:7b-instruct-q4_K_M';
   const http2 = require('http');
-
-  function bridgeRequest(method, path, body) {
-    return new Promise(resolve => {
-      const raw = body ? JSON.stringify(body) : null;
-      const req = http2.request({
-        hostname: '127.0.0.1', port: BRIDGE_PORT, path, method,
-        headers: raw ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(raw) } : {},
-        timeout: 10000,
-      }, res => {
-        let d = ''; res.on('data', c => d += c);
-        res.on('end', () => { try { resolve({ ok: res.statusCode < 400, data: JSON.parse(d) }); } catch(e) { resolve({ ok:false, error: e.message }); } });
-      });
-      req.on('timeout', () => { req.destroy(); resolve({ ok:false, error:'ollama-bridge timeout' }); });
-      req.on('error', e => resolve({ ok:false, error: e.message }));
-      if (raw) req.write(raw);
-      req.end();
+  return new Promise(resolve => {
+    const body = JSON.stringify({
+      prompt:   job.prompt || job.content || '',
+      model,
+      command:  job.command || 'chat',
+      jobId:    job.id,
+      meta:     { source: 'guardian-mistral', jobId: job.id },
     });
-  }
-
-  const queued = await bridgeRequest('POST', '/api/jobs', {
-    prompt: job.prompt || job.content || '', model,
-    componentId: 'guardian.job.dispatch', hookId: 'guardian.job.dispatch.receive',
-    intent: job.command || 'chat',
+    const req = http2.request({
+      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/generate',
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 120000,
+    }, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try {
+          const d = JSON.parse(raw);
+          updateJob(job.id, { status: 'complete', response: d.response || d.text || raw, completedAt: Date.now() });
+          bus.emit('guardian.job.complete', { jobId: job.id, provider: 'mistral', chars: (d.response||'').length });
+          resolve({ ok: true, text: d.response || d.text || '' });
+        } catch(e) {
+          updateJob(job.id, { status: 'error', error: 'parse error: ' + e.message });
+          resolve({ ok: false, error: e.message });
+        }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); updateJob(job.id, { status: 'error', error: 'mistral timeout' }); resolve({ ok:false, error:'timeout' }); });
+    req.on('error', e => { updateJob(job.id, { status: 'error', error: e.message }); resolve({ ok:false, error: e.message }); });
+    req.write(body); req.end();
   });
-  if (!queued.ok || !queued.data?.jobId) {
-    const err = queued.error || queued.data?.error || 'ollama-bridge rejected job';
-    updateJob(job.id, { status: 'error', error: err });
-    return { ok: false, error: err };
-  }
-
-  const bridgeJobId = queued.data.jobId;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    await new Promise(r => setTimeout(r, 1000));
-    const poll = await bridgeRequest('GET', `/api/jobs/${bridgeJobId}`);
-    const j = poll.data?.job;
-    if (!poll.ok || !j) continue; // transient — keep polling until deadline
-    if (j.status === 'complete') {
-      updateJob(job.id, { status: 'complete', response: j.result || '', completedAt: Date.now() });
-      bus.emit('guardian.job.complete', { jobId: job.id, provider: job.provider, chars: (j.result||'').length });
-      return { ok: true, text: j.result || '' };
-    }
-    if (j.status === 'failed') {
-      updateJob(job.id, { status: 'error', error: j.error || 'ollama-bridge job failed' });
-      return { ok: false, error: j.error || 'ollama-bridge job failed' };
-    }
-    // queued / running — keep polling
-  }
-  updateJob(job.id, { status: 'error', error: `${job.provider} timeout` });
-  return { ok: false, error: 'timeout' };
 }
 
 // ── job store ─────────────────────────────────────────────────────────────────
@@ -539,7 +495,7 @@ function updateJob(id, patch) {
 }
 
 // Jobs waiting for provider to connect
-const { pool: _dispatchPool } = require('../lib/dispatch-pool'); // §P11: per-provider semaphore
+const { pool: _dispatchPool } = require('../guardian/lib/dispatch-pool'); // §P11: per-provider semaphore
 const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-pool paths)
 
 function dispatchJob(job) {
@@ -615,7 +571,7 @@ function _doDispatch(job) {
   console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP`);
   // §ALK-09: record dispatch decision
   try {
-    const alk = require('../lib/alk');
+    const alk = require('../meta/alk');
     alk.record({
       actor:   'llm',
       intent:  'generate',
@@ -1422,10 +1378,25 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
     }
   });
 
-  // [DISABLED — see CHANGELOG] ollama.agent / copilot.agent / reflection-contracts.poll
-  // phases removed: ollama not used outside Nexus (ollama-ncp SSE crash loop),
-  // co-pilot agent was broken/unused, reflection depended on the ollama agent.
+  // ── PHASE 9.5: Ollama agent — local model, optional, never blocks boot ───
+  // Moved from cortex/boot.js: Ollama is a local HTTP service Guardian talks
+  // to directly (see ollama-runtime.js), not part of Cortex's intelligence
+  // stack. This phase is SOFT and explicitly not "baked in" — it pings
+  // Ollama first and only starts the agent_calls poller if something is
+  // actually listening. No Ollama running → this is a no-op, Guardian boots
+  // exactly the same either way.
+  // [DISABLED] ollama.agent — Ollama not used outside Nexus; removing prevents
+  // the ollama-ncp SSE crash loop that spams "NCP connected / §FLAPPING" on boot.
+  // seq.phase({ name:'ollama.agent', ... });
 
+  // [DISABLED] copilot.agent — Co-pilot removed; was broken (_ensureProfile not defined)
+  // and unused outside Nexus. HTTP routes at /copilot/* remain so the API surface
+  // doesn't break anything that pokes those endpoints directly.
+  // seq.phase({ name:'copilot.agent', ... });
+
+  // [DISABLED] §23.7 Reflection contracts — depends on Ollama (dispatches to provider:'ollama').
+  // Removed along with the Ollama agent; nothing to dispatch to.
+  // seq.phase({ name:'reflection-contracts.poll', ... });
 
   // ── ChatGPT mode — stateless, no listener needed (request/response only) ──
   seq.phase({ name:'chatgpt-mode.ready', type:'SOFT',
@@ -1843,12 +1814,19 @@ _evLedger.startAutoSave(60000);
 // §LAW II: ledger write happens BEFORE any subscriber processes the event
 const _origEmit = bus.emit.bind(bus);
 bus.emit = function(type, data) {
-  _evLedger.record(type, data || {}, {
+  // §fix 2026-07-02 — guard non-string types before they reach CFR sigma.
+  // The coercion warning in sigma.js fires 400+ times at boot because some
+  // callers pass bus.emit({type:'x',...}) instead of bus.emit('x', {...}).
+  // Normalize here at the intercept point so sigma never sees an object type.
+  const safeType = typeof type === 'string' ? type
+    : (type?.type && typeof type.type === 'string' ? type.type : String(type || ''));
+  const safeData = typeof type === 'string' ? (data || {}) : (type?.payload || type?.data || data || {});
+  _evLedger.record(safeType, safeData, {
     source:    'guardian.bus',
-    causedBy:  data?.jobId || data?.causedBy || null,
-    sessionId: data?.sessionId || null,
+    causedBy:  safeData?.jobId || safeData?.causedBy || null,
+    sessionId: safeData?.sessionId || null,
   });
-  return _origEmit(type, data);
+  return _origEmit(safeType, safeData);
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1986,7 +1964,7 @@ function cockpitBroadcast(data) {
 // before it existed when this lived earlier in the file (TDZ ReferenceError
 // on boot). Moved here instead of deferring the emit itself, since the next
 // thing added between the old spot and here could hit the same landmine.
-const { createSeamWatchdog } = require('./lib/seam-watchdog');
+const { createSeamWatchdog } = require('../lib/seam/watchdog.js');
 const _seamWatchdog = createSeamWatchdog({
   activeQueues:   _activeQueues,
   ncpIsConnected: (provider) => ncp.isConnected(provider),
@@ -2415,7 +2393,7 @@ function handleExtendedRoutes(req, res, url, method) {
   if (method==='GET' && url.pathname==='/alk/last') {
     // Resume — returns last user-initiated ALK decision
     try {
-      const alk = require('../lib/alk');
+      const alk = require('../meta/alk');
       const decisions = alk.query({ actor: 'user', limit: 1 });
       const last = decisions[0] || null;
       pRes(res, 200, { ok:true, decision: last });
@@ -2498,21 +2476,6 @@ function handleExtendedRoutes(req, res, url, method) {
       if (ncp.isConnected(p)) out[p] = 'connected';
     }
     pRes(res, 200, { ok:true, providers:out, channels: connected }); return true;
-  }
-
-  // §API-01 2026-07-02: orchestrator's /api/guardian/capabilities used to
-  // require('./guardian/api-dispatch') directly into its OWN process — which
-  // means cfg.key() (checks e.g. process.env.OPENAI_API_KEY) was reading
-  // orchestrator's env, not guardian's. If the two processes' env ever
-  // differ (containers, .env scoping, secrets only injected where needed),
-  // orchestrator reported the wrong availability. This is the real HTTP
-  // route guardian was missing — orchestrator now proxies to this instead.
-  if (method==='GET' && url.pathname==='/api/capabilities') {
-    try {
-      const ad = require('./api-dispatch');
-      pRes(res, 200, { ok:true, providers: ad.capabilities() });
-    } catch(e) { pRes(res, 500, { ok:false, error: e.message }); }
-    return true;
   }
 
   // ── NCP channel endpoints (replace WSS) ─────────────────────────────────
@@ -2924,35 +2887,8 @@ function handleExtendedRoutes(req, res, url, method) {
 
   // /copilot/prompt and /copilot/channel removed — sovereign copilot service at :3750 handles these.
 
-  // ── POST /hot-load — Phase 14/28: Build from inside ─────────────────────────
-  // Load or replace a module in the running system without restart.
-  // §2.1: snapshots before integrate. Rollback if σ > 0.70 after monitorMs.
-  if (method === 'POST' && url.pathname === '/hot-load') {
-    bodyJ(req).then(async body => {
-      const { modulePath, src, invariants: _inv, monitorMs = 60000 } = body || {};
-      if (!modulePath) { pRes(res, 400, { ok: false, error: 'modulePath required' }); return; }
-      try {
-        const hl = require('../lib/hot-loader');
-        if (!hl._inited) { hl.init({ bus, jaaDB: jaa }); hl._inited = true; }
-        // RAID gate — hot-load is a live code change, requires approval
-        const approval = raid._approveTool('guardian.hot-load', `hot-load:${modulePath}`,
-          { action: 'hot_patch', proof: body.proof });
-        if (!approval.approved) { pRes(res, 403, { ok: false, denied: true, reason: approval.reason }); return; }
-        const result = await hl.load({ modulePath, src, monitorMs });
-        pRes(res, result.ok ? 200 : 400, result);
-      } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
-    }).catch(e => pRes(res, 500, { ok: false, error: e.message }));
-    return true;
-  }
+  // hot-load routes removed — use GET/POST /api/system/hot-load on orchestrator
 
-  // ── GET /hot-load/status — in-flight hot loads ────────────────────────────
-  if (method === 'GET' && url.pathname === '/hot-load/status') {
-    try {
-      const hl = require('../lib/hot-loader');
-      pRes(res, 200, { ok: true, ...hl.status() });
-    } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
-    return true;
-  }
 
   // ── Organism delivery queue — ERAVOS polls this to get newly-built organisms ──
   // NEXUS builds an organism zip via /build, puts it here.
@@ -3100,83 +3036,11 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
-  // ── POST /blueprint/compile — Phase 42: compile system blueprint ──────────
-  if (method === 'POST' && url.pathname === '/blueprint/compile') {
-    (async () => {
-      try {
-        const bp = require('../lib/blueprint');
-        bp.init({ bus, jaaDB: jaa });
-        const result = await bp.compile();
-        pRes(res, result.ok ? 200 : 500, result.ok
-          ? { ok:true, sigma:result.sigma, components:result.blueprint.registry.components, gaps:result.gaps.length, uuid:result.blueprint.uuid }
-          : { ok:false, error:result.error });
-      } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
-    })();
-    return true;
-  }
+  // blueprint routes removed — use /api/guardian/blueprint on orchestrator (already proxied)
 
-  // ── GET /blueprint — load current blueprint ───────────────────────────────
-  if (method === 'GET' && url.pathname === '/blueprint') {
-    try {
-      const bp = require('../lib/blueprint');
-      const b = bp.load();
-      pRes(res, b ? 200 : 404, b || { ok:false, error:'No blueprint compiled yet. POST /blueprint/compile first.' });
-    } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
-    return true;
-  }
+  // autonomous routes removed — use /api/system/autonomous on orchestrator
 
-  // ── POST /autonomous/run — Phase 13: run autonomous loop ─────────────────
-  if (method === 'POST' && url.pathname === '/autonomous/run') {
-    bodyJ(req).then(async body => {
-      const { goal, budget, boundary, exit: exitCond, source } = body || {};
-      if (!goal || !budget || !boundary || !exitCond) {
-        pRes(res, 400, { ok:false, error:'goal, budget, boundary, and exit are all required — none inferred' });
-        return;
-      }
-      // RAID gate
-      const approval = raid._approveTool('guardian.autonomous', 'autonomous-loop',
-        { action:'autonomous', proof:body.proof });
-      if (!approval.approved) { pRes(res, 403, { ok:false, denied:true, reason:approval.reason }); return; }
-      try {
-        const al = require('../lib/autonomous-loop');
-        al.init({ bus, jaaDB:jaa, raid });
-        const result = await al.run({ goal, budget, boundary, exit:exitCond, source:source||'api' });
-        pRes(res, result.ok ? 200 : 400, result);
-      } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
-    }).catch(e => pRes(res, 500, { ok:false, error:e.message }));
-    return true;
-  }
-
-  // ── GET /autonomous/status ────────────────────────────────────────────────
-  if (method === 'GET' && url.pathname === '/autonomous/status') {
-    try {
-      const al = require('../lib/autonomous-loop');
-      pRes(res, 200, { ok:true, ...al.status() });
-    } catch(e) { pRes(res, 500, { ok:false, error:e.message }); }
-    return true;
-  }
-
-  // ── GET /mcp/status — MCP server status ─────────────────────────────────────
-  if (method === 'GET' && url.pathname === '/mcp/status') {
-    try {
-      const mcp = require('../lib/mcp-server');
-      pRes(res, 200, { ok: true, ...mcp.status() });
-    } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
-    return true;
-  }
-
-  // ── GET /mcp/tools — list MCP tools ─────────────────────────────────────────
-  if (method === 'GET' && url.pathname === '/mcp/tools') {
-    try {
-      const mcp = require('../lib/mcp-server');
-      pRes(res, 200, {
-        ok: true,
-        tools: mcp.TOOLS.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
-        total: mcp.TOOLS.length,
-      });
-    } catch(e) { pRes(res, 500, { ok: false, error: e.message }); }
-    return true;
-  }
+  // mcp routes removed — use /api/system/mcp on orchestrator
 
   // /copilot/observe removed — sovereign copilot service at :3750 handles this.
 
@@ -3397,7 +3261,7 @@ function handleExtendedRoutes(req, res, url, method) {
     }
     if (method==='POST' && parts[1]==='reset') {
       // Re-bootstrap defaults
-      const { JaaStore: JS2 } = require('../lib/jaa-store.js');
+      const { JaaStore: JS2 } = require('./jaa-store.js');
       const defaults = JS2.prototype?._bootstrapSettings?.call?.(jaa) || null;
       // Force re-insert all defaults
       for (const [k,v] of Object.entries({session_greeting_enabled:'true',session_greeting_text:'Guardian session initialising. Please ask me: "What are we calling this session?" — then wait for my answer before we begin.',scan_debounce_ms:'1500',artifact_max:'500',gap_min_score:'0.25',pa_enabled:'true',memory_auto_push:'true',dropzone_auto_upload:'true',stream_log_level:'EVENTS',greeting_delay_ms:'1200',poll_interval_ms:'500',stable_count_threshold:'5'})) {

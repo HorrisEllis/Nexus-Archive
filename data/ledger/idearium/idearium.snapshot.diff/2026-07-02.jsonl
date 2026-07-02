@@ -1,2 +1,0 @@
-{"uuid":"1f82ea53-7869-48c0-a6ed-33dabbc1115b","system":"idearium","component":"idearium.snapshot.diff","action":"registered","status":"ok","tags":["idearium"],"detail":"Diff two snapshots","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782957492070}
-{"uuid":"4efdd27f-3f57-4b00-b941-f0b13c844ed6","system":"idearium","component":"idearium.snapshot.diff","action":"updated","status":"ok","tags":["idearium"],"detail":"Diff two snapshots","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782961329319}

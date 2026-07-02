@@ -1,2 +1,0 @@
-{"uuid":"4be6a56d-245b-42de-b804-8a338251df78","system":"cg","component":"cg.driver.exec","action":"registered","status":"ok","tags":["cg","driver","automation"],"detail":"Execute ClearDriver browser action","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492264}
-{"uuid":"151bd3a0-a263-4121-bc03-67282915ff1b","system":"cg","component":"cg.driver.exec","action":"updated","status":"ok","tags":["cg","driver","automation"],"detail":"Execute ClearDriver browser action","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329490}

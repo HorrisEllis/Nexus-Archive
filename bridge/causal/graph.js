@@ -27,7 +27,7 @@
 
 'use strict';
 
-const { CausalGraph } = require('../../lib/cfr/graph');
+const { CausalGraph } = require('../../meta/cfr/graph');
 
 // Historical interval registry — action_pair → [interval_ms[]]
 // Used for MISSING_LINK gap detection. In-memory; rebuilt from ledger on open.

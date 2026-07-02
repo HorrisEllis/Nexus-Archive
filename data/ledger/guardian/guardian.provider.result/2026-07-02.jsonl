@@ -1,2 +1,0 @@
-{"uuid":"9afe90da-7b0f-4cbb-8c3a-29c7d7f179d4","system":"guardian","component":"guardian.provider.result","action":"registered","status":"ok","tags":["guardian","ncp"],"detail":"NCP result from browser tab","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493426}
-{"uuid":"39147b15-093e-4fad-b098-ac4450bb7f22","system":"guardian","component":"guardian.provider.result","action":"updated","status":"ok","tags":["guardian","ncp"],"detail":"NCP result from browser tab","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329397}
