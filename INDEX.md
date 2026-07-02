@@ -1,7 +1,17 @@
 # NEXUS build kit — everything needed to start a new system
 Assembled 2026-07-02 from the live nexus-consolidated__36 checkout.
 
-## Start here, in order
+## Start here
+
+**`MASTER-MAP.md`** — read this first. It's the real answer to "ports,
+components, CLI, hooks, wires, registry, cortex schemas, API channels" —
+built by actually reading `blueprint-index.json`, `loom/data/registry.json`,
+`nexus-connect.js`, and `contracts/SYSTEM-CONTRACTS.js`, not by listing
+filenames. It also names two real gaps found while building it (a stale
+component count, a port-map mismatch) worth knowing about before you add
+a new system on top of them.
+
+Then, in order:
 
 1. **`docs/AXIOMS-v3.0.md`** — the actual constitution. Immutable laws
    (marked §) are non-negotiable for any new system; flexible principles
