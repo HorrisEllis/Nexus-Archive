@@ -1,0 +1,2 @@
+{"uuid":"12db64ff-ba9e-4500-aaa9-035717c35514","system":"eros","component":"eros.cmd.hover","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP hover over node","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492367}
+{"uuid":"ad59f2ad-3d06-4c95-aa8a-3b74e2005c4f","system":"eros","component":"eros.cmd.hover","action":"updated","status":"ok","tags":["eros","driver"],"detail":"CDP hover over node","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329695}

@@ -1,0 +1,2 @@
+{"uuid":"e6430363-9045-4852-bd37-68c2c5840d0e","system":"eros","component":"eros.replay.checkpoint","action":"registered","status":"ok","tags":["eros","replay"],"detail":"Create checkpoint from current state","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492384}
+{"uuid":"15e1117d-589e-4f16-90b7-daa01766aa62","system":"eros","component":"eros.replay.checkpoint","action":"updated","status":"ok","tags":["eros","replay"],"detail":"Create checkpoint from current state","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329752}

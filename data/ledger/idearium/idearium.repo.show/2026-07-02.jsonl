@@ -1,0 +1,2 @@
+{"uuid":"0b2f224c-435d-454d-b737-55c0aa9f4c47","system":"idearium","component":"idearium.repo.show","action":"registered","status":"ok","tags":["idearium"],"detail":"Get a single repo by uuid","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782957492073}
+{"uuid":"1d64ac87-14aa-4ced-a5c9-bfac14867452","system":"idearium","component":"idearium.repo.show","action":"updated","status":"ok","tags":["idearium"],"detail":"Get a single repo by uuid","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782961329332}

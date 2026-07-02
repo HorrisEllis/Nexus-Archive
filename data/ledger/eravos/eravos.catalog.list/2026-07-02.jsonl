@@ -1,0 +1,2 @@
+{"uuid":"cde819c4-3857-4e89-9c5e-347cd18ec1b6","system":"eravos","component":"eravos.catalog.list","action":"registered","status":"ok","tags":["eravos"],"detail":"Available organisms from registry","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782957492858}
+{"uuid":"370a59e0-b7e9-426f-96ef-d52c2ec2e7b3","system":"eravos","component":"eravos.catalog.list","action":"updated","status":"ok","tags":["eravos"],"detail":"Available organisms from registry","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782961330033}

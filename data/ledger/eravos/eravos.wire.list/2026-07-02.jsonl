@@ -1,0 +1,2 @@
+{"uuid":"fd1f9c3f-bbb7-4d64-ac71-92dcdbba2edf","system":"eravos","component":"eravos.wire.list","action":"registered","status":"ok","tags":["eravos"],"detail":"List all wires","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782957492856}
+{"uuid":"6c681f3b-44aa-4698-bca2-3b338371814b","system":"eravos","component":"eravos.wire.list","action":"updated","status":"ok","tags":["eravos"],"detail":"List all wires","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782961330029}

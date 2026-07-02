@@ -1,0 +1,2 @@
+{"uuid":"491afc78-c534-4266-88f8-33be8139ba0e","system":"eravos","component":"eravos.transport.stop","action":"registered","status":"ok","tags":["eravos"],"detail":"Stop playback","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782957492860}
+{"uuid":"8907b1f6-fbb6-42e1-bef0-2aaa22386876","system":"eravos","component":"eravos.transport.stop","action":"updated","status":"ok","tags":["eravos"],"detail":"Stop playback","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782961330046}

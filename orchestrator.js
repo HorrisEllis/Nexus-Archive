@@ -1168,11 +1168,25 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
 
   // ── Guardian capabilities — /api/guardian/capabilities ─────────────────
   // Lists all available AI providers and their strengths
+  //
+  // §API-01 2026-07-02: this used to require('./guardian/api-dispatch')
+  // directly into the orchestrator process, which meant provider-key checks
+  // ran against orchestrator's env instead of guardian's. Guardian now
+  // exposes GET /api/capabilities itself; this just proxies to it.
   if (top === 'api' && sub === 'guardian' && rest === 'capabilities') {
     try {
-      const ad = require('./guardian/api-dispatch');
-      const caps = ad.capabilities();
-      return json(res, 200, { ok:true, providers: caps });
+      const http = require('http');
+      const r = await new Promise((resolve) => {
+        const req2 = http.request({ hostname:'127.0.0.1', port:7820, path:'/api/capabilities', method:'GET', timeout:4000 }, gres => {
+          let d=''; gres.on('data', c=>d+=c);
+          gres.on('end', () => { try { resolve({ ok: gres.statusCode<400, data: JSON.parse(d) }); } catch(e) { resolve({ ok:false, error:e.message }); } });
+        });
+        req2.on('timeout', () => { req2.destroy(); resolve({ ok:false, error:'guardian timeout' }); });
+        req2.on('error', e => resolve({ ok:false, error:e.message }));
+        req2.end();
+      });
+      if (!r.ok) return json(res, 502, { ok:false, error: r.error || 'guardian unreachable' });
+      return json(res, 200, { ok:true, providers: r.data?.providers || [] });
     } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
   }
 

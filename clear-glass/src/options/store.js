@@ -34,6 +34,10 @@ const DEFAULTS = {
   // Toolbar customization — ids of feature buttons pinned to the main
   // chrome bar. Anything not listed here lives in the overflow menu only.
   pinnedToolbarButtons:  ['copilot-toggle', 'btn-bookmark'],
+
+  // WebExtensions — unpacked extension folders loaded via
+  // session.loadExtension(), persisted so they survive a restart.
+  installedExtensions:   [],
 };
 
 class NexusOptions {

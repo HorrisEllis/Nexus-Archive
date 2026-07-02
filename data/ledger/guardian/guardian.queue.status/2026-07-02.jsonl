@@ -1,0 +1,2 @@
+{"uuid":"7fc00891-2483-4710-9369-307899e4a403","system":"guardian","component":"guardian.queue.status","action":"registered","status":"ok","tags":["guardian"],"detail":"Physical queue status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493436}
+{"uuid":"98256acf-64d4-460e-b0c1-0d174fb82104","system":"guardian","component":"guardian.queue.status","action":"updated","status":"ok","tags":["guardian"],"detail":"Physical queue status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329432}

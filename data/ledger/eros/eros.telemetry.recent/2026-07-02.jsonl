@@ -1,0 +1,2 @@
+{"uuid":"b7bfef00-5158-4d42-baca-a12dc3940d73","system":"eros","component":"eros.telemetry.recent","action":"registered","status":"ok","tags":["eros","telemetry"],"detail":"Recent telemetry events","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492388}
+{"uuid":"d9990d27-173c-4e29-a335-21ee4fa71467","system":"eros","component":"eros.telemetry.recent","action":"updated","status":"ok","tags":["eros","telemetry"],"detail":"Recent telemetry events","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329770}

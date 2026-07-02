@@ -1,0 +1,2 @@
+{"uuid":"c9df240a-b928-4a3e-b6a7-0e143ec450ce","system":"eros","component":"eros.observer.unwatch","action":"registered","status":"ok","tags":["eros","observer"],"detail":"Stop DOM observer on tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492387}
+{"uuid":"bca105ea-b89c-446c-8826-e973063621f4","system":"eros","component":"eros.observer.unwatch","action":"updated","status":"ok","tags":["eros","observer"],"detail":"Stop DOM observer on tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329766}

@@ -1,0 +1,2 @@
+{"uuid":"3684a1c6-4846-4f6a-8a41-828918a77130","system":"guardian","component":"guardian.job.status","action":"registered","status":"ok","tags":["guardian"],"detail":"Single job status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493428}
+{"uuid":"f86c6951-3ec7-4968-bad0-971c40105c84","system":"guardian","component":"guardian.job.status","action":"updated","status":"ok","tags":["guardian"],"detail":"Single job status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329410}

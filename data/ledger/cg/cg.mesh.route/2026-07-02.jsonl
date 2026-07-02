@@ -1,0 +1,2 @@
+{"uuid":"063da4ad-e5de-432b-948b-915ddfbd5bb6","system":"cg","component":"cg.mesh.route","action":"registered","status":"ok","tags":["cg","mesh","raid"],"detail":"RAID-route prompt to healthiest agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492286}
+{"uuid":"36c51540-b851-46ec-a7d9-83f24afb8db3","system":"cg","component":"cg.mesh.route","action":"updated","status":"ok","tags":["cg","mesh","raid"],"detail":"RAID-route prompt to healthiest agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329547}

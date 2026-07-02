@@ -1,0 +1,2 @@
+{"uuid":"833a2b76-7762-45d5-b45a-6f7fadd088b7","system":"idearium","component":"idearium.gap.show","action":"registered","status":"ok","tags":["idearium"],"detail":"Get a single gap by uuid","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782957492066}
+{"uuid":"e843c11a-1004-4e68-a251-f3c156f7b39b","system":"idearium","component":"idearium.gap.show","action":"updated","status":"ok","tags":["idearium"],"detail":"Get a single gap by uuid","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782961329298}

@@ -33,7 +33,16 @@ contextBridge.exposeInMainWorld('ClearGlass', {
 
   // ── Co-pilot ─────────────────────────────────────────────────────────
   copilot: {
-    send: (payload) => ipcRenderer.invoke('copilot:send', payload),
+    send:     (payload) => ipcRenderer.invoke('copilot:send', payload),
+    build:    (payload) => ipcRenderer.invoke('copilot:build', payload),
+    diagnose: (payload) => ipcRenderer.invoke('copilot:diagnose', payload),
+  },
+
+  // ── WebExtensions — §NEW 2026-07-02 ─────────────────────────────────────
+  extensions: {
+    list:        ()     => ipcRenderer.invoke('extensions:list'),
+    unload:      (id)   => ipcRenderer.invoke('extensions:unload', { id }),
+    pickAndLoad: ()     => ipcRenderer.invoke('extensions:pickAndLoad'),
   },
 
   // ── Context ───────────────────────────────────────────────────────────

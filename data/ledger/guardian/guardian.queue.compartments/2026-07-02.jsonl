@@ -1,0 +1,2 @@
+{"uuid":"a551d9f4-87ee-4065-b60a-0fb7df8af3ff","system":"guardian","component":"guardian.queue.compartments","action":"registered","status":"ok","tags":["guardian"],"detail":"Job compartment list","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493437}
+{"uuid":"34c182c0-1e43-49fb-93aa-747409e2c48d","system":"guardian","component":"guardian.queue.compartments","action":"updated","status":"ok","tags":["guardian"],"detail":"Job compartment list","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329437}

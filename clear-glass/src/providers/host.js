@@ -155,6 +155,19 @@ class ProviderHost {
         contextIsolation:            true,
         webSecurity:                 true,
         allowRunningInsecureContent: false,
+        // §fix 2026-07-02 — these windows are deliberately hidden
+        // (show: false) and meant to run their NCP EventSource + 8s
+        // heartbeat at full speed in the background. Electron's default
+        // for backgroundThrottling is true, which clamps timers and
+        // deprioritizes network activity in unfocused/hidden renderers.
+        // That's the likely cause of the chatgpt NCP tab reconnecting
+        // roughly every ~9s (close to HB_MS=8000 in userscript-chatgpt.js)
+        // — the heartbeat timer getting throttled/delayed enough for the
+        // connection to look stale and cycle. Was never set explicitly
+        // before, so every hidden provider window inherited Chromium's
+        // default throttling despite the whole point of this class being
+        // background-resident tabs.
+        backgroundThrottling:        false,
         // preload is NOT used here — we inject via executeJavaScript after load
       },
       title: `NEXUS NCP — ${def.name}`,
@@ -217,18 +230,33 @@ class ProviderHost {
       if (win.isDestroyed()) { clearInterval(reloadTimer); return; }
       const url = win.webContents.getURL();
       const isProviderPage = def.hosts.some(h => url.includes(h));
-      if (isProviderPage) {
-        // Only re-inject if script on disk has changed
-        const filePath = this._scriptPath(providerId);
-        try {
-          const mtime = fs.statSync(filePath).mtimeMs;
-          const cached = this._scriptCache.get(providerId);
-          if (!cached || cached.mtimeMs !== mtime) {
-            _log(`[ProviderHost] ${providerId} — script changed on disk, re-injecting…`);
-            await this._inject(providerId, win);
-          }
-        } catch (_) {}
+      if (!isProviderPage) return;
+
+      // §fix 2026-07-02 — filePath used to be built *before* this try
+      // block (`this._scriptPath(providerId)` above it), so when
+      // guardianDir is unset, path.join(null, ...) threw synchronously
+      // inside this async setInterval callback — nothing awaits or
+      // catches a setInterval callback's returned promise, so it became
+      // an unhandled rejection, once per hosted provider, every 60s
+      // ("The 'path' argument must be of type string. Received null").
+      // Moved inside the try, and guardianDir is checked once so it
+      // logs a single clear warning instead of crashing silently forever.
+      if (!this.guardianDir) {
+        if (!this._warnedNoGuardianDir) {
+          this._warnedNoGuardianDir = true;
+          _logWarn(`[ProviderHost] skipping script reload — guardianDir not configured (set GUARDIAN_DIR). This warning only logs once; reload checks will keep skipping silently until GUARDIAN_DIR is set.`);
+        }
+        return;
       }
+      try {
+        const filePath = this._scriptPath(providerId);
+        const mtime = fs.statSync(filePath).mtimeMs;
+        const cached = this._scriptCache.get(providerId);
+        if (!cached || cached.mtimeMs !== mtime) {
+          _log(`[ProviderHost] ${providerId} — script changed on disk, re-injecting…`);
+          await this._inject(providerId, win);
+        }
+      } catch (_) {}
     }, SCRIPT_RELOAD_INTERVAL_MS);
 
     this.postEvent('provider.host.starting', { providerId, url: def.url });

@@ -1,0 +1,2 @@
+{"uuid":"eea0d6a8-7d8b-47ec-b2b4-3b3ff8715701","system":"guardian","component":"guardian.gaps.summary","action":"registered","status":"ok","tags":["guardian"],"detail":"Gap summary by type + severity","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493439}
+{"uuid":"ddaa14d5-403b-4593-b589-e1614a943d21","system":"guardian","component":"guardian.gaps.summary","action":"updated","status":"ok","tags":["guardian"],"detail":"Gap summary by type + severity","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329449}

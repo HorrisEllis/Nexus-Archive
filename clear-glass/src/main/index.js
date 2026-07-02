@@ -37,7 +37,7 @@
  * It does not depend on nexus-wired or ErosmancerOS to boot.
  */
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, session } = require('electron');
 const path   = require('path');
 const http   = require('http');
 const { randomUUID } = require('crypto');
@@ -96,6 +96,7 @@ const IpcBridge         = require('../ipc/bridge');
 const NexusOptions      = require('../options/store');
 const BookmarkStore     = require('../bookmarks/store');
 const RewindEngine      = require('../rewind/engine');
+const ExtensionManager  = require('../extensions/manager');
 const ProviderHost      = require('../providers/host');
 const UserscriptManager = require('../userscripts/manager');
 const { registerAll }   = require('../gates/index');
@@ -108,7 +109,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture, extensions;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -442,6 +443,14 @@ async function bootstrap() {
   nexusOptions = new NexusOptions();
   await nexusOptions.load();
 
+  // 8.55. WebExtensions — unpacked extension support via Electron's native
+  // session.loadExtension(). New capability, no prior groundwork existed.
+  extensions = new ExtensionManager({ session: session.defaultSession, options: nexusOptions });
+  extensions.loadPersisted().then(results => {
+    const failed = results.filter(r => !r.ok);
+    if (failed.length) console.warn(`[extensions] ${failed.length} extension(s) failed to reload:`, failed.map(f => f.error));
+  }).catch(err => console.warn('[extensions] loadPersisted failed (non-fatal):', err.message));
+
   // 8.6. Bookmark store
   bookmarks = new BookmarkStore();
   await bookmarks.load();
@@ -610,6 +619,8 @@ async function bootstrap() {
     rewind,
     providerHost,
     userscripts,
+    copilot,
+    extensions,
   });
   await ipcBridge.start();
   // §5.2 Contract IS the bridge — serve /contract so orchestrator can verify us

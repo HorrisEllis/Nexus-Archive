@@ -1,0 +1,2 @@
+{"uuid":"67b75e01-5a01-44e6-9923-89f2854af328","system":"cg","component":"cg.dom.pick","action":"registered","status":"ok","tags":["cg","dom","seam"],"detail":"Register element picker result as named NEXUS hook","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492268}
+{"uuid":"7daad9e9-e913-4202-8f1b-3905f329444f","system":"cg","component":"cg.dom.pick","action":"updated","status":"ok","tags":["cg","dom","seam"],"detail":"Register element picker result as named NEXUS hook","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329497}

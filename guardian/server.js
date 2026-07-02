@@ -67,6 +67,18 @@ if (_replayed.length) {
 // that destructures a single object) while nothing ever exercised that path to
 // catch it. One function now. Both callers use it — that class of drift can't
 // recur because there's only one place left for it to recur in.
+//
+// §SCOPE 2026-07-02: this queue is co-pilot's spec-build queue — it exists to
+// chunk a spec, dispatch each chunk to a real browser-tab provider (claude/
+// chatgpt/gemini/perplexity via NCP) or sovereign HTTP model, and verify each
+// chunk before advancing. It is not a general-purpose job bus. emerge's T2
+// gate used to piggyback on it for ollama codegen (POST /command with
+// provider:'ollama'), which meant an ollama job sat here waiting for an NCP
+// browser tab that could never connect — Ollama has no browser tab. That
+// path now goes straight to ollama-bridge (see emerge/compiler/t2-gate.js).
+// The one legitimate non-co-pilot caller left is t2-gate's chatgpt/claude
+// branch, because those genuinely are browser-tab providers this queue was
+// built for.
 function _buildSeamQueue(specText, opts = {}) {
   const {
     provider     = 'chatgpt',
@@ -249,7 +261,7 @@ class SISOStream {
 const bus = new SISOStream();
 
 // ── Jaa pure-JS store (zero native deps) ────────────────────────────────────────────
-const { JaaStore } = require('./jaa-store.js');
+const { JaaStore } = require('../lib/jaa-store.js');
 
 // ── config ────────────────────────────────────────────────────────────────────
 
@@ -355,44 +367,76 @@ const PROVIDER_ALIASES = {
   'chat.mistral.ai':     'mistral',
 };
 
-// ── Mistral dispatch — routes to ollama-bridge at :3749 ──────────────────────
-// Mistral jobs don't go through NCP/browser tabs; they hit the sovereign
-// ollama-bridge HTTP service directly, same as forge_repair jobs.
+// ── Mistral / Ollama dispatch — routes to ollama-bridge at :3749 ─────────────
+// Mistral and ollama-provider jobs don't go through NCP/browser tabs; they
+// hit the sovereign ollama-bridge HTTP service directly, same as forge_repair
+// jobs in nexus-heal-loop.js.
+//
+// §BUGFIX 2026-07-02: this used to POST to '/generate' — a route that never
+// existed on ollama-bridge (see ollama/server.js's real route table: only
+// /api/jobs, /api/jobs/:id, /api/queue, /api/models, /health). Every mistral
+// and guardian-side ollama dispatch has been silently 404ing and falling
+// into the JSON-parse-error branch since whenever that path was written.
+// Rewritten against the bridge's actual contract: POST /api/jobs returns
+// {jobId} immediately (the bridge queues it), then poll GET /api/jobs/:id
+// until status is 'complete' | 'failed' or timeoutMs elapses.
 async function _dispatchToMistral(job) {
   const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
-  const model = process.env.MISTRAL_MODEL || 'mistral:7b-instruct-q4_K_M';
+  const model = job.provider === 'ollama'
+    ? (process.env.OLLAMA_MODEL  || 'llama3.1:8b')
+    : (process.env.MISTRAL_MODEL || 'mistral:7b-instruct-q4_K_M');
+  const timeoutMs = 120000;
   const http2 = require('http');
-  return new Promise(resolve => {
-    const body = JSON.stringify({
-      prompt:   job.prompt || job.content || '',
-      model,
-      command:  job.command || 'chat',
-      jobId:    job.id,
-      meta:     { source: 'guardian-mistral', jobId: job.id },
-    });
-    const req = http2.request({
-      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/generate',
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 120000,
-    }, res => {
-      let raw = '';
-      res.on('data', c => raw += c);
-      res.on('end', () => {
-        try {
-          const d = JSON.parse(raw);
-          updateJob(job.id, { status: 'complete', response: d.response || d.text || raw, completedAt: Date.now() });
-          bus.emit('guardian.job.complete', { jobId: job.id, provider: 'mistral', chars: (d.response||'').length });
-          resolve({ ok: true, text: d.response || d.text || '' });
-        } catch(e) {
-          updateJob(job.id, { status: 'error', error: 'parse error: ' + e.message });
-          resolve({ ok: false, error: e.message });
-        }
+
+  function bridgeRequest(method, path, body) {
+    return new Promise(resolve => {
+      const raw = body ? JSON.stringify(body) : null;
+      const req = http2.request({
+        hostname: '127.0.0.1', port: BRIDGE_PORT, path, method,
+        headers: raw ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(raw) } : {},
+        timeout: 10000,
+      }, res => {
+        let d = ''; res.on('data', c => d += c);
+        res.on('end', () => { try { resolve({ ok: res.statusCode < 400, data: JSON.parse(d) }); } catch(e) { resolve({ ok:false, error: e.message }); } });
       });
+      req.on('timeout', () => { req.destroy(); resolve({ ok:false, error:'ollama-bridge timeout' }); });
+      req.on('error', e => resolve({ ok:false, error: e.message }));
+      if (raw) req.write(raw);
+      req.end();
     });
-    req.on('timeout', () => { req.destroy(); updateJob(job.id, { status: 'error', error: 'mistral timeout' }); resolve({ ok:false, error:'timeout' }); });
-    req.on('error', e => { updateJob(job.id, { status: 'error', error: e.message }); resolve({ ok:false, error: e.message }); });
-    req.write(body); req.end();
+  }
+
+  const queued = await bridgeRequest('POST', '/api/jobs', {
+    prompt: job.prompt || job.content || '', model,
+    componentId: 'guardian.job.dispatch', hookId: 'guardian.job.dispatch.receive',
+    intent: job.command || 'chat',
   });
+  if (!queued.ok || !queued.data?.jobId) {
+    const err = queued.error || queued.data?.error || 'ollama-bridge rejected job';
+    updateJob(job.id, { status: 'error', error: err });
+    return { ok: false, error: err };
+  }
+
+  const bridgeJobId = queued.data.jobId;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 1000));
+    const poll = await bridgeRequest('GET', `/api/jobs/${bridgeJobId}`);
+    const j = poll.data?.job;
+    if (!poll.ok || !j) continue; // transient — keep polling until deadline
+    if (j.status === 'complete') {
+      updateJob(job.id, { status: 'complete', response: j.result || '', completedAt: Date.now() });
+      bus.emit('guardian.job.complete', { jobId: job.id, provider: job.provider, chars: (j.result||'').length });
+      return { ok: true, text: j.result || '' };
+    }
+    if (j.status === 'failed') {
+      updateJob(job.id, { status: 'error', error: j.error || 'ollama-bridge job failed' });
+      return { ok: false, error: j.error || 'ollama-bridge job failed' };
+    }
+    // queued / running — keep polling
+  }
+  updateJob(job.id, { status: 'error', error: `${job.provider} timeout` });
+  return { ok: false, error: 'timeout' };
 }
 
 // ── job store ─────────────────────────────────────────────────────────────────
@@ -1378,25 +1422,10 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
     }
   });
 
-  // ── PHASE 9.5: Ollama agent — local model, optional, never blocks boot ───
-  // Moved from cortex/boot.js: Ollama is a local HTTP service Guardian talks
-  // to directly (see ollama-runtime.js), not part of Cortex's intelligence
-  // stack. This phase is SOFT and explicitly not "baked in" — it pings
-  // Ollama first and only starts the agent_calls poller if something is
-  // actually listening. No Ollama running → this is a no-op, Guardian boots
-  // exactly the same either way.
-  // [DISABLED] ollama.agent — Ollama not used outside Nexus; removing prevents
-  // the ollama-ncp SSE crash loop that spams "NCP connected / §FLAPPING" on boot.
-  // seq.phase({ name:'ollama.agent', ... });
+  // [DISABLED — see CHANGELOG] ollama.agent / copilot.agent / reflection-contracts.poll
+  // phases removed: ollama not used outside Nexus (ollama-ncp SSE crash loop),
+  // co-pilot agent was broken/unused, reflection depended on the ollama agent.
 
-  // [DISABLED] copilot.agent — Co-pilot removed; was broken (_ensureProfile not defined)
-  // and unused outside Nexus. HTTP routes at /copilot/* remain so the API surface
-  // doesn't break anything that pokes those endpoints directly.
-  // seq.phase({ name:'copilot.agent', ... });
-
-  // [DISABLED] §23.7 Reflection contracts — depends on Ollama (dispatches to provider:'ollama').
-  // Removed along with the Ollama agent; nothing to dispatch to.
-  // seq.phase({ name:'reflection-contracts.poll', ... });
 
   // ── ChatGPT mode — stateless, no listener needed (request/response only) ──
   seq.phase({ name:'chatgpt-mode.ready', type:'SOFT',
@@ -2471,6 +2500,21 @@ function handleExtendedRoutes(req, res, url, method) {
     pRes(res, 200, { ok:true, providers:out, channels: connected }); return true;
   }
 
+  // §API-01 2026-07-02: orchestrator's /api/guardian/capabilities used to
+  // require('./guardian/api-dispatch') directly into its OWN process — which
+  // means cfg.key() (checks e.g. process.env.OPENAI_API_KEY) was reading
+  // orchestrator's env, not guardian's. If the two processes' env ever
+  // differ (containers, .env scoping, secrets only injected where needed),
+  // orchestrator reported the wrong availability. This is the real HTTP
+  // route guardian was missing — orchestrator now proxies to this instead.
+  if (method==='GET' && url.pathname==='/api/capabilities') {
+    try {
+      const ad = require('./api-dispatch');
+      pRes(res, 200, { ok:true, providers: ad.capabilities() });
+    } catch(e) { pRes(res, 500, { ok:false, error: e.message }); }
+    return true;
+  }
+
   // ── NCP channel endpoints (replace WSS) ─────────────────────────────────
   // ── CFR-Ω routes — kernel field debugger ──────────────────────────────
   if (url.pathname.startsWith('/cfr')) {
@@ -3353,7 +3397,7 @@ function handleExtendedRoutes(req, res, url, method) {
     }
     if (method==='POST' && parts[1]==='reset') {
       // Re-bootstrap defaults
-      const { JaaStore: JS2 } = require('./jaa-store.js');
+      const { JaaStore: JS2 } = require('../lib/jaa-store.js');
       const defaults = JS2.prototype?._bootstrapSettings?.call?.(jaa) || null;
       // Force re-insert all defaults
       for (const [k,v] of Object.entries({session_greeting_enabled:'true',session_greeting_text:'Guardian session initialising. Please ask me: "What are we calling this session?" — then wait for my answer before we begin.',scan_debounce_ms:'1500',artifact_max:'500',gap_min_score:'0.25',pa_enabled:'true',memory_auto_push:'true',dropzone_auto_upload:'true',stream_log_level:'EVENTS',greeting_delay_ms:'1200',poll_interval_ms:'500',stable_count_threshold:'5'})) {

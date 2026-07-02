@@ -12,15 +12,17 @@
 
 const http    = require('http');
 const express = require('express');
-const { ipcMain, session } = require('electron');
+const { ipcMain, session, dialog } = require('electron');
 const { emit, on, Event, getBus } = require('../core/bus');
 const { v4: uuidv4 } = require('uuid');
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture, copilot, extensions }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
+    this.copilot     = copilot;
+    this.extensions  = extensions;
     this.ctxMgr      = ctxMgr;
     this.vault       = vault;
     this.apiSettings = apiSettings;
@@ -166,7 +168,19 @@ class IpcBridge {
         return { ok: false, error: err.message, count: 0 };
       }
     });
-    ipcMain.handle('copilot:send',   async (e, d) => rendererEmit('copilot.message', d));
+    // §BUGFIX 2026-07-02: this used to be `rendererEmit('copilot.message', d)`
+    // — fire-and-forget onto the bus, returning {ok:true} with no `text`.
+    // browser.html's sendCopilot() does `const res = await cg.copilot.send(...)`
+    // then `res.text.replace(...)` — res.text was always undefined, so every
+    // single co-pilot message in Clear Glass threw "Cannot read properties of
+    // undefined (reading 'replace')", caught by the outer try/catch and shown
+    // as "Error: ..." to the user. The real CoPilotBridge instance was never
+    // passed into IpcBridge at all — this.copilot didn't exist. It does now.
+    ipcMain.handle('copilot:send', async (e, d) => {
+      if (!this.copilot) return { ok: false, error: 'copilot bridge not initialized', text: 'Co-pilot is not available.' };
+      try { return await this.copilot.send(d); }
+      catch (err) { return { ok: false, error: err.message, text: `Error: ${err.message}` }; }
+    });
     // §fix 2026-06-30 — the actual ask: "where are the errors, useless."
     // Renderer-process errors (window.onerror, unhandledrejection in
     // browser.html) now report here, captured the same way as main-process
@@ -218,8 +232,23 @@ class IpcBridge {
     ipcMain.handle('providers:show',  async (e, d) => this.providerHost?.show(d.providerId));
 
     // Copilot extended
-    ipcMain.handle('copilot:build',    async (e, d) => rendererEmit('copilot.build', d));
-    ipcMain.handle('copilot:diagnose', async (e, d) => rendererEmit('copilot.diagnose', d));
+    // §BUGFIX 2026-07-02: same fire-and-forget stub bug as copilot:send above.
+    ipcMain.handle('copilot:build',    async (e, d) => this.copilot ? this.copilot.build(d)    : { ok:false, error:'copilot bridge not initialized' });
+    ipcMain.handle('copilot:diagnose', async (e, d) => this.copilot ? this.copilot.diagnose(d) : { ok:false, error:'copilot bridge not initialized' });
+
+    // ── WebExtensions — §NEW 2026-07-02 ─────────────────────────────────────
+    ipcMain.handle('extensions:list', async () => ({ ok: true, extensions: this.extensions?.list() || [] }));
+    ipcMain.handle('extensions:unload', async (e, { id } = {}) => this.extensions ? this.extensions.unload(id) : { ok:false, error:'extensions manager not initialized' });
+    // Opens a native folder picker (unpacked extension dir must contain manifest.json)
+    ipcMain.handle('extensions:pickAndLoad', async () => {
+      if (!this.extensions) return { ok:false, error:'extensions manager not initialized' };
+      const picked = await dialog.showOpenDialog({
+        title: 'Load unpacked extension — select the folder containing manifest.json',
+        properties: ['openDirectory'],
+      });
+      if (picked.canceled || !picked.filePaths[0]) return { ok:false, error:'cancelled' };
+      return this.extensions.load(picked.filePaths[0]);
+    });
     ipcMain.handle('url:listen',     async (e, d) => rendererEmit('url.listen', d));
     ipcMain.handle('mesh:spawn',     async (e, d) => rendererEmit('mesh.spawn', d));
     ipcMain.handle('mesh:route',     async (e, d) => rendererEmit('mesh.route', d));

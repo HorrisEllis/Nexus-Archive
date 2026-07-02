@@ -1,0 +1,2 @@
+{"uuid":"3da4576e-1321-44d5-b86a-36c64228cc6a","system":"idearium","component":"idearium.idea.archive","action":"registered","status":"ok","tags":["idearium"],"detail":"Archive (soft-delete) an idea","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782957492057}
+{"uuid":"0845a485-a62e-4cef-9a03-e083913311af","system":"idearium","component":"idearium.idea.archive","action":"updated","status":"ok","tags":["idearium"],"detail":"Archive (soft-delete) an idea","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782961329251}

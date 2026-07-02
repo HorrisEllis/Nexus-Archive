@@ -1,0 +1,2 @@
+{"uuid":"200f9d34-20af-4c68-81ae-b5c587a110e7","system":"eros","component":"eros.cmd.screenshot","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP screenshot","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492372}
+{"uuid":"be4902ce-e0a5-481d-b8fc-cb9c5e96c411","system":"eros","component":"eros.cmd.screenshot","action":"updated","status":"ok","tags":["eros","driver"],"detail":"CDP screenshot","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329708}

@@ -1,0 +1,2 @@
+{"uuid":"7a2d67f7-b82e-4118-8723-8e2e14fbeef8","system":"idearium","component":"idearium.idea.phase","action":"registered","status":"ok","tags":["idearium"],"detail":"Advance an idea's lifecycle phase","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782957492059}
+{"uuid":"47d1bb61-a807-48d1-8227-fd390429303b","system":"idearium","component":"idearium.idea.phase","action":"updated","status":"ok","tags":["idearium"],"detail":"Advance an idea's lifecycle phase","causedBy":"idearium","contractUuid":null,"session":null,"ts":1782961329265}

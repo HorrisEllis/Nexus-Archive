@@ -1,0 +1,2 @@
+{"uuid":"f8b3a540-fb0f-40d8-97f8-0baab9a8c699","system":"guardian","component":"guardian.gaps.list","action":"registered","status":"ok","tags":["guardian"],"detail":"Open gaps detected by guardian","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493439}
+{"uuid":"e11f52b5-192c-4b01-9ec7-7acd2a91e242","system":"guardian","component":"guardian.gaps.list","action":"updated","status":"ok","tags":["guardian"],"detail":"Open gaps detected by guardian","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329446}

@@ -1,0 +1,2 @@
+{"uuid":"6b6bfba6-a0d2-481c-a6ed-d9a9c2eda250","system":"eros","component":"eros.tab.shadow.map","action":"registered","status":"ok","tags":["eros","tab","dom"],"detail":"Map shadow DOM tree for tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492361}
+{"uuid":"e1e149f6-dde3-4710-b46b-2557a043bbaf","system":"eros","component":"eros.tab.shadow.map","action":"updated","status":"ok","tags":["eros","tab","dom"],"detail":"Map shadow DOM tree for tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329673}

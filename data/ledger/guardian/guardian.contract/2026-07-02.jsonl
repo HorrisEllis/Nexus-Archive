@@ -1,0 +1,2 @@
+{"uuid":"9a9e8b5e-18ba-47f4-80e4-62e1e105f733","system":"guardian","component":"guardian.contract","action":"registered","status":"ok","tags":["guardian"],"detail":"Guardian interaction contract","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493421}
+{"uuid":"a4f0445e-cde2-4cb4-bcff-5724f21b0835","system":"guardian","component":"guardian.contract","action":"updated","status":"ok","tags":["guardian"],"detail":"Guardian interaction contract","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329368}

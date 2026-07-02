@@ -1,0 +1,2 @@
+{"uuid":"a0b91254-9503-42a5-b910-1edc81626ceb","system":"cg","component":"cg.copilot.clear","action":"registered","status":"ok","tags":["cg","copilot"],"detail":"Clear co-pilot conversation history for agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492284}
+{"uuid":"59ed4f5a-9b6e-4797-a6c2-54cd790a719b","system":"cg","component":"cg.copilot.clear","action":"updated","status":"ok","tags":["cg","copilot"],"detail":"Clear co-pilot conversation history for agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329533}

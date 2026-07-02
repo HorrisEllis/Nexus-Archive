@@ -1,0 +1,2 @@
+{"uuid":"3ce9aead-6257-4ba5-b63c-7350702c7e17","system":"guardian","component":"guardian.events","action":"registered","status":"ok","tags":["guardian","stream"],"detail":"SSE — all guardian bus events","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493423}
+{"uuid":"11448f7d-cfe4-4aca-9b27-2ce94825be56","system":"guardian","component":"guardian.events","action":"updated","status":"ok","tags":["guardian","stream"],"detail":"SSE — all guardian bus events","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329377}

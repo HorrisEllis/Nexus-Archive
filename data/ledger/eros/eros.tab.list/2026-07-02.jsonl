@@ -1,0 +1,2 @@
+{"uuid":"5fc78ae9-e091-45fd-9b6c-d29bcbbb9f30","system":"eros","component":"eros.tab.list","action":"registered","status":"ok","tags":["eros","tab"],"detail":"List open CDP tabs","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492359}
+{"uuid":"40b3ce16-6756-48eb-bda2-0fcb4140d64a","system":"eros","component":"eros.tab.list","action":"updated","status":"ok","tags":["eros","tab"],"detail":"List open CDP tabs","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329663}

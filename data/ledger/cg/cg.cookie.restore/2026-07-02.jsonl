@@ -1,0 +1,2 @@
+{"uuid":"77c46a5f-75eb-4268-92cc-022bf98e0543","system":"cg","component":"cg.cookie.restore","action":"registered","status":"ok","tags":["cg","cookie","vault"],"detail":"Restore cookies from vault into session","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492279}
+{"uuid":"62ba7a3d-cd35-47b7-834e-efead5f8737c","system":"cg","component":"cg.cookie.restore","action":"updated","status":"ok","tags":["cg","cookie","vault"],"detail":"Restore cookies from vault into session","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329520}

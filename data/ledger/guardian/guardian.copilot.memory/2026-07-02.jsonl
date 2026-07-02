@@ -1,0 +1,2 @@
+{"uuid":"784bc258-6a06-4298-b7a9-9362c09da018","system":"guardian","component":"guardian.copilot.memory","action":"registered","status":"ok","tags":["guardian"],"detail":"Co-pilot memory operations","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493443}
+{"uuid":"a33e9900-8f83-45fb-b043-9f2f35f800e7","system":"guardian","component":"guardian.copilot.memory","action":"updated","status":"ok","tags":["guardian"],"detail":"Co-pilot memory operations","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329466}

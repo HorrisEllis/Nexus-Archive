@@ -1,0 +1,2 @@
+{"uuid":"b296086a-8bde-4e4a-83ef-95a5b96ad274","system":"guardian","component":"guardian.seam.sessions","action":"registered","status":"ok","tags":["guardian"],"detail":"SEAM session history","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782957493431}
+{"uuid":"bbc3635a-6e43-47ce-a825-a366f4f27e81","system":"guardian","component":"guardian.seam.sessions","action":"updated","status":"ok","tags":["guardian"],"detail":"SEAM session history","causedBy":"guardian","contractUuid":null,"session":null,"ts":1782961329422}

@@ -1,0 +1,2 @@
+{"uuid":"a7449152-19f9-4d81-bbd2-d9199220d194","system":"eros","component":"eros.hostile.reset","action":"registered","status":"ok","tags":["eros","hostile"],"detail":"Reset threat signals for tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492381}
+{"uuid":"2df1efdf-a247-4c09-b57a-897e7a41f007","system":"eros","component":"eros.hostile.reset","action":"updated","status":"ok","tags":["eros","hostile"],"detail":"Reset threat signals for tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329742}
