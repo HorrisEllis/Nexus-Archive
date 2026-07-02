@@ -1,0 +1,2 @@
+{"uuid":"877489c6-3ed2-4b41-870c-f8699a7c499b","system":"cg","component":"cg.context.health","action":"registered","status":"ok","tags":["cg","context","raid"],"detail":"Agent health — RAID routing weight","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492277}
+{"uuid":"11694965-dd5c-4bf4-8933-cd521bb6e50c","system":"cg","component":"cg.context.health","action":"updated","status":"ok","tags":["cg","context","raid"],"detail":"Agent health — RAID routing weight","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329515}

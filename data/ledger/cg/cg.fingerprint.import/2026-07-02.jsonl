@@ -1,0 +1,2 @@
+{"uuid":"be340536-93c3-4991-b060-4ca55f33b35f","system":"cg","component":"cg.fingerprint.import","action":"registered","status":"ok","tags":["cg","fingerprint"],"detail":"Import Firefox profile for agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492298}
+{"uuid":"b5dd6fd2-f456-4360-8704-82786aa64989","system":"cg","component":"cg.fingerprint.import","action":"updated","status":"ok","tags":["cg","fingerprint"],"detail":"Import Firefox profile for agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329583}

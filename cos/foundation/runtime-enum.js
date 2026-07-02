@@ -30,4 +30,30 @@ const RUNTIME_MAP = new Map(RUNTIMES.map(r => [r.id, r]));
 
 const RUNTIME_IDS = Object.freeze(RUNTIMES.map(r => r.id));
 
-module.exports = Object.freeze({ RUNTIMES, RUNTIME_MAP, RUNTIME_IDS });
+// ─── Full RuntimeID type enum (spec §59.1) ────────────────────────────────────
+// RUNTIMES above is the OPERATIONAL set — runtimes COS can actually detect and
+// spawn today (14 entries, each with a manifest). RUNTIME_ID_ENUM is the full
+// TYPE-LEVEL set from §59.1 — it includes three values with no operational
+// entry yet:
+//   'exe'    — Phase 24 (EXE Runner) builds the manifest + spawn logic
+//   'wine'   — spec marks this "v2.x", explicitly not yet in scope
+//   'plugin' — not a concrete runtime; marks a runtime contributed by a plugin
+// isKnownRuntimeId() validates against this full set. isOperationalRuntimeId()
+// validates against the narrower spawnable set.
+const RUNTIME_ID_ENUM = Object.freeze([...RUNTIME_IDS, 'exe', 'wine', 'plugin']);
+const RUNTIME_ID_SET  = new Set(RUNTIME_ID_ENUM);
+
+/** @param {string} id @returns {boolean} */
+function isKnownRuntimeId(id) {
+  return RUNTIME_ID_SET.has(id);
+}
+
+/** @param {string} id @returns {boolean} */
+function isOperationalRuntimeId(id) {
+  return RUNTIME_MAP.has(id);
+}
+
+module.exports = Object.freeze({
+  RUNTIMES, RUNTIME_MAP, RUNTIME_IDS,
+  RUNTIME_ID_ENUM, isKnownRuntimeId, isOperationalRuntimeId,
+});

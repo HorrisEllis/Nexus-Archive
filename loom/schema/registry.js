@@ -49,14 +49,26 @@ class LoomRegistry {
 
   has(kind, id) {
     if (!KINDS.includes(kind)) throw new Error(`[loom/registry] unknown kind: ${kind}`);
+    // §FIX 2026-07-02 — found by building loom/contracts/index.js: two
+    // separate LoomDriver instances pointed at the same dataDir (exactly
+    // what a real CLI process and a real API process are) could not see
+    // each other's writes, because _state was loaded once at construct
+    // time and never refreshed. That directly violates this file's own
+    // header comment (§2.2 the storage device IS the source of truth —
+    // not "was, at construction time"). Reread before every read op.
+    // Writes still go through add() -> _persist() -> disk immediately,
+    // unchanged; this only fixes the read side.
+    this._state = this._load();
     return Object.prototype.hasOwnProperty.call(this._state[kind], id);
   }
 
   get(kind, id) {
+    this._state = this._load();
     return this._state[kind][id] || null;
   }
 
   all(kind) {
+    this._state = this._load();
     return { ...this._state[kind] };
   }
 
@@ -79,6 +91,7 @@ class LoomRegistry {
    *  (Architect's GET /api/hooks/graph does the same job for its own
    *  hooks; this is LOOM's equivalent once wires exist). */
   graph() {
+    this._state = this._load();
     const nodes = Object.values(this._state.hook).map(h => ({
       id: h.id, component_id: h.component_id, type: h.type, direction: h.direction,
     }));

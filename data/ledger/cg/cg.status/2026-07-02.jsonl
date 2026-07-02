@@ -1,0 +1,2 @@
+{"uuid":"52bf66dd-6664-4e95-9c93-3532ff9321f9","system":"cg","component":"cg.status","action":"registered","status":"ok","tags":["cg"],"detail":"Full system status — bus sample, agents, listeners, TLS","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492261}
+{"uuid":"0e6837aa-90ae-4a2b-a14d-71fc74a5578a","system":"cg","component":"cg.status","action":"updated","status":"ok","tags":["cg"],"detail":"Full system status — bus sample, agents, listeners, TLS","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329482}

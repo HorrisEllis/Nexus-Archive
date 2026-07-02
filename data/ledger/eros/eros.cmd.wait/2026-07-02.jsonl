@@ -1,0 +1,2 @@
+{"uuid":"269a1f21-7b39-41ec-9a07-7089810be3d9","system":"eros","component":"eros.cmd.wait","action":"registered","status":"ok","tags":["eros","driver"],"detail":"Wait for selector to appear","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492373}
+{"uuid":"8221ae9b-2e5b-4cc1-9945-b83689acc961","system":"eros","component":"eros.cmd.wait","action":"updated","status":"ok","tags":["eros","driver"],"detail":"Wait for selector to appear","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329712}

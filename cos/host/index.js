@@ -29,7 +29,7 @@ const { StateStore }     = require('./state-store.js');
 const { createEventBus } = require('./event-bus.js');
 const { SystemMap }      = require('./system-map.js');
 const { Event }          = require('../siso/Event.js');
-const { HOST, COMP }     = require('../foundation/event-contracts.js');
+const { HOST, COMP, VAULT } = require('../foundation/event-contracts.js');
 const { COS_VERSION }    = require('../foundation/constants.js');
 
 const {
@@ -45,12 +45,46 @@ const {
   ProcessStdinGate,
 } = require('./gates/process.js');
 
+const {
+  ArchetypeAssignGate,
+  ArchetypeImportGate,
+  ArchetypeDetectGate,
+} = require('./gates/archetype.js');
+
+const {
+  BlueprintCreateGate,
+  BlueprintImportGate,
+  BlueprintDestroyGate,
+} = require('./gates/blueprint.js');
+
+const {
+  PluginInstallGate,
+  PluginEnableGate,
+  PluginDisableGate,
+  PluginRemoveGate,
+} = require('./gates/plugin.js');
+
+const {
+  PlaygroundCreateGate,
+  PlaygroundDestroyGate,
+  PlaygroundPromoteGate,
+  PlaygroundStatusGate,
+} = require('./gates/playgrounds.js');
+
+const {
+  VaultSetGate, VaultGetGate, VaultDeleteGate, VaultGrantGate, VaultRevokeGate, VaultExportGate, VaultImportGate,
+} = require('./gates/vault.js');
+const { getInjectionEnvVars } = require('../vault/index.js');
+const { startMonitoring, stopMonitoring } = require('../watchdog/monitor.js');
+
 // ─── createHost ───────────────────────────────────────────────────────────────
 
 function createHost(opts = {}) {
   // 1. State store
   const store = new StateStore(opts.stateFile);
   store.load();
+
+  const vaultOpts = { storeFile: opts.vaultStoreFile, keyFile: opts.vaultKeyFile, auditLogFile: opts.vaultAuditLogFile };
 
   // 2. Event bus (SISO Stream + StreamLog)
   const bus = createEventBus({
@@ -78,6 +112,37 @@ function createHost(opts = {}) {
   bus.register(new ProcessKillGate());
   bus.register(new ProcessStdinGate());
 
+  //    Archetype operations (Phase 21)
+  bus.register(new ArchetypeAssignGate());
+  bus.register(new ArchetypeImportGate());
+  bus.register(new ArchetypeDetectGate());
+
+  //    Blueprint operations (Phase 22)
+  bus.register(new BlueprintCreateGate());
+  bus.register(new BlueprintImportGate());
+  bus.register(new BlueprintDestroyGate());
+
+  //    Plugin operations (Phase 29)
+  bus.register(new PluginInstallGate());
+  bus.register(new PluginEnableGate());
+  bus.register(new PluginDisableGate());
+  bus.register(new PluginRemoveGate());
+
+  //    Playground operations (Phase 30)
+  bus.register(new PlaygroundCreateGate());
+  bus.register(new PlaygroundDestroyGate());
+  bus.register(new PlaygroundPromoteGate());
+  bus.register(new PlaygroundStatusGate());
+
+  //    Vault operations (Phase 28)
+  bus.register(new VaultSetGate());
+  bus.register(new VaultGetGate());
+  bus.register(new VaultDeleteGate());
+  bus.register(new VaultGrantGate());
+  bus.register(new VaultRevokeGate());
+  bus.register(new VaultExportGate());
+  bus.register(new VaultImportGate());
+
   //    When a compartment transitions to 'running', check if it has an entryFile.
   //    If so, emit the spawn command into the gate pipeline.
   //    This keeps StartCompartmentGate (state) separate from ProcessSpawnGate (process).
@@ -86,6 +151,11 @@ function createHost(opts = {}) {
     if (!comp) return;
     if (!comp.entryFile || !comp.runtimeId) return;  // no spawn without entry + runtime
 
+    const vaultEnv = getInjectionEnvVars({ sysmap, vaultOpts }, comp);
+    for (const key of Object.keys(vaultEnv)) {
+      bus.emit(VAULT.INJECTED, { compartmentId: comp.id, key }); // value never logged
+    }
+
     bus.emit('comp:process:spawn', {
       compartmentId: comp.id,
       name:          comp.name,
@@ -93,7 +163,7 @@ function createHost(opts = {}) {
       entryFile:     comp.entryFile,
       entryArgs:     comp.entryArgs || [],
       cwd:           comp.fs && comp.fs.root ? comp.fs.root : process.cwd(),
-      env:           comp.envVars || {},
+      env:           Object.assign({}, vaultEnv, comp.envVars || {}), // compartment's own envVars win on conflict
       bus,
       store,
       sysmap,
@@ -116,7 +186,28 @@ function createHost(opts = {}) {
     bus,
     sysmap,
     version: COS_VERSION,
+    vaultOpts,
   };
+
+  //    Vault audit trail — persisted because each CLI invocation is a
+  //    fresh process; the in-memory bus alone can't survive between
+  //    `cos vault set` and a later `cos vault audit` call.
+  bus.onAny((ev) => {
+    if (ev.type.startsWith('vault:')) {
+      const { appendAuditEntry } = require('../vault/audit-log.js');
+      appendAuditEntry(ev, vaultOpts.auditLogFile);
+    }
+  });
+
+  //    Watchdog monitor lifecycle — tied to the actual process, not the
+  //    compartment's logical state (a compartment can be 'started' a
+  //    moment before its process actually spawns).
+  bus.on(COMP.PROCESS_STARTED, (ev) => {
+    const comp = store.getCompartment(ev.payload.compartmentId);
+    if (comp) startMonitoring({ store, sysmap, bus }, comp);
+  });
+  bus.on(COMP.PROCESS_EXITED, (ev) => stopMonitoring(ev.payload.compartmentId));
+  bus.on(COMP.PROCESS_CRASHED, (ev) => stopMonitoring(ev.payload.compartmentId));
 
   bus.emit(HOST.MAP_UPDATED, { source: 'boot', version: COS_VERSION });
 

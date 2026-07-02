@@ -1,0 +1,2 @@
+{"uuid":"8ae62b83-87cb-4b8f-8252-9a91b56ebf14","system":"eravos","component":"eravos.organism.list","action":"registered","status":"ok","tags":["eravos"],"detail":"List all mounted organisms","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782957492853}
+{"uuid":"680e8a18-d475-4088-a345-20982ea77678","system":"eravos","component":"eravos.organism.list","action":"updated","status":"ok","tags":["eravos"],"detail":"List all mounted organisms","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782961330016}

@@ -213,6 +213,83 @@ const PLAYGROUND = Object.freeze({
   COMPARE_DONE:         'comp:compare:done',
 });
 
+// ─── Archetype Events (Phase 21, spec §43/§60) ────────────────────────────────
+
+const ARCHETYPE = Object.freeze({
+  LISTED:    'archetype:listed',
+  SHOWN:     'archetype:shown',
+  ASSIGNED:  'archetype:assigned',
+  DETECTED:  'archetype:detected',
+  CREATED:   'archetype:created',   // hk-a-005 — also fired on import (§77)
+  ERROR:     'archetype:error',
+});
+
+// ─── Blueprint Events (Phase 22, spec §44/§61) ────────────────────────────────
+
+const BLUEPRINT = Object.freeze({
+  LISTED:    'blueprint:listed',
+  SHOWN:     'blueprint:shown',
+  CREATED:   'blueprint:created',     // hk-b-003 — launch
+  IMPORTED:  'blueprint:imported',    // custom blueprint import (§77-style)
+  STATUS:    'blueprint:status:shown',
+  DESTROYED: 'blueprint:destroyed',
+  ERROR:     'blueprint:error',
+});
+
+// ─── Plugin Events (Phase 29, spec §62-64) ────────────────────────────────────
+
+const PLUGIN_NS = Object.freeze({
+  LISTED:    'plugin:listed',
+  SHOWN:     'plugin:shown',
+  INSTALLED: 'plugin:installed',
+  ENABLED:   'plugin:enabled',
+  DISABLED:  'plugin:disabled',
+  REMOVED:   'plugin:removed',
+  ERROR:     'plugin:error',
+});
+
+// ─── Playgrounds Events (Phase 30, spec §67) ──────────────────────────────────
+
+const PLAYGROUNDS = Object.freeze({
+  CREATED:   'playgrounds:created',
+  LISTED:    'playgrounds:listed',
+  SHOWN:     'playgrounds:status:shown',
+  DESTROYED: 'playgrounds:destroyed',
+  PROMOTED:  'playgrounds:promoted',
+  ERROR:     'playgrounds:error',
+});
+
+// ─── Vault Events (Phase 28, spec §52) ────────────────────────────────────────
+
+const VAULT = Object.freeze({
+  SET:          'vault:secret:set',
+  ACCESSED:     'vault:secret:accessed',
+  REVEALED:     'vault:secret:revealed',
+  DELETED:      'vault:secret:deleted',
+  INJECTED:     'vault:secret:injected',
+  GRANT_ADDED:  'vault:grant:added',
+  GRANT_REVOKED:'vault:grant:revoked',
+  LISTED:       'vault:listed',
+  AUDIT_SHOWN:  'vault:audit:shown',
+  EXPORTED:     'vault:exported',
+  IMPORTED:     'vault:imported',
+  ACCESS_DENIED:'vault:access:denied',
+  ERROR:        'vault:error',
+});
+
+// ─── vaultd Events (spec §66) ──────────────────────────────────────────────────
+
+const VAULTD = Object.freeze({
+  INSTALLED: 'vaultd:installed',
+  STARTED:   'vaultd:started',
+  STOPPED:   'vaultd:stopped',
+  STATUS:    'vaultd:status:shown',
+  MIGRATED:  'vaultd:migrated',
+  BACKED_UP: 'vaultd:backed-up',
+  RESTORED:  'vaultd:restored',
+  ERROR:     'vaultd:error',
+});
+
 // ─── All Events (flat set for validation) ────────────────────────────────────
 
 const ALL_EVENT_TYPES = Object.freeze(new Set([
@@ -229,6 +306,12 @@ const ALL_EVENT_TYPES = Object.freeze(new Set([
   ...Object.values(CLI),
   ...Object.values(SERVICE),
   ...Object.values(PLAYGROUND),
+  ...Object.values(ARCHETYPE),
+  ...Object.values(BLUEPRINT),
+  ...Object.values(PLUGIN_NS),
+  ...Object.values(PLAYGROUNDS),
+  ...Object.values(VAULT),
+  ...Object.values(VAULTD),
 ]));
 
 /**
@@ -242,7 +325,11 @@ function isKnownEvent(eventType) {
 
 module.exports = {
   HOST, COMP, WATCHDOG, REPLAY, PIPE, GIT, SSH, VERSION,
-  NEXUS, NETWORK, CLI, SERVICE, PLAYGROUND,
+  NEXUS, NETWORK, CLI, SERVICE, PLAYGROUND, ARCHETYPE, BLUEPRINT,
+  PLUGIN: PLUGIN_NS,
+  PLAYGROUNDS,
+  VAULT,
+  VAULTD,
   ALL_EVENT_TYPES,
   isKnownEvent,
 };

@@ -27,7 +27,13 @@ const COMPILERS = Object.freeze([
   { id: 'gradle',           displayName: 'Gradle',            configFile: 'build.gradle'          },
   { id: 'maven',            displayName: 'Maven',             configFile: 'pom.xml'               },
   { id: 'docker',           displayName: 'Docker (build)',    configFile: 'Dockerfile'            },
+  // 'docker' is a local extension — not in spec §59.1's CompilerID enum.
+  // Kept: it doesn't contradict anything, just adds detection coverage.
   { id: 'wasm-pack',        displayName: 'WASM Pack',         configFile: null                    },
+  { id: 'plugin',           displayName: 'Plugin-provided',   configFile: null                    },
+  // 'plugin' is spec §59.1's marker value — not a real compiler, indicates
+  // a plugin contributes the compiler. No manifest; Plugin Manager (Phase 29)
+  // resolves it at registration time.
 ]);
 
 const COMPILER_MAP = new Map(COMPILERS.map(c => [c.id, c]));

@@ -14,8 +14,8 @@ const os   = require('os');
 
 // ─── Version ──────────────────────────────────────────────────────────────────
 
-const COS_VERSION = '1.0.0';
-const SPEC_VERSION = '1.5.0';
+const COS_VERSION = '1.7.0';
+const SPEC_VERSION = '1.7.0';
 
 // ─── Ports ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,9 @@ const COS_CONFIG_FILE   = path.join(COS_DATA_ROOT,  'config.json');
 const COS_LOG_DIR       = path.join(COS_STATE_DIR,  'logs');
 const COS_SNAPSHOT_DIR  = path.join(COS_STATE_DIR,  'snapshots');
 const COS_COMP_DIR      = path.join(COS_DATA_ROOT,  'compartments');
+const COS_VAULT_DIR     = path.join(COS_STATE_DIR,  'vault');
+const COS_VAULT_KEY_FILE   = path.join(COS_VAULT_DIR, 'master.key');
+const COS_VAULT_STORE_FILE = path.join(COS_VAULT_DIR, 'store.enc.json');
 
 // ─── Per-Compartment Paths ────────────────────────────────────────────────────
 
@@ -101,6 +104,9 @@ module.exports = Object.freeze({
   COS_LOG_DIR,
   COS_SNAPSHOT_DIR,
   COS_COMP_DIR,
+  COS_VAULT_DIR,
+  COS_VAULT_KEY_FILE,
+  COS_VAULT_STORE_FILE,
   compartmentPaths,
 
   // Kernel

@@ -1,0 +1,2 @@
+{"uuid":"c29c121c-4c6d-4e40-b885-f82ca86d3c5c","system":"eros","component":"eros.behavior.profile","action":"registered","status":"ok","tags":["eros","behavior"],"detail":"Set behavior profile for session","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492377}
+{"uuid":"7b213132-3255-4a5c-9689-d50b89cc3718","system":"eros","component":"eros.behavior.profile","action":"updated","status":"ok","tags":["eros","behavior"],"detail":"Set behavior profile for session","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329723}

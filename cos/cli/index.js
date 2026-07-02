@@ -28,7 +28,7 @@
 'use strict';
 
 const { createHost }         = require('../host/index.js');
-const { runCreateWizard }    = require('./commands/create.js');
+const { runCreateWizard, createCompartment } = require('./commands/create.js');
 const { listCompartments }   = require('./commands/list.js');
 const { renderMap }          = require('./commands/map.js');
 const { startCompartment }   = require('./commands/start.js');
@@ -38,6 +38,13 @@ const { showStatus }         = require('./commands/status.js');
 const { runHooksCommand }    = require('./commands/hooks.js');
 const { runEventsCommand }   = require('./commands/events.js');
 const { validateSchema }     = require('./commands/schema.js');
+const { runArchetypeCommand } = require('./commands/archetype.js');
+const { runBlueprintCommand } = require('./commands/blueprint.js');
+const { runPluginCommand } = require('./commands/plugin.js');
+const { runPlaygroundCommand } = require('./commands/playground.js');
+const { runVaultCommand } = require('./commands/vault.js');
+const { runSnapshotCommand } = require('./commands/snapshot.js');
+const { runVaultdCommand } = require('./commands/vaultd.js');
 const { runCommand, attachCompartment } = require('./commands/run.js');
 const { COS_VERSION, SPEC_VERSION } = require('../foundation/constants.js');
 
@@ -83,6 +90,13 @@ function printHelp() {
     destroy <name>              Destroy compartment [--force] [--wipe]
     map                         Print the system map
     hooks <list|show|fire>      Manage registered hooks
+    archetype <list|show|...>   Manage archetypes (Phase 21)
+    blueprint <list|show|...>   Manage blueprints (Phase 22)
+    plugins <list|show|...>     Manage plugins (Phase 29)
+    playground <create|...>    Manage playgrounds (Phase 30)
+    vault <set|get|list|...>   Manage secrets (Phase 28)
+    snapshot <take|list|...>   Manage snapshots (Watchdog support)
+    vaultd <start|stop|...>    Standalone vault daemon (spec sect 66)
     events <stream|tail>        Event bus stream / tail
     schema validate             Validate all hooks against schema
     version                     Show version info
@@ -104,6 +118,23 @@ function printHelp() {
     cos destroy my-service --force
     cos map --watch
     cos hooks list
+    cos archetype list
+    cos archetype show web-server
+    cos archetype detect
+    cos archetype assign my-service web-server
+    cos blueprint list
+    cos blueprint create worker-pool my-pool
+    cos blueprint status <instanceId>
+    cos plugins list
+    cos plugins new my-plugin
+    cos plugins validate ./my-plugin
+    cos plugins add ./my-plugin
+    cos playground create myapp --mirror=real-app
+    cos playground create myapp --blueprint=worker-pool
+    cos playground status myapp
+    cos vault set my-service API_KEY=sk-12345
+    cos vault get my-service API_KEY --reveal
+    cos vault grant my-service other-service API_KEY
     cos events tail --n=50
     cos events stream
     cos schema validate
@@ -139,6 +170,42 @@ async function main(argv = process.argv) {
 
       case 'create': {
         const nameArg = args[0] || null;
+        // §FIX 2026-07-02 — cos create was wizard-only: readline.createInterface
+        // + rl.question, no flag path. In any non-TTY context (CI, a test
+        // harness, an orchestration script piping stdin from /dev/null) this
+        // blocks forever waiting for input that will never arrive.
+        // createCompartment() underneath was already clean and scriptable —
+        // this adds the CLI entry point that doesn't go through the wizard.
+        if (flags.purpose !== undefined || flags.yes || flags['non-interactive']) {
+          if (!nameArg) { console.error('  Usage: cos create <name> --purpose="..." [--runtime=node] [--network-isolated=true|false]'); return 1; }
+          try {
+            const comp = createCompartment(host, {
+              name: nameArg,
+              purpose: flags.purpose || '',
+              runtimeId: flags.runtime || null,
+              networkIsolated: flags['network-isolated'] !== 'false',
+            });
+            host.store.flushSync();
+            if (flags.json) {
+              console.log(JSON.stringify({ ok: true, compartment: comp }, null, 2));
+            } else {
+              console.log('');
+              console.log(`  \u2713  Created: ${comp.name}`);
+              console.log(`     ID:      ${comp.id}`);
+              console.log(`     Slug:    ${comp.slug}`);
+              if (comp.runtimeId) console.log(`     Runtime: ${comp.runtimeId}`);
+              console.log(`     Network: ${flags['network-isolated'] !== 'false' ? 'isolated' : 'open'}`);
+              console.log(`     Path:    ${comp.fs.root}`);
+              console.log('');
+            }
+            return 0;
+          } catch (err) {
+            if (flags.json) console.log(JSON.stringify({ ok: false, error: err.message }));
+            else console.error(`  Error: ${err.message}`);
+            host.store.flushSync();
+            return 1;
+          }
+        }
         const result  = await runCreateWizard(host, nameArg);
         host.store.flushSync();
         return result ? 0 : 1;
@@ -207,6 +274,55 @@ async function main(argv = process.argv) {
         const rest = args.slice(1);
         runHooksCommand(host, sub, rest, flags);
         return 0;
+      }
+
+      case 'archetype': {
+        const sub = args[0];
+        const rest = args.slice(1);
+        const result = runArchetypeCommand(host, sub, rest, flags);
+        return result === null ? 1 : 0;
+      }
+
+      case 'blueprint': {
+        const sub = args[0];
+        const rest = args.slice(1);
+        const result = runBlueprintCommand(host, sub, rest, flags);
+        return result === null ? 1 : 0;
+      }
+
+      case 'plugins': {
+        const sub = args[0];
+        const rest = args.slice(1);
+        const result = runPluginCommand(host, sub, rest, flags);
+        return result === null ? 1 : 0;
+      }
+
+      case 'playground': {
+        const sub = args[0];
+        const rest = args.slice(1);
+        const result = await runPlaygroundCommand(host, sub, rest, flags);
+        return result === null ? 1 : 0;
+      }
+
+      case 'vault': {
+        const sub = args[0];
+        const rest = args.slice(1);
+        const result = runVaultCommand(host, sub, rest, flags);
+        return result === null ? 1 : 0;
+      }
+
+      case 'snapshot': {
+        const sub = args[0];
+        const rest = args.slice(1);
+        const result = runSnapshotCommand(host, sub, rest, flags);
+        return result === null ? 1 : 0;
+      }
+
+      case 'vaultd': {
+        const sub = args[0];
+        const rest = args.slice(1);
+        const result = await runVaultdCommand(host, sub, rest, flags);
+        return result === null ? 1 : 0;
       }
 
       case 'events': {

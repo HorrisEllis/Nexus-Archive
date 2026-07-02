@@ -1,0 +1,2 @@
+{"uuid":"2fe434b4-c8be-4233-b31b-f55283be2516","system":"cg","component":"cg.url.listen.list","action":"registered","status":"ok","tags":["cg","listener"],"detail":"List active URL listeners","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492291}
+{"uuid":"51c5ea44-b4f2-4ba4-8891-9c7d40d5d00f","system":"cg","component":"cg.url.listen.list","action":"updated","status":"ok","tags":["cg","listener"],"detail":"List active URL listeners","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329567}

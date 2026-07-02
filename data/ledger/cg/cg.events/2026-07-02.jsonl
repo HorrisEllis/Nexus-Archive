@@ -1,0 +1,2 @@
+{"uuid":"389e3472-6f70-4c61-be1e-398145e2b2e7","system":"cg","component":"cg.events","action":"registered","status":"ok","tags":["cg","stream"],"detail":"SSE — all SISO bus events","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492262}
+{"uuid":"28529796-d1a8-4c9d-84f3-18c255bc0da9","system":"cg","component":"cg.events","action":"updated","status":"ok","tags":["cg","stream"],"detail":"SSE — all SISO bus events","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329484}

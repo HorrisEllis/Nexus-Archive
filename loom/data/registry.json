@@ -6,7 +6,7 @@
       "name": "LOOM",
       "version": "0.1.0",
       "uuid": "nexus-loom-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125739
+      "registeredAt": 1782980143375
     },
     "nexus.architect": {
       "id": "nexus.architect",
@@ -14,7 +14,7 @@
       "name": "The Architect",
       "version": "1.1.0",
       "uuid": "architect-spec-0000-2026-0530-rheon-002",
-      "registeredAt": 1782976125740
+      "registeredAt": 1782980143376
     },
     "nexus.loom.agent-suite": {
       "id": "nexus.loom.agent-suite",
@@ -22,7 +22,7 @@
       "name": "LOOM Agent Suite",
       "version": "0.1.0",
       "uuid": "nexus-loom-agent-suite-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125746
+      "registeredAt": 1782980143376
     },
     "warp.core.event": {
       "id": "warp.core.event",
@@ -30,7 +30,7 @@
       "name": "core/Event.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.core.event-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125761
+      "registeredAt": 1782980143380
     },
     "warp.core.gate": {
       "id": "warp.core.gate",
@@ -38,7 +38,7 @@
       "name": "core/Gate.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.core.gate-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125762
+      "registeredAt": 1782980143381
     },
     "warp.core.axiom": {
       "id": "warp.core.axiom",
@@ -46,7 +46,7 @@
       "name": "core/Axiom.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.core.axiom-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125762
+      "registeredAt": 1782980143381
     },
     "warp.core.stream": {
       "id": "warp.core.stream",
@@ -54,7 +54,7 @@
       "name": "core/Stream.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.core.stream-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125762
+      "registeredAt": 1782980143381
     },
     "warp.core.streamlog": {
       "id": "warp.core.streamlog",
@@ -62,7 +62,7 @@
       "name": "core/StreamLog.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.core.streamlog-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125762
+      "registeredAt": 1782980143381
     },
     "warp.core.gatefusion": {
       "id": "warp.core.gatefusion",
@@ -70,7 +70,7 @@
       "name": "core/GateFusion.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.core.gatefusion-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125763
+      "registeredAt": 1782980143381
     },
     "warp.core.index": {
       "id": "warp.core.index",
@@ -78,7 +78,7 @@
       "name": "core/index.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.core.index-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125763
+      "registeredAt": 1782980143382
     },
     "warp.dispatch.canonicalize": {
       "id": "warp.dispatch.canonicalize",
@@ -86,7 +86,7 @@
       "name": "dispatch/canonicalize.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.canonicalize-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125763
+      "registeredAt": 1782980143383
     },
     "warp.dispatch.cascade": {
       "id": "warp.dispatch.cascade",
@@ -94,7 +94,7 @@
       "name": "dispatch/cascade.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.cascade-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125763
+      "registeredAt": 1782980143383
     },
     "warp.dispatch.digest": {
       "id": "warp.dispatch.digest",
@@ -102,7 +102,7 @@
       "name": "dispatch/digest.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.digest-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125763
+      "registeredAt": 1782980143383
     },
     "warp.dispatch.deltacache": {
       "id": "warp.dispatch.deltacache",
@@ -110,7 +110,7 @@
       "name": "dispatch/deltaCache.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.deltacache-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125763
+      "registeredAt": 1782980143383
     },
     "warp.dispatch.population": {
       "id": "warp.dispatch.population",
@@ -118,7 +118,7 @@
       "name": "dispatch/population.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.population-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125768
+      "registeredAt": 1782980143384
     },
     "warp.dispatch.pregen": {
       "id": "warp.dispatch.pregen",
@@ -126,7 +126,7 @@
       "name": "dispatch/pregen.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.pregen-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125768
+      "registeredAt": 1782980143384
     },
     "warp.dispatch.index": {
       "id": "warp.dispatch.index",
@@ -134,7 +134,7 @@
       "name": "dispatch/index.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.index-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125768
+      "registeredAt": 1782980143384
     },
     "warp.plugin.crystallizer_flatfile": {
       "id": "warp.plugin.crystallizer_flatfile",
@@ -142,7 +142,7 @@
       "name": "plugins/crystallizer-flatfile.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.plugin.crystallizer_flatfile-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125769
+      "registeredAt": 1782980143384
     },
     "warp.plugin.scorer_default": {
       "id": "warp.plugin.scorer_default",
@@ -150,7 +150,7 @@
       "name": "plugins/scorer-default.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.plugin.scorer_default-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125769
+      "registeredAt": 1782980143385
     },
     "warp.dispatch.benchmark": {
       "id": "warp.dispatch.benchmark",
@@ -158,7 +158,7 @@
       "name": "dispatch/benchmark.js",
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.benchmark-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125769
+      "registeredAt": 1782980143385
     }
   },
   "seam": {},
@@ -171,7 +171,7 @@
       "direction": "in",
       "uuid": "nexus-loom-hook-declare-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125746
+      "registeredAt": 1782980143376
     },
     "loom.agent-suite.hook.declare-via-agent": {
       "id": "loom.agent-suite.hook.declare-via-agent",
@@ -181,7 +181,7 @@
       "direction": "in",
       "uuid": "nexus-loom-agent-suite-hook-declare-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125748
+      "registeredAt": 1782980143377
     },
     "warp.core.event.export": {
       "id": "warp.core.event.export",
@@ -191,7 +191,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.core.event-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125770
+      "registeredAt": 1782980143385
     },
     "warp.core.gate.export": {
       "id": "warp.core.gate.export",
@@ -201,7 +201,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.core.gate-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125770
+      "registeredAt": 1782980143386
     },
     "warp.core.axiom.export": {
       "id": "warp.core.axiom.export",
@@ -211,7 +211,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.core.axiom-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125770
+      "registeredAt": 1782980143387
     },
     "warp.core.stream.export": {
       "id": "warp.core.stream.export",
@@ -221,7 +221,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.core.stream-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125771
+      "registeredAt": 1782980143387
     },
     "warp.core.streamlog.export": {
       "id": "warp.core.streamlog.export",
@@ -231,7 +231,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.core.streamlog-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125771
+      "registeredAt": 1782980143387
     },
     "warp.core.gatefusion.export": {
       "id": "warp.core.gatefusion.export",
@@ -241,7 +241,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.core.gatefusion-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125771
+      "registeredAt": 1782980143388
     },
     "warp.core.gatefusion.import": {
       "id": "warp.core.gatefusion.import",
@@ -251,7 +251,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.core.gatefusion-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125772
+      "registeredAt": 1782980143388
     },
     "warp.core.index.export": {
       "id": "warp.core.index.export",
@@ -261,7 +261,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.core.index-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125772
+      "registeredAt": 1782980143388
     },
     "warp.core.index.import": {
       "id": "warp.core.index.import",
@@ -271,7 +271,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.core.index-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125772
+      "registeredAt": 1782980143389
     },
     "warp.dispatch.canonicalize.export": {
       "id": "warp.dispatch.canonicalize.export",
@@ -281,7 +281,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.dispatch.canonicalize-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125774
+      "registeredAt": 1782980143389
     },
     "warp.dispatch.cascade.export": {
       "id": "warp.dispatch.cascade.export",
@@ -291,7 +291,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.dispatch.cascade-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125774
+      "registeredAt": 1782980143390
     },
     "warp.dispatch.digest.export": {
       "id": "warp.dispatch.digest.export",
@@ -301,7 +301,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.dispatch.digest-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125774
+      "registeredAt": 1782980143391
     },
     "warp.dispatch.digest.import": {
       "id": "warp.dispatch.digest.import",
@@ -311,7 +311,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.dispatch.digest-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125775
+      "registeredAt": 1782980143392
     },
     "warp.dispatch.deltacache.export": {
       "id": "warp.dispatch.deltacache.export",
@@ -321,7 +321,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.dispatch.deltacache-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125775
+      "registeredAt": 1782980143393
     },
     "warp.dispatch.deltacache.import": {
       "id": "warp.dispatch.deltacache.import",
@@ -331,7 +331,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.dispatch.deltacache-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125775
+      "registeredAt": 1782980143393
     },
     "warp.dispatch.population.export": {
       "id": "warp.dispatch.population.export",
@@ -341,7 +341,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.dispatch.population-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125776
+      "registeredAt": 1782980143394
     },
     "warp.dispatch.population.import": {
       "id": "warp.dispatch.population.import",
@@ -351,7 +351,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.dispatch.population-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125776
+      "registeredAt": 1782980143394
     },
     "warp.dispatch.pregen.export": {
       "id": "warp.dispatch.pregen.export",
@@ -361,7 +361,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.dispatch.pregen-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125776
+      "registeredAt": 1782980143395
     },
     "warp.dispatch.pregen.import": {
       "id": "warp.dispatch.pregen.import",
@@ -371,7 +371,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.dispatch.pregen-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125776
+      "registeredAt": 1782980143395
     },
     "warp.dispatch.index.export": {
       "id": "warp.dispatch.index.export",
@@ -381,7 +381,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.dispatch.index-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125777
+      "registeredAt": 1782980143396
     },
     "warp.dispatch.index.import": {
       "id": "warp.dispatch.index.import",
@@ -391,7 +391,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.dispatch.index-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125777
+      "registeredAt": 1782980143396
     },
     "warp.plugin.crystallizer_flatfile.export": {
       "id": "warp.plugin.crystallizer_flatfile.export",
@@ -401,7 +401,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.plugin.crystallizer_flatfile-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125780
+      "registeredAt": 1782980143396
     },
     "warp.plugin.scorer_default.export": {
       "id": "warp.plugin.scorer_default.export",
@@ -411,7 +411,7 @@
       "direction": "out",
       "uuid": "nexus-loom-map-warp.plugin.scorer_default-export-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125780
+      "registeredAt": 1782980143397
     },
     "warp.dispatch.benchmark.import": {
       "id": "warp.dispatch.benchmark.import",
@@ -421,7 +421,7 @@
       "direction": "in",
       "uuid": "nexus-loom-map-warp.dispatch.benchmark-import-v1-0000-2026-0701-jamesbrooks-001",
       "novelType": false,
-      "registeredAt": 1782976125780
+      "registeredAt": 1782980143397
     }
   },
   "wire": {
@@ -430,189 +430,189 @@
       "from_hook_id": "loom.hook.declare",
       "to_hook_id": "loom.agent-suite.hook.declare-via-agent",
       "uuid": "nexus-loom-wire-agent-suite-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125748
+      "registeredAt": 1782980143377
     },
     "warp.wire.1.warp.core.event--warp.core.gatefusion": {
       "id": "warp.wire.1.warp.core.event--warp.core.gatefusion",
       "from_hook_id": "warp.core.event.export",
       "to_hook_id": "warp.core.gatefusion.import",
       "uuid": "nexus-loom-map-wire-1-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125781
+      "registeredAt": 1782980143398
     },
     "warp.wire.2.warp.core.gate--warp.core.gatefusion": {
       "id": "warp.wire.2.warp.core.gate--warp.core.gatefusion",
       "from_hook_id": "warp.core.gate.export",
       "to_hook_id": "warp.core.gatefusion.import",
       "uuid": "nexus-loom-map-wire-2-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125781
+      "registeredAt": 1782980143399
     },
     "warp.wire.3.warp.core.event--warp.core.index": {
       "id": "warp.wire.3.warp.core.event--warp.core.index",
       "from_hook_id": "warp.core.event.export",
       "to_hook_id": "warp.core.index.import",
       "uuid": "nexus-loom-map-wire-3-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125781
+      "registeredAt": 1782980143399
     },
     "warp.wire.4.warp.core.gate--warp.core.index": {
       "id": "warp.wire.4.warp.core.gate--warp.core.index",
       "from_hook_id": "warp.core.gate.export",
       "to_hook_id": "warp.core.index.import",
       "uuid": "nexus-loom-map-wire-4-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125781
+      "registeredAt": 1782980143400
     },
     "warp.wire.5.warp.core.axiom--warp.core.index": {
       "id": "warp.wire.5.warp.core.axiom--warp.core.index",
       "from_hook_id": "warp.core.axiom.export",
       "to_hook_id": "warp.core.index.import",
       "uuid": "nexus-loom-map-wire-5-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125781
+      "registeredAt": 1782980143400
     },
     "warp.wire.6.warp.core.stream--warp.core.index": {
       "id": "warp.wire.6.warp.core.stream--warp.core.index",
       "from_hook_id": "warp.core.stream.export",
       "to_hook_id": "warp.core.index.import",
       "uuid": "nexus-loom-map-wire-6-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125781
+      "registeredAt": 1782980143401
     },
     "warp.wire.7.warp.core.streamlog--warp.core.index": {
       "id": "warp.wire.7.warp.core.streamlog--warp.core.index",
       "from_hook_id": "warp.core.streamlog.export",
       "to_hook_id": "warp.core.index.import",
       "uuid": "nexus-loom-map-wire-7-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125782
+      "registeredAt": 1782980143401
     },
     "warp.wire.8.warp.core.gatefusion--warp.core.index": {
       "id": "warp.wire.8.warp.core.gatefusion--warp.core.index",
       "from_hook_id": "warp.core.gatefusion.export",
       "to_hook_id": "warp.core.index.import",
       "uuid": "nexus-loom-map-wire-8-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125782
+      "registeredAt": 1782980143402
     },
     "warp.wire.9.warp.dispatch.canonicalize--warp.dispatch.digest": {
       "id": "warp.wire.9.warp.dispatch.canonicalize--warp.dispatch.digest",
       "from_hook_id": "warp.dispatch.canonicalize.export",
       "to_hook_id": "warp.dispatch.digest.import",
       "uuid": "nexus-loom-map-wire-9-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125782
+      "registeredAt": 1782980143403
     },
     "warp.wire.10.warp.dispatch.canonicalize--warp.dispatch.deltacache": {
       "id": "warp.wire.10.warp.dispatch.canonicalize--warp.dispatch.deltacache",
       "from_hook_id": "warp.dispatch.canonicalize.export",
       "to_hook_id": "warp.dispatch.deltacache.import",
       "uuid": "nexus-loom-map-wire-10-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125782
+      "registeredAt": 1782980143403
     },
     "warp.wire.11.warp.dispatch.canonicalize--warp.dispatch.population": {
       "id": "warp.wire.11.warp.dispatch.canonicalize--warp.dispatch.population",
       "from_hook_id": "warp.dispatch.canonicalize.export",
       "to_hook_id": "warp.dispatch.population.import",
       "uuid": "nexus-loom-map-wire-11-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125782
+      "registeredAt": 1782980143404
     },
     "warp.wire.12.warp.dispatch.canonicalize--warp.dispatch.pregen": {
       "id": "warp.wire.12.warp.dispatch.canonicalize--warp.dispatch.pregen",
       "from_hook_id": "warp.dispatch.canonicalize.export",
       "to_hook_id": "warp.dispatch.pregen.import",
       "uuid": "nexus-loom-map-wire-12-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125782
+      "registeredAt": 1782980143405
     },
     "warp.wire.13.warp.dispatch.digest--warp.dispatch.index": {
       "id": "warp.wire.13.warp.dispatch.digest--warp.dispatch.index",
       "from_hook_id": "warp.dispatch.digest.export",
       "to_hook_id": "warp.dispatch.index.import",
       "uuid": "nexus-loom-map-wire-13-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125782
+      "registeredAt": 1782980143405
     },
     "warp.wire.14.warp.dispatch.population--warp.dispatch.index": {
       "id": "warp.wire.14.warp.dispatch.population--warp.dispatch.index",
       "from_hook_id": "warp.dispatch.population.export",
       "to_hook_id": "warp.dispatch.index.import",
       "uuid": "nexus-loom-map-wire-14-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125783
+      "registeredAt": 1782980143406
     },
     "warp.wire.15.warp.dispatch.pregen--warp.dispatch.index": {
       "id": "warp.wire.15.warp.dispatch.pregen--warp.dispatch.index",
       "from_hook_id": "warp.dispatch.pregen.export",
       "to_hook_id": "warp.dispatch.index.import",
       "uuid": "nexus-loom-map-wire-15-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125783
+      "registeredAt": 1782980143406
     },
     "warp.wire.16.warp.core.index--warp.dispatch.benchmark": {
       "id": "warp.wire.16.warp.core.index--warp.dispatch.benchmark",
       "from_hook_id": "warp.core.index.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-16-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125783
+      "registeredAt": 1782980143407
     },
     "warp.wire.17.warp.core.gatefusion--warp.dispatch.benchmark": {
       "id": "warp.wire.17.warp.core.gatefusion--warp.dispatch.benchmark",
       "from_hook_id": "warp.core.gatefusion.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-17-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125783
+      "registeredAt": 1782980143408
     },
     "warp.wire.18.warp.dispatch.index--warp.dispatch.benchmark": {
       "id": "warp.wire.18.warp.dispatch.index--warp.dispatch.benchmark",
       "from_hook_id": "warp.dispatch.index.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-18-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125783
+      "registeredAt": 1782980143408
     },
     "warp.wire.19.warp.dispatch.population--warp.dispatch.benchmark": {
       "id": "warp.wire.19.warp.dispatch.population--warp.dispatch.benchmark",
       "from_hook_id": "warp.dispatch.population.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-19-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125783
+      "registeredAt": 1782980143409
     },
     "warp.wire.20.warp.plugin.crystallizer_flatfile--warp.dispatch.benchmark": {
       "id": "warp.wire.20.warp.plugin.crystallizer_flatfile--warp.dispatch.benchmark",
       "from_hook_id": "warp.plugin.crystallizer_flatfile.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-20-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125784
+      "registeredAt": 1782980143410
     },
     "warp.wire.21.warp.plugin.scorer_default--warp.dispatch.benchmark": {
       "id": "warp.wire.21.warp.plugin.scorer_default--warp.dispatch.benchmark",
       "from_hook_id": "warp.plugin.scorer_default.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-21-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125784
+      "registeredAt": 1782980143410
     },
     "warp.wire.22.warp.dispatch.cascade--warp.dispatch.benchmark": {
       "id": "warp.wire.22.warp.dispatch.cascade--warp.dispatch.benchmark",
       "from_hook_id": "warp.dispatch.cascade.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-22-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125784
+      "registeredAt": 1782980143411
     },
     "warp.wire.23.warp.dispatch.digest--warp.dispatch.benchmark": {
       "id": "warp.wire.23.warp.dispatch.digest--warp.dispatch.benchmark",
       "from_hook_id": "warp.dispatch.digest.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-23-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125784
+      "registeredAt": 1782980143412
     },
     "warp.wire.24.warp.dispatch.canonicalize--warp.dispatch.benchmark": {
       "id": "warp.wire.24.warp.dispatch.canonicalize--warp.dispatch.benchmark",
       "from_hook_id": "warp.dispatch.canonicalize.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-24-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125785
+      "registeredAt": 1782980143412
     },
     "warp.wire.25.warp.dispatch.pregen--warp.dispatch.benchmark": {
       "id": "warp.wire.25.warp.dispatch.pregen--warp.dispatch.benchmark",
       "from_hook_id": "warp.dispatch.pregen.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-25-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125785
+      "registeredAt": 1782980143413
     },
     "warp.wire.26.warp.dispatch.deltacache--warp.dispatch.benchmark": {
       "id": "warp.wire.26.warp.dispatch.deltacache--warp.dispatch.benchmark",
       "from_hook_id": "warp.dispatch.deltacache.export",
       "to_hook_id": "warp.dispatch.benchmark.import",
       "uuid": "nexus-loom-map-wire-26-v1-0000-2026-0701-jamesbrooks-001",
-      "registeredAt": 1782976125785
+      "registeredAt": 1782980143414
     }
   }
 }

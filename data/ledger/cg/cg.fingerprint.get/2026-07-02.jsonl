@@ -1,0 +1,2 @@
+{"uuid":"b4890869-a9c8-4f0a-a3c5-2d7f265353b1","system":"cg","component":"cg.fingerprint.get","action":"registered","status":"ok","tags":["cg","fingerprint"],"detail":"Get agent Firefox fingerprint profile","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492296}
+{"uuid":"13cf7309-1e64-4468-9c18-b2fae1674e72","system":"cg","component":"cg.fingerprint.get","action":"updated","status":"ok","tags":["cg","fingerprint"],"detail":"Get agent Firefox fingerprint profile","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329580}

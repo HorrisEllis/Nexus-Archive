@@ -61,6 +61,22 @@ function shortId() {
 }
 
 /**
+ * Returns a JSON-safe version of an event payload, or a placeholder if
+ * it isn't one (circular references, etc.) — found via SnapshotEngine
+ * crashing on a real watchdog-triggered snapshot where the event tail
+ * included a request event whose payload embedded host/sysmap directly.
+ * @param {*} payload
+ * @returns {*}
+ */
+function safeSerializablePayload(payload) {
+  try {
+    return JSON.parse(JSON.stringify(payload));
+  } catch {
+    return { _unserializable: true, keys: payload && typeof payload === 'object' ? Object.keys(payload) : [] };
+  }
+}
+
+/**
  * Compute SHA-256 hash of a file. Returns null on error.
  * @param {string} absPath
  * @returns {string|null}
@@ -156,13 +172,19 @@ class SnapshotEngine {
       }
     }
 
-    // Event log tail
+    // Event log tail — sanitized per-event. Some event payloads in this
+    // system embed host/sysmap/bus directly (several gates pass them
+    // through so the gate handler can read them synchronously) — those
+    // objects are circular and were never meant to be serialized. A
+    // single JSON.stringify(snap) at the end would fail the ENTIRE
+    // snapshot over one bad payload; sanitizing here means only that one
+    // event's payload degrades to a placeholder instead.
     const eventTail = this._host.bus
       ? this._host.bus.tail(SNAP_EVENT_TAIL).map(ev => ({
           seq:       ev.seq,
           type:      ev.type,
           timestamp: ev.timestamp,
-          payload:   ev.payload,
+          payload:   safeSerializablePayload(ev.payload),
         }))
       : [];
 

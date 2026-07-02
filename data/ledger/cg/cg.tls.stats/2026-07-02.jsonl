@@ -1,0 +1,2 @@
+{"uuid":"fa4dd72d-ff5c-4f57-92aa-53f6990785c2","system":"cg","component":"cg.tls.stats","action":"registered","status":"ok","tags":["cg","tls"],"detail":"TLS proxy — JA4 rewrite stats, tunnels, errors","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492299}
+{"uuid":"798e039c-4f06-4f39-accf-5ac3bfc04051","system":"cg","component":"cg.tls.stats","action":"updated","status":"ok","tags":["cg","tls"],"detail":"TLS proxy — JA4 rewrite stats, tunnels, errors","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329585}

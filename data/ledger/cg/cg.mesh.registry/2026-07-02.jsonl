@@ -1,0 +1,2 @@
+{"uuid":"3505921c-590c-40b6-afec-6e3398858b1e","system":"cg","component":"cg.mesh.registry","action":"registered","status":"ok","tags":["cg","mesh"],"detail":"List available AI agents and their URLs","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492288}
+{"uuid":"5e2f3a5d-d2bc-4dd2-9157-5f502381b51a","system":"cg","component":"cg.mesh.registry","action":"updated","status":"ok","tags":["cg","mesh"],"detail":"List available AI agents and their URLs","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329559}
