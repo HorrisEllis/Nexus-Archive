@@ -1,0 +1,2 @@
+{"uuid":"58a1d5e0-4648-4dfc-a4d7-d00b717a7650","system":"idearium","component":"idearium.idea.update","action":"registered","status":"ok","tags":["idearium"],"detail":"Update an idea's fields","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783024403211}
+{"uuid":"44fd4209-940b-4ca9-af4f-5762ac9b909f","system":"idearium","component":"idearium.idea.update","action":"updated","status":"ok","tags":["idearium"],"detail":"Update an idea's fields","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783032739525}

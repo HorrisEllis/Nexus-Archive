@@ -1,0 +1,2 @@
+{"uuid":"58660c45-49ed-4949-9dc3-5db0cedb601d","system":"architect","component":"architect.hook.get","action":"registered","status":"ok","tags":["architect"],"detail":"Single hook detail","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405152}
+{"uuid":"45caefe2-4913-4f37-b5ef-4161b478b303","system":"architect","component":"architect.hook.get","action":"updated","status":"ok","tags":["architect"],"detail":"Single hook detail","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741413}

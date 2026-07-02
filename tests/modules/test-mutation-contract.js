@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('assert');
 const compReg = require('../../lib/component-registry');
-const mc = require('../../orchestrator/lib/mutation-contract');
+const mc = require('../../lib/mutation-contract');
 
 let passed = 0, failed = 0;
 function test(id, desc, fn) {
@@ -116,7 +116,7 @@ test('T-011', 'uninitialized module fails loudly, never silently no-ops (§1.2)'
   // proves the audit-first guard actually fires rather than asserting it
   // by reading the source.
   delete require.cache[require.resolve('../../lib/mutation-contract')];
-  const freshMc = require('../../orchestrator/lib/mutation-contract');
+  const freshMc = require('../../lib/mutation-contract');
   const r = freshMc.mutateProperty('test.widget.panel', 'comp_properties.style.color', '#000', { issuedVia: 'cli' });
   assert.strictEqual(r.ok, false);
   assert.match(r.error, /init\(jaaDB, bus\) was never called/);

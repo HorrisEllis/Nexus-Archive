@@ -1,0 +1,2 @@
+{"uuid":"816d9615-025d-4ce3-b6cb-42b1387e0f1b","system":"idearium","component":"idearium.repo.list","action":"registered","status":"ok","tags":["idearium"],"detail":"List ingested repos","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783024403225}
+{"uuid":"ae92cc2b-b4a8-4ee1-84d2-534d5b31d215","system":"idearium","component":"idearium.repo.list","action":"updated","status":"ok","tags":["idearium"],"detail":"List ingested repos","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783032739561}

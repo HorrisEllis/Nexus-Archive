@@ -1,0 +1,2 @@
+{"uuid":"4212cc3d-e534-4db9-bd0b-ae89ae5bb820","system":"ollama","component":"ollama.models.list","action":"registered","status":"ok","tags":["ollama"],"detail":"Available local models","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783024404143}
+{"uuid":"f7961c0f-ff35-4020-8e85-8628d098fc4d","system":"ollama","component":"ollama.models.list","action":"updated","status":"ok","tags":["ollama"],"detail":"Available local models","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783032740380}

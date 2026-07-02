@@ -42,7 +42,7 @@
  */
 
 const crypto = require('crypto');
-const compReg = require('../../lib/component-registry');
+const compReg = require('./component-registry');
 
 const MODULE_ID = 'mutation-contract';
 const VERSION   = '1.0.0';

@@ -1,0 +1,2 @@
+{"uuid":"04265e8a-b442-4229-bde5-bfe6b5ad76e1","system":"idearium","component":"idearium.repo.ingest","action":"registered","status":"ok","tags":["idearium"],"detail":"Ingest a repo's file tree as a new repo entry","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783024403225}
+{"uuid":"727d61fa-4cc7-4201-92e7-85b35c4077be","system":"idearium","component":"idearium.repo.ingest","action":"updated","status":"ok","tags":["idearium"],"detail":"Ingest a repo's file tree as a new repo entry","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783032739562}

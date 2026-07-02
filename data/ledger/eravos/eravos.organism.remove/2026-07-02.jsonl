@@ -1,0 +1,2 @@
+{"uuid":"99296c34-e858-4223-a10a-69b312e26816","system":"eravos","component":"eravos.organism.remove","action":"registered","status":"ok","tags":["eravos"],"detail":"Remove an organism","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783024404128}
+{"uuid":"9df1a64b-be77-4595-92e3-80d675f847bd","system":"eravos","component":"eravos.organism.remove","action":"updated","status":"ok","tags":["eravos"],"detail":"Remove an organism","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783032740353}

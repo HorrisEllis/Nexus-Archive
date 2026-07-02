@@ -1,0 +1,2 @@
+{"uuid":"30744349-cd06-423b-ac4e-a31a788b5488","system":"ollama","component":"ollama.jobs.list","action":"registered","status":"ok","tags":["ollama"],"detail":"List recent jobs","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783024404141}
+{"uuid":"e3d3f76b-296c-4176-8dee-eec2da11f2ed","system":"ollama","component":"ollama.jobs.list","action":"updated","status":"ok","tags":["ollama"],"detail":"List recent jobs","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783032740372}

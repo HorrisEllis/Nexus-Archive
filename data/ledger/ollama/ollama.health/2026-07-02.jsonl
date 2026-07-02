@@ -1,0 +1,2 @@
+{"uuid":"6859fa34-af6a-4650-a131-140be19e4cfc","system":"ollama","component":"ollama.health","action":"registered","status":"ok","tags":["ollama"],"detail":"Ollama bridge health","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783024404144}
+{"uuid":"c9cdb1ee-e94a-4b7d-a478-a63db5c25081","system":"ollama","component":"ollama.health","action":"updated","status":"ok","tags":["ollama"],"detail":"Ollama bridge health","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783032740382}

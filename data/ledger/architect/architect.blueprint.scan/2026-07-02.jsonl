@@ -1,0 +1,2 @@
+{"uuid":"326ee8be-3239-4a94-9e47-63d9475c407c","system":"architect","component":"architect.blueprint.scan","action":"registered","status":"ok","tags":["architect"],"detail":"Scan path → generate blueprint","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405157}
+{"uuid":"5551e2cb-f94c-45ac-9b2a-bac7e89310c3","system":"architect","component":"architect.blueprint.scan","action":"updated","status":"ok","tags":["architect"],"detail":"Scan path → generate blueprint","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741424}

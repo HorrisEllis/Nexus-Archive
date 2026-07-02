@@ -23,8 +23,8 @@
  * would be scope creep dressed up as a fix.
  */
 
-const ge      = require('../../lib/grammar-engine');
-const compReg = require('../../lib/component-registry');
+const ge      = require('./grammar-engine');
+const compReg = require('./component-registry');
 
 const MODULE_ID = 'grammar-fallback';
 const VERSION   = '1.0.0';

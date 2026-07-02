@@ -81,19 +81,19 @@ let _jaa, _uid, _bus, _grammar, _snr, _raid, _memory, _chat, _replay, _liminal, 
 
 function _getJAA() {
   if (_jaa) return _jaa;
-  try { ({ jaaDB: _jaa, uid: _uid } = require('../../cortex/memory/jaa-db')); } catch(_) {}
+  try { ({ jaaDB: _jaa, uid: _uid } = require('../cortex/memory/jaa-db')); } catch(_) {}
   return _jaa;
 }
 function uid() { return _uid?.() ?? crypto.randomUUID(); }
 
 function _getBus() {
   if (_bus) return _bus;
-  try { _bus = require('../../nexus-bus'); } catch(_) {}
+  try { _bus = require('../nexus-bus'); } catch(_) {}
   return _bus;
 }
 function _getGrammar() {
   if (_grammar) return _grammar;
-  try { _grammar = require('../../lib/grammar-engine'); } catch(_) {}
+  try { _grammar = require('./grammar-engine'); } catch(_) {}
   return _grammar;
 }
 function _getSNR() {
@@ -103,27 +103,27 @@ function _getSNR() {
 }
 function _getRAID() {
   if (_raid) return _raid;
-  try { _raid = require('../../cortex/core/raid/index'); } catch(_) {}
+  try { _raid = require('../cortex/core/raid/index'); } catch(_) {}
   return _raid;
 }
 function _getIntentClassifier() {
   if (_intentClassifier) return _intentClassifier;
-  try { _intentClassifier = require('../../lib/intent-classifier'); } catch(_) {}
+  try { _intentClassifier = require('./intent-classifier'); } catch(_) {}
   return _intentClassifier;
 }
 function _getMemory() {
   if (_memory) return _memory;
-  try { _memory = require('../../lib/vector-memory'); } catch(_) {}
+  try { _memory = require('./vector-memory'); } catch(_) {}
   return _memory;
 }
 function _getChat() {
   if (_chat) return _chat;
-  try { _chat = require('../../lib/chat-logger'); } catch(_) {}
+  try { _chat = require('./chat-logger'); } catch(_) {}
   return _chat;
 }
 function _getReplay() {
   if (_replay) return _replay;
-  try { _replay = require('../../lib/replay-engine'); } catch(_) {}
+  try { _replay = require('./replay-engine'); } catch(_) {}
   return _replay;
 }
 function _getLiminal() {
@@ -133,12 +133,12 @@ function _getLiminal() {
 }
 function _getConstitutionalAI() {
   if (_constitutionalAI) return _constitutionalAI;
-  try { _constitutionalAI = require('../../lib/constitutional-ai'); } catch(_) {}
+  try { _constitutionalAI = require('./constitutional-ai'); } catch(_) {}
   return _constitutionalAI;
 }
 function _getUserModel() {
   if (_userModel) return _userModel;
-  try { _userModel = require('../../copilot/lib/user-model'); } catch(_) {}
+  try { _userModel = require('./user-model'); } catch(_) {}
   return _userModel;
 }
 
@@ -444,7 +444,7 @@ async function _phaseB(req, ctx) {
         let _cfrSigmaFloor = 0;
         let _cfrRegime = 'stable';
         try {
-          const _cfrInfluence = require('../../nexus-cfr-influence');
+          const _cfrInfluence = require('../nexus-cfr-influence');
           _cfrSigmaFloor = _cfrInfluence.getSigmaFloor?.() || 0;
           _cfrRegime     = _cfrInfluence.getState?.()?.regime || 'stable';
         } catch(_) {}
@@ -608,7 +608,7 @@ async function _phaseD(ctx, phaseAResult, phaseBResult, executionResult) {
   const jaa = _getJAA();
   if (jaa && [OUTCOME.UNRESOLVED, OUTCOME.HELD].includes(phaseAResult?.outcome)) {
     try {
-      const taxonomy = require('../../lib/open-loop-taxonomy');
+      const taxonomy = require('./open-loop-taxonomy');
       const loopType = phaseAResult?.outcome === OUTCOME.HELD ? 'DECISION' : 'UNDERSTANDING';
       const loop = taxonomy.createLoop({
         loop_type:         loopType,

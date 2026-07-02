@@ -1,0 +1,2 @@
+{"uuid":"96e8a363-d547-4301-aee1-f54af9a8b1b7","system":"eravos","component":"eravos.wire.connect","action":"registered","status":"ok","tags":["eravos"],"detail":"Connect two organism hooks","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783024404128}
+{"uuid":"ba4c3b8b-ba4d-4957-baf9-782e2bf2896d","system":"eravos","component":"eravos.wire.connect","action":"updated","status":"ok","tags":["eravos"],"detail":"Connect two organism hooks","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783032740355}

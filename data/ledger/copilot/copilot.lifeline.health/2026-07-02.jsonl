@@ -1,0 +1,2 @@
+{"uuid":"b608f225-f308-42a5-bd96-4618446bc4f9","system":"copilot","component":"copilot.lifeline.health","action":"registered","status":"ok","tags":["copilot"],"detail":"Lifeline provider health","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783024404152}
+{"uuid":"c555a60f-50f8-4a4d-a886-d169a046a26b","system":"copilot","component":"copilot.lifeline.health","action":"updated","status":"ok","tags":["copilot"],"detail":"Lifeline provider health","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783032740396}

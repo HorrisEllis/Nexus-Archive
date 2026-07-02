@@ -1,0 +1,2 @@
+{"uuid":"54c88b54-e9d7-4f72-a8c2-e8ba0ac8ef27","system":"copilot","component":"copilot.axioms.remove","action":"registered","status":"ok","tags":["copilot"],"detail":"Remove a runtime axiom","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783024404152}
+{"uuid":"1d9ed8c0-c709-4108-8b98-a68b4aedfdc0","system":"copilot","component":"copilot.axioms.remove","action":"updated","status":"ok","tags":["copilot"],"detail":"Remove a runtime axiom","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783032740394}

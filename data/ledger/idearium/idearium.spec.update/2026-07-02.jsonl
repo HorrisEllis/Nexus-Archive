@@ -1,0 +1,2 @@
+{"uuid":"303341bf-ea85-486c-a28a-83aa0546c9f0","system":"idearium","component":"idearium.spec.update","action":"registered","status":"ok","tags":["idearium"],"detail":"Update a spec's section content","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783024403216}
+{"uuid":"08183389-74a5-4fcb-b98e-01d4194588f8","system":"idearium","component":"idearium.spec.update","action":"updated","status":"ok","tags":["idearium"],"detail":"Update a spec's section content","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783032739540}

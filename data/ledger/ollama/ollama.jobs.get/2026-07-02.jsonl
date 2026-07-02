@@ -1,0 +1,2 @@
+{"uuid":"e59e438b-4467-4aa4-b9cb-4f9ebee84951","system":"ollama","component":"ollama.jobs.get","action":"registered","status":"ok","tags":["ollama"],"detail":"Get single job by id","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783024404142}
+{"uuid":"f39f149f-86ff-4008-b4a6-bfc9b83c71ff","system":"ollama","component":"ollama.jobs.get","action":"updated","status":"ok","tags":["ollama"],"detail":"Get single job by id","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783032740373}

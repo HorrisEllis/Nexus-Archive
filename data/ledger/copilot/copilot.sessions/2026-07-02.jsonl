@@ -1,0 +1,2 @@
+{"uuid":"bb0f1f47-a333-47bc-af43-15a514172fd4","system":"copilot","component":"copilot.sessions","action":"registered","status":"ok","tags":["copilot"],"detail":"Active co-pilot sessions","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783024404149}
+{"uuid":"905d29dd-e9d6-4da3-94e9-a1015fd2a263","system":"copilot","component":"copilot.sessions","action":"updated","status":"ok","tags":["copilot"],"detail":"Active co-pilot sessions","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783032740389}

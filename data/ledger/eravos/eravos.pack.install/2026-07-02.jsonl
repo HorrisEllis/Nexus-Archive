@@ -1,0 +1,2 @@
+{"uuid":"3e4ef647-6d4b-4353-b03f-a8779b6e3019","system":"eravos","component":"eravos.pack.install","action":"registered","status":"ok","tags":["eravos"],"detail":"Install a .zip organism pack","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783024404130}
+{"uuid":"3a9b4610-80bf-40c2-963f-bb674f17e5d7","system":"eravos","component":"eravos.pack.install","action":"updated","status":"ok","tags":["eravos"],"detail":"Install a .zip organism pack","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783032740359}
