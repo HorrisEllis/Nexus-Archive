@@ -282,7 +282,7 @@ const engine = new ExpectationEngine();
 // Lazy-load so anomaly engine can init independently
 engine.onAnomaly(signal => {
   try {
-    const anomalyEngine = require('../../../meta/causal/anomaly');
+    const anomalyEngine = require('../../meta/causal/anomaly');
     anomalyEngine.classify(signal);
   } catch(e) {
     console.warn('[causal/expectation] anomaly engine unavailable:', e.message);

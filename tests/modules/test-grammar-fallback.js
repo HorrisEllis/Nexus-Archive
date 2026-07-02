@@ -2,7 +2,7 @@
 const assert = require('assert');
 const ge     = require('../../lib/grammar-engine');
 const compReg = require('../../lib/component-registry');
-const { resolveCommand } = require('../../lib/grammar-fallback');
+const { resolveCommand } = require('../../guardian/lib/grammar-fallback');
 
 let passed = 0, failed = 0;
 function test(id, desc, fn) {
