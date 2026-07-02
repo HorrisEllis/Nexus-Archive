@@ -1,2 +1,0 @@
-{"uuid":"829e9d1d-c0a1-4960-be75-980cc07ac04c","system":"cg","component":"cg.dom.mutate","action":"registered","status":"ok","tags":["cg","dom"],"detail":"Mutate DOM node — text, html, style, attrs, remove","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492266}
-{"uuid":"5e90c535-ddee-4e1f-92c5-02d57a095fe9","system":"cg","component":"cg.dom.mutate","action":"updated","status":"ok","tags":["cg","dom"],"detail":"Mutate DOM node — text, html, style, attrs, remove","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329495}

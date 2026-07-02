@@ -1,2 +1,0 @@
-{"uuid":"72a9ff9f-f1e4-4600-ac6c-8ff2f56b628f","system":"architect","component":"architect.hooks.list","action":"registered","status":"ok","tags":["architect"],"detail":"Hook registry — all declared hooks","causedBy":"architect","contractUuid":null,"session":null,"ts":1782957494016}
-{"uuid":"81bfc646-3159-4aff-8e50-b737434f8abb","system":"architect","component":"architect.hooks.list","action":"updated","status":"ok","tags":["architect"],"detail":"Hook registry — all declared hooks","causedBy":"architect","contractUuid":null,"session":null,"ts":1782961331059}

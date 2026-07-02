@@ -1,2 +1,0 @@
-{"uuid":"e6055690-0246-4252-b2fe-996790d1816c","system":"cg","component":"cg.mesh.list","action":"registered","status":"ok","tags":["cg","mesh"],"detail":"List mesh agents with health + status","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492288}
-{"uuid":"ac0f6bbb-bd5a-4fe0-b43d-4987489a23de","system":"cg","component":"cg.mesh.list","action":"updated","status":"ok","tags":["cg","mesh"],"detail":"List mesh agents with health + status","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329554}

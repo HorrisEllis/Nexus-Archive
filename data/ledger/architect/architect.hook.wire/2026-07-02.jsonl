@@ -1,2 +1,0 @@
-{"uuid":"ed2e1e1f-ad6e-477d-8ad8-596a842a89b3","system":"architect","component":"architect.hook.wire","action":"registered","status":"ok","tags":["architect","wires"],"detail":"Wire two hooks together","causedBy":"architect","contractUuid":null,"session":null,"ts":1782957494020}
-{"uuid":"c9a65b1b-9bd2-4977-a5e4-3c057a828517","system":"architect","component":"architect.hook.wire","action":"updated","status":"ok","tags":["architect","wires"],"detail":"Wire two hooks together","causedBy":"architect","contractUuid":null,"session":null,"ts":1782961331072}

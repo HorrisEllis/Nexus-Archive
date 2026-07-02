@@ -1,2 +1,0 @@
-{"uuid":"ff145f65-8269-42b4-98f8-00701b3dedb4","system":"eravos","component":"eravos.organism.spawn","action":"registered","status":"ok","tags":["eravos"],"detail":"Spawn an organism by id onto the canvas","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782957492852}
-{"uuid":"59431401-cc8a-472e-b17b-b36d549cd6c9","system":"eravos","component":"eravos.organism.spawn","action":"updated","status":"ok","tags":["eravos"],"detail":"Spawn an organism by id onto the canvas","causedBy":"eravos","contractUuid":null,"session":null,"ts":1782961330012}

@@ -1,2 +1,0 @@
-{"uuid":"3ce70dcf-52ba-4f71-905e-01abd71b503a","system":"cg","component":"cg.window.list","action":"registered","status":"ok","tags":["cg","window"],"detail":"List open agent windows","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492302}
-{"uuid":"52cbf462-98c8-4503-8d5d-1b90677f270c","system":"cg","component":"cg.window.list","action":"updated","status":"ok","tags":["cg","window"],"detail":"List open agent windows","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329595}

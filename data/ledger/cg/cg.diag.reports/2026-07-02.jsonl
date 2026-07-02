@@ -1,2 +1,0 @@
-{"uuid":"8469d188-60d2-45b5-af09-253ce402ef3d","system":"cg","component":"cg.diag.reports","action":"registered","status":"ok","tags":["cg","diagnostic"],"detail":"List diagnostic run reports","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492293}
-{"uuid":"16f0c56d-c7f5-4bd0-8d43-6fc6efeb5c90","system":"cg","component":"cg.diag.reports","action":"updated","status":"ok","tags":["cg","diagnostic"],"detail":"List diagnostic run reports","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329578}

@@ -1,2 +1,0 @@
-{"uuid":"3020cfa8-7a3a-4a09-bf95-78e36eea0faf","system":"eros","component":"eros.cmd.navigate","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP navigate to URL","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492369}
-{"uuid":"fd7c279d-76b0-4b81-9cbb-2838d56d941b","system":"eros","component":"eros.cmd.navigate","action":"updated","status":"ok","tags":["eros","driver"],"detail":"CDP navigate to URL","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329701}

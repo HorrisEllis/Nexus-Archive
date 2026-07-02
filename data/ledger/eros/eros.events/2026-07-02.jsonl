@@ -1,2 +1,0 @@
-{"uuid":"03c08641-e465-41a5-8fc7-1c9fd4e7562d","system":"eros","component":"eros.events","action":"registered","status":"ok","tags":["eros","stream"],"detail":"WebSocket event stream","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782957492354}
-{"uuid":"412e0397-6cfd-46e6-b25f-4c7b084dba6e","system":"eros","component":"eros.events","action":"updated","status":"ok","tags":["eros","stream"],"detail":"WebSocket event stream","causedBy":"erosmancer-os","contractUuid":null,"session":null,"ts":1782961329649}

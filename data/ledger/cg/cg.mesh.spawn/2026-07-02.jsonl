@@ -1,2 +1,0 @@
-{"uuid":"f949efc6-2824-455f-bbd9-f84f0393eab5","system":"cg","component":"cg.mesh.spawn","action":"registered","status":"ok","tags":["cg","mesh","agent"],"detail":"Spawn free AI agent in isolated context","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492284}
-{"uuid":"2129c21c-0c84-4305-a72e-d97734ee5265","system":"cg","component":"cg.mesh.spawn","action":"updated","status":"ok","tags":["cg","mesh","agent"],"detail":"Spawn free AI agent in isolated context","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329538}

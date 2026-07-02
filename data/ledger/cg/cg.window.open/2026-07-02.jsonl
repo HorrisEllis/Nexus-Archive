@@ -1,2 +1,0 @@
-{"uuid":"aeb2cd7f-d488-4caa-adc3-eab0d135509c","system":"cg","component":"cg.window.open","action":"registered","status":"ok","tags":["cg","window"],"detail":"Open agent browser window","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492300}
-{"uuid":"2c7c95d0-aed9-487f-89c5-0d79ad319e8c","system":"cg","component":"cg.window.open","action":"updated","status":"ok","tags":["cg","window"],"detail":"Open agent browser window","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329589}

@@ -1,2 +1,0 @@
-{"uuid":"c6707b6d-d629-4a5c-8e34-b077e66d4075","system":"cg","component":"cg.cookie.snapshot","action":"registered","status":"ok","tags":["cg","cookie","vault"],"detail":"Snapshot current session cookies","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492280}
-{"uuid":"2550e45d-0f25-4969-9076-32841687f7b9","system":"cg","component":"cg.cookie.snapshot","action":"updated","status":"ok","tags":["cg","cookie","vault"],"detail":"Snapshot current session cookies","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329523}

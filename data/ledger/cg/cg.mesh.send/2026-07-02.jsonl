@@ -1,2 +1,0 @@
-{"uuid":"0d32af72-2d68-42d9-9271-b2dd9498e3ee","system":"cg","component":"cg.mesh.send","action":"registered","status":"ok","tags":["cg","mesh"],"detail":"Send prompt to specific mesh agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782957492285}
-{"uuid":"10fa0739-10fa-4fc9-b23e-a2f55fddec0c","system":"cg","component":"cg.mesh.send","action":"updated","status":"ok","tags":["cg","mesh"],"detail":"Send prompt to specific mesh agent","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1782961329542}
