@@ -1,2 +1,0 @@
-{"uuid":"b5e5049c-3f9f-4950-a10a-419ae5e986dc","system":"eravos","component":"eravos.organism.list","action":"registered","status":"ok","tags":["eravos"],"detail":"List all mounted organisms","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783024404127}
-{"uuid":"740e696a-5f1c-4b99-a6a3-fc269ed09175","system":"eravos","component":"eravos.organism.list","action":"updated","status":"ok","tags":["eravos"],"detail":"List all mounted organisms","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783032740352}

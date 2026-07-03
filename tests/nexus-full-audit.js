@@ -101,7 +101,7 @@ console.log('\n══ §3 INTEGRATION WIRING ══\n');
 
 t('guardian boots mcp-server', () => {
   const s = read('guardian/server.js');
-  return s.includes("require('../lib/mcp-server')") && s.includes('mcp.start()');
+  return s.includes("require('../orchestrator/lib/mcp-server')") && s.includes('mcp.start()');
 });
 t('guardian has /build route (T2 gate)', () => read('guardian/server.js').includes("url.pathname === '/build'"));
 t('guardian has /hot-load route (Phase 14/28)', () => read('guardian/server.js').includes("'/hot-load'"));
@@ -124,7 +124,7 @@ t('mcp-server has nexus_build tool', () => read('lib/mcp-server.js').includes("'
 t('mcp-server has nexus_blueprint tool', () => read('lib/mcp-server.js').includes("'nexus_blueprint'"));
 t('mcp-server has nexus_autonomous_run tool', () => read('lib/mcp-server.js').includes("'nexus_autonomous_run'"));
 t('mcp-server has nexus_hot_load tool', () => read('lib/mcp-server.js').includes("'nexus_hot_load'"));
-t('mcp-stdio imports mcp-server tools', () => read('lib/mcp-stdio.js').includes("require('./mcp-server')"));
+t('mcp-stdio imports mcp-server tools', () => read('lib/mcp-stdio.js').includes("require('../orchestrator/lib/mcp-server')"));
 t('self-heal excludes semantic gaps (Phase 24.3 fix)', () => read('cortex/self-heal/index.js').includes('SEMANTIC_GAP_TYPES'));
 
 // ── SECTION 4: ERAVOS system ──────────────────────────────────────────────────

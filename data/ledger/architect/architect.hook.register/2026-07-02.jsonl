@@ -1,2 +1,0 @@
-{"uuid":"6e1cd66e-c653-4ee2-af3b-3e8c30c291f4","system":"architect","component":"architect.hook.register","action":"registered","status":"ok","tags":["architect","hooks"],"detail":"Register a new hook","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405152}
-{"uuid":"532e3aa3-2fae-4df5-a647-61edb8c4e982","system":"architect","component":"architect.hook.register","action":"updated","status":"ok","tags":["architect","hooks"],"detail":"Register a new hook","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741414}

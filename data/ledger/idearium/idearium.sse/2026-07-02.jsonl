@@ -1,2 +1,0 @@
-{"uuid":"53aad3c3-45d8-4247-ae33-6241ddc78727","system":"idearium","component":"idearium.sse","action":"registered","status":"ok","tags":["idearium","stream"],"detail":"Live SSE event stream","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783024403208}
-{"uuid":"91a0e6b0-5419-4713-90c3-8f577e423a0a","system":"idearium","component":"idearium.sse","action":"updated","status":"ok","tags":["idearium","stream"],"detail":"Live SSE event stream","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783032739519}

@@ -1,2 +1,0 @@
-{"uuid":"a7039547-2888-4d01-a0d3-807e46818f63","system":"architect","component":"architect.hooks.graph","action":"registered","status":"ok","tags":["architect"],"detail":"Hook topology graph (json|mermaid)","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405156}
-{"uuid":"9fbb70ca-c958-4e99-820d-88223fa4ecff","system":"architect","component":"architect.hooks.graph","action":"updated","status":"ok","tags":["architect"],"detail":"Hook topology graph (json|mermaid)","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741421}

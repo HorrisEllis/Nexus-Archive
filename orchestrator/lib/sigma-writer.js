@@ -60,28 +60,28 @@ let _jaa, _uid, _bus, _ledger, _cfr, _sigmaLib;
 
 function _getJAA() {
   if (_jaa) return _jaa;
-  try { ({ jaaDB: _jaa, uid: _uid } = require('../cortex/memory/jaa-db')); } catch (_) {}
+  try { ({ jaaDB: _jaa, uid: _uid } = require('../../cortex/memory/jaa-db')); } catch (_) {}
   return _jaa;
 }
 function uid() { return _uid?.() ?? crypto.randomUUID(); }
 function _getBus() {
   if (_bus) return _bus;
-  try { _bus = require('../nexus-bus'); } catch (_) {}
+  try { _bus = require('../../nexus-bus'); } catch (_) {}
   return _bus;
 }
 function _getLedger() {
   if (_ledger) return _ledger;
-  try { _ledger = require('./event-ledger'); } catch (_) {}
+  try { _ledger = require('../../idearium/lib/event-ledger'); } catch (_) {}
   return _ledger;
 }
 function _getCFR() {
   if (_cfr) return _cfr;
-  try { _cfr = require('./cfr/field'); } catch (_) {}
+  try { _cfr = require('../../meta/cfr/field'); } catch (_) {}
   return _cfr;
 }
 function _getSigmaLib() {
   if (_sigmaLib) return _sigmaLib;
-  try { _sigmaLib = require('./cfr/sigma'); } catch (_) {}
+  try { _sigmaLib = require('../../meta/cfr/sigma'); } catch (_) {}
   return _sigmaLib;
 }
 

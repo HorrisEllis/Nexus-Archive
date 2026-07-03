@@ -1,2 +1,0 @@
-{"uuid":"b65207eb-279a-4731-80c4-f7618deed2d6","system":"idearium","component":"idearium.cli.exec","action":"registered","status":"ok","tags":["idearium"],"detail":"Execute a unified CLI command","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783024403229}
-{"uuid":"b2d6ea1f-c87a-462e-bfc7-5e5debbf28a6","system":"idearium","component":"idearium.cli.exec","action":"updated","status":"ok","tags":["idearium"],"detail":"Execute a unified CLI command","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783032739572}

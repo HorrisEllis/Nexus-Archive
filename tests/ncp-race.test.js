@@ -13,7 +13,7 @@
 // Pass: exits 0, prints "PASS" for both assertions.
 // Fail: throws, non-zero exit — this is a real test, not a console.log demo.
 
-const { createNCPServer } = require('../lib/ncp');
+const { createNCPServer } = require('../guardian/lib/ncp');
 
 function mockReqRes() {
   const closeHandlers = [];

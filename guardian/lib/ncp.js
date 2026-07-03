@@ -135,15 +135,15 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     // checks (recent rows here, scoped by queue_uuid===key), not just a
     // counter in memory that resets on restart.
     try {
-      const { jaaDB, uid } = require('../cortex/memory/jaa-db');
+      const { jaaDB, uid } = require('../../cortex/memory/jaa-db');
       jaaDB.insert('event_log', { uuid: uid(), type: 'ncp.flap', queue_uuid: key, source: 'lib/ncp.js', ts: now });
     } catch (_) {}
 
     if (hist.length >= FLAP_THRESHOLD) {
       _flapHistory.set(key, []); // reset so this doesn't re-fire every single disconnect once over threshold
       try {
-        const gp = require('../meta/gap/predicate');
-        const { jaaDB, uid } = require('../cortex/memory/jaa-db');
+        const gp = require('../../meta/gap/predicate');
+        const { jaaDB, uid } = require('../../cortex/memory/jaa-db');
         const { enriched_gap, existing_uuid } = gp.enrichGap({
           type: 'ncp_connection_flapping', path: key, severity: 'high',
           body: `${hist.length} disconnects for ${key} within ${FLAP_WINDOW_MS/1000}s`,
@@ -157,7 +157,7 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
         // further to do here, that IS the dedup behavior working correctly.
       } catch (_) {}
       try {
-        require('./component-ledger').write({
+        require('../../lib/component-ledger').write({
           system: 'guardian', component: 'guardian.ncp', action: 'connection_flapping',
           status: 'high', tags: [key], detail: `${hist.length} disconnects within ${FLAP_WINDOW_MS/1000}s`,
           causedBy: null,

@@ -517,7 +517,10 @@ const SYSTEM_LOCAL_UI_DIRS = [
   { system:'emerge',       dir: path.join(ROOT,'ui') },        // emerge IDE ui lives at root ui/
   { system:'orchestrator', dir: path.join(ROOT,'ui','orchestrator') },
   { system:'explorer',     dir: path.join(ROOT,'ui') },  // contract-explorer + contract-renderer
-  { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostic') },  // §HOTSWAP-03
+  { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostics') },  // §HOTSWAP-03
+  // §BUGFIX 2026-07-02: was 'ui','diagnostic' (singular) — that folder is
+  // empty. The real diagnostic UI, with a real index.html, lives at
+  // ui/diagnostics (plural). GET /ui/diagnostic was serving nothing.
 ];
 
 // ── UI Hotswap Watcher ───────────────────────────────────────────────────────
@@ -620,11 +623,17 @@ const server = http.createServer(async (req, res) => {
   const M     = req.method;
   const QS    = u.searchParams;
 
-  // ── Root UI — NEXUS Home (Phase 1: structure complete) ─────────────────
+  // ── Root UI — NEXUS Diagnostic is primary (promoted 2026-07-02, per
+  // explicit decision: "the primary UI, it's buried under a mediocre one" —
+  // that work got interrupted before landing. Home and orchestrator both
+  // stay fully reachable, at /ui/home and /ui/orchestrator respectively,
+  // and as fallbacks here if diagnostics is ever missing. ─────────────────
   if (M==='GET' && (u.pathname==='/' || u.pathname==='/home')) {
+    const diagPath = path.join(UI_ROOT,'diagnostics','index.html');
+    if (fs.existsSync(diagPath)) return serveFile(res, diagPath);
     const homePath = path.join(UI_ROOT,'home','index.html');
     if (fs.existsSync(homePath)) return serveFile(res, homePath);
-    // fallback to orchestrator UI while home is being built
+    // fallback to orchestrator UI while home/diagnostics are being built
     return serveFile(res, path.join(UI_ROOT,'orchestrator','index.html'));
   }
 
@@ -2187,7 +2196,9 @@ ${C.b}UI hotswap${C.r}
   ui/guardian/    → http://localhost:${PORT}/ui/guardian
   ui/idearium/    → http://localhost:${PORT}/ui/idearium
   ui/emerge/      → http://localhost:${PORT}/ui/emerge
-  ui/orchestrator/ → http://localhost:${PORT}/
+  ui/diagnostics/ → http://localhost:${PORT}/  (primary — home/orchestrator as fallback)
+  ui/home/        → http://localhost:${PORT}/ui/home
+  ui/orchestrator/ → http://localhost:${PORT}/ui/orchestrator
 `);
 }
 

@@ -1,2 +1,0 @@
-{"uuid":"19b76a90-5f9c-45e4-8f1f-c2cdf93f79a8","system":"ollama","component":"ollama.queue.status","action":"registered","status":"ok","tags":["ollama"],"detail":"Queue depth and running count","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783024404143}
-{"uuid":"65e06995-5732-495b-b2cd-90cc8acead19","system":"ollama","component":"ollama.queue.status","action":"updated","status":"ok","tags":["ollama"],"detail":"Queue depth and running count","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783032740377}

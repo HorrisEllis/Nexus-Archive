@@ -1,2 +1,0 @@
-{"uuid":"1597e858-106d-42a6-bea0-bcb799c5f1a8","system":"ollama","component":"ollama.jobs.dispatch","action":"registered","status":"ok","tags":["ollama","dispatch"],"detail":"Queue a job for local model execution","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783024404140}
-{"uuid":"17ed2b4b-5010-4271-a475-d171963f1549","system":"ollama","component":"ollama.jobs.dispatch","action":"updated","status":"ok","tags":["ollama","dispatch"],"detail":"Queue a job for local model execution","causedBy":"ollama","contractUuid":null,"session":null,"ts":1783032740370}

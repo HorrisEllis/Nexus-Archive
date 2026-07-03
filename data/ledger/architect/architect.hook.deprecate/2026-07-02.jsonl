@@ -1,2 +1,0 @@
-{"uuid":"b981f7f3-4d17-4f10-861b-1d7faa357048","system":"architect","component":"architect.hook.deprecate","action":"registered","status":"ok","tags":["architect"],"detail":"Deprecate or remove hook","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405154}
-{"uuid":"65bea516-1d3e-4ba1-8e1b-ca7919c30d2b","system":"architect","component":"architect.hook.deprecate","action":"updated","status":"ok","tags":["architect"],"detail":"Deprecate or remove hook","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741417}

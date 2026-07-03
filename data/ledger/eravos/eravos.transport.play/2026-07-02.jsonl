@@ -1,2 +1,0 @@
-{"uuid":"ad92428d-4f38-4b77-a4a0-f3328b60ffad","system":"eravos","component":"eravos.transport.play","action":"registered","status":"ok","tags":["eravos"],"detail":"Start playback","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783024404131}
-{"uuid":"0e4e88d5-3bb4-46e9-bf64-07f04bf193e8","system":"eravos","component":"eravos.transport.play","action":"updated","status":"ok","tags":["eravos"],"detail":"Start playback","causedBy":"eravos","contractUuid":null,"session":null,"ts":1783032740362}

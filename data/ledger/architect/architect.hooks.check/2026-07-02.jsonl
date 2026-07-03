@@ -1,2 +1,0 @@
-{"uuid":"690d7df4-5b2f-4107-b911-1c1ab0954155","system":"architect","component":"architect.hooks.check","action":"registered","status":"ok","tags":["architect"],"detail":"Check hook against constraints","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405156}
-{"uuid":"0ef1b718-2f9c-4913-9ca9-6c3ac55dfa80","system":"architect","component":"architect.hooks.check","action":"updated","status":"ok","tags":["architect"],"detail":"Check hook against constraints","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741422}

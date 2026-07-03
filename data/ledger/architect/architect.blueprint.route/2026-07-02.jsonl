@@ -1,2 +1,0 @@
-{"uuid":"c0e34cdc-48b6-4129-a1d7-1a2ffef49f6d","system":"architect","component":"architect.blueprint.route","action":"registered","status":"ok","tags":["architect"],"detail":"Route intent via blueprint","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405159}
-{"uuid":"4c3b0eb1-47d5-4ead-9eef-78d5eafc7e8b","system":"architect","component":"architect.blueprint.route","action":"updated","status":"ok","tags":["architect"],"detail":"Route intent via blueprint","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741429}

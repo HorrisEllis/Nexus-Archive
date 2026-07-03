@@ -1,2 +1,0 @@
-{"uuid":"4e2d8bb2-523e-479c-a1e6-ab976d0f42ea","system":"idearium","component":"idearium.contract.get","action":"registered","status":"ok","tags":["idearium"],"detail":"Return idearium's API contract descriptor","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783024403205}
-{"uuid":"4e333125-f3b2-4559-a315-006487b59afd","system":"idearium","component":"idearium.contract.get","action":"updated","status":"ok","tags":["idearium"],"detail":"Return idearium's API contract descriptor","causedBy":"idearium","contractUuid":null,"session":null,"ts":1783032739510}

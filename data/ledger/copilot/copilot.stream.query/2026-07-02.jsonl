@@ -1,2 +1,0 @@
-{"uuid":"53ca67ad-9f81-42f7-a802-dc8838e81b9b","system":"copilot","component":"copilot.stream.query","action":"registered","status":"ok","tags":["copilot"],"detail":"Query the continuous event stream","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783024404147}
-{"uuid":"5f88af8b-751a-408c-bdd9-d9212e66d17c","system":"copilot","component":"copilot.stream.query","action":"updated","status":"ok","tags":["copilot"],"detail":"Query the continuous event stream","causedBy":"copilot","contractUuid":null,"session":null,"ts":1783032740386}

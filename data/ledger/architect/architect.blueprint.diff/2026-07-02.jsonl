@@ -1,2 +1,0 @@
-{"uuid":"83bd9a42-f34f-4e22-9d7c-d1a29b61c3c3","system":"architect","component":"architect.blueprint.diff","action":"registered","status":"ok","tags":["architect"],"detail":"Diff two blueprints","causedBy":"architect","contractUuid":null,"session":null,"ts":1783024405158}
-{"uuid":"7554cab3-1fb4-46f5-989b-7c320a4c7271","system":"architect","component":"architect.blueprint.diff","action":"updated","status":"ok","tags":["architect"],"detail":"Diff two blueprints","causedBy":"architect","contractUuid":null,"session":null,"ts":1783032741426}
