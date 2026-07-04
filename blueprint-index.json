@@ -1,17 +1,17 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_fe0d493e",
+  "uuid": "bpi_b493474e",
   "version": "1.0.0",
-  "builtAt": 1783077317155,
+  "builtAt": 1783183115772,
   "builtBy": "blueprint-index",
   "systemCount": 11,
-  "totalComponents": 198,
+  "totalComponents": 216,
   "systems": [
     {
       "systemId": "orchestrator",
       "label": "Orchestrator",
       "port": 9000,
-      "componentCount": 22,
+      "componentCount": 24,
       "components": [
         {
           "id": "health",
@@ -257,6 +257,34 @@
             "path": "/api/ui/hotswap"
           },
           "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "cos.enforcement",
+          "description": "COS BoundaryIndex monitors every nexus-bus event — I-1 UUID, C-1 causal edges. Violations → ledger as cos.invariant.* events.",
+          "route": {
+            "method": "BUS",
+            "path": "cos.invariant.*"
+          },
+          "tags": [
+            "cos",
+            "enforcement",
+            "bus"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "rfr2.bus.bridge",
+          "description": "RFR2 delta+enforcement wired to nexus-bus wildcard. Feeds computeEventDelta (S/C fields) and invariant checks. Emits rfr2.delta.signal, rfr2.enforcement.violation, rfr2.delta.fractal.",
+          "route": {
+            "method": "BUS",
+            "path": "rfr2.delta.*"
+          },
+          "tags": [
+            "rfr2",
+            "delta",
+            "bus"
+          ],
           "grammar": []
         }
       ],
@@ -528,6 +556,36 @@
           "componentId": "ui.hotswap",
           "systemId": "ui",
           "tags": []
+        },
+        {
+          "command": "enforcement",
+          "aliases": [],
+          "usage": "enforcement",
+          "method": "BUS",
+          "path": "cos.invariant.*",
+          "description": "COS BoundaryIndex monitors every nexus-bus event — I-1 UUID, C-1 causal edges. Violations → ledger as cos.invariant.* events.",
+          "componentId": "cos.enforcement",
+          "systemId": "cos",
+          "tags": [
+            "cos",
+            "enforcement",
+            "bus"
+          ]
+        },
+        {
+          "command": "bus-bridge",
+          "aliases": [],
+          "usage": "bus-bridge",
+          "method": "BUS",
+          "path": "rfr2.delta.*",
+          "description": "RFR2 delta+enforcement wired to nexus-bus wildcard. Feeds computeEventDelta (S/C fields) and invariant checks. Emits rfr2.delta.signal, rfr2.enforcement.violation, rfr2.delta.fractal.",
+          "componentId": "rfr2.bus.bridge",
+          "systemId": "rfr2",
+          "tags": [
+            "rfr2",
+            "delta",
+            "bus"
+          ]
         }
       ],
       "seamHooks": [],
@@ -537,7 +595,7 @@
       "systemId": "cortex",
       "label": "Cortex",
       "port": 3748,
-      "componentCount": 41,
+      "componentCount": 44,
       "components": [
         {
           "id": "cortex.health",
@@ -1168,6 +1226,58 @@
           ],
           "grammar": [
             "hooks summary"
+          ]
+        },
+        {
+          "id": "cortex.component.stream",
+          "name": "component.stream",
+          "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s",
+          "route": {
+            "method": "GET",
+            "path": "/events/component/:componentId"
+          },
+          "tags": [
+            "cortex",
+            "sse",
+            "stream",
+            "component"
+          ],
+          "grammar": [
+            "component stream"
+          ]
+        },
+        {
+          "id": "cortex.query.surface",
+          "name": "query.surface",
+          "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative",
+          "route": {
+            "method": "GET",
+            "path": "/api/cortex/query"
+          },
+          "tags": [
+            "cortex",
+            "intelligence",
+            "query"
+          ],
+          "grammar": [
+            "query surface"
+          ]
+        },
+        {
+          "id": "cortex.query.surface.post",
+          "name": "query.surface.post",
+          "description": "Unified query surface (POST body variant)",
+          "route": {
+            "method": "POST",
+            "path": "/api/cortex/query"
+          },
+          "tags": [
+            "cortex",
+            "intelligence",
+            "query"
+          ],
+          "grammar": [
+            "query surface post"
           ]
         }
       ],
@@ -1802,6 +1912,58 @@
             "nerve",
             "wires"
           ]
+        },
+        {
+          "command": "component-stream",
+          "aliases": [
+            "component stream"
+          ],
+          "usage": "component-stream",
+          "method": "GET",
+          "path": "/events/component/:componentId",
+          "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s",
+          "componentId": "cortex.component.stream",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "sse",
+            "stream",
+            "component"
+          ]
+        },
+        {
+          "command": "query-surface",
+          "aliases": [
+            "query surface"
+          ],
+          "usage": "query-surface",
+          "method": "GET",
+          "path": "/api/cortex/query",
+          "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative",
+          "componentId": "cortex.query.surface",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "intelligence",
+            "query"
+          ]
+        },
+        {
+          "command": "query-surface-post",
+          "aliases": [
+            "query surface post"
+          ],
+          "usage": "query-surface-post",
+          "method": "POST",
+          "path": "/api/cortex/query",
+          "description": "Unified query surface (POST body variant)",
+          "componentId": "cortex.query.surface.post",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "intelligence",
+            "query"
+          ]
         }
       ],
       "seamHooks": [
@@ -2286,6 +2448,36 @@
           ],
           "contract": null,
           "hookId": null
+        },
+        {
+          "componentId": "cortex.component.stream",
+          "label": "component.stream",
+          "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s",
+          "intents": [
+            "component stream"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.query.surface",
+          "label": "query.surface",
+          "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative",
+          "intents": [
+            "query surface"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.query.surface.post",
+          "label": "query.surface.post",
+          "description": "Unified query surface (POST body variant)",
+          "intents": [
+            "query surface post"
+          ],
+          "contract": null,
+          "hookId": null
         }
       ]
     },
@@ -2293,7 +2485,7 @@
       "systemId": "guardian",
       "label": "Guardian",
       "port": 7820,
-      "componentCount": 33,
+      "componentCount": 39,
       "components": [
         {
           "id": "guardian.health",
@@ -2827,6 +3019,116 @@
           "grammar": [
             "copilot memory",
             "copilot-memory"
+          ]
+        },
+        {
+          "id": "guardian.proxy.cfr.state",
+          "name": "proxy.cfr.state",
+          "description": "Proxy → cortex:3748/cfr/field — live CFR field state",
+          "route": {
+            "method": "GET",
+            "path": "/api/guardian/cfr/state"
+          },
+          "tags": [
+            "guardian",
+            "proxy",
+            "cfr"
+          ],
+          "grammar": [
+            "proxy cfr state",
+            "proxy-cfr-state"
+          ]
+        },
+        {
+          "id": "guardian.proxy.cfr.event",
+          "name": "proxy.cfr.event",
+          "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger",
+          "route": {
+            "method": "POST",
+            "path": "/api/guardian/cfr/event"
+          },
+          "tags": [
+            "guardian",
+            "proxy",
+            "cfr"
+          ],
+          "grammar": [
+            "proxy cfr event",
+            "proxy-cfr-event"
+          ]
+        },
+        {
+          "id": "guardian.proxy.nerve.snapshot",
+          "name": "proxy.nerve.snapshot",
+          "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer",
+          "route": {
+            "method": "GET",
+            "path": "/api/guardian/nerve/snapshot"
+          },
+          "tags": [
+            "guardian",
+            "proxy",
+            "nerve"
+          ],
+          "grammar": [
+            "proxy nerve snapshot",
+            "proxy-nerve-snapshot"
+          ]
+        },
+        {
+          "id": "guardian.proxy.hooks.summary",
+          "name": "proxy.hooks.summary",
+          "description": "Proxy → cortex:3748/hooks/summary — wire graph",
+          "route": {
+            "method": "GET",
+            "path": "/api/guardian/hooks/summary"
+          },
+          "tags": [
+            "guardian",
+            "proxy",
+            "hooks"
+          ],
+          "grammar": [
+            "proxy hooks summary",
+            "proxy-hooks-summary"
+          ]
+        },
+        {
+          "id": "guardian.proxy.cortex.query",
+          "name": "proxy.cortex.query",
+          "description": "Proxy → cortex:3748/api/cortex/query — unified query surface",
+          "route": {
+            "method": "GET",
+            "path": "/api/guardian/cortex/query"
+          },
+          "tags": [
+            "guardian",
+            "proxy",
+            "intelligence",
+            "query"
+          ],
+          "grammar": [
+            "proxy cortex query",
+            "proxy-cortex-query"
+          ]
+        },
+        {
+          "id": "guardian.proxy.component.sse",
+          "name": "proxy.component.sse",
+          "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream",
+          "route": {
+            "method": "GET",
+            "path": "/api/guardian/events/component/:id"
+          },
+          "tags": [
+            "guardian",
+            "proxy",
+            "sse",
+            "stream"
+          ],
+          "grammar": [
+            "proxy component sse",
+            "proxy-component-sse"
           ]
         }
       ],
@@ -3364,6 +3666,116 @@
           "tags": [
             "guardian"
           ]
+        },
+        {
+          "command": "proxy-cfr-state",
+          "aliases": [
+            "proxy cfr state",
+            "proxy-cfr-state"
+          ],
+          "usage": "proxy-cfr-state",
+          "method": "GET",
+          "path": "/api/guardian/cfr/state",
+          "description": "Proxy → cortex:3748/cfr/field — live CFR field state",
+          "componentId": "guardian.proxy.cfr.state",
+          "systemId": "guardian",
+          "tags": [
+            "guardian",
+            "proxy",
+            "cfr"
+          ]
+        },
+        {
+          "command": "proxy-cfr-event",
+          "aliases": [
+            "proxy cfr event",
+            "proxy-cfr-event"
+          ],
+          "usage": "proxy-cfr-event",
+          "method": "POST",
+          "path": "/api/guardian/cfr/event",
+          "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger",
+          "componentId": "guardian.proxy.cfr.event",
+          "systemId": "guardian",
+          "tags": [
+            "guardian",
+            "proxy",
+            "cfr"
+          ]
+        },
+        {
+          "command": "proxy-nerve-snapshot",
+          "aliases": [
+            "proxy nerve snapshot",
+            "proxy-nerve-snapshot"
+          ],
+          "usage": "proxy-nerve-snapshot",
+          "method": "GET",
+          "path": "/api/guardian/nerve/snapshot",
+          "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer",
+          "componentId": "guardian.proxy.nerve.snapshot",
+          "systemId": "guardian",
+          "tags": [
+            "guardian",
+            "proxy",
+            "nerve"
+          ]
+        },
+        {
+          "command": "proxy-hooks-summary",
+          "aliases": [
+            "proxy hooks summary",
+            "proxy-hooks-summary"
+          ],
+          "usage": "proxy-hooks-summary",
+          "method": "GET",
+          "path": "/api/guardian/hooks/summary",
+          "description": "Proxy → cortex:3748/hooks/summary — wire graph",
+          "componentId": "guardian.proxy.hooks.summary",
+          "systemId": "guardian",
+          "tags": [
+            "guardian",
+            "proxy",
+            "hooks"
+          ]
+        },
+        {
+          "command": "proxy-cortex-query",
+          "aliases": [
+            "proxy cortex query",
+            "proxy-cortex-query"
+          ],
+          "usage": "proxy-cortex-query",
+          "method": "GET",
+          "path": "/api/guardian/cortex/query",
+          "description": "Proxy → cortex:3748/api/cortex/query — unified query surface",
+          "componentId": "guardian.proxy.cortex.query",
+          "systemId": "guardian",
+          "tags": [
+            "guardian",
+            "proxy",
+            "intelligence",
+            "query"
+          ]
+        },
+        {
+          "command": "proxy-component-sse",
+          "aliases": [
+            "proxy component sse",
+            "proxy-component-sse"
+          ],
+          "usage": "proxy-component-sse",
+          "method": "GET",
+          "path": "/api/guardian/events/component/:id",
+          "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream",
+          "componentId": "guardian.proxy.component.sse",
+          "systemId": "guardian",
+          "tags": [
+            "guardian",
+            "proxy",
+            "sse",
+            "stream"
+          ]
         }
       ],
       "seamHooks": [
@@ -3792,6 +4204,72 @@
           ],
           "contract": null,
           "hookId": null
+        },
+        {
+          "componentId": "guardian.proxy.cfr.state",
+          "label": "proxy.cfr.state",
+          "description": "Proxy → cortex:3748/cfr/field — live CFR field state",
+          "intents": [
+            "proxy cfr state",
+            "proxy-cfr-state"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "guardian.proxy.cfr.event",
+          "label": "proxy.cfr.event",
+          "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger",
+          "intents": [
+            "proxy cfr event",
+            "proxy-cfr-event"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "guardian.proxy.nerve.snapshot",
+          "label": "proxy.nerve.snapshot",
+          "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer",
+          "intents": [
+            "proxy nerve snapshot",
+            "proxy-nerve-snapshot"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "guardian.proxy.hooks.summary",
+          "label": "proxy.hooks.summary",
+          "description": "Proxy → cortex:3748/hooks/summary — wire graph",
+          "intents": [
+            "proxy hooks summary",
+            "proxy-hooks-summary"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "guardian.proxy.cortex.query",
+          "label": "proxy.cortex.query",
+          "description": "Proxy → cortex:3748/api/cortex/query — unified query surface",
+          "intents": [
+            "proxy cortex query",
+            "proxy-cortex-query"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "guardian.proxy.component.sse",
+          "label": "proxy.component.sse",
+          "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream",
+          "intents": [
+            "proxy component sse",
+            "proxy-component-sse"
+          ],
+          "contract": null,
+          "hookId": null
         }
       ]
     },
@@ -3799,7 +4277,7 @@
       "systemId": "copilot",
       "label": "Co-pilot",
       "port": 3750,
-      "componentCount": 15,
+      "componentCount": 21,
       "components": [
         {
           "id": "copilot.prompt",
@@ -4032,6 +4510,106 @@
           ],
           "grammar": [
             "copilot contract"
+          ]
+        },
+        {
+          "id": "copilot.channel",
+          "name": "channel",
+          "description": "Set active channel for all sessions",
+          "route": {
+            "method": "POST",
+            "path": "/api/channel"
+          },
+          "tags": [
+            "copilot",
+            "session"
+          ],
+          "grammar": [
+            "copilot channel"
+          ]
+        },
+        {
+          "id": "copilot.observe",
+          "name": "observe",
+          "description": "Observe and ingest an external event into co-pilot stream",
+          "route": {
+            "method": "POST",
+            "path": "/api/observe"
+          },
+          "tags": [
+            "copilot",
+            "stream"
+          ],
+          "grammar": [
+            "copilot observe"
+          ]
+        },
+        {
+          "id": "copilot.empty.state",
+          "name": "empty.state",
+          "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory",
+          "route": {
+            "method": "EVENT",
+            "path": "copilot.empty_state"
+          },
+          "tags": [
+            "copilot",
+            "boot",
+            "state"
+          ],
+          "grammar": [
+            "copilot empty state"
+          ]
+        },
+        {
+          "id": "copilot.query.surface.enriched",
+          "name": "query.surface.enriched",
+          "description": "Emitted when query surface enrichment runs — about + gap count",
+          "route": {
+            "method": "EVENT",
+            "path": "copilot.query_surface.enriched"
+          },
+          "tags": [
+            "copilot",
+            "intelligence",
+            "query"
+          ],
+          "grammar": [
+            "copilot query surface enriched"
+          ]
+        },
+        {
+          "id": "copilot.conditioning.log",
+          "name": "conditioning.log",
+          "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence.",
+          "route": {
+            "method": "BEHAVIOR",
+            "path": "conditioning_log"
+          },
+          "tags": [
+            "copilot",
+            "learning",
+            "raid"
+          ],
+          "grammar": [
+            "copilot conditioning log"
+          ]
+        },
+        {
+          "id": "copilot.uniqueness.synthesis",
+          "name": "uniqueness.synthesis",
+          "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call.",
+          "route": {
+            "method": "BEHAVIOR",
+            "path": "uniqueness_synthesis"
+          },
+          "tags": [
+            "copilot",
+            "uniqueness",
+            "quality"
+          ],
+          "grammar": [
+            "copilot uniqueness synthesis"
           ]
         }
       ],
@@ -4267,6 +4845,106 @@
           "systemId": "copilot",
           "tags": [
             "copilot"
+          ]
+        },
+        {
+          "command": "channel",
+          "aliases": [
+            "copilot channel"
+          ],
+          "usage": "channel",
+          "method": "POST",
+          "path": "/api/channel",
+          "description": "Set active channel for all sessions",
+          "componentId": "copilot.channel",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "session"
+          ]
+        },
+        {
+          "command": "observe",
+          "aliases": [
+            "copilot observe"
+          ],
+          "usage": "observe",
+          "method": "POST",
+          "path": "/api/observe",
+          "description": "Observe and ingest an external event into co-pilot stream",
+          "componentId": "copilot.observe",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "stream"
+          ]
+        },
+        {
+          "command": "empty-state",
+          "aliases": [
+            "copilot empty state"
+          ],
+          "usage": "empty-state",
+          "method": "EVENT",
+          "path": "copilot.empty_state",
+          "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory",
+          "componentId": "copilot.empty.state",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "boot",
+            "state"
+          ]
+        },
+        {
+          "command": "query-surface-enriched",
+          "aliases": [
+            "copilot query surface enriched"
+          ],
+          "usage": "query-surface-enriched",
+          "method": "EVENT",
+          "path": "copilot.query_surface.enriched",
+          "description": "Emitted when query surface enrichment runs — about + gap count",
+          "componentId": "copilot.query.surface.enriched",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "intelligence",
+            "query"
+          ]
+        },
+        {
+          "command": "conditioning-log",
+          "aliases": [
+            "copilot conditioning log"
+          ],
+          "usage": "conditioning-log",
+          "method": "BEHAVIOR",
+          "path": "conditioning_log",
+          "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence.",
+          "componentId": "copilot.conditioning.log",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "learning",
+            "raid"
+          ]
+        },
+        {
+          "command": "uniqueness-synthesis",
+          "aliases": [
+            "copilot uniqueness synthesis"
+          ],
+          "usage": "uniqueness-synthesis",
+          "method": "BEHAVIOR",
+          "path": "uniqueness_synthesis",
+          "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call.",
+          "componentId": "copilot.uniqueness.synthesis",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "uniqueness",
+            "quality"
           ]
         }
       ],
@@ -4536,6 +5214,66 @@
           ],
           "contract": null,
           "hookId": null
+        },
+        {
+          "componentId": "copilot.channel",
+          "label": "channel",
+          "description": "Set active channel for all sessions",
+          "intents": [
+            "copilot channel"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.observe",
+          "label": "observe",
+          "description": "Observe and ingest an external event into co-pilot stream",
+          "intents": [
+            "copilot observe"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.empty.state",
+          "label": "empty.state",
+          "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory",
+          "intents": [
+            "copilot empty state"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.query.surface.enriched",
+          "label": "query.surface.enriched",
+          "description": "Emitted when query surface enrichment runs — about + gap count",
+          "intents": [
+            "copilot query surface enriched"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.conditioning.log",
+          "label": "conditioning.log",
+          "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence.",
+          "intents": [
+            "copilot conditioning log"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.uniqueness.synthesis",
+          "label": "uniqueness.synthesis",
+          "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call.",
+          "intents": [
+            "copilot uniqueness synthesis"
+          ],
+          "contract": null,
+          "hookId": null
         }
       ]
     },
@@ -4543,7 +5281,7 @@
       "systemId": "ollama",
       "label": "Ollama Bridge",
       "port": 3749,
-      "componentCount": 7,
+      "componentCount": 8,
       "components": [
         {
           "id": "ollama.jobs.dispatch",
@@ -4654,6 +5392,23 @@
           ],
           "grammar": [
             "ollama health"
+          ]
+        },
+        {
+          "id": "ollama.seam.quality",
+          "name": "seam.quality",
+          "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js",
+          "route": {
+            "method": "GET",
+            "path": "/api/jobs/:id/seam"
+          },
+          "tags": [
+            "ollama",
+            "seam",
+            "quality"
+          ],
+          "grammar": [
+            "ollama seam quality"
           ]
         }
       ],
@@ -4768,6 +5523,23 @@
           "tags": [
             "ollama"
           ]
+        },
+        {
+          "command": "seam-quality",
+          "aliases": [
+            "ollama seam quality"
+          ],
+          "usage": "seam-quality",
+          "method": "GET",
+          "path": "/api/jobs/:id/seam",
+          "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js",
+          "componentId": "ollama.seam.quality",
+          "systemId": "ollama",
+          "tags": [
+            "ollama",
+            "seam",
+            "quality"
+          ]
         }
       ],
       "seamHooks": [
@@ -4878,6 +5650,16 @@
           "description": "Ollama bridge health",
           "intents": [
             "ollama health"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "ollama.seam.quality",
+          "label": "seam.quality",
+          "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js",
+          "intents": [
+            "ollama seam quality"
           ],
           "contract": null,
           "hookId": null
@@ -8728,6 +9510,36 @@
       "tags": []
     },
     {
+      "command": "enforcement",
+      "aliases": [],
+      "usage": "enforcement",
+      "method": "BUS",
+      "path": "cos.invariant.*",
+      "description": "COS BoundaryIndex monitors every nexus-bus event — I-1 UUID, C-1 causal edges. Violations → ledger as cos.invariant.* events.",
+      "componentId": "cos.enforcement",
+      "systemId": "cos",
+      "tags": [
+        "cos",
+        "enforcement",
+        "bus"
+      ]
+    },
+    {
+      "command": "bus-bridge",
+      "aliases": [],
+      "usage": "bus-bridge",
+      "method": "BUS",
+      "path": "rfr2.delta.*",
+      "description": "RFR2 delta+enforcement wired to nexus-bus wildcard. Feeds computeEventDelta (S/C fields) and invariant checks. Emits rfr2.delta.signal, rfr2.enforcement.violation, rfr2.delta.fractal.",
+      "componentId": "rfr2.bus.bridge",
+      "systemId": "rfr2",
+      "tags": [
+        "rfr2",
+        "delta",
+        "bus"
+      ]
+    },
+    {
       "command": "health",
       "aliases": [
         "health"
@@ -9359,6 +10171,58 @@
       ]
     },
     {
+      "command": "component-stream",
+      "aliases": [
+        "component stream"
+      ],
+      "usage": "component-stream",
+      "method": "GET",
+      "path": "/events/component/:componentId",
+      "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s",
+      "componentId": "cortex.component.stream",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "sse",
+        "stream",
+        "component"
+      ]
+    },
+    {
+      "command": "query-surface",
+      "aliases": [
+        "query surface"
+      ],
+      "usage": "query-surface",
+      "method": "GET",
+      "path": "/api/cortex/query",
+      "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative",
+      "componentId": "cortex.query.surface",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "intelligence",
+        "query"
+      ]
+    },
+    {
+      "command": "query-surface-post",
+      "aliases": [
+        "query surface post"
+      ],
+      "usage": "query-surface-post",
+      "method": "POST",
+      "path": "/api/cortex/query",
+      "description": "Unified query surface (POST body variant)",
+      "componentId": "cortex.query.surface.post",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "intelligence",
+        "query"
+      ]
+    },
+    {
       "command": "health",
       "aliases": [
         "health",
@@ -9893,6 +10757,116 @@
       ]
     },
     {
+      "command": "proxy-cfr-state",
+      "aliases": [
+        "proxy cfr state",
+        "proxy-cfr-state"
+      ],
+      "usage": "proxy-cfr-state",
+      "method": "GET",
+      "path": "/api/guardian/cfr/state",
+      "description": "Proxy → cortex:3748/cfr/field — live CFR field state",
+      "componentId": "guardian.proxy.cfr.state",
+      "systemId": "guardian",
+      "tags": [
+        "guardian",
+        "proxy",
+        "cfr"
+      ]
+    },
+    {
+      "command": "proxy-cfr-event",
+      "aliases": [
+        "proxy cfr event",
+        "proxy-cfr-event"
+      ],
+      "usage": "proxy-cfr-event",
+      "method": "POST",
+      "path": "/api/guardian/cfr/event",
+      "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger",
+      "componentId": "guardian.proxy.cfr.event",
+      "systemId": "guardian",
+      "tags": [
+        "guardian",
+        "proxy",
+        "cfr"
+      ]
+    },
+    {
+      "command": "proxy-nerve-snapshot",
+      "aliases": [
+        "proxy nerve snapshot",
+        "proxy-nerve-snapshot"
+      ],
+      "usage": "proxy-nerve-snapshot",
+      "method": "GET",
+      "path": "/api/guardian/nerve/snapshot",
+      "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer",
+      "componentId": "guardian.proxy.nerve.snapshot",
+      "systemId": "guardian",
+      "tags": [
+        "guardian",
+        "proxy",
+        "nerve"
+      ]
+    },
+    {
+      "command": "proxy-hooks-summary",
+      "aliases": [
+        "proxy hooks summary",
+        "proxy-hooks-summary"
+      ],
+      "usage": "proxy-hooks-summary",
+      "method": "GET",
+      "path": "/api/guardian/hooks/summary",
+      "description": "Proxy → cortex:3748/hooks/summary — wire graph",
+      "componentId": "guardian.proxy.hooks.summary",
+      "systemId": "guardian",
+      "tags": [
+        "guardian",
+        "proxy",
+        "hooks"
+      ]
+    },
+    {
+      "command": "proxy-cortex-query",
+      "aliases": [
+        "proxy cortex query",
+        "proxy-cortex-query"
+      ],
+      "usage": "proxy-cortex-query",
+      "method": "GET",
+      "path": "/api/guardian/cortex/query",
+      "description": "Proxy → cortex:3748/api/cortex/query — unified query surface",
+      "componentId": "guardian.proxy.cortex.query",
+      "systemId": "guardian",
+      "tags": [
+        "guardian",
+        "proxy",
+        "intelligence",
+        "query"
+      ]
+    },
+    {
+      "command": "proxy-component-sse",
+      "aliases": [
+        "proxy component sse",
+        "proxy-component-sse"
+      ],
+      "usage": "proxy-component-sse",
+      "method": "GET",
+      "path": "/api/guardian/events/component/:id",
+      "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream",
+      "componentId": "guardian.proxy.component.sse",
+      "systemId": "guardian",
+      "tags": [
+        "guardian",
+        "proxy",
+        "sse",
+        "stream"
+      ]
+    },
+    {
       "command": "prompt",
       "aliases": [
         "ask",
@@ -10126,6 +11100,106 @@
       ]
     },
     {
+      "command": "channel",
+      "aliases": [
+        "copilot channel"
+      ],
+      "usage": "channel",
+      "method": "POST",
+      "path": "/api/channel",
+      "description": "Set active channel for all sessions",
+      "componentId": "copilot.channel",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "session"
+      ]
+    },
+    {
+      "command": "observe",
+      "aliases": [
+        "copilot observe"
+      ],
+      "usage": "observe",
+      "method": "POST",
+      "path": "/api/observe",
+      "description": "Observe and ingest an external event into co-pilot stream",
+      "componentId": "copilot.observe",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "stream"
+      ]
+    },
+    {
+      "command": "empty-state",
+      "aliases": [
+        "copilot empty state"
+      ],
+      "usage": "empty-state",
+      "method": "EVENT",
+      "path": "copilot.empty_state",
+      "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory",
+      "componentId": "copilot.empty.state",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "boot",
+        "state"
+      ]
+    },
+    {
+      "command": "query-surface-enriched",
+      "aliases": [
+        "copilot query surface enriched"
+      ],
+      "usage": "query-surface-enriched",
+      "method": "EVENT",
+      "path": "copilot.query_surface.enriched",
+      "description": "Emitted when query surface enrichment runs — about + gap count",
+      "componentId": "copilot.query.surface.enriched",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "intelligence",
+        "query"
+      ]
+    },
+    {
+      "command": "conditioning-log",
+      "aliases": [
+        "copilot conditioning log"
+      ],
+      "usage": "conditioning-log",
+      "method": "BEHAVIOR",
+      "path": "conditioning_log",
+      "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence.",
+      "componentId": "copilot.conditioning.log",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "learning",
+        "raid"
+      ]
+    },
+    {
+      "command": "uniqueness-synthesis",
+      "aliases": [
+        "copilot uniqueness synthesis"
+      ],
+      "usage": "uniqueness-synthesis",
+      "method": "BEHAVIOR",
+      "path": "uniqueness_synthesis",
+      "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call.",
+      "componentId": "copilot.uniqueness.synthesis",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "uniqueness",
+        "quality"
+      ]
+    },
+    {
       "command": "jobs-dispatch",
       "aliases": [
         "ollama dispatch",
@@ -10234,6 +11308,23 @@
       "systemId": "ollama",
       "tags": [
         "ollama"
+      ]
+    },
+    {
+      "command": "seam-quality",
+      "aliases": [
+        "ollama seam quality"
+      ],
+      "usage": "seam-quality",
+      "method": "GET",
+      "path": "/api/jobs/:id/seam",
+      "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js",
+      "componentId": "ollama.seam.quality",
+      "systemId": "ollama",
+      "tags": [
+        "ollama",
+        "seam",
+        "quality"
       ]
     },
     {
@@ -12313,6 +13404,36 @@
       "hookId": null
     },
     {
+      "componentId": "cortex.component.stream",
+      "label": "component.stream",
+      "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s",
+      "intents": [
+        "component stream"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.query.surface",
+      "label": "query.surface",
+      "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative",
+      "intents": [
+        "query surface"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.query.surface.post",
+      "label": "query.surface.post",
+      "description": "Unified query surface (POST body variant)",
+      "intents": [
+        "query surface post"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
       "componentId": "guardian.health",
       "label": "health",
       "description": "Guardian health, job counts, provider status",
@@ -12679,6 +13800,72 @@
       "hookId": null
     },
     {
+      "componentId": "guardian.proxy.cfr.state",
+      "label": "proxy.cfr.state",
+      "description": "Proxy → cortex:3748/cfr/field — live CFR field state",
+      "intents": [
+        "proxy cfr state",
+        "proxy-cfr-state"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "guardian.proxy.cfr.event",
+      "label": "proxy.cfr.event",
+      "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger",
+      "intents": [
+        "proxy cfr event",
+        "proxy-cfr-event"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "guardian.proxy.nerve.snapshot",
+      "label": "proxy.nerve.snapshot",
+      "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer",
+      "intents": [
+        "proxy nerve snapshot",
+        "proxy-nerve-snapshot"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "guardian.proxy.hooks.summary",
+      "label": "proxy.hooks.summary",
+      "description": "Proxy → cortex:3748/hooks/summary — wire graph",
+      "intents": [
+        "proxy hooks summary",
+        "proxy-hooks-summary"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "guardian.proxy.cortex.query",
+      "label": "proxy.cortex.query",
+      "description": "Proxy → cortex:3748/api/cortex/query — unified query surface",
+      "intents": [
+        "proxy cortex query",
+        "proxy-cortex-query"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "guardian.proxy.component.sse",
+      "label": "proxy.component.sse",
+      "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream",
+      "intents": [
+        "proxy component sse",
+        "proxy-component-sse"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
       "componentId": "copilot.prompt",
       "label": "prompt",
       "description": "Primary entry — all co-pilot interactions",
@@ -12846,6 +14033,66 @@
       "hookId": null
     },
     {
+      "componentId": "copilot.channel",
+      "label": "channel",
+      "description": "Set active channel for all sessions",
+      "intents": [
+        "copilot channel"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.observe",
+      "label": "observe",
+      "description": "Observe and ingest an external event into co-pilot stream",
+      "intents": [
+        "copilot observe"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.empty.state",
+      "label": "empty.state",
+      "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory",
+      "intents": [
+        "copilot empty state"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.query.surface.enriched",
+      "label": "query.surface.enriched",
+      "description": "Emitted when query surface enrichment runs — about + gap count",
+      "intents": [
+        "copilot query surface enriched"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.conditioning.log",
+      "label": "conditioning.log",
+      "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence.",
+      "intents": [
+        "copilot conditioning log"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.uniqueness.synthesis",
+      "label": "uniqueness.synthesis",
+      "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call.",
+      "intents": [
+        "copilot uniqueness synthesis"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
       "componentId": "ollama.jobs.dispatch",
       "label": "jobs.dispatch",
       "description": "Queue a job for local model execution",
@@ -12920,6 +14167,16 @@
       "description": "Ollama bridge health",
       "intents": [
         "ollama health"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "ollama.seam.quality",
+      "label": "seam.quality",
+      "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js",
+      "intents": [
+        "ollama seam quality"
       ],
       "contract": null,
       "hookId": null
@@ -13950,6 +15207,20 @@
         "description": "Hot-swap a UI file"
       }
     ],
+    "enforcement": [
+      {
+        "componentId": "cos.enforcement",
+        "systemId": "orchestrator",
+        "description": "COS BoundaryIndex monitors every nexus-bus event — I-1 UUID, C-1 causal edges. Violations → ledger as cos.invariant.* events."
+      }
+    ],
+    "bus-bridge": [
+      {
+        "componentId": "rfr2.bus.bridge",
+        "systemId": "orchestrator",
+        "description": "RFR2 delta+enforcement wired to nexus-bus wildcard. Feeds computeEventDelta (S/C fields) and invariant checks. Emits rfr2.delta.signal, rfr2.enforcement.violation, rfr2.delta.fractal."
+      }
+    ],
     "health": [
       {
         "componentId": "cortex.health",
@@ -14101,6 +15372,11 @@
         "componentId": "guardian.events",
         "systemId": "guardian",
         "description": "SSE — all guardian bus events"
+      },
+      {
+        "componentId": "guardian.proxy.cfr.event",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger"
       },
       {
         "componentId": "bridge.events",
@@ -14364,6 +15640,11 @@
         "componentId": "guardian.bus.log",
         "systemId": "guardian",
         "description": "Recent SISO bus log"
+      },
+      {
+        "componentId": "copilot.conditioning.log",
+        "systemId": "copilot",
+        "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence."
       }
     ],
     "events-log": [
@@ -14419,6 +15700,16 @@
         "componentId": "cortex.cfr.compounds",
         "systemId": "cortex",
         "description": "Compound effect scan (ripple/wave/tidal)"
+      },
+      {
+        "componentId": "guardian.proxy.cfr.state",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/cfr/field — live CFR field state"
+      },
+      {
+        "componentId": "guardian.proxy.cfr.event",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger"
       }
     ],
     "cfr-health": [
@@ -14954,6 +16245,11 @@
         "description": "Nerve attention layer snapshot — nodes, field, stresses"
       },
       {
+        "componentId": "guardian.proxy.nerve.snapshot",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer"
+      },
+      {
         "componentId": "emerge.snapshot",
         "systemId": "emerge",
         "description": "Snapshot before applying patch"
@@ -15143,6 +16439,11 @@
         "componentId": "cortex.nerve.snapshot",
         "systemId": "cortex",
         "description": "Nerve attention layer snapshot — nodes, field, stresses"
+      },
+      {
+        "componentId": "guardian.proxy.nerve.snapshot",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer"
       }
     ],
     "nerve-snapshot": [
@@ -15164,6 +16465,11 @@
         "componentId": "cortex.hooks.summary",
         "systemId": "cortex",
         "description": "Wire graph — active hooks and declared wires"
+      },
+      {
+        "componentId": "guardian.proxy.hooks.summary",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/hooks/summary — wire graph"
       },
       {
         "componentId": "architect.hooks.list",
@@ -15196,6 +16502,11 @@
         "componentId": "guardian.gaps.summary",
         "systemId": "guardian",
         "description": "Gap summary by type + severity"
+      },
+      {
+        "componentId": "guardian.proxy.hooks.summary",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/hooks/summary — wire graph"
       }
     ],
     "hooks-summary": [
@@ -15203,6 +16514,133 @@
         "componentId": "cortex.hooks.summary",
         "systemId": "cortex",
         "description": "Wire graph — active hooks and declared wires"
+      }
+    ],
+    "component stream": [
+      {
+        "componentId": "cortex.component.stream",
+        "systemId": "cortex",
+        "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s"
+      }
+    ],
+    "component": [
+      {
+        "componentId": "cortex.component.stream",
+        "systemId": "cortex",
+        "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s"
+      },
+      {
+        "componentId": "guardian.proxy.component.sse",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream"
+      }
+    ],
+    "stream": [
+      {
+        "componentId": "cortex.component.stream",
+        "systemId": "cortex",
+        "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s"
+      },
+      {
+        "componentId": "copilot.stream.query",
+        "systemId": "copilot",
+        "description": "Query the continuous event stream"
+      },
+      {
+        "componentId": "copilot.stream.ingest",
+        "systemId": "copilot",
+        "description": "Push events into co-pilot stream"
+      },
+      {
+        "componentId": "copilot.prompt.stream",
+        "systemId": "copilot",
+        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
+      }
+    ],
+    "component-stream": [
+      {
+        "componentId": "cortex.component.stream",
+        "systemId": "cortex",
+        "description": "Per-component SSE event stream — filtered by componentId prefix, replays last 20, keepalive 15s"
+      }
+    ],
+    "query surface": [
+      {
+        "componentId": "cortex.query.surface",
+        "systemId": "cortex",
+        "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative"
+      }
+    ],
+    "query": [
+      {
+        "componentId": "cortex.query.surface",
+        "systemId": "cortex",
+        "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative"
+      },
+      {
+        "componentId": "cortex.query.surface.post",
+        "systemId": "cortex",
+        "description": "Unified query surface (POST body variant)"
+      },
+      {
+        "componentId": "guardian.proxy.cortex.query",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/cortex/query — unified query surface"
+      },
+      {
+        "componentId": "copilot.query.surface.enriched",
+        "systemId": "copilot",
+        "description": "Emitted when query surface enrichment runs — about + gap count"
+      },
+      {
+        "componentId": "cg.dom.query",
+        "systemId": "clear-glass",
+        "description": "Query live DOM tree"
+      }
+    ],
+    "surface": [
+      {
+        "componentId": "cortex.query.surface",
+        "systemId": "cortex",
+        "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative"
+      },
+      {
+        "componentId": "cortex.query.surface.post",
+        "systemId": "cortex",
+        "description": "Unified query surface (POST body variant)"
+      },
+      {
+        "componentId": "copilot.query.surface.enriched",
+        "systemId": "copilot",
+        "description": "Emitted when query surface enrichment runs — about + gap count"
+      }
+    ],
+    "query-surface": [
+      {
+        "componentId": "cortex.query.surface",
+        "systemId": "cortex",
+        "description": "Unified query surface — joins gaps+sigma+events+field+blueprint+memory, mastermind narrative"
+      }
+    ],
+    "query surface post": [
+      {
+        "componentId": "cortex.query.surface.post",
+        "systemId": "cortex",
+        "description": "Unified query surface (POST body variant)"
+      }
+    ],
+    "post": [
+      {
+        "componentId": "cortex.query.surface.post",
+        "systemId": "cortex",
+        "description": "Unified query surface (POST body variant)"
+      }
+    ],
+    "query-surface-post": [
+      {
+        "componentId": "cortex.query.surface.post",
+        "systemId": "cortex",
+        "description": "Unified query surface (POST body variant)"
       }
     ],
     "version": [
@@ -15311,6 +16749,11 @@
         "componentId": "guardian.provider.channel",
         "systemId": "guardian",
         "description": "NCP SSE channel — browser tabs connect here"
+      },
+      {
+        "componentId": "copilot.channel",
+        "systemId": "copilot",
+        "description": "Set active channel for all sessions"
       }
     ],
     "provider-channel": [
@@ -15520,6 +16963,11 @@
         "componentId": "guardian.seam.watchdog",
         "systemId": "guardian",
         "description": "SEAM watchdog + stall detection"
+      },
+      {
+        "componentId": "ollama.seam.quality",
+        "systemId": "ollama",
+        "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js"
       },
       {
         "componentId": "emerge.seams",
@@ -15982,6 +17430,36 @@
         "description": "Co-pilot interaction contract"
       },
       {
+        "componentId": "copilot.channel",
+        "systemId": "copilot",
+        "description": "Set active channel for all sessions"
+      },
+      {
+        "componentId": "copilot.observe",
+        "systemId": "copilot",
+        "description": "Observe and ingest an external event into co-pilot stream"
+      },
+      {
+        "componentId": "copilot.empty.state",
+        "systemId": "copilot",
+        "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory"
+      },
+      {
+        "componentId": "copilot.query.surface.enriched",
+        "systemId": "copilot",
+        "description": "Emitted when query surface enrichment runs — about + gap count"
+      },
+      {
+        "componentId": "copilot.conditioning.log",
+        "systemId": "copilot",
+        "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence."
+      },
+      {
+        "componentId": "copilot.uniqueness.synthesis",
+        "systemId": "copilot",
+        "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call."
+      },
+      {
         "componentId": "cg.copilot.message",
         "systemId": "clear-glass",
         "description": "Route to Clear Glass co-pilot"
@@ -16020,6 +17498,153 @@
         "description": "Co-pilot memory operations"
       }
     ],
+    "proxy cfr state": [
+      {
+        "componentId": "guardian.proxy.cfr.state",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/cfr/field — live CFR field state"
+      }
+    ],
+    "proxy": [
+      {
+        "componentId": "guardian.proxy.cfr.state",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/cfr/field — live CFR field state"
+      },
+      {
+        "componentId": "guardian.proxy.cfr.event",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger"
+      },
+      {
+        "componentId": "guardian.proxy.nerve.snapshot",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer"
+      },
+      {
+        "componentId": "guardian.proxy.hooks.summary",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/hooks/summary — wire graph"
+      },
+      {
+        "componentId": "guardian.proxy.cortex.query",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/cortex/query — unified query surface"
+      },
+      {
+        "componentId": "guardian.proxy.component.sse",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream"
+      },
+      {
+        "componentId": "cg.wire.eros.proxy",
+        "systemId": "clear-glass",
+        "description": "Proxy command to ErosmancerOS"
+      }
+    ],
+    "state": [
+      {
+        "componentId": "guardian.proxy.cfr.state",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/cfr/field — live CFR field state"
+      },
+      {
+        "componentId": "copilot.empty.state",
+        "systemId": "copilot",
+        "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory"
+      }
+    ],
+    "proxy-cfr-state": [
+      {
+        "componentId": "guardian.proxy.cfr.state",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/cfr/field — live CFR field state"
+      }
+    ],
+    "proxy cfr event": [
+      {
+        "componentId": "guardian.proxy.cfr.event",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger"
+      }
+    ],
+    "proxy-cfr-event": [
+      {
+        "componentId": "guardian.proxy.cfr.event",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/event — emit event to CFR ledger"
+      }
+    ],
+    "proxy nerve snapshot": [
+      {
+        "componentId": "guardian.proxy.nerve.snapshot",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer"
+      }
+    ],
+    "proxy-nerve-snapshot": [
+      {
+        "componentId": "guardian.proxy.nerve.snapshot",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/nerve/snapshot — Nerve attention layer"
+      }
+    ],
+    "proxy hooks summary": [
+      {
+        "componentId": "guardian.proxy.hooks.summary",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/hooks/summary — wire graph"
+      }
+    ],
+    "proxy-hooks-summary": [
+      {
+        "componentId": "guardian.proxy.hooks.summary",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/hooks/summary — wire graph"
+      }
+    ],
+    "proxy cortex query": [
+      {
+        "componentId": "guardian.proxy.cortex.query",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/cortex/query — unified query surface"
+      }
+    ],
+    "cortex": [
+      {
+        "componentId": "guardian.proxy.cortex.query",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/cortex/query — unified query surface"
+      }
+    ],
+    "proxy-cortex-query": [
+      {
+        "componentId": "guardian.proxy.cortex.query",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/api/cortex/query — unified query surface"
+      }
+    ],
+    "proxy component sse": [
+      {
+        "componentId": "guardian.proxy.component.sse",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream"
+      }
+    ],
+    "sse": [
+      {
+        "componentId": "guardian.proxy.component.sse",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream"
+      }
+    ],
+    "proxy-component-sse": [
+      {
+        "componentId": "guardian.proxy.component.sse",
+        "systemId": "guardian",
+        "description": "Proxy → cortex:3748/events/component/:id — per-component SSE stream"
+      }
+    ],
     "ask": [
       {
         "componentId": "copilot.prompt",
@@ -16037,23 +17662,6 @@
         "componentId": "copilot.prompt",
         "systemId": "copilot",
         "description": "Primary entry — all co-pilot interactions"
-      }
-    ],
-    "stream": [
-      {
-        "componentId": "copilot.stream.query",
-        "systemId": "copilot",
-        "description": "Query the continuous event stream"
-      },
-      {
-        "componentId": "copilot.stream.ingest",
-        "systemId": "copilot",
-        "description": "Push events into co-pilot stream"
-      },
-      {
-        "componentId": "copilot.prompt.stream",
-        "systemId": "copilot",
-        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
       }
     ],
     "cs": [
@@ -16321,6 +17929,125 @@
         "description": "Co-pilot interaction contract"
       }
     ],
+    "copilot channel": [
+      {
+        "componentId": "copilot.channel",
+        "systemId": "copilot",
+        "description": "Set active channel for all sessions"
+      }
+    ],
+    "copilot observe": [
+      {
+        "componentId": "copilot.observe",
+        "systemId": "copilot",
+        "description": "Observe and ingest an external event into co-pilot stream"
+      }
+    ],
+    "observe": [
+      {
+        "componentId": "copilot.observe",
+        "systemId": "copilot",
+        "description": "Observe and ingest an external event into co-pilot stream"
+      }
+    ],
+    "copilot empty state": [
+      {
+        "componentId": "copilot.empty.state",
+        "systemId": "copilot",
+        "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory"
+      }
+    ],
+    "empty": [
+      {
+        "componentId": "copilot.empty.state",
+        "systemId": "copilot",
+        "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory"
+      }
+    ],
+    "empty-state": [
+      {
+        "componentId": "copilot.empty.state",
+        "systemId": "copilot",
+        "description": "Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory"
+      }
+    ],
+    "copilot query surface enriched": [
+      {
+        "componentId": "copilot.query.surface.enriched",
+        "systemId": "copilot",
+        "description": "Emitted when query surface enrichment runs — about + gap count"
+      }
+    ],
+    "enriched": [
+      {
+        "componentId": "copilot.query.surface.enriched",
+        "systemId": "copilot",
+        "description": "Emitted when query surface enrichment runs — about + gap count"
+      }
+    ],
+    "query-surface-enriched": [
+      {
+        "componentId": "copilot.query.surface.enriched",
+        "systemId": "copilot",
+        "description": "Emitted when query surface enrichment runs — about + gap count"
+      }
+    ],
+    "copilot conditioning log": [
+      {
+        "componentId": "copilot.conditioning.log",
+        "systemId": "copilot",
+        "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence."
+      }
+    ],
+    "conditioning": [
+      {
+        "componentId": "copilot.conditioning.log",
+        "systemId": "copilot",
+        "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence."
+      }
+    ],
+    "conditioning-log": [
+      {
+        "componentId": "copilot.conditioning.log",
+        "systemId": "copilot",
+        "description": "Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence."
+      }
+    ],
+    "copilot uniqueness synthesis": [
+      {
+        "componentId": "copilot.uniqueness.synthesis",
+        "systemId": "copilot",
+        "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call."
+      }
+    ],
+    "uniqueness": [
+      {
+        "componentId": "copilot.uniqueness.synthesis",
+        "systemId": "copilot",
+        "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call."
+      }
+    ],
+    "synthesis": [
+      {
+        "componentId": "copilot.uniqueness.synthesis",
+        "systemId": "copilot",
+        "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call."
+      }
+    ],
+    "copilot uniqueness synthesi": [
+      {
+        "componentId": "copilot.uniqueness.synthesis",
+        "systemId": "copilot",
+        "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call."
+      }
+    ],
+    "uniqueness-synthesis": [
+      {
+        "componentId": "copilot.uniqueness.synthesis",
+        "systemId": "copilot",
+        "description": "Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call."
+      }
+    ],
     "ollama dispatch": [
       {
         "componentId": "ollama.jobs.dispatch",
@@ -16363,6 +18090,11 @@
         "componentId": "ollama.health",
         "systemId": "ollama",
         "description": "Ollama bridge health"
+      },
+      {
+        "componentId": "ollama.seam.quality",
+        "systemId": "ollama",
+        "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js"
       }
     ],
     "od": [
@@ -16537,6 +18269,27 @@
         "componentId": "ollama.health",
         "systemId": "ollama",
         "description": "Ollama bridge health"
+      }
+    ],
+    "ollama seam quality": [
+      {
+        "componentId": "ollama.seam.quality",
+        "systemId": "ollama",
+        "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js"
+      }
+    ],
+    "quality": [
+      {
+        "componentId": "ollama.seam.quality",
+        "systemId": "ollama",
+        "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js"
+      }
+    ],
+    "seam-quality": [
+      {
+        "componentId": "ollama.seam.quality",
+        "systemId": "ollama",
+        "description": "SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js"
       }
     ],
     "relay request": [
@@ -17674,13 +19427,6 @@
         "description": "Token archaeology — detect LLM API patterns"
       }
     ],
-    "query": [
-      {
-        "componentId": "cg.dom.query",
-        "systemId": "clear-glass",
-        "description": "Query live DOM tree"
-      }
-    ],
     "dom-query": [
       {
         "componentId": "cg.dom.query",
@@ -18167,13 +19913,6 @@
         "description": "Proxy command to ErosmancerOS"
       }
     ],
-    "proxy": [
-      {
-        "componentId": "cg.wire.eros.proxy",
-        "systemId": "clear-glass",
-        "description": "Proxy command to ErosmancerOS"
-      }
-    ],
     "wire-eros-proxy": [
       {
         "componentId": "cg.wire.eros.proxy",
@@ -18246,5 +19985,5 @@
     ]
   },
   "errors": [],
-  "buildMs": 14
+  "buildMs": 25
 }

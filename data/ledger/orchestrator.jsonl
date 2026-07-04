@@ -1,0 +1,93 @@
+{"_system":"orchestrator","_ts":1783183115612,"type":"orchestrator.boot.started","payload":{"systemId":"orchestrator","port":9000,"version":"2.0.0","phases":7,"seqId":"692b4e10","ts":1783183115588}}
+{"_system":"orchestrator","_ts":1783183115637,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"server.bound","type":"HARD","ms":3,"seqId":"692b4e10"}}
+{"_system":"orchestrator","_ts":1783183115639,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ledger.writable","type":"HARD","ms":0,"seqId":"692b4e10"}}
+{"_system":"orchestrator","_ts":1783183115657,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"health.verify","type":"HARD","ms":59,"seqId":"692b4e10"}}
+{"_system":"orchestrator","_ts":1783183115738,"type":"orchestrator.ui.opened","payload":{"url":"http://127.0.0.1:9000"}}
+{"_system":"orchestrator","_ts":1783183115804,"type":"orchestrator.booted","payload":{"version":"3.0.0","port":9000}}
+{"_system":"orchestrator","_ts":1783183115816,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"recall.verify","type":"HARD","ms":3,"seqId":"692b4e10"}}
+{"_system":"orchestrator","_ts":1783183115817,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ui.hotswap","type":"SOFT","ms":69,"seqId":"692b4e10"}}
+{"_system":"orchestrator","_ts":1783183115817,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"cli.terminal","type":"SOFT","ms":1,"seqId":"692b4e10"}}
+{"_system":"orchestrator","_ts":1783183115825,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"nexus.ui.open","type":"SOFT","ms":8,"seqId":"692b4e10"}}
+{"_system":"orchestrator","_ts":1783183115827,"type":"orchestrator.boot.complete","payload":{"systemId":"orchestrator","port":9000,"version":"2.0.0","phases":7,"pass":7,"soft":0,"seqId":"692b4e10","ts":1783183115740}}
+{"_system":"orchestrator","_ts":1783183115828,"type":"system.registered","payload":{"systemId":"orchestrator","port":9000,"meta":{"version":"3.0.0"},"registeredAt":1783183115828}}
+{"_system":"orchestrator","_ts":1783183115870,"type":"system.registered","payload":{"systemId":"orchestrator","contractTrust":"VERIFIED","contractHash":"0007b79d9c331592","contractVerifiedAt":1783183115869}}
+{"_system":"orchestrator","_ts":1783183115876,"type":"orchestrator.pulse","payload":{"systemId":"orchestrator","seq":1,"pulseId":"cde7b1b0-5771-4102-833e-636a82ef976f","port":9000,"clients":0}}
+{"_system":"orchestrator","_ts":1783183116033,"type":"bridge.boot.started","payload":{"systemId":"bridge","port":9999,"version":"3.0.0","phases":8,"seqId":"e74fdce5","ts":1783183116010}}
+{"_system":"orchestrator","_ts":1783183116036,"type":"system.registered","payload":{"systemId":"bridge","port":9999,"meta":{"role":"trust-relay","version":"3.0.0"},"registeredAt":1783183116036}}
+{"_system":"orchestrator","_ts":1783183116040,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6f-39i2zw","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116040,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6g-zpzfkg","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116045,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q6l-8g3ho9","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116045,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6l-i68ndg","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116045,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6l-2ah2w2","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116046,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6m-op2dtl","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116046,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6m-kywe3b","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116047,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q6m-ymkzq4","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116047,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6n-8gmajm","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116047,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6n-xy164j","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116053,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6t-bpnnvd","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116053,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6t-gna15c","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116053,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6t-u8itba","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116054,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q6u-g8rmja","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116054,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6u-g1df4o","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116054,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6u-3fk310","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116054,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6u-s2qtyy","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116055,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6u-lp0b9y","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116055,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6v-d6llqi","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116055,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q6v-c9sm3h","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116055,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6v-k7782n","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116056,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6w-apemh4","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116056,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6w-igmyyy","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116056,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6w-xt0z7n","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116056,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6w-x4m16z","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116057,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q6x-lptyxe","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116057,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6x-qmewi1","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116057,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6x-5l4ke5","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116057,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6x-bfpecz","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116057,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6x-nf7owu","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116057,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6x-o1gvcp","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116058,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q6y-v33kze","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116058,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6y-jr7pec","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116058,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6y-kc8qw3","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116058,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6y-1dmz69","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116058,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6y-qlcvfb","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116058,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6y-xoo32b","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116059,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q6z-tnzlly","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116059,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6z-cecd41","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116059,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6z-hucixg","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116059,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q6z-iwmqmg","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116059,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q6z-he2bfs","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116059,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q6z-b69hjf","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116060,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q70-674pdj","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116060,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q70-hv4pay","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116060,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q70-upvked","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116060,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q70-qjff73","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116060,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q70-jqgsox","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116060,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q70-cqdb3f","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116061,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q71-12mff4","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116061,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q71-x9nc6b","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116061,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q71-f01eah","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q72-xi6w07","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q72-961mzo","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q72-14j2rv","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q72-f8c4y6","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q72-ypugg7","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q72-jrkqy5","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on component.registered: ev-mr6l6q72-5kzxh7","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116062,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q72-t1gsgt","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116063,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q72-irm8gc","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116063,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on ledger.write: ev-mr6l6q73-en7a1y","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116063,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.delta.signal: ev-mr6l6q73-smijyp","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116063,"type":"cos.invariant.I-1","payload":{"detail":"non-UUID event id on rfr2.enforcement.violation: ev-mr6l6q73-675477","severity":"warn"}}
+{"_system":"orchestrator","_ts":1783183116068,"type":"bridge.registered","payload":{"port":9999,"role":"trust-relay","version":"3.0.0"}}
+{"_system":"orchestrator","_ts":1783183116081,"type":"orchestrator.pulse","payload":{"systemId":"bridge","port":9999,"clients":0}}
+{"_system":"orchestrator","_ts":1783183116082,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"orchestrator.register","type":"SOFT","ms":45,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116115,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"ledger.open","type":"HARD","ms":4,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116116,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"identity.init","type":"HARD","ms":0,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116116,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"registry.init","type":"HARD","ms":1,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116123,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"router.init","type":"HARD","ms":1,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116123,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"server.start","type":"HARD","ms":29,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116124,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"held.replay","type":"SOFT","ms":0,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116127,"type":"bridge.booted","payload":{"version":"3.0.0","port":9999}}
+{"_system":"orchestrator","_ts":1783183116129,"type":"bridge.phase.ok","payload":{"systemId":"bridge","phase":"boot.announce","type":"SOFT","ms":20,"seqId":"e74fdce5"}}
+{"_system":"orchestrator","_ts":1783183116130,"type":"bridge.boot.complete","payload":{"systemId":"bridge","port":9999,"version":"3.0.0","phases":8,"pass":8,"soft":0,"seqId":"e74fdce5","ts":1783183116129}}
+{"_system":"orchestrator","_ts":1783183118067,"type":"system.registered","payload":{"systemId":"bridge","contractTrust":"VERIFIED","contractHash":"894a6d5c955d855a","contractVerifiedAt":1783183118067}}

@@ -2531,7 +2531,7 @@ try {
           });
         }
       });
-      _log(`[orchestrator] COS invariant monitoring wired to nexus-bus`);
+      console.log('[orchestrator] COS invariant monitoring wired to nexus-bus');
     }
   }
 
