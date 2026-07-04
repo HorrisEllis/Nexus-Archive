@@ -21,6 +21,9 @@
 <body>
 
 <!-- Chrome bar -->
+  <div id="tab-bar" style="display:flex;align-items:center;background:#0e0e18;border-bottom:1px solid rgba(255,255,255,.08);padding:0 6px;height:34px;flex-shrink:0;overflow-x:auto;overflow-y:hidden;gap:2px;">
+    <div id="tab-list" style="display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;min-width:0;"></div>
+
 <div id="chrome">
   <div class="chrome-group">
     <button class="nav-btn" id="btn-back"    title="Back">←</button>
@@ -88,8 +91,7 @@
 <!-- Main layout -->
 <div id="layout">
   <!-- Tab bar -->
-  <div id="tab-bar" style="display:flex;align-items:center;background:#0e0e18;border-bottom:1px solid rgba(255,255,255,.08);padding:0 6px;height:34px;flex-shrink:0;overflow-x:auto;overflow-y:hidden;gap:2px;">
-    <div id="tab-list" style="display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;min-width:0;"></div>
+
     <button id="btn-new-tab" title="New tab" style="flex-shrink:0;background:none;border:none;color:#6a6d82;font-size:16px;padding:0 8px;cursor:pointer;line-height:34px;">+</button>
   </div>
 
