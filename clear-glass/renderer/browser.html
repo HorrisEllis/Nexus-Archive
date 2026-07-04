@@ -1417,7 +1417,17 @@
     let url = input.trim();
     if (!url) return '';
     if (!url.includes('://') && !url.startsWith('about:')) {
-      url = url.includes('.') ? 'https://' + url : `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+      // §fix 2026-07-04 — local addresses must always be http://, never https://.
+      // NEXUS and all sovereign services run plain HTTP. Adding https:// causes
+      // ERR_SSL_PROTOCOL_ERROR (-107) in the webview.
+      const isLocal = /^(127\.|localhost|0\.0\.0\.0|::1)/.test(url);
+      if (isLocal) {
+        url = 'http://' + url;
+      } else if (url.includes('.')) {
+        url = 'https://' + url;
+      } else {
+        url = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+      }
     }
     return url;
   }

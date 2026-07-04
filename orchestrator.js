@@ -2397,27 +2397,35 @@ try {
       const uiUrl   = /^https?:\/\/[\w.:\/-]+$/.test(rawUrl) ? rawUrl : `http://127.0.0.1:${PORT}`;
       const cgWire  = cfg.clearGlassWire || 'http://127.0.0.1:7704';
 
-      // Try Clear Glass wire server first
-      try {
-        const _http = require('http');
-        const body  = JSON.stringify({ url: uiUrl, agentId: 'nexus-home' });
-        await new Promise((resolve, reject) => {
-          const req = _http.request({
-            hostname: '127.0.0.1', port: parseInt(cgWire.split(':').pop()) || 7704,
-            path: '/open', method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-            timeout: 3000,
-          }, r => { r.resume(); resolve(); });
-          req.on('error', reject);
-          req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
-          req.write(body); req.end();
-        });
-        ledgerWrite('orchestrator', 'orchestrator.ui.opened', { url: uiUrl, via: 'clear-glass' });
-        console.log(`[nexus] UI opened in Clear Glass: ${uiUrl}`);
-        return;
-      } catch (_) {
-        console.log(`[nexus] Clear Glass wire :7704 unavailable — falling back to system browser`);
+      // Try Clear Glass wire server — retry up to 8x (Clear Glass boots after orchestrator)
+      const _http  = require('http');
+      const cgPort = parseInt(cgWire.split(':').pop()) || 7704;
+      const body   = JSON.stringify({ url: uiUrl, agentId: 'nexus-home' });
+      const _tryOpen = () => new Promise((resolve, reject) => {
+        const req = _http.request({
+          hostname: '127.0.0.1', port: cgPort,
+          path: '/open', method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+          timeout: 2000,
+        }, r => { r.resume(); resolve(true); });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+        req.write(body); req.end();
+      });
+      let opened = false;
+      for (let attempt = 0; attempt < 8 && !opened; attempt++) {
+        try {
+          if (attempt > 0) await new Promise(r => setTimeout(r, 2000));
+          await _tryOpen();
+          opened = true;
+          ledgerWrite('orchestrator', 'orchestrator.ui.opened', { url: uiUrl, via: 'clear-glass' });
+          console.log(`[nexus] UI opened in Clear Glass: ${uiUrl} (attempt ${attempt + 1})`);
+        } catch (_) {
+          console.log(`[nexus] Clear Glass :${cgPort} not ready yet (attempt ${attempt + 1}/8)...`);
+        }
       }
+      if (opened) return;
+      console.log(`[nexus] Clear Glass didn't start — falling back to system browser`);
 
       // Fallback: system browser
       const spawn   = spawnChild;

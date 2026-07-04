@@ -890,8 +890,7 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
 
   win.once('ready-to-show', () => {
     win.show();
-    // Force-open renderer DevTools in detached window for debugging
-    win.webContents.openDevTools({ mode: 'detach' });
+    // DevTools: F12 / Ctrl+Shift+I only — never auto-open
   });
 
   // F12 / Ctrl+Shift+I toggles renderer DevTools
