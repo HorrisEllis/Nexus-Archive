@@ -614,6 +614,100 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── POST /bridge/deliver — Bridge :9999 routes copilot.prompt here ────────
+  // §2026-07-04: Clear Glass and tv-shell both go through Bridge → /bridge/deliver
+  // Bridge sends: { request: { payload: { prompt, channel, sessionId, ... } } }
+  // We extract the prompt and run the same path as /api/prompt.
+  if (method === 'POST' && p === '/bridge/deliver') {
+    const body      = await readBody(req);
+    const payload   = body.request?.payload || body.payload || body;
+    const prompt    = payload.prompt || '';
+    const channel   = payload.channel || 'bridge';
+    const sessionId = payload.sessionId || req.headers['x-bridge-source'] || crypto.randomUUID();
+    const requestId = body.request?.uuid || crypto.randomUUID();
+    const session   = _getSession(sessionId, channel);
+    session.exchanges++;
+
+    if (!prompt) {
+      json(res, 400, { ok:false, error:'prompt required in payload' });
+      return;
+    }
+
+    broadcast('copilot.prompt.received', { prompt: prompt.slice(0,100), channel, sessionId, source: 'bridge' });
+
+    // Assemble context — same 7-layer path as /api/prompt
+    let contextText = '';
+    try {
+      const snap = await _fetch(`${CX_URL}/api/memory?table=chat_log&n=4&sessionId=${encodeURIComponent(sessionId)}`, {}, 2000);
+      if (snap?.rows?.length) contextText = snap.rows.map(r => `[${r.intent}] ${r.prompt} → ${(r.response||'').slice(0,200)}`).join('\n');
+    } catch(_) {}
+    try { contextText = await _analysis.assembleContext(prompt, _stream, session); } catch(_) {}
+
+    // System state enrichment
+    const keywords = prompt.toLowerCase().split(/\s+/).find(w => ['guardian','cortex','copilot','ollama','bridge','idearium','eravos','sigma','gap'].includes(w));
+    if (keywords) {
+      try {
+        const qs = await _fetch(`${CX_URL}/api/cortex/query?about=${encodeURIComponent(keywords)}&window=3600000`, {}, 3000);
+        if (qs?.ok) {
+          const parts = [];
+          if (qs.gaps?.length) parts.push(`Open gaps for ${keywords}: ${qs.gaps.length}`);
+          if (qs.sigma?.trajectory) parts.push(`Sigma: ${qs.sigma.trajectory}`);
+          if (parts.length) contextText += `\n\n=== SYSTEM STATE (${keywords}) ===\n${parts.join('. ')}.`;
+        }
+      } catch(_) {}
+    }
+
+    contextText = await _injectSessionHistory(session, contextText);
+    const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0,500), sessionId);
+    if (mastermind?.analysis) contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0,400)}`;
+
+    // Uniqueness anchor
+    const uniqueness = await _synthesizeUniqueness(prompt, contextText, session);
+
+    // Dispatch via lifeline (Ollama → Guardian fallback)
+    let text = '', modelUsed = 'none';
+    try {
+      const lifeResult = await _lifeline.route(
+        `${contextText}${uniqueness}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
+        { requestId, sessionId, intent: 'ask', channel }
+      );
+      text      = lifeResult?.text || '';
+      modelUsed = lifeResult?.provider_used || 'none';
+      if (lifeResult?.escalated) broadcast('copilot.lifeline.escalated', { provider: lifeResult.provider_used });
+    } catch(e) {
+      text = `Analysis failed: ${e.message}`;
+    }
+
+    // Persist to conditioning_log and chat_log
+    try {
+      await _persist('chat_log', {
+        uuid: crypto.randomUUID(), requestId, sessionId,
+        prompt: prompt.slice(0,500), response: text.slice(0,2000),
+        modelUsed, intent: 'ask', channel,
+        componentId: 'copilot.bridge', hookId: 'copilot.bridge.deliver',
+        contextLayers: 7, fromStream: false, ts: Date.now()
+      });
+      await _persist('conditioning_log', {
+        uuid: crypto.randomUUID(), sessionId, requestId,
+        system: modelUsed, cluster: 'general',
+        outcome: text.length > 50 ? 'success' : 'partial',
+        quality: text.length > 50 ? 1 : 0.5,
+        sigmaAtDispatch: _lastSigma || 0, ts: Date.now(),
+      });
+    } catch(_) {}
+
+    streamIngest({ type: 'copilot.answered', requestId, intent: 'ask', modelUsed });
+
+    // Bridge expects: { ok, result: { response: { text, ... } } }
+    json(res, 200, {
+      ok:     true,
+      result: {
+        response: { ok: true, text, modelUsed, contextLayers: 7, requestId, sessionId }
+      }
+    });
+    return;
+  }
+
   // ── POST /api/prompt — standard JSON response ─────────────────────────────
   if (method === 'POST' && p === '/api/prompt') {
     const body      = await readBody(req);
