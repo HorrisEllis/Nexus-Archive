@@ -370,8 +370,9 @@ async function _dispatchToMistral(job) {
       jobId:    job.id,
       meta:     { source: 'guardian-mistral', jobId: job.id },
     });
+    // §fix 2026-07-04: /generate never existed on ollama-bridge. Real route is POST /api/jobs + poll GET /api/jobs/:id
     const req = http2.request({
-      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/generate',
+      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/api/jobs',
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
       timeout: 120000,
     }, res => {
@@ -380,9 +381,34 @@ async function _dispatchToMistral(job) {
       res.on('end', () => {
         try {
           const d = JSON.parse(raw);
-          updateJob(job.id, { status: 'complete', response: d.response || d.text || raw, completedAt: Date.now() });
-          bus.emit('guardian.job.complete', { jobId: job.id, provider: 'mistral', chars: (d.response||'').length });
-          resolve({ ok: true, text: d.response || d.text || '' });
+          const jobId = d.jobId || d.uuid;
+          if (!jobId) { resolve({ ok:false, error:'no jobId returned' }); return; }
+          // Poll for completion
+          let polls = 0;
+          const poll = () => {
+            polls++;
+            if (polls > 120) { resolve({ ok:false, error:'poll timeout' }); return; }
+            const pr = http2.request({ hostname:'127.0.0.1', port:BRIDGE_PORT, path:`/api/jobs/${jobId}`, method:'GET', timeout:5000 }, rs => {
+              let rb = ''; rs.on('data', c => rb += c);
+              rs.on('end', () => {
+                try {
+                  const pd = JSON.parse(rb);
+                  if (pd.status === 'complete' || pd.progress === 'complete') {
+                    updateJob(job.id, { status:'complete', response:pd.result||pd.text||'', completedAt:Date.now() });
+                    bus.emit('guardian.job.complete', { jobId:job.id, provider:'mistral', chars:(pd.result||'').length });
+                    resolve({ ok:true, text:pd.result||pd.text||'' });
+                  } else if (pd.status === 'failed' || pd.progress === 'failed') {
+                    resolve({ ok:false, error:pd.error||'ollama job failed' });
+                  } else {
+                    setTimeout(poll, 1000);
+                  }
+                } catch(_) { setTimeout(poll, 1000); }
+              });
+            });
+            pr.on('error', () => setTimeout(poll, 1000));
+            pr.end();
+          };
+          setTimeout(poll, 1000);
         } catch(e) {
           updateJob(job.id, { status: 'error', error: 'parse error: ' + e.message });
           resolve({ ok: false, error: e.message });

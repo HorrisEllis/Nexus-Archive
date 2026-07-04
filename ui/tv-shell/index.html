@@ -226,6 +226,14 @@
 <div id="channel">
   <!-- CH1: OVERVIEW -->
   <div class="ch active" id="ch-overview">
+    <!-- Warp contract-driven system cards — auto-populated from /contract endpoints -->
+    <div id="warp-overview-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px 0;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">
+      <span>VIEW:</span>
+      <button onclick="_setOverviewMode('legacy')" id="btn-legacy-view" style="background:rgba(0,229,255,.15);border:1px solid rgba(0,229,255,.3);color:#00e5ff;font-family:'Space Mono',monospace;font-size:9px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.06em">TILES</button>
+      <button onclick="_setOverviewMode('warp')" id="btn-warp-view" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.3);font-family:'Space Mono',monospace;font-size:9px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.06em">CONTRACT ✦</button>
+      <span id="warp-view-status" style="margin-left:auto;color:rgba(255,255,255,.2)"></span>
+    </div>
+    <div id="warp-overview-container" style="display:none"></div>
     <div class="sys-grid" id="sys-grid">
       <div class="sys-tile" onclick="tuneById('ch-orch-full')" id="tile-orch">
         <div class="tile-head"><span class="tile-icon">⬡</span><span class="tile-port">:9000</span><span class="tile-status" id="ts-orch">—</span></div>
@@ -1913,6 +1921,40 @@ if (typeof CP === 'undefined') {
 
 document.addEventListener('DOMContentLoaded', () => typeof CP !== 'undefined' && CP.init());
 
+function _setOverviewMode(mode) {
+  const legacyGrid = document.getElementById('sys-grid');
+  const warpGrid   = document.getElementById('warp-overview-container');
+  const btnLegacy  = document.getElementById('btn-legacy-view');
+  const btnWarp    = document.getElementById('btn-warp-view');
+  const status     = document.getElementById('warp-view-status');
+
+  if (mode === 'warp') {
+    if (legacyGrid) legacyGrid.style.display = 'none';
+    if (warpGrid)   warpGrid.style.display = 'block';
+    if (btnLegacy)  { btnLegacy.style.background='rgba(255,255,255,.04)'; btnLegacy.style.color='rgba(255,255,255,.3)'; btnLegacy.style.borderColor='rgba(255,255,255,.1)'; }
+    if (btnWarp)    { btnWarp.style.background='rgba(0,229,255,.15)'; btnWarp.style.color='#00e5ff'; btnWarp.style.borderColor='rgba(0,229,255,.3)'; }
+    if (status) status.textContent = 'reading /contract endpoints…';
+    if (window._warpRefresh) window._warpRefresh();
+    setTimeout(() => { if (status) status.textContent = ''; }, 3000);
+  } else {
+    if (legacyGrid) legacyGrid.style.display = '';
+    if (warpGrid)   warpGrid.style.display = 'none';
+    if (btnLegacy)  { btnLegacy.style.background='rgba(0,229,255,.15)'; btnLegacy.style.color='#00e5ff'; btnLegacy.style.borderColor='rgba(0,229,255,.3)'; }
+    if (btnWarp)    { btnWarp.style.background='rgba(255,255,255,.04)'; btnWarp.style.color='rgba(255,255,255,.3)'; btnWarp.style.borderColor='rgba(255,255,255,.1)'; }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // §Warp spine: init contract-driven component system
+  if (typeof NexusShell !== 'undefined') {
+    const container = document.getElementById('warp-overview-container');
+    NexusShell.init(container);
+    // Expose to window for dev console + co-pilot access
+    window._warp = NexusShell.stream;
+    window._warpRefresh = () => NexusShell.refresh();
+  }
+});
+
 async function asSend(){
   const inp = document.getElementById('assistant-in');
   const q   = inp.value.trim(); if(!q) return;
@@ -2894,6 +2936,9 @@ async function wizOpenSpec(uuid) {
   wizShowStep(2);
 }
 </script>
+  <!-- Warp-UI spine — contract-driven component system -->
+  <script src="/ui/tv-shell/warp-ui/warp-browser.js"></script>
+  <script src="/ui/tv-shell/warp-ui/nexus-shell.js"></script>
   <script src="/ui/tv-shell/spotlight/spotlight.js"></script>
   <script>
     // Nerve canvas — set ORCH before loading so nerve.js can call the real routes

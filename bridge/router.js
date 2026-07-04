@@ -25,7 +25,7 @@ const { STATUS, MAX_ROUTE_DEPTH, MAX_ATTEMPTS, patchRequest } = require('./types
 
 const CB_FAIL_THRESHOLD = parseInt(process.env.BRIDGE_CB_FAILS  || '3');
 const CB_RESET_MS       = parseInt(process.env.BRIDGE_CB_RESET  || '30000');
-const ROUTE_TIMEOUT_MS  = parseInt(process.env.BRIDGE_ROUTE_TO  || '5000');
+const ROUTE_TIMEOUT_MS  = parseInt(process.env.BRIDGE_ROUTE_TO  || '120000'); // §fix: LLMs need 2+ minutes
 
 // ── SISO primitives ───────────────────────────────────────────────────────────
 class Event {
