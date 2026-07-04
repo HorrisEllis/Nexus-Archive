@@ -1502,14 +1502,13 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
     <!-- Assistant -->
     <div id="bot-bar">
       <div id="bot-bar-head">
-        <span id="bot-bar-label">SYSTEM CONSOLE</span>
-        <button id="copilot-mode-btn" onclick="toggleCopilotMode()" title="Switch between co-pilot (Bridge :9999) and system console" style="background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:rgba(255,255,255,.35);font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;cursor:pointer;letter-spacing:.08em;transition:all .2s;margin-right:4px">✦ CO-PILOT</button>
+        <span id="bot-bar-label">✦ CO-PILOT</span>
         <button id="fullscreen-btn" onclick="toggleConsoleFullscreen()" title="Fullscreen console (Shift+Enter)">⛶</button>
       </div>
       <div id="cp-guide"></div>
       <div id="assistant-out"></div>
       <div id="assistant-row">
-        <input id="assistant-in" placeholder="Ask NEXUS anything · /command for tools · /gaps · /jobs · /status" onkeydown="if(event.key==='Enter')asSend();if(event.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen'))toggleConsoleFullscreen()">
+        <input id="assistant-in" placeholder="Ask co-pilot via Bridge :9999 — sees DOM, can navigate, build, dispatch…" onkeydown="if(event.key==='Enter')asSend();if(event.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen'))toggleConsoleFullscreen()">
         <button id="send-btn" onclick="asSend()">→</button>
       </div>
       <div id="ticker-line">NEXUS v0.6.3 · sovereign cognitive OS · waiting for systems...</div>
@@ -2372,7 +2371,7 @@ async function runDiagEngines(){
 
 // ── Co-pilot mode toggle ───────────────────────────────────────────────────────
 // Two modes: 'system' (grammar engine → Guardian copilot) | 'copilot' (Bridge :9999)
-let _asMode = 'system'; // default
+let _asMode = 'copilot'; // §2026-07-04: always co-pilot now, no more system-console toggle
 let _bridgeToken = null;
 
 async function _getBridgeToken() {
@@ -2889,7 +2888,7 @@ async function asSend(){
 
   if(cp === null){
     out.style.color='rgba(255,100,100,.8)';
-    out.textContent='Guardian unreachable (:7820). Is NEXUS running?';
+    out.textContent='Orchestrator unreachable (:9000), or co-pilot (:3750) failed. Is NEXUS running?';
     return;
   }
 
@@ -3453,24 +3452,35 @@ async function agentForge() {
 
 // ── Failure / event logging ──────────────────────────────────────────────────
 // §1.2 nothing silently fails — all UI errors logged to cortex + local data/
-const _uiLog = [];
+//
+// §BUGFIX 2026-07-04: was `const _uiLog = []`. If anything earlier in this
+// script throws before this line runs, this const never initializes — but
+// _logToData (a hoisted function declaration) is still callable afterward
+// from anywhere later in the file, and touching _uiLog then throws "can't
+// access lexical declaration before initialization." That secondary crash
+// was masking whatever broke first — the real error never got a chance to
+// surface. `var` is hoisted WITH its initial value, so this can't happen
+// regardless of what else in this file breaks upstream.
+var _uiLog = window._uiLog || [];
 function _logToData(type, payload = {}) {
-  const entry = { type, source: 'home-ui', payload, ts: Date.now() };
-  _uiLog.push(entry);
-  // POST to cortex (fire-and-forget)
-  fetch('http://127.0.0.1:3748/api/event', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(entry),
-  }).catch(() => {
-    // Cortex offline — store locally in sessionStorage for later replay
-    try {
-      const pending = JSON.parse(sessionStorage.getItem('nexus_ui_log_pending') || '[]');
-      pending.push(entry);
-      if (pending.length > 200) pending.splice(0, pending.length - 200);
-      sessionStorage.setItem('nexus_ui_log_pending', JSON.stringify(pending));
-    } catch(_) {}
+  try {
+    const entry = { type, source: 'home-ui', payload, ts: Date.now() };
+    _uiLog.push(entry);
+    // POST to cortex (fire-and-forget)
+    fetch('http://127.0.0.1:3748/api/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    }).catch(() => {
+      // Cortex offline — store locally in sessionStorage for later replay
+      try {
+        const pending = JSON.parse(sessionStorage.getItem('nexus_ui_log_pending') || '[]');
+        pending.push(entry);
+        if (pending.length > 200) pending.splice(0, pending.length - 200);
+        sessionStorage.setItem('nexus_ui_log_pending', JSON.stringify(pending));
+      } catch(_) {}
   });
+  } catch(_) { /* logging must never be the thing that crashes something else */ }
 }
 
 // Replay pending logs when cortex comes back online
