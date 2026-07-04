@@ -80,26 +80,6 @@ const { jaaDB, uid } = require('./memory/jaa-db');
 // ── CFR field state — lightweight in-memory implementation ───────────────────
 // Full CFR (lib/cfr/) is wired in orchestrator. Cortex keeps a HTTP-readable
 // copy so copilot-context Layer 4 and the cfr-influence poller can read it.
-// Per-component SSE subscriber map — keyed by componentId prefix
-const _componentStreams = {};
-
-// Broadcast an event to any component-stream subscribers that match
-function _broadcastToComponentStreams(row) {
-  if (!row.componentId && !row.hookId && !row.source) return;
-  for (const [cid, clients] of Object.entries(_componentStreams)) {
-    const matches =
-      (row.componentId && row.componentId.startsWith(cid)) ||
-      (row.hookId      && row.hookId.startsWith(cid)) ||
-      (row.source      && row.source === cid);
-    if (matches && clients.size > 0) {
-      const msg = `data: ${JSON.stringify(row)}\n\n`;
-      for (const res of clients) {
-        try { res.write(msg); } catch(_) { clients.delete(res); }
-      }
-    }
-  }
-}
-
 let _field = {
   coherence:  0.6,
   friction:   0.2,
@@ -325,120 +305,6 @@ const server = http.createServer(async (req, res) => {
   // ui/tv-shell/spotlight/spotlight.js's wireRelationalTension() has been
   // calling since it was written, with no real endpoint behind it
   // (logged honestly as dead in the code at the time). hooks/index.js's
-  // ── Unified query surface ─────────────────────────────────────────────────────
-  // §nexus-query-surface.spec Phase 2 — 2026-07-02
-  // "What's happening with X?" — joins every queryable data source into one read.
-  // Co-pilot calls this before every response. The rest of NEXUS uses it for
-  // living changelog, bug tracker, and diagnostic views — same data, different filters.
-  if (p === '/api/cortex/query' && (method === 'GET' || method === 'POST')) {
-    try {
-      const params  = method === 'GET'
-        ? Object.fromEntries(url.searchParams)
-        : await readBody(req);
-
-      const about  = (params.about || '').trim().toLowerCase();
-      const window = parseInt(params.window) || 3600000; // 1h default
-      const since  = Date.now() - window;
-
-      // ── 1. Gaps — open predicates matching the subject ──────────────────────
-      let gaps = [];
-      try {
-        const allGaps = jaaDB.query('gaps', { status: 'open' }, { limit: 50 }) || [];
-        gaps = about
-          ? allGaps.filter(g =>
-              (g.system||'').toLowerCase().includes(about) ||
-              (g.type||'').toLowerCase().includes(about) ||
-              (g.description||'').toLowerCase().includes(about))
-          : allGaps.slice(0, 20);
-      } catch(_) {}
-
-      // ── 2. Sigma trajectory — recent sigma_records for this subject ─────────
-      let sigma = { recent: [], trajectory: 'unknown', avg: 0 };
-      try {
-        const records = jaaDB.query('sigma_records', {}, { orderBy: 'id', order: 'DESC', limit: 100 }) || [];
-        const relevant = about
-          ? records.filter(r => (r.source||'').toLowerCase().includes(about))
-          : records;
-        const inWindow = relevant.filter(r => (r.ts||0) > since).slice(0, 20);
-        const scores   = inWindow.map(r => r.composite || r.score || 0).filter(n => n > 0);
-        const avg = scores.length ? scores.reduce((a,b) => a+b, 0) / scores.length : 0;
-        const last3 = scores.slice(0, 3);
-        const trajectory = last3.length < 2 ? 'unknown'
-          : last3[0] > last3[last3.length - 1] ? 'rising'
-          : last3[0] < last3[last3.length - 1] ? 'falling'
-          : 'stable';
-        sigma = { recent: inWindow.slice(0, 5), trajectory, avg: +avg.toFixed(3) };
-      } catch(_) {}
-
-      // ── 3. CFR field — live relational state ────────────────────────────────
-      const field = { ..._field, ts: Date.now() };
-
-      // ── 4. Recent events — causally relevant to subject ─────────────────────
-      let events = [];
-      try {
-        const allEvents = jaaDB.tail('event_log', 50) || [];
-        events = about
-          ? allEvents.filter(e =>
-              (e.source||'').toLowerCase().includes(about) ||
-              (e.type||'').toLowerCase().includes(about))
-              .slice(0, 10)
-          : allEvents.slice(0, 10);
-      } catch(_) {}
-
-      // ── 5. Blueprint divergences ────────────────────────────────────────────
-      let blueprint = { divergences: [] };
-      try {
-        const allGaps2 = jaaDB.query('gaps', { type: 'blueprint_divergence', status: 'open' }, { limit: 10 }) || [];
-        blueprint.divergences = about
-          ? allGaps2.filter(g => (g.system||'').includes(about))
-          : allGaps2;
-      } catch(_) {}
-
-      // ── 6. Memory — recent cortex memory entries ─────────────────────────────
-      let memory = [];
-      try {
-        const mem = jaaDB.query('cortex_memory', {}, { orderBy: 'id', order: 'DESC', limit: 20 }) || [];
-        memory = about
-          ? mem.filter(m => (m.key||'').includes(about) || (m.value||'').toLowerCase().includes(about)).slice(0, 5)
-          : mem.slice(0, 5);
-      } catch(_) {}
-
-      // ── 7. Narrative — mastermind synthesis over assembled data ─────────────
-      let narrative = '';
-      try {
-        const context = [
-          about ? `Query subject: ${about}` : 'Query: full system state',
-          `Open gaps: ${gaps.length}. Sigma trajectory: ${sigma.trajectory} (avg ${sigma.avg}).`,
-          `CFR regime: ${field.regime || 'stable'}. Coherence: ${(field.coherence||0).toFixed(2)}, friction: ${(field.friction||0).toFixed(2)}.`,
-          events.length ? `Recent events: ${events.slice(0,3).map(e=>e.type).join(', ')}.` : 'No recent events.',
-          memory.length ? `Memory: ${memory[0]?.key || '—'}.` : '',
-        ].filter(Boolean).join(' ');
-        const m = _mastermindAnalysis(
-          about ? `What's happening with ${about}?` : 'What is the current system state?',
-          context
-        );
-        narrative = m.analysis || '';
-      } catch(_) {}
-
-      json(res, 200, {
-        ok: true,
-        about:     about || '*',
-        window:    window,
-        gaps,
-        sigma,
-        field,
-        events,
-        blueprint,
-        memory,
-        narrative,
-        ts: Date.now(),
-      });
-    } catch (e) {
-      json(res, 500, { ok: false, error: `query failed: ${e.message}` });
-    }
-    return;
-  }
-
   // data was always real — 80 hooks across 10 systems — it just was never
   // exposed over HTTP. This is the missing piece, not new data.
   if (p === '/hooks/summary' && method === 'GET') {
@@ -463,64 +329,9 @@ const server = http.createServer(async (req, res) => {
     const row = { id: uid(), type: body.type || 'unknown',
       payload: JSON.stringify(body.payload || {}),
       source: body.source || 'unknown', ts: body.ts || Date.now(),
-      causedBy: body.causedBy || null,
-      componentId: body.componentId || body.payload?.componentId || null,
-      hookId: body.hookId || body.payload?.hookId || null };
+      causedBy: body.causedBy || null }; // §sensation 2026-06-29 — was missing
     jaaDB.insert('event_log', row);
-    // Broadcast to any per-component SSE subscribers
-    _broadcastToComponentStreams(row);
     json(res, 200, { ok: true, id: row.id });
-    return;
-  }
-
-  // ── Per-component SSE channel ─────────────────────────────────────────────
-  // GET /events/component/:componentId — streams events for one component.
-  // §2026-07-02 — "every system's event ledger for each component has a SSE channel"
-  // Subscribers get events filtered to componentId (or hookId prefix match).
-  // The orchestrator exposes this at /api/events/component/:id for consumers
-  // who don't need the full firehose.
-  if (p.startsWith('/events/component/') && method === 'GET') {
-    const componentId = decodeURIComponent(p.slice('/events/component/'.length));
-    if (!componentId) { json(res, 400, { ok: false, error: 'componentId required' }); return; }
-
-    res.writeHead(200, {
-      'Content-Type':                'text/event-stream',
-      'Cache-Control':               'no-cache',
-      'Connection':                  'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'X-Accel-Buffering':           'no',
-    });
-    res.write(`data: ${JSON.stringify({ type:'component.stream.connected', componentId, ts: Date.now() })}\n\n`);
-
-    // Send last 20 events for this component immediately (replay)
-    try {
-      const recent = jaaDB.tail('event_log', 200);
-      const filtered = recent.filter(e =>
-        (e.componentId && e.componentId.startsWith(componentId)) ||
-        (e.hookId      && e.hookId.startsWith(componentId)) ||
-        (e.source      && e.source === componentId) ||
-        (e.type        && e.type.includes(componentId.replace('.', '.')))
-      ).slice(0, 20);
-      for (const ev of filtered.reverse()) {
-        res.write(`data: ${JSON.stringify({ ...ev, replayed: true })}\n\n`);
-      }
-    } catch(_) {}
-
-    // Register client for live updates
-    if (!_componentStreams[componentId]) _componentStreams[componentId] = new Set();
-    _componentStreams[componentId].add(res);
-
-    const keepAlive = setInterval(() => {
-      try { res.write(': keepalive\n\n'); } catch(_) { clearInterval(keepAlive); }
-    }, 15000);
-
-    req.on('close', () => {
-      clearInterval(keepAlive);
-      if (_componentStreams[componentId]) {
-        _componentStreams[componentId].delete(res);
-        if (_componentStreams[componentId].size === 0) delete _componentStreams[componentId];
-      }
-    });
     return;
   }
 

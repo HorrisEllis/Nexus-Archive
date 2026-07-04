@@ -17,10 +17,11 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { v4: uuidv4 } = require('uuid');
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture, copilot }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
+    this.copilot     = copilot;
     this.ctxMgr      = ctxMgr;
     this.vault       = vault;
     this.apiSettings = apiSettings;
@@ -166,7 +167,21 @@ class IpcBridge {
         return { ok: false, error: err.message, count: 0 };
       }
     });
-    ipcMain.handle('copilot:send',   async (e, d) => rendererEmit('copilot.message', d));
+    // §fix 2026-07-04 — copilot:send was fire-and-forget (rendererEmit only).
+    // Now calls the real CoPilotBridge.send() and returns its response,
+    // so the renderer gets an actual {text, commands, msgId} back.
+    ipcMain.handle('copilot:send', async (e, d) => {
+      if (this.copilot) {
+        try {
+          return await this.copilot.send(d);
+        } catch (err) {
+          return { text: `Co-pilot error: ${err.message}`, commands: [], msgId: d.requestId };
+        }
+      }
+      // Fallback: bus-only (legacy behaviour if bridge not wired)
+      rendererEmit('copilot.message', d);
+      return { text: '', commands: [], msgId: d.requestId };
+    });
     // §fix 2026-06-30 — the actual ask: "where are the errors, useless."
     // Renderer-process errors (window.onerror, unhandledrejection in
     // browser.html) now report here, captured the same way as main-process

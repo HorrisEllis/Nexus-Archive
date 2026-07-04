@@ -29,6 +29,14 @@ async function _fetch(url) {
 const GREETING_RE = /^(hi|hello|hey|sup|yo|what's up|good (morning|evening|afternoon))\b/i;
 const CONVERSATIONAL_RE = /^(how are you|you there|you online|you awake)\b/i;
 
+// §fix 2026-07-04 — these 6 constants were used but never declared, crash-looping copilot
+const AWARE_RE    = /^(what do you know|what can you see|what are you aware of|your knowledge|capabilities|what do you have access to)\b/i;
+const SYSTEMS_RE  = /^(systems?|list systems?|show systems?|what systems?|all systems?)\b/i;
+const COMP_RE     = /^(components?|list components?|show components?|what components?)\b/i;
+const CLI_RE      = /^(cli|commands?|list commands?|show commands?|what commands?)\b/i;
+const SEAM_RE     = /^(seam|hooks?|list hooks?|show hooks?|wires?)\b/i;
+const ROUTE_RE    = /^\/([a-z][a-z0-9._-]{1,40})$|^(what is|what does|look up|find)\s+([a-z][a-z0-9._-]{1,40})\b/i;
+
 // Status queries
 const STATUS_RE = /^\/(status|health)$|^(status|health|is everything ok|how's the system)\b/i;
 const STREAM_RE = /^(stream|what'?s happening|recent events|show me the stream|what'?s going on)\b/i;

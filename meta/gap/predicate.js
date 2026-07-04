@@ -66,8 +66,8 @@ const SEVERITY_RANK = { low: 0, medium: 1, high: 2, critical: 3 };
 
 // ── Lazy deps ─────────────────────────────────────────────────────────────────
 let _jaa, _uid, _bus;
-function _getJAA()  { if (!_jaa)  try { ({ jaaDB: _jaa, uid: _uid } = require('../cortex/memory/jaa-db')); } catch(_) {} return _jaa; }
-function _getBus()  { if (!_bus)  try { _bus = require('../nexus-bus'); } catch(_) {} return _bus; }
+function _getJAA()  { if (!_jaa)  try { ({ jaaDB: _jaa, uid: _uid } = require('../../cortex/memory/jaa-db')); } catch(_) {} return _jaa; }
+function _getBus()  { if (!_bus)  try { _bus = require('../../nexus-bus'); } catch(_) {} return _bus; }
 function uid()      { return _uid?.() ?? crypto.randomUUID(); }
 
 // ── Predicate operations ───────────────────────────────────────────────────────
@@ -496,7 +496,7 @@ function verifyClosure(gap, { strategy = 'unknown', jobId = null } = {}) {
       console.warn(`[${MODULE_ID}] ⚠ TENSION ESCALATED · gap ${gap.uuid.slice(0,8)} · ${gap.type} · ` +
         `${gap.severity || 'low'} → ${escalation.severity} · open ${escalation.ageMin}min · composite ${escalation.composite}`);
       try {
-        require('./component-ledger').write({
+        require('../../lib/component-ledger').write({
           system: 'gap-lifecycle', component: COMP_ID, action: 'tension_escalated', status: escalation.severity,
           tags: [gap.type], detail: `open ${escalation.ageMin}min, composite ${escalation.composite}`,
           causedBy: gap.uuid,
@@ -609,7 +609,7 @@ function _logEvent(type, payload) {
 // via the grammar engine, RAID, and the topology view.
 function registerComponent() {
   try {
-    const reg = require('./component-registry');
+    const reg = require('../../lib/component-registry');
     reg.register({
       id:          COMP_ID,
       namespace:   'gap-lifecycle',

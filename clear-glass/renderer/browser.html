@@ -369,7 +369,6 @@
   #layout {
     flex: 1;
     display: flex;
-    flex-direction: column;
     overflow: hidden;
   }
 
@@ -1418,18 +1417,7 @@
     let url = input.trim();
     if (!url) return '';
     if (!url.includes('://') && !url.startsWith('about:')) {
-      // §fix 2026-07-04 — localhost and 127.x are plain HTTP, never HTTPS.
-      // The orchestrator and all NEXUS services run HTTP. If a URL arrives
-      // without a protocol (e.g. "127.0.0.1:9000"), adding https:// causes
-      // ERR_SSL_PROTOCOL_ERROR. Always use http:// for local addresses.
-      const isLocal = /^(127\.|localhost|0\.0\.0\.0|::1)/.test(url);
-      if (isLocal) {
-        url = 'http://' + url;
-      } else if (url.includes('.')) {
-        url = 'https://' + url;
-      } else {
-        url = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
-      }
+      url = url.includes('.') ? 'https://' + url : `https://www.google.com/search?q=${encodeURIComponent(url)}`;
     }
     return url;
   }

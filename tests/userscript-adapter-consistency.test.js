@@ -32,10 +32,10 @@ const FINGERPRINTS = {
 };
 
 const FILES = {
-  claude:     'guardian/userscripts/claude.js',
-  chatgpt:    'guardian/userscripts/chatgpt.js',
-  gemini:     'guardian/userscripts/gemini.js',
-  perplexity: 'guardian/userscripts/perplexity.js',
+  claude:     'guardian/userscript-claude.js',
+  chatgpt:    'guardian/userscript-chatgpt.js',
+  gemini:     'guardian/userscript-gemini.js',
+  perplexity: 'guardian/userscript-perplexity.js',
 };
 
 function run() {

@@ -206,12 +206,12 @@
   },
   "userscripts": [
     {
-      "file": "guardian/userscripts/claude.js",
+      "file": "guardian/userscript-claude.js",
       "target": "claude.ai",
       "install": "Tampermonkey"
     },
     {
-      "file": "guardian/userscripts/chatgpt.js",
+      "file": "guardian/userscript-chatgpt.js",
       "target": "chatgpt.com",
       "install": "Tampermonkey"
     }

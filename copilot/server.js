@@ -63,15 +63,11 @@ const VERSION   = '3.0.0';
 
 // ── CONTINUOUS STREAM — the co-pilot's consciousness ─────────────────────────
 const _stream = [];
-let _lastSigma = 0; // updated from sigma events on the stream — conditioning_log reads this
 const MAX_STREAM = 500;
 
 function streamIngest(event) {
   _stream.push({ ...event, ingestedAt: Date.now() });
   if (_stream.length > MAX_STREAM) _stream.shift();
-  // Track sigma for conditioning_log — captures field state at dispatch time
-  if (event.composite != null) _lastSigma = event.composite;
-  else if (event.sigma != null) _lastSigma = event.sigma;
   broadcast('copilot.stream.event', { type: event.type, ts: event.ts || Date.now() });
 }
 
@@ -236,44 +232,10 @@ async function _injectSessionHistory(session, contextText) {
   } catch(_) { return contextText; }
 }
 
-// ── Uniqueness synthesis — grounds each request in what's specific right now ──
-// §2026-07-02: "make it unique every payload so it's not just a copy-paste bot"
-async function _synthesizeUniqueness(prompt, context, session) {
-  try {
-    const anchors = [];
-    const now = Date.now();
-    const reqId = `${now.toString(36)}-${Math.random().toString(36).slice(2,6)}`;
-    anchors.push(`Request: ${reqId} | ${new Date(now).toISOString()}`);
-
-    const words   = prompt.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    const skip    = new Set(['what','how','does','this','that','with','from','have','will','your','nexus','about']);
-    const distinct = words.filter(w => !skip.has(w));
-    if (distinct.length) anchors.push(`Focus: ${distinct.slice(0,5).join(', ')}`);
-
-    if (_lastSigma > 0) anchors.push(`Sigma: ${_lastSigma.toFixed(3)} (${_lastSigma > 0.5 ? 'elevated' : 'stable'})`);
-
-    const qsMatch = context.match(/=== SYSTEM STATE \(([^)]+)\) ===\n([^\n]+)/);
-    if (qsMatch) anchors.push(`State: ${qsMatch[2].slice(0,80)}`);
-
-    const exchange = session?.exchanges || 0;
-    if (exchange === 0) anchors.push('First exchange — establish grounding');
-    else if (exchange > 5) anchors.push(`Exchange ${exchange} — build on thread, no repetition`);
-
-    const regimeMatch = context.match(/regime=([\w]+)/);
-    if (regimeMatch) anchors.push(`CFR: ${regimeMatch[1]}`);
-
-    return anchors.length > 1
-      ? `\n\n=== THIS REQUEST ===\n${anchors.join(' | ')}\nRespond to THIS specific request, not a general version of it.`
-      : '';
-  } catch(_) { return ''; }
-}
-
 // ── Dispatch to Ollama sovereign system ───────────────────────────────────────
 async function _dispatchToOllama(prompt, context, opts = {}) {
-  // Inject uniqueness anchor so every payload is grounded in this specific moment
-  const unique = opts.uniqueness || '';
   return _post(`${OL_URL}/api/jobs`, {
-    prompt:      `SYSTEM CONTEXT:\n${context}${unique}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
+    prompt:      `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
     model:       opts.model || 'mistral:7b',
     intent:      opts.intent || 'ask',
     componentId: 'copilot.prompt',
@@ -489,27 +451,6 @@ const server = http.createServer(async (req, res) => {
     // §P103: inject session history on first exchange
     contextText = await _injectSessionHistory(session, contextText);
 
-    // §query-surface 2026-07-02 — read system state before dispatching.
-    // This is the difference between "I remember what we said" and
-    // "I know what this system has done, what's broken, and what's worked."
-    try {
-      const keywords = prompt.toLowerCase().split(/\s+/)
-        .find(w => ['guardian','cortex','copilot','ollama','bridge','idearium','eravos','sigma','gap','seam'].includes(w));
-      if (keywords) {
-        const qs = await _fetch(`${CX_URL}/api/cortex/query?about=${encodeURIComponent(keywords)}&window=3600000`, {}, 3000);
-        if (qs?.ok) {
-          const parts = [];
-          if (qs.gaps?.length)     parts.push(`Open gaps for ${keywords}: ${qs.gaps.length} (${qs.gaps.slice(0,2).map(g=>g.type||g.description||'gap').join(', ')})`);
-          if (qs.sigma?.trajectory) parts.push(`Sigma: ${qs.sigma.trajectory} (avg ${qs.sigma.avg})`);
-          if (qs.field?.regime)    parts.push(`Field: ${qs.field.regime}`);
-          if (parts.length) {
-            contextText += `\n\n=== SYSTEM STATE (${keywords}) ===\n${parts.join('. ')}.`;
-            broadcast('copilot.query_surface.enriched', { about: keywords, gaps: qs.gaps?.length || 0 });
-          }
-        }
-      }
-    } catch(_) { /* query surface is best-effort — never block dispatch */ }
-
     // §P110: query Cortex MASTERMIND for causal context before model call
     const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0, 500), sessionId);
     if (mastermind?.analysis) {
@@ -518,9 +459,8 @@ const server = http.createServer(async (req, res) => {
 
     // Dispatch to Ollama with stream flag
     try {
-      const uniqueness = await _synthesizeUniqueness(prompt, contextText, session);
       const ollamaResult = await _dispatchToOllama(prompt, contextText, {
-        intent: 'ask', requestId, sessionId, stream: true, uniqueness });
+        intent: 'ask', requestId, sessionId, stream: true });
 
       if (ollamaResult?.jobId) {
         const result = await _streamOllamaJob(ollamaResult.jobId, res, sessionId);
@@ -614,85 +554,54 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── POST /bridge/deliver — Bridge :9999 routes copilot.prompt here ────────
-  // §2026-07-04: Clear Glass and tv-shell both go through Bridge → /bridge/deliver
-  // Bridge sends: { request: { payload: { prompt, channel, sessionId, ... } } }
-  // We extract the prompt and run the same path as /api/prompt.
+  // ── POST /bridge/deliver — Bridge :9999 routes requests here ────────────────
+  // §2026-07-04: tv-shell and Clear Glass both go through Bridge → /bridge/deliver
+  // Bridge sends: { request: { uuid, payload: { prompt, channel, sessionId, ... } } }
   if (method === 'POST' && p === '/bridge/deliver') {
     const body      = await readBody(req);
     const payload   = body.request?.payload || body.payload || body;
     const prompt    = payload.prompt || '';
     const channel   = payload.channel || 'bridge';
-    const sessionId = payload.sessionId || req.headers['x-bridge-source'] || crypto.randomUUID();
+    const sessionId = payload.sessionId || req.headers['x-bridge-source'] || _newId();
     const requestId = body.request?.uuid || crypto.randomUUID();
     const session   = _getSession(sessionId, channel);
     session.exchanges++;
 
     if (!prompt) {
-      json(res, 400, { ok:false, error:'prompt required in payload' });
+      json(res, 400, { ok:false, error:'payload.prompt required' });
       return;
     }
 
-    broadcast('copilot.prompt.received', { prompt: prompt.slice(0,100), channel, sessionId, source: 'bridge' });
+    broadcast('copilot.prompt.received', { prompt: prompt.slice(0,100), channel, sessionId, via: 'bridge' });
 
-    // Assemble context — same 7-layer path as /api/prompt
+    // Full context assembly — same path as /api/prompt
     let contextText = '';
-    try {
-      const snap = await _fetch(`${CX_URL}/api/memory?table=chat_log&n=4&sessionId=${encodeURIComponent(sessionId)}`, {}, 2000);
-      if (snap?.rows?.length) contextText = snap.rows.map(r => `[${r.intent}] ${r.prompt} → ${(r.response||'').slice(0,200)}`).join('\n');
-    } catch(_) {}
     try { contextText = await _analysis.assembleContext(prompt, _stream, session); } catch(_) {}
-
-    // System state enrichment
-    const keywords = prompt.toLowerCase().split(/\s+/).find(w => ['guardian','cortex','copilot','ollama','bridge','idearium','eravos','sigma','gap'].includes(w));
-    if (keywords) {
-      try {
-        const qs = await _fetch(`${CX_URL}/api/cortex/query?about=${encodeURIComponent(keywords)}&window=3600000`, {}, 3000);
-        if (qs?.ok) {
-          const parts = [];
-          if (qs.gaps?.length) parts.push(`Open gaps for ${keywords}: ${qs.gaps.length}`);
-          if (qs.sigma?.trajectory) parts.push(`Sigma: ${qs.sigma.trajectory}`);
-          if (parts.length) contextText += `\n\n=== SYSTEM STATE (${keywords}) ===\n${parts.join('. ')}.`;
-        }
-      } catch(_) {}
-    }
-
     contextText = await _injectSessionHistory(session, contextText);
+
     const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0,500), sessionId);
     if (mastermind?.analysis) contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0,400)}`;
 
-    // Uniqueness anchor
-    const uniqueness = await _synthesizeUniqueness(prompt, contextText, session);
-
-    // Dispatch via lifeline (Ollama → Guardian fallback)
+    // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
     let text = '', modelUsed = 'none';
     try {
-      const lifeResult = await _lifeline.route(
-        `${contextText}${uniqueness}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
+      const life = await _lifeline.route(
+        `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
         { requestId, sessionId, intent: 'ask', channel }
       );
-      text      = lifeResult?.text || '';
-      modelUsed = lifeResult?.provider_used || 'none';
-      if (lifeResult?.escalated) broadcast('copilot.lifeline.escalated', { provider: lifeResult.provider_used });
-    } catch(e) {
-      text = `Analysis failed: ${e.message}`;
-    }
+      text      = life?.text || '';
+      modelUsed = life?.provider_used || 'none';
+      if (life?.escalated) broadcast('copilot.lifeline.escalated', { provider: life.provider_used });
+    } catch(e) { text = `Dispatch failed: ${e.message}`; }
 
-    // Persist to conditioning_log and chat_log
+    // Persist (best-effort)
     try {
       await _persist('chat_log', {
         uuid: crypto.randomUUID(), requestId, sessionId,
         prompt: prompt.slice(0,500), response: text.slice(0,2000),
         modelUsed, intent: 'ask', channel,
-        componentId: 'copilot.bridge', hookId: 'copilot.bridge.deliver',
+        componentId: 'copilot.bridge.deliver', hookId: 'copilot.bridge.in',
         contextLayers: 7, fromStream: false, ts: Date.now()
-      });
-      await _persist('conditioning_log', {
-        uuid: crypto.randomUUID(), sessionId, requestId,
-        system: modelUsed, cluster: 'general',
-        outcome: text.length > 50 ? 'success' : 'partial',
-        quality: text.length > 50 ? 1 : 0.5,
-        sigmaAtDispatch: _lastSigma || 0, ts: Date.now(),
       });
     } catch(_) {}
 
@@ -700,10 +609,8 @@ const server = http.createServer(async (req, res) => {
 
     // Bridge expects: { ok, result: { response: { text, ... } } }
     json(res, 200, {
-      ok:     true,
-      result: {
-        response: { ok: true, text, modelUsed, contextLayers: 7, requestId, sessionId }
-      }
+      ok: true,
+      result: { response: { ok: true, text, modelUsed, contextLayers: 7, requestId, sessionId } }
     });
     return;
   }
@@ -780,9 +687,8 @@ const server = http.createServer(async (req, res) => {
     let text = '';
     let modelUsed = 'none';
     try {
-      const uniqueness = await _synthesizeUniqueness(prompt, contextText, session);
       const lifeResult = await _lifeline.route(
-        `${contextText}${uniqueness}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
+        `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
         { requestId, sessionId: session.sessionId, intent: 'ask', channel }
       );
       text      = lifeResult?.text || '';
@@ -798,33 +704,6 @@ const server = http.createServer(async (req, res) => {
       componentId:'copilot.prompt', hookId:'copilot.prompt.reply',
       contextLayers: 7, fromStream: true, ts: Date.now() };
     await _persist('chat_log', row);
-
-    // §copilot-system-programmer.spec Phase 4 — 2026-07-02
-    // conditioning_log write after every response. This is the learning flywheel
-    // fuel: every interaction with every system becomes a data point that RAID's
-    // role_confidence reads to improve routing accuracy. Without this write,
-    // role_confidence stays at 0.5 neutral forever and the simulation gets no
-    // better over time. The write is best-effort — never block the response on it.
-    try {
-      const lifelineCluster = _lifeline?._lastCluster || 'general';
-      const lifelineAgent   = modelUsed || 'none';
-      const quality = text.length > 50 ? 1 : (text.length > 10 ? 0.5 : 0);
-      await _persist('conditioning_log', {
-        uuid:        crypto.randomUUID(),
-        sessionId,
-        requestId,
-        system:      lifelineAgent,          // which agent handled it
-        cluster:     lifelineCluster,        // which cluster was assigned
-        prompt:      prompt.slice(0, 200),
-        outcome:     quality > 0.5 ? 'success' : 'partial',
-        quality,                              // 0-1 proxy until real feedback signal
-        modelUsed,
-        contextLayers: 7,
-        sigmaAtDispatch: _lastSigma || 0,   // field state at dispatch time
-        ts: Date.now(),
-      });
-    } catch(_) { /* conditioning_log is best-effort, never block the response */ }
-
     streamIngest({ type: 'copilot.answered', requestId, intent: 'ask', modelUsed });
 
     json(res, 200, { ok:true, requestId, sessionId, text, modelUsed, intent:'ask',
@@ -899,84 +778,6 @@ server.listen(PORT, () => {
   setTimeout(_connectCortexStream, 2000);
   setTimeout(_connectGuardianStream, 3000);
   setTimeout(_connectIdeariumStream, 4000);
-  // §nexus-project-flow.spec — empty-state detection 2026-07-02
-  // When there are no active projects, co-pilot opens a specific, state-derived
-  // conversation rather than sitting silent. Runs 8s after boot — after all
-  // streams are connected and the system has a real picture of its state.
-  setTimeout(_checkEmptyState, 8000);
 });
-
-// ── Empty-state detection ─────────────────────────────────────────────────────
-// §nexus-project-flow.spec — fires 8s after boot.
-// Reads project_registry, idearium stalled phases, open gaps, blueprint
-// divergences from the query surface. If nothing is active, builds a
-// specific, UUID-backed offer — not a generic "how can I help?" but a
-// grounded list of what's actually unfinished.
-async function _checkEmptyState() {
-  try {
-    const CX = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
-    const ID = process.env.IDEARIUM_URL || 'http://127.0.0.1:4800';
-
-    // Check project_registry — do active projects exist?
-    let activeProjects = 0;
-    try {
-      const pr = await _fetch(`${CX}/api/memory?table=project_registry&n=5`, {}, 2000);
-      activeProjects = (pr?.rows || pr?.data || []).filter(p => p.status === 'active').length;
-    } catch(_) {}
-
-    if (activeProjects > 0) return; // projects running — nothing to surface
-
-    // Read the real state of each item to surface
-    const items = [];
-
-    // Stalled idearium ideas
-    try {
-      const ideas = await _fetch(`${ID}/api/ideas?status=tensioned&limit=5`, {}, 2000);
-      const stalled = (ideas?.ideas || ideas?.data || []).filter(i => i.status === 'tensioned');
-      for (const idea of stalled.slice(0, 3)) {
-        const age = Math.round((Date.now() - (idea.updatedAt || idea.ts || Date.now())) / 86400000);
-        items.push(`Idea "${idea.title || idea.name || idea.uuid?.slice(0,8)}" has been at tensioned phase for ${age} day${age === 1 ? '' : 's'}`);
-      }
-    } catch(_) {}
-
-    // Open gaps
-    try {
-      const qs = await _fetch(`${CX}/api/cortex/query?about=*&window=604800000`, {}, 3000);
-      const gaps = qs?.gaps || [];
-      if (gaps.length > 0) {
-        const highSeverity = gaps.filter(g => g.severity === 'HIGH' || g.severity === 'CRITICAL');
-        if (highSeverity.length > 0) {
-          items.push(`${highSeverity.length} high-severity gap${highSeverity.length === 1 ? '' : 's'} open: ${highSeverity.slice(0,2).map(g => g.type || g.description || 'gap').join(', ')}`);
-        } else if (gaps.length > 0) {
-          items.push(`${gaps.length} open gap${gaps.length === 1 ? '' : 's'}`);
-        }
-
-        // Sigma trajectory
-        if (qs?.sigma?.trajectory && qs.sigma.trajectory !== 'unknown') {
-          items.push(`System sigma ${qs.sigma.trajectory} (avg ${qs.sigma.avg})`);
-        }
-
-        // Blueprint divergences
-        if (qs?.blueprint?.divergences?.length > 0) {
-          items.push(`${qs.blueprint.divergences.length} blueprint divergence${qs.blueprint.divergences.length === 1 ? '' : 's'} — modules without specs`);
-        }
-      }
-    } catch(_) {}
-
-    if (items.length === 0) return; // nothing to surface, system is clean
-
-    const offer = items.map((item, i) => `${i + 1}. ${item}.`).join('\n');
-    const message = `No active projects. Here's what's unfinished:\n\n${offer}\n\nDo you want to work on any of these, or start something new?`;
-
-    broadcast('copilot.empty_state', {
-      activeProjects: 0,
-      items: items.length,
-      message,
-      ts: Date.now(),
-    });
-
-    console.log(`[${new Date().toISOString()}] [copilot/server.js] [EmptyState] ${items.length} items surfaced`);
-  } catch(_) { /* empty-state check is best-effort */ }
-}
 
 module.exports = { server, streamIngest };

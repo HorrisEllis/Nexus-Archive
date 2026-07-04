@@ -67,6 +67,7 @@ const PORTS = {
   ollama:       parseInt(process.env.OLLAMA_PORT        || '11434'),
   'ollama-bridge': parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749'),
   copilot:      parseInt(process.env.COPILOT_PORT        || '3750'),
+  loom:         parseInt(process.env.LOOM_PORT            || '3752'),
 };
 
 const HEALTH_PATHS = {
@@ -76,6 +77,7 @@ const HEALTH_PATHS = {
   emerge:       '/status',
   orchestrator: '/health',
   ollama:       '/api/tags',
+  loom:         '/health',
 };
 
 // ── Gated HTTP helper ─────────────────────────────────────────────────────────

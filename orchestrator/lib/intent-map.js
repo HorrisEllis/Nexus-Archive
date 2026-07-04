@@ -146,7 +146,7 @@ const INTERACTIONS = [
 function buildIntentMap() {
   // resolve component intent via the uid registry (the backbone Gap 1 made real)
   let COMPONENT_MAP = {};
-  try { COMPONENT_MAP = require('./uid/component-map').COMPONENT_MAP || {}; } catch (_) {}
+  try { COMPONENT_MAP = require('../../lib/uid/component-map').COMPONENT_MAP || {}; } catch (_) {}
 
   const grouped = {};
   for (const key of Object.keys(CATEGORIES)) grouped[key] = { label: CATEGORIES[key], interactions: [] };

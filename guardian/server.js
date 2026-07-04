@@ -1365,12 +1365,12 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
       const fs  = require('fs');
       const rp  = require('path');
       const readVer = f => { try { const c=fs.readFileSync(rp.join(__dirname,f),'utf8'); const m=c.match(/@version\s+([\d.]+)/); return m?m[1]:null; } catch { return null; } };
-      const cv  = readVer('userscripts/claude.js');
-      const gv  = readVer('userscripts/chatgpt.js');
-      const gmv = readVer('userscripts/gemini.js');
-      const ppv = readVer('userscripts/perplexity.js');
-      if (!cv) return { ok:false, msg:'userscripts/claude.js: @version missing' };
-      if (!gv) return { ok:false, msg:'userscripts/chatgpt.js: @version missing' };
+      const cv  = readVer('userscript-claude.js');
+      const gv  = readVer('userscript-chatgpt.js');
+      const gmv = readVer('userscript-gemini.js');
+      const ppv = readVer('userscript-perplexity.js');
+      if (!cv) return { ok:false, msg:'userscript-claude.js: @version missing' };
+      if (!gv) return { ok:false, msg:'userscript-chatgpt.js: @version missing' };
       console.log('[guardian versions] claude=' + cv + ' chatgpt=' + gv +
         (gmv ? ' gemini=' + gmv : ' gemini=NOT_INSTALLED') +
         (ppv ? ' perplexity=' + ppv : ' perplexity=NOT_INSTALLED'));
@@ -2300,8 +2300,8 @@ function handleExtendedRoutes(req, res, url, method) {
     pRes(res, 200, {
       ok: true,
       guardian:        '3.6.1',
-      userscript_claude:  userscriptVersion('userscripts/claude.js'),
-      userscript_chatgpt: userscriptVersion('userscripts/chatgpt.js'),
+      userscript_claude:  userscriptVersion('userscript-claude.js'),
+      userscript_chatgpt: userscriptVersion('userscript-chatgpt.js'),
       spec_parser:     '1.0.0',
       seam_queue:      '1.0.0',
       detector:        '1.0.0',
@@ -2828,8 +2828,8 @@ function handleExtendedRoutes(req, res, url, method) {
             };
             result = {
               guardian: '3.6.1',
-              userscript_claude:  readVer('guardian/userscripts/claude.js'),
-              userscript_chatgpt: readVer('guardian/userscripts/chatgpt.js'),
+              userscript_claude:  readVer('guardian/userscript-claude.js'),
+              userscript_chatgpt: readVer('guardian/userscript-chatgpt.js'),
             };
             break;
           }
@@ -2931,38 +2931,7 @@ function handleExtendedRoutes(req, res, url, method) {
     return;
   }
 
-  // §2026-07-02 per-component SSE channel — proxied to cortex
-  if (method === 'GET' && url.pathname.startsWith('/api/guardian/events/component/')) {
-    const cid  = url.pathname.slice('/api/guardian/events/component/'.length);
-    const req2 = http.request({ hostname: '127.0.0.1', port: 3748,
-      path: `/events/component/${encodeURIComponent(cid)}`, method: 'GET',
-      headers: { Accept: 'text/event-stream' }, timeout: 0 }, upstream => {
-      res.writeHead(upstream.statusCode, {
-        'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*',
-      });
-      upstream.pipe(res);
-    });
-    req2.on('error', () => { try { res.end(); } catch(_) {} });
-    req.on('close', () => req2.destroy());
-    req2.end();
-    return;
-  }
-
-  // §2026-07-02 unified query surface proxy
-  if (method === 'GET' && url.pathname === '/api/guardian/cortex/query') {
-    const qs    = url.search || '';
-    const req2  = http.request({ hostname: '127.0.0.1', port: 3748, path: `/api/cortex/query${qs}`, method: 'GET', timeout: 5000 }, r => {
-      let buf = ''; r.on('data', c => buf += c);
-      r.on('end', () => { res.writeHead(r.statusCode || 200, { 'Content-Type': 'application/json' }); res.end(buf); });
-    });
-    req2.on('error', () => { res.writeHead(502); res.end(JSON.stringify({ ok: false, error: 'cortex unreachable' })); });
-    req2.on('timeout', () => req2.destroy());
-    req2.end();
-    return;
-  }
-
-
+  // §5.7 sovereign consumer — nerve/snapshot proxied same way as cfr/state.
   // Clear Glass fetches /api/guardian/nerve/snapshot; guardian proxies to
   // cortex; cortex calls lib/nerve/index.js. No sibling imports anywhere.
   if (method === 'GET' && url.pathname === '/api/guardian/nerve/snapshot') {

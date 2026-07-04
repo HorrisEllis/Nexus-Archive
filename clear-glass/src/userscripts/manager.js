@@ -67,10 +67,10 @@ class UserscriptManager {
   async _loadGuardianScripts() {
     if (!this.guardianDir) return;
     const guardianScripts = [
-      { file: 'userscripts/claude.js',      id: 'guardian-claude',      name: 'Guardian — Claude',      matches: ['https://claude.ai/*'] },
-      { file: 'userscripts/chatgpt.js',     id: 'guardian-chatgpt',     name: 'Guardian — ChatGPT',     matches: ['https://chatgpt.com/*', 'https://chat.openai.com/*'] },
-      { file: 'userscripts/gemini.js',      id: 'guardian-gemini',      name: 'Guardian — Gemini',      matches: ['https://gemini.google.com/*'] },
-      { file: 'userscripts/perplexity.js',  id: 'guardian-perplexity',  name: 'Guardian — Perplexity',  matches: ['https://www.perplexity.ai/*'] },
+      { file: 'userscript-claude.js',      id: 'guardian-claude',      name: 'Guardian — Claude',      matches: ['https://claude.ai/*'] },
+      { file: 'userscript-chatgpt.js',     id: 'guardian-chatgpt',     name: 'Guardian — ChatGPT',     matches: ['https://chatgpt.com/*', 'https://chat.openai.com/*'] },
+      { file: 'userscript-gemini.js',      id: 'guardian-gemini',      name: 'Guardian — Gemini',      matches: ['https://gemini.google.com/*'] },
+      { file: 'userscript-perplexity.js',  id: 'guardian-perplexity',  name: 'Guardian — Perplexity',  matches: ['https://www.perplexity.ai/*'] },
       { file: 'userscript-ollama.js',      id: 'guardian-ollama',      name: 'Guardian — Ollama',      matches: ['http://localhost:11434/*'] },
     ];
 

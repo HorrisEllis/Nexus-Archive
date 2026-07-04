@@ -124,10 +124,10 @@ try { ({ createCFRLedger } = require('./meta/cfr/ledger')); } catch(e) { console
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
 const nexusBus       = (() => { try { return require('./nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
-const nexusQuery     = (() => { try { return require('./orchestrator/lib/query');         } catch(e) { return null; } })();
-const nexusKnowledge = (() => { try { return require('./orchestrator/lib/knowledge');     } catch(e) { return null; } })();
+const nexusQuery     = (() => { try { return require('./nexus-query');         } catch(e) { return null; } })();
+const nexusKnowledge = (() => { try { return require('./nexus-knowledge');     } catch(e) { return null; } })();
 const nexusCFR       = (() => { try { return require('./nexus-cfr-influence'); } catch(e) { return null; } })();
-const nexusHealLoop  = (() => { try { return require('./orchestrator/lib/heal-loop');     } catch(e) { return null; } })();
+const nexusHealLoop  = (() => { try { return require('./nexus-heal-loop');     } catch(e) { return null; } })();
 try { ({ spawn: spawnChild } = require('child_process')); } catch(e) { spawnChild = null; }
 
 const PORT    = parseInt(process.env.ORCHESTRATOR_PORT || '9000');
@@ -517,7 +517,10 @@ const SYSTEM_LOCAL_UI_DIRS = [
   { system:'emerge',       dir: path.join(ROOT,'ui') },        // emerge IDE ui lives at root ui/
   { system:'orchestrator', dir: path.join(ROOT,'ui','orchestrator') },
   { system:'explorer',     dir: path.join(ROOT,'ui') },  // contract-explorer + contract-renderer
-  { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostic') },  // §HOTSWAP-03
+  { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostics') },  // §HOTSWAP-03
+  // §BUGFIX 2026-07-02: was 'ui','diagnostic' (singular) — that folder is
+  // empty. The real diagnostic UI, with a real index.html, lives at
+  // ui/diagnostics (plural). GET /ui/diagnostic was serving nothing.
 ];
 
 // ── UI Hotswap Watcher ───────────────────────────────────────────────────────
@@ -620,20 +623,17 @@ const server = http.createServer(async (req, res) => {
   const M     = req.method;
   const QS    = u.searchParams;
 
-  // ── Root UI — tv-shell is the primary NEXUS UI ───────────────────────────
-  // §2026-07-02: tv-shell is the real UI. Particle field, spotlight, nerve
-  // canvas, channel switching. Diagnostic is at /home and /ui/diagnostics.
-  if (M==='GET' && (u.pathname==='/' || u.pathname==='/tv')) {
-    const tvPath = path.join(UI_ROOT,'tv-shell','index.html');
-    if (fs.existsSync(tvPath)) return serveFile(res, tvPath);
-    // fallback: orchestrator status if tv-shell missing
-    return serveFile(res, path.join(UI_ROOT,'orchestrator','index.html'));
-  }
-
-  // ── Home / diagnostic — accessible at /home ──────────────────────────────
-  if (M==='GET' && u.pathname==='/home') {
+  // ── Root UI — NEXUS Diagnostic is primary (promoted 2026-07-02, per
+  // explicit decision: "the primary UI, it's buried under a mediocre one" —
+  // that work got interrupted before landing. Home and orchestrator both
+  // stay fully reachable, at /ui/home and /ui/orchestrator respectively,
+  // and as fallbacks here if diagnostics is ever missing. ─────────────────
+  if (M==='GET' && (u.pathname==='/' || u.pathname==='/home')) {
+    const diagPath = path.join(UI_ROOT,'diagnostics','index.html');
+    if (fs.existsSync(diagPath)) return serveFile(res, diagPath);
     const homePath = path.join(UI_ROOT,'home','index.html');
     if (fs.existsSync(homePath)) return serveFile(res, homePath);
+    // fallback to orchestrator UI while home/diagnostics are being built
     return serveFile(res, path.join(UI_ROOT,'orchestrator','index.html'));
   }
 
@@ -2196,7 +2196,9 @@ ${C.b}UI hotswap${C.r}
   ui/guardian/    → http://localhost:${PORT}/ui/guardian
   ui/idearium/    → http://localhost:${PORT}/ui/idearium
   ui/emerge/      → http://localhost:${PORT}/ui/emerge
-  ui/orchestrator/ → http://localhost:${PORT}/
+  ui/diagnostics/ → http://localhost:${PORT}/  (primary — home/orchestrator as fallback)
+  ui/home/        → http://localhost:${PORT}/ui/home
+  ui/orchestrator/ → http://localhost:${PORT}/ui/orchestrator
 `);
 }
 
@@ -2380,30 +2382,56 @@ try {
   });
 
   // Phase 6 SOFT: open NEXUS UI in browser
-  // Controlled by orchestrator.config.json → openUIOnBoot (default: true)
+  // §2026-07-04: Open NEXUS in Clear Glass, not the default browser.
+  // Posts to Clear Glass wire server :7704/open → openAgentWindow().
+  // Falls back to system browser if Clear Glass isn't running.
   ownSeq.phase({ name:'nexus.ui.open', type:'SOFT',
-    label:'Open NEXUS UI in browser',
+    label:'Open NEXUS UI in Clear Glass',
     fn: async () => {
       const cfgPath = path.join(ROOT, 'orchestrator.config.json');
       let cfg = {};
       try { cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')); } catch (_) {}
-      if (cfg.openUIOnBoot === false) return;  // explicit opt-out only
-      const rawUrl = cfg.uiURL || `http://127.0.0.1:${PORT}`;
-      // ORC-12: validate uiURL to prevent command injection via crafted config
-      const uiUrl = /^https?:\/\/[\w.:\/-]+$/.test(rawUrl) ? rawUrl : `http://127.0.0.1:${PORT}`;
-      const spawn = spawnChild;
+      if (cfg.openUIOnBoot === false) return;
+
+      const rawUrl  = cfg.uiURL || `http://127.0.0.1:${PORT}`;
+      const uiUrl   = /^https?:\/\/[\w.:\/-]+$/.test(rawUrl) ? rawUrl : `http://127.0.0.1:${PORT}`;
+      const cgWire  = cfg.clearGlassWire || 'http://127.0.0.1:7704';
+
+      // Try Clear Glass wire server first
+      try {
+        const _http = require('http');
+        const body  = JSON.stringify({ url: uiUrl, agentId: 'nexus-home' });
+        await new Promise((resolve, reject) => {
+          const req = _http.request({
+            hostname: '127.0.0.1', port: parseInt(cgWire.split(':').pop()) || 7704,
+            path: '/open', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+            timeout: 3000,
+          }, r => { r.resume(); resolve(); });
+          req.on('error', reject);
+          req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+          req.write(body); req.end();
+        });
+        ledgerWrite('orchestrator', 'orchestrator.ui.opened', { url: uiUrl, via: 'clear-glass' });
+        console.log(`[nexus] UI opened in Clear Glass: ${uiUrl}`);
+        return;
+      } catch (_) {
+        console.log(`[nexus] Clear Glass wire :7704 unavailable — falling back to system browser`);
+      }
+
+      // Fallback: system browser
+      const spawn   = spawnChild;
       const openers = [
-        ['cmd',      ['/c', 'start', '', uiUrl]],
-        ['open',     [uiUrl]],
+        ['cmd', ['/c', 'start', '', uiUrl]],
+        ['open', [uiUrl]],
         ['xdg-open', [uiUrl]],
-        ['wslview',  [uiUrl]],
       ];
       for (const [bin, args] of openers) {
         try {
           const proc = spawn(bin, args, { detached: true, stdio: 'ignore', shell: bin === 'cmd' });
           proc.on('error', () => {});
           proc.unref();
-          ledgerWrite('orchestrator', 'orchestrator.ui.opened', { url: uiUrl });
+          ledgerWrite('orchestrator', 'orchestrator.ui.opened', { url: uiUrl, via: 'system-browser' });
           return;
         } catch (_) {}
       }
@@ -2511,53 +2539,6 @@ try {
   const VERSION = '3.0.0';
   ledgerWrite('orchestrator','orchestrator.booted',{ version:VERSION, port:PORT });
   startWatchdog();
-
-  // ── COS enforcement bus wiring — 2026-07-02 ──────────────────────────────
-  // COS BoundaryIndex now monitors live events from the nexus bus.
-  // Uses the inline CJS-compatible invariant check from raid/simulation.js
-  // (the ESM enforcement module requires dynamic import — deferred to Phase 6).
-  // This gives us I-1/I-2 (UUID integrity), C-1 (causal edges), T-1 (timestamps),
-  // H-1 (source presence) on every event, immediately, with no new dependencies.
-  if (nexusBus) {
-    const _cosInvariantCheck = (() => {
-      try { return require('./cortex/core/raid/simulation').classifyFault; } catch(_) { return null; }
-    })();
-    if (_cosInvariantCheck) {
-      nexusBus.on('*', (ev) => {
-        if (!ev || !ev.type) return;
-        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        // Only check events that carry an id field (not all bus events do)
-        if (ev.id && !UUID_RE.test(ev.id)) {
-          ledgerWrite('orchestrator', 'cos.invariant.I-1', {
-            detail: `non-UUID event id on ${ev.type}: ${ev.id}`,
-            severity: 'warn',
-          });
-        }
-        if (ev.causedBy && !ev.edgeType) {
-          ledgerWrite('orchestrator', 'cos.invariant.C-1', {
-            detail: `causedBy without edgeType on ${ev.type}`,
-            severity: 'warn',
-          });
-        }
-      });
-      console.log('[orchestrator] COS invariant monitoring wired to nexus-bus');
-    }
-  }
-
-  // ── RFR2 delta + enforcement wired to nexus-bus — 2026-07-02 ─────────────
-  // §nexus-intelligence-system.spec Gap 1: "measurement layer not receiving events."
-  // lib/rfr2-bus-bridge.js subscribes to '*' and feeds every event through
-  // computeEventDelta() (S-field/C-field) and enforcement invariant checks.
-  // Results emit as rfr2.delta.signal and rfr2.enforcement.violation — the
-  // intelligence layer's L1 measurement path now has live data.
-  try {
-    const rfr2Bridge = require('./lib/rfr2-bus-bridge');
-    rfr2Bridge.attach(nexusBus);
-  } catch(e) {
-    _log(`[orchestrator] rfr2-bus-bridge failed to attach: ${e.message}`);
-  }
-
-
 
   // ── Start pulse self-registration ─────────────────────────────────────────
   // Orchestrator registers itself as a system in its own registry so the UI

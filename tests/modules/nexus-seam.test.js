@@ -15,8 +15,8 @@ function test(desc, fn) {
   catch(e) { console.error(`  ✗ ${desc}\n    ${e.message}`); failed++; }
 }
 
-const seam = require('/home/claude/nexus_29/lib/seam/index.js');
-const { Detector } = require('/home/claude/nexus_29/lib/seam/detector.js');
+const seam = require('/home/claude/nexus_new/lib/seam/index.js');
+const { Detector } = require('/home/claude/nexus_new/lib/seam/detector.js');
 
 // ── lib/seam exports ─────────────────────────────────────────────────────────
 
@@ -93,8 +93,7 @@ test('SEAM-10 Detector.delta returns score for axiom checking', () => {
 
 test('SEAM-11 guardian server imports from lib/seam (not its own lib/)', () => {
   const src = require('fs').readFileSync(
-    '/home/claude/nexus_29/guardian/server.js', 'utf8');
-  // After the move, guardian should require lib/seam not ./lib/seam-queue
+    '/home/claude/nexus_new/guardian/server.js', 'utf8');
   assert.ok(src.includes("require('../lib/seam/queue.js')"),
     'guardian must require SEAM from lib/seam/queue.js');
   assert.ok(!src.includes("require('./lib/seam-queue')"),
@@ -103,7 +102,7 @@ test('SEAM-11 guardian server imports from lib/seam (not its own lib/)', () => {
 
 test('SEAM-12 ollama server has SEAM Detector integration', () => {
   const src = require('fs').readFileSync(
-    '/home/claude/nexus_29/ollama/server.js', 'utf8');
+    '/home/claude/nexus_new/ollama/server.js', 'utf8');
   assert.ok(src.includes("require('../lib/seam/detector.js')"),
     'ollama must require SEAM detector from lib/seam/');
   assert.ok(src.includes('seamScore'), 'ollama must write seamScore on jobs');

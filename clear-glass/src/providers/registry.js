@@ -18,7 +18,7 @@ const NCP_PROVIDERS = {
     name:           'Claude',
     url:            'https://claude.ai',
     hosts:          ['claude.ai'],
-    userscriptFile: 'userscripts/claude.js',
+    userscriptFile: 'userscript-claude.js',
     color:          '#cc785c',
   },
   chatgpt: {
@@ -26,7 +26,7 @@ const NCP_PROVIDERS = {
     name:           'ChatGPT',
     url:            'https://chatgpt.com',
     hosts:          ['chatgpt.com', 'chat.openai.com'],
-    userscriptFile: 'userscripts/chatgpt.js',
+    userscriptFile: 'userscript-chatgpt.js',
     color:          '#19c37d',
   },
   gemini: {
@@ -34,7 +34,7 @@ const NCP_PROVIDERS = {
     name:           'Gemini',
     url:            'https://gemini.google.com',
     hosts:          ['gemini.google.com', 'aistudio.google.com'],
-    userscriptFile: 'userscripts/gemini.js',
+    userscriptFile: 'userscript-gemini.js',
     color:          '#4285f4',
   },
   perplexity: {
@@ -42,7 +42,7 @@ const NCP_PROVIDERS = {
     name:           'Perplexity',
     url:            'https://www.perplexity.ai',
     hosts:          ['www.perplexity.ai', 'perplexity.ai'],
-    userscriptFile: 'userscripts/perplexity.js',
+    userscriptFile: 'userscript-perplexity.js',
     color:          '#20b2aa',
   },
 };

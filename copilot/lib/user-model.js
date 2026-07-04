@@ -95,7 +95,7 @@ function _getJaa() {
   if (_jaa) return _jaa;
   // Lazy load — supports test environments that mock jaa-db directly
   try {
-    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const { jaaDB } = require('../../cortex/memory/jaa-db');
     // Only return if the singleton is opened and ready
     if (jaaDB && typeof jaaDB.query === 'function') return jaaDB;
     return null;
@@ -478,7 +478,7 @@ function validateWiring() {
   const jaaOk = !!jaa;
   let taxonomyOk = false;
   try { require('../../lib/open-loop-taxonomy'); taxonomyOk = true; } catch(_) {
-    try { require('./open-loop-taxonomy'); taxonomyOk = true; } catch(_) {}
+    try { require('../../lib/open-loop-taxonomy'); taxonomyOk = true; } catch(_) {}
   }
   return { ok: jaaOk, jaa: jaaOk, taxonomy: taxonomyOk };
 }
