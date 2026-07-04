@@ -159,6 +159,16 @@
       "version": "1.4.0",
       "uuid": "nexus-loom-map-warp.dispatch.benchmark-v1-0000-2026-0701-jamesbrooks-001",
       "registeredAt": 1782980143385
+    },
+    "test.component.smoke": {
+      "uuid": "test-component-smoke-0001",
+      "id": "test.component.smoke",
+      "kind": "component",
+      "comp_type": "test",
+      "namespace": "test",
+      "name": "smoke-test",
+      "version": "1.0.0",
+      "registeredAt": 1783205299141
     }
   },
   "seam": {},

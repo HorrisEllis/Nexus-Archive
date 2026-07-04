@@ -165,7 +165,12 @@ function createVaultdServer(opts) {
 // Allow running directly: `node vaultd/server.js <port> <stateFile> <mapFile>`
 // — exactly how vaultd/daemon.js spawns it as a detached child.
 if (require.main === module) {
-  const requestedPort = parseInt(process.argv[2], 10) || 3750;
+  // §BUGFIX 2026-07-04: was defaulting to 3750 — the same port sovereign
+  // copilot runs on (copilot/server.js, confirmed this session). Two real
+  // services claiming the same default port. Moved to 3760, matching what
+  // other generated systems (e.g. clearglass-accounts, built via
+  // loom/templates/system-scaffold.js) already assume vaultd's port to be.
+  const requestedPort = parseInt(process.argv[2], 10) || 3760;
   const stateFile = process.argv[3] || undefined;
   const mapFile = process.argv[4] || undefined;
   const server = createVaultdServer({ port: requestedPort, stateFile, mapFile });

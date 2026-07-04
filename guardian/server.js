@@ -1254,8 +1254,11 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
   const { BootSequence } = require('../lib/boot-sequence');
   const nc2 = require('../nexus-connect');
 
+  // §BUGFIX 2026-07-04: was a hardcoded '3.6.1' here, independent of
+  // lib/version.js's registry — sourcing from it directly now.
+  const { services: _svc } = require('../lib/version');
   const seq = new BootSequence({
-    systemId: 'guardian', port: HTTP_PORT, version: '3.6.1',
+    systemId: 'guardian', port: HTTP_PORT, version: _svc.guardian,
     label: 'Nexus Guardian', maxRetries: 1,
   });
 

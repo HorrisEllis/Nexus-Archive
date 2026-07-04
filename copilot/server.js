@@ -59,7 +59,9 @@ const _lifeline    = require('./lifeline');
 const _modBuilder  = require('./module-builder');
 const _rDiagnose   = require('./recursive-diagnose');
 const SYSTEM_ID = 'copilot';
-const VERSION   = '3.0.0';
+// §BUGFIX 2026-07-04: was a hardcoded '3.0.0', independent of
+// lib/version.js's registry — sourcing from it now.
+const VERSION   = require('../lib/version').services.copilot;
 
 // ── CONTINUOUS STREAM — the co-pilot's consciousness ─────────────────────────
 const _stream = [];
@@ -236,7 +238,11 @@ async function _injectSessionHistory(session, contextText) {
 async function _dispatchToOllama(prompt, context, opts = {}) {
   return _post(`${OL_URL}/api/jobs`, {
     prompt:      `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-    model:       opts.model || 'mistral:7b',
+    // §BUGFIX 2026-07-04: was hardcoded to 'mistral:7b' (ollama-bridge's
+    // FALLBACK_MODEL) instead of leaving it unset so ollama-bridge's real
+    // DEFAULT_MODEL (qwen2.5-coder:7b, what the CLI tells users to pull)
+    // applies. See lifeline.js's matching fix for the full explanation.
+    ...(opts.model ? { model: opts.model } : {}),
     intent:      opts.intent || 'ask',
     componentId: 'copilot.prompt',
     hookId:      'copilot.prompt.to-ollama',

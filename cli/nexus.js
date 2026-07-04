@@ -198,7 +198,7 @@ ${C.bold}Examples:${C.reset}
   nexus /cockpit seam compile spec.md
   nexus /cortex ask "what gaps are open?"
   nexus /idearium idea add "build something new"
-  nexus /ollama pull qwen2.5-coder:7b
+  nexus /ollama pull qwen2.5-coder:1.5b
   nexus /ollama run "explain this code"
 
 Flags: ${C.muted}--json${C.reset} (raw JSON output on any command)

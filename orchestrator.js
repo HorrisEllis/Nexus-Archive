@@ -228,7 +228,7 @@ const CLI_REF = {
     { cmd:'nexus /cortex ask "question"',           desc:'Ask cortex' },
     { cmd:'nexus /idearium idea add "text"',        desc:'Add idea' },
     { cmd:'nexus /idearium spec new <uuid>',        desc:'Create spec' },
-    { cmd:'nexus /ollama pull qwen2.5-coder:7b',    desc:'Pull model' },
+    { cmd:'nexus /ollama pull qwen2.5-coder:1.5b',    desc:'Pull model' },
     { cmd:'nexus /ollama run "prompt"',             desc:'Run inference' },
   ],
 };
@@ -2253,8 +2253,13 @@ server.listen(PORT, BIND_HOST, async () => {
   // ════════════════════════════════════════════════════════════════════════════
   // ORCHESTRATOR OWN BOOT SEQUENCE (§AXIOM — starts first)
   // ════════════════════════════════════════════════════════════════════════════
+  // §BUGFIX 2026-07-04: was a hardcoded '2.0.0' here, independent of
+  // lib/version.js's VERSION.services.orchestrator — the two happened to
+  // agree by coincidence, not by construction. Sourcing from the registry
+  // means this can't silently drift from it again.
+  const NEXUS_VERSION = require('./lib/version');
   const ownSeq = new BootSequence({
-    systemId: 'orchestrator', port: PORT, version: '2.0.0',
+    systemId: 'orchestrator', port: PORT, version: NEXUS_VERSION.services.orchestrator,
     label: 'Nexus Orchestrator', maxRetries: 1,
   });
 
@@ -2416,19 +2421,30 @@ try {
         req.write(body); req.end();
       });
       let opened = false;
-      for (let attempt = 0; attempt < 8 && !opened; attempt++) {
+      // §BUGFIX 2026-07-04: was 8 attempts x 2s = 16s total. Clear Glass's
+      // real boot sequence (SSE :7701, IPC :7702, TLS proxy :7703, THEN 4
+      // provider tabs loading sequentially, THEN the wire server :7704)
+      // routinely takes longer than that on a real machine — so this
+      // retry loop was giving up and falling back to the system browser
+      // moments before Clear Glass would have succeeded on its own,
+      // producing two genuinely different "open NEXUS" triggers (Clear
+      // Glass's own default boot window, plus this fallback) instead of
+      // one. 20 attempts x 3s = 60s gives real, comfortable margin.
+      const MAX_ATTEMPTS = 20;
+      const RETRY_DELAY_MS = 3000;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS && !opened; attempt++) {
         try {
-          if (attempt > 0) await new Promise(r => setTimeout(r, 2000));
+          if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
           await _tryOpen();
           opened = true;
           ledgerWrite('orchestrator', 'orchestrator.ui.opened', { url: uiUrl, via: 'clear-glass' });
           console.log(`[nexus] UI opened in Clear Glass: ${uiUrl} (attempt ${attempt + 1})`);
         } catch (_) {
-          console.log(`[nexus] Clear Glass :${cgPort} not ready yet (attempt ${attempt + 1}/8)...`);
+          console.log(`[nexus] Clear Glass :${cgPort} not ready yet (attempt ${attempt + 1}/${MAX_ATTEMPTS})...`);
         }
       }
       if (opened) return;
-      console.log(`[nexus] Clear Glass didn't start — falling back to system browser`);
+      console.log(`[nexus] Clear Glass didn't start after ${MAX_ATTEMPTS * RETRY_DELAY_MS / 1000}s — falling back to system browser`);
 
       // Fallback: system browser
       const spawn   = spawnChild;

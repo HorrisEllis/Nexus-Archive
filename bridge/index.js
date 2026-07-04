@@ -38,7 +38,9 @@ const { createBridgeServer, BRIDGE_PORT } = require('./server');
 const ROOT       = path.join(__dirname, '..');
 const DATA_DIR   = path.join(ROOT, 'data', 'bridge');
 const LEDGER_DIR = process.env.BRIDGE_LEDGER_DIR || path.join(DATA_DIR, 'ledger');
-const VERSION    = '3.0.0';
+// §BUGFIX 2026-07-04: was a hardcoded '3.0.0', independent of
+// lib/version.js's registry — sourcing from it now.
+const VERSION    = require('../lib/version').services.bridge;
 
 let ledger, identity, registry, router, server, cfrLedger;
 

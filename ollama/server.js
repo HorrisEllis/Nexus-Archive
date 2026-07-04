@@ -23,8 +23,20 @@ const ORCH_URL     = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000';
 const CX_URL       = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
 const DATA_DIR     = path.join(__dirname, '..', 'data', 'ollama');
 const MAX_CONCURRENT = parseInt(process.env.OLLAMA_MAX_CONCURRENT || '3');
-const DEFAULT_MODEL  = process.env.OLLAMA_DEFAULT_MODEL || 'qwen2.5-coder:7b';
-const FALLBACK_MODEL = process.env.OLLAMA_FALLBACK_MODEL || 'mistral:7b';
+// §BUGFIX 2026-07-04: was 'qwen2.5-coder:7b' / 'mistral:7b' — neither tag
+// is what's actually installed (confirmed via a screenshot of the real
+// Ollama app's model list: mistral:7b-instruct-q4_K_M and
+// qwen2.5-coder:1.5b are the two present, nothing else local). Every
+// Ollama call this codebase makes was requesting a model that was never
+// pulled, silently failing, and falling through to whatever came next —
+// this is very likely why co-pilot "never worked once." Aligned to the
+// same two tags five other files already independently agreed on:
+// guardian/server.js's MISTRAL_MODEL, idearium/agent-suite/index.js,
+// loom/agent-suite/index.js, lib/context-builder.js (its own mistral
+// default), and cli/nexus-repl.js (which already calls qwen2.5-coder:1.5b
+// "the NEXUS reasoning layer"). This file was the one outlier, not them.
+const DEFAULT_MODEL  = process.env.OLLAMA_DEFAULT_MODEL || 'qwen2.5-coder:1.5b';
+const FALLBACK_MODEL = process.env.OLLAMA_FALLBACK_MODEL || 'mistral:7b-instruct-q4_K_M';
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
 

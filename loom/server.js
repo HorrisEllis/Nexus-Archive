@@ -28,14 +28,27 @@
 const http = require('http');
 const { LoomDriver } = require('./schema/index');
 const { LoomContracts } = require('./contracts/index');
+// §BUGFIX 2026-07-04: this module was built earlier this session
+// specifically to give LOOM a durable write path into cortex — and then
+// never actually connected to anything. Wiring it in now: every real
+// registry mutation below also records through here.
+const cortexSync = require('./schema/cortex-sync');
 
 const SYSTEM_ID = 'loom';
 const PORT      = parseInt(process.env.LOOM_PORT || '3752');
 const OR_URL    = process.env.ORCH_URL || 'http://127.0.0.1:9000';
-const VERSION   = '1.0.0';
+// §2026-07-04: sourced from the central registry from day one, unlike the
+// other systems this session found drifted — loom is new enough to just
+// do it right rather than fix it twice.
+const VERSION   = require('../lib/version').services.loom;
 
 const driver    = new LoomDriver();
 const contracts = new LoomContracts();
+const _sseClients = new Set();
+function _broadcast(type, payload) {
+  const line = `data: ${JSON.stringify({ type, ...payload, ts: Date.now() })}\n\n`;
+  for (const res of _sseClients) { try { res.write(line); } catch (_) { _sseClients.delete(res); } }
+}
 
 function json(res, code, body) {
   const s = JSON.stringify(body);
@@ -58,6 +71,17 @@ const server = http.createServer(async (req, res) => {
   const method = req.method;
 
   try {
+    if (method === 'GET' && p === '/events') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*',
+      });
+      res.write(`data: ${JSON.stringify({ type: 'loom.connected', ts: Date.now() })}\n\n`);
+      _sseClients.add(res);
+      req.on('close', () => _sseClients.delete(res));
+      return;
+    }
+
     if (method === 'GET' && p === '/health') {
       return json(res, 200, { ok: true, systemId: SYSTEM_ID, version: VERSION });
     }
@@ -89,6 +113,10 @@ const server = http.createServer(async (req, res) => {
       const kind = p.split('/')[3];
       const payload = await readBody(req);
       const result = driver.declare(kind, payload);
+      if (result.ok !== false) {
+        cortexSync.record('add', kind, payload);
+        _broadcast('loom.registry.declared', { kind, id: payload?.id });
+      }
       return json(res, result.ok === false ? 409 : 200, result);
     }
 
@@ -99,22 +127,33 @@ const server = http.createServer(async (req, res) => {
     // ── Contracts (LoomContracts) ────────────────────────────────────────
     if (method === 'POST' && p === '/api/contracts') {
       const body = await readBody(req);
-      try { return json(res, 200, { ok: true, contract: contracts.openContract(body) }); }
-      catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      try {
+        const contract = contracts.openContract(body);
+        cortexSync.record('contract-open', 'contract', contract);
+        _broadcast('loom.contract.opened', { id: contract?.id, componentId: body?.componentId });
+        return json(res, 200, { ok: true, contract });
+      } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
     }
 
     if (method === 'POST' && /^\/api\/contracts\/[^/]+\/handoff$/.test(p)) {
       const id = p.split('/')[3];
       const body = await readBody(req);
-      try { return json(res, 200, { ok: true, contract: contracts.recordHandoff(id, body) }); }
-      catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      try {
+        const contract = contracts.recordHandoff(id, body);
+        _broadcast('loom.contract.handoff', { id });
+        return json(res, 200, { ok: true, contract });
+      } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
     }
 
     if (method === 'POST' && /^\/api\/contracts\/[^/]+\/close$/.test(p)) {
       const id = p.split('/')[3];
       const body = await readBody(req);
-      try { return json(res, 200, { ok: true, contract: contracts.closeContract(id, body) }); }
-      catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      try {
+        const contract = contracts.closeContract(id, body);
+        cortexSync.record('contract-close', 'contract', contract);
+        _broadcast('loom.contract.closed', { id, status: contract?.status });
+        return json(res, 200, { ok: true, contract });
+      } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
     }
 
     json(res, 404, { ok: false, error: 'not found' });

@@ -30,4 +30,14 @@ const RUNTIME_MAP = new Map(RUNTIMES.map(r => [r.id, r]));
 
 const RUNTIME_IDS = Object.freeze(RUNTIMES.map(r => r.id));
 
-module.exports = Object.freeze({ RUNTIMES, RUNTIME_MAP, RUNTIME_IDS });
+// §BUGFIX 2026-07-04: cos/archetype/schema.js has required isKnownRuntimeId
+// from this file since before this checkout — it was never defined here,
+// only RUNTIMES/RUNTIME_MAP/RUNTIME_IDS were. That's a require()-time crash
+// in archetype/schema.js, which crashes archetype/registry.js at require()
+// time, which crashes cos/cli/index.js at require() time — every single
+// `cos` CLI command failed before argument parsing ever ran.
+function isKnownRuntimeId(id) {
+  return RUNTIME_IDS.includes(id);
+}
+
+module.exports = Object.freeze({ RUNTIMES, RUNTIME_MAP, RUNTIME_IDS, isKnownRuntimeId });

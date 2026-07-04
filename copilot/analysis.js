@@ -171,7 +171,10 @@ async function _callOllama(prompt, context, opts = {}) {
   try {
     const job = await _post(`${OL_URL}/api/jobs`, {
       prompt:      `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-      model:       opts.model || 'mistral:7b',
+      // §BUGFIX 2026-07-04: same fix as lifeline.js/server.js — was forcing
+      // 'mistral:7b' instead of leaving it unset for ollama-bridge's real
+      // default to apply.
+      ...(opts.model ? { model: opts.model } : {}),
       intent:      opts.intent || 'ask',
       componentId: 'copilot.analysis',
       hookId:      'copilot.analysis.to-ollama',

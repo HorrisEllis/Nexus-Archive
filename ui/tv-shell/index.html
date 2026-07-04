@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/ui/tv-shell/spotlight/spotlight.css">
 <!-- §fix 2026-07-04: Google Fonts blocked in Electron webviews and offline.
      Replaced with system font stack that renders identically at these sizes. -->
-<link rel="stylesheet" href="tv-shell.css">
+<link rel="stylesheet" href="/ui/tv-shell/tv-shell.css">
 <script src="/ui/lib/api.js"></script>
 </head>
 <body>
@@ -1482,7 +1482,16 @@ async function _bridgeDispatch(target, type, payload, timeout=30000) {
     body: JSON.stringify({ type, source: 'tv-shell', target, payload, tags: ['tv-shell', target] }),
     signal: AbortSignal.timeout(timeout),
   });
-  if (!r.ok) throw new Error(`Bridge ${target} HTTP ${r.status}`);
+  if (!r.ok) {
+    // §BUGFIX 2026-07-04: same bug as Clear Glass's copilot bridge.js —
+    // independently implemented here, fixed there, never fixed here.
+    // Bridge's validateRequest() puts the real reason in the response
+    // body (e.g. "unknown type: X"); this used to discard it and only
+    // report the bare status code.
+    let detail = '';
+    try { const errBody = await r.json(); detail = errBody?.errors?.join('; ') || errBody?.error || ''; } catch (_) {}
+    throw new Error(`Bridge ${target} HTTP ${r.status}${detail ? ' — ' + detail : ''}`);
+  }
   const data = await r.json();
   if (!data.ok) throw new Error(data.error || 'Bridge error');
   return data.result?.response ?? data.result ?? data;
@@ -1956,80 +1965,15 @@ async function asSend(){
     return;
   }
 
-  // ── System mode: grammar engine → Guardian copilot ──────────────────────────
-  // Pass current channel context + live UI state to co-pilot
-  let uiSnapshot = null;
-  try { uiSnapshot = JSON.parse(window.NEXUS_UI_STATE.snapshot()); } catch(_) {}
-  const cp = await post(`${B.orch}/api/guardian/copilot/prompt`, {
-    prompt: q,
-    channel: CH_META[curCh]?.id || 'ch-overview',
-    channelName: CH_META[curCh]?.name || 'Overview',
-    uiState: uiSnapshot,
-    contextOpts: { intent: q },
-  });
-
-  out.textContent = '';
-
-  if(cp === null){
-    out.style.color='rgba(255,100,100,.8)';
-    out.textContent='Orchestrator unreachable (:9000), or co-pilot (:3750) failed. Is NEXUS running?';
-    return;
-  }
-
-  if(!cp.ok){
-    out.style.color='rgba(255,100,100,.8)';
-    out.textContent = cp.denied
-      ? `RAID denied: ${cp.reason}`
-      : `Error: ${cp.error || 'request failed'}`;
-    return;
-  }
-
-  // Execute any UI instructions from co-pilot (spotlight, steps, navigation)
-  if (cp.ui) CP.exec(cp.ui, cp.text);
-
-  // Navigation shortcut — co-pilot says "go to channel X"
-  if (cp.action === 'navigate' && cp.ui?.command === 'tuneById') {
-    const navId = cp.ui.arg;
-    const navIdx = CH_META.findIndex(c => c.id === navId);
-    if (navIdx !== -1) {
-      out.style.color='rgba(150,220,180,.9)';
-      out.textContent = cp.text || 'Navigating…';
-      setTimeout(() => tune(navIdx), 350);
-      return;
-    }
-  }
-
-  // Main response
-  out.style.color='rgba(200,220,210,.92)';
-  out.textContent = cp.text || 'No response.';
-
-  // If co-pilot spotlighted something, briefly scroll it into view
-  if (cp.ui?.spotlight) {
-    const name = Array.isArray(cp.ui.spotlight) ? cp.ui.spotlight[0] : cp.ui.spotlight;
-    const el = document.getElementById(name) || document.getElementById(
-      {'guardian':'tile-gd','cortex':'tile-cx','idearium':'tile-idr',
-       'orchestrator':'tile-orch','bridge':'tile-br','diagnostic':'tile-dg'}[name]);
-    if (el) el.scrollIntoView({ behavior:'smooth', block:'nearest' });
-  }
-
-  // RAID decision — always explicit, never hidden
-  if(cp.classification){
-    const c = cp.classification;
-    const raidEl = document.createElement('div');
-    raidEl.style.cssText='font-size:10px;opacity:.45;margin-top:6px;font-family:monospace;border-top:1px solid rgba(255,255,255,.07);padding-top:4px';
-    const parts = [`RAID → ${c.intent}`];
-    if(c.tool) parts.push(`tool:${c.tool}`);
-    if(c.confidence) parts.push(`confidence:${(c.confidence*100).toFixed(0)}%`);
-    if(cp.modelUsed) parts.push(`model:${cp.modelUsed}`);
-    if(cp.systemState) parts.push(`gaps:${cp.systemState.gapCount} jobs:${cp.systemState.jobCount}`);
-    raidEl.textContent = parts.join(' · ');
-    out.appendChild(raidEl);
-  } else if(cp.modelUsed){
-    const m = document.createElement('div');
-    m.style.cssText='font-size:10px;opacity:.35;margin-top:4px;font-family:monospace';
-    m.textContent = `via ${cp.modelUsed}`;
-    out.appendChild(m);
-  }
+  // §DEADCODE 2026-07-04: everything below this point used to be the
+  // 'system mode' branch (orchestrator-proxy dispatch, identical to what
+  // ui/home/index.html's copilot.js now uses). The copilot-mode branch
+  // above always returns, and _asMode is permanently 'copilot' since the
+  // SYSTEM CONSOLE / CO-PILOT toggle was removed — this ~75 lines could
+  // never execute. Removed rather than left as dead weight. If tv-shell's
+  // Bridge-dispatch path and ui/home's orchestrator-proxy path should be
+  // unified into one shared module, that's a real decision to make
+  // explicitly, not something to guess at while deleting unreachable code.
 }
 
 

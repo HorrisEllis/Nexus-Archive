@@ -384,30 +384,41 @@ async function _startWire() {
         const { url: openUrl, agentId: openAgent } = parsed;
         if (!openUrl) { res.writeHead(400); return res.end(JSON.stringify({ error: 'url required' })); }
         try {
-          if (!openAgent) {
-            let targetOrigin = null;
-            try { targetOrigin = new URL(openUrl).origin; } catch (_) {}
-            if (targetOrigin) {
-              for (const [wid, win] of windows) {
-                if (win.isDestroyed()) continue;
-                let currentOrigin = null;
-                try { currentOrigin = new URL(win.webContents.getURL()).origin; } catch (_) {}
-                if (currentOrigin === targetOrigin) {
-                  win.show(); win.focus();
-                  return res.end(JSON.stringify({ ok: true, agentId: wid, url: openUrl, reused: true }));
-                }
+          // §BUGFIX 2026-07-04 (round 2): the previous fix here only ran
+          // when NO agentId was passed — but orchestrator's real boot call
+          // always sends agentId:'nexus-home' explicitly (checked the
+          // actual caller this time, not assumed). That guard meant this
+          // entire origin-check/reuse block was dead code for the one
+          // call that actually mattered — the boot-time open always fell
+          // straight through to openAgentWindow() with a brand-new
+          // agentId, creating a second real window every single time.
+          // Removed the guard: check for an existing window on this
+          // origin FIRST, always, regardless of what agentId (if any)
+          // the caller asked for.
+          let targetOrigin = null;
+          try { targetOrigin = new URL(openUrl).origin; } catch (_) {}
+          if (targetOrigin) {
+            for (const [wid, win] of windows) {
+              if (win.isDestroyed()) continue;
+              let currentOrigin = null;
+              try { currentOrigin = new URL(win.webContents.getURL()).origin; } catch (_) {}
+              if (currentOrigin === targetOrigin) {
+                win.show(); win.focus();
+                return res.end(JSON.stringify({ ok: true, agentId: wid, url: openUrl, reused: true }));
               }
             }
-            // Boot race: the default window opens at about:blank (or
-            // whatever defaultStartUrl is) before this wire call ever
-            // arrives, so the origin check above can't match it yet.
-            // Navigate it in place instead of opening a second window.
-            const defaultWin = windows.get('default');
-            if (defaultWin && !defaultWin.isDestroyed()) {
-              defaultWin.webContents.send('cg:navigate', openUrl);
-              defaultWin.show(); defaultWin.focus();
-              return res.end(JSON.stringify({ ok: true, agentId: 'default', url: openUrl, navigated: true }));
-            }
+          }
+          // Boot race: the default window opens at about:blank (or
+          // whatever defaultStartUrl is) before this wire call ever
+          // arrives, so the origin check above can't match it yet.
+          // Navigate it in place instead of opening a second window —
+          // regardless of what agentId this specific /open call asked
+          // for, 'default' is the one real window that already exists.
+          const defaultWin = windows.get('default');
+          if (defaultWin && !defaultWin.isDestroyed()) {
+            defaultWin.webContents.send('cg:navigate', openUrl);
+            defaultWin.show(); defaultWin.focus();
+            return res.end(JSON.stringify({ ok: true, agentId: 'default', url: openUrl, navigated: true }));
           }
           const aid = openAgent || `nexus-${Date.now()}`;
           openAgentWindow({ agentId: aid, url: openUrl }).catch(() => {});
@@ -791,6 +802,17 @@ function _handleOrchestratorEvent(ev, copilot, busEmit) {
         try { currentOrigin = new URL(win.webContents.getURL()).origin; } catch (_) {}
         if (currentOrigin === targetOrigin) { win.show(); win.focus(); return; }
       }
+    }
+    // §BUGFIX 2026-07-04 (round 2): this was missing the same
+    // default-window-navigate tier the /open HTTP handler needed — the
+    // origin check above can't match the default window while it's still
+    // showing about:blank, so this always fell through to creating a
+    // genuinely new window. Same fix as /open, applied here too.
+    const defaultWin = windows.get('default');
+    if (defaultWin && !defaultWin.isDestroyed()) {
+      defaultWin.webContents.send('cg:navigate', ev.url);
+      defaultWin.show(); defaultWin.focus();
+      return;
     }
     openAgentWindow({ agentId: randomUUID(), url: ev.url })
       .catch(e => console.warn('[ClearGlass] open failed:', e.message));

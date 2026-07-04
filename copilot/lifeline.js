@@ -106,7 +106,17 @@ async function _tryOllama(prompt, opts = {}) {
     // Submit job
     const job = await _post(`${OL_URL}/api/jobs`, {
       prompt,
-      model:       opts.model || 'mistral:7b',
+      // §BUGFIX 2026-07-04: was hardcoded to 'mistral:7b' — ollama-bridge's
+      // own FALLBACK_MODEL, not its DEFAULT_MODEL (qwen2.5-coder:7b, the
+      // one the CLI's own onboarding tells users to `ollama pull`). If a
+      // user only pulled the documented default, every co-pilot job ever
+      // submitted requested a model that was never installed and failed
+      // silently — _tryOllama() catches everything and returns null, so
+      // this always looked like "falling through to Guardian," never like
+      // an error. Omitting model here lets ollama-bridge apply its own
+      // real default/fallback chain instead of a copy of one string here
+      // permanently frozen out of sync with the other.
+      ...(opts.model ? { model: opts.model } : {}),
       intent:      opts.intent || 'ask',
       componentId: 'copilot.lifeline',
       hookId:      'copilot.lifeline.ollama',

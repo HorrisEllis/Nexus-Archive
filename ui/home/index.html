@@ -7,8 +7,9 @@
 <link rel="stylesheet" href="/ui/themes/nexus-dark.css">
 <link rel="stylesheet" href="/ui/tv-shell/spotlight/spotlight.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="/ui/home/home.css">
 <script src="/ui/lib/api.js"></script>
+<script src="/ui/copilot/copilot.js"></script>
 </head>
 <body>
 <canvas id="void"></canvas>
@@ -1478,10 +1479,10 @@ async function runDiagEngines(){
 }
 
 // ── Assistant with grammar engine ─────────────────────────────────────────────
-const asHist=[];let asIdx=-1;
+// asHist/asIdx moved into ui/copilot/copilot.js — CoPilot.navigateHistory()
 document.getElementById('assistant-in').addEventListener('keydown',e=>{
-  if(e.key==='ArrowUp'){asIdx=Math.min(asIdx+1,asHist.length-1);e.target.value=asHist[asIdx]||'';e.preventDefault()}
-  if(e.key==='ArrowDown'){asIdx=Math.max(asIdx-1,-1);e.target.value=asIdx>=0?asHist[asIdx]:'';e.preventDefault()}
+  if(e.key==='ArrowUp'){e.target.value=CoPilot.navigateHistory('up');e.preventDefault()}
+  if(e.key==='ArrowDown'){e.target.value=CoPilot.navigateHistory('down');e.preventDefault()}
 });
 
 // ── Causal Graph ─────────────────────────────────────────────────────────────
@@ -1869,99 +1870,11 @@ if (typeof CP === 'undefined') {
 
 document.addEventListener('DOMContentLoaded', () => typeof CP !== 'undefined' && CP.init());
 
-async function asSend(){
-  const inp = document.getElementById('assistant-in');
-  const q   = inp.value.trim(); if(!q) return;
-  asHist.unshift(q); asIdx=-1; inp.value='';
-
-  const out = document.getElementById('assistant-out');
-  out.style.display='block';
-  out.style.color='rgba(200,220,210,.8)';
-  out.textContent='';
-
-  // clear is the only client-side command — everything else goes to co-pilot
-  if(q.toLowerCase()==='clear'){ out.style.display='none'; return; }
-
-  // Show thinking indicator
-  const thinking = document.createElement('span');
-  thinking.textContent = '…';
-  thinking.style.cssText='opacity:.4;font-style:italic';
-  out.appendChild(thinking);
-
-  // Pass current channel context + live UI state to co-pilot
-  let uiSnapshot = null;
-  try { uiSnapshot = JSON.parse(window.NEXUS_UI_STATE.snapshot()); } catch(_) {}
-  const cp = await post(`${B.orch}/api/guardian/copilot/prompt`, {
-    prompt: q,
-    channel: CH_META[curCh]?.id || 'ch-overview',
-    channelName: CH_META[curCh]?.name || 'Overview',
-    uiState: uiSnapshot,
-    contextOpts: { intent: q },
-  });
-
-  out.textContent = '';
-
-  if(cp === null){
-    out.style.color='rgba(255,100,100,.8)';
-    out.textContent='Orchestrator unreachable (:9000), or co-pilot (:3750) failed. Is NEXUS running?';
-    return;
-  }
-
-  if(!cp.ok){
-    out.style.color='rgba(255,100,100,.8)';
-    out.textContent = cp.denied
-      ? `RAID denied: ${cp.reason}`
-      : `Error: ${cp.error || 'request failed'}`;
-    return;
-  }
-
-  // Execute any UI instructions from co-pilot (spotlight, steps, navigation)
-  if (cp.ui) CP.exec(cp.ui, cp.text);
-
-  // Navigation shortcut — co-pilot says "go to channel X"
-  if (cp.action === 'navigate' && cp.ui?.command === 'tuneById') {
-    const navId = cp.ui.arg;
-    const navIdx = CH_META.findIndex(c => c.id === navId);
-    if (navIdx !== -1) {
-      out.style.color='rgba(150,220,180,.9)';
-      out.textContent = cp.text || 'Navigating…';
-      setTimeout(() => tune(navIdx), 350);
-      return;
-    }
-  }
-
-  // Main response
-  out.style.color='rgba(200,220,210,.92)';
-  out.textContent = cp.text || 'No response.';
-
-  // If co-pilot spotlighted something, briefly scroll it into view
-  if (cp.ui?.spotlight) {
-    const name = Array.isArray(cp.ui.spotlight) ? cp.ui.spotlight[0] : cp.ui.spotlight;
-    const el = document.getElementById(name) || document.getElementById(
-      {'guardian':'tile-gd','cortex':'tile-cx','idearium':'tile-idr',
-       'orchestrator':'tile-orch','bridge':'tile-br','diagnostic':'tile-dg'}[name]);
-    if (el) el.scrollIntoView({ behavior:'smooth', block:'nearest' });
-  }
-
-  // RAID decision — always explicit, never hidden
-  if(cp.classification){
-    const c = cp.classification;
-    const raidEl = document.createElement('div');
-    raidEl.style.cssText='font-size:10px;opacity:.45;margin-top:6px;font-family:monospace;border-top:1px solid rgba(255,255,255,.07);padding-top:4px';
-    const parts = [`RAID → ${c.intent}`];
-    if(c.tool) parts.push(`tool:${c.tool}`);
-    if(c.confidence) parts.push(`confidence:${(c.confidence*100).toFixed(0)}%`);
-    if(cp.modelUsed) parts.push(`model:${cp.modelUsed}`);
-    if(cp.systemState) parts.push(`gaps:${cp.systemState.gapCount} jobs:${cp.systemState.jobCount}`);
-    raidEl.textContent = parts.join(' · ');
-    out.appendChild(raidEl);
-  } else if(cp.modelUsed){
-    const m = document.createElement('div');
-    m.style.cssText='font-size:10px;opacity:.35;margin-top:4px;font-family:monospace';
-    m.textContent = `via ${cp.modelUsed}`;
-    out.appendChild(m);
-  }
-}
+// asSend() body moved into ui/copilot/copilot.js — CoPilot.send().
+// Thin wrapper kept so existing onclick="asSend()"/onkeydown="asSend()"
+// HTML attributes don't all need updating for this extraction.
+CoPilot.init({ B, CH_META, getCurCh: () => curCh, tune, post });
+async function asSend(){ return CoPilot.send(); }
 
 
 // ── Rewind ────────────────────────────────────────────────────────────────────
