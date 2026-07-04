@@ -369,6 +369,7 @@
   #layout {
     flex: 1;
     display: flex;
+    flex-direction: column;
     overflow: hidden;
   }
 
@@ -1265,6 +1266,17 @@
 
   // ── Elements ───────────────────────────────────────────────────────
   const wv             = document.getElementById('wv');
+
+  // §NEW 2026-07-04: main process navigates this window in place when the
+  // orchestrator's wire /open call targets the already-open default window
+  // (see clear-glass/src/main/index.js's /open handler) — avoids opening a
+  // second window just to show the same NEXUS UI the default window will
+  // load anyway once this fires.
+  if (window.ClearGlass?.on) {
+    window.ClearGlass.on('cg:navigate', (targetUrl) => {
+      if (targetUrl && typeof wv.loadURL === 'function') wv.loadURL(targetUrl);
+    });
+  }
   const urlBar         = document.getElementById('url-bar');
   const agentBadge     = document.getElementById('agent-badge');
   const loadBar        = document.getElementById('load-bar');

@@ -366,10 +366,49 @@ async function _startWire() {
 
       // Open URL in Clear Glass — orchestrator calls this instead of default browser
       // POST /open { url: 'http://...', agentId: optional }
+      //
+      // §BUGFIX 2026-07-04: this used to default agentId to a fresh
+      // `nexus-${Date.now()}` every time, with no check for whether a
+      // window already showed the same URL — so the default boot window
+      // (agentId:'default', opened at startup) and the orchestrator's
+      // wire-triggered "open NEXUS UI" call (hitting this same /open
+      // endpoint moments later) each got their own window, both showing
+      // the same NEXUS UI. openAgentWindow()'s dedup-by-agentId couldn't
+      // help since the two calls never shared an agentId — and reusing
+      // 'default' blindly isn't safe either: its existing-window branch
+      // only calls .show(), it never navigates, so a reused-but-blank
+      // window would just stay blank instead of loading the requested URL.
+      // Real fix: check whether *any* open window already shows this
+      // origin before creating a new one, and focus that one instead.
       if (u === '/open' && req.method === 'POST') {
         const { url: openUrl, agentId: openAgent } = parsed;
         if (!openUrl) { res.writeHead(400); return res.end(JSON.stringify({ error: 'url required' })); }
         try {
+          if (!openAgent) {
+            let targetOrigin = null;
+            try { targetOrigin = new URL(openUrl).origin; } catch (_) {}
+            if (targetOrigin) {
+              for (const [wid, win] of windows) {
+                if (win.isDestroyed()) continue;
+                let currentOrigin = null;
+                try { currentOrigin = new URL(win.webContents.getURL()).origin; } catch (_) {}
+                if (currentOrigin === targetOrigin) {
+                  win.show(); win.focus();
+                  return res.end(JSON.stringify({ ok: true, agentId: wid, url: openUrl, reused: true }));
+                }
+              }
+            }
+            // Boot race: the default window opens at about:blank (or
+            // whatever defaultStartUrl is) before this wire call ever
+            // arrives, so the origin check above can't match it yet.
+            // Navigate it in place instead of opening a second window.
+            const defaultWin = windows.get('default');
+            if (defaultWin && !defaultWin.isDestroyed()) {
+              defaultWin.webContents.send('cg:navigate', openUrl);
+              defaultWin.show(); defaultWin.focus();
+              return res.end(JSON.stringify({ ok: true, agentId: 'default', url: openUrl, navigated: true }));
+            }
+          }
           const aid = openAgent || `nexus-${Date.now()}`;
           openAgentWindow({ agentId: aid, url: openUrl }).catch(() => {});
           return res.end(JSON.stringify({ ok: true, agentId: aid, url: openUrl }));
@@ -733,8 +772,26 @@ function _handleOrchestratorEvent(ev, copilot, busEmit) {
   const type = ev.type || '';
 
   // clear-glass.open — UI asked to open a URL in Clear Glass
+  //
+  // §BUGFIX 2026-07-04: same bug class as the /open HTTP handler fixed
+  // earlier — this always minted a fresh randomUUID() agentId, so it never
+  // matched an existing window and always spawned a new one, even for a
+  // URL already open somewhere. Repeated clicks (or any UI path that fires
+  // this more than once) pile up windows/navigations competing for the
+  // same origin — the real cause behind ERR_ABORTED (-3) bursts on
+  // http://127.0.0.1:9000/ showing up well after boot, not a boot-time race.
   if (type === 'clear-glass.open' && ev.url) {
     console.log(`[ClearGlass] open request from orchestrator SSE: ${ev.url}`);
+    let targetOrigin = null;
+    try { targetOrigin = new URL(ev.url).origin; } catch (_) {}
+    if (targetOrigin) {
+      for (const [wid, win] of windows) {
+        if (win.isDestroyed()) continue;
+        let currentOrigin = null;
+        try { currentOrigin = new URL(win.webContents.getURL()).origin; } catch (_) {}
+        if (currentOrigin === targetOrigin) { win.show(); win.focus(); return; }
+      }
+    }
     openAgentWindow({ agentId: randomUUID(), url: ev.url })
       .catch(e => console.warn('[ClearGlass] open failed:', e.message));
     return;

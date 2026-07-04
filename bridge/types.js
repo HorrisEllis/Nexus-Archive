@@ -42,6 +42,19 @@ const TYPES = new Set([
   'bridge.handshake',    // system boot → Bridge identity
   'bridge.ping',         // heartbeat probe
   'bridge.sync',         // registry sync request
+  // §BUGFIX 2026-07-04: Clear Glass's CoPilotBridge._bridgeDispatch() sends
+  // these six types and has been sending them since it was built — every
+  // one was rejected here with "unknown type", surfacing to the user as a
+  // bare "HTTP 400" with no indication why. Found by reading validateRequest()
+  // down to this exact Set and diffing it against every _bridgeDispatch()
+  // call site in clear-glass/src/copilot/bridge.js.
+  'copilot.prompt',      // Clear Glass → Bridge → co-pilot :3750 /bridge/deliver
+  'copilot.build',       // Clear Glass → Bridge → co-pilot :3750
+  'copilot.diagnose',    // Clear Glass → Bridge → co-pilot :3750
+  'copilot.health',      // Clear Glass → Bridge → co-pilot :3750
+  'guardian.command',    // Clear Glass → Bridge → guardian :7820
+  'guardian.fetch',      // Clear Glass → Bridge → guardian :7820
+  'ollama.generate',     // Clear Glass → Bridge → ollama-bridge :3749
 ]);
 
 // ── Source types — who is making the call ────────────────────────────────────

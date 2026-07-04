@@ -623,17 +623,19 @@ const server = http.createServer(async (req, res) => {
   const M     = req.method;
   const QS    = u.searchParams;
 
-  // ── Root UI — NEXUS Diagnostic is primary (promoted 2026-07-02, per
-  // explicit decision: "the primary UI, it's buried under a mediocre one" —
-  // that work got interrupted before landing. Home and orchestrator both
-  // stay fully reachable, at /ui/home and /ui/orchestrator respectively,
-  // and as fallbacks here if diagnostics is ever missing. ─────────────────
+  // ── Root UI — TV-shell is the homepage (explicit, repeated request —
+  // diagnostics and the ALK-GL/spotlight/channel-switching home were both
+  // tried here before and both were wrong per that same repeated ask).
+  // Diagnostics and home both stay fully reachable at /ui/diagnostics and
+  // /ui/home, and as fallbacks below if tv-shell is ever missing. ────────
   if (M==='GET' && (u.pathname==='/' || u.pathname==='/home')) {
+    const tvPath = path.join(UI_ROOT,'tv-shell','index.html');
+    if (fs.existsSync(tvPath)) return serveFile(res, tvPath);
     const diagPath = path.join(UI_ROOT,'diagnostics','index.html');
     if (fs.existsSync(diagPath)) return serveFile(res, diagPath);
     const homePath = path.join(UI_ROOT,'home','index.html');
     if (fs.existsSync(homePath)) return serveFile(res, homePath);
-    // fallback to orchestrator UI while home/diagnostics are being built
+    // fallback to orchestrator UI while everything else is being built
     return serveFile(res, path.join(UI_ROOT,'orchestrator','index.html'));
   }
 
@@ -2196,7 +2198,8 @@ ${C.b}UI hotswap${C.r}
   ui/guardian/    → http://localhost:${PORT}/ui/guardian
   ui/idearium/    → http://localhost:${PORT}/ui/idearium
   ui/emerge/      → http://localhost:${PORT}/ui/emerge
-  ui/diagnostics/ → http://localhost:${PORT}/  (primary — home/orchestrator as fallback)
+  ui/tv-shell/    → http://localhost:${PORT}/  (primary — diagnostics/home/orchestrator as fallback)
+  ui/diagnostics/ → http://localhost:${PORT}/ui/diagnostic
   ui/home/        → http://localhost:${PORT}/ui/home
   ui/orchestrator/ → http://localhost:${PORT}/ui/orchestrator
 `);

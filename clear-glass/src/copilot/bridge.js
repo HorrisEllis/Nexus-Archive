@@ -590,7 +590,19 @@ ${buildToolsPrompt()}${domSection}`;
       }),
       timeout,
     });
-    if (!res.ok) throw new Error(`[Bridge] ${target} dispatch HTTP ${res.status}`);
+    if (!res.ok) {
+      // §BUGFIX 2026-07-04: this used to throw just the status code —
+      // `[Bridge] ${target} dispatch HTTP ${res.status}` — discarding
+      // Bridge's actual response body, which already contains the real
+      // reason (validateRequest() puts a specific message there, e.g.
+      // "unknown type: copilot.prompt" — exactly the bug this same commit
+      // fixes in bridge/types.js). Read it so the next failure, whatever
+      // it turns out to be, is diagnosable from the UI instead of a bare
+      // status code that means "something, somewhere, rejected this."
+      let detail = '';
+      try { const errBody = await res.json(); detail = errBody?.errors?.join('; ') || errBody?.error || ''; } catch (_) {}
+      throw new Error(`[Bridge] ${target} dispatch HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
+    }
     const data = await res.json();
     if (!data.ok) throw new Error(`[Bridge] ${target} error: ${data.error || 'unknown'}`);
     return data.result?.response ?? data.result ?? data;

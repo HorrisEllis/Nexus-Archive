@@ -64,6 +64,11 @@ const CONTRACT_PATHS = {
   copilot:        '/contract',
   'clear-glass':  '/contract',
   'nexus-wire':   '/contract',
+  // §BUGFIX 2026-07-04: loom added as a sovereign system this session
+  // (loom/server.js, :3752) with a real GET /contract route, matching this
+  // same bare-path convention — but never added here, so every poll fell
+  // through to the '/api/contract' default and 404'd.
+  loom:           '/contract',
 };
 
 function contractPathFor(systemId) {
