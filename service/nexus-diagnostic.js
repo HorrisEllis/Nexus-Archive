@@ -1022,7 +1022,7 @@ function startService() {
 
     // 5. Required files per system
     const REQUIRED_FILES = {
-      guardian:  ['guardian/server.js','guardian/userscript-claude.js','guardian/userscript-chatgpt.js'],
+      guardian:  ['guardian/server.js','guardian/userscripts/claude.js','guardian/userscripts/chatgpt.js'],
       cortex:    ['cortex/boot.js','cortex/core/raid/index.js','cortex/memory/jaa-db.js'],
       idearium:  ['idearium/api/index.js'],
       lib:       ['lib/ess.js','lib/ico.js','lib/baseline.js','lib/queue.js','lib/ncp.js'],

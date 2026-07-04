@@ -47,7 +47,7 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
   },
 };
 
-const um = require('../../copilot/lib/user-model');
+const um = require('../../lib/user-model');
 
 function reset() { _hyps = []; _chatLog = []; _gaps = []; }
 

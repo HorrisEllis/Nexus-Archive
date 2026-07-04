@@ -132,7 +132,7 @@ require.cache[require.resolve('../../nexus-bus')] = {
   exports: { emit: () => {} },
 };
 
-const al = require('../../orchestrator/lib/autonomous-loop');
+const al = require('../../lib/autonomous-loop');
 
 function reset() {
   resetStore();

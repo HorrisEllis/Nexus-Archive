@@ -61,7 +61,6 @@ const ALL_KERNELS = [
   { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'] },
   { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true },
   { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true },
-  { name: 'loom',         cmd: 'node', args: ['loom/server.js'],    optional: true },
   // Clear Glass sovereign browser — Electron + inline wire bridge.
   // Registers itself AND ErosmancerOS with the orchestrator on boot.
   // optional: true — missing Electron install won't trip the circuit breaker.
@@ -143,24 +142,8 @@ function _spawnKernel(kernel, color) {
 
   _log(`${color}[${kernel.name}]${RESET} starting — ${kernel.cmd} ${kernel.args.join(' ')}`);
 
-  const path = require('path');
-  const resolvedCwd = kernel.cwd ? path.join(ROOT, kernel.cwd) : ROOT;
-  // §BUGFIX 2026-07-02: a relative kernel.cmd (e.g. clear-glass's
-  // 'node_modules\.bin\electron.cmd') was being looked up against
-  // autopilot.js's own process.cwd() (the repo root), not against the
-  // `cwd` option below — that option only sets the CHILD's working
-  // directory once it starts, it does not change where Node/Windows
-  // looks for the executable itself. That's the exact cause of "The
-  // system cannot find the path specified" — Windows was looking for
-  // <repo root>/node_modules/.bin/electron.cmd, which doesn't exist;
-  // the real one is at clear-glass/node_modules/.bin/electron.cmd.
-  // Resolving to an absolute path here removes the ambiguity entirely.
-  const resolvedCmd = (kernel.cwd && !path.isAbsolute(kernel.cmd))
-    ? path.join(resolvedCwd, kernel.cmd)
-    : kernel.cmd;
-
-  const proc = spawn(resolvedCmd, kernel.args, {
-    cwd: resolvedCwd,
+  const proc = spawn(kernel.cmd, kernel.args, {
+    cwd: kernel.cwd ? require('path').join(ROOT, kernel.cwd) : ROOT,
     env: { ...process.env, ...(kernel.env || {}) },
     stdio: ['ignore', 'pipe', 'pipe'],
     // .cmd files on Windows must run through the shell

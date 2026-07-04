@@ -310,4 +310,8 @@ module.exports = {
   recordOutcome,
   startHealthPoll, stopHealthPoll,
   _approveTool, _toolHealthSnapshot,
+  // §simulation — pre-commit sandbox, wired 2026-07-02
+  // Callers: decide = _decide(call, _health, _weights); then simulate(decide, ctx)
+  // before dispatching. _decide() itself is unchanged.
+  simulation: require('./simulation'),
 };

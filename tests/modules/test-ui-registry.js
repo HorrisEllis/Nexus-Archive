@@ -5,7 +5,7 @@
  */
 
 const assert = require('assert');
-const uiReg  = require('../../orchestrator/lib/ui-registry');
+const uiReg  = require('../../lib/ui-registry');
 
 let passed = 0, failed = 0;
 const events = [];

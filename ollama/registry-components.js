@@ -26,6 +26,7 @@ const components=[
   _c('queue.status','GET','/api/queue','Queue depth and running count',{grammar:['ollama queue','oq']}),
   _c('models.list','GET','/api/models','Available local models',{grammar:['ollama models','om']}),
   _c('health','GET','/health','Ollama bridge health',{grammar:['ollama health']}),
+  _c('seam.quality','GET','/api/jobs/:id/seam','SEAM quality score for completed job — truncation, sigma, delta. §2026-07-02: SEAM Detector wired into ollama dispatch path via lib/seam/detector.js',{tags:['seam','quality']}),
 ];
 module.exports={
   systemId:NS,version:V,port:3749,

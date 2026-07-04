@@ -471,8 +471,8 @@ async function diagGuardian() {
   ];
   const SOFT_FILES = [
     ['guardian/ui/index.html',          'Forge IDE UI'],
-    ['guardian/userscript-claude.js',   'Claude Tampermonkey userscript v10'],
-    ['guardian/userscript-chatgpt.js',  'ChatGPT Tampermonkey userscript v9'],
+    ['guardian/userscripts/claude.js',   'Claude Tampermonkey userscript v10'],
+    ['guardian/userscripts/chatgpt.js',  'ChatGPT Tampermonkey userscript v9'],
   ];
 
   console.log(C.bold + '  HARD files:' + C.reset);

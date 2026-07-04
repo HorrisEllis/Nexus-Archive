@@ -1,0 +1,10 @@
+{
+  "id": "orchestrator-v1",
+  "version": "2.0.0",
+  "namespace": "orchestrator",
+  "ports": { "http": 9000 },
+  "uuid": "orchestrator-contract-v1-0000-2026-0702-jamesbrooks-001",
+  "role": "Command and control — proxies all /api/<system>/* routes, serves UI, owns ledger and blueprint",
+  "health": { "method": "GET", "path": "/health", "returns": { "ok": true } },
+  "axioms": ["§2.1", "§2.3", "§5.7", "LAW_II"]
+}

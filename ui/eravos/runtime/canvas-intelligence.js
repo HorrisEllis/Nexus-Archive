@@ -450,6 +450,84 @@ function _rafLoop(nowMs) {
   _rafId = requestAnimationFrame(_rafLoop);
 }
 
+// ── Intelligence event subscriptions — connect face to live system events ──────
+// §alk-gl-intelligence-canvas-face.spec 2026-07-02
+// Subscribes to orchestrator SSE for: co-pilot generation, sigma spikes,
+// gap openings, RAID simulation results, query surface enrichment.
+// Each event drives the blendshape state machine directly.
+function _connectIntelligenceEvents() {
+  try {
+    const es = new EventSource(`${ORCH}/events`);
+
+    es.addEventListener('copilot.prompt.received',     () => { _mode = 'thinking'; _blink(280); });
+    es.addEventListener('copilot.context.assembled',   () => { _mode = 'analyzing'; });
+    es.addEventListener('copilot.mastermind.enriched', () => { _mode = 'mastermind'; });
+
+    es.addEventListener('copilot.answered', (e) => {
+      try {
+        const d = JSON.parse(e.data || '{}');
+        _genRate = 0.6; _mode = 'generating'; _gazeTarget = null;
+        setTimeout(() => { onGenerationEnd(); onPositiveOutcome(d.modelUsed || null); }, 2500);
+      } catch(_) {}
+    });
+
+    es.addEventListener('copilot.lifeline.escalated',  () => { _mode = 'uncertain'; });
+
+    es.addEventListener('rfr2.delta.signal', (e) => {
+      try {
+        const d = JSON.parse(e.data || '{}');
+        onSigmaUpdate(Math.max(d.sField || 0, d.cField || 0));
+      } catch(_) {}
+    });
+
+    es.addEventListener('rfr2.enforcement.violation', (e) => {
+      try { onFault('CONSTITUTIONAL', JSON.parse(e.data || '{}').source || null); } catch(_) {}
+    });
+
+    es.addEventListener('rfr2.delta.fractal', (e) => {
+      try {
+        const d = JSON.parse(e.data || '{}');
+        _bsTarget.sneerL = Math.min(0.6, d.occurrences / 10);
+        _bsTarget.sneerR = _bsTarget.sneerL;
+        setTimeout(() => { _bsTarget.sneerL = 0; _bsTarget.sneerR = 0; }, 3000);
+      } catch(_) {}
+    });
+
+    es.addEventListener('cortex.gap.found', (e) => {
+      try {
+        const d = JSON.parse(e.data || '{}');
+        const sys = d.system || d.source || null;
+        const sev = d.severity || 'MEDIUM';
+        onFault(sev === 'CRITICAL' || sev === 'HIGH' ? 'INTEGRITY' : 'CAPABILITY', sys);
+        if (sys && SYSTEM_POSITIONS[sys] && _engine) {
+          const [x, y] = SYSTEM_POSITIONS[sys];
+          _engine.injectStress(x, y, 0, sev === 'CRITICAL' ? 800 : sev === 'HIGH' ? 500 : 250, 3);
+        }
+      } catch(_) {}
+    });
+
+    es.addEventListener('gap.closed', () => onFaultResolved());
+
+    es.addEventListener('raid.simulation.result', (e) => {
+      try {
+        const d = JSON.parse(e.data || '{}');
+        if      (d.recommendation === 'commit')   onHighConfidence(d.decision?.agent);
+        else if (d.recommendation === 'escalate') onFault('CONSTITUTIONAL', d.decision?.agent);
+        else if (d.recommendation === 'fallback') onFault('CAPABILITY',     d.decision?.agent);
+      } catch(_) {}
+    });
+
+    es.addEventListener('copilot.query_surface.enriched', (e) => {
+      try { onQueryFocus(JSON.parse(e.data || '{}').about || null); } catch(_) {}
+    });
+
+    es.onerror = () => {
+      setTimeout(_connectIntelligenceEvents, 5000);
+      try { es.close(); } catch(_) {}
+    };
+  } catch(_) {}
+}
+
 // ── Boot ───────────────────────────────────────────────────────────────────────
 function boot(hostEl) {
   if (_engine) return;
@@ -494,6 +572,12 @@ function boot(hostEl) {
   // Start polling Nerve snapshot
   _pollSnapshot();
   setInterval(() => _pollSnapshot().catch(() => {}), POLL_MS);
+
+  // ── Wire live intelligence events ────────────────────────────────────────
+  // §alk-gl-intelligence-canvas-face.spec — connects face blendshapes to
+  // real events from the nexus-bus via orchestrator SSE.
+  // Defined above in _connectIntelligenceEvents().
+  _connectIntelligenceEvents();
 
   console.log('[canvas-intelligence] v1.0.0 — intelligence field active');
 }

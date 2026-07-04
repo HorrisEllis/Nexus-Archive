@@ -95,16 +95,16 @@ test('SEAM-11 guardian server imports from lib/seam (not its own lib/)', () => {
   const src = require('fs').readFileSync(
     '/home/claude/nexus_29/guardian/server.js', 'utf8');
   // After the move, guardian should require lib/seam not ./lib/seam-queue
-  assert.ok(src.includes("require('../../lib/seam/queue.js')"),
+  assert.ok(src.includes("require('../lib/seam/queue.js')"),
     'guardian must require SEAM from lib/seam/queue.js');
-  assert.ok(!src.includes("require('../../lib/seam/queue.js')"),
+  assert.ok(!src.includes("require('./lib/seam-queue')"),
     'guardian must not use old local seam-queue path');
 });
 
 test('SEAM-12 ollama server has SEAM Detector integration', () => {
   const src = require('fs').readFileSync(
     '/home/claude/nexus_29/ollama/server.js', 'utf8');
-  assert.ok(src.includes("require('../../lib/seam/detector.js')"),
+  assert.ok(src.includes("require('../lib/seam/detector.js')"),
     'ollama must require SEAM detector from lib/seam/');
   assert.ok(src.includes('seamScore'), 'ollama must write seamScore on jobs');
 });

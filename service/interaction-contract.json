@@ -1,0 +1,19 @@
+{
+  "id": "diagnostic-v1",
+  "version": "1.0.0",
+  "namespace": "diagnostic",
+  "ports": { "http": 7825 },
+  "uuid": "diagnostic-contract-v1-0000-2026-0702-jamesbrooks-001",
+  "role": "System diagnostic engine — gap detection, baseline tracking, friction scoring, audit",
+  "health": { "method": "GET", "path": "/status", "returns": { "ok": true } },
+  "routes": [
+    { "method": "GET", "path": "/status",        "description": "Full system health snapshot" },
+    { "method": "GET", "path": "/gaps",          "description": "All open gaps" },
+    { "method": "GET", "path": "/friction",      "description": "Per-system friction scores" },
+    { "method": "GET", "path": "/audit",         "description": "Full audit" },
+    { "method": "GET", "path": "/events",        "description": "SSE stream of diagnostic events" },
+    { "method": "GET", "path": "/ledger/:system","description": "System ledger tail" },
+    { "method": "GET", "path": "/baseline/:sys", "description": "Baseline stats for a system" }
+  ],
+  "axioms": ["§2.3", "§6.2"]
+}

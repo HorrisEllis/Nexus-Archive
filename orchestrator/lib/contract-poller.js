@@ -9,7 +9,7 @@
  * Finds stuck contracts, opens gaps, attempts re-dispatch.
  * §AX-2 — nothing silently lost.
  */
-const { findStuck, markStuck, reportStuck, dispatch, STATUS } = require('../../lib/contract-queue');
+const { findStuck, markStuck, reportStuck, dispatch, STATUS } = require('./contract-queue');
 
 const POLL_INTERVAL_MS = parseInt(process.env.CONTRACT_POLL_MS || '15000');
 const KNOWN_SYSTEMS    = ['guardian','cortex','eravos','ollama','copilot','idearium','architect','emerge','bridge'];

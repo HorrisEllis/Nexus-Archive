@@ -64,32 +64,32 @@ function tmpDir(name)  { const d = path.join(TMP, name); fs.mkdirSync(d, { recur
 
 const { makeCompartment, makeHook, makeSystemMap, makePipe,
         isValidTransition, COMPARTMENT_STATES }
-  = require('../foundation/types.js');
+  = require('./foundation/types.js');
 
 const { CosAxiomError, enforce, getAxiomDefs, AXIOMS }
-  = require('../foundation/axioms.js');
+  = require('./foundation/axioms.js');
 
 const { HookSchemaError, validateHook, isUUID, isSemver, isEventType, isKebab }
-  = require('../foundation/hook-schema.js');
+  = require('./foundation/hook-schema.js');
 
 const { HOST, COMP, WATCHDOG, ALL_EVENT_TYPES, isKnownEvent }
-  = require('../foundation/event-contracts.js');
+  = require('./foundation/event-contracts.js');
 
 const { COS_VERSION, compartmentPaths, DEFAULT_API_PORT }
-  = require('../foundation/constants.js');
+  = require('./foundation/constants.js');
 
-const { RUNTIME_IDS }  = require('../foundation/runtime-enum.js');
-const { COMPILER_IDS } = require('../foundation/compiler-enum.js');
+const { RUNTIME_IDS }  = require('./foundation/runtime-enum.js');
+const { COMPILER_IDS } = require('./foundation/compiler-enum.js');
 
-const { StateStore }     = require('../host/state-store.js');
-const { createEventBus } = require('../host/event-bus.js');
-const { SystemMap }      = require('../host/system-map.js');
-const { createHost }     = require('../host/index.js');
+const { StateStore }     = require('./host/state-store.js');
+const { createEventBus } = require('./host/event-bus.js');
+const { SystemMap }      = require('./host/system-map.js');
+const { createHost }     = require('./host/index.js');
 
-const { createCompartment, toSlug } = require('../cli/commands/create.js');
-const { renderTable }               = require('../cli/commands/list.js');
-const { renderTree }                = require('../cli/commands/map.js');
-const { parseArgs }                 = require('../cli/index.js');
+const { createCompartment, toSlug } = require('./cli/commands/create.js');
+const { renderTable }               = require('./cli/commands/list.js');
+const { renderTree }                = require('./cli/commands/map.js');
+const { parseArgs }                 = require('./cli/index.js');
 
 // ═════════════════════════════════════════════════════════════════════════════
 // PHASE 0 — FOUNDATION
@@ -773,14 +773,14 @@ test('parseArgs: --key=value flags', () => {
 
 // ─── New command requires ─────────────────────────────────────────────────────
 
-const { startCompartment }   = require('../cli/commands/start.js');
-const { stopCompartment }    = require('../cli/commands/stop.js');
-const { destroyCompartment, runDestroyWizard } = require('../cli/commands/destroy.js');
-const { showStatus }         = require('../cli/commands/status.js');
-const { runHooksCommand, listHooks, showHook, fireHook } = require('../cli/commands/hooks.js');
-const { runEventsCommand, tailEvents, formatEvent } = require('../cli/commands/events.js');
-const { validateSchema }     = require('../cli/commands/schema.js');
-const { parseArgs: parseArgsFresh } = require('../cli/index.js');
+const { startCompartment }   = require('./cli/commands/start.js');
+const { stopCompartment }    = require('./cli/commands/stop.js');
+const { destroyCompartment, runDestroyWizard } = require('./cli/commands/destroy.js');
+const { showStatus }         = require('./cli/commands/status.js');
+const { runHooksCommand, listHooks, showHook, fireHook } = require('./cli/commands/hooks.js');
+const { runEventsCommand, tailEvents, formatEvent } = require('./cli/commands/events.js');
+const { validateSchema }     = require('./cli/commands/schema.js');
+const { parseArgs: parseArgsFresh } = require('./cli/index.js');
 
 // ─── Phase 2 — cli/commands/start.js ─────────────────────────────────────────
 
@@ -788,7 +788,7 @@ section('Phase 2 — cli/commands/start.js');
 
 test('startCompartment: transitions created → running', () => {
   const host = createHost({ stateFile: tmpFile('start-state.json'), mapFile: tmpFile('start-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   const comp = createCompartment(host, { name: 'start-test', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   assert.strictEqual(comp.state, 'created');
   const updated = startCompartment(host, 'start-test', { log: () => {}, error: () => {} });
@@ -798,7 +798,7 @@ test('startCompartment: transitions created → running', () => {
 
 test('startCompartment: persists state to store', () => {
   const host = createHost({ stateFile: tmpFile('start-persist.json'), mapFile: tmpFile('start-persist-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'start-persist', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   startCompartment(host, 'start-persist', { log: () => {}, error: () => {} });
   const stored = host.store.getCompartmentByName('start-persist');
@@ -807,7 +807,7 @@ test('startCompartment: persists state to store', () => {
 
 test('startCompartment: throws on invalid transition (already running)', () => {
   const host = createHost({ stateFile: tmpFile('start-dup.json'), mapFile: tmpFile('start-dup-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'start-dup', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   startCompartment(host, 'start-dup', { log: () => {}, error: () => {} });
   assert.throws(
@@ -830,7 +830,7 @@ section('Phase 2 — cli/commands/stop.js');
 
 test('stopCompartment: transitions running → stopped', () => {
   const host = createHost({ stateFile: tmpFile('stop-state.json'), mapFile: tmpFile('stop-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'stop-test', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   startCompartment(host, 'stop-test', { log: () => {}, error: () => {} });
   const updated = stopCompartment(host, 'stop-test', { log: () => {}, error: () => {} });
@@ -840,7 +840,7 @@ test('stopCompartment: transitions running → stopped', () => {
 
 test('stopCompartment: throws on invalid transition (already stopped)', () => {
   const host = createHost({ stateFile: tmpFile('stop-dup.json'), mapFile: tmpFile('stop-dup-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'stop-dup', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   startCompartment(host, 'stop-dup', { log: () => {}, error: () => {} });
   stopCompartment(host, 'stop-dup', { log: () => {}, error: () => {} });
@@ -864,7 +864,7 @@ section('Phase 2 — cli/commands/destroy.js');
 
 test('destroyCompartment: removes from store + sysmap', () => {
   const host = createHost({ stateFile: tmpFile('dest-state.json'), mapFile: tmpFile('dest-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'dest-test', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   destroyCompartment(host, 'dest-test', { force: true });
   assert.strictEqual(host.store.getCompartmentByName('dest-test'), null);
@@ -874,7 +874,7 @@ test('destroyCompartment: removes from store + sysmap', () => {
 
 test('destroyCompartment: emits host:compartment:destroyed', () => {
   const host = createHost({ stateFile: tmpFile('dest-event.json'), mapFile: tmpFile('dest-event-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'dest-event', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   let fired = null;
   host.bus.on('host:compartment:destroyed', ev => { fired = ev.payload; });
@@ -885,7 +885,7 @@ test('destroyCompartment: emits host:compartment:destroyed', () => {
 
 test('destroyCompartment: throws on running without force', () => {
   const host = createHost({ stateFile: tmpFile('dest-run.json'), mapFile: tmpFile('dest-run-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'dest-run', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   startCompartment(host, 'dest-run', { log: () => {}, error: () => {} });
   assert.throws(
@@ -896,7 +896,7 @@ test('destroyCompartment: throws on running without force', () => {
 
 test('destroyCompartment: force destroys running compartment', () => {
   const host = createHost({ stateFile: tmpFile('dest-force.json'), mapFile: tmpFile('dest-force-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'dest-force', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   startCompartment(host, 'dest-force', { log: () => {}, error: () => {} });
   assert.doesNotThrow(() => destroyCompartment(host, 'dest-force', { force: true }));
@@ -917,7 +917,7 @@ section('Phase 2 — cli/commands/status.js');
 
 test('showStatus: returns compartment for valid name', () => {
   const host = createHost({ stateFile: tmpFile('status-state.json'), mapFile: tmpFile('status-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'status-test', purpose: 'testing status', runtimeId: 'node', networkIsolated: true });
   const logs = [];
   const comp = showStatus(host, 'status-test', {}, { log: s => logs.push(s), error: () => {} });
@@ -934,7 +934,7 @@ test('showStatus: returns null for missing compartment', () => {
 
 test('showStatus: --json returns raw compartment JSON', () => {
   const host = createHost({ stateFile: tmpFile('status-json.json'), mapFile: tmpFile('status-json-map.json') });
-  const { createCompartment } = require('../cli/commands/create.js');
+  const { createCompartment } = require('./cli/commands/create.js');
   createCompartment(host, { name: 'status-json', purpose: 'test', runtimeId: 'node', networkIsolated: true });
   const logs = [];
   showStatus(host, 'status-json', { json: true }, { log: s => logs.push(s), error: () => {} });
@@ -1089,7 +1089,7 @@ test('parseArgs: parses subcommand in args', () => {
 // ─── SISO primitive requires ──────────────────────────────────────────────────
 
 const { Event: SisoEvent, Gate: SisoGate, Stream: SisoStream, StreamLog: SisoStreamLog }
-  = require('../siso/index.js');
+  = require('./siso/index.js');
 
 // ─── SISO — Event ─────────────────────────────────────────────────────────────
 
@@ -1326,7 +1326,7 @@ test('StreamLog: since() returns entries after given seq', () => {
 });
 
 test('StreamLog: shared across stream — EventBus.log captures all events', () => {
-  const bus = require('../host/event-bus.js').createEventBus({ logLevel: 'DATA' });
+  const bus = require('./host/event-bus.js').createEventBus({ logLevel: 'DATA' });
   bus.emit('host:test:one', { v: 1 });
   bus.emit('host:test:two', { v: 2 });
   const entries = bus.log.sample().entries;
@@ -1339,7 +1339,7 @@ test('StreamLog: shared across stream — EventBus.log captures all events', () 
 section('SISO — Gate pipeline in EventBus');
 
 test('EventBus: register gate — gate transforms event, result goes to pending', () => {
-  const { createEventBus } = require('../host/event-bus.js');
+  const { createEventBus } = require('./host/event-bus.js');
   const bus = createEventBus();
 
   class DoubleGate extends SisoGate {
@@ -1358,14 +1358,14 @@ test('EventBus: register gate — gate transforms event, result goes to pending'
 });
 
 test('EventBus: gate signature collision throws', () => {
-  const { createEventBus } = require('../host/event-bus.js');
+  const { createEventBus } = require('./host/event-bus.js');
   const bus = createEventBus();
   bus.register(new SisoGate('test:collision:a'));
   assert.throws(() => bus.register(new SisoGate('test:collision:a')), /Signature collision/);
 });
 
 test('EventBus: deregister removes gate, event goes to pending after', () => {
-  const { createEventBus } = require('../host/event-bus.js');
+  const { createEventBus } = require('./host/event-bus.js');
   const bus = createEventBus();
 
   class Sink extends SisoGate {
@@ -1383,7 +1383,7 @@ test('EventBus: deregister removes gate, event goes to pending after', () => {
 });
 
 test('EventBus: host boot registers 4 compartment lifecycle gates', () => {
-  const { createHost } = require('../host/index.js');
+  const { createHost } = require('./host/index.js');
   const host = createHost({
     stateFile: tmpFile('gate-boot.json'),
     mapFile:   tmpFile('gate-boot-map.json'),
@@ -1396,8 +1396,8 @@ test('EventBus: host boot registers 4 compartment lifecycle gates', () => {
 // ─── Phase 4 requires ────────────────────────────────────────────────────────
 
 const { spawnProcess, killProcess, getProcess, resolveRuntime }
-  = require('../compartment/process-runner.js');
-const { ProcessSpawnGate, ProcessKillGate } = require('../host/gates/process.js');
+  = require('./compartment/process-runner.js');
+const { ProcessSpawnGate, ProcessKillGate } = require('./host/gates/process.js');
 
 // ─── Phase 4 — resolveRuntime ─────────────────────────────────────────────────
 
@@ -1428,7 +1428,7 @@ section('Phase 4 — spawnProcess (live Node.js)');
 // Async test helper that returns a Promise — wraps test()
 // We use a manual approach: collect events over a timeout
 function spawnTestHost() {
-  const { createEventBus }  = require('../host/event-bus.js');
+  const { createEventBus }  = require('./host/event-bus.js');
   const bus   = createEventBus();
   const store = {
     getCompartment:    () => null,
@@ -1622,9 +1622,9 @@ testProcess('spawnProcess: duplicate spawn emits comp:spawn:failed', async () =>
 testProcess('spawnProcess: missing runtimeId emits comp:spawn:failed', async () => {
   const { bus, store, sysmap } = spawnTestHost();
   const p = collectEvents(bus, ['comp:spawn:failed'], 300);
-  const { ProcessSpawnGate: PSG } = require('../host/gates/process.js');
-  const { Stream } = require('../siso/Stream.js');
-  const { Event }  = require('../siso/Event.js');
+  const { ProcessSpawnGate: PSG } = require('./host/gates/process.js');
+  const { Stream } = require('./siso/Stream.js');
+  const { Event }  = require('./siso/Event.js');
 
   const s = new Stream();
   s.register(new PSG());
@@ -1705,8 +1705,8 @@ testProcess('host boot: cos start + entryFile triggers real spawn', async () => 
     mapFile:   tmpFile('spawn-boot-map.json'),
   });
 
-  const { createCompartment } = require('../cli/commands/create.js');
-  const { startCompartment }  = require('../cli/commands/start.js');
+  const { createCompartment } = require('./cli/commands/create.js');
+  const { startCompartment }  = require('./cli/commands/start.js');
 
   const stdout = [];
   host.bus.on('comp:process:stdout', ev => stdout.push(ev.payload.line));

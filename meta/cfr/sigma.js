@@ -48,7 +48,7 @@ function _warnCoercion(badValue) {
     `Caller: ${callerLine.trim()}`);
 
   try {
-    require('../../lib/component-ledger').write({
+    require('../component-ledger').write({
       system: 'cortex', component: 'lib.cfr-sigma', action: 'type_coercion',
       status: 'coerced', tags: ['malformed-caller'],
       detail: `occurrence #${_coercionCount} — ${callerLine.trim()}`, causedBy: null,

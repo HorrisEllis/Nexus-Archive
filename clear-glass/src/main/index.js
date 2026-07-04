@@ -307,72 +307,12 @@ async function _startWire() {
   };
 
   // ── HTTP server ──────────────────────────────────────────────────────────
-  _wireServer = http.createServer((req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'application/json');
-
-    let body = '';
-    req.on('data', c => body += c);
-    req.on('end', async () => {
-      let parsed = {};
-      try { parsed = body ? JSON.parse(body) : {}; } catch {}
-
-      const u = req.url;
-
-      // Contract endpoint — what the orchestrator verifies on boot
-      if (u === '/contract' && req.method === 'GET') {
-        return res.end(JSON.stringify(CONTRACT));
-      }
-
-      if ((u === '/health' || u === '/wire/health') && req.method === 'GET') {
-        return res.end(JSON.stringify({ ok: true, module: 'nexus-wire', port: WIRE_PORT, ts: Date.now() }));
-      }
-
-      // ErosmancerOS proxy
-      if (u.startsWith('/eros/')) {
-        const erosPath = '/api' + u.replace(/^\/eros/, '');
-        const up = await _proxyEros(req.method, erosPath, parsed);
-        res.writeHead(up.status);
-        return res.end(JSON.stringify(up.body));
-      }
-
-      // ClearDriver → ErosmancerOS action bridge
-      if (u === '/bridge/driver' && req.method === 'POST') {
-        const { action, agentId, ...args } = parsed;
-        const endpoint = ACTION_MAP[action];
-        if (!endpoint) { res.writeHead(400); return res.end(JSON.stringify({ error: `No Eros mapping: ${action}` })); }
-        const up = await _proxyEros('POST', endpoint, { tabId: agentId, ...args }, 30000);
-        res.writeHead(up.status);
-        return res.end(JSON.stringify(up.body));
-      }
-
-      // Hostile detection → SISO bus (direct emit, no HTTP round-trip)
-      if (u === '/hook/hostile' && req.method === 'POST') {
-        const { level, type, tabId, recommendation } = parsed;
-        console.log(`[ClearGlass/Wire] Hostile: ${type} (${level}) tab=${tabId}`);
-        if (level === 'high' || level === 'critical') {
-          emit('context.fp.switch', { agentId: tabId, mode: 'firefox', reason: `hostile:${type}` });
-        }
-        _postEvent('eros.hostile.detected', { level, type, tabId, recommendation });
-        return res.end(JSON.stringify({ ok: true }));
-      }
-
-      // Behavior plan → Cortex intelligence
-      if (u === '/hook/behavior' && req.method === 'POST') {
-        const { planId, profile, variant, meta } = parsed;
-        _postEvent('eros.behavior.plan', { planId, profile, variant, meta });
-        return res.end(JSON.stringify({ ok: true }));
-      }
-
-      res.writeHead(404);
-      res.end(JSON.stringify({ error: 'not found' }));
-    });
+  // ── Wire API — routes extracted to clear-glass/src/api/wire.js ──────────────
+  const { createWireHandler, startWireServer } = require('../api/wire');
+  const wireHandler = createWireHandler({
+    CONTRACT, WIRE_PORT, EROS_PORT, ACTION_MAP, emit, _postEvent, _proxyEros,
   });
-
-  await new Promise((resolve, reject) => {
-    _wireServer.listen(WIRE_PORT, '127.0.0.1', resolve);
-    _wireServer.on('error', reject);
-  });
+  _wireServer = await startWireServer({ port: WIRE_PORT, handler: wireHandler });
 
   console.log(`[ClearGlass/Wire] :${WIRE_PORT} ready — Eros:${EROS_PORT} ↔ NEXUS:${NEXUS_PORTS.orchestrator}`);
 }

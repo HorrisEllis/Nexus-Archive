@@ -15,7 +15,7 @@
 const crypto  = require('crypto');
 const fs      = require('fs');
 const path    = require('path');
-const cq      = require('../lib/contract-queue');
+const cq      = require('../copilot/lib/contract-queue');
 const lifeline = require('./lifeline');
 const axiomMgr = require('./axiom-manager');
 

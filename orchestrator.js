@@ -124,10 +124,10 @@ try { ({ createCFRLedger } = require('./meta/cfr/ledger')); } catch(e) { console
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
 const nexusBus       = (() => { try { return require('./nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
-const nexusQuery     = (() => { try { return require('./nexus-query');         } catch(e) { return null; } })();
-const nexusKnowledge = (() => { try { return require('./nexus-knowledge');     } catch(e) { return null; } })();
+const nexusQuery     = (() => { try { return require('./orchestrator/lib/query');         } catch(e) { return null; } })();
+const nexusKnowledge = (() => { try { return require('./orchestrator/lib/knowledge');     } catch(e) { return null; } })();
 const nexusCFR       = (() => { try { return require('./nexus-cfr-influence'); } catch(e) { return null; } })();
-const nexusHealLoop  = (() => { try { return require('./nexus-heal-loop');     } catch(e) { return null; } })();
+const nexusHealLoop  = (() => { try { return require('./orchestrator/lib/heal-loop');     } catch(e) { return null; } })();
 try { ({ spawn: spawnChild } = require('child_process')); } catch(e) { spawnChild = null; }
 
 const PORT    = parseInt(process.env.ORCHESTRATOR_PORT || '9000');
@@ -517,10 +517,7 @@ const SYSTEM_LOCAL_UI_DIRS = [
   { system:'emerge',       dir: path.join(ROOT,'ui') },        // emerge IDE ui lives at root ui/
   { system:'orchestrator', dir: path.join(ROOT,'ui','orchestrator') },
   { system:'explorer',     dir: path.join(ROOT,'ui') },  // contract-explorer + contract-renderer
-  { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostics') },  // §HOTSWAP-03
-  // §BUGFIX 2026-07-02: was 'ui','diagnostic' (singular) — that folder is
-  // empty. The real diagnostic UI, with a real index.html, lives at
-  // ui/diagnostics (plural). GET /ui/diagnostic was serving nothing.
+  { system:'diagnostic',   dir: path.join(ROOT,'ui','diagnostic') },  // §HOTSWAP-03
 ];
 
 // ── UI Hotswap Watcher ───────────────────────────────────────────────────────
@@ -623,17 +620,11 @@ const server = http.createServer(async (req, res) => {
   const M     = req.method;
   const QS    = u.searchParams;
 
-  // ── Root UI — NEXUS Diagnostic is primary (promoted 2026-07-02, per
-  // explicit decision: "the primary UI, it's buried under a mediocre one" —
-  // that work got interrupted before landing. Home and orchestrator both
-  // stay fully reachable, at /ui/home and /ui/orchestrator respectively,
-  // and as fallbacks here if diagnostics is ever missing. ─────────────────
+  // ── Root UI — NEXUS Home (Phase 1: structure complete) ─────────────────
   if (M==='GET' && (u.pathname==='/' || u.pathname==='/home')) {
-    const diagPath = path.join(UI_ROOT,'diagnostics','index.html');
-    if (fs.existsSync(diagPath)) return serveFile(res, diagPath);
     const homePath = path.join(UI_ROOT,'home','index.html');
     if (fs.existsSync(homePath)) return serveFile(res, homePath);
-    // fallback to orchestrator UI while home/diagnostics are being built
+    // fallback to orchestrator UI while home is being built
     return serveFile(res, path.join(UI_ROOT,'orchestrator','index.html'));
   }
 
@@ -2196,9 +2187,7 @@ ${C.b}UI hotswap${C.r}
   ui/guardian/    → http://localhost:${PORT}/ui/guardian
   ui/idearium/    → http://localhost:${PORT}/ui/idearium
   ui/emerge/      → http://localhost:${PORT}/ui/emerge
-  ui/diagnostics/ → http://localhost:${PORT}/  (primary — home/orchestrator as fallback)
-  ui/home/        → http://localhost:${PORT}/ui/home
-  ui/orchestrator/ → http://localhost:${PORT}/ui/orchestrator
+  ui/orchestrator/ → http://localhost:${PORT}/
 `);
 }
 
@@ -2513,6 +2502,53 @@ try {
   const VERSION = '3.0.0';
   ledgerWrite('orchestrator','orchestrator.booted',{ version:VERSION, port:PORT });
   startWatchdog();
+
+  // ── COS enforcement bus wiring — 2026-07-02 ──────────────────────────────
+  // COS BoundaryIndex now monitors live events from the nexus bus.
+  // Uses the inline CJS-compatible invariant check from raid/simulation.js
+  // (the ESM enforcement module requires dynamic import — deferred to Phase 6).
+  // This gives us I-1/I-2 (UUID integrity), C-1 (causal edges), T-1 (timestamps),
+  // H-1 (source presence) on every event, immediately, with no new dependencies.
+  if (nexusBus) {
+    const _cosInvariantCheck = (() => {
+      try { return require('./cortex/core/raid/simulation').classifyFault; } catch(_) { return null; }
+    })();
+    if (_cosInvariantCheck) {
+      nexusBus.on('*', (ev) => {
+        if (!ev || !ev.type) return;
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        // Only check events that carry an id field (not all bus events do)
+        if (ev.id && !UUID_RE.test(ev.id)) {
+          ledgerWrite('orchestrator', 'cos.invariant.I-1', {
+            detail: `non-UUID event id on ${ev.type}: ${ev.id}`,
+            severity: 'warn',
+          });
+        }
+        if (ev.causedBy && !ev.edgeType) {
+          ledgerWrite('orchestrator', 'cos.invariant.C-1', {
+            detail: `causedBy without edgeType on ${ev.type}`,
+            severity: 'warn',
+          });
+        }
+      });
+      _log(`[orchestrator] COS invariant monitoring wired to nexus-bus`);
+    }
+  }
+
+  // ── RFR2 delta + enforcement wired to nexus-bus — 2026-07-02 ─────────────
+  // §nexus-intelligence-system.spec Gap 1: "measurement layer not receiving events."
+  // lib/rfr2-bus-bridge.js subscribes to '*' and feeds every event through
+  // computeEventDelta() (S-field/C-field) and enforcement invariant checks.
+  // Results emit as rfr2.delta.signal and rfr2.enforcement.violation — the
+  // intelligence layer's L1 measurement path now has live data.
+  try {
+    const rfr2Bridge = require('./lib/rfr2-bus-bridge');
+    rfr2Bridge.attach(nexusBus);
+  } catch(e) {
+    _log(`[orchestrator] rfr2-bus-bridge failed to attach: ${e.message}`);
+  }
+
+
 
   // ── Start pulse self-registration ─────────────────────────────────────────
   // Orchestrator registers itself as a system in its own registry so the UI

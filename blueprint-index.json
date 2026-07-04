@@ -1,19 +1,535 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_70ddb755",
+  "uuid": "bpi_fe0d493e",
   "version": "1.0.0",
-  "builtAt": 1782640602231,
+  "builtAt": 1783077317155,
   "builtBy": "blueprint-index",
   "systemCount": 11,
-  "totalComponents": 133,
+  "totalComponents": 198,
   "systems": [
     {
       "systemId": "orchestrator",
       "label": "Orchestrator",
       "port": 9000,
-      "componentCount": 0,
-      "components": [],
-      "cliMap": [],
+      "componentCount": 22,
+      "components": [
+        {
+          "id": "health",
+          "description": "Orchestrator health",
+          "route": {
+            "method": "GET",
+            "path": "/health"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "contract",
+          "description": "Orchestrator interaction contract",
+          "route": {
+            "method": "GET",
+            "path": "/contract"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "status",
+          "description": "Full system status snapshot",
+          "route": {
+            "method": "GET",
+            "path": "/api/status"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "bus.stats",
+          "description": "Nexus bus stats + per-source emitCount/lastSeen",
+          "route": {
+            "method": "GET",
+            "path": "/api/bus/stats"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "ledger.write",
+          "description": "Write event to system ledger",
+          "route": {
+            "method": "POST",
+            "path": "/api/ledger"
+          },
+          "tags": [
+            "ledger"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "ledger.read",
+          "description": "Read system ledger tail",
+          "route": {
+            "method": "GET",
+            "path": "/api/ledger/:system"
+          },
+          "tags": [
+            "ledger"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "register",
+          "description": "Register a sovereign system",
+          "route": {
+            "method": "POST",
+            "path": "/api/register"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "systems",
+          "description": "Registered systems",
+          "route": {
+            "method": "GET",
+            "path": "/api/systems"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "components",
+          "description": "Blueprint component index",
+          "route": {
+            "method": "GET",
+            "path": "/api/components"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "contract.verify",
+          "description": "Verify a system contract",
+          "route": {
+            "method": "POST",
+            "path": "/api/contract/verify"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "contracts.all",
+          "description": "All interaction contracts",
+          "route": {
+            "method": "GET",
+            "path": "/api/contracts"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "system.hot-load",
+          "description": "Live-patch a module without restart",
+          "route": {
+            "method": "POST",
+            "path": "/api/system/hot-load"
+          },
+          "tags": [
+            "system",
+            "hot"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "system.hot-load.status",
+          "description": "Hot-load monitor status",
+          "route": {
+            "method": "GET",
+            "path": "/api/system/hot-load/status"
+          },
+          "tags": [
+            "system",
+            "hot"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "system.autonomous",
+          "description": "Run an autonomous goal loop",
+          "route": {
+            "method": "POST",
+            "path": "/api/system/autonomous"
+          },
+          "tags": [
+            "system",
+            "autonomous"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "system.autonomous.status",
+          "description": "Autonomous loop status",
+          "route": {
+            "method": "GET",
+            "path": "/api/system/autonomous/status"
+          },
+          "tags": [
+            "system",
+            "autonomous"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "system.mcp",
+          "description": "MCP server status",
+          "route": {
+            "method": "GET",
+            "path": "/api/system/mcp"
+          },
+          "tags": [
+            "system",
+            "mcp"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "system.mcp.tools",
+          "description": "MCP available tools",
+          "route": {
+            "method": "GET",
+            "path": "/api/system/mcp/tools"
+          },
+          "tags": [
+            "system",
+            "mcp"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "heartbeat",
+          "description": "System heartbeat — keeps lastSeen live",
+          "route": {
+            "method": "POST",
+            "path": "/api/heartbeat"
+          },
+          "tags": [
+            "pulse"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "pulse",
+          "description": "System pulse event",
+          "route": {
+            "method": "POST",
+            "path": "/api/pulse"
+          },
+          "tags": [
+            "pulse"
+          ],
+          "grammar": []
+        },
+        {
+          "id": "spec-drift",
+          "description": "Current spec/code divergence",
+          "route": {
+            "method": "GET",
+            "path": "/api/spec-drift"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "ui.list",
+          "description": "Available UI systems",
+          "route": {
+            "method": "GET",
+            "path": "/api/ui"
+          },
+          "tags": [],
+          "grammar": []
+        },
+        {
+          "id": "ui.hotswap",
+          "description": "Hot-swap a UI file",
+          "route": {
+            "method": "POST",
+            "path": "/api/ui/hotswap"
+          },
+          "tags": [],
+          "grammar": []
+        }
+      ],
+      "cliMap": [
+        {
+          "command": "health",
+          "aliases": [],
+          "usage": "health",
+          "method": "GET",
+          "path": "/health",
+          "description": "Orchestrator health",
+          "componentId": "health",
+          "systemId": "health",
+          "tags": []
+        },
+        {
+          "command": "contract",
+          "aliases": [],
+          "usage": "contract",
+          "method": "GET",
+          "path": "/contract",
+          "description": "Orchestrator interaction contract",
+          "componentId": "contract",
+          "systemId": "contract",
+          "tags": []
+        },
+        {
+          "command": "status",
+          "aliases": [],
+          "usage": "status",
+          "method": "GET",
+          "path": "/api/status",
+          "description": "Full system status snapshot",
+          "componentId": "status",
+          "systemId": "status",
+          "tags": []
+        },
+        {
+          "command": "stats",
+          "aliases": [],
+          "usage": "stats",
+          "method": "GET",
+          "path": "/api/bus/stats",
+          "description": "Nexus bus stats + per-source emitCount/lastSeen",
+          "componentId": "bus.stats",
+          "systemId": "bus",
+          "tags": []
+        },
+        {
+          "command": "write",
+          "aliases": [],
+          "usage": "write",
+          "method": "POST",
+          "path": "/api/ledger",
+          "description": "Write event to system ledger",
+          "componentId": "ledger.write",
+          "systemId": "ledger",
+          "tags": [
+            "ledger"
+          ]
+        },
+        {
+          "command": "read",
+          "aliases": [],
+          "usage": "read",
+          "method": "GET",
+          "path": "/api/ledger/:system",
+          "description": "Read system ledger tail",
+          "componentId": "ledger.read",
+          "systemId": "ledger",
+          "tags": [
+            "ledger"
+          ]
+        },
+        {
+          "command": "register",
+          "aliases": [],
+          "usage": "register",
+          "method": "POST",
+          "path": "/api/register",
+          "description": "Register a sovereign system",
+          "componentId": "register",
+          "systemId": "register",
+          "tags": []
+        },
+        {
+          "command": "systems",
+          "aliases": [],
+          "usage": "systems",
+          "method": "GET",
+          "path": "/api/systems",
+          "description": "Registered systems",
+          "componentId": "systems",
+          "systemId": "systems",
+          "tags": []
+        },
+        {
+          "command": "components",
+          "aliases": [],
+          "usage": "components",
+          "method": "GET",
+          "path": "/api/components",
+          "description": "Blueprint component index",
+          "componentId": "components",
+          "systemId": "components",
+          "tags": []
+        },
+        {
+          "command": "verify",
+          "aliases": [],
+          "usage": "verify",
+          "method": "POST",
+          "path": "/api/contract/verify",
+          "description": "Verify a system contract",
+          "componentId": "contract.verify",
+          "systemId": "contract",
+          "tags": []
+        },
+        {
+          "command": "all",
+          "aliases": [],
+          "usage": "all",
+          "method": "GET",
+          "path": "/api/contracts",
+          "description": "All interaction contracts",
+          "componentId": "contracts.all",
+          "systemId": "contracts",
+          "tags": []
+        },
+        {
+          "command": "hot-load",
+          "aliases": [],
+          "usage": "hot-load",
+          "method": "POST",
+          "path": "/api/system/hot-load",
+          "description": "Live-patch a module without restart",
+          "componentId": "system.hot-load",
+          "systemId": "system",
+          "tags": [
+            "system",
+            "hot"
+          ]
+        },
+        {
+          "command": "hot-load-status",
+          "aliases": [],
+          "usage": "hot-load-status",
+          "method": "GET",
+          "path": "/api/system/hot-load/status",
+          "description": "Hot-load monitor status",
+          "componentId": "system.hot-load.status",
+          "systemId": "system",
+          "tags": [
+            "system",
+            "hot"
+          ]
+        },
+        {
+          "command": "autonomous",
+          "aliases": [],
+          "usage": "autonomous",
+          "method": "POST",
+          "path": "/api/system/autonomous",
+          "description": "Run an autonomous goal loop",
+          "componentId": "system.autonomous",
+          "systemId": "system",
+          "tags": [
+            "system",
+            "autonomous"
+          ]
+        },
+        {
+          "command": "autonomous-status",
+          "aliases": [],
+          "usage": "autonomous-status",
+          "method": "GET",
+          "path": "/api/system/autonomous/status",
+          "description": "Autonomous loop status",
+          "componentId": "system.autonomous.status",
+          "systemId": "system",
+          "tags": [
+            "system",
+            "autonomous"
+          ]
+        },
+        {
+          "command": "mcp",
+          "aliases": [],
+          "usage": "mcp",
+          "method": "GET",
+          "path": "/api/system/mcp",
+          "description": "MCP server status",
+          "componentId": "system.mcp",
+          "systemId": "system",
+          "tags": [
+            "system",
+            "mcp"
+          ]
+        },
+        {
+          "command": "mcp-tools",
+          "aliases": [],
+          "usage": "mcp-tools",
+          "method": "GET",
+          "path": "/api/system/mcp/tools",
+          "description": "MCP available tools",
+          "componentId": "system.mcp.tools",
+          "systemId": "system",
+          "tags": [
+            "system",
+            "mcp"
+          ]
+        },
+        {
+          "command": "heartbeat",
+          "aliases": [],
+          "usage": "heartbeat",
+          "method": "POST",
+          "path": "/api/heartbeat",
+          "description": "System heartbeat — keeps lastSeen live",
+          "componentId": "heartbeat",
+          "systemId": "heartbeat",
+          "tags": [
+            "pulse"
+          ]
+        },
+        {
+          "command": "pulse",
+          "aliases": [],
+          "usage": "pulse",
+          "method": "POST",
+          "path": "/api/pulse",
+          "description": "System pulse event",
+          "componentId": "pulse",
+          "systemId": "pulse",
+          "tags": [
+            "pulse"
+          ]
+        },
+        {
+          "command": "spec-drift",
+          "aliases": [],
+          "usage": "spec-drift",
+          "method": "GET",
+          "path": "/api/spec-drift",
+          "description": "Current spec/code divergence",
+          "componentId": "spec-drift",
+          "systemId": "spec-drift",
+          "tags": []
+        },
+        {
+          "command": "list",
+          "aliases": [],
+          "usage": "list",
+          "method": "GET",
+          "path": "/api/ui",
+          "description": "Available UI systems",
+          "componentId": "ui.list",
+          "systemId": "ui",
+          "tags": []
+        },
+        {
+          "command": "hotswap",
+          "aliases": [],
+          "usage": "hotswap",
+          "method": "POST",
+          "path": "/api/ui/hotswap",
+          "description": "Hot-swap a UI file",
+          "componentId": "ui.hotswap",
+          "systemId": "ui",
+          "tags": []
+        }
+      ],
       "seamHooks": [],
       "copilotMap": []
     },
@@ -21,11 +537,1757 @@
       "systemId": "cortex",
       "label": "Cortex",
       "port": 3748,
-      "componentCount": 0,
-      "components": [],
-      "cliMap": [],
-      "seamHooks": [],
-      "copilotMap": []
+      "componentCount": 41,
+      "components": [
+        {
+          "id": "cortex.health",
+          "name": "health",
+          "description": "Cortex health + JAA stats",
+          "route": {
+            "method": "GET",
+            "path": "/health"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "health"
+          ]
+        },
+        {
+          "id": "cortex.contract",
+          "name": "contract",
+          "description": "Cortex interaction contract",
+          "route": {
+            "method": "GET",
+            "path": "/contract"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "contract"
+          ]
+        },
+        {
+          "id": "cortex.events",
+          "name": "events",
+          "description": "SSE — all cortex events",
+          "route": {
+            "method": "GET",
+            "path": "/events"
+          },
+          "tags": [
+            "cortex",
+            "stream"
+          ],
+          "grammar": [
+            "events"
+          ]
+        },
+        {
+          "id": "cortex.memory.browse",
+          "name": "memory.browse",
+          "description": "Browse any JAA table",
+          "route": {
+            "method": "GET",
+            "path": "/api/memory"
+          },
+          "tags": [
+            "cortex",
+            "memory"
+          ],
+          "grammar": [
+            "memory browse"
+          ]
+        },
+        {
+          "id": "cortex.memory.insert",
+          "name": "memory.insert",
+          "description": "Insert row into any JAA table",
+          "route": {
+            "method": "POST",
+            "path": "/api/memory/insert"
+          },
+          "tags": [
+            "cortex",
+            "memory"
+          ],
+          "grammar": [
+            "memory insert"
+          ]
+        },
+        {
+          "id": "cortex.memory.search",
+          "name": "memory.search",
+          "description": "Semantic search across memory",
+          "route": {
+            "method": "POST",
+            "path": "/api/memory/search"
+          },
+          "tags": [
+            "cortex",
+            "memory"
+          ],
+          "grammar": [
+            "memory search"
+          ]
+        },
+        {
+          "id": "cortex.memory.forget",
+          "name": "memory.forget",
+          "description": "Archive memory row (never delete)",
+          "route": {
+            "method": "POST",
+            "path": "/api/memory/forget"
+          },
+          "tags": [
+            "cortex",
+            "memory"
+          ],
+          "grammar": [
+            "memory forget"
+          ]
+        },
+        {
+          "id": "cortex.memory.working",
+          "name": "memory.working",
+          "description": "Working memory snapshot",
+          "route": {
+            "method": "GET",
+            "path": "/api/memory/working"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "memory working"
+          ]
+        },
+        {
+          "id": "cortex.gaps.list",
+          "name": "gaps.list",
+          "description": "Open gaps by severity",
+          "route": {
+            "method": "GET",
+            "path": "/api/gaps"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "gaps list"
+          ]
+        },
+        {
+          "id": "cortex.gaps.open",
+          "name": "gaps.open",
+          "description": "Open a new gap",
+          "route": {
+            "method": "POST",
+            "path": "/api/gaps"
+          },
+          "tags": [
+            "cortex",
+            "gaps"
+          ],
+          "grammar": [
+            "gaps open"
+          ]
+        },
+        {
+          "id": "cortex.events.log",
+          "name": "events.log",
+          "description": "Query event log",
+          "route": {
+            "method": "GET",
+            "path": "/api/events"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "events log"
+          ]
+        },
+        {
+          "id": "cortex.events.write",
+          "name": "events.write",
+          "description": "Write event to JAA event_log",
+          "route": {
+            "method": "POST",
+            "path": "/api/event"
+          },
+          "tags": [
+            "cortex",
+            "ledger"
+          ],
+          "grammar": [
+            "events write"
+          ]
+        },
+        {
+          "id": "cortex.cfr.health",
+          "name": "cfr.health",
+          "description": "CFR field health — sigma, regime, coherence",
+          "route": {
+            "method": "GET",
+            "path": "/cfr/health"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "cfr health"
+          ]
+        },
+        {
+          "id": "cortex.cfr.field",
+          "name": "cfr.field",
+          "description": "Live CFR field state",
+          "route": {
+            "method": "GET",
+            "path": "/cfr/field"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "cfr field"
+          ]
+        },
+        {
+          "id": "cortex.cfr.graph",
+          "name": "cfr.graph",
+          "description": "Causal graph nodes + edges",
+          "route": {
+            "method": "GET",
+            "path": "/cfr/graph"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "cfr graph"
+          ]
+        },
+        {
+          "id": "cortex.cfr.deltas",
+          "name": "cfr.deltas",
+          "description": "Recent delta records",
+          "route": {
+            "method": "GET",
+            "path": "/cfr/deltas"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "cfr deltas"
+          ]
+        },
+        {
+          "id": "cortex.cfr.compounds",
+          "name": "cfr.compounds",
+          "description": "Compound effect scan (ripple/wave/tidal)",
+          "route": {
+            "method": "POST",
+            "path": "/cfr/compounds"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "cfr compounds"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.status",
+          "name": "intelligence.status",
+          "description": "Intelligence core status",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/status"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence status"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.context",
+          "name": "intelligence.context",
+          "description": "Pre-request context for intent",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/context"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence context"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.patterns",
+          "name": "intelligence.patterns",
+          "description": "Crystallised BEP patterns",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/patterns"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence patterns"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.failures",
+          "name": "intelligence.failures",
+          "description": "Failure mode taxonomy",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/failures"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence failures"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.rca",
+          "name": "intelligence.rca",
+          "description": "Root cause analysis findings",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/rca"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence rca"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.reuse",
+          "name": "intelligence.reuse",
+          "description": "SEAM reuse candidates",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/reuse"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence reuse"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.event",
+          "name": "intelligence.event",
+          "description": "Feed event for analysis",
+          "route": {
+            "method": "POST",
+            "path": "/api/intelligence/event"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence event"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.intuition",
+          "name": "intelligence.intuition",
+          "description": "INTUITION fast-path answer",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/intuition"
+          },
+          "tags": [
+            "cortex",
+            "cognition"
+          ],
+          "grammar": [
+            "intelligence intuition"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.mastermind",
+          "name": "intelligence.mastermind",
+          "description": "MASTERMIND strategic analysis",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/mastermind"
+          },
+          "tags": [
+            "cortex",
+            "cognition"
+          ],
+          "grammar": [
+            "intelligence mastermind"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.predict",
+          "name": "intelligence.predict",
+          "description": "Predicted next gap from precursors",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/predict"
+          },
+          "tags": [
+            "cortex",
+            "cognition"
+          ],
+          "grammar": [
+            "intelligence predict"
+          ]
+        },
+        {
+          "id": "cortex.intelligence.confidence",
+          "name": "intelligence.confidence",
+          "description": "Confidence score for query",
+          "route": {
+            "method": "GET",
+            "path": "/api/intelligence/confidence"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "intelligence confidence"
+          ]
+        },
+        {
+          "id": "cortex.raid.decide",
+          "name": "raid.decide",
+          "description": "Route intent to best agent/component",
+          "route": {
+            "method": "POST",
+            "path": "/api/raid/decide"
+          },
+          "tags": [
+            "cortex",
+            "routing"
+          ],
+          "grammar": [
+            "raid decide"
+          ]
+        },
+        {
+          "id": "cortex.raid.health",
+          "name": "raid.health",
+          "description": "RAID agent health + weights",
+          "route": {
+            "method": "GET",
+            "path": "/api/raid/health"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "raid health"
+          ]
+        },
+        {
+          "id": "cortex.snapshot.list",
+          "name": "snapshot.list",
+          "description": "Snapshot list",
+          "route": {
+            "method": "GET",
+            "path": "/api/snapshots"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "snapshot list"
+          ]
+        },
+        {
+          "id": "cortex.snapshot.create",
+          "name": "snapshot.create",
+          "description": "Create snapshot",
+          "route": {
+            "method": "POST",
+            "path": "/api/snapshots/create"
+          },
+          "tags": [
+            "cortex",
+            "snapshot"
+          ],
+          "grammar": [
+            "snapshot create"
+          ]
+        },
+        {
+          "id": "cortex.snapshot.rollback",
+          "name": "snapshot.rollback",
+          "description": "Rollback to snapshot",
+          "route": {
+            "method": "POST",
+            "path": "/api/snapshots/rollback"
+          },
+          "tags": [
+            "cortex",
+            "snapshot"
+          ],
+          "grammar": [
+            "snapshot rollback"
+          ]
+        },
+        {
+          "id": "cortex.versionium.log",
+          "name": "versionium.log",
+          "description": "Version commit log",
+          "route": {
+            "method": "GET",
+            "path": "/api/versionium/log"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "versionium log"
+          ]
+        },
+        {
+          "id": "cortex.chat.log",
+          "name": "chat.log",
+          "description": "Co-pilot conversation log",
+          "route": {
+            "method": "GET",
+            "path": "/api/chat-log"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "chat log"
+          ]
+        },
+        {
+          "id": "cortex.search",
+          "name": "search",
+          "description": "Cross-table search",
+          "route": {
+            "method": "GET",
+            "path": "/api/search"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "search"
+          ]
+        },
+        {
+          "id": "cortex.search.context",
+          "name": "search.context",
+          "description": "Context assembly for search query",
+          "route": {
+            "method": "POST",
+            "path": "/api/search/context"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "search context"
+          ]
+        },
+        {
+          "id": "cortex.tags.list",
+          "name": "tags.list",
+          "description": "All tags in memory",
+          "route": {
+            "method": "GET",
+            "path": "/api/tags"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "tags list"
+          ]
+        },
+        {
+          "id": "cortex.tags.add",
+          "name": "tags.add",
+          "description": "Add tag",
+          "route": {
+            "method": "POST",
+            "path": "/api/tags"
+          },
+          "tags": [
+            "cortex"
+          ],
+          "grammar": [
+            "tags add"
+          ]
+        },
+        {
+          "id": "cortex.nerve.snapshot",
+          "name": "nerve.snapshot",
+          "description": "Nerve attention layer snapshot — nodes, field, stresses",
+          "route": {
+            "method": "GET",
+            "path": "/nerve/snapshot"
+          },
+          "tags": [
+            "cortex",
+            "nerve"
+          ],
+          "grammar": [
+            "nerve snapshot"
+          ]
+        },
+        {
+          "id": "cortex.hooks.summary",
+          "name": "hooks.summary",
+          "description": "Wire graph — active hooks and declared wires",
+          "route": {
+            "method": "GET",
+            "path": "/hooks/summary"
+          },
+          "tags": [
+            "cortex",
+            "nerve",
+            "wires"
+          ],
+          "grammar": [
+            "hooks summary"
+          ]
+        }
+      ],
+      "cliMap": [
+        {
+          "command": "health",
+          "aliases": [
+            "health"
+          ],
+          "usage": "health",
+          "method": "GET",
+          "path": "/health",
+          "description": "Cortex health + JAA stats",
+          "componentId": "cortex.health",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "contract",
+          "aliases": [
+            "contract"
+          ],
+          "usage": "contract",
+          "method": "GET",
+          "path": "/contract",
+          "description": "Cortex interaction contract",
+          "componentId": "cortex.contract",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "events",
+          "aliases": [
+            "events"
+          ],
+          "usage": "events",
+          "method": "GET",
+          "path": "/events",
+          "description": "SSE — all cortex events",
+          "componentId": "cortex.events",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "stream"
+          ]
+        },
+        {
+          "command": "memory-browse",
+          "aliases": [
+            "memory browse"
+          ],
+          "usage": "memory-browse",
+          "method": "GET",
+          "path": "/api/memory",
+          "description": "Browse any JAA table",
+          "componentId": "cortex.memory.browse",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "memory"
+          ]
+        },
+        {
+          "command": "memory-insert",
+          "aliases": [
+            "memory insert"
+          ],
+          "usage": "memory-insert",
+          "method": "POST",
+          "path": "/api/memory/insert",
+          "description": "Insert row into any JAA table",
+          "componentId": "cortex.memory.insert",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "memory"
+          ]
+        },
+        {
+          "command": "memory-search",
+          "aliases": [
+            "memory search"
+          ],
+          "usage": "memory-search",
+          "method": "POST",
+          "path": "/api/memory/search",
+          "description": "Semantic search across memory",
+          "componentId": "cortex.memory.search",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "memory"
+          ]
+        },
+        {
+          "command": "memory-forget",
+          "aliases": [
+            "memory forget"
+          ],
+          "usage": "memory-forget",
+          "method": "POST",
+          "path": "/api/memory/forget",
+          "description": "Archive memory row (never delete)",
+          "componentId": "cortex.memory.forget",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "memory"
+          ]
+        },
+        {
+          "command": "memory-working",
+          "aliases": [
+            "memory working"
+          ],
+          "usage": "memory-working",
+          "method": "GET",
+          "path": "/api/memory/working",
+          "description": "Working memory snapshot",
+          "componentId": "cortex.memory.working",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "gaps-list",
+          "aliases": [
+            "gaps list"
+          ],
+          "usage": "gaps-list",
+          "method": "GET",
+          "path": "/api/gaps",
+          "description": "Open gaps by severity",
+          "componentId": "cortex.gaps.list",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "gaps-open",
+          "aliases": [
+            "gaps open"
+          ],
+          "usage": "gaps-open",
+          "method": "POST",
+          "path": "/api/gaps",
+          "description": "Open a new gap",
+          "componentId": "cortex.gaps.open",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "gaps"
+          ]
+        },
+        {
+          "command": "events-log",
+          "aliases": [
+            "events log"
+          ],
+          "usage": "events-log",
+          "method": "GET",
+          "path": "/api/events",
+          "description": "Query event log",
+          "componentId": "cortex.events.log",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "events-write",
+          "aliases": [
+            "events write"
+          ],
+          "usage": "events-write",
+          "method": "POST",
+          "path": "/api/event",
+          "description": "Write event to JAA event_log",
+          "componentId": "cortex.events.write",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "ledger"
+          ]
+        },
+        {
+          "command": "cfr-health",
+          "aliases": [
+            "cfr health"
+          ],
+          "usage": "cfr-health",
+          "method": "GET",
+          "path": "/cfr/health",
+          "description": "CFR field health — sigma, regime, coherence",
+          "componentId": "cortex.cfr.health",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "cfr-field",
+          "aliases": [
+            "cfr field"
+          ],
+          "usage": "cfr-field",
+          "method": "GET",
+          "path": "/cfr/field",
+          "description": "Live CFR field state",
+          "componentId": "cortex.cfr.field",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "cfr-graph",
+          "aliases": [
+            "cfr graph"
+          ],
+          "usage": "cfr-graph",
+          "method": "GET",
+          "path": "/cfr/graph",
+          "description": "Causal graph nodes + edges",
+          "componentId": "cortex.cfr.graph",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "cfr-deltas",
+          "aliases": [
+            "cfr deltas"
+          ],
+          "usage": "cfr-deltas",
+          "method": "GET",
+          "path": "/cfr/deltas",
+          "description": "Recent delta records",
+          "componentId": "cortex.cfr.deltas",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "cfr-compounds",
+          "aliases": [
+            "cfr compounds"
+          ],
+          "usage": "cfr-compounds",
+          "method": "POST",
+          "path": "/cfr/compounds",
+          "description": "Compound effect scan (ripple/wave/tidal)",
+          "componentId": "cortex.cfr.compounds",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-status",
+          "aliases": [
+            "intelligence status"
+          ],
+          "usage": "intelligence-status",
+          "method": "GET",
+          "path": "/api/intelligence/status",
+          "description": "Intelligence core status",
+          "componentId": "cortex.intelligence.status",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-context",
+          "aliases": [
+            "intelligence context"
+          ],
+          "usage": "intelligence-context",
+          "method": "GET",
+          "path": "/api/intelligence/context",
+          "description": "Pre-request context for intent",
+          "componentId": "cortex.intelligence.context",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-patterns",
+          "aliases": [
+            "intelligence patterns"
+          ],
+          "usage": "intelligence-patterns",
+          "method": "GET",
+          "path": "/api/intelligence/patterns",
+          "description": "Crystallised BEP patterns",
+          "componentId": "cortex.intelligence.patterns",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-failures",
+          "aliases": [
+            "intelligence failures"
+          ],
+          "usage": "intelligence-failures",
+          "method": "GET",
+          "path": "/api/intelligence/failures",
+          "description": "Failure mode taxonomy",
+          "componentId": "cortex.intelligence.failures",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-rca",
+          "aliases": [
+            "intelligence rca"
+          ],
+          "usage": "intelligence-rca",
+          "method": "GET",
+          "path": "/api/intelligence/rca",
+          "description": "Root cause analysis findings",
+          "componentId": "cortex.intelligence.rca",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-reuse",
+          "aliases": [
+            "intelligence reuse"
+          ],
+          "usage": "intelligence-reuse",
+          "method": "GET",
+          "path": "/api/intelligence/reuse",
+          "description": "SEAM reuse candidates",
+          "componentId": "cortex.intelligence.reuse",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-event",
+          "aliases": [
+            "intelligence event"
+          ],
+          "usage": "intelligence-event",
+          "method": "POST",
+          "path": "/api/intelligence/event",
+          "description": "Feed event for analysis",
+          "componentId": "cortex.intelligence.event",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "intelligence-intuition",
+          "aliases": [
+            "intelligence intuition"
+          ],
+          "usage": "intelligence-intuition",
+          "method": "GET",
+          "path": "/api/intelligence/intuition",
+          "description": "INTUITION fast-path answer",
+          "componentId": "cortex.intelligence.intuition",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "cognition"
+          ]
+        },
+        {
+          "command": "intelligence-mastermind",
+          "aliases": [
+            "intelligence mastermind"
+          ],
+          "usage": "intelligence-mastermind",
+          "method": "GET",
+          "path": "/api/intelligence/mastermind",
+          "description": "MASTERMIND strategic analysis",
+          "componentId": "cortex.intelligence.mastermind",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "cognition"
+          ]
+        },
+        {
+          "command": "intelligence-predict",
+          "aliases": [
+            "intelligence predict"
+          ],
+          "usage": "intelligence-predict",
+          "method": "GET",
+          "path": "/api/intelligence/predict",
+          "description": "Predicted next gap from precursors",
+          "componentId": "cortex.intelligence.predict",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "cognition"
+          ]
+        },
+        {
+          "command": "intelligence-confidence",
+          "aliases": [
+            "intelligence confidence"
+          ],
+          "usage": "intelligence-confidence",
+          "method": "GET",
+          "path": "/api/intelligence/confidence",
+          "description": "Confidence score for query",
+          "componentId": "cortex.intelligence.confidence",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "raid-decide",
+          "aliases": [
+            "raid decide"
+          ],
+          "usage": "raid-decide",
+          "method": "POST",
+          "path": "/api/raid/decide",
+          "description": "Route intent to best agent/component",
+          "componentId": "cortex.raid.decide",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "routing"
+          ]
+        },
+        {
+          "command": "raid-health",
+          "aliases": [
+            "raid health"
+          ],
+          "usage": "raid-health",
+          "method": "GET",
+          "path": "/api/raid/health",
+          "description": "RAID agent health + weights",
+          "componentId": "cortex.raid.health",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "snapshot-list",
+          "aliases": [
+            "snapshot list"
+          ],
+          "usage": "snapshot-list",
+          "method": "GET",
+          "path": "/api/snapshots",
+          "description": "Snapshot list",
+          "componentId": "cortex.snapshot.list",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "snapshot-create",
+          "aliases": [
+            "snapshot create"
+          ],
+          "usage": "snapshot-create",
+          "method": "POST",
+          "path": "/api/snapshots/create",
+          "description": "Create snapshot",
+          "componentId": "cortex.snapshot.create",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "snapshot"
+          ]
+        },
+        {
+          "command": "snapshot-rollback",
+          "aliases": [
+            "snapshot rollback"
+          ],
+          "usage": "snapshot-rollback",
+          "method": "POST",
+          "path": "/api/snapshots/rollback",
+          "description": "Rollback to snapshot",
+          "componentId": "cortex.snapshot.rollback",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "snapshot"
+          ]
+        },
+        {
+          "command": "versionium-log",
+          "aliases": [
+            "versionium log"
+          ],
+          "usage": "versionium-log",
+          "method": "GET",
+          "path": "/api/versionium/log",
+          "description": "Version commit log",
+          "componentId": "cortex.versionium.log",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "chat-log",
+          "aliases": [
+            "chat log"
+          ],
+          "usage": "chat-log",
+          "method": "GET",
+          "path": "/api/chat-log",
+          "description": "Co-pilot conversation log",
+          "componentId": "cortex.chat.log",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "search",
+          "aliases": [
+            "search"
+          ],
+          "usage": "search",
+          "method": "GET",
+          "path": "/api/search",
+          "description": "Cross-table search",
+          "componentId": "cortex.search",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "search-context",
+          "aliases": [
+            "search context"
+          ],
+          "usage": "search-context",
+          "method": "POST",
+          "path": "/api/search/context",
+          "description": "Context assembly for search query",
+          "componentId": "cortex.search.context",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "tags-list",
+          "aliases": [
+            "tags list"
+          ],
+          "usage": "tags-list",
+          "method": "GET",
+          "path": "/api/tags",
+          "description": "All tags in memory",
+          "componentId": "cortex.tags.list",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "tags-add",
+          "aliases": [
+            "tags add"
+          ],
+          "usage": "tags-add",
+          "method": "POST",
+          "path": "/api/tags",
+          "description": "Add tag",
+          "componentId": "cortex.tags.add",
+          "systemId": "cortex",
+          "tags": [
+            "cortex"
+          ]
+        },
+        {
+          "command": "nerve-snapshot",
+          "aliases": [
+            "nerve snapshot"
+          ],
+          "usage": "nerve-snapshot",
+          "method": "GET",
+          "path": "/nerve/snapshot",
+          "description": "Nerve attention layer snapshot — nodes, field, stresses",
+          "componentId": "cortex.nerve.snapshot",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "nerve"
+          ]
+        },
+        {
+          "command": "hooks-summary",
+          "aliases": [
+            "hooks summary"
+          ],
+          "usage": "hooks-summary",
+          "method": "GET",
+          "path": "/hooks/summary",
+          "description": "Wire graph — active hooks and declared wires",
+          "componentId": "cortex.hooks.summary",
+          "systemId": "cortex",
+          "tags": [
+            "cortex",
+            "nerve",
+            "wires"
+          ]
+        }
+      ],
+      "seamHooks": [
+        {
+          "componentId": "cortex.memory.insert",
+          "in": [
+            {
+              "id": "cortex.memory.insert.receive",
+              "intent": [
+                "persist",
+                "write",
+                "log"
+              ],
+              "contract": "nexus-interaction-contract-v1::cortex",
+              "tags": [
+                "memory"
+              ]
+            }
+          ],
+          "out": []
+        },
+        {
+          "componentId": "cortex.intelligence.intuition",
+          "in": [],
+          "out": [
+            {
+              "id": "cortex.intelligence.intuition.answer",
+              "wires_to": [
+                "copilot.prompt.receive_result"
+              ],
+              "tags": [
+                "answer"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "cortex.raid.decide",
+          "in": [
+            {
+              "id": "cortex.raid.receive",
+              "intent": [
+                "build",
+                "ask",
+                "forge",
+                "classify"
+              ],
+              "contract": "nexus-interaction-contract-v1::cortex",
+              "tags": [
+                "raid"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "cortex.raid.feedback",
+              "wires_to": [
+                "ollama.jobs.dispatch.receive",
+                "guardian.job.dispatch.receive"
+              ],
+              "tags": [
+                "routing"
+              ]
+            }
+          ]
+        }
+      ],
+      "copilotMap": [
+        {
+          "componentId": "cortex.health",
+          "label": "health",
+          "description": "Cortex health + JAA stats",
+          "intents": [
+            "health"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.contract",
+          "label": "contract",
+          "description": "Cortex interaction contract",
+          "intents": [
+            "contract"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.events",
+          "label": "events",
+          "description": "SSE — all cortex events",
+          "intents": [
+            "events"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.memory.browse",
+          "label": "memory.browse",
+          "description": "Browse any JAA table",
+          "intents": [
+            "memory browse"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.memory.insert",
+          "label": "memory.insert",
+          "description": "Insert row into any JAA table",
+          "intents": [
+            "persist",
+            "write",
+            "log",
+            "memory insert"
+          ],
+          "contract": "nexus-interaction-contract-v1::cortex",
+          "hookId": "cortex.memory.insert.receive"
+        },
+        {
+          "componentId": "cortex.memory.search",
+          "label": "memory.search",
+          "description": "Semantic search across memory",
+          "intents": [
+            "memory search"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.memory.forget",
+          "label": "memory.forget",
+          "description": "Archive memory row (never delete)",
+          "intents": [
+            "memory forget"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.memory.working",
+          "label": "memory.working",
+          "description": "Working memory snapshot",
+          "intents": [
+            "memory working"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.gaps.list",
+          "label": "gaps.list",
+          "description": "Open gaps by severity",
+          "intents": [
+            "gaps list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.gaps.open",
+          "label": "gaps.open",
+          "description": "Open a new gap",
+          "intents": [
+            "gaps open"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.events.log",
+          "label": "events.log",
+          "description": "Query event log",
+          "intents": [
+            "events log"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.events.write",
+          "label": "events.write",
+          "description": "Write event to JAA event_log",
+          "intents": [
+            "events write"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.cfr.health",
+          "label": "cfr.health",
+          "description": "CFR field health — sigma, regime, coherence",
+          "intents": [
+            "cfr health"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.cfr.field",
+          "label": "cfr.field",
+          "description": "Live CFR field state",
+          "intents": [
+            "cfr field"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.cfr.graph",
+          "label": "cfr.graph",
+          "description": "Causal graph nodes + edges",
+          "intents": [
+            "cfr graph"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.cfr.deltas",
+          "label": "cfr.deltas",
+          "description": "Recent delta records",
+          "intents": [
+            "cfr deltas"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.cfr.compounds",
+          "label": "cfr.compounds",
+          "description": "Compound effect scan (ripple/wave/tidal)",
+          "intents": [
+            "cfr compounds"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.status",
+          "label": "intelligence.status",
+          "description": "Intelligence core status",
+          "intents": [
+            "intelligence status"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.context",
+          "label": "intelligence.context",
+          "description": "Pre-request context for intent",
+          "intents": [
+            "intelligence context"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.patterns",
+          "label": "intelligence.patterns",
+          "description": "Crystallised BEP patterns",
+          "intents": [
+            "intelligence patterns"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.failures",
+          "label": "intelligence.failures",
+          "description": "Failure mode taxonomy",
+          "intents": [
+            "intelligence failures"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.rca",
+          "label": "intelligence.rca",
+          "description": "Root cause analysis findings",
+          "intents": [
+            "intelligence rca"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.reuse",
+          "label": "intelligence.reuse",
+          "description": "SEAM reuse candidates",
+          "intents": [
+            "intelligence reuse"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.event",
+          "label": "intelligence.event",
+          "description": "Feed event for analysis",
+          "intents": [
+            "intelligence event"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.intuition",
+          "label": "intelligence.intuition",
+          "description": "INTUITION fast-path answer",
+          "intents": [
+            "intelligence intuition"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.mastermind",
+          "label": "intelligence.mastermind",
+          "description": "MASTERMIND strategic analysis",
+          "intents": [
+            "intelligence mastermind"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.predict",
+          "label": "intelligence.predict",
+          "description": "Predicted next gap from precursors",
+          "intents": [
+            "intelligence predict"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.intelligence.confidence",
+          "label": "intelligence.confidence",
+          "description": "Confidence score for query",
+          "intents": [
+            "intelligence confidence"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.raid.decide",
+          "label": "raid.decide",
+          "description": "Route intent to best agent/component",
+          "intents": [
+            "build",
+            "ask",
+            "forge",
+            "classify",
+            "raid decide"
+          ],
+          "contract": "nexus-interaction-contract-v1::cortex",
+          "hookId": "cortex.raid.receive"
+        },
+        {
+          "componentId": "cortex.raid.health",
+          "label": "raid.health",
+          "description": "RAID agent health + weights",
+          "intents": [
+            "raid health"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.snapshot.list",
+          "label": "snapshot.list",
+          "description": "Snapshot list",
+          "intents": [
+            "snapshot list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.snapshot.create",
+          "label": "snapshot.create",
+          "description": "Create snapshot",
+          "intents": [
+            "snapshot create"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.snapshot.rollback",
+          "label": "snapshot.rollback",
+          "description": "Rollback to snapshot",
+          "intents": [
+            "snapshot rollback"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.versionium.log",
+          "label": "versionium.log",
+          "description": "Version commit log",
+          "intents": [
+            "versionium log"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.chat.log",
+          "label": "chat.log",
+          "description": "Co-pilot conversation log",
+          "intents": [
+            "chat log"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.search",
+          "label": "search",
+          "description": "Cross-table search",
+          "intents": [
+            "search"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.search.context",
+          "label": "search.context",
+          "description": "Context assembly for search query",
+          "intents": [
+            "search context"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.tags.list",
+          "label": "tags.list",
+          "description": "All tags in memory",
+          "intents": [
+            "tags list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.tags.add",
+          "label": "tags.add",
+          "description": "Add tag",
+          "intents": [
+            "tags add"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.nerve.snapshot",
+          "label": "nerve.snapshot",
+          "description": "Nerve attention layer snapshot — nodes, field, stresses",
+          "intents": [
+            "nerve snapshot"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cortex.hooks.summary",
+          "label": "hooks.summary",
+          "description": "Wire graph — active hooks and declared wires",
+          "intents": [
+            "hooks summary"
+          ],
+          "contract": null,
+          "hookId": null
+        }
+      ]
     },
     {
       "systemId": "guardian",
@@ -1537,7 +3799,7 @@
       "systemId": "copilot",
       "label": "Co-pilot",
       "port": 3750,
-      "componentCount": 13,
+      "componentCount": 15,
       "components": [
         {
           "id": "copilot.prompt",
@@ -1708,6 +3970,38 @@
           ],
           "grammar": [
             "copilot diagnose list"
+          ]
+        },
+        {
+          "id": "copilot.prompt.fulfill",
+          "name": "prompt.fulfill",
+          "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
+          "route": {
+            "method": "POST",
+            "path": "/api/prompt/fulfill"
+          },
+          "tags": [
+            "copilot"
+          ],
+          "grammar": [
+            "fulfill",
+            "cp fulfill"
+          ]
+        },
+        {
+          "id": "copilot.prompt.stream",
+          "name": "prompt.stream",
+          "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
+          "route": {
+            "method": "POST",
+            "path": "/api/prompt/stream"
+          },
+          "tags": [
+            "copilot"
+          ],
+          "grammar": [
+            "stream ask",
+            "cp stream"
           ]
         },
         {
@@ -1914,6 +4208,38 @@
           ]
         },
         {
+          "command": "prompt-fulfill",
+          "aliases": [
+            "fulfill",
+            "cp fulfill"
+          ],
+          "usage": "prompt-fulfill",
+          "method": "POST",
+          "path": "/api/prompt/fulfill",
+          "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
+          "componentId": "copilot.prompt.fulfill",
+          "systemId": "copilot",
+          "tags": [
+            "copilot"
+          ]
+        },
+        {
+          "command": "prompt-stream",
+          "aliases": [
+            "stream ask",
+            "cp stream"
+          ],
+          "usage": "prompt-stream",
+          "method": "POST",
+          "path": "/api/prompt/stream",
+          "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
+          "componentId": "copilot.prompt.stream",
+          "systemId": "copilot",
+          "tags": [
+            "copilot"
+          ]
+        },
+        {
           "command": "health",
           "aliases": [
             "copilot health"
@@ -1982,6 +4308,62 @@
               ],
               "tags": [
                 "response"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.prompt.fulfill",
+          "in": [
+            {
+              "id": "copilot.prompt.fulfill.receive",
+              "intent": [
+                "ask",
+                "build",
+                "diagnose"
+              ],
+              "contract": "nexus-interaction-contract-v1::copilot",
+              "tags": [
+                "entry-point",
+                "adaptive"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "copilot.fulfillment.attempt",
+              "wires_to": [
+                "cortex.intelligence.event"
+              ],
+              "tags": [
+                "learning"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.prompt.stream",
+          "in": [
+            {
+              "id": "copilot.prompt.stream.receive",
+              "intent": [
+                "ask"
+              ],
+              "contract": null,
+              "tags": [
+                "streaming",
+                "sse"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "copilot.prompt.stream.chunk",
+              "wires_to": [
+                "ui.copilot.stream"
+              ],
+              "tags": [
+                "streaming"
               ]
             }
           ]
@@ -2108,6 +4490,32 @@
           ],
           "contract": null,
           "hookId": null
+        },
+        {
+          "componentId": "copilot.prompt.fulfill",
+          "label": "prompt.fulfill",
+          "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
+          "intents": [
+            "ask",
+            "build",
+            "diagnose",
+            "fulfill",
+            "cp fulfill"
+          ],
+          "contract": "nexus-interaction-contract-v1::copilot",
+          "hookId": "copilot.prompt.fulfill.receive"
+        },
+        {
+          "componentId": "copilot.prompt.stream",
+          "label": "prompt.stream",
+          "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
+          "intents": [
+            "ask",
+            "stream ask",
+            "cp stream"
+          ],
+          "contract": null,
+          "hookId": "copilot.prompt.stream.receive"
         },
         {
           "componentId": "copilot.health",
@@ -6053,6 +8461,905 @@
   "allCLI": [
     {
       "command": "health",
+      "aliases": [],
+      "usage": "health",
+      "method": "GET",
+      "path": "/health",
+      "description": "Orchestrator health",
+      "componentId": "health",
+      "systemId": "health",
+      "tags": []
+    },
+    {
+      "command": "contract",
+      "aliases": [],
+      "usage": "contract",
+      "method": "GET",
+      "path": "/contract",
+      "description": "Orchestrator interaction contract",
+      "componentId": "contract",
+      "systemId": "contract",
+      "tags": []
+    },
+    {
+      "command": "status",
+      "aliases": [],
+      "usage": "status",
+      "method": "GET",
+      "path": "/api/status",
+      "description": "Full system status snapshot",
+      "componentId": "status",
+      "systemId": "status",
+      "tags": []
+    },
+    {
+      "command": "stats",
+      "aliases": [],
+      "usage": "stats",
+      "method": "GET",
+      "path": "/api/bus/stats",
+      "description": "Nexus bus stats + per-source emitCount/lastSeen",
+      "componentId": "bus.stats",
+      "systemId": "bus",
+      "tags": []
+    },
+    {
+      "command": "write",
+      "aliases": [],
+      "usage": "write",
+      "method": "POST",
+      "path": "/api/ledger",
+      "description": "Write event to system ledger",
+      "componentId": "ledger.write",
+      "systemId": "ledger",
+      "tags": [
+        "ledger"
+      ]
+    },
+    {
+      "command": "read",
+      "aliases": [],
+      "usage": "read",
+      "method": "GET",
+      "path": "/api/ledger/:system",
+      "description": "Read system ledger tail",
+      "componentId": "ledger.read",
+      "systemId": "ledger",
+      "tags": [
+        "ledger"
+      ]
+    },
+    {
+      "command": "register",
+      "aliases": [],
+      "usage": "register",
+      "method": "POST",
+      "path": "/api/register",
+      "description": "Register a sovereign system",
+      "componentId": "register",
+      "systemId": "register",
+      "tags": []
+    },
+    {
+      "command": "systems",
+      "aliases": [],
+      "usage": "systems",
+      "method": "GET",
+      "path": "/api/systems",
+      "description": "Registered systems",
+      "componentId": "systems",
+      "systemId": "systems",
+      "tags": []
+    },
+    {
+      "command": "components",
+      "aliases": [],
+      "usage": "components",
+      "method": "GET",
+      "path": "/api/components",
+      "description": "Blueprint component index",
+      "componentId": "components",
+      "systemId": "components",
+      "tags": []
+    },
+    {
+      "command": "verify",
+      "aliases": [],
+      "usage": "verify",
+      "method": "POST",
+      "path": "/api/contract/verify",
+      "description": "Verify a system contract",
+      "componentId": "contract.verify",
+      "systemId": "contract",
+      "tags": []
+    },
+    {
+      "command": "all",
+      "aliases": [],
+      "usage": "all",
+      "method": "GET",
+      "path": "/api/contracts",
+      "description": "All interaction contracts",
+      "componentId": "contracts.all",
+      "systemId": "contracts",
+      "tags": []
+    },
+    {
+      "command": "hot-load",
+      "aliases": [],
+      "usage": "hot-load",
+      "method": "POST",
+      "path": "/api/system/hot-load",
+      "description": "Live-patch a module without restart",
+      "componentId": "system.hot-load",
+      "systemId": "system",
+      "tags": [
+        "system",
+        "hot"
+      ]
+    },
+    {
+      "command": "hot-load-status",
+      "aliases": [],
+      "usage": "hot-load-status",
+      "method": "GET",
+      "path": "/api/system/hot-load/status",
+      "description": "Hot-load monitor status",
+      "componentId": "system.hot-load.status",
+      "systemId": "system",
+      "tags": [
+        "system",
+        "hot"
+      ]
+    },
+    {
+      "command": "autonomous",
+      "aliases": [],
+      "usage": "autonomous",
+      "method": "POST",
+      "path": "/api/system/autonomous",
+      "description": "Run an autonomous goal loop",
+      "componentId": "system.autonomous",
+      "systemId": "system",
+      "tags": [
+        "system",
+        "autonomous"
+      ]
+    },
+    {
+      "command": "autonomous-status",
+      "aliases": [],
+      "usage": "autonomous-status",
+      "method": "GET",
+      "path": "/api/system/autonomous/status",
+      "description": "Autonomous loop status",
+      "componentId": "system.autonomous.status",
+      "systemId": "system",
+      "tags": [
+        "system",
+        "autonomous"
+      ]
+    },
+    {
+      "command": "mcp",
+      "aliases": [],
+      "usage": "mcp",
+      "method": "GET",
+      "path": "/api/system/mcp",
+      "description": "MCP server status",
+      "componentId": "system.mcp",
+      "systemId": "system",
+      "tags": [
+        "system",
+        "mcp"
+      ]
+    },
+    {
+      "command": "mcp-tools",
+      "aliases": [],
+      "usage": "mcp-tools",
+      "method": "GET",
+      "path": "/api/system/mcp/tools",
+      "description": "MCP available tools",
+      "componentId": "system.mcp.tools",
+      "systemId": "system",
+      "tags": [
+        "system",
+        "mcp"
+      ]
+    },
+    {
+      "command": "heartbeat",
+      "aliases": [],
+      "usage": "heartbeat",
+      "method": "POST",
+      "path": "/api/heartbeat",
+      "description": "System heartbeat — keeps lastSeen live",
+      "componentId": "heartbeat",
+      "systemId": "heartbeat",
+      "tags": [
+        "pulse"
+      ]
+    },
+    {
+      "command": "pulse",
+      "aliases": [],
+      "usage": "pulse",
+      "method": "POST",
+      "path": "/api/pulse",
+      "description": "System pulse event",
+      "componentId": "pulse",
+      "systemId": "pulse",
+      "tags": [
+        "pulse"
+      ]
+    },
+    {
+      "command": "spec-drift",
+      "aliases": [],
+      "usage": "spec-drift",
+      "method": "GET",
+      "path": "/api/spec-drift",
+      "description": "Current spec/code divergence",
+      "componentId": "spec-drift",
+      "systemId": "spec-drift",
+      "tags": []
+    },
+    {
+      "command": "list",
+      "aliases": [],
+      "usage": "list",
+      "method": "GET",
+      "path": "/api/ui",
+      "description": "Available UI systems",
+      "componentId": "ui.list",
+      "systemId": "ui",
+      "tags": []
+    },
+    {
+      "command": "hotswap",
+      "aliases": [],
+      "usage": "hotswap",
+      "method": "POST",
+      "path": "/api/ui/hotswap",
+      "description": "Hot-swap a UI file",
+      "componentId": "ui.hotswap",
+      "systemId": "ui",
+      "tags": []
+    },
+    {
+      "command": "health",
+      "aliases": [
+        "health"
+      ],
+      "usage": "health",
+      "method": "GET",
+      "path": "/health",
+      "description": "Cortex health + JAA stats",
+      "componentId": "cortex.health",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "contract",
+      "aliases": [
+        "contract"
+      ],
+      "usage": "contract",
+      "method": "GET",
+      "path": "/contract",
+      "description": "Cortex interaction contract",
+      "componentId": "cortex.contract",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "events",
+      "aliases": [
+        "events"
+      ],
+      "usage": "events",
+      "method": "GET",
+      "path": "/events",
+      "description": "SSE — all cortex events",
+      "componentId": "cortex.events",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "stream"
+      ]
+    },
+    {
+      "command": "memory-browse",
+      "aliases": [
+        "memory browse"
+      ],
+      "usage": "memory-browse",
+      "method": "GET",
+      "path": "/api/memory",
+      "description": "Browse any JAA table",
+      "componentId": "cortex.memory.browse",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "memory"
+      ]
+    },
+    {
+      "command": "memory-insert",
+      "aliases": [
+        "memory insert"
+      ],
+      "usage": "memory-insert",
+      "method": "POST",
+      "path": "/api/memory/insert",
+      "description": "Insert row into any JAA table",
+      "componentId": "cortex.memory.insert",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "memory"
+      ]
+    },
+    {
+      "command": "memory-search",
+      "aliases": [
+        "memory search"
+      ],
+      "usage": "memory-search",
+      "method": "POST",
+      "path": "/api/memory/search",
+      "description": "Semantic search across memory",
+      "componentId": "cortex.memory.search",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "memory"
+      ]
+    },
+    {
+      "command": "memory-forget",
+      "aliases": [
+        "memory forget"
+      ],
+      "usage": "memory-forget",
+      "method": "POST",
+      "path": "/api/memory/forget",
+      "description": "Archive memory row (never delete)",
+      "componentId": "cortex.memory.forget",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "memory"
+      ]
+    },
+    {
+      "command": "memory-working",
+      "aliases": [
+        "memory working"
+      ],
+      "usage": "memory-working",
+      "method": "GET",
+      "path": "/api/memory/working",
+      "description": "Working memory snapshot",
+      "componentId": "cortex.memory.working",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "gaps-list",
+      "aliases": [
+        "gaps list"
+      ],
+      "usage": "gaps-list",
+      "method": "GET",
+      "path": "/api/gaps",
+      "description": "Open gaps by severity",
+      "componentId": "cortex.gaps.list",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "gaps-open",
+      "aliases": [
+        "gaps open"
+      ],
+      "usage": "gaps-open",
+      "method": "POST",
+      "path": "/api/gaps",
+      "description": "Open a new gap",
+      "componentId": "cortex.gaps.open",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "gaps"
+      ]
+    },
+    {
+      "command": "events-log",
+      "aliases": [
+        "events log"
+      ],
+      "usage": "events-log",
+      "method": "GET",
+      "path": "/api/events",
+      "description": "Query event log",
+      "componentId": "cortex.events.log",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "events-write",
+      "aliases": [
+        "events write"
+      ],
+      "usage": "events-write",
+      "method": "POST",
+      "path": "/api/event",
+      "description": "Write event to JAA event_log",
+      "componentId": "cortex.events.write",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "ledger"
+      ]
+    },
+    {
+      "command": "cfr-health",
+      "aliases": [
+        "cfr health"
+      ],
+      "usage": "cfr-health",
+      "method": "GET",
+      "path": "/cfr/health",
+      "description": "CFR field health — sigma, regime, coherence",
+      "componentId": "cortex.cfr.health",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "cfr-field",
+      "aliases": [
+        "cfr field"
+      ],
+      "usage": "cfr-field",
+      "method": "GET",
+      "path": "/cfr/field",
+      "description": "Live CFR field state",
+      "componentId": "cortex.cfr.field",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "cfr-graph",
+      "aliases": [
+        "cfr graph"
+      ],
+      "usage": "cfr-graph",
+      "method": "GET",
+      "path": "/cfr/graph",
+      "description": "Causal graph nodes + edges",
+      "componentId": "cortex.cfr.graph",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "cfr-deltas",
+      "aliases": [
+        "cfr deltas"
+      ],
+      "usage": "cfr-deltas",
+      "method": "GET",
+      "path": "/cfr/deltas",
+      "description": "Recent delta records",
+      "componentId": "cortex.cfr.deltas",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "cfr-compounds",
+      "aliases": [
+        "cfr compounds"
+      ],
+      "usage": "cfr-compounds",
+      "method": "POST",
+      "path": "/cfr/compounds",
+      "description": "Compound effect scan (ripple/wave/tidal)",
+      "componentId": "cortex.cfr.compounds",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-status",
+      "aliases": [
+        "intelligence status"
+      ],
+      "usage": "intelligence-status",
+      "method": "GET",
+      "path": "/api/intelligence/status",
+      "description": "Intelligence core status",
+      "componentId": "cortex.intelligence.status",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-context",
+      "aliases": [
+        "intelligence context"
+      ],
+      "usage": "intelligence-context",
+      "method": "GET",
+      "path": "/api/intelligence/context",
+      "description": "Pre-request context for intent",
+      "componentId": "cortex.intelligence.context",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-patterns",
+      "aliases": [
+        "intelligence patterns"
+      ],
+      "usage": "intelligence-patterns",
+      "method": "GET",
+      "path": "/api/intelligence/patterns",
+      "description": "Crystallised BEP patterns",
+      "componentId": "cortex.intelligence.patterns",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-failures",
+      "aliases": [
+        "intelligence failures"
+      ],
+      "usage": "intelligence-failures",
+      "method": "GET",
+      "path": "/api/intelligence/failures",
+      "description": "Failure mode taxonomy",
+      "componentId": "cortex.intelligence.failures",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-rca",
+      "aliases": [
+        "intelligence rca"
+      ],
+      "usage": "intelligence-rca",
+      "method": "GET",
+      "path": "/api/intelligence/rca",
+      "description": "Root cause analysis findings",
+      "componentId": "cortex.intelligence.rca",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-reuse",
+      "aliases": [
+        "intelligence reuse"
+      ],
+      "usage": "intelligence-reuse",
+      "method": "GET",
+      "path": "/api/intelligence/reuse",
+      "description": "SEAM reuse candidates",
+      "componentId": "cortex.intelligence.reuse",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-event",
+      "aliases": [
+        "intelligence event"
+      ],
+      "usage": "intelligence-event",
+      "method": "POST",
+      "path": "/api/intelligence/event",
+      "description": "Feed event for analysis",
+      "componentId": "cortex.intelligence.event",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "intelligence-intuition",
+      "aliases": [
+        "intelligence intuition"
+      ],
+      "usage": "intelligence-intuition",
+      "method": "GET",
+      "path": "/api/intelligence/intuition",
+      "description": "INTUITION fast-path answer",
+      "componentId": "cortex.intelligence.intuition",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "cognition"
+      ]
+    },
+    {
+      "command": "intelligence-mastermind",
+      "aliases": [
+        "intelligence mastermind"
+      ],
+      "usage": "intelligence-mastermind",
+      "method": "GET",
+      "path": "/api/intelligence/mastermind",
+      "description": "MASTERMIND strategic analysis",
+      "componentId": "cortex.intelligence.mastermind",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "cognition"
+      ]
+    },
+    {
+      "command": "intelligence-predict",
+      "aliases": [
+        "intelligence predict"
+      ],
+      "usage": "intelligence-predict",
+      "method": "GET",
+      "path": "/api/intelligence/predict",
+      "description": "Predicted next gap from precursors",
+      "componentId": "cortex.intelligence.predict",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "cognition"
+      ]
+    },
+    {
+      "command": "intelligence-confidence",
+      "aliases": [
+        "intelligence confidence"
+      ],
+      "usage": "intelligence-confidence",
+      "method": "GET",
+      "path": "/api/intelligence/confidence",
+      "description": "Confidence score for query",
+      "componentId": "cortex.intelligence.confidence",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "raid-decide",
+      "aliases": [
+        "raid decide"
+      ],
+      "usage": "raid-decide",
+      "method": "POST",
+      "path": "/api/raid/decide",
+      "description": "Route intent to best agent/component",
+      "componentId": "cortex.raid.decide",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "routing"
+      ]
+    },
+    {
+      "command": "raid-health",
+      "aliases": [
+        "raid health"
+      ],
+      "usage": "raid-health",
+      "method": "GET",
+      "path": "/api/raid/health",
+      "description": "RAID agent health + weights",
+      "componentId": "cortex.raid.health",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "snapshot-list",
+      "aliases": [
+        "snapshot list"
+      ],
+      "usage": "snapshot-list",
+      "method": "GET",
+      "path": "/api/snapshots",
+      "description": "Snapshot list",
+      "componentId": "cortex.snapshot.list",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "snapshot-create",
+      "aliases": [
+        "snapshot create"
+      ],
+      "usage": "snapshot-create",
+      "method": "POST",
+      "path": "/api/snapshots/create",
+      "description": "Create snapshot",
+      "componentId": "cortex.snapshot.create",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "snapshot"
+      ]
+    },
+    {
+      "command": "snapshot-rollback",
+      "aliases": [
+        "snapshot rollback"
+      ],
+      "usage": "snapshot-rollback",
+      "method": "POST",
+      "path": "/api/snapshots/rollback",
+      "description": "Rollback to snapshot",
+      "componentId": "cortex.snapshot.rollback",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "snapshot"
+      ]
+    },
+    {
+      "command": "versionium-log",
+      "aliases": [
+        "versionium log"
+      ],
+      "usage": "versionium-log",
+      "method": "GET",
+      "path": "/api/versionium/log",
+      "description": "Version commit log",
+      "componentId": "cortex.versionium.log",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "chat-log",
+      "aliases": [
+        "chat log"
+      ],
+      "usage": "chat-log",
+      "method": "GET",
+      "path": "/api/chat-log",
+      "description": "Co-pilot conversation log",
+      "componentId": "cortex.chat.log",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "search",
+      "aliases": [
+        "search"
+      ],
+      "usage": "search",
+      "method": "GET",
+      "path": "/api/search",
+      "description": "Cross-table search",
+      "componentId": "cortex.search",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "search-context",
+      "aliases": [
+        "search context"
+      ],
+      "usage": "search-context",
+      "method": "POST",
+      "path": "/api/search/context",
+      "description": "Context assembly for search query",
+      "componentId": "cortex.search.context",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "tags-list",
+      "aliases": [
+        "tags list"
+      ],
+      "usage": "tags-list",
+      "method": "GET",
+      "path": "/api/tags",
+      "description": "All tags in memory",
+      "componentId": "cortex.tags.list",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "tags-add",
+      "aliases": [
+        "tags add"
+      ],
+      "usage": "tags-add",
+      "method": "POST",
+      "path": "/api/tags",
+      "description": "Add tag",
+      "componentId": "cortex.tags.add",
+      "systemId": "cortex",
+      "tags": [
+        "cortex"
+      ]
+    },
+    {
+      "command": "nerve-snapshot",
+      "aliases": [
+        "nerve snapshot"
+      ],
+      "usage": "nerve-snapshot",
+      "method": "GET",
+      "path": "/nerve/snapshot",
+      "description": "Nerve attention layer snapshot — nodes, field, stresses",
+      "componentId": "cortex.nerve.snapshot",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "nerve"
+      ]
+    },
+    {
+      "command": "hooks-summary",
+      "aliases": [
+        "hooks summary"
+      ],
+      "usage": "hooks-summary",
+      "method": "GET",
+      "path": "/hooks/summary",
+      "description": "Wire graph — active hooks and declared wires",
+      "componentId": "cortex.hooks.summary",
+      "systemId": "cortex",
+      "tags": [
+        "cortex",
+        "nerve",
+        "wires"
+      ]
+    },
+    {
+      "command": "health",
       "aliases": [
         "health",
         "health"
@@ -6751,6 +10058,38 @@
       "path": "/api/diagnose/list",
       "description": "List past diagnosis sessions",
       "componentId": "copilot.diagnose.list",
+      "systemId": "copilot",
+      "tags": [
+        "copilot"
+      ]
+    },
+    {
+      "command": "prompt-fulfill",
+      "aliases": [
+        "fulfill",
+        "cp fulfill"
+      ],
+      "usage": "prompt-fulfill",
+      "method": "POST",
+      "path": "/api/prompt/fulfill",
+      "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
+      "componentId": "copilot.prompt.fulfill",
+      "systemId": "copilot",
+      "tags": [
+        "copilot"
+      ]
+    },
+    {
+      "command": "prompt-stream",
+      "aliases": [
+        "stream ask",
+        "cp stream"
+      ],
+      "usage": "prompt-stream",
+      "method": "POST",
+      "path": "/api/prompt/stream",
+      "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
+      "componentId": "copilot.prompt.stream",
       "systemId": "copilot",
       "tags": [
         "copilot"
@@ -8159,6 +11498,69 @@
   ],
   "allSEAM": [
     {
+      "componentId": "cortex.memory.insert",
+      "in": [
+        {
+          "id": "cortex.memory.insert.receive",
+          "intent": [
+            "persist",
+            "write",
+            "log"
+          ],
+          "contract": "nexus-interaction-contract-v1::cortex",
+          "tags": [
+            "memory"
+          ]
+        }
+      ],
+      "out": []
+    },
+    {
+      "componentId": "cortex.intelligence.intuition",
+      "in": [],
+      "out": [
+        {
+          "id": "cortex.intelligence.intuition.answer",
+          "wires_to": [
+            "copilot.prompt.receive_result"
+          ],
+          "tags": [
+            "answer"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "cortex.raid.decide",
+      "in": [
+        {
+          "id": "cortex.raid.receive",
+          "intent": [
+            "build",
+            "ask",
+            "forge",
+            "classify"
+          ],
+          "contract": "nexus-interaction-contract-v1::cortex",
+          "tags": [
+            "raid"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "cortex.raid.feedback",
+          "wires_to": [
+            "ollama.jobs.dispatch.receive",
+            "guardian.job.dispatch.receive"
+          ],
+          "tags": [
+            "routing"
+          ]
+        }
+      ]
+    },
+    {
       "componentId": "guardian.job.dispatch",
       "in": [
         {
@@ -8253,6 +11655,62 @@
           ],
           "tags": [
             "response"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "copilot.prompt.fulfill",
+      "in": [
+        {
+          "id": "copilot.prompt.fulfill.receive",
+          "intent": [
+            "ask",
+            "build",
+            "diagnose"
+          ],
+          "contract": "nexus-interaction-contract-v1::copilot",
+          "tags": [
+            "entry-point",
+            "adaptive"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "copilot.fulfillment.attempt",
+          "wires_to": [
+            "cortex.intelligence.event"
+          ],
+          "tags": [
+            "learning"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "copilot.prompt.stream",
+      "in": [
+        {
+          "id": "copilot.prompt.stream.receive",
+          "intent": [
+            "ask"
+          ],
+          "contract": null,
+          "tags": [
+            "streaming",
+            "sse"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "copilot.prompt.stream.chunk",
+          "wires_to": [
+            "ui.copilot.stream"
+          ],
+          "tags": [
+            "streaming"
           ]
         }
       ]
@@ -8437,6 +11895,423 @@
     }
   ],
   "allCopilot": [
+    {
+      "componentId": "cortex.health",
+      "label": "health",
+      "description": "Cortex health + JAA stats",
+      "intents": [
+        "health"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.contract",
+      "label": "contract",
+      "description": "Cortex interaction contract",
+      "intents": [
+        "contract"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.events",
+      "label": "events",
+      "description": "SSE — all cortex events",
+      "intents": [
+        "events"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.memory.browse",
+      "label": "memory.browse",
+      "description": "Browse any JAA table",
+      "intents": [
+        "memory browse"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.memory.insert",
+      "label": "memory.insert",
+      "description": "Insert row into any JAA table",
+      "intents": [
+        "persist",
+        "write",
+        "log",
+        "memory insert"
+      ],
+      "contract": "nexus-interaction-contract-v1::cortex",
+      "hookId": "cortex.memory.insert.receive"
+    },
+    {
+      "componentId": "cortex.memory.search",
+      "label": "memory.search",
+      "description": "Semantic search across memory",
+      "intents": [
+        "memory search"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.memory.forget",
+      "label": "memory.forget",
+      "description": "Archive memory row (never delete)",
+      "intents": [
+        "memory forget"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.memory.working",
+      "label": "memory.working",
+      "description": "Working memory snapshot",
+      "intents": [
+        "memory working"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.gaps.list",
+      "label": "gaps.list",
+      "description": "Open gaps by severity",
+      "intents": [
+        "gaps list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.gaps.open",
+      "label": "gaps.open",
+      "description": "Open a new gap",
+      "intents": [
+        "gaps open"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.events.log",
+      "label": "events.log",
+      "description": "Query event log",
+      "intents": [
+        "events log"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.events.write",
+      "label": "events.write",
+      "description": "Write event to JAA event_log",
+      "intents": [
+        "events write"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.cfr.health",
+      "label": "cfr.health",
+      "description": "CFR field health — sigma, regime, coherence",
+      "intents": [
+        "cfr health"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.cfr.field",
+      "label": "cfr.field",
+      "description": "Live CFR field state",
+      "intents": [
+        "cfr field"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.cfr.graph",
+      "label": "cfr.graph",
+      "description": "Causal graph nodes + edges",
+      "intents": [
+        "cfr graph"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.cfr.deltas",
+      "label": "cfr.deltas",
+      "description": "Recent delta records",
+      "intents": [
+        "cfr deltas"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.cfr.compounds",
+      "label": "cfr.compounds",
+      "description": "Compound effect scan (ripple/wave/tidal)",
+      "intents": [
+        "cfr compounds"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.status",
+      "label": "intelligence.status",
+      "description": "Intelligence core status",
+      "intents": [
+        "intelligence status"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.context",
+      "label": "intelligence.context",
+      "description": "Pre-request context for intent",
+      "intents": [
+        "intelligence context"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.patterns",
+      "label": "intelligence.patterns",
+      "description": "Crystallised BEP patterns",
+      "intents": [
+        "intelligence patterns"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.failures",
+      "label": "intelligence.failures",
+      "description": "Failure mode taxonomy",
+      "intents": [
+        "intelligence failures"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.rca",
+      "label": "intelligence.rca",
+      "description": "Root cause analysis findings",
+      "intents": [
+        "intelligence rca"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.reuse",
+      "label": "intelligence.reuse",
+      "description": "SEAM reuse candidates",
+      "intents": [
+        "intelligence reuse"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.event",
+      "label": "intelligence.event",
+      "description": "Feed event for analysis",
+      "intents": [
+        "intelligence event"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.intuition",
+      "label": "intelligence.intuition",
+      "description": "INTUITION fast-path answer",
+      "intents": [
+        "intelligence intuition"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.mastermind",
+      "label": "intelligence.mastermind",
+      "description": "MASTERMIND strategic analysis",
+      "intents": [
+        "intelligence mastermind"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.predict",
+      "label": "intelligence.predict",
+      "description": "Predicted next gap from precursors",
+      "intents": [
+        "intelligence predict"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.intelligence.confidence",
+      "label": "intelligence.confidence",
+      "description": "Confidence score for query",
+      "intents": [
+        "intelligence confidence"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.raid.decide",
+      "label": "raid.decide",
+      "description": "Route intent to best agent/component",
+      "intents": [
+        "build",
+        "ask",
+        "forge",
+        "classify",
+        "raid decide"
+      ],
+      "contract": "nexus-interaction-contract-v1::cortex",
+      "hookId": "cortex.raid.receive"
+    },
+    {
+      "componentId": "cortex.raid.health",
+      "label": "raid.health",
+      "description": "RAID agent health + weights",
+      "intents": [
+        "raid health"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.snapshot.list",
+      "label": "snapshot.list",
+      "description": "Snapshot list",
+      "intents": [
+        "snapshot list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.snapshot.create",
+      "label": "snapshot.create",
+      "description": "Create snapshot",
+      "intents": [
+        "snapshot create"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.snapshot.rollback",
+      "label": "snapshot.rollback",
+      "description": "Rollback to snapshot",
+      "intents": [
+        "snapshot rollback"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.versionium.log",
+      "label": "versionium.log",
+      "description": "Version commit log",
+      "intents": [
+        "versionium log"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.chat.log",
+      "label": "chat.log",
+      "description": "Co-pilot conversation log",
+      "intents": [
+        "chat log"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.search",
+      "label": "search",
+      "description": "Cross-table search",
+      "intents": [
+        "search"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.search.context",
+      "label": "search.context",
+      "description": "Context assembly for search query",
+      "intents": [
+        "search context"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.tags.list",
+      "label": "tags.list",
+      "description": "All tags in memory",
+      "intents": [
+        "tags list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.tags.add",
+      "label": "tags.add",
+      "description": "Add tag",
+      "intents": [
+        "tags add"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.nerve.snapshot",
+      "label": "nerve.snapshot",
+      "description": "Nerve attention layer snapshot — nodes, field, stresses",
+      "intents": [
+        "nerve snapshot"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cortex.hooks.summary",
+      "label": "hooks.summary",
+      "description": "Wire graph — active hooks and declared wires",
+      "intents": [
+        "hooks summary"
+      ],
+      "contract": null,
+      "hookId": null
+    },
     {
       "componentId": "guardian.health",
       "label": "health",
@@ -8923,6 +12798,32 @@
       ],
       "contract": null,
       "hookId": null
+    },
+    {
+      "componentId": "copilot.prompt.fulfill",
+      "label": "prompt.fulfill",
+      "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
+      "intents": [
+        "ask",
+        "build",
+        "diagnose",
+        "fulfill",
+        "cp fulfill"
+      ],
+      "contract": "nexus-interaction-contract-v1::copilot",
+      "hookId": "copilot.prompt.fulfill.receive"
+    },
+    {
+      "componentId": "copilot.prompt.stream",
+      "label": "prompt.stream",
+      "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
+      "intents": [
+        "ask",
+        "stream ask",
+        "cp stream"
+      ],
+      "contract": null,
+      "hookId": "copilot.prompt.stream.receive"
     },
     {
       "componentId": "copilot.health",
@@ -9853,207 +13754,119 @@
     }
   ],
   "grammarIndex": {
-    "health": [
+    "stats": [
       {
-        "componentId": "guardian.health",
-        "systemId": "guardian",
-        "description": "Guardian health, job counts, provider status"
+        "componentId": "bus.stats",
+        "systemId": "orchestrator",
+        "description": "Nexus bus stats + per-source emitCount/lastSeen"
+      }
+    ],
+    "write": [
+      {
+        "componentId": "ledger.write",
+        "systemId": "orchestrator",
+        "description": "Write event to system ledger"
       },
       {
-        "componentId": "copilot.lifeline.health",
-        "systemId": "copilot",
-        "description": "Lifeline provider health"
+        "componentId": "cortex.events.write",
+        "systemId": "cortex",
+        "description": "Write event to JAA event_log"
+      }
+    ],
+    "read": [
+      {
+        "componentId": "ledger.read",
+        "systemId": "orchestrator",
+        "description": "Read system ledger tail"
+      }
+    ],
+    "verify": [
+      {
+        "componentId": "contract.verify",
+        "systemId": "orchestrator",
+        "description": "Verify a system contract"
       },
       {
-        "componentId": "copilot.health",
-        "systemId": "copilot",
-        "description": "Co-pilot health"
-      },
-      {
-        "componentId": "ollama.health",
-        "systemId": "ollama",
-        "description": "Ollama bridge health"
-      },
-      {
-        "componentId": "bridge.health",
+        "componentId": "bridge.identity.verify",
         "systemId": "bridge",
-        "description": "Bridge health + relay stats"
+        "description": "Verify system identity token"
+      }
+    ],
+    "all": [
+      {
+        "componentId": "contracts.all",
+        "systemId": "orchestrator",
+        "description": "All interaction contracts"
+      }
+    ],
+    "hot-load": [
+      {
+        "componentId": "system.hot-load",
+        "systemId": "orchestrator",
+        "description": "Live-patch a module without restart"
       },
       {
-        "componentId": "emerge.health",
+        "componentId": "emerge.hot.load",
         "systemId": "emerge",
-        "description": "Emerge IDE health"
-      },
-      {
-        "componentId": "architect.health",
-        "systemId": "architect",
-        "description": "Architect health + hook counts"
-      },
-      {
-        "componentId": "eravos.health",
-        "systemId": "eravos",
-        "description": "ERAVOS health"
-      },
-      {
-        "componentId": "cg.health",
-        "systemId": "clear-glass",
-        "description": "Clear Glass health, context count, bus stats"
-      },
-      {
-        "componentId": "cg.wire.health",
-        "systemId": "clear-glass",
-        "description": "Wire bridge health"
+        "description": "Hot-patch a running module (QUARANTINE→PROVE→INTEGRATE→MONITOR)"
       }
     ],
-    "contract": [
+    "hot-load-status": [
       {
-        "componentId": "guardian.contract",
-        "systemId": "guardian",
-        "description": "Guardian interaction contract"
-      },
-      {
-        "componentId": "copilot.contract",
-        "systemId": "copilot",
-        "description": "Co-pilot interaction contract"
-      },
-      {
-        "componentId": "bridge.contract",
-        "systemId": "bridge",
-        "description": "Bridge interaction contract"
-      },
-      {
-        "componentId": "architect.contract",
-        "systemId": "architect",
-        "description": "Architect interaction contract"
-      },
-      {
-        "componentId": "eravos.contract",
-        "systemId": "eravos",
-        "description": "ERAVOS interaction contract"
-      },
-      {
-        "componentId": "cg.contract",
-        "systemId": "clear-glass",
-        "description": "Clear Glass interaction contract"
+        "componentId": "system.hot-load.status",
+        "systemId": "orchestrator",
+        "description": "Hot-load monitor status"
       }
     ],
-    "version": [
+    "autonomous": [
       {
-        "componentId": "guardian.version",
-        "systemId": "guardian",
-        "description": "Guardian + userscript versions"
+        "componentId": "system.autonomous",
+        "systemId": "orchestrator",
+        "description": "Run an autonomous goal loop"
       }
     ],
-    "baseline": [
+    "autonomous-status": [
       {
-        "componentId": "guardian.baseline",
-        "systemId": "guardian",
-        "description": "Friction + sigma baseline"
+        "componentId": "system.autonomous.status",
+        "systemId": "orchestrator",
+        "description": "Autonomous loop status"
       }
     ],
-    "events": [
+    "mcp": [
       {
-        "componentId": "guardian.events",
-        "systemId": "guardian",
-        "description": "SSE — all guardian bus events"
-      },
-      {
-        "componentId": "bridge.events",
-        "systemId": "bridge",
-        "description": "SSE — all bridge events"
-      },
-      {
-        "componentId": "cg.events",
-        "systemId": "clear-glass",
-        "description": "SSE — all SISO bus events"
+        "componentId": "system.mcp",
+        "systemId": "orchestrator",
+        "description": "MCP server status"
       }
     ],
-    "event": [
+    "mcp-tools": [
       {
-        "componentId": "guardian.events",
-        "systemId": "guardian",
-        "description": "SSE — all guardian bus events"
-      },
-      {
-        "componentId": "bridge.events",
-        "systemId": "bridge",
-        "description": "SSE — all bridge events"
-      },
-      {
-        "componentId": "cg.events",
-        "systemId": "clear-glass",
-        "description": "SSE — all SISO bus events"
-      }
-    ],
-    "bus log": [
-      {
-        "componentId": "guardian.bus.log",
-        "systemId": "guardian",
-        "description": "Recent SISO bus log"
-      }
-    ],
-    "bus": [
-      {
-        "componentId": "guardian.bus.log",
-        "systemId": "guardian",
-        "description": "Recent SISO bus log"
-      },
-      {
-        "componentId": "guardian.bus.emit",
-        "systemId": "guardian",
-        "description": "Emit event onto bus"
-      }
-    ],
-    "log": [
-      {
-        "componentId": "guardian.bus.log",
-        "systemId": "guardian",
-        "description": "Recent SISO bus log"
-      }
-    ],
-    "bus-log": [
-      {
-        "componentId": "guardian.bus.log",
-        "systemId": "guardian",
-        "description": "Recent SISO bus log"
-      }
-    ],
-    "bus emit": [
-      {
-        "componentId": "guardian.bus.emit",
-        "systemId": "guardian",
-        "description": "Emit event onto bus"
-      }
-    ],
-    "emit": [
-      {
-        "componentId": "guardian.bus.emit",
-        "systemId": "guardian",
-        "description": "Emit event onto bus"
-      }
-    ],
-    "bus-emit": [
-      {
-        "componentId": "guardian.bus.emit",
-        "systemId": "guardian",
-        "description": "Emit event onto bus"
-      }
-    ],
-    "providers list": [
-      {
-        "componentId": "guardian.providers.list",
-        "systemId": "guardian",
-        "description": "Connected NCP browser tab providers"
-      }
-    ],
-    "providers": [
-      {
-        "componentId": "guardian.providers.list",
-        "systemId": "guardian",
-        "description": "Connected NCP browser tab providers"
+        "componentId": "system.mcp.tools",
+        "systemId": "orchestrator",
+        "description": "MCP available tools"
       }
     ],
     "list": [
+      {
+        "componentId": "ui.list",
+        "systemId": "orchestrator",
+        "description": "Available UI systems"
+      },
+      {
+        "componentId": "cortex.gaps.list",
+        "systemId": "cortex",
+        "description": "Open gaps by severity"
+      },
+      {
+        "componentId": "cortex.snapshot.list",
+        "systemId": "cortex",
+        "description": "Snapshot list"
+      },
+      {
+        "componentId": "cortex.tags.list",
+        "systemId": "cortex",
+        "description": "All tags in memory"
+      },
       {
         "componentId": "guardian.providers.list",
         "systemId": "guardian",
@@ -10128,6 +13941,1343 @@
         "componentId": "cg.url.listen.list",
         "systemId": "clear-glass",
         "description": "List active listeners"
+      }
+    ],
+    "hotswap": [
+      {
+        "componentId": "ui.hotswap",
+        "systemId": "orchestrator",
+        "description": "Hot-swap a UI file"
+      }
+    ],
+    "health": [
+      {
+        "componentId": "cortex.health",
+        "systemId": "cortex",
+        "description": "Cortex health + JAA stats"
+      },
+      {
+        "componentId": "cortex.cfr.health",
+        "systemId": "cortex",
+        "description": "CFR field health — sigma, regime, coherence"
+      },
+      {
+        "componentId": "cortex.raid.health",
+        "systemId": "cortex",
+        "description": "RAID agent health + weights"
+      },
+      {
+        "componentId": "guardian.health",
+        "systemId": "guardian",
+        "description": "Guardian health, job counts, provider status"
+      },
+      {
+        "componentId": "copilot.lifeline.health",
+        "systemId": "copilot",
+        "description": "Lifeline provider health"
+      },
+      {
+        "componentId": "copilot.health",
+        "systemId": "copilot",
+        "description": "Co-pilot health"
+      },
+      {
+        "componentId": "ollama.health",
+        "systemId": "ollama",
+        "description": "Ollama bridge health"
+      },
+      {
+        "componentId": "bridge.health",
+        "systemId": "bridge",
+        "description": "Bridge health + relay stats"
+      },
+      {
+        "componentId": "emerge.health",
+        "systemId": "emerge",
+        "description": "Emerge IDE health"
+      },
+      {
+        "componentId": "architect.health",
+        "systemId": "architect",
+        "description": "Architect health + hook counts"
+      },
+      {
+        "componentId": "eravos.health",
+        "systemId": "eravos",
+        "description": "ERAVOS health"
+      },
+      {
+        "componentId": "cg.health",
+        "systemId": "clear-glass",
+        "description": "Clear Glass health, context count, bus stats"
+      },
+      {
+        "componentId": "cg.wire.health",
+        "systemId": "clear-glass",
+        "description": "Wire bridge health"
+      }
+    ],
+    "contract": [
+      {
+        "componentId": "cortex.contract",
+        "systemId": "cortex",
+        "description": "Cortex interaction contract"
+      },
+      {
+        "componentId": "guardian.contract",
+        "systemId": "guardian",
+        "description": "Guardian interaction contract"
+      },
+      {
+        "componentId": "copilot.contract",
+        "systemId": "copilot",
+        "description": "Co-pilot interaction contract"
+      },
+      {
+        "componentId": "bridge.contract",
+        "systemId": "bridge",
+        "description": "Bridge interaction contract"
+      },
+      {
+        "componentId": "architect.contract",
+        "systemId": "architect",
+        "description": "Architect interaction contract"
+      },
+      {
+        "componentId": "eravos.contract",
+        "systemId": "eravos",
+        "description": "ERAVOS interaction contract"
+      },
+      {
+        "componentId": "cg.contract",
+        "systemId": "clear-glass",
+        "description": "Clear Glass interaction contract"
+      }
+    ],
+    "events": [
+      {
+        "componentId": "cortex.events",
+        "systemId": "cortex",
+        "description": "SSE — all cortex events"
+      },
+      {
+        "componentId": "cortex.events.log",
+        "systemId": "cortex",
+        "description": "Query event log"
+      },
+      {
+        "componentId": "cortex.events.write",
+        "systemId": "cortex",
+        "description": "Write event to JAA event_log"
+      },
+      {
+        "componentId": "guardian.events",
+        "systemId": "guardian",
+        "description": "SSE — all guardian bus events"
+      },
+      {
+        "componentId": "bridge.events",
+        "systemId": "bridge",
+        "description": "SSE — all bridge events"
+      },
+      {
+        "componentId": "cg.events",
+        "systemId": "clear-glass",
+        "description": "SSE — all SISO bus events"
+      }
+    ],
+    "event": [
+      {
+        "componentId": "cortex.events",
+        "systemId": "cortex",
+        "description": "SSE — all cortex events"
+      },
+      {
+        "componentId": "cortex.intelligence.event",
+        "systemId": "cortex",
+        "description": "Feed event for analysis"
+      },
+      {
+        "componentId": "guardian.events",
+        "systemId": "guardian",
+        "description": "SSE — all guardian bus events"
+      },
+      {
+        "componentId": "bridge.events",
+        "systemId": "bridge",
+        "description": "SSE — all bridge events"
+      },
+      {
+        "componentId": "cg.events",
+        "systemId": "clear-glass",
+        "description": "SSE — all SISO bus events"
+      }
+    ],
+    "memory browse": [
+      {
+        "componentId": "cortex.memory.browse",
+        "systemId": "cortex",
+        "description": "Browse any JAA table"
+      }
+    ],
+    "memory": [
+      {
+        "componentId": "cortex.memory.browse",
+        "systemId": "cortex",
+        "description": "Browse any JAA table"
+      },
+      {
+        "componentId": "cortex.memory.insert",
+        "systemId": "cortex",
+        "description": "Insert row into any JAA table"
+      },
+      {
+        "componentId": "cortex.memory.search",
+        "systemId": "cortex",
+        "description": "Semantic search across memory"
+      },
+      {
+        "componentId": "cortex.memory.forget",
+        "systemId": "cortex",
+        "description": "Archive memory row (never delete)"
+      },
+      {
+        "componentId": "cortex.memory.working",
+        "systemId": "cortex",
+        "description": "Working memory snapshot"
+      },
+      {
+        "componentId": "guardian.copilot.memory",
+        "systemId": "guardian",
+        "description": "Co-pilot memory operations"
+      }
+    ],
+    "browse": [
+      {
+        "componentId": "cortex.memory.browse",
+        "systemId": "cortex",
+        "description": "Browse any JAA table"
+      }
+    ],
+    "memory-browse": [
+      {
+        "componentId": "cortex.memory.browse",
+        "systemId": "cortex",
+        "description": "Browse any JAA table"
+      }
+    ],
+    "memory insert": [
+      {
+        "componentId": "cortex.memory.insert",
+        "systemId": "cortex",
+        "description": "Insert row into any JAA table"
+      }
+    ],
+    "insert": [
+      {
+        "componentId": "cortex.memory.insert",
+        "systemId": "cortex",
+        "description": "Insert row into any JAA table"
+      }
+    ],
+    "memory-insert": [
+      {
+        "componentId": "cortex.memory.insert",
+        "systemId": "cortex",
+        "description": "Insert row into any JAA table"
+      }
+    ],
+    "memory search": [
+      {
+        "componentId": "cortex.memory.search",
+        "systemId": "cortex",
+        "description": "Semantic search across memory"
+      }
+    ],
+    "search": [
+      {
+        "componentId": "cortex.memory.search",
+        "systemId": "cortex",
+        "description": "Semantic search across memory"
+      },
+      {
+        "componentId": "cortex.search",
+        "systemId": "cortex",
+        "description": "Cross-table search"
+      },
+      {
+        "componentId": "cortex.search.context",
+        "systemId": "cortex",
+        "description": "Context assembly for search query"
+      }
+    ],
+    "memory-search": [
+      {
+        "componentId": "cortex.memory.search",
+        "systemId": "cortex",
+        "description": "Semantic search across memory"
+      }
+    ],
+    "memory forget": [
+      {
+        "componentId": "cortex.memory.forget",
+        "systemId": "cortex",
+        "description": "Archive memory row (never delete)"
+      }
+    ],
+    "forget": [
+      {
+        "componentId": "cortex.memory.forget",
+        "systemId": "cortex",
+        "description": "Archive memory row (never delete)"
+      }
+    ],
+    "memory-forget": [
+      {
+        "componentId": "cortex.memory.forget",
+        "systemId": "cortex",
+        "description": "Archive memory row (never delete)"
+      }
+    ],
+    "memory working": [
+      {
+        "componentId": "cortex.memory.working",
+        "systemId": "cortex",
+        "description": "Working memory snapshot"
+      }
+    ],
+    "working": [
+      {
+        "componentId": "cortex.memory.working",
+        "systemId": "cortex",
+        "description": "Working memory snapshot"
+      }
+    ],
+    "memory-working": [
+      {
+        "componentId": "cortex.memory.working",
+        "systemId": "cortex",
+        "description": "Working memory snapshot"
+      }
+    ],
+    "gaps list": [
+      {
+        "componentId": "cortex.gaps.list",
+        "systemId": "cortex",
+        "description": "Open gaps by severity"
+      },
+      {
+        "componentId": "guardian.gaps.list",
+        "systemId": "guardian",
+        "description": "Open gaps detected by guardian"
+      }
+    ],
+    "gaps": [
+      {
+        "componentId": "cortex.gaps.list",
+        "systemId": "cortex",
+        "description": "Open gaps by severity"
+      },
+      {
+        "componentId": "cortex.gaps.open",
+        "systemId": "cortex",
+        "description": "Open a new gap"
+      },
+      {
+        "componentId": "guardian.gaps.list",
+        "systemId": "guardian",
+        "description": "Open gaps detected by guardian"
+      },
+      {
+        "componentId": "guardian.gaps.summary",
+        "systemId": "guardian",
+        "description": "Gap summary by type + severity"
+      }
+    ],
+    "gaps-list": [
+      {
+        "componentId": "cortex.gaps.list",
+        "systemId": "cortex",
+        "description": "Open gaps by severity"
+      },
+      {
+        "componentId": "guardian.gaps.list",
+        "systemId": "guardian",
+        "description": "Open gaps detected by guardian"
+      }
+    ],
+    "gaps open": [
+      {
+        "componentId": "cortex.gaps.open",
+        "systemId": "cortex",
+        "description": "Open a new gap"
+      }
+    ],
+    "open": [
+      {
+        "componentId": "cortex.gaps.open",
+        "systemId": "cortex",
+        "description": "Open a new gap"
+      },
+      {
+        "componentId": "eravos.canvas",
+        "systemId": "eravos",
+        "description": "Main ERAVOS canvas — organisms, wires, transport"
+      },
+      {
+        "componentId": "cg.window.open",
+        "systemId": "clear-glass",
+        "description": "Open agent browser window"
+      }
+    ],
+    "gaps-open": [
+      {
+        "componentId": "cortex.gaps.open",
+        "systemId": "cortex",
+        "description": "Open a new gap"
+      }
+    ],
+    "events log": [
+      {
+        "componentId": "cortex.events.log",
+        "systemId": "cortex",
+        "description": "Query event log"
+      }
+    ],
+    "log": [
+      {
+        "componentId": "cortex.events.log",
+        "systemId": "cortex",
+        "description": "Query event log"
+      },
+      {
+        "componentId": "cortex.versionium.log",
+        "systemId": "cortex",
+        "description": "Version commit log"
+      },
+      {
+        "componentId": "cortex.chat.log",
+        "systemId": "cortex",
+        "description": "Co-pilot conversation log"
+      },
+      {
+        "componentId": "guardian.bus.log",
+        "systemId": "guardian",
+        "description": "Recent SISO bus log"
+      }
+    ],
+    "events-log": [
+      {
+        "componentId": "cortex.events.log",
+        "systemId": "cortex",
+        "description": "Query event log"
+      }
+    ],
+    "events write": [
+      {
+        "componentId": "cortex.events.write",
+        "systemId": "cortex",
+        "description": "Write event to JAA event_log"
+      }
+    ],
+    "events-write": [
+      {
+        "componentId": "cortex.events.write",
+        "systemId": "cortex",
+        "description": "Write event to JAA event_log"
+      }
+    ],
+    "cfr health": [
+      {
+        "componentId": "cortex.cfr.health",
+        "systemId": "cortex",
+        "description": "CFR field health — sigma, regime, coherence"
+      }
+    ],
+    "cfr": [
+      {
+        "componentId": "cortex.cfr.health",
+        "systemId": "cortex",
+        "description": "CFR field health — sigma, regime, coherence"
+      },
+      {
+        "componentId": "cortex.cfr.field",
+        "systemId": "cortex",
+        "description": "Live CFR field state"
+      },
+      {
+        "componentId": "cortex.cfr.graph",
+        "systemId": "cortex",
+        "description": "Causal graph nodes + edges"
+      },
+      {
+        "componentId": "cortex.cfr.deltas",
+        "systemId": "cortex",
+        "description": "Recent delta records"
+      },
+      {
+        "componentId": "cortex.cfr.compounds",
+        "systemId": "cortex",
+        "description": "Compound effect scan (ripple/wave/tidal)"
+      }
+    ],
+    "cfr-health": [
+      {
+        "componentId": "cortex.cfr.health",
+        "systemId": "cortex",
+        "description": "CFR field health — sigma, regime, coherence"
+      }
+    ],
+    "cfr field": [
+      {
+        "componentId": "cortex.cfr.field",
+        "systemId": "cortex",
+        "description": "Live CFR field state"
+      }
+    ],
+    "field": [
+      {
+        "componentId": "cortex.cfr.field",
+        "systemId": "cortex",
+        "description": "Live CFR field state"
+      }
+    ],
+    "cfr-field": [
+      {
+        "componentId": "cortex.cfr.field",
+        "systemId": "cortex",
+        "description": "Live CFR field state"
+      }
+    ],
+    "cfr graph": [
+      {
+        "componentId": "cortex.cfr.graph",
+        "systemId": "cortex",
+        "description": "Causal graph nodes + edges"
+      }
+    ],
+    "graph": [
+      {
+        "componentId": "cortex.cfr.graph",
+        "systemId": "cortex",
+        "description": "Causal graph nodes + edges"
+      },
+      {
+        "componentId": "architect.hooks.graph",
+        "systemId": "architect",
+        "description": "Hook topology graph (json|mermaid)"
+      }
+    ],
+    "cfr-graph": [
+      {
+        "componentId": "cortex.cfr.graph",
+        "systemId": "cortex",
+        "description": "Causal graph nodes + edges"
+      }
+    ],
+    "cfr deltas": [
+      {
+        "componentId": "cortex.cfr.deltas",
+        "systemId": "cortex",
+        "description": "Recent delta records"
+      }
+    ],
+    "deltas": [
+      {
+        "componentId": "cortex.cfr.deltas",
+        "systemId": "cortex",
+        "description": "Recent delta records"
+      }
+    ],
+    "cfr delta": [
+      {
+        "componentId": "cortex.cfr.deltas",
+        "systemId": "cortex",
+        "description": "Recent delta records"
+      }
+    ],
+    "cfr-deltas": [
+      {
+        "componentId": "cortex.cfr.deltas",
+        "systemId": "cortex",
+        "description": "Recent delta records"
+      }
+    ],
+    "cfr compounds": [
+      {
+        "componentId": "cortex.cfr.compounds",
+        "systemId": "cortex",
+        "description": "Compound effect scan (ripple/wave/tidal)"
+      }
+    ],
+    "compounds": [
+      {
+        "componentId": "cortex.cfr.compounds",
+        "systemId": "cortex",
+        "description": "Compound effect scan (ripple/wave/tidal)"
+      }
+    ],
+    "cfr compound": [
+      {
+        "componentId": "cortex.cfr.compounds",
+        "systemId": "cortex",
+        "description": "Compound effect scan (ripple/wave/tidal)"
+      }
+    ],
+    "cfr-compounds": [
+      {
+        "componentId": "cortex.cfr.compounds",
+        "systemId": "cortex",
+        "description": "Compound effect scan (ripple/wave/tidal)"
+      }
+    ],
+    "intelligence status": [
+      {
+        "componentId": "cortex.intelligence.status",
+        "systemId": "cortex",
+        "description": "Intelligence core status"
+      }
+    ],
+    "intelligence": [
+      {
+        "componentId": "cortex.intelligence.status",
+        "systemId": "cortex",
+        "description": "Intelligence core status"
+      },
+      {
+        "componentId": "cortex.intelligence.context",
+        "systemId": "cortex",
+        "description": "Pre-request context for intent"
+      },
+      {
+        "componentId": "cortex.intelligence.patterns",
+        "systemId": "cortex",
+        "description": "Crystallised BEP patterns"
+      },
+      {
+        "componentId": "cortex.intelligence.failures",
+        "systemId": "cortex",
+        "description": "Failure mode taxonomy"
+      },
+      {
+        "componentId": "cortex.intelligence.rca",
+        "systemId": "cortex",
+        "description": "Root cause analysis findings"
+      },
+      {
+        "componentId": "cortex.intelligence.reuse",
+        "systemId": "cortex",
+        "description": "SEAM reuse candidates"
+      },
+      {
+        "componentId": "cortex.intelligence.event",
+        "systemId": "cortex",
+        "description": "Feed event for analysis"
+      },
+      {
+        "componentId": "cortex.intelligence.intuition",
+        "systemId": "cortex",
+        "description": "INTUITION fast-path answer"
+      },
+      {
+        "componentId": "cortex.intelligence.mastermind",
+        "systemId": "cortex",
+        "description": "MASTERMIND strategic analysis"
+      },
+      {
+        "componentId": "cortex.intelligence.predict",
+        "systemId": "cortex",
+        "description": "Predicted next gap from precursors"
+      },
+      {
+        "componentId": "cortex.intelligence.confidence",
+        "systemId": "cortex",
+        "description": "Confidence score for query"
+      }
+    ],
+    "status": [
+      {
+        "componentId": "cortex.intelligence.status",
+        "systemId": "cortex",
+        "description": "Intelligence core status"
+      },
+      {
+        "componentId": "guardian.job.status",
+        "systemId": "guardian",
+        "description": "Single job status"
+      },
+      {
+        "componentId": "guardian.queue.status",
+        "systemId": "guardian",
+        "description": "Physical queue status"
+      },
+      {
+        "componentId": "bridge.circuit.status",
+        "systemId": "bridge",
+        "description": "Circuit breaker state per node"
+      },
+      {
+        "componentId": "cg.status",
+        "systemId": "clear-glass",
+        "description": "Full system status — bus sample, agents, listeners, TLS"
+      }
+    ],
+    "intelligence statu": [
+      {
+        "componentId": "cortex.intelligence.status",
+        "systemId": "cortex",
+        "description": "Intelligence core status"
+      }
+    ],
+    "intelligence-status": [
+      {
+        "componentId": "cortex.intelligence.status",
+        "systemId": "cortex",
+        "description": "Intelligence core status"
+      }
+    ],
+    "intelligence context": [
+      {
+        "componentId": "cortex.intelligence.context",
+        "systemId": "cortex",
+        "description": "Pre-request context for intent"
+      }
+    ],
+    "context": [
+      {
+        "componentId": "cortex.intelligence.context",
+        "systemId": "cortex",
+        "description": "Pre-request context for intent"
+      },
+      {
+        "componentId": "cortex.search.context",
+        "systemId": "cortex",
+        "description": "Context assembly for search query"
+      },
+      {
+        "componentId": "cg.context.create",
+        "systemId": "clear-glass",
+        "description": "Create isolated Chromium partition"
+      },
+      {
+        "componentId": "cg.context.switch",
+        "systemId": "clear-glass",
+        "description": "Switch active agent context"
+      },
+      {
+        "componentId": "cg.context.list",
+        "systemId": "clear-glass",
+        "description": "List agent contexts"
+      },
+      {
+        "componentId": "cg.context.fp.switch",
+        "systemId": "clear-glass",
+        "description": "Switch fingerprint mode"
+      }
+    ],
+    "intelligence-context": [
+      {
+        "componentId": "cortex.intelligence.context",
+        "systemId": "cortex",
+        "description": "Pre-request context for intent"
+      }
+    ],
+    "intelligence patterns": [
+      {
+        "componentId": "cortex.intelligence.patterns",
+        "systemId": "cortex",
+        "description": "Crystallised BEP patterns"
+      }
+    ],
+    "patterns": [
+      {
+        "componentId": "cortex.intelligence.patterns",
+        "systemId": "cortex",
+        "description": "Crystallised BEP patterns"
+      }
+    ],
+    "intelligence pattern": [
+      {
+        "componentId": "cortex.intelligence.patterns",
+        "systemId": "cortex",
+        "description": "Crystallised BEP patterns"
+      }
+    ],
+    "intelligence-patterns": [
+      {
+        "componentId": "cortex.intelligence.patterns",
+        "systemId": "cortex",
+        "description": "Crystallised BEP patterns"
+      }
+    ],
+    "intelligence failures": [
+      {
+        "componentId": "cortex.intelligence.failures",
+        "systemId": "cortex",
+        "description": "Failure mode taxonomy"
+      }
+    ],
+    "failures": [
+      {
+        "componentId": "cortex.intelligence.failures",
+        "systemId": "cortex",
+        "description": "Failure mode taxonomy"
+      }
+    ],
+    "intelligence failure": [
+      {
+        "componentId": "cortex.intelligence.failures",
+        "systemId": "cortex",
+        "description": "Failure mode taxonomy"
+      }
+    ],
+    "intelligence-failures": [
+      {
+        "componentId": "cortex.intelligence.failures",
+        "systemId": "cortex",
+        "description": "Failure mode taxonomy"
+      }
+    ],
+    "intelligence rca": [
+      {
+        "componentId": "cortex.intelligence.rca",
+        "systemId": "cortex",
+        "description": "Root cause analysis findings"
+      }
+    ],
+    "rca": [
+      {
+        "componentId": "cortex.intelligence.rca",
+        "systemId": "cortex",
+        "description": "Root cause analysis findings"
+      }
+    ],
+    "intelligence-rca": [
+      {
+        "componentId": "cortex.intelligence.rca",
+        "systemId": "cortex",
+        "description": "Root cause analysis findings"
+      }
+    ],
+    "intelligence reuse": [
+      {
+        "componentId": "cortex.intelligence.reuse",
+        "systemId": "cortex",
+        "description": "SEAM reuse candidates"
+      }
+    ],
+    "reuse": [
+      {
+        "componentId": "cortex.intelligence.reuse",
+        "systemId": "cortex",
+        "description": "SEAM reuse candidates"
+      }
+    ],
+    "intelligence-reuse": [
+      {
+        "componentId": "cortex.intelligence.reuse",
+        "systemId": "cortex",
+        "description": "SEAM reuse candidates"
+      }
+    ],
+    "intelligence event": [
+      {
+        "componentId": "cortex.intelligence.event",
+        "systemId": "cortex",
+        "description": "Feed event for analysis"
+      }
+    ],
+    "intelligence-event": [
+      {
+        "componentId": "cortex.intelligence.event",
+        "systemId": "cortex",
+        "description": "Feed event for analysis"
+      }
+    ],
+    "intelligence intuition": [
+      {
+        "componentId": "cortex.intelligence.intuition",
+        "systemId": "cortex",
+        "description": "INTUITION fast-path answer"
+      }
+    ],
+    "intuition": [
+      {
+        "componentId": "cortex.intelligence.intuition",
+        "systemId": "cortex",
+        "description": "INTUITION fast-path answer"
+      }
+    ],
+    "intelligence-intuition": [
+      {
+        "componentId": "cortex.intelligence.intuition",
+        "systemId": "cortex",
+        "description": "INTUITION fast-path answer"
+      }
+    ],
+    "intelligence mastermind": [
+      {
+        "componentId": "cortex.intelligence.mastermind",
+        "systemId": "cortex",
+        "description": "MASTERMIND strategic analysis"
+      }
+    ],
+    "mastermind": [
+      {
+        "componentId": "cortex.intelligence.mastermind",
+        "systemId": "cortex",
+        "description": "MASTERMIND strategic analysis"
+      }
+    ],
+    "intelligence-mastermind": [
+      {
+        "componentId": "cortex.intelligence.mastermind",
+        "systemId": "cortex",
+        "description": "MASTERMIND strategic analysis"
+      }
+    ],
+    "intelligence predict": [
+      {
+        "componentId": "cortex.intelligence.predict",
+        "systemId": "cortex",
+        "description": "Predicted next gap from precursors"
+      }
+    ],
+    "predict": [
+      {
+        "componentId": "cortex.intelligence.predict",
+        "systemId": "cortex",
+        "description": "Predicted next gap from precursors"
+      }
+    ],
+    "intelligence-predict": [
+      {
+        "componentId": "cortex.intelligence.predict",
+        "systemId": "cortex",
+        "description": "Predicted next gap from precursors"
+      }
+    ],
+    "intelligence confidence": [
+      {
+        "componentId": "cortex.intelligence.confidence",
+        "systemId": "cortex",
+        "description": "Confidence score for query"
+      }
+    ],
+    "confidence": [
+      {
+        "componentId": "cortex.intelligence.confidence",
+        "systemId": "cortex",
+        "description": "Confidence score for query"
+      }
+    ],
+    "intelligence-confidence": [
+      {
+        "componentId": "cortex.intelligence.confidence",
+        "systemId": "cortex",
+        "description": "Confidence score for query"
+      }
+    ],
+    "raid decide": [
+      {
+        "componentId": "cortex.raid.decide",
+        "systemId": "cortex",
+        "description": "Route intent to best agent/component"
+      }
+    ],
+    "raid": [
+      {
+        "componentId": "cortex.raid.decide",
+        "systemId": "cortex",
+        "description": "Route intent to best agent/component"
+      },
+      {
+        "componentId": "cortex.raid.health",
+        "systemId": "cortex",
+        "description": "RAID agent health + weights"
+      }
+    ],
+    "decide": [
+      {
+        "componentId": "cortex.raid.decide",
+        "systemId": "cortex",
+        "description": "Route intent to best agent/component"
+      }
+    ],
+    "raid-decide": [
+      {
+        "componentId": "cortex.raid.decide",
+        "systemId": "cortex",
+        "description": "Route intent to best agent/component"
+      }
+    ],
+    "raid health": [
+      {
+        "componentId": "cortex.raid.health",
+        "systemId": "cortex",
+        "description": "RAID agent health + weights"
+      }
+    ],
+    "raid-health": [
+      {
+        "componentId": "cortex.raid.health",
+        "systemId": "cortex",
+        "description": "RAID agent health + weights"
+      }
+    ],
+    "snapshot list": [
+      {
+        "componentId": "cortex.snapshot.list",
+        "systemId": "cortex",
+        "description": "Snapshot list"
+      }
+    ],
+    "snapshot": [
+      {
+        "componentId": "cortex.snapshot.list",
+        "systemId": "cortex",
+        "description": "Snapshot list"
+      },
+      {
+        "componentId": "cortex.snapshot.create",
+        "systemId": "cortex",
+        "description": "Create snapshot"
+      },
+      {
+        "componentId": "cortex.snapshot.rollback",
+        "systemId": "cortex",
+        "description": "Rollback to snapshot"
+      },
+      {
+        "componentId": "cortex.nerve.snapshot",
+        "systemId": "cortex",
+        "description": "Nerve attention layer snapshot — nodes, field, stresses"
+      },
+      {
+        "componentId": "emerge.snapshot",
+        "systemId": "emerge",
+        "description": "Snapshot before applying patch"
+      }
+    ],
+    "snapshot-list": [
+      {
+        "componentId": "cortex.snapshot.list",
+        "systemId": "cortex",
+        "description": "Snapshot list"
+      }
+    ],
+    "snapshot create": [
+      {
+        "componentId": "cortex.snapshot.create",
+        "systemId": "cortex",
+        "description": "Create snapshot"
+      }
+    ],
+    "create": [
+      {
+        "componentId": "cortex.snapshot.create",
+        "systemId": "cortex",
+        "description": "Create snapshot"
+      },
+      {
+        "componentId": "guardian.seam.session.create",
+        "systemId": "guardian",
+        "description": "Create SEAM session"
+      },
+      {
+        "componentId": "guardian.queue.compartment.create",
+        "systemId": "guardian",
+        "description": "Create job compartment"
+      },
+      {
+        "componentId": "cg.context.create",
+        "systemId": "clear-glass",
+        "description": "Create isolated Chromium partition"
+      }
+    ],
+    "snapshot-create": [
+      {
+        "componentId": "cortex.snapshot.create",
+        "systemId": "cortex",
+        "description": "Create snapshot"
+      }
+    ],
+    "snapshot rollback": [
+      {
+        "componentId": "cortex.snapshot.rollback",
+        "systemId": "cortex",
+        "description": "Rollback to snapshot"
+      }
+    ],
+    "rollback": [
+      {
+        "componentId": "cortex.snapshot.rollback",
+        "systemId": "cortex",
+        "description": "Rollback to snapshot"
+      }
+    ],
+    "snapshot-rollback": [
+      {
+        "componentId": "cortex.snapshot.rollback",
+        "systemId": "cortex",
+        "description": "Rollback to snapshot"
+      }
+    ],
+    "versionium log": [
+      {
+        "componentId": "cortex.versionium.log",
+        "systemId": "cortex",
+        "description": "Version commit log"
+      }
+    ],
+    "versionium": [
+      {
+        "componentId": "cortex.versionium.log",
+        "systemId": "cortex",
+        "description": "Version commit log"
+      }
+    ],
+    "versionium-log": [
+      {
+        "componentId": "cortex.versionium.log",
+        "systemId": "cortex",
+        "description": "Version commit log"
+      }
+    ],
+    "chat log": [
+      {
+        "componentId": "cortex.chat.log",
+        "systemId": "cortex",
+        "description": "Co-pilot conversation log"
+      }
+    ],
+    "chat": [
+      {
+        "componentId": "cortex.chat.log",
+        "systemId": "cortex",
+        "description": "Co-pilot conversation log"
+      }
+    ],
+    "chat-log": [
+      {
+        "componentId": "cortex.chat.log",
+        "systemId": "cortex",
+        "description": "Co-pilot conversation log"
+      }
+    ],
+    "search context": [
+      {
+        "componentId": "cortex.search.context",
+        "systemId": "cortex",
+        "description": "Context assembly for search query"
+      }
+    ],
+    "search-context": [
+      {
+        "componentId": "cortex.search.context",
+        "systemId": "cortex",
+        "description": "Context assembly for search query"
+      }
+    ],
+    "tags list": [
+      {
+        "componentId": "cortex.tags.list",
+        "systemId": "cortex",
+        "description": "All tags in memory"
+      }
+    ],
+    "tags": [
+      {
+        "componentId": "cortex.tags.list",
+        "systemId": "cortex",
+        "description": "All tags in memory"
+      },
+      {
+        "componentId": "cortex.tags.add",
+        "systemId": "cortex",
+        "description": "Add tag"
+      }
+    ],
+    "tags-list": [
+      {
+        "componentId": "cortex.tags.list",
+        "systemId": "cortex",
+        "description": "All tags in memory"
+      }
+    ],
+    "tags add": [
+      {
+        "componentId": "cortex.tags.add",
+        "systemId": "cortex",
+        "description": "Add tag"
+      }
+    ],
+    "add": [
+      {
+        "componentId": "cortex.tags.add",
+        "systemId": "cortex",
+        "description": "Add tag"
+      },
+      {
+        "componentId": "copilot.axioms.add",
+        "systemId": "copilot",
+        "description": "Add a runtime axiom"
+      }
+    ],
+    "tags-add": [
+      {
+        "componentId": "cortex.tags.add",
+        "systemId": "cortex",
+        "description": "Add tag"
+      }
+    ],
+    "nerve snapshot": [
+      {
+        "componentId": "cortex.nerve.snapshot",
+        "systemId": "cortex",
+        "description": "Nerve attention layer snapshot — nodes, field, stresses"
+      }
+    ],
+    "nerve": [
+      {
+        "componentId": "cortex.nerve.snapshot",
+        "systemId": "cortex",
+        "description": "Nerve attention layer snapshot — nodes, field, stresses"
+      }
+    ],
+    "nerve-snapshot": [
+      {
+        "componentId": "cortex.nerve.snapshot",
+        "systemId": "cortex",
+        "description": "Nerve attention layer snapshot — nodes, field, stresses"
+      }
+    ],
+    "hooks summary": [
+      {
+        "componentId": "cortex.hooks.summary",
+        "systemId": "cortex",
+        "description": "Wire graph — active hooks and declared wires"
+      }
+    ],
+    "hooks": [
+      {
+        "componentId": "cortex.hooks.summary",
+        "systemId": "cortex",
+        "description": "Wire graph — active hooks and declared wires"
+      },
+      {
+        "componentId": "architect.hooks.list",
+        "systemId": "architect",
+        "description": "Hook registry — all declared hooks"
+      },
+      {
+        "componentId": "architect.hooks.validate",
+        "systemId": "architect",
+        "description": "Validate all hooks against invariants"
+      },
+      {
+        "componentId": "architect.hooks.graph",
+        "systemId": "architect",
+        "description": "Hook topology graph (json|mermaid)"
+      },
+      {
+        "componentId": "architect.hooks.check",
+        "systemId": "architect",
+        "description": "Check hook against constraints"
+      }
+    ],
+    "summary": [
+      {
+        "componentId": "cortex.hooks.summary",
+        "systemId": "cortex",
+        "description": "Wire graph — active hooks and declared wires"
+      },
+      {
+        "componentId": "guardian.gaps.summary",
+        "systemId": "guardian",
+        "description": "Gap summary by type + severity"
+      }
+    ],
+    "hooks-summary": [
+      {
+        "componentId": "cortex.hooks.summary",
+        "systemId": "cortex",
+        "description": "Wire graph — active hooks and declared wires"
+      }
+    ],
+    "version": [
+      {
+        "componentId": "guardian.version",
+        "systemId": "guardian",
+        "description": "Guardian + userscript versions"
+      }
+    ],
+    "baseline": [
+      {
+        "componentId": "guardian.baseline",
+        "systemId": "guardian",
+        "description": "Friction + sigma baseline"
+      }
+    ],
+    "bus log": [
+      {
+        "componentId": "guardian.bus.log",
+        "systemId": "guardian",
+        "description": "Recent SISO bus log"
+      }
+    ],
+    "bus": [
+      {
+        "componentId": "guardian.bus.log",
+        "systemId": "guardian",
+        "description": "Recent SISO bus log"
+      },
+      {
+        "componentId": "guardian.bus.emit",
+        "systemId": "guardian",
+        "description": "Emit event onto bus"
+      }
+    ],
+    "bus-log": [
+      {
+        "componentId": "guardian.bus.log",
+        "systemId": "guardian",
+        "description": "Recent SISO bus log"
+      }
+    ],
+    "bus emit": [
+      {
+        "componentId": "guardian.bus.emit",
+        "systemId": "guardian",
+        "description": "Emit event onto bus"
+      }
+    ],
+    "emit": [
+      {
+        "componentId": "guardian.bus.emit",
+        "systemId": "guardian",
+        "description": "Emit event onto bus"
+      }
+    ],
+    "bus-emit": [
+      {
+        "componentId": "guardian.bus.emit",
+        "systemId": "guardian",
+        "description": "Emit event onto bus"
+      }
+    ],
+    "providers list": [
+      {
+        "componentId": "guardian.providers.list",
+        "systemId": "guardian",
+        "description": "Connected NCP browser tab providers"
+      }
+    ],
+    "providers": [
+      {
+        "componentId": "guardian.providers.list",
+        "systemId": "guardian",
+        "description": "Connected NCP browser tab providers"
       }
     ],
     "providers-list": [
@@ -10289,28 +15439,6 @@
         "componentId": "guardian.job.status",
         "systemId": "guardian",
         "description": "Single job status"
-      }
-    ],
-    "status": [
-      {
-        "componentId": "guardian.job.status",
-        "systemId": "guardian",
-        "description": "Single job status"
-      },
-      {
-        "componentId": "guardian.queue.status",
-        "systemId": "guardian",
-        "description": "Physical queue status"
-      },
-      {
-        "componentId": "bridge.circuit.status",
-        "systemId": "bridge",
-        "description": "Circuit breaker state per node"
-      },
-      {
-        "componentId": "cg.status",
-        "systemId": "clear-glass",
-        "description": "Full system status — bus sample, agents, listeners, TLS"
       }
     ],
     "job statu": [
@@ -10528,23 +15656,6 @@
         "description": "Create SEAM session"
       }
     ],
-    "create": [
-      {
-        "componentId": "guardian.seam.session.create",
-        "systemId": "guardian",
-        "description": "Create SEAM session"
-      },
-      {
-        "componentId": "guardian.queue.compartment.create",
-        "systemId": "guardian",
-        "description": "Create job compartment"
-      },
-      {
-        "componentId": "cg.context.create",
-        "systemId": "clear-glass",
-        "description": "Create isolated Chromium partition"
-      }
-    ],
     "seam-session-create": [
       {
         "componentId": "guardian.seam.session.create",
@@ -10725,40 +15836,7 @@
         "description": "SHA-256 deduplicated code artifacts"
       }
     ],
-    "gaps list": [
-      {
-        "componentId": "guardian.gaps.list",
-        "systemId": "guardian",
-        "description": "Open gaps detected by guardian"
-      }
-    ],
-    "gaps": [
-      {
-        "componentId": "guardian.gaps.list",
-        "systemId": "guardian",
-        "description": "Open gaps detected by guardian"
-      },
-      {
-        "componentId": "guardian.gaps.summary",
-        "systemId": "guardian",
-        "description": "Gap summary by type + severity"
-      }
-    ],
-    "gaps-list": [
-      {
-        "componentId": "guardian.gaps.list",
-        "systemId": "guardian",
-        "description": "Open gaps detected by guardian"
-      }
-    ],
     "gaps summary": [
-      {
-        "componentId": "guardian.gaps.summary",
-        "systemId": "guardian",
-        "description": "Gap summary by type + severity"
-      }
-    ],
-    "summary": [
       {
         "componentId": "guardian.gaps.summary",
         "systemId": "guardian",
@@ -10935,13 +16013,6 @@
         "description": "Co-pilot memory operations"
       }
     ],
-    "memory": [
-      {
-        "componentId": "guardian.copilot.memory",
-        "systemId": "guardian",
-        "description": "Co-pilot memory operations"
-      }
-    ],
     "copilot-memory": [
       {
         "componentId": "guardian.copilot.memory",
@@ -10954,6 +16025,11 @@
         "componentId": "copilot.prompt",
         "systemId": "copilot",
         "description": "Primary entry — all co-pilot interactions"
+      },
+      {
+        "componentId": "copilot.prompt.stream",
+        "systemId": "copilot",
+        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
       }
     ],
     "cp": [
@@ -10973,6 +16049,11 @@
         "componentId": "copilot.stream.ingest",
         "systemId": "copilot",
         "description": "Push events into co-pilot stream"
+      },
+      {
+        "componentId": "copilot.prompt.stream",
+        "systemId": "copilot",
+        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
       }
     ],
     "cs": [
@@ -11070,13 +16151,6 @@
       }
     ],
     "add axiom": [
-      {
-        "componentId": "copilot.axioms.add",
-        "systemId": "copilot",
-        "description": "Add a runtime axiom"
-      }
-    ],
-    "add": [
       {
         "componentId": "copilot.axioms.add",
         "systemId": "copilot",
@@ -11189,6 +16263,48 @@
         "componentId": "copilot.diagnose.list",
         "systemId": "copilot",
         "description": "List past diagnosis sessions"
+      }
+    ],
+    "fulfill": [
+      {
+        "componentId": "copilot.prompt.fulfill",
+        "systemId": "copilot",
+        "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)"
+      }
+    ],
+    "cp fulfill": [
+      {
+        "componentId": "copilot.prompt.fulfill",
+        "systemId": "copilot",
+        "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)"
+      }
+    ],
+    "prompt-fulfill": [
+      {
+        "componentId": "copilot.prompt.fulfill",
+        "systemId": "copilot",
+        "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)"
+      }
+    ],
+    "stream ask": [
+      {
+        "componentId": "copilot.prompt.stream",
+        "systemId": "copilot",
+        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
+      }
+    ],
+    "cp stream": [
+      {
+        "componentId": "copilot.prompt.stream",
+        "systemId": "copilot",
+        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
+      }
+    ],
+    "prompt-stream": [
+      {
+        "componentId": "copilot.prompt.stream",
+        "systemId": "copilot",
+        "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
       }
     ],
     "copilot health": [
@@ -11613,13 +16729,6 @@
         "description": "Verify system identity token"
       }
     ],
-    "verify": [
-      {
-        "componentId": "bridge.identity.verify",
-        "systemId": "bridge",
-        "description": "Verify system identity token"
-      }
-    ],
     "identity-verify": [
       {
         "componentId": "bridge.identity.verify",
@@ -11737,20 +16846,6 @@
         "description": "Hot-patch a running module (QUARANTINE→PROVE→INTEGRATE→MONITOR)"
       }
     ],
-    "hot-load": [
-      {
-        "componentId": "emerge.hot.load",
-        "systemId": "emerge",
-        "description": "Hot-patch a running module (QUARANTINE→PROVE→INTEGRATE→MONITOR)"
-      }
-    ],
-    "snapshot": [
-      {
-        "componentId": "emerge.snapshot",
-        "systemId": "emerge",
-        "description": "Snapshot before applying patch"
-      }
-    ],
     "emerge snapshot": [
       {
         "componentId": "emerge.snapshot",
@@ -11852,28 +16947,6 @@
         "componentId": "architect.hooks.list",
         "systemId": "architect",
         "description": "Hook registry — all declared hooks"
-      }
-    ],
-    "hooks": [
-      {
-        "componentId": "architect.hooks.list",
-        "systemId": "architect",
-        "description": "Hook registry — all declared hooks"
-      },
-      {
-        "componentId": "architect.hooks.validate",
-        "systemId": "architect",
-        "description": "Validate all hooks against invariants"
-      },
-      {
-        "componentId": "architect.hooks.graph",
-        "systemId": "architect",
-        "description": "Hook topology graph (json|mermaid)"
-      },
-      {
-        "componentId": "architect.hooks.check",
-        "systemId": "architect",
-        "description": "Check hook against constraints"
       }
     ],
     "hooks-list": [
@@ -12058,13 +17131,6 @@
       }
     ],
     "hooks graph": [
-      {
-        "componentId": "architect.hooks.graph",
-        "systemId": "architect",
-        "description": "Hook topology graph (json|mermaid)"
-      }
-    ],
-    "graph": [
       {
         "componentId": "architect.hooks.graph",
         "systemId": "architect",
@@ -12317,18 +17383,6 @@
         "componentId": "eravos.canvas",
         "systemId": "eravos",
         "description": "Main ERAVOS canvas — organisms, wires, transport"
-      }
-    ],
-    "open": [
-      {
-        "componentId": "eravos.canvas",
-        "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
-      },
-      {
-        "componentId": "cg.window.open",
-        "systemId": "clear-glass",
-        "description": "Open agent browser window"
       }
     ],
     "open canva": [
@@ -12709,28 +17763,6 @@
         "componentId": "cg.context.create",
         "systemId": "clear-glass",
         "description": "Create isolated Chromium partition"
-      }
-    ],
-    "context": [
-      {
-        "componentId": "cg.context.create",
-        "systemId": "clear-glass",
-        "description": "Create isolated Chromium partition"
-      },
-      {
-        "componentId": "cg.context.switch",
-        "systemId": "clear-glass",
-        "description": "Switch active agent context"
-      },
-      {
-        "componentId": "cg.context.list",
-        "systemId": "clear-glass",
-        "description": "List agent contexts"
-      },
-      {
-        "componentId": "cg.context.fp.switch",
-        "systemId": "clear-glass",
-        "description": "Switch fingerprint mode"
       }
     ],
     "context-create": [
@@ -13214,5 +18246,5 @@
     ]
   },
   "errors": [],
-  "buildMs": 9
+  "buildMs": 14
 }

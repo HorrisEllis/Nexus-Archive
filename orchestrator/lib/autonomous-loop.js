@@ -100,7 +100,7 @@ async function _queryCaseLibrary(intent) {
 
 async function _llmStep(run, stepNum, systemPrompt, userPrompt) {
   const runtime = (() => {
-    try { return require('../../ollama-runtime'); } catch(_) { return null; }
+    try { return require('../ollama-runtime'); } catch(_) { return null; }
   })();
 
   if (!runtime) throw new Error('ollama-runtime not available');
@@ -359,7 +359,7 @@ async function startRun(opts = {}) {
     throw new Error(`Unsupported exit_condition.type: "${opts.exit_condition.type}". Supported: ${[...SUPPORTED_EXIT_TYPES].join(', ')}`);
 
   const { jaaDB: jaa, uid: _uid } = (() => {
-    try { return require('../../cortex/memory/jaa-db'); } catch(_) { return { jaaDB: null, uid: () => require('crypto').randomUUID() }; }
+    try { return require('../cortex/memory/jaa-db'); } catch(_) { return { jaaDB: null, uid: () => require('crypto').randomUUID() }; }
   })();
   const snap    = _safeRequire('../cortex/snapshot');
   const cLib    = _safeRequire('./case-library');

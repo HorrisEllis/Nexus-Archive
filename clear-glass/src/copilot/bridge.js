@@ -228,7 +228,7 @@ class CoPilotBridge {
     // ── Blueprint / component query ────────────────────────────────────────
     if (action === 'blueprint.query' || action === 'components.list') {
       try {
-        const bi  = require('../../../lib/blueprint-index');
+        const bi  = require('../../lib/blueprint-index');
         const idx = bi.load();
         if (!idx) return { error: 'blueprint-index not built' };
         const q = (cmd.query || '').toLowerCase();
@@ -244,7 +244,7 @@ class CoPilotBridge {
     }
     if (action === 'blueprint.rebuild') {
       try {
-        const bi = require('../../../lib/blueprint-index');
+        const bi = require('../../lib/blueprint-index');
         const r  = bi.build();
         return { ok: r.ok, totalComponents: r.index?.totalComponents };
       } catch(e) { return { error: e.message }; }

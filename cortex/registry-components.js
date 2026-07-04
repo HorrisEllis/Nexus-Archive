@@ -70,4 +70,8 @@ module.exports = [
   // ── Tags ───────────────────────────────────────────────────────────────
   _c('tags.list',             'GET',  '/api/tags',                     'All tags in memory'),
   _c('tags.add',              'POST', '/api/tags',                     'Add tag'),
+  // ── Nerve (Phase 1: attention layer) ────────────────────────────────────
+  // §2026-07-02 — added this session: nerve read layer + hooks summary
+  _c('nerve.snapshot',        'GET',  '/nerve/snapshot',               'Nerve attention layer snapshot — nodes, field, stresses', { tags: ['nerve'] }),
+  _c('hooks.summary',         'GET',  '/hooks/summary',                'Wire graph — active hooks and declared wires', { tags: ['nerve', 'wires'] }),
 ];

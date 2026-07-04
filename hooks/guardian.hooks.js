@@ -60,7 +60,7 @@ const GUARDIAN_HOOKS = [
       snrGated:    false,
     },
     references: {
-      files:    ['lib/ncp.js → createNCPServer', 'guardian/server.js → GET /channel'],
+      files:    ['guardian/lib/ncp.js → createNCPServer', 'guardian/server.js → GET /channel'],
       related:  ['guardian-ncp-result', 'guardian-ncp-heartbeat'],
       spec:     'docs/specs/GUARDIAN-COMPLETE.md §Transport',
     },
@@ -138,7 +138,7 @@ const GUARDIAN_HOOKS = [
       replayable:  true,
     },
     references: {
-      files:    ['guardian/server.js → POST /command → dispatchJob()', 'lib/ncp.js → push()'],
+      files:    ['guardian/server.js → POST /command → dispatchJob()', 'guardian/lib/ncp.js → push()'],
       related:  ['guardian-job-complete', 'guardian-ncp-channel', 'guardian-seam-dispatch'],
       fault:    'F-NCP-001 — _write not defined (fixed 2026-06-11)',
       spec:     'docs/specs/GUARDIAN-COMPLETE.md §Job Lifecycle',
@@ -178,7 +178,7 @@ const GUARDIAN_HOOKS = [
       replayable:  false,
     },
     references: {
-      files:    ['guardian/server.js → case GUARDIAN_COMPLETE', 'guardian/userscript-claude.js → _onJobComplete()'],
+      files:    ['guardian/server.js → case GUARDIAN_COMPLETE', 'guardian/userscripts/claude.js → _onJobComplete()'],
       related:  ['guardian-dispatch-job', 'guardian-artifact', 'guardian-gaps'],
       fault:    'F-SEAM-001 — complete never routed to queue.onResponse() (fixed 2026-06-11)',
     },
@@ -222,7 +222,7 @@ const GUARDIAN_HOOKS = [
       snrGated:    false,
     },
     references: {
-      files:    ['guardian/lib/seam-queue.js', 'guardian/lib/spec-parser.js', 'guardian/server.js → POST /command'],
+      files:    ['lib/seam/queue.js', 'lib/seam/spec-parser.js', 'guardian/server.js → POST /command'],
       related:  ['guardian-dispatch-job', 'guardian-seam-chunk-verified'],
       fault:    'F-SEAM-001 — GUARDIAN_COMPLETE never routed to queue.onResponse() (fixed 2026-06-11)',
       spec:     'docs/specs/SEAM-SPEC-v1.0.0.md',
@@ -262,7 +262,7 @@ const GUARDIAN_HOOKS = [
       idempotent:  true,
     },
     references: {
-      files:    ['guardian/userscript-claude.js → scanArtifacts()', 'guardian/userscript-chatgpt.js → scanArtifacts()'],
+      files:    ['guardian/userscripts/claude.js → scanArtifacts()', 'guardian/userscripts/chatgpt.js → scanArtifacts()'],
       related:  ['guardian-job-complete'],
     },
     seam: {
@@ -301,7 +301,7 @@ const GUARDIAN_HOOKS = [
       replayable:  false,
     },
     references: {
-      files:    ['guardian/server.js → case NEXUS_DOM_MAP', 'guardian/userscript-claude.js → sendDOMMap()'],
+      files:    ['guardian/server.js → case NEXUS_DOM_MAP', 'guardian/userscripts/claude.js → sendDOMMap()'],
       fault:    'F-DOM-001 — was silently dropped (fixed 2026-06-11)',
     },
     seam:      null,
@@ -337,7 +337,7 @@ const GUARDIAN_HOOKS = [
       snrGated:    false,
     },
     references: {
-      files:    ['guardian/userscript-claude.js → pullIntelligenceContext()', 'cortex/intelligence/index.js → getContext()'],
+      files:    ['guardian/userscripts/claude.js → pullIntelligenceContext()', 'cortex/intelligence/index.js → getContext()'],
       related:  ['guardian-dispatch-job'],
     },
     seam: {
