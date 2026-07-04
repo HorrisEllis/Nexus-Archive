@@ -1486,11 +1486,11 @@ body[data-mode='perplexity'] .forge-send:hover{background:rgba(129,140,248,.1);b
       <button id="rewind-btn" onclick="openRewind()">⟲ REWIND</button>
     </div>
 
-    <!-- Assistant -->
+    <!-- Assistant — co-pilot CLI is the primary mode in this panel -->
     <div id="bot-bar">
       <div id="bot-bar-head">
-        <span id="bot-bar-label">SYSTEM CONSOLE</span>
-        <button id="copilot-mode-btn" onclick="toggleCopilotMode()" title="Switch between co-pilot (Bridge :9999) and system console" style="background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:rgba(255,255,255,.35);font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;cursor:pointer;letter-spacing:.08em;transition:all .2s;margin-right:4px">✦ CO-PILOT</button>
+        <span id="bot-bar-label">CO-PILOT</span>
+        <button id="copilot-mode-btn" onclick="toggleCopilotMode()" title="Switch between co-pilot and system console" style="background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:rgba(255,255,255,.35);font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;cursor:pointer;letter-spacing:.08em;transition:all .2s;margin-right:4px">⬡ CONSOLE</button>
         <button id="fullscreen-btn" onclick="toggleConsoleFullscreen()" title="Fullscreen console (Shift+Enter)">⛶</button>
       </div>
       <div id="cp-guide"></div>
@@ -2359,7 +2359,7 @@ async function runDiagEngines(){
 
 // ── Co-pilot mode toggle ───────────────────────────────────────────────────────
 // Two modes: 'system' (grammar engine → Guardian copilot) | 'copilot' (Bridge :9999)
-let _asMode = 'system'; // default
+let _asMode = 'copilot'; // co-pilot is the primary mode — toggle to system console
 let _bridgeToken = null;
 
 async function _getBridgeToken() {
@@ -2411,7 +2411,7 @@ function toggleCopilotMode() {
     btn.style.borderColor = '';
     btn.style.background = '';
     if (lbl) lbl.textContent = 'SYSTEM CONSOLE';
-    if (inp) inp.placeholder = 'Ask NEXUS anything · /command for tools · /gaps · /jobs · /status';
+    if (inp) inp.placeholder = '/gaps · /jobs · /status · /sigma — system diagnostics';
     _logToData('ui.copilot-mode.disabled', { ts: Date.now() });
   }
 }

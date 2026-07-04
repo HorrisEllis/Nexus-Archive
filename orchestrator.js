@@ -620,11 +620,20 @@ const server = http.createServer(async (req, res) => {
   const M     = req.method;
   const QS    = u.searchParams;
 
-  // ── Root UI — NEXUS Home (Phase 1: structure complete) ─────────────────
-  if (M==='GET' && (u.pathname==='/' || u.pathname==='/home')) {
+  // ── Root UI — tv-shell is the primary NEXUS UI ───────────────────────────
+  // §2026-07-02: tv-shell is the real UI. Particle field, spotlight, nerve
+  // canvas, channel switching. Diagnostic is at /home and /ui/diagnostics.
+  if (M==='GET' && (u.pathname==='/' || u.pathname==='/tv')) {
+    const tvPath = path.join(UI_ROOT,'tv-shell','index.html');
+    if (fs.existsSync(tvPath)) return serveFile(res, tvPath);
+    // fallback: orchestrator status if tv-shell missing
+    return serveFile(res, path.join(UI_ROOT,'orchestrator','index.html'));
+  }
+
+  // ── Home / diagnostic — accessible at /home ──────────────────────────────
+  if (M==='GET' && u.pathname==='/home') {
     const homePath = path.join(UI_ROOT,'home','index.html');
     if (fs.existsSync(homePath)) return serveFile(res, homePath);
-    // fallback to orchestrator UI while home is being built
     return serveFile(res, path.join(UI_ROOT,'orchestrator','index.html'));
   }
 

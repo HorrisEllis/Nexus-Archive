@@ -739,7 +739,7 @@ function _rebuildTrayMenu(mesh) {
     { label: '⬡ Open claude.ai',     click: () => openAgentWindow({ agentId: randomUUID(), url: 'https://claude.ai/new' }) },
     { label: '⬡ Open Mistral Chat',  click: () => openAgentWindow({ agentId: randomUUID(), url: 'https://chat.mistral.ai' }) },
     { label: '⬡ Open ChatGPT',       click: () => openAgentWindow({ agentId: randomUUID(), url: 'https://chatgpt.com' }) },
-    { label: '⬡ NEXUS Home UI',      click: () => openAgentWindow({ agentId: 'nexus-home', url: 'http://127.0.0.1:9000/ui/home/index.html' }) },
+    { label: '⬡ NEXUS Home UI',      click: () => openAgentWindow({ agentId: 'nexus-home', url: 'http://127.0.0.1:9000' }) },
     { type: 'separator' },
     { label: 'NEXUS UI Audit',        click: () => emit('diag.nexus', { agentId: 'default' }) },
     { label: 'API Settings',          click: openSettingsWindow },
