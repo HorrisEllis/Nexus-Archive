@@ -45,4 +45,7 @@ module.exports = [
   // ── UI ────────────────────────────────────────────────────────────────────
   _c('ui.list',             'GET',  '/api/ui',                   'Available UI systems'),
   _c('ui.hotswap',          'POST', '/api/ui/hotswap',           'Hot-swap a UI file'),
+  // §2026-07-02 — wired at boot this session (bus-level, not HTTP routes)
+  _c('cos.enforcement',     'BUS',  'cos.invariant.*',           'COS BoundaryIndex monitors every nexus-bus event — I-1 UUID, C-1 causal edges. Violations → ledger as cos.invariant.* events.', { tags:['cos','enforcement','bus'] }),
+  _c('rfr2.bus.bridge',     'BUS',  'rfr2.delta.*',              'RFR2 delta+enforcement wired to nexus-bus wildcard. Feeds computeEventDelta (S/C fields) and invariant checks. Emits rfr2.delta.signal, rfr2.enforcement.violation, rfr2.delta.fractal.', { tags:['rfr2','delta','bus'] }),
 ];

@@ -2,97 +2,25 @@
 /**
  * hooks/cortex.hooks.js — Cortex System Hook Map
  * UUID: cortex-hooks-map-v1-0000-4000
- * Status: pre-release
- * System: Cortex :3748
- * Status: living
  */
 
 const CORTEX_HOOKS = [
-  {
-    id: 'cx-hook-event-ingest-0001', name: 'cortex-event-ingest',
-    intent: 'Receive events from all systems and write them to JAA event_log so nothing is lost',
-    type: 'api', direction: 'sink',
-    from: { surface:'*', layer:0 }, to: { surface:'cortex', layer:1, port:3748 },
-    ui: { panel:'CORTEX > EVENTS', element:'Event ledger rows', action:'POST /api/event' },
-    config: { path:'/api/event', method:'POST', schema:'{ type, payload, source, causedBy?, ts }' },
-    contract: { axioms:['§2.1','§1.2'], sideEffects:['jaa.insert("event_log")','sigma.record()','delta.record()'], idempotent:false, replayable:true },
-    references: { files:['cortex/boot.js → POST /api/event'] },
-    seam: null, status:'active', updatedAt:'2026-06-11T17:30:00Z',
-  },
-  {
-    id: 'cx-hook-intelligence-context-0002', name: 'cortex-intelligence-context',
-    intent: 'Return pre-request context (failure modes, reuse candidates, patterns) so agents never start cold',
-    type: 'api', direction: 'bidirectional',
-    from: { surface:'*', layer:0 }, to: { surface:'cortex', layer:1, port:3748 },
-    ui: { panel:'CORTEX > INTELLIGENCE > STATUS', element:'Intelligence status panel', action:'GET /api/intelligence/context' },
-    config: { path:'/api/intelligence/context', queryParams:['intent','command','provider'], timeout:3000 },
-    contract: { axioms:['§CC-001','§US-04'], sideEffects:[], idempotent:true },
-    references: { files:['cortex/boot.js → GET /api/intelligence/context', 'cortex/boot.js → intelligence routes'] },
-    seam: { componentId:'cortex-intelligence-context-query', intentId:'return-pre-request-context-to-agents' },
-    status:'active', updatedAt:'2026-06-11T17:30:00Z',
-  },
-  {
-    id: 'cx-hook-snapshot-create-0003', name: 'cortex-snapshot-create',
-    intent: 'Archive full JAA table state to a .nex snapshot so the system can rewind to any prior state',
-    type: 'api', direction: 'unidirectional',
-    from: { surface:'orchestrator', layer:1 }, to: { surface:'cortex', layer:1 },
-    ui: { panel:'CORTEX > SNAPSHOTS', element:'Snapshot list + Create button', action:'POST /api/snapshots/create' },
-    config: { path:'/api/snapshots/create', method:'POST', schema:'{ message? }', returns:'{ ok, snapId }' },
-    contract: { axioms:['§2.1','§2.3'], sideEffects:['writes .nex file to data/snapshots/','jaa.insert("versionium_commits")'], idempotent:false, replayable:false },
-    references: { files:['cortex/boot.js','cortex/boot.js → POST /api/snapshots/create'] },
-    seam: null, status:'active', updatedAt:'2026-06-11T17:30:00Z',
-  },
-  {
-    id: 'cx-hook-snapshot-rollback-0004', name: 'cortex-snapshot-rollback',
-    intent: 'Restore all JAA tables to a prior snapshot state — the rewind button',
-    type: 'api', direction: 'unidirectional',
-    from: { surface:'orchestrator', layer:1 }, to: { surface:'cortex', layer:1 },
-    ui: { panel:'CORTEX > SNAPSHOTS', element:'⏪ Rewind button on each snapshot row', action:'POST /api/snapshots/rollback' },
-    config: { path:'/api/snapshots/rollback', method:'POST', schema:'{ snapId, apply:true }', warning:'restores JAA tables only — files on disk unchanged' },
-    contract: { axioms:['§2.1'], sideEffects:['replaces all JAA table contents'], idempotent:false, replayable:false },
-    references: { files:['cortex/boot.js → POST /api/snapshots/rollback'] },
-    seam: null, status:'active', updatedAt:'2026-06-11T17:30:00Z',
-  },
-  {
-    id: 'cx-hook-jaa-memory-0005', name: 'cortex-jaa-memory-query',
-    intent: 'Expose JAA table contents for browsing and search so the system is fully observable',
-    type: 'api', direction: 'bidirectional',
-    from: { surface:'*', layer:0 }, to: { surface:'cortex', layer:1 },
-    ui: { panel:'CORTEX > MEMORY + CORTEX > TABLES', element:'Table selector, row browser, filter', action:'GET /api/memory?table=X&n=200' },
-    config: { path:'/api/memory', queryParams:['table','n'], maxRows:500 },
-    contract: { axioms:['§2.3'], sideEffects:[], idempotent:true },
-    references: { files:['cortex/boot.js → GET /api/memory'] },
-    seam: null, status:'active', updatedAt:'2026-06-11T17:30:00Z',
-  },
-  {
-    id: 'cx-hook-gap-write-0006', name: 'cortex-gap-write',
-    intent: 'Record a named gap in JAA so nothing is unnamed and all gaps are observable and actionable',
-    type: 'api', direction: 'unidirectional',
-    from: { surface:'*', layer:0 }, to: { surface:'cortex', layer:1 },
-    ui: { panel:'CORTEX > GAPS', element:'Gap list with severity badges', action:'POST /api/gaps or event cortex.gap.found' },
-    config: { path:'/api/gaps', method:'POST', schema:'{ type, severity, description, source, path?, body? }' },
-    contract: { axioms:['§1.2','§F-GAP-01'], sideEffects:['jaa.insert("gaps")'], idempotent:false },
-    references: { files:['cortex/boot.js → POST /api/gaps'] },
-    seam: null, status:'active', updatedAt:'2026-06-11T17:30:00Z',
-  },
-  {
-    id: 'cx-hook-self-heal-0007', name: 'cortex-self-heal',
-    intent: 'Trigger autonomous gap analysis and patch generation so the system repairs itself without operator intervention',
-    type: 'gate', direction: 'unidirectional',
-    from: { surface:'cortex-healer', layer:1 }, to: { surface:'cortex', layer:1 },
-    ui: { panel:'CORTEX > SELF-HEAL', element:'HEAL button + self-heal status', action:'POST /api/self-heal/run' },
-    config: { path:'/api/self-heal/run', scanInterval:'30s', maxPatchesPerRun:3 },
-    contract: { axioms:['§1.2','§HEALER-01'], sideEffects:['opens gaps','emits cortex.healer.patched','may dispatch guardian jobs'], idempotent:false },
-    references: { files:['cortex/boot.js → self-heal loop','cortex/boot.js → self-heal loop'] },
-    seam: null, status:'active', updatedAt:'2026-06-11T17:30:00Z',
-  },
-  // §2026-07-02 nerve/snapshot and hooks/summary added to cortex/boot.js
-  { id:'cx-hook-nerve-snapshot-0099', name:'cortex-nerve-snapshot', intent:'Expose Nerve attention-layer snapshot over HTTP for Clear Glass and tv-shell consumers', type:'api', direction:'unidirectional', from:{surface:'cortex',layer:1,port:3748}, to:{surface:'browser',layer:6}, config:{path:'/nerve/snapshot', method:'GET'}, contract:{axioms:['§5.7'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /nerve/snapshot', 'lib/nerve/index.js → getSnapshot()']}, seam:null, status:'active', updatedAt:'2026-07-02T00:00:00Z' },
-  { id:'cx-hook-hooks-summary-0100', name:'cortex-hooks-summary', intent:'Expose live wire graph over HTTP for relational pressure system', type:'api', direction:'unidirectional', from:{surface:'cortex',layer:1,port:3748}, to:{surface:'browser',layer:6}, config:{path:'/hooks/summary', method:'GET'}, contract:{axioms:['§5.7'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /hooks/summary', 'hooks/index.js → allHooks()']}, seam:null, status:'active', updatedAt:'2026-07-02T00:00:00Z' },
+  { id:'cx-hook-event-ingest-0001', name:'cortex-event-ingest', intent:'Accept any event from any system and write it to the append-only event_log with sigma+delta+field snapshot. The truth substrate write path.', type:'api', direction:'unidirectional', from:{surface:'*',layer:0}, to:{surface:'cortex',layer:1,port:3748}, config:{path:'/api/event', method:'POST', persists:['id','type','payload','source','ts','causedBy','componentId','hookId']}, contract:{axioms:['§LAW_II','§2.1'], sideEffects:['writes to event_log JAA table','broadcasts to component SSE subscribers'], idempotent:false}, references:{files:['cortex/boot.js → POST /api/event','cortex/boot.js → _broadcastToComponentStreams()']}, seam:null, status:'active', updatedAt:'2026-07-02T00:00:00Z' },
+  { id:'cx-hook-memory-recall-0002', name:'cortex-memory-recall', intent:'Return working memory, semantic search results, or full table tail so callers can read the system\'s knowledge.', type:'api', direction:'bidirectional', from:{surface:'*',layer:0}, to:{surface:'cortex',layer:1,port:3748}, config:{path:'/api/memory', methods:['GET','POST']}, contract:{axioms:['§2.3'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /api/memory']}, seam:null, status:'active', updatedAt:'2026-06-11T17:30:00Z' },
+  { id:'cx-hook-gap-ingest-0003', name:'cortex-gap-ingest', intent:'Accept gap records from guardian and idearium and write them to the gaps table. Gaps are the system\'s named acknowledgment that something is broken or missing.', type:'api', direction:'unidirectional', from:{surface:'guardian',layer:4}, to:{surface:'cortex',layer:1}, config:{path:'/api/gaps', method:'POST'}, contract:{axioms:['§2.1'], sideEffects:['writes to gaps JAA table'], idempotent:false}, references:{files:['cortex/boot.js → POST /api/gaps']}, seam:null, status:'active', updatedAt:'2026-06-11T17:30:00Z' },
+  { id:'cx-hook-intelligence-0004', name:'cortex-intelligence-dual-mode', intent:'Expose dual-mode cognition: intuition (fast, pattern-match) and mastermind (deep causal). Callers choose the mode based on urgency vs depth.', type:'api', direction:'bidirectional', from:{surface:'*',layer:0}, to:{surface:'cortex',layer:1,port:3748}, config:{paths:['/api/intelligence/intuition','/api/intelligence/mastermind'], methods:['POST']}, contract:{axioms:['§5.7'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → intelligence routes']}, seam:null, status:'active', updatedAt:'2026-06-11T17:30:00Z' },
+  { id:'cx-hook-raid-0005', name:'cortex-raid-routing', intent:'RAID adaptive routing decision — returns agent+cluster+reason for any dispatch call. Pre-commit simulation available via raid.simulation.', type:'api', direction:'bidirectional', from:{surface:'copilot',layer:3}, to:{surface:'cortex',layer:1,port:3748}, config:{path:'/api/raid/decide', method:'GET'}, contract:{axioms:['§LAW_I','§LAW_III'], sideEffects:[], idempotent:false}, references:{files:['cortex/core/raid/index.js → _decide()','cortex/core/raid/simulation.js → simulate()']}, seam:null, status:'active', updatedAt:'2026-06-11T17:30:00Z' },
+  { id:'cx-hook-cfr-field-0006', name:'cortex-cfr-field', intent:'Expose the live CFR field state (coherence/friction/resonance/entropy/regime) over HTTP so guardian and the orchestrator can read it without SSE.', type:'api', direction:'unidirectional', from:{surface:'cortex',layer:1,port:3748}, to:{surface:'*',layer:0}, config:{path:'/cfr/field', method:'GET'}, contract:{axioms:['§2.3'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /cfr/field']}, seam:null, status:'active', updatedAt:'2026-06-11T17:30:00Z' },
+  { id:'cx-hook-self-heal-0007', name:'cortex-self-heal', intent:'Healer loop that monitors gaps and dispatches guardian jobs to close them.', type:'api', direction:'unidirectional', from:{surface:'cortex',layer:1,port:3748}, to:{surface:'guardian',layer:4}, config:{loop:'self-heal', trigger:'gap.found'}, contract:{axioms:['§1.2','§HEALER-01'], sideEffects:['opens gaps','emits cortex.healer.patched','may dispatch guardian jobs'], idempotent:false}, references:{files:['cortex/boot.js → self-heal loop']}, seam:null, status:'active', updatedAt:'2026-06-11T17:30:00Z' },
+  // §2026-07-02 — added this session
+  { id:'cx-hook-nerve-snapshot-0099', name:'cortex-nerve-snapshot', intent:'Expose Nerve attention-layer snapshot over HTTP for Clear Glass and tv-shell consumers', type:'api', direction:'unidirectional', from:{surface:'cortex',layer:1,port:3748}, to:{surface:'browser',layer:6}, config:{path:'/nerve/snapshot', method:'GET'}, contract:{axioms:['§5.7'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /nerve/snapshot','lib/nerve/index.js → getSnapshot()']}, seam:null, status:'active', updatedAt:'2026-07-02T00:00:00Z' },
+  { id:'cx-hook-hooks-summary-0100', name:'cortex-hooks-summary', intent:'Expose live wire graph over HTTP for relational pressure system', type:'api', direction:'unidirectional', from:{surface:'cortex',layer:1,port:3748}, to:{surface:'browser',layer:6}, config:{path:'/hooks/summary', method:'GET'}, contract:{axioms:['§5.7'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /hooks/summary','hooks/index.js → allHooks()']}, seam:null, status:'active', updatedAt:'2026-07-02T00:00:00Z' },
+  { id:'cx-hook-component-stream-0101', name:'cortex-component-sse', intent:'Per-component SSE stream — subscribers filter by componentId prefix, 20-event replay on connect, 15s keepalive.', type:'stream', direction:'unidirectional', from:{surface:'cortex',layer:1,port:3748}, to:{surface:'*',layer:6}, config:{path:'/events/component/:componentId', protocol:'SSE', keepaliveMs:15000, replayCount:20}, contract:{axioms:['§5.7'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /events/component/:id','cortex/boot.js → _broadcastToComponentStreams()']}, seam:null, status:'active', updatedAt:'2026-07-02T00:00:00Z' },
+  { id:'cx-hook-query-surface-0102', name:'cortex-query-surface', intent:'Unified query surface — gaps+sigma+events+field+blueprint+memory joined with mastermind narrative. ?about=keyword filter.', type:'api', direction:'bidirectional', from:{surface:'*',layer:0}, to:{surface:'cortex',layer:1,port:3748}, config:{path:'/api/cortex/query', methods:['GET','POST'], dataSources:['gaps','sigma_records','event_log','cortex_memory','_field']}, contract:{axioms:['§2.3','§5.7'], sideEffects:[], idempotent:true}, references:{files:['cortex/boot.js → GET /api/cortex/query']}, seam:null, status:'active', updatedAt:'2026-07-02T00:00:00Z' },
 ];
 
 module.exports = {
-  systemId:'cortex', port:3748, version:'3.0.0', updatedAt:'2026-06-11T17:30:00Z', hooks:CORTEX_HOOKS,
+  systemId:'cortex', port:3748, version:'3.0.0', updatedAt:'2026-07-02T00:00:00Z', hooks:CORTEX_HOOKS,
   byId:(id)=>CORTEX_HOOKS.find(h=>h.id===id), byName:(n)=>CORTEX_HOOKS.find(h=>h.name===n),
   byType:(t)=>CORTEX_HOOKS.filter(h=>h.type===t), withSEAM:()=>CORTEX_HOOKS.filter(h=>h.seam!==null), active:()=>CORTEX_HOOKS.filter(h=>h.status==='active'),
 };

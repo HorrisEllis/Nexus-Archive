@@ -42,13 +42,23 @@ const components=[
   }),
   _c('health','GET','/health','Co-pilot health'),
   _c('contract','GET','/contract','Co-pilot interaction contract'),
+  // §2026-07-02 — routes and behaviors added this session
+  _c('channel','POST','/api/channel','Set active channel for all sessions', { tags:['session'] }),
+  _c('observe','POST','/api/observe','Observe and ingest an external event into co-pilot stream', { tags:['stream'] }),
+  _c('empty.state','EVENT','copilot.empty_state','Emitted 8s after boot when no active projects — surfaces stalled ideas, open gaps, sigma trajectory', { tags:['boot','state'] }),
+  _c('query.surface.enriched','EVENT','copilot.query_surface.enriched','Emitted when query surface enrichment runs — about + gap count', { tags:['intelligence','query'] }),
+  _c('conditioning.log','BEHAVIOR','conditioning_log','Writes agent+cluster+outcome+quality+sigmaAtDispatch after every response. Feeds RAID role_confidence.', { tags:['learning','raid'] }),
+  _c('uniqueness.synthesis','BEHAVIOR','uniqueness_synthesis','Synthesizes a unique grounding anchor per request — request ID, focus terms, sigma, exchange count, CFR regime. Injected before model call.', { tags:['uniqueness','quality'] }),
 ];
 module.exports={
   systemId:NS,version:V,port:3750,
   label:'COPILOT',purpose:'Sovereign co-pilot. Continuous stream. Dual cognition.',
   components,
   events:{
-    emits:['copilot.booted','copilot.prompt.received','copilot.context.assembled','copilot.answered','copilot.stream.event','copilot.build.started','copilot.build.complete'],
-    handles:['ollama.job.complete','cortex.pattern.crystallized','orchestrator.shutdown'],
+    emits:['copilot.booted','copilot.prompt.received','copilot.context.assembled','copilot.answered',
+           'copilot.stream.event','copilot.build.started','copilot.build.complete',
+           'copilot.empty_state','copilot.query_surface.enriched','copilot.lifeline.escalated'],
+    handles:['ollama.job.complete','cortex.pattern.crystallized','orchestrator.shutdown',
+             'rfr2.delta.signal','cortex.gap.found','raid.simulation.result'],
   },
 };

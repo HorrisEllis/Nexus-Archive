@@ -80,4 +80,11 @@ module.exports = [
     }
   }),
   _c('copilot.memory',       'POST', '/api/copilot/memory',     'Co-pilot memory operations'),
+  // §2026-07-02 — proxy routes added this session
+  _c('proxy.cfr.state',      'GET',  '/api/guardian/cfr/state',          'Proxy → cortex:3748/cfr/field — live CFR field state', { tags:['proxy','cfr'] }),
+  _c('proxy.cfr.event',      'POST', '/api/guardian/cfr/event',          'Proxy → cortex:3748/api/event — emit event to CFR ledger', { tags:['proxy','cfr'] }),
+  _c('proxy.nerve.snapshot', 'GET',  '/api/guardian/nerve/snapshot',     'Proxy → cortex:3748/nerve/snapshot — Nerve attention layer', { tags:['proxy','nerve'] }),
+  _c('proxy.hooks.summary',  'GET',  '/api/guardian/hooks/summary',      'Proxy → cortex:3748/hooks/summary — wire graph', { tags:['proxy','hooks'] }),
+  _c('proxy.cortex.query',   'GET',  '/api/guardian/cortex/query',       'Proxy → cortex:3748/api/cortex/query — unified query surface', { tags:['proxy','intelligence','query'] }),
+  _c('proxy.component.sse',  'GET',  '/api/guardian/events/component/:id','Proxy → cortex:3748/events/component/:id — per-component SSE stream', { tags:['proxy','sse','stream'] }),
 ];
