@@ -300,6 +300,52 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /cfr/graph — §gap-closed 2026-07-05: registry-components.js has
+  // declared 'cfr.graph — Causal graph nodes + edges' on cortex since
+  // v3.2.0, and this route never existed (§1.1 violation: declared, not
+  // proven). Cortex doesn't run a CFR ledger of its own — but it holds
+  // the one CROSS-system event_log (every kernel forwards here via
+  // _toCortex), so its graph is the inter-system one no single kernel's
+  // /cfr/graph can produce. Edge rules mirror meta/cfr/graph.js: explicit
+  // causedBy (1.0), shared job/queue chain (0.8), temporal <2s within the
+  // same source (0.4).
+  if (p === '/cfr/graph' && method === 'GET') {
+    const nCap = Math.min(150, parseInt(url.searchParams.get('nodes') || '80'));
+    const rows = jaaDB.tail('event_log', nCap).reverse(); // oldest→newest
+    const nodes = rows.map(r => ({
+      id:     r.uuid || r.id,
+      label:  r.type || '?',
+      source: r.source || String(r.type || '').split('.')[0] || 'cortex',
+      sigma:  r.sigma?.score ?? r.sigma ?? 0,
+      regime: _field.regime,
+      ts:     r.ts,
+    }));
+    const edges = [];
+    const byChain = new Map(); // jobId/queue_uuid → last node id
+    const lastBySource = new Map(); // source → { id, ts }
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i], id = r.uuid || r.id;
+      if (!id) continue;
+      if (r.causedBy) edges.push({ from: r.causedBy, to: id, type: 'causal', weight: 1.0 });
+      const chain = r.jobId || r.queue_uuid || r.payload?.jobId || null;
+      if (chain) {
+        const prev = byChain.get(chain);
+        if (prev) edges.push({ from: prev, to: id, type: 'job', weight: 0.8 });
+        byChain.set(chain, id);
+      }
+      const src = nodes[i].source;
+      const lastS = lastBySource.get(src);
+      if (lastS && (r.ts - lastS.ts) < 2000)
+        edges.push({ from: lastS.id, to: id, type: 'temporal', weight: 0.4 });
+      lastBySource.set(src, { id, ts: r.ts });
+    }
+    const ids = new Set(nodes.map(n => n.id));
+    json(res, 200, { ok: true, system: 'cortex', nodes,
+      edges: edges.filter(e => ids.has(e.from) && ids.has(e.to)).slice(-250),
+      counts: { nodes: nodes.length } });
+    return;
+  }
+
   // ── Hooks/wires summary — relational pressure feed ────────────────────────
   // §pressure-system fix 2026-06-30 — this is the route
   // ui/tv-shell/spotlight/spotlight.js's wireRelationalTension() has been

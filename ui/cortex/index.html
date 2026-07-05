@@ -3,105 +3,86 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CORTEX — the brain of NEXUS</title>
-<!--
-  ui/cortex/index.html — CORTEX BRAIN v2.0.0
-  component_id: ui.cortex.brain · 2026-07-05
-  Replaces the tabbed v1 (preserved at index.html.pre-brain.bak).
-
-  The brain IS the CFR field, rendered:
-    coherence → pulse rate + green luminance      friction → rotational drag
-    tension   → red shift + particle jitter       entropy  → cortical scatter
-    resonance → ambient synapse firing rate       regime   → global hue state
-  System nuclei (12) light with real online status (:9000/api/status).
-  Live events (:9000/sse) fire synapse bursts from their source nucleus.
-
-  Every fetch degrades gracefully — a dead route greys its panel, never
-  blanks the brain. SSE reconnect uses real backoff (3s→30s, reset only
-  after 10s stable) — the lesson from the userscript flapping storm,
-  applied here from day one instead of re-learned later.
--->
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+/* ═══════════════════════════════════════════════════════════════════════
+   ui/cortex — CORTEX brain v3.0.0 (ALK-GL edition)
+   §2026-07-05: renderer is the REAL ALK-GL engine (ui/eravos/runtime/
+   alk-gl.js v1.9.0) — the same GPU ping-pong RGBA32F compute field that
+   powers the 13 ERAVOS organisms. Not a reimplementation; a reuse.
+     · 12 system nuclei = attractors (mass ← online status + event flash)
+     · ~30 low-mass tissue attractors sculpt the cloud into two hemispheres
+     · CFR drives the physics: coherence→structure, entropy→entropy,
+       resonance→curl, friction→damping, tension→vmax + shock strength
+     · live events = engine.injectStress() shockwaves at the source nucleus
+     · coherence lengthens the accumulation-trail memory (the brain
+       literally remembers longer when coherent)
+     · edges are ANCHORED: SVG overlay, both endpoints re-projected from
+       nucleus world positions through engine._mvp every frame — they
+       cannot detach. Pulses travel along them on fire.
+   Previous renderers preserved: index.three.bak.html (three.js v2),
+   index.html.pre-brain.bak (panel dashboard v1).
+   ═══════════════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--void:#04080a;--panel:rgba(10,18,22,.82);--border:#1a2830;--border2:#243848;
---green:#00ff88;--green2:#00cc6a;--cyan:#00e5ff;--amber:#ffaa00;--red:#ff3355;--violet:#b26bff;
---text:#d0f0e8;--text2:#7aa898;--text3:#3a6055;--mono:'Space Mono',monospace;--ui:'Space Grotesk',sans-serif}
+:root{--void:#04080a;--surface:#0a1014;--panel:#0f1820;--border:#1a2830;--border2:#243848;--green:#00ff88;--green2:#00cc6a;--cyan:#00e5ff;--amber:#ffaa00;--red:#ff3355;--violet:#b26bff;--text:#d0f0e8;--text2:#7aa898;--text3:#3a6055;--mono:'Space Mono',monospace;--ui:'Space Grotesk',sans-serif}
 html,body{height:100%;background:var(--void);color:var(--text);font-family:var(--ui);overflow:hidden}
-#gl{position:fixed;inset:0;z-index:0}
-.hud{position:fixed;z-index:2;pointer-events:none}
-.hud>*{pointer-events:auto}
-
-/* ── top bar ── */
-#top{top:0;left:0;right:0;height:46px;display:flex;align-items:center;gap:14px;padding:0 16px;
-background:linear-gradient(180deg,rgba(4,8,10,.92),rgba(4,8,10,.55) 80%,transparent);}
-#glyph{font-size:20px;color:var(--green);animation:gl 3s ease-in-out infinite}
-@keyframes gl{0%,100%{opacity:.45}50%{opacity:1;filter:drop-shadow(0 0 12px var(--green))}}
-.title{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.18em;color:var(--green)}
-.title small{color:var(--text3);font-weight:400;letter-spacing:.08em}
-#regime{font-family:var(--mono);font-size:10px;padding:3px 12px;border-radius:20px;border:1px solid;letter-spacing:.1em}
-#chips{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
-.chip{font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:12px;border:1px solid var(--border2);
-color:var(--text3);display:flex;align-items:center;gap:5px;background:rgba(4,8,10,.5)}
-.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
-.chip.on{color:var(--text2);border-color:rgba(0,255,136,.25)}.chip.on .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
-.chip.off .dot{background:var(--red)}
-
-/* ── panels ── */
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;backdrop-filter:blur(12px);
-overflow:hidden;transition:all .25s;max-height:520px;display:flex;flex-direction:column}
-.panel.min{max-height:34px}
-.phead{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);
-font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--text2);
-text-transform:uppercase;cursor:pointer;user-select:none;flex-shrink:0}
-.phead .st{margin-left:auto;font-size:8px;font-weight:400;color:var(--text3)}
+#gl{position:fixed;inset:0;z-index:0;width:100vw;height:100vh;display:block}
+#edgesvg{position:fixed;inset:0;z-index:1;pointer-events:none;width:100vw;height:100vh}
+#nucs{position:fixed;inset:0;z-index:2;pointer-events:none}
+.nuc{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;text-align:center;transition:opacity .4s}
+.nuc .dot{width:11px;height:11px;border-radius:50%;margin:0 auto 3px;box-shadow:0 0 12px currentColor;transition:transform .15s}
+.nuc:hover .dot{transform:scale(1.5)}
+.nuc .nl{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.12em;text-shadow:0 0 8px rgba(0,0,0,.9)}
+.nuc.off{opacity:.22}
+.hud{position:fixed;z-index:3;display:flex;gap:10px;pointer-events:none}
+.hud .panel,#top{pointer-events:auto}
+#top{top:0;left:0;right:0;height:44px;display:flex;align-items:center;gap:14px;padding:0 18px;background:linear-gradient(180deg,rgba(4,8,10,.92),rgba(4,8,10,.55) 70%,transparent);z-index:4}
+#glyph{color:var(--green);font-size:18px;animation:gly 3s ease-in-out infinite}
+@keyframes gly{0%,100%{opacity:.45}50%{opacity:1;filter:drop-shadow(0 0 9px var(--green))}}
+.title{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.15em;color:var(--green)}
+.title small{font-weight:400;color:var(--text3);letter-spacing:.06em;font-size:9px}
+#regime{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;padding:3px 12px;border-radius:20px;border:1px solid}
+#chips{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap;max-width:52vw;justify-content:flex-end}
+.chip{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;padding:2px 8px;border-radius:12px;border:1px solid var(--border2);color:var(--text3)}
+.chip .dot{width:5px;height:5px;border-radius:50%;background:var(--text3)}
+.chip.on{color:var(--green2);border-color:rgba(0,255,136,.25)}.chip.on .dot{background:var(--green)}
+.chip.off{color:var(--red);border-color:rgba(255,51,85,.25)}.chip.off .dot{background:var(--red)}
+#left{top:56px;left:12px;flex-direction:column;width:265px}
+#right{top:56px;right:12px;flex-direction:column;width:295px}
+#bottom{left:12px;right:12px;bottom:10px;height:132px}
+.panel{background:rgba(10,16,20,.88);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;max-height:44vh}
+#bottom .panel{flex:1;max-height:none}
+.phead{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.16em;color:var(--text3);text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;flex-shrink:0}
 .panel.min .pbody{display:none}
 .pbody{padding:10px 12px;overflow-y:auto;font-size:11px}
-.pbody::-webkit-scrollbar{width:5px}.pbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-#left{top:56px;left:12px;width:270px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 200px)}
-#right{top:56px;right:12px;width:300px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 200px)}
-#bottom{bottom:12px;left:12px;right:12px;height:128px}
-#bottom .panel{height:100%;max-height:none}
-
-/* ── CFR gauges ── */
-.gauge{margin-bottom:9px}
-.glbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text3);
-text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
-.glbl b{color:var(--text2)}
-.gbar{height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
-.gfill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1),background .8s}
-
-/* ── intelligence ── */
-.iin{display:flex;gap:6px;margin-bottom:8px}
-input,textarea{background:rgba(4,8,10,.7);border:1px solid var(--border);border-radius:7px;color:var(--text);
-font-family:var(--ui);font-size:11px;padding:7px 10px;outline:none;width:100%;transition:border-color .2s}
-input:focus{border-color:var(--green2)}
-.btn{padding:6px 11px;border-radius:7px;border:1px solid var(--border2);background:rgba(0,255,136,.06);
-color:var(--green);font-family:var(--mono);font-size:9px;cursor:pointer;white-space:nowrap;letter-spacing:.05em}
-.btn:hover{border-color:var(--green);background:rgba(0,255,136,.12)}
-.btn.alt{color:var(--violet);background:rgba(178,107,255,.06)}.btn.alt:hover{border-color:var(--violet)}
-.ians{font-size:11px;color:var(--text2);line-height:1.55;background:rgba(4,8,10,.5);border-left:2px solid var(--green2);
-padding:8px 10px;border-radius:0 7px 7px 0;margin-bottom:8px;white-space:pre-wrap;max-height:150px;overflow-y:auto}
-.ians.mm{border-left-color:var(--violet)}
-.ians:empty{display:none}
-.ilist{font-family:var(--mono);font-size:9.5px;color:var(--text3);line-height:1.7;max-height:110px;overflow-y:auto}
-.ilist b{color:var(--text2)}
-
-/* ── memory ── */
-.tsel{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-.tchip{font-family:var(--mono);font-size:8.5px;padding:2px 8px;border-radius:10px;border:1px solid var(--border2);
-color:var(--text3);cursor:pointer}
-.tchip.on{color:var(--cyan);border-color:var(--cyan)}
-.mrows{font-family:var(--mono);font-size:9px;color:var(--text2);line-height:1.6;max-height:170px;overflow-y:auto;word-break:break-all}
-.mrow{padding:3px 0;border-bottom:1px solid rgba(26,40,48,.55)}
-.mrow .k{color:var(--text3)}
-
-/* ── gaps ── */
-.gap{border-left:2px solid var(--amber);padding:5px 9px;margin-bottom:5px;background:rgba(4,8,10,.45);border-radius:0 6px 6px 0}
+.pbody::-webkit-scrollbar,.mrows::-webkit-scrollbar,.ilist::-webkit-scrollbar,#evs::-webkit-scrollbar{width:4px}
+.pbody::-webkit-scrollbar-thumb,.mrows::-webkit-scrollbar-thumb,.ilist::-webkit-scrollbar-thumb,#evs::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.st{font-size:8px;color:var(--text3);font-weight:400;letter-spacing:.04em;text-transform:none}
+.gauge{margin-bottom:8px}
+.glbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text2);margin-bottom:3px}
+.glbl b{color:var(--text)}
+.gbar{height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.gfill{height:100%;border-radius:2px;transition:width .9s cubic-bezier(.22,1,.36,1)}
+.iin{display:flex;gap:5px;margin-bottom:7px}
+.iin input{flex:1;background:var(--surface);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:6px 9px;font-family:var(--mono);font-size:9.5px;outline:none}
+.iin input:focus{border-color:rgba(0,255,136,.4)}
+.btn{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);color:var(--green);border-radius:5px;padding:5px 10px;font-family:var(--mono);font-size:9px;cursor:pointer}
+.btn.alt{background:rgba(178,107,255,.08);border-color:rgba(178,107,255,.3);color:var(--violet)}
+.ians{font-size:10.5px;line-height:1.55;color:var(--text2);padding:6px 0;min-height:0;white-space:pre-wrap}
+.ians.mm{color:#c9b3ee}
+.ians .via{display:block;font-family:var(--mono);font-size:8px;color:var(--text3);margin-top:3px}
+.ilist{max-height:110px;overflow-y:auto;font-size:9.5px;color:var(--text2)}
+.ilist .it{padding:3px 0;border-bottom:1px solid rgba(26,40,48,.5)}
+.ilist .it b{font-family:var(--mono);font-size:9px;color:var(--green2)}
+.tsel{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.tbtn{font-family:var(--mono);font-size:8px;padding:2px 8px;border-radius:10px;border:1px solid var(--border2);background:none;color:var(--text3);cursor:pointer}
+.tbtn.on{color:var(--green);border-color:rgba(0,255,136,.4);background:rgba(0,255,136,.06)}
+.mrows{max-height:200px;overflow-y:auto;font-family:var(--mono);font-size:8.5px}
+.mrow{padding:4px 0;border-bottom:1px solid rgba(26,40,48,.5);color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gap{padding:6px 0;border-bottom:1px solid rgba(26,40,48,.5);border-left:2px solid var(--amber);padding-left:8px;margin-bottom:4px}
 .gap.high{border-left-color:var(--red)}
 .gap .gt{font-family:var(--mono);font-size:8.5px;color:var(--text3);text-transform:uppercase}
 .gap .gb{font-size:10.5px;color:var(--text2)}
-
-/* ── event stream ── */
 #evs{display:flex;flex-direction:column-reverse;overflow-y:auto;height:100%;font-family:var(--mono);font-size:9.5px}
 .ev{display:flex;gap:10px;padding:2px 0;border-bottom:1px solid rgba(26,40,48,.4);animation:evin .3s ease}
 @keyframes evin{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
@@ -109,18 +90,19 @@ color:var(--text3);cursor:pointer}
 .ev .src{flex-shrink:0;min-width:92px;font-weight:700}
 .ev .ty{color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #ssest{font-size:8px;color:var(--text3);font-weight:400}
-
-/* hint */
-#hint{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:1;font-family:var(--mono);
-font-size:9px;color:var(--text3);letter-spacing:.1em;pointer-events:none;opacity:.6}
+#hint{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:1;font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;pointer-events:none;opacity:.6}
+#glfail{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:5;font-family:var(--mono);font-size:10px;color:var(--amber);background:rgba(10,16,20,.9);border:1px solid rgba(255,170,0,.35);border-radius:8px;padding:8px 16px;display:none}
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
+<svg id="edgesvg"></svg>
+<div id="nucs"></div>
+<div id="glfail"></div>
 
 <div class="hud" id="top">
   <span id="glyph">⬡</span>
-  <span class="title">CORTEX <small>· the brain of NEXUS · ui.cortex.brain v2.0.0</small></span>
+  <span class="title">CORTEX <small>· the brain of NEXUS · ui.cortex.brain v3.0.0 · ALK-GL</small></span>
   <span id="regime" style="color:var(--green);border-color:rgba(0,255,136,.35)">STABLE</span>
   <div id="chips"></div>
 </div>
@@ -168,9 +150,9 @@ font-size:9px;color:var(--text3);letter-spacing:.1em;pointer-events:none;opacity
   </div>
 </div>
 
-<div id="hint">drag: orbit · wheel: zoom · click nucleus: focus system</div>
+<div id="hint">drag: rotate brain · wheel: zoom · click nucleus: focus system</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../eravos/runtime/alk-gl.js"></script>
 <script>
 'use strict';
 /* ══════════ endpoints ══════════ */
@@ -178,20 +160,20 @@ const CX='http://localhost:3748', ORCH='http://localhost:9000';
 const j=async(u,opt)=>{const r=await fetch(u,opt);return r.json();};
 const esc=s=>String(s).replace(/</g,'&lt;');
 
-/* ══════════ system map — 12 nuclei, stable anatomical seats ══════════ */
+/* ══════════ system map — 12 nuclei, anatomical seats ══════════ */
 const SYSTEMS={
-  cortex:      {c:0x00ff88,p:[   0, .55,   0],label:'CORTEX'},       // crown — this system
-  orchestrator:{c:0x00e5ff,p:[   0, .10, .95],label:'ORCH'},         // frontal — executive
-  guardian:    {c:0xffaa00,p:[   0,-.35, .55],label:'GUARDIAN'},     // limbic — protection
-  bridge:      {c:0xb26bff,p:[   0,-.15,-.15],label:'BRIDGE'},       // corpus callosum — relay
-  copilot:     {c:0x00e5ff,p:[ .55, .30, .55],label:'COPILOT'},      // right frontal
-  idearium:    {c:0xff6bd6,p:[-.55, .30, .55],label:'IDEARIUM'},     // left frontal — ideas
-  architect:   {c:0x6bff8f,p:[-.62, .18,-.25],label:'ARCHITECT'},    // left parietal — structure
-  loom:        {c:0x6bd0ff,p:[ .62, .18,-.25],label:'LOOM'},         // right parietal — weaving
-  eravos:      {c:0xffd86b,p:[ .48,-.10,-.72],label:'ERAVOS'},       // right occipital — canvas
-  ollama:      {c:0x9dff6b,p:[-.48,-.10,-.72],label:'OLLAMA'},       // left occipital — local model
-  diagnostic:  {c:0xff8f6b,p:[   0,-.55,-.55],label:'DIAG'},         // cerebellum — coordination
-  'clear-glass':{c:0x8fb6ff,p:[  0, .05,-1.0],label:'GLASS'},        // brainstem-out — the window
+  cortex:      {c:'#00ff88',p:[   0, .55,   0],label:'CORTEX'},
+  orchestrator:{c:'#00e5ff',p:[   0, .10, .95],label:'ORCH'},
+  guardian:    {c:'#ffaa00',p:[   0,-.35, .55],label:'GUARDIAN'},
+  bridge:      {c:'#b26bff',p:[   0,-.15,-.15],label:'BRIDGE'},
+  copilot:     {c:'#00e5ff',p:[ .55, .30, .55],label:'COPILOT'},
+  idearium:    {c:'#ff6bd6',p:[-.55, .30, .55],label:'IDEARIUM'},
+  architect:   {c:'#6bff8f',p:[-.62, .18,-.25],label:'ARCHITECT'},
+  loom:        {c:'#6bd0ff',p:[ .62, .18,-.25],label:'LOOM'},
+  eravos:      {c:'#ffd86b',p:[ .48,-.10,-.72],label:'ERAVOS'},
+  ollama:      {c:'#9dff6b',p:[-.48,-.10,-.72],label:'OLLAMA'},
+  diagnostic:  {c:'#ff8f6b',p:[   0,-.55,-.55],label:'DIAG'},
+  'clear-glass':{c:'#8fb6ff',p:[  0, .05,-1.0],label:'GLASS'},
 };
 const sysOf=ev=>{
   const raw=(ev._system||ev.system||ev.source||String(ev.type||'').split('.')[0]||'').toLowerCase();
@@ -199,151 +181,205 @@ const sysOf=ev=>{
   for(const k of Object.keys(SYSTEMS))if(raw.includes(k))return k;
   return 'orchestrator';
 };
+/* anchored topology — same 16 real seams as v2 */
+const EDGES=[
+  ['orchestrator','cortex'],['orchestrator','guardian'],['orchestrator','bridge'],
+  ['orchestrator','idearium'],['orchestrator','diagnostic'],
+  ['guardian','cortex'],['guardian','ollama'],['idearium','guardian'],
+  ['copilot','cortex'],['copilot','guardian'],['copilot','bridge'],
+  ['bridge','clear-glass'],['loom','guardian'],['architect','cortex'],
+  ['eravos','bridge'],['diagnostic','cortex'],
+];
 
-/* ══════════ three.js scene ══════════ */
+/* ══════════ ALK-GL engine — the actual ERAVOS field engine, reused ══════════ */
+/* world-space mapping for the anatomical seats: alk bound is ±6 x/y, ±3 z */
+const WS=[4.1,3.1,2.5];               // seat→world scale (x,y,z)
+const seatW=p=>[p[0]*WS[0],p[1]*WS[1],p[2]*WS[2]];
 const canvas=document.getElementById('gl');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x04080a,0.11);
-const camera=new THREE.PerspectiveCamera(50,1,0.1,100);
-let camR=4.6,camTheta=0.4,camPhi=1.25;
-function placeCam(){
-  camera.position.set(camR*Math.sin(camPhi)*Math.sin(camTheta),camR*Math.cos(camPhi),camR*Math.sin(camPhi)*Math.cos(camTheta));
-  camera.lookAt(0,0,0);
+let engine=null;
+try{
+  if(!window.ALKGL)throw new Error('alk-gl.js not loaded — expected at ../eravos/runtime/alk-gl.js');
+  engine=new ALKGL(canvas,{N:65536,bound:6,boundZ:3});
+  engine._cam.camZ=12.5; engine._cam.tiltX=0.10;
+  engine.setAccumulation({decay:0.93,exposure:1.7,gamma:1.8,bloom:0.22});
+}catch(e){
+  const f=document.getElementById('glfail');
+  f.style.display='block';
+  f.textContent='⚠ field engine unavailable — '+e.message+' · panels still live';
 }
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-addEventListener('resize',resize);resize();placeCam();
 
-/* orbit — hand-rolled (r128 CDN core has no OrbitControls) */
-let drag=false,px=0,py=0,userSpun=0;
+/* ── sculpt the brain: two hemisphere shells of low-mass tissue attractors.
+   Same fold idiom as v2, but as attractor mass instead of static points —
+   the cloud takes brain shape because that's where the gravity is. ── */
+const tissue=[];
+if(engine){
+  const fold=(x,y,z)=>0.10*Math.sin(7*x+3*z)*Math.sin(6*y+2*x)+0.06*Math.sin(13*y+5*z)*Math.cos(9*x);
+  let n=0;
+  for(let i=0;i<30;i++){
+    const u=Math.random()*2-1,t=Math.random()*Math.PI*2,s=Math.sqrt(1-u*u);
+    let x=s*Math.cos(t),y=u,z=s*Math.sin(t);
+    const r=1+fold(x,y,z);
+    x*=1.05*r; y*=0.82*r; z*=1.32*r;
+    x+=(x>=0?0.09:-0.09);                      // longitudinal fissure
+    tissue.push({id:'tissue'+(n++),seat:[x,y,z],mass:0.32});
+  }
+}
+/* nucleus runtime state */
+const nucState={};
+for(const[id,s]of Object.entries(SYSTEMS))nucState[id]={seat:s.p.slice(),online:null,flash:0};
+
+/* ══════════ HTML nucleus overlay + anchored SVG edges ══════════ */
+const nucsDiv=document.getElementById('nucs');
+const nucEls={};
+for(const[id,s]of Object.entries(SYSTEMS)){
+  const d=document.createElement('div');d.className='nuc';d.style.color=s.c;
+  d.innerHTML=`<div class="dot" style="background:${s.c}"></div><div class="nl" style="color:${s.c}">${s.label}</div>`;
+  d.onclick=()=>{fire(id);addEv({type:`ui.focus.${id}`,_system:id,ts:Date.now()});};
+  nucsDiv.appendChild(d);nucEls[id]=d;
+}
+const svg=document.getElementById('edgesvg');
+const SVGNS='http://www.w3.org/2000/svg';
+const edgeEls=[];
+for(const[a,b]of EDGES){
+  const l=document.createElementNS(SVGNS,'line');
+  l.setAttribute('stroke','#2a5a50');l.setAttribute('stroke-width','1');l.setAttribute('opacity','0.14');
+  svg.appendChild(l);edgeEls.push({a,b,l,glow:0});
+}
+const edgesOf={};for(const e of edgeEls){(edgesOf[e.a]??=[]).push(e);(edgesOf[e.b]??=[]).push(e);}
+/* pulse pool — sparks travel along anchored paths (topology edges OR synapses) */
+const PULSES=[];const pulsePool=[];
+for(let i=0;i<24;i++){
+  const c=document.createElementNS(SVGNS,'circle');
+  c.setAttribute('r','2.6');c.setAttribute('opacity','0');
+  svg.appendChild(c);pulsePool.push(c);
+}
+
+/* ══════════ CFR SYNAPSE LAYER — the nodes ARE the synapses ══════════
+   §2026-07-05: every CFR ledger entry is a node in the CausalGraph
+   (meta/cfr/graph.js) with typed, weighted edges — causal 1.0, job 0.8,
+   session 0.7, temporal 0.4. Those were computed on every ingest and
+   never rendered anywhere. This layer polls /cfr/graph (cortex = the
+   cross-system graph from forwarded events; guardian = the busiest
+   kernel's own) and draws each event-node as a dendrite anchored near
+   its system's nucleus — position is a deterministic hash of the node
+   uuid, so a node NEVER moves between polls or frames. Edges between
+   them are the synapses: real causality, drawn as filament. A NEW edge
+   arriving = a synapse firing = pulse + shockwave in the field.       */
+const GD='http://localhost:7820';
+const scr={};               // system id → projected screen [x,y] (shared with fire closures)
+const synScr=new Map();     // synapse node id → projected screen [x,y]
+const synNodes=new Map();   // id → {w:[x,y,z], sys, sigma, ts, el}
+const synEdges=new Map();   // "from→to" → {from,to,type,weight,glow,el}
+const SYN_MAX_NODES=120, SYN_MAX_EDGES=180, SYN_TTL=90000;
+const synLayer=document.createElementNS(SVGNS,'g');
+svg.insertBefore(synLayer,svg.firstChild);   // under topology edges + pulses
+const hash01=(s,salt)=>{let h=2166136261^salt;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return((h>>>0)%10000)/10000;};
+const sysOfNode=n=>{
+  const raw=String(n.source||'').toLowerCase();
+  if(SYSTEMS[raw])return raw;
+  for(const k of Object.keys(SYSTEMS))if(raw.includes(k))return k;
+  return sysOf({type:n.label,source:n.source});
+};
+function synWorld(n){ // deterministic dendrite seat near the system nucleus
+  const sys=sysOfNode(n),seat=seatW(SYSTEMS[sys].p);
+  const u=hash01(n.id,7)*2-1, t=hash01(n.id,13)*Math.PI*2, r=0.45+hash01(n.id,29)*0.85;
+  const s=Math.sqrt(1-u*u);
+  return[seat[0]+s*Math.cos(t)*r,seat[1]+u*r*0.8,seat[2]+s*Math.sin(t)*r];
+}
+function ingestGraph(g){
+  if(!g||!g.nodes)return;
+  const now=Date.now();
+  for(const n of g.nodes){
+    if(!n.id||now-n.ts>SYN_TTL)continue;
+    if(synNodes.has(n.id)){synNodes.get(n.id).ts=Math.max(synNodes.get(n.id).ts,n.ts);continue;}
+    const sys=sysOfNode(n);
+    const el=document.createElementNS(SVGNS,'circle');
+    el.setAttribute('r',(1.4+(n.sigma||0)*2.6).toFixed(2));
+    el.setAttribute('fill',SYSTEMS[sys].c);
+    synLayer.appendChild(el);
+    synNodes.set(n.id,{w:synWorld(n),sys,sigma:n.sigma||0,ts:n.ts,el});
+  }
+  for(const e of(g.edges||[])){
+    const key=e.from+'→'+e.to;
+    if(synEdges.has(key))continue;
+    if(!synNodes.has(e.from)||!synNodes.has(e.to))continue;
+    const el=document.createElementNS(SVGNS,'line');
+    const c=SYSTEMS[synNodes.get(e.from).sys].c;
+    el.setAttribute('stroke',c);el.setAttribute('stroke-width',(0.5+e.weight).toFixed(2));
+    synLayer.appendChild(el);
+    const rec={from:e.from,to:e.to,type:e.type,weight:e.weight,glow:1,el};
+    synEdges.set(key,rec);
+    // a synapse firing IS the event: shockwave at the from-node + pulse
+    const st=synNodes.get(e.from);
+    if(engine){const w=rotY(st.w,theta);engine.injectStress(w[0],w[1],w[2],120+e.weight*220,1.3);}
+    firePulse(()=>synScr.get(e.from),()=>synScr.get(e.to),c);
+  }
+  // prune: oldest first
+  if(synNodes.size>SYN_MAX_NODES||synEdges.size>SYN_MAX_EDGES)pruneSyn();
+}
+function pruneSyn(){
+  const now=Date.now();
+  for(const[id,n]of synNodes){if(now-n.ts>SYN_TTL||synNodes.size>SYN_MAX_NODES){n.el.remove();synNodes.delete(id);}}
+  for(const[k,e]of synEdges){if(!synNodes.has(e.from)||!synNodes.has(e.to)||synEdges.size>SYN_MAX_EDGES){e.el.remove();synEdges.delete(k);}}
+}
+async function pollGraph(){
+  try{ingestGraph(await j(`${CX}/cfr/graph?nodes=80`));}catch(_){}
+  try{ingestGraph(await j(`${GD}/cfr/graph?nodes=80`));}catch(_){}
+  pruneSyn();
+}
+setInterval(pollGraph,4000);setTimeout(pollGraph,1200);
+
+/* ══════════ world rotation + camera ══════════ */
+let theta=0.35,userSpun=0,drag=false,px=0,py=0;
 canvas.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;});
 addEventListener('pointerup',()=>drag=false);
 addEventListener('pointermove',e=>{
   if(!drag)return;
-  camTheta-=(e.clientX-px)*0.006; camPhi=Math.max(0.25,Math.min(2.85,camPhi-(e.clientY-py)*0.006));
-  px=e.clientX;py=e.clientY;userSpun=performance.now();placeCam();
+  theta-=(e.clientX-px)*0.006;
+  if(engine)engine._cam.tiltX=Math.max(-0.6,Math.min(0.8,engine._cam.tiltX+(e.clientY-py)*0.003));
+  px=e.clientX;py=e.clientY;userSpun=performance.now();
 });
-canvas.addEventListener('wheel',e=>{camR=Math.max(2.2,Math.min(9,camR+e.deltaY*0.003));placeCam();},{passive:true});
-
-/* ── cortex point cloud — two hemispheres, folded ── */
-const N=9000;
-const pos=new Float32Array(N*3), base=new Float32Array(N*3), col=new Float32Array(N*3), rnd=new Float32Array(N);
-const fold=(x,y,z)=>0.10*Math.sin(7*x+3*z)*Math.sin(6*y+2*x)+0.06*Math.sin(13*y+5*z)*Math.cos(9*x)+0.035*Math.sin(21*z+11*x);
-for(let i=0;i<N;i++){
-  // sample on unit sphere
-  const u=Math.random()*2-1, t=Math.random()*Math.PI*2, s=Math.sqrt(1-u*u);
-  let x=s*Math.cos(t), y=u, z=s*Math.sin(t);
-  // brain ellipsoid: wide (x), tall-ish (y), long (z); flatten base
-  const r=1+fold(x,y,z);
-  x*=1.05*r; y*=(0.82*r)*(y<-.3?0.92:1); z*=1.32*r;
-  // longitudinal fissure — push hemispheres apart, deepen the gap on top
-  const gap=0.09+(y>0? y*0.10 :0);
-  x+= (x>=0? gap : -gap);
-  pos[i*3]=base[i*3]=x; pos[i*3+1]=base[i*3+1]=y; pos[i*3+2]=base[i*3+2]=z;
-  rnd[i]=Math.random();
+canvas.addEventListener('wheel',e=>{if(engine)engine._cam.camZ=Math.max(7,Math.min(22,engine._cam.camZ+e.deltaY*0.008));},{passive:true});
+const rotY=(p,th)=>{const c=Math.cos(th),s=Math.sin(th);return[p[0]*c+p[2]*s,p[1],-p[0]*s+p[2]*c];};
+/* project world → screen via the engine's own MVP (column-major) */
+function project(w){
+  if(!engine)return null;
+  const M=engine._mvp;
+  const x=w[0],y=w[1],z=w[2];
+  const cw=M[3]*x+M[7]*y+M[11]*z+M[15];
+  if(cw<=0.001)return null;
+  const cx=(M[0]*x+M[4]*y+M[8]*z+M[12])/cw;
+  const cy=(M[1]*x+M[5]*y+M[9]*z+M[13])/cw;
+  return[(cx*0.5+0.5)*innerWidth,(1-(cy*0.5+0.5))*innerHeight];
 }
-const geo=new THREE.BufferGeometry();
-geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-geo.setAttribute('color',new THREE.BufferAttribute(col,3));
-const pmat=new THREE.PointsMaterial({size:0.022,vertexColors:true,transparent:true,opacity:0.85,
-  blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
-const brain=new THREE.Points(geo,pmat);
-scene.add(brain);
 
-/* ── system nuclei + labels ── */
-const nuclei={};
-function labelSprite(text,hex){
-  const cv=document.createElement('canvas');cv.width=256;cv.height=64;
-  const g=cv.getContext('2d');g.font='700 26px "Space Mono",monospace';g.textAlign='center';
-  g.fillStyle='#'+hex.toString(16).padStart(6,'0');g.globalAlpha=.9;g.fillText(text,128,40);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false}));
-  sp.scale.set(.72,.18,1);return sp;
-}
-for(const[id,s]of Object.entries(SYSTEMS)){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(0.05,16,16),
-    new THREE.MeshBasicMaterial({color:s.c,transparent:true,opacity:0.9}));
-  m.position.set(...s.p);
-  const halo=new THREE.Mesh(new THREE.SphereGeometry(0.09,16,16),
-    new THREE.MeshBasicMaterial({color:s.c,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false}));
-  m.add(halo);
-  const lbl=labelSprite(s.label,s.c);lbl.position.y=0.16;m.add(lbl);
-  m.userData={id,seat:new THREE.Vector3(...s.p),flash:0,online:null,halo,lbl};
-  brain.add(m);nuclei[id]=m;
-}
-/* click nucleus → focus */
-const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
-canvas.addEventListener('click',e=>{
-  mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;
-  ray.setFromCamera(mouse,camera);
-  const hit=ray.intersectObjects(Object.values(nuclei),false)[0];
-  if(hit){fire(hit.object.userData.id);addEv({type:`ui.focus.${hit.object.userData.id}`,_system:hit.object.userData.id,ts:Date.now()});}
-});
-
-/* ── anchored edge graph — the real NEXUS topology, not random lines ──
-   §anchored 2026-07-05: fires used to draw a one-shot line from a nucleus
-   to a RANDOM particle's unscaled base position — endpoints matched no
-   rendered geometry and no real data path, so edges appeared to fly
-   around untethered. These are the actual seams: who talks to whom.     */
-const EDGES=[
-  ['orchestrator','cortex'],['orchestrator','guardian'],['orchestrator','bridge'],
-  ['orchestrator','idearium'],['orchestrator','diagnostic'],
-  ['guardian','cortex'],      // event forward — _toCortex
-  ['guardian','ollama'],      // sovereign bridge dispatch
-  ['idearium','guardian'],    // spec submit → /command
-  ['copilot','cortex'],       // intuition / context reads
-  ['copilot','guardian'],     // RAID-gated dispatch
-  ['copilot','bridge'],       // tv-shell path
-  ['bridge','clear-glass'],
-  ['loom','guardian'],
-  ['architect','cortex'],
-  ['eravos','bridge'],
-  ['diagnostic','cortex'],
-];
-const edgeObjs=[];
-for(const[a,b]of EDGES){
-  if(!nuclei[a]||!nuclei[b])continue;
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));
-  const l=new THREE.Line(g,new THREE.LineBasicMaterial({
-    color:0x2a5a50,transparent:true,opacity:0.16,blending:THREE.AdditiveBlending,depthWrite:false}));
-  l.userData={a,b,glow:0};
-  brain.add(l);edgeObjs.push(l);
-}
-const edgesOf={};for(const e of edgeObjs){(edgesOf[e.userData.a]??=[]).push(e);(edgesOf[e.userData.b]??=[]).push(e);}
-
-/* ── pulse pool — a spark travels ALONG an anchored edge, a→b ── */
-const PULSES=[];const pulsePool=[];
-for(let i=0;i<32;i++){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),
-    new THREE.MeshBasicMaterial({transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
-  brain.add(m);pulsePool.push(m);
+/* ══════════ fire — event lands: mass flash + shockwave + edge pulse ══════════ */
+function firePulse(getA,getB,color){
+  const c=pulsePool.find(p=>!p._live);if(!c)return;
+  c._live=true;c._t0=performance.now();c._getA=getA;c._getB=getB;
+  c.setAttribute('fill',color);
+  PULSES.push(c);
 }
 function fire(sysId){
-  const nuc=nuclei[sysId];if(!nuc)return;
-  nuc.userData.flash=1;
+  const st=nucState[sysId];if(!st)return;
+  st.flash=1;
+  if(engine){
+    const w=rotY(seatW(st.seat),theta);
+    engine.injectStress(w[0],w[1],w[2],300+vis.tension*500,2.4);
+  }
   const es=edgesOf[sysId];if(!es||!es.length)return;
   const edge=es[Math.random()*es.length|0];
-  edge.userData.glow=1;
-  const m=pulsePool.find(p=>!p.userData.live);if(!m)return;
-  // travel outward from the system that fired, toward its neighbor
-  const from=edge.userData.a===sysId?edge.userData.a:edge.userData.b;
-  const to  =edge.userData.a===sysId?edge.userData.b:edge.userData.a;
-  m.material.color.setHex(SYSTEMS[sysId].c);
-  m.userData={live:true,t0:performance.now(),from,to,edge};
-  PULSES.push(m);
+  edge.glow=1;
+  const from=edge.a===sysId?edge.a:edge.b;
+  const to  =edge.a===sysId?edge.b:edge.a;
+  firePulse(()=>scr[from],()=>scr[to],SYSTEMS[sysId].c);
 }
 
-/* ══════════ CFR → visual state ══════════ */
+/* ══════════ CFR field ══════════ */
 const field={coherence:.6,friction:.2,resonance:.3,entropy:.2,tension:.1,regime:'stable',updatedAt:0};
-const vis={coherence:.6,friction:.2,resonance:.3,entropy:.2,tension:.1};   // lerped
-const REGIME_HUE={stable:[0x00ff88,'var(--green)','rgba(0,255,136,.35)'],
-  elevated:[0xffaa00,'var(--amber)','rgba(255,170,0,.35)'],
-  watch:[0xffaa00,'var(--amber)','rgba(255,170,0,.35)'],
-  critical:[0xff3355,'var(--red)','rgba(255,51,85,.4)'],
-  chaotic:[0xff3355,'var(--red)','rgba(255,51,85,.4)']};
-let regimeColor=new THREE.Color(0x00ff88);
-
+const vis={coherence:.6,friction:.2,resonance:.3,entropy:.2,tension:.1};
+const REGIME_HUE={stable:['var(--green)','rgba(0,255,136,.35)'],elevated:['var(--amber)','rgba(255,170,0,.35)'],
+  watch:['var(--amber)','rgba(255,170,0,.35)'],critical:['var(--red)','rgba(255,51,85,.4)'],chaotic:['var(--red)','rgba(255,51,85,.4)']};
 async function pollField(){
   try{
     const f=await j(`${CX}/cfr/field`);
@@ -360,8 +396,7 @@ function renderCFR(ok){
   document.getElementById('cfr-ts').textContent=ok?new Date(field.updatedAt).toLocaleTimeString():'⚠ :3748 unreachable';
   const R=REGIME_HUE[field.regime]||REGIME_HUE.stable;
   const badge=document.getElementById('regime');
-  badge.textContent=field.regime.toUpperCase();badge.style.color=R[1];badge.style.borderColor=R[2];
-  regimeColor.setHex(R[0]);
+  badge.textContent=field.regime.toUpperCase();badge.style.color=R[0];badge.style.borderColor=R[1];
 }
 setInterval(pollField,2000);pollField();
 
@@ -374,23 +409,21 @@ async function pollStatus(){
       const c=document.createElement('span');c.className='chip '+(d.online?'on':'off');
       c.innerHTML=`<span class="dot"></span>${esc(id)}`;c.title=`${id} :${d.port} · ${d.ms}ms`;
       chips.appendChild(c);
-      if(nuclei[id])nuclei[id].userData.online=!!d.online;
+      if(nucState[id])nucState[id].online=!!d.online;
     }
   }catch(_){
-    const chips=document.getElementById('chips');
-    chips.innerHTML='<span class="chip off"><span class="dot"></span>orchestrator :9000 unreachable</span>';
+    document.getElementById('chips').innerHTML='<span class="chip off"><span class="dot"></span>orchestrator :9000 unreachable</span>';
   }
 }
 setInterval(pollStatus,6000);pollStatus();
 
-/* ══════════ SSE — live events → stream panel + synapse fire ══════════ */
+/* ══════════ SSE — live events → stream + shockwave fire ══════════ */
 let es=null,_attempts=0,_stableTimer=null;
 function connectSSE(){
   try{es=new EventSource(`${ORCH}/sse`);}catch(_){return scheduleReconnect();}
   es.onopen=()=>{
     document.getElementById('ssest').textContent='● live';
-    // §backoff: only reset attempts after 10s of stability — a connect-then-
-    // drop flicker must not reset the ladder (the flapping-storm lesson).
+    // §backoff: reset only after 10s stable — the flapping-storm lesson.
     clearTimeout(_stableTimer);
     _stableTimer=setTimeout(()=>{_attempts=0;},10000);
   };
@@ -408,10 +441,10 @@ function scheduleReconnect(){
 }
 const evs=document.getElementById('evs');let evCount=0;
 function addEv(ev){
-  const sys=sysOf(ev),c=SYSTEMS[sys]?.c||0x7aa898;
+  const sys=sysOf(ev),c=SYSTEMS[sys]?.c||'#7aa898';
   const d=document.createElement('div');d.className='ev';
   d.innerHTML=`<span class="ts">${new Date(ev.ts||ev._ts||Date.now()).toLocaleTimeString()}</span>
-    <span class="src" style="color:#${c.toString(16).padStart(6,'0')}">${esc(sys)}</span>
+    <span class="src" style="color:${c}">${esc(sys)}</span>
     <span class="ty">${esc(ev.type||'?')}</span>`;
   evs.prepend(d);
   if(++evCount>150)evs.lastChild?.remove();
@@ -425,7 +458,9 @@ async function askIntuition(){
   try{
     const r=await j(`${CX}/api/intelligence/intuition`,{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:q})});
-    el.textContent=r.text||r.answer||r.intuition||JSON.stringify(r).slice(0,400);
+    el.textContent=r.text||r.answer||r.intuition||'(no answer)';
+    if(r.modelUsed){const v=document.createElement('span');v.className='via';
+      v.textContent=`✦ ${r.modelUsed}${r.escalatedFrom?' ← '+r.escalatedFrom:''}`;el.appendChild(v);}
     fire('cortex');
   }catch(e){el.textContent=`⚠ ${e.message}`;}
 }
@@ -435,55 +470,59 @@ async function askMastermind(){
   try{
     const r=await j(`${CX}/api/intelligence/mastermind`,{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:q})});
-    el.textContent=r.analysis||r.text||JSON.stringify(r).slice(0,500);
+    el.textContent=r.analysis||r.text||'(no analysis)';
     fire('cortex');fire('cortex');
   }catch(e){el.textContent=`⚠ ${e.message}`;}
 }
 async function pollIntel(){
   try{
     const st=await j(`${CX}/api/intelligence/status`);
-    document.getElementById('int-st').textContent=st.ok?'online':'degraded';
+    document.getElementById('int-st').textContent=st.ok?'● online':'⚠';
     const pats=await j(`${CX}/api/intelligence/patterns?limit=5`);
-    const P=pats.patterns||[];document.getElementById('patc').textContent=P.length;
-    document.getElementById('patterns').innerHTML=P.length
-      ?P.map(p=>`<div>▸ <b>${esc(p.pattern||p.type||p.name||'?')}</b> ${esc(p.detail||p.description||'')}</div>`).join('')
-      :'<span style="opacity:.5">none observed</span>';
+    const P=pats.patterns||[];
+    document.getElementById('patc').textContent=P.length;
+    document.getElementById('patterns').innerHTML=P.length?P.map(p=>
+      `<div class="it"><b>${esc(p.type||p.name||'?')}</b> ×${p.count??''} ${esc((p.summary||p.description||'').slice(0,60))}</div>`).join(''):'<span style="opacity:.5">none yet</span>';
     const rc=await j(`${CX}/api/intelligence/rca?limit=5`);
-    const R=rc.rca||[];document.getElementById('rcac').textContent=R.length;
-    document.getElementById('rca').innerHTML=R.length
-      ?R.map(r=>`<div>▸ <b>${esc(r.cause||r.type||'?')}</b> ${esc(r.detail||r.effect||'')}</div>`).join('')
-      :'<span style="opacity:.5">no open root causes</span>';
+    const R=rc.rca||[];
+    document.getElementById('rcac').textContent=R.length;
+    document.getElementById('rca').innerHTML=R.length?R.map(r=>
+      `<div class="it">${esc((r.summary||r.cause||JSON.stringify(r)).slice(0,80))}</div>`).join(''):'<span style="opacity:.5">none yet</span>';
   }catch(_){document.getElementById('int-st').textContent='⚠ unreachable';}
 }
 setInterval(pollIntel,8000);pollIntel();
 
-/* ══════════ memory panel ══════════ */
+/* ══════════ JAA memory browser ══════════ */
 const TABLES=['event_log','components','component_ledger','gaps','sigma_records','chat_log','snapshots','settings','bridge_requests'];
-let curTable='event_log';
-function renderTsel(){
-  document.getElementById('tsel').innerHTML=TABLES.map(t=>
-    `<span class="tchip ${t===curTable?'on':''}" onclick="curTable='${t}';renderTsel();pollMem()">${t}</span>`).join('');
+let curTable=null;
+const tsel=document.getElementById('tsel');
+for(const t of TABLES){
+  const b=document.createElement('button');b.className='tbtn';b.textContent=t;
+  b.onclick=()=>{curTable=t;document.querySelectorAll('.tbtn').forEach(x=>x.classList.toggle('on',x.textContent===t));loadTable();};
+  tsel.appendChild(b);
 }
-async function pollMem(){
+async function loadTable(){
+  if(!curTable)return;
+  const el=document.getElementById('mrows');el.textContent='loading…';
   try{
     const r=await j(`${CX}/api/jaa/${curTable}?limit=8`);
-    document.getElementById('mem-st').textContent=`${curTable} · ${r.count} rows`;
-    document.getElementById('mrows').innerHTML=(r.rows||[]).map(row=>{
-      const{id,ts,...rest}=row;
-      return`<div class="mrow"><span class="k">${ts?new Date(ts).toLocaleTimeString():''}</span> ${esc(JSON.stringify(rest).slice(0,140))}</div>`;
-    }).join('')||'<span style="opacity:.5">empty</span>';
-  }catch(_){document.getElementById('mem-st').textContent='⚠ unreachable';}
+    const rows=r.rows||[];
+    document.getElementById('mem-st').textContent=`${curTable} · ${rows.length}`;
+    el.innerHTML=rows.length?rows.map(x=>{
+      const s=JSON.stringify(x);return `<div class="mrow" title="${esc(s)}">${esc(s.slice(0,110))}</div>`;
+    }).join(''):'<span style="opacity:.5">empty</span>';
+  }catch(_){el.textContent='⚠ unreachable';}
 }
-renderTsel();setInterval(pollMem,7000);pollMem();
+setInterval(()=>{if(curTable)loadTable();},7000);
 
-/* ══════════ gaps panel ══════════ */
+/* ══════════ gaps ══════════ */
 async function pollGaps(){
   try{
     const r=await j(`${CX}/api/gaps`);
-    const G=r.gaps||r.rows||[];
-    document.getElementById('gap-st').textContent=`${G.length} open`;
-    document.getElementById('gaps').innerHTML=G.length?G.slice(0,10).map(g=>
-      `<div class="gap ${(g.severity||'')==='high'?'high':''}">
+    const gaps=r.gaps||[];
+    document.getElementById('gap-st').textContent=`${gaps.length} open`;
+    document.getElementById('gaps').innerHTML=gaps.length?gaps.slice(0,8).map(g=>
+      `<div class="gap ${['high','critical'].includes(g.severity)?'high':''}">
         <div class="gt">${esc(g.type||g.kind||'gap')} · ${esc(g.severity||'')}</div>
         <div class="gb">${esc(g.description||g.detail||g.body||g.id||'')}</div></div>`).join('')
       :'<span style="opacity:.5;font-size:10px">no open gaps — field is clean</span>';
@@ -494,80 +533,110 @@ setInterval(pollGaps,9000);pollGaps();
 /* ══════════ panel toggle ══════════ */
 function togglePanel(id){document.getElementById(id).classList.toggle('min');}
 
-/* ══════════ animation loop — the brain breathes the field ══════════ */
-const tmp=new THREE.Color();
-let last=performance.now(),beat=0;
+/* ══════════ main loop — CFR drives the ALK field ══════════ */
+let last=performance.now();
 function tick(now){
   requestAnimationFrame(tick);
-  const dt=Math.min((now-last)/1000,0.1);last=now;
+  const dt=Math.min((now-last)/1000,0.05);last=now;
 
   // lerp visual field toward polled field — the brain shifts, never snaps
   for(const k of Object.keys(vis))vis[k]+=(field[k]-vis[k])*Math.min(1,dt*1.5);
 
-  // heartbeat: rate from coherence, depth from resonance
-  beat+=dt*(0.6+vis.coherence*1.6)*Math.PI*2;
-  const pulse=1+Math.sin(beat)*(0.012+vis.resonance*0.03);
+  // slow world rotation, dragged down by friction, paused after user input
+  if(now-userSpun>2500)theta+=dt*0.06*(1-vis.friction*0.85);
 
-  // rotation: slow orbit, dragged down by friction, paused briefly after user input
-  if(now-userSpun>2500){camTheta+=dt*0.07*(1-vis.friction*0.85);placeCam();}
+  if(engine){
+    // CFR → ALK physics. This is the mapping that makes the field BE the CFR:
+    engine.field.structure=0.35+vis.coherence*0.60;   // coherence pulls toward attractors
+    engine.field.entropy  =0.08+vis.entropy  *0.55;   // entropy scatters + warms the palette
+    engine.field.curl     =0.28+vis.resonance*0.55;   // resonance swirls
+    engine.field.damping  =0.06+vis.friction *0.30;   // friction slows everything
+    engine.field.vmax     =0.13+vis.tension  *0.14;   // tension raises the speed ceiling (hotter whites)
+    // coherent brain remembers longer — trail memory from coherence
+    engine.setAccumulation({decay:0.885+vis.coherence*0.075});
 
-  // particles: jitter = tension, scatter = entropy, color = regime blend
-  const jit=vis.tension*0.035, sc=1+vis.entropy*0.16;
-  const t=now*0.001;
-  for(let i=0;i<N;i++){
-    const i3=i*3,r=rnd[i];
-    pos[i3]  =base[i3]  *sc*pulse+Math.sin(t*3.1+r*40)*jit*r;
-    pos[i3+1]=base[i3+1]*sc*pulse+Math.sin(t*2.7+r*55)*jit;
-    pos[i3+2]=base[i3+2]*sc*pulse+Math.cos(t*3.4+r*30)*jit*r;
-    // color: regime hue, luminance from coherence, shimmer from resonance
-    const lum=0.25+vis.coherence*0.55+Math.sin(t*2+r*90)*vis.resonance*0.15;
-    tmp.copy(regimeColor).multiplyScalar(Math.max(0.05,lum*(0.6+r*0.6)));
-    col[i3]=tmp.r;col[i3+1]=tmp.g;col[i3+2]=tmp.b;
-  }
-  geo.attributes.position.needsUpdate=true;
-  geo.attributes.color.needsUpdate=true;
+    // attractors: tissue shells + system nuclei (mass = online + flash)
+    for(const t of tissue){
+      const w=rotY(seatW(t.seat),theta);
+      engine.upsertAttractor(t.id,w[0],w[1],w[2],t.mass);
+    }
+    for(const[id,st]of Object.entries(nucState)){
+      st.flash=Math.max(0,st.flash-dt*2.0);
+      const on=st.online!==false;
+      const w=rotY(seatW(st.seat),theta);
+      engine.upsertAttractor('sys:'+id,w[0],w[1],w[2],(on?1.5:0.12)+st.flash*2.6);
+    }
 
-  // nuclei: BREATHE WITH THE TISSUE — same sc*pulse the cloud uses, so a
-  // nucleus stays seated in its region instead of the cloud drifting
-  // around a fixed point (§anchored 2026-07-05). Then flash/online/bob.
-  const nscale=sc*pulse;
-  for(const nuc of Object.values(nuclei)){
-    const u=nuc.userData;
-    nuc.position.copy(u.seat).multiplyScalar(nscale);
-    u.flash=Math.max(0,u.flash-dt*2.2);
-    const on=u.online!==false;
-    nuc.material.opacity=(on?0.65:0.12)+u.flash*0.35;
-    u.halo.material.opacity=(on?0.14:0.03)+u.flash*0.45;
-    u.halo.scale.setScalar(1+u.flash*1.6+Math.sin(beat+nuc.position.x*7)*0.06);
-    u.lbl.material.opacity=on?0.85:0.25;
+    engine.step(dt);
+    engine.render(canvas.width,canvas.height,1.35+vis.resonance*0.9);
   }
 
-  // edges: re-anchor both endpoints to the CURRENT nucleus positions every
-  // frame — they can never detach, whatever the field does. Glow decays.
-  for(const e of edgeObjs){
-    const A=nuclei[e.userData.a].position,B=nuclei[e.userData.b].position;
-    const p=e.geometry.attributes.position.array;
-    p[0]=A.x;p[1]=A.y;p[2]=A.z;p[3]=B.x;p[4]=B.y;p[5]=B.z;
-    e.geometry.attributes.position.needsUpdate=true;
-    e.userData.glow=Math.max(0,e.userData.glow-dt*1.4);
-    e.material.opacity=0.10+vis.resonance*0.10+e.userData.glow*0.55;
+  // overlays: nuclei + ANCHORED edges — both endpoints re-projected from
+  // current world positions through the engine's own MVP, every frame.
+  svg.setAttribute('width',innerWidth);svg.setAttribute('height',innerHeight);
+  for(const k in scr)delete scr[k];
+  for(const[id,st]of Object.entries(nucState)){
+    const w=rotY(seatW(st.seat),theta);
+    const s=project(w);scr[id]=s;
+    const el=nucEls[id];
+    if(!s){el.style.display='none';continue;}
+    el.style.display='';
+    el.style.left=s[0]+'px';el.style.top=s[1]+'px';
+    el.classList.toggle('off',st.online===false);
+    el.querySelector('.dot').style.transform=`scale(${1+st.flash*0.9})`;
   }
-
-  // ambient synapse firing from resonance
-  if(Math.random()<vis.resonance*dt*6){
-    const ids=Object.keys(SYSTEMS);fire(ids[Math.random()*ids.length|0]);
+  for(const e of edgeEls){
+    const A=scr[e.a],B=scr[e.b];
+    if(!A||!B){e.l.setAttribute('opacity','0');continue;}
+    e.l.setAttribute('x1',A[0]);e.l.setAttribute('y1',A[1]);
+    e.l.setAttribute('x2',B[0]);e.l.setAttribute('y2',B[1]);
+    e.glow=Math.max(0,e.glow-dt*1.4);
+    e.l.setAttribute('opacity',(0.08+vis.resonance*0.08+e.glow*0.5).toFixed(3));
+    if(e.glow>0.02)e.l.setAttribute('stroke',SYSTEMS[e.a].c);else e.l.setAttribute('stroke','#2a5a50');
   }
-  // pulse lifecycle — spark lerps along its (re-anchored) edge, a→b
+  // synapse layer: project every CFR node (deterministic seats — anchored
+  // by construction), draw its causal edges, fade by age
+  const nowMs=Date.now();
+  synScr.clear();
+  for(const[id,n]of synNodes){
+    const s=project(rotY(n.w,theta));
+    if(!s){n.el.setAttribute('opacity','0');continue;}
+    synScr.set(id,s);
+    n.el.setAttribute('cx',s[0]);n.el.setAttribute('cy',s[1]);
+    const age=1-Math.min(1,(nowMs-n.ts)/SYN_TTL);
+    n.el.setAttribute('opacity',(0.15+age*0.55+Math.min(1,n.sigma)*0.25).toFixed(3));
+  }
+  for(const[,e]of synEdges){
+    const A=synScr.get(e.from),B=synScr.get(e.to);
+    if(!A||!B){e.el.setAttribute('opacity','0');continue;}
+    e.el.setAttribute('x1',A[0]);e.el.setAttribute('y1',A[1]);
+    e.el.setAttribute('x2',B[0]);e.el.setAttribute('y2',B[1]);
+    e.glow=Math.max(0,e.glow-dt*0.9);
+    e.el.setAttribute('opacity',(0.05+e.weight*0.12+e.glow*0.55).toFixed(3));
+  }
+  // ambient firing from resonance — replays a random REAL causal edge
+  // from the live graph (the old version invented a random one; there is
+  // no need to invent synapses when the ledger provides them)
+  if(Math.random()<vis.resonance*dt*5){
+    if(synEdges.size){
+      const arr=[...synEdges.values()];
+      const e=arr[Math.random()*arr.length|0];
+      e.glow=1;
+      firePulse(()=>synScr.get(e.from),()=>synScr.get(e.to),SYSTEMS[synNodes.get(e.from)?.sys||'cortex'].c);
+    }else{
+      const ids=Object.keys(SYSTEMS);fire(ids[Math.random()*ids.length|0]);
+    }
+  }
+  // pulses travel their anchored paths (topology or synapse)
   for(let i=PULSES.length-1;i>=0;i--){
-    const m=PULSES[i],age=(now-m.userData.t0)/650;
-    if(age>=1){m.material.opacity=0;m.userData.live=false;PULSES.splice(i,1);continue;}
-    const A=nuclei[m.userData.from].position,B=nuclei[m.userData.to].position;
-    m.position.lerpVectors(A,B,age);
-    m.material.opacity=age<0.2?age*4:(1-age)*0.9;
-    m.scale.setScalar(1+Math.sin(age*Math.PI)*0.8);
+    const c=PULSES[i],age=(now-c._t0)/620;
+    if(age>=1){c.setAttribute('opacity','0');c._live=false;PULSES.splice(i,1);continue;}
+    const A=c._getA(),B=c._getB();
+    if(!A||!B){c.setAttribute('opacity','0');continue;}
+    c.setAttribute('cx',A[0]+(B[0]-A[0])*age);
+    c.setAttribute('cy',A[1]+(B[1]-A[1])*age);
+    c.setAttribute('opacity',(age<0.2?age*4:(1-age)).toFixed(3));
   }
-
-  renderer.render(scene,camera);
 }
 requestAnimationFrame(tick);
 </script>
