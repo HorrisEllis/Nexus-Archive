@@ -393,7 +393,22 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/intelligence/intuition') {
     const body   = method === 'POST' ? await readBody(req) : {};
     const prompt = body.prompt || url.searchParams.get('prompt') || '';
-    json(res, 200, _intuitionAnswer(prompt));
+    // §gap-closed 2026-07-05 — _intuitionAnswer's fast-path miss returned
+    // { text:null, confidence:0 } with a comment saying "caller should use
+    // mastermind/Ollama" — but no caller anywhere performs that fallback
+    // (the brain UI stringifies the null object; copilot's cortex.intuition
+    // layer surfaces it as an empty answer, which is the exact
+    // {"ok":true,"text":null} the operator hit). Per §1.2, the escalation
+    // lives HERE: fast-path miss falls through to mastermind's causal
+    // read of the live field, so this endpoint always answers with
+    // something real and says which engine produced it.
+    const fast = _intuitionAnswer(prompt);
+    if (fast.text !== null) { json(res, 200, fast); return; }
+    const mm = _mastermindAnalysis(prompt, body.context);
+    json(res, 200, {
+      ok: true, text: mm.analysis, intent: 'causal',
+      confidence: 0.55, modelUsed: 'cortex.mastermind', escalatedFrom: 'cortex.intuition',
+    });
     return;
   }
 

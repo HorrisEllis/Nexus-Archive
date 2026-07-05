@@ -642,8 +642,12 @@ async function handle(req, res, route, query, body) {
 
         se.markChunkBuilding(params.uuid, chunk.uuid, { agent: preferAgent });
 
-        // Dispatch to agent — non-blocking, chunk builds async
-        as.buildChunkWithAgent(chunkPrompt, { preferAgent }).then(async result => {
+        // Dispatch to agent — non-blocking, chunk builds async.
+        // tag: params.uuid ties every torrent-style chunk of this one spec
+        // together, so a ChatGPT/Claude fallback can be found later via
+        // GET /jobs/by-tag/:uuid without idearium needing to track jobIds
+        // for chunks it didn't wait around for.
+        as.buildChunkWithAgent(chunkPrompt, { preferAgent, tag: params.uuid }).then(async result => {
           if (result.ok && !result.queued && result.text) {
             se.completeChunk(params.uuid, chunk.uuid, result.text);
             const updatedManifest = se.loadSpec(params.uuid);

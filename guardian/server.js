@@ -67,12 +67,92 @@ if (_replayed.length) {
 // that destructures a single object) while nothing ever exercised that path to
 // catch it. One function now. Both callers use it — that class of drift can't
 // recur because there's only one place left for it to recur in.
+// §gap-closed 2026-07-05 — SEAM's ncpPush always routed through NCP, even
+// for provider:'ollama', which meant an ollama-tagged SEAM chunk tried to
+// push into an NCP channel named 'ollama' that no browser tab ever opens —
+// it just sat there. ollama/server.js already has a real sovereign HTTP
+// bridge (:3749, POST /api/jobs + poll GET /api/jobs/:id) — this wires SEAM
+// dispatch directly into it, the same mechanics _dispatchToMistral already
+// uses for plain (non-SEAM) jobs, just correlated back to a compartment's
+// jobId via queue.onResponse() instead of updateJob().
+//
+// model: 'code' agent → DEFAULT_MODEL (qwen2.5-coder:1.5b) on the bridge,
+// since SEAM chunks are spec→implementation generation, not conversation.
+function _ollamaSeamDispatch(queue, data) {
+  const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
+  const http2 = require('http');
+  const body = JSON.stringify({
+    prompt:      data.prompt,
+    model:       process.env.OLLAMA_DEFAULT_MODEL || 'qwen2.5-coder:1.5b',
+    intent:      'seam',
+    componentId: 'guardian.seam.dispatch',
+    hookId:      'guardian.seam.chunk.ollama',
+    requestId:   data.jobId,
+  });
+  const req = http2.request({
+    hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/api/jobs',
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    timeout: 15000,
+  }, res => {
+    let raw = '';
+    res.on('data', c => raw += c);
+    res.on('end', () => {
+      let ollamaJobId = null;
+      try { ollamaJobId = JSON.parse(raw).jobId; } catch(_) {}
+      if (!ollamaJobId) {
+        console.error('[guardian seam] ollama bridge returned no jobId:', raw.slice(0, 200));
+        queue.forceRetryActive('ollama_bridge_no_jobid');
+        return;
+      }
+      let polls = 0;
+      const poll = () => {
+        polls++;
+        if (polls > 150) { // ~2.5min at 1s/poll — chunk generation can be slow on a 1.5b model
+          console.error('[guardian seam] ollama poll timeout, jobId:', data.jobId);
+          queue.forceRetryActive('ollama_bridge_poll_timeout');
+          return;
+        }
+        const pr = http2.request({
+          hostname: '127.0.0.1', port: BRIDGE_PORT, path: `/api/jobs/${ollamaJobId}`,
+          method: 'GET', timeout: 5000,
+        }, rs => {
+          let rb = ''; rs.on('data', c => rb += c);
+          rs.on('end', () => {
+            try {
+              const pd = JSON.parse(rb);
+              const job = pd.job || pd;
+              if (job.status === 'complete') {
+                // Correlate back to the compartment using the SEAM-side jobId
+                // (data.jobId), not ollama's own uuid — onResponse() only
+                // matches queue._active.jobId, which was set by comp.inject().
+                queue.onResponse(data.jobId, job.result || '');
+              } else if (job.status === 'failed') {
+                console.error('[guardian seam] ollama job failed:', job.error);
+                queue.forceRetryActive('ollama_job_failed: ' + (job.error || 'unknown'));
+              } else {
+                setTimeout(poll, 1000);
+              }
+            } catch(_) { setTimeout(poll, 1000); }
+          });
+        });
+        pr.on('error', () => setTimeout(poll, 1000));
+        pr.end();
+      };
+      setTimeout(poll, 1000);
+    });
+  });
+  req.on('timeout', () => { req.destroy(); queue.forceRetryActive('ollama_bridge_timeout'); });
+  req.on('error', e => { console.error('[guardian seam] ollama bridge error:', e.message); queue.forceRetryActive('ollama_bridge_error: ' + e.message); });
+  req.write(body); req.end();
+}
+
 function _buildSeamQueue(specText, opts = {}) {
   const {
     provider     = 'chatgpt',
     title        = null,
     splitOn      = 'heading',
     maxChunkSize = 3000,
+    tag          = null,
   } = opts;
 
   const plan = parseSpec(specText, { splitOn, maxChunkSize });
@@ -81,6 +161,7 @@ function _buildSeamQueue(specText, opts = {}) {
   const queue = new SEAMQueue({
     title: title || plan.meta.name || 'Untitled Spec',
     provider,
+    tag,
     chunks: [
       // Chunk 0: prerequisite — INTAKE, no implementation yet
       { title: '§ Prerequisites', content: plan.prerequisiteBlock, builtPrompt: plan.prerequisiteBlock, axioms: [] },
@@ -92,7 +173,13 @@ function _buildSeamQueue(specText, opts = {}) {
     // CFR ledger first — no separate _evLedger.record() call needed here. The
     // old /command path called both, which double-logged every SEAM event.
     busEmit: (type, data) => bus.emit(type, data),
-    ncpPush: (prov, data) => ncp.push(prov, data),
+    // Branch by provider: 'ollama' bypasses NCP entirely and goes straight to
+    // the sovereign ollama-bridge HTTP API, since no browser tab ever opens
+    // for it. Everything else keeps the original NCP channel-push behavior.
+    ncpPush: (prov, data) => {
+      if (prov === 'ollama') { _ollamaSeamDispatch(queue, data); return; }
+      ncp.push(prov, data);
+    },
     onComplete: (stats) => {
       _activeQueues.delete(queue.uuid);
       bus.emit('guardian.seam.queue.complete', { queueId: queue.uuid, ...stats });
@@ -120,9 +207,10 @@ _physQueue.watchInput(async (data, filename) => {
       (data._raw || data.content || JSON.stringify(data));
     const provider = data._meta?.provider || data.provider || 'claude';
     const title    = data._meta?.title    || data.title    || null;
+    const tag      = data._meta?.tag      || data.tag      || null;
     console.log('[guardian queue] spec arrived:', filename.slice(0, 40));
     try {
-      const { queue } = _buildSeamQueue(specText, { provider, title });
+      const { queue } = _buildSeamQueue(specText, { provider, title, tag });
       if (ncp.isConnected(provider)) queue.start();
       else bus.emit('guardian.tab.needed', { provider, jobId: queueUid });
     } catch(e) {
@@ -311,33 +399,15 @@ async function chooseProvider(intent, fallback = 'claude', preferred = '') {
 const DB_FILE   = path.join(__dirname, 'guardian.db');
 const SCHEMA_FILE = path.join(__dirname, 'schema.sql');
 
-// ── self-signed cert generation ───────────────────────────────────────────────
-
-
-function generateCertWithNode() {
-  // Use selfsigned npm package if available — throws if it can't generate.
-  // Caller (ensureCert) catches and the WSS boot phase handles it.
-  let selfsigned;
-  try { selfsigned = require('selfsigned'); } catch(_) {
-    throw new Error('selfsigned package not installed — run: npm install selfsigned');
-  }
-  const attrs = [{ name: 'commonName', value: '127.0.0.1' }];
-  const opts  = {
-    keySize: 2048, days: 825,
-    extensions: [{ name: 'subjectAltName', altNames: [
-      { type: 7, ip: '127.0.0.1' }, { type: 2, value: 'localhost' },
-    ]}],
-  };
-  const pems = selfsigned.generate(attrs, opts);
-  fs.writeFileSync(KEY_FILE,  pems.private);
-  fs.writeFileSync(CERT_FILE, pems.cert);
-  console.log('[guardian] TLS cert generated via selfsigned ✓');
-}
-
-// ── TLS cert is only needed for WSS (:7821, userscripts)
-// The HTTP server (:7820) boots without it.
-// ensureCert() is called lazily inside startWSS(), not at module scope.
-let tlsOpts = null;
+// §GAP CLOSED 2026-07-05: this section (~30 lines) generated self-signed
+// TLS certs for a WSS server that no longer exists — NCP replaced it
+// (see the NCP server comment below). generateCertWithNode() also
+// referenced KEY_FILE/CERT_FILE, which were never defined anywhere in
+// this file — it would have thrown ReferenceError the one time anything
+// tried to call it, except nothing ever did: ensureCert(), which the old
+// comment here said called it, was never defined either. Fully dead,
+// removed rather than left as a landmine for the next person who adds
+// a WSS boot phase back and assumes this already works.
 
 
 // ── provider registry ─────────────────────────────────────────────────────────
@@ -504,9 +574,9 @@ async function writeToNexus(job) {
 
 // ── job lifecycle ─────────────────────────────────────────────────────────────
 
-function createJob({ command, provider, prompt, content }) {
+function createJob({ command, provider, prompt, content, tag = null }) {
   const id  = randomUUID();
-  const job = { id, command, provider, prompt, content: content || null,
+  const job = { id, command, provider, prompt, content: content || null, tag,
     status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now() };
   jobs.set(id, job);
   console.log(`[guardian] job created: ${id} → ${provider} /${command}`);
@@ -1221,23 +1291,23 @@ const PROVIDERS = new Proxy({}, {
   set: () => true,  // ignore direct sets — NCP manages connections
 });
 
-// httpsServer + wss → null (no longer needed)
+// httpsServer + wss → null (no longer needed, kept for module.exports
+// compatibility in case anything external still destructures them)
 let httpsServer = null;
-let wss         = null;  // kept for module.exports compatibility
-function onWss() {}      // no-op shim — WSS replaced by NCP; calls are harmless
-function startWSS() { return { ok: true, note: 'WSS replaced by NCP' }; }
+let wss         = null;
 
-
-
-
-
-// ── WSS boot happens inside the HTTP server's boot sequence (SOFT) ──────────
-// See server.listen(HTTP_PORT) callback below — startWSS() is called there.
-
-
+// §fix 2026-07-05: this declaration was deleted along with httpsServer/wss
+// during the NCP refactor (see comment above — "replaces httpsServer + wss
+// entirely") and never replaced, even though server.listen() below,
+// server.listeners('request')/removeAllListeners/on('request') further
+// down, and module.exports at the bottom all still reference `server`.
+// Every real route already lives in handleExtendedRoutes() (this file's
+// actual transport layer) — this default listener is intentionally a
+// no-op; _origListeners just needs something to capture and fall through
+// to when handleExtendedRoutes() doesn't match a path.
+const server = http.createServer((req, res) => {});
 
 // ── Main HTTP server (:7820) ─────────────────────────────────────────────────
-const server = require('http').createServer();
 
 const _lip = (() => {
   try {
@@ -1482,284 +1552,14 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
   }
 });
 
-// ── Dropzone server — Express app for file upload/download ──────────────────
-function startDropzone(opts = {}) {
-  const express = (() => { try { return require('express'); } catch { return null; } })();
-  if (!express) { console.warn('[guardian] express not available — dropzone disabled'); return null; }
-  const multer  = (() => { try { return require('multer'); } catch { return null; } })();
-  if (!multer) { console.warn('[guardian] multer not available — dropzone disabled'); return null; }
-
-  const cfg = {
-    port:           opts.port           || parseInt(process.env.GUARDIAN_DZ_PORT || '7822'),
-    uploadDir:      opts.uploadDir      || require('path').join(__dirname, '..', 'data', 'guardian', 'input'),
-    maxFileSizeMB:  opts.maxFileSizeMB  || 500,
-    maxFiles:       opts.maxFiles       || 1000,
-  };
-
-  require('fs').mkdirSync(cfg.uploadDir, { recursive: true });
-
-  const app     = express();
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, cfg.uploadDir),
-    filename:    (req, file, cb) => {
-      const token = require('crypto').randomBytes(6).toString('hex');
-      cb(null, `${token}__${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
-    },
-  });
-  const registry = { _map: new Map(),
-    get: (t) => { const e=this?._map?.get(t); return e||null; },
-    list: (f) => [],
-    delete: (t) => true,
-    extendTTL: (t) => null,
-    addTag: (t) => null,
-  };
-
-  const upload = multer({ storage, limits: { fileSize: cfg.maxFileSizeMB * 1024 * 1024 } });
-
-  // ── CORS ──────────────────────────────────────────────────────────────────
-  app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin',  '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Guardian-Source,X-Guardian-Lang,X-Guardian-Job,X-Spec-Name,X-Spec-Lang,X-Spec-Version,X-Is-Spec,X-Ttl,X-Guardian-Account,X-Guardian-Chat');
-    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-    next();
-  });
-
-  // Root — DROP ZONE UI
-  app.get('/', (req, res) => res.send(buildDropzoneHTML(cfg)));
-
-  // ── SPEC endpoint — paste a spec directly ─────────────────────────────────
-  app.post('/api/spec', express.text({ limit: '50mb', type: '*/*' }), (req, res) => {
-    try {
-      const content = req.body;
-      if (!content || content.trim().length < 3)
-        return res.status(400).json({ ok: false, error: 'Empty spec content' });
-
-      const name    = req.headers['x-spec-name']    || req.query.name    || null;
-      const version = req.headers['x-spec-version'] || req.query.version || '1.0.0';
-      const lang    = req.headers['x-spec-lang']    || req.query.lang    || null;
-      const account = req.headers['x-guardian-account'] || null;
-      const chatId  = req.headers['x-guardian-chat']    || null;
-      const jobId   = req.headers['x-guardian-job']     || null;
-
-      let result;
-      if (registry) {
-        result = registry.storeSpec(content, {
-          name, lang, version, account, chatId, jobId,
-          port: cfg.port, ttl: cfg.maxTTL,
-          tags: ['spec', ...(lang ? [lang] : [])],
-          meta: { version, uploadedVia: 'spec-api' },
-        });
-      } else {
-        const inferred = inferSpecFilename
-          ? inferSpecFilename(content, { name, lang })
-          : { filename: `spec-${Date.now()}.md` };
-        const buf   = Buffer.from(content, 'utf8');
-        const token = require('crypto').randomBytes(6).toString('hex');
-        const filepath = path.join(cfg.uploadDir, `${token}__${inferred.filename}`);
-        fs.writeFileSync(filepath, buf);
-        result = { token, url: `http://127.0.0.1:${cfg.port}/d/${token}`, filename: inferred.filename, size: buf.length };
-      }
-
-      if (!result) return res.status(500).json({ ok: false, error: 'Store failed' });
-      console.log(`[dropzone] spec stored: ${result.filename} (${result.size}B)`);
-      res.json({ ok: true, ...result, ttl: cfg.maxTTL, expiresAt: Date.now() + cfg.maxTTL * 1000 });
-    } catch (err) {
-      console.error(`[dropzone] /api/spec error: ${err.message}`);
-      res.status(500).json({ ok: false, error: err.message });
-    }
-  });
-
-  // ── PASTE endpoint — code/text with content-based naming ─────────────────
-  app.post('/api/paste', express.text({ limit: '50mb', type: '*/*' }), (req, res) => {
-    try {
-      const content = req.body;
-      if (!content || !content.trim())
-        return res.status(400).json({ ok: false, error: 'Empty content' });
-
-      const lang    = req.headers['x-guardian-lang'] || req.query.lang || null;
-      const name    = req.headers['x-guardian-name'] || req.query.name || null;
-      const ttl     = Math.min(parseInt(req.query.ttl || req.headers['x-ttl'] || cfg.defaultTTL), cfg.maxTTL);
-      const account = req.headers['x-guardian-account'] || null;
-      const chatId  = req.headers['x-guardian-chat']    || null;
-      const jobId   = req.headers['x-guardian-job']     || null;
-      const isSpec  = req.query.spec === 'true' || req.headers['x-is-spec'] === 'true';
-
-      let result;
-      if (registry) {
-        result = registry.autoUpload(name || 'paste', content, {
-          name, lang, ttl, account, chatId, jobId, isSpec,
-          port: cfg.port, source: 'paste-api',
-          tags: [...(lang ? [lang] : []), ...(isSpec ? ['spec'] : [])],
-        });
-      } else {
-        const inferred = inferFilename
-          ? inferFilename(content, { name, lang })
-          : { filename: 'paste.txt' };
-        const buf = Buffer.from(content, 'utf8');
-        const token = require('crypto').randomBytes(6).toString('hex');
-        const filepath = path.join(cfg.uploadDir, `${token}__${inferred.filename}`);
-        fs.writeFileSync(filepath, buf);
-        result = { token, url: `http://127.0.0.1:${cfg.port}/d/${token}`, filename: inferred.filename, size: buf.length };
-      }
-
-      if (!result) return res.status(500).json({ ok: false, error: 'Store failed' });
-      res.json({ ok: true, ...result, expiresAt: Date.now() + ttl * 1000 });
-    } catch (err) {
-      res.status(500).json({ ok: false, error: err.message });
-    }
-  });
-
-  // ── Standard upload — with post-write content inference ───────────────────
-  app.post('/api/upload', upload.single('file'), (req, res) => {
-    if (!req.file) return res.status(400).send('No file.');
-    const ttl     = Math.min(Math.max(parseInt(req.body.ttl) || cfg.defaultTTL, 60), cfg.maxTTL);
-    const token   = req._dzToken || path.basename(req.file.filename).split('__')[0];
-    const lang    = req.body.lang    || req.headers['x-guardian-lang'] || null;
-    const isSpec  = req.body.isSpec === 'true';
-    const account = req.body.account || null;
-    const chatId  = req.body.chatId  || null;
-    const jobId   = req.body.jobId   || null;
-
-    let finalFilename = req.file.originalname;
-    try {
-      if (inferFilename && req.file.size < 5 * 1024 * 1024) {
-        const content  = fs.readFileSync(req.file.path, 'utf8');
-        const inferred = inferFilename(content, {
-          name: req.file.originalname.replace(/\.[^.]+$/, ''),
-          lang, isSpec,
-        });
-        finalFilename = inferred.filename;
-        const newPath = path.join(cfg.uploadDir, `${token}__${finalFilename}`);
-        if (newPath !== req.file.path) {
-          fs.renameSync(req.file.path, newPath);
-          req.file.path = newPath;
-        }
-      }
-    } catch (_) { /* binary — keep original name */ }
-
-    let entry;
-    if (registry) {
-      entry = registry.register({
-        token, filename: finalFilename, filepath: req.file.path,
-        size: req.file.size, ttl, lang, account, chatId, jobId,
-        source: 'upload', tags: isSpec ? ['spec'] : [],
-      });
-    } else {
-      entry = { expiresAt: Date.now() + ttl * 1000 };
-    }
-
-    console.log(`[dropzone] upload: ${finalFilename} (${fmtSize(req.file.size)}) token:${token}`);
-    res.json({ token, filename: finalFilename, size: req.file.size, expiresAt: entry.expiresAt });
-  });
-
-  // ── Download ──────────────────────────────────────────────────────────────
-  app.get('/d/:token', (req, res) => {
-    const entry = registry ? registry.get(req.params.token) : null;
-    if (!entry) return res.status(404).send('Not found or expired.');
-    registry.recordDownload(req.params.token);
-    res.download(entry.filepath, entry.filename);
-  });
-
-  // ── File list ─────────────────────────────────────────────────────────────
-  app.get('/api/files', (req, res) => {
-    const list = registry ? registry.list({
-      category: req.query.category || null,
-      lang:     req.query.lang     || null,
-      search:   req.query.q        || null,
-      account:  req.query.account  || null,
-      tag:      req.query.tag      || null,
-    }) : [];
-    res.json(list.map(f => ({
-      token: f.token, filename: f.filename, size: f.size,
-      expiresAt: f.expiresAt, downloads: f.downloads, ttl: f.ttl,
-      ext: f.ext, lang: f.lang, category: f.category, tags: f.tags,
-      purpose: f.purpose, uploadedAt: f.uploadedAt,
-    })));
-  });
-
-  // ── File by token ─────────────────────────────────────────────────────────
-  app.get('/api/files/:token', (req, res) => {
-    const entry = registry ? registry.get(req.params.token) : null;
-    if (!entry) return res.status(404).json({ ok: false, error: 'Not found' });
-    res.json({ ok: true, file: entry });
-  });
-
-  // ── Delete ────────────────────────────────────────────────────────────────
-  app.delete('/api/files/:token', (req, res) => {
-    res.json({ ok: registry ? registry.delete(req.params.token) : false });
-  });
-
-  // ── Extend TTL ────────────────────────────────────────────────────────────
-  app.patch('/api/files/:token/ttl', express.json(), (req, res) => {
-    const entry = registry ? registry.extendTTL(req.params.token, parseInt(req.body.addSeconds || 3600)) : null;
-    if (!entry) return res.status(404).json({ ok: false, error: 'Not found' });
-    res.json({ ok: true, expiresAt: entry.expiresAt, ttl: entry.ttl });
-  });
-
-  // ── Add tag ───────────────────────────────────────────────────────────────
-  app.post('/api/files/:token/tags', express.json(), (req, res) => {
-    const entry = registry ? registry.addTag(req.params.token, req.body.tag) : null;
-    if (!entry) return res.status(404).json({ ok: false, error: 'Not found' });
-    res.json({ ok: true, tags: entry.tags });
-  });
-
-  // ── Specs list ────────────────────────────────────────────────────────────
-  app.get('/api/specs', (req, res) => {
-    res.json({ ok: true, specs: registry ? registry.list({ tag: 'spec' }) : [] });
-  });
-
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  app.get('/api/stats', (req, res) => {
-    res.json({ ok: true, stats: registry ? registry.stats() : {} });
-  });
-
-  // ── Info ──────────────────────────────────────────────────────────────────
-  app.get('/api/info', (req, res) => {
-    res.json({
-      port: cfg.port, ips: getLocalIPs(), serverName: cfg.serverName,
-      persistent: !!registry, version: 'v9',
-      maxFileSizeMB: cfg.maxFileSizeMB, maxTTL: cfg.maxTTL,
-    });
-  });
-
-  const dzServer = app.listen(cfg.port, cfg.host, () => {
-    const ips = getLocalIPs();
-    console.log(`[dropzone] UI on http://127.0.0.1:${cfg.port}`);
-    ips.forEach(ip => console.log(`[dropzone] LAN: http://${ip.address}:${cfg.port}  (${ip.name})`));
-    console.log(`[dropzone] Upload dir: ${cfg.uploadDir}`);
-    console.log(`[dropzone] Persistent registry: ${registry ? 'YES ✓' : 'NO (fallback)'}`);
-  });
-
-  dzServer.on('error', err => console.error(`[dropzone] ERROR: ${err.message}`));
-
-  // ── Internal auto-upload — persistent + spec-namer ────────────────────────
-  function autoUpload(filename, content, opts = {}) {
-    if (typeof opts === 'number') opts = { ttl: opts };
-    const ttl = Math.min(opts.ttl || cfg.defaultTTL, cfg.maxTTL);
-    if (registry) {
-      return registry.autoUpload(filename, content, { ...opts, ttl, port: cfg.port });
-    }
-    // Pure fallback
-    try {
-      const buf      = Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8');
-      const token    = require('crypto').randomBytes(6).toString('hex');
-      const safe     = sanitizeFilename(filename);
-      const filepath = path.join(cfg.uploadDir, `${token}__${safe}`);
-      fs.writeFileSync(filepath, buf);
-      const url = `http://127.0.0.1:${cfg.port}/d/${token}`;
-      return { token, url, filename: safe, size: buf.length };
-    } catch (err) {
-      console.error(`[dropzone] autoUpload fallback failed: ${err.message}`);
-      return null;
-    }
-  }
-
-  return { server: dzServer, autoUpload, registry };
-}
-
-const dropzone = startDropzone();
-const dropzoneServer = dropzone ? dropzone.server : null;
+// ── Auto-upload for generated code blocks — real dropzone HTTP server is
+// guardian/dropzone.js, run separately. This just needs somewhere for a
+// generated code block to land and a link to hand back. See
+// guardian/artifact-upload.js header for what this replaced and why.
+const { createAutoUploader } = require('./artifact-upload');
+const dropzone = createAutoUploader({
+  uploadDir: require('path').join(__dirname, '..', 'data', 'guardian', 'input'),
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  SISO EVENT BUS — §8.3 canonical SISO as foundation
@@ -1882,7 +1682,7 @@ const jaa = new JaaStore(STORE_DIR);
 // ── Lab Manager — §LAB-01 every experiment has a UUID and a hypothesis ────
 let _lab = null;
 try {
-  const { LabManager } = require('./lab/lab');
+  const { LabManager } = require('../cos/playground/llm-lab');
   _lab = new LabManager({
     jaa,
     guardianDispatch: async (provider, prompt, meta = {}) => {
@@ -2457,6 +2257,25 @@ function handleExtendedRoutes(req, res, url, method) {
   if (method==='GET' && url.pathname==='/seam/queues') {
     const queues = [..._activeQueues.values()].map(q => q.toJSON());
     pRes(res, 200, { ok:true, active: queues.length, queues }); return true;
+  }
+  // §tagging 2026-07-05 — idearium/loom agent suites submit specs without
+  // ever seeing the guardian-assigned queue UUID (it's returned from
+  // POST /command, but a fire-and-forget caller may not keep it around).
+  // This lets them poll progress by the tag they themselves chose. Checked
+  // before the generic /seam/queues/:id route below so a tag never gets
+  // misread as a UUID (and vice versa — tags and UUIDs don't collide since
+  // UUIDs are never passed as this segment's value here).
+  if (method==='GET' && url.pathname.startsWith('/seam/queues/by-tag/')) {
+    const tag = decodeURIComponent(url.pathname.slice('/seam/queues/by-tag/'.length));
+    const matches = [..._activeQueues.values()].filter(q => q.tag === tag).map(q => q.toJSON());
+    if (!matches.length) {
+      // Not necessarily an error — the queue may already have completed and
+      // been evicted from _activeQueues (see onComplete above). Check JAA's
+      // seam_sessions for a historical match before reporting empty.
+      const historical = (jaa.all('seam_sessions') || []).filter(s => s.tag === tag);
+      pRes(res, 200, { ok:true, active: 0, queues: [], historical }); return true;
+    }
+    pRes(res, 200, { ok:true, active: matches.length, queues: matches }); return true;
   }
   if (method==='GET' && url.pathname.startsWith('/seam/queues/')) {
     const qid = url.pathname.split('/')[3];
@@ -3131,6 +2950,10 @@ function handleExtendedRoutes(req, res, url, method) {
             provider, title: body.title,
             splitOn:      body.splitOn      || 'heading',
             maxChunkSize: body.maxChunkSize || 3000,
+            // Lets idearium/loom's agent suites correlate a spec they submitted
+            // with its SEAM queue by name (e.g. project id) instead of the
+            // queue UUID, which they don't have until after this call returns.
+            tag:          body.tag || body.project || null,
           });
 
           // §LAW II physical redundancy — write to disk queue before dispatch
@@ -3204,7 +3027,7 @@ function handleExtendedRoutes(req, res, url, method) {
       }
 
       // §LAW II — createJob writes to JAA
-      const job = createJob({ command, provider, prompt, content });
+      const job = createJob({ command, provider, prompt, content, tag: body.tag || null });
       dispatchJob(job);
       pRes(res, 200, { ok:true, jobId: job.id, status: job.status, provider });
 
@@ -3218,6 +3041,15 @@ function handleExtendedRoutes(req, res, url, method) {
     let list = [...jobs.values()];
     if (status) list = list.filter(j=>j.status===status);
     pRes(res, 200, { ok:true, jobs:list.slice(-limit) }); return true;
+  }
+  // §tagging 2026-07-05 — mirrors /seam/queues/by-tag/: for chunk builds
+  // that fell back to ChatGPT/Claude (idearium/loom's buildChunkWithAgent /
+  // buildComponentWithAgent), the caller has a tag but no jobId until the
+  // dispatch call above returns — this lets it recover progress by tag.
+  if (method==='GET' && url.pathname.startsWith('/jobs/by-tag/')) {
+    const tag = decodeURIComponent(url.pathname.slice('/jobs/by-tag/'.length));
+    const matches = [...jobs.values()].filter(j => j.tag === tag);
+    pRes(res, 200, { ok:true, count: matches.length, jobs: matches }); return true;
   }
   if (method==='GET' && url.pathname==='/bus') {
     const n   = parseInt(url.searchParams.get('n') || '20');
@@ -4255,4 +4087,4 @@ const memoryServer = startMemoryServer();
 
 // [WSS handler removed — NCP is the transport]
 
-module.exports = { server, wss, ncp, jobs, PROVIDERS, dropzoneServer, dropzone, memoryServer };
+module.exports = { server, wss, ncp, jobs, PROVIDERS, dropzone, memoryServer };
