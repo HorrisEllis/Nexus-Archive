@@ -1,83 +1,53 @@
 'use strict';
 /**
- * guardian/registry-components.js
- * comp_id: nexus.guardian.registry
- * uuid: nexus-guardian-registry-v1-0000-2026-0627-jamesbrooks-001
- * Declares every Guardian capability to the orchestrator on boot.
+ * guardian/registry-components.js — Canonical component descriptors
+ * UUID: nexus-guardian-registry-v1-0000-2026-0705-001
+ * Version: 1.0.0
+ *
+ * Guardian had no registry-components.js at all — cortex and idearium
+ * each declare their real routes this way (see cortex/registry-components.js,
+ * idearium/registry-components.js); guardian's NCP hub was undeclared even
+ * though cortex/core/raid/index.js and idearium/agent-suite/index.js both
+ * depend on it by URL. This backfills guardian's surface the same way
+ * idearium's registry backfilled its own (§FIX-ROADMAP-61/62 note there).
  */
-
-const V = '3.6.1';
+const V = '1.0.0';
 const NS = 'guardian';
+
 function _c(id, method, path, desc, opts = {}) {
   return {
-    id: `${NS}.${id}`, namespace: NS, name: id, version: V,
-    grammar: opts.grammar || [id.replace(/\./g,' '), id.replace(/\./g,'-')],
-    route: { method, path },
-    description: desc,
-    params:      opts.params || [],
-    tags:        [NS, ...(opts.tags || [])],
-    permissions: opts.permissions || ['system'],
-    hooks:       opts.hooks || {},
+    id: `${NS}.${id}`, namespace: NS, name: id, version: opts.version || V,
+    grammar: opts.grammar || [id.replace(/\./g, ' ')],
+    route: { method, path }, description: desc,
+    params: opts.params || [], tags: [NS, ...(opts.tags || [])],
+    permissions: opts.permissions || ['system'], hooks: opts.hooks || {},
   };
 }
 
 module.exports = [
-  // ── Health / introspection ─────────────────────────────────────────────
-  _c('health',               'GET',  '/health',                 'Guardian health, job counts, provider status'),
-  _c('contract',             'GET',  '/contract',               'Guardian interaction contract'),
-  _c('version',              'GET',  '/version',                'Guardian + userscript versions'),
-  _c('baseline',             'GET',  '/baseline',               'Friction + sigma baseline'),
-  _c('events',               'GET',  '/events',                 'SSE — all guardian bus events', { tags:['stream'] }),
-  _c('bus.log',              'GET',  '/bus',                    'Recent SISO bus log'),
-  _c('bus.emit',             'POST', '/bus/emit',               'Emit event onto bus'),
-
-  // ── NCP / providers ────────────────────────────────────────────────────
-  _c('providers.list',       'GET',  '/providers',              'Connected NCP browser tab providers'),
-  _c('provider.channel',     'GET',  '/channel',                'NCP SSE channel — browser tabs connect here', { tags:['ncp'] }),
-  _c('provider.result',      'POST', '/result',                 'NCP result from browser tab', { tags:['ncp'] }),
-
-  // ── Jobs ───────────────────────────────────────────────────────────────
-  _c('job.list',             'GET',  '/jobs',                   'Active + recent jobs'),
-  _c('job.dispatch',         'POST', '/command',                'Dispatch job to provider (raw or SEAM)', {
-    tags: ['dispatch'],
-    hooks: {
-      in:  [{ id:'guardian.job.dispatch.receive', intent:['build','ask','forge','compile'], contract:'nexus-interaction-contract-v1::guardian', tags:['dispatch'] }],
-      out: [{ id:'guardian.job.dispatch.complete', wires_to:['cortex.raid.feedback'], tags:['result'] }],
-    }
+  // ── NCP hub (guardian/ncp/server.js) ────────────────────────────────────
+  _c('ncp.health',     'GET',  '/health',    'NCP hub liveness + per-provider connected-tab counts', { tags: ['ncp'] }),
+  _c('ncp.channel',    'GET',  '/channel',   'SSE stream a browser tab holds open to receive jobs', {
+    tags: ['ncp', 'stream'], params: ['tabId', 'provider'],
   }),
-  _c('job.build',            'POST', '/build',                  'Full T0→T1→T2 build pipeline from spec', { tags:['build'] }),
-  _c('job.status',           'GET',  '/status/:jobId',          'Single job status'),
-  _c('job.response',         'GET',  '/response/:jobId',        'Full response for a job'),
-
-  // ── SEAM ───────────────────────────────────────────────────────────────
-  _c('seam.queues',          'GET',  '/seam/queues',            'Active SEAM queues'),
-  _c('seam.queue',           'GET',  '/seam/queues/:id',        'Single SEAM queue detail'),
-  _c('seam.sessions',        'GET',  '/seam/sessions',          'SEAM session history'),
-  _c('seam.session.create',  'POST', '/seam/sessions',          'Create SEAM session'),
-  _c('seam.retry',           'POST', '/seam/retry',             'Retry a failed SEAM chunk'),
-  _c('seam.watchdog',        'GET',  '/seam/watchdog/status',   'SEAM watchdog + stall detection'),
-
-  // ── Queue / compartments ───────────────────────────────────────────────
-  _c('queue.status',         'GET',  '/queue',                  'Physical queue status'),
-  _c('queue.enqueue',        'POST', '/queue/enqueue',          'Enqueue item to physical queue'),
-  _c('queue.compartments',   'GET',  '/queue/compartments',     'Job compartment list'),
-  _c('queue.compartment.create','POST','/queue/compartments',   'Create job compartment'),
-
-  // ── Artifacts / gaps / sessions ────────────────────────────────────────
-  _c('artifacts.list',       'GET',  '/artifacts',              'SHA-256 deduplicated code artifacts'),
-  _c('gaps.list',            'GET',  '/gaps',                   'Open gaps detected by guardian'),
-  _c('gaps.summary',         'GET',  '/gaps/summary',           'Gap summary by type + severity'),
-  _c('sessions.list',        'GET',  '/sessions',               'NCP session history'),
-  _c('settings.get',         'GET',  '/settings',               'Guardian settings'),
-  _c('settings.reset',       'POST', '/settings/reset',         'Reset settings to defaults'),
-
-  // ── Co-pilot (proxy to :3750) ──────────────────────────────────────────
-  _c('copilot.prompt',       'POST', '/api/copilot/prompt',     'Route to co-pilot :3750/api/prompt', {
-    tags: ['copilot'],
+  _c('ncp.command',    'POST', '/command',   'Queue a job for a provider tab, routed through the warp dispatch pipeline', {
+    tags: ['ncp', 'dispatch'], params: ['provider', 'prompt', 'meta'],
     hooks: {
-      in:  [{ id:'guardian.copilot.receive', intent:['ask','build','diagnose','note'], contract:'nexus-interaction-contract-v1::guardian', tags:['copilot'] }],
-      out: [{ id:'guardian.copilot.to-copilot', wires_to:['copilot.prompt.receive'], tags:['proxy'] }],
-    }
+      in: [{ id: 'guardian.ncp.command.receive', intent: ['ask', 'build', 'spec'], contract: 'nexus-interaction-contract-v1::guardian', tags: ['ncp'] }],
+      out: [{ id: 'guardian.ncp.command.dispatched', wires_to: ['cortex.intelligence.event'], tags: ['ncp'] }],
+    },
   }),
-  _c('copilot.memory',       'POST', '/api/copilot/memory',     'Co-pilot memory operations'),
+  _c('ncp.result',     'POST', '/result',    'Browser tab → hub result/telemetry messages (GUARDIAN_*)', { tags: ['ncp'] }),
+  _c('ncp.heartbeat',  'POST', '/heartbeat', 'Browser tab liveness + usage-limit state', { tags: ['ncp'] }),
+
+  // ── Direct API dispatch (guardian/api-dispatch.js) ──────────────────────
+  _c('api.dispatch',   'POST', '/api/dispatch', 'Direct REST dispatch for non-NCP providers (chatgpt/gemini/perplexity/claude API)', {
+    tags: ['api'], params: ['provider', 'prompt', 'opts'],
+  }),
+
+  // ── Agent seam panels (guardian/ui/agents/*) ────────────────────────────
+  _c('ui.agent.chatgpt', 'GET', '/ui/agents/chatgpt/index.html', 'ChatGPT agent seam panel — reads ui/agents/chatgpt/index.yml', {
+    tags: ['ui', 'chatgpt'],
+    hooks: { in: [{ id: 'guardian.ui.agent.chatgpt.receive', intent: ['status'], contract: 'guardian-ui-agent-contract-v1', tags: ['seam'] }] },
+  }),
 ];

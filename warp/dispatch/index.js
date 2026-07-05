@@ -101,7 +101,17 @@ async function unifiedDispatch({
     ? population.variantsFor(gateClass).find(v => v.digest === digest)
     : null;
 
-  function evaluateAxioms() {
+  // §fix 2026-07-05: evaluateAxioms() used to close over the outer `event`
+  // param only — every candidate in the loop below was checked against the
+  // fixed *request* event, never against what cascade() actually produced.
+  // The axiom-gate ran, logged a result, and always checked the same
+  // thing regardless of which candidate was being scored: a pass/fail that
+  // looked like verification but wasn't reading the content it was meant
+  // to gate. Same failure shape as the bridge/router.js `.response` bug —
+  // matches at the outer call, wrong underneath. Axiom.check's own
+  // contract ("predicate the Stream runs against every transform") means
+  // "transform" here is the candidate's output, so that's what gets passed.
+  function evaluateAxioms(candidateEvent) {
     const axiomFailures = [];
     const skipped = [];
     for (const axiom of orderedAxioms) {
@@ -109,16 +119,24 @@ async function unifiedDispatch({
         skipped.push(axiom.id);
         continue; // logged via `skipped`, not silently omitted
       }
-      const passed = axiom.check(event, { signature: gateSignature }, {});
+      const passed = axiom.check(candidateEvent, { signature: gateSignature }, {});
       if (!passed) axiomFailures.push({ axiomId: axiom.id, severity: axiom.severity });
     }
     if (skipped.length) log?.record({ step: 'axiom-gate', result: 'soft-skip', axioms: skipped, reason: 'cache-verified', digest });
     return axiomFailures;
   }
 
+  // Each candidate is checked against an event carrying ITS OWN output,
+  // not the shared request event — this is the actual fix, everything
+  // above is unchanged plumbing.
+  const candidateEventFor = (cascadeResult) => ({
+    ...event,
+    data: { ...event.data, output: cascadeResult.output },
+  });
+
   const scored = [];
   for (const cascadeResult of candidates) {
-    const axiomFailures = evaluateAxioms();
+    const axiomFailures = evaluateAxioms(candidateEventFor(cascadeResult));
     const hardFail = axiomFailures.some(f => f.severity === 'hard');
     if (hardFail) continue; // this candidate is out, others may still pass
     const fitness = scorer({ axiomFailures, output: cascadeResult.output, expectedShapeKeys, tokenBudget });
@@ -126,9 +144,11 @@ async function unifiedDispatch({
   }
 
   if (scored.length === 0) {
-    // Every candidate failed hard axioms — report the failures (representative),
-    // never silently report "nothing happened."
-    const axiomFailures = evaluateAxioms();
+    // Every candidate failed hard axioms — report the failures against the
+    // last candidate actually tried (representative), never silently
+    // report "nothing happened."
+    const last = candidates[candidates.length - 1];
+    const axiomFailures = evaluateAxioms(candidateEventFor(last));
     log?.record({ step: 'axiom-gate', result: 'reject-all-candidates', failures: axiomFailures });
     return { ok: false, output: null, source: 'rejected', failures: axiomFailures, digest };
   }
