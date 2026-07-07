@@ -26,6 +26,13 @@ class CausalGraph {
     this._byJob      = new Map();  // jobId      → id[]
     this._bySystem   = new Map();  // system     → id[] (last 100)
     this._byType     = new Map();  // type       → id[] (last 50)
+    // §ADDED 2026-07-06 — the exact edge type RAID's own code names as
+    // its missing dependency: `topologicalProximity = 1.0; // stub —
+    // needs CFR _byComponent edge, not built (docs/cfr.spec)`. That
+    // spec already calls this "the fifth edge type... zero new CFR API
+    // surface, same ring-buffer pattern, automatic" — this follows that
+    // exact pattern, matching _bySystem/_byType above.
+    this._byComponent = new Map();  // componentId → id[] (last 100)
   }
 
   /**
@@ -111,6 +118,65 @@ class CausalGraph {
       tring.push(id);
       if (tring.length > 50) tring.shift();
     }
+
+    // ── Component adjacency (successive events from the same component) ────
+    // §ADDED 2026-07-06 — see constructor comment. componentId comes from
+    // the entry directly, or from payload.componentId — matching the same
+    // fallback shape already used for jobId a few lines up.
+    const compId = entry.componentId || entry.payload?.componentId;
+    if (compId) {
+      if (!this._byComponent.has(compId)) this._byComponent.set(compId, []);
+      const cring = this._byComponent.get(compId);
+      if (cring.length > 0) {
+        this.edges.push({
+          from:   cring[cring.length - 1],
+          to:     id,
+          type:   'component',
+          weight: 0.8,
+        });
+      }
+      cring.push(id);
+      if (cring.length > 100) cring.shift();
+    }
+  }
+
+  /**
+   * componentProximity(a, b) — 0..1 real proximity between two
+   * component IDs, derived from the actual edge graph rather than a
+   * hardcoded constant. This is exactly what RAID's topologicalProximity
+   * stub has been waiting for. Returns 0 if either component has never
+   * been seen, or 1.0 if they're the same component (trivially adjacent
+   * to itself) — otherwise walks each component's most recent node and
+   * checks real graph distance between them via existing edges (any
+   * type, not just 'component'), capped at a small hop limit since this
+   * needs to stay cheap enough to call inline during routing.
+   */
+  componentProximity(a, b, maxHops = 3) {
+    if (a === b) return 1.0;
+    const aIds = this._byComponent.get(a);
+    const bIds = this._byComponent.get(b);
+    if (!aIds?.length || !bIds?.length) return 0;
+
+    const start = aIds[aIds.length - 1];
+    const targetSet = new Set(bIds);
+    let frontier = [start];
+    const seen = new Set(frontier);
+    for (let hop = 1; hop <= maxHops; hop++) {
+      const next = [];
+      for (const nodeId of frontier) {
+        for (const e of this.edges) {
+          const neighbor = e.from === nodeId ? e.to : (e.to === nodeId ? e.from : null);
+          if (neighbor && !seen.has(neighbor)) {
+            if (targetSet.has(neighbor)) return Math.max(0, 1 - (hop - 1) / maxHops);
+            seen.add(neighbor);
+            next.push(neighbor);
+          }
+        }
+      }
+      frontier = next;
+      if (!frontier.length) break;
+    }
+    return 0; // no path found within maxHops — real distance, not a guess
   }
 
   /**

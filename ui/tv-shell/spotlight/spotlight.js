@@ -439,14 +439,27 @@ const CP = (() => {
            exec, setHealthState, updateTensionField, getCFR: () => _cfr };
 })();
 
+// §BUG FIXED 2026-07-06: window.CP was never assigned anywhere — CP only
+// existed as this file's own local closure variable, invisible to any
+// other script. ui/copilot/copilot.js's `if (cp.ui) window.CP.exec(cp.ui,
+// cp.text)` has been throwing TypeError on `undefined.exec` every time a
+// copilot response included a `ui` field — harmless only because
+// copilot/server.js has never actually sent one yet. Exposed for real now.
+if (typeof window !== 'undefined') window.CP = CP;
+
 // Public API — clean surface for the shell and other systems
+// §BUG FIXED 2026-07-06: three of these five wrappers called method names
+// that don't exist on CP's real exports (guidedSteps/updateTension/
+// executeUI vs. the real showGuide/updateTensionField/exec) — checked
+// every one against the IIFE's actual `return {...}` statement above
+// rather than assume the other two (`on`/`off`) meant the rest were fine.
 if (typeof window !== 'undefined') {
   window.Spotlight = {
     on:      (targets, opts) => typeof CP !== 'undefined' && CP.spotlight(targets, opts),
     off:     ()              => typeof CP !== 'undefined' && CP.clearSpotlight(),
-    step:    (steps, opts)   => typeof CP !== 'undefined' && CP.guidedSteps(steps, opts),
-    tension: (map)           => typeof CP !== 'undefined' && CP.updateTension(map),
-    execute: (ui)            => typeof CP !== 'undefined' && CP.executeUI(ui),
+    step:    (steps, _opts)  => typeof CP !== 'undefined' && CP.showGuide(steps),
+    tension: (map)           => typeof CP !== 'undefined' && CP.updateTensionField(map),
+    execute: (ui, text)      => typeof CP !== 'undefined' && CP.exec(ui, text),
     navigate:(ch)            => typeof tuneById !== 'undefined' && tuneById(ch),
   };
 }

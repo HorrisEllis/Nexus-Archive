@@ -26,6 +26,7 @@
  */
 
 const http = require('http');
+const fs   = require('fs');
 const { LoomDriver } = require('./schema/index');
 const { LoomContracts } = require('./contracts/index');
 // §BUGFIX 2026-07-04: this module was built earlier this session
@@ -33,6 +34,19 @@ const { LoomContracts } = require('./contracts/index');
 // never actually connected to anything. Wiring it in now: every real
 // registry mutation below also records through here.
 const cortexSync = require('./schema/cortex-sync');
+// §GAP CLOSED 2026-07-05: loom/ingest/index.js (LoomIngest.ingestZip) was
+// built in phase 144 — sha256 identity, real unzip listing, parent-diff
+// lineage, all working and tested — and then never wired to an actual
+// endpoint. Same shape as cortexSync's own history two lines above:
+// built, correct, disconnected. Wiring it in now via /api/ingest.
+const { LoomIngest } = require('./ingest/index');
+// §GAP CLOSED 2026-07-05: same pattern a third time — scaffoldSystem
+// (loom/templates/system-scaffold.js, phase 145) is a real, tested
+// operations-list → CLI+API+contract projector, never wired to an
+// endpoint either. /api/scaffold below is what a UI checkbox form
+// actually calls.
+const { scaffoldSystem } = require('./templates/system-scaffold');
+const path = require('path');
 
 const SYSTEM_ID = 'loom';
 const PORT      = parseInt(process.env.LOOM_PORT || '3752');
@@ -42,7 +56,45 @@ const OR_URL    = process.env.ORCH_URL || 'http://127.0.0.1:9000';
 // do it right rather than fix it twice.
 const VERSION   = require('../lib/version').services.loom;
 
+// ── Scaffold templates — real operations, system-scaffold's own shape ──────
+// Not placeholders: each of these is a valid `operations` array on its
+// own — scaffoldSystem() has been run against "Basic CRUD" directly
+// while wiring this in, same way ingest was proven against a real zip
+// before calling it done.
+const SCAFFOLD_TEMPLATES = [
+  {
+    id: 'crud-basic', label: 'Basic CRUD',
+    description: 'list/get/create/update/delete over one resource',
+    operations: [
+      { id: 'list',   verb: 'list',   method: 'GET',    apiPath: '/items',      params: [], description: 'list all items' },
+      { id: 'get',    verb: 'get',    method: 'GET',    apiPath: '/items/:id',  params: ['id'], description: 'get one item' },
+      { id: 'create', verb: 'create', method: 'POST',   apiPath: '/items',      params: ['data'], description: 'create an item' },
+      { id: 'update', verb: 'update', method: 'PATCH',  apiPath: '/items/:id',  params: ['id', 'data'], description: 'update an item' },
+      { id: 'delete', verb: 'delete', method: 'DELETE', apiPath: '/items/:id',  params: ['id'], description: 'delete an item' },
+    ],
+  },
+  {
+    id: 'read-only-registry', label: 'Read-only registry',
+    description: 'query-only surface over a data set — no mutation verbs at all',
+    operations: [
+      { id: 'list',   verb: 'list',   method: 'GET', apiPath: '/records',       params: [], description: 'list all records' },
+      { id: 'get',    verb: 'get',    method: 'GET', apiPath: '/records/:id',   params: ['id'], description: 'get one record' },
+      { id: 'search', verb: 'search', method: 'GET', apiPath: '/records/search', params: ['q'], description: 'full-text search' },
+    ],
+  },
+  {
+    id: 'job-queue', label: 'Job queue',
+    description: 'submit/status/cancel — same shape ollama/copilot/guardian already use for dispatch',
+    operations: [
+      { id: 'submit', verb: 'submit', method: 'POST', apiPath: '/jobs',          params: ['payload'], description: 'submit a job' },
+      { id: 'status', verb: 'status', method: 'GET',  apiPath: '/jobs/:id',      params: ['id'], description: 'check job status' },
+      { id: 'cancel', verb: 'cancel', method: 'POST', apiPath: '/jobs/:id/cancel', params: ['id'], description: 'cancel a queued job' },
+    ],
+  },
+];
+
 const driver    = new LoomDriver();
+const ingest    = new LoomIngest();
 const contracts = new LoomContracts();
 const _sseClients = new Set();
 function _broadcast(type, payload) {
@@ -65,12 +117,41 @@ function readBody(req) {
   });
 }
 
+// §ADDED 2026-07-05: readBody above JSON.parses its input, which corrupts
+// binary data — no use for actual zip bytes. A typed file path was never
+// going to work as the real ingest path anyway: browsers do not expose
+// real filesystem paths for dropped/selected files (Windows included —
+// drag-and-drop from Explorer hands back a File object with bytes, never
+// C:\Users\...\thing.zip). This reads the raw body as a Buffer instead,
+// capped generously since real build zips run large (loom/ingest/index.js's
+// own header cites a 178MB/10,991-entry example).
+function readRawBody(req, maxBytes = 500 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', c => {
+      size += c.length;
+      if (size > maxBytes) { req.destroy(); reject(new Error(`upload exceeds ${maxBytes} byte limit`)); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const p = url.pathname;
   const method = req.method;
 
   try {
+    if (method === 'GET' && (p === '/' || p === '/ui')) {
+      const html = fs.readFileSync(path.join(__dirname, 'ui', 'index.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
     if (method === 'GET' && p === '/events') {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache',
@@ -93,7 +174,9 @@ const server = http.createServer(async (req, res) => {
         id: 'loom-v1', systemId: SYSTEM_ID, version: VERSION,
         routes: ['GET /health', 'GET /contract', 'GET /api/registry/:kind',
           'GET /api/registry/:kind/:id', 'POST /api/registry/:kind', 'GET /api/graph',
-          'POST /api/contracts', 'POST /api/contracts/:id/handoff', 'POST /api/contracts/:id/close'],
+          'POST /api/contracts', 'POST /api/contracts/:id/handoff', 'POST /api/contracts/:id/close',
+          'POST /api/ingest', 'POST /api/ingest-upload', 'GET /api/revisions', 'GET /api/revisions/:id',
+          'GET /api/templates', 'POST /api/scaffold'],
       });
     }
 
@@ -122,6 +205,99 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'GET' && p === '/api/graph') {
       return json(res, 200, { ok: true, graph: driver.registry.graph() });
+    }
+
+    // ── Ingest (LoomIngest) — old iteration zips ─────────────────────────
+    // POST /api/ingest {zipPath, label} — matches LoomIngest's own contract:
+    // "the function a drop handler will call once UI exists." zipPath must
+    // be a path already on this machine (an uploaded file's saved path,
+    // or a CLI-supplied path) — this endpoint does not accept raw upload
+    // bytes; that's a separate, later concern (multipart handling), not
+    // implied by wiring the existing ingest call in.
+    if (method === 'POST' && p === '/api/ingest') {
+      const body = await readBody(req);
+      if (!body?.zipPath) return json(res, 400, { ok: false, error: 'zipPath is required' });
+      try {
+        const record = ingest.ingestZip(body.zipPath, { label: body.label });
+        cortexSync.record('ingest', 'revision', record);
+        _broadcast('loom.revision.ingested', { id: record.id, label: record.label, alreadyIngested: !!record.alreadyIngested });
+        return json(res, 200, { ok: true, record: { ...record, _rawEntries: undefined } });
+      } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+    }
+
+    if (method === 'GET' && p === '/api/revisions') {
+      // §fix: RevisionRegistry.all() returns {id: record, ...}, not an
+      // array — Object.values(), not .map() directly on the result.
+      const revisions = Object.values(ingest.revisions.all()).map(r => ({ ...r, _rawEntries: undefined }));
+      return json(res, 200, { ok: true, revisions });
+    }
+
+    if (method === 'GET' && /^\/api\/revisions\/[^/]+$/.test(p)) {
+      const id = decodeURIComponent(p.split('/')[3]);
+      const record = ingest.revisions.get(id);
+      if (!record) return json(res, 404, { ok: false, error: 'not found' });
+      return json(res, 200, { ok: true, record: { ...record, _rawEntries: undefined }, summary: ingest.summary(id) });
+    }
+
+    // ── Scaffold (system-scaffold.js) — templates + custom operations ────────
+    // GET /api/templates — named, pre-built operation sets a checkbox UI
+    // picks from. Each entry is real operations, in system-scaffold's own
+    // {id, verb, method, apiPath, params, description} shape — checking a
+    // template box and unchecking one operation from it is a normal edit,
+    // not a special case, because both paths produce the same operations
+    // array scaffoldSystem() already accepts.
+    if (method === 'GET' && p === '/api/templates') {
+      return json(res, 200, { ok: true, templates: SCAFFOLD_TEMPLATES });
+    }
+
+    // POST /api/ingest-upload — real file upload, the actual drag-and-drop
+    // path. Filename comes via X-Filename header (URL-encoded) since this
+    // is a raw binary body, not multipart/form-data — no new dependency
+    // added for it, same zero-dependency stance loom/ingest/index.js's own
+    // header states. Saves to disk, then runs the exact same ingestZip()
+    // the path-based /api/ingest above uses — one ingest engine, two ways
+    // to hand it a file.
+    if (method === 'POST' && p === '/api/ingest-upload') {
+      const rawName = req.headers['x-filename'];
+      if (!rawName) return json(res, 400, { ok: false, error: 'X-Filename header is required' });
+      const filename = decodeURIComponent(rawName).replace(/[^a-zA-Z0-9._-]/g, '_');
+      let buf;
+      try { buf = await readRawBody(req); }
+      catch (e) { return json(res, 413, { ok: false, error: e.message }); }
+      if (!buf.length) return json(res, 400, { ok: false, error: 'empty upload' });
+
+      const uploadDir = path.join(__dirname, '..', 'data', 'loom', 'uploads');
+      fs.mkdirSync(uploadDir, { recursive: true });
+      const savedPath = path.join(uploadDir, `${Date.now()}__${filename}`);
+      fs.writeFileSync(savedPath, buf);
+
+      try {
+        const record = ingest.ingestZip(savedPath, { label: filename });
+        cortexSync.record('ingest', 'revision', record);
+        _broadcast('loom.revision.ingested', { id: record.id, label: record.label, alreadyIngested: !!record.alreadyIngested });
+        return json(res, 200, { ok: true, record: { ...record, _rawEntries: undefined } });
+      } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+    }
+
+    if (method === 'POST' && p === '/api/scaffold') {
+      const body = await readBody(req);
+      const { name, port, purpose, operations } = body || {};
+      if (!name || !port || !operations) {
+        return json(res, 400, { ok: false, error: 'name, port, and operations are required' });
+      }
+      try {
+        const result = scaffoldSystem(name, {
+          port, purpose, operations,
+          outDir: path.join(__dirname, '..', 'data', 'loom', 'scaffolded'),
+          // no dataDir override — same loom/data/registry.json the live
+          // `driver` above already reads, so a scaffolded component shows
+          // up in /api/registry and /api/graph immediately, not in a
+          // second, disconnected registry file.
+        });
+        cortexSync.record('scaffold', 'component', { name, port, operations: operations.map(o => o.id) });
+        _broadcast('loom.system.scaffolded', { name, port, fileCount: result.written.length });
+        return json(res, 200, { ok: true, ...result });
+      } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
     }
 
     // ── Contracts (LoomContracts) ────────────────────────────────────────

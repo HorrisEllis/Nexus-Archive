@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Architect UTL — minimal proof</title>
+<style>
+body { font-family: monospace; background: #0a0a0a; color: #ddd; padding: 30px; max-width: 900px; margin: 0 auto; }
+textarea { width: 100%; height: 80px; background: #111; color: #0f8; border: 1px solid #333; padding: 10px; font-family: monospace; font-size: 13px; }
+button { margin-top: 8px; padding: 8px 16px; background: #0f8; color: #000; border: none; cursor: pointer; font-family: monospace; font-weight: bold; }
+.result { margin-top: 20px; }
+.section { margin-bottom: 16px; padding: 10px; border-left: 3px solid #444; }
+.section h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; opacity: 0.6; }
+.constraint { border-left-color: #f80; }
+.gap { border-left-color: #f04; }
+.tension { border-left-color: #08f; }
+.meta { opacity: 0.5; font-size: 11px; margin-top: 4px; }
+.empty { opacity: 0.4; font-style: italic; }
+</style>
+</head>
+<body>
+<h2>Architect UTL — minimal, unstyled, real</h2>
+<p style="opacity:0.6">Types your real intent, calls the real /api/translate/utl endpoint, shows exactly what comes back. No mock, no simulation.</p>
+<textarea id="input" placeholder="e.g. The system must never expose raw credentials, but the retry logic is missing a backoff strategy.">The system must never expose raw credentials, but the retry logic is missing a backoff strategy.</textarea>
+<br>
+<button onclick="run()">Send to Architect (real call)</button>
+<div id="result" class="result"></div>
+
+<script>
+async function run() {
+  const text = document.getElementById('input').value;
+  const resultEl = document.getElementById('result');
+  resultEl.innerHTML = '<span class="empty">calling http://127.0.0.1:3747/api/translate/utl...</span>';
+  try {
+    const r = await fetch('http://127.0.0.1:3747/api/translate/utl', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text })
+    });
+    const data = await r.json();
+    if (!data.ok) { resultEl.innerHTML = '<span style="color:#f44">Error: ' + (data.error||'unknown') + '</span>'; return; }
+    const result = data.result;
+    let html = '<div class="meta">type_signature: ' + result.type_signature + ' | confidence: ' + result.confidence.toFixed(3) + '</div>';
+
+    html += '<div class="section constraint"><h3>Constraints (' + result.constraints.length + ')</h3>';
+    html += result.constraints.length
+      ? result.constraints.map(c => '<div>[' + c.type + '] ' + c.description + '</div>').join('')
+      : '<span class="empty">none extracted</span>';
+    html += '</div>';
+
+    html += '<div class="section gap"><h3>Gaps (' + result.gaps.length + ')</h3>';
+    html += result.gaps.length
+      ? result.gaps.map(g => '<div>' + (g.description || JSON.stringify(g)) + '</div>').join('')
+      : '<span class="empty">none extracted</span>';
+    html += '</div>';
+
+    html += '<div class="section tension"><h3>Tensions (' + result.tensions.length + ')</h3>';
+    html += result.tensions.length
+      ? result.tensions.map(t => '<div>' + t.description + '</div>').join('')
+      : '<span class="empty">none extracted</span>';
+    html += '</div>';
+
+    resultEl.innerHTML = html;
+  } catch (e) {
+    resultEl.innerHTML = '<span style="color:#f44">Fetch failed: ' + e.message + ' — is Architect running on :3747?</span>';
+  }
+}
+</script>
+</body>
+</html>

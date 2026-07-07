@@ -262,6 +262,21 @@ function _toCortex(type, payload = {}) {
     body: JSON.stringify({ type, payload: { ...payload, _account:getAccount(), _chatUrl:location.href },
       source:'userscript-claude', causedBy:currentJobId||null, ts:Date.now() }) }).catch(()=>{});
 }
+// §GAP CLOSED 2026-07-06 — same fix as userscript-chatgpt.js: _toCortex
+// only ever sent metadata shells, never real content. See that file's
+// comment for the full explanation.
+// §BUG FIXED 2026-07-06 — same fix as userscript-chatgpt.js: cortex now
+// rejects pushes over 256KB, so this truncates client-side instead of
+// letting an oversized push silently vanish via the fire-and-forget catch.
+const CORTEX_PUSH_LIMIT = 250 * 1024;
+function _toCortexPush(content, tags = [], tier = 'session') {
+  let body = content;
+  if (typeof body === 'string' && body.length > CORTEX_PUSH_LIMIT) {
+    body = body.slice(0, CORTEX_PUSH_LIMIT) + '\n\n[...truncated, exceeded push size limit...]';
+  }
+  fetch(`${CORTEX_URL}/api/push`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+    body: JSON.stringify({ content: body, tags, tier }) }).catch(()=>{});
+}
 function _toBridge(type, payload = {}) {
   fetch(`${NCP_URL}/result`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ type, ...payload, ts:Date.now() }) }).catch(()=>{});
@@ -438,6 +453,7 @@ async function scanArtifacts(jobId) {
     // Then send to guardian/cortex
     send({ type:'GUARDIAN_ARTIFACT', jobId, content:art.content, lang, hash, chatUrl:location.href, account:getAccount() });
     _toCortex('guardian.artifact', { jobId, hash, lang, chars:content.length });
+    _toCortexPush(content, ['artifact', lang, `job:${jobId}`], 'session');
     _log('ok', `Artifact: ${lang} ${hash}`, `${content.length}ch`);
     if (panelOpen && activeTab==='arts') renderArts();
   }
@@ -594,11 +610,18 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
     currentGaps = [...issues, ...currentGaps].slice(0,100);
     if (retryCount === 0) autoRetry(jobId, text, retryCount);
     send({ type:'GUARDIAN_GAPS', jobId, gaps:issues, chatUrl:location.href, account:getAccount() });
-    _toCortex('cortex.gap.found', { jobId, gaps:issues, source:'userscript-detector' });
+    // §BUG FIXED 2026-07-06 — same fix as userscript-chatgpt.js: batched
+    // event hid every real gap from nexus-heal-loop.js. See that file's
+    // comment for the full traced root cause.
+    for (const issue of issues) {
+      _toCortex('cortex.gap.found', { jobId, type: issue.type, description: issue.reason,
+        score: issue.score, source: 'userscript-detector' });
+    }
   }
 
   send({ type:'GUARDIAN_COMPLETE', jobId, text, chatUrl:location.href, account:getAccount(), requestId:jobId });
   _toCortex('guardian.job.complete', { jobId, chars:text.length, ms, usage });
+  _toCortexPush(text, ['conversation', 'claude', `job:${jobId}`], 'session');
   _toBridge('guardian.job.complete', { jobId, chars:text.length, ms, provider:PROVIDER });
   sendLedger('UPGRADE', `Job complete · #${jobId.slice(0,8)}`, { jobId, chars:text.length, ms });
 

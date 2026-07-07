@@ -267,6 +267,30 @@ function _toCortex(type, payload = {}) {
     body: JSON.stringify({ type, payload: { ...payload, _account:getAccount(), _chatUrl:location.href },
       source:'userscript-chatgpt', causedBy:currentJobId||null, ts:Date.now() }) }).catch(()=>{});
 }
+// §GAP CLOSED 2026-07-06: _toCortex above only ever sent metadata shells
+// to /api/event (hash+length for artifacts, char-count for completed
+// jobs) — the actual conversation/artifact content never reached Cortex
+// anywhere, confirmed by reading every _toCortex call site in this file.
+// This pushes the real content through the new /api/push (real
+// implementation, cortex/push-recall.js) so it's actually recallable
+// later, not just an event-log entry saying something happened.
+// §BUG FIXED 2026-07-06 — cortex/push-recall.js now rejects anything over
+// 256KB (found by adversarial testing that push() had no limit at all).
+// This call is fire-and-forget (.catch(()=>{}) below) — before this fix,
+// an oversized artifact or long conversation would now silently vanish
+// instead of the old unbounded-but-successful behavior. That's a
+// regression the size-limit fix would have caused on its own if nothing
+// upstream respected it. Truncating here instead, with a visible marker,
+// so recall() later shows a real (if partial) result, not nothing.
+const CORTEX_PUSH_LIMIT = 250 * 1024; // slightly under the 256KB server limit, room for JSON overhead
+function _toCortexPush(content, tags = [], tier = 'session') {
+  let body = content;
+  if (typeof body === 'string' && body.length > CORTEX_PUSH_LIMIT) {
+    body = body.slice(0, CORTEX_PUSH_LIMIT) + '\n\n[...truncated, exceeded push size limit...]';
+  }
+  fetch(`${CORTEX_URL}/api/push`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+    body: JSON.stringify({ content: body, tags, tier }) }).catch(()=>{});
+}
 function _toBridge(type, payload = {}) {
   fetch(`${NCP_URL}/result`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ type, ...payload, ts:Date.now() }) }).catch(()=>{});
@@ -443,6 +467,7 @@ async function scanArtifacts(jobId) {
     // Then send to guardian/cortex
     send({ type:'GUARDIAN_ARTIFACT', jobId, content:art.content, lang, hash, chatUrl:location.href, account:getAccount() });
     _toCortex('guardian.artifact', { jobId, hash, lang, chars:content.length });
+    _toCortexPush(content, ['artifact', lang, `job:${jobId}`], 'session');
     _log('ok', `Artifact: ${lang} ${hash}`, `${content.length}ch`);
     if (panelOpen && activeTab==='arts') renderArts();
   }
@@ -609,11 +634,24 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
     currentGaps = [...issues, ...currentGaps].slice(0,100);
     if (retryCount === 0) autoRetry(jobId, text, retryCount);
     send({ type:'GUARDIAN_GAPS', jobId, gaps:issues, chatUrl:location.href, account:getAccount() });
-    _toCortex('cortex.gap.found', { jobId, gaps:issues, source:'userscript-detector' });
+    // §BUG FIXED 2026-07-06 — this single batched event, shaped
+    // {jobId, gaps: issues, source}, matched nexus-heal-loop.js's
+    // '.gap.found' substring listener but had none of the fields
+    // (description/type/body/path) it expects from a SINGLE gap —
+    // traced through Architect's real event log showing 928/928 UTL
+    // calls landing on empty input because of exactly this. Each real
+    // issue already has a real `type` and `reason` — emitting one event
+    // per issue lets the heal loop actually classify and act on them
+    // individually instead of every one being invisible inside a batch.
+    for (const issue of issues) {
+      _toCortex('cortex.gap.found', { jobId, type: issue.type, description: issue.reason,
+        score: issue.score, source: 'userscript-detector' });
+    }
   }
 
   send({ type:'GUARDIAN_COMPLETE', jobId, text, chatUrl:location.href, account:getAccount(), requestId:jobId });
   _toCortex('guardian.job.complete', { jobId, chars:text.length, ms, usage });
+  _toCortexPush(text, ['conversation', 'chatgpt', `job:${jobId}`], 'session');
   _toBridge('guardian.job.complete', { jobId, chars:text.length, ms, provider:PROVIDER });
   sendLedger('UPGRADE', `Job complete · #${jobId.slice(0,8)}`, { jobId, chars:text.length, ms });
 

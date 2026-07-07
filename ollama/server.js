@@ -44,10 +44,31 @@ const _cw = require('../lib/cortex-write')('ollama');
 const SYSTEM_ID = 'ollama';
 const VERSION   = '1.0.0';
 
+// §GAP CLOSED 2026-07-05: WARP (warp/dispatch/) had zero production
+// callers anywhere in this codebase — built, 64/64 tests passing, never
+// actually invoked outside its own test suite. This is its first real
+// caller. NEXUS importing WARP is the allowed direction per WARP's own
+// spec ("NEXUS imports WARP, WARP never imports NEXUS") — nothing in
+// warp/ changes or knows about ollama; this file adapts ollama's job
+// shape to WARP's five-primitive interface, the same way
+// lib/seam/adapters/warp-cascade.js adapts a seam record's shape.
+// Concrete, measurable effect: an identical prompt+model dispatched
+// twice now costs one real model call instead of two — WARP's own
+// stated purpose ("gets faster and cheaper the longer it runs"), not
+// previously true anywhere in this codebase because nothing called it.
+const { unifiedDispatch }      = require('../warp/dispatch/index');
+const { runCascade }           = require('../warp/dispatch/cascade');
+const { FlatFileCrystallizer } = require('../warp/plugins/crystallizer-flatfile');
+const { PopulationStore }      = require('../warp/dispatch/population');
+
+const _crystallizer = new FlatFileCrystallizer({ path: path.join(DATA_DIR, 'warp-crystals.json') });
+const _population    = new PopulationStore({ maxPerClass: 8 });
+
 // ── Job queue ─────────────────────────────────────────────────────────────────
 const _queue    = [];    // waiting
 const _running  = new Map(); // jobId → job
 const _complete = [];   // last 100
+const _uploads  = new Map(); // uploadId → {text, filename, uploadedAt} — bounded to 200 in the handler
 const _sseClients = new Set();
 
 let _ollamaOnline = false;
@@ -73,7 +94,32 @@ setInterval(async () => {
   if (was !== _ollamaOnline) broadcast(_ollamaOnline ? 'ollama.health.ok' : 'ollama.health.degraded', {});
 }, 10000);
 
-// ── Job dispatcher ────────────────────────────────────────────────────────────
+// ── Raw Ollama call — unchanged mechanics, now WARP's `generate` fn ────────
+function _callOllamaRaw(model, prompt, maxTokens, timeoutMs) {
+  const body = JSON.stringify({ model, prompt, stream: false,
+    options: { num_predict: maxTokens || 2048, temperature: 0.2 } });
+  return new Promise((resolve, reject) => {
+    const u   = new URL(`${OLLAMA_HOST}/api/generate`);
+    const req = http.request({
+      hostname: u.hostname, port: u.port || 11434,
+      path: u.pathname, method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: timeoutMs || 45000,
+    }, r => {
+      let d = '';
+      r.on('data', c => d += c);
+      r.on('end', () => {
+        try { resolve(JSON.parse(d).response || ''); }
+        catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('ollama request timeout')); });
+    req.end(body);
+  });
+}
+
+// ── Job dispatcher — now runs through WARP's unifiedDispatch ───────────────
 async function _dispatch(job) {
   _running.set(job.uuid, job);
   job.status = 'running';
@@ -82,73 +128,75 @@ async function _dispatch(job) {
 
   // §seam-integration 2026-07-02 — SEAM Detector now lives in lib/seam/
   // which makes it accessible to any provider, not just guardian/NCP paths.
-  // Ollama uses the Detector directly for response quality scoring without
-  // requiring the full state machine (which needs a jaa + ncpPush context).
   let _detector = null;
   try { _detector = require('../lib/seam/detector.js').Detector; } catch(_) {}
 
   const model = job.model || DEFAULT_MODEL;
-  const body  = JSON.stringify({ model, prompt: job.prompt, stream: false,
-    options: { num_predict: job.maxTokens || 2048, temperature: 0.2 } });
+  const { Axiom } = require('../warp/core/Axiom');
+  const axioms = (job.axioms || []).map(a =>
+    a instanceof Axiom ? a : new Axiom(a.id || `job.axiom.${Math.random()}`, { severity: a.severity || 'soft', check: a.check || (() => true) }));
 
-  return new Promise(res => {
-    const u    = new URL(`${OLLAMA_HOST}/api/generate`);
-    const req  = http.request({
-      hostname: u.hostname, port: u.port || 11434,
-      path: u.pathname, method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: job.timeoutMs || 45000,
-    }, r => {
-      let d = '';
-      r.on('data', c => d += c);
-      r.on('end', () => {
-        try {
-          const resp = JSON.parse(d);
-          job.result      = resp.response || '';
-          job.status      = 'complete';
-          job.completedAt = Date.now();
-          job.durationMs  = job.completedAt - job.startedAt;
+  const cascade = ({ event }) => runCascade({
+    providers: ['ollama'],
+    maxAttempts: 1,
+    generate: () => _callOllamaRaw(model, event.data.prompt, job.maxTokens, job.timeoutMs),
+    validate: (output) => ({ ok: true, output }), // hard-axiom filtering happens in unifiedDispatch itself
+  }).then(r => ({ ok: r.ok, output: r.output, attempts: r.attempts }));
 
-          // SEAM quality check — same Detector used by guardian for NCP responses
-          if (_detector && job.result) {
-            const profile    = _detector.profile(job.result);
-            const truncation = _detector.truncation(job.result, profile);
-            const sigma      = _detector.sigma(job.result, profile);
-            const delta      = _detector.delta(job.result, job.prompt || '', job.axioms || []);
-            job.seamScore    = { truncated: truncation.truncated, composite: sigma.composite, passed: !truncation.truncated && sigma.composite < 0.35 };
-            if (!job.seamScore.passed) broadcast('ollama.seam.quality_low', { uuid: job.uuid, score: job.seamScore });
-          }
-
-          _statsToday.completed++;
-          broadcast('ollama.job.complete', { uuid: job.uuid, durationMs: job.durationMs,
-            model, componentId: job.componentId, hookId: job.hookId,
-            requestId: job.requestId, intent: job.intent });
-          _writeToCortex(job);
-        } catch(e) {
-          job.status = 'failed'; job.error = e.message; _statsToday.failed++;
-          broadcast('ollama.job.failed', { uuid: job.uuid, error: e.message });
-        }
-        _running.delete(job.uuid);
-        _complete.unshift(job);
-        if (_complete.length > 100) _complete.pop();
-        res(job);
-        _pump();
-      });
+  try {
+    const result = await unifiedDispatch({
+      gateSignature: `ollama.${model}`,
+      gateClass:     `ollama.${model}`,
+      event:         { data: { prompt: job.prompt } },
+      axioms, cascade,
+      crystallizer:  _crystallizer,
+      population:    _population,
+      scorer:        ({ axiomFailures }) => 1 - axiomFailures.length * 0.1,
+      log: null,
     });
-    req.on('error', e => {
-      job.status = 'failed'; job.error = e.message; _statsToday.failed++;
-      broadcast('ollama.job.failed', { uuid: job.uuid, error: e.message });
-      _running.delete(job.uuid);
-      _complete.unshift(job);
-      res(job);
+
+    if (!result.ok) {
+      job.status = 'failed'; job.error = 'axiom rejection: ' + JSON.stringify(result.failures || []);
+      _statsToday.failed++;
+      broadcast('ollama.job.failed', { uuid: job.uuid, error: job.error });
+      _running.delete(job.uuid); _complete.unshift(job);
+      if (_complete.length > 100) _complete.pop();
       _pump();
-    });
-    req.on('timeout', () => {
-      job.status = 'failed'; job.error = 'timeout';
-      req.destroy();
-    });
-    req.write(body); req.end();
-  });
+      return job;
+    }
+
+    job.result      = result.output || '';
+    job.warpSource   = result.source; // 'crystal' (cache hit) | 'generated' | 'pre-generation-reuse'
+    job.status      = 'complete';
+    job.completedAt = Date.now();
+    job.durationMs  = job.completedAt - job.startedAt;
+
+    // SEAM quality check — same Detector used by guardian for NCP responses.
+    // Unchanged by the WARP wiring above — orthogonal concern (WARP decides
+    // whether to regenerate; Detector decides whether what came back, cached
+    // or fresh, is actually good).
+    if (_detector && job.result) {
+      const profile    = _detector.profile(job.result);
+      const truncation = _detector.truncation(job.result, profile);
+      const sigma      = _detector.sigma(job.result, profile);
+      job.seamScore    = { truncated: truncation.truncated, composite: sigma.composite, passed: !truncation.truncated && sigma.composite < 0.35 };
+      if (!job.seamScore.passed) broadcast('ollama.seam.quality_low', { uuid: job.uuid, score: job.seamScore });
+    }
+
+    _statsToday.completed++;
+    broadcast('ollama.job.complete', { uuid: job.uuid, durationMs: job.durationMs,
+      model, componentId: job.componentId, hookId: job.hookId,
+      requestId: job.requestId, intent: job.intent, warpSource: job.warpSource });
+    _writeToCortex(job);
+  } catch (e) {
+    job.status = 'failed'; job.error = e.message; _statsToday.failed++;
+    broadcast('ollama.job.failed', { uuid: job.uuid, error: e.message });
+  }
+  _running.delete(job.uuid);
+  _complete.unshift(job);
+  if (_complete.length > 100) _complete.pop();
+  _pump();
+  return job;
 }
 
 function _pump() {
@@ -208,10 +256,63 @@ async function readBody(req) {
   });
 }
 
+// §ADDED 2026-07-06 — "ollama needs to completely nexus adapt, can read
+// any file like an upload as plaintext." readBody above JSON.parses its
+// input, which corrupts any binary content — no use for a real file
+// upload. This reads the raw bytes, decodes as UTF-8 (explicitly
+// "plaintext" per the request, not an attempt to handle every binary
+// format), capped generously since a dropped file could be a whole
+// source file or log dump, not just a short prompt.
+function readRawBody(req, maxBytes = 25 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', c => {
+      size += c.length;
+      if (size > maxBytes) { req.destroy(); reject(new Error(`upload exceeds ${maxBytes} byte limit`)); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   const url    = new URL(req.url, `http://localhost:${PORT}`);
   const method = req.method;
   const p      = url.pathname;
+
+  // POST /api/upload — real file upload, decoded as plaintext, stored
+  // against an id a subsequent /api/jobs call can reference via
+  // {uploadId}. Filename comes via X-Filename header (URL-encoded), same
+  // no-multipart convention loom/server.js's upload endpoint already
+  // uses — one real pattern, not a second one invented here.
+  if (method === 'POST' && p === '/api/upload') {
+    const rawName = req.headers['x-filename'];
+    let buf;
+    try { buf = await readRawBody(req); }
+    catch (e) { json(res, 413, { ok: false, error: e.message }); return; }
+    if (!buf.length) { json(res, 400, { ok: false, error: 'empty upload' }); return; }
+
+    const text = buf.toString('utf8');
+    const uploadId = crypto.randomUUID();
+    _uploads.set(uploadId, { text, filename: rawName ? decodeURIComponent(rawName) : 'upload.txt', uploadedAt: Date.now() });
+    // Bounded — an upload store that only ever grows is its own slow leak.
+    if (_uploads.size > 200) {
+      const oldest = [..._uploads.entries()].sort((a,b) => a[1].uploadedAt - b[1].uploadedAt)[0][0];
+      _uploads.delete(oldest);
+    }
+    json(res, 200, { ok: true, uploadId, filename: rawName ? decodeURIComponent(rawName) : 'upload.txt', chars: text.length });
+    return;
+  }
+
+  if (method === 'GET' && p.startsWith('/api/upload/')) {
+    const id = p.split('/')[3];
+    const up = _uploads.get(id);
+    if (!up) { json(res, 404, { ok: false, error: 'upload not found — may have expired' }); return; }
+    json(res, 200, { ok: true, ...up });
+    return;
+  }
 
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
@@ -246,9 +347,20 @@ const server = http.createServer(async (req, res) => {
     if (!body.prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
     if (!_ollamaOnline) { json(res, 503, { ok:false, error:'Ollama host unreachable' }); return; }
 
+    // §ADDED 2026-07-06 — a job can reference an uploadId from POST
+    // /api/upload; the file's plaintext is prepended as real context, not
+    // silently dropped if the upload has expired (400, not a job that
+    // quietly runs without the file the caller thought it attached).
+    let prompt = body.prompt;
+    if (body.uploadId) {
+      const up = _uploads.get(body.uploadId);
+      if (!up) { json(res, 400, { ok:false, error:`uploadId '${body.uploadId}' not found — may have expired` }); return; }
+      prompt = `[Uploaded file: ${up.filename}]\n${up.text}\n\n${body.prompt}`;
+    }
+
     const job = {
       uuid:        crypto.randomUUID(),
-      prompt:      body.prompt,
+      prompt,
       model:       body.model || DEFAULT_MODEL,
       maxTokens:   body.maxTokens || 2048,
       timeoutMs:   body.timeoutMs || 45000,

@@ -860,6 +860,24 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
 
   if (M==='GET' && sub==='channels')  return json(res, 200, { ok:true, channels:CHANNELS });
 
+  // §GAP CLOSED 2026-07-06 — lib/nerve/index.js's _pollBus() has been
+  // polling /api/bus/stats since Nerve was built, 404ing silently the
+  // whole time ("keep stale sources rather than null them") — this route
+  // never existed. The write side (heartbeat -> nexusBus.emit) is merged
+  // into the real, pre-existing heartbeat handler further down in this
+  // file (search "Heartbeat from any system") rather than living here as
+  // a separate route — an earlier pass at this fix added a second,
+  // duplicate /api/heartbeat handler at this exact point in the file,
+  // which silently shadowed that real handler (SYSTEM_REGISTRY + SSE
+  // broadcast + health snapshot) ever since, since routes return on
+  // first match and this one came first. Caught and corrected before
+  // building anything further on top of it — removed the duplicate,
+  // merged the one real line it added into the actual handler instead.
+  if (M==='GET' && sub==='bus' && seg[2]==='stats') {
+    if (!nexusBus) return json(res, 503, { ok:false, error:'nexus-bus not available' });
+    return json(res, 200, { ok:true, ...nexusBus.stats() });
+  }
+
   // ── §AXIOM: System registration — all systems call this on boot ───────────
   // Flow: system boots → bus connects → kernel starts → registers here
   if (M==='POST' && sub==='register') {
@@ -1305,6 +1323,15 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
         ...existing, systemId, port, status, meta,
         lastSeen: now, seq, pulseId,
       });
+      // §BUG FIXED 2026-07-06 — a separate, duplicate heartbeat route was
+      // added earlier this session to fix Nerve's empty _sources map, at
+      // an EARLIER point in this file's route-matching order — meaning
+      // it silently shadowed THIS real, richer, pre-existing handler
+      // (SYSTEM_REGISTRY + SSE broadcast + health snapshot) ever since,
+      // turning it into dead code. Found by checking for exactly this
+      // kind of self-inflicted regression before building anything else
+      // on top of it. Merged here instead; the duplicate route is removed.
+      if (nexusBus) nexusBus.emit('system.heartbeat', { port, status }, { source: systemId });
     }
 
     // Build lightweight health snapshot from registry (no outbound requests — fast)
@@ -1866,7 +1893,14 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
       if (!modulePath) return json(res, 400, { ok:false, error:'modulePath required' });
       try {
         const hl = require('./orchestrator/lib/hot-loader');
-        if (!hl._inited) { hl.init({ bus: nexusBus, jaaDB: null }); hl._inited = true; }
+        if (!hl._inited) {
+          // §BUG FIXED 2026-07-06 — was jaaDB: null, same pattern found in
+          // autonomous-loop's init just below. This file already imports a
+          // real jaaDB correctly elsewhere (see the compReg.init calls) —
+          // using that instead of a hardcoded null.
+          const { jaaDB: realJaaDB } = require('./cortex/memory/jaa-db');
+          hl.init({ bus: nexusBus, jaaDB: realJaaDB }); hl._inited = true;
+        }
         const result = await hl.load({ modulePath, src, monitorMs });
         return json(res, result.ok ? 200 : 400, result);
       } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
@@ -1884,7 +1918,15 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
         return json(res, 400, { ok:false, error:'goal, budget, boundary, exit required' });
       try {
         const al = require('./orchestrator/lib/autonomous-loop');
-        al.init({ bus: nexusBus, jaaDB: null, raid: null });
+        // §BUG FIXED 2026-07-06 — was jaaDB: null, meaning
+        // meta/crystal-lattice.js's _maybeCrystallize() (called via
+        // lib/compartment-engine.js's execute() path) always hit its own
+        // `if (!jaa) return {crystallized:false, reason:'jaa-unavailable'}`
+        // guard, guaranteed, every time this ran. This is the one real
+        // trigger for that whole chain — traced directly from the user's
+        // "pattern engine migrated to intuition" report two turns back.
+        const { jaaDB: realJaaDB2 } = require('./cortex/memory/jaa-db');
+        al.init({ bus: nexusBus, jaaDB: realJaaDB2, raid: null });
         const result = await al.run({ goal, budget, boundary, exit:exitCond, source:source||'api' });
         return json(res, result.ok ? 200 : 400, result);
       } catch(e) { return json(res, 500, { ok:false, error:e.message }); }

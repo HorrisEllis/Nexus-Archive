@@ -246,7 +246,25 @@ function attachToBus(bus) {
     if (ev.type.includes('.gap.found') || ev.type.includes('.gap.opened') ||
         ev.type === 'nexus.gap.detected') {
       const gap = ev.payload;
+      // §BUG FIXED 2026-07-06 — traced through Architect's real event log:
+      // 928 of 928 UTL translate calls, since this loop existed, produced
+      // type_signature 'text.empty' with zero exceptions. Root cause:
+      // this listener matches on event TYPE NAME substring only, never
+      // shape. guardian/userscript-{chatgpt,claude}.js emit
+      // 'cortex.gap.found' (matches '.gap.found') with payload
+      // {jobId, gaps: issues, source} — plural `gaps` array, no
+      // description/type/body/path at all. _classifyGap's template
+      // literal against that shape evaluates to two spaces, which
+      // Architect's UTL correctly (but uselessly) reports as empty every
+      // time. Architect's pipeline was never broken — nothing shaped
+      // like a real single gap had ever reached it.
       if (!gap || gap.status === 'resolved') return;
+      const looksLikeSingleGap = gap.description || gap.type || gap.body || gap.path || gap.id || gap.uuid;
+      if (!looksLikeSingleGap) {
+        bus.emit('heal-loop.skipped', { reason: 'payload_shape_mismatch', eventType: ev.type,
+          payloadKeys: Object.keys(gap) }, { source: 'heal-loop' });
+        return;
+      }
       try {
         const result = await healGap(gap);
         bus.emit('heal-loop.result', result, { source: 'heal-loop', causedBy: gap.id || gap.uuid });

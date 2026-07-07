@@ -37,6 +37,8 @@
  *   GET  /api/intelligence/rca           — root cause analysis entries
  *   GET  /api/intelligence/status        — intelligence subsystem health
  *   GET  /api/jaa/:table                 — query any JAA table (safe read)
+ *   POST /api/push                        — real Unified API write (cortex/push-recall.js)
+ *   GET/POST /api/recall                  — real Unified API read, 2 of 5 lanes (lexical+recency)
  *   GET  /api/memory                     — query memory table
  *   POST /api/memory/insert              — insert to memory table
  *   POST /api/memory/forget              — delete from memory table
@@ -71,6 +73,26 @@ const SYSTEM  = 'cortex';
 
 // ── JAA memory store ──────────────────────────────────────────────────────────
 const { jaaDB, uid } = require('./memory/jaa-db');
+
+// §GAP CLOSED 2026-07-06: the spec's "Unified API" (cortex.push/recall,
+// intent IR, 5-lane MQL) was 100% documentation, 0% code — confirmed by
+// reading this file's actual /api/memory/insert handler, which was a raw
+// {table,row} passthrough with no validation. cortex/push-recall.js is
+// the real implementation (2 of 5 lanes honestly — lexical + recency;
+// causal/failure/BEP need structures that don't exist yet, see that
+// file's header), tested standalone before being wired here. Adapter
+// below maps its {insert,tail,all} expectation onto jaaDB's real
+// {insert(table,row), tail(table,n)} signature, targeting one fixed
+// table ('memory_unified') so push/recall don't scatter across whatever
+// table name a caller feels like typing — the exact problem raw
+// {table,row} passthrough caused everywhere else.
+const { CortexPushRecall } = require('./push-recall.js');
+const _pushRecall = new CortexPushRecall({
+  store: {
+    insert: (row) => jaaDB.insert('memory_unified', row),
+    all:    () => jaaDB.tail('memory_unified', 10_000),
+  },
+});
 
 // Ensure data dirs exist
 ['data/cortex/memory', 'data/cortex/ledger', 'data/snapshots'].forEach(d => {
@@ -131,17 +153,33 @@ function _raidDecide(intent, cfrCtx = {}) {
 
 // ── Patterns + RCA ───────────────────────────────────────────────────────────
 function _buildPatterns(limit = 5) {
-  // Read from event_log — look for repeated types
-  const events = jaaDB.tail('event_log', 100);
-  const counts = {};
-  for (const e of events) {
-    const t = e.type || 'unknown';
-    counts[t] = (counts[t] || 0) + 1;
-  }
-  return Object.entries(counts)
-    .sort(([, a], [, b]) => b - a)
+  // §GAP CLOSED 2026-07-06 — traced from the user's own description
+  // ("pattern engine migrated to intuition"): copilot/intuition.js has
+  // called this exact endpoint expecting {precursor, outcome, count,
+  // confidence} since it was written — but this function used to just
+  // tally event_log types, producing {type, count, lastSeen} instead.
+  // Every field intuition.js reads off a returned pattern (p.precursor,
+  // p.outcome, p.confidence) was undefined against the old shape,
+  // meaning "Crystallised patterns" output has always rendered as
+  // "undefined → undefined (NaN%)" whenever this path fired. The real
+  // pattern engine is meta/crystal-lattice.js — it writes real
+  // (domain, verb, outcome) crystals to the 'crystals' JAA table once a
+  // pattern repeats past PATTERN_FREQUENCY_THRESHOLD times, already
+  // wired into orchestrator.js via lib/compartment-engine.js. This reads
+  // that real table instead of re-deriving a shallower stand-in.
+  const crystals = jaaDB.tail('crystals', 50);
+  if (!crystals.length) return []; // honest empty, not a fabricated fallback
+  return crystals
+    .sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0))
     .slice(0, limit)
-    .map(([type, count]) => ({ type, count, lastSeen: Date.now() }));
+    .map(c => ({
+      precursor:  `${c.entry_conditions?.domain || '?'}:${c.entry_conditions?.verb || '?'}`,
+      outcome:    c.exit_conditions?.outcome || 'unknown',
+      count:      c.usage_count || c.pattern_frequency_at_creation || 0,
+      confidence: c.success_probability ?? 0,
+      kind:       c.kind,
+      ts:         c.ts,
+    }));
 }
 
 function _buildRCA(limit = 5) {
@@ -190,9 +228,45 @@ function _intuitionAnswer(prompt) {
 function _mastermindAnalysis(prompt, contextSnippet) {
   const gaps   = jaaDB.query('gaps', { status: 'open' }, { limit: 3 });
   const regime = _field.regime;
+
+  // §UPGRADED 2026-07-07 — was concatenating current state ("Open issues:
+  // TYPE") without ever tracing WHY. Builds a real, bounded causal graph
+  // on-demand from the last 300 event_log rows (Cortex has no live CFR
+  // ledger of its own — that lives per-process in each of the 9 real
+  // consumers — so this is a genuine cross-section of what's actually
+  // stored here, not a fabricated or live-streaming one) and walks
+  // CausalGraph.ancestors() for each open gap, the same class extended
+  // earlier this session for RAID's topologicalProximity. Falls back to
+  // the old "Open issues: TYPE" phrasing when no real chain exists —
+  // never invents a cause that isn't in the data.
+  const { CausalGraph } = require('../meta/cfr/graph.js');
+  const graph = new CausalGraph();
+  const recentEvents = jaaDB.tail('event_log', 300);
+  for (const ev of recentEvents) graph.ingest(ev);
+  for (const g of gaps) graph.ingest({ uuid: g.id, id: g.id, ts: g.ts, type: g.type, causedBy: g.causedBy || null, source: g.source });
+
+  const traces = [];
+  const untraced = [];
+  for (const g of gaps) {
+    const chain = graph.ancestors(g.id);
+    if (chain.length > 1) {
+      traces.push(`Root-cause trace for '${g.type || g.id}': ${chain.map(e => e.type || e.id).join(' → ')}.`);
+    } else {
+      // §BUG FIXED 2026-07-07 — found by testing a mixed case (one gap
+      // with a real trace, one without) directly: the original logic
+      // only showed the generic "Open issues" line when NO gap had a
+      // trace at all, so an untraced gap sitting alongside a traced one
+      // was silently dropped from the output entirely — not degraded,
+      // just missing. Every gap now contributes something.
+      untraced.push(g.type || g.id);
+    }
+  }
+
   const lines  = [
     `Causal field: regime=${regime}, coherence=${_field.coherence.toFixed(2)}, entropy=${_field.entropy.toFixed(2)}.`,
-    gaps.length ? `Open issues (${gaps.length}): ${gaps.map(g => g.type || g.id).join(', ')}.` : 'No open issues.',
+    ...traces,
+    untraced.length ? `Open issues (no traced cause) (${untraced.length}): ${untraced.join(', ')}.` : '',
+    (!gaps.length) ? 'No open issues.' : '',
     contextSnippet ? `Context: ${String(contextSnippet).slice(0, 200)}` : '',
   ].filter(Boolean);
   return {
@@ -300,52 +374,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /cfr/graph — §gap-closed 2026-07-05: registry-components.js has
-  // declared 'cfr.graph — Causal graph nodes + edges' on cortex since
-  // v3.2.0, and this route never existed (§1.1 violation: declared, not
-  // proven). Cortex doesn't run a CFR ledger of its own — but it holds
-  // the one CROSS-system event_log (every kernel forwards here via
-  // _toCortex), so its graph is the inter-system one no single kernel's
-  // /cfr/graph can produce. Edge rules mirror meta/cfr/graph.js: explicit
-  // causedBy (1.0), shared job/queue chain (0.8), temporal <2s within the
-  // same source (0.4).
-  if (p === '/cfr/graph' && method === 'GET') {
-    const nCap = Math.min(150, parseInt(url.searchParams.get('nodes') || '80'));
-    const rows = jaaDB.tail('event_log', nCap).reverse(); // oldest→newest
-    const nodes = rows.map(r => ({
-      id:     r.uuid || r.id,
-      label:  r.type || '?',
-      source: r.source || String(r.type || '').split('.')[0] || 'cortex',
-      sigma:  r.sigma?.score ?? r.sigma ?? 0,
-      regime: _field.regime,
-      ts:     r.ts,
-    }));
-    const edges = [];
-    const byChain = new Map(); // jobId/queue_uuid → last node id
-    const lastBySource = new Map(); // source → { id, ts }
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i], id = r.uuid || r.id;
-      if (!id) continue;
-      if (r.causedBy) edges.push({ from: r.causedBy, to: id, type: 'causal', weight: 1.0 });
-      const chain = r.jobId || r.queue_uuid || r.payload?.jobId || null;
-      if (chain) {
-        const prev = byChain.get(chain);
-        if (prev) edges.push({ from: prev, to: id, type: 'job', weight: 0.8 });
-        byChain.set(chain, id);
-      }
-      const src = nodes[i].source;
-      const lastS = lastBySource.get(src);
-      if (lastS && (r.ts - lastS.ts) < 2000)
-        edges.push({ from: lastS.id, to: id, type: 'temporal', weight: 0.4 });
-      lastBySource.set(src, { id, ts: r.ts });
-    }
-    const ids = new Set(nodes.map(n => n.id));
-    json(res, 200, { ok: true, system: 'cortex', nodes,
-      edges: edges.filter(e => ids.has(e.from) && ids.has(e.to)).slice(-250),
-      counts: { nodes: nodes.length } });
-    return;
-  }
-
   // ── Hooks/wires summary — relational pressure feed ────────────────────────
   // §pressure-system fix 2026-06-30 — this is the route
   // ui/tv-shell/spotlight/spotlight.js's wireRelationalTension() has been
@@ -439,22 +467,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/intelligence/intuition') {
     const body   = method === 'POST' ? await readBody(req) : {};
     const prompt = body.prompt || url.searchParams.get('prompt') || '';
-    // §gap-closed 2026-07-05 — _intuitionAnswer's fast-path miss returned
-    // { text:null, confidence:0 } with a comment saying "caller should use
-    // mastermind/Ollama" — but no caller anywhere performs that fallback
-    // (the brain UI stringifies the null object; copilot's cortex.intuition
-    // layer surfaces it as an empty answer, which is the exact
-    // {"ok":true,"text":null} the operator hit). Per §1.2, the escalation
-    // lives HERE: fast-path miss falls through to mastermind's causal
-    // read of the live field, so this endpoint always answers with
-    // something real and says which engine produced it.
-    const fast = _intuitionAnswer(prompt);
-    if (fast.text !== null) { json(res, 200, fast); return; }
-    const mm = _mastermindAnalysis(prompt, body.context);
-    json(res, 200, {
-      ok: true, text: mm.analysis, intent: 'causal',
-      confidence: 0.55, modelUsed: 'cortex.mastermind', escalatedFrom: 'cortex.intuition',
-    });
+    json(res, 200, _intuitionAnswer(prompt));
     return;
   }
 
@@ -494,6 +507,37 @@ const server = http.createServer(async (req, res) => {
     let rows = jaaDB.tail(table, n * 2);
     if (sessionId) rows = rows.filter(r => r.sessionId === sessionId || r.session_id === sessionId);
     json(res, 200, { ok: true, table, rows: rows.slice(0, n), count: rows.length });
+    return;
+  }
+
+  if (p === '/api/push') {
+    const body = await readBody(req);
+    const { content, tags, tier } = body;
+    try {
+      const result = _pushRecall.push(content, tags, tier);
+      json(res, 200, { ok: true, ...result });
+    } catch (e) {
+      // §ADDED 2026-07-06 — a rejected push used to just return a 400 and
+      // vanish. Real failure now lands in data/cortex/failures.jsonl,
+      // queryable via lib/ledger-writer.readLatest('cortex','failures',n).
+      try { require('../lib/ledger-writer').writeFailure('cortex', e, { module: 'push-recall', source: 'api.push' }); } catch(_) {}
+      json(res, 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  if (p === '/api/recall') {
+    let intent = url.searchParams.get('intent');
+    const query = url.searchParams.get('query');
+    const tier  = url.searchParams.get('tier') || null;
+    if (!intent && method === 'POST') {
+      const body = await readBody(req);
+      intent = body.intent;
+    }
+    try {
+      const results = _pushRecall.recall(intent, { query }, tier);
+      json(res, 200, { ok: true, results, count: results.length });
+    } catch (e) { json(res, 400, { ok: false, error: e.message }); }
     return;
   }
 
@@ -575,6 +619,27 @@ const server = http.createServer(async (req, res) => {
     }
     const snaps = jaaDB.tail('snapshots', p === '/api/snapshots' ? 20 : 1);
     json(res, 200, { ok: true, snapshots: snaps, latest: snaps[0] || null });
+    return;
+  }
+
+  // §GAP CLOSED 2026-07-06 — snapshots could be created and read, but
+  // nothing ever restored state FROM one. hooks/cortex.hooks.js declares
+  // this as /api/snapshots/rollback; real path kept flatter
+  // (/api/snapshot/rollback) matching this file's own /api/snapshot
+  // singular convention — the registry needs updating to match, not the
+  // other way around, since /api/snapshot (not /api/snapshots) is what
+  // every other route here already uses as the base.
+  if (p === '/api/snapshot/rollback' && method === 'POST') {
+    const body = await readBody(req);
+    const { id } = body || {};
+    if (!id) { json(res, 400, { ok: false, error: 'id required' }); return; }
+    const all = jaaDB.tail('snapshots', 500);
+    const target = all.find(s => s.id === id);
+    if (!target) { json(res, 404, { ok: false, error: `snapshot '${id}' not found` }); return; }
+    const before = { ..._field };
+    Object.assign(_field, target.field);
+    jaaDB.insert('event_log', { type: 'cortex.snapshot.rolled_back', payload: { id, before, after: { ..._field } }, source: 'cortex', ts: Date.now() });
+    json(res, 200, { ok: true, restoredFrom: id, field: { ..._field } });
     return;
   }
 

@@ -60,6 +60,7 @@ function getAgentSuite() {
 getSpecEngine(); getAgentSuite();
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
+import { dispatchChunkWithVerification } from '../spec-engine/chunk-dispatch.js';
 import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
 
@@ -642,18 +643,26 @@ async function handle(req, res, route, query, body) {
 
         se.markChunkBuilding(params.uuid, chunk.uuid, { agent: preferAgent });
 
-        // Dispatch to agent — non-blocking, chunk builds async.
-        // tag: params.uuid ties every torrent-style chunk of this one spec
-        // together, so a ChatGPT/Claude fallback can be found later via
-        // GET /jobs/by-tag/:uuid without idearium needing to track jobIds
-        // for chunks it didn't wait around for.
-        as.buildChunkWithAgent(chunkPrompt, { preferAgent, tag: params.uuid }).then(async result => {
+        // §GAP CLOSED 2026-07-06 — this used to be a single, unverified
+        // call to as.buildChunkWithAgent(): one attempt, no retry, no
+        // quality check. A truncated or off-topic response was
+        // indistinguishable from a good one until a human noticed.
+        // dispatchChunkWithVerification wraps the same dispatch function
+        // in a real QueueCompartment (lib/seam/queue.js) — the identical
+        // multi-strategy retry ladder and Detector-based verification
+        // Guardian already uses for its own chunks. Same promise-based
+        // contract as before; the .then/.catch below is unchanged.
+        dispatchChunkWithVerification(chunkPrompt, chunk,
+          (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts),
+          { preferAgent }
+        ).then(async result => {
           if (result.ok && !result.queued && result.text) {
             se.completeChunk(params.uuid, chunk.uuid, result.text);
             const updatedManifest = se.loadSpec(params.uuid);
             os.emit('idearium.spec-engine.chunk.complete', {
               specUuid: params.uuid, chunkUuid: chunk.uuid,
               sectionId: chunk.sectionId, progress: updatedManifest.progress,
+              verifiedAttempts: result.attempts, detectionComposite: result.detection?.composite,
             });
           } else if (result.queued) {
             // ChatGPT/Claude — chunk will complete via guardian job callback
@@ -661,7 +670,7 @@ async function handle(req, res, route, query, body) {
               specUuid: params.uuid, chunkUuid: chunk.uuid, jobId: result.jobId, agent: result.agent,
             });
           } else {
-            se.failChunk(params.uuid, chunk.uuid, result.error || 'agent dispatch failed');
+            se.failChunk(params.uuid, chunk.uuid, result.error || 'agent dispatch failed after verification retries');
           }
         }).catch(e => se.failChunk(params.uuid, chunk.uuid, e.message));
 

@@ -67,92 +67,12 @@ if (_replayed.length) {
 // that destructures a single object) while nothing ever exercised that path to
 // catch it. One function now. Both callers use it — that class of drift can't
 // recur because there's only one place left for it to recur in.
-// §gap-closed 2026-07-05 — SEAM's ncpPush always routed through NCP, even
-// for provider:'ollama', which meant an ollama-tagged SEAM chunk tried to
-// push into an NCP channel named 'ollama' that no browser tab ever opens —
-// it just sat there. ollama/server.js already has a real sovereign HTTP
-// bridge (:3749, POST /api/jobs + poll GET /api/jobs/:id) — this wires SEAM
-// dispatch directly into it, the same mechanics _dispatchToMistral already
-// uses for plain (non-SEAM) jobs, just correlated back to a compartment's
-// jobId via queue.onResponse() instead of updateJob().
-//
-// model: 'code' agent → DEFAULT_MODEL (qwen2.5-coder:1.5b) on the bridge,
-// since SEAM chunks are spec→implementation generation, not conversation.
-function _ollamaSeamDispatch(queue, data) {
-  const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
-  const http2 = require('http');
-  const body = JSON.stringify({
-    prompt:      data.prompt,
-    model:       process.env.OLLAMA_DEFAULT_MODEL || 'qwen2.5-coder:1.5b',
-    intent:      'seam',
-    componentId: 'guardian.seam.dispatch',
-    hookId:      'guardian.seam.chunk.ollama',
-    requestId:   data.jobId,
-  });
-  const req = http2.request({
-    hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/api/jobs',
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-    timeout: 15000,
-  }, res => {
-    let raw = '';
-    res.on('data', c => raw += c);
-    res.on('end', () => {
-      let ollamaJobId = null;
-      try { ollamaJobId = JSON.parse(raw).jobId; } catch(_) {}
-      if (!ollamaJobId) {
-        console.error('[guardian seam] ollama bridge returned no jobId:', raw.slice(0, 200));
-        queue.forceRetryActive('ollama_bridge_no_jobid');
-        return;
-      }
-      let polls = 0;
-      const poll = () => {
-        polls++;
-        if (polls > 150) { // ~2.5min at 1s/poll — chunk generation can be slow on a 1.5b model
-          console.error('[guardian seam] ollama poll timeout, jobId:', data.jobId);
-          queue.forceRetryActive('ollama_bridge_poll_timeout');
-          return;
-        }
-        const pr = http2.request({
-          hostname: '127.0.0.1', port: BRIDGE_PORT, path: `/api/jobs/${ollamaJobId}`,
-          method: 'GET', timeout: 5000,
-        }, rs => {
-          let rb = ''; rs.on('data', c => rb += c);
-          rs.on('end', () => {
-            try {
-              const pd = JSON.parse(rb);
-              const job = pd.job || pd;
-              if (job.status === 'complete') {
-                // Correlate back to the compartment using the SEAM-side jobId
-                // (data.jobId), not ollama's own uuid — onResponse() only
-                // matches queue._active.jobId, which was set by comp.inject().
-                queue.onResponse(data.jobId, job.result || '');
-              } else if (job.status === 'failed') {
-                console.error('[guardian seam] ollama job failed:', job.error);
-                queue.forceRetryActive('ollama_job_failed: ' + (job.error || 'unknown'));
-              } else {
-                setTimeout(poll, 1000);
-              }
-            } catch(_) { setTimeout(poll, 1000); }
-          });
-        });
-        pr.on('error', () => setTimeout(poll, 1000));
-        pr.end();
-      };
-      setTimeout(poll, 1000);
-    });
-  });
-  req.on('timeout', () => { req.destroy(); queue.forceRetryActive('ollama_bridge_timeout'); });
-  req.on('error', e => { console.error('[guardian seam] ollama bridge error:', e.message); queue.forceRetryActive('ollama_bridge_error: ' + e.message); });
-  req.write(body); req.end();
-}
-
 function _buildSeamQueue(specText, opts = {}) {
   const {
     provider     = 'chatgpt',
     title        = null,
     splitOn      = 'heading',
     maxChunkSize = 3000,
-    tag          = null,
   } = opts;
 
   const plan = parseSpec(specText, { splitOn, maxChunkSize });
@@ -161,7 +81,6 @@ function _buildSeamQueue(specText, opts = {}) {
   const queue = new SEAMQueue({
     title: title || plan.meta.name || 'Untitled Spec',
     provider,
-    tag,
     chunks: [
       // Chunk 0: prerequisite — INTAKE, no implementation yet
       { title: '§ Prerequisites', content: plan.prerequisiteBlock, builtPrompt: plan.prerequisiteBlock, axioms: [] },
@@ -173,13 +92,7 @@ function _buildSeamQueue(specText, opts = {}) {
     // CFR ledger first — no separate _evLedger.record() call needed here. The
     // old /command path called both, which double-logged every SEAM event.
     busEmit: (type, data) => bus.emit(type, data),
-    // Branch by provider: 'ollama' bypasses NCP entirely and goes straight to
-    // the sovereign ollama-bridge HTTP API, since no browser tab ever opens
-    // for it. Everything else keeps the original NCP channel-push behavior.
-    ncpPush: (prov, data) => {
-      if (prov === 'ollama') { _ollamaSeamDispatch(queue, data); return; }
-      ncp.push(prov, data);
-    },
+    ncpPush: (prov, data) => ncp.push(prov, data),
     onComplete: (stats) => {
       _activeQueues.delete(queue.uuid);
       bus.emit('guardian.seam.queue.complete', { queueId: queue.uuid, ...stats });
@@ -207,10 +120,9 @@ _physQueue.watchInput(async (data, filename) => {
       (data._raw || data.content || JSON.stringify(data));
     const provider = data._meta?.provider || data.provider || 'claude';
     const title    = data._meta?.title    || data.title    || null;
-    const tag      = data._meta?.tag      || data.tag      || null;
     console.log('[guardian queue] spec arrived:', filename.slice(0, 40));
     try {
-      const { queue } = _buildSeamQueue(specText, { provider, title, tag });
+      const { queue } = _buildSeamQueue(specText, { provider, title });
       if (ncp.isConnected(provider)) queue.start();
       else bus.emit('guardian.tab.needed', { provider, jobId: queueUid });
     } catch(e) {
@@ -574,9 +486,9 @@ async function writeToNexus(job) {
 
 // ── job lifecycle ─────────────────────────────────────────────────────────────
 
-function createJob({ command, provider, prompt, content, tag = null }) {
+function createJob({ command, provider, prompt, content }) {
   const id  = randomUUID();
-  const job = { id, command, provider, prompt, content: content || null, tag,
+  const job = { id, command, provider, prompt, content: content || null,
     status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now() };
   jobs.set(id, job);
   console.log(`[guardian] job created: ${id} → ${provider} /${command}`);
@@ -1295,17 +1207,6 @@ const PROVIDERS = new Proxy({}, {
 // compatibility in case anything external still destructures them)
 let httpsServer = null;
 let wss         = null;
-
-// §fix 2026-07-05: this declaration was deleted along with httpsServer/wss
-// during the NCP refactor (see comment above — "replaces httpsServer + wss
-// entirely") and never replaced, even though server.listen() below,
-// server.listeners('request')/removeAllListeners/on('request') further
-// down, and module.exports at the bottom all still reference `server`.
-// Every real route already lives in handleExtendedRoutes() (this file's
-// actual transport layer) — this default listener is intentionally a
-// no-op; _origListeners just needs something to capture and fall through
-// to when handleExtendedRoutes() doesn't match a path.
-const server = http.createServer((req, res) => {});
 
 // ── Main HTTP server (:7820) ─────────────────────────────────────────────────
 
@@ -2258,25 +2159,6 @@ function handleExtendedRoutes(req, res, url, method) {
     const queues = [..._activeQueues.values()].map(q => q.toJSON());
     pRes(res, 200, { ok:true, active: queues.length, queues }); return true;
   }
-  // §tagging 2026-07-05 — idearium/loom agent suites submit specs without
-  // ever seeing the guardian-assigned queue UUID (it's returned from
-  // POST /command, but a fire-and-forget caller may not keep it around).
-  // This lets them poll progress by the tag they themselves chose. Checked
-  // before the generic /seam/queues/:id route below so a tag never gets
-  // misread as a UUID (and vice versa — tags and UUIDs don't collide since
-  // UUIDs are never passed as this segment's value here).
-  if (method==='GET' && url.pathname.startsWith('/seam/queues/by-tag/')) {
-    const tag = decodeURIComponent(url.pathname.slice('/seam/queues/by-tag/'.length));
-    const matches = [..._activeQueues.values()].filter(q => q.tag === tag).map(q => q.toJSON());
-    if (!matches.length) {
-      // Not necessarily an error — the queue may already have completed and
-      // been evicted from _activeQueues (see onComplete above). Check JAA's
-      // seam_sessions for a historical match before reporting empty.
-      const historical = (jaa.all('seam_sessions') || []).filter(s => s.tag === tag);
-      pRes(res, 200, { ok:true, active: 0, queues: [], historical }); return true;
-    }
-    pRes(res, 200, { ok:true, active: matches.length, queues: matches }); return true;
-  }
   if (method==='GET' && url.pathname.startsWith('/seam/queues/')) {
     const qid = url.pathname.split('/')[3];
     const q   = _activeQueues.get(qid);
@@ -2950,10 +2832,6 @@ function handleExtendedRoutes(req, res, url, method) {
             provider, title: body.title,
             splitOn:      body.splitOn      || 'heading',
             maxChunkSize: body.maxChunkSize || 3000,
-            // Lets idearium/loom's agent suites correlate a spec they submitted
-            // with its SEAM queue by name (e.g. project id) instead of the
-            // queue UUID, which they don't have until after this call returns.
-            tag:          body.tag || body.project || null,
           });
 
           // §LAW II physical redundancy — write to disk queue before dispatch
@@ -3027,7 +2905,7 @@ function handleExtendedRoutes(req, res, url, method) {
       }
 
       // §LAW II — createJob writes to JAA
-      const job = createJob({ command, provider, prompt, content, tag: body.tag || null });
+      const job = createJob({ command, provider, prompt, content });
       dispatchJob(job);
       pRes(res, 200, { ok:true, jobId: job.id, status: job.status, provider });
 
@@ -3041,15 +2919,6 @@ function handleExtendedRoutes(req, res, url, method) {
     let list = [...jobs.values()];
     if (status) list = list.filter(j=>j.status===status);
     pRes(res, 200, { ok:true, jobs:list.slice(-limit) }); return true;
-  }
-  // §tagging 2026-07-05 — mirrors /seam/queues/by-tag/: for chunk builds
-  // that fell back to ChatGPT/Claude (idearium/loom's buildChunkWithAgent /
-  // buildComponentWithAgent), the caller has a tag but no jobId until the
-  // dispatch call above returns — this lets it recover progress by tag.
-  if (method==='GET' && url.pathname.startsWith('/jobs/by-tag/')) {
-    const tag = decodeURIComponent(url.pathname.slice('/jobs/by-tag/'.length));
-    const matches = [...jobs.values()].filter(j => j.tag === tag);
-    pRes(res, 200, { ok:true, count: matches.length, jobs: matches }); return true;
   }
   if (method==='GET' && url.pathname==='/bus') {
     const n   = parseInt(url.searchParams.get('n') || '20');

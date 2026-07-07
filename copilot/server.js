@@ -23,6 +23,57 @@ const fs     = require('fs');
 const PORT     = parseInt(process.env.COPILOT_PORT || '3750');
 const GD_URL   = process.env.GUARDIAN_URL   || 'http://127.0.0.1:7820';
 const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
+
+// §ADDED 2026-07-06 — completes the loop the Spotlight bug fix (same
+// session) unblocked: ui/tv-shell/spotlight/spotlight.js's window.CP.exec
+// now actually works, but nothing ever sent it a `ui{}` block. This is
+// that decision logic — real, not a stub, with an honest limit stated
+// directly: lib/nerve/index.js's own comment says per-node CFR stress is
+// "a Phase 3+ concern... global field is honest for Phase 1," so WHICH
+// system is stressed can't be answered yet — only "is the system as a
+// whole calm or not" can. Built to match that real limit, not to pretend
+// past it. This list must match ui/tv-shell/spotlight/spotlight.js's own
+// EL registry — canonical source is that file; kept in sync manually
+// since one's browser JS and one's Node, no shared import path today.
+const SPOTLIGHT_TARGETS = ['guardian','cortex','idearium','orchestrator','bridge',
+  'diagnostic','architect','emerge','forge','agent','blueprint'];
+
+async function _fetchCFRField() {
+  return new Promise((resolve) => {
+    const u = new URL(`${CX_URL}/cfr/field`);
+    const req = http.request({ hostname: u.hostname, port: u.port || 3748, path: u.pathname, timeout: 1500 }, r => {
+      let d = ''; r.on('data', c => d += c);
+      r.on('end', () => { try { resolve(JSON.parse(d)); } catch(_) { resolve(null); } });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.end();
+  });
+}
+
+/**
+ * _buildSpotlightUI — real decision, real data, honest about its limit.
+ * WHICH systems: literal name-mention matching against the same targets
+ * Spotlight itself knows about — if the answer talks about guardian, the
+ * guardian tile lights up. HOW urgently: the real global CFR regime
+ * (stable vs. not) sets intensity/color — not per-system, because
+ * per-system doesn't exist yet.
+ */
+async function _buildSpotlightUI(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  const mentioned = SPOTLIGHT_TARGETS.filter(name => new RegExp(`\\b${name}\\b`).test(lower));
+  if (!mentioned.length) return null;
+
+  const field = await _fetchCFRField();
+  const stable = !field || field.regime === 'stable'; // fail open to calm, never fabricate alarm from a failed fetch
+  return {
+    spotlight: mentioned,
+    spotlightTtl: 8000,
+    spotlightIntensity: stable ? 0.6 : 0.9,
+    spotlightColor: stable ? null : '#ff5566',
+  };
+}
 const OR_URL   = process.env.ORCH_URL       || 'http://127.0.0.1:9000';
 const OL_URL   = process.env.OLLAMA_URL     || 'http://127.0.0.1:3749';
 const IDR_URL  = process.env.IDEARIUM_URL   || 'http://127.0.0.1:4800';
@@ -613,11 +664,21 @@ const server = http.createServer(async (req, res) => {
 
     streamIngest({ type: 'copilot.answered', requestId, intent: 'ask', modelUsed });
 
-    // Bridge expects: { ok, result: { response: { text, ... } } }
-    json(res, 200, {
-      ok: true,
-      result: { response: { ok: true, text, modelUsed, contextLayers: 7, requestId, sessionId } }
-    });
+    // §BUG FIXED 2026-07-05: this pre-wrapped the answer in
+    // {result:{response:{...}}} to match what it assumed the bridge's
+    // eventual response shape would look like — but bridge/router.js's
+    // ResultGate already does that wrapping itself, once, around
+    // whatever raw body this endpoint returns. Pre-wrapping here meant
+    // the real payload ended up nested one level too deep
+    // (result.response.result.response.text instead of result.response.text),
+    // so Clear Glass's unwrap chain (_bridgeDispatch → _callNexusCopilot)
+    // always bottomed out on an object with no `.text` and no `.response`,
+    // silently returning ''. Confirmed live: the bridge tab showed
+    // {"ok":true,"uuid":...,"status":"fulfilled"} with no actual answer
+    // anywhere in it — the bare ledger-confirmation shape, not a bug in
+    // the ledger, a bug in what got put on the wire for it to confirm.
+    // Fix: return the flat answer. ResultGate wraps it exactly once.
+    json(res, 200, { ok: true, text, modelUsed, contextLayers: 7, requestId, sessionId });
     return;
   }
 
@@ -644,7 +705,8 @@ const server = http.createServer(async (req, res) => {
         channel, componentId:'copilot.prompt', hookId:'copilot.prompt.reply',
         contextLayers: 1, fromStream: true, ts: Date.now() };
       await _persist('chat_log', row);
-      json(res, 200, { ok:true, requestId, sessionId, ...intuition, channel });
+      const ui = await _buildSpotlightUI(intuition.text);
+      json(res, 200, { ok:true, requestId, sessionId, ...intuition, channel, ...(ui ? { ui } : {}) });
       return;
     }
 
@@ -657,8 +719,9 @@ const server = http.createServer(async (req, res) => {
         channel, componentId:'copilot.prompt', hookId:'copilot.prompt.reply',
         contextLayers: 2, fromStream: true, source: 'cortex.intuition', ts: Date.now() };
       await _persist('chat_log', row);
+      const ui = await _buildSpotlightUI(cortexIntuition.text);
       json(res, 200, { ok:true, requestId, sessionId, text: cortexIntuition.text,
-        modelUsed: 'cortex.intuition', channel, source: 'cortex.intuition' });
+        modelUsed: 'cortex.intuition', channel, source: 'cortex.intuition', ...(ui ? { ui } : {}) });
       return;
     }
 
@@ -702,6 +765,11 @@ const server = http.createServer(async (req, res) => {
       if (lifeResult?.escalated) broadcast('copilot.lifeline.escalated', { provider: lifeResult.provider_used });
     } catch(e) {
       text = `Analysis failed: ${e.message}`;
+      // §ADDED 2026-07-06 — a lifeline failure used to only ever exist as
+      // the text of the answer shown to the person asking. Now also lands
+      // in data/copilot/failures.jsonl, queryable and correlatable with
+      // everything else logged the same way.
+      try { require('../lib/ledger-writer').writeFailure('copilot', e, { module: 'lifeline', source: 'api.prompt', prompt: prompt.slice(0,200) }); } catch(_) {}
     }
 
     const row = { uuid: crypto.randomUUID(), requestId, sessionId,
@@ -712,8 +780,9 @@ const server = http.createServer(async (req, res) => {
     await _persist('chat_log', row);
     streamIngest({ type: 'copilot.answered', requestId, intent: 'ask', modelUsed });
 
+    const ui = await _buildSpotlightUI(text);
     json(res, 200, { ok:true, requestId, sessionId, text, modelUsed, intent:'ask',
-      channel, contextLayers: 7, fromStream: true });
+      channel, contextLayers: 7, fromStream: true, ...(ui ? { ui } : {}) });
     return;
   }
 

@@ -88,13 +88,37 @@ function _agentAvailable(dispatchName, health, opts = {}) {
 }
 
 // ── Layer 2: fitness (ranks survivors) ────────────────────────────────────────
-// Each non-health term is a named, currently-neutral placeholder — see header.
-function _fitness(dispatchName, cluster, health) {
+// §GAP CLOSED 2026-07-06 — topologicalProximity was hardcoded 1.0 with a
+// comment naming its exact real dependency: "needs CFR _byComponent
+// edge, not built (docs/cfr.spec)". That edge type is now real
+// (meta/cfr/graph.js's componentProximity()), tested against causally-
+// adjacent, unrelated, and unknown components before being wired here.
+// Optional injection, not a hard require — RAID._fitness() still works
+// with no graph supplied (falls back to the same neutral 1.0 it always
+// had), matching the same backward-compatible pattern used everywhere
+// else this session (WARP's async Stream extension, the seam adapters).
+// roleConfidence and snrTierGate are still real, honest stubs — this
+// closes one of RAID's three stubbed terms, not all three.
+function _fitness(dispatchName, cluster, health, opts = {}) {
   const key = HEALTH_KEY[dispatchName] || dispatchName;
   const snap = health?.[key] || {};
   const healthScore = snap.successRate != null ? snap.successRate : (snap.online ? 0.8 : 0.1);
   const roleConfidence      = 1.0; // stub — needs role-drift tracking, not built
-  const topologicalProximity = 1.0; // stub — needs CFR _byComponent edge, not built (docs/cfr.spec)
+  // §BUG FIXED 2026-07-06 (same pass, caught before shipping) — first
+  // version of this wire passed `dispatchName` (a provider name like
+  // 'ollama') directly as the target componentId. Tested it: this always
+  // returns 0, silently, because 'ollama' never matches a real graph
+  // componentId like 'ollama.generate' — different namespaces entirely.
+  // That would have made every fitness score multiply by 0 whenever a
+  // graph was supplied — worse than the original neutral stub, not an
+  // improvement. Fixed: caller must supply the real target componentId
+  // explicitly (opts.targetComponentId) — no guessed dispatchName->
+  // componentId mapping fabricated here. Falls back to the same neutral
+  // 1.0 as "no graph supplied" if that mapping isn't provided, rather
+  // than silently computing a wrong proximity.
+  const topologicalProximity = (opts.graph && opts.componentId && opts.targetComponentId)
+    ? opts.graph.componentProximity(opts.componentId, opts.targetComponentId)
+    : 1.0;
   const snrTierGate          = 1.0; // stub — needs docs/raid-snr-filter.spec wiring into this layer
   return snrTierGate * roleConfidence * healthScore * topologicalProximity;
 }

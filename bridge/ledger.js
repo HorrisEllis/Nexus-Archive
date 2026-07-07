@@ -21,6 +21,19 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const { STATUS, patchRequest } = require('./types');
 
+// §GAP CLOSED 2026-07-05: bridge/ was the only live system server
+// (guardian, ollama, eravos, copilot, loom already do this) with zero
+// Cortex writes — every cross-system request passed through here and
+// bridge's OWN ledger (data/bridge/ledger/requests.jsonl) recorded it,
+// but Cortex never saw any of it. Same pattern loom/schema/cortex-sync.js
+// used to close the identical gap for LOOM: write-through via
+// lib/cortex-write.js, disk-buffered if Cortex is offline. The JSONL
+// ledger above stays the source of truth for bridge's own routing
+// decisions (§2.1) — this is a mirror, not a replacement, and never
+// blocks or rejects a request if Cortex is slow or down.
+const createCortexWriter = require('../lib/cortex-write');
+const _cw = createCortexWriter('bridge');
+
 // ── SISO primitives (CJS port matching nexus siso/index.js pattern) ──────────
 class Event {
   constructor(type, data = {}) {
@@ -212,14 +225,24 @@ function createBridgeLedger({ ledgerDir }) {
   // ── Write — §2.1 ledger write BEFORE dispatch ────────────────────────────
   function write(req) {
     return new Promise((resolve, reject) => {
-      stream.emit(new Event('request.write', { req, resolve, reject }));
+      stream.emit(new Event('request.write', {
+        req, resolve: (r) => {
+          _cw.insert('bridge_requests', { ...r, _mirrorOf: 'requests.jsonl' }); // fire-and-forget, cortex-write.js handles its own failures/buffering
+          resolve(r);
+        }, reject,
+      }));
     });
   }
 
   // ── Update — patch status, routeHistory, error, etc. ────────────────────
   function update(uuid, patch) {
     return new Promise((resolve, reject) => {
-      stream.emit(new Event('request.update', { uuid, patch, resolve, reject }));
+      stream.emit(new Event('request.update', {
+        uuid, patch, resolve: (r) => {
+          _cw.insert('bridge_requests', { uuid, _patch: patch, ts: Date.now() });
+          resolve(r);
+        }, reject,
+      }));
     });
   }
 

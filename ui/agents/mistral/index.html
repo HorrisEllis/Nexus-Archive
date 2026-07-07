@@ -150,7 +150,16 @@ input.nx-in:focus{border-color:var(--ac-glow)}
   </div>
 </div>
 <script>
-const GD='http://localhost:7820',ORCH='http://localhost:9000',CX='http://localhost:3748',OL='http://localhost:11434';
+const GD='http://localhost:7820',ORCH='http://localhost:9000',CX='http://localhost:3748',OL='http://localhost:11434',OLB='http://localhost:3749';
+// §BUG FIXED 2026-07-05: this console used to POST straight to OL (raw
+// Ollama, :11434) for every generation — bypassing the queue, the ledger,
+// sigma/delta scoring, and Cortex entirely. Meanwhile guardian/server.js
+// already special-cased 'mistral' jobs to route to OLB (ollama-bridge,
+// :3749) instead, so there were two different, disconnected Mistral
+// paths in the codebase. OL stays for /api/tags (model listing is
+// read-only and harmless) — every actual generation now goes through
+// OLB's real job queue, same pipeline every other system uses, sigma/
+// delta scored by the same Detector on the way out.
 let selModel='mistral:7b-instruct-q4_K_M',_abort=null,_streaming=false;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(5000),...opts});return r.ok?r.json():null;}catch{return null;}}
@@ -231,24 +240,48 @@ async function send(){
   addMsg('user',prompt);
   document.getElementById('prompt-in').value='';
   const msgEl=addStream();
-  let buf='',tok=0;const t0=Date.now();
+  let tok=0;const t0=Date.now();
   document.getElementById('send-btn').style.display='none';
   document.getElementById('stop-btn').style.display='';
   document.getElementById('st-model').textContent=selModel;
   _streaming=true;
+  // §NOTE: the real queue (OLB) doesn't expose a token-by-token SSE channel
+  // the way raw Ollama's /api/generate stream did — a job is dispatched,
+  // scored (sigma/delta via lib/seam's Detector), and completed as one
+  // unit. That's the real tradeoff of going through the actual pipeline
+  // instead of around it: no live token trickle, but the response is
+  // now ledgered, Cortex-written, and quality-scored, none of which the
+  // raw path ever did. Shows a "thinking" state instead of a live buffer.
+  updateStream(msgEl,'…');
   try{
     _abort=new AbortController();
-    const r=await fetch(`${OL}/api/generate`,{method:'POST',headers:{'Content-Type':'application/json'},signal:_abort.signal,body:JSON.stringify({model:selModel,prompt:`${system}\n\nUser: ${prompt}\n\nAssistant:`,stream:true,options:{temperature:0.3,num_predict:2048}})});
-    if(!r.ok)throw new Error('Ollama '+r.status);
-    const reader=r.body.getReader();const dec=new TextDecoder();
+    const jobRes=await fetch(`${OLB}/api/jobs`,{method:'POST',headers:{'Content-Type':'application/json'},signal:_abort.signal,body:JSON.stringify({
+      model:selModel,prompt:`${system}\n\nUser: ${prompt}\n\nAssistant:`,
+      intent:'ask', componentId:'ui.mistral.console',
+    })}).then(r=>r.json());
+    if(!jobRes.ok) throw new Error(jobRes.error||'ollama-bridge rejected job');
+    const jobId=jobRes.jobId;
+    let job=null;
     while(true){
-      const{done,value}=await reader.read();if(done)break;
-      for(const line of dec.decode(value).split('\n').filter(Boolean)){
-        try{const d=JSON.parse(line);if(d.response){buf+=d.response;tok++;updateStream(msgEl,buf);document.getElementById('st-tok').textContent=tok+' tok';}if(d.done)document.getElementById('st-time').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';}catch{}
-      }
+      if(_abort.signal.aborted) throw new DOMException('aborted','AbortError');
+      await new Promise(r=>setTimeout(r,600));
+      const poll=await fetch(`${OLB}/api/jobs/${jobId}`,{signal:_abort.signal}).then(r=>r.json());
+      if(!poll.ok) throw new Error(poll.error||'job not found');
+      job=poll.job;
+      if(job.status==='complete'||job.status==='failed') break;
     }
-  }catch(e){if(e.name!=='AbortError')updateStream(msgEl,buf||'✗ '+e.message);}
-  finally{finalStream(msgEl,buf);_streaming=false;_abort=null;document.getElementById('send-btn').style.display='';document.getElementById('stop-btn').style.display='none';}
+    if(job.status==='failed') throw new Error(job.error||'job failed');
+    const text=job.result||'';
+    tok=text.split(/\s+/).filter(Boolean).length;
+    updateStream(msgEl,text);
+    document.getElementById('st-tok').textContent=tok+' tok';
+    document.getElementById('st-time').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
+    if(job.seamScore&&!job.seamScore.passed){
+      updateStream(msgEl,text+`\n\n[quality flag: sigma composite ${job.seamScore.composite?.toFixed(2)} — see ollama.seam.quality_low]`);
+    }
+    finalStream(msgEl,text);
+  }catch(e){if(e.name!=='AbortError')updateStream(msgEl,'✗ '+e.message);}
+  finally{_streaming=false;_abort=null;document.getElementById('send-btn').style.display='';document.getElementById('stop-btn').style.display='none';}
 }
 
 function stop(){_abort?.abort();}

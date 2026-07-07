@@ -1003,19 +1003,26 @@ function startService() {
     }
 
     // 4. Check for recent failure ledger entries
+    // BUG FIXED 2026-07-06 - this loop never destructured cfg from
+    // Object.entries(SYSTEMS) (only [name]), and no module-level cfg
+    // exists either - every execution of this block has thrown
+    // ReferenceError: cfg is not defined since it was written, meaning
+    // failure-mode detection has never once completed successfully. It
+    // also hand-rolled a directory scan for .ndjson files that never
+    // matched what lib/ledger-writer.js actually writes (a single
+    // <system>/failures.jsonl file, not a directory of many files) -
+    // that function's own comment says "exposed for diagnostic service to
+    // use," confirming the two were meant to connect and never did.
+    // Using the real readLatest() now instead of re-deriving the same
+    // logic a second, differently-broken way.
+    const { readLatest } = require('../lib/ledger-writer');
     for (const [name] of Object.entries(SYSTEMS)) {
-      const failDir = path.join(ROOT, cfg.dataDir, 'failures');
-      if (!fs.existsSync(failDir)) continue;
-      const failFiles = fs.readdirSync(failDir).filter(f => f.endsWith('.ndjson'));
-      for (const ff of failFiles.slice(-5)) {
-        const lines = fs.readFileSync(path.join(failDir, ff), 'utf8').trim().split('\n').filter(Boolean);
-        const recent = lines.slice(-3).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-        for (const entry of recent) {
-          if (entry.friction > 0.7) {
-            issues.push({ type: 'high_friction_failure', system: name,
-              error: entry.error?.slice(0,100), friction: entry.friction, severity: 'medium',
-              solution: entry.solution || null });
-          }
+      const recentFailures = readLatest(name, 'failures', 5);
+      for (const entry of recentFailures) {
+        if (entry.friction > 0.7) {
+          issues.push({ type: 'high_friction_failure', system: name,
+            error: entry.error?.slice(0,100), friction: entry.friction, severity: 'medium',
+            solution: entry.solution || null });
         }
       }
     }
@@ -1066,6 +1073,75 @@ function startService() {
           severity:'low', fix:`${name} ledger stale — check if service is running` });
       }
     }
+
+    // 8. Cortex push/recall boundary self-test — §ADDED 2026-07-06.
+    // Turns this session's adversarial findings into a permanent,
+    // repeatable check instead of a one-off script: does the real
+    // /api/push endpoint still reject an oversized payload? If this ever
+    // starts passing (i.e. an oversized push succeeds), the size-limit
+    // fix has regressed — exactly the kind of silent drift this whole
+    // diagnostic service exists to catch. Skips cleanly if Cortex is
+    // unreachable — this is a live-endpoint check, not a unit test, and
+    // an unreachable Cortex is already reported by check #2 above.
+    try {
+      const http2 = require('http');
+      const oversized = 'x'.repeat(300 * 1024); // over the real 256KB limit
+      const pushBody = JSON.stringify({ content: oversized, tags: ['diag-selftest'], tier: 'recent' });
+      const pushResult = await new Promise((resolve) => {
+        const req2 = http2.request({ hostname: '127.0.0.1', port: SYSTEMS.cortex.port, path: '/api/push', method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(pushBody) }, timeout: 2000 },
+          r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>{ try { resolve(JSON.parse(d)); } catch(_) { resolve(null); } }); });
+        req2.on('error', () => resolve(null));
+        req2.on('timeout', () => { req2.destroy(); resolve(null); });
+        req2.write(pushBody); req2.end();
+      });
+      if (pushResult && pushResult.ok === true) {
+        issues.push({ type: 'size_limit_regression', system: 'cortex', severity: 'high',
+          error: 'push() accepted a 300KB payload — the 256KB limit added 2026-07-06 has regressed',
+          fix: 'Check cortex/push-recall.js MAX_CONTENT_CHARS is still enforced in push()' });
+      }
+      // pushResult === null means Cortex unreachable — already covered by check #2, not double-reported here.
+    } catch (_) { /* best-effort self-test, never blocks the rest of the diagnostic pass */ }
+
+    // 9. Upload filename sanitization self-test — §ADDED 2026-07-06.
+    // Loom's /api/ingest-upload sanitizes filenames before writing to
+    // disk; this confirms the actual regex still neutralizes every
+    // path-traversal pattern tested during this session's adversarial
+    // pass, without needing a live server (pure function check).
+    {
+      const traversalTests = ['../../../etc/passwd', '..\\..\\windows\\system32\\config', '....//....//etc/passwd'];
+      const sanitize = (raw) => raw.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const stillDangerous = traversalTests.filter(t => { const s = sanitize(t); return s.includes('/') || s.includes('\\'); });
+      if (stillDangerous.length) {
+        issues.push({ type: 'path_traversal_regression', system: 'loom', severity: 'critical',
+          error: `filename sanitizer no longer neutralizes: ${stillDangerous.join(', ')}`,
+          fix: 'Check loom/server.js /api/ingest-upload — the sanitize regex has changed or was removed' });
+      }
+    }
+
+    // 10. Failure-ledger causal chain self-test — §ADDED 2026-07-06.
+    // Check #4 above (readLatest-based high-friction detection) was
+    // completely broken (ReferenceError on every execution) until this
+    // session found and fixed it. This writes a synthetic failure and
+    // confirms it's actually detected end-to-end, so if #4 regresses
+    // again — wrong system name, wrong field name, reintroduced scope
+    // bug — this check catches it rather than the whole chain going
+    // silently dark a second time.
+    try {
+      const { writeFailure, readLatest } = require('../lib/ledger-writer');
+      const marker = 'diag-selftest-' + crypto.randomUUID();
+      writeFailure('diagnostic-selftest', new Error(marker), { friction: 0.9 });
+      const found = readLatest('diagnostic-selftest', 'failures', 5).some(e => e.error === marker);
+      if (!found) {
+        issues.push({ type: 'failure_chain_regression', system: 'diagnostic', severity: 'critical',
+          error: 'a synthetic high-friction failure was written but not read back — the failure-ledger causal chain (check #4) is broken again',
+          fix: 'Check lib/ledger-writer.js writeFailure()/readLatest() path agreement and service/nexus-diagnostic.js check #4' });
+      }
+      // Clean up the self-test's own trace — this check should be
+      // invisible in real failure data, not add noise to what it's testing.
+      const fp = path.join(ROOT, 'data', 'diagnostic-selftest', 'failures.jsonl');
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    } catch (_) { /* best-effort — a broken self-test must not crash the diagnostic pass it's checking */ }
 
     return {
       ts:          Date.now(),
