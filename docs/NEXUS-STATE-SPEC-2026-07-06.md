@@ -223,3 +223,56 @@ Everything else in `lib/` has real consumers, from 1 (narrow, single-purpose) to
 **Second RFR2 module proven through the same bridge, confirming genuine reusability, not a coincidence:** `enforcement` — all 25 real invariants loaded correctly (identity/causality/time/arch/hostile/context/exec-model groups), `createRuntimeGuard()` and `getInvariant()` both real and working.
 
 **Honest limit found, not glossed over:** `checkKernelInvariants(kernel, boundaryIndex, opts)` needs an actual RFR2 kernel object — these 25 invariants check RFR2's *own* event/replay system's internal correctness, not RAID's routing decisions directly. Meaningfully exercising them requires the fuller `simulation.js` build (synthetic dispatch construction, COS sandbox lifecycle) already scoped out of this session — proven the bridge and the module's basic API, not a deeper integration that isn't real yet.
+
+---
+
+## PART 14 — The workflow/command layer: mostly already built (cockpit), one real new tool added and tested
+
+**Before speccing "create and schedule workflows/tasks/commands" as new, checked — and most of it already exists, wired.** `cockpit/pipeline.js` is a real node-based workflow engine (trigger/condition/transform/api_call/agent_call/store/emit/loop node types; cron/schedule/webhook/event triggers) and `cockpit/cli.js` is a real CLI contract ("CLI = UI = same contract", commands for pipeline/seam/idea/gap). Both are **already required by guardian/server.js**. "Schedule workflows and tasks" is not a gap — it's cockpit, real and connected.
+
+**What was genuinely missing — the keyword→command bridge — is now built and tested.** `lib/agent-tools/tools/run-cockpit-command.js` lets a model resolve plain intent to a real cockpit command and execute it through the actual `ForgeCLI.exec()`. Three real behaviors proven:
+- **Drift-proof by construction** — the tool's advertised command list is read from cockpit's own `INTERACTION_CONTRACT`, never hand-copied. This directly prevents the single most common bug class of the entire session (a declared surface drifting from its real implementation). If cockpit's commands change, the tool reflects it automatically.
+- **Real execution** — ran `forge pipeline list` against a live `ForgeCLI` with a real registry, got real structured output (`{type:'list', items:[]}`), not a mock.
+- **Hallucination guard** — a made-up command (`forge delete-everything now`) is refused against the real contract, not blindly executed.
+
+Registered into `lib/agent-tools/` alongside `read_file`; both advertise valid schemas. The live `ForgeCLI` is injected via `wireCockpit()` by the owner (guardian), not constructed in the tool — same dependency-injection discipline as everything real this session.
+
+**forge.spec extended** with the four genuinely-new pieces, each grounded in what's already real: the command/keyword layer (now partially built), the continuous stream (pieces proven, loop unbuilt), personalities (data-not-code, on Cortex's real storage, smallest real gap), and copilot's navigate/note/tool/action intents (the connective tissue, still copilot's only precise gap).
+
+**Net: the "programmable Ollama + system + co-pilot" end-state is closer to real than the ask assumes** — cockpit already provides the programmable workflow spine, agent-tools now provides the model's hands to drive it, and the remaining gaps (continuous stream loop, personalities, the 4 copilot intents) are each small, precise, and named — not a from-scratch build.
+
+---
+
+## PART 15 — Personalities built and wired: real, tested, three working defaults from first boot
+
+**`cortex/personas.js` — the "personalities" gap from forge.spec, confirmed this session to have zero prior implementation, now real.** A persona is data: `{name, systemPrompt, allowedTools, defaultIntent}`. Considered and rejected storing these as a tier in `cortex/push-recall.js` — its tiers are for *searchable, ranked content*, and a persona is a config object fetched by exact name; mixing them would pollute content recall with objects that have no business being scored as "relevant memory." Separate module, same real JAA backing, injected not hard-required.
+
+**Ships with three real working defaults, not an empty store:** `default` (general, all tools), `builder` (action-biased, defaults to build intent), `diagnostician` (root-cause-focused, restricted to read_file, defaults to diagnose intent). Copilot has working profiles from first boot, not a feature that only works after manual setup. Defaults seed into JAA lazily without clobbering any user-modified persona of the same name.
+
+**Wired into copilot/server.js and tested through the real injection logic.** A `persona` param on the prompt request selects a profile whose systemPrompt prepends the assembled 7-layer context. Proven: three different persona names produce three genuinely different system prompts through the exact code now in the server. Never fails a request — unknown persona falls back to the built-in default inside get(), and the whole lookup is wrapped so a profile miss can never block a real answer.
+
+**Full behavior tested:** seeding (3 defaults), get-by-name (real restricted-tool profile), unknown-name fallback (never null), custom create + retrieve, and validation (a persona missing a systemPrompt throws rather than storing something useless).
+
+**Updated end-state tally for the forge.spec "programmable co-pilot" pieces:**
+- Command/keyword layer → `run_cockpit_command` tool, built + tested (Part 14)
+- Personalities → `cortex/personas.js`, built + wired + tested (this part)
+- Continuous stream loop → pieces all proven, the always-on loop itself still unbuilt
+- copilot navigate/note/tool/action intents → still copilot's only precise remaining gap; personas now give the `tool`/`action` intents real content to surface (persona-selected tool access), making that gap smaller and more concrete than before
+
+---
+
+## PART 16 — Continuous stream loop closed: the "nothing lost" chain proven end to end
+
+**Checked what was already real before building — most of the continuous stream already existed.** copilot/server.js's `_stream` buffer is already fed live from Cortex's and Guardian's SSE `/events`, and already flows into context assembly (`cc.assemble({ eventBuffer: _stream })`). The listen→buffer→context path was real. Two specific things named in the end-state ask were genuinely missing, and `copilot/stream-digest.js` is only those two:
+
+1. **Normalize** — raw events are JSON blobs; the ask says "parse into plain text." `normalizeEvent()` turns `{type:'guardian.job.complete', payload:{chars:840,ms:1200}}` into `"guardian finished a job (840 chars, 1.2s)"` — the readable shape a model actually uses well. Handles every real event type this session touched, with a safe generic fallback that never drops or throws on an unexpected shape. Consecutive-duplicate dedup so a flapping system doesn't fill the digest with 40 identical heartbeat lines.
+
+2. **Nothing lost** — the in-memory `_stream` is bounded and dies on restart. `StreamDigest` periodically (60s) pushes the normalized recent stream into Cortex via the real `/api/push` built this session, so the live feed becomes durable, recallable history instead of RAM.
+
+**Proven end to end, not just unit-tested:** booted real Cortex, fired a real digest, confirmed the push succeeded (`ok:true` + real id), then **recalled it back** — `FOUND durable digest in Cortex`. The complete chain works: live events → plain text → Cortex → survives → recallable. Also tested: normalization across all real types, dedup, the digest loop, and empty-stream safety (skips cleanly, never pushes garbage). Sovereign and injectable (takes `getStream()` + `pushToCortex()`), best-effort (never crashes copilot over a digest), and the timer is unref'd so it never holds the process alive.
+
+**forge.spec "programmable co-pilot" tally — 3 of 4 now built and tested:**
+- Command/keyword layer → `run_cockpit_command`, built + tested (Part 14)
+- Personalities → `cortex/personas.js`, built + wired + tested (Part 15)
+- Continuous stream loop → `copilot/stream-digest.js`, built + wired + proven end to end (this part)
+- copilot navigate/note/tool/action intents → the one remaining precise gap; now has real content behind it (personas for tool/action, cockpit commands for action, the digest stream for note) — smaller and more concrete than ever, the natural last piece

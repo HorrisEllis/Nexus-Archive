@@ -508,6 +508,21 @@ const server = http.createServer(async (req, res) => {
     // §P103: inject session history on first exchange
     contextText = await _injectSessionHistory(session, contextText);
 
+    // §ADDED 2026-07-07 — persona support. A `persona` param (defaults to
+    // 'default') selects a real personality profile (cortex/personas.js)
+    // whose systemPrompt prepends the assembled context, shaping tone,
+    // tool bias, and default intent. Never fails the request — an unknown
+    // persona name falls back to the built-in default inside get().
+    try {
+      const { PersonaStore } = require('../cortex/personas.js');
+      const { jaaDB } = require('../cortex/memory/jaa-db.js');
+      const personaStore = new PersonaStore({ jaa: jaaDB });
+      const persona = personaStore.get(body.persona || 'default');
+      if (persona?.systemPrompt) {
+        contextText = `${persona.systemPrompt}\n\n${contextText}`;
+      }
+    } catch (_) { /* personas optional — never block a real answer over profile lookup */ }
+
     // §P110: query Cortex MASTERMIND for causal context before model call
     const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0, 500), sessionId);
     if (mastermind?.analysis) {
@@ -853,6 +868,29 @@ server.listen(PORT, () => {
   setTimeout(_connectCortexStream, 2000);
   setTimeout(_connectGuardianStream, 3000);
   setTimeout(_connectIdeariumStream, 4000);
+
+  // §ADDED 2026-07-07 — continuous stream digest. The _stream buffer is
+  // already fed live from Cortex/Guardian SSE and already flows into
+  // context assembly; this adds the two missing pieces (normalize to
+  // plain text, push a durable digest into Cortex so nothing is lost on
+  // restart). Pushes to the real /api/push endpoint built this session.
+  try {
+    const { StreamDigest } = require('./stream-digest.js');
+    const _digest = new StreamDigest({
+      getStream: () => _stream,
+      pushToCortex: (content, tags, tier) => {
+        const body = JSON.stringify({ content, tags, tier });
+        const u = new URL(`${CX_URL}/api/push`);
+        const req = http.request({ hostname: u.hostname, port: u.port || 3748, path: '/api/push', method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, () => {});
+        req.on('error', () => {}); // digest is best-effort, never crashes copilot
+        req.write(body); req.end();
+      },
+      intervalMs: 60000,
+    });
+    _digest.start();
+    console.log('[copilot] stream-digest started — activity persists to Cortex every 60s');
+  } catch (e) { console.warn('[copilot] stream-digest not started:', e.message); }
 });
 
 module.exports = { server, streamIngest };

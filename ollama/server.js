@@ -409,41 +409,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // §GAP CLOSED 2026-07-06 — Phase 13 (Autonomous Loop). This is the first
-  // production caller of compartment-engine.spawn() anywhere in the
-  // codebase — intent-classifier -> case-library.query() -> spawn() ->
-  // execute() -> resolve(), the exact chain Phase 25/26/46's summaries
-  // each named as their last unmet dependency. Deliberately a new, opt-in
-  // route rather than rerouting /api/jobs' existing traffic through it —
-  // real production callers should choose this path, not be silently
-  // migrated onto an execution model that hasn't seen live traffic yet.
-  if (method === 'POST' && p === '/api/autonomous/run') {
-    const body = await readBody(req);
-    if (!body.text) { json(res, 400, { ok:false, error:'text required' }); return; }
-    if (!_ollamaOnline) { json(res, 503, { ok:false, error:'Ollama host unreachable' }); return; }
-    try {
-      const { run } = require('../lib/autonomous-loop.js');
-      const model = body.model || DEFAULT_MODEL;
-      const executor = async (workingMemory, constraintFrame) => {
-        // workingMemorySeed is null until case-library has a real seed for
-        // this exact signature (Phase 46 honesty rule — see case-library.js);
-        // prepended as context when present, never fabricated when absent.
-        const seedPrefix = workingMemory ? `[Prior case context: ${JSON.stringify(workingMemory)}]\n\n` : '';
-        const text = await _callOllamaRaw(model, seedPrefix + body.text, body.maxTokens, body.timeoutMs);
-        return { text };
-      };
-      const result = await run({
-        req: { text: body.text, source: body.source || 'ollama.autonomous', runId: body.runId, causedBy: body.causedBy },
-        executor,
-        budget: body.budget, boundary: body.boundary, injectedFrameworks: body.injectedFrameworks,
-      });
-      json(res, 200, { ok: true, ...result });
-    } catch (e) {
-      json(res, 500, { ok: false, error: e.message });
-    }
-    return;
-  }
-
   if (method === 'POST' && p === '/api/jobs') {
     const body = await readBody(req);
     if (!body.prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }

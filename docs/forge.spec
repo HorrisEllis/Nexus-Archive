@@ -109,3 +109,79 @@ spec:
     the natural effect of connecting what's already real, which is the
     actual finding of this entire session: the deficit was never
     capability, it was connection.
+
+  # ── §ADDED 2026-07-07 — the command/keyword/personality/stream layer ──────
+  # Checked before speccing any of this as new: cockpit/pipeline.js (real
+  # node-based workflow engine — trigger/condition/transform/api_call/
+  # agent_call/store/emit/loop, cron+schedule+webhook trigger types) and
+  # cockpit/cli.js (real CLI contract — forge pipeline/seam/idea/gap
+  # commands, "CLI = UI = same contract") are BOTH already real and
+  # already wired to guardian/server.js. "Create and schedule workflow,
+  # tasks, contracts" is not a gap — it's cockpit, already built, already
+  # connected. What's actually missing is four genuinely new pieces:
+  command_and_keyword_layer:
+    what: >
+      Ollama-side keyword-to-command mapping — a user's plain-text
+      request ("run the gap report") resolves to a real cockpit CLI
+      command ("forge gap list") without the user typing CLI syntax.
+    builds_on: [cockpit/cli.js's real interaction-contract, lib/agent-tools/'s
+                tool-calling loop (built this session)]
+    shape: >
+      A new tool in lib/agent-tools/tools/ — run_cockpit_command — schema
+      lists cockpit's real commands (read from cockpit/cli.js's own
+      contract, not hand-copied, so it can't drift from the real command
+      set the way the hooks registry drifted from copilot's real routes).
+      The model picks a command by matching user intent to a real
+      command's description; execute() shells out to the real CLI
+      exactly as a human would, same contract, same guarantees.
+    status: "not built — real, scoped, buildable next step, not started this session"
+
+  continuous_stream:
+    what: >
+      Listen/poll layer that watches real systems (userscript detection
+      already real and fixed this session — guardian's per-issue gap
+      events; Guardian job completions; Cortex's event_log) and
+      normalizes whatever it sees into plain text pushed into a running
+      Ollama context, so Copilot's next answer already has it without
+      re-asking.
+    builds_on: [guardian/userscript-{chatgpt,claude}.js's real per-issue
+                event emission (fixed this session), cortex/push-recall.js
+                (real memory), meta/crystal-lattice.js (real pattern
+                recognition, wired this session)]
+    honest_note: >
+      This is NOT a new capability to invent — it's the same "always
+      route generation through what's real" discipline applied
+      continuously instead of per-request. The pieces (listen, normalize,
+      push to Cortex, recall on the next turn) are each independently
+      real and tested this session; wiring them into one always-on loop
+      is the remaining, real work.
+    status: "not built — the individual pieces are proven, the loop
+             itself is not"
+
+  personalities:
+    what: >
+      Different system prompts / behavioral profiles Copilot can adopt
+      per conversation or per system it's representing.
+    checked: "no existing implementation anywhere in the codebase —
+              confirmed by direct search before speccing this as new,
+              not assumed absent"
+    shape: >
+      A profile is data, not code — {name, systemPrompt, allowedTools,
+      defaultIntent} — stored the same way cortex/push-recall.js already
+      stores tagged content (tier: 'session' or a new 'persona' tier),
+      recalled by name rather than invented as a new storage system.
+    status: "genuinely new, zero existing infrastructure to build on
+             beyond Cortex's own real storage — the smallest real gap
+             here, but still a real one"
+
+  copilot_command_intents:
+    what: >
+      copilot's own hook registry declares navigate/note/tool/action as
+      real intents (confirmed exhaustively this session — copilot's ONLY
+      real gap, exactly these 4 of 20 declared hooks). This is where
+      run_cockpit_command and personalities actually surface to a user —
+      not a separate UI, the existing /api/prompt entry point finally
+      handling the intents it already claims to.
+    status: "the connective tissue for everything above — still the
+             smallest, most precisely-bounded gap in copilot, unchanged
+             from earlier this session's finding"
