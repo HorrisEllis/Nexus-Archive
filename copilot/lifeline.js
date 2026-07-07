@@ -146,10 +146,30 @@ async function _tryOllama(prompt, opts = {}) {
 // ── Route to Guardian NCP ─────────────────────────────────────────────────────
 async function _tryGuardian(prompt, opts = {}) {
   try {
+    // §GAP PARTIALLY CLOSED 2026-07-07 — the comment here used to say
+    // "RAID picks best available" while calling nothing. Now really
+    // calls RAID's RoutingIR for the escalation target. Honest about
+    // what this does and doesn't fix: RAID's decision is now real; the
+    // endpoint it's handed to (/api/copilot/prompt) still doesn't exist
+    // on Guardian's side, confirmed directly, and the one real
+    // synchronous alternative found (/chatgpt-mode/query) also 503s —
+    // its own required file (guardian/agents/chatgpt-mode.js) doesn't
+    // exist either. Both dead ends are on Guardian's receiving side, not
+    // fixable from here. This wiring is correct and ready the moment
+    // either endpoint is real.
+    let ragProvider = opts.provider;
+    if (!ragProvider) {
+      try {
+        const { buildRoutingIR } = require('../cortex/core/raid/routing-ir.js');
+        const ir = buildRoutingIR({ intent: 'lifeline-escalation', prompt });
+        ragProvider = ir.selected;
+      } catch (_) { ragProvider = 'auto'; } // RAID unreachable — fail to the old default, not a crash
+    }
+
     // Use the NEXUS co-pilot proxy on Guardian
     const result = await _post(`${GD_URL}/api/copilot/prompt`, {
       prompt,
-      provider:   opts.provider || 'auto',   // RAID picks best available
+      provider:   ragProvider,
       requestId:  opts.requestId,
       sessionId:  opts.sessionId,
       channel:    'lifeline',

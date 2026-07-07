@@ -95,6 +95,57 @@ setInterval(async () => {
 }, 10000);
 
 // ── Raw Ollama call — unchanged mechanics, now WARP's `generate` fn ────────
+// §GAP CLOSED 2026-07-07 — lib/agent-tools/'s runToolLoop() needed a real
+// callModel(messages, toolSchemas) implementation; this is it. Uses
+// Ollama's real /api/chat (not /api/generate — that endpoint has no
+// tools param) with tools declared. qwen2.5-coder (DEFAULT_MODEL)
+// confirmed to support Ollama's native tool-calling before this was
+// built, not assumed.
+function _callOllamaChatWithTools(model, messages, toolSchemas, timeoutMs) {
+  const body = JSON.stringify({ model, messages, tools: toolSchemas, stream: false });
+  return new Promise((resolve, reject) => {
+    const u = new URL(`${OLLAMA_HOST}/api/chat`);
+    const req = http.request({
+      hostname: u.hostname, port: u.port || 11434, path: u.pathname, method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: timeoutMs || 60000,
+    }, r => {
+      let d = '';
+      r.on('data', c => d += c);
+      r.on('end', () => {
+        try {
+          const parsed = JSON.parse(d);
+          const msg = parsed.message || {};
+          resolve({
+            text: msg.content || '',
+            toolCalls: (msg.tool_calls || []).map(tc => ({
+              id: tc.id, name: tc.function?.name, arguments: tc.function?.arguments,
+            })),
+          });
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('ollama chat request timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+// POST /api/jobs/tools — same job shape as /api/jobs, but runs through
+// the real agent-tools loop (lib/agent-tools/index.js) instead of a
+// single raw call. Separate endpoint, not a silent mode-switch on the
+// existing one — a tool-enabled request has a different real cost and
+// latency profile (multiple model round-trips possible), a caller
+// should opt into that explicitly.
+async function _dispatchWithTools(prompt, model, maxIterations) {
+  const { runToolLoop } = require('../lib/agent-tools/index.js');
+  const systemPrompt = 'You are a coding assistant with access to a read_file tool for reading real files in this project. Use it when you need to see a file\'s actual content before answering.';
+  return runToolLoop(
+    (messages, toolSchemas) => _callOllamaChatWithTools(model, messages, toolSchemas),
+    systemPrompt, prompt, { maxIterations: maxIterations || 6 }
+  );
+}
 function _callOllamaRaw(model, prompt, maxTokens, timeoutMs) {
   const body = JSON.stringify({ model, prompt, stream: false,
     options: { num_predict: maxTokens || 2048, temperature: 0.2 } });
@@ -342,6 +393,22 @@ const server = http.createServer(async (req, res) => {
   }
 
   // POST /api/jobs — queue a job
+  // POST /api/jobs/tools — real agent-tools loop, separate from /api/jobs
+  // since a tool-enabled request has a genuinely different cost/latency
+  // profile (multiple model round-trips possible) — a caller opts in,
+  // not a silent mode-switch on the plain endpoint.
+  if (method === 'POST' && p === '/api/jobs/tools') {
+    const body = await readBody(req);
+    if (!body.prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
+    try {
+      const result = await _dispatchWithTools(body.prompt, body.model || DEFAULT_MODEL, body.maxIterations);
+      json(res, 200, { ok: true, text: result.text, iterations: result.iterations, toolCallLog: result.toolCallLog });
+    } catch (e) {
+      json(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   if (method === 'POST' && p === '/api/jobs') {
     const body = await readBody(req);
     if (!body.prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
