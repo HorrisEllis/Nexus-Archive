@@ -739,6 +739,39 @@ function _handleNCPMessage(msg) {
           bus.emit('guardian.gaps', { jobId, gaps, drift: gapDrift, provider });
         }
 
+        // §GAP CLOSED 2026-07-06 — meta/liminal's 12 domain-agnostic detectors
+        // were confirmed real (module.exports checked directly) but had zero
+        // consumers outside orchestrator's status-endpoint depth. This is the
+        // same real completion path GapHunter already runs on, same JAA
+        // `gaps` table, same event shape — a second detector alongside the
+        // first, not a parallel system. analyzeCode runs per code block
+        // (silent-failure/unawaited-promise/SQLi/stub detection on content
+        // that's about to be written to disk); analyzeText runs on the full
+        // response (assumption/contrastive/structural/shadow/negative-space/
+        // relational/reversal/existential gaps). liminal's own analyze()
+        // dispatch already picks code vs text — reused here rather than
+        // reimplemented.
+        let liminalGaps = [];
+        try {
+          const liminal = require('../meta/liminal');
+          for (const block of codeBlocks) {
+            liminalGaps.push(...liminal.analyzeCode(block.content));
+          }
+          liminalGaps.push(...liminal.analyzeText(finalText));
+        } catch (e) {
+          console.error(`[guardian] liminal analysis failed (non-fatal): ${e.message}`);
+        }
+        if (liminalGaps.length > 0) {
+          for (const g of liminalGaps) {
+            jaa.insert('gaps', { uuid: require('crypto').randomUUID(),
+              jobId, provider, type: g.type, domain: g.domain,
+              reason: g.reason, description: g.description,
+              score: g.criticality, evidence: g.evidence,
+              source: g.module || 'liminal', ts: Date.now() });
+          }
+          bus.emit('guardian.gaps.liminal', { jobId, gaps: liminalGaps, provider });
+        }
+
         // Server-side detector — only if we have a SEAM chunk to compare against
         let detection = null;
         if (job?.seam_chunk_content) {

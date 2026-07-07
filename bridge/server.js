@@ -38,6 +38,66 @@ const _sseClients = new Set();
 // into the CFR field so /cfr/* reflects real traffic.
 let _cfrLedger = null;
 
+// §GAP CLOSED 2026-07-06 — centralizing cross-cutting intelligence at
+// bridge's one real chokepoint instead of wiring it into guardian, then
+// copilot, then ollama, then idearium separately (which is how liminal
+// got wired into guardian last session — real, but done once of what
+// should be N times). Every request that flows through handleRequest
+// now gets CFR-scoring + gap-detection for free, including systems that
+// don't exist yet. This does NOT replace per-system wiring already done
+// (guardian's liminal/gap-hunter calls stay — they see content bridge
+// never does, like SEAM chunk comparisons) — it's additive coverage for
+// the large fraction of cross-system traffic that bypasses guardian
+// entirely (copilot->cortex, copilot->ollama, etc. per the adjacency
+// audit — those calls hit bridge's payload shape if/when they're
+// migrated to route through bridge instead of calling ports directly;
+// until then this still runs on whatever *does* come through bridge today).
+const createCortexWriter = require('../lib/cortex-write');
+const _cw = createCortexWriter('bridge');
+let _liminal, _gapHunter;
+function _getLiminal()  { return _liminal   || (_liminal   = require('../meta/liminal')); }
+function _getGapHunter(){ return _gapHunter || (_gapHunter = require('../meta/gap/hunter')); }
+
+// Extracts a text representation from an arbitrary request payload —
+// liminal/gap-hunter both operate on strings. Most payloads carry one of
+// these fields; anything else gets a truncated JSON dump so detection
+// still runs on *something* real rather than skipping silently.
+function _payloadText(payload) {
+  if (typeof payload === 'string') return payload;
+  if (!payload || typeof payload !== 'object') return '';
+  return payload.text || payload.prompt || payload.content || payload.response
+    || JSON.stringify(payload).slice(0, 5000);
+}
+
+// Runs once per request, at the one place every bridge request passes
+// through. Fire-and-forget — a detection failure must never block
+// dispatch (§1.2, same rule every other system's gap-analysis follows).
+function _analyzeRequest(request) {
+  const text = _payloadText(request.payload);
+  if (!text) return;
+  try {
+    if (_cfrLedger) _cfrLedger.record('bridge.request', { type: request.type, source: request.source, target: request.target, textLen: text.length });
+  } catch (_) {}
+  try {
+    const liminal = _getLiminal();
+    const gapHunter = _getGapHunter();
+    const findings = [...liminal.analyze(text), ...gapHunter.analyze(text)];
+    for (const g of findings) {
+      _cw.insert('gaps', {
+        uuid: randomUUID(), requestUuid: request.uuid,
+        source: g.module || 'gap-hunter', target: request.target,
+        type: g.type, domain: g.domain || null,
+        reason: g.reason || null, description: g.description || null,
+        score: g.criticality ?? g.score ?? null, evidence: g.evidence || null,
+        ts: Date.now(),
+      });
+    }
+    if (findings.length) _pushSSE('bridge.gaps.detected', { requestUuid: request.uuid, count: findings.length });
+  } catch (e) {
+    console.error(`[bridge] request analysis failed (non-fatal): ${e.message}`);
+  }
+}
+
 function _pushSSE(type, data) {
   const msg = `data: ${JSON.stringify({ type, data, ts: Date.now() })}\n\n`;
   for (const res of _sseClients) {
@@ -116,6 +176,11 @@ async function handleRequest(req, res, { identity, router, ledger }) {
   // §2.1 — ledger write BEFORE dispatch
   await ledger.write(request);
   _pushSSE('bridge.request.created', { uuid: request.uuid, type: request.type, source: request.source, target: request.target });
+
+  // §GAP CLOSED 2026-07-06 — CFR-scoring + gap-detection, once, at the
+  // hub. Deliberately not awaited: analysis must never add latency to
+  // real dispatch, and a detector failure must never block a request.
+  _analyzeRequest(request);
 
   // Dispatch
   const result = await router.dispatch(request);
