@@ -424,6 +424,53 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §GAP CLOSED 2026-07-07 — copilot's hook registry has declared
+  // /api/axioms, /api/axioms/add and /api/axioms/remove as active since
+  // it was written, while copilot/axiom-manager.js sat real, complete,
+  // and unwired — zero references to "axioms" existed anywhere in this
+  // file. Found by scripts/verify-wires.js, confirmed by hand. These
+  // three routes were copilot's ONLY remaining gap against its own
+  // registry (all 12 other checkable hooks verified real).
+  if (method === 'GET' && p === '/api/axioms') {
+    try {
+      const am = require('./axiom-manager.js');
+      const tier   = url.searchParams.get('tier')   || undefined;
+      const status = url.searchParams.get('status') || undefined;
+      const axioms = am.list({ tier, status });
+      json(res, 200, { ok: true, count: axioms.length, axioms });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  if (method === 'POST' && p === '/api/axioms/add') {
+    try {
+      const am = require('./axiom-manager.js');
+      const body = await readBody(req);
+      if (!body.id || !body.text) { json(res, 400, { ok:false, error:'id and text required' }); return; }
+      const result = am.add(body.id, body.text, { reason: body.reason, source: body.source || 'copilot-api', tier: body.tier || 'RUNTIME' });
+      json(res, 200, { ok: true, axiom: result });
+    } catch (e) {
+      // axiom-manager throws real errors (duplicate id, immutable tier) —
+      // surface them, never swallow into a false success.
+      json(res, 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  if (method === 'POST' && p === '/api/axioms/remove') {
+    try {
+      const am = require('./axiom-manager.js');
+      const body = await readBody(req);
+      if (!body.id) { json(res, 400, { ok:false, error:'id required' }); return; }
+      // confirm defaults false — axiom-manager's own guard refuses an
+      // unconfirmed removal. Not overridden here: a destructive call
+      // should require an explicit confirm from the caller, not a default.
+      const result = am.remove(body.id, { confirm: body.confirm === true });
+      json(res, 200, { ok: true, removed: result });
+    } catch (e) { json(res, 400, { ok: false, error: e.message }); }
+    return;
+  }
+
   if (method === 'GET' && p === '/api/sessions') {
     json(res, 200, { ok:true, sessions: [..._sessions.values()] });
     return;
@@ -708,6 +755,51 @@ const server = http.createServer(async (req, res) => {
     session.exchanges++;
 
     if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
+
+    // §GAP CLOSED 2026-07-07 — copilot's own hook registry declares seven
+    // intents (ask|build|diagnose|navigate|note|tool|action); `ask` was
+    // hardcoded at nine points in this file, and navigate/note/tool/action
+    // had no implementation anywhere. copilot/intents.js implements those
+    // four. Strictly ADDITIVE: route() returns null for ask/build/diagnose,
+    // so every existing request falls through to the exact pipeline below,
+    // unchanged. Only a genuinely-matched new intent returns early.
+    try {
+      const _intents = require('./intents.js');
+      const intentResult = await _intents.route(prompt, {
+        pushToCortex: (content, tags, tier) => new Promise((resolve, reject) => {
+          const b = JSON.stringify({ content, tags, tier });
+          const rq = http.request({ hostname: '127.0.0.1', port: 3748, path: '/api/push', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } },
+            r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>{ try { resolve(JSON.parse(d)); } catch(e){ reject(e); } }); });
+          rq.on('error', reject);
+          rq.write(b); rq.end();
+        }),
+        runTools: async (userPrompt) => {
+          const { PersonaStore } = require('../cortex/personas.js');
+          const { jaaDB } = require('../cortex/memory/jaa-db.js');
+          const persona = new PersonaStore({ jaa: jaaDB }).get(body.persona || 'default');
+          // Delegates the actual model call to the real ollama /api/jobs/tools
+          // endpoint built this session, rather than reimplementing it here.
+          return new Promise((resolve, reject) => {
+            const b = JSON.stringify({ prompt: userPrompt, persona: persona.name });
+            const rq = http.request({ hostname: '127.0.0.1', port: 3749, path: '/api/jobs/tools', method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } },
+              r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>{ try { resolve(JSON.parse(d)); } catch(e){ reject(e); } }); });
+            rq.on('error', reject);
+            rq.write(b); rq.end();
+          });
+        },
+      });
+      if (intentResult) {
+        streamIngest({ type: 'copilot.answered', requestId, intent: intentResult.intent, modelUsed: 'copilot.intents' });
+        json(res, intentResult.ok ? 200 : 400, { ...intentResult, requestId, sessionId, channel });
+        return;
+      }
+    } catch (e) {
+      // §1.2 — an intent-routing failure must never swallow a real request.
+      // Log it and fall through to the existing, working ask pipeline.
+      console.warn('[copilot] intent routing failed, falling through to ask:', e.message);
+    }
 
     broadcast('copilot.prompt.received', { prompt: prompt.slice(0,100), channel, sessionId });
 

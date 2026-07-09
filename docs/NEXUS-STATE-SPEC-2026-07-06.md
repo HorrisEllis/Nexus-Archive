@@ -276,3 +276,28 @@ Registered into `lib/agent-tools/` alongside `read_file`; both advertise valid s
 - Personalities → `cortex/personas.js`, built + wired + tested (Part 15)
 - Continuous stream loop → `copilot/stream-digest.js`, built + wired + proven end to end (this part)
 - copilot navigate/note/tool/action intents → the one remaining precise gap; now has real content behind it (personas for tool/action, cockpit commands for action, the digest stream for note) — smaller and more concrete than ever, the natural last piece
+
+---
+
+## PART 17 — Copilot fully closed against its own registry: four intents + three axiom endpoints, verified live
+
+**Copilot now has zero gaps against its declared hooks.** Verified by re-running `scripts/verify-wires.js` (the tool built earlier this session for exactly this) — it reports no copilot candidates remaining. This was copilot's only outstanding gap, and it is closed.
+
+**`copilot/intents.js` — the four missing intents (navigate/note/tool/action), built and wired.** copilot's primary hook has always declared seven intents; `ask` was hardcoded at nine separate points in `copilot/server.js`, and these four had no implementation anywhere. Each is grounded in real infrastructure built earlier this session, not invented:
+- `navigate` → reads real surface→port mappings from the hook registry (drift-proof by construction, same discipline as `run_cockpit_command` reading cockpit's contract). Correctly maps architect to `/ui/spec-builder`, **not** the bare root — that root returns a real 404, the exact dashboard bug fixed earlier this session, encoded here so it cannot recur.
+- `note` → pushes to Cortex's real `/api/push`. **Refuses to claim success on failure**: if the store throws or no backend is available, it reports the error rather than telling the user their note was saved. Tested both failure paths explicitly.
+- `tool` / `action` → delegate to Ollama's real `/api/jobs/tools` endpoint (built this session), inheriting `run_cockpit_command`'s real hallucination guard — a command not in cockpit's own contract is refused, never executed.
+
+**Strictly additive, and proven so.** `route()` returns `null` for ask/build/diagnose, so every pre-existing request falls through to the exact same pipeline, unchanged. Verified live: a navigate prompt returns the real architect URL; an `ask` prompt still resolves with `intent: 'ask'` through the original path. Intent classification is deterministic keyword matching, not model-based — a misroute here would silently send a request down the wrong pipeline, so an auditable rule beats an opaque probability, and routing shouldn't cost a model round-trip.
+
+**Copilot's three axiom endpoints wired to the real, existing `axiom-manager.js`.** Found by `verify-wires.js`, confirmed by hand: the registry declared `/api/axioms`, `/api/axioms/add`, `/api/axioms/remove` as active while `axiom-manager.js` sat complete and unreferenced — the word "axioms" appeared nowhere in `copilot/server.js`. Wired and verified live: `GET /api/axioms` returns **32 real axioms** parsed from the actual AXIOMS file, first being `§1.1 "Nothing Exists Until Proven"` (IMMUTABLE, frozen). `remove` deliberately does not default `confirm` to true — a destructive call requires an explicit confirm from the caller.
+
+**Self-caught during this build:** left an unused `runToolLoop` import after switching to delegate to Ollama's endpoint; removed rather than left as dead code. Also confirmed the delegate target (`/api/jobs/tools`) actually exists before depending on it — the precise check that this session's dominant bug class (declared wire, no implementation) exists to prevent.
+
+**Regression check:** all 13 modified files pass `node --check`; Loom's real production suite still 18/18.
+
+**forge.spec "programmable co-pilot" tally — 4 of 4 built and tested:**
+- Command/keyword layer → `run_cockpit_command` (Part 14)
+- Personalities → `cortex/personas.js` (Part 15)
+- Continuous stream loop → `copilot/stream-digest.js` (Part 16)
+- navigate/note/tool/action intents → `copilot/intents.js` (this part)
