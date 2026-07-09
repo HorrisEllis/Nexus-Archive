@@ -301,3 +301,26 @@ Registered into `lib/agent-tools/` alongside `read_file`; both advertise valid s
 - Personalities → `cortex/personas.js` (Part 15)
 - Continuous stream loop → `copilot/stream-digest.js` (Part 16)
 - navigate/note/tool/action intents → `copilot/intents.js` (this part)
+
+---
+
+## PART 18 — Guardian's ask endpoint built; a regression I caused found and fixed; a pre-existing RAID bug exposed
+
+**`guardian/ask.js` + `POST /api/copilot/prompt` — Guardian's missing synchronous ask, built.** `copilot/lifeline.js`'s escalation path has called this exact endpoint (with a RAID-selected provider, wired and tested earlier this session) into the void. Guardian had zero working synchronous ask endpoints: this one was absent, and `/chatgpt-mode/query` 503s because `guardian/agents/chatgpt-mode.js` doesn't exist.
+
+**Deliberately did NOT build `chatgpt-mode.js`.** That path implies a second browser-tab agent — Guardian already has one (NCP job machinery, with RAID selection already in `/command`'s raw path). Building a parallel agent would create exactly the competing-truth-layers duplication this session repeatedly found and undid. `ask.js` is an honest synchronous facade over the real `createJob → dispatchJob → NCP → poll` pipeline. It cannot make an async job synchronous, only wait for it — and it says so:
+- **Fail-fast** when no NCP provider is connected (0ms, not a 90s poll into a vague timeout).
+- **Real timeout** names the jobId so the work is retrievable via `GET /jobs`, never silently lost.
+- **Reads both `responseText` and `result`** — Guardian genuinely stores completion text under different names on different code paths. An honest patch over a real inconsistency, explicitly not a fix to Guardian.
+- **"Complete but no text" is reported as the anomaly it is**, never an empty success.
+Six paths tested standalone with injected deps before wiring.
+
+**A real bug in my own wiring, caught before shipping.** The first version passed `provider: 'auto'` straight to `createJob`. But `createJob` stores the provider verbatim and `dispatchJob` enqueues to `pendingQueue['auto']` — a bucket no real provider ever drains. That would create a permanently-stuck job only the timeout would release. `/command` resolves `auto` via RAID *before* `createJob`; so must this. Fixed via an injected `resolveProvider` (keeping `ask.js` sovereign), and verified: **zero jobs created** when no resolver is supplied, rather than one stuck job.
+
+**A REGRESSION I INTRODUCED EARLIER THIS SESSION, found by finally booting Guardian.** `const server = http.createServer(...)` was deleted during the dead-TLS/WSS/dropzone cleanup. The removal was clean enough that `node --check` still passed — but `server.listen()` and `server.listeners('request')` both referenced an undefined variable, so **guardian/server.js could not boot at all**, and had been shipped that way in every package since. Restored faithfully as the 404 fallback handler that `_origListeners` is designed to capture (all 41 real routes live in `handleExtendedRoutes`, consulted first). **The lesson, recorded rather than quietly patched: a syntax check is not a boot check.** Every prior "verified" claim about Guardian this session rested on reading code, not running it.
+
+**A PRE-EXISTING bug exposed by that boot.** `/command`'s raw dispatch calls `_raid.decide(...)`. RAID exports `_decide`, not `decide` — and its real signature is `_decide({prompt, context:{cfrRegime, cfrSigmaFloor}})`, not `(prompt, {preferredAgent, cfrCtx})`. Both the name and the argument shape were wrong. Because the call sits inside a try/catch, it threw silently on **every raw dispatch** and fell through to the `'chatgpt'` fallback. **RAID has therefore never once actually routed a raw job in Guardian**, and the `[guardian] RAID → ...` log line has never printed. Fixed, minimally and faithfully.
+
+**`RoutingIR` got its first production consumer.** Built and tested earlier this session with zero real callers, it now resolves the provider for `/api/copilot/prompt` — reporting honest `rule_based` vs `competitive` mode. Verified live against booted Guardian: `auto` → RoutingIR → `claude` (LAW_III unconditional reserve) → fail-fast in 17ms with the resolved provider named.
+
+**Regression check:** Guardian now boots (loads 3,227 real event_log rows, 81 jobs, 207 gaps). `/health` serves. Loom's real suite still 18/18. `verify-wires.js` reports no remaining copilot or guardian-ask candidates. All four touched files pass `node --check`.

@@ -1247,6 +1247,26 @@ async function _selfProbe(path_) {
   });
 }
 
+// §REGRESSION FIXED 2026-07-07 — `const server = http.createServer(...)`
+// was removed earlier this session while deleting dead TLS/cert and WSS
+// stub code. The removal was clean enough that `node --check` still
+// passed (the whole statement went, leaving no orphaned body), so nothing
+// caught it — but `server.listen()` below and `server.listeners('request')`
+// further down both referenced an undefined variable, meaning
+// guardian/server.js could not boot AT ALL. Found by actually booting it,
+// not by inspection. Real lesson, recorded rather than quietly patched:
+// a syntax check is not a boot check.
+//
+// This base handler is the 404 fallback by design. All 41 real routes
+// live in handleExtendedRoutes(), which the `server.on('request')` block
+// further down consults FIRST; `_origListeners` captures this handler and
+// invokes it only when no route matched. Restoring it as a 404 preserves
+// the original fallback semantics exactly.
+const server = http.createServer((req, res) => {
+  res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.end(JSON.stringify({ ok: false, error: `${req.method} ${req.url} not found` }));
+});
+
 server.listen(HTTP_PORT, '127.0.0.1', async () => {
   const { BootSequence } = require('../lib/boot-sequence');
   const nc2 = require('../nexus-connect');
@@ -2777,6 +2797,53 @@ function handleExtendedRoutes(req, res, url, method) {
   // ── POST /chatgpt-mode/query — two-layer Nexus(authority)/ChatGPT(reasoning) ──
   // Same shape as /copilot/prompt above, deliberately — different agent
   // (guardian/agents/chatgpt-mode.js), same request/response/error pattern.
+  // §GAP CLOSED 2026-07-07 — /api/copilot/prompt is called by
+  // copilot/lifeline.js's escalation path (with a RAID-selected provider,
+  // wired and tested earlier this session) and did not exist anywhere in
+  // this file. Guardian had ZERO working synchronous ask endpoints: this
+  // one was absent, and /chatgpt-mode/query below 503s because
+  // guardian/agents/chatgpt-mode.js does not exist. Rather than build a
+  // second, parallel browser-tab agent, this wraps the REAL job machinery
+  // (createJob -> dispatchJob -> NCP -> poll) that /command already uses,
+  // via guardian/ask.js. Honest facade: it cannot make an async job
+  // synchronous, only wait for it — and it fails fast when no provider is
+  // connected rather than polling into a vague timeout.
+  if (method === 'POST' && url.pathname === '/api/copilot/prompt') {
+    bodyJ(req).then(async body => {
+      const { askSync } = require('./ask.js');
+      const result = await askSync(body.prompt, {
+        provider:  body.provider || 'auto',
+        content:   body.content,
+        timeoutMs: body.timeoutMs,
+        command:   'ask',
+      }, {
+        createJob,
+        dispatchJob,
+        getJob: (id) => jobs.get(id),
+        isProviderConnected: (p) => { try { return ncp.isConnected(p); } catch (_) { return false; } },
+        // Routes through RoutingIR (cortex/core/raid/routing-ir.js), which
+        // wraps RAID's real _decide() honestly — reporting rule_based mode
+        // when LAW_I/LAW_III fire (no real competition happened) vs
+        // competitive mode with real fitness numbers when it did. Built and
+        // tested earlier this session with zero production callers; this is
+        // its first. NOTE: `_raid.decide()` does not exist — see the
+        // §BUG FIXED note on /command's raw path below.
+        resolveProvider: (p) => {
+          const { buildRoutingIR } = require('../cortex/core/raid/routing-ir.js');
+          let _cfrCtx = {};
+          try {
+            const _cfrInfl = require('../nexus-cfr-influence');
+            _cfrCtx = { cfrSigmaFloor: _cfrInfl.getSigmaFloor?.() || 0, cfrRegime: _cfrInfl.getState?.()?.regime || 'stable' };
+          } catch (_) {}
+          const ir = buildRoutingIR({ intent: 'copilot-ask', prompt: p, context: _cfrCtx });
+          return ir.selected;
+        },
+      });
+      pRes(res, result.ok ? 200 : 502, result);
+    }).catch(e => pRes(res, 500, { ok: false, error: e.message }));
+    return true;
+  }
+
   if (method === 'POST' && url.pathname === '/chatgpt-mode/query') {
     bodyJ(req).then(async body => {
       const { prompt, mode, maxTokens, model, timeout } = body || {};
@@ -2887,7 +2954,18 @@ function handleExtendedRoutes(req, res, url, method) {
             _cfrCtx = { sigmaFloor: _cfrInfl.getSigmaFloor?.() || 0,
                         regime: _cfrInfl.getState?.()?.regime || 'stable' };
           } catch(_) {}
-          const _decision = _raid.decide(_prompt, { preferredAgent: 'auto', cfrCtx: _cfrCtx });
+          // §BUG FIXED 2026-07-07 — this called `_raid.decide(...)`, which
+          // does not exist: RAID exports `_decide`, and its signature is
+          // _decide(call, health, weights) where call is
+          // {prompt, context:{cfrRegime, cfrSigmaFloor}} — not
+          // (prompt, {preferredAgent, cfrCtx}). Because the call sat inside
+          // the try/catch below, it threw silently on EVERY raw dispatch and
+          // fell through to the 'chatgpt' fallback. RAID has therefore never
+          // actually routed a raw job in Guardian, and the
+          // `[guardian] RAID → ...` log line below has never once printed.
+          // Found while wiring /api/copilot/prompt, which reused this same
+          // broken call.
+          const _decision = _raid._decide({ prompt: _prompt, context: { cfrRegime: _cfrCtx.regime, cfrSigmaFloor: _cfrCtx.sigmaFloor } });
           _rawProvider = _decision.agent;
           console.log(`[guardian] RAID → ${_rawProvider} (${_decision.reason}) σfloor:${_cfrCtx.sigmaFloor}`);
         } catch(_) {
