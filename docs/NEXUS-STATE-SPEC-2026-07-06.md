@@ -324,3 +324,40 @@ Six paths tested standalone with injected deps before wiring.
 **`RoutingIR` got its first production consumer.** Built and tested earlier this session with zero real callers, it now resolves the provider for `/api/copilot/prompt` — reporting honest `rule_based` vs `competitive` mode. Verified live against booted Guardian: `auto` → RoutingIR → `claude` (LAW_III unconditional reserve) → fail-fast in 17ms with the resolved provider named.
 
 **Regression check:** Guardian now boots (loads 3,227 real event_log rows, 81 jobs, 207 gaps). `/health` serves. Loom's real suite still 18/18. `verify-wires.js` reports no remaining copilot or guardian-ask candidates. All four touched files pass `node --check`.
+
+---
+
+## PART 19 — Fixing the verification process, not just the bugs
+
+Two critiques were levelled at Part 18's postmortem, and both were correct. Acting on them changed the tooling, not just the code.
+
+**Critique 1: "I can't honestly tell you anything is working" was overbroad.** Evidence is a ladder, not a binary. Collapsing the rungs is precisely what let a non-booting Guardian ship. `scripts/verify-boot.js` now makes the rungs explicit and never asserts one it did not observe:
+
+`PARSES < BOOTS < SERVING < HEALTHY < CONTRACT`
+
+A service can PARSE and be dead. It can BOOT and never listen. It can SERVE and return 500s. Each rung is earned separately. **Not an end-to-end test** — reaching CONTRACT proves the process is alive and answering, nothing about business behavior.
+
+**Critique 2: "swap the order if orphaned hooks can prevent startup."** Tested rather than accepted. Four files load the registry at runtime, but nothing enumerates routes — an *undeclared* route cannot throw. Cortex and Copilot both boot today with 69 orphans present. **Ordering stands: boot verification first**, because every claim above it depends on it.
+
+**First real boot run — the first runtime proof this session of anything:**
+
+| service | tier | note |
+|---|---|---|
+| cortex | CONTRACT | v3.0.0 |
+| guardian | CONTRACT | v3.6.1 — proves the restored `createServer` fix is real |
+| copilot | CONTRACT | v3.1.0 |
+| orchestrator | CONTRACT | — |
+| architect | CONTRACT | v3.0.0 |
+| ollama | **HEALTHY** | `/health` 2xx but `ok:false` |
+
+The tool then earned its keep by making me *check* rather than assume: ollama's `ok:false` is **not a bug** — the Ollama daemon at `:11434` isn't running in this sandbox, and the server correctly reports degraded instead of lying (§1.2 working as designed). The tier ladder distinguished "serving" from "healthy" exactly as intended.
+
+**`verify-wires.js` now runs bidirectionally.** The original proved only *"every declared hook has code."* It could not prove the converse, *"every implemented route has a declaration"* — different properties. A one-way checker is blind in exactly the direction its author is blind.
+
+**The reverse scan's first run: 69 implemented routes with no declared hook**, against 65 declared routes total. **The registry describes roughly half the real HTTP surface.** Guardian 34, Cortex 30, Copilot 3, Ollama 2. Reported as *candidates*, not verdicts — some are near-duplicates (`/jobs` vs `/jobs/`) and some may be intentional internals. This is a systemic §5.1 finding, far larger than my own contribution to it.
+
+**Six of them were mine, and are now registered** (`/api/copilot/prompt`, `/api/jobs/tools`, `/api/snapshot/rollback`, `/api/bus/stats`, `/api/push`, `/api/recall`). Registry: 82 → 88 hooks. Reverse orphans: 69 → 64 — exactly **five**, not six, because `/api/bus/stats` was never in the reverse list: orchestrator segment-routes it (`sub==='bus' && seg[2]==='stats'`), a blind spot the tool documents rather than hides. The arithmetic being explainable is the point.
+
+**Regression after touching the hooks files** (Cortex loads the registry at boot — a real risk): cortex, copilot, guardian all still reach CONTRACT. Forward scan flags none of the six new hooks as missing.
+
+**Still not done, and named:** Clear Glass is not wired as an NCP provider. `guardian/ask.js` was built around "a browser tab connects," and `clear-glass/` contains no NCP client while `guardian/server.js` contains zero references to it. That assumption is now embedded in user-facing text ("no browser tab available") — an architectural assumption that became part of the product's contract. It is remediation #3, deliberately after a verified runtime exists to integrate against.

@@ -55,6 +55,61 @@ function containsPath(rel, routePath, surface) {
   return content.includes(routePath) || content.includes(stripped);
 }
 
+/**
+ * §REVERSE SCAN — added 2026-07-09. The original tool only proved one
+ * implication: "every declared hook has code." It could not prove the
+ * converse: "every implemented route has a declaration." Those are
+ * different properties, and the gap hid six real endpoints built this
+ * very session with no hook entry (§5.1 requires one on everything):
+ * /api/copilot/prompt, /api/jobs/tools, /api/snapshot/rollback,
+ * /api/bus/stats, /api/push, /api/recall. A one-way checker is blind in
+ * exactly the direction its author is blind.
+ *
+ * Heuristic, and honest about it: extracts route string literals from the
+ * real route-matching patterns these servers actually use. It will miss
+ * segment-routed paths (orchestrator's `sub==='bus' && seg[2]==='stats'`)
+ * — the same blind spot the forward scan has, noted rather than hidden.
+ * Output is CANDIDATES for confirmation, never a verdict.
+ */
+function reverseScan() {
+  const h = require(path.join(ROOT, 'hooks/index.js'));
+  const declared = new Set(h.allHooks().map(x => x.config?.path).filter(Boolean));
+
+  // Real matching styles found across these servers.
+  const PATTERNS = [
+    /p === '([^']+)'/g,
+    /url\.pathname === '([^']+)'/g,
+    /url\.pathname==='([^']+)'/g,
+  ];
+
+  const orphans = [];
+  for (const [surface, files] of Object.entries(SURFACE_FILES)) {
+    for (const rel of files.filter(fileExists)) {
+      const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      const found = new Set();
+      for (const re of PATTERNS) {
+        let m;
+        while ((m = re.exec(src)) !== null) {
+          if (m[1].startsWith('/')) found.add(m[1]);
+        }
+      }
+      for (const route of found) {
+        if (!declared.has(route)) orphans.push({ surface, route, file: rel });
+      }
+    }
+  }
+
+  console.log(`\n=== REVERSE SCAN: ${orphans.length} implemented route(s) with NO declared hook (§5.1) ===\n`);
+  const bySurface = {};
+  for (const o of orphans) (bySurface[o.surface] ||= []).push(o.route);
+  for (const [surface, routes] of Object.entries(bySurface)) {
+    console.log(`${surface} (${routes.length}):`);
+    for (const r of routes.sort()) console.log(`   ${r}`);
+  }
+  if (!orphans.length) console.log('  none — every implemented route is declared.');
+  return orphans;
+}
+
 function main() {
   const h = require(path.join(ROOT, 'hooks/index.js'));
   const all = h.allHooks().filter(x => x.config?.path && SURFACE_FILES[x.to?.surface]);
@@ -84,3 +139,4 @@ function main() {
 }
 
 main();
+reverseScan();

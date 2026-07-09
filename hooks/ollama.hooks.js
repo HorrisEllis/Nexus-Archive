@@ -18,6 +18,20 @@
  */
 const HOOKS = [
   {
+    id: "ollama-hook-jobs-tools-0009",
+    name: "ollama-jobs-tools",
+    intent: "Run a job through the sovereign agent tool-calling loop (lib/agent-tools)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "ollama", layer: 1, port: 3749 },
+    config: { path: "/api/jobs/tools", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["lib/agent-tools/index.js","lib/agent-tools/tools/read-file.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
     id: "ollama-hook-jobs-dispatch-0001",
     name: "ollama-jobs-dispatch",
     intent: "Queue a job for local model execution",

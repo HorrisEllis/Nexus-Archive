@@ -28,6 +28,20 @@
  */
 
 const GUARDIAN_HOOKS = [
+  {
+    id: "guardian-hook-copilot-prompt-0031",
+    name: "guardian-copilot-prompt",
+    intent: "Synchronous ask over the real NCP job pipeline (enqueue + poll)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "guardian", layer: 1, port: 7820 },
+    config: { path: "/api/copilot/prompt", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["guardian/ask.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
 
   // ── NCP Transport ─────────────────────────────────────────────────────────
 

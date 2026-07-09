@@ -9,6 +9,48 @@
 
 const CORTEX_HOOKS = [
   {
+    id: "cortex-hook-snapshot-rollback-0013",
+    name: "cortex-snapshot-rollback",
+    intent: "Restore CFR field state from a stored snapshot",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "cortex", layer: 1, port: 3748 },
+    config: { path: "/api/snapshot/rollback", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["cortex/boot.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
+    id: "cortex-hook-recall-0012",
+    name: "cortex-recall",
+    intent: "Recall from unified memory (lexical + recency scored)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "cortex", layer: 1, port: 3748 },
+    config: { path: "/api/recall", method: "GET" },
+    contract: { axioms: [], sideEffects: [], idempotent: true },
+    references: { files: ["cortex/push-recall.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
+    id: "cortex-hook-push-0011",
+    name: "cortex-push",
+    intent: "Push content into unified memory (tiered, tagged)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "cortex", layer: 1, port: 3748 },
+    config: { path: "/api/push", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["cortex/push-recall.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
     id: 'cx-hook-event-ingest-0001', name: 'cortex-event-ingest',
     intent: 'Receive events from all systems and write them to JAA event_log so nothing is lost',
     type: 'api', direction: 'sink',
