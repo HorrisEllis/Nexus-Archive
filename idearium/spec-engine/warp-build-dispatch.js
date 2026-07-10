@@ -51,6 +51,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import fs from 'fs';
+import crypto from 'crypto';
 
 let _crystallizer = null;
 let _population = null;
@@ -83,6 +84,14 @@ export function createWarpChunkDispatch(as, { raid = null, axioms = [], pollTime
     raid,
     crystallizer,
     population,
+    // §OPT-IN 2026-07-09 — WARP's exact cache is written only on promotion
+    // (3 independent regenerations + fitness floor), which is correct for
+    // GENERALIZING a gateClass across similar inputs but wrong for identical
+    // ones. seam_uuid above is now a sha256 of the exact prompt, so a digest
+    // hit means the input is byte-identical and already hard-axiom-validated.
+    // Caching it on first success is deterministic reuse, and it is what makes
+    // each build cheaper than the last instead of costing the same forever.
+    exactCacheOnFirstSuccess: true,
     // generate() is the real network call WARP's cascade invokes per
     // provider attempt — this is where Guardian's queued/async chatgpt
     // and claude path gets resolved to a real value before returning,
@@ -105,9 +114,33 @@ export function createWarpChunkDispatch(as, { raid = null, axioms = [], pollTime
   });
 
   return async function dispatch(prompt, opts = {}) {
+    // §COMPOUNDING BUG FIXED 2026-07-09 — two faults, and together they made
+    // the exact cache simultaneously useless and unsafe.
+    //
+    // (1) seam_uuid was `${specUuid}:${chunkIdx}`, and the digest is
+    //     hash(gateSignature=seam_uuid + axioms + event content). specUuid is
+    //     unique per spec, so an IDENTICAL chunk built in a second spec
+    //     produced a different digest and could never hit the cache. WARP
+    //     could not compound across specs no matter how many builds ran. The
+    //     fallback was worse: `idearium-chunk-${Date.now()}` gave every single
+    //     call a unique key, so nothing could ever hit, even within one spec.
+    //
+    // (2) warp-cascade builds `event: { data: { seam: record.seam_id } }`, and
+    //     seam_id here is the section TITLE. The prompt was nowhere in the
+    //     digest. Two different chunks both titled "Purpose" would hash the
+    //     same and could return each other's output — a wrong cache hit, which
+    //     is worse than a miss.
+    //
+    // Both are fixed by the same move: key on the CONTENT. seam_uuid becomes a
+    // sha256 of the exact prompt, so identical prompts (across specs, across
+    // runs, across machines) share one key, and different prompts never do.
+    // That is what makes the cache content-addressed, and content-addressing is
+    // what makes it compound.
+    const promptDigest = crypto.createHash('sha256').update(String(prompt)).digest('hex').slice(0, 32);
+
     const record = {
       prompt,
-      seam_uuid: opts.specUuid ? `${opts.specUuid}:${opts.chunkIdx ?? 'chunk'}` : `idearium-chunk-${Date.now()}`,
+      seam_uuid: `idearium-chunk-sha256:${promptDigest}`,
       seam_id: opts.chunkTitle || opts.sectionTitle || 'idearium-chunk',
       description: opts.chunkTitle || prompt.slice(0, 80),
       contract: { exports: [] }, // honest — idearium chunks are free-text, no fixed shape to check
@@ -117,7 +150,20 @@ export function createWarpChunkDispatch(as, { raid = null, axioms = [], pollTime
       if (!result.ok) {
         return { ok: false, error: `axiom/cascade failure after ${result.attempts} attempt(s)` };
       }
-      return { ok: true, text: result.output, agent: 'warp' };
+      // §OBSERVABILITY 2026-07-09 — surface WARP's own provenance. Without
+      // this the caller cannot distinguish a zero-token exact-cache hit
+      // (source:'crystal', cost:0) from a full LLM generation, and the
+      // compounding this file enables would be invisible in the ledger.
+      // An optimisation nobody can measure is an optimisation nobody can prove.
+      return {
+        ok: true,
+        text: result.output,
+        agent: 'warp',
+        source: result.source,      // 'crystal' | 'generated' | 'pre-generation-reuse'
+        cost: result.cost ?? null,  // 0 on an exact-cache hit
+        digest: result.digest,
+        cacheHit: result.source === 'crystal',
+      };
     } catch (e) {
       // Real dispatch/network-layer failure, not a content-quality one —
       // let dispatchChunkWithVerification's own watchdogRetry() classify

@@ -877,6 +877,23 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // ran (StreamLog), not from a document. A capability held only in memory
   // is the same orphan as an undeclared route; this makes it callable, and
   // it is declared in the hooks registry.
+  // §ORPHAN WIRED 2026-07-09 — lib/system-manifest.js ("One System → One
+  // Manifest") had ZERO consumers. It projects components + hooks + wires +
+  // APIs + CLI phrases per system from data that already exists, which is
+  // exactly "the system is mapped as it's built". It was also broken:
+  // buildAllManifests() threw because it required an undocumented argument.
+  // Fixed and given a door.
+  if (M==='GET' && sub==='manifest') {
+    try {
+      const { buildManifest, buildAllManifests } = require('./lib/system-manifest');
+      const which = seg[2];
+      if (which) return json(res, 200, { ok:true, manifest: buildManifest(which) });
+      return json(res, 200, { ok:true, manifests: buildAllManifests() });
+    } catch (e) {
+      return json(res, 500, { ok:false, error: e.message });
+    }
+  }
+
   if (M==='GET' && sub==='warp' && seg[2]==='map') {
     if (!global._warpSpine) return json(res, 503, { ok:false, error:'warp spine not attached' });
     return json(res, 200, { ok:true, ...global._warpSpine.map() });

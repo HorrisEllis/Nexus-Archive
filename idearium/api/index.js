@@ -56,8 +56,81 @@ function getAgentSuite() {
   }
   return _agentSuite;
 }
+
+// §PHASE 2 WIRE 2026-07-09 — idearium/spec-engine/warp-build-dispatch.js had
+// ZERO consumers. The production build path called as.buildChunkWithAgent()
+// directly, so WARP's exact cache was never in it: every chunk paid full
+// tokens, every time, forever. That is the whole of the "WARP doesn't
+// compound" complaint — the cache was not slow, it was not there.
+//
+// createWarpChunkDispatch(as) returns a function with the SAME
+// (prompt, opts) -> {ok, text} shape as as.buildChunkWithAgent, so it is a
+// drop-in for dispatchChunkWithVerification's dispatchFn. It adds: exact-cache
+// lookup, population seed, provider cascade, and axiom-gate validation.
+//
+// Fails soft. If WARP cannot load, builds continue on the direct agent path
+// rather than breaking — a caching layer must never be a single point of
+// failure for the thing it caches.
+let _warpChunkDispatch = null;
+let _warpLoadAttempted = false;
+let _warpLoadPromise   = null;
+let _warpLoadError     = null;
+
+/**
+ * §PHASE 2 FIXED 2026-07-09 — two faults, both hidden by "fails soft".
+ *
+ * (1) This fired the dynamic import and returned null IMMEDIATELY. The import
+ *     resolves a tick later, so the FIRST build always took the direct agent
+ *     path — the one build most likely to be a cache miss anyway, but also the
+ *     one that must WRITE the cache for anything to compound. Now awaitable.
+ *
+ * (2) warp-build-dispatch.js could not be imported at all: it does
+ *     `import { pollGuardianJob }` and chunk-dispatch.js exported no such name
+ *     (it had `_pollGuardianJob`, private). Every call rejected, the catch
+ *     logged a warning, and every build silently used the direct agent path —
+ *     while the comment above speceng.build stated dispatch went through WARP.
+ *     Fixed at the source (chunk-dispatch now exports the real poller).
+ *
+ * Still fails soft: a caching layer must never be a single point of failure for
+ * the thing it caches. But the failure is now RECORDED (§1.2) and reported by
+ * `warpStatus()`, so "WARP is in the build path" is a checkable claim rather
+ * than a comment.
+ */
+async function getWarpChunkDispatch() {
+  const as = getAgentSuite();
+  if (!as) return null;
+  if (_warpChunkDispatch) return _warpChunkDispatch;
+  if (_warpLoadAttempted && !_warpLoadPromise) return null;
+
+  if (!_warpLoadAttempted) {
+    _warpLoadAttempted = true;
+    _warpLoadPromise = import('../spec-engine/warp-build-dispatch.js')
+      .then(m => {
+        _warpChunkDispatch = m.createWarpChunkDispatch(as, {});
+        console.log('[idearium/api] WARP chunk dispatch active — exact cache in the build path');
+        return _warpChunkDispatch;
+      })
+      .catch(e => {
+        _warpLoadError = e.message;
+        console.warn('[idearium/api] WARP dispatch unavailable, using direct agent path:', e.message);
+        return null;
+      })
+      .finally(() => { _warpLoadPromise = null; });
+  }
+  return _warpLoadPromise ? await _warpLoadPromise : _warpChunkDispatch;
+}
+
+/** warpStatus() — makes "WARP is in the build path" observable (§2.3). */
+function warpStatus() {
+  return { active: !!_warpChunkDispatch, attempted: _warpLoadAttempted, error: _warpLoadError };
+}
 // Pre-warm on startup
+// §FIXED 2026-07-09 — getWarpChunkDispatch() returns null until its dynamic
+// import resolves, so without pre-warming the FIRST speceng.build always
+// bypasses WARP. That is precisely the build whose output most needs to enter
+// the cache. Pre-warm after agent-suite, since the dispatch needs it.
 getSpecEngine(); getAgentSuite();
+setTimeout(() => { getWarpChunkDispatch().catch(() => {}); }, 100);  // pre-warm; failure already recorded by warpStatus()
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
 import { dispatchChunkWithVerification } from '../spec-engine/chunk-dispatch.js';
@@ -195,6 +268,10 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos'],           'repo.list'],
     ['POST',   ['api','repos'],           'repo.ingest'],
     // ── Spec Engine (Phase 40) ─────────────────────────────────────────────
+    // §ROUTED 2026-07-09 — the action alone is unreachable; idearium dispatches
+    // by (method, segments) -> action. A handler with no route is an orphan.
+    ['GET',    ['api','spec-engine','warp-status'],          'speceng.warp.status'],
+    ['GET',    ['api','spec-engine','templates'],            'speceng.templates'],
     ['GET',    ['api','spec-engine','specs'],               'speceng.list'],
     ['POST',   ['api','spec-engine','specs'],               'speceng.create'],
     ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
@@ -604,14 +681,33 @@ async function handle(req, res, route, query, body) {
       return ok(res, { specs: se.listSpecs() });
     }
 
+    // §CONTRACT BEFORE UI 2026-07-09 — the first-page template picker needs a
+    // real list to render from. Backend and contract first; the UI reads this,
+    // never a hardcoded dropdown that drifts from the registry.
+    // §OBSERVABLE 2026-07-09 — until now, "dispatch goes through WARP" was a
+    // comment. It was false for months: the import always rejected and the
+    // soft-fallback hid it. This makes the claim checkable from outside.
+    case 'speceng.warp.status':
+      return ok(res, warpStatus());
+
+    case 'speceng.templates': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      try { return ok(res, { templates: se.listTemplates() }); }
+      catch (e) { return err(res, 500, e.message); }
+    }
+
     case 'speceng.create': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      const { name, type, description, agent } = body;
+      const { name, type, description, agent, templateId } = body;
       if (!name) return err(res, 400, 'name required');
       try {
-        const manifest = se.createSpec({ name, type, description, agent });
-        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type });
+        // An unknown templateId throws inside createSpec (§1.2) and surfaces
+        // as a 400 here rather than silently creating an unseeded spec that
+        // claims a template.
+        const manifest = se.createSpec({ name, type, description, agent, templateId });
+        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateId: templateId || null });
         return ok(res, { manifest });
       } catch(e) { return err(res, 500, e.message); }
     }
@@ -652,8 +748,18 @@ async function handle(req, res, route, query, body) {
         // multi-strategy retry ladder and Detector-based verification
         // Guardian already uses for its own chunks. Same promise-based
         // contract as before; the .then/.catch below is unchanged.
-        dispatchChunkWithVerification(chunkPrompt, chunk,
-          (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts),
+        // §PHASE 2 2026-07-09 — dispatch through WARP when it is loaded, so the
+        // exact cache sits in the real build path. Same shape, so
+        // dispatchChunkWithVerification's retry ladder and Detector
+        // verification are unchanged; WARP simply answers instantly when this
+        // exact prompt has been built before. Falls back to the direct agent
+        // path when WARP is not (yet) loaded — never a hard dependency.
+        const warpFn = await getWarpChunkDispatch();   // §awaited: the FIRST build must also populate the cache
+        const dispatchFn = warpFn
+          ? (prompt, dispatchOpts) => warpFn(prompt, { ...dispatchOpts, chunkTitle: chunk.title || chunk.sectionId })
+          : (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts);
+
+        dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn,
           { preferAgent }
         ).then(async result => {
           if (result.ok && !result.queued && result.text) {
@@ -662,6 +768,11 @@ async function handle(req, res, route, query, body) {
             os.emit('idearium.spec-engine.chunk.complete', {
               specUuid: params.uuid, chunkUuid: chunk.uuid,
               sectionId: chunk.sectionId, progress: updatedManifest.progress,
+              // §MEASURABLE — a zero-token cache hit must be distinguishable
+              // from a full generation in the ledger, or the saving is a claim.
+              source: result.source || 'agent',
+              cacheHit: result.cacheHit === true,
+              cost: result.cost ?? null,
               verifiedAttempts: result.attempts, detectionComposite: result.detection?.composite,
             });
           } else if (result.queued) {
@@ -825,8 +936,14 @@ export function startAPI() {
       const { join, dirname } = await import('path');
       const { fileURLToPath } = await import('url');
       const __d = dirname(fileURLToPath(import.meta.url));
+      // §DUPLICATE RESOLVED 2026-07-09 — idearium/ui/index.html and
+      // ui/idearium/index.html were BYTE-IDENTICAL 2,327-line files. Two
+      // copies of one UI drift the moment either is edited. The sovereign
+      // location wins: a system owns its own UI. orchestrator already serves
+      // the URL /ui/idearium from idearium/ui (orchestrator.js static map),
+      // so the second copy was a fallback nobody reached. Removed.
       const uiPath = join(__d, '..', 'ui', 'index.html');
-      const uiPath2 = join(__d, '..', '..', 'ui', 'idearium', 'index.html');
+      const uiPath2 = uiPath;
       const finalPath = existsSync(uiPath) ? uiPath : uiPath2;
       if (existsSync(finalPath)) {
         res.writeHead(200, { 'Content-Type': 'text/html' });

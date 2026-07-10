@@ -230,7 +230,7 @@ const HOOKS = [
       componentId: "emerge.hot-load.receive",
       intentId: "deploy|patch|hot-load"
     },
-    status: "active",
+    status: "planned",
     updatedAt: "2026-06-29T00:00:00Z"
   },
   {
@@ -263,7 +263,7 @@ const HOOKS = [
       ]
     },
     seam: null,
-    status: "active",
+    status: "planned",
     updatedAt: "2026-06-29T00:00:00Z"
   },
   {
@@ -296,7 +296,7 @@ const HOOKS = [
       ]
     },
     seam: null,
-    status: "active",
+    status: "planned",
     updatedAt: "2026-06-29T00:00:00Z"
   },
   {
@@ -329,7 +329,7 @@ const HOOKS = [
       ]
     },
     seam: null,
-    status: "active",
+    status: "planned",
     updatedAt: "2026-06-29T00:00:00Z"
   },
   {
@@ -362,7 +362,7 @@ const HOOKS = [
       ]
     },
     seam: null,
-    status: "active",
+    status: "planned",
     updatedAt: "2026-06-29T00:00:00Z"
   },
   {
@@ -395,7 +395,7 @@ const HOOKS = [
       ]
     },
     seam: null,
-    status: "active",
+    status: "planned",
     updatedAt: "2026-06-29T00:00:00Z"
   }
 ];

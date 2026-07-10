@@ -1,7 +1,7 @@
 /**
  * idearium/spec-engine/index.js — Spec Compiler Engine
  * UUID: idearium-spec-engine-v1-0000-4000-0000-000000000001
- * Version: 1.0.0
+ * Version: 1.1.0
  * Phase: 40 — Component Descriptor + Spec Chunk System
  * Seam ID: idearium.spec-engine:v1:p0001
  * Component: idearium.spec-engine
@@ -31,12 +31,13 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { getTemplate, listTemplates, readSeed } from './templates.js';
 
 const _require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const MODULE_ID   = 'idearium.spec-engine';
-const VERSION     = '1.0.0';
+const VERSION     = '1.1.0';  // +templates, +templateId provenance (idearium-templates.spec v1.0.0)
 const COMP_ID     = 'idearium.spec-engine';
 const SEAM_PREFIX = 'idearium.spec-engine:v1:chunk';
 
@@ -82,9 +83,68 @@ function _specDedupKey(name, type = 'component') {
 }
 
 // ── Create a new spec with all chunks initialized ─────────────────────────────
-export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus' }) {
+/**
+ * _seedMetaFromTemplate — the ONLY deterministic seed genesis.spec supports.
+ *
+ * §HONEST SCOPE 2026-07-09. templates.js promises the seed will "pre-fill
+ * whichever chunks it can". Measured against the real files, that is one
+ * chunk, not eight: idearium's SPEC_SECTIONS are prose sections
+ * (meta/purpose/axioms/schema/api/events/integration/tests) while genesis.spec
+ * is a GRAMMAR — `spine WARP`, `bind kernel.boot -> Stream`, `axiom GEN-S1`.
+ * There is no structural mapping from a DSL to eight markdown essays, and
+ * inventing one would fabricate content while claiming determinism.
+ *
+ * What IS extractable, exactly and verifiably: the header block — version,
+ * UUID, spine declaration, and the spine binding rule. That is a real `meta`
+ * section. Seeding it skips one agent dispatch out of eight. That is a
+ * measurable 12.5% token reduction on a genesis spec, not a promised one.
+ *
+ * Returns null when nothing can be extracted. A null seed means "dispatch
+ * every chunk normally" — never a half-filled chunk presented as complete.
+ */
+function _seedMetaFromTemplate(templateId, specName) {
+  const seed = readSeed(templateId);
+  if (!seed) return null;
+
+  const version = seed.match(/^version\s+(\S+)/m)?.[1];
+  const uuid    = seed.match(/UUID:\s*(\S+)/)?.[1];
+  const spine   = seed.match(/^spine\s+(\S+)/m)?.[1];
+  const rule    = seed.match(/^spine\.rule\s*=\s*(\S+)/m)?.[1];
+  const prims   = seed.match(/^spine\.primitives\s*=\s*(.+)$/m)?.[1]?.trim();
+
+  // §1.1 — if the template's shape changed and nothing matched, say so by
+  // returning null rather than emitting an empty section that looks built.
+  if (!version && !uuid && !spine) return null;
+
+  const lines = [
+    `# Meta`,
+    ``,
+    `Seeded deterministically from template \`${templateId}\` — no agent dispatched.`,
+    ``,
+    `- **Name**: ${specName}`,
+    version ? `- **Template version**: ${version}` : null,
+    uuid    ? `- **Template UUID**: ${uuid}` : null,
+    spine   ? `- **Spine**: ${spine}` : null,
+    prims   ? `- **Spine primitives**: ${prims}` : null,
+    rule    ? `- **Spine rule**: ${rule}` : null,
+    ``,
+    `> Source: idearium/spec-engine/templates/${templateId}.spec`,
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}
+
+export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null }) {
   _ensureRoot();
   if (!name) throw new Error('spec name required');
+
+  // §1.2 — an unknown templateId is an error, not a silent fallback to none.
+  // A spec that claims a template it never used is a lie in its own manifest.
+  const template = templateId ? getTemplate(templateId) : null;
+  if (templateId && !template) {
+    throw new Error(`unknown templateId '${templateId}'. Known: ${listTemplates().map(t => t.id).join(', ')}`);
+  }
+  if (template) type = template.kind;
 
   const specUuid  = crypto.randomUUID();
   const dedupKey  = _specDedupKey(name, type);
@@ -145,12 +205,54 @@ export function createSpec({ name, type = 'component', description = '', agent =
     updatedAt:   now,
     completedAt: null,
     archivePath: null,          // set when compressed
+    // §PROVENANCE 2026-07-09 — which template seeded this spec, and exactly
+    // which sections were filled without an agent. A manifest that cannot say
+    // where its content came from cannot be audited, and "deterministic" then
+    // becomes a claim rather than a record.
+    templateId:     templateId,
+    templateSeeded: [],
     chunks,
   };
 
   // §2.1 — write manifest to disk before anything else
   const manifestPath = path.join(specDir, 'manifest.json');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
+  // §SEEDED 2026-07-09 — the template's deterministic contribution, applied
+  // AFTER the manifest is on disk because completeChunk() reloads the spec to
+  // recompute progress. Reuses completeChunk rather than writing chunk files
+  // here: one code path owns "a chunk became complete", so progress, byteSize
+  // and the ledger stay correct by construction.
+  if (template) {
+    const seeded = _seedMetaFromTemplate(templateId, name);
+    if (seeded) {
+      const metaChunk = manifest.chunks.find(c => c.sectionId === 'meta');
+      if (metaChunk) {
+        try {
+          completeChunk(specUuid, metaChunk.uuid, seeded);
+
+          // §BUG FIXED 2026-07-09 — this previously set `metaChunk.agent` on
+          // the stale in-memory object and then returned the freshly-loaded
+          // on-disk manifest, so the seeded chunk reported `agent: 'ollama'`.
+          // It claimed an LLM produced content no LLM ever touched. Provenance
+          // that lies is worse than provenance that is absent. Persist it.
+          const fresh = loadSpec(specUuid);
+          const fm = fresh.chunks.find(c => c.uuid === metaChunk.uuid);
+          if (fm) { fm.agent = 'template'; fm.agentModel = `template:${templateId}`; }
+          fresh.templateSeeded = ['meta'];
+          saveSpec(fresh);
+
+          console.log(`[${MODULE_ID}] seeded 'meta' from template '${templateId}' — 1 of ${chunks.length} chunks needs no agent`);
+          return fresh;
+        } catch (e) {
+          // §1.2 — a failed seed degrades to normal dispatch, loudly.
+          console.warn(`[${MODULE_ID}] template seed failed, chunk stays PENDING: ${e.message}`);
+        }
+      }
+      return loadSpec(specUuid);
+    }
+    console.warn(`[${MODULE_ID}] template '${templateId}' produced no deterministic seed — all ${chunks.length} chunks will dispatch`);
+  }
 
   console.log(`[${MODULE_ID}] spec created: ${specUuid.slice(0,8)} "${name}" · ${chunks.length} chunks · agent:${agent}`);
   return manifest;
@@ -412,9 +514,20 @@ export function buildChunkPrompt(manifest, chunk, systemContext = '') {
 }
 
 export default {
+  // §ADDED 2026-07-09 — idearium/api does `m.default || m`, so the DEFAULT
+  // export is the real API surface. Named exports alone are invisible to it:
+  // `se.listTemplates is not a function` at runtime. Caught by calling the
+  // live endpoint, not by reading the file.
+  listTemplates, getTemplate, readSeed,
   createSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
   buildChunkPrompt, archiveSpec, expandSpec,
   SPEC_SECTIONS, CHUNK_STATES,
   MODULE_ID, VERSION, COMP_ID,
 };
+
+// §RE-EXPORT 2026-07-09 — idearium/api/index.js loads only spec-engine/index.js
+// (`import('../spec-engine/index.js')`). Without this, `se.listTemplates()`
+// in the `speceng.templates` action would be undefined at runtime: a declared
+// wire to nothing, caught before shipping rather than after.
+export { listTemplates, getTemplate, readSeed };

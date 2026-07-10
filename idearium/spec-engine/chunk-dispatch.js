@@ -180,7 +180,21 @@ export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatch
     const { passed, detection } = comp.evaluate();
 
     if (passed) {
-      return { ok: true, escalated: false, text: dispatchResult.text, detection, attempts, agent: dispatchResult.agent };
+      // §PASS-THROUGH 2026-07-09 — this returned a fixed field set, silently
+      // dropping anything the dispatchFn reported beyond {ok, text, agent}.
+      // With WARP in the build path that means source/cost/cacheHit vanish
+      // here, and a zero-token exact-cache hit becomes indistinguishable from
+      // a full LLM generation in every downstream event and ledger row.
+      // Verification owns quality, not provenance — forward what it did not
+      // produce rather than erasing it.
+      return {
+        ok: true, escalated: false, text: dispatchResult.text, detection, attempts,
+        agent: dispatchResult.agent,
+        source:   dispatchResult.source,
+        cost:     dispatchResult.cost,
+        cacheHit: dispatchResult.cacheHit,
+        digest:   dispatchResult.digest,
+      };
     }
     if (comp.state === STATE.ESCALATED) {
       return { ok: false, escalated: true, detection, attempts, text: dispatchResult.text };
@@ -190,3 +204,14 @@ export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatch
 
   return { ok: false, escalated: true, detection: comp.detection, attempts, error: 'exceeded outer wall-clock attempt cap' };
 }
+
+// §BROKEN IMPORT FIXED 2026-07-09 — warp-build-dispatch.js does
+// `import { pollGuardianJob } from './chunk-dispatch.js'`, but this module
+// only ever defined `_pollGuardianJob` privately and exported
+// `dispatchChunkWithVerification`. The named import failed, so
+// warp-build-dispatch.js could NEVER be imported — an ESM SyntaxError at load.
+// It also has zero consumers, so nothing ever tried, and the failure stayed
+// invisible. Its header describes test results that cannot have come from
+// importing this file. Export the real poller under the name its one consumer
+// expects, rather than duplicating a second poller.
+export { _pollGuardianJob as pollGuardianJob };

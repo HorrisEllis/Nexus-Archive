@@ -4,6 +4,10 @@ const { DEFAULT_PROMOTE_THRESHOLD } = require('./population');
 const { preGenerationCheck } = require('./pregen');
 
 /**
+ * Version: 1.4.1 — exact cache may be written on first success when a caller
+ *   opts in (exactCacheOnFirstSuccess). See docs/warp-devkit-addendum-v1.4.1.spec.
+ *   Default behaviour unchanged.
+ *
  * unifiedDispatch — the seven steps from warp.spec + the v1.4 patch, as
  * one function. This is the actual merge: not three systems, one path
  * an event takes.
@@ -25,6 +29,15 @@ async function unifiedDispatch({
   // caller explicitly asks for it.
   preGeneration = null, // { enabled: true, threshold: 0.87 } to turn on
   skipVerifiedSoftAxioms = false,
+  // §COMPOUNDING 2026-07-09 — opt-in, off by default, following this file's
+  // own stated law two lines above. When true, a first successful, hard-gate-
+  // validated output for an IDENTICAL input (exact digest) is written to the
+  // exact cache immediately, instead of waiting for three independent
+  // regenerations. See the comment at step 5. exactCacheFitnessMin mirrors
+  // population.js's DEFAULT_FITNESS_MIN (0.7), passed rather than imported so
+  // this module keeps its zero-coupling to population's internals.
+  exactCacheOnFirstSuccess = false,
+  exactCacheFitnessMin = 0.7,
 }) {
   // v1.0.1: digest now hashes full canonicalized event.data, not just its
   // keys — fixes the collision bug where two different requests with the
@@ -168,9 +181,40 @@ async function unifiedDispatch({
   });
   log?.record({ step: 'score-and-retain', fitness, readyToPromote });
 
+  // §COMPOUNDING 2026-07-09 — WARP did not compound, and its own header said
+  // so: "the exact-cache isn't populated after one success ... an identical
+  // chunk has to be independently re-generated and retained 3 times."
+  //
+  // That conflated two different mechanisms:
+  //   - POPULATION is generalization. A gateClass variant is promoted only
+  //     after DEFAULT_PROMOTE_THRESHOLD (3) independent successes clearing a
+  //     fitness floor, because it will be reused for inputs that are SIMILAR,
+  //     not identical. Three trials is the right bar for that. Unchanged.
+  //   - The EXACT CACHE is memoization. `digest` is content-addressed over the
+  //     request event (see dispatch/digest.js): a hit means the input is
+  //     IDENTICAL, not similar. Requiring three regenerations of identical
+  //     input is three times the tokens for one answer, and means the cache
+  //     can never make the next build cheaper than the last.
+  //
+  // Safety, verified rather than assumed: step 4 returns
+  // `{ok:false, source:'rejected'}` on any HARD axiom failure before reaching
+  // here, so every output at this point is already hard-gate validated. We
+  // additionally require cascadeResult.ok and the same fitness floor the
+  // promotion path uses, so a barely-passing variant is never frozen forever.
+  //
+  // Effect: each successful build makes the identical next one cost 0. That is
+  // what compounding means — the value accumulates instead of resetting.
+  const exactCacheable = exactCacheOnFirstSuccess
+    && cascadeResult.ok
+    && cascadeResult.output != null
+    && fitness >= exactCacheFitnessMin;
+
   if (readyToPromote) {
     crystallizer.set(digest, cascadeResult.output);
     log?.record({ step: 'promote', digest, threshold: DEFAULT_PROMOTE_THRESHOLD });
+  } else if (exactCacheable) {
+    crystallizer.set(digest, cascadeResult.output);
+    log?.record({ step: 'exact-cache-write', digest, fitness, reason: 'first-success-identical-input' });
   }
 
   return {

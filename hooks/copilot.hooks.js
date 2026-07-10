@@ -18,6 +18,48 @@
  */
 const HOOKS = [
   {
+    id: "copilot-hook-bridge-deliver-post-0100",
+    name: "copilot-bridge-deliver-post",
+    intent: "Write bridge deliver (generated from code by scripts/generate-hooks.js — refine by hand)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "copilot", layer: 1, port: 3750 },
+    config: { path: "/bridge/deliver", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["copilot/server.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
+    id: "copilot-hook-api-channel-post-0101",
+    name: "copilot-api-channel-post",
+    intent: "Write channel (generated from code by scripts/generate-hooks.js — refine by hand)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "copilot", layer: 1, port: 3750 },
+    config: { path: "/api/channel", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["copilot/server.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
+    id: "copilot-hook-api-observe-post-0102",
+    name: "copilot-api-observe-post",
+    intent: "Write observe (generated from code by scripts/generate-hooks.js — refine by hand)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "copilot", layer: 1, port: 3750 },
+    config: { path: "/api/observe", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["copilot/server.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
     id: "copilot-hook-prompt-0001",
     name: "copilot-prompt",
     intent: "Primary entry — all co-pilot interactions",

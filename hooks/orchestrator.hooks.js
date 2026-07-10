@@ -6,6 +6,34 @@
  */
 const HOOKS = [
   {
+    id: "orchestrator-hook-manifest-0012",
+    name: "orchestrator-system-manifest",
+    intent: "Project component + hook + wire + API + CLI per system from code. Gives lib/system-manifest.js its first consumer. /api/manifest for all 13 systems, /api/manifest/<system> for one.",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "orchestrator", layer: 1, port: 9000 },
+    config: { path: "/api/manifest", method: "GET" },
+    contract: { axioms: [], sideEffects: [], idempotent: true, methodEnforced: true },
+    references: { files: ["lib/system-manifest.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
+    id: "orchestrator-hook-nexus-heal-0011",
+    name: "orchestrator-self-heal",
+    intent: "Trigger autonomous gap analysis and repair-spec generation. RELOCATED 2026-07-09 from cortex.hooks.js, where it declared POST /api/self-heal/run on cortex and referenced two phantom files (cortex/healer/index.js, cortex/self-heal/index.js). Neither cortex route nor those files ever existed. The real implementation is nexus-heal-loop.js, required by orchestrator.js:130 and served at POST /api/nexus/heal — verified live: it classifies the gap and returns a real repairSpec.",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "orchestrator", layer: 1, port: 9000 },
+    config: { path: "/api/nexus/heal", method: "POST" },
+    contract: { axioms: ["1.2"], sideEffects: ["classifies gap", "builds repairSpec", "may dispatch to architect"], idempotent: false, methodEnforced: true },
+    references: { files: ["nexus-heal-loop.js", "lib/gap-relay.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
     id: "orchestrator-hook-warp-map-0010",
     name: "orchestrator-warp-map",
     intent: "Live map of every event that ran, projected from WARP StreamLog (not a document)",

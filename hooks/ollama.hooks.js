@@ -18,6 +18,20 @@
  */
 const HOOKS = [
   {
+    id: "ollama-hook-api-upload-post-0100",
+    name: "ollama-api-upload-post",
+    intent: "Write upload (generated from code by scripts/generate-hooks.js — refine by hand)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "ollama", layer: 1, port: 3749 },
+    config: { path: "/api/upload", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["ollama/server.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
     id: "ollama-hook-jobs-tools-0009",
     name: "ollama-jobs-tools",
     intent: "Run a job through the sovereign agent tool-calling loop (lib/agent-tools)",

@@ -43,16 +43,82 @@ function fileExists(rel) {
   return fs.existsSync(path.join(ROOT, rel));
 }
 
+function stripComments(src) {
+  // §FIXED 2026-07-09 — this scan matched route strings that appeared only in
+  // COMMENTS. /api/warp/map "passed" solely because a comment above the handler
+  // mentioned it; the literal never appears in code, because the route is
+  // segment-matched. A checker that reads its author's prose instead of the
+  // program is worse than no checker.
+  //
+  // §AND THEN I BROKE IT — the obvious `/\*[\s\S]*?\*\//g` matched a `/*`
+  // sequence inside a REGEX LITERAL in copilot/server.js and swallowed
+  // everything to the next `*/`: 30,444 of 48,908 characters, 62% of the
+  // file. It then reported 14 live routes as missing. Measured, not guessed.
+  // Only strip comments that BEGIN a line — the JSDoc and `//` banners this
+  // codebase actually uses — and never touch anything mid-expression, where
+  // regex literals and division live.
+  return src
+    .replace(/^[ \t]*\/\*[\s\S]*?\*\/[ \t]*$/gm, '')  // block comments on their own lines
+    .replace(/^[ \t]*\/\/.*$/gm, '')                  // line comments on their own lines
+    .replace(/^[ \t]*\*.*$/gm, '');                   // JSDoc continuation lines
+}
+
+function segmentRouted(code, routePath) {
+  // §ADDED 2026-07-09 — orchestrator matches routes by segment, not literal:
+  //   `sub==='warp' && seg[2]==='map'`   serves /api/warp/map
+  //   `sub==='manifest'`                 serves /api/manifest
+  // The literal string is nowhere in the file, so a substring search declares
+  // a live, verified route "missing". Reconstruct the check from the segments.
+  const parts = routePath.replace(/^\//, '').split('/').filter(Boolean);
+  if (parts[0] !== 'api' || parts.length < 2) return false;
+  const first = parts[1];
+  if (!new RegExp(`sub\\s*===?\\s*['"]${first}['"]`).test(code)) return false;
+  for (let i = 2; i < parts.length; i++) {
+    if (!new RegExp(`seg\\[${i}\\]\\s*===?\\s*['"]${parts[i]}['"]`).test(code)) return false;
+  }
+  return true;
+}
+
+function prefixActionRouted(code, routePath) {
+  // §ADDED 2026-07-09 — architect serves POST /api/blueprint/scan via
+  //   `path_.startsWith('/api/blueprint')` + `const action = seg[2]` +
+  //   `action === 'scan'`
+  // The full literal appears nowhere. The scanner called a live, verified
+  // route a missing wire. This is the third distinct routing style in the
+  // codebase (literal, segment, prefix+action) — a substring search was
+  // never going to be sufficient, and pretending otherwise produced false
+  // reports in BOTH directions.
+  const parts = routePath.replace(/^\//, '').split('/').filter(Boolean);
+  if (parts.length < 2) return false;
+  const prefix = '/' + parts.slice(0, parts.length - 1).join('/');
+  const tail = parts[parts.length - 1];
+  if (!new RegExp(`startsWith\\(\\s*['"]${prefix.replace(/\//g, '\\/')}['"]`).test(code)) return false;
+  return new RegExp(`(action|sub2|seg\\[\\d\\])\\s*===?\\s*['"]${tail}['"]`).test(code);
+}
+
 function containsPath(rel, routePath, surface) {
   const full = path.join(ROOT, rel);
   if (!fs.existsSync(full)) return null;
-  const content = fs.readFileSync(full, 'utf8');
+  const content = stripComments(fs.readFileSync(full, 'utf8'));
   // Some hook files store config.path with a redundant surface prefix
   // (e.g. "cortex/api/snapshots/create" instead of "/api/snapshots/create")
   // — a real inconsistency in the registry data itself, not something to
   // silently work around without noting it. Check both forms.
   const stripped = routePath.startsWith(surface + '/') ? routePath.slice(surface.length) : routePath;
-  return content.includes(routePath) || content.includes(stripped);
+  if (content.includes(routePath) || content.includes(stripped)) return true;
+
+  // §ADDED 2026-07-09 — path-param routes. `/api/jobs/:id` is served by
+  // matching the PREFIX and slicing the id off the end; the literal ':id'
+  // appears nowhere in the source. Checking for it reported two live ollama
+  // routes as missing wires. Match the prefix before the first param instead.
+  const paramIdx = stripped.indexOf('/:');
+  if (paramIdx > 0) {
+    const prefix = stripped.slice(0, paramIdx);
+    if (content.includes(prefix)) return true;
+  }
+
+  return segmentRouted(content, stripped) || segmentRouted(content, routePath)
+      || prefixActionRouted(content, stripped) || prefixActionRouted(content, routePath);
 }
 
 /**
@@ -90,7 +156,15 @@ function reverseScan() {
       for (const re of PATTERNS) {
         let m;
         while ((m = re.exec(src)) !== null) {
-          if (m[1].startsWith('/')) found.add(m[1]);
+          // §FIXED 2026-07-09 — '/jobs' and '/jobs/' are matched by the SAME
+          // conditional (`url.pathname==='/jobs'||url.pathname==='/jobs/'`).
+          // Counting both inflated the orphan count and would have pushed two
+          // hook declarations for one handler into the registry. A trailing
+          // slash is not a route; normalize before comparing.
+          if (m[1].startsWith('/')) {
+            const norm = m[1].length > 1 ? m[1].replace(/\/+$/, '') : m[1];
+            found.add(norm);
+          }
         }
       }
       for (const route of found) {
@@ -112,7 +186,14 @@ function reverseScan() {
 
 function main() {
   const h = require(path.join(ROOT, 'hooks/index.js'));
-  const all = h.allHooks().filter(x => x.config?.path && SURFACE_FILES[x.to?.surface]);
+  // §FIXED 2026-07-09 — the forward scan checked EVERY hook for an
+  // implementation, including ones explicitly marked `status: "planned"`.
+  // A planned hook declares an intent, not an existence claim (§1.1);
+  // reporting it as a missing wire buries the real violations in noise.
+  // emerge's six hooks are the case in point: emerge has no HTTP server and
+  // is not supervised by autopilot, so its routes cannot exist yet — that is
+  // a roadmap entry, not a lie. Only `active` hooks assert "this exists".
+  const all = h.allHooks().filter(x => x.config?.path && SURFACE_FILES[x.to?.surface] && (x.status || 'active') === 'active');
 
   console.log(`Checking ${all.length} declared hooks with a real config.path against a real target surface...\n`);
 

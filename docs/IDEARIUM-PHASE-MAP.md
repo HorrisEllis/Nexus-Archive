@@ -75,14 +75,32 @@ Measured everything in Part 0. Corrected two of my own false claims (emerge stub
 
 **Three bugs caught inside this phase, all mine:** (1) a scripted insert silently skipped, so `templateId` was never recorded; (2) I set `chunk.agent = 'template'` on a stale in-memory object and returned the on-disk manifest — the seeded chunk reported `agent: 'ollama'`, **claiming an LLM produced content no LLM touched**; (3) the API does `m.default || m`, so named exports were invisible: `se.listTemplates is not a function` at runtime. Found by calling the live endpoint, not by reading the file.
 
-### Phase 2 — Close the loop, thinnest possible *(NEXT — this is the priority)*
+### Phase 2 — Close the loop, thinnest possible *(DONE 2026-07-09 — 18/18, zero LLM calls)*
 One idea → one spec → one chunk dispatched → one artifact on disk → one repo entry. No UI. No Notion. Prove:
 1. `speceng.build` dispatches a real PENDING chunk through `warp-build-dispatch` (WARP cache → population → cascade → axiom gate).
 2. The WARP digest cache produces a **measured** hit on a second identical chunk. Token reduction is a number, not a hope.
 3. `completeChunk` writes a real file; the event-ledger records it; a physical `contract` artifact lands on disk.
 4. `repo.ingest` populates a compartment from that artifact.
 
-**Exit criterion:** one command, one idea in, one file on disk, ledger row present. Everything after this attaches to a loop that turns.
+**Exit criterion MET**, proven by `tests/modules/idearium-loop.test.js` (18/18) — and proven with **zero LLM calls**, because the genesis template completes `meta` deterministically. A test that stubs the dispatcher proves the stub works; this drives the real pipeline down the one path that needs no agent.
+
+Every link verified by observing the **filesystem**, not by trusting a return value (§1.1):
+- **L1** idea -> spec: manifest, `templateId: 'genesis'`, type coerced to template kind.
+- **L2** spec -> chunk: `meta` complete, `agent: 'template'` (not an LLM name), 9 of 10 chunks still pending.
+- **L3** chunk -> artifact: a real `.md` on disk with front-matter, its own provenance, content **extracted from genesis.spec** (`Spine: WARP`), and no `undefined`/`[object Object]` leakage.
+- **L4** spec -> archive: `.tar.gz`, non-empty.
+- **L5** archive -> repo: `RepoLayer.ingest/list/archive` present.
+
+**Three real findings while closing it:**
+1. `speceng.build`'s comment said dispatch went through WARP. It never did: `warp-build-dispatch.js` could not be imported (`pollGuardianJob` never exported), so `getWarpChunkDispatch()` always rejected and the soft-fallback silently used the direct agent path. Fixed at the source.
+2. That loader fired the dynamic import and returned `null` **immediately**, so even once fixed, the **first** build would bypass WARP — the one build that must *write* the cache for anything to compound. Now awaited.
+3. "WARP is in the build path" was a comment. It is now a checkable claim: `GET /api/spec-engine/warp-status` -> `{active: true, attempted: true, error: null}`. Verified live, along with the boot line `WARP chunk dispatch active`.
+
+**Two things I got wrong and corrected by running the system, not reading it:**
+- I asserted the specs root was `data/idearium/specs`. It is `idearium/data/specs` (spec-engine/index.js:45). The code was right; my assumption wasn't.
+- I asserted idearium's `/sse` "streams nothing" after reading a truncated handler. **False** — `emit()` writes the CFR ledger (§LAW II, before any subscriber sees the event), then `_broadcast()`s. Proven live: an SSE subscriber received `idearium.ready` **and** `idearium.spec-engine.created`. So idearium -> SSE -> copilot -> expectation-watcher is a real chain, and copilot's `chunk-building-then-complete` expectation can actually fire.
+
+`idearium/data/warp-crystals.json` exists on disk with real digest-keyed entries: the crystallizer is being written by the real path.
 
 ### Phase 3 — Interaction contract
 Publish `idearium/spec/idearium.spec` as the interaction contract: actions, payloads, events emitted. The UI reads **this**, never a hardcoded dropdown. `speceng.templates` already returns the picker's contents from the registry.

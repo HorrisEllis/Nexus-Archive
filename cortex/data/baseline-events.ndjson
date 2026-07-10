@@ -595,3 +595,10 @@
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1782691093647,"_ts":1782691093647}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1782691094149,"_ts":1782691094149}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1782691094651,"_ts":1782691094651}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1783639870368,"_ts":1783639870368}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1783639870871,"_ts":1783639870871}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1783639871374,"_ts":1783639871374}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1783639871878,"_ts":1783639871878}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1783639872383,"_ts":1783639872383}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1783639872886,"_ts":1783639872886}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1783639873391,"_ts":1783639873391}

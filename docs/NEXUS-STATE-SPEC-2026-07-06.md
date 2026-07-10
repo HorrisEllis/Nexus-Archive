@@ -607,3 +607,326 @@ WARP is a leaf. Their actual spine is `nexus-bus.js` — a raw `EventEmitter`. M
 **Regressions:** orchestrator and cortex both reach CONTRACT after attaching the spine and editing the registry (cortex loads the registry at boot). Loom 18/18.
 
 **Next, in the order the architecture implies:** attach the spine to guardian/cortex/copilot the same way (they are the loudest buses); then migrate the 8 remaining AX-010 violations, each of which is a call change rather than a build; then the kernel unlocks Phases 27/30/109.
+
+---
+
+## PART 28 — The UI entry point exists; copilot's voice was broken in two places
+
+**Merge audit, verified not claimed.** Every uploaded zip's contents are present: v6 (RAID stubs, intelligence decomposition, 60+ tests), v7 (`diagnose`/`move-data` tools), v8 (consent, build/execution pipelines, expectation-watcher, 4 UI files), vault-picker (5 Clear Glass files). Nothing outstanding.
+
+**The UI entry point already works.** `orchestrator.config.json` → `uiURL: http://127.0.0.1:9000`; orchestrator serves `ui/tv-shell/index.html` at `/`. Copilot is proxied — under **guardian's** namespace, which is why `ui/home` calls `/api/guardian/copilot/channel`. Verified live end-to-end: `POST :9000/api/guardian/copilot/prompt {prompt:'take me to architect'}` returned the real navigate intent with the correct `/ui/spec-builder` URL. A `note` prompt correctly **failed** (`ECONNREFUSED 3748`) rather than claiming it saved — the system refusing to lie.
+
+*(My first probe used `/api/copilot/prompt` and got "route not found". The route at line 1674 is real but lives inside the `sub==='guardian'` block where `action=seg[2]`. Read the parser before trusting the grep.)*
+
+### The expectation system: orphaned, then wired, then found broken again downstream
+
+`copilot/lib/expectation-watcher.js` shipped in v8 and **nothing in `copilot/*.js` required it.** It is the event-driven expectation system: a trigger fires, the expected follow-up must arrive within `timeoutMs`, or a violation is raised.
+
+**Copilot had no bus at all** — its events arrive as SSE from cortex/guardian into the `_stream` ring. Per §AX-011 the bus is a within-process spine, so copilot now has one, fed by the real `streamIngest()` path, fanning out `(type, event)` and `('*', event)` exactly as `nexus-bus` does.
+
+**Two real bugs found in the incoming module:**
+1. `createExpectationWatcher` accepted a malformed expectation and threw *inside the bus wildcard handler* on the first matching event — `exp.triggerMatch is not a function`. Attached to `streamIngest`, that would break event ingestion for the whole process. Now validated at construction, where it fails loudly at the point of declaration. My first validation pass was itself incomplete: `message` and `linkKey` are also called as functions. Derived from the real call sites, not guessed.
+2. Verified the 5 shipped defaults pass the new validation.
+
+**Then the wire was broken one step further downstream.** The watcher emits `copilot.error.detected` onto the local bus. `ui/toast/toast.js` line 66 already subscribes to exactly that event type. **But copilot never broadcast it to SSE clients** — a real detector, firing correctly, into a bus nobody listened to. The dominant bug of this codebase, reproduced once more. Now broadcast. Proven end to end: trigger fires → no follow-up → `reason: timeout` → `broadcast('copilot.error.detected')` → SSE → toast.
+
+**Copilot boots to CONTRACT with 5 expectations armed. Loom 18/18.**
+
+### What remains — mapped, in phases
+
+**Phase A — make copilot talk (small, all wires, no builds)**
+1. `ui/toast/toast.js` is loaded by **no page**. Add it to `ui/tv-shell/index.html`; it already knows how to render `copilot.error.detected`.
+2. `ui/tv-shell/tutorial/tutorial.js` has **1 referencing file**. Wire it as the pipeline walkthrough — it is the natural test harness for the chain that already works end to end.
+3. Spotlight (15 refs) and Nerve are built. Nerve's presence map now has `/api/bus/stats` to poll. Point it at `/api/warp/map` too — that map is a projection of what actually ran.
+
+**Phase B — finish AX-010 (8 call changes, zero builds)**
+`guardian/api-dispatch.js` ×2, `guardian/server.js` `/command` ×2, `copilot/adversarial.js`, `copilot/axiom-manager.js`, `lib/execution-pipeline.js` ×3. Each has a real cortex API waiting; each is a `require()` → `nx.post()` swap.
+
+**Phase C — WARP spine to the loud buses**
+Attach `lib/warp-bus.js` to guardian, cortex, copilot exactly as orchestrator does. Orchestrator's bus proved *silent* (`historySize: 0`); guardian's will not be.
+
+**Phase D — the kernel**
+`meta/rfr2/kernel/` unlocks `clip`/`compress`/`context`, and with them Phases 27 (System State VM), 30 (Time-Travel Debugging), 109 (Epistemic Branch Runtime). Contract recorded in `docs/RFR2-KERNEL-CONTRACT.md`. Blocked on the upstream module — not reconstructable without guessing semantics.
+
+**Phase E — reverse scan to zero**
+65 implemented routes still undeclared (guardian 33, cortex 28, copilot 3, ollama 1). Declaring them is mechanical; the *right* fix is making the registry a projection of code, the same way `/api/warp/map` is a projection of the StreamLog.
+
+---
+
+## PART 29 — Merge, then the registry as a projection: 65 → 27
+
+**Mapped first. Neither zip contains the RFR2 kernel.** Phases 27/30/109 remain blocked. (`nexus-v8-rfr2-wired` contains `docs/RFR2-KERNEL-CONTRACT.md` — it is derived from this tree.)
+
+**From `nexus-v8-rfr2-wired`, all verified by running its tests in MY tree:**
+- `cortex/intelligence/mastermind.js` now genuinely consumes RFR2: `loadRFR2Module('delta')`. Confirmed superset of mine (91L → 156L, nothing lost). `mastermind-fractals` **4/4**.
+- `lib/agent-tools/tools/run-pipeline.js` + `run-pipeline-tool` **5/5**.
+- 10 per-system `spec/` files (cortex, guardian, orchestrator, siso, ollama, idearium, eravos, emerge, erosmancer, cli).
+- **Skipped** `clear-glass/ncp-client.js` — deliberately demoted to `tests/helpers/` earlier; re-adding it would recreate the parallel NCP provider.
+
+**From `copilot-full-tool-access`: one file taken, one refused.**
+- Took `query-intelligence.js` (`nexus_intelligence` — queries cortex's faculties).
+- **Refused `run-cockpit-command.js`.** Its `index.js` registered it *alongside* `run-command.js`. Both read cockpit's `INTERACTION_CONTRACT`; both execute via `ForgeCLI.exec()`. They are the same tool under two names. A model offered both picks arbitrarily and they drift. `run_command` stays canonical (it enumerates args; the other does not). **Merge duplicates by picking one and deleting the other — never by keeping both.**
+- **Skipped its `copilot/server.js`** — behind this tree (no expectation-watcher) and adds nothing tool-related.
+
+Tools registered: `read_file, run_command, diagnose, move_data, run_pipeline, nexus_intelligence`.
+
+### `scripts/generate-hooks.js` — the registry as a projection of code
+
+Hand-writing 65 hook entries produces exactly what already exists: a parallel document that drifts from the moment it is written. This reads the real route literals **and their real HTTP methods** out of the source and emits declarations from them. Dry-run by default; writes only on `--write` (§1.1 — run it, read it, then let it write).
+
+**Result: reverse scan 65 → 27.** Hooks 91 → 131.
+
+**It declared 38, not 65, and the shortfall is the honest part.** Cortex routes as `if (p === '/x')` with the method tested elsewhere, so the method is **not statically determinable at the match site**. A wrong `method` in the registry is a lie, so the generator refuses to guess and leaves those 27 (cortex 24, guardian 3) for hand entries or a real parser. Verified: **none of the 38 generated hooks appear in the forward scan's missing-wire list** — every one resolves to real code.
+
+**The forward scan's 10 declared-but-missing wires are the mirror violation**, and one is diagnostic: `cortex-self-heal → /api/self-heal/run` is **declared with no implementation**. Also `cortex-snapshot-create`, `architect-snr-gate`, `bridge-system-register`, and six `emerge/*`.
+
+### Stub + unwired sweep
+
+- **10 declared-but-missing routes** (above).
+- **23 explicit `not implemented` / `TODO` markers** in production code, concentrated in `emerge/compiler/*`, `loom/templates/system-scaffold.js`, `cortex/boot.js`, `guardian/server.js`.
+- **Genuinely unwired modules: `lib/nano-ws.js`, `lib/system-manifest.js`** — zero consumers.
+- **My first orphan list was wrong** and I corrected it: a sloppy matcher reported `consent` (3 consumers), `execution-pipeline` (3), `rfr2-bridge` (4), and `nexus-expansion-boot` (2) as orphans. Measure, then re-measure before believing a negative result.
+
+**RFR2 status: 5 modules exercised, now with a real production consumer** — `rfr2-bridge` has 4 consumers (`mastermind`, `consent`, 2 test suites). `clip`/`compress`/`context` still blocked on the absent kernel.
+
+**Regressions:** cortex, guardian, copilot all CONTRACT; Loom 18/18. (A `copilot EADDRINUSE` failure mid-run was a leftover process from my own earlier test, not a defect — confirmed by re-running after freeing the port. Evidence tiers matter: `PARSES` is not `CONTRACT`.)
+
+---
+
+## PART 30 — Reverse scan: 65 → 0, and a stub that reported success
+
+**Hooks 91 → 161. Reverse scan 65 → 0.** Forward scan unchanged at 10 (all pre-existing). cortex, guardian, copilot, orchestrator all CONTRACT. 207 tests pass, 7 fail (the stale `copilot.test.js`, broken in every branch). Loom 18/18.
+
+### The find: a stub that lied
+
+```js
+if (p === '/api/cli/exec') {
+  json(res, 200, { ok: true, result: 'cortex cli exec — not implemented', ts: Date.now() });
+}
+```
+
+**HTTP 200, `ok: true`.** Every caller checking `ok` saw success. This violates §1.2 (nothing silently fails) and §1.3 (no stubs in production) at once, and it is *worse than a missing route*: a missing route fails loudly at the call site, while this one quietly convinced every caller its command had run. Now returns **501, `ok:false`**, with a pointer to the `run_command` agent tool. Verified against a booted cortex. The route itself stays — in a non-linear system a route is an affordance and its missing implementation is a gap to fill, not proof the surface should die. It was the only stub of this shape in the codebase.
+
+### Why the generator stopped at 38, and what the other 27 were
+
+`scripts/generate-hooks.js` declared the 38 routes whose method appears in the conditional. The rest are written `if (p === '/x') { … }` with **no method guard anywhere** — not in the header, not in the body. **12 of 13 sampled cortex routes enforce no method at all.** A `GET` to `/api/intelligence/adversarial` runs the adversarial analysis. A `POST` to `/api/events` returns events.
+
+**A fixed-window heuristic got this wrong**, and would have written a lie into the contract: with a 700-char window it inferred `GET` for `/api/cli/exec` (which purports to execute CLI commands) and `POST` for `/api/intelligence/status`. `scripts/analyze-methodless-routes.js` replaces the window with **brace-matched full-handler extraction**, and reports evidence rather than a guess.
+
+**Two more errors of mine, caught before writing:**
+1. The declarer initially took the *first* method literal in a block. But `/cfr/health` and `/cfr/field` share one handler that branches: `POST` updates the field, anything else returns it. Declaring only `POST` would have hidden the `GET` surface. Fixed to collect **all** methods per handler — 23 routes yielded 28 hook entries.
+2. The remaining 4 orphans were **aliases**, not routes: `/cockpit` / `/cockpit/` / `/jobs/` are matched by the same conditional, as is `/api/settings.js` with `/api/settings`. Padding the registry with duplicate declarations for one handler would have been the wrong fix. **The measurement was wrong, so I fixed the measurement**: `verify-wires.js` now normalizes trailing slashes before comparing. Then declared the two genuinely distinct paths (`/cockpit` is a real UI surface; `/api/settings.js` is fetched as a script tag).
+
+**Every hook carries `methodEnforced`.** Where the handler has no guard, the registry says so rather than implying an enforcement that does not exist. That flag is now a work queue: 20+ cortex routes accept any verb. Adding real guards is a behaviour change and belongs in its own phase, with clients checked first.
+
+### Stub + unwired sweep (final)
+
+- **10 declared-but-missing routes.** One is diagnostic: `cortex-self-heal → /api/self-heal/run` is declared with **no implementation** — the self-heal that has never fired now also has a hook pointing at nothing. Also `cortex-snapshot-create`, `architect-snr-gate`, `bridge-system-register`, and six `emerge/*`.
+- **23 `not implemented` / `TODO` markers**, concentrated in `emerge/compiler/*`, `loom/templates/system-scaffold.js`.
+- **Genuinely unwired modules: `lib/nano-ws.js`, `lib/system-manifest.js`** — zero consumers.
+- **My first orphan list was wrong** — a sloppy matcher called `consent` (3 consumers), `execution-pipeline` (3), `rfr2-bridge` (4), `nexus-expansion-boot` (2) orphans. Re-measure before believing a negative result.
+
+### Remaining, in order
+
+1. **`methodEnforced: false` on 20+ cortex routes** — real guards, behaviour change, own phase.
+2. **10 declared-but-missing wires** — either implement or delete the declaration. `/api/self-heal/run` is the interesting one.
+3. **AX-010: 8 remaining hardwires** — each a `require()` → `nx.post()` swap.
+4. **WARP spine to guardian/cortex/copilot.**
+5. **The RFR2 kernel** — still absent, still blocking Phases 27/30/109.
+
+---
+
+## PART 31 — Both scans to zero, and the checker that was reading its own comments
+
+**Forward scan 10 → 0. Reverse scan 0. Hooks 162.** Five services CONTRACT. 207 tests pass, 7 fail (stale `copilot.test.js`). Loom 18/18.
+
+### The 10 declared-but-missing wires, triaged individually
+
+**Three hooks pointed at the wrong surface entirely:**
+- `cortex-self-heal → cortex /api/self-heal/run` — that route never existed, and its two referenced files (`cortex/healer/index.js`, `cortex/self-heal/index.js`) are **phantoms**. The real implementation is `nexus-heal-loop.js`, served at orchestrator's `POST /api/nexus/heal`. **Verified live**: it classifies a gap and returns a real `repairSpec`. So self-heal exists, runs, and builds repair specs — I have now been wrong about it twice, in both directions. Hook relocated to `orchestrator.hooks.js`.
+- `architect-snr-gate` declared `ollama /api/snr/check`. Architect implements `/api/snr`. Wrong surface *and* path. Retargeted.
+- `bridge-system-register` declared `/bridge/register` and referenced `bridge/server.js`. Bridge implements `/bridge/handshake`; systems register with **orchestrator** at `/api/register`. Wrong on path and premise. Retargeted.
+
+**One capability genuinely missing, now built:** `POST /api/snapshots/create`. Declared since 2026-06-11 — *"archive full JAA table state so the system can rewind"* — and never implemented; `/api/snapshots` only ever **read** a table nothing wrote. Now real: 7 tables, per-table integrity via `rfr2 identity.contentHash()` (RFR2's **second** production consumer, and the versionium primitive), plus a `stateHash` over all of them. Verified: two consecutive snapshots of unchanged state produce identical hashes.
+
+**A latent bug caught before it bit:** the snapshot must never hash its own output table. `snapshots.json` doesn't exist on disk *yet*, so this was invisible. The moment it appears, every snapshot would include the previous one, `stateHash` would differ on every call, and the single property the hash exists to provide — same state, same hash — would be silently destroyed. Explicitly excluded.
+
+**One honestly refused:** `cortex-snapshot-rollback` is now `status: 'planned'`. It is **not implementable from the current snapshot**: `create` stores content *hashes* for integrity, not content, so there is nothing to restore from. Real rollback is `rfr2/compress.snapshot()/restore()` — Phase 27, blocked on the absent kernel. Declaring it `active` would be a lie.
+
+**Six emerge hooks → `status: 'planned'`.** Emerge has no HTTP server and is not supervised by autopilot; its routes *cannot* exist. That is a roadmap entry, not a lie. `verify-wires.js` now honours `status`: only `active` hooks assert "this exists" (§1.1).
+
+### The checker was reading its own prose
+
+`/api/warp/map` was passing the forward scan **only because a comment above the handler mentioned it**. The literal appears nowhere in code — the route is segment-matched. A checker that reads its author's comments instead of the program is worse than no checker.
+
+**Then I broke it fixing it.** The obvious `/\*[\s\S]*?\*\//g` matched a `/*` sequence inside a **regex literal** in `copilot/server.js` and swallowed everything to the next `*/` — **30,444 of 48,908 characters, 62% of the file** — and reported 14 live routes as missing. Measured, not guessed. Corrected to strip only comments that begin a line; verified it now removes 22–38% and preserves every route literal.
+
+**Three distinct routing styles exist here, and substring search sees one of them:**
+1. literal — `p === '/api/events'`
+2. segment — `sub==='warp' && seg[2]==='map'` (orchestrator)
+3. prefix+action — `startsWith('/api/blueprint')` + `action === 'scan'` (architect)
+Plus path params: `startsWith('/api/jobs/')` serves `/api/jobs/:id`.
+
+All four are now understood by the scanner. Before that, it produced false reports in **both** directions simultaneously: false *misses* from comment-matching, false *hits* on segment and prefix routes. `architect-topology-scan` and both `ollama-jobs-*` hooks were live routes wrongly accused.
+
+### Orphans resolved
+
+- **`lib/system-manifest.js` — wired.** It projects components + hooks + wires + APIs + CLI per system from data that already exists: literally *"the system is mapped as it's built."* Zero consumers. It was also **broken**: `buildAllManifests()` required an undocumented argument, so any no-arg call threw `systemIds is not iterable` — plausibly why nothing used it. Fixed (defaults to the config `ports` block, per-system failures isolated) and given a door: `GET /api/manifest` and `/api/manifest/<system>`. Verified live: 13 systems, cortex reporting 39 components / 44 hooks / 39 APIs.
+- **`lib/nano-ws.js`** stays. It implements a real declared surface (`guardian-wss-7821`). Unwired capability, not dead code — and in a non-linear system that distinction is the whole point.
+
+**Remaining:** the 23 `not implemented` markers (concentrated in `emerge/compiler/*`, which has no server); `methodEnforced: false` on 20+ cortex routes; 8 AX-010 hardwires; the RFR2 kernel.
+
+---
+
+## PART 32 — Idearium: map first, then Phase 1 shipped
+
+Full phase map in `docs/IDEARIUM-PHASE-MAP.md`. Ground truth measured before planning (§3.1, map before build), and it corrected **two of my own earlier claims**:
+
+- **"23 `not implemented` markers, mostly emerge/compiler" was wrong.** Those strings are **template literals** inside `emit.js` — emerge *generates* stubs into scaffolds. Real stubs across the tree: **8**. `emerge/compiler/` is ~5,600 lines of real code, which strengthens the deterministic-compiler plan.
+- **The provider cascade is not backwards.** `cortex/core/raid/index.js` LAW_I already tries ollama first; LAW_III makes claude the unconditional last resort. The production path is already ollama → … → claude. The real problem is a *second* cascade in `guardian/agents/index.js` with exactly one consumer (`cli/diagnose.js`) — a competing truth layer to delete, not to fix.
+
+**The uploaded `spec-engine/index.js` is byte-identical to the tree's.** `templateId`, `_seedChunksFromTemplate`, `listTemplates` existed nowhere. `templates.js` would have landed as an orphan the moment it arrived.
+
+### Phase 1 shipped and proven over HTTP
+
+`createSpec({ templateId })` — unknown id **throws**; a spec that claims a template it never used is a lie in its own manifest. `_seedMetaFromTemplate()` has **honest scope**: `genesis.spec` is a grammar (`spine WARP`, `bind kernel.boot -> Stream`), not eight markdown essays. It deterministically fills exactly **one** section — `meta`, from the real header. **9 of 10 chunks need an agent instead of 10**: a measured 10% reduction, not a promised one. `templates.js`'s comment ("pre-fill whichever chunks it can") was an unimplemented promise; it is now implemented at its true size.
+
+Live: `GET /api/spec-engine/templates` → 5 templates, genesis with `hasSeed`. `POST /api/spec-engine/specs {templateId:'genesis'}` → `meta` complete, `agent: 'template'`, `templateId` recorded. Unknown template → 400.
+
+**Three bugs caught inside this phase, all mine.** (1) A scripted insert silently skipped because its guard string matched a different line, so `templateId` was never recorded. (2) I set `chunk.agent = 'template'` on a **stale in-memory object** and then returned the on-disk manifest — the seeded chunk reported `agent: 'ollama'`, **claiming an LLM produced content no LLM touched**. Provenance that lies is worse than provenance absent. (3) `idearium/api` loads spec-engine as `m.default || m`, so named exports were invisible: `se.listTemplates is not a function` at runtime — found by calling the live endpoint, not by reading the file. A fourth was caught before shipping: the `speceng.templates` action had no route in `matchRoute`'s table, so no URL could reach it.
+
+### Pushback, on the record
+
+1. **"All data saves to cortex"** breaks sovereignty. Guardian owns its store today; cortex-primary means no system boots without cortex, which destroys the hotswap proven on :3999. Correct pattern: **local primary, cortex mirror**. Two independent copies is what "no data lost" actually means; one central store is a single point of loss wearing the costume of safety.
+2. **"Utilize the rewind"** is blocked on `meta/rfr2/kernel/`, which exists in no zip. Not reconstructable — the surface is derivable, the semantics (eviction, drop accounting, causal order) are not, and a wrong kernel makes `compress.snapshot()` restore to a *different* causal graph. Silent corruption of the one subsystem whose purpose is fidelity.
+3. **"Full Notion before the loop closes"** would produce the seventh orphan. Six already: expectation-watcher, system-manifest, toast, tutorial, RFR2, templates. Every subsystem built ahead of its wire became an orphan. **Phase 2 — close the thinnest loop (idea → spec → chunk → dispatch → artifact → repo) — is worth more than Phases 3–9 combined**, because after it every feature has somewhere real to attach.
+
+Both wire scans still 0. Loom 18/18. Idearium boots and serves.
+
+---
+
+## PART 33 — WARP now compounds. And the module that could never load.
+
+### The compounding gap was documented, not fixed
+
+`warp-build-dispatch.js`'s own header said it: *"the exact-cache isn't populated after one success ... an identical chunk has to be independently re-generated and retained 3 times."* Accurate, and nobody acted on it.
+
+**Root cause: two mechanisms sharing one write condition.** `unifiedDispatch` step 5 only calls `crystallizer.set()` when `readyToPromote` — `hits >= 3` **and** `fitness >= 0.7`.
+
+- **Population** is *generalization*: a variant gets reused for inputs that are **similar**. Three trials is the right bar. Unchanged.
+- **The exact cache** is *memoization*: `digest` is content-addressed, so a hit means the input is **identical**. Three regenerations of identical input is three times the tokens for one answer, and guarantees the cache can never make the next build cheaper than the last.
+
+Safety verified rather than assumed: step 4 returns `{ok:false, source:'rejected'}` on any **hard** axiom failure before step 5, so every output at the retain point is already gate-validated. The new write additionally requires `cascadeResult.ok` and the same fitness floor.
+
+**Measured: 3 identical dispatches → 3 LLM generations before, 1 after.** Sources `[generated, generated, generated]` → `[generated, crystal, crystal]`, costs `[_, 0, 0]`. **67% eliminated, and every subsequent identical build costs zero.** Opt-in (`exactCacheOnFirstSuccess`), off by default — honouring that file's own stated law: *"new behavior only activates when a caller explicitly asks for it."* WARP's 43 tests unchanged; loom 18/18.
+
+*Caught before shipping:* my first draft referenced `DEFAULT_FITNESS_MIN` and `exactCacheOnFirstSuccess` with neither in scope — a `ReferenceError` on every dispatch. And `warp-cascade` didn't forward the flag: an opt-in nobody could opt into.
+
+### idearium's cache key was simultaneously useless and unsafe
+
+1. **Never hits.** `seam_uuid = ${specUuid}:${chunkIdx}` — and `digest = hash(gateSignature=seam_uuid + axioms + event)`. specUuid is unique per spec, so an identical chunk in a second spec produced a different digest. The fallback was worse: `idearium-chunk-${Date.now()}` gave **every single call** a unique key.
+2. **Hits wrongly.** `warp-cascade` builds `event: { data: { seam: record.seam_id } }`, and `seam_id` here is the section **title**. The prompt was nowhere in the digest. Two different chunks both titled "Purpose" would hash identically and could return each other's output. *A wrong cache hit is worse than a miss.*
+
+Fixed by the same move: `seam_uuid = idearium-chunk-sha256:<sha256(prompt)>`. Identical prompts share one key; different prompts never do. **Content-addressing is what makes a cache compound.**
+
+### `warp-build-dispatch.js` could never be imported
+
+It does `import { pollGuardianJob } from './chunk-dispatch.js'`. That module defines `_pollGuardianJob` **privately** and exports only `dispatchChunkWithVerification`. The named import is an ESM SyntaxError at load — **the file could never be imported.** It also has **zero consumers**, so nothing ever tried, and the failure stayed invisible. Its header describes test results that cannot have come from importing it.
+
+Fixed by exporting the real poller under the expected name rather than writing a second one. It now loads. **A module with zero consumers cannot report that it is broken; absence of failure is not evidence of function (§1.1).**
+
+### Token reduction: three sources, and they must not be conflated
+
+- **emerge** — deterministic generation. Content produced by a compiler costs **zero** tokens. This is the 90% claim's only honest home. `emerge/compiler/` is ~5,600 real lines; the "23 not implemented markers" I reported earlier were **template literals** inside `emit.js` — emerge *generates* stubs, it isn't made of them. Real stubs tree-wide: 8.
+- **WARP exact cache** — memoization. Measured 67% on a 3-build identical sequence.
+- **templates** — seeding. 1 of 10 sections. 10%.
+
+They **multiply, they do not add**, and none is 90% alone. State which mechanism a number came from, or the number means nothing.
+
+### Documents
+
+- `docs/warp-devkit-addendum-v1.4.1.spec` — additive, revertible (delete the file, remove two params + one pass-through).
+- `docs/idearium-templates.spec` — decoupled, new capability, own spec.
+- Versions bumped: `spec-engine` 1.0.0 → **1.1.0**; `warp-cascade` 1.0.0 → **1.1.0**; `warp/dispatch` versioned **1.4.1** (it had no version marker at all).
+- `tests/modules/warp-compounding.test.js` — **6/6**, including T-006: a below-floor output is never frozen into the exact cache.
+
+### The duplicate UI
+
+`idearium/ui/index.html` and `ui/idearium/index.html` were **byte-identical 2,327-line files**. `/ui/idearium` is a URL, served by orchestrator from `idearium/ui/` — the second copy was a fallback nobody reached. Removed; the sovereign location wins, because a system owns its own UI. Verified idearium still serves `200` on `/`.
+
+**On breaking the HTML into a stack:** agreed, and it belongs in Phase 8, *after* the loop closes. A 2,327-line file split into spec-library / options / brainstorm / IDE panels before there is a pipeline to feed them produces four orphans instead of one. Split it when each panel has a contract endpoint to render from — `speceng.templates` is the first of those, and it exists now.
+
+---
+
+## PART 34 — Phase 2: WARP's cache is now in the real build path
+
+### The finding that makes the whole compounding complaint make sense
+
+`speceng.build` — idearium's **production** build action — called `as.buildChunkWithAgent()` directly, wrapped in `dispatchChunkWithVerification`'s retry ladder. **WARP was not in that path at all.** `warp-build-dispatch.js` held the cache, had **zero consumers**, and (as Part 33 established) could not even be imported.
+
+So the cache was not slow. **It was not there.** Every chunk paid full tokens, every time, forever.
+
+### The wire
+
+`createWarpChunkDispatch(as)` returns a function with the *same* `(prompt, opts) → {ok, text}` shape as `as.buildChunkWithAgent`, so it drops straight into `dispatchChunkWithVerification`'s `dispatchFn` slot. The retry ladder and Detector verification are unchanged; WARP simply answers instantly when this exact prompt has been built before.
+
+**Fails soft.** If WARP cannot load, builds continue on the direct agent path. A caching layer must never be a single point of failure for the thing it caches.
+
+**Proven, in a fresh process:**
+- build #1, cold → `source: generated`, 1 agent call
+- build #2, identical prompt → `source: crystal`, `cacheHit: true`, `cost: 0`, **still 1 agent call**
+- build #3, different prompt → `generated`, no wrong-hit; digests differ
+- **Re-run the whole script in a NEW process → 0 agent calls.** The crystallizer is flat-file, so the cache survives restart. That is compounding in the real sense: every build makes all future identical builds free, permanently.
+
+### Three bugs caught inside this wire, all mine
+
+1. **`dispatchChunkWithVerification` dropped provenance.** Its success return was a fixed `{ok, escalated, text, detection, attempts, agent}` — `source`, `cost`, `cacheHit`, `digest` were silently erased. A zero-token cache hit would have been indistinguishable from a full LLM generation in every downstream event and ledger row. **An optimisation nobody can measure is an optimisation nobody can prove.** Verification owns quality, not provenance; it now forwards what it did not produce.
+
+2. **The lazy loader made the first build always miss.** `getWarpChunkDispatch()` returns `null` until its dynamic import resolves, so the very first `speceng.build` — the one whose output most needs to *enter* the cache — bypassed WARP entirely. Pre-warmed at startup, matching the existing `getSpecEngine(); getAgentSuite();` pattern. Verified in the boot log: `WARP chunk dispatch active — exact cache in the build path`.
+
+3. **The WARP dispatch discarded its own provenance** before returning: `{ok:true, text, agent:'warp'}` with no `source`/`cost`. Now returns `source`, `cost`, `digest`, `cacheHit`, and the chunk-complete event records them.
+
+### Tests
+
+- `tests/modules/idearium-warp-cache.test.mjs` — **7/7**. T-005 specifically guards against the wrong-output cache hit that the old title-keyed digest permitted.
+- `tests/modules/warp-compounding.test.js` — **6/6**.
+- WARP core 12/12, v1.4 21/21, loom 18/18. Both wire scans still 0. cortex + guardian CONTRACT.
+
+### Loop status
+
+`idea → spec → chunk → dispatch → artifact → repo`
+
+- **spec** — `createSpec`, with template seeding (Part 32).
+- **chunk** — `SPEC_SECTIONS` → 10 chunks, `nextPendingChunk`.
+- **dispatch** — ✅ **now through WARP**, cached, verified, provenance-recorded.
+- **artifact** — `completeChunk` writes chunk files; `archiveSpec` compresses.
+- **repo** — `repo.ingest` exists as an action; **not yet proven end-to-end with a real artifact.** That is the next link, and the last one before the loop turns.
+
+---
+
+## PART 34 — Phase 2: the loop closes, with zero LLM calls
+
+**`tests/modules/idearium-loop.test.js` — 18/18.** One idea, all the way through: idea → spec → deterministic chunk → physical artifact → archive → repo compartment. **No tokens spent**, because the genesis template completes `meta` deterministically. A test that stubs the dispatcher proves the stub works; this drives the real pipeline down the one path that needs no agent.
+
+Every link verified by observing the **filesystem**, not by trusting a return value. `createSpec` can return a manifest saying `complete` while no file exists — that is exactly the bug class this codebase keeps producing. The artifact is checked for front-matter, for its own provenance line, for content **extracted from genesis.spec** (`Spine: WARP`), and for absence of `undefined` / `[object Object]` leakage.
+
+### Three real findings
+
+1. **`speceng.build`'s comment claimed dispatch went through WARP. It never did.** `warp-build-dispatch.js` could not be imported at all — `pollGuardianJob` was never exported — so `getWarpChunkDispatch()` always rejected, and the "fails soft" fallback silently used the direct agent path. The comment described behaviour that could not occur. A caching layer must never be a single point of failure for the thing it caches — but *failing soft must not mean failing silent* (§1.2).
+
+2. **Even once importable, the first build would bypass WARP.** The loader fired the dynamic import and returned `null` immediately; the import resolves a tick later. The first build is the one that must *write* the cache for anything to compound. Now awaited.
+
+3. **"WARP is in the build path" is now a checkable claim, not a comment.** `GET /api/spec-engine/warp-status` → `{active: true, attempted: true, error: null}`, matching the boot line `[idearium/api] WARP chunk dispatch active`. `idearium/data/warp-crystals.json` holds real digest-keyed entries.
+
+### Two things I got wrong, corrected by running the system
+
+- I asserted the specs root was `data/idearium/specs`. It is `idearium/data/specs` (`spec-engine/index.js:45`). The test failed against my assumption; the code was right.
+- **I asserted idearium's `/sse` "streams nothing"** after reading a truncated handler, and concluded copilot could never be told a build was stuck. **False.** `emit()` records to the CFR ledger *before any subscriber sees the event* (§LAW II), then `_broadcast()`s to SSE clients. Proven live: a subscriber received `idearium.ready` **and** `idearium.spec-engine.created`. So idearium → SSE → copilot → expectation-watcher is a real chain, and the `chunk-building-then-complete` expectation can genuinely fire.
+
+Reading a file is not evidence. Twice in one phase I drew a confident conclusion from a partial read and the running system contradicted me.
+
+**231 tests pass**, 7 fail (the stale `copilot.test.js`). Loom 18/18. Both wire scans 0.
+
+### What Phase 2 unlocks
+
+Every subsequent feature now attaches to a loop that turns. The UI stack (Phase 8) can be split into spec-library, options, brainstorm/braindump, IDE — **and more** — because each panel now has a real contract endpoint to render from and a real artifact to point at, rather than being a fourth orphan waiting for a pipeline.
