@@ -89,7 +89,13 @@ class LoomRegistry {
 
   /** graph() — hook/wire adjacency, for Lattice L3's stated source
    *  (Architect's GET /api/hooks/graph does the same job for its own
-   *  hooks; this is LOOM's equivalent once wires exist). */
+   *  hooks; this is LOOM's equivalent once wires exist).
+   *  §part_2 2026-07-10 — now carries the SEMANTIC layer: a wire's intent
+   *  (WHY A connects to B) and a component's consumes/produces (what it
+   *  depends on / offers). These pass through add() unchanged; graph()
+   *  used to strip them. Without them the graph is topology only ("A->B");
+   *  with them it answers context+intent ("A->B in order to persist state").
+   */
   graph() {
     this._state = this._load();
     const nodes = Object.values(this._state.hook).map(h => ({
@@ -97,8 +103,74 @@ class LoomRegistry {
     }));
     const edges = Object.values(this._state.wire).map(w => ({
       from: w.from_hook_id, to: w.to_hook_id, id: w.id,
+      intent: w.intent || null, // the WHY — was silently dropped before
     }));
-    return { nodes, edges };
+    const components = Object.values(this._state.component).map(c => ({
+      id: c.id, name: c.name || c.id,
+      consumes: c.consumes || [], // what this component depends on
+      produces: c.produces || [], // what it offers others
+    }));
+    return { nodes, edges, components };
+  }
+
+  /** contextGraph() — the queryable context+intent view. Resolves wires to
+   *  the components on each end (via each hook's component_id) so a relation
+   *  reads "component A -> component B: <intent>", not just "hook -> hook".
+   *  This is the non-linear system map: declared structure + why. */
+  contextGraph() {
+    this._state = this._load();
+    const hookComp = {};
+    for (const h of Object.values(this._state.hook)) hookComp[h.id] = h.component_id;
+    const relations = Object.values(this._state.wire).map(w => ({
+      from: hookComp[w.from_hook_id] || w.from_hook_id,
+      to:   hookComp[w.to_hook_id]   || w.to_hook_id,
+      fromHook: w.from_hook_id, toHook: w.to_hook_id,
+      intent: w.intent || null,
+      wireId: w.id,
+    }));
+    return {
+      components: Object.values(this._state.component).map(c => ({
+        id: c.id, name: c.name || c.id, consumes: c.consumes || [], produces: c.produces || [],
+      })),
+      relations,
+    };
+  }
+
+  /** impactOf(componentId) — real impact analysis. "If this component's SEAM
+   *  breaks, what depends on it and what intents fail downstream?" Walks the
+   *  relation graph transitively from componentId, collecting every dependent
+   *  and the intent of each broken link. This is what makes the registry a
+   *  nervous system instead of a filing cabinet. */
+  impactOf(componentId, maxDepth = 8) {
+    const { relations } = this.contextGraph();
+    // A wire from A's out-hook to B's in-hook means B DEPENDS ON A (A produces,
+    // B consumes). So the dependents of componentId are the `to` ends of wires
+    // whose `from` is componentId — i.e. who breaks if componentId stops.
+    const dependents = new Map(); // componentId -> [{ dependsOn, intent, via }]
+    const visited = new Set([componentId]);
+    let frontier = [componentId];
+    let depth = 0;
+    while (frontier.length && depth < maxDepth) {
+      depth++;
+      const next = [];
+      for (const source of frontier) {
+        for (const r of relations) {
+          if (r.from === source && !visited.has(r.to)) {
+            if (!dependents.has(r.to)) dependents.set(r.to, []);
+            dependents.get(r.to).push({ dependsOn: source, intent: r.intent, via: r.wireId });
+            visited.add(r.to);
+            next.push(r.to);
+          }
+        }
+      }
+      frontier = next;
+    }
+    return {
+      component: componentId,
+      directDependents: relations.filter(r => r.from === componentId).map(r => ({ component: r.to, intent: r.intent })),
+      transitiveDependents: [...dependents.entries()].map(([id, links]) => ({ component: id, links })),
+      brokenIntents: [...dependents.values()].flat().map(l => l.intent).filter(Boolean),
+    };
   }
 }
 

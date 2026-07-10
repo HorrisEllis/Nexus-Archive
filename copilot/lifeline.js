@@ -73,18 +73,33 @@ async function _get(url, timeoutMs = 5000) {
 }
 
 // ── Estimate confidence from Ollama response ──────────────────────────────────
-// A simple heuristic — real confidence would come from Ollama logprobs
-// but those aren't always available. We use response characteristics.
-function _estimateConfidence(text = '', prompt = '') {
+// A heuristic — real logprob confidence isn't always available. §IMPROVED
+// 2026-07-10 to fix two real failure modes the length/keyword-only version
+// had: (1) it couldn't tell a grounded answer (one that used tools /
+// retrieved real data) from a guess, so a confident hallucination scored
+// HIGH and a correct tool-backed answer got no credit; (2) it docked 0.2
+// for the word "error"/"failed", which wrongly penalized *correct* answers
+// that explain an error — extremely common in a dev assistant — and forced
+// needless Guardian escalation. Now: a grounded answer gets a real floor,
+// and error-explanation is distinguished from self-reported failure.
+function _estimateConfidence(text = '', prompt = '', opts = {}) {
   if (!text || text.length < 10) return 0.1;
 
   let score = 0.6; // base
+
+  // §GROUNDING — the one real signal. If the answer was produced by the
+  // tool loop (read a real file, ran a real command, queried real
+  // intelligence), it's verifiable, not guessed. That earns a floor no
+  // amount of hedging language should drop below — a tool-grounded "I
+  // read the file and it says X" is MORE trustworthy when it's measured,
+  // not less. This is what actually fixes the confidence problem.
+  if (opts.grounded) score = Math.max(score, 0.8);
 
   // Longer, more detailed responses tend to be more confident
   if (text.length > 200) score += 0.1;
   if (text.length > 500) score += 0.05;
 
-  // Hedging language = lower confidence
+  // Hedging language = lower confidence (but never below a grounded floor)
   const hedges = ['i think', 'i believe', 'might be', 'not sure', 'unclear', "i don't know", 'uncertain'];
   const hedgeCount = hedges.filter(h => text.toLowerCase().includes(h)).length;
   score -= hedgeCount * 0.08;
@@ -94,10 +109,16 @@ function _estimateConfidence(text = '', prompt = '') {
   const directCount = direct.filter(d => text.toLowerCase().includes(d)).length;
   score += directCount * 0.05;
 
-  // Error/failure language = low confidence
-  if (text.toLowerCase().includes('error') || text.toLowerCase().includes('failed')) score -= 0.2;
+  // §FIXED — only penalize SELF-REPORTED failure ("I couldn't", "I failed
+  // to", "unable to"), not the mere presence of "error"/"failed", which
+  // appear constantly in correct technical explanations ("this fixes the
+  // error", "the failed test was..."). The old blanket -0.2 made copilot
+  // escalate correct debugging answers.
+  const selfFailure = ['i could not', "i couldn't", 'i failed to', 'i was unable', 'i am unable', "i can't determine", 'cannot answer'];
+  if (selfFailure.some(f => text.toLowerCase().includes(f))) score -= 0.25;
 
-  return Math.max(0.1, Math.min(0.99, score));
+  const floor = opts.grounded ? 0.7 : 0.1;
+  return Math.max(floor, Math.min(0.99, score));
 }
 
 // ── Route to Ollama ───────────────────────────────────────────────────────────
@@ -381,4 +402,4 @@ async function health() {
   };
 }
 
-module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD, extractExplicitAgent };
+module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD, extractExplicitAgent, _estimateConfidence };

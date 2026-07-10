@@ -294,6 +294,23 @@ async function readBody(req) {
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
+// §AX-008 FOUNDATION FIX 2026-07-09 — copilot's _connectCortexStream()
+// connects to CX_URL/events, but cortex had NO /events SSE endpoint
+// (only /api/events, a query route). The stream silently reconnect-looped
+// forever; architect/cortex events written to event_log never reached
+// copilot's live buffer. This adds the real SSE endpoint + a broadcaster
+// that /api/event fires into — so every system POSTing to /api/event
+// (architect already does) now reaches copilot's stream. One fix,
+// completes AX-008 for architect and any future event-POSTing system.
+const _sseClients = new Set();
+function _broadcastEvent(evt) {
+  if (!_sseClients.size) return;
+  const line = `data: ${JSON.stringify(evt)}\n\n`;
+  for (const res of _sseClients) {
+    try { res.write(line); } catch (_) { _sseClients.delete(res); }
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const url    = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const method = req.method;
@@ -380,7 +397,26 @@ const server = http.createServer(async (req, res) => {
       source: body.source || 'unknown', ts: body.ts || Date.now(),
       causedBy: body.causedBy || null }; // §sensation 2026-06-29 — was missing
     jaaDB.insert('event_log', row);
+    // §AX-008 — re-broadcast to live SSE subscribers (copilot) so events
+    // reach the stream, not just the event_log table.
+    _broadcastEvent({ type: row.type, payload: body.payload || {}, source: row.source, ts: row.ts, id: row.id });
     json(res, 200, { ok: true, id: row.id });
+    return;
+  }
+
+  // §AX-008 — the SSE stream copilot's _connectCortexStream() subscribes
+  // to. Was missing entirely; copilot reconnect-looped against a 404.
+  if (p === '/events' && method === 'GET') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.write(': connected\n\n');
+    _sseClients.add(res);
+    const keepAlive = setInterval(() => { try { res.write(': ping\n\n'); } catch(_) {} }, 20000);
+    req.on('close', () => { clearInterval(keepAlive); _sseClients.delete(res); });
     return;
   }
 
@@ -877,6 +913,59 @@ server.listen(PORT, '127.0.0.1', () => {
     setInterval(_feedLattice, 60000);
   } catch (e) {
     console.warn(`[cortex] system-lattice not available: ${e.message}`);
+  }
+
+  // §INTELLIGENCE WIRE 2026-07-09 — meta/causal/{anomaly,compound} are real
+  // classifier engines (Phase 71.3) with init({jaaDB,bus})/classify() APIs,
+  // built to be fed and never initialized by anyone — confirmed 0 live
+  // consumers in the orphan audit. Initialize them here with cortex's real
+  // jaaDB and the nexus-bus so anomalies actually get classified, written
+  // to anomaly_log, and emitted. Honest scope: this wires the engines to
+  // BE callable and to receive bus signals; the upstream Expectation
+  // Engine (71.2) that would feed classify() is a separate, still-open
+  // piece — flagged in the expansion map, not faked here.
+  try {
+    let _bus = null;
+    try { _bus = require('../nexus-bus.js'); } catch (_) { _bus = null; }
+    const causal = require('../meta/causal');
+    if (causal.anomaly?.init)  causal.anomaly.init({ jaaDB, bus: _bus });
+    // compound is a factory (createCompoundEngine{graph,jaaDB}), not an
+    // init()-style module — it classifies ripple/wave/tidal compound
+    // effects over a real causal graph. Build it against the same
+    // on-demand graph mastermind uses; expose on the cortex module so
+    // callers (and a future /api/intelligence/compound endpoint) can
+    // reach it. Rebuilt lazily since the graph is a recent-window snapshot.
+    let _compoundEngine = null;
+    global.__cortexCompound = () => {
+      const graph = _mastermind.buildRecentCausalGraph();
+      if (!graph) return null;
+      if (causal.compound?.createCompoundEngine) {
+        _compoundEngine = causal.compound.createCompoundEngine({ graph, jaaDB });
+        return _compoundEngine;
+      }
+      return null;
+    };
+    console.log('[cortex] causal anomaly engine initialized; compound engine factory ready');
+  } catch (e) {
+    console.warn(`[cortex] causal engines not available: ${e.message}`);
+  }
+
+  // §INTELLIGENCE WIRE 2026-07-09 — lib/reflection.js is the learning loop
+  // (scores past decisions from decision_log, opens gaps on repeated
+  // dissatisfaction, feeds BDA via observeSignal). It has a real init()
+  // that self-schedules a poll, but nobody called it — 0 live consumers
+  // in the orphan audit. One init() here activates BOTH reflection AND
+  // meta/bda (the Behavioral Drift Analyzer reflection feeds) — two
+  // orphaned intelligence modules closed by one real wire. Honest note:
+  // reflection is conservative by design (§it never auto-mutates RAID
+  // weights or the identity kernel — only opens gaps for human/higher
+  // review), so activating it can't destabilize the system.
+  try {
+    const reflection = require('../lib/reflection.js');
+    reflection.init({ jaaDB });
+    console.log('[cortex] reflection learning loop active (feeds BDA)');
+  } catch (e) {
+    console.warn(`[cortex] reflection not available: ${e.message}`);
   }
 });
 

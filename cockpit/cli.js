@@ -449,7 +449,7 @@ const INTERACTION_CONTRACT = {
 // ══════════════════════════════════════════════════════════════════════
 
 class ForgeCLI {
-  constructor({ bus, jaa, registry, executor, compiler, guardian, idearium, trust } = {}) {
+  constructor({ bus, jaa, registry, executor, compiler, guardian, idearium, trust, pipelineClass } = {}) {
     this._bus       = bus;
     this._jaa       = jaa;
     this._registry  = registry;
@@ -458,6 +458,7 @@ class ForgeCLI {
     this._guardian  = guardian;
     this._idearium  = idearium;
     this._trust     = trust;
+    this._pipelineClass = pipelineClass || null;
     this._history   = [];
   }
 
@@ -638,6 +639,12 @@ class ForgeCLI {
   }
 
   _getPipelineClass() {
+    // §FIXED 2026-07-06 — this only checked a bare global and
+    // window.Pipeline, i.e. browser-only. In Node, "forge pipeline
+    // create" could never have worked — found by the first real
+    // end-to-end test the moment cockpit/live.js became the first-ever
+    // composition of this class. Injectable dep first, old lookups kept.
+    if (this._pipelineClass) return this._pipelineClass;
     if (typeof Pipeline !== 'undefined') return Pipeline;
     if (typeof window !== 'undefined' && window.Pipeline) return window.Pipeline;
     throw new Error('Pipeline class not loaded');

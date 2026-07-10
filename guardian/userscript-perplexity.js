@@ -559,16 +559,11 @@ setInterval(() => GM_setValue('gd_hb_'+MY_TAB, Date.now()), 5000);
 // ── NCP connection ────────────────────────────────────────────────────────────
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
-  // §gap-closed 2026-07-05 — see guardian/userscript-chatgpt.js for the full
-  // writeup. Reset ran unconditionally at the top of connect(), wiping the
-  // attempts counter before onerror's backoff could ever escalate past its
-  // minimum — a constant ~3s reconnect loop forever instead of the 3s→30s
-  // backoff §P113 was meant to implement.
+  _reconnectAttempts = 0; // §P113: reset backoff on successful connect
   if (_es) { try { _es.close(); } catch(_) {} }
   const params = `tabId=${MY_TAB}&provider=${PROVIDER}`;
   connState = 'connecting'; updatePill();
   _es = new EventSource(`${NCP_CHANNEL}?${params}`);
-  let _stableTimer = null;
   _es.onmessage = e => { try { _handleServerMessage(JSON.parse(e.data)); } catch(err) { _log('err','NCP parse',err.message); } };
   _es.onopen = () => {
     connState = 'ready'; updatePill();
@@ -578,12 +573,9 @@ function connect() {
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
     replayPending();
-    const STABLE_MS = 10000;
-    _stableTimer = setTimeout(() => { _reconnectAttempts = 0; }, STABLE_MS);
   };
   _es.onerror = () => {
     connState = 'disconnected'; updatePill();
-    if (_stableTimer) { clearTimeout(_stableTimer); _stableTimer = null; }
     _reconnectAttempts++;
     const _delay = Math.min(RECONNECT_MIN_MS * Math.pow(2, _reconnectAttempts - 1), RECONNECT_MAX_MS);
     _log('err', `NCP error — retry ${_delay}ms (attempt ${_reconnectAttempts})`);

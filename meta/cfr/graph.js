@@ -33,6 +33,8 @@ class CausalGraph {
     // surface, same ring-buffer pattern, automatic" — this follows that
     // exact pattern, matching _bySystem/_byType above.
     this._byComponent = new Map();  // componentId → id[] (last 100)
+    this._adj        = new Map();  // undirected adjacency, id → Set(id) — built lazily by componentDistance()
+    this._adjEdgeCount = 0;        // detects staleness against this.edges without a full rebuild every call
   }
 
   /**
@@ -255,6 +257,52 @@ class CausalGraph {
       sessions: this._bySession.size,
       jobs:     this._byJob.size,
     };
+  }
+
+  // §RESTORED IN MERGE 2026-07-09 — componentDistance (mine, BFS hop count)
+  // and componentProximity (parallel session's, 0..1 score) are different
+  // real methods that collided in the merge because the parallel branch's
+  // graph.js dropped componentDistance. Both kept — hop count and proximity
+  // score answer different questions; RAID's fitness uses the distance,
+  // pinned tests cfr-graph-component-distance.test.js verify it.
+  _rebuildComponentAdjacency() {
+    if (this._adjEdgeCount === this.edges.length) return;
+    this._adj = new Map();
+    const compOf = (id) => {
+      const n = this.nodes.get(id);
+      return n ? (n.componentId || n.comp_id || n.payload?.componentId || null) : null;
+    };
+    for (const e of this.edges) {
+      const ca = compOf(e.from), cb = compOf(e.to);
+      if (!ca || !cb || ca === cb) continue;
+      if (!this._adj.has(ca)) this._adj.set(ca, new Set());
+      if (!this._adj.has(cb)) this._adj.set(cb, new Set());
+      this._adj.get(ca).add(cb);
+      this._adj.get(cb).add(ca);
+    }
+    this._adjEdgeCount = this.edges.length;
+  }
+
+  componentDistance(componentA, componentB, maxDepth = 12) {
+    if (!componentA || !componentB) return null;
+    if (componentA === componentB) return 0;
+    this._rebuildComponentAdjacency();
+    if (!this._adj.has(componentA) || !this._adj.has(componentB)) return null;
+    const visited = new Set([componentA]);
+    let frontier = [componentA];
+    let depth = 0;
+    while (frontier.length && depth < maxDepth) {
+      depth++;
+      const next = [];
+      for (const node of frontier) {
+        for (const neighbor of (this._adj.get(node) || [])) {
+          if (neighbor === componentB) return depth;
+          if (!visited.has(neighbor)) { visited.add(neighbor); next.push(neighbor); }
+        }
+      }
+      frontier = next;
+    }
+    return null;
   }
 }
 

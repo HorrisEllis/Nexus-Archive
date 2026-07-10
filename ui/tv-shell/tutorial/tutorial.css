@@ -1,0 +1,66 @@
+/* ui/tv-shell/tutorial/tutorial.css — visual guidance vocabulary
+   UUID: nexus-tutorial-css-v1-0000-2026-0706-jamesbrooks-001
+
+   Every color here derives from spotlight.css's variables (--cp-focus,
+   --cp-focus-alpha, --ac, --cp-tension) — Spotlight remains the single
+   producer of the palette; this file only consumes. The live CFR field
+   reaches these through the root-level --cp-tension wire tutorial.js
+   maintains (polling the real /cfr/field), so a turbulent system makes
+   the guidance itself visibly hotter without any JS color logic. */
+
+/* ── The co-pilot cursor — an animated pointer copilot moves for you ── */
+#tut-cursor {
+  position: fixed; z-index: 1002; pointer-events: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--cp-focus, var(--ac, #00d4ff));
+  box-shadow: 0 0 12px var(--cp-focus, #00d4ff),
+              0 0 calc(6px + var(--cp-tension, 0) * 24px) var(--cp-focus, #00d4ff);
+  transition: left .8s cubic-bezier(.4,0,.2,1), top .8s cubic-bezier(.4,0,.2,1);
+  opacity: 0;
+}
+#tut-cursor.visible { opacity: calc(var(--cp-focus-alpha, .8)); }
+#tut-cursor::after { /* trailing ring */
+  content: ''; position: absolute; inset: -8px; border-radius: 50%;
+  border: 2px solid var(--cp-focus, #00d4ff);
+  animation: tut-ring 1.4s ease-out infinite;
+}
+@keyframes tut-ring {
+  0%   { transform: scale(.6); opacity: .9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+#tut-cursor.clicking { animation: tut-click .35s ease; }
+@keyframes tut-click { 50% { transform: scale(.65); } }
+
+/* ── Target pulse — borders of the thing you should touch ── */
+.tut-pulse {
+  animation: tut-pulse 1.2s ease-in-out infinite !important;
+  border-radius: 8px;
+}
+@keyframes tut-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--cp-focus, #00d4ff),
+                         0 0 calc(10px + var(--cp-tension,0)*30px) var(--cp-focus, #00d4ff); }
+  50%      { box-shadow: 0 0 0 5px var(--cp-focus, #00d4ff),
+                         0 0 calc(24px + var(--cp-tension,0)*40px) var(--cp-focus, #00d4ff); }
+}
+
+/* ── Input highlight — text boxes copilot wants you to type into ── */
+.tut-input-focus {
+  outline: 2px solid var(--cp-focus, #00d4ff) !important;
+  outline-offset: 2px;
+  animation: tut-input-breathe 1.6s ease-in-out infinite;
+  caret-color: var(--cp-focus, #00d4ff);
+}
+@keyframes tut-input-breathe {
+  0%, 100% { outline-color: var(--cp-focus, #00d4ff); }
+  50%      { outline-color: color-mix(in srgb, var(--cp-focus, #00d4ff) 35%, transparent); }
+}
+
+/* ── Region flash — one bright sweep to yank the eye somewhere ── */
+.tut-flash { animation: tut-flash .9s ease-out 2; }
+@keyframes tut-flash {
+  0%  { background-color: color-mix(in srgb, var(--cp-focus, #00d4ff) 22%, transparent); }
+  100%{ background-color: transparent; }
+}
+
+/* ── Everything not the target dims — literal spotlight semantics ── */
+body.tut-active .tut-dimmed { opacity: .35; transition: opacity .5s; }

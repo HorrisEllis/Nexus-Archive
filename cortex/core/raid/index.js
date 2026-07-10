@@ -24,14 +24,24 @@
  *   §P97 — CFR sigma floor tightens the consecutiveFails threshold when
  *          the causal field is outside 'stable' regime
  *
- * LAYER 2 (fitness, ranks survivors) — partial, on purpose:
+ * LAYER 2 (fitness, ranks survivors) — real as of 2026-07-06, no stubs:
  *   health() term — real, drawn from the live health snapshot
- *   role_confidence(), topological_proximity(), SNR_tier_gate() — stubbed
- *   at neutral (1.0). Each has a hard, named, currently-unbuilt dependency
- *   (role-confidence drift tracking; CFR's _byComponent edge, planned per
- *   docs/cfr.spec but not present; the SNR pre-gate's own canonical spec,
- *   docs/raid-snr-filter.spec). Faking these would be worse than leaving
- *   them honestly neutral — see docs/META-SYSTEM-AND-SUBSYSTEM-SPECS.md §4.4.
+ *   roleConfidence() — real, reads RAID's own _weights map (previously
+ *     write-only — recordOutcome() populated it every dispatch, nothing
+ *     ever read it back). Floored at 0.5 (neutral) for <3 observed calls.
+ *   topologicalProximity() — real when a CFR CausalGraph is injected via
+ *     setCausalGraph() (meta/cfr/graph.js gained componentDistance() this
+ *     same pass); honestly neutral (0.5) if no graph is wired or either
+ *     component has never been observed, never fabricated.
+ *   SNR pre-gate (docs/raid-snr-filter.spec) — built as cortex/core/raid/
+ *     snr-filter.js (this file also did not exist before this pass). NOT
+ *     folded into the fitness multiplication — that would be backwards
+ *     (a genuinely-unknown call has snr:0.0 and would zero out every
+ *     candidate's score, when unknown is exactly the case that most needs
+ *     a normal dispatch). Wired instead as a pre-gate in _decide(), gated
+ *     on an explicit faultClass so it only engages for fault-remediation
+ *     calls, never for the plain provider-selection calls this file's own
+ *     determinism suite (tests/full.test.js §6) already pins.
  *
  * "Specialist clusters" (where LAW_I would NOT apply) are named in
  * docs/raid.spec but never enumerated anywhere. Treating all four current
@@ -40,9 +50,18 @@
  */
 
 const http = require('http');
+const snrFilter = require('./snr-filter');
+const tunables = require('./tunables');
 
 const MODULE_ID = 'cortex/core/raid';
-const VERSION   = '6.2.0';
+const VERSION   = '6.3.0';
+
+// ── Optional CFR causal-graph injection ───────────────────────────────────────
+// RAID has no live CFR ledger of its own — bridge/cortex own that. A caller
+// that has one (orchestrator, at boot) wires it in via setCausalGraph();
+// absent that, topologicalProximity() is honestly neutral, never fabricated.
+let _cfrGraph = null;
+function setCausalGraph(graph) { _cfrGraph = graph; }
 
 // ── Dispatch-name → health-key mapping ───────────────────────────────────────
 // Guardian-mediated NCP tabs are health-checked under 'guardian-<provider>'
@@ -88,39 +107,51 @@ function _agentAvailable(dispatchName, health, opts = {}) {
 }
 
 // ── Layer 2: fitness (ranks survivors) ────────────────────────────────────────
-// §GAP CLOSED 2026-07-06 — topologicalProximity was hardcoded 1.0 with a
-// comment naming its exact real dependency: "needs CFR _byComponent
-// edge, not built (docs/cfr.spec)". That edge type is now real
-// (meta/cfr/graph.js's componentProximity()), tested against causally-
-// adjacent, unrelated, and unknown components before being wired here.
-// Optional injection, not a hard require — RAID._fitness() still works
-// with no graph supplied (falls back to the same neutral 1.0 it always
-// had), matching the same backward-compatible pattern used everywhere
-// else this session (WARP's async Stream extension, the seam adapters).
-// roleConfidence and snrTierGate are still real, honest stubs — this
-// closes one of RAID's three stubbed terms, not all three.
-function _fitness(dispatchName, cluster, health, opts = {}) {
+// 2026-07-06: the three stubs below are now real. §Correction, not just a
+// fill-in: snrTierGate was named here in the original comment as a fitness
+// multiplier, but its actual spec (docs/raid-snr-filter.spec) describes a
+// pre-gate — "does a known fix already exist at all" — not a per-agent
+// ranking term. Multiplying it in here would be backwards: a genuinely
+// unknown call (snr:0.0) would zero out every candidate's fitness, when an
+// unknown call is exactly the case that most needs a normal agent dispatch.
+// snr-filter is wired instead as a pre-gate in _decide(), before any agent
+// is even considered — see below.
+
+// roleConfidence — reads RAID's own _weights map (already populated by
+// recordOutcome() on every real dispatch outcome, previously write-only:
+// nothing ever read it back into a decision). Laplace-floored at 0.5 for
+// <3 observed calls — insufficient evidence is honestly neutral, not
+// fabricated certainty in either direction.
+function _roleConfidence(dispatchName, cluster) {
+  const key = `${cluster}:${dispatchName}`;
+  const w = _weights.get(key);
+  if (!w || w.calls < tunables.get('minCallsForConfidence')) return tunables.get('neutralConfidence');
+  return w.successes / w.calls;
+}
+
+// topologicalProximity — real when a CFR CausalGraph has been injected via
+// setCausalGraph(); honestly neutral (tunables.neutralConfidence) otherwise,
+// or when either component has never appeared in the graph. Never fabricates
+// a distance. CFR's graph itself stays domain-agnostic (§5.9 — meta/ modules
+// never import a sovereign system's own config); RAID owns the Cortex
+// dependency and passes the hop-depth cap into componentDistance() itself
+// rather than CFR reading RAID's table directly.
+function _topologicalProximity(dispatchName, callerComponentId) {
+  const neutral = tunables.get('neutralConfidence');
+  if (!_cfrGraph || !callerComponentId) return neutral;
+  const targetComponentId = HEALTH_KEY[dispatchName] || dispatchName;
+  const dist = _cfrGraph.componentDistance(callerComponentId, targetComponentId, tunables.get('maxGraphHopDepth'));
+  if (dist === null) return neutral;
+  return 1 / (1 + dist);
+}
+
+function _fitness(dispatchName, cluster, health, callerComponentId) {
   const key = HEALTH_KEY[dispatchName] || dispatchName;
   const snap = health?.[key] || {};
   const healthScore = snap.successRate != null ? snap.successRate : (snap.online ? 0.8 : 0.1);
-  const roleConfidence      = 1.0; // stub — needs role-drift tracking, not built
-  // §BUG FIXED 2026-07-06 (same pass, caught before shipping) — first
-  // version of this wire passed `dispatchName` (a provider name like
-  // 'ollama') directly as the target componentId. Tested it: this always
-  // returns 0, silently, because 'ollama' never matches a real graph
-  // componentId like 'ollama.generate' — different namespaces entirely.
-  // That would have made every fitness score multiply by 0 whenever a
-  // graph was supplied — worse than the original neutral stub, not an
-  // improvement. Fixed: caller must supply the real target componentId
-  // explicitly (opts.targetComponentId) — no guessed dispatchName->
-  // componentId mapping fabricated here. Falls back to the same neutral
-  // 1.0 as "no graph supplied" if that mapping isn't provided, rather
-  // than silently computing a wrong proximity.
-  const topologicalProximity = (opts.graph && opts.componentId && opts.targetComponentId)
-    ? opts.graph.componentProximity(opts.componentId, opts.targetComponentId)
-    : 1.0;
-  const snrTierGate          = 1.0; // stub — needs docs/raid-snr-filter.spec wiring into this layer
-  return snrTierGate * roleConfidence * healthScore * topologicalProximity;
+  const roleConfidence      = _roleConfidence(dispatchName, cluster);
+  const topologicalProximity = _topologicalProximity(dispatchName, callerComponentId);
+  return roleConfidence * healthScore * topologicalProximity;
 }
 
 // ── _decide — pure function, same inputs always produce same decision ───────
@@ -130,6 +161,27 @@ function _decide(call, health, weights) {
   const cfrRegime     = ctx.cfrRegime || 'stable';
   const cfrSigmaFloor  = ctx.cfrSigmaFloor || 0;
   const tightened      = cfrRegime !== 'stable' && cfrSigmaFloor > 0; // §P97
+  const callerComponentId = ctx.componentId || null;
+
+  // SNR pre-gate (docs/raid-snr-filter.spec) — only engages when the caller
+  // declares a faultClass (this is a fault-remediation call, not general
+  // provider selection). A known invariant or crystallised pattern resolves
+  // right here with no agent dispatched at all — LAW_I/LAW_III and the
+  // fitness chain below never run for those. Gated deliberately, not run
+  // unconditionally: this codebase's existing RAID-determinism suite pins
+  // plain prompt→provider selection with no faultClass on any fixture, and
+  // this gate must never become a silent second path those tests can't see.
+  if (call?.faultClass) {
+    const snr = snrFilter.filter({
+      intent: call?.prompt || call?.intent || '',
+      cluster,
+      faultClass: call.faultClass,
+      causedBy: ctx.causedBy, sessionId: ctx.sessionId, jobId: ctx.jobId,
+    });
+    if (snr.dispatch === false) {
+      return { agent: null, cluster, reason: `snr-gate resolved locally: ${snr.reason}`, snr };
+    }
+  }
 
   // Explicit preference — checked by its literal key, echoed back verbatim.
   if (call?.preferredAgent) {
@@ -156,7 +208,7 @@ function _decide(call, health, weights) {
   }
   if (survivors.length > 1) {
     const ranked = survivors
-      .map(name => ({ name, score: _fitness(name, cluster, health) }))
+      .map(name => ({ name, score: _fitness(name, cluster, health, callerComponentId) }))
       .sort((a, b) => b.score - a.score);
     return { agent: ranked[0].name, cluster, reason: `cluster_chain: highest fitness for ${cluster} (${ranked[0].score.toFixed(2)})` };
   }
@@ -331,6 +383,7 @@ module.exports = {
   MODULE_ID, VERSION,
   _decide, _cluster, _health, _weights,
   _agentAvailable, _fitness, HEALTH_KEY,
+  _roleConfidence, _topologicalProximity, setCausalGraph,
   recordOutcome,
   startHealthPoll, stopHealthPoll,
   _approveTool, _toolHealthSnapshot,

@@ -173,7 +173,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, {
         id: 'loom-v1', systemId: SYSTEM_ID, version: VERSION,
         routes: ['GET /health', 'GET /contract', 'GET /api/registry/:kind',
-          'GET /api/registry/:kind/:id', 'POST /api/registry/:kind', 'GET /api/graph',
+          'GET /api/registry/:kind/:id', 'POST /api/registry/:kind', 'GET /api/graph', 'GET /api/context-graph', 'GET /api/impact/:id',
           'POST /api/contracts', 'POST /api/contracts/:id/handoff', 'POST /api/contracts/:id/close',
           'POST /api/ingest', 'POST /api/ingest-upload', 'GET /api/revisions', 'GET /api/revisions/:id',
           'GET /api/templates', 'POST /api/scaffold'],
@@ -205,6 +205,18 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'GET' && p === '/api/graph') {
       return json(res, 200, { ok: true, graph: driver.registry.graph() });
+    }
+    // §part_2 2026-07-10 — the semantic query layer. context-graph resolves
+    // wires to component-level relations with intent; impact answers "if this
+    // breaks, who fails downstream and what intents break". This is what makes
+    // the registry a queryable nervous system, not just a filing cabinet.
+    if (method === 'GET' && p === '/api/context-graph') {
+      return json(res, 200, { ok: true, contextGraph: driver.registry.contextGraph() });
+    }
+    if (method === 'GET' && p.startsWith('/api/impact/')) {
+      const componentId = decodeURIComponent(p.slice('/api/impact/'.length));
+      if (!componentId) return json(res, 400, { ok: false, error: 'component id required' });
+      return json(res, 200, { ok: true, impact: driver.registry.impactOf(componentId) });
     }
 
     // ── Ingest (LoomIngest) — old iteration zips ─────────────────────────

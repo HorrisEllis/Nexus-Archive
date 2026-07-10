@@ -85,6 +85,26 @@ const DEFAULT_EXPECTATIONS = [
     timeoutMs: 300000,
     message: (data) => `Pipeline ${data.pipelineId}'s build finished but verify/compare/promote never reached a terminal state within 5 minutes.`,
   },
+  {
+    // §SELF-DIAGNOSIS 2026-07-10 — the consumer rule for the tv-shell
+    // producer. A gated on-screen control (button/dropdown with
+    // data-expect) emits ui.interaction.gated carrying `awaiting` (the
+    // event.type its effect should fire). This one declarative rule
+    // covers EVERY gated control: expectMatch compares the arriving
+    // event's type against the `awaiting` recorded at trigger time, so a
+    // click that produces no effect within 8s becomes
+    // copilot.error.detected — the system self-diagnoses a broken button.
+    // The wildcard expect ('*') lets any subsequent event be the
+    // candidate follow-up; the real match is awaiting === type.
+    id: 'ui-gated-interaction-then-effect',
+    trigger: 'ui.interaction.gated',
+    triggerMatch: (data) => typeof data.awaiting === 'string' && data.awaiting.length > 0,
+    expect: '*',
+    expectMatch: (data, type, triggerData) => !!triggerData && type === triggerData.awaiting,
+    linkKey: (data) => data.elementId + ':' + (data.awaiting || '') + ':' + (data.ts || ''),
+    timeoutMs: 8000,
+    message: (data) => `Gated control "${data.elementId}" was activated but its expected effect "${data.awaiting}" never fired within 8s — the interaction may be broken.`,
+  },
 ];
 
 function createExpectationWatcher(bus, { expectations = DEFAULT_EXPECTATIONS } = {}) {
@@ -94,6 +114,24 @@ function createExpectationWatcher(bus, { expectations = DEFAULT_EXPECTATIONS } =
 
   // pending: expectationId -> linkKey -> { timer, triggeredAt, triggerData }
   const pending = new Map();
+
+  // §1.2/§1.1 MERGED from full-6 2026-07-10 — validate at construction, not
+  // at the first event. A malformed expectation (e.g. missing triggerMatch)
+  // would otherwise throw INSIDE the bus wildcard handler
+  // (`exp.triggerMatch is not a function`), and since this is attached to
+  // copilot's streamIngest, that throw would break event ingestion for the
+  // whole process. A bad expectation must fail loudly where it's declared.
+  for (const exp of expectations) {
+    if (!exp?.id)                         throw new Error('[expectation-watcher] expectation requires an id');
+    if (typeof exp.trigger !== 'string')  throw new Error(`[expectation-watcher] '${exp.id}': trigger must be an event type string`);
+    if (typeof exp.expect !== 'string')   throw new Error(`[expectation-watcher] '${exp.id}': expect must be an event type string`);
+    if (typeof exp.triggerMatch !== 'function') throw new Error(`[expectation-watcher] '${exp.id}': triggerMatch must be a function`);
+    if (typeof exp.expectMatch !== 'function')  throw new Error(`[expectation-watcher] '${exp.id}': expectMatch must be a function`);
+    if (typeof exp.linkKey !== 'function')      throw new Error(`[expectation-watcher] '${exp.id}': linkKey must be a function`);
+    if (typeof exp.message !== 'function')      throw new Error(`[expectation-watcher] '${exp.id}': message must be a function`);
+    if (!Number.isFinite(exp.timeoutMs))  throw new Error(`[expectation-watcher] '${exp.id}': timeoutMs must be a number`);
+  }
+
   for (const exp of expectations) pending.set(exp.id, new Map());
 
   function _clear(expId, key) {
@@ -144,17 +182,76 @@ function createExpectationWatcher(bus, { expectations = DEFAULT_EXPECTATIONS } =
       const typeMatches = exp.expect === event.type || exp.expect.endsWith('*');
       if (!typeMatches) return;
       const data = event.payload || event.data || {};
-      if (!exp.expectMatch(data, event.type)) return;
-      const key = exp.linkKey(data);
-      if (!m.has(key)) return; // no matching pending trigger — not this expectation's concern
 
-      const isFailure = event.type.endsWith('.error') || event.type.endsWith('.failed') || data.status === 'error' || data.status === 'failed';
-      if (isFailure) _detect(exp, key, { ...m.get(key).triggerData, ...data }, 'explicit-failure');
-      _clear(exp.id, key);
+      // Fast path: the follow-up event carries enough to reconstruct the
+      // trigger's linkKey (build/chunk/pipeline flows — data.buildId etc.).
+      const directKey = exp.linkKey(data);
+      if (m.has(directKey) && exp.expectMatch(data, event.type, m.get(directKey).triggerData)) {
+        const isFailure = event.type.endsWith('.error') || event.type.endsWith('.failed') || data.status === 'error' || data.status === 'failed';
+        if (isFailure) _detect(exp, directKey, { ...m.get(directKey).triggerData, ...data }, 'explicit-failure');
+        _clear(exp.id, directKey);
+        return;
+      }
+
+      // Scan path: for rules whose follow-up event cannot reconstruct the
+      // trigger's linkKey (the UI-gated case — a click's effect event knows
+      // nothing about the button's elementId/ts), test each pending trigger's
+      // own triggerData via expectMatch. This is what lets one declarative
+      // ui-gated rule resolve against arbitrary effect events.
+      for (const [pendKey, rec] of [...m.entries()]) {
+        if (exp.expectMatch(data, event.type, rec.triggerData)) {
+          const isFailure = event.type.endsWith('.error') || event.type.endsWith('.failed') || data.status === 'error' || data.status === 'failed';
+          if (isFailure) _detect(exp, pendKey, { ...rec.triggerData, ...data }, 'explicit-failure');
+          _clear(exp.id, pendKey);
+          return;
+        }
+      }
     };
 
     unsubscribers.push(bus.on('*', (event) => { triggerHandler(event); expectHandler(event); }));
   }
+
+  // §part_1c SIGMA RELAY 2026-07-10 — sigma-writer emits sigma.event.warning
+  // (>=0.70) and sigma.event.halt_risk on ANY bus event that deviates from its
+  // per-event-type baseline. That's the "any runtime" deviation detector the
+  // user asked for — a workflow that stalls, a control that looks responsive
+  // but does nothing, produces an off-baseline signal. Promote those to
+  // copilot.error.detected so a runtime deviation becomes a diagnosis + toast,
+  // not a silent bus event. halt_risk is always surfaced; warning is surfaced
+  // too (deviation IS "not working as intended").
+  unsubscribers.push(bus.on('*', (event) => {
+    if (event.type !== 'sigma.event.warning' && event.type !== 'sigma.event.halt_risk') return;
+    const d = event.payload || event.data || {};
+    const severe = event.type === 'sigma.event.halt_risk';
+    bus.emit('copilot.error.detected', {
+      source: 'sigma-deviation',
+      expectationId: 'sigma-runtime-deviation',
+      reason: severe ? 'halt-risk' : 'baseline-deviation',
+      severity: severe ? 'halt' : 'warning',
+      sigma: d.sigma,
+      message: `Runtime deviation on "${d.type}" — sigma ${typeof d.sigma === 'number' ? d.sigma.toFixed(2) : d.sigma}${severe ? ' (HALT RISK)' : ''}${d.reason ? ': ' + d.reason : ''}. The system is behaving off-baseline.`,
+      triggerData: d,
+      ts: Date.now(),
+    });
+  }));
+  // that threw, an async interaction that rejected) is ALREADY an error, not
+  // a missing follow-up, so it doesn't fit the trigger->expect model. Promote
+  // it straight to copilot.error.detected so a broken interaction of ANY kind
+  // is diagnosed the moment it breaks, naming the control that was touched.
+  unsubscribers.push(bus.on('*', (event) => {
+    if (event.type !== 'ui.interaction.error') return;
+    const d = event.payload || event.data || {};
+    bus.emit('copilot.error.detected', {
+      source: 'ui-interaction',
+      expectationId: 'ui-interaction-error',
+      reason: 'interaction-threw',
+      message: d.correlated
+        ? `UI control "${d.elementId}" broke when ${d.kind === 'input' ? 'edited' : 'clicked'}: ${d.error}`
+        : `A UI interaction failed: ${d.error}`,
+      triggerData: d,
+      ts: Date.now(),
+    });
+  }));
 
   return {
     stop() { unsubscribers.forEach((fn) => { try { fn && fn(); } catch (_) {} }); },

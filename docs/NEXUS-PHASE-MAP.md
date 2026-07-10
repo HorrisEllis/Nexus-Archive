@@ -143,7 +143,7 @@ and everything remaining. Updated every session. §AX-10.
 ### Cortex Intelligence
 | # | Name | Status | Location | Notes |
 |---|------|--------|----------|-------|
-| 84 | INTUITION faculty (Cortex) | ✅ | cortex/intelligence/intuition.js | BEP + sigma + fault taxonomy |
+| 84 | INTUITION faculty (Cortex) | ✅ | cortex/boot.js `_intuitionAnswer()` — file relocated inline, phase never updated to match | BEP + sigma + fault taxonomy |
 | 85 | MASTERMIND faculty | ✅ | cortex/intelligence/mastermind.js | Causal, prediction, counterfactual |
 | 86 | DEDUP engine | ✅ | cortex/intelligence/dedup.js | Reference-based, original preserved |
 
@@ -1166,3 +1166,122 @@ specific repo layout. Logs a clear warning if unconfigured instead of
 silently resolving to a guess.
 
 73/73 tests passing across 8 suites.
+
+---
+
+## CHANGELOG (session 16 — 2026-07-05): Seam-chunking core built agnostic, three live bugs fixed, Loom given real endpoints
+
+**Gap named first: this document went stale.** Last entry above is dated 2026-06-30. Everything below happened 2026-07-01 through 2026-07-05 and was never recorded here — a direct miss against this doc's own rule, §AX-10, "updated every session." The entire `meta/` intelligence suite (CFR sigma/delta, RFR2, BDA, gap hunter, ALK, telemetry-codec, liminal, adversary-suite — 13 modules, all real) was built in this gap and is not reflected in the INTELLIGENCE phase table above. It has exactly one consumer (`orchestrator.js`), touching 3 of 13 modules for a status endpoint. Not wired into guardian, bridge, copilot, or the new seam pipeline below. Also found in this gap: **Phase 84's `cortex/intelligence/intuition.js` no longer exists anywhere in the tree**, despite being marked ✅ COMPLETE above — its logic was folded inline into `cortex/boot.js` (`_intuitionAnswer()`) at some point with no note left behind. The `/api/intelligence/patterns` endpoint it and `copilot/intuition.js` both expect is real but thin: a raw event-type frequency count over the last 100 `event_log` rows, not the crystallized-pattern shape (`patternType`/`signature`/`crystallised`) both consumers' own code expects from `meta/crystal-lattice.js`, which neither actually calls. Two other duplications found the same way: two separate "gap-finder" implementations (Phase 2's foundation one vs. `meta/gap/hunter.js`'s 8-type one) and two separate INTUITION implementations (`copilot/intuition.js` vs. `cortex/boot.js`'s inline one) — neither pair reconciled anywhere.
+
+**Seam-chunking built as a new phase, agnostic from the start.** `lib/seam/` gained a second concern alongside the existing prose-spec/SEAMQueue delivery system (untouched): structured build-contract chunking, for `runtime.spec`-style `modules:`/`schemas:` YAML rather than prose. `kg-seam-bridge.js` turns `emerge/compiler`'s already-computed KnowledgeGraph (specDepth/generationReadiness/confidence/deps — real numbers, not re-derived) into seam registry records. `stream.js`/`gates.js` are a five-gate SISO pipeline (Registry→Classify→Axiom→Cascade→Persist) where Cascade and Persist take injected functions — zero hard dependency on WARP, RAID, or Cortex in the core files. `lib/seam/adapters/warp-cascade.js` and `cortex-persist.js` are the only two files that import those systems, opt-in per caller. Ran the full chain against the actual `runtime.spec`: all 9 real modules dispatched correctly through a simulated ollama→chatgpt escalation, all persisted to Cortex's buffer, `MOD-TIER-CONTRACT` (T2) correctly escalated on a forced ollama failure, `MOD-RING-BUFFER` forced to T1 correctly never touched `generate()` at all (§CC-002 held).
+
+**Three bugs found by actually running things, not by inspection:**
+
+1. **`warp/dispatch/index.js`'s axiom-gate never checked candidate output.** `evaluateAxioms()` closed over the fixed request `event` parameter, never the per-candidate `cascadeResult.output` — every candidate in the cascade loop was checked against the same thing regardless of what was actually generated, so a hard axiom could never fail on genuinely bad output, only ever on the request shape. The axiom-gate ran, logged a pass/fail, and was checking the wrong thing the entire time. Fixed: each candidate now gets its own event carrying its own output.
+
+2. **`copilot/server.js`'s `/bridge/deliver` was pre-wrapping its answer one level too deep.** `bridge/router.js`'s `ResultGate` already wraps whatever raw body a target returns into `.response` — copilot's handler was *also* wrapping its own answer in `{result:{response:{...}}}` before that, so after `ResultGate` and `bridge/server.js` both wrapped it again, the real text sat two levels deeper than every consumer's unwrap chain (`_bridgeDispatch` → `_callNexusCopilot`) expected. No error anywhere — ledger showed `FULFILLED`, SSE fired success, the actual answer just silently resolved to `''`. **Confirmed still live via a screenshot mid-session** showing exactly the bare `{"ok":true,"uuid":...,"status":"fulfilled"}` shape this predicts. Fixed and re-traced through the full real chain to confirm `.text` resolves.
+
+3. **Guardian's inline dropzone `autoUpload()` threw on every call.** `registry` in that closure was an always-truthy stub object; `registry.autoUpload` was never defined on it at all (only `get`/`list`/`delete`/`extendTTL`/`addTag`, and those were also broken — arrow functions referencing `this` inside an object literal). Every code-block auto-upload after a job completion threw an uncaught `TypeError`, at both call sites, zero try/catch. The reachable pure-fallback branch that could have worked also referenced an undefined `sanitizeFilename`. Extracted into `guardian/artifact-upload.js`, fixed, tested — `autoUpload()` now actually writes the file and returns a real token/URL.
+
+**Guardian stripped, not just patched.** `server.js`: 4,275 → 3,959 lines. Removed the 278-line broken dropzone Express/multer duplicate of `guardian/dropzone.js` (kept `guardian/dropzone.js` as the one real implementation). Removed dead TLS/cert-gen code — `generateCertWithNode()` referenced `KEY_FILE`/`CERT_FILE`, never defined anywhere in the file; `ensureCert()`, supposedly its caller, didn't exist either. Removed `startWSS()`/`onWss()`, both no-op stubs with zero call sites, superseded by NCP. Deleted `guardian/memory.js` (756 lines) — zero references anywhere, a complete duplicate of the *live* inline memory server already running in `server.js` on the same port. Moved `guardian/lab/lab.js` → `cos/playground/llm-lab.js` (same "run twice, compare, log verdict" category as `compare.js`, LLM-specialized instead of branch-specialized; already took `guardianDispatch` as an injected function, zero coupling broken by the move).
+
+**Bridge given a Cortex mirror.** Confirmed `bridge/` was the only live system server with zero Cortex writes despite being the central cross-system request router — its own ledger (`data/bridge/ledger/requests.jsonl`) recorded everything, Cortex saw none of it. `write()`/`update()` now mirror fire-and-forget via `lib/cortex-write.js`, same pattern loom/ollama/eravos/copilot already use. Confirmed buffering to `data/bridge/bridge_requests.buffer.jsonl` when Cortex is unreachable.
+
+**Loom given real endpoints — everything below existed as tested, working library code with zero HTTP surface before this session.** `LoomIngest.ingestZip()` (built phase 144, sha256 identity + real `unzip -l` listing + parent-diff lineage) → `POST /api/ingest`, `POST /api/ingest-upload` (real binary upload — see below), `GET /api/revisions[/:id]`. `scaffoldSystem()` (built phase 145, one operations list → CLI+API+contract+registry projection) → `GET /api/templates` (3 real templates: Basic CRUD, Read-only registry, Job queue), `POST /api/scaffold`. Console at `GET /`, forked from `idearium/ui/index.html` (same starfield/tokens/rail-nav shell, Loom's registered teal `#33bb88` swapped for idearium's cyan) after the first version — an original design — was correctly rejected. Ran the full chain against the user's actual uploaded zip: ingested (sha256 `9e68a449bbd4...`, 1008 files, 5.2MB), re-ingested to confirm idempotency, ingested a modified second copy to confirm parent-lineage diff tracking, scaffolded a real system and confirmed it appeared in the live registry immediately.
+
+**Real drag-and-drop added, replacing a typed-path field that was never viable on the user's actual platform.** Browsers — Windows 11 included — do not expose real filesystem paths for dropped or picked files, only bytes. `POST /api/ingest-upload` (new `readRawBody()`, since JSON.parse-based body reading corrupts binary data) accepts the actual file; the console's drop zone uploads real bytes via `XMLHttpRequest` with progress. Verified with a real binary POST of the actual uploaded zip — same sha256 as every path-based test.
+
+**Mistral console fixed onto the real pipeline.** Was POSTing straight to raw Ollama (`:11434`), bypassing the queue, ledger, sigma/delta scoring, and Cortex — a second, disconnected Mistral path alongside guardian's own existing `mistral→ollama-bridge:3749` redirect for the same provider. Now goes through the real queue. Traded token-by-token streaming for it — the queue has no per-token SSE channel — stated directly in the code, not hidden. Confirmed the endpoint is reached correctly and fails cleanly (`"Ollama host unreachable"`, no live daemon in the dev sandbox) rather than the old silent-bypass path.
+
+**What's still open, named, not attempted this session:** the `meta/` 13-module intelligence suite remains almost entirely unwired (one consumer, 3 of 13 modules, status-endpoint depth only) — this is OL-2/OL-14/OL-17 from far above in this same document, still open, not a new finding. The two intuition implementations and two gap-finder implementations are not reconciled. Guardian's userscripts (2,247 + 2,234 lines, the two largest files in the system) are untouched. Loom can scaffold new systems and ingest/diff old build zips, but cannot yet edit an existing NEXUS system in place — the user's stated goal ("Loom is the target from now on") needs a dispatch-and-edit capability wired through the seam pipeline built this session, which exists as infrastructure but has not been pointed at "modify file X in system Y" as a use case yet.
+
+Full session package (17 files, complete — no diffs, per §5.3/Output Contract) delivered as `nexus-session-package.zip` alongside this update.
+
+
+---
+
+## CHANGELOG (session 17 — 2026-07-05): WARP's first production caller, whole-project package
+
+**"This is pathetic for how big it is. It's a toy right now."** Checked precisely rather than argue with the feeling: grepped every system for a WARP caller outside WARP's own test suite. Found none. `warp/dispatch/` — cache, population, cascade, axiom-gate, 64/64 tests passing per this document's own session-7 entry — had exactly zero production callers anywhere in ~170,000 lines. That's the accurate version of "toy": not that it doesn't work, that nothing calls it.
+
+**Why the fix isn't "make WARP import the seam system."** `warp/warp.spec` states its own non-negotiable directly: *"Decoupled from NEXUS entirely: NEXUS imports WARP, WARP never imports NEXUS. Drop the zip into any project."* Wiring `lib/seam/` into `warp/dispatch/index.js` directly would break that — WARP would stop being a standalone, droppable devkit and become NEXUS-coupled. The correct direction, already how last session's work was built, is NEXUS-side adapters (`lib/seam/adapters/warp-cascade.js`) that import WARP, never the reverse.
+
+**First real caller: `ollama/server.js`.** Every job dispatch was a raw, uncached HTTP call to the Ollama daemon — identical prompt, identical model, full model re-invocation every time, no exception. `_dispatch()` now routes through `unifiedDispatch()`, with the existing raw HTTP call preserved unchanged as WARP's `generate` function, `FlatFileCrystallizer` (WARP's own shipped plugin, persisted to `data/ollama/warp-crystals.json`) as the cache, and a `PopulationStore` per model. The existing Detector sigma/delta quality scoring is untouched — orthogonal concern, WARP decides whether to regenerate, Detector decides whether what came back (cached or fresh) is actually good.
+
+**Verified the promotion policy properly, not assumed.** First test showed the cache "not working" — every dispatch counted as a fresh model call, including an identical second prompt. That's not a bug: `PopulationStore`'s `defaultPromotionPolicy` requires 3 hits *and* fitness ≥ 0.7 before a variant crystallizes to the permanent cache — proving stability across repeated exposure before permanent reuse, not caching a first lucky success (the AlphaEvolve/FunSearch pattern the spec names). Re-ran with 5 identical dispatches: calls 1–3 each hit the model (building population evidence), calls 4–5 served from the crystal cache with **zero** model calls. That's the real, demonstrated behavior, not the naive one initially expected.
+
+**Found and removed a dead half-migrated function while wiring this in.** The edit that rewrote `_dispatch()` initially left the old raw-HTTP version behind, renamed `_dispatch_OLD_UNUSED`, referencing a `body` variable that no longer existed in scope — broken, unreachable, exactly the kind of debris this session has been removing from guardian elsewhere. Deleted cleanly (35 lines) rather than left as `_OLD_UNUSED` clutter.
+
+**Delivered as the entire project, not a session diff.** Per §5.3/Output Contract ("no partial patches... entire project only"), packaged the full ~170,000-line tree (1,371 files, node_modules and test-run artifacts excluded) as `nexus-full.zip`, alongside this changelog entry.
+
+**Still zero callers for:** the seam-pipeline side of `lib/seam/adapters/warp-cascade.js` (built and demonstrated in a test script, not wired into guardian/idearium/copilot's real dispatch paths yet) — ollama is WARP's first caller, not its only intended one.
+
+
+---
+
+## MAP (2026-07-05) — Session topology, not narrative
+
+Per the standing rule: map before building. This is the structural map of everything touched across sessions 16–17 plus the external "SEAM OS v1.0" document the user supplied — what's a node, what's an edge, what's real vs. proposed vs. conflicting with existing axioms. Changelog entries above are the story; this is the graph.
+
+### Node status (system → role → wiring state)
+
+| System | Role | Wired into real traffic? |
+|---|---|---|
+| `emerge/compiler` | `.spec` → KnowledgeGraph (real `generationReadiness`/`confidence`/`deps`, computed not guessed) | ✅ — proven against `runtime.spec` itself |
+| `lib/seam/kg-seam-bridge.js` | KGNode → seam record (comp_id/seam_uuid/contract/deps) | ✅ — consumes emerge's output directly |
+| `lib/seam/stream.js` + `gates.js` | Registry→Classify→Axiom→Cascade→Persist event pipeline | ✅ — ran full chain against real `runtime.spec`, 9/9 modules |
+| `lib/seam/axioms.js` | seam contract → plain `{id,severity,check}` predicates | ✅ — bug found and fixed (hyphen-normalization mismatch) by running it |
+| `lib/seam/adapters/warp-cascade.js` | seam → WARP `unifiedDispatch` | 🔵 built + demoed, **zero production callers** |
+| `lib/seam/adapters/cortex-persist.js` | seam terminal events → Cortex | 🔵 built + demoed, same gap |
+| `warp/dispatch/` (cache+population+cascade+axiom-gate) | content-addressable reuse, 64/64 tests | 🔄 **first production caller wired this session** (`ollama/server.js`) — was a toy before, proven with a real 3-hit-then-cache-hit test |
+| `ollama/server.js` | job queue → Ollama daemon | ✅ now also runs through WARP's cache |
+| `guardian/server.js` | NCP dispatch, ledger, SEAMQueue (prose-spec path) | ✅ — unrelated to the structured-seam path above, both real, not merged |
+| `bridge/router.js` + `ledger.js` | cross-system HTTP router | ✅ — Cortex mirror added this session, was the one system with zero Cortex writes |
+| `copilot/server.js` | dual-cognition (intuition/analysis/adversarial) + `/bridge/deliver` | ✅ dispatch bug fixed; cognition faculties real but **not proven wired to Cortex's memory** — see gap below |
+| `cortex/boot.js` | JAA-table HTTP surface | 🔴 **"Unified API" (`push`/`recall`, IR, AJV, `memory-index.schema.json`, 5-lane MQL) is 100% spec text, 0% implemented** — real endpoint is a raw `{table,row}` passthrough, no schema, no IR, confirmed by reading the actual handler |
+| `meta/` (13 modules — CFR, RFR2, BDA, gap hunter, ALK, etc.) | domain-agnostic intelligence suite | 🔴 one consumer (`orchestrator.js`), 3 of 13 modules touched, status-endpoint depth only |
+| `loom/server.js` + console | registry / scaffold / ingest | ✅ all three now have real endpoints + real drag-and-drop, proven against the user's actual zip |
+| `ui/agents/mistral` | Mistral console | ✅ fixed onto the real ollama-bridge queue this session |
+
+### Edges that should exist and don't
+
+```
+emerge → lib/seam            ✅ real
+lib/seam → warp              🔵 built, unused in production
+lib/seam → cortex            🔵 built, unused in production
+ollama  → warp               ✅ real (this session's fix)
+guardian/copilot/loom/bridge → warp   ❌ none of these call WARP at all yet
+everything → cortex.recall() ❌ does not exist; everything either writes raw {table,row}
+                                 or keeps its own local intelligence (two intuitions,
+                                 two gap-hunters — direct consequence of this missing edge)
+```
+
+### Reconciling the user-supplied "SEAM OS v1.0" document against what's real
+
+The document proposes four primitives — SEAM, REGISTRY, CORTEX (reuse cache), EVENTBUS. Checked each against the actual codebase rather than accepted at face value:
+
+- **SEAM** — real match. The document's `{seam_id, comp_id, uuid, contract, exec}` shape is a simplified version of what `kg-seam-bridge.js` already builds (`contract` there is richer: `exports`/`gate_pipeline`/`behavioral_contracts`/`error_paths`, not just `input`/`output`/`sideEffects`). Same concept, real implementation already ahead of the document's version.
+
+- **EVENTBUS** — real match, already the load-bearing pattern everywhere. `bridge/router.js`, `emerge/kg-builder.js`, `lib/seam/stream.js`, `warp/core` all independently implement the same inline `Event`/`Gate`/`Stream` primitives — this is MOD-SISO, already canonical, already how every one of these systems talks internally.
+
+- **CORTEX (as the document defines it — a deterministic reuse cache keyed by `seam_id + input_hash`, storing only inputs/outputs/contract signature, no logic)** — **this is not what "Cortex" means in this codebase. This is WARP.** `warp/plugins/crystallizer-flatfile.js` + `population.js` do exactly this, digest-keyed, exact match to the document's `Cortex.query({seam_id, input_hash})` → hit/miss model, proven working this session (3 identical dispatches build population evidence, 4th+ serve from cache). The *actual* Cortex in this codebase (`cortex/boot.js`) is meant to be something larger and different — tagged, intent-addressable, semantic long-term memory, not an exact-match reuse cache — per its own spec, though that larger version isn't built yet either (see the 🔴 row above). Recommend not building a second "Cortex" against the document's definition — WARP already *is* that system, live, as of this session.
+
+- **REGISTRY ("Registry is source of truth. Not files. Not runtime. Not cortex.")** — **this directly conflicts with existing, already-written axioms**, not just codebase-vs-document. §7.6: "the codebase is a materialised view of the Upgrade Ledger. The log is the truth. The code is the projection." §2.2: "the storage device is the source of truth." Both say the *ledger/log* is truth and everything else (including a registry) is a derived, rebuildable index. The document's registry-as-truth model would mean losing the registry = losing the system; the ledger-as-truth model (already adopted) means losing the registry = an inconvenience, rebuild it from the log. The existing axiom is the safer, already-chosen one — worth keeping rather than adopting the document's framing.
+
+**Net:** the document is a reasonably accurate compiler-theory description of a system that's already about 70% built, under different names, with the real Cortex gap (IR/push/recall) being the one piece that's genuinely missing on both sides — the document doesn't solve it either, it just calls a different, already-real system "Cortex" and moves on.
+
+### Addendum (same session) — RAID/copilot routing split, and a fourth duplicate state machine found
+
+**`copilot/lifeline.js` does not call RAID.** Checked directly: `cortex/core/raid/index.js`'s `_decide(call, health, weights)` is real — LAW_I (ollama first), a computed survivor chain, fitness ranking, LAW_III (claude unconditional last resort), CFR-sigma-floor tightening. `copilot/lifeline.js` has its own separate, hardcoded `route()` with `priority: ['ollama', 'guardian']` and never requires or calls RAID at all. Same shape as the two intuitions and two gap-hunters found earlier — two provider-routing implementations, not reconciled. Fix is directional, not symmetric: RAID is the more complete one (health-aware, fitness-ranked, has a real gap list of its own — role_confidence/topological_proximity/SNR_tier_gate stubbed at neutral, tracked as OL-2 above) — `lifeline.js` should call `_decide()` instead of maintaining its own 2-item list, not the reverse.
+
+**RAID's `_decide()` interface is real but not schema'd — this is the same missing-IR shape as Cortex's write path, one layer over.** `call` is a loosely-typed object (`prompt`/`intent`/`context`/`preferredAgent`) with no validation; different callers could construct it inconsistently with no way to catch drift. A RAID IR would be: a canonical `RoutingRequest` (intent, context.cfrRegime, context.cfrSigmaFloor, preferredAgent) and canonical `RoutingDecision` (agent, cluster, reason, fitness breakdown) — schema'd the same way Cortex's `push`/`recall` IR should be, so every caller (guardian, copilot, bridge, ollama) constructs and reads it identically instead of each inventing its own shape, which is exactly how `lifeline.js` ended up bypassing RAID rather than using it.
+
+**Fourth duplicate state machine found:** `idearium/spec-engine/index.js`'s `CHUNK_STATES` (`PENDING→BUILDING→VERIFYING→COMPLETE`/`FAILED`/`ESCALATED`) is structurally the same machine as `lib/seam/queue.js`'s `SEAMQueue` (`QUEUED→INJECTING→GENERATING→DETECTING→VERIFIED`/`RETRYING`/`ESCALATED`) — built independently, not reconciled, same pattern as intuition/gap-hunter/routing above. Idearium's chunk model is otherwise a real, working torrent-piece implementation already: each chunk has a `chunkIdx`, independent `status`, and `_assembleFullSpec()` reassembles by filtering to `COMPLETE` and sorting by index — genuinely torrent-shaped (independently-completable, independently-verifiable pieces, reassembled once enough are done). The one gap versus a true DAG-based torrent model: `chunkIdx` orders as a flat sequence, not a dependency graph — `kg-seam-bridge.js`'s `deps`/`downstream` fields already provide that DAG for the seam-registry side and could supply Idearium's missing ordering dimension if the two were connected.
+
+### Correction (2026-07-06) — the "two intuitions" finding was imprecise, and one real duplicate got consolidated
+
+**Re-checked by reading both files fully instead of by name/location alone.** `cortex/boot.js`'s `_intuitionAnswer()` and `copilot/intuition.js` are not a duplicate — they're different faculties. Cortex's is a local rule-based fast-path over its own data (health/gaps/patterns keyword matching). Copilot's is a separate faculty that calls Cortex via HTTP as one of several data sources. Confirmed `copilot/server.js`'s real `/api/prompt` handler already calls both, in sequence, intentionally — copilot's own intuition first, Cortex's as fallback, full generation third. That's correct layered architecture, already wired. The earlier note above overclaimed a duplicate where there wasn't one — noted here rather than silently corrected, per this document's own standard.
+
+**The gap-hunter duplicate, unlike the above, was real and has been fixed.** `meta/gap/hunter.js` and `guardian/lib/gap-hunter.js` were confirmed byte-identical (`diff` after normalizing the only difference — relative import paths) — same UUID, same header, same logic, copy-pasted rather than shared. Seven consumers on the `meta/` side, four on the `guardian/` side, meaning any future fix would need to land twice or silently drift. `meta/gap/hunter.js` kept as canonical (more consumers, matches `meta/`'s own stated domain-agnostic role); `guardian/lib/gap-hunter.js` is now a one-line forwarding shim, same pattern `lib/meta/index.js` already used correctly for the broader meta layer. Verified the shim resolves to the exact same function references, not just matching shape (`viaShim.analyze === canonical.analyze` — true).
+
+**Third pair checked — confirmed real, not yet consolidated.** `lib/seam/queue.js`'s `SEAMQueue` (`QUEUED→INJECTING→GENERATING→DETECTING→VERIFIED/RETRYING/ESCALATED`) states its own purpose directly in its header: *"Guardian is the state machine. The AI provider is a lossy transform function."* That's the identical problem `idearium/spec-engine`'s `CHUNK_STATES` (`PENDING→BUILDING→VERIFYING→COMPLETE/FAILED/ESCALATED`) solves, just applied to spec sections instead of generic prose chunks. Unlike the intuition pair above, this one is a genuine duplicate — but both are actively used by different real consumers, and merging them needs careful API reconciliation, not a rushed pass. Scoped as its own next task rather than attempted here.

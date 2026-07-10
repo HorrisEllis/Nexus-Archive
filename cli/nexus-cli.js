@@ -60,6 +60,35 @@ let _sseReq    = null;
 let _history   = [];
 
 // ── HTTP helpers ───────────────────────────────────────────────────────────────
+// §part_3 2026-07-10 — the CLI's copilot fallback. Posts to copilot's real
+// /api/prompt (:3750) — the SAME agent (all 8 tools) the tv-shell floating
+// input reaches. Direct endpoint avoids the CLI managing Bridge handshake
+// tokens; it is the identical copilot, not a second one. Same copilot
+// everywhere, many front doors.
+function _copilotAsk(prompt, timeoutMs = 45000) {
+  return new Promise((resolve) => {
+    const COPILOT_URL = process.env.NEXUS_COPILOT_URL || 'http://127.0.0.1:3750';
+    const payload = Buffer.from(JSON.stringify({ prompt, source: 'nexus-cli' }));
+    let done = false;
+    const req = http.request(COPILOT_URL + '/api/prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': payload.length },
+      timeout: timeoutMs,
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        if (done) return; done = true;
+        try { const j = JSON.parse(d); resolve({ ok: true, text: j.text || j.response || j.answer || '' }); }
+        catch (_) { resolve({ ok: false }); }
+      });
+    });
+    req.on('timeout', () => { if (!done) { done = true; req.destroy(); resolve({ ok: false }); } });
+    req.on('error', () => { if (!done) { done = true; resolve({ ok: false }); } });
+    req.write(payload); req.end();
+  });
+}
+
 function _request(method, path, body) {
   return new Promise((resolve, reject) => {
     const payload = body ? Buffer.from(JSON.stringify(body)) : null;
@@ -243,7 +272,29 @@ async function exec(input) {
       }
     }
 
-    // Fall back to trie suggestions
+    // §part_3 2026-07-10 — copilot as the CLI's FINAL resolver. Before this,
+    // an input the grammar engine and Qwen reasoning couldn't resolve
+    // dead-ended on "unknown: ..." with trie suggestions. But copilot is the
+    // full agent with all 8 tools — it can reason about and ACT on a natural
+    // request the structured CLI can't parse. Handing off here makes the
+    // command CLI and the copilot CLI ONE continuous surface: structured
+    // commands resolve fast locally; anything else flows to the same copilot
+    // the tv-shell floating input reaches (Bridge :9999). Same copilot
+    // everywhere, many front doors.
+    try {
+      process.stdout.write(c.dim('  → copilot…\r'));
+      const cp = await _copilotAsk(trimmed);
+      process.stdout.write('\r                    \r');
+      if (cp && cp.ok && cp.text) {
+        console.log(cp.text);
+        return;
+      }
+    } catch (e) {
+      process.stdout.write('\r                    \r');
+      // fall through to suggestions if copilot is unreachable
+    }
+
+    // Fall back to trie suggestions (copilot unreachable or no answer)
     console.log(c.y(`  unknown: ${trimmed}`));
     const suggestions = ge.complete(trimmed.split(' ')[0]);
     if (suggestions.length) {
@@ -411,7 +462,7 @@ async function run(commandString) {
   await exec(commandString);
 }
 
-module.exports = { start, run, exec, MODULE_ID, VERSION };
+module.exports = { start, run, exec, _copilotAsk, MODULE_ID, VERSION };
 
 // CLI entrypoint
 if (require.main === module) {

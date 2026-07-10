@@ -422,36 +422,6 @@ function createCFRLedger({
       return true;
     }
 
-    // GET /cfr/graph — nodes + edges. §gap-closed 2026-07-05: the
-    // CausalGraph has computed typed, weighted edges (causal 1.0 /
-    // session 0.7 / job / temporal) on every single ingest since it was
-    // written — and no route ever exposed them. /cfr/nodes above serves
-    // nodes only. This is the synapse feed: cortex's registry already
-    // declared 'cfr.graph — Causal graph nodes + edges' as a component,
-    // and ui/cortex renders these edges as literal synapses.
-    if (method === 'GET' && pathname === '/cfr/graph') {
-      const qs    = urlObj?.searchParams || new URLSearchParams('');
-      const nCap  = Math.min(150, parseInt(qs.get('nodes') || '80'));
-      const recent = _history.slice(-nCap);
-      const ids    = new Set(recent.map(e => e.uuid));
-      const nodes  = recent.map(e => ({
-        id:     e.uuid,
-        label:  e.type,
-        source: e.source || e._system || systemId,
-        sigma:  e.sigma?.score ?? 0,
-        regime: e.cfr?.regime ?? 'stable',
-        ts:     e.ts,
-      }));
-      // edges array grows for the ledger's lifetime — scan only the tail,
-      // keep only edges whose BOTH endpoints are in the served node window
-      const edges = _graph.edges.slice(-800)
-        .filter(e => ids.has(e.from) && ids.has(e.to))
-        .slice(-250);
-      json(200, { ok: true, system: systemId, nodes, edges,
-        counts: { nodes: nodes.length, edges: edges.length } });
-      return true;
-    }
-
     // GET /cfr/deltas — recent ledger entries for replay/debug
     if (method === 'GET' && (pathname === '/cfr/deltas' || pathname.startsWith('/cfr/deltas'))) {
       const qs     = urlObj?.searchParams || new URLSearchParams(pathname.split('?')[1] || '');

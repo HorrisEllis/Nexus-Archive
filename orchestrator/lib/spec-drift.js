@@ -70,16 +70,29 @@ function _loadSpecs() {
         specs[name] = { version, file, path: full };
       }
     }
-    // Also check system-local specs (cockpit/cockpit.spec, emerge/emerge.spec etc)
-    const root = path.join(__dirname, '..');
+    // §2026-07-09 — specs now live per-system. Two real conventions,
+    const root = path.join(__dirname, '..', '..');
+    // both checked: <system>/<system>.spec (flat, original) and
+    // <system>/spec/<system>.spec (foldered, new — the per-system spec
+    // folder). docs/ specs already loaded above still win on name
+    // collision so a stale docs copy never masks the moved one... except
+    // we WANT the per-system one to be authoritative now, so per-system
+    // overrides docs for the 13 systems that were moved. Precedence:
+    // <system>/spec/ > <system>/ > docs/.
     for (const dir of fs.readdirSync(root)) {
       if (['node_modules','.git','data','docs'].includes(dir)) continue;
-      const localSpec = path.join(root, dir, dir + '.spec');
-      if (fs.existsSync(localSpec)) {
-        const name    = _specName(localSpec);
-        const version = _specVersion(localSpec);
-        if (name && version && !specs[name]) {
-          specs[name] = { version, file: dir + '/' + dir + '.spec', path: localSpec };
+      const candidates = [
+        path.join(root, dir, 'spec', dir + '.spec'),  // foldered (new, authoritative)
+        path.join(root, dir, dir + '.spec'),          // flat (original)
+      ];
+      for (const localSpec of candidates) {
+        if (fs.existsSync(localSpec)) {
+          const name    = _specName(localSpec);
+          const version = _specVersion(localSpec);
+          if (name && version) {
+            specs[name] = { version, file: path.relative(root, localSpec), path: localSpec };
+          }
+          break; // first found wins (foldered before flat)
         }
       }
     }

@@ -82,6 +82,7 @@ const _cw = require('../lib/cortex-write')('copilot');
 
 // Blueprint index — component awareness substrate (§BP-01)
 let _blueprintIndex = null;
+let _expectationWatcher = null;
 function _getBP() {
   if (_blueprintIndex) return _blueprintIndex;
   try { _blueprintIndex = require('../lib/blueprint-index'); return _blueprintIndex; } catch(_) { return null; }
@@ -1025,6 +1026,37 @@ server.listen(PORT, () => {
     _digest.start();
     console.log('[copilot] stream-digest started — activity persists to Cortex every 60s');
   } catch (e) { console.warn('[copilot] stream-digest not started:', e.message); }
+
+  // §GAP CLOSED 2026-07-10 — run_cockpit_command (agent-tools/tools/
+  // run-cockpit-command.js) needs a live ForgeCLI injected via
+  // wireCockpit(); nothing ever called it, so the tool was registered but
+  // inert. The real instance is cockpit/live.js's getForgeCLI() (the
+  // first-ever composition, built earlier this session). Wire it at boot.
+  // §GAP CLOSED 2026-07-10 — run_cockpit_command needs a live ForgeCLI
+  // injected via wireCockpit(); nothing called it, so the tool was inert.
+  try {
+    const { getForgeCLI } = require('../cockpit/live.js');
+    const { wireCockpit } = require('../lib/agent-tools/tools/run-cockpit-command.js');
+    wireCockpit(getForgeCLI());
+    console.log('[copilot] run_cockpit_command wired to live ForgeCLI');
+  } catch (e) { console.warn('[copilot] run_cockpit_command not wired:', e.message); }
+
+  // §GAP CLOSED 2026-07-10 — expectation-watcher.js is "co-pilot tracks
+  // errors from expected events and gated interaction event listeners" —
+  // it watches trigger→expected-follow-up pairs and emits
+  // copilot.error.detected when the follow-up never arrives (a build that
+  // dispatched but never completed, a chunk queued but never populated, a
+  // gated button whose click event never produced its effect). It was
+  // fully built and referenced in comments as "already listening" — but
+  // nothing ever started it. createExpectationWatcher() attaches to the
+  // bus immediately (it's live on creation); we hold the handle so its
+  // stop()/listPending() are reachable.
+  try {
+    const nexusBus = require('../nexus-bus.js');
+    const { createExpectationWatcher } = require('./lib/expectation-watcher.js');
+    _expectationWatcher = createExpectationWatcher(nexusBus);
+    console.log('[copilot] expectation-watcher live — unfired expected events become copilot.error.detected');
+  } catch (e) { console.warn('[copilot] expectation-watcher not started:', e.message); }
 });
 
 module.exports = { server, streamIngest, _resolveIntuitionResponse };

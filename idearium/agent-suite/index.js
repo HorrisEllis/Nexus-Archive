@@ -143,80 +143,54 @@ export async function getIdeas(phase = null) {
 }
 
 // ── Ollama generation — Mistral for reasoning, Qwen for quick ────────────────
-// This is what builds each torrent-style chunk locally without needing a
-// browser tab.
-//
-// §gap-closed 2026-07-05 — this used to hit raw Ollama directly on :11434
-// (via ollama-runtime streaming, or a direct HTTP fallback), which meant
-// every idearium spec chunk skipped the sovereign bridge entirely: no WARP
-// cache (identical chunk prompts across specs re-generated from scratch
-// every time), no MAX_CONCURRENT queueing (nothing stopped N chunks firing
-// at Ollama in parallel), no SEAM Detector quality score, no cortex-write
-// logging. Now routes through ollama/server.js's real bridge (:3749,
-// POST /api/jobs + poll) — same mechanics guardian/server.js's
-// _ollamaSeamDispatch uses for SEAM chunks, so a chunk built here and a
-// chunk built through the SEAM queue get identical treatment.
-const OLLAMA_BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
+// This is what builds each chunk locally without needing a browser tab.
+export async function generateWithOllama(system, prompt, { model = 'mistral:7b-instruct-q4_K_M', timeoutMs = 120000 } = {}) {
+  const runtime = (() => {
+    try { return _require('../../ollama-runtime'); }
+    catch { return null; }
+  })();
 
-export async function generateWithOllama(system, prompt, { model = 'mistral:7b-instruct-q4_K_M', timeoutMs = 120000, tag = null } = {}) {
-  const body = JSON.stringify({
-    prompt: `${system}\n\n${prompt}`,
-    model,
-    timeoutMs,
-    intent:      'spec_chunk',
-    componentId: 'idearium.agent-suite.generateWithOllama',
-    hookId:      'idearium.agent-suite.ollama',
-    sessionId:   tag,
-  });
-
-  const jobId = await new Promise((resolve) => {
-    const req = http.request({
-      hostname: '127.0.0.1', port: OLLAMA_BRIDGE_PORT, path: '/api/jobs',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 10000,
-    }, (res) => {
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => { try { resolve(JSON.parse(data).jobId || null); } catch { resolve(null); } });
-    });
-    req.on('error', () => resolve(null));
-    req.on('timeout', () => { req.destroy(); resolve(null); });
-    req.write(body);
-    req.end();
-  });
-
-  if (!jobId) return { ok: false, error: 'ollama bridge unreachable or refused job' };
-
-  const startedAt = Date.now();
-  return new Promise((resolve) => {
-    const poll = () => {
-      if (Date.now() - startedAt > timeoutMs) { resolve({ ok: false, error: `${model} timed out after ${timeoutMs}ms` }); return; }
+  if (!runtime) {
+    // Direct HTTP fallback if runtime not available
+    const body = JSON.stringify({ model, prompt: `${system}\n\n${prompt}`, stream: false,
+      options: { temperature: 0.3, num_predict: 2048 } });
+    const r = await new Promise((resolve) => {
       const req = http.request({
-        hostname: '127.0.0.1', port: OLLAMA_BRIDGE_PORT, path: `/api/jobs/${jobId}`,
-        method: 'GET', timeout: 5000,
+        hostname: '127.0.0.1', port: OLLAMA_PORT, path: '/api/generate',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        timeout: timeoutMs,
       }, (res) => {
         let data = '';
         res.on('data', d => data += d);
         res.on('end', () => {
-          try {
-            const job = JSON.parse(data).job || JSON.parse(data);
-            if (job.status === 'complete') resolve({ ok: true, text: (job.result || '').trim(), model, warpSource: job.warpSource });
-            else if (job.status === 'failed') resolve({ ok: false, error: job.error || 'ollama job failed', model });
-            else setTimeout(poll, 1000);
-          } catch { setTimeout(poll, 1000); }
+          try { resolve({ ok: true, text: JSON.parse(data).response || '' }); }
+          catch { resolve({ ok: false, error: 'parse failed' }); }
         });
       });
-      req.on('error', () => setTimeout(poll, 1000));
+      req.on('error', e => resolve({ ok: false, error: e.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'timeout' }); });
+      req.write(body);
       req.end();
-    };
-    setTimeout(poll, 1000);
+    });
+    return r;
+  }
+
+  return new Promise((resolve) => {
+    let buf = '';
+    const timer = setTimeout(() => resolve({ ok: false, error: `${model} timed out after ${timeoutMs}ms` }), timeoutMs);
+    runtime.streamGenerate(
+      { model, prompt, system },
+      (tok) => { buf += tok; },
+      ()    => { clearTimeout(timer); resolve({ ok: true, text: buf.trim(), model }); },
+      (err) => { clearTimeout(timer); resolve({ ok: false, error: String(err), model }); },
+    );
   });
 }
 
 // ── Dispatch chunk to agent (Mistral → ChatGPT → Claude) ─────────────────────
 // Returns { ok, text, agent, model } or { ok: false, error }
-export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama', tag = null } = {}) {
+export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama' } = {}) {
   // Agent priority: Mistral (local) → ChatGPT → Claude
   // Mistral runs directly. ChatGPT/Claude go through guardian NCP.
 
@@ -225,7 +199,7 @@ export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama',
     const r = await generateWithOllama(
       'You are a precise technical spec writer for the NEXUS sovereign AI orchestration system. Write only the requested section content — no preamble.',
       chunkPrompt,
-      { model: 'mistral:7b-instruct-q4_K_M', timeoutMs: 120000, tag }
+      { model: 'mistral:7b-instruct-q4_K_M', timeoutMs: 120000 }
     );
     if (r.ok && r.text) return { ok: true, text: r.text, agent: 'ollama', model: r.model };
     console.warn(`[${MODULE_ID}] Mistral failed: ${r.error} — falling back to ChatGPT`);
@@ -234,7 +208,7 @@ export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama',
   // 2. Fall back to ChatGPT via guardian
   if (preferAgent !== 'claude') {
     const r = await _http(GUARDIAN_PORT, 'POST', '/command', {
-      command: 'spec', provider: 'chatgpt', prompt: chunkPrompt, tag,
+      command: 'spec', provider: 'chatgpt', prompt: chunkPrompt,
       meta: { source: 'idearium.agent-suite', task: 'spec_chunk' },
     }, 300000); // 5min — ChatGPT via NCP can be slow
     if (r.ok && r.data?.jobId) {
@@ -246,7 +220,7 @@ export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama',
 
   // 3. Fall back to Claude via guardian
   const r = await _http(GUARDIAN_PORT, 'POST', '/command', {
-    command: 'spec', provider: 'claude', prompt: chunkPrompt, tag,
+    command: 'spec', provider: 'claude', prompt: chunkPrompt,
     meta: { source: 'idearium.agent-suite', task: 'spec_chunk' },
   }, 300000);
   if (r.ok && r.data?.jobId) {
