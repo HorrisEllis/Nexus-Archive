@@ -35,89 +35,6 @@
 (function (global) {
 
   const COPILOT_URL = (global.NEXUS_COPILOT_URL) || 'http://127.0.0.1:3750';
-  const CORTEX_URL  = (global.NEXUS_CORTEX_URL)  || 'http://127.0.0.1:3748';
-
-  // ── §CFR→CSS root wire — the live field drives the whole visual layer ──
-  // spotlight.css declares --cp-tension at :root but only ever wrote it
-  // per-tile. This polls the real /cfr/field and sets it at the root, so
-  // every variable-driven consumer (cursor glow, pulse radius, anything
-  // in tutorial.css or spotlight.css) breathes with the actual system
-  // state — turbulent regime = visibly hotter guidance, no JS color code.
-  let _tensionTimer = null;
-  function startFieldWire() {
-    if (_tensionTimer) return;
-    const tick = async () => {
-      try {
-        const r = await fetch(`${CORTEX_URL}/cfr/field`, { signal: AbortSignal.timeout(2500) });
-        const f = await r.json();
-        // sigma-ish tension: friction+entropy high or coherence low → hotter
-        const tension = Math.max(0, Math.min(1,
-          ((f.friction ?? 0.5) + (f.entropy ?? 0.5)) / 2 * (f.regime === 'stable' ? 0.6 : 1.0)));
-        document.documentElement.style.setProperty('--cp-tension', tension.toFixed(2));
-      } catch (_) { /* field unreachable — leave last value, never fabricate */ }
-    };
-    tick();
-    _tensionTimer = setInterval(tick, 3000);
-  }
-
-  // ── The co-pilot cursor — a literal pointer copilot moves for you ──────
-  function _cursor() {
-    let c = document.getElementById('tut-cursor');
-    if (!c) { c = document.createElement('div'); c.id = 'tut-cursor'; document.body.appendChild(c); }
-    return c;
-  }
-  function _moveCursorTo(el) {
-    const c = _cursor();
-    const r = el.getBoundingClientRect();
-    c.style.left = `${r.left + r.width / 2 - 9}px`;
-    c.style.top  = `${r.top + r.height / 2 - 9}px`;
-    c.classList.add('visible');
-    return new Promise(res => setTimeout(res, 850)); // matches the CSS transition
-  }
-  async function _cursorClick() {
-    const c = _cursor();
-    c.classList.add('clicking');
-    setTimeout(() => c.classList.remove('clicking'), 400);
-  }
-  // Ghost-typing — literally shows what to type, character by character,
-  // as a placeholder overlay. Never actually fills the input (the user
-  // does the doing; copilot does the showing).
-  async function _ghostType(el, text) {
-    const original = el.placeholder;
-    el.classList.add('tut-input-focus');
-    for (let i = 1; i <= text.length; i++) {
-      el.placeholder = text.slice(0, i);
-      await new Promise(r => setTimeout(r, 45));
-    }
-    setTimeout(() => { el.placeholder = original; }, 6000);
-  }
-
-  async function _showStep(step) {
-    // System-tile spotlight (window.CP) — unchanged, still real.
-    if (step.spotlight && global.CP?.exec) {
-      global.CP.exec({ ui: { spotlight: [step.spotlight], spotlightTtl: 0 } });
-    }
-    // Element-level guidance — the literal showing.
-    if (step.target) {
-      const el = document.querySelector(step.target);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        await _moveCursorTo(el);
-        el.classList.add('tut-pulse');
-        if (step.action === 'click') await _cursorClick();
-        if (step.action === 'type' && step.ghostText) await _ghostType(el, step.ghostText);
-        if (step.flash) { el.classList.add('tut-flash'); setTimeout(() => el.classList.remove('tut-flash'), 2000); }
-        return el;
-      }
-      // Target selector matched nothing — report it, don't silently skip.
-      _reportToCopilot({ type: 'tutorial.target.missing', selector: step.target, step: step.id, ts: Date.now() });
-    }
-    return null;
-  }
-  function _clearStep(el) {
-    if (el) { el.classList.remove('tut-pulse', 'tut-input-focus'); }
-  }
-
 
   // ── Minimal toast for tv-shell (idearium's toast is page-local) ──────────
   function _toast(msg, kind = 'info', ttl = 5000) {
@@ -177,8 +94,6 @@
     }
 
     start() {
-      document.body.classList.add('tut-active');
-      startFieldWire(); // live CFR → root --cp-tension, the whole visual layer breathes with the real field
       _toast(`Tutorial: ${this.def.title}`, 'info', 4000);
       _reportToCopilot({ type: 'tutorial.started', tutorial: this.def.id, steps: this.def.steps.length, ts: Date.now() });
       this.next();
@@ -189,19 +104,16 @@
       if (this.idx >= this.def.steps.length) {
         _toast('Tutorial complete ✓', 'info', 6000);
         if (global.CP?.off) global.CP.off();
-        document.body.classList.remove('tut-active');
-        const c = document.getElementById('tut-cursor');
-        if (c) c.classList.remove('visible');
         _reportToCopilot({ type: 'tutorial.completed', tutorial: this.def.id, ts: Date.now() });
         return;
       }
       const step = this.def.steps[this.idx];
       this._active = _toast(`${this.idx + 1}/${this.def.steps.length} — ${step.say}`, 'info', 0);
 
-      // The literal showing — cursor moves to the target, borders pulse,
-      // ghost-typing demonstrates input. Falls back to tile spotlight
-      // alone when a step has no element-level target.
-      const shownEl = await _showStep(step);
+      // Spotlight the target through window.CP's real interface.
+      if (step.spotlight && global.CP?.exec) {
+        global.CP.exec({ ui: { spotlight: [step.spotlight], spotlightTtl: 0 } });
+      }
 
       // Poll the expected condition — the machine-checkable half.
       const deadline = Date.now() + (step.timeoutMs || 60000);
@@ -209,7 +121,6 @@
         const result = await _check(step.expected);
         if (result.ok) {
           this._active?.remove();
-          _clearStep(shownEl);
           _reportToCopilot({ type: 'tutorial.step.passed', tutorial: this.def.id, step: step.id, ts: Date.now() });
           return this.next();
         }
@@ -220,7 +131,6 @@
       // copilot's stream, plus a visible failure toast with a retry.
       const last = await _check(step.expected);
       this._active?.remove();
-      _clearStep(shownEl);
       _toast(`Step "${step.id}" didn't complete — expected: ${step.expectedText || 'condition'}; observed: ${last.observed}`, 'err', 0);
       _reportToCopilot({
         type: 'tutorial.step.failed', tutorial: this.def.id, step: step.id,
@@ -247,9 +157,6 @@
       {
         id: 'capture-idea',
         say: 'Type a raw thought into the brainstorm box and hit "+ capture", then promote it to an idea.',
-        target: '#gate-brain-text',
-        action: 'type',
-        ghostText: 'a system that watches my repos and opens gaps when tests fail...',
         expected: { url: 'http://127.0.0.1:4800/api/ideas', checkFn: d => (d?.ideas || []).length > 0 },
         expectedText: 'at least one idea exists',
         timeoutMs: 300000,
@@ -271,5 +178,5 @@
     ],
   };
 
-  global.NexusTutorial = { Tutorial, FIRST_SPEC_TUTORIAL, _check, startFieldWire, _showStep, _clearStep };
+  global.NexusTutorial = { Tutorial, FIRST_SPEC_TUTORIAL, _check };
 })(typeof window !== 'undefined' ? window : globalThis);

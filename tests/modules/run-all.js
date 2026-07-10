@@ -66,17 +66,6 @@ const SUITES = [
   'lifeline-fluid-routing.test.js',
   'run-command-tool.test.js',
   'tutorial-engine.test.js',
-  'diagnose-move-data-tools.test.js',
-  'bridge-response-survival.test.js',
-  'run-pipeline-tool.test.js',
-  'mastermind-fractals.test.js',
-  'cortex-sse-broadcast.test.js',
-  'copilot-confidence.test.js',
-  'closed-loop-tool.test.js',
-  'expectation-watcher.test.js',
-  'ui-self-diagnosis.test.js',
-  'loom-context-intent.test.js',
-  'cli-copilot-fallback.test.js',
 ];
 
 let totalPassed = 0;

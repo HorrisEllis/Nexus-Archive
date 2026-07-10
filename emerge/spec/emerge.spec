@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        emerge
-    version:     1.1.0
+    version:     1.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        :4242
     uuid:        nexus-emerge-v1-0000-2026-0615-jamesbrooks-001
@@ -70,9 +70,3 @@ spec:
     - "compile() on a known-good .eg file produces deterministic output (§CC-002)"
     - "hot.load follows QUARANTINE→PROVE→INTEGRATE→MONITOR, rolls back on sigma > 0.70"
     - "SNR gate rejects a low-fidelity .eg file before parser runs"
-
-
-# ── ADDENDUM 2026-07-09 (v1.1.0) — what changed this session ──
-# Verified against real source, tested, 97/97 baseline held. Each item
-# is a real wire or fix, not a claim:
-#   - t2-gate build dispatch routed through WARP cascade (cache/population/axiom-gate) — was direct-to-SEAMQueue, bypassing the WARP build spine; opt-out via T2_DISABLE_WARP

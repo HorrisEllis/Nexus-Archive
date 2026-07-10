@@ -18,10 +18,10 @@
  *   navigate -> hooks/index.js's real surface->port registry
  *   note     -> cortex/push-recall.js's real /api/push (durable memory)
  *   tool     -> lib/agent-tools/'s real tool-calling loop
- *   action   -> cockpit's real ForgeCLI, via run_cockpit_command
+ *   action   -> cockpit's real ForgeCLI, via run_command
  *
  * §DRIFT-PROOF — navigate's target list is READ FROM the hook registry,
- * never hand-copied. Same discipline as run_cockpit_command reading
+ * never hand-copied. Same discipline as run_command reading
  * cockpit's own INTERACTION_CONTRACT: the single most common bug found
  * this entire session was a declared surface drifting from its real
  * implementation. A registry-sourced list cannot drift.
@@ -136,7 +136,7 @@ async function handleTool(prompt, { runTools }) {
 
 // ── action ───────────────────────────────────────────────────────────────────
 // An action is a real cockpit command. Routed through the same
-// run_cockpit_command tool as everything else, so it inherits that tool's
+// run_command tool as everything else, so it inherits that tool's
 // real hallucination guard (a command not in cockpit's own contract is
 // refused, never executed).
 async function handleAction(prompt, { runTools }) {

@@ -274,6 +274,8 @@ function matchRoute(method, url) {
     ['GET',    ['api','spec-engine','templates'],            'speceng.templates'],
     ['GET',    ['api','spec-engine','specs'],               'speceng.list'],
     ['POST',   ['api','spec-engine','specs'],               'speceng.create'],
+    // §ROUTED 2026-07-10 — the promote action that bridges a built spec to a repo.
+    ['POST',   ['api','spec-engine','specs',':uuid','promote'], 'spec.promote'],
     ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
     ['GET',    ['api','spec-engine','context'],             'speceng.context'],
     ['GET',    ['sse'],                   'sse'],
@@ -645,6 +647,86 @@ async function handle(req, res, route, query, body) {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
       return ok(res, { repo });
+    }
+
+    // §GAP CLOSED 2026-07-10 — "Idearium isn't importing ideas into the
+    // repository library. When you click promote idea to a repository, it needs
+    // two options, automatic using emerge or manual using the spec builder."
+    //
+    // Root cause: repo.ingest requires files[] (a drag-and-drop payload). There
+    // was NO path from a built SPEC to a repo — promoting an idea produced a
+    // spec, and nothing turned that spec into a repo artifact. This is the last
+    // link before the loop turns: idea → spec → chunk → dispatch → ARTIFACT → repo.
+    //
+    // mode:
+    //   'emerge' (automatic) — deterministic assembly of the spec's completed
+    //       chunks into a single .spec artifact. No agent. Zero tokens. Fails
+    //       loudly if chunks are still pending rather than shipping a partial
+    //       repo that looks complete.
+    //   'manual' (spec builder) — same assembly, but pending chunks are allowed
+    //       and marked as TODO sections, so a human finishes them in the builder.
+    case 'spec.promote': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      const specUuid = params.uuid || body.specUuid;
+      const mode = body.mode || 'emerge';
+      if (!specUuid) return err(res, 400, 'specUuid required');
+      if (mode !== 'emerge' && mode !== 'manual') {
+        return err(res, 400, `unknown promote mode '${mode}' — use 'emerge' (automatic) or 'manual' (spec builder)`);
+      }
+      let manifest;
+      try { manifest = se.loadSpec(specUuid); }
+      catch (e) { return err(res, 404, `spec not found: ${specUuid}`); }
+
+      const pending = manifest.chunks.filter(c => c.status !== 'complete');
+      // §1.2 — automatic promotion of an unfinished spec would produce a repo
+      // that claims completeness it does not have. Refuse, and say what is left.
+      if (mode === 'emerge' && pending.length > 0) {
+        return err(res, 409, `cannot auto-promote: ${pending.length} of ${manifest.chunks.length} chunks not built ` +
+          `(${pending.map(c => c.sectionId).join(', ')}). Build them, or promote with mode:'manual' to finish in the spec builder.`);
+      }
+
+      // Assemble the artifact deterministically from real chunk content.
+      const sections = manifest.chunks
+        .sort((a, b) => a.chunkIdx - b.chunkIdx)
+        .map(c => {
+          const body_ = c.status === 'complete' && c.content
+            ? c.content
+            : `## ${c.sectionTitle || c.sectionId}\n\n<!-- TODO: not yet built — finish in the spec builder -->\n`;
+          return body_;
+        });
+      const specText = `# ${manifest.name}\n\n` +
+        `<!-- promoted from spec ${specUuid} · mode:${mode} · ` +
+        `${manifest.chunks.length - pending.length}/${manifest.chunks.length} chunks built -->\n\n` +
+        sections.join('\n\n');
+
+      // A single canonical .spec file is the repo's physical artifact (§2.1).
+      const files = [{ path: `${manifest.name.replace(/[^a-zA-Z0-9-_]/g, '-')}.spec`, content: specText }];
+
+      const result = getRepoLayer().ingest({
+        name: manifest.name,
+        files,
+        specText,
+        source: `promote:${mode}`,
+        parent: manifest.ideaUuid || null,
+      });
+      if (result.error) return err(res, 400, result.error);
+
+      const repoUuid = result.repo?.uuid || null;
+      // §1.2 — if ingest returned no repo, this promote did NOT create one.
+      // Reporting ok with a null id would be a success message over a no-op.
+      if (!repoUuid) return err(res, 500, 'ingest returned no repo — promotion did not create a repository');
+
+      os.emit('idearium.spec.promoted', {
+        specUuid, repoUuid,
+        mode, chunksBuilt: manifest.chunks.length - pending.length,
+        chunksTotal: manifest.chunks.length,
+      });
+      return ok(res, {
+        repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
+        mode, promotedFrom: specUuid,
+        chunksBuilt: manifest.chunks.length - pending.length, chunksTotal: manifest.chunks.length,
+      });
     }
 
     case 'repo.ingest': {

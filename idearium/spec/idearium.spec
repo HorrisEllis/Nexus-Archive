@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     3.1.0
+    version:     3.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        4800
     uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001
@@ -114,10 +114,3 @@ spec:
       - "PROJECTS — phase board (seed→complete), spec drop zone"
       - "IDEAS — idea list with weight and lattice connections"
       - "LATTICE — resonance graph visualisation"
-
-
-# ── ADDENDUM 2026-07-09 (v3.1.0) — what changed this session ──
-# Verified against real source, tested, 97/97 baseline held. Each item
-# is a real wire or fix, not a claim:
-#   - chunk-dispatch routed through WARP build logic (cache/population/axiom-gate) — was direct-to-Guardian, bypassing WARP
-#   - fullscreen entry gate (brainstorm / open repo) with lifeline-assisted Copilot help; AI-generation trigger + live chunk progress; CSS variable bridge to Spotlight

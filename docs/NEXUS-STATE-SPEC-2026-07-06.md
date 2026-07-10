@@ -930,3 +930,56 @@ Reading a file is not evidence. Twice in one phase I drew a confident conclusion
 ### What Phase 2 unlocks
 
 Every subsequent feature now attaches to a loop that turns. The UI stack (Phase 8) can be split into spec-library, options, brainstorm/braindump, IDE — **and more** — because each panel now has a real contract endpoint to render from and a real artifact to point at, rather than being a fourth orphan waiting for a pipeline.
+
+---
+
+## PART 35 — The crash, the closed-loop tool, and the idea→repo link
+
+### The machine crash — root-caused and fixed
+
+From the live Windows console: `[orchestrator] exited code=3221226505` then, on restart, `Error: spawn UNKNOWN errno: -4094`. `3221226505` = `0xC0000409` (STATUS_STACK_BUFFER_OVERRUN, Node's fatal fast-fail, usually OOM). `-4094` = UV_UNKNOWN — a spawn failing this way during a restart is resource exhaustion, since the same command spawned fine seconds earlier.
+
+**Measured cause: `autopilot.js` spawns twelve Node processes and passed NO heap limit to any of them.** Each was free to grow to V8's default (~4GB). Add Clear Glass (Electron + four webviews) and there is no headroom. Nothing watched memory, so the first symptom was a crash — and the supervisor then restarted straight back into the exhausted machine, turning one crash into a storm.
+
+`lib/resource-monitor.js` (zero-dep): real `os` memory/CPU sampling, delta-sampled CPU%, pure `classify()` → ok/pressure/critical + `spawnSafe`. Honest about limits: per-child RSS can't be read cross-platform without a native dep, so it's self-reported; `cpuPct` is `null` on the first sample, never a fabricated 0. Two autopilot changes: (1) every Node child gets `--max-old-space-size` (default 1024MB, per-kernel override) so an over-budget process dies with a **named JS OOM** attributable to itself instead of a Windows status code; (2) spawns are gated on real free memory and re-armed on a 15s backoff. `GET /api/perf` exposes it live (verified: level, spawnSafe, freeMem%, rss). **Stated limit: the heap cap governs V8 heap, not external/native memory (Electron webviews).**
+
+### v9 merged
+
+`run_closed_loop` tool — drives idea→spec→build→repo as one agent tool by calling idearium's HTTP API. This is "co-pilot can do anything nexus can." Test 4/4. Six v9 tests merged. Per-system specs (architect/copilot/bridge). **`run-cockpit-command` refused a second time** — still a byte-level duplicate of `run_command`. A prior decision isn't undone by re-uploading the file. Tools now: read_file, run_command, diagnose, move_data, run_pipeline, nexus_intelligence, run_closed_loop.
+
+### The idea→repo link — your reported bug, closed
+
+*"Idearium isn't importing ideas into the repository library. When you click promote idea to a repository, it needs two options, automatic using emerge or manual using the spec builder."*
+
+**Root cause:** `repo.ingest` requires `files[]` (a drag-and-drop payload). There was **no path from a built spec to a repo** — promoting produced a spec, and nothing turned that spec into a repo artifact. The last link before the loop turns was missing.
+
+`spec.promote` (`POST /api/spec-engine/specs/:uuid/promote`) assembles a manifest's completed chunks into a single `.spec` artifact and ingests it via `RepoLayer.ingest` (which already accepted `specText`):
+- **`emerge` (automatic)** — deterministic assembly, no agent, zero tokens. **Refuses (409) if any chunk is unbuilt** rather than shipping a partial repo that looks complete.
+- **`manual` (spec builder)** — allows pending chunks, marks them as TODO sections for a human to finish.
+
+Verified end to end: auto-promote of an unfinished genesis spec → 409 listing the 9 pending sections; manual → 200 with a real `repoUuid` that **appears in `/api/repos`**. `tests/modules/spec-promote.test.mjs` 5/5.
+
+*Bug caught inside the fix:* my first version reported `result.uuid`, but `ingest` returns `{repo, ideaUuid, specUuid}` — the id is `result.repo.uuid`. The response would have claimed success with a null id, a success message over a caller that couldn't find its repo. Now returns the real `repoUuid`, and 500s if ingest produced no repo.
+
+### Loop status
+
+`idea → spec → chunk → dispatch✅ → artifact → repo✅` — **the loop turns.** A genesis idea becomes a spec (meta seeded), chunks dispatch through WARP's cache, and `spec.promote` lands a real repo in the library. Both scans 0, five services CONTRACT, loom 18/18.
+
+---
+
+## PART 36 — Merge: my tree as base, not the uploaded merge
+
+The upload included a `MERGE-REPORT.md` describing a completed merge that **took files by modification timestamp**. That is a real hazard: my most recent work post-dates the source zips, so a timestamp merge silently *reverts* it. Verified before trusting it — the uploaded `nexus-merged.zip` was **missing `spec.promote`** (the idea→repo fix) and **`lib/resource-monitor.js`** (the crash fix). Adopting it wholesale would have reintroduced the two bugs from the last two turns.
+
+**So the base is MY tree, and only genuine additions were pulled in:**
+- **CLI copilot fallback** (`cli/nexus-cli.js`, +51 lines) — the CLI now posts to copilot's real `/api/prompt`, so every front door reaches the same copilot with all its tools. "Same copilot everywhere, many front doors." Test 3/3.
+- **`query_recall` tool** — cortex `/api/recall` (CortexPushRecall) existed with two real lanes (lexical + recency); copilot *wrote* to recall but had no *read* path. This is that path, exposed to the agent loop — "what did we decide about X". Honest scope: 3 of 5 lanes (causal/failure/bep) need the absent kernel, so the tool only offers intents whose lanes are real. Registered; endpoint verified live (`ok:true`). Decoupled spec `docs/nexus-copilot-recall.spec`.
+- **loom wire-intent graph** — `loom/schema/registry.js` gained `graph()`/`contextGraph()` carrying wire intent and component consumes/produces (superset, nothing lost). `loom-context-intent` 5/5, schema regression still 18/18.
+
+Tools now (8): read_file, run_command, diagnose, move_data, run_pipeline, nexus_intelligence, run_closed_loop, **query_recall**.
+
+**Refused again:** `run-cockpit-command` (still a duplicate of `run_command`).
+
+**Verified the merge reverted nothing:** `spec.promote`, `resource-monitor`, WARP compounding, and the autopilot heap gate all still present. Both wire scans 0. cortex/guardian/copilot CONTRACT. spec-promote 5/5, warp-compounding 6/6, closed-loop 4/4.
+
+**On the MERGE-REPORT method:** taking whole files by timestamp is safe only when the two archives are strictly sequential off one base. They were not — this session advanced idearium and orchestrator *after* both zips were cut. The lesson is the one this codebase keeps teaching: verify against the running tree, never against a claim about it.

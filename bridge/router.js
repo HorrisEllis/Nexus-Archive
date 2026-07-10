@@ -220,23 +220,13 @@ class DispatchGate extends Gate {
 class ResultGate extends Gate {
   constructor(ctx) { super('route.result'); this._ctx = ctx; }
   transform(event) {
-    const { req, ok, data, resolve, reject } = event.data;
+    const { req, ok, resolve, reject } = event.data;
 
     if (ok) {
-      // §BUG FIXED 2026-07-09 — the target's real HTTP response body
-      // (`data`) was captured all the way here and then discarded:
-      // resolve() only returned {ok,uuid,status}. For copilot that meant
-      // the actual answer ({ok:true,text:"..."}) never left Bridge — the
-      // tv-shell co-pilot bar showed the bare {ok,uuid,status:"fulfilled"}
-      // ledger envelope instead of a human reply. Parse the body and
-      // include it as `response` so the caller's unwrap
-      // (data.result?.response ?? ...) finds the real text.
-      let response = null;
-      try { response = data ? JSON.parse(data) : null; } catch (_) { response = data || null; }
       this._ctx.ledger.update(req.uuid, {
         status:      STATUS.FULFILLED,
         completedAt: Date.now(),
-      }).then(() => resolve({ ok: true, uuid: req.uuid, status: STATUS.FULFILLED, response }));
+      }).then(() => resolve({ ok: true, uuid: req.uuid, status: STATUS.FULFILLED }));
     } else {
       // Dispatch reached target but target returned error
       if (req.attempts < MAX_ATTEMPTS) {

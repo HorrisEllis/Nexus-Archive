@@ -10,7 +10,6 @@
      Replaced with system font stack that renders identically at these sizes. -->
 <link rel="stylesheet" href="/ui/tv-shell/tv-shell.css">
 <script src="/ui/lib/api.js"></script>
-<link rel="stylesheet" href="/ui/toast/toast.css">
 </head>
 <body>
 <canvas id="void"></canvas>
@@ -1098,7 +1097,7 @@ function connectSSE(){
   // Cortex SSE — proxied through orchestrator, same as Idearium below
   // (this finishes the Phase 23.5 lockdown — cortex was the one left dialing
   // direct when idearium got fixed).
-  connect(`${B.orch}/api/cortex/sse`,d=>{addCxEvent(d);addEvent(d);_toastFromEvent(d)},s=>{
+  connect(`${B.orch}/api/cortex/sse`,d=>{addCxEvent(d);addEvent(d)},s=>{
     const el=document.getElementById('log-conn-status');
     if(el)el.textContent=s==='live'?'● live':s;
     if(el)el.style.color=s==='live'?'#00ff88':'rgba(255,170,0,.6)';
@@ -1482,96 +1481,6 @@ async function _getBridgeToken() {
   return null;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// §SELF-DIAGNOSIS PRODUCER 2026-07-10 — every on-screen interaction becomes an
-// event. Delegated document-level capture (not per-element wiring) so ALL
-// clicks/dropdowns/checkboxes/inputs — including inline-onclick elements — flow
-// through one path to cortex /api/event. The consumer (copilot's
-// expectation-watcher) is already live; this is the producer half that closes
-// the loop. A gated element with data-expect="<event.type>" additionally
-// registers an expectation, so if the click fires no effect, copilot
-// auto-detects it (copilot.error.detected). Spec:
-// docs/nexus-selfdiag-registry-interface.spec part_1.
-// ═══════════════════════════════════════════════════════════════════════════
-function _emitUIInteraction(kind, el, extra = {}) {
-  try {
-    const id = el.id || el.getAttribute?.('data-id') || el.name || el.className?.split?.(' ')[0] || el.tagName?.toLowerCase() || 'unknown';
-    const label = (el.textContent || el.value || el.placeholder || '').trim().slice(0, 40);
-    const expect = el.getAttribute?.('data-expect') || null;
-    const payload = { elementId: id, kind, label, expect, action: extra.action || kind, ts: Date.now() };
-    // §remember what was just touched, so a JS error firing microseconds
-    // later can be blamed on the RIGHT control (part_1b correlation).
-    _lastInteraction = { elementId: id, kind, label, ts: payload.ts };
-    // fire-and-forget to cortex; never block or throw into the UI
-    fetch(`http://127.0.0.1:${P.cx}/api/event`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'ui.interaction', payload, source: 'tv-shell' }),
-    }).catch(() => {});
-    if (expect) {
-      fetch(`http://127.0.0.1:${P.cx}/api/event`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'ui.interaction.gated', payload: { ...payload, awaiting: expect }, source: 'tv-shell' }),
-      }).catch(() => {});
-    }
-  } catch (_) { /* §1.2 — instrumentation never breaks the UI */ }
-}
-
-// §SELF-DIAGNOSIS part_1b 2026-07-10 — diagnose a broken ANYTHING, not just
-// gated controls. If an interaction handler throws (dead onclick, missing
-// function -> ReferenceError, a TypeError) or an async handler rejects (a
-// fetch/await that fails), correlate it to the element the user just touched
-// and emit ui.interaction.error. The expectation-watcher already treats
-// *.error as an explicit failure, so this reaches copilot.error.detected —
-// copilot sees WHICH control broke and HOW.
-let _lastInteraction = null;
-function _emitInteractionError(errInfo) {
-  try {
-    // only blame an interaction if one happened in the last ~1.5s — an error
-    // long after any click is a background error, not a broken button.
-    const recent = _lastInteraction && (Date.now() - _lastInteraction.ts) < 1500 ? _lastInteraction : null;
-    const payload = {
-      elementId: recent?.elementId || 'unknown',
-      label: recent?.label || '',
-      kind: recent?.kind || 'unknown',
-      error: String(errInfo.message || errInfo.reason || errInfo).slice(0, 200),
-      correlated: !!recent,
-      ts: Date.now(),
-    };
-    fetch(`http://127.0.0.1:${P.cx}/api/event`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'ui.interaction.error', payload, source: 'tv-shell' }),
-    }).catch(() => {});
-  } catch (_) {}
-}
-window.addEventListener('error', (e) => {
-  _emitInteractionError({ message: `${e.message}${e.filename ? ' @ ' + (e.filename.split('/').pop()) + ':' + e.lineno : ''}` });
-});
-window.addEventListener('unhandledrejection', (e) => {
-  _emitInteractionError({ reason: (e.reason && (e.reason.message || e.reason)) || 'unhandled promise rejection' });
-});
-
-// Capture phase = fires before inline handlers, catches everything.
-document.addEventListener('click',  (e) => { const el = e.target.closest?.('button,a,[onclick],[role="button"],.ch-btn,.mode-card,.tile') || e.target; if (el) _emitUIInteraction('click', el); }, true);
-document.addEventListener('change', (e) => { const el = e.target; if (el && (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio')) _emitUIInteraction('change', el, { action: el.type || 'select' }); }, true);
-document.addEventListener('input',  (e) => { const el = e.target; if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) _emitUIInteraction('input', el, { action: 'input' }); }, true);
-
-// §part_1c TOAST 2026-07-10 — show a toast every time something doesn't work
-// as intended. Every diagnosis (copilot.error.detected — from a broken
-// interaction, an unfired gated effect, or a sigma runtime deviation) and any
-// raw *.error/*.failed surfaces visibly. window.Toast is loaded via
-// /ui/toast/toast.js; guard in case it hasn't mounted yet.
-function _toastFromEvent(d) {
-  try {
-    if (!d || !d.type || !window.Toast) return;
-    if (d.type === 'copilot.error.detected') {
-      window.Toast.show(d.message || (d.payload && d.payload.message) || 'Something did not work as intended.', 'error', d);
-    } else if (d.type === 'sigma.event.halt_risk') {
-      window.Toast.show(`Halt risk on "${(d.payload||d).type||'runtime'}" — system off-baseline.`, 'error', d);
-    } else if (d.type.endsWith('.error') || d.type.endsWith('.failed')) {
-      window.Toast.show((d.payload && (d.payload.error||d.payload.reason)) || d.error || `${d.type}`, 'error', d);
-    }
-  } catch (_) { /* toast is best-effort, never breaks the shell */ }
-}
 async function _bridgeDispatch(target, type, payload, timeout=30000) {
   const token = await _getBridgeToken();
   if (!token) throw new Error('Bridge handshake failed — is Bridge :9999 running?');
@@ -2011,8 +1920,6 @@ if (typeof CP === 'undefined') {
 }
 
 document.addEventListener('DOMContentLoaded', () => typeof CP !== 'undefined' && CP.init());
-// §part_1c — create the toast rail once so diagnoses can surface visibly.
-document.addEventListener('DOMContentLoaded', () => { try { window.Toast && window.Toast.mount(document.body); } catch(_){} });
 
 function _setOverviewMode(mode) {
   const legacyGrid = document.getElementById('sys-grid');
@@ -3033,7 +2940,6 @@ async function wizOpenSpec(uuid) {
   <script src="/ui/tv-shell/warp-ui/warp-browser.js"></script>
   <script src="/ui/tv-shell/warp-ui/nexus-shell.js"></script>
   <script src="/ui/tv-shell/spotlight/spotlight.js"></script>
-  <script src="/ui/toast/toast.js"></script>
   <script>
     // Nerve canvas — set ORCH before loading so nerve.js can call the real routes
     window.__NEXUS_ORCH__ = (typeof B !== 'undefined' && B.orch) ? B.orch : 'http://127.0.0.1:9000';

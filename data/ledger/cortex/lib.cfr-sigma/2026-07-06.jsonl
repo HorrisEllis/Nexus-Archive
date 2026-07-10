@@ -1,1 +1,0 @@
-{"uuid":"bb8dad60-dac4-417b-8015-c15b16cadf25","system":"cortex","component":"lib.cfr-sigma","action":"type_coercion","status":"coerced","tags":["malformed-caller"],"detail":"occurrence #1 — at _scoreEvent (/home/claude/nexus/orchestrator/lib/sigma-writer.js:140:22)","causedBy":null,"contractUuid":null,"session":null,"ts":1783357479028}

@@ -1,10 +1,5 @@
-// NOTE 2026-07-10 (merge): T-003/004/005 assert instant exact-caching (build
-// once -> served from cache). Real WARP requires DEFAULT_PROMOTE_THRESHOLD=3
-// retentions before a digest crystallizes into the exact cache (verified in
-// idearium-warp-dispatch.test.mjs). These 3 cases encode a wrong assumption
-// about WARP and are NOT in run-all until corrected. T-001/2/6 pass and are real.
-const { unifiedDispatch } = require('../../warp/dispatch/index.js');
-const { PopulationStore } = require('../../warp/dispatch/population.js');
+const { unifiedDispatch } = require('/home/claude/nexus/warp/dispatch/index.js');
+const { PopulationStore } = require('/home/claude/nexus/warp/dispatch/population.js');
 
 function makeCrystallizer() {
   const store = new Map();

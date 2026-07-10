@@ -883,6 +883,15 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // exactly "the system is mapped as it's built". It was also broken:
   // buildAllManifests() threw because it required an undocumented argument.
   // Fixed and given a door.
+  // §PERF 2026-07-10 — resource telemetry, queryable. The 0xC0000409 crash was
+  // the FIRST symptom of memory pressure because nothing exposed the pressure
+  // before it became fatal. GET /api/perf returns a real sample + trend; the
+  // supervisor uses the same classifier to gate spawns.
+  if (M==='GET' && sub==='perf') {
+    if (!global._resourceMonitor) return json(res, 503, { ok:false, error:'resource monitor not started' });
+    return json(res, 200, { ok:true, ...global._resourceMonitor.report() });
+  }
+
   if (M==='GET' && sub==='manifest') {
     try {
       const { buildManifest, buildAllManifests } = require('./lib/system-manifest');
@@ -2322,6 +2331,17 @@ if (nexusBus) {
     console.log('[warp-spine] attached to orchestrator bus — 4 axioms, StreamLog mapping active');
   } catch (e) {
     console.warn('[warp-spine] not attached:', e.message);
+  }
+
+  // §PERF 2026-07-10 — pressure emitted onto the bus, so the WARP spine records
+  // it in StreamLog and anything listening (heal-loop, copilot) can react before
+  // the machine fast-fails. Sampling is cheap (os counters, no child probing).
+  try {
+    const { ResourceMonitor } = require('./lib/resource-monitor');
+    global._resourceMonitor = new ResourceMonitor({ bus: nexusBus, name: 'orchestrator', intervalMs: 10000 }).start();
+    console.log('[resource-monitor] sampling every 10s — GET /api/perf');
+  } catch (e) {
+    console.warn('[resource-monitor] not started:', e.message);
   }
 
   // §GAP CLOSED 2026-07-09 — heal-loop has always listened on THIS

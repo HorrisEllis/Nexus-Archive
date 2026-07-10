@@ -1,0 +1,110 @@
+{
+  "_version": 1,
+  "repos": [
+    {
+      "uuid": "nexus-id-repo-b19290e5",
+      "name": "promo-test-1783712582799",
+      "ideaUuid": "1678989f-538d-42df-99f6-9da8ca413c3e",
+      "specUuid": "000a64fd-3ddf-4de3-85e9-a58a80051c79",
+      "specPath": "promo-test-1783712582799.spec",
+      "parent": null,
+      "forks": [],
+      "source": "promote:manual",
+      "fileCount": 1,
+      "files": [
+        {
+          "path": "promo-test-1783712582799.spec",
+          "bytes": 1245
+        }
+      ],
+      "phase": "building",
+      "createdAt": 1783712582826,
+      "updatedAt": 1783712582826,
+      "status": "active"
+    },
+    {
+      "uuid": "nexus-id-repo-253b4673",
+      "name": "promo2-1783712622681",
+      "ideaUuid": "12628afa-3620-43fe-a34b-5a1dd9795255",
+      "specUuid": "029282ce-032f-42a1-ab76-8bf59e6ab6b7",
+      "specPath": "promo2-1783712622681.spec",
+      "parent": null,
+      "forks": [],
+      "source": "promote:manual",
+      "fileCount": 1,
+      "files": [
+        {
+          "path": "promo2-1783712622681.spec",
+          "bytes": 1237
+        }
+      ],
+      "phase": "building",
+      "createdAt": 1783712622705,
+      "updatedAt": 1783712622705,
+      "status": "active"
+    },
+    {
+      "uuid": "nexus-id-repo-b2f513a7",
+      "name": "promote-test-1783712648326",
+      "ideaUuid": "cebc1db0-87f6-4442-af7b-a62ad8fee526",
+      "specUuid": "b3b9c84b-0f2a-47aa-81da-d529350f8604",
+      "specPath": "promote-test-1783712648326.spec",
+      "parent": null,
+      "forks": [],
+      "source": "promote:manual",
+      "fileCount": 1,
+      "files": [
+        {
+          "path": "promote-test-1783712648326.spec",
+          "bytes": 1249
+        }
+      ],
+      "phase": "building",
+      "createdAt": 1783712648356,
+      "updatedAt": 1783712648356,
+      "status": "active"
+    },
+    {
+      "uuid": "nexus-id-repo-94d3831a",
+      "name": "promote-test-1783712682876",
+      "ideaUuid": "2a9de541-af09-44b8-a71f-d8b783ec2293",
+      "specUuid": "78c1fbab-5520-48b3-9c6f-ce12321a5943",
+      "specPath": "promote-test-1783712682876.spec",
+      "parent": null,
+      "forks": [],
+      "source": "promote:manual",
+      "fileCount": 1,
+      "files": [
+        {
+          "path": "promote-test-1783712682876.spec",
+          "bytes": 1249
+        }
+      ],
+      "phase": "building",
+      "createdAt": 1783712682905,
+      "updatedAt": 1783712682905,
+      "status": "active"
+    },
+    {
+      "uuid": "nexus-id-repo-e4285412",
+      "name": "promote-test-1783712976532",
+      "ideaUuid": "eaee32cf-a75e-4f94-a449-148eac51e9a2",
+      "specUuid": "51b770e9-0cb2-4cb4-a1e6-4995b5c1f77c",
+      "specPath": "promote-test-1783712976532.spec",
+      "parent": null,
+      "forks": [],
+      "source": "promote:manual",
+      "fileCount": 1,
+      "files": [
+        {
+          "path": "promote-test-1783712976532.spec",
+          "bytes": 1249
+        }
+      ],
+      "phase": "building",
+      "createdAt": 1783712976565,
+      "updatedAt": 1783712976565,
+      "status": "active"
+    }
+  ]
+}

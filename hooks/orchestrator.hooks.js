@@ -6,6 +6,20 @@
  */
 const HOOKS = [
   {
+    id: "orchestrator-hook-perf-0013",
+    name: "orchestrator-perf",
+    intent: "Real resource telemetry: free memory, cpu, heap, pressure level, spawnSafe. Exists because the 0xC0000409 crash was the FIRST symptom of memory pressure — nothing exposed it beforehand.",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "orchestrator", layer: 1, port: 9000 },
+    config: { path: "/api/perf", method: "GET" },
+    contract: { axioms: ["1.2"], sideEffects: [], idempotent: true, methodEnforced: true },
+    references: { files: ["lib/resource-monitor.js"] },
+    status: "active",
+    updatedAt: "2026-07-10T00:00:00Z"
+  },
+  {
     id: "orchestrator-hook-manifest-0012",
     name: "orchestrator-system-manifest",
     intent: "Project component + hook + wire + API + CLI per system from code. Gives lib/system-manifest.js its first consumer. /api/manifest for all 13 systems, /api/manifest/<system> for one.",

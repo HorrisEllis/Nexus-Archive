@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        orchestrator
-    version:     2.2.0
+    version:     2.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        9000
     uuid:        nexus-orchestrator-v2-0000-2026-0615-jamesbrooks-001
@@ -135,10 +135,3 @@ spec:
       - "EVENTS — live SSE event stream"
       - "COMPONENTS — full component registry browser"
       - "UI SESSIONS — connected UIs, types, heartbeat status"
-
-
-# ── ADDENDUM 2026-07-09 (v2.2.0) — what changed this session ──
-# Verified against real source, tested, 97/97 baseline held. Each item
-# is a real wire or fix, not a claim:
-#   - spec-drift reads per-system <system>/spec/ folders (specs moved out of docs/ into owning systems); precedence spec/ > flat > docs/
-#   - sigma-writer wildcard-event root fix (nexus-bus emits one event object, listener read it as two args — source of the non-string event.type spam) + Windows-path caller-trace fix

@@ -34,6 +34,16 @@ const path = require('path');
 const http = require('http');
 
 const ROOT     = __dirname;
+
+// §RESOURCE GOVERNANCE 2026-07-10 — see _spawnKernel for the crash this fixes.
+// 1024MB per Node child: twelve of them is ~12GB worst case rather than the
+// ~48GB twelve uncapped V8 heaps could theoretically claim. Override per kernel
+// with `maxOldSpaceMB` for a system that genuinely needs more (cortex holds the
+// memory tables; guardian holds job state).
+const DEFAULT_MAX_OLD_SPACE_MB = Number(process.env.NEXUS_MAX_OLD_SPACE_MB || 1024);
+const MEM_BACKOFF_MS = 15000;
+const { ResourceMonitor } = require('./lib/resource-monitor');
+const _resourceMonitor = new ResourceMonitor({ name: 'autopilot', intervalMs: 15000 }).start();
 const LOG_DIR  = path.join(ROOT, 'data', 'autopilot');
 const LOG_FILE = path.join(LOG_DIR, 'autopilot.log');
 try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch(_) {}
@@ -170,7 +180,46 @@ function _spawnKernel(kernel, color) {
     ? path.join(resolvedCwd, kernel.cmd)
     : kernel.cmd;
 
-  const proc = spawn(resolvedCmd, kernel.args, {
+  // §CRASH ROOT CAUSE 2026-07-10 — from a live Windows console:
+  //     [orchestrator] exited code=3221226505   (0xC0000409, STATUS_STACK_BUFFER_OVERRUN
+  //                                              — Node's fatal fast-fail, usually OOM)
+  //     Error: spawn UNKNOWN  errno: -4094      (UV_UNKNOWN, on the RESTART)
+  // The same command spawned fine seconds earlier, so the path was never wrong:
+  // the machine had no memory left to fork into.
+  //
+  // Measured: this supervisor spawns twelve Node processes and passed NO heap
+  // limit to any of them. Each was free to grow to V8's default (~4GB on
+  // 64-bit). Add Clear Glass (Electron + four provider webviews) and there is
+  // no headroom. Nothing was watching, so the first symptom was a crash.
+  //
+  // Two changes, both real:
+  //   1. Every Node child gets an explicit --max-old-space-size. A process that
+  //      exceeds it dies with a clean JS heap OOM naming itself, instead of
+  //      taking the machine down and fast-failing with a Windows status code.
+  //      Per-kernel override via `kernel.maxOldSpaceMB`.
+  //   2. A spawn is gated on real free memory. Restarting into an exhausted
+  //      machine is how one crash becomes a crash storm: the spawn fails with
+  //      UNKNOWN, the supervisor counts it as a crash, and immediately retries.
+  const isNode = /(^|[\\/])node(\.exe)?$/i.test(kernel.cmd);
+  const heapMB = kernel.maxOldSpaceMB || DEFAULT_MAX_OLD_SPACE_MB;
+  const kernelArgs = isNode && !kernel.args.some(a => String(a).startsWith('--max-old-space-size'))
+    ? [`--max-old-space-size=${heapMB}`, ...kernel.args]
+    : kernel.args;
+
+  if (!_resourceMonitor.spawnSafe()) {
+    const s = _resourceMonitor.current();
+    console.error(`[autopilot] REFUSING to spawn ${kernel.name}: only ${(s.system.freeMemPct * 100).toFixed(1)}% memory free. ` +
+                  `Spawning now would fail with 'spawn UNKNOWN' and be miscounted as a crash. Retrying in ${MEM_BACKOFF_MS / 1000}s.`);
+    // §1.2 — a refusal must re-arm. Neither caller of _spawnKernel inspects the
+    // return value, so returning null without rescheduling would leave the
+    // kernel permanently dead and silent. Back off long enough for the machine
+    // to actually recover rather than hammering a full memory subsystem.
+    const t = setTimeout(() => _spawnKernel(kernel, color), MEM_BACKOFF_MS);
+    if (t.unref) t.unref();
+    return null;
+  }
+
+  const proc = spawn(resolvedCmd, kernelArgs, {
     cwd: resolvedCwd,
     env: { ...process.env, ...(kernel.env || {}) },
     stdio: ['ignore', 'pipe', 'pipe'],

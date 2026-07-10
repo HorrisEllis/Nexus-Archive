@@ -52,17 +52,6 @@ async function test(id,d,fn){try{await fn();console.log(`  ✓ ${id} ${d}`);pass
     assert.ok(detected && detected.message.includes('load-btn'));
   });
 
-  await test('T-006','a sigma runtime deviation (any-runtime) becomes a diagnosis',async()=>{
-    let warn=null,halt=null;
-    bus.on('copilot.error.detected', e=>{ const d=e.payload||e; if(d.expectationId==='sigma-runtime-deviation'){ if(d.severity==='halt')halt=d; else warn=d; } });
-    const w = createExpectationWatcher(bus);
-    bus.emit('sigma.event.warning', { type:'guardian.seam.dispatch', sigma:0.74, reason:'interval 4x baseline' });
-    bus.emit('sigma.event.halt_risk', { type:'cortex.memory.write', sigma:0.91, reason:'never completed' });
-    await new Promise(r=>setTimeout(r,200)); w.stop();
-    assert.ok(warn && warn.message.includes('guardian.seam.dispatch'), 'sigma warning should diagnose');
-    assert.ok(halt && halt.severity==='halt' && halt.message.includes('HALT RISK'), 'halt risk should diagnose as halt');
-  });
-
   console.log(`\n  ui-self-diagnosis: ${passed} passed, ${failed} failed\n`);
   process.exit(failed>0?1:0);
 })();

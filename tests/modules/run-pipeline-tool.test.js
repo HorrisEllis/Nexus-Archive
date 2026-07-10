@@ -26,15 +26,6 @@ async function test(id,d,fn){try{await fn();console.log(`  ✓ ${id} ${d}`);pass
     const r = await executeTool('run_pipeline',{action:'status',id:'nope-123'});
     assert.ok(r.error && r.error.includes('nope-123'));
   });
-  await test('T-006','pipeline run records persist to JAA and survive a fresh module load (§2.1)',async()=>{
-    const { jaaDB } = require('../../cortex/memory/jaa-db');
-    jaaDB.insert('pipeline_runs',{pipelineId:'persist-test-x',specPath:'/s.spec',status:'complete',stage:'complete',startedAt:1,finishedAt:2,error:null,ts:Date.now()});
-    delete require.cache[require.resolve('../../lib/execution-pipeline.js')];
-    const ep = require('../../lib/execution-pipeline.js');
-    const rec = ep.getPipeline('persist-test-x');
-    assert.ok(rec && rec.status==='complete','persisted pipeline record must survive fresh load');
-  });
-
   console.log(`\n  run-pipeline-tool: ${passed} passed, ${failed} failed\n`);
   process.exit(failed>0?1:0);
 })();

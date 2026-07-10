@@ -41,51 +41,6 @@ const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_PORT || '7820');
 const MAX_TOKENS    = parseInt(process.env.T2_MAX_TOKENS || '800');
 const TIMEOUT_MS    = parseInt(process.env.T2_TIMEOUT_MS || '90000');
 
-// §WARP-AS-BUILD-SPINE 2026-07-09 — per AXIOMS-v3.1: WARP is the build
-// dispatch spine (it replaces the direct-to-SEAMQueue build path, NOT
-// SISO's event processing — those are different layers). This build path
-// (build-pipeline → t2-gate → guardian SEAMQueue) bypassed WARP entirely:
-// no cache, no population reuse, no axiom-gate. This wraps the SAME
-// guardian /command dispatch through WARP's cascade so identical T2
-// builds hit cache instead of regenerating, and axioms gate before the
-// heuristic pass. Opt-OUT via T2_DISABLE_WARP (default is WARP-on, since
-// the directive makes WARP the spine). Same backward-compatible pattern
-// idearium's warp-build-dispatch.js already proved.
-let _warpDispatch = null;
-function _getWarpDispatch() {
-  if (_warpDispatch !== null) return _warpDispatch;
-  try {
-    const { createWarpDispatch } = require('../../lib/seam/adapters/warp-cascade.js');
-    const { FlatFileCrystallizer } = require('../../warp/plugins/crystallizer-flatfile.js');
-    const { PopulationStore } = require('../../warp/dispatch/population.js');
-    const dataDir = path.join(__dirname, '..', '..', 'data', 'warp');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    const crystallizer = new FlatFileCrystallizer({ path: path.join(dataDir, 't2-crystals.json') });
-    const population = new PopulationStore({ maxPerClass: 8 });
-    _warpDispatch = createWarpDispatch({
-      crystallizer, population,
-      // generate() = the real guardian build call, resolved to text. WARP
-      // only reaches here on cache miss — a hit never calls guardian.
-      generate: async (provider, record) => {
-        const dispatchR = await _postGuardian('/command', {
-          content: record.prompt, provider, title: record.seam_id, command: 'seam',
-        });
-        if (!dispatchR.body?.ok && !dispatchR.body?.queued) {
-          throw new Error(`dispatch failed: ${JSON.stringify(dispatchR.body).slice(0, 100)}`);
-        }
-        const queueId = dispatchR.body?.queueId || dispatchR.body?.queue?.uuid;
-        const result = await _waitForQueue(queueId);
-        if (!result.ok) throw new Error(result.error || 'queue did not resolve');
-        return result.response;
-      },
-    });
-  } catch (e) {
-    console.warn(`[${MODULE_ID}] WARP dispatch unavailable, falling back to direct guardian: ${e.message}`);
-    _warpDispatch = false;
-  }
-  return _warpDispatch;
-}
-
 // ── Build the SEAM prompt for a single T2 node ────────────────────────────────
 // One node per prompt. §CC-004.
 function buildNodePrompt(node, parsedSpec, stubSrc, outputDir) {
@@ -281,57 +236,34 @@ async function dispatch(compileResult, opts = {}) {
       // Dispatch to guardian → seam-queue → Ollama
       _progress(node, 'dispatching', `provider=${provider}`);
 
-      let responseText = null;
-      const warp = process.env.T2_DISABLE_WARP ? false : _getWarpDispatch();
+      const dispatchR = await _postGuardian('/command', {
+        content:  seamText,
+        provider: provider,
+        title:    `T2: ${modName}`,
+        command:  'seam',
+      });
 
-      if (warp) {
-        // §WARP SPINE — identical builds hit cache; axioms gate first.
-        const record = {
-          prompt: seamText,
-          seam_uuid: `t2-${modName}-${crypto.randomBytes(3).toString('hex')}`,
-          seam_id: `T2: ${modName}`,
-          description: `T2 build of ${modName}`,
-          contract: { exports: [] },
-        };
-        const warpResult = await warp(record, []);
-        if (!warpResult.ok) {
-          failed++;
-          results.push({ node: modName, status: 'failed', error: `warp cascade failed after ${warpResult.attempts} attempt(s)` });
-          _progress(node, 'failed', 'warp cascade failure');
-          continue;
-        }
-        responseText = warpResult.output;
-        _progress(node, 'generating', `via WARP${warpResult.cached ? ' (cache hit)' : ''}`);
-      } else {
-        // Direct path (T2_DISABLE_WARP set, or WARP unavailable).
-        const dispatchR = await _postGuardian('/command', {
-          content:  seamText,
-          provider: provider,
-          title:    `T2: ${modName}`,
-          command:  'seam',
-        });
+      if (!dispatchR.body?.ok && !dispatchR.body?.queued) {
+        throw new Error(`dispatch failed: ${JSON.stringify(dispatchR.body).slice(0, 100)}`);
+      }
 
-        if (!dispatchR.body?.ok && !dispatchR.body?.queued) {
-          throw new Error(`dispatch failed: ${JSON.stringify(dispatchR.body).slice(0, 100)}`);
-        }
+      const queueId = dispatchR.body?.queueId || dispatchR.body?.queue?.uuid;
+      _progress(node, 'generating', `queueId=${queueId?.slice(0, 8)}`);
 
-        const queueId = dispatchR.body?.queueId || dispatchR.body?.queue?.uuid;
-        _progress(node, 'generating', `queueId=${queueId?.slice(0, 8)}`);
+      // Wait for completion
+      const result = await _waitForQueue(queueId);
 
-        const result = await _waitForQueue(queueId);
-        if (!result.ok) {
-          failed++;
-          results.push({ node: modName, status: 'failed', error: result.error });
-          _progress(node, 'failed', result.error);
-          continue;
-        }
-        responseText = result.response;
+      if (!result.ok) {
+        failed++;
+        results.push({ node: modName, status: 'failed', error: result.error });
+        _progress(node, 'failed', result.error);
+        continue;
       }
 
       // Write implementation to disk
-      const outPath = _writeImpl(outputDir, modName, responseText);
+      const outPath = _writeImpl(outputDir, modName, result.response);
       completed++;
-      results.push({ node: modName, status: 'complete', outPath, chars: responseText.length });
+      results.push({ node: modName, status: 'complete', outPath, chars: result.response.length });
       _progress(node, 'complete', outPath);
 
       // Register with Cortex (non-fatal)

@@ -1,1 +1,0 @@
-[{"uuid":"test-crystal-1","kind":"CREATE_CRYSTAL","pattern_signature":"guardian:dispatch:PASS","entry_conditions":{"domain":"guardian","verb":"dispatch"},"exit_conditions":{"outcome":"PASS"},"success_probability":0.92,"usage_count":7,"pattern_frequency_at_creation":5,"source":"crystal-lattice","ts":1783358561704,"id":"eb8660c7-1cc9-442d-b938-eed0e0195181"}]

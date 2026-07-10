@@ -26,13 +26,7 @@ class CausalGraph {
     this._byJob      = new Map();  // jobId      → id[]
     this._bySystem   = new Map();  // system     → id[] (last 100)
     this._byType     = new Map();  // type       → id[] (last 50)
-    // §ADDED 2026-07-06 — the exact edge type RAID's own code names as
-    // its missing dependency: `topologicalProximity = 1.0; // stub —
-    // needs CFR _byComponent edge, not built (docs/cfr.spec)`. That
-    // spec already calls this "the fifth edge type... zero new CFR API
-    // surface, same ring-buffer pattern, automatic" — this follows that
-    // exact pattern, matching _bySystem/_byType above.
-    this._byComponent = new Map();  // componentId → id[] (last 100)
+    this._byComponent = new Map(); // componentId → id[] (last 100)
     this._adj        = new Map();  // undirected adjacency, id → Set(id) — built lazily by componentDistance()
     this._adjEdgeCount = 0;        // detects staleness against this.edges without a full rebuild every call
   }
@@ -104,6 +98,29 @@ class CausalGraph {
       if (ring.length > 100) ring.shift();
     }
 
+    // ── Component adjacency (same declared component, ring-bounded) ────────
+    // Distinct from _bySystem: componentId is the caller-declared identity
+    // (comp_id / componentId on the entry), not the transport-level system
+    // name — two different systems can share no edge here while two calls
+    // from the same component on different systems do. This is the edge
+    // topologicalProximity() needs and that raid/index.js's stub named as
+    // its unbuilt dependency.
+    const compId = entry.componentId || entry.comp_id || entry.payload?.componentId;
+    if (compId) {
+      if (!this._byComponent.has(compId)) this._byComponent.set(compId, []);
+      const ring = this._byComponent.get(compId);
+      if (ring.length > 0) {
+        this.edges.push({
+          from:   ring[ring.length - 1],
+          to:     id,
+          type:   'component',
+          weight: 0.6,
+        });
+      }
+      ring.push(id);
+      if (ring.length > 100) ring.shift();
+    }
+
     // ── Type sequence (same type, successive) ─────────────────────────────
     const type = entry.type;
     if (type) {
@@ -120,65 +137,6 @@ class CausalGraph {
       tring.push(id);
       if (tring.length > 50) tring.shift();
     }
-
-    // ── Component adjacency (successive events from the same component) ────
-    // §ADDED 2026-07-06 — see constructor comment. componentId comes from
-    // the entry directly, or from payload.componentId — matching the same
-    // fallback shape already used for jobId a few lines up.
-    const compId = entry.componentId || entry.payload?.componentId;
-    if (compId) {
-      if (!this._byComponent.has(compId)) this._byComponent.set(compId, []);
-      const cring = this._byComponent.get(compId);
-      if (cring.length > 0) {
-        this.edges.push({
-          from:   cring[cring.length - 1],
-          to:     id,
-          type:   'component',
-          weight: 0.8,
-        });
-      }
-      cring.push(id);
-      if (cring.length > 100) cring.shift();
-    }
-  }
-
-  /**
-   * componentProximity(a, b) — 0..1 real proximity between two
-   * component IDs, derived from the actual edge graph rather than a
-   * hardcoded constant. This is exactly what RAID's topologicalProximity
-   * stub has been waiting for. Returns 0 if either component has never
-   * been seen, or 1.0 if they're the same component (trivially adjacent
-   * to itself) — otherwise walks each component's most recent node and
-   * checks real graph distance between them via existing edges (any
-   * type, not just 'component'), capped at a small hop limit since this
-   * needs to stay cheap enough to call inline during routing.
-   */
-  componentProximity(a, b, maxHops = 3) {
-    if (a === b) return 1.0;
-    const aIds = this._byComponent.get(a);
-    const bIds = this._byComponent.get(b);
-    if (!aIds?.length || !bIds?.length) return 0;
-
-    const start = aIds[aIds.length - 1];
-    const targetSet = new Set(bIds);
-    let frontier = [start];
-    const seen = new Set(frontier);
-    for (let hop = 1; hop <= maxHops; hop++) {
-      const next = [];
-      for (const nodeId of frontier) {
-        for (const e of this.edges) {
-          const neighbor = e.from === nodeId ? e.to : (e.to === nodeId ? e.from : null);
-          if (neighbor && !seen.has(neighbor)) {
-            if (targetSet.has(neighbor)) return Math.max(0, 1 - (hop - 1) / maxHops);
-            seen.add(neighbor);
-            next.push(neighbor);
-          }
-        }
-      }
-      frontier = next;
-      if (!frontier.length) break;
-    }
-    return 0; // no path found within maxHops — real distance, not a guess
   }
 
   /**
@@ -250,23 +208,16 @@ class CausalGraph {
       ((b.sigma?.score ?? b.sigma ?? 0) - (a.sigma?.score ?? a.sigma ?? 0)));
   }
 
-  stats() {
-    return {
-      nodes:    this.nodes.size,
-      edges:    this.edges.length,
-      sessions: this._bySession.size,
-      jobs:     this._byJob.size,
-    };
-  }
-
-  // §RESTORED IN MERGE 2026-07-09 — componentDistance (mine, BFS hop count)
-  // and componentProximity (parallel session's, 0..1 score) are different
-  // real methods that collided in the merge because the parallel branch's
-  // graph.js dropped componentDistance. Both kept — hop count and proximity
-  // score answer different questions; RAID's fitness uses the distance,
-  // pinned tests cfr-graph-component-distance.test.js verify it.
+  /**
+   * _rebuildComponentAdjacency — lazy, only when this.edges has grown since
+   * last build (guards against rebuilding on every single call in a hot loop).
+   * Builds an undirected component-level graph: any edge whose two endpoints
+   * belong to different declared components becomes an adjacency between
+   * those component IDs. Nodes lacking a componentId contribute nothing —
+   * they're real ledger entries, just not ones this proximity metric can see.
+   */
   _rebuildComponentAdjacency() {
-    if (this._adjEdgeCount === this.edges.length) return;
+    if (this._adjEdgeCount === this.edges.length) return; // no new edges since last build
     this._adj = new Map();
     const compOf = (id) => {
       const n = this.nodes.get(id);
@@ -283,11 +234,26 @@ class CausalGraph {
     this._adjEdgeCount = this.edges.length;
   }
 
+  /**
+   * componentDistance — hop count between two declared componentIds over
+   * the real causal graph. Returns null (not Infinity, not 0) when either
+   * component has never appeared in the graph or no path connects them —
+   * "never observed" and "observed but maximally distant" must not collapse
+   * into the same number, same discipline as case-library's confidence:null.
+   *
+   * maxDepth is a caller-supplied parameter, not a CFR constant — CFR is
+   * domain-agnostic (this file's own header: "it does not know what NEXUS
+   * is") and must not own a NEXUS-specific tunable. RAID supplies its own
+   * Cortex-backed value; a default is kept here only so this method is
+   * still usable standalone (tests, other future callers) without forcing
+   * every caller to know about RAID's config.
+   */
   componentDistance(componentA, componentB, maxDepth = 12) {
     if (!componentA || !componentB) return null;
     if (componentA === componentB) return 0;
     this._rebuildComponentAdjacency();
     if (!this._adj.has(componentA) || !this._adj.has(componentB)) return null;
+
     const visited = new Set([componentA]);
     let frontier = [componentA];
     let depth = 0;
@@ -302,7 +268,16 @@ class CausalGraph {
       }
       frontier = next;
     }
-    return null;
+    return null; // no path found within maxDepth
+  }
+
+  stats() {
+    return {
+      nodes:    this.nodes.size,
+      edges:    this.edges.length,
+      sessions: this._bySession.size,
+      jobs:     this._byJob.size,
+    };
   }
 }
 

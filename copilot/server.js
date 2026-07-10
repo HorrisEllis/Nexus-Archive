@@ -82,7 +82,6 @@ const _cw = require('../lib/cortex-write')('copilot');
 
 // Blueprint index — component awareness substrate (§BP-01)
 let _blueprintIndex = null;
-let _expectationWatcher = null;
 function _getBP() {
   if (_blueprintIndex) return _blueprintIndex;
   try { _blueprintIndex = require('../lib/blueprint-index'); return _blueprintIndex; } catch(_) { return null; }
@@ -119,10 +118,57 @@ const VERSION   = require('../lib/version').services.copilot;
 const _stream = [];
 const MAX_STREAM = 500;
 
+// §WIRED 2026-07-09 — copilot/lib/expectation-watcher.js arrived with
+// nexus-autonomous-v8 and was orphaned: nothing in copilot/*.js required it.
+// It is the event-driven expectation system — "co-pilot tracks errors from
+// expected events" — detecting when a trigger fires and the expected
+// follow-up never arrives within its timeout.
+//
+// It needs a bus. Copilot had none: its events arrive as SSE from cortex and
+// guardian and land in the _stream ring via streamIngest(). Per §AX-011 the
+// bus is a within-process spine, so copilot gets its own, fed by the real
+// ingestion path. Same single-object event shape as nexus-bus (`on('*', ev)`),
+// so anything written against that contract works here unchanged.
+const { EventEmitter } = require('events');
+const _copilotBus = new EventEmitter();
+_copilotBus.setMaxListeners(50);
+
+let _expectationWatcher = null;
+try {
+  const { createExpectationWatcher } = require('./lib/expectation-watcher.js');
+  _expectationWatcher = createExpectationWatcher(_copilotBus);
+
+  // §WIRE COMPLETED 2026-07-09 — the watcher emits 'copilot.error.detected'
+  // onto the LOCAL bus, and ui/toast/toast.js already subscribes to exactly
+  // that event type. But nothing carried it across: copilot never broadcast
+  // it to its SSE clients, so a detected violation died in-process and the
+  // user was never told. That is the dominant bug of this codebase — a real
+  // detector wired to nothing — reproduced one more time. This is the wire.
+  //
+  // Per §AX-011 the bus is within-process; SSE is how it crosses to the UI.
+  _copilotBus.on('copilot.error.detected', (d) => {
+    try { broadcast('copilot.error.detected', d); }
+    catch (e) { console.warn('[copilot] failed to broadcast error.detected:', e.message); }
+  });
+
+  console.log('[copilot] expectation-watcher attached — 5 expectations armed, violations broadcast to /sse');
+} catch (e) {
+  console.warn('[copilot] expectation-watcher not attached:', e.message);
+}
+
 function streamIngest(event) {
   _stream.push({ ...event, ingestedAt: Date.now() });
   if (_stream.length > MAX_STREAM) _stream.shift();
   broadcast('copilot.stream.event', { type: event.type, ts: event.ts || Date.now() });
+
+  // Feed the local bus so the expectation watcher sees real traffic.
+  // Both fan-outs, matching nexus-bus's contract exactly (specific + wildcard,
+  // one event object). Never let a listener error break ingestion (§1.2:
+  // report, don't swallow the pipeline).
+  if (event?.type) {
+    try { _copilotBus.emit(event.type, event); } catch (e) { console.warn('[copilot] bus listener error:', e.message); }
+    try { _copilotBus.emit('*', event); }       catch (e) { console.warn('[copilot] bus wildcard error:', e.message); }
+  }
 }
 
 // Subscribe to Cortex SSE for live events
@@ -1026,37 +1072,6 @@ server.listen(PORT, () => {
     _digest.start();
     console.log('[copilot] stream-digest started — activity persists to Cortex every 60s');
   } catch (e) { console.warn('[copilot] stream-digest not started:', e.message); }
-
-  // §GAP CLOSED 2026-07-10 — run_cockpit_command (agent-tools/tools/
-  // run-cockpit-command.js) needs a live ForgeCLI injected via
-  // wireCockpit(); nothing ever called it, so the tool was registered but
-  // inert. The real instance is cockpit/live.js's getForgeCLI() (the
-  // first-ever composition, built earlier this session). Wire it at boot.
-  // §GAP CLOSED 2026-07-10 — run_cockpit_command needs a live ForgeCLI
-  // injected via wireCockpit(); nothing called it, so the tool was inert.
-  try {
-    const { getForgeCLI } = require('../cockpit/live.js');
-    const { wireCockpit } = require('../lib/agent-tools/tools/run-cockpit-command.js');
-    wireCockpit(getForgeCLI());
-    console.log('[copilot] run_cockpit_command wired to live ForgeCLI');
-  } catch (e) { console.warn('[copilot] run_cockpit_command not wired:', e.message); }
-
-  // §GAP CLOSED 2026-07-10 — expectation-watcher.js is "co-pilot tracks
-  // errors from expected events and gated interaction event listeners" —
-  // it watches trigger→expected-follow-up pairs and emits
-  // copilot.error.detected when the follow-up never arrives (a build that
-  // dispatched but never completed, a chunk queued but never populated, a
-  // gated button whose click event never produced its effect). It was
-  // fully built and referenced in comments as "already listening" — but
-  // nothing ever started it. createExpectationWatcher() attaches to the
-  // bus immediately (it's live on creation); we hold the handle so its
-  // stop()/listPending() are reachable.
-  try {
-    const nexusBus = require('../nexus-bus.js');
-    const { createExpectationWatcher } = require('./lib/expectation-watcher.js');
-    _expectationWatcher = createExpectationWatcher(nexusBus);
-    console.log('[copilot] expectation-watcher live — unfired expected events become copilot.error.detected');
-  } catch (e) { console.warn('[copilot] expectation-watcher not started:', e.message); }
 });
 
 module.exports = { server, streamIngest, _resolveIntuitionResponse };
