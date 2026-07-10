@@ -983,3 +983,47 @@ Tools now (8): read_file, run_command, diagnose, move_data, run_pipeline, nexus_
 **Verified the merge reverted nothing:** `spec.promote`, `resource-monitor`, WARP compounding, and the autopilot heap gate all still present. Both wire scans 0. cortex/guardian/copilot CONTRACT. spec-promote 5/5, warp-compounding 6/6, closed-loop 4/4.
 
 **On the MERGE-REPORT method:** taking whole files by timestamp is safe only when the two archives are strictly sequential off one base. They were not — this session advanced idearium and orchestrator *after* both zips were cut. The lesson is the one this codebase keeps teaching: verify against the running tree, never against a claim about it.
+
+---
+
+## PART 37 — Idearium Phases 5 and 3: sovereign transport, then the contract as a projection
+
+### Phase 5 — AX-010 cleanup (done first, because it feeds the contract)
+
+Idearium hardcoded `127.0.0.1:9000` in **five** places (I'd previously counted three; the real number was five — two ledger calls used different formatting and slipped the first grep). Each is an AX-010 violation: a caller that names a port cannot be hotswapped, and a wrong port fails silently as a dropped fire-and-forget mirror.
+
+Replaced with `_orchestrator()`, resolving from `orchestrator.config.json`'s `ports` block via `lib/nexus-client` — the single source of truth AX-010 established. The ESM/CJS boundary was already bridged (`_require` exists in the file). Falls back to `:9000` with a warning only if the config is unreadable, rather than crashing a mirror path. **Zero hardcodes remain; idearium still serves 200.** It was the last system hardwiring the orchestrator port.
+
+### Phase 3 — the interaction contract, projected not stored
+
+The UI must read the contract to render. But `schemas/interaction-contract.json` is a **static file**: it declared **30** endpoints while the router had **55**, and named **none** of the actions built this session (`speceng.templates`, `spec.promote`, ...). A UI reading it would be blind to half the API.
+
+`contract.live` (`GET /api/contract/live`) projects the contract from the **real route table**, by extracting the route tuples from this module's own source — the same discipline the hook generator uses. The contract is a projection of the code, so it cannot drift from it. Verified live: **59 endpoints**, including `spec.promote` (`POST /api/spec-engine/specs/:uuid/promote`) and `speceng.templates`, both absent from the static file.
+
+`contract.get` (the static file) stays for backward compatibility; `contract.live` is what the Phase 8 UI will read.
+
+### Loop + contract status
+
+`idea → spec → chunk → dispatch✅ → artifact → repo✅`, sovereign transport throughout, and a contract that reflects the real API. Both wire scans 0. spec-promote 5/5, idearium-warp-cache 7/7, cortex CONTRACT.
+
+**Next: Phase 4 (WARP spine on idearium's bus) and Phase 6 (intelligence in the loop — dedup lookup before dispatch, sigma on failed chunks), then Phase 8 UI reading `contract.live`.**
+
+---
+
+## PART 38 — "The idearium UI has no specs" — two spec stores, UI read the empty one
+
+The Spec Library panel showed nothing. Traced to root: **idearium has two spec stores.**
+- `/api/specs` (`spec.list` → `os.db.specs`) — the legacy OS store. **0 specs.**
+- `/api/spec-engine/specs` (`speceng.list`) — the real spec-engine manifests. **16 specs.**
+
+The UI's `loadSpecs()` calls `/api/specs` — the empty one. And its `catch(e){}` swallowed the emptiness silently, so it rendered "no specs yet" instead of an error.
+
+**Fixed at the API, not the UI**, so every consumer benefits: `spec.list` now merges both stores (legacy first for backward compatibility, spec-engine manifests deduped by uuid). Verified: `/api/specs` → 16 specs, `sources: {legacy:0, engine:16}`.
+
+**Two shape mismatches caught in the same fix**, both of which would have shown specs with blank chips:
+1. `renderSpecList` reads `spec.phase` and `spec.sections`; the engine names them `status` and `chunks`. Normalized in the merge — the UI needs no change.
+2. The chip's "done" state keys on `section.content` being truthy, but the list is deliberately content-free (loaded on demand in the detail view). A complete section now gets a `✓` marker keyed on **status**, so the chip lights without shipping section bodies into the list. `listSpecs()` gained a lightweight `chunks` summary (id/title/status, no content) for exactly this.
+
+Verified end to end: 16 specs, **14 with at least one built section** (genesis specs correctly show `meta` done, 1/10). `tests/modules/spec-list-merge.test.mjs` 5/5.
+
+Both wire scans 0. spec-promote 5/5, idearium-warp-cache 7/7. The loop is now **visible** in the UI it produces specs for.

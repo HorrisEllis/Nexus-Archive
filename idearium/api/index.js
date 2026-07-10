@@ -20,6 +20,17 @@ import { createRequire } from 'module';
 import { spawnSync, spawn as spawnProc } from 'child_process';
 const _require = createRequire(import.meta.url);
 
+// §AX-010 2026-07-10 — idearium hardcoded 127.0.0.1:9000 in four places
+// (ledger x2, register, heartbeat). Resolve the orchestrator from
+// orchestrator.config.json's `ports` block (AX-010 single source of truth) so
+// idearium stops being the last system that hardwires the port. Falls back to
+// :9000 with a warning only if the config is unreadable.
+const _nexusClient = _require('../../lib/nexus-client.js');
+function _orchestrator() {
+  try { return _nexusClient.resolve('orchestrator'); }
+  catch (e) { console.warn('[idearium/api] orchestrator resolve failed, defaulting :9000:', e.message); return { host: '127.0.0.1', port: 9000 }; }
+}
+
 // ── Meta: Spatial Lattice — resonance-weighted idea/spec/gap graph ────────────
 let _latticeEng = null;
 function _getLattice() {
@@ -252,6 +263,7 @@ function matchRoute(method, url) {
     ['GET',    [],                        'health'],
     ['GET',    ['health'],                 'health'],     // alias: GET /health → same as GET /
     ['GET',    ['api','contract'],        'contract.get'],
+    ['GET',    ['api','contract','live'], 'contract.live'],
     ['GET',    ['api','stats'],           'stats.get'],
     ['GET',    ['api','snr'],             'snr.current'],
     ['GET',    ['api','snr','history'],   'snr.history'],
@@ -373,6 +385,41 @@ async function handle(req, res, route, query, body) {
       try { return ok(res, { contract: os.contract() }); }
       catch (e) { return err(res, 500, e.message); }
 
+    // §PHASE 3 2026-07-10 — the interaction contract, projected from the REAL
+    // route table instead of a static file. The hand-maintained
+    // schemas/interaction-contract.json declared 30 endpoints while the router
+    // had 55, and named none of the new actions (speceng.templates,
+    // spec.promote, ...). A UI reading the static file is blind to half the API
+    // and to everything built this session. This reads the route tuples out of
+    // this module's own source — the same discipline the hook generator uses:
+    // the contract is a projection of the code, so it cannot drift from it.
+    case 'contract.live': {
+      try {
+        const src = _require('fs').readFileSync(_require('url').fileURLToPath(import.meta.url), 'utf8');
+        const routes = [];
+        // Match: ['GET', ['api','spec-engine','specs',':uuid','promote'], 'spec.promote'],
+        const re = /\[\s*'(GET|POST|PUT|DELETE|PATCH)'\s*,\s*\[([^\]]*)\]\s*,\s*'([a-z][a-z0-9.]*)'\s*\]/gi;
+        let m;
+        while ((m = re.exec(src)) !== null) {
+          const method = m[1];
+          const segs = m[2].split(',').map(s => s.trim().replace(/^'|'$/g, '')).filter(Boolean);
+          const path = '/' + segs.join('/');
+          const action = m[3];
+          // dedup: same method+path can appear as an alias
+          if (!routes.some(r => r.method === method && r.path === path)) {
+            routes.push({ method, path, action });
+          }
+        }
+        return ok(res, {
+          system: 'idearium',
+          version: VERSION,
+          generatedFrom: 'idearium/api/index.js route table (projection, not a static file)',
+          endpointCount: routes.length,
+          endpoints: routes.sort((a, b) => a.path.localeCompare(b.path)),
+        });
+      } catch (e) { return err(res, 500, `contract projection failed: ${e.message}`); }
+    }
+
     case 'stats.get':
       return ok(res, { stats: os.stats() });
 
@@ -398,7 +445,8 @@ async function handle(req, res, route, query, body) {
       // Mirror to orchestrator ledger (fire-and-forget)
       import('http').then(({ default: http }) => {
         const body2 = JSON.stringify({ system:'idearium', type:'idearium.idea.created', payload:{ uuid:idea?.uuid, text:(text||'').slice(0,80), tags } });
-        const r = http.request({ hostname:'127.0.0.1', port:9000, path:'/api/ledger', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body2)} }, ()=>{});
+        const _o = _orchestrator();
+        const r = http.request({ hostname:_o.host, port:_o.port, path:'/api/ledger', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body2)} }, ()=>{});
         r.on('error',()=>{}); r.write(body2); r.end();
       }).catch(()=>{});
       return ok(res, { idea, eventId: ev.uuid });
@@ -460,8 +508,43 @@ async function handle(req, res, route, query, body) {
 
     // ── Specs ──────────────────────────────────────────────────────────────
 
-    case 'spec.list':
-      return ok(res, { specs: os.specs(query) });
+    // §BUG FIXED 2026-07-10 — "the idearium ui has no specs." The Spec Library
+    // panel calls /api/specs (spec.list), which returned ONLY os.specs() — the
+    // legacy OS db.specs, which is empty. Meanwhile 16 real specs live in the
+    // spec-engine (/api/spec-engine/specs). Two spec stores, and the UI read the
+    // empty one. Merge both here so /api/specs shows every spec regardless of
+    // which subsystem created it. Legacy first (unchanged for existing readers),
+    // then spec-engine manifests, deduped by uuid. A spec-engine failure must
+    // not blank the legacy list (§1.2).
+    case 'spec.list': {
+      const legacy = os.specs(query) || [];
+      let engine = [];
+      try {
+        const se = getSpecEngine();
+        if (se) {
+          // Normalize spec-engine manifests to the shape the UI's renderSpecList
+          // expects: it reads .sections (chunks), .phase (status), .version. The
+          // engine names them chunks/status/version, so without this map specs
+          // render with blank section chips and no status. One shape for every
+          // consumer; the UI needs no change.
+          engine = (se.listSpecs() || []).map(s => ({
+            ...s,
+            phase: s.status,
+            sections: (s.chunks || []).map(c => ({
+              id: c.sectionId || c.chunkIdx, title: c.sectionTitle || c.sectionId,
+              // The UI marks a chip 'done' when .content is truthy. The list is
+              // deliberately content-free (loaded on demand in the detail view),
+              // so a complete section gets a non-empty marker keyed on STATUS —
+              // the chip lights without shipping the section body into the list.
+              content: c.status === 'complete' ? '\u2713' : '', required: true,
+            })),
+          }));
+        }
+      } catch (e) { console.warn('[idearium/api] spec-engine list failed, legacy only:', e.message); }
+      const seen = new Set(legacy.map(s => s.uuid));
+      const merged = [...legacy, ...engine.filter(s => !seen.has(s.uuid))];
+      return ok(res, { specs: merged, sources: { legacy: legacy.length, engine: engine.length } });
+    }
 
     case 'spec.create': {
       if (!body.name) return err(res, 400, 'name required');
@@ -554,7 +637,8 @@ async function handle(req, res, route, query, body) {
           system: 'idearium', type: 'idearium.spec.built',
           payload: { specUuid: params.uuid, name: spec.name, sections: built.length, compiled: !!compileResult.ok },
         });
-        const r = http.request({ hostname:'127.0.0.1', port:9000, path:'/api/ledger',
+        const _o = _orchestrator();
+        const r = http.request({ hostname:_o.host, port:_o.port, path:'/api/ledger',
           method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)} }, ()=>{});
         r.on('error',()=>{}); r.write(payload); r.end();
       }).catch(()=>{});
@@ -1174,7 +1258,7 @@ function _latticeLink(a, b, w=0.7, t='associated') {
           meta:{ role:'idea-os', version:VERSION },
           components: IDEARIUM_COMPONENTS });
         const r = _require('http').request({
-          hostname:'127.0.0.1', port:9000, path:'/api/register', method:'POST',
+          hostname:_orchestrator().host, port:_orchestrator().port, path:'/api/register', method:'POST',
           headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)},
         });
         r.setTimeout(2000, () => r.destroy()); r.on('error', () => {});
@@ -1182,7 +1266,7 @@ function _latticeLink(a, b, w=0.7, t='associated') {
         setInterval(() => {
           const hb = JSON.stringify({ systemId:'idearium', port:PORT, status:'online' });
           const r2 = _require('http').request({
-            hostname:'127.0.0.1', port:9000, path:'/api/heartbeat', method:'POST',
+            hostname:_orchestrator().host, port:_orchestrator().port, path:'/api/heartbeat', method:'POST',
             headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(hb)},
           });
           r2.on('error', () => {}); r2.write(hb); r2.end();
@@ -1196,7 +1280,7 @@ function _latticeLink(a, b, w=0.7, t='associated') {
       fn: async () => {
         const bBody = JSON.stringify({ systemId:'idearium', appId:'idearium', secret:'nexus-idearium-internal-v1' });
         const r = _require('http').request({
-          hostname:'127.0.0.1', port:9000, path:'/api/register', method:'POST',
+          hostname:_orchestrator().host, port:_orchestrator().port, path:'/api/register', method:'POST',
           headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(bBody)},
         }, res => {
           let d = ''; res.on('data', c => { d += c; });
@@ -1208,8 +1292,9 @@ function _latticeLink(a, b, w=0.7, t='associated') {
         // Also post booted to ledger
         const lb = JSON.stringify({ system:'idearium', type:'idearium.booted',
           payload:{ version:VERSION, port:PORT } });
+        const _o2 = _orchestrator();
         const r2 = _require('http').request({
-          hostname:'127.0.0.1', port:9000, path:'/api/ledger', method:'POST',
+          hostname:_o2.host, port:_o2.port, path:'/api/ledger', method:'POST',
           headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(lb)},
         });
         r2.on('error', () => {}); r2.write(lb); r2.end();

@@ -292,6 +292,14 @@ export function listSpecs() {
         agent:       manifest.agent,
         createdAt:   manifest.createdAt,
         updatedAt:   manifest.updatedAt,
+        version:     manifest.version,
+        // §2026-07-10 — lightweight per-section status for the UI's Spec Library
+        // chips. Id/title/done only, NOT content: the list must stay small even
+        // with many specs. The detail view loads full chunk content on demand.
+        chunks: (manifest.chunks || []).map(c => ({
+          sectionId: c.sectionId, sectionTitle: c.sectionTitle,
+          chunkIdx: c.chunkIdx, status: c.status,
+        })),
       });
     } catch (_) {}
   }
