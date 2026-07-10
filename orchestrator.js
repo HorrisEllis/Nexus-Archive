@@ -873,6 +873,15 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // first match and this one came first. Caught and corrected before
   // building anything further on top of it — removed the duplicate,
   // merged the one real line it added into the actual handler instead.
+  // §WARP SPINE — GET /api/warp/map. The map projected from what actually
+  // ran (StreamLog), not from a document. A capability held only in memory
+  // is the same orphan as an undeclared route; this makes it callable, and
+  // it is declared in the hooks registry.
+  if (M==='GET' && sub==='warp' && seg[2]==='map') {
+    if (!global._warpSpine) return json(res, 503, { ok:false, error:'warp spine not attached' });
+    return json(res, 200, { ok:true, ...global._warpSpine.map() });
+  }
+
   if (M==='GET' && sub==='bus' && seg[2]==='stats') {
     if (!nexusBus) return json(res, 503, { ok:false, error:'nexus-bus not available' });
     return json(res, 200, { ok:true, ...nexusBus.stats() });
@@ -2275,6 +2284,53 @@ else {
 if (nexusBus) {
   if (nexusCFR)       nexusCFR.init({ bus: nexusBus, pollMs: 5000 });
   if (nexusHealLoop)  nexusHealLoop.attachToBus(nexusBus);
+
+  // §WARP SPINE 2026-07-09 — "warp is the spine for each system, supposed to
+  // be." Measured: it wasn't. WARP was required by loom (3 files), ollama (1)
+  // and lib/seam (3); guardian, cortex, copilot, orchestrator, idearium,
+  // architect, bridge and emerge touched it not at all. This ATTACHES WARP to
+  // the existing bus rather than replacing it — 80 files emit onto nexus-bus,
+  // and swapping it outright would be the largest change with the least
+  // evidence. Every event is mirrored into a real WARP Stream, recorded to a
+  // real StreamLog (the map, projected from what actually ran, not a parallel
+  // document that drifts), and checked against WARP Axioms.
+  //
+  // Advisory by default: violations are reported, never thrown. Turning
+  // enforcement on over a live bus on day one converts a reporting tool into
+  // an outage. Observe first, enforce second.
+  try {
+    const { WarpSpine, defaultAxioms } = require('./lib/warp-bus');
+    global._warpSpine = new WarpSpine({ bus: nexusBus, name: 'orchestrator', strict: false });
+    defaultAxioms(global._warpSpine).attach();
+    console.log('[warp-spine] attached to orchestrator bus — 4 axioms, StreamLog mapping active');
+  } catch (e) {
+    console.warn('[warp-spine] not attached:', e.message);
+  }
+
+  // §GAP CLOSED 2026-07-09 — heal-loop has always listened on THIS
+  // in-process bus, but every real gap is produced in another process:
+  // guardian's userscripts emit 'cortex.gap.found' on guardian's bus, and
+  // service/nexus-diagnostic.js (:7825) broadcasts 'gap.found' to its own
+  // SSE clients. connectBridgeRelay() pipes bridge SSE into broadcast()
+  // (orchestrator's SSE fan-out), never into bus.emit(). So no gap has
+  // ever crossed into heal-loop. lib/gap-relay.js is that missing wire —
+  // gap-shaped events only, loop-guarded, deduped.
+  if (nexusHealLoop) {
+    try {
+      const { GapRelay } = require('./lib/gap-relay');
+      const _gapRelay = new GapRelay({
+        bus: nexusBus,
+        sources: [
+          { name: 'guardian',   host: '127.0.0.1', port: 7820, path: '/events' },
+          { name: 'diagnostic', host: '127.0.0.1', port: 7825, path: '/events' },
+        ],
+      });
+      _gapRelay.start();
+      console.log('[gap-relay] relaying gap events from guardian:7820 + diagnostic:7825 → heal-loop');
+    } catch (e) {
+      console.warn('[gap-relay] not started:', e.message);
+    }
+  }
   if (nexusKnowledge) nexusKnowledge.seedSystemFacts();
   // §P106: wire sigma-writer so sigma_records table actually gets populated.
   // Previously zero call sites for sigma_records insert anywhere in the codebase.

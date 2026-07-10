@@ -25,6 +25,23 @@ spec:
   # not direct HTTP calls. HTTP is for external consumers (CLI, UI, other systems).
   # Internal state changes go through the bus first.
   #
+  # ⚠️ §AX-011 QUALIFIER (addendum v1.2.0, 2026-07-09) — the two sentences
+  # above are TRUE WITHIN A PROCESS and have never been true between them.
+  # nexus-bus.js is `class NexusBus extends EventEmitter`: every one of the
+  # twelve NEXUS processes holds its own instance. There is no distributed
+  # bus. Read as a cross-process promise, this paragraph left engineers two
+  # choices for reaching another system — require() its files, or hardcode
+  # its port — and both are violations of a spec that offered no third
+  # option. Twelve such violations accumulated. Meanwhile nexus-heal-loop
+  # listened faithfully, for months, to a bus on which no gap was ever
+  # emitted, because gaps are produced in other processes.
+  #
+  # ACROSS a boundary the sanctioned coupling is L3 (API) + L4 (handshake),
+  # called through lib/nexus-client.js — name a SYSTEM and a PATH, never a
+  # host or a port. See docs/nexus-system-foundation-addendum-v1.2.0.spec,
+  # axioms AX-010 (sovereign transport), AX-011 (the bus does not span
+  # processes), AX-012 (handshake verification precedes use).
+  #
   # ════════════════════════════════════════════════════════════════════════════
 
   meta:

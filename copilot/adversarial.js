@@ -11,12 +11,26 @@
  *
  * Runs every 60s AND on any high-severity gap event.
  * Results written to cortex as adversarial_log entries.
+ *
+ * §CONSOLIDATED 2026-07-06 — pingBoth()'s contradiction check used to be a
+ * bespoke substring match (online vs offline) duplicating logic that now
+ * lives once, generically, in cortex/intelligence/adversarial.js's
+ * compare({left,right}) engine — the same engine built for Cortex's own
+ * intuition/mastermind pair, generalized specifically so a second real
+ * caller like this one wouldn't need its own comparison logic. This file
+ * keeps its own normalizer (copilot's intuition.js/analysis.js return free
+ * text, not Cortex's structured gapCount/tracedCount shape — the only
+ * honest, real signal available here is the same online/offline mention
+ * the old check used; normalizing it doesn't add semantic understanding
+ * that isn't there, it just routes the same real signal through the
+ * shared, tested, scored engine instead of a bespoke boolean).
  */
 
 const http      = require('http');
 const crypto    = require('crypto');
 const intuition = require('./intuition');
 const analysis  = require('./analysis');
+const { compare } = require('../cortex/intelligence/adversarial');
 
 const CX_URL = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
 
@@ -77,27 +91,46 @@ async function pingAnalysis(prompt, stream = []) {
   }
 }
 
-// ── Ping both — check for contradiction ──────────────────────────────────────
+/**
+ * _normalizeCopilotAnswer — the real, honest normalizer for this file.
+ * Copilot's intuition/analysis return free text, not Cortex's structured
+ * gapCount/tracedCount. The only real, non-fabricated signal available to
+ * classify a claim from arbitrary prose is the same one the old check
+ * used: does it say "online" or "offline". A text mentioning "offline"
+ * is treated as issue_detected (conservative default for the ambiguous
+ * case where both words appear); "online" alone is no_issue; neither
+ * word present means this answer isn't a status claim at all — marked
+ * not comparable rather than fabricating a claim to compare.
+ */
+function _normalizeCopilotAnswer(source, result) {
+  const text = (result?.text || '').toLowerCase();
+  if (!text) return { source, domain: 'copilot', intent: 'unknown', comparable: false };
+  const mentionsOffline = /\boffline\b/.test(text);
+  const mentionsOnline  = /\bonline\b/.test(text);
+  if (!mentionsOffline && !mentionsOnline) {
+    return { source, domain: 'copilot', intent: result?.intent || 'unknown', comparable: false };
+  }
+  return {
+    source, domain: 'copilot', intent: 'status', confidence: 0.7,
+    claims: [{ type: mentionsOffline ? 'issue_detected' : 'no_issue', detail: result.text, traced: false }],
+    comparable: true,
+  };
+}
+
+// ── Ping both — check for contradiction via the shared generic engine ───────
 async function pingBoth(prompt, stream = []) {
   const [iResult, aResult] = await Promise.all([
     pingIntuition(prompt, stream),
     pingAnalysis(prompt, stream),
   ]);
 
-  let contradiction = false;
+  const verdict = compare({
+    left:  _normalizeCopilotAnswer('intuition', iResult.result),
+    right: _normalizeCopilotAnswer('analysis', aResult.result),
+  });
+  const contradiction = verdict.comparable && verdict.verdict === 'contradiction';
 
-  // Simple contradiction check: if intuition answers and analysis says the opposite
-  // For now: flag if one says "online" and other says "offline"
-  if (iResult.result?.text && aResult.result?.text) {
-    const iText = iResult.result.text.toLowerCase();
-    const aText = aResult.result.text.toLowerCase();
-    if ((iText.includes('online') && aText.includes('offline')) ||
-        (iText.includes('offline') && aText.includes('online'))) {
-      contradiction = true;
-    }
-  }
-
-  return { intuition: iResult, analysis: aResult, contradiction };
+  return { intuition: iResult, analysis: aResult, contradiction, verdict };
 }
 
 // ── Run full adversarial pass ─────────────────────────────────────────────────
@@ -170,4 +203,4 @@ function stop() {
 
 function lastResults() { return _results.slice(0, 5); }
 
-module.exports = { run, pingIntuition, pingAnalysis, pingBoth, start, stop, lastResults };
+module.exports = { run, pingIntuition, pingAnalysis, pingBoth, start, stop, lastResults, _normalizeCopilotAnswer };

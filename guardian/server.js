@@ -2821,22 +2821,23 @@ function handleExtendedRoutes(req, res, url, method) {
         dispatchJob,
         getJob: (id) => jobs.get(id),
         isProviderConnected: (p) => { try { return ncp.isConnected(p); } catch (_) { return false; } },
-        // Routes through RoutingIR (cortex/core/raid/routing-ir.js), which
-        // wraps RAID's real _decide() honestly — reporting rule_based mode
-        // when LAW_I/LAW_III fire (no real competition happened) vs
-        // competitive mode with real fitness numbers when it did. Built and
-        // tested earlier this session with zero production callers; this is
-        // its first. NOTE: `_raid.decide()` does not exist — see the
-        // §BUG FIXED note on /command's raw path below.
-        resolveProvider: (p) => {
-          const { buildRoutingIR } = require('../cortex/core/raid/routing-ir.js');
-          let _cfrCtx = {};
+        // §SOVEREIGNTY 2026-07-09 — this required
+        // '../cortex/core/raid/routing-ir.js' across a system boundary (I
+        // wrote it). Cortex already exposes POST /api/raid/decide — a real,
+        // working, orphaned route. It was orphaned precisely BECAUSE callers
+        // reached around it with require(). Guardian now asks cortex, so
+        // cortex's RAID can be replaced or moved without touching guardian.
+        // Falls back to the unconditional reserve if cortex is unreachable:
+        // routing must never be the reason an ask cannot be attempted.
+        resolveProvider: async (p) => {
           try {
-            const _cfrInfl = require('../nexus-cfr-influence');
-            _cfrCtx = { cfrSigmaFloor: _cfrInfl.getSigmaFloor?.() || 0, cfrRegime: _cfrInfl.getState?.()?.regime || 'stable' };
-          } catch (_) {}
-          const ir = buildRoutingIR({ intent: 'copilot-ask', prompt: p, context: _cfrCtx });
-          return ir.selected;
+            const nx = require('../lib/nexus-client');
+            const d = await nx.post('cortex', '/api/raid/decide', { prompt: p }, { timeout: 3000 });
+            return d?.agent || null;
+          } catch (e) {
+            console.warn('[guardian] cortex /api/raid/decide unreachable, using reserve:', e.message);
+            return 'claude'; // LAW_III unconditional reserve
+          }
         },
       });
       pRes(res, result.ok ? 200 : 502, result);

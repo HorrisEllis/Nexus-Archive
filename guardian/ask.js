@@ -86,7 +86,12 @@ async function askSync(prompt, opts = {}, deps = {}) {
       return { ok: false, error: "provider 'auto' requires an injected resolveProvider() — refusing to enqueue a job to a queue nothing drains" };
     }
     try {
-      resolved = deps.resolveProvider(prompt);
+      // Awaited: resolveProvider is now async, because resolving a provider
+      // means ASKING cortex over its API rather than requiring its files.
+      // Without the await, `resolved` would be a Promise and every job would
+      // enqueue to pendingQueue['[object Promise]'] — the same silent-wire
+      // failure this whole session has been about.
+      resolved = await deps.resolveProvider(prompt);
     } catch (e) {
       return { ok: false, error: `provider resolution failed: ${e.message}` };
     }
@@ -97,8 +102,19 @@ async function askSync(prompt, opts = {}, deps = {}) {
 
   // §FAIL FAST — an unconnected provider means this job can never complete
   // in the caller's lifetime. Say so now, don't poll into a timeout.
+  //
+  // §MESSAGE CORRECTED TWICE. It first said "no browser tab available",
+  // which encoded an unverified assumption. It then pointed at
+  // clear-glass/ncp-client.js — a provider *I* wrote, which turned out to
+  // duplicate the real mechanism: Clear Glass's ProviderHost injects
+  // Guardian's own userscripts (guardian/userscript-<agent>.js) into its
+  // webviews, and those connect to /channel. That is canonical; my client
+  // is now tests/helpers/clear-glass-ncp-provider.js, a test double only.
+  // The real production failure is upstream and specific: ProviderHost
+  // needs GUARDIAN_DIR set (autopilot now sets it), and CookieVault must
+  // restore a session or the tab lands on a login page and can never answer.
   if (typeof isProviderConnected === 'function' && !isProviderConnected(resolved)) {
-    return { ok: false, error: `provider '${resolved}' is not connected — no browser tab available to answer`, provider: resolved };
+    return { ok: false, error: `no provider connected on NCP channel '${resolved}' — check that Clear Glass booted with GUARDIAN_DIR set and that its '${resolved}' tab has a restored session (not a login page)`, provider: resolved };
   }
 
   let job;

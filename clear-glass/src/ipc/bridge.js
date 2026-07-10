@@ -266,7 +266,46 @@ class IpcBridge {
 
     // DOM events from page scripts
     ipcMain.on('dom:event',       (e, d) => emit('dom.mutations', d));
-    ipcMain.on('dom:pick-result', (e, d) => emit('dom.pick.registered', d));
+    ipcMain.on('dom:pick-result', (e, d) => {
+      // Always reaches SSE via the bus, regardless of routeTo — the
+      // in-process event stream isn't a "channel" the picker opts into,
+      // it's the substrate everything else in Clear Glass already relies
+      // on. routeTo:'api' is additive, not exclusive.
+      emit('dom.pick.registered', d);
+
+      if (d?.routeTo === 'api' && d?.apiUrl) {
+        this._postToApiChannel(d.apiUrl, d).catch(err => {
+          emit('dom.pick.route.error', { apiUrl: d.apiUrl, error: err.message, ts: Date.now() });
+        });
+      }
+    });
+  }
+
+  // §BUILD 2026-07-09 — "route to API channel": POST the picked element
+  // (or a DOM stream batch, same shape) to a caller-configured URL. Runs
+  // from main process, not the renderer — keeps the target URL out of
+  // the untrusted webview guest's reach and avoids CSP complications.
+  async _postToApiChannel(url, payload) {
+    const parsed = new (require('url').URL)(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error(`Refusing non-http(s) API channel: ${parsed.protocol}`);
+    }
+    const lib = parsed.protocol === 'https:' ? require('https') : require('http');
+    const body = JSON.stringify(payload);
+    return new Promise((resolve, reject) => {
+      const req = lib.request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, res => {
+        res.resume(); // drain, we don't need the response body
+        if (res.statusCode >= 400) reject(new Error(`API channel returned ${res.statusCode}`));
+        else resolve({ status: res.statusCode });
+      });
+      req.setTimeout(8000, () => { req.destroy(); reject(new Error('API channel timeout')); });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
   }
 
   // ── Bookmarks ────────────────────────────────────────────────────────────

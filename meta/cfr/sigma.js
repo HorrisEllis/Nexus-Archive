@@ -33,7 +33,15 @@ function _warnCoercion(badValue) {
   // Walk the stack past this file and sigma's own callers (cfr/ledger.js's
   // record()) to find the actual upstream call site that built a malformed
   // event/type in the first place.
-  const stack = (new Error()).stack?.split('\n').slice(1) || [];
+  //
+  // §BUG FIXED 2026-07-09 (from a live Windows console log) — these checks
+  // compared forward-slash paths ('cfr/sigma.js'), but V8 stack frames use
+  // the platform separator. On Windows every frame reads 'meta\cfr\sigma.js',
+  // so NONE of these filters ever matched: the function skipped nothing and
+  // reported ITSELF ("at _warnCoercion (...sigma.js:36)") as the upstream
+  // caller. 600 warnings, each naming the warner. Normalize separators so
+  // the diagnostic can actually do its one job on every platform.
+  const stack = ((new Error()).stack?.split('\n').slice(1) || []).map(l => l.replace(/\\/g, '/'));
   // Skip all cfr/ internal frames to find the real upstream caller
   const callerLine = stack.find(l =>
     !l.includes('cfr/sigma.js') &&

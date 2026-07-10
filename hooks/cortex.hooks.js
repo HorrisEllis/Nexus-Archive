@@ -9,6 +9,34 @@
 
 const CORTEX_HOOKS = [
   {
+    id: "cortex-hook-raid-decide-0015",
+    name: "cortex-raid-decide",
+    intent: "RAID provider selection over the API (AX-010) — replaces require(cortex/core/raid)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "cortex", layer: 1, port: 3748 },
+    config: { path: "/api/raid/decide", method: "POST" },
+    contract: { axioms: [], sideEffects: [], idempotent: false },
+    references: { files: ["cortex/core/raid/index.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
+    id: "cortex-hook-personas-0014",
+    name: "cortex-personas",
+    intent: "Read/write personality profiles — the sovereign API replacing copilot cross-system require",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "cortex", layer: 1, port: 3748 },
+    config: { path: "/api/personas", method: "GET" },
+    contract: { axioms: [], sideEffects: [], idempotent: true },
+    references: { files: ["cortex/personas.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
     id: "cortex-hook-snapshot-rollback-0013",
     name: "cortex-snapshot-rollback",
     intent: "Restore CFR field state from a stored snapshot",

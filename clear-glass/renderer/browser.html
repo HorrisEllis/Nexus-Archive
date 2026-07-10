@@ -51,6 +51,11 @@
   <div class="chrome-group">
     <button class="nav-btn" id="btn-dom"    title="DOM Archaeology">⛏</button>
     <button id="picker-btn"                 title="Element Picker">◎</button>
+    <select id="picker-route" title="Route picks to" style="background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);font-size:10px;border-radius:4px;height:22px;">
+      <option value="sse">→ SSE</option>
+      <option value="api">→ API</option>
+    </select>
+    <input id="picker-api-url" type="text" placeholder="https://..." style="display:none;width:120px;font-size:10px;background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);border-radius:4px;height:22px;padding:0 4px;">
     <button class="nav-btn" id="btn-mesh" title="Agent Mesh">⬡</button>
     <button class="nav-btn" id="btn-diag" title="Diagnostics">⚕</button>
   </div>
@@ -140,6 +145,7 @@
     <h3>⛏ DOM Archaeology</h3>
     <input id="dom-search" type="text" placeholder="selector or text...">
     <button id="dom-refresh" class="nav-btn" title="Refresh tree" style="width:22px;height:22px;font-size:11px;">↺</button>
+    <button id="dom-stream-btn" class="nav-btn" title="Stream live DOM mutations to SSE" style="width:22px;height:22px;font-size:11px;">▶</button>
     <button id="dom-panel-close">✕</button>
   </div>
   <div id="dom-tree"><span style="color:var(--text-dim)">Loading DOM...</span></div>
@@ -343,6 +349,7 @@
   const agentId = params.get('agentId') || 'default';
   const ssePort = params.get('ssePort') || 7701;
   const initialUrl = params.get('url') || '';
+  const wvPreload = params.get('wvPreload') || '';
 
   // ── State ──────────────────────────────────────────────────────────
   let pickerActive = false;
@@ -356,6 +363,20 @@
 
   // ── Elements ───────────────────────────────────────────────────────
   const wv             = document.getElementById('wv');
+  const pickerRoute    = document.getElementById('picker-route');
+  const pickerApiUrl   = document.getElementById('picker-api-url');
+  const domStreamBtn   = document.getElementById('dom-stream-btn');
+  let   domStreaming   = false;
+
+  pickerRoute?.addEventListener('change', () => {
+    pickerApiUrl.style.display = pickerRoute.value === 'api' ? '' : 'none';
+  });
+
+  // §BUILD 2026-07-09 — must be set before the webview's first navigation.
+  // Without this the guest page has no route back to the host at all
+  // (see src/preload/webview-bridge.js for why the old require('electron')
+  // trick inside injected page scripts didn't work).
+  if (wvPreload) wv.setAttribute('preload', wvPreload);
 
   // §NEW 2026-07-04: main process navigates this window in place when the
   // orchestrator's wire /open call targets the already-open default window
@@ -810,7 +831,51 @@
       pickerActive = false;
       pickerBtn.classList.remove('active');
       addMsg('assistant', `Picked: <code>${pick.tag}${pick.id_attr ? '#' + pick.id_attr : ''}${pick.classes ? '.' + pick.classes.split(' ')[0] : ''}</code> — registered as "${pick.name}"`);
+
+      // §BUILD 2026-07-09 — this used to stop at the local panel above.
+      // Forward to main → bus → SSE (always), and additionally to a
+      // caller-configured API channel when that routing mode is selected.
+      // The routing choice never leaves the page it was captured on, so
+      // it goes over with the payload rather than being main-process state.
+      window.ClearGlass?._sendPickResult?.({
+        ...pick, agentId,
+        routeTo: pickerRoute?.value || 'sse',
+        apiUrl:  pickerRoute?.value === 'api' ? (pickerApiUrl?.value || '') : undefined,
+      });
+    } else if (e.channel === 'dom:event') {
+      // Live MutationObserver stream — forward straight through, no local
+      // UI cost (this can fire many times a second on a busy page).
+      window.ClearGlass?._sendDomEvent?.({ ...e.args[0], agentId });
     }
+  });
+
+  // ── DOM → SSE streaming ───────────────────────────────────────────────
+  // §BUILD 2026-07-09 — DOM_MESH_SCRIPT below used to be query/highlight
+  // helpers only, never injected, no observer. This is the actual
+  // "stream the entire DOM to SSE" feature: inject a MutationObserver
+  // that batches changes and pushes them out through the same bridge the
+  // picker uses, on toggle.
+  domStreamBtn?.addEventListener('click', async () => {
+    domStreaming = !domStreaming;
+    domStreamBtn.classList.toggle('active', domStreaming);
+    domStreamBtn.textContent = domStreaming ? '■' : '▶';
+    domStreamBtn.title = domStreaming ? 'Stop streaming DOM to SSE' : 'Stream live DOM mutations to SSE';
+    try {
+      if (domStreaming) {
+        await wv.executeJavaScript(DOM_STREAM_SCRIPT);
+      } else {
+        await wv.executeJavaScript(`if (window.__cgDomStream) window.__cgDomStream.stop();`);
+      }
+    } catch (err) {
+      addMsg('assistant', `⚠ DOM stream ${domStreaming ? 'start' : 'stop'} failed: ${err.message}`);
+      domStreaming = !domStreaming;
+      domStreamBtn.classList.toggle('active', domStreaming);
+    }
+  });
+
+  // Re-arm streaming on navigation — a fresh page has no observer.
+  wv.addEventListener('did-navigate', () => {
+    if (domStreaming) wv.executeJavaScript(DOM_STREAM_SCRIPT).catch(() => {});
   });
 
   const PICKER_SCRIPT = `
@@ -847,8 +912,14 @@
       value: el.value,
       rect: {top:r.top,left:r.left,width:r.width,height:r.height},
     };
-    try { require('electron').ipcRenderer.sendToHost('dom:pick-result', data); } catch {}
-    try { window.postMessage({ __cgBridge: true, channel: 'dom:pick-result', payload: data }, '*'); } catch {}
+    // §FIX 2026-07-09 — both of the old bridge attempts were dead:
+    // require('electron') has no Node access in this isolated guest page,
+    // and postMessage doesn't cross the webview guest/host boundary the
+    // way sendToHost does. window.__cg is the real one — see
+    // src/preload/webview-bridge.js, loaded via the webview's 'preload'
+    // attribute (set from wvPreload in the outer page, main process
+    // origin).
+    try { window.__cg?.send('dom:pick-result', data); } catch {}
     window.__cgPicker.destroy();
   };
   window.__cgPicker = {
@@ -1718,6 +1789,84 @@ It will write and install it for you.`);
 
   // ── Inline DOM mesh script (injected into webview) ─────────────────
   const DOM_MESH_SCRIPT = `(function(){if(window.__cgDomMesh)return;const mesh=new Map();let c=0;function nid(el){if(!el.__cgId)el.__cgId='cg-'+(++c);return el.__cgId;}function meta(el){const r=el.getBoundingClientRect?el.getBoundingClientRect():{};return{id:el.__cgId||null,tag:el.tagName?.toLowerCase()||'#text',id_attr:el.id||null,classes:el.className&&typeof el.className==='string'?el.className.trim().split(/\\s+/).filter(Boolean):[],text:el.innerText?.slice(0,200)||null,rect:{top:r.top,left:r.left,width:r.width,height:r.height},visible:r.width>0&&r.height>0,children:el.childElementCount||0};}function ser(el,d=0,max=4){if(!el||el.nodeType!==1)return null;const m=meta(el);m.id=nid(el);if(d<max){m.children=[];for(const c of el.children){const s=ser(c,d+1,max);if(s)m.children.push(s);}}else m.children=el.childElementCount;return m;}window.__cgDomMesh={query(s){return[...document.querySelectorAll(s)].map(el=>({...meta(el),id:nid(el)}));},getTree(max=4){return ser(document.documentElement,0,max);},highlight(s,c='#00f5ff'){document.querySelectorAll('[data-cgh]').forEach(e=>{e.style.outline='';delete e.dataset.cgh;});document.querySelectorAll(s).forEach(e=>{e.style.outline='2px solid '+c;e.dataset.cgh='1';});},};})();`;
+
+  // §BUILD 2026-07-09 — real DOM → SSE streaming. Separate from
+  // DOM_MESH_SCRIPT above (which is query-on-demand, used by the tree
+  // panel) — this one runs continuously. Batches mutations on a short
+  // timer rather than emitting per-mutation, so a busy page (chat UIs
+  // streaming tokens, for instance) doesn't flood the bridge with one
+  // IPC call per character.
+  const DOM_STREAM_SCRIPT = `
+(function() {
+  if (window.__cgDomStream) return;
+
+  function meta(el) {
+    const r = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
+    return {
+      tag: el.tagName ? el.tagName.toLowerCase() : '#text',
+      id_attr: el.id || null,
+      classes: el.className && typeof el.className === 'string'
+        ? el.className.trim().split(/\\s+/).filter(Boolean) : [],
+      text: el.innerText ? el.innerText.slice(0, 200) : (el.textContent ? el.textContent.slice(0, 200) : null),
+      rect: { top: r.top, left: r.left, width: r.width, height: r.height },
+    };
+  }
+
+  let pending = [];
+  let flushTimer = null;
+  const FLUSH_MS = 250;
+  const MAX_BATCH = 500; // hard cap so one giant re-render can't build an unbounded payload
+
+  function schedule() {
+    if (flushTimer) return;
+    flushTimer = setTimeout(flush, FLUSH_MS);
+  }
+
+  function flush() {
+    flushTimer = null;
+    if (!pending.length) return;
+    const batch = pending.slice(0, MAX_BATCH);
+    const dropped = pending.length - batch.length;
+    pending = [];
+    try {
+      window.__cg?.send('dom:event', {
+        type: 'dom.mutations',
+        url: location.href,
+        changes: batch,
+        dropped: dropped > 0 ? dropped : undefined,
+        ts: Date.now(),
+      });
+    } catch (_) {}
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.type === 'childList') {
+        m.addedNodes.forEach(n => { if (n.nodeType === 1) pending.push({ type: 'added', ...meta(n) }); });
+        m.removedNodes.forEach(n => { if (n.nodeType === 1) pending.push({ type: 'removed', tag: n.tagName ? n.tagName.toLowerCase() : '#text' }); });
+      } else if (m.type === 'attributes') {
+        pending.push({ type: 'attribute', tag: m.target.tagName?.toLowerCase(), attr: m.attributeName, value: m.target.getAttribute(m.attributeName) });
+      } else if (m.type === 'characterData') {
+        pending.push({ type: 'text', text: m.target.textContent ? m.target.textContent.slice(0, 200) : null });
+      }
+    }
+    schedule();
+  });
+
+  observer.observe(document.documentElement, {
+    childList: true, subtree: true, attributes: true, characterData: true,
+  });
+
+  // Initial full snapshot so a subscriber gets a starting point, not just deltas
+  try {
+    window.__cg?.send('dom:event', { type: 'dom.snapshot', url: location.href, ts: Date.now(), root: meta(document.documentElement) });
+  } catch (_) {}
+
+  window.__cgDomStream = {
+    stop() { observer.disconnect(); clearTimeout(flushTimer); window.__cgDomStream = null; }
+  };
+})();
+  `;
 
   function debounce(fn, ms) {
     let t;

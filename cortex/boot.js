@@ -33,6 +33,7 @@
  *   GET  /api/intelligence/intuition     — fast intuition answer
  *   POST /api/intelligence/intuition     — same, POST body
  *   POST /api/intelligence/mastermind    — causal analysis
+ *   POST /api/intelligence/adversarial   — inner-critic: scores & reconciles intuition vs mastermind
  *   GET  /api/intelligence/patterns      — pattern log
  *   GET  /api/intelligence/rca           — root cause analysis entries
  *   GET  /api/intelligence/status        — intelligence subsystem health
@@ -73,6 +74,42 @@ const SYSTEM  = 'cortex';
 
 // ── JAA memory store ──────────────────────────────────────────────────────────
 const { jaaDB, uid } = require('./memory/jaa-db');
+let _openLoopTaxonomy = null;
+function _getTaxonomy() {
+  if (_openLoopTaxonomy !== null) return _openLoopTaxonomy;
+  try { _openLoopTaxonomy = require('../lib/open-loop-taxonomy'); } catch (_) { _openLoopTaxonomy = false; }
+  return _openLoopTaxonomy;
+}
+let _sysLattice = null;
+function _getSystemLattice() {
+  if (_sysLattice !== null) return _sysLattice;
+  try { _sysLattice = require('../meta/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
+  return _sysLattice;
+}
+let _CausalGraph = null;
+function _getCausalGraphClass() {
+  if (_CausalGraph !== null) return _CausalGraph;
+  try { _CausalGraph = require('../meta/cfr/graph').CausalGraph; } catch (_) { _CausalGraph = false; }
+  return _CausalGraph;
+}
+
+// ── Intelligence: three real faculties, per docs/cortex-dual-cognition.spec ──
+// §SPLIT 2026-07-06 — _intuitionAnswer/_mastermindAnalysis used to be
+// inline functions here. Pulled into cortex/intelligence/{intuition,
+// mastermind}.js — the spec's own intended paths — with Adversarial as a
+// real third faculty (new, extends the spec's one-line "contradiction =
+// gap" with scoring + reconciliation). boot.js is the composition root:
+// it owns jaaDB/_field/the causal-graph class and wires them in, each
+// faculty file stays independently requirable and testable.
+const { createIntuition }  = require('./intelligence/intuition');
+const { createMastermind } = require('./intelligence/mastermind');
+const adversarial          = require('./intelligence/adversarial');
+
+const _intuition  = createIntuition({
+  jaaDB, getField: () => _field, getTaxonomy: _getTaxonomy,
+  getSystemLattice: _getSystemLattice, buildPatterns: (n) => _buildPatterns(n),
+});
+const _mastermind = createMastermind({ jaaDB, getField: () => _field, getCausalGraphClass: _getCausalGraphClass });
 
 // §GAP CLOSED 2026-07-06: the spec's "Unified API" (cortex.push/recall,
 // intent IR, 5-lane MQL) was 100% documentation, 0% code — confirmed by
@@ -194,88 +231,26 @@ function _buildRCA(limit = 5) {
 }
 
 // ── Intelligence: intuition (fast pattern answer) ────────────────────────────
+// Real logic now lives in cortex/intelligence/intuition.js — kept as a
+// thin wrapper here so existing callers/exports/tests are unaffected.
 function _intuitionAnswer(prompt) {
-  const p = String(prompt || '').toLowerCase();
-  // Rule-based fast answers for known query types
-  if (p.includes('health') || p.includes('status')) {
-    return {
-      ok: true,
-      text: `System coherence: ${_field.coherence.toFixed(2)}, friction: ${_field.friction.toFixed(2)}, regime: ${_field.regime}.`,
-      intent: 'status', confidence: 0.82, modelUsed: 'cortex.intuition',
-    };
-  }
-  if (p.includes('gap') || p.includes('open issue')) {
-    const n = jaaDB.count('gaps', { status: 'open' }) || 0;
-    return {
-      ok: true,
-      text: `There are currently ${n} open gaps in the system.`,
-      intent: 'gaps', confidence: 0.90, modelUsed: 'cortex.intuition',
-    };
-  }
-  if (p.includes('pattern') || p.includes('most common')) {
-    const top = _buildPatterns(3).map(p => `${p.type}(${p.count})`).join(', ');
-    return {
-      ok: true,
-      text: `Top event patterns: ${top || 'insufficient data'}.`,
-      intent: 'patterns', confidence: 0.78, modelUsed: 'cortex.intuition',
-    };
-  }
-  // Not a fast-path — caller should use mastermind/Ollama
-  return { ok: true, text: null, confidence: 0, modelUsed: 'cortex.intuition' };
+  return _intuition.answer(prompt);
 }
 
 // ── Intelligence: mastermind (causal analysis) ────────────────────────────────
+// Real logic now lives in cortex/intelligence/mastermind.js.
 function _mastermindAnalysis(prompt, contextSnippet) {
-  const gaps   = jaaDB.query('gaps', { status: 'open' }, { limit: 3 });
-  const regime = _field.regime;
+  return _mastermind.analyze(prompt, contextSnippet);
+}
 
-  // §UPGRADED 2026-07-07 — was concatenating current state ("Open issues:
-  // TYPE") without ever tracing WHY. Builds a real, bounded causal graph
-  // on-demand from the last 300 event_log rows (Cortex has no live CFR
-  // ledger of its own — that lives per-process in each of the 9 real
-  // consumers — so this is a genuine cross-section of what's actually
-  // stored here, not a fabricated or live-streaming one) and walks
-  // CausalGraph.ancestors() for each open gap, the same class extended
-  // earlier this session for RAID's topologicalProximity. Falls back to
-  // the old "Open issues: TYPE" phrasing when no real chain exists —
-  // never invents a cause that isn't in the data.
-  const { CausalGraph } = require('../meta/cfr/graph.js');
-  const graph = new CausalGraph();
-  const recentEvents = jaaDB.tail('event_log', 300);
-  for (const ev of recentEvents) graph.ingest(ev);
-  for (const g of gaps) graph.ingest({ uuid: g.id, id: g.id, ts: g.ts, type: g.type, causedBy: g.causedBy || null, source: g.source });
-
-  const traces = [];
-  const untraced = [];
-  for (const g of gaps) {
-    const chain = graph.ancestors(g.id);
-    if (chain.length > 1) {
-      traces.push(`Root-cause trace for '${g.type || g.id}': ${chain.map(e => e.type || e.id).join(' → ')}.`);
-    } else {
-      // §BUG FIXED 2026-07-07 — found by testing a mixed case (one gap
-      // with a real trace, one without) directly: the original logic
-      // only showed the generic "Open issues" line when NO gap had a
-      // trace at all, so an untraced gap sitting alongside a traced one
-      // was silently dropped from the output entirely — not degraded,
-      // just missing. Every gap now contributes something.
-      untraced.push(g.type || g.id);
-    }
-  }
-
-  const lines  = [
-    `Causal field: regime=${regime}, coherence=${_field.coherence.toFixed(2)}, entropy=${_field.entropy.toFixed(2)}.`,
-    ...traces,
-    untraced.length ? `Open issues (no traced cause) (${untraced.length}): ${untraced.join(', ')}.` : '',
-    (!gaps.length) ? 'No open issues.' : '',
-    contextSnippet ? `Context: ${String(contextSnippet).slice(0, 200)}` : '',
-  ].filter(Boolean);
-  return {
-    ok: true,
-    analysis: lines.join(' '),
-    regime,
-    field: { ..._field },
-    modelUsed: 'cortex.mastermind',
-  };
+// ── Intelligence: adversarial (inner critic) ─────────────────────────────────
+// Runs both faculties, then has Adversarial score and (where possible)
+// reconcile them, per this session's extension of the one-line spec.
+function _adversarialCompare(prompt, contextSnippet) {
+  const intuitionResult  = _intuition.answer(prompt);
+  const mastermindResult = _mastermind.analyze(prompt, contextSnippet);
+  const verdict = adversarial.compareCortexFaculties(intuitionResult, mastermindResult);
+  return { intuition: intuitionResult, mastermind: mastermindResult, adversarial: verdict };
 }
 
 // ── Assembled context snapshot (copilot Layer 2 reads this) ──────────────────
@@ -477,6 +452,119 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (p === '/api/intelligence/adversarial') {
+    const body = await readBody(req);
+    json(res, 200, _adversarialCompare(body.prompt, body.context));
+    return;
+  }
+
+  // §GAP CLOSED 2026-07-07 — nexus-query-surface.spec, build_order items
+  // 1 ("implement the route... reads from JAA directly") and 3 ("narrative
+  // synthesis... call mastermind()"). Was status: proposed, zero
+  // implementation existed anywhere (confirmed by grep for the route path
+  // before this). copilot-system-programmer.spec build_order item 1 names
+  // this as "the read layer everything else needs" — this is that layer.
+  //
+  // §HONEST SCOPE, stated per the spec's own build_order rather than left
+  // implicit:
+  //  - item 2 (fuzzy keyword resolution via intuition()'s schema-routing
+  //    variant) is NOT built. This does exact/substring matching against
+  //    gaps/event_log/blueprint text fields only — real signal, not the
+  //    full "classify guardian vs chatgpt vs sigma" resolution the spec
+  //    envisions.
+  //  - `commits` (Versionium) and `labs` (LabSession) fields are always
+  //    empty arrays with an explicit `_note` — grepped for both before
+  //    writing this; no commit-tracking or lab-session-tracking
+  //    implementation exists anywhere in the tree to query. Returning
+  //    fabricated-looking empty arrays with no note would be worse than
+  //    this being visibly incomplete.
+  //  - `field` (CFR) is the live system-wide field snapshot, not scoped
+  //    to relationships involving `about` specifically — meta/cfr/field.js
+  //    doesn't track per-relationship shape, only one global field.
+  //  - reads use jaaDB.tail() (a recent-window scan), same tradeoff
+  //    orchestrator.js's /api/recall already makes — a match outside the
+  //    scanned window won't surface. Not a full table scan.
+  if (p === '/api/cortex/query') {
+    const about  = url.searchParams.get('about') || '';
+    const window = parseInt(url.searchParams.get('window') || '3600000');
+    const since  = Date.now() - window;
+    if (!about) { json(res, 400, { ok:false, error:'about param required' }); return; }
+
+    const needle = about.toLowerCase();
+    const hay = (v) => {
+      if (v == null) return '';
+      return (typeof v === 'string' ? v : JSON.stringify(v)).toLowerCase();
+    };
+    const matches = (row, fields) => fields.some(f => hay(row[f]).includes(needle));
+
+    let gaps = [];
+    try {
+      gaps = jaaDB.tail('gaps', 500)
+        .filter(g => (g.ts || 0) >= since)
+        .filter(g => matches(g, ['domain', 'type', 'description', 'reason', 'source']))
+        .slice(0, 50);
+    } catch (_) {}
+
+    let events = [];
+    try {
+      events = jaaDB.tail('event_log', 500)
+        .filter(e => (e.ts || 0) >= since)
+        .filter(e => matches(e, ['type', 'source', 'payload']))
+        .slice(0, 50);
+    } catch (_) {}
+
+    let sigma = { records: [], note: null };
+    try {
+      const rows = jaaDB.tail('sigma_records', 200).filter(s => (s.ts || 0) >= since);
+      if (!rows.length) {
+        sigma.note = 'sigma_records table empty in this window — sigma-writer may not be running against live traffic yet';
+      } else {
+        const subjectRows = rows.filter(s => matches(s, ['source', 'type', 'eventType']));
+        sigma.records = (subjectRows.length ? subjectRows : rows).slice(0, 20);
+        if (!subjectRows.length) sigma.note = `no sigma_records matched '${about}' directly — showing recent system-wide records instead`;
+      }
+    } catch (_) { sigma.note = 'sigma_records table not queryable'; }
+
+    let field = null;
+    try { field = { ..._field, _note: 'system-wide CFR field snapshot, not scoped to this subject specifically' }; } catch (_) {}
+
+    let blueprint = [];
+    try {
+      const bp = require('../lib/blueprint').load?.();
+      if (bp) {
+        const text = JSON.stringify(bp).toLowerCase();
+        if (text.includes(needle)) blueprint = [{ note: 'subject appears in current blueprint — full divergence diffing not implemented, this is presence-only', found: true }];
+      }
+    } catch (_) {}
+
+    const commits = [];
+    const commitsNote = 'not built — no Versionium commit-tracking implementation exists in this tree (confirmed by grep; only docs/specs/VERSIONIUM.spec.md, no .js source)';
+
+    const labs = [];
+    const labsNote = 'not built — no LabSession tracking matching this spec exists (cos/playground/llm-lab.js and eravos edm-lab are unrelated systems)';
+
+    // Narrative — factual summary of what THIS query found, plus
+    // mastermind's own causal-trace/regime analysis (which queries global
+    // open gaps, not filtered to `about` — a real mismatch worth stating
+    // rather than silently blending the two into one falsely-unified voice).
+    const factualLine = `Found ${gaps.length} gap(s) and ${events.length} event(s) matching '${about}' in the last ${Math.round(window/60000)} minutes.` +
+      (sigma.note ? ` ${sigma.note}.` : ` ${sigma.records.length} sigma record(s) in window.`);
+    let mastermindLine = '';
+    try { mastermindLine = _mastermind.analyze(about, factualLine)?.analysis || ''; } catch (_) {}
+
+    const result = {
+      about, window, since, ts: Date.now(),
+      gaps, sigma, field, events, blueprint,
+      commits, labs,
+      narrative: `${factualLine} ${mastermindLine}`.trim(),
+      _scope_note: 'Keyword resolution is exact/substring only (spec build_order item 2, fuzzy resolution, not built). commits/labs are stubbed empty — see commits._note/labs._note.',
+      commits_note: commitsNote,
+      labs_note: labsNote,
+    };
+    json(res, 200, { ok: true, ...result });
+    return;
+  }
+
   if (p === '/api/intelligence/patterns') {
     const limit = parseInt(url.searchParams.get('limit') || '5');
     json(res, 200, { ok: true, patterns: _buildPatterns(limit) });
@@ -667,6 +755,34 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Settings compat ───────────────────────────────────────────────────────
+  // §SOVEREIGNTY 2026-07-09 — personas lived only as a module, so
+  // copilot/server.js reached across the system boundary with
+  // require('../cortex/personas.js') + require('../cortex/memory/jaa-db.js').
+  // That is the hardest possible wire: it couples file layout, module system
+  // and process, and makes cortex un-swappable. A capability that another
+  // system needs must be an API. Here it is.
+  if (method === 'GET' && p === '/api/personas') {
+    const { PersonaStore } = require('./personas.js');
+    const store = new PersonaStore({ jaa: jaaDB });
+    const name = url.searchParams.get('name');
+    if (name) { json(res, 200, { ok: true, persona: store.get(name) }); return; }
+    json(res, 200, { ok: true, personas: store.list() });
+    return;
+  }
+
+  if (method === 'POST' && p === '/api/personas') {
+    const body = await readBody(req);
+    try {
+      const { PersonaStore } = require('./personas.js');
+      const store = new PersonaStore({ jaa: jaaDB });
+      json(res, 200, { ok: true, ...store.set(body) });
+    } catch (e) {
+      // §1.2 — validation errors (missing systemPrompt) surface, never store silently.
+      json(res, 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   if (p === '/api/settings.js' || p === '/api/settings') {
     const rows = jaaDB.query('settings', {});
     json(res, 200, { ok: true, settings: rows });
@@ -732,6 +848,39 @@ server.listen(PORT, '127.0.0.1', () => {
   try { require('./core/raid').startHealthPoll(15000); } catch(e) {
     console.warn(`[cortex] RAID health poll failed to start: ${e.message}`);
   }
+  // §GAP CLOSED 2026-07-06 — meta/spatial/system-lattice.js was real,
+  // tested, and persisted, but nothing fed it in production — the
+  // "standing, continuously-updated" half of nexus-relationship-shape.spec
+  // v0.2 was still dormant. Feeds it from the same on-demand causal graph
+  // mastermind now builds from recent event_log rows — one real source,
+  // two real consumers, not two separate graph-construction paths.
+  // 60s interval: coarser than RAID's 15s health poll or the 5s
+  // orchestrator poll on purpose — this aggregates cross-system structure,
+  // not live health, doesn't need sub-minute freshness.
+  try {
+    const sysLattice = require('../meta/spatial/system-lattice');
+    sysLattice.load(); // rehydrate from Cortex before the first feed tick
+    const _feedLattice = () => {
+      try {
+        // §BUG FIXED 2026-07-09 (from a live console log) — this called
+        // _buildRecentCausalGraph(), which was inline in this file until the
+        // 07-07 split moved it into cortex/intelligence/mastermind.js. The
+        // helper moved; this caller did not. It threw every 60s in
+        // production, caught by the warn below and never fixed. The function
+        // is already exposed on the mastermind instance — reuse it rather
+        // than reintroducing a second copy of the same graph builder.
+        const graph = _mastermind.buildRecentCausalGraph();
+        if (graph) sysLattice.ingestCFRGraph(graph);
+      } catch (e) { console.warn(`[cortex] system-lattice feed failed: ${e.message}`); }
+    };
+    _feedLattice(); // run once immediately, don't wait a full interval for first data
+    setInterval(_feedLattice, 60000);
+  } catch (e) {
+    console.warn(`[cortex] system-lattice not available: ${e.message}`);
+  }
 });
 
-module.exports = { server, jaaDB };
+module.exports = {
+  server, jaaDB, _intuitionAnswer, _mastermindAnalysis, _adversarialCompare,
+  _buildPatterns, _buildRCA, _intuition, _mastermind, adversarial,
+};

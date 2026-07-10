@@ -361,3 +361,249 @@ The tool then earned its keep by making me *check* rather than assume: ollama's 
 **Regression after touching the hooks files** (Cortex loads the registry at boot — a real risk): cortex, copilot, guardian all still reach CONTRACT. Forward scan flags none of the six new hooks as missing.
 
 **Still not done, and named:** Clear Glass is not wired as an NCP provider. `guardian/ask.js` was built around "a browser tab connects," and `clear-glass/` contains no NCP client while `guardian/server.js` contains zero references to it. That assumption is now embedded in user-facing text ("no browser tab available") — an architectural assumption that became part of the product's contract. It is remediation #3, deliberately after a verified runtime exists to integrate against.
+
+---
+
+## PART 20 — Clear Glass wired as a real NCP provider; the ask chain proven end to end
+
+**Remediation #3, done — and it produced the first genuine end-to-end proof in this session.**
+
+**The architectural point, which I had wrong.** `guardian/ask.js` was built around "a browser tab connects via NCP" without asking *which* browser. Clear Glass is a browser: it drives claude.ai or chatgpt.com. It therefore connects under those **same provider names** (`claude`, `chatgpt`) — RAID's vocabulary, the job queue, and `pendingQueue` keys all stay exactly as they are. No new provider concept was invented; doing so would have been another competing truth layer. What changes is *who holds the tab*: a sovereign Electron browser instead of a userscript in someone else's Chrome.
+
+**`clear-glass/ncp-client.js`** implements Guardian's real NCP protocol, read from `guardian/lib/ncp.js` rather than guessed:
+1. `GET /channel?provider=X&tabId=Y` → SSE, first frame `NCP_READY`
+2. Server pushes `{type:'GUARDIAN_JOB', jobId, prompt, content}`
+3. Client posts `/result {type:'GUARDIAN_COMPLETE', provider, jobId, text}`
+
+**It refuses to fabricate.** `answer(prompt, job)` is injected and required — the constructor throws rather than connect a provider that cannot actually answer. An answerer returning nothing posts `GUARDIAN_ERROR`, never an empty success. §1.3: a canned default string would be a production stub that silently poisons every downstream reader of `job.responseText`. Reconnect uses capped exponential backoff, respecting the real "flickering" race `ncp.js` §23.12 documents.
+
+**END-TO-END, a rung above CONTRACT.** With Clear Glass connected as provider `claude`, `POST /api/copilot/prompt {provider:'auto'}` returned in **574ms**:
+
+```
+{"ok":true, "jobId":"401dfdca…", "provider":"claude",
+ "text":"Four. (answered by the Clear Glass provider…)", "modelUsed":"claude"}
+```
+
+Every link exercised, none inferred: RoutingIR resolved `auto`→`claude` (its first production use) → `createJob` → `dispatchJob` → NCP SSE push → Clear Glass answered → `POST /result` → `askSync` polled → synchronous text. This simultaneously validates the restored `createServer`, the `auto`-resolution bug fix, `askSync`'s poll loop, and RoutingIR — four things previously proven only in isolation.
+
+**A user-facing message corrected, because it was a contract.** `ask.js` said *"no browser tab available to answer."* That encoded an unverified assumption into the product's interface. It now reads: *"no provider connected on NCP channel 'X' — start a Clear Glass provider (clear-glass/ncp-client.js) or another NCP client for it."* The condition it names is the real one, and it says what satisfies it.
+
+**Regressions:** Loom 18/18. Guardian and Copilot both still reach CONTRACT.
+
+**Evidence-tier note:** this run reached a rung the boot verifier does not itself assert — `END-TO-END`. `verify-boot.js` deliberately stops at CONTRACT ("the process is alive and answering") and claims nothing about business behavior. That claim was earned here separately, by exercising the real path, and is recorded as such rather than folded into the tool's output.
+
+---
+
+## PART 21 — Merging the parallel 07-07 branch (nexus-wired-v6)
+
+**First, a correction to what I told you last turn.** I reported a list of files "missing from my tree." That list was produced before the working tree was re-synced between turns, and it is now false: 68 files carry a post-sync mtime, my `snr-filter.js` is byte-identical to theirs, and `roleConfidence` was already real. **I cannot explain the mechanism.** Every claim below is re-derived from observed state now, not from that earlier diff.
+
+**The three duplicates I predicted were already resolved by the sync, in favor of theirs, with zero dangling references:**
+- `run_command` (theirs) canonical; my `run_cockpit_command` gone. `agent-tools` registers `read_file` + `run_command`.
+- `componentDistance()` (theirs) canonical; my `componentProximity()` gone.
+- `cortex/boot.js`'s `_mastermindAnalysis` is now a one-line delegation to `cortex/intelligence/mastermind.js`. No duplicate logic.
+
+My own work survived intact: `intents.js`, `stream-digest.js`, `personas.js`, `ask.js`, `clear-glass/ncp-client.js`, `verify-boot.js`, the reverse wire scan, and the restored `createServer`.
+
+**Their tree does not boot.** `guardian/server.js` there is missing `const server = http.createServer(...)` and dies with `ReferenceError: server is not defined`. Same regression, consistent with a shared ancestor. My restored server is the only fix in either branch.
+
+**Their work is real, not claimed — I ran it.** RAID's three fitness stubs are genuinely closed (`snr-filter.js`, `tunables.js`, `roleConfidence` reading RAID's own `_weights`), backed by 16 passing tests. `cortex/intelligence/{intuition,mastermind,adversarial}.js` is the node-per-file decomposition, with 26 tests. Plus `system-lattice.js` and a 60+ test suite my branch entirely lacked.
+
+**Four suites failed against the merged tree. Each was diagnosed, not patched away:**
+
+1. **`lifeline-fluid-routing`** — their `extractExplicitAgent()` ("talk to chatgpt" → route straight there) didn't exist in my lifeline. Ported. It composes with my RAID wiring rather than bypassing it: `_tryGuardian` only consults RoutingIR when no provider was named.
+
+2. **T-005 encoded a decision that is now wrong.** It asserted `_tryGuardian` must post to `/command`, "not the dead `/api/copilot/prompt`." That was true on 07-07. I then *made that endpoint real*. Verified empirically against a booted Guardian rather than argued: `POST /command` returns `{ok, jobId, status, provider}` — **no text at all** — so their `_tryGuardian` (which reads `result || text`) returns `null` on every call, silently. Worse, `/command` **500s** on their payload, because its raw path calls `parseCommand(body.raw)` and they never send `raw`. **The old test asserted only that `_post` was called with `/command`; it never checked the outcome — so it passed while the feature could not work.** Rewrote T-004/T-005 to assert the endpoint that returns real text, with the reasoning recorded in the test file.
+
+3. **A real bug of mine, found by their test.** My `_tryGuardian` reported `provider: 'guardian'` when the response named no model — masking which agent actually answered. Guardian is the router, never the answerer. Their branch reported the dispatched agent and was right. Fixed to fall back to the resolved provider, which is always known.
+
+4. **T-006 taught me a distinction I had conflated.** Their `_tryGuardian` pre-checks `/providers`; mine relied on Guardian's server-side fail-fast. Adopted theirs as an early-out — the server stays authoritative — but split two conditions my first attempt merged: `/providers` answered and the provider is not positively connected → **fail closed** (an unlisted provider is not connected, not "unknown"); `/providers` itself unreachable → **fail open**, defer to the server rather than block on a check that may be the broken thing.
+
+5. **`copilot-adversarial-*`** — ported `_resolveIntuitionResponse` (a pure, testable decision function that surfaces a contradiction rather than hiding it) and `_queryCortexAdversarial`, and replaced my `copilot/adversarial.js` with theirs after confirming by function-name diff that theirs is a strict superset with nothing of mine lost.
+
+**`copilot.test.js` (7 failures) is stale in BOTH trees** — it requires `guardian/agents/co-pilot`, deleted when Copilot was split out of Guardian. Not a merge casualty. Left failing rather than faked.
+
+**Merged baseline, all verified by running it:**
+- **191 passed, 7 failed** (the 7 being the stale suite above). Loom's production suite 18/18.
+- cortex, copilot, guardian, architect all reach **CONTRACT**.
+- **END-TO-END re-proven post-merge**: Clear Glass connected as provider `claude`, `POST /api/copilot/prompt {provider:'auto'}` returned real text in **516ms**.
+
+---
+
+## PART 22 — Three real bugs from a live console, and the actual self-heal root cause
+
+A running-system console log is worth more than any static audit. Three bugs, all traced to root cause and fixed.
+
+**1. `[cortex] system-lattice feed failed: _buildRecentCausalGraph is not defined`** — firing every 60s in production. The helper was inline in `cortex/boot.js` until the 07-07 split moved it into `cortex/intelligence/mastermind.js`. The helper moved; the caller at line 837 did not. It's already exposed on the mastermind instance, so the fix is to call `_mastermind.buildRecentCausalGraph()` — reuse, not a second copy of the same graph builder. Proven: builds a real 4-node/4-edge graph from actual event_log rows, and `system-lattice.ingestCFRGraph()` accepts it.
+
+**2. The `cfr/sigma` warning was lying about who caused it.** Every one of the 600 occurrences reported `Caller: at _warnCoercion (...sigma.js:36)` — the warner naming itself. Its stack filter tests `l.includes('cfr/sigma.js')` with forward slashes, but V8 frames use the platform separator; on Windows every frame reads `meta\cfr\sigma.js`, so **none of the skip filters ever matched**. 600 warnings, each pointing at the warning function. Fixed by normalizing separators before filtering. Verified: the repaired diagnostic now names the real upstream caller.
+
+**3. …which then exposed the real bug.** `orchestrator/lib/sigma-writer.js` subscribed as `bus.on('*', (eventType, payload) => …)`. But `nexus-bus.js:72` emits `super.emit('*', event)` — a **single** event object. So `eventType` was the entire event and `payload` was always `undefined`. `computeSigma()` received `{type:{…}}`, coerced it, and **every `sigma_record` written since §P106 stored a type of `[object Object]` and scored against an empty payload.** The warnings were the symptom; the listener signature was the disease. Fixed and proven: a real bus event now writes `type: "guardian.job.complete"`. The historical records are unrecoverable — the true type was never persisted. (`nexus-heal-loop.js` uses the correct single-object signature; it was never affected.)
+
+**4. SELF-HEAL: I was wrong, and the truth is more specific.** I previously told James self-heal "genuinely doesn't exist." It does. `nexus-heal-loop.js` is real, correctly written, subscribes with the correct `bus.on('*', ev => …)` signature, and has its own §1.2 shape check that rejects malformed gaps. It boots — the console proves it: `[heal-loop] listening on bus for gap events`.
+
+**It has never fired on a real gap, and here is exactly why.** heal-loop is required by `orchestrator.js:130`, so it listens on the **orchestrator's in-process EventEmitter bus**. Every real gap is produced in a *different process*:
+- `guardian/userscript-*.js` emit `cortex.gap.found` on **guardian's** bus.
+- `service/nexus-diagnostic.js` (:7825) detects gaps and calls `broadcast({type:'gap.found'})` — its own SSE clients and its own ledger.
+
+Orchestrator's only SSE consumer, `connectBridgeRelay()`, pipes bridge events into `broadcast()` — orchestrator's SSE fan-out to *its* clients — **never into `bus.emit()`**. Nothing has ever carried a gap across the process boundary. heal-loop has been listening, correctly, to a bus on which no gap was ever emitted.
+
+**`lib/gap-relay.js` is that missing wire, and only that wire.** It does not re-implement healing. Three real loop-safety guards, each tested: only gap-shaped types cross; a relayed event is tagged `_relayed` and never re-relayed (no amplification storm); the same gap from two sources is deduped within a window and healed once.
+
+**A bug in my own relay, caught before shipping.** heal-loop matches `ev.type.includes('.gap.found')` — with a **leading dot**. Diagnostic emits a bare `'gap.found'`, which fails that check. Relaying it verbatim would have produced this session's dominant bug for the umpteenth time: a wire that is declared, connected, and does nothing. The relay now normalizes the bare form to `nexus.gap.detected`, heal-loop's exact-match type. Prefixed types pass through unchanged, preserving origin.
+
+**Proven on the real bus:** both `cortex.gap.found` (guardian) and `nexus.gap.detected` (diagnostic, normalized) now reach heal-loop's filter *and* pass its shape check. Wired into `orchestrator.js` beside `attachToBus`. Orchestrator and cortex both still reach CONTRACT; Loom 18/18.
+
+**Still open:** 64 implemented routes with no declared hook (§5.1); RFR2 bridge works but only 2 of 13 modules exercised; Clear Glass's NCP client is proven but idle — nothing in the Electron app constructs a `ClearGlassProvider` with a real `answer()` yet.
+
+---
+
+## PART 23 — The Clear Glass vault picker: why no provider could ever answer
+
+The `guardian-vault-picker-expansion` zip is Clear Glass, and it closes the loop on the live console — but not the way I expected. It also proves I built a duplicate.
+
+**I had Clear Glass's architecture wrong, twice.** I wrote `clear-glass/ncp-client.js` as a sovereign NCP provider. But Clear Glass *already had one*: `ProviderHost` injects **Guardian's own userscripts** (`guardian/userscript-<agent>.js`, "the exact unmodified file") into its webviews, and those connect to `/channel`. My client was a competing truth layer with zero production consumers. **Resolved by picking the canonical one:** the userscript path stays; my client moved to `tests/helpers/clear-glass-ncp-provider.js`, which is what it honestly is — the test double that proved the ask chain end to end. Re-verified after the move: 514ms, real text.
+
+**Two real, stacked production blockers, both visible in the console, neither previously understood:**
+
+1. **`[ProviderHost] no guardianDir configured` → `[Userscripts] 0 scripts loaded`.** `clear-glass/src/main/index.js` deliberately removed its hardcoded `../../../guardian` fallback ("not supposed to be baked in") and requires `GUARDIAN_DIR` explicitly — but nothing ever set it. So the four provider tabs boot and none of them ever connects to Guardian's NCP channel. Guardian therefore has no answerer, and every ask fails fast. Fixed in `autopilot.js`: the supervisor knows where guardian lives, so it now passes `env: { GUARDIAN_DIR: path.join(ROOT, 'guardian') }`. Verified the path resolves to a directory containing 7 real userscripts, and that `ProviderHost` selects them by explicit `def.userscriptFile` rather than a `readdir` — so the two `.deprecated` files are never injected.
+
+2. **`[ProviderHost] claude — loaded https://claude.ai/login`.** The tab was sitting on a **login page**. The expansion's own comment names the cause: *"nothing here ever called `vault.restore()`"* — the same declared-but-never-invoked pattern that has run through this entire session. `AgentMesh` now restores the CookieVault session on spawn. Verified the wire is real, not declared: `main/index.js:636` constructs `new AgentMesh({ ..., vault })`, `vault` is a real `CookieVault` (line 529), and `CookieVault.restore({agentId, accountId, ses})` matches the call site's signature exactly.
+
+Together these explain the whole failure: no userscript → no NCP connection; and even with one, a logged-out tab could never produce an answer. Applied all 5 expansion files after confirming by function-name diff that they are a strict superset (nothing of mine lost). All syntax-check clean.
+
+**`guardian/ask.js`'s error message corrected a second time.** It now names the real conditions — Clear Glass booted with `GUARDIAN_DIR`, and the provider tab holding a restored session rather than a login page. A message is a contract; twice now mine encoded an assumption I hadn't verified.
+
+**From `nexus-merged-v7.zip`:** that snapshot is my earlier package and is *behind* this tree (no gap-relay, no sigma-writer fix). It did contain two real agent tools I lacked — `diagnose.js` and `move-data.js` — now merged and registered. Their suite failed 5/7 until the diagnostic service was actually running, then passed **7/7**: `diagnose` hits the real `:7825` endpoint by design. Environmental, not broken — verified rather than "fixed". Note for CI: that suite requires `:7825` up.
+
+**Merged baseline:** 198 passed, 7 failed (the stale `copilot.test.js`, broken in every branch). Loom 18/18. Orchestrator, guardian, cortex all CONTRACT. End-to-end ask chain 514ms.
+
+---
+
+## PART 24 — Sovereignty: the orphaned routes and the hardwiring are one problem
+
+James stated the intent: *"no hardwiring. I need to be able to remove any system and swap in another. They use the API and the orchestrator as a hub for each connection."* Measured against the code, the intent was not implemented — and **I was the one violating it.**
+
+**Twelve direct cross-system `require()` calls existed** — one sovereign system reaching into another's filesystem. Six were mine, written this session: `routing-ir.js` required from both guardian and copilot; `cortex/personas.js` and `cortex/memory/jaa-db.js` required straight out of copilot. A `require()` across a system boundary is the hardest possible wire: it couples file layout, module system, and process. **Cortex cannot be swapped while anything requires its files.**
+
+**The two tasks turned out to be one finding.** Cortex already *exposes* these capabilities as real HTTP APIs — `/api/raid/decide`, `/api/intelligence/adversarial`, `/api/memory/insert`. Every one appears in verify-wires' orphaned-route list. **They are orphaned precisely because callers reach around them with `require()`.** The 64 undeclared routes and the hardwiring are the same disease seen from two directions.
+
+**The hub already existed, locked in a drawer.** `orchestrator.js` has a `SYS` map and `sysReq(systemId, method, path, body)` — a caller names a *system* and a *path*, never a port. But it lives inside `orchestrator.js`, unusable by any other process, so every other system reinvented a hardcoded port.
+
+**`lib/nexus-client.js`** is that indirection, extracted and shared. `call(systemId, method, path, body)`. No host. No port. A caller that cannot name a port cannot hardwire one. An unknown systemId is a loud error, never a guessed default (§1.2) — guessing a port is how you get two sources of truth.
+
+**The config was itself an orphan.** `orchestrator.config.json`'s `ports` block existed, was hot-reloadable via `nexus-config.onChange/watch`, and **nothing in the codebase read `ports.*`.** It was also wrong: it said `ollama: 11434` (the daemon) while orchestrator's `SYS` map said `3749` (the bridge) — two sources of truth, disagreeing. Nothing read it, so nothing broke. Corrected and completed (copilot/loom/eravos/diagnostic added) *before* anything started depending on it, and it is now the single authority.
+
+**Hotswap proven, not asserted.** Booted a *different implementation* of cortex on :3999, edited one config line, and — with no restart and no code change — a caller asking for system `'cortex'` reached the replacement: `{"ok":true,"impl":"replacement-cortex"}`.
+
+**Personas became an API before anything consumed it** (CLI/API first, as specified): `GET/POST /api/personas` on cortex. Copilot no longer opens cortex's database.
+
+**Refactored, all six of my violations:**
+- `copilot/server.js` — personas + jaa-db requires → `nx.get('cortex','/api/personas')`; also a hardcoded `port: 3749` → `nx.post('ollama', …)`.
+- `copilot/lifeline.js` — RoutingIR require → `nx.post('cortex','/api/raid/decide')`.
+- `guardian/server.js` — RoutingIR require → the same real API.
+
+**Two bugs caught inside this refactor.** (1) `resolveProvider` became async, but `ask.js` called it unawaited — `resolved` would have been a Promise and every job would enqueue to `pendingQueue['[object Promise]']`. Awaited. (2) A real regression I introduced: when cortex is unreachable, provider falls back to `'auto'`, which **skipped the connectivity pre-check entirely** and dispatched blindly. Now `'auto'` checks whether *any* provider is connected — unresolved does not mean unchecked. Same fail-closed-on-evidence rule.
+
+**Verified:** end-to-end 508ms through NCP. Notably, RAID consulted over its real API now picks `ollama` first (LAW_I cheap-first, health=100) rather than the `claude` reserve — routing behaviour that was invisible while everyone bypassed the API. Loom 18/18. cortex/guardian/copilot all CONTRACT. `lifeline-fluid-routing` 6/6 after fixing my regression.
+
+**Remaining hardwiring (pre-existing, not mine):** `guardian/api-dispatch.js` ×2, `guardian/server.js` `/command` path ×2, `copilot/adversarial.js` ×1 — all reaching into `cortex/core/raid` or `cortex/intelligence`. Each has a real cortex API to call instead.
+
+**Not deleted:** `/chatgpt-mode/query`. I was about to remove it as dead. In a non-linear system a route is an *affordance*; its missing module is a gap to fill, not proof the surface should die. Deleting it would collapse optionality the architecture is designed to hold open.
+
+---
+
+## PART 25 — Architecture questions, answered with evidence; and why RFR2 really has no consumers
+
+**"The hub is either cortex or orchestrator" — it is both, on different planes, and merging them would break hotswap.** Orchestrator is the *control* plane: the `SYS` map, registration, `sysReq`, contract polling. Cortex is the *data + intelligence* plane: memory, CFR, RAID, the faculties. "Cortex is the brain, copilot is the mind" matches the code exactly — cortex holds memory and faculties; copilot composes them into reasoning. But connections route through orchestrator.
+
+**"All data stores in cortex, each system a redundant backup" — today is the inverse, and I'd push back on the proposed direction.** Guardian owns `guardian/memory_store/` with its own `artifacts`, `chat_log`, `event_log`, `cfr_state`. Each system is primary; there is no central copy. Making cortex primary would make it a single point of failure and would break the sovereignty and hotswap just established — a system that cannot boot without cortex is not sovereign. The pattern that delivers both goals is **local primary, cortex mirror**, which is precisely what `bridge/ledger.js` was changed to earlier this session (it was the only system writing nothing to Cortex).
+
+**Memory subsystems, measured by real consumers:** `crystal-lattice` 13 (genuinely load-bearing), `chat-logger` 3, `vector-memory` 1, `context-builder` 1, `replay-engine` 1. **`versionium` is spec-only — `docs/specs/VERSIONIUM.spec.md`, zero code.**
+
+### The RFR2 root cause: it is not neglect, it is impossible
+
+9 of 12 RFR2 modules load and work standalone. Three do not: **`clip`, `compress`, `context`** — all three fail on `import { createKernel } from '../kernel/index.js'`, and **`meta/rfr2/kernel/` does not exist.** Not in the tree, not in `unintegrated/`, not in any uploaded zip.
+
+Those three are exactly the modules the phase-map crossref maps the architecture's biggest phases onto: **Phase 27** (System State VM → `compress.snapshot/restore`), **Phase 30** (Time-Travel Debugging → `clip.snapshotRange/restoreClip`, called *"the most direct one-to-one match in the whole corpus"*), and **Phase 109** (Epistemic Branch Runtime, called *"the big one"*). Every one of the VM-snapshot / replay-engine / epistemic-branching capabilities requested routes through them.
+
+**The kernel contract is fully derivable from its three consumers** — `createKernel({ringCap})` returning `{ingest, getAll, findById, getChildren, edgeMeta, edgeCount, droppedCount, clock}` — and is now recorded in `docs/RFR2-KERNEL-CONTRACT.md`.
+
+**It was deliberately NOT reconstructed.** The surface is determinable; the semantics are not (ring-cap eviction policy, drop accounting, whether `getAll()` guarantees causal order, clock ownership). A guessed kernel does not fail loudly — it makes `compress.snapshot()` restore to a *different* causal graph and `clip.validateClipStability()` validate an unstable clip. That is worse than absent: silent corruption of the one subsystem whose entire purpose is fidelity. §1.1 cuts against writing it from inference. The upstream path the crossref itself cites is `rfr2/packages/nexus/src/kernel` — copy it in, and three phases become buildable.
+
+**RFR2 exercised: 2 → 5 modules**, all against real data via `lib/rfr2-bridge.js`:
+- `identity.contentHash()` — stable across runs, changes with content, independent of key order. **This is the per-file versionium primitive** (Phase 32 / 105), and it works today.
+- `time.causalOrder()` / `seqPrecedes()` — real causal sort over real events.
+- `version-gate` — `createVersionGate`, `validate`, `migrate`.
+- plus `delta` and `enforcement` from earlier.
+
+**Consent boundary unchanged:** `resonance`, `irs.js`, `relational.js` are people-modeling, are not in `meta/rfr2/`, and are not to be pulled in under a phase-map pretext.
+
+---
+
+## PART 26 — Specs updated: the meaning, written down where it can't be lost
+
+James: *"the meaning is getting lost… I don't want anything inline or hardwired that can use the api, or interaction contract, with handshake verification."*
+
+**He is right, and the foundation spec already said it.** `nexus-system-foundation.spec` v1.1.0, L1, verbatim: *"all state changes are events. Nothing couples directly."* and *"Systems talk to each other through events, not direct HTTP calls."* Twelve cross-system `require()` calls violated it, six added by an AI assistant in a single session while "building features."
+
+**But the interesting part is why, and it is not carelessness.** Measured: `nexus-bus.js` is `class NexusBus extends EventEmitter`. It is **in-process**. Eighty files emit onto it; every one of the twelve NEXUS processes holds its **own instance**. There is no distributed bus. There never was.
+
+So an engineer needing a capability from another process had exactly two options — `require()` its files (couple the filesystem) or hardcode its port (couple the address) — and both violate a spec that offered no third option. **The rule wasn't ignored. It was unimplementable across the boundary, and nobody wrote that down.** The same silence is why `nexus-heal-loop` has listened faithfully, for months, to a bus on which no gap was ever emitted.
+
+### `docs/nexus-system-foundation-addendum-v1.2.0.spec` — additive, revertible
+
+Written to the existing addendum convention (v1.1.0's format). **Revert = delete the file and remove three comment markers.** No layer changes, no data migration, no API removal; each migrated call site records its prior state in its `§SOVEREIGNTY` comment.
+
+- **AX-010 Sovereign Transport** — no system reaches into another's filesystem, module tree, or database. No caller names a host or port; callers name a SYSTEM and a PATH. *A caller that cannot name a port cannot hardwire one.* Records the symmetry that makes this one problem, not two: cortex already exposes `/api/raid/decide` and `/api/intelligence/adversarial`, and both sit in the 64-orphaned-route list — **orphaned precisely because callers reached around them with `require()`**. Explicit exceptions: shared `lib/` infra (L0/L1) and self-references within a system's own subtree.
+
+- **AX-011 The Bus Does Not Span Processes** — the finding, recorded because its absence is what let the meaning get lost. L1 is a within-process spine. Across processes the sanctioned coupling is L3+L4. Existing cross-process transports are exactly two: SSE fan-out (one-way) and `lib/gap-relay.js` (gap events only). *"Do not write 'systems communicate via events' in a spec without qualifying it. That sentence is how self-heal came to listen to silence for months."*
+
+- **AX-012 Handshake Verification Precedes Use** — a route that exists but is undeclared is not in the contract; one declared but absent is a lie. Both are violations; wiring is verified in **both** directions. Corollary: *"a one-way consistency checker is blind in exactly the direction its author is blind"* — `verify-wires.js` proved "every declared hook has code" while 64 implemented routes went undeclared, six added by the session that wrote the checker. Includes the evidence-tier ladder (`PARSES < BOOTS < SERVING < HEALTHY < CONTRACT`) and why it exists: guardian passed `node --check` for an entire session while unable to boot.
+
+**The base spec now points at the addendum**, with an inline `⚠️ §AX-011 QUALIFIER` on the exact L1 paragraph that has been read as a cross-process promise. A spec whose correction is undiscoverable is the same failure as an orphaned route.
+
+**Compliance is recorded in the addendum, honestly**: 4 call sites migrated, 8 remaining (each with a real cortex API waiting — a call change, not a build), AX-011 recorded-not-resolved, AX-012 reverse scan still showing 64.
+
+### `nexus-autonomous-v8.zip` — mapped, then merged
+
+Mapped first, as instructed. v8 predates the sovereignty work (no `nexus-client`, `gap-relay`, or `personas`) and **does not contain the RFR2 kernel**. Nine genuinely new files, merged: `lib/consent.js`, `lib/build-pipeline.js`, `lib/execution-pipeline.js`, `copilot/lib/expectation-watcher.js`, and four UI files.
+
+`lib/consent.js` is the explicit, per-item, revocable consent registry for the rfr2 people-modeling boundary (`resonance`, `irs.js`, `relational.js`). Verified it **fails closed**: an ungranted item returns `false`, an unknown item returns `null`. A consent registry that failed open would be worse than none.
+
+**One AX-010 violation found in the incoming code, recorded rather than silently patched:** `lib/execution-pipeline.js` requires `../orchestrator/lib/hot-loader`, `../cos/playground`, and `../emerge/compiler/t2-gate` — shared `lib/` reaching into three sovereign systems. Listed in the addendum's `compliance.remaining`.
+
+**Regressions after merge:** Loom 18/18; cortex, guardian, copilot all CONTRACT.
+
+---
+
+## PART 27 — WARP as the spine: measured, attached, and made to produce the map
+
+James: *"warp is the spine for each system, supposed to be. the system is supposed to be mapped, as it's built, updated, fixed, all mapped first."*
+
+**Mapped first. WARP was the spine of two systems, not ten.**
+
+| consumer | files |
+|---|---|
+| `loom/schema/{axioms,driver,gates}.js` | 3 |
+| `lib/seam/{gates,build-contract,adapters/warp-cascade}.js` | 3 |
+| `ollama/server.js` | 1 |
+| guardian, cortex, copilot, orchestrator, idearium, architect, bridge, emerge | **0** |
+
+WARP is a leaf. Their actual spine is `nexus-bus.js` — a raw `EventEmitter`. Meanwhile WARP's `Stream` has exactly the spine shape (`register / on / hook / registerAxiom / emit`) and `StreamLog` (`record / entries`) is a mapping substrate.
+
+**`lib/warp-bus.js` attaches WARP rather than replacing nexus-bus.** Eighty files emit onto that bus; replacing it outright would be the largest possible change with the least possible evidence — the exact pattern that has hurt this codebase repeatedly. Instead every event is mirrored into a real WARP `Stream`, recorded to a real `StreamLog`, and checked against WARP `Axiom`s. No emitter changes. No listener changes. **Observe first, enforce second, replace only with evidence.**
+
+**I guessed WARP's API wrong and the code told me.** My first draft assumed `new Axiom(name, predicate, message)` and `stream._axioms`. The real primitive is `new Axiom(id, {check, severity})`, stored on `stream.axioms`, called as `check(event, gate, sample)`, with WARP's own `hard`/`soft` severity model — which I then used instead of the ad-hoc `strict` flag I had invented. An earlier draft would have silently checked nothing.
+
+**Four default axioms, each violated by real code in this repository.** `type-is-string` (hard) is the one `orchestrator/lib/sigma-writer.js` broke for months, writing `[object Object]` into every sigma_record. Verified directly: feeding the spine that exact malformed event returns `["type-is-string"]`. **The axiom fires.** Advisory by default — turning enforcement on over a live bus with 80 emitters on day one converts a reporting tool into an outage.
+
+**The map is a projection, not a document.** `StreamLog` records what actually ran; `GET /api/warp/map` serves it. Proven in-process: 3 events emitted, 3 mirrored, 2 distinct types, 0 violations, correct `byType` counts. **The 64 orphaned routes exist precisely because the map was a parallel document instead of a projection of code.**
+
+**An unplanned confirmation of AX-011.** Booting real orchestrator and querying `/api/bus/stats` after 7 seconds: `historySize: 0`, `sources: {}`, `listeners: 5`. The spine is attached and the bus is *silent*. Orchestrator's in-process event bus carries almost nothing, because all real cross-system traffic is HTTP. That is independent evidence for AX-011 — the bus was never the inter-system spine, and calling it one is what let self-heal listen to silence.
+
+**Registry updated — a capability that isn't declared is an orphan.** Registered `orchestrator /api/warp/map`, `cortex /api/personas`, `cortex /api/raid/decide`. Hooks 88 → 91. Forward scan: all three resolve to real code. Reverse scan: cortex 29 → 28 (`/api/raid/decide` and `/api/personas` declared = −2; `/api/personas` is also newly implemented = +1). Total 65 = guardian 33 + cortex 28 + copilot 3 + ollama 1 — header and per-surface sums agree.
+
+**Regressions:** orchestrator and cortex both reach CONTRACT after attaching the spine and editing the registry (cortex loads the registry at boot). Loom 18/18.
+
+**Next, in the order the architecture implies:** attach the spine to guardian/cortex/copilot the same way (they are the loudest buses); then migrate the 8 remaining AX-010 violations, each of which is a call change rather than a build; then the kernel unlocks Phases 27/30/109.

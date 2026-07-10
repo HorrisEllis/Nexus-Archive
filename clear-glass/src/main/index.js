@@ -42,6 +42,15 @@ const path   = require('path');
 const http   = require('http');
 const { randomUUID } = require('crypto');
 
+// §EXPANSION 2026-07-07 — ErosmancerOS is a CDP client. Without this,
+// Clear Glass's webContents were never a CDP target at all — the whole
+// eros-registry-components.js / wire/nexus-wire.js bridge layer had
+// nothing to attach to regardless of which routes it called. Must be
+// set before app is ready; cannot be toggled at runtime.
+// Port is intentionally distinct from ERAVOS/NEXUS/eros-os's own ports.
+const CG_CDP_PORT = parseInt(process.env.CG_CDP_PORT || '9333', 10);
+app.commandLine.appendSwitch('remote-debugging-port', String(CG_CDP_PORT));
+
 // ── SISO bus — must be first ───────────────────────────────────────────────
 const { createBus, emit, on, Event } = require('../core/bus');
 
@@ -245,6 +254,29 @@ function _startHeartbeat() {
 let _wireServer = null;
 
 async function _startWire() {
+  // ── ErosmancerOS proxy helper — defined first, needed for /api/connect ──
+  function _proxyEros(method, urlPath, body, timeout = 15000) {
+    return new Promise(resolve => {
+      const payload = (body && method !== 'GET') ? JSON.stringify(body) : null;
+      const req = http.request({
+        hostname: '127.0.0.1', port: EROS_PORT, path: urlPath, method,
+        headers: { 'Content-Type': 'application/json',
+          ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}) },
+      }, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => {
+          try { resolve({ status: res.statusCode, ok: res.statusCode < 400, body: JSON.parse(d) }); }
+          catch { resolve({ status: res.statusCode, ok: res.statusCode < 400, body: d }); }
+        });
+      });
+      req.setTimeout(timeout, () => { req.destroy(); resolve({ status: 504, ok: false, error: 'upstream timeout', body: { error: 'upstream timeout' } }); });
+      req.on('error', e => resolve({ status: 502, ok: false, error: e.message, body: { error: e.message } }));
+      if (payload) req.write(payload);
+      req.end();
+    });
+  }
+
   // ── Register ErosmancerOS with orchestrator ──────────────────────────────
   const erosReg = await _ncReq(NEXUS_PORTS.orchestrator, 'POST', '/api/register', {
     systemId:   'erosmancer-os',
@@ -256,6 +288,20 @@ async function _startWire() {
   console.log(erosReg.ok
     ? `[ClearGlass/Wire §AXIOM] ErosmancerOS registered with orchestrator :${NEXUS_PORTS.orchestrator}`
     : '[ClearGlass/Wire §AXIOM] orchestrator offline — ErosmancerOS standalone');
+
+  // §EXPANSION 2026-07-07 — nothing anywhere in the codebase ever called
+  // POST /api/connect on ErosmancerOS. It could register with the
+  // orchestrator and accept /api/execute calls, but had no CDP session at
+  // all — every downstream call would 503 "Not connected." Point it at
+  // Clear Glass's own remote-debugging-port (opened above via
+  // app.commandLine.appendSwitch) so its Target.setDiscoverTargets call
+  // actually sees Clear Glass's webContents.
+  const erosConnect = await _proxyEros('POST', '/api/connect', {
+    target: { type: 'local', port: CG_CDP_PORT, host: 'localhost' },
+  }, 8000);
+  console.log(erosConnect.ok
+    ? `[ClearGlass/Wire] ErosmancerOS connected to CDP :${CG_CDP_PORT}`
+    : `[ClearGlass/Wire] ErosmancerOS connect failed (will retry on first driver call): ${erosConnect.error || erosConnect.status}`);
 
   // ── Register nexus-wire itself ───────────────────────────────────────────
   await _ncReq(NEXUS_PORTS.orchestrator, 'POST', '/api/register', {
@@ -277,34 +323,30 @@ async function _startWire() {
   const _wireHb = setInterval(wirePing, 10000);
   if (_wireHb.unref) _wireHb.unref();
 
-  // ── ErosmancerOS proxy helper ────────────────────────────────────────────
-  function _proxyEros(method, urlPath, body, timeout = 15000) {
-    return new Promise(resolve => {
-      const payload = (body && method !== 'GET') ? JSON.stringify(body) : null;
-      const req = http.request({
-        hostname: '127.0.0.1', port: EROS_PORT, path: urlPath, method,
-        headers: { 'Content-Type': 'application/json',
-          ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}) },
-      }, res => {
-        let d = '';
-        res.on('data', c => d += c);
-        res.on('end', () => {
-          try { resolve({ status: res.statusCode, body: JSON.parse(d) }); }
-          catch { resolve({ status: res.statusCode, body: d }); }
-        });
-      });
-      req.setTimeout(timeout, () => { req.destroy(); resolve({ status: 504, body: { error: 'upstream timeout' } }); });
-      req.on('error', e => resolve({ status: 502, body: { error: e.message } }));
-      if (payload) req.write(payload);
-      req.end();
-    });
-  }
+  // §FIX 2026-07-07 — see wire/nexus-wire.js for the full explanation: the
+  // old ACTION_MAP pointed at /api/os/* routes that never existed in
+  // erosmancer-os/src/api/server.ts. Real contract is /api/execute with a
+  // registered node uuid, gated behind an attached CDP session. This inline
+  // copy now does the same tab-resolution + node-registration flow.
+  const _agentTabCache = new Map(); // agentId → { tabId, attached }
 
-  const ACTION_MAP = {
-    click: '/api/os/click', type: '/api/os/type', hover: '/api/os/hover',
-    scroll: '/api/os/scroll', navigate: '/api/os/navigate', evaluate: '/api/os/evaluate',
-    screenshot: '/api/os/screenshot', waitForSelector: '/api/os/wait', attribute: '/api/os/attribute',
-  };
+  async function _resolveErosTab(agentId, currentUrl) {
+    const cached = _agentTabCache.get(agentId);
+    if (cached) return cached;
+
+    const tabsResp = await _proxyEros('GET', '/api/tabs', null, 5000);
+    const tabs = (tabsResp.body && tabsResp.body.tabs) || [];
+    let match = currentUrl ? tabs.find(t => t.url === currentUrl) : null;
+    if (!match && tabs.length) match = tabs[0];
+    if (!match) return null;
+
+    const attachResp = await _proxyEros('POST', `/api/tabs/${match.targetId}/attach`, { role: 'primary' }, 8000);
+    if (attachResp.status >= 400) return null;
+
+    const entry = { tabId: match.targetId, attached: true };
+    _agentTabCache.set(agentId, entry);
+    return entry;
+  }
 
   // ── HTTP server ──────────────────────────────────────────────────────────
   _wireServer = http.createServer((req, res) => {
@@ -336,12 +378,37 @@ async function _startWire() {
         return res.end(JSON.stringify(up.body));
       }
 
-      // ClearDriver → ErosmancerOS action bridge
+      // ClearDriver → ErosmancerOS action bridge (see _resolveErosTab above)
       if (u === '/bridge/driver' && req.method === 'POST') {
-        const { action, agentId, ...args } = parsed;
-        const endpoint = ACTION_MAP[action];
-        if (!endpoint) { res.writeHead(400); return res.end(JSON.stringify({ error: `No Eros mapping: ${action}` })); }
-        const up = await _proxyEros('POST', endpoint, { tabId: agentId, ...args }, 30000);
+        const { action, agentId, selector, tag = 'div', text, url, code, currentUrl, ...args } = parsed;
+
+        if (action === 'navigate') {
+          const tab = await _resolveErosTab(agentId, currentUrl);
+          if (!tab?.tabId) { res.writeHead(502); return res.end(JSON.stringify({ ok: false, error: 'No matching Eros CDP target — is remote-debugging-port open and is Eros connected to it?' })); }
+          const up = await _proxyEros('POST', '/api/execute', { action: 'navigate', tabId: tab.tabId, payload: url }, 30000);
+          res.writeHead(up.status);
+          return res.end(JSON.stringify(up.body));
+        }
+
+        const tab = await _resolveErosTab(agentId, currentUrl);
+        if (!tab) { res.writeHead(502); return res.end(JSON.stringify({ ok: false, error: 'No matching Eros CDP target for this agent' })); }
+
+        if (action === 'register') {
+          const reg = await _proxyEros('POST', '/api/nodes', { tag, tabId: tab.tabId, selector }, 8000);
+          res.writeHead(reg.status);
+          return res.end(JSON.stringify(reg.body));
+        }
+
+        let uuid = args.uuid || args.nodeUuid;
+        if (!uuid && selector) {
+          const reg = await _proxyEros('POST', '/api/nodes', { tag, tabId: tab.tabId, selector }, 8000);
+          if (reg.status >= 400) { res.writeHead(reg.status); return res.end(JSON.stringify(reg.body)); }
+          uuid = reg.body?.node?.uuid;
+        }
+        if (!uuid) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'uuid or selector required' })); }
+
+        const payload = action === 'type' ? text : (action === 'evaluate' ? code : undefined);
+        const up = await _proxyEros('POST', '/api/execute', { action, uuid, tabId: tab.tabId, payload }, 30000);
         res.writeHead(up.status);
         return res.end(JSON.stringify(up.body));
       }
@@ -566,7 +633,7 @@ async function bootstrap() {
   });
 
   // 10. Agent mesh — Claude, ChatGPT, Gemini, Perplexity, Mistral, Grok
-  const mesh = new AgentMesh({ ctxMgr, driver, sse: { emit: (t, d) => emit(t, d) } });
+  const mesh = new AgentMesh({ ctxMgr, driver, vault, sse: { emit: (t, d) => emit(t, d) } });
   await mesh.init();
 
   // 11. Diagnostic engine — Playwright-equivalent on ClearDriver
@@ -961,7 +1028,10 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
   }
 
   win.loadFile(path.join(__dirname, '../../renderer/browser.html'), {
-    query: { agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '' },
+    query: {
+      agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '',
+      wvPreload: 'file://' + path.join(__dirname, '../preload/webview-bridge.js'),
+    },
   });
 
   win.on('maximize',   () => emit('window.maximized', { agentId, maximized: true }));
@@ -1065,7 +1135,10 @@ async function openBackgroundTab({ agentId, url = 'about:blank' } = {}) {
   });
 
   win.loadFile(path.join(__dirname, '../../renderer/browser.html'), {
-    query: { agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '' },
+    query: {
+      agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '',
+      wvPreload: 'file://' + path.join(__dirname, '../preload/webview-bridge.js'),
+    },
   });
 
   win.on('closed', () => bgTabs.delete(agentId));

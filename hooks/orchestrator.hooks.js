@@ -6,6 +6,20 @@
  */
 const HOOKS = [
   {
+    id: "orchestrator-hook-warp-map-0010",
+    name: "orchestrator-warp-map",
+    intent: "Live map of every event that ran, projected from WARP StreamLog (not a document)",
+    type: "api",
+    direction: "unidirectional",
+    from: { surface: "*", layer: 0 },
+    to: { surface: "orchestrator", layer: 1, port: 9000 },
+    config: { path: "/api/warp/map", method: "GET" },
+    contract: { axioms: [], sideEffects: [], idempotent: true },
+    references: { files: ["lib/warp-bus.js","warp/core/Stream.js"] },
+    status: "active",
+    updatedAt: "2026-07-09T00:00:00Z"
+  },
+  {
     id: "orchestrator-hook-bus-stats-0009",
     name: "orchestrator-bus-stats",
     intent: "Read nexus-bus stats (_sources presence map) — polled by lib/nerve",

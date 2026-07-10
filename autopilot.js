@@ -72,6 +72,17 @@ const ALL_KERNELS = [
       ? 'node_modules\\.bin\\electron.cmd'
       : 'node_modules/.bin/electron',
     args: ['.'], cwd: 'clear-glass', optional: true,
+    // §GAP CLOSED 2026-07-09 (from a live console log) — clear-glass logged
+    // "[ProviderHost] no guardianDir configured … userscript loading will
+    // fail until configured", then "[Userscripts] 0 scripts loaded".
+    // Consequence: the 4 provider tabs boot, but none ever connects to
+    // Guardian's NCP /channel, so guardian has no answerer and every ask
+    // fails fast. clear-glass/src/main/index.js deliberately removed its
+    // hardcoded '../../../guardian' fallback ("not supposed to be baked
+    // in") and requires GUARDIAN_DIR explicitly — but nothing set it. The
+    // supervisor knows where guardian lives; that is the right place to say
+    // so. Absolute, because clear-glass runs with cwd='clear-glass'.
+    env: { GUARDIAN_DIR: path.join(ROOT, 'guardian') },
     // §CRITICAL fix 2026-06-30 — root cause of a real 6-crash circuit-
     // breaker trip, traced from a live boot log: requestSingleInstanceLock()
     // was failing on every restart because Windows hadn't finished

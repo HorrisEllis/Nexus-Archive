@@ -70,11 +70,12 @@ const AGENT_REGISTRY = {
 };
 
 class AgentMesh {
-  constructor({ ctxMgr, driver, sse, seam }) {
+  constructor({ ctxMgr, driver, sse, seam, vault }) {
     this.ctxMgr  = ctxMgr;
     this.driver  = driver;
     this.sse     = sse;
     this.seam    = seam;
+    this.vault   = vault;
     this.agents  = new Map(); // agentKey → AgentState
     this.queue   = [];        // pending tasks
     this.processing = false;
@@ -85,6 +86,20 @@ class AgentMesh {
   }
 
   // ── Spawn agent context ───────────────────────────────────────────────
+  // §EXPANSION 2026-07-09 — CookieVault's own header comment says it exists
+  // to "support save, restore, snapshot, and diff for RAID fallback
+  // routing," but nothing here ever called vault.restore(). Every spawn()
+  // — including every fallback spawn inside route() — got a brand-new
+  // session.fromPartition() with zero cookies. Any agent behind a login
+  // (claude.ai, chatgpt.com, gemini.google.com...) would silently land on
+  // a logged-out page after a fallback, and route() would report success
+  // for a task that never actually ran.
+  //
+  // Fix: restore keyed on the *stable* agentKey ('claude', 'chatgpt', ...)
+  // rather than the ephemeral per-spawn contextId — the vault's named
+  // "account cookies" path (accountId), not its versioned per-instance
+  // snapshot path, which ContextManager already auto-populates per
+  // ephemeral contextId and is unrelated to this.
   async spawn(agentKey, options = {}) {
     const def = AGENT_REGISTRY[agentKey];
     if (!def) throw new Error(`Unknown agent: ${agentKey}`);
@@ -92,12 +107,25 @@ class AgentMesh {
     const contextId = `mesh-${agentKey}-${uuidv4().slice(0, 8)}`;
 
     // Create isolated context
-    await this.ctxMgr.create({
+    const ctx = await this.ctxMgr.create({
       agentId: contextId,
       profileOptions: options.fingerprint || {},
     });
 
+    let cookiesRestored = 0;
+    if (this.vault && ctx?.session) {
+      try {
+        const r = await this.vault.restore({ agentId: agentKey, accountId: 'default', ses: ctx.session });
+        cookiesRestored = r?.restored || 0;
+      } catch (err) {
+        this.sse.emit('mesh.vault.restore.error', { agentKey, contextId, error: err.message, ts: Date.now() });
+      }
+    }
+
+    this.sse.emit('mesh.vault.restore', { agentKey, contextId, cookiesRestored, ts: Date.now() });
+
     const state = {
+
       key:       agentKey,
       contextId,
       def,
@@ -163,6 +191,20 @@ class AgentMesh {
 
       state.status = 'idle';
       state.health = Math.min(100, state.health + 5);
+
+      // §EXPANSION 2026-07-09 — mirror of the restore in spawn(): a
+      // successful round-trip means this context's cookies are known-good
+      // for this agentKey. Persist them under the stable account slot so
+      // the *next* fallback spawn (fresh partition, zero cookies) has
+      // something real to restore instead of hitting a login wall.
+      if (this.vault) {
+        const ses = this.ctxMgr.getSession(state.contextId);
+        if (ses) {
+          ses.cookies.get({}).then(cookies =>
+            this.vault.save({ agentId: state.key, accountId: 'default', domain: new URL(def.url).hostname, cookies })
+          ).catch(err => this.sse.emit('mesh.vault.save.error', { agentKey: state.key, error: err.message, ts: Date.now() }));
+        }
+      }
 
       this.sse.emit('mesh.task.complete', {
         taskId, agentKey: state.key, contextId: state.contextId,

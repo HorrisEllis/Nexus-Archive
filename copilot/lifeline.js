@@ -159,11 +159,46 @@ async function _tryGuardian(prompt, opts = {}) {
     // either endpoint is real.
     let ragProvider = opts.provider;
     if (!ragProvider) {
+      // §SOVEREIGNTY 2026-07-09 — was require('../cortex/core/raid/routing-ir.js'),
+      // a hardwire across a system boundary that I introduced. Cortex exposes
+      // POST /api/raid/decide; copilot asks for it now. Unreachable cortex
+      // falls back to 'auto', which guardian resolves on its own side —
+      // degraded, never crashed.
       try {
-        const { buildRoutingIR } = require('../cortex/core/raid/routing-ir.js');
-        const ir = buildRoutingIR({ intent: 'lifeline-escalation', prompt });
-        ragProvider = ir.selected;
-      } catch (_) { ragProvider = 'auto'; } // RAID unreachable — fail to the old default, not a crash
+        const nx = require('../lib/nexus-client');
+        const d = await nx.post('cortex', '/api/raid/decide', { prompt }, { timeout: 3000 });
+        ragProvider = d?.agent || 'auto';
+      } catch (_) { ragProvider = 'auto'; }
+    }
+
+    // §MERGED 2026-07-09 — client-side early-out from the 07-07 branch.
+    // guardian/ask.js already fail-fasts authoritatively, so this is an
+    // optimization, not a second source of truth. Two conditions that look
+    // similar but are not, and were conflated in my first version:
+    //   - /providers answered, and the provider is not positively connected
+    //     -> FAIL CLOSED. We have real evidence; don't dispatch on a hope.
+    //     (An unlisted provider is not connected, not "unknown".)
+    //   - /providers itself is unreachable -> FAIL OPEN. We have no
+    //     evidence at all; proceed and let the server decide, rather than
+    //     blocking on a check that may itself be the broken thing.
+    if (ragProvider && ragProvider !== 'auto') {
+      const provCheck = await _get(`${GD_URL}/providers`, 3000).catch(() => null);
+      if (provCheck?.providers && provCheck.providers[ragProvider]?.connected !== true) {
+        return null; // real evidence of not-connected — fall through to the cascade
+      }
+    } else if (ragProvider === 'auto') {
+      // §REGRESSION FIXED 2026-07-09 — introduced by the sovereignty refactor
+      // in this same pass. When cortex's /api/raid/decide is unreachable we
+      // fall back to 'auto', and the branch above skipped the connectivity
+      // check entirely, dispatching blindly to a guardian that has nobody to
+      // ask. Unresolved does not mean unchecked: if /providers answers and
+      // NOT ONE provider is connected, nothing can possibly answer — return
+      // null and let the cascade handle it. Same fail-closed-on-evidence,
+      // fail-open-on-no-evidence rule as above.
+      const provCheck = await _get(`${GD_URL}/providers`, 3000).catch(() => null);
+      if (provCheck?.providers && !Object.values(provCheck.providers).some(p => p?.connected === true)) {
+        return null;
+      }
     }
 
     // Use the NEXUS co-pilot proxy on Guardian
@@ -178,7 +213,13 @@ async function _tryGuardian(prompt, opts = {}) {
 
     if (!result?.text) return null;
     const confidence = _estimateConfidence(result.text, prompt);
-    return { ok: true, text: result.text, confidence, provider: result.modelUsed || 'guardian', fromGuardian: true };
+    // §BUG FIXED 2026-07-09 — this fell back to the literal string
+    // 'guardian' when the response didn't name a model, which HIDES which
+    // agent actually answered (guardian is the router, never the answerer).
+    // The 07-07 branch reported the dispatched agent and was right to.
+    // ragProvider is always known here, so there is never a reason to
+    // report a placeholder.
+    return { ok: true, text: result.text, confidence, provider: result.modelUsed || result.provider || ragProvider, fromGuardian: true };
   } catch(_) { return null; }
 }
 
@@ -211,8 +252,43 @@ function _persist(opts, result) {
  * @param {object} opts — { requestId, sessionId, intent, model, maxTokens, channel }
  * @returns {object} { ok, text, confidence, provider_used, escalated, requestId }
  */
+// §MERGED 2026-07-09 from the parallel 07-07 branch (nexus-wired-v6).
+// Fluid routing: when a person names an agent ("talk to chatgpt", "use
+// claude"), skip the Ollama-first cascade and dispatch straight to them.
+// If that explicit dispatch fails (agent not connected), fall through to
+// the normal cascade rather than dead-ending — they asked for a specific
+// agent, but they should still get an answer.
+const KNOWN_AGENTS = ['chatgpt', 'claude', 'mistral', 'gemini', 'ollama'];
+const EXPLICIT_AGENT_RE = new RegExp(
+  `\\b(?:talk to|use|switch to|route (?:this|it)? ?to|ask)\\s+(${KNOWN_AGENTS.join('|')})\\b`, 'i'
+);
+
+function extractExplicitAgent(prompt) {
+  const m = EXPLICIT_AGENT_RE.exec(String(prompt || ''));
+  return m ? m[1].toLowerCase() : null;
+}
+
 async function route(prompt, opts = {}) {
   const requestId = opts.requestId || crypto.randomUUID();
+
+  // Explicit agent request short-circuits the cascade. Note this composes
+  // with my RAID wiring rather than bypassing it: _tryGuardian only asks
+  // RoutingIR to pick a provider when none was supplied, so an explicit
+  // agent is honored exactly as named.
+  const explicitAgent = (opts.provider && opts.provider !== 'auto') ? opts.provider : extractExplicitAgent(prompt);
+  if (explicitAgent && explicitAgent !== 'ollama') {
+    const guardianResult = await _tryGuardian(prompt, { ...opts, provider: explicitAgent, requestId });
+    if (guardianResult?.ok) {
+      const result = {
+        ok: true, text: guardianResult.text, confidence: guardianResult.confidence,
+        provider_used: guardianResult.provider, escalated: true,
+        explicit_agent_request: true, requestId,
+      };
+      _persist({ ...opts, prompt, requestId }, result, 'explicit_agent_request');
+      return result;
+    }
+    // Explicit request failed — fall through to the normal cascade.
+  }
 
   // ── 1. Try Ollama ──────────────────────────────────────────────────────────
   const ollamaResult = await _tryOllama(prompt, { ...opts, requestId });
@@ -305,4 +381,4 @@ async function health() {
   };
 }
 
-module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD };
+module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD, extractExplicitAgent };

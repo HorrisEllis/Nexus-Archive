@@ -211,9 +211,22 @@ function _subscribe() {
   const bus = _getBus();
   if (!bus) return;
 
-  bus.on('*', (eventType, payload) => {
+  // §BUG FIXED 2026-07-09 (root cause of the 600 cfr/sigma coercion warnings
+  // in the live console) — this was `bus.on('*', (eventType, payload) => ...)`.
+  // But nexus-bus.js:72 emits `super.emit('*', event)` with a SINGLE argument:
+  // the whole event object. So `eventType` was that object and `payload` was
+  // always undefined. computeSigma() then received `{type: {…}}`, warned
+  // "non-string event.type (object) — coercing", and every sigma_record
+  // written since §P106 stored a type of "[object Object]" and scored against
+  // an empty payload. The warnings were the symptom; this signature was the
+  // disease. Specific-type listeners get the same single-object shape
+  // (nexus-bus.js:71), so this is the bus's real contract, not a special case.
+  bus.on('*', (event) => {
+    const eventType = event?.type;
+    const payload   = event?.payload;
+
     // Skip feedback-loop-prone event types and our own emissions
-    if (!eventType || SKIP_TYPES_RE.test(eventType)) return;
+    if (!eventType || typeof eventType !== 'string' || SKIP_TYPES_RE.test(eventType)) return;
 
     const ts     = Date.now();
     const record = _scoreEvent(eventType, payload, ts);

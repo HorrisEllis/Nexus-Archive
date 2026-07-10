@@ -268,6 +268,43 @@ async function _queryCortexMastermind(prompt, contextLayers, sessionId) {
 // ── §P103: Session continuity — inject last N exchanges on session start ───────
 // Fetches chat_log from Cortex and appends to the 7-layer context so the
 // co-pilot remembers what was said earlier in the session.
+// §MERGED 2026-07-09 from the parallel 07-07 branch (nexus-wired-v6).
+// Pure decision function, deliberately kept out of the HTTP handler so it
+// is directly testable. Given a fast intuition answer and (maybe) an
+// adversarial verdict, decides what to actually say. A contradiction is
+// surfaced to the user, never hidden.
+function _resolveIntuitionResponse(cortexIntuition, adversarialVerdict) {
+  const av = adversarialVerdict?.adversarial;
+  if (av?.verdict === 'contradiction') {
+    return {
+      text: `${cortexIntuition.text} (Note: deeper analysis found a discrepancy — ${av.reasons.join('; ')}.)`,
+      source: 'cortex.intuition+adversarial',
+    };
+  }
+  if (av?.verdict === 'reconciled') {
+    return {
+      text: av.reconciled_hypothesis || cortexIntuition.text,
+      source: 'cortex.intuition+mastermind.reconciled',
+    };
+  }
+  return { text: cortexIntuition.text, source: 'cortex.intuition' };
+}
+
+// Runs both faculties server-side in one round trip and compares them,
+// rather than making copilot fetch intuition and mastermind separately and
+// reconcile them itself. Returns null on any failure — never a fabricated
+// verdict, so the caller falls back to plain intuition text unchanged.
+async function _queryCortexAdversarial(prompt, sessionId) {
+  try {
+    const r = await _fetch(`${CX_URL}/api/intelligence/adversarial`, {
+      method: 'POST',
+      body: { prompt, sessionId },
+      timeout: 4000,
+    });
+    return r || null;
+  } catch(_) { return null; }
+}
+
 async function _injectSessionHistory(session, contextText) {
   if (!session?.sessionId || session.exchanges > 1) return contextText;
   try {
@@ -560,11 +597,16 @@ const server = http.createServer(async (req, res) => {
     // whose systemPrompt prepends the assembled context, shaping tone,
     // tool bias, and default intent. Never fails the request — an unknown
     // persona name falls back to the built-in default inside get().
+    // §SOVEREIGNTY 2026-07-09 — this used to
+    // require('../cortex/personas.js') + require('../cortex/memory/jaa-db.js'),
+    // reaching straight into another sovereign system's filesystem. I wrote
+    // that; it was hardwiring. Copilot now asks cortex over its API through
+    // lib/nexus-client, which resolves 'cortex' from config. Cortex is
+    // swappable again, and copilot no longer opens cortex's database.
     try {
-      const { PersonaStore } = require('../cortex/personas.js');
-      const { jaaDB } = require('../cortex/memory/jaa-db.js');
-      const personaStore = new PersonaStore({ jaa: jaaDB });
-      const persona = personaStore.get(body.persona || 'default');
+      const nx = require('../lib/nexus-client');
+      const r = await nx.get('cortex', `/api/personas?name=${encodeURIComponent(body.persona || 'default')}`, { timeout: 2500 });
+      const persona = r?.persona;
       if (persona?.systemPrompt) {
         contextText = `${persona.systemPrompt}\n\n${contextText}`;
       }
@@ -775,19 +817,19 @@ const server = http.createServer(async (req, res) => {
           rq.write(b); rq.end();
         }),
         runTools: async (userPrompt) => {
-          const { PersonaStore } = require('../cortex/personas.js');
-          const { jaaDB } = require('../cortex/memory/jaa-db.js');
-          const persona = new PersonaStore({ jaa: jaaDB }).get(body.persona || 'default');
-          // Delegates the actual model call to the real ollama /api/jobs/tools
-          // endpoint built this session, rather than reimplementing it here.
-          return new Promise((resolve, reject) => {
-            const b = JSON.stringify({ prompt: userPrompt, persona: persona.name });
-            const rq = http.request({ hostname: '127.0.0.1', port: 3749, path: '/api/jobs/tools', method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } },
-              r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>{ try { resolve(JSON.parse(d)); } catch(e){ reject(e); } }); });
-            rq.on('error', reject);
-            rq.write(b); rq.end();
-          });
+          // §SOVEREIGNTY 2026-07-09 — two violations lived here, both mine:
+          // a require() into cortex's filesystem, and a hardcoded
+          // `port: 3749` for ollama. Both resolved through lib/nexus-client
+          // now: a caller that cannot name a port cannot hardwire one, and a
+          // caller that asks over HTTP does not care which implementation
+          // answers.
+          const nx = require('../lib/nexus-client');
+          let personaName = 'default';
+          try {
+            const r = await nx.get('cortex', `/api/personas?name=${encodeURIComponent(body.persona || 'default')}`, { timeout: 2500 });
+            personaName = r?.persona?.name || 'default';
+          } catch (_) { /* cortex unreachable — proceed with the default profile, never block the tool call */ }
+          return nx.post('ollama', '/api/jobs/tools', { prompt: userPrompt, persona: personaName }, { timeout: 90000 });
         },
       });
       if (intentResult) {
@@ -985,4 +1027,4 @@ server.listen(PORT, () => {
   } catch (e) { console.warn('[copilot] stream-digest not started:', e.message); }
 });
 
-module.exports = { server, streamIngest };
+module.exports = { server, streamIngest, _resolveIntuitionResponse };
