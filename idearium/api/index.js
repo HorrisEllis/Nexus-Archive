@@ -287,7 +287,6 @@ function matchRoute(method, url) {
     ['GET',    ['api','spec-engine','specs'],               'speceng.list'],
     ['POST',   ['api','spec-engine','specs'],               'speceng.create'],
     // §ROUTED 2026-07-10 — the promote action that bridges a built spec to a repo.
-    ['POST',   ['api','spec-engine','import'],              'spec.import'],
     ['POST',   ['api','spec-engine','specs',':uuid','promote'], 'spec.promote'],
     ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
     ['GET',    ['api','spec-engine','context'],             'speceng.context'],
@@ -750,32 +749,6 @@ async function handle(req, res, route, query, body) {
     //       repo that looks complete.
     //   'manual' (spec builder) — same assembly, but pending chunks are allowed
     //       and marked as TODO sections, so a human finishes them in the builder.
-    // §IMPORT 2026-07-10 — "import zip or .spec to build a repo." Accepts raw
-    // .spec text, parses its blocks into a manifest with authored sections
-    // pre-filled (zero tokens), and returns a spec that is immediately
-    // promotable to a repo via spec.promote. The zip path lands the same way:
-    // extract, feed each .spec here.
-    case 'spec.import': {
-      const se = getSpecEngine();
-      if (!se) return err(res, 503, 'spec-engine not ready');
-      const { specText, name } = body;
-      if (!specText) return err(res, 400, 'specText required (raw .spec file contents)');
-      try {
-        const result = se.importSpec({ name, specText });
-        os.emit('idearium.spec.imported', {
-          specUuid: result.manifest.uuid, name: result.manifest.name,
-          blocksFound: result.blocksFound, sectionsFilled: result.sectionsFilled.length,
-        });
-        return ok(res, {
-          manifest: result.manifest,
-          blocksFound: result.blocksFound,
-          sectionsFilled: result.sectionsFilled,
-          unmatched: result.unmatched,
-          promoteUrl: `/api/spec-engine/specs/${result.manifest.uuid}/promote`,
-        });
-      } catch (e) { return err(res, 400, `import failed: ${e.message}`); }
-    }
-
     case 'spec.promote': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
@@ -1164,27 +1137,6 @@ export function startAPI() {
 
     // Serve UI
     const cleanUrl = req.url.split('?')[0];
-    // §STACK SPLIT 2026-07-10 — serve UI static assets. The UI was broken out
-    // of a 2,335-line monolith into index.html + js/*.js (loaded via
-    // <script src>). Without serving js/ those files 404 and the whole UI goes
-    // blank. Path-traversal guarded: only files under ui/ are served.
-    if (req.method === 'GET' && (cleanUrl.startsWith('/js/') || cleanUrl.startsWith('/css/'))) {
-      const { readFileSync, existsSync } = await import('fs');
-      const { join, dirname, normalize } = await import('path');
-      const { fileURLToPath } = await import('url');
-      const __d = dirname(fileURLToPath(import.meta.url));
-      const uiRoot = join(__d, '..', 'ui');
-      const asset = normalize(join(uiRoot, cleanUrl));
-      if (!asset.startsWith(uiRoot)) { res.writeHead(403); res.end('forbidden'); return; }
-      if (existsSync(asset)) {
-        const type = asset.endsWith('.js') ? 'application/javascript'
-                   : asset.endsWith('.css') ? 'text/css' : 'text/plain';
-        res.writeHead(200, { 'Content-Type': type });
-        res.end(readFileSync(asset, 'utf8'));
-      } else { res.writeHead(404); res.end('not found'); }
-      return;
-    }
-
     if (req.method === 'GET' && (cleanUrl === '/' || cleanUrl === '/idearium' || cleanUrl === '/ui')) {
       const { readFileSync, existsSync } = await import('fs');
       const { join, dirname } = await import('path');

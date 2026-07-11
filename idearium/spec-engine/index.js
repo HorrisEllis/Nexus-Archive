@@ -539,7 +539,7 @@ export default {
   // `se.listTemplates is not a function` at runtime. Caught by calling the
   // live endpoint, not by reading the file.
   listTemplates, getTemplate, readSeed,
-  findByDedupKey, findPriorSection, importSpec,
+  findByDedupKey, findPriorSection,
   createSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
   buildChunkPrompt, archiveSpec, expandSpec,
@@ -598,71 +598,6 @@ export function findPriorSection(sectionId, sectionDesc = '', excludeSpecUuid = 
     } catch (_) {}
   }
   return best;
-}
-
-// §IMPORT 2026-07-10 — "need a way to import zip or .spec to build a repo."
-// Parse an uploaded .spec's top-level blocks and pre-fill matching sections
-// from the authored content. It is already written, so this costs ZERO tokens —
-// the same principle as template seeding, but for a whole authored spec. The
-// result is a normal spec-engine manifest: promotable to a repo, buildable for
-// any sections the .spec didn't cover.
-//
-// Parsing is intentionally simple and honest: it splits on the "# BLOCK N — X"
-// banners this format uses (see causal-nexus.spec) and, failing that, on
-// top-level "key:" headers. A block whose name fuzzy-matches a SPEC_SECTION
-// (meta, purpose/intent, schema/architecture, api/interfaces, events,
-// integration, tests/validation) fills that section. Unmatched blocks are
-// preserved verbatim in an appended "imported" meta note so nothing is lost
-// (§Information Must Never Be Lost).
-export function importSpec({ name, specText, author = 'import' }) {
-  if (!specText || !specText.trim()) throw new Error('importSpec: specText required');
-  const specName = name || (specText.match(/name:\s*(\S+)/)?.[1]) || `imported-${Date.now()}`;
-
-  // Split into blocks. Primary: "# BLOCK N — TITLE". Fallback: top-level keys.
-  const blocks = {};
-  const bannerRe = /#\s*BLOCK\s*\d+\s*[—-]\s*([A-Z][A-Z _]+)/g;
-  const banners = [...specText.matchAll(bannerRe)];
-  if (banners.length) {
-    for (let i = 0; i < banners.length; i++) {
-      const title = banners[i][1].trim().toLowerCase();
-      const start = banners[i].index;
-      const end = i + 1 < banners.length ? banners[i + 1].index : specText.length;
-      blocks[title] = specText.slice(start, end).trim();
-    }
-  }
-
-  // Map a block title to one of SPEC_SECTIONS. Explicit, auditable aliases.
-  const alias = {
-    meta: 'meta', intent: 'purpose', purpose: 'purpose', architecture: 'schema',
-    modules: 'schema', schema: 'schema', 'causal map': 'integration',
-    'event model': 'events', events: 'events', 'runtime model': 'integration',
-    interfaces: 'api', api: 'api', validation: 'tests', tests: 'tests',
-    snapshots: 'integration', 'evolution log': 'integration',
-  };
-
-  // Build the manifest, then complete every section a block maps to.
-  const manifest = createSpec({ name: specName, type: 'system', description: `imported from .spec`, author });
-  const filled = new Set();
-  const unmatched = [];
-  for (const [title, body] of Object.entries(blocks)) {
-    const sectionId = alias[title];
-    if (!sectionId) { unmatched.push(title); continue; }
-    const chunk = manifest.chunks.find(c => c.sectionId === sectionId && c.status !== 'complete');
-    if (chunk) {
-      completeChunk(manifest.uuid, chunk.uuid, `<!-- imported block: ${title} -->\n\n${body}`);
-      const fresh = loadSpec(manifest.uuid);
-      const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
-      if (fc) { fc.agent = 'import'; fc.agentModel = 'import:.spec'; }
-      saveSpec(fresh);
-      filled.add(sectionId);
-    }
-  }
-
-  const out = loadSpec(manifest.uuid);
-  out.importedBlocks = Object.keys(blocks);
-  out.importedUnmatched = unmatched;   // §nothing lost — recorded, not dropped
-  saveSpec(out);
-  return { manifest: out, blocksFound: Object.keys(blocks).length, sectionsFilled: [...filled], unmatched };
 }
 
 export { listTemplates, getTemplate, readSeed };

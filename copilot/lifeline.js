@@ -75,37 +75,27 @@ async function _get(url, timeoutMs = 5000) {
 // ── Estimate confidence from Ollama response ──────────────────────────────────
 // A simple heuristic — real confidence would come from Ollama logprobs
 // but those aren't always available. We use response characteristics.
-//
-// §FIXED 2026-07-10 — "confidence metrics are fucked, keeps using lifeline for
-// everything." Root cause: base was 0.6 against a 0.75 escalation threshold, so
-// a NORMAL answer (0.6 + 0.1 for length = 0.70) never cleared the bar and
-// escalated to Guardian every time. The heuristic was structurally biased below
-// its own threshold — lifeline fired on 100% of prompts by construction, not by
-// genuine uncertainty. Base is now 0.72 so a substantive answer clears 0.75,
-// and only thin/hedged/error responses fall through to escalation. The penalties
-// still do real work; they just start from a centre that isn't pre-failed.
 function _estimateConfidence(text = '', prompt = '') {
   if (!text || text.length < 10) return 0.1;
 
-  let score = 0.72; // base — a plain answer should NOT auto-escalate
+  let score = 0.6; // base
 
   // Longer, more detailed responses tend to be more confident
-  if (text.length > 120) score += 0.06;
-  if (text.length > 300) score += 0.06;
-  if (text.length > 600) score += 0.04;
+  if (text.length > 200) score += 0.1;
+  if (text.length > 500) score += 0.05;
 
   // Hedging language = lower confidence
-  const hedges = ['i think', 'i believe', 'might be', 'not sure', 'unclear', "i don't know", 'uncertain', 'i am not able', "i can't", 'as an ai'];
+  const hedges = ['i think', 'i believe', 'might be', 'not sure', 'unclear', "i don't know", 'uncertain'];
   const hedgeCount = hedges.filter(h => text.toLowerCase().includes(h)).length;
-  score -= hedgeCount * 0.1;
+  score -= hedgeCount * 0.08;
 
   // Direct statements = higher confidence
-  const direct = ['the answer is', 'this is', 'specifically', 'in summary', 'the key point', 'here is', "here's"];
+  const direct = ['the answer is', 'this is', 'specifically', 'in summary', 'the key point'];
   const directCount = direct.filter(d => text.toLowerCase().includes(d)).length;
-  score += directCount * 0.04;
+  score += directCount * 0.05;
 
   // Error/failure language = low confidence
-  if (text.toLowerCase().includes('error') || text.toLowerCase().includes('failed')) score -= 0.25;
+  if (text.toLowerCase().includes('error') || text.toLowerCase().includes('failed')) score -= 0.2;
 
   return Math.max(0.1, Math.min(0.99, score));
 }
