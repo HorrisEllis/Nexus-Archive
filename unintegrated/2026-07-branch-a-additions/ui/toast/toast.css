@@ -1,0 +1,35 @@
+/* ui/toast/toast.css — sovereign module. Variable-driven per the
+   spotlight system's own custom-property convention. */
+
+.toast-rail {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 10px;
+  max-width: 360px;
+  font-family: var(--font, system-ui, sans-serif);
+}
+
+.toast {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--panel-bg, #14141c);
+  border-left: 3px solid var(--toast-error, #f87171);
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: var(--fg, #e6e6e6);
+  font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  opacity: 0; transform: translateX(16px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.toast--in { opacity: 1; transform: translateX(0); }
+
+.toast--error   { border-left-color: var(--toast-error, #f87171); }
+.toast--warn    { border-left-color: var(--toast-warn, #fbbf24); }
+.toast--info    { border-left-color: var(--accent, #5eead4); }
+
+.toast__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-top: 5px; flex-shrink: 0; }
+.toast__msg { flex: 1; line-height: 1.4; }
+.toast__close {
+  background: none; border: none; color: inherit; opacity: 0.5;
+  font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0 0 6px;
+}
+.toast__close:hover { opacity: 1; }

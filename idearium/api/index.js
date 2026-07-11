@@ -59,6 +59,15 @@ function getSpecEngine() {
   }
   return _specEngine;
 }
+let _copilotAdapter = null;
+function getCopilotAdapter() {
+  if (!_copilotAdapter) {
+    import('../copilot-adapter/index.js').then(m => { _copilotAdapter = m.default || m; }).catch(e => {
+      console.warn('[idearium/api] copilot-adapter load failed:', e.message);
+    });
+  }
+  return _copilotAdapter;
+}
 function getAgentSuite() {
   if (!_agentSuite) {
     import('../agent-suite/index.js').then(m => { _agentSuite = m.default || m; }).catch(e => {
@@ -140,7 +149,7 @@ function warpStatus() {
 // import resolves, so without pre-warming the FIRST speceng.build always
 // bypasses WARP. That is precisely the build whose output most needs to enter
 // the cache. Pre-warm after agent-suite, since the dispatch needs it.
-getSpecEngine(); getAgentSuite();
+getSpecEngine(); getAgentSuite(); getCopilotAdapter();
 setTimeout(() => { getWarpChunkDispatch().catch(() => {}); }, 100);  // pre-warm; failure already recorded by warpStatus()
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
@@ -153,8 +162,50 @@ import path from 'path';
 //    called it).
 let _repoLayer = null;
 function getRepoLayer() {
-  if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS() });
+  if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS(), specEngine: getSpecEngine });
   return _repoLayer;
+}
+
+// §SHARED 2026-07-10 — the deterministic chunks-to-repo-files assembly that
+// spec.promote does. Pulled out so spec.import can call it directly and
+// create the repo as part of import ("repository created automatically"),
+// instead of requiring a second manual promote call for a spec that's
+// already complete the moment it's imported. Same rules apply: mode:'emerge'
+// refuses to promote an unfinished spec rather than shipping a repo that
+// claims completeness it doesn't have.
+// §SIMPLIFIED 2026-07-11 — RepoLayer no longer needs a rebuilt files[] +
+// specText bundle handed to it; it indexes the manifest that already
+// exists by specUuid directly (see repo/index.js's redesign — "the spec
+// is the metadata, the repo is a thin index over it"). This function's
+// job shrinks to exactly one check: is the spec actually complete enough
+// to promote. Everything past that is one line.
+function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
+  let manifest;
+  try { manifest = se.loadSpec(specUuid); }
+  catch (e) { return { error: `spec not found: ${specUuid}` }; }
+
+  const pending = manifest.chunks.filter(c => c.status !== 'complete');
+  if (mode === 'emerge' && pending.length > 0) {
+    return { error: `cannot auto-promote: ${pending.length} of ${manifest.chunks.length} chunks not built ` +
+      `(${pending.map(c => c.sectionId).join(', ')}). Build them, or promote with mode:'manual' to finish in the spec builder.` };
+  }
+
+  const result = getRepoLayer().ingest({
+    name: manifest.name,
+    specUuid: manifest.uuid,
+    source: `promote:${mode}`,
+    parent: manifest.ideaUuid || null,
+    promotedFromSpec: specUuid,
+  });
+  if (result.error) return { error: result.error };
+
+  const repoUuid = result.repo?.uuid || null;
+  if (!repoUuid) return { error: 'ingest returned no repo — promotion did not create a repository' };
+
+  return {
+    repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
+    mode, chunksBuilt: manifest.chunks.length - pending.length, chunksTotal: manifest.chunks.length,
+  };
 }
 
 const PORT    = parseInt(process.env.IDEARIUM_PORT   || '4800');
@@ -287,9 +338,12 @@ function matchRoute(method, url) {
     ['GET',    ['api','spec-engine','specs'],               'speceng.list'],
     ['POST',   ['api','spec-engine','specs'],               'speceng.create'],
     // §ROUTED 2026-07-10 — the promote action that bridges a built spec to a repo.
+    ['POST',   ['api','spec-engine','import'],              'spec.import'],
     ['POST',   ['api','spec-engine','specs',':uuid','promote'], 'spec.promote'],
     ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
     ['GET',    ['api','spec-engine','context'],             'speceng.context'],
+    // §GATE 2026-07-11 — copilot adapter boundary. See copilot-adapter/index.js.
+    ['POST',   ['api','copilot','suggest'],                 'copilot.suggest'],
     ['GET',    ['sse'],                   'sse'],
   ];
 
@@ -627,8 +681,17 @@ async function handle(req, res, route, query, body) {
           t1: compileResult.t1?.emitted?.length ?? 0,
           topology: compileResult.topology || null,
         });
+        // Compile actually finished — phase was parked at 'building' above
+        // and nothing ever moved it forward. Advance it now so the UI
+        // stops showing "building" for a build that's already done.
+        os.emit('idearium.spec.update', { uuid: params.uuid, fields: { phase: 'complete' } });
       } else {
         os.emit('idearium.error', { op: 'spec.build.compile', reason: compileResult.error });
+        // Compile failed — don't leave the spec parked on 'building' forever
+        // (that reads as "actively building" when it's actually dead).
+        // Fall back to 'specced' so the UI reflects reality and a rebuild
+        // can be re-attempted.
+        os.emit('idearium.spec.update', { uuid: params.uuid, fields: { phase: 'specced' } });
       }
 
       // Notify orchestrator
@@ -644,8 +707,11 @@ async function handle(req, res, route, query, body) {
       }).catch(()=>{});
 
       return ok(res, {
-        status: 'built', spec: os.spec(params.uuid),
-        built, missing, message: `spec ${params.uuid.slice(0,8)} → building`,
+        status: compileResult.ok ? 'built' : 'build_failed', spec: os.spec(params.uuid),
+        built, missing,
+        message: compileResult.ok
+          ? `spec ${params.uuid.slice(0,8)} → complete`
+          : `spec ${params.uuid.slice(0,8)} → build failed: ${compileResult.error || 'unknown error'}`,
         compiler: compileResult,
       });
     }
@@ -749,6 +815,56 @@ async function handle(req, res, route, query, body) {
     //       repo that looks complete.
     //   'manual' (spec builder) — same assembly, but pending chunks are allowed
     //       and marked as TODO sections, so a human finishes them in the builder.
+    // §IMPORT 2026-07-10 — "import zip or .spec to build a repo." Accepts raw
+    // .spec text, parses its blocks into a manifest with authored sections
+    // pre-filled (zero tokens), and returns a spec that is immediately
+    // promotable to a repo via spec.promote. The zip path lands the same way:
+    // extract, feed each .spec here.
+    case 'spec.import': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      const { specText, name } = body;
+      if (!specText) return err(res, 400, 'specText required (raw .spec file contents)');
+      try {
+        const result = se.importSpec({ name, specText });
+        os.emit('idearium.spec.imported', {
+          specUuid: result.manifest.uuid, name: result.manifest.name,
+          blocksFound: result.blocksFound, sectionsFilled: result.sectionsFilled.length,
+        });
+
+        // §AUTO-REPO 2026-07-10 — "repository created automatically." Every
+        // block the boundary engine found now has a completed chunk (import
+        // no longer leaves anything pending — see spec-engine's importSpec),
+        // so the spec is promotable the instant it lands. Do it here instead
+        // of waiting for a second manual call. Still non-fatal if it fails —
+        // the import itself already succeeded and is on disk either way —
+        // but the failure is reported, not swallowed.
+        let promote = null;
+        if (result.manifest.status === 'complete') {
+          promote = _promoteSpecToRepo(se, result.manifest.uuid, 'emerge');
+          if (promote.error) {
+            console.warn(`[idearium/api] auto-promote after import failed: ${promote.error}`);
+          } else {
+            os.emit('idearium.spec.promoted', {
+              specUuid: result.manifest.uuid, repoUuid: promote.repoUuid,
+              mode: 'emerge', chunksBuilt: promote.chunksBuilt, chunksTotal: promote.chunksTotal,
+              source: 'auto-import',
+            });
+          }
+        }
+
+        return ok(res, {
+          manifest: result.manifest,
+          blocksFound: result.blocksFound,
+          sectionsFilled: result.sectionsFilled,
+          unmatched: result.unmatched,
+          repoUuid: promote && !promote.error ? promote.repoUuid : null,
+          repoError: promote && promote.error ? promote.error : null,
+          promoteUrl: `/api/spec-engine/specs/${result.manifest.uuid}/promote`,
+        });
+      } catch (e) { return err(res, 400, `import failed: ${e.message}`); }
+    }
+
     case 'spec.promote': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
@@ -758,75 +874,33 @@ async function handle(req, res, route, query, body) {
       if (mode !== 'emerge' && mode !== 'manual') {
         return err(res, 400, `unknown promote mode '${mode}' — use 'emerge' (automatic) or 'manual' (spec builder)`);
       }
-      let manifest;
-      try { manifest = se.loadSpec(specUuid); }
-      catch (e) { return err(res, 404, `spec not found: ${specUuid}`); }
-
-      const pending = manifest.chunks.filter(c => c.status !== 'complete');
-      // §1.2 — automatic promotion of an unfinished spec would produce a repo
-      // that claims completeness it does not have. Refuse, and say what is left.
-      if (mode === 'emerge' && pending.length > 0) {
-        return err(res, 409, `cannot auto-promote: ${pending.length} of ${manifest.chunks.length} chunks not built ` +
-          `(${pending.map(c => c.sectionId).join(', ')}). Build them, or promote with mode:'manual' to finish in the spec builder.`);
+      const result = _promoteSpecToRepo(se, specUuid, mode);
+      if (result.error) {
+        const status = /not found/.test(result.error) ? 404 : /cannot auto-promote/.test(result.error) ? 409 : 400;
+        return err(res, status, result.error);
       }
 
-      // Assemble the artifact deterministically from real chunk content.
-      // §2026-07-10 — one repo file PER CHUNK/component, not a single collapsed
-      // .spec. Each chunk already carries fileName + comp_id + seam_id (§5.1),
-      // so the repo shows the real file structure with every file tied to its
-      // component and seam — "specs generate with the file structure and files
-      // listed as components." The canonical .spec is added alongside as an index.
-      const files = manifest.chunks
-        .sort((a, b) => a.chunkIdx - b.chunkIdx)
-        .map(c => {
-          const built = c.status === 'complete' && c.content;
-          const content = built
-            ? c.content
-            : `## ${c.sectionTitle || c.sectionId}\n\n<!-- TODO: not yet built — finish in the spec builder -->\n`;
-          return {
-            path: c.fileName || `${String(c.chunkIdx).padStart(2, '0')}-${c.sectionId}.md`,
-            content,
-            comp_id: c.comp_id || null,
-            seam_id: c.seam_id || null,
-            status: c.status,
-          };
-        });
-
-      // Canonical index .spec: the whole thing in one file, as a repo README.
-      const specText = `# ${manifest.name}\n\n` +
-        `<!-- promoted from spec ${specUuid} · mode:${mode} · ` +
-        `${manifest.chunks.length - pending.length}/${manifest.chunks.length} chunks built -->\n\n` +
-        `## File structure\n\n` +
-        files.map(f => `- \`${f.path}\`${f.comp_id ? ` — component: ${f.comp_id}` : ''} (${f.status})`).join('\n') +
-        `\n\n---\n\n` +
-        files.map(f => `### ${f.path}\n\n${f.content}`).join('\n\n');
-      files.unshift({ path: `${manifest.name.replace(/[^a-zA-Z0-9-_]/g, '-')}.spec`, content: specText, comp_id: 'index', seam_id: null, status: 'index' });
-
-      const result = getRepoLayer().ingest({
-        name: manifest.name,
-        files,
-        specText,
-        source: `promote:${mode}`,
-        parent: manifest.ideaUuid || null,
-        promotedFromSpec: specUuid,
-      });
-      if (result.error) return err(res, 400, result.error);
-
-      const repoUuid = result.repo?.uuid || null;
-      // §1.2 — if ingest returned no repo, this promote did NOT create one.
-      // Reporting ok with a null id would be a success message over a no-op.
-      if (!repoUuid) return err(res, 500, 'ingest returned no repo — promotion did not create a repository');
-
       os.emit('idearium.spec.promoted', {
-        specUuid, repoUuid,
-        mode, chunksBuilt: manifest.chunks.length - pending.length,
-        chunksTotal: manifest.chunks.length,
+        specUuid, repoUuid: result.repoUuid,
+        mode, chunksBuilt: result.chunksBuilt, chunksTotal: result.chunksTotal,
       });
       return ok(res, {
-        repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
+        repoUuid: result.repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
         mode, promotedFrom: specUuid,
-        chunksBuilt: manifest.chunks.length - pending.length, chunksTotal: manifest.chunks.length,
+        chunksBuilt: result.chunksBuilt, chunksTotal: result.chunksTotal,
       });
+    }
+
+    // §GATE 2026-07-11 — the adapter boundary itself. No intelligence lives
+    // here — see copilot-adapter/index.js's header for why that's deliberate.
+    // Callable today (the wizard's "ask copilot" button hits this), honestly
+    // reports connected:false until a real backend is registered.
+    case 'copilot.suggest': {
+      const ca = getCopilotAdapter();
+      if (!ca) return err(res, 503, 'copilot-adapter not ready');
+      const { context, goal, current_gate } = body;
+      const result = await ca.suggest({ context: context || {}, goal: goal || '', current_gate: current_gate || '' });
+      return ok(res, result);
     }
 
     case 'repo.ingest': {
@@ -1137,6 +1211,27 @@ export function startAPI() {
 
     // Serve UI
     const cleanUrl = req.url.split('?')[0];
+    // §STACK SPLIT 2026-07-10 — serve UI static assets. The UI was broken out
+    // of a 2,335-line monolith into index.html + js/*.js (loaded via
+    // <script src>). Without serving js/ those files 404 and the whole UI goes
+    // blank. Path-traversal guarded: only files under ui/ are served.
+    if (req.method === 'GET' && (cleanUrl.startsWith('/js/') || cleanUrl.startsWith('/css/'))) {
+      const { readFileSync, existsSync } = await import('fs');
+      const { join, dirname, normalize } = await import('path');
+      const { fileURLToPath } = await import('url');
+      const __d = dirname(fileURLToPath(import.meta.url));
+      const uiRoot = join(__d, '..', 'ui');
+      const asset = normalize(join(uiRoot, cleanUrl));
+      if (!asset.startsWith(uiRoot)) { res.writeHead(403); res.end('forbidden'); return; }
+      if (existsSync(asset)) {
+        const type = asset.endsWith('.js') ? 'application/javascript'
+                   : asset.endsWith('.css') ? 'text/css' : 'text/plain';
+        res.writeHead(200, { 'Content-Type': type });
+        res.end(readFileSync(asset, 'utf8'));
+      } else { res.writeHead(404); res.end('not found'); }
+      return;
+    }
+
     if (req.method === 'GET' && (cleanUrl === '/' || cleanUrl === '/idearium' || cleanUrl === '/ui')) {
       const { readFileSync, existsSync } = await import('fs');
       const { join, dirname } = await import('path');
