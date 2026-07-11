@@ -37,7 +37,9 @@ const _require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const MODULE_ID   = 'idearium.spec-engine';
-const VERSION     = '1.1.0';  // +templates, +templateId provenance (idearium-templates.spec v1.0.0)
+const VERSION     = '1.2.0';  // +multi-template composition (templateIds[]), +buildEngine selector
+                               // (auto|warp|direct), +generalized section seeding (was meta-only).
+                               // See idearium.spec's addendum (v3.1.0, 2026-07-11) for the full list.
 const COMP_ID     = 'idearium.spec-engine';
 const SEAM_PREFIX = 'idearium.spec-engine:v1:chunk';
 

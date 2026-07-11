@@ -3,6 +3,67 @@
 # Status: Pre-build spec — map before touching anything
 # Date: 2026-06-27
 
+## §ADDENDUM 2026-07-11 — Phase 1 & 2 executed
+
+Phase 1 (extract modules) and Phase 2 (channels as sovereign HTML) below
+are done, for the 10 channels this plan named plus `blueprint` (found
+inline alongside them, not originally listed but extracted the same way):
+
+  ui/channels/overview/overview.html
+  ui/channels/guardian/guardian.html
+  ui/channels/cortex/cortex.html
+  ui/channels/idearium/idearium.html
+  ui/channels/bridge/bridge.html
+  ui/channels/log/log.html
+  ui/channels/diagnose/diagnose.html
+  ui/channels/causal/causal.html          (includes the CG force-graph engine)
+  ui/channels/conversations/conversations.html
+  ui/channels/blueprint/blueprint.html
+  ui/channels/build/build.html            (build.js existed already; the
+                                            HTML host it needed never did —
+                                            fixed as part of this pass)
+
+Each is a real standalone document (inline JS rather than the plan's
+separate .js/.css per channel — functionally sovereign either way, just
+not split a second time). Every shell-scope global a channel's extracted
+code still referenced (SYSTEMS, railDots, AUTOPILOT_KEY_MAP, CP stub,
+flashDot stub, CONTRACT_KEY_MAP, _verifiedSystems, evCount/logFilter_)
+was audited call-site by call-site and either given a local definition or
+a safe no-op stub — see each channel's own `§SOVEREIGN CHANNEL` comments.
+
+**The bigger gap this closed**: `ui/home/shell.js` already existed,
+already implemented `tune()`/`tuneById()`/the SSE wiring DECOMP.md
+specifies it should own — but had exactly ONE channel registered
+('build'), and nothing on disk ever loaded shell.js at all (no HTML host
+existed). Both fixed: `ui/home/nexus-home.html` is that host, and
+shell.js's CH_META now lists all 11 channels above with a real rail UI
+to switch between them.
+
+**Also fixed, found during the same audit** — `ui/tv-shell/menu.js`,
+`spotlight.js`, and `nerve.js` (loaded by shell.js) each expected globals
+the old monolith provided by co-location in one script tag
+(`window.CH_META`, `window.curCh`, `window.B`) that a real multi-script
+shell has to expose explicitly. `nerve.js` also hard-required a
+`#nerve-canvas` element with no null-guard — its own markup lives in
+`nerve.html`, which nothing was injecting; added to nexus-home.html and
+null-guarded nerve.js itself to match the codebase's own established
+defensive pattern (see index.html's void-canvas §FIX 2026-06-21). And
+`spotlight.js`'s `CP.init()` — wires click-observation and CFR polling —
+was defined, returned, but never called by anything; now self-invokes on
+DOM-ready.
+
+**Not done — Phase 3 & 4 remain open**: `ui/home/index.html` itself is
+untouched (still the full 2788-line monolith, still production traffic,
+per this plan's own migration philosophy of proving the decomposed shape
+works standalone before cutting the monolith over). No `POST /api/ui/
+spotlight/*` HTTP control surface exists yet on the orchestrator side.
+Channel functional correctness (does guardian.html's job list actually
+render right) is verified by syntax check, dependency-closure audit, and
+static-serve reachability — not by a live multi-service NEXUS stack,
+which wasn't available to test against in the session that built this.
+
+---
+
 ## What exists now
 
 ui/home/index.html — 4032 lines, single monolith

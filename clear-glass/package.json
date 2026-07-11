@@ -1,6 +1,6 @@
 {
   "name": "clear-glass",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "NEXUS sovereign browser \u2014 SISO-native \u2192E\u2192E\u2192",
   "main": "src/main/index.js",
   "author": "James Brooks (Erosmancer)",

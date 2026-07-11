@@ -1,6 +1,16 @@
 /**
  * idearium/repo/index.js — Idearium Repo Layer (forks/zips as tracked ideas)
  * UUID: idearium-repo-v001-000000000001
+ * Version: 1.1.0
+ *
+ * §ADDENDUM 2026-07-11 — ingest() now materializes real files to disk
+ * under dataDir/repos/<repoUuid>/ whenever it has file content to write
+ * (repo.localPath/materializedCount record this), and three new methods
+ * (readFile/writeFile/deleteFile) give the API real CRUD against those
+ * materialized files. Previously this layer tracked path+bytes metadata
+ * only — a "repo" was a JSON manifest with no actual files anywhere.
+ * deleteFile moves bytes to a repo-local .trash/ rather than unlinking
+ * (§7.4 — nothing discarded silently).
  *
  * THE MERGE (per the spec): a fork or a dropped zip is not "a file" — it is an
  * IDEA with a spec and a tree. Idearium already tracks ideas through phases
@@ -92,6 +102,30 @@ export class RepoLayer {
       }
     } catch (e) { console.warn(`[idearium/repo] spec create degraded: ${e.message}`); }
 
+    // §MATERIALIZED 2026-07-11 — this used to store path+bytes only; content
+    // (when the caller has it, e.g. spec.promote's assembled chunk files)
+    // was thrown away, so a promoted repo was browsable in the UI's file
+    // list but had no real files anywhere on disk — a "repo" that was
+    // actually just a JSON manifest. Every file WITH content now gets
+    // written for real under dataDir/repos/<repoUuid>/<path>. Files without
+    // content (e.g. a dropped-zip ingest that only recorded path+bytes)
+    // still degrade to metadata-only, loudly — not silently claimed as
+    // materialized.
+    const repoRoot = path.join(this.dataDir, 'repos', repoUuid);
+    let materialized = 0;
+    for (const f of files) {
+      if (typeof f.content !== 'string') continue;
+      try {
+        const dest = path.join(repoRoot, f.path);
+        if (!dest.startsWith(repoRoot)) continue; // §1.2 — refuse a path escaping the repo root
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.writeFileSync(dest, f.content, 'utf8');
+        materialized++;
+      } catch (e) {
+        console.warn(`[idearium/repo] materialize failed for '${f.path}': ${e.message}`);
+      }
+    }
+
     // 3. the REPO record — the thing the UI lists, keyed by its spec
     const repo = {
       uuid:      repoUuid,
@@ -104,6 +138,11 @@ export class RepoLayer {
       // opened a blank panel. openRepoFor() now matches on this.
       promotedFromSpec: promotedFromSpec || null,
       specPath:  specFile ? specFile.path : null,
+      // §MATERIALIZED 2026-07-11 — where the real files actually live on
+      // disk, when any were written. null means metadata-only (honest,
+      // not hidden) — e.g. an ingest whose files carried no content.
+      localPath: materialized > 0 ? repoRoot : null,
+      materializedCount: materialized,
       parent,                                  // fork lineage
       forks:     [],
       source,                                  // 'drop' | 'fork' | 'cli'
@@ -180,6 +219,85 @@ export class RepoLayer {
     if (!r) return { error: 'not found' };
     r.status = 'archived'; r.updatedAt = Date.now(); this._save();   // §7.4 not deleted
     return { ok: true, uuid: repoUuid };
+  }
+
+  // ── file CRUD — real read/write against the materialized directory ─────────
+  // §FILE EDIT 2026-07-11 — a repo that could list files but never open or
+  // save one was a browser, not an editor. These three methods are the
+  // whole gap: resolve a repo-relative path safely (never outside
+  // localPath — §1.2, a path escape is a loud error, not a silent clamp),
+  // read/write/delete the real file, and keep repo.files[] (what the UI
+  // list renders) in sync with what's actually on disk so the two never
+  // drift apart.
+  _resolvePath(repo, relPath) {
+    if (!repo.localPath) throw new Error('repo has no materialized files — nothing to read/write (metadata-only repo)');
+    if (!relPath || typeof relPath !== 'string') throw new Error('path required');
+    const clean = relPath.replace(/^\/+/, '');
+    const abs = path.join(repo.localPath, clean);
+    const root = path.resolve(repo.localPath) + path.sep;
+    if (!path.resolve(abs).startsWith(root)) throw new Error(`path escapes repo root: ${relPath}`);
+    return { abs, clean };
+  }
+
+  readFile(repoUuid, relPath) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return { error: 'repo not found' };
+    try {
+      const { abs, clean } = this._resolvePath(r, relPath);
+      const content = fs.readFileSync(abs, 'utf8');
+      return { path: clean, content, bytes: Buffer.byteLength(content, 'utf8') };
+    } catch (e) { return { error: e.message }; }
+  }
+
+  // Creates a new file OR overwrites an existing one — same operation,
+  // distinguished only by whether repo.files[] already has that path.
+  // §1.2 — the manifest entry (bytes, updatedAt) is rewritten every save so
+  // the file list the UI renders never lies about size/recency.
+  writeFile(repoUuid, relPath, content) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return { error: 'repo not found' };
+    if (typeof content !== 'string') return { error: 'content must be a string' };
+    try {
+      if (!r.localPath) {
+        // First write to a metadata-only repo (e.g. one ingested by a
+        // dropped-zip with no content) — materialize it now instead of
+        // refusing, since a repo record already exists to attach files to.
+        r.localPath = path.join(this.dataDir, 'repos', repoUuid);
+        fs.mkdirSync(r.localPath, { recursive: true });
+      }
+      const { abs, clean } = this._resolvePath(r, relPath);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, content, 'utf8');
+
+      const bytes = Buffer.byteLength(content, 'utf8');
+      const existing = r.files.find(f => f.path === clean);
+      if (existing) { existing.bytes = bytes; existing.status = 'edited'; }
+      else { r.files.push({ path: clean, bytes, comp_id: null, seam_id: null, status: 'added' }); r.fileCount = r.files.length; }
+      r.materializedCount = (r.materializedCount || 0) + (existing ? 0 : 1);
+      r.updatedAt = Date.now();
+      this._save();
+      return { ok: true, path: clean, bytes, created: !existing };
+    } catch (e) { return { error: e.message }; }
+  }
+
+  deleteFile(repoUuid, relPath) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return { error: 'repo not found' };
+    try {
+      const { abs, clean } = this._resolvePath(r, relPath);
+      // §7.4 — nothing discarded silently: the manifest entry is removed
+      // (so the UI stops listing it) but the bytes are moved to a
+      // sibling .trash/ folder inside the repo, not unlinked outright.
+      const trashDir = path.join(r.localPath, '.trash');
+      fs.mkdirSync(trashDir, { recursive: true });
+      const trashDest = path.join(trashDir, `${Date.now()}-${path.basename(clean)}`);
+      if (fs.existsSync(abs)) fs.renameSync(abs, trashDest);
+      r.files = r.files.filter(f => f.path !== clean);
+      r.fileCount = r.files.length;
+      r.updatedAt = Date.now();
+      this._save();
+      return { ok: true, path: clean, trashedTo: trashDest };
+    } catch (e) { return { error: e.message }; }
   }
 }
 

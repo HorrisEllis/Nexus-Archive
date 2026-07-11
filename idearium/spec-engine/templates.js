@@ -1,7 +1,17 @@
 /**
  * idearium/spec-engine/templates.js — Spec Template Registry
  * UUID: nexus-idearium-templates-v1-0000-2026-0710-jamesbrooks-001
- * Version: 1.0.0
+ * Version: 1.1.0
+ *
+ * §ADDENDUM 2026-07-11 — five new templates (architecture, schemas,
+ * checklists, axioms, compartments) alongside the original four kind-
+ * templates + genesis. Each seeds a different subset of SPEC_SECTIONS via
+ * `## SECTION: <id>` markers (see spec-engine/index.js's
+ * _seedSectionsFromTemplate) — pick several together (spec-engine.createSpec
+ * now takes templateIds[], not just one) to compose a spec whose sections
+ * come from more than one template at once. compartments.spec is designed
+ * to be promoted to a repository the moment it's seeded, before any
+ * component code exists — see its own header comment.
  *
  * §NEW — first-page template picker needs a real list to render, not a
  * hardcoded 4-string dropdown. Each entry maps to a `type` createSpec()

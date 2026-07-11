@@ -5,14 +5,25 @@
 Every behavior is a Gate on a Stream. No module talks to another directly.
 Commands arrive as Events. Gates transform them. SSE broadcasts results.
 
+## §ADDENDUM 2026-07-11 — v3.2.0, renderer decomposed
+
+`renderer/browser.html` was 1879 lines with ~1600 of that as one inline
+`<script>` block. Extracted to `renderer/browser.js` (external, same-origin
+`<script src>`); `browser.html` is 275 lines now, structure only. CSP's
+`script-src` dropped `'unsafe-inline'` — nothing inline left to justify it
+(`style-src` keeps it; inline `style="..."` attributes weren't part of
+this pass). `npm test` below is unaffected — it exercises `src/`, not
+`renderer/`, and was re-run after the extraction (46/46, unchanged).
+
 ---
 
 ## Boot
 
 ```bash
 npm install
-npm test       # 29 tests, pure Node — no Electron needed
+npm test       # 46 tests total (29 bus + 17 watchdog), pure Node — no Electron needed
 npm start      # Launch browser
+
 ```
 
 ---

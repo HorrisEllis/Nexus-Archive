@@ -737,14 +737,106 @@ function renderApiRepoPanel(repo) {
   if (!repo) {
     document.getElementById('repo-badge').textContent = 'no repo linked to this idea';
     tree.innerHTML = `<div class="repo-empty">no repo linked yet<br><br>drop files below to attach one to this idea<br><br><button class="modal-btn confirm" onclick="document.getElementById('repo-drop-input').click()">drop repo files…</button></div>`;
+    CURRENT_API_REPO = null; ACTIVE_API_FILE = null; _showIdeEditor(false);
     return;
   }
-  document.getElementById('repo-badge').textContent = `${repo.fileCount} files · ${repo.phase}${repo.forks.length?` · ${repo.forks.length} fork(s)`:''}`;
+  document.getElementById('repo-badge').textContent = `${repo.fileCount} files · ${repo.phase}${repo.forks.length?` · ${repo.forks.length} fork(s)`:''}${repo.localPath?' · materialized on disk':''}`;
+  CURRENT_API_REPO = repo;
+  const statusLine = repo.localPath
+    ? `${repo.materializedCount||repo.fileCount} of ${repo.fileCount} files materialized as real files — <span style="color:var(--mint)">${escapeHtml(repo.localPath)}</span>`
+    : (repo.promotedFromSpec ? 'promoted from spec — file structure as components (no content-addressable store for this one — metadata only)' : 'manifest only — file content isn\'t stored yet');
+  const addBtn = `<div style="padding:4px 2px 10px"><button class="action-btn" onclick="addApiRepoFile('${repo.uuid}')">+ add file</button></div>`;
   tree.innerHTML = `
     <div class="repo-empty" style="text-align:left;padding:14px">
-      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">${repo.promotedFromSpec ? 'promoted from spec — file structure as components' : 'manifest only — file content isn\'t stored yet, see note'}</div>
-      ${(repo.files||[]).map(f=>`<div style="font-family:var(--mono);font-size:11px;padding:3px 0;color:var(--text2)">${escapeHtml(f.path)} <span style="color:var(--text3)">(${f.bytes}b)</span>${f.comp_id?`<br><span style="color:var(--accent);font-size:9px;padding-left:12px">▸ ${escapeHtml(f.comp_id)}${f.status?` · ${f.status}`:''}</span>`:''}</div>`).join('') || '<div style="color:var(--text3)">no files</div>'}
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">${statusLine}</div>
+      ${addBtn}
+      ${(repo.files||[]).map(f=>`
+        <div style="display:flex;align-items:center;gap:6px;padding:3px 0" class="api-file-row${ACTIVE_API_FILE===f.path?' active':''}">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text2);cursor:pointer;flex:1" onclick="openApiRepoFile('${repo.uuid}','${f.path.replace(/'/g,"\\'")}')">
+            ${escapeHtml(f.path)} <span style="color:var(--text3)">(${f.bytes}b)</span>${f.comp_id?`<br><span style="color:var(--accent);font-size:9px;padding-left:12px">▸ ${escapeHtml(f.comp_id)}${f.status?` · ${f.status}`:''}</span>`:''}
+          </span>
+          ${repo.localPath ? `<span style="cursor:pointer;color:var(--text3);font-size:12px;padding:0 4px" title="delete" onclick="event.stopPropagation();deleteApiRepoFile('${repo.uuid}','${f.path.replace(/'/g,"\\'")}')">×</span>` : ''}
+        </div>`).join('') || '<div style="color:var(--text3)">no files</div>'}
     </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// API REPO FILE EDITOR — real read/write against a materialized repo,
+// via GET/POST/DELETE /api/repos/:uuid/file. Separate from openFile()
+// above, which is the read-only local-folder (File System Access) browser
+// — this is the API-backed path with actual save/add/delete.
+// ════════════════════════════════════════════════════
+let CURRENT_API_REPO = null;
+let ACTIVE_API_FILE = null;
+let API_FILE_DIRTY = false;
+
+function _showIdeEditor(show) {
+  document.getElementById('ide-code').style.display = show ? 'none' : '';
+  document.getElementById('ide-editor').style.display = show ? '' : 'none';
+}
+
+async function openApiRepoFile(repoUuid, filePath) {
+  if (API_FILE_DIRTY && !confirm(`discard unsaved changes to ${ACTIVE_API_FILE}?`)) return;
+  ACTIVE_API_FILE = filePath;
+  API_FILE_DIRTY = false;
+  renderApiRepoPanel(CURRENT_API_REPO);
+  document.getElementById('ide-tabs').innerHTML = `${escapeHtml(filePath)}` +
+    `<span class="ide-tab-dirty" id="ide-dirty" style="display:none">● unsaved</span>` +
+    `<button class="ide-tab-btn" onclick="saveApiRepoFile()">save</button>`;
+  try {
+    const r = await api(`/api/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`);
+    _showIdeEditor(true);
+    const ta = document.getElementById('ide-editor');
+    ta.value = r.content;
+    ta.oncancel = null;
+    ta.oninput = () => { API_FILE_DIRTY = true; const d = document.getElementById('ide-dirty'); if (d) d.style.display = ''; };
+  } catch (e) {
+    _showIdeEditor(false);
+    document.getElementById('ide-code').textContent = `// could not read file: ${e.message}`;
+  }
+}
+
+async function saveApiRepoFile() {
+  if (!CURRENT_API_REPO || !ACTIVE_API_FILE) return;
+  const content = document.getElementById('ide-editor').value;
+  try {
+    await api(`/api/repos/${CURRENT_API_REPO.uuid}/file`, {
+      method: 'POST', body: JSON.stringify({ path: ACTIVE_API_FILE, content }),
+    });
+    API_FILE_DIRTY = false;
+    const d = document.getElementById('ide-dirty'); if (d) d.style.display = 'none';
+    toast(`saved ${ACTIVE_API_FILE}`, 'ok');
+    await loadApiRepos();
+    const fresh = API_REPOS.find(r => r.uuid === CURRENT_API_REPO.uuid);
+    if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
+  } catch (e) { toast(`save failed: ${e.message}`, 'err'); }
+}
+
+async function addApiRepoFile(repoUuid) {
+  const filePath = await themedPrompt('new file path (e.g. src/notes.md):', 'add file');
+  if (!filePath) return;
+  try {
+    await api(`/api/repos/${repoUuid}/file`, {
+      method: 'POST', body: JSON.stringify({ path: filePath, content: '' }),
+    });
+    toast(`created ${filePath}`, 'ok');
+    await loadApiRepos();
+    const fresh = API_REPOS.find(r => r.uuid === repoUuid);
+    if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
+    openApiRepoFile(repoUuid, filePath);
+  } catch (e) { toast(`create failed: ${e.message}`, 'err'); }
+}
+
+async function deleteApiRepoFile(repoUuid, filePath) {
+  if (!confirm(`delete ${filePath}? (moved to .trash/, not permanently erased — §7.4)`)) return;
+  try {
+    await api(`/api/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' });
+    toast(`deleted ${filePath}`, 'ok');
+    if (ACTIVE_API_FILE === filePath) { ACTIVE_API_FILE = null; _showIdeEditor(false); document.getElementById('ide-tabs').textContent = 'no file open'; document.getElementById('ide-code').textContent = '// click a file in the tree to open it here'; }
+    await loadApiRepos();
+    const fresh = API_REPOS.find(r => r.uuid === repoUuid);
+    if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
+  } catch (e) { toast(`delete failed: ${e.message}`, 'err'); }
 }
 
 async function pickLocalRepo() {

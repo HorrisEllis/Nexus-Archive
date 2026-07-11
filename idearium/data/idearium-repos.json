@@ -760,10 +760,10 @@
         },
         {
           "path": "00-meta.md",
-          "bytes": 336,
+          "bytes": 90,
           "comp_id": "idearium.spec-engine",
           "seam_id": "idearium.spec-engine:v1:chunk:2bb72761:meta",
-          "status": "complete"
+          "status": "edited"
         },
         {
           "path": "01-purpose.md",
@@ -831,7 +831,106 @@
       ],
       "phase": "building",
       "createdAt": 1783756412813,
-      "updatedAt": 1783756412813,
+      "updatedAt": 1783757240689,
+      "status": "active",
+      "localPath": "data/repos/nexus-id-repo-40853aae",
+      "materializedCount": 12
+    },
+    {
+      "uuid": "nexus-id-repo-4efbbc6c",
+      "name": "Waypoint",
+      "ideaUuid": "56321d4b-2fb8-45da-86bd-5777e22804fe",
+      "specUuid": "d2f2e3d3-c5e9-4ec0-9bc1-607072daf85a",
+      "promotedFromSpec": "6d7f7dd2-daea-4f54-bf68-76cf7f4f9e12",
+      "specPath": "Waypoint.spec",
+      "localPath": "/home/claude/work/merged/nexus/idearium/data/repos/nexus-id-repo-4efbbc6c",
+      "materializedCount": 11,
+      "parent": null,
+      "forks": [],
+      "source": "promote:emerge",
+      "fileCount": 11,
+      "files": [
+        {
+          "path": "Waypoint.spec",
+          "bytes": 21133,
+          "comp_id": "index",
+          "seam_id": null,
+          "status": "index"
+        },
+        {
+          "path": "00-meta.md",
+          "bytes": 336,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:meta",
+          "status": "complete"
+        },
+        {
+          "path": "01-purpose.md",
+          "bytes": 1126,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:purpose",
+          "status": "complete"
+        },
+        {
+          "path": "02-axioms.md",
+          "bytes": 2466,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:axioms",
+          "status": "complete"
+        },
+        {
+          "path": "03-schema.md",
+          "bytes": 1414,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:schema",
+          "status": "complete"
+        },
+        {
+          "path": "04-api.md",
+          "bytes": 89,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:api",
+          "status": "complete"
+        },
+        {
+          "path": "05-events.md",
+          "bytes": 10401,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:events",
+          "status": "complete"
+        },
+        {
+          "path": "06-integration.md",
+          "bytes": 1330,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:integration",
+          "status": "complete"
+        },
+        {
+          "path": "07-failure_modes.md",
+          "bytes": 1093,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:failure_modes",
+          "status": "complete"
+        },
+        {
+          "path": "08-build_order.md",
+          "bytes": 777,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:build_order",
+          "status": "complete"
+        },
+        {
+          "path": "09-tests.md",
+          "bytes": 1121,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:6d7f7dd2:tests",
+          "status": "complete"
+        }
+      ],
+      "phase": "building",
+      "createdAt": 1783756623771,
+      "updatedAt": 1783756623771,
       "status": "active"
     }
   ]

@@ -322,6 +322,12 @@ body{display:flex;flex-direction:column;position:relative}
 .ide-tabs{height:30px;border-bottom:1px solid var(--b0);display:flex;align-items:center;padding:0 10px;gap:8px;flex-shrink:0;font-family:var(--mono);font-size:10px;color:var(--text2)}
 .ide-code{flex:1;overflow:auto;padding:14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);white-space:pre;background:rgba(5,7,11,.4)}
 .ide-code .ln{color:var(--text3);display:inline-block;width:34px;text-align:right;margin-right:14px;user-select:none}
+.ide-editor{flex:1;overflow:auto;padding:14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);background:rgba(5,7,11,.4);border:none;outline:none;resize:none;white-space:pre;tab-size:2}
+.ide-editor:focus{background:rgba(5,7,11,.6)}
+.ide-tab-btn{background:var(--bg3,#1a1f2b);border:1px solid var(--b1,#2a2f3b);border-radius:4px;color:var(--text2);font-family:var(--mono);font-size:10px;padding:2px 8px;cursor:pointer;margin-left:auto}
+.ide-tab-btn:hover{border-color:var(--accent,#5af);color:var(--text)}
+.ide-tab-btn.danger:hover{border-color:var(--red,#e25);color:var(--red,#e25)}
+.ide-tab-dirty{color:var(--amber,#e8a233);font-size:9px;margin-left:4px}
 .repo-empty{display:flex;align-items:center;justify-content:center;height:100%;font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center;padding:30px;flex-direction:column;gap:12px}
 
 /* ════════════════════════════════════════════════════
@@ -545,6 +551,7 @@ body{display:flex;flex-direction:column;position:relative}
         <div class="ide-pane">
           <div class="ide-tabs" id="ide-tabs">no file open</div>
           <div class="ide-code" id="ide-code">// click a file in the tree to open it here</div>
+          <textarea class="ide-editor" id="ide-editor" style="display:none" spellcheck="false"></textarea>
         </div>
       </div>
     </section>

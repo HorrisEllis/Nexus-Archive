@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     3.0.0
+    version:     3.1.0
     foundation:  nexus-system-foundation@1.0.0
     port:        4800
     uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001
@@ -10,6 +10,32 @@ spec:
       as a seed idea and progresses through phases.
       The Spatial lattice builds a resonance-weighted graph connecting
       ideas to specs to gaps. High-weight edges = strong association.
+
+  addendum:
+    - version: 3.1.0
+      date:    2026-07-11
+      changes: >
+        Multi-template spec composition (spec-engine.createSpec now takes
+        templateIds[], not just one templateId — seeded sections merge
+        across every selected template, first-pick-wins on overlap).
+        Six new architecture templates (architecture, schemas, checklists,
+        axioms, compartments, plus the existing genesis) seed up to 8 of
+        10 spec sections deterministically, zero agent dispatch.
+        buildEngine selector (auto|warp|direct) on createSpec — 'warp'
+        fails loud instead of silently downgrading when WARP's cache
+        isn't loaded; 'direct' bypasses it on purpose.
+        RepoLayer materializes real files to disk on promote
+        (data/repos/<uuid>/) instead of tracking path+bytes metadata
+        only — repo.localPath/materializedCount record this honestly.
+        Repo file CRUD: GET/POST/DELETE /api/repos/:uuid/file — read,
+        edit, add, and soft-delete (moved to .trash/, §7.4) files inside
+        a materialized repo, wired into the UI's repo panel as a real
+        editor (was read-only metadata listing before).
+      verified: >
+        Live-tested end to end against a running idearium server: idea
+        capture → 5-template spec creation → 100% deterministic +
+        cross-spec-reuse build → promote → materialized repo → file
+        read/edit/add/delete, all confirmed on disk.
 
   core:
     schemas:

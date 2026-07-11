@@ -404,6 +404,14 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','fork'],        'repo.fork'],
     ['DELETE', ['api','repos',    ':uuid'],               'repo.archive'],
     ['GET',    ['api','repos',    ':uuid','lineage'],     'repo.lineage'],
+    // §FILE EDIT 2026-07-11 — repo files were browsable metadata only,
+    // never readable or writable through the API. path travels as a query
+    // param / body field (not a URL segment) so nested paths ('src/x.js')
+    // don't need wildcard route matching.
+    ['GET',    ['api','repos',    ':uuid','file'],         'repo.file.read'],
+    ['PUT',    ['api','repos',    ':uuid','file'],         'repo.file.write'],
+    ['POST',   ['api','repos',    ':uuid','file'],         'repo.file.write'],
+    ['DELETE', ['api','repos',    ':uuid','file'],         'repo.file.delete'],
   ];
 
   for (const [m, pattern, action] of dynRoutes) {
@@ -925,6 +933,47 @@ async function handle(req, res, route, query, body) {
 
     case 'repo.lineage':
       return ok(res, { lineage: getRepoLayer().lineage(params.uuid) });
+
+    // §FILE EDIT 2026-07-11 — read/write/delete a real file inside a
+    // materialized repo. path is a query param on GET/DELETE, a body field
+    // on PUT/POST — never a URL segment, so nested paths need no wildcard
+    // routing and no extra escaping.
+    case 'repo.file.read': {
+      const filePath = query.path;
+      if (!filePath) return err(res, 400, 'path required (?path=...)');
+      const result = getRepoLayer().readFile(params.uuid, filePath);
+      if (result.error) {
+        const status = /repo not found/.test(result.error) ? 404
+                      : /no materialized files|ENOENT/.test(result.error) ? 404 : 400;
+        return err(res, status, result.error);
+      }
+      return ok(res, result);
+    }
+
+    case 'repo.file.write': {
+      const filePath = body.path;
+      if (!filePath) return err(res, 400, 'path required');
+      if (typeof body.content !== 'string') return err(res, 400, 'content (string) required');
+      const result = getRepoLayer().writeFile(params.uuid, filePath, body.content);
+      if (result.error) {
+        const status = /repo not found/.test(result.error) ? 404 : 400;
+        return err(res, status, result.error);
+      }
+      os.emit('idearium.repo.file.write', { repoUuid: params.uuid, path: result.path, bytes: result.bytes, created: result.created });
+      return ok(res, result);
+    }
+
+    case 'repo.file.delete': {
+      const filePath = query.path || body.path;
+      if (!filePath) return err(res, 400, 'path required');
+      const result = getRepoLayer().deleteFile(params.uuid, filePath);
+      if (result.error) {
+        const status = /repo not found/.test(result.error) ? 404 : 400;
+        return err(res, status, result.error);
+      }
+      os.emit('idearium.repo.file.delete', { repoUuid: params.uuid, path: result.path });
+      return ok(res, result);
+    }
 
     // ── Spec Engine handlers (Phase 40) ────────────────────────────────────────
 

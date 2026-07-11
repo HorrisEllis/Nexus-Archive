@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS · DIAGNOSE</title>
+<link rel="stylesheet" href="/ui/home/home.css">
+<style>
+  /* §SOVEREIGN CHANNEL 2026-07-11 — this channel is a standalone document,
+     openable and testable on its own (DECOMP.md benefit #3). It reuses
+     home.css for design tokens + existing component classes (.sys-tile,
+     .ch, etc.) rather than forking them, so it always matches the shell's
+     look without duplicating hundreds of class definitions. */
+  html,body{margin:0;padding:0;background:transparent;color:var(--text,#e8eef7);font-family:'Space Grotesk',sans-serif;height:100%}
+  .ch{display:block!important;position:static!important;width:100%;height:100%;animation:none!important}
+  .channel-root{padding:16px;height:100%;box-sizing:border-box;overflow:auto}
+</style>
+</head>
+<body>
+<div class="channel-root">
+<div class="ch" id="ch-diagnose">
+    <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-shrink:0">
+      <span style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em">System Diagnostics</span>
+      <button class="btn primary" onclick="runDiag()" style="margin-left:auto">Run All</button>
+    </div>
+    <div id="diag-rows"></div>
+    <!-- CFR Field -->
+    <div class="gd-box" style="margin-top:14px">
+      <div class="box-head">CFR Field <span id="diag-cfr-sigma" style="color:rgba(255,255,255,.3);font-size:9px;margin-left:8px"></span>
+        <button class="btn" style="font-size:9px;padding:3px 7px" onclick="loadDiagCFR()">↺</button>
+      </div>
+      <div class="box-body" id="diag-cfr-body"><div style="color:rgba(255,255,255,.2);font-size:11px">Not loaded</div></div>
+    </div>
+    <!-- Open Loops -->
+    <div class="gd-box" style="margin-top:10px">
+      <div class="box-head">Open Loops <button class="btn" style="font-size:9px;padding:3px 7px" onclick="loadDiagGaps()">↺</button></div>
+      <div class="box-body" id="diag-gaps-body"><div style="color:rgba(255,255,255,.2);font-size:11px">Not loaded</div></div>
+    </div>
+    <!-- Diagnostic Engines -->
+    <div class="gd-box" style="margin-top:10px">
+      <div class="box-head">Diagnostic Engines <button class="btn" style="font-size:9px;padding:3px 7px" onclick="runDiagEngines()">Run</button></div>
+      <div class="box-body" id="diag-engines-body"><div style="color:rgba(255,255,255,.2);font-size:11px">Not run yet</div></div>
+    </div>
+  </div>
+</div>
+<script src="/ui/lib/api.js"></script>
+<script>
+'use strict';
+// §API base ports — same map home/index.html uses (P{...}), duplicated
+// here on purpose: a sovereign channel must not depend on the shell's
+// global scope existing (it may be opened standalone, per DECOMP.md).
+const P={orch:9000,gd:7820,cx:3748,br:9999,idr:4800,em:4242,arch:3747,dg:7825};
+const B={orch:`http://127.0.0.1:${P.orch}`,gd:`http://127.0.0.1:${P.gd}`,cx:`http://127.0.0.1:${P.cx}`,br:`http://127.0.0.1:${P.br}`,idr:`http://127.0.0.1:${P.idr}`,em:`http://127.0.0.1:${P.em}`,arch:`http://127.0.0.1:${P.arch}`,dg:`http://127.0.0.1:${P.dg}`};
+
+function buildDiag(){
+  document.getElementById('diag-rows').innerHTML=DIAG.map((s,i)=>`
+    <div class="diag-row" id="dr-${i}">
+      <span class="diag-name">${s.name}</span>
+      <span class="diag-port">:${s.port}</span>
+      <span class="diag-status" id="dst-${i}">—</span>
+      <span class="diag-detail" id="ddt-${i}">not checked</span>
+    </div>`).join('');
+}
+
+async function runDiag(){
+  for(let i=0;i<DIAG.length;i++){
+    const s=DIAG[i];
+    const statusEl=document.getElementById(`dst-${i}`);
+    const detailEl=document.getElementById(`ddt-${i}`);
+    if(statusEl)statusEl.textContent='...';
+    if(statusEl)statusEl.className='diag-status checking';
+    const d=await get(s.url);
+    const ok=d&&(d.ok===true||d.status==='ok'||!d.error);
+    if(statusEl){statusEl.textContent=ok?'ONLINE':'OFFLINE';statusEl.className='diag-status '+(ok?'ok':'fail')}
+    const detail=[];
+    if(d?.version)detail.push('v'+d.version);
+    if(d?.uptimeMs)detail.push(Math.floor(d.uptimeMs/60000)+'m uptime');
+    if(d?.routes)detail.push(d.routes+' routes');
+    if(d?.jobs!==undefined)detail.push(d.jobs+' jobs');
+    if(d?.tables)detail.push(Object.keys(d.tables||{}).length+' tables');
+    if(detailEl)detailEl.textContent=detail.join(' · ')||(ok?'healthy':'unreachable');
+  }
+}
+
+async function loadDiagCFR(){
+  const el=document.getElementById('diag-cfr-body');
+  const sigma=document.getElementById('diag-cfr-sigma');
+  // Was: guardian cfr/state, fall back to cortex resilience/status. Dropped
+  // the fallback — /api/resilience/status doesn't exist anywhere server-side
+  // (checked admin-server.js and every cortex/*.js route handler). It always
+  // resolved null before; routing it through the proxy would resolve a
+  // truthy {ok:false,error:...} 404 body instead, which is worse — it would
+  // render a fake "sigma=0.000" panel instead of "CFR not responding". This
+  // needs the actual cortex route built, not a proxy entry for a route that
+  // isn't there.
+  const d=await get(`${B.orch}/api/guardian/cfr/state`);
+  if(!d){el.innerHTML='<div style="color:rgba(255,255,255,.2);font-size:11px">CFR not responding</div>';return}
+  const s=d.sigma?.score??d.sigma??d.score??0;
+  if(sigma)sigma.textContent=`σ=${typeof s==='number'?s.toFixed(3):s}`;
+  const color=s<.35?'#00ff88':s<.7?'#ffaa00':'#ff3355';
+  el.innerHTML=`
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;color:rgba(255,255,255,.3);margin-bottom:4px;font-family:'Space Mono',monospace">SIGMA</div>
+      <div style="height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden"><div style="width:${Math.min(100,Math.round((s||0)*100))}%;height:100%;background:${color};transition:width .5s"></div></div>
+      <div style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:${color};margin-top:6px">${typeof s==='number'?s.toFixed(3):s||'—'}</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.4)">
+      ${Object.entries(d).filter(([k])=>!['sigma','cfr','_'].some(x=>k.startsWith(x))).slice(0,8).map(([k,v])=>`<span><span style="color:rgba(255,255,255,.2)">${k}:</span> ${typeof v==='object'?JSON.stringify(v).slice(0,30):String(v).slice(0,30)}</span>`).join('')}
+    </div>`;
+}
+
+async function loadDiagGaps(){
+  const el=document.getElementById('diag-gaps-body');
+  const d=await get(`${B.orch}/api/cortex/gaps?status=open`);
+  const gaps=Array.isArray(d)?d:[];
+  if(!gaps.length){el.innerHTML='<div style="color:rgba(0,255,136,.4);font-size:11px">No open loops</div>';return}
+  el.innerHTML=gaps.slice(0,15).map(g=>`<div class="gap-row ${g.severity||'low'}"><div class="gap-type-lbl">${g.loop_type||g.type||'gap'}${g.severity?' · '+g.severity:''}</div><div class="gap-body-txt">${(g.body||g.path||'').slice(0,120)}</div></div>`).join('');
+}
+
+async function runDiagEngines(){
+  const el=document.getElementById('diag-engines-body');
+  el.innerHTML='<div style="color:rgba(255,170,0,.6);font-size:11px">Running diagnostic engines...</div>';
+  const d=await post(`${B.orch}/api/cortex/replay/inspect`,{fromTs:Date.now()-300000});
+  const rows=[];
+  if(d){rows.push({name:'Replay inspect (5m)',val:d.eventCount+' events',ok:true})}
+  // Resilience status row dropped — /api/resilience/status doesn't exist
+  // server-side (see loadDiagCFR above). Was always a no-op.
+  // Topology from gap-loop via cortex event_log
+  const gaps=await get(`${B.orch}/api/cortex/gaps?status=open`);
+  const gapCount=Array.isArray(gaps)?gaps.length:0;
+  rows.push({name:'Open loops',val:gapCount+' total',ok:gapCount===0});
+  const fails=await get(`${B.orch}/api/cortex/failures`);
+  const failCount=Array.isArray(fails)?fails.length:(fails?.failures||[]).length;
+  rows.push({name:'Failures',val:failCount+' recent',ok:failCount===0});
+  el.innerHTML=rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px"><span style="color:${r.ok?'#00ff88':'#ffaa00'}">${r.ok?'✓':'⚠'}</span><span style="color:rgba(255,255,255,.6)">${r.name}</span><span style="margin-left:auto;font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(255,255,255,.3)">${r.val}</span></div>`).join('');
+}
+
+// ── init ──────────────────────────────────────────────────────────────────
+try { buildDiag(); } catch(e) { console.warn('[channel:diagnose] init failed:', e.message); }
+
+// ── this channel's own SSE subscription — sovereign, not dependent on the
+//    shell's single connection (matches DECOMP.md's "each channel can be
+//    opened independently... for debugging"). Shell-embedded use can still
+//    layer postMessage on top later without this needing to change. ──────
+try {
+  const es = new EventSource(`${B.orch}/sse`);
+  es.onmessage = (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      if (typeof window.onChannelEvent === 'function') window.onChannelEvent(d);
+    } catch(_) {}
+  };
+  es.onerror = () => { /* orchestrator not reachable — channel still renders, just static until it is */ };
+} catch(_) {}
+</script>
+</body>
+</html>

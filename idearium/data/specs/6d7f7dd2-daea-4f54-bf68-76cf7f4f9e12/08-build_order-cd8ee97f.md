@@ -1,0 +1,30 @@
+---
+chunk_uuid: cd8ee97f-ca99-4d70-bc0d-972d9ff10caa
+spec_uuid: 6d7f7dd2-daea-4f54-bf68-76cf7f4f9e12
+section: build_order
+title: Build Order
+comp_id: idearium.spec-engine
+seam_id: idearium.spec-engine:v1:chunk:6d7f7dd2:build_order
+contract_id: spec-contract:6d7f7dd2:build_order:cd8ee97f
+agent: ollama
+model: unknown
+status: complete
+completed_at: 2026-07-11T07:56:57.698Z
+---
+
+Seeded deterministically from template `architecture` — no agent dispatched.
+
+## Build Order
+
+Bottom-up, §3.1 — each step must be PARSES-tier before the next starts:
+
+1. `data/` schemas and fixtures — the shapes everything else is graded against
+2. `lib/` shared utilities — zero dependency on anything above this line
+3. `core/` kernel/runtime — boots on its own, no subsystem wired yet
+4. Each subsystem module, one at a time, smallest unit first (§5.1)
+5. `api/` routes — wires subsystems to HTTP, no UI dependency
+6. `ui/` — talks only to `api/`, never reaches into `core/` or a subsystem directly
+7. `docs/` — CHANGELOG and MANIFEST updated to match what was actually built,
+   not what was planned
+
+> Source: idearium/spec-engine/templates/architecture.spec § build_order

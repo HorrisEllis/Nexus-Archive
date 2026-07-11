@@ -1,7 +1,61 @@
-# NEXUS v0.9.9 — Full Session Changelog
-**Date:** 2026-06-25 → 2026-06-27  
-**Session type:** Architecture completion, system audit, test remediation  
+# NEXUS v0.9.11 — Session Changelog (2026-07-11)
+**Date:** 2026-07-11
+**Session type:** Idearium multi-template pipeline, repo file CRUD, tv-ui channel decomposition, Clear Glass UI decomposition
 **By:** James Brooks (Erosmancer) + Claude
+
+---
+
+## Scope
+
+Four threads, in the order worked:
+
+1. **Idearium multi-template composition + WARP build-logic selector** —
+   `spec-engine.createSpec` generalized from one `templateId` to
+   `templateIds[]`; seeded sections compose across every selected
+   template. `buildEngine: 'auto'|'warp'|'direct'` added and threaded
+   through the build dispatch path. Five new templates (architecture,
+   schemas, checklists, axioms, compartments) added to the registry.
+2. **Idearium repo file CRUD** — `RepoLayer` went from metadata-only
+   (path+bytes) to actually materializing files on disk on promote, plus
+   real read/write/delete against those files, wired into the UI's repo
+   panel as an editor instead of a read-only listing.
+3. **tv-ui channel decomposition** — `ui/home/index.html`'s monolith had
+   9 named channels (per its own `DECOMP.md`) that were never actually
+   split out, and a `shell.js` that could mount channels but had exactly
+   one registered and no HTML page that ever loaded it. Both fixed; see
+   `ui/home/DECOMP.md`'s 2026-07-11 addendum for the full list of what
+   was extracted and the four latent bugs found auditing the tv-shell
+   modules (`menu.js`/`spotlight.js`/`nerve.js`) that shell.js loads.
+4. **Clear Glass UI decomposition** — `renderer/browser.html`'s ~1600-line
+   inline script extracted to `browser.js`; CSP tightened now that no
+   inline JS remains to justify `'unsafe-inline'` on `script-src`.
+
+## Verification
+
+- Idearium: live-tested against a running server — idea capture, 5-template
+  spec creation, 100%-deterministic build (8/10 sections seeded, 2/10
+  filled by cross-spec reuse, zero agent tokens), promote, materialized
+  repo, and file read/edit/add/delete all confirmed on disk.
+- tv-ui channels: every extracted channel and the new shell/nerve/menu/
+  spotlight wiring passes `node --check`; all resolve over a static
+  HTTP server with correct absolute-path assets. Not live-tested against
+  a running multi-service NEXUS stack (orchestrator/guardian/cortex/
+  bridge) — that stack wasn't available in-session.
+- Clear Glass: existing test suite (`npm test` — bus.test.js +
+  watchdog.test.js, 46 tests total) re-run after the extraction, still
+  46/46.
+
+## Versions touched
+
+| Component | Before | After |
+|---|---|---|
+| idearium.spec | 3.0.0 | 3.1.0 |
+| idearium/spec-engine (VERSION const) | 1.1.0 | 1.2.0 |
+| idearium-templates.spec | 1.0.0 | 1.1.0 |
+| idearium/repo (RepoLayer) | unversioned | 1.1.0 |
+| idearium/package.json | (no version field) | 3.1.0 |
+| clear-glass/package.json | 3.1.0 | 3.2.0 |
+| nexus/package.json | 0.9.10 | 0.9.11 |
 
 ---
 

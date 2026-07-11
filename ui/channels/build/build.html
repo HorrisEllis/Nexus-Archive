@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS · Build Pipeline</title>
+<link rel="stylesheet" href="/ui/home/home.css">
+<style>
+  /* §GAP CLOSED 2026-07-11 — shell.js has mounted this channel by iframe
+     src since it was written, but this file never existed: build.js had
+     no HTML to load into. The channel registration was real; the channel
+     itself was 404. */
+  html,body{margin:0;padding:0;background:transparent;color:var(--text,#e8eef7);font-family:'Space Grotesk',sans-serif;height:100%;box-sizing:border-box}
+  .build-wrap{padding:16px;height:100%;overflow:auto;box-sizing:border-box}
+  .build-form{display:flex;flex-direction:column;gap:10px;max-width:520px}
+  .build-form input,.build-form select{background:var(--bg2,#12161f);border:1px solid var(--b1,#2a2f3b);border-radius:4px;color:var(--text,#e8eef7);padding:7px 10px;font-family:var(--mono,monospace);font-size:12px}
+  .build-form-row{display:flex;gap:8px}
+  .build-form-row button{flex:1;background:var(--bg3,#1a1f2b);border:1px solid var(--b1,#2a2f3b);border-radius:4px;color:var(--text2,#a8b3c5);padding:8px 12px;cursor:pointer;font-family:var(--mono,monospace);font-size:12px}
+  .build-form-row button:hover{border-color:var(--accent,#5af);color:var(--text,#e8eef7)}
+  #build-status-section.hidden{display:none}
+  #build-status-section{margin-top:18px}
+  #build-node-grid{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .build-node{border:1px solid var(--b1,#2a2f3b);border-radius:4px;padding:8px 10px;font-family:var(--mono,monospace);font-size:11px}
+  .build-node__name{color:var(--text,#e8eef7);font-weight:600}
+  .build-node__status{color:var(--text3,#6b7688);margin-left:8px;font-size:10px;text-transform:uppercase}
+  .build-node__detail{color:var(--text2,#a8b3c5);margin-top:2px}
+  #build-history-list{list-style:none;margin:8px 0 0;padding:0;font-family:var(--mono,monospace);font-size:11px}
+  #build-history-list li{padding:4px 0;border-bottom:1px solid var(--b1,#2a2f3b);color:var(--text2,#a8b3c5)}
+</style>
+</head>
+<body>
+<div class="build-wrap">
+  <h3 style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3,#6b7688);margin:0 0 12px">Build Pipeline</h3>
+
+  <div class="build-form">
+    <input id="build-spec-path" placeholder=".spec path (e.g. nexus/idearium/spec/idearium.spec)">
+    <input id="build-output-dir" placeholder="output dir (optional)">
+    <select id="build-provider">
+      <option value="ollama">ollama (local)</option>
+      <option value="claude">claude</option>
+      <option value="chatgpt">chatgpt</option>
+    </select>
+    <label style="font-size:11px;color:var(--text2,#a8b3c5);display:flex;align-items:center;gap:6px">
+      <input type="checkbox" id="build-full-pipeline"> full pipeline (all nodes, not just next)
+    </label>
+    <div class="build-form-row">
+      <button id="build-start-btn">start build</button>
+      <button id="build-auto-btn">hand to copilot (autonomous)</button>
+    </div>
+  </div>
+
+  <div id="build-status-section" class="hidden">
+    <div style="font-family:var(--mono,monospace);font-size:11px;color:var(--text3,#6b7688)">
+      status: <span id="build-status-badge">idle</span> · <span id="build-status-id"></span>
+    </div>
+    <div id="build-node-grid"></div>
+  </div>
+
+  <h3 style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3,#6b7688);margin:20px 0 8px">History</h3>
+  <ul id="build-history-list"></ul>
+</div>
+<script src="/ui/channels/build/build.js"></script>
+</body>
+</html>

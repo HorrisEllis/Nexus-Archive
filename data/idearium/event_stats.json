@@ -1,0 +1,45 @@
+{
+  "stats": {
+    "idearium.idea.create": {
+      "count": 1,
+      "lastTs": 1783756389598,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.spec-engine.created": {
+      "count": 1,
+      "lastTs": 1783756394733,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.spec-engine.chunk.complete": {
+      "count": 2,
+      "lastTs": 1783756406799,
+      "intervals": [
+        4392
+      ],
+      "totalMs": 4392
+    },
+    "idearium.spec.promoted": {
+      "count": 1,
+      "lastTs": 1783756412813,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.repo.file.write": {
+      "count": 2,
+      "lastTs": 1783757235066,
+      "intervals": [
+        79
+      ],
+      "totalMs": 79
+    },
+    "idearium.repo.file.delete": {
+      "count": 1,
+      "lastTs": 1783757240689,
+      "intervals": [],
+      "totalMs": 0
+    }
+  },
+  "baseline": {}
+}

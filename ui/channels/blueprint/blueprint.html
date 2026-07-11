@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS · BLUEPRINT</title>
+<link rel="stylesheet" href="/ui/home/home.css">
+<style>
+  /* §SOVEREIGN CHANNEL 2026-07-11 — this channel is a standalone document,
+     openable and testable on its own (DECOMP.md benefit #3). It reuses
+     home.css for design tokens + existing component classes (.sys-tile,
+     .ch, etc.) rather than forking them, so it always matches the shell's
+     look without duplicating hundreds of class definitions. */
+  html,body{margin:0;padding:0;background:transparent;color:var(--text,#e8eef7);font-family:'Space Grotesk',sans-serif;height:100%}
+  .ch{display:block!important;position:static!important;width:100%;height:100%;animation:none!important}
+  .channel-root{padding:16px;height:100%;box-sizing:border-box;overflow:auto}
+</style>
+</head>
+<body>
+<div class="channel-root">
+<div class="ch" id="ch-blueprint">
+    <iframe src="" id="blueprint-iframe"
+      style="width:100%;height:100%;border:none;background:#0a0a14"
+      title="Blueprint Builder"></iframe>
+  </div>
+</div>
+<script src="/ui/lib/api.js"></script>
+<script>
+'use strict';
+// §API base ports — same map home/index.html uses (P{...}), duplicated
+// here on purpose: a sovereign channel must not depend on the shell's
+// global scope existing (it may be opened standalone, per DECOMP.md).
+const P={orch:9000,gd:7820,cx:3748,br:9999,idr:4800,em:4242,arch:3747,dg:7825};
+const B={orch:`http://127.0.0.1:${P.orch}`,gd:`http://127.0.0.1:${P.gd}`,cx:`http://127.0.0.1:${P.cx}`,br:`http://127.0.0.1:${P.br}`,idr:`http://127.0.0.1:${P.idr}`,em:`http://127.0.0.1:${P.em}`,arch:`http://127.0.0.1:${P.arch}`,dg:`http://127.0.0.1:${P.dg}`};
+
+
+
+// ── init ──────────────────────────────────────────────────────────────────
+try { /* static tile — links to ui/blueprint-builder, no init needed */ } catch(e) { console.warn('[channel:blueprint] init failed:', e.message); }
+
+// ── this channel's own SSE subscription — sovereign, not dependent on the
+//    shell's single connection (matches DECOMP.md's "each channel can be
+//    opened independently... for debugging"). Shell-embedded use can still
+//    layer postMessage on top later without this needing to change. ──────
+try {
+  const es = new EventSource(`${B.orch}/sse`);
+  es.onmessage = (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      if (typeof window.onChannelEvent === 'function') window.onChannelEvent(d);
+    } catch(_) {}
+  };
+  es.onerror = () => { /* orchestrator not reachable — channel still renders, just static until it is */ };
+} catch(_) {}
+</script>
+</body>
+</html>
