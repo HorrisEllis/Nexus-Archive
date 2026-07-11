@@ -5,6 +5,36 @@
 Every behavior is a Gate on a Stream. No module talks to another directly.
 Commands arrive as Events. Gates transform them. SSE broadcasts results.
 
+## §ADDENDUM 2026-07-11 (5) — v3.6.0, a real regression from my own earlier fix
+
+The GPU crash fix in addendum (1) below stopped the fatal crash-loop, but
+broke something worse: it rendered the actual page content as a solid
+black screen, confirmed live via a screenshot (browser chrome — toolbar,
+health indicators — painted correctly; the `<webview>` content area did
+not). This app's windows are all `frame: false` with `webviewTag: true`,
+and both of those depend on the GPU process for compositing — the
+original fix's three switches (`--disable-gpu`,
+`--disable-gpu-compositing`, `--disable-software-rasterizer`) removed
+that process entirely, which is a known, documented way to get exactly
+this black-screen failure with this window configuration.
+
+Replaced with a narrower fix aimed at the actual failure: `error_code=18`
+on Windows is very commonly a GPU **sandbox** initialization failure
+specifically, not a general incapacity to use the GPU at all.
+`--disable-gpu-sandbox` removes just the sandbox restriction the process
+was failing to initialize under, leaving the process itself — and
+therefore compositing for frameless windows and webviews — intact.
+Paired with `--disable-gpu-process-crash-limit` as a defensive companion:
+doesn't prevent a crash, but stops Chromium's own internal crash-count
+circuit breaker from escalating an occasional GPU hiccup into the same
+fatal app-kill, independent of whether the sandbox fix fully holds.
+
+Not verified live — same limitation as every GPU-related note in this
+file: no Electron here to run it. The `process-monitor.html` tool (built
+specifically for questions like this) is what caught the black-screen
+regression in the first place; use it again after this change to confirm
+compositing actually recovered rather than taking this note's word for it.
+
 ## §ADDENDUM 2026-07-11 (2) — v3.3.0, fixed from a real crash log
 
 You ran this on a real Windows machine and it caught two things no amount

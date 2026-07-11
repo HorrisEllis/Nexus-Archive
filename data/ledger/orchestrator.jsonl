@@ -1,0 +1,13 @@
+{"_system":"orchestrator","_ts":1783795247425,"type":"orchestrator.boot.started","payload":{"systemId":"orchestrator","port":9000,"version":"2.1.0","phases":7,"seqId":"f1bec0b8","ts":1783795247402}}
+{"_system":"orchestrator","_ts":1783795247445,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"server.bound","type":"HARD","ms":0,"seqId":"f1bec0b8"}}
+{"_system":"orchestrator","_ts":1783795247446,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ledger.writable","type":"HARD","ms":0,"seqId":"f1bec0b8"}}
+{"_system":"orchestrator","_ts":1783795247465,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"health.verify","type":"HARD","ms":57,"seqId":"f1bec0b8"}}
+{"_system":"orchestrator","_ts":1783795247574,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"recall.verify","type":"HARD","ms":5,"seqId":"f1bec0b8"}}
+{"_system":"orchestrator","_ts":1783795247575,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ui.hotswap","type":"SOFT","ms":98,"seqId":"f1bec0b8"}}
+{"_system":"orchestrator","_ts":1783795247576,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"cli.terminal","type":"SOFT","ms":1,"seqId":"f1bec0b8"}}
+{"_system":"orchestrator","_ts":1783795267837,"type":"system.registered","payload":{"systemId":"test-probe","port":9876,"meta":{"role":"test"},"registeredAt":1783795267835}}
+{"_system":"orchestrator","_ts":1783795267860,"type":"orchestrator.pulse","payload":{"systemId":"test-probe","port":9876,"clients":0}}
+{"_system":"orchestrator","_ts":1783795267862,"type":"test.ledger.1783795267860","payload":{"test":true}}
+{"_system":"orchestrator","_ts":1783795267900,"type":"exec","payload":{"cmd":"node --version","exit":0,"output":"v22.22.2\n","ts":1783795267899}}
+{"_system":"orchestrator","_ts":1783795267911,"type":"recall.filter.test.1783795267909","payload":{}}
+{"_system":"orchestrator","_ts":1783795269840,"type":"system.registered","payload":{"systemId":"test-probe","contractTrust":"UNREACHABLE","contractVerifiedAt":1783795269840}}

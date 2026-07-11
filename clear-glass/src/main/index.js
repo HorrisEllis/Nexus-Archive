@@ -130,19 +130,42 @@ const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service t
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
 app.disableHardwareAcceleration();
-// §BUG FIXED 2026-07-11 — disableHardwareAcceleration() alone still lets
-// Electron spawn a GPU process for software compositing; on this machine
-// even THAT process fails to launch (error_code=18, "GPU process isn't
-// usable. Goodbye.") — a FATAL crash that killed the whole app, not just
-// one window (see the 2026-07-11 boot log: "crashes in window: 1/6",
-// autopilot restarting on a countdown toward its circuit breaker). These
-// three switches remove the GPU process from the picture entirely —
-// pure software rendering inside each renderer process, no separate GPU
-// process to fail. The standard fix for this exact fatal error on
-// constrained/virtualized/sandboxed Windows hosts.
-app.commandLine.appendSwitch('disable-gpu');
-app.commandLine.appendSwitch('disable-gpu-compositing');
-app.commandLine.appendSwitch('disable-software-rasterizer');
+// §BUG FIXED 2026-07-11, REVISED 2026-07-11 — the first version of this
+// fix (app.commandLine.appendSwitch('disable-gpu') + disable-gpu-compositing
+// + disable-software-rasterizer) stopped the fatal crash-loop but broke
+// something worse: every window in this app is frame:false with
+// webviewTag:true (see the win = new BrowserWindow({...}) calls below) —
+// frameless windows AND <webview> tags both depend on the GPU process for
+// compositing, and fully removing that process is a known, documented
+// Electron/Chromium combination that renders a black window instead of
+// content. Confirmed live: the browser chrome painted fine (plain HTML/
+// CSS in the main renderer), the actual page content — loaded via
+// <webview>, which runs its own guest renderer with its own compositing
+// path — did not, on a real machine, via the process-monitor tool built
+// specifically to catch exactly this kind of "did the fix actually work"
+// question.
+//
+// error_code=18 on Windows is very commonly a SANDBOX initialization
+// failure specifically, not a GPU-capability failure in general —
+// --disable-gpu-sandbox targets that directly (removes the sandbox
+// restriction the process was failing to initialize under) while leaving
+// the GPU process itself, and therefore compositing for frameless windows
+// and webviews, intact. This is the standard, narrower fix for this
+// specific failure mode; the blanket --disable-gpu three-switch version
+// is what you reach for when a process shouldn't exist at all, which
+// wasn't true here — this app needs it to exist, just not to need the
+// sandbox it couldn't initialize.
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+// Defensive companion, not the primary fix: even with the sandbox issue
+// addressed above, if the GPU process still crashes occasionally on this
+// machine, Chromium has its OWN internal crash-count circuit breaker that
+// permanently disables GPU usage after enough failures — which is a
+// second, independent circuit breaker stacked on top of autopilot's own
+// (the "crashes in window: 1/6" one). This doesn't prevent a crash; it
+// prevents Chromium's response to a crash from becoming the fatal
+// "GPU process isn't usable. Goodbye." app-kill, so a transient GPU
+// hiccup degrades to a slower frame instead of taking the whole app down.
+app.commandLine.appendSwitch('disable-gpu-process-crash-limit');
 // §CRITICAL fix 2026-06-30 — this was the actual cause of the 6-crash
 // circuit-breaker trip. requestSingleInstanceLock() failing produces a
 // CLEAN exit (code 0, no signal, zero log output) — indistinguishable from
