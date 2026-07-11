@@ -1,0 +1,61 @@
+{
+  "_version": "3.0.0",
+  "_savedAt": 1783756389605,
+  "ideas": [
+    {
+      "uuid": "a96b1ec9-469b-4efa-8770-d46cf1054700",
+      "slug": "pulse-a-sovereign-local-first-habitritual-tracker-",
+      "text": "Pulse — a sovereign local-first habit/ritual tracker: log a habit, see streaks, get a gentle nudge, all offline-first with an optional sync compartment.",
+      "tags": [
+        "demo",
+        "pipeline-test"
+      ],
+      "phase": "seed",
+      "tension": 0,
+      "tensionUpdatedAt": null,
+      "parentIdea": null,
+      "linkedSpec": null,
+      "resonanceWith": [],
+      "tensionWith": [],
+      "openGaps": [],
+      "stability": {
+        "execution": 1,
+        "runtime": 1,
+        "effectiveness": 1,
+        "rigidity": 1,
+        "persistence": 1
+      },
+      "compartment": null,
+      "archiveReason": null,
+      "archivedAt": null,
+      "causedBy": null,
+      "source": "api",
+      "createdAt": 1783756389605,
+      "updatedAt": 1783756389605
+    }
+  ],
+  "specs": [],
+  "gaps": [],
+  "links": [],
+  "snapshots": [],
+  "events": [
+    {
+      "uuid": "297c6cc7-4a2a-48ce-8711-db8a0b9a53f6",
+      "type": "idearium.idea.create",
+      "payload": {
+        "text": "Pulse — a sovereign local-first habit/ritual tracker: log a habit, see streaks, get a gentle nudge, all offline-first with an optional sync compartment.",
+        "tags": [
+          "demo",
+          "pipeline-test"
+        ],
+        "compartment": null,
+        "source": "api"
+      },
+      "causedBy": null,
+      "source": "idearium.core",
+      "ts": 1783756389604
+    }
+  ],
+  "snr": [],
+  "tensions": []
+}

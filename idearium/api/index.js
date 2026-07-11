@@ -59,15 +59,6 @@ function getSpecEngine() {
   }
   return _specEngine;
 }
-let _copilotAdapter = null;
-function getCopilotAdapter() {
-  if (!_copilotAdapter) {
-    import('../copilot-adapter/index.js').then(m => { _copilotAdapter = m.default || m; }).catch(e => {
-      console.warn('[idearium/api] copilot-adapter load failed:', e.message);
-    });
-  }
-  return _copilotAdapter;
-}
 function getAgentSuite() {
   if (!_agentSuite) {
     import('../agent-suite/index.js').then(m => { _agentSuite = m.default || m; }).catch(e => {
@@ -149,7 +140,7 @@ function warpStatus() {
 // import resolves, so without pre-warming the FIRST speceng.build always
 // bypasses WARP. That is precisely the build whose output most needs to enter
 // the cache. Pre-warm after agent-suite, since the dispatch needs it.
-getSpecEngine(); getAgentSuite(); getCopilotAdapter();
+getSpecEngine(); getAgentSuite();
 setTimeout(() => { getWarpChunkDispatch().catch(() => {}); }, 100);  // pre-warm; failure already recorded by warpStatus()
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
@@ -162,7 +153,7 @@ import path from 'path';
 //    called it).
 let _repoLayer = null;
 function getRepoLayer() {
-  if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS(), specEngine: getSpecEngine });
+  if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS() });
   return _repoLayer;
 }
 
@@ -173,12 +164,6 @@ function getRepoLayer() {
 // already complete the moment it's imported. Same rules apply: mode:'emerge'
 // refuses to promote an unfinished spec rather than shipping a repo that
 // claims completeness it doesn't have.
-// §SIMPLIFIED 2026-07-11 — RepoLayer no longer needs a rebuilt files[] +
-// specText bundle handed to it; it indexes the manifest that already
-// exists by specUuid directly (see repo/index.js's redesign — "the spec
-// is the metadata, the repo is a thin index over it"). This function's
-// job shrinks to exactly one check: is the spec actually complete enough
-// to promote. Everything past that is one line.
 function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
   let manifest;
   try { manifest = se.loadSpec(specUuid); }
@@ -190,9 +175,35 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
       `(${pending.map(c => c.sectionId).join(', ')}). Build them, or promote with mode:'manual' to finish in the spec builder.` };
   }
 
+  const files = manifest.chunks
+    .sort((a, b) => a.chunkIdx - b.chunkIdx)
+    .map(c => {
+      const built = c.status === 'complete' && c.content;
+      const content = built
+        ? c.content
+        : `## ${c.sectionTitle || c.sectionId}\n\n<!-- TODO: not yet built — finish in the spec builder -->\n`;
+      return {
+        path: c.fileName || `${String(c.chunkIdx).padStart(2, '0')}-${c.sectionId}.md`,
+        content,
+        comp_id: c.comp_id || null,
+        seam_id: c.seam_id || null,
+        status: c.status,
+      };
+    });
+
+  const specText = `# ${manifest.name}\n\n` +
+    `<!-- promoted from spec ${specUuid} · mode:${mode} · ` +
+    `${manifest.chunks.length - pending.length}/${manifest.chunks.length} chunks built -->\n\n` +
+    `## File structure\n\n` +
+    files.map(f => `- \`${f.path}\`${f.comp_id ? ` — component: ${f.comp_id}` : ''} (${f.status})`).join('\n') +
+    `\n\n---\n\n` +
+    files.map(f => `### ${f.path}\n\n${f.content}`).join('\n\n');
+  files.unshift({ path: `${manifest.name.replace(/[^a-zA-Z0-9-_]/g, '-')}.spec`, content: specText, comp_id: 'index', seam_id: null, status: 'index' });
+
   const result = getRepoLayer().ingest({
     name: manifest.name,
-    specUuid: manifest.uuid,
+    files,
+    specText,
     source: `promote:${mode}`,
     parent: manifest.ideaUuid || null,
     promotedFromSpec: specUuid,
@@ -342,8 +353,6 @@ function matchRoute(method, url) {
     ['POST',   ['api','spec-engine','specs',':uuid','promote'], 'spec.promote'],
     ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
     ['GET',    ['api','spec-engine','context'],             'speceng.context'],
-    // §GATE 2026-07-11 — copilot adapter boundary. See copilot-adapter/index.js.
-    ['POST',   ['api','copilot','suggest'],                 'copilot.suggest'],
     ['GET',    ['sse'],                   'sse'],
   ];
 
@@ -891,18 +900,6 @@ async function handle(req, res, route, query, body) {
       });
     }
 
-    // §GATE 2026-07-11 — the adapter boundary itself. No intelligence lives
-    // here — see copilot-adapter/index.js's header for why that's deliberate.
-    // Callable today (the wizard's "ask copilot" button hits this), honestly
-    // reports connected:false until a real backend is registered.
-    case 'copilot.suggest': {
-      const ca = getCopilotAdapter();
-      if (!ca) return err(res, 503, 'copilot-adapter not ready');
-      const { context, goal, current_gate } = body;
-      const result = await ca.suggest({ context: context || {}, goal: goal || '', current_gate: current_gate || '' });
-      return ok(res, result);
-    }
-
     case 'repo.ingest': {
       const { name, files, source, ideaUuid } = body;
       if (!name) return err(res, 400, 'name required');
@@ -956,14 +953,14 @@ async function handle(req, res, route, query, body) {
     case 'speceng.create': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      const { name, type, description, agent, templateId } = body;
+      const { name, type, description, agent, templateId, templateIds, buildEngine } = body;
       if (!name) return err(res, 400, 'name required');
       try {
-        // An unknown templateId throws inside createSpec (§1.2) and surfaces
-        // as a 400 here rather than silently creating an unseeded spec that
-        // claims a template.
-        const manifest = se.createSpec({ name, type, description, agent, templateId });
-        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateId: templateId || null });
+        // An unknown templateId/templateIds (or buildEngine) throws inside
+        // createSpec (§1.2) and surfaces as a 400 here rather than silently
+        // creating an unseeded / mis-configured spec.
+        const manifest = se.createSpec({ name, type, description, agent, templateId, templateIds, buildEngine: buildEngine || 'auto' });
+        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateIds: manifest.templateIds, buildEngine: manifest.buildEngine });
         return ok(res, { manifest });
       } catch(e) { return err(res, 500, e.message); }
     }
@@ -1034,7 +1031,21 @@ async function handle(req, res, route, query, body) {
         // verification are unchanged; WARP simply answers instantly when this
         // exact prompt has been built before. Falls back to the direct agent
         // path when WARP is not (yet) loaded — never a hard dependency.
-        const warpFn = await getWarpChunkDispatch();   // §awaited: the FIRST build must also populate the cache
+        // §BUILD-LOGIC SELECTOR 2026-07-11 — manifest.buildEngine (set at
+        // spec-creation time, exposed as the "build logic" dropdown in the
+        // UI) decides how this call resolves dispatchFn:
+        //   'auto'   — unchanged: WARP if loaded, silent fallback to direct.
+        //   'warp'   — WARP is mandatory. If it isn't loaded, the chunk fails
+        //              loudly instead of quietly downgrading to direct-agent
+        //              (§1.2 — a build declared WARP-built must actually be).
+        //   'direct' — WARP is bypassed on purpose, even if loaded (e.g. a
+        //              rebuild that must not read a stale cache entry).
+        const engineChoice = manifest.buildEngine || 'auto';
+        const warpFn = engineChoice === 'direct' ? null : await getWarpChunkDispatch();
+        if (engineChoice === 'warp' && !warpFn) {
+          se.failChunk(params.uuid, chunk.uuid, `buildEngine:'warp' required but WARP dispatch unavailable — ${warpStatus().error || 'not loaded'}`);
+          return err(res, 503, 'WARP build logic selected but unavailable — see warpStatus()');
+        }
         const dispatchFn = warpFn
           ? (prompt, dispatchOpts) => warpFn(prompt, { ...dispatchOpts, chunkTitle: chunk.title || chunk.sectionId })
           : (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts);

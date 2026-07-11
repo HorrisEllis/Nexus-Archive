@@ -1,7 +1,7 @@
 /**
  * idearium/spec-engine/templates.js — Spec Template Registry
  * UUID: nexus-idearium-templates-v1-0000-2026-0710-jamesbrooks-001
- * Version: 1.1.0
+ * Version: 1.0.0
  *
  * §NEW — first-page template picker needs a real list to render, not a
  * hardcoded 4-string dropdown. Each entry maps to a `type` createSpec()
@@ -9,25 +9,7 @@
  * plus an optional seedFile — a real .spec/.md file whose content is
  * used to deterministically pre-fill whichever chunks it can, so those
  * chunks skip the agent dispatch entirely (the actual token-reduction
- * lever — see spec-engine/index.js's `_seedFromTemplate`).
- *
- * §EXPANDED 2026-07-11 — "utilize templates of different architectures."
- * Added the named-architecture set from the wizard scoping conversation:
- * Minimal Kernel / API Service / Event System / Plugin Runtime / AI Agent
- * System / Custom (Full Nexus was already covered by 'genesis' below —
- * renamed its label so it's addressable by that name too, not duplicated).
- *
- * Every new seedFile is a REAL excerpt copied verbatim from an already-
- * authored, already-uploaded spec — never fabricated. Per SYSTEM_SPEC_v1_0_0's
- * own axiom #1 ("nothing pretends to work — no stubs, no mocks"), inventing
- * plausible-looking architecture content for a template would be exactly
- * that. Each seed file's header comment records its exact source (file +
- * line range) so the provenance is auditable, not asserted.
- *
- * `seedSection` — which SPEC_SECTIONS id the seed's content fills. Defaults
- * to 'meta' (genesis's existing behavior, unchanged). The new templates
- * seed a section whose content actually matches what was extracted, instead
- * of forcing everything through 'meta' the way a single-seed system would.
+ * lever — see spec-engine/index.js's `_seedChunksFromTemplate`).
  *
  * Templates with no seedFile behave exactly as before: every chunk goes
  * through normal agent dispatch. Nothing is removed, only added to.
@@ -49,7 +31,6 @@ const TEMPLATES = Object.freeze([
     label:       'New System',
     description: 'A full sovereign system — kernel, engine, runtime, own ledger, own compartments.',
     seedFile:    null,
-    seedSection: 'meta',
   },
   {
     id:          'codebase',
@@ -57,7 +38,6 @@ const TEMPLATES = Object.freeze([
     label:       'New Codebase',
     description: 'A standalone repo-scale project — not necessarily sovereign, but multi-module.',
     seedFile:    null,
-    seedSection: 'meta',
   },
   {
     id:          'library',
@@ -65,7 +45,6 @@ const TEMPLATES = Object.freeze([
     label:       'New Library',
     description: 'A reusable, dependency-free package other systems import — like WARP itself.',
     seedFile:    null,
-    seedSection: 'meta',
   },
   {
     id:          'module-component',
@@ -73,76 +52,65 @@ const TEMPLATES = Object.freeze([
     label:       'New Module / Component',
     description: 'The smallest unit — one file, one intent, dropped into an existing system.',
     seedFile:    null,
-    seedSection: 'meta',
   },
   {
     id:          'genesis',
     kind:        'system',
-    label:       'Full Nexus (genesis, sovereign, WARP-spined)',
+    label:       'Genesis (sovereign, WARP-spined)',
     description: 'Scaffold a new sovereign system directly from genesis.spec — kernel-as-Stream, ' +
                  'schema-baseline axioms, seam/contract split, associative lattice, nerve, tv-ui, pulse.',
     seedFile:    'genesis.spec',
-    seedSection: 'meta',
+  },
+  // §ARCHITECTURE TEMPLATES 2026-07-11 — expansion beyond the four "what kind
+  // of thing is this" templates above. These seed structural determinism
+  // (folder layout, build order, canonical schema/axiom/checklist shape)
+  // rather than a project kind — pick one alongside a kind template, or
+  // stand alone to draw the map before any component gets built.
+  {
+    id:          'architecture',
+    kind:        'structure',
+    label:       'Architecture / Structure Map',
+    description: 'Deterministic folder layout + bottom-up build order (§3.1) — fixes "where does ' +
+                 'this go" once, before component chunks are built.',
+    seedFile:    'architecture.spec',
   },
   {
-    id:          'minimal-kernel',
+    id:          'schemas',
+    kind:        'schema',
+    label:       'Schema Baseline',
+    description: 'Canonical data-schema shape — entity/uuid/fields/constraints/decay-tier — so every ' +
+                 'spec\'s schema chunk seeds from the same fixed template instead of a freehand guess.',
+    seedFile:    'schemas.spec',
+  },
+  {
+    id:          'checklists',
+    kind:        'checklist',
+    label:       'Verification Checklists',
+    description: 'Standing tests + failure-mode checklists (evidence tiers PARSES→CONTRACT) applied ' +
+                 'to every spec the same way, deterministically.',
+    seedFile:    'checklists.spec',
+  },
+  {
+    id:          'axioms',
+    kind:        'axioms',
+    label:       'Axioms (AXIOMS-v1.0, canonical)',
+    description: 'The full standing axiom set, restated once — every spec\'s "axioms" chunk seeds from ' +
+                 'this instead of an agent re-deriving or forgetting the ruleset.',
+    seedFile:    'axioms.spec',
+  },
+  {
+    id:          'compartments',
     kind:        'system',
-    label:       'Minimal Kernel',
-    description: 'The smallest sovereign core — kernel-as-Stream, spine primitives, root types and ' +
-                 'axioms, zero domains attached yet. Start here and add compartments later.',
-    seedFile:    'minimal-kernel.spec',
-    seedSection: 'meta',
-  },
-  {
-    id:          'api-service',
-    kind:        'component',
-    label:       'API Service',
-    description: 'A service defined by its external/internal interface contracts — auth, SLA, ' +
-                 'failure contract, consumers, mock availability.',
-    seedFile:    'api-service.spec',
-    seedSection: 'api',
-  },
-  {
-    id:          'event-system',
-    kind:        'component',
-    label:       'Event System',
-    description: 'A pure event-driven core — ring-buffered stream, typed event schemas, delivery ' +
-                 'guarantees, idempotency, dead-lettering.',
-    seedFile:    'event-system.spec',
-    seedSection: 'events',
-  },
-  {
-    id:          'plugin-runtime',
-    kind:        'system',
-    label:       'Plugin Runtime',
-    description: 'A host with structurally isolated plugins — bus-only communication, load/unload ' +
-                 'contract, hot-swap, no direct kernel or database access.',
-    seedFile:    'plugin-runtime.md',
-    seedSection: 'schema',
-  },
-  {
-    id:          'ai-agent-system',
-    kind:        'system',
-    label:       'AI Agent System',
-    description: 'An agent/self-modification engine with a model routing ladder (local-first, ' +
-                 'remote fallback, fail-loud) and explicit entry points.',
-    seedFile:    'ai-agent-system.spec',
-    seedSection: 'integration',
-  },
-  {
-    id:          'custom',
-    kind:        'custom',
-    label:       'Custom',
-    description: 'No architectural pattern imposed — every chunk dispatches normally, shaped ' +
-                 'entirely by what you write in the wizard.',
-    seedFile:    null,
-    seedSection: null,
+    label:       'Compartment Map (map first, into a repository)',
+    description: 'Declares compartment/seam/gate boundaries and is meant to be promoted to a ' +
+                 'repository immediately — the map drawn first, components filled in after.',
+    seedFile:    'compartments.spec',
   },
 ]);
 
 function listTemplates() {
-  return TEMPLATES.map(({ id, kind, label, description, seedFile, seedSection }) =>
-    ({ id, kind, label, description, hasSeed: !!seedFile, seedSection }));
+  return TEMPLATES.map(({ id, kind, label, description, seedFile }) =>
+    ({ id, kind, label, description, hasSeed: !!seedFile }));
 }
 
 function getTemplate(id) {

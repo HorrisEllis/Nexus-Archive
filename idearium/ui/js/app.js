@@ -448,6 +448,7 @@ function renderBrainstorms() {
       </div>
       <div class="action-row">
         ${b.promoted ? `<span class="ic-tag" style="color:var(--mint)">promoted ✓</span>` : `<button class="action-btn primary" onclick="promoteBrainstorm('${b.id}')">promote → idea</button>`}
+        <button class="action-btn" onclick='openNewSpecModal({name:${JSON.stringify(b.text.slice(0,60))}, description:${JSON.stringify(b.text)}})'>+ spec</button>
         <button class="action-btn danger" onclick="deleteBrainstorm('${b.id}')">discard</button>
       </div>
     </div>
@@ -569,62 +570,98 @@ async function exportSpec(uuid) {
     toast('exported','ok');
   } catch(e) { toast(e.message,'err'); }
 }
-async function newSpecPrompt() {
-  const name = await themedPrompt('spec name:', 'new spec');
-  if (!name) return;
+function newSpecPrompt() {
+  openNewSpecModal();
+}
+
+// ════════════════════════════════════════════════════
+// NEW SPEC MODAL — template picker (architecture/schemas/checklists/axioms/
+// compartments/genesis/...) + WARP build-logic selector, wired to the real
+// spec-engine (GET/POST /api/spec-engine/...). "Map to repo now" is not a
+// separate backend action — it's create → spec.promote(mode:'manual') in
+// one click, which is exactly what the compartments/axioms templates are
+// designed for: their seeded chunks (meta/purpose/axioms/integration) are
+// enough to promote immediately, everything else lands as a TODO in the
+// repo skeleton until a follow-up spec fills it in.
+// ════════════════════════════════════════════════════
+let NS_TEMPLATES = null;
+let NS_IDEA_UUID = null; // set when opened from an idea, so the created repo can be linked later
+
+async function loadNewSpecTemplates() {
+  if (NS_TEMPLATES) return NS_TEMPLATES;
   try {
-    await api('/api/specs', { method:'POST', body: JSON.stringify({name}) });
-    toast('spec created','ok');
-    await loadSpecs();
-  } catch(e) { toast(e.message,'err'); }
+    const r = await api('/api/spec-engine/templates');
+    NS_TEMPLATES = r.templates || r.data || r || [];
+  } catch (e) { NS_TEMPLATES = []; }
+  return NS_TEMPLATES;
 }
-// §IMPORT 2026-07-11 — "upload these and have it parse, import and build a
-// repo." Mirrors ingestDroppedFiles' shape (read as text client-side, POST,
-// toast, refresh) but targets /api/spec-engine/import instead of /api/repos:
-// each file becomes its own spec manifest (boundary-engine-parsed, chunks
-// pre-filled from the authored content — zero tokens), then auto-promotes
-// to a repo server-side the instant every chunk is complete. One file in,
-// one repo out, no intermediate manual step.
-async function importSpecFiles(fileList) {
-  const files = Array.from(fileList || []);
-  if (!files.length) return;
-  for (const f of files) {
-    const specText = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = reject;
-      r.readAsText(f);
+
+async function openNewSpecModal({ name = '', description = '', ideaUuid = null } = {}) {
+  NS_IDEA_UUID = ideaUuid;
+  document.getElementById('ns-name').value = name;
+  document.getElementById('ns-description').value = description;
+  document.getElementById('ns-build-engine').value = 'auto';
+
+  const templates = await loadNewSpecTemplates();
+  const wrap = document.getElementById('ns-templates');
+  wrap.innerHTML = templates.map(t => `
+    <label style="display:flex;align-items:flex-start;gap:8px;padding:4px 2px;cursor:pointer;font-size:11px;color:var(--text2)">
+      <input type="checkbox" class="ns-tpl-check" value="${t.id}" onchange="onNewSpecTemplateChange()" style="margin-top:2px">
+      <span><b style="color:var(--text)">${escapeHtml(t.label||t.id)}</b>${t.hasSeed ? ' <span style="color:var(--mint)">· deterministic</span>' : ''}<br>
+      <span style="color:var(--text3)">${escapeHtml(t.description||'')}</span></span>
+    </label>`).join('');
+
+  document.getElementById('new-spec-modal').classList.add('open');
+  document.getElementById('ns-name').focus();
+}
+function closeNewSpecModal() { document.getElementById('new-spec-modal').classList.remove('open'); }
+
+function selectedTemplateIds() {
+  return [...document.querySelectorAll('.ns-tpl-check:checked')].map(c => c.value);
+}
+
+function onNewSpecTemplateChange() {
+  // "map to repo now" only makes sense once the map-first templates
+  // (compartments, axioms) are among the selection — showing it for every
+  // combination would let someone promote a spec that's really just empty
+  // TODOs with a name attached.
+  const ids = selectedTemplateIds();
+  const mapWorthy = ids.includes('compartments') || ids.includes('axioms');
+  document.getElementById('ns-map-btn').style.display = mapWorthy ? '' : 'none';
+}
+
+async function submitNewSpec(mapToRepo) {
+  const name = document.getElementById('ns-name').value.trim();
+  if (!name) { toast('name required', 'err'); return; }
+  const description = document.getElementById('ns-description').value.trim();
+  const templateIds = selectedTemplateIds();
+  const buildEngine = document.getElementById('ns-build-engine').value || 'auto';
+
+  try {
+    const r = await api('/api/spec-engine/specs', {
+      method: 'POST',
+      body: JSON.stringify({ name, description, templateIds, buildEngine }),
     });
-    const name = f.name.replace(/\.[^/.]+$/, '');
-    try {
-      const res = await api('/api/spec-engine/import', { method: 'POST', body: JSON.stringify({ name, specText }) });
-      const blocks = res.blocksFound ?? '?';
-      const filled = (res.sectionsFilled || []).length;
-      if (res.repoUuid) {
-        toast(`"${name}" imported — ${blocks} block(s) → ${filled} chunk(s) → repo ${res.repoUuid.slice(0,8)} built`, 'ok');
-      } else if (res.repoError) {
-        toast(`"${name}" imported (${filled} chunks) but repo build failed: ${res.repoError}`, 'err');
-      } else {
-        toast(`"${name}" imported — ${blocks} block(s) → ${filled} chunk(s), not yet promoted`, 'ok');
-      }
-    } catch (e) {
-      toast(`import failed for "${f.name}": ${e.message}`, 'err');
+    const manifest = r.manifest || r;
+    toast(`spec created${templateIds.length ? ` from [${templateIds.join(', ')}]` : ''} · build logic: ${buildEngine}`, 'ok');
+
+    if (mapToRepo) {
+      try {
+        const promoted = await api(`/api/spec-engine/specs/${manifest.uuid}/promote`, {
+          method: 'POST', body: JSON.stringify({ mode: 'manual' }),
+        });
+        toast('mapped to repository — compartments/axioms in, rest TODO', 'ok');
+        closeNewSpecModal();
+        await loadSpecs(); await loadApiRepos();
+        openRepoFor(null, manifest.uuid, name);
+        return;
+      } catch (e) { toast(`spec created, map-to-repo failed: ${e.message}`, 'err'); }
     }
-  }
-  await loadSpecs();
-  if (typeof loadApiRepos === 'function') await loadApiRepos();
+
+    closeNewSpecModal();
+    await loadSpecs();
+  } catch (e) { toast(e.message, 'err'); }
 }
-
-// Drop zone: dragging .spec/.md files onto the Spec Library list imports
-// them the same way the toolbar button does.
-(function wireSpecDropzone(){
-  const zone = document.getElementById('spec-list');
-  if (!zone) return;
-  ['dragover','dragenter'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.style.outline = '1px dashed var(--accent, #5af)'; }));
-  ['dragleave','drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.style.outline = ''; }));
-  zone.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) importSpecFiles(e.dataTransfer.files); });
-})();
-
 async function createSpecForIdea(ideaUuid) {
   const idea = IDEAS.find(i=>i.uuid===ideaUuid); if (!idea) return;
   try {
@@ -873,7 +910,7 @@ function toast(msg, type='ok') {
   setTimeout(()=>div.remove(), 2800);
 }
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') closeModal();
+  if (e.key==='Escape') { closeModal(); closeNewSpecModal(); }
   if ((e.metaKey||e.ctrlKey) && e.key==='n') { e.preventDefault(); setView('ideas'); openModal(); }
 });
 

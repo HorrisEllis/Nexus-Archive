@@ -84,62 +84,28 @@ function _specDedupKey(name, type = 'component') {
 
 // ── Create a new spec with all chunks initialized ─────────────────────────────
 /**
- * _seedFromTemplate — deterministic, per-template seeding. Returns
- * { sectionId, content } or null. Two honest paths, not one blurred into
- * the other:
+ * _seedMetaFromTemplate — the ONLY deterministic seed genesis.spec supports.
  *
- * (a) genesis (DSL, no other structural mapping) — the ONLY thing exactly
- *     and verifiably extractable is the header block: version, UUID, spine
- *     declaration, spine binding rule. That is a real `meta` section.
- *     §HONEST SCOPE 2026-07-09, unchanged: idearium's SPEC_SECTIONS are
- *     prose sections (meta/purpose/axioms/schema/api/events/integration/
- *     tests) while genesis.spec is a GRAMMAR (`spine WARP`, `bind
- *     kernel.boot -> Stream`). There is no structural mapping from the DSL
- *     to the other seven sections, and inventing one would fabricate
- *     content while claiming determinism. This path is untouched from the
- *     2026-07-09 version — same regexes, same output, same one-chunk scope.
+ * §HONEST SCOPE 2026-07-09. templates.js promises the seed will "pre-fill
+ * whichever chunks it can". Measured against the real files, that is one
+ * chunk, not eight: idearium's SPEC_SECTIONS are prose sections
+ * (meta/purpose/axioms/schema/api/events/integration/tests) while genesis.spec
+ * is a GRAMMAR — `spine WARP`, `bind kernel.boot -> Stream`, `axiom GEN-S1`.
+ * There is no structural mapping from a DSL to eight markdown essays, and
+ * inventing one would fabricate content while claiming determinism.
  *
- * (b) the 2026-07-11 named-architecture templates (minimal-kernel,
- *     api-service, event-system, plugin-runtime, ai-agent-system) — each
- *     seedFile IS already-authored content for exactly the role its
- *     `seedSection` names (event-system.spec is a real event_model block,
- *     seeded into 'events'; api-service.spec is a real interfaces block,
- *     seeded into 'api'; etc — see templates.js's provenance comments).
- *     No field-extraction, no reinterpretation: the seed's raw text is the
- *     section's content, verbatim, same principle importSpec uses for a
- *     whole document. Honest because the content was chosen to already BE
- *     that section, not asked to become it.
+ * What IS extractable, exactly and verifiably: the header block — version,
+ * UUID, spine declaration, and the spine binding rule. That is a real `meta`
+ * section. Seeding it skips one agent dispatch out of eight. That is a
+ * measurable 12.5% token reduction on a genesis spec, not a promised one.
  *
- * Returns null when nothing can be extracted/applies. A null seed means
- * "dispatch every chunk normally" — never a half-filled chunk presented as
- * complete.
+ * Returns null when nothing can be extracted. A null seed means "dispatch
+ * every chunk normally" — never a half-filled chunk presented as complete.
  */
-function _seedFromTemplate(templateId, specName) {
+function _seedMetaFromTemplate(templateId, specName) {
   const seed = readSeed(templateId);
   if (!seed) return null;
-  const template = getTemplate(templateId);
-  const seedSection = template?.seedSection || 'meta';
 
-  if (templateId === 'genesis') {
-    const content = _seedMetaFromGenesis(seed, specName, templateId);
-    return content ? { sectionId: seedSection, content } : null;
-  }
-
-  // Path (b): verbatim section content, tagged with provenance — the same
-  // "already real, just needs a home" logic importSpec uses per-block.
-  const lines = [
-    `Seeded deterministically from template \`${templateId}\` — no agent dispatched.`,
-    ``,
-    `> Source: idearium/spec-engine/templates/${template.seedFile}`,
-    ``,
-    `---`,
-    ``,
-    seed.trim(),
-  ];
-  return { sectionId: seedSection, content: lines.join('\n') };
-}
-
-function _seedMetaFromGenesis(seed, specName, templateId) {
   const version = seed.match(/^version\s+(\S+)/m)?.[1];
   const uuid    = seed.match(/UUID:\s*(\S+)/)?.[1];
   const spine   = seed.match(/^spine\s+(\S+)/m)?.[1];
@@ -168,23 +134,89 @@ function _seedMetaFromGenesis(seed, specName, templateId) {
   return lines.join('\n');
 }
 
+// §DETERMINISM EXPANSION 2026-07-11 — the seeder only ever filled the 'meta'
+// chunk (1 of 10), no matter how much authored content a template carried.
+// A template author writing a real axioms list, a real schema, a real build
+// order got ALL of that thrown away except four regex-captured header
+// fields. That's not "deterministic seeding", that's a template summary.
+//
+// Convention: a seed .spec file MAY contain explicit block markers —
+//   ## SECTION: <sectionId>
+//   ...content (verbatim, kept as-authored)...
+//   ## SECTION: <nextId>
+// Any sectionId matching a real SPEC_SECTIONS.id gets that block's content
+// as its seeded chunk, verbatim, zero agent dispatch. Templates with no
+// markers (e.g. the original genesis.spec) fall through to
+// _seedMetaFromTemplate only — nothing about existing templates changes.
+// This is purely additive.
+const SECTION_MARKER_RE = /^##\s*SECTION:\s*([a-z_]+)\s*$/gm;
+
+function _seedSectionsFromTemplate(templateId, specName) {
+  const seed = readSeed(templateId);
+  const out = {};
+
+  // 'meta' always tries the original header-regex path first — unchanged
+  // behavior for every template that predates this convention.
+  const metaSeed = _seedMetaFromTemplate(templateId, specName);
+  if (metaSeed) out.meta = metaSeed;
+
+  if (!seed) return out;
+
+  const validIds = new Set(SPEC_SECTIONS.map(s => s.id));
+  const markers = [...seed.matchAll(SECTION_MARKER_RE)];
+  for (let i = 0; i < markers.length; i++) {
+    const id = markers[i][1];
+    if (!validIds.has(id)) continue; // §1.2 — unknown marker is ignored, not silently misfiled
+    const start = markers[i].index + markers[i][0].length;
+    const end   = i + 1 < markers.length ? markers[i + 1].index : seed.length;
+    const body  = seed.slice(start, end).trim();
+    if (!body) continue;
+    out[id] = `Seeded deterministically from template \`${templateId}\` — no agent dispatched.\n\n${body}\n\n` +
+              `> Source: idearium/spec-engine/templates/${templateId}.spec § ${id}`;
+  }
+  return out;
+}
+
 // §GENERALIZED 2026-07-10 — chunk/manifest construction pulled out of
 // createSpec() so importSpec() can hand it a section list SHAPED BY THE
 // SOURCE DOCUMENT instead of being forced through the fixed 10-entry
 // SPEC_SECTIONS template. createSpec() below is now a thin wrapper that
 // passes SPEC_SECTIONS as its default — behavior for existing callers is
 // unchanged, byte for byte.
-function _buildManifest({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, sections = SPEC_SECTIONS }) {
+function _buildManifest({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto' }) {
   _ensureRoot();
   if (!name) throw new Error('spec name required');
 
+  // §MULTI-TEMPLATE SELECT 2026-07-11 — "select the architecture AND the
+  // features needed" means composing several templates into one spec, not
+  // choosing one. templateIds (array) is the real interface now; templateId
+  // (string) still works and is normalized into a one-element list — no
+  // existing caller breaks. Order matters: earlier templates win when two
+  // templates seed the same section (first pick is the primary one).
+  const idList = (Array.isArray(templateIds) && templateIds.length) ? templateIds
+               : (templateId ? [templateId] : []);
+
   // §1.2 — an unknown templateId is an error, not a silent fallback to none.
   // A spec that claims a template it never used is a lie in its own manifest.
-  const template = templateId ? getTemplate(templateId) : null;
-  if (templateId && !template) {
-    throw new Error(`unknown templateId '${templateId}'. Known: ${listTemplates().map(t => t.id).join(', ')}`);
-  }
+  const templates = idList.map(id => {
+    const t = getTemplate(id);
+    if (!t) throw new Error(`unknown templateId '${id}'. Known: ${listTemplates().map(x => x.id).join(', ')}`);
+    return t;
+  });
+  const template = templates[0] || null;       // primary, for back-compat (type, single-template callers)
   if (template) type = template.kind;
+
+  // §BUILD-LOGIC SELECTOR 2026-07-11 — 'auto' keeps existing behavior (WARP
+  // used when available, silent fallback to direct agent). 'warp' makes WARP
+  // mandatory and loud: a chunk build fails rather than silently downgrading
+  // to direct-agent if the cache/cascade isn't loaded. 'direct' skips WARP
+  // entirely (bypasses its exact-cache/population — useful when a rebuild
+  // must not read a stale cached result). Anything else is a config error,
+  // not a silent default (§1.2).
+  const VALID_ENGINES = ['auto', 'warp', 'direct'];
+  if (!VALID_ENGINES.includes(buildEngine)) {
+    throw new Error(`unknown buildEngine '${buildEngine}'. Known: ${VALID_ENGINES.join(', ')}`);
+  }
 
   const specUuid  = crypto.randomUUID();
   const dedupKey  = _specDedupKey(name, type);
@@ -245,6 +277,7 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
     status:      'building',    // pending | building | complete | archived
     agent,                      // primary agent (Mistral first)
     agentPriority: ['ollama', 'chatgpt', 'claude'],  // LAW_I: local first
+    buildEngine,                 // auto | warp | direct — §BUILD-LOGIC SELECTOR
     totalChunks: chunks.length,
     doneChunks:  0,
     failedChunks:0,
@@ -257,16 +290,15 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
     // which sections were filled without an agent. A manifest that cannot say
     // where its content came from cannot be audited, and "deterministic" then
     // becomes a claim rather than a record.
-    templateId:     templateId,
+    templateId:     template ? template.id : null,   // primary (back-compat single-field readers)
+    templateIds:    templates.map(t => t.id),         // §MULTI-TEMPLATE SELECT — full composed set
     templateSeeded: [],
     // §PHASE 6 — non-null when a spec with the same name+type already existed.
     // The caller can offer reuse; this spec is still created (deliberate rebuild
     // is valid), but the redundancy is now visible instead of silent.
     duplicateOf:    existing ? existing.uuid : null,
-    rootHash:       null,  // computed below, after chunks[] exists
     chunks,
   };
-  manifest.rootHash = computeRootHash(manifest);
 
   // §2.1 — write manifest to disk before anything else
   const manifestPath = path.join(specDir, 'manifest.json');
@@ -277,45 +309,66 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
   // recompute progress. Reuses completeChunk rather than writing chunk files
   // here: one code path owns "a chunk became complete", so progress, byteSize
   // and the ledger stay correct by construction.
-  if (template) {
-    const seeded = _seedFromTemplate(templateId, name);
-    if (seeded) {
-      const targetChunk = manifest.chunks.find(c => c.sectionId === seeded.sectionId);
-      if (targetChunk) {
+  if (templates.length) {
+    // §DETERMINISM EXPANSION 2026-07-11 — was: only ever tries to seed
+    // 'meta', from one template. Now: seeds every SPEC_SECTIONS id any
+    // selected template's seed file has a `## SECTION: <id>` block for
+    // (plus 'meta' via the header-regex path), composing ACROSS the whole
+    // selection. If two selected templates both seed the same section
+    // (e.g. two templates both provide 'meta'), the first-listed template
+    // wins — the primary pick, not a silent overwrite by whichever loaded
+    // last.
+    const seededMap = {};       // sectionId -> { content, fromTemplateId }
+    for (const t of templates) {
+      const perTemplate = _seedSectionsFromTemplate(t.id, name);
+      for (const [sectionId, content] of Object.entries(perTemplate)) {
+        if (seededMap[sectionId]) continue; // first pick wins
+        seededMap[sectionId] = { content, fromTemplateId: t.id };
+      }
+    }
+    const seededIds = Object.keys(seededMap);
+    if (seededIds.length) {
+      const actuallySeeded = [];
+      for (const sectionId of seededIds) {
+        const chunk = manifest.chunks.find(c => c.sectionId === sectionId);
+        if (!chunk) continue;
         try {
-          completeChunk(specUuid, targetChunk.uuid, seeded.content);
-
-          // §BUG FIXED 2026-07-09 — this previously set the chunk's `agent` on
-          // the stale in-memory object and then returned the freshly-loaded
-          // on-disk manifest, so the seeded chunk reported `agent: 'ollama'`.
-          // It claimed an LLM produced content no LLM ever touched. Provenance
-          // that lies is worse than provenance that is absent. Persist it.
-          const fresh = loadSpec(specUuid);
-          const fm = fresh.chunks.find(c => c.uuid === targetChunk.uuid);
-          if (fm) { fm.agent = 'template'; fm.agentModel = `template:${templateId}`; }
-          fresh.templateSeeded = [seeded.sectionId];
-          saveSpec(fresh);
-
-          console.log(`[${MODULE_ID}] seeded '${seeded.sectionId}' from template '${templateId}' — 1 of ${chunks.length} chunks needs no agent`);
-          return fresh;
+          completeChunk(specUuid, chunk.uuid, seededMap[sectionId].content);
+          actuallySeeded.push(sectionId);
         } catch (e) {
-          // §1.2 — a failed seed degrades to normal dispatch, loudly.
-          console.warn(`[${MODULE_ID}] template seed failed, chunk stays PENDING: ${e.message}`);
+          // §1.2 — a failed seed degrades that one chunk to normal dispatch, loudly.
+          console.warn(`[${MODULE_ID}] template seed failed for '${sectionId}', chunk stays PENDING: ${e.message}`);
         }
-      } else {
-        console.warn(`[${MODULE_ID}] template '${templateId}' targets section '${seeded.sectionId}' which isn't in this spec's section list — seed skipped, all chunks dispatch`);
+      }
+
+      if (actuallySeeded.length) {
+        // §BUG FIXED 2026-07-09 (preserved) — provenance must be persisted
+        // on the fresh on-disk manifest, not the stale in-memory object,
+        // or a seeded chunk reports `agent: 'ollama'` for content no LLM
+        // ever touched.
+        const fresh = loadSpec(specUuid);
+        for (const sectionId of actuallySeeded) {
+          const fm = fresh.chunks.find(c => c.sectionId === sectionId);
+          if (fm) { fm.agent = 'template'; fm.agentModel = `template:${seededMap[sectionId].fromTemplateId}`; }
+        }
+        fresh.templateSeeded = actuallySeeded;
+        saveSpec(fresh);
+
+        console.log(`[${MODULE_ID}] seeded [${actuallySeeded.join(', ')}] from templates [${templates.map(t=>t.id).join(', ')}] — ` +
+          `${actuallySeeded.length} of ${chunks.length} chunks need no agent`);
+        return fresh;
       }
       return loadSpec(specUuid);
     }
-    console.warn(`[${MODULE_ID}] template '${templateId}' produced no deterministic seed — all ${chunks.length} chunks will dispatch`);
+    console.warn(`[${MODULE_ID}] templates [${templates.map(t=>t.id).join(', ')}] produced no deterministic seed — all ${chunks.length} chunks will dispatch`);
   }
 
   console.log(`[${MODULE_ID}] spec created: ${specUuid.slice(0,8)} "${name}" · ${chunks.length} chunks · agent:${agent}`);
   return manifest;
 }
 
-export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null }) {
-  return _buildManifest({ name, type, description, agent, author, templateId, sections: SPEC_SECTIONS });
+export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto' }) {
+  return _buildManifest({ name, type, description, agent, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine });
 }
 
 // ── Load spec manifest from disk ──────────────────────────────────────────────
@@ -442,7 +495,6 @@ export function completeChunk(specUuid, chunkUuid, content) {
   manifest.failedChunks= manifest.chunks.filter(c => c.status === CHUNK_STATES.FAILED || c.status === CHUNK_STATES.ESCALATED).length;
   manifest.progress    = Math.round((manifest.doneChunks / manifest.totalChunks) * 100);
   manifest.updatedAt   = Date.now();
-  manifest.rootHash     = computeRootHash(manifest);
 
   if (manifest.doneChunks === manifest.totalChunks) {
     manifest.status      = 'complete';
@@ -592,7 +644,6 @@ export default {
   createSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
   buildChunkPrompt, archiveSpec, expandSpec,
-  computeRootHash, findByRootHash, ingestFilesAsSpec,
   SPEC_SECTIONS, CHUNK_STATES,
   MODULE_ID, VERSION, COMP_ID,
 };
@@ -619,87 +670,6 @@ export function findByDedupKey(name, type = 'component') {
     } catch (_) {}
   }
   return null;
-}
-
-// §ROOT HASH 2026-07-11 — "the repo is an archive using the spec, the spec
-// is the metadata, like a compartment with the spec as the metadata." The
-// repo layer used to keep its OWN copy of file metadata (path+byte-length,
-// no actual content) alongside a SEPARATE legacy spec object — two
-// disconnected records claiming to describe one thing. Fixed not by adding
-// a new archive format on top, but by recognizing the spec's own chunks
-// already ARE the archive: real content, already verified on disk (§1.1),
-// already tagged with comp_id/seam_id/contract_id. The only missing piece
-// was identity — something that says "this exact content" the way JAA's
-// store already does (content-addressable, SHA-256 of canonical JSON, same
-// content -> same hash — see the james-brooks skill's JAA section). Reusing
-// that exact convention here rather than inventing a second one: a spec's
-// rootHash is the hash of its ordered (sectionId, chunk-hash) pairs. Two
-// specs with identical chunk content produce the identical rootHash — free
-// dedup, and a repo becomes addressable by content instead of by an
-// arbitrarily-assigned uuid pointing at a copy nobody kept in sync.
-function _canonicalJSON(v) {
-  if (Array.isArray(v)) return '[' + v.map(_canonicalJSON).join(',') + ']';
-  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + _canonicalJSON(v[k])).join(',') + '}';
-  return JSON.stringify(v);
-}
-function _sha256(s) { return crypto.createHash('sha256').update(s).digest('hex'); }
-function _hashChunk(c) { return _sha256(_canonicalJSON({ sectionId: c.sectionId, content: c.content || '' })); }
-
-export function computeRootHash(manifest) {
-  const ordered = [...manifest.chunks]
-    .sort((a, b) => a.chunkIdx - b.chunkIdx)
-    .map(c => ({ sectionId: c.sectionId, hash: _hashChunk(c) }));
-  return _sha256(_canonicalJSON(ordered));
-}
-
-// Content-addressable lookup — the repo layer's dedup lever. Same rootHash
-// means same content already exists on disk; a caller can reuse it instead
-// of writing a byte-identical second copy.
-export function findByRootHash(rootHash) {
-  _ensureRoot();
-  for (const entry of fs.readdirSync(SPECS_ROOT, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    try {
-      const m = loadSpec(entry.name);
-      if (m.rootHash === rootHash) return m;
-    } catch (_) {}
-  }
-  return null;
-}
-
-// §UNIFIED INGEST 2026-07-11 — "least amount of friction, highest leverage,
-// not a wrapper." Dropped repo files used to go through a completely
-// separate code path from an imported .spec: RepoLayer built its own
-// throwaway spec object and stored file metadata (no content) in its own
-// JSON file. That's two storage systems for one concept. This collapses
-// them: a dropped file becomes a chunk exactly the way an imported .spec's
-// block becomes a chunk (dynamic sections, real content, completeChunk's
-// existing §1.1 disk-verification) — same mechanism, same one gate,
-// regardless of whether the content arrived as a parsed .spec block or a
-// raw file. The repo layer (repo/index.js) no longer needs its own content
-// store at all; it becomes a thin index over this.
-export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
-  if (!files.length) throw new Error('ingestFilesAsSpec: at least one file required');
-  const seenIds = new Map();
-  const sections = files.map((f, idx) => {
-    let id = _slug((f.path || `file-${idx}`).replace(/\//g, '-'));
-    const n = (seenIds.get(id) || 0) + 1;
-    seenIds.set(id, n);
-    if (n > 1) id = `${id}-${n}`;
-    return { id, title: f.path || `file-${idx}`, desc: `ingested file: ${f.path || idx}` };
-  });
-  const manifest = _buildManifest({ name, type: 'codebase', description: 'ingested from dropped files', author, sections });
-  files.forEach((f, i) => {
-    const chunk = manifest.chunks[i];
-    const content = (f.content && f.content.trim()) ? f.content : `<!-- ${f.path}: no text content captured -->`;
-    markChunkBuilding(manifest.uuid, chunk.uuid, { agent: 'ingest', model: 'ingest:drop' });
-    completeChunk(manifest.uuid, chunk.uuid, content);
-    const fresh = loadSpec(manifest.uuid);
-    const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
-    if (fc) { fc.agent = 'ingest'; fc.agentModel = 'ingest:drop'; }
-    saveSpec(fresh);
-  });
-  return loadSpec(manifest.uuid);
 }
 
 // findPriorSection — the chunk-level lever. The WARP exact cache reuses a chunk
@@ -735,44 +705,12 @@ export function findPriorSection(sectionId, sectionDesc = '', excludeSpecUuid = 
 // boundaries and creates warp gates automatically" instead of a human (or a
 // hardcoded alias table) declaring them. Applied here at the cheapest honest
 // level: structural repetition. Within a block's body, find every line that
-// opens a new sibling unit. Group candidates by their grouping key (indent
-// depth for YAML, header depth for markdown, keyword for line-oriented
-// DSLs). The grouping with 3+ repeats IS the block's natural sibling
-// boundary. Returns null when no such repetition exists, so a small/flat
-// block is left whole.
-//
-// §GENERALIZED 2026-07-11 — real uploaded specs proved this needs to be
-// format-agnostic, not YAML-only. Same James-authored corpus, three
-// structurally different dialects:
-//   - YAML block style   (causal-nexus.spec, RHEON_VOID*, forge-ide.spec) —
-//     "  key:" sibling lines at a shared indent.
-//   - Flat YAML, no banners (NEXUS-GUARDIAN.spec, NEXUS-SPEC-v9, spec-parser.spec) —
-//     same shape, just no "# BLOCK N —" banners above it. Already handled:
-//     these fall to a single unbannered block, which is >SPLIT_THRESHOLD, so
-//     the YAML detector runs on the whole document and finds the top-level
-//     keys directly. No change needed for this dialect.
-//   - Markdown docs      (SYSTEM_SPEC_v1_0_0.md, spec-nexus-browser-automation.md) —
-//     no YAML keys at all, only "## N. TITLE" headers. YAML detector finds
-//     nothing → collapsed into one undivided chunk. Confirmed by direct test.
-//   - Line-statement DSL (genesis.spec) — no YAML, no markdown, only
-//     `domain "name"` declarations at column 0 with `// ── banner ──`
-//     comments for the preamble. Same failure as markdown.
-// The last two silently defeated the boundary engine — not a crash, just a
-// giant unsplit chunk, which is the same "information not lost but not
-// usefully bounded" failure the engine exists to prevent. Fixed by trying
-// three detectors in order and using the first that finds real repetition,
-// instead of only ever trying the YAML one.
+// is a bare "key:" opening a nested mapping. Group those by indent depth.
+// The indent depth with 3+ repeats IS the block's natural sibling boundary
+// (e.g. BLOCK 4 — MODULES has 21 sibling keys — identity, time, kernel, ...
+// — all at the same indent, each a self-contained cohesive unit). Returns
+// null when no such repetition exists, so a small/flat block is left whole.
 function _detectSubBoundaries(body) {
-  return _detectYamlBoundaries(body) || _detectMarkdownBoundaries(body) || _detectDeclarationBoundaries(body);
-}
-
-// Dialect 1 — YAML sibling keys: "  key:" lines grouped by indent depth.
-// The shallowest indent with >=3 repeats is the true outer partition (e.g.
-// the 21 module names in BLOCK 4). Deeper indents recur more often (every
-// module repeats "inputs:", "outputs:", ...) but that's structure INSIDE
-// each unit, not between units — picking the deepest one would slice spans
-// across module boundaries and produce colliding, wrongly-scoped chunks.
-function _detectYamlBoundaries(body) {
   const lines = body.split('\n');
   const keyLineRe = /^(\s+)([a-zA-Z][\w.-]*):\s*$/;
   const byIndent = new Map();
@@ -783,84 +721,23 @@ function _detectYamlBoundaries(body) {
     if (!byIndent.has(indent)) byIndent.set(indent, []);
     byIndent.get(indent).push({ key: m[2], lineIdx: i });
   });
+  // The shallowest indent with >=3 repeats is the block's true outer
+  // partition (e.g. the 21 module names in BLOCK 4). Deeper indents recur
+  // more often (every module repeats "inputs:", "outputs:", ...) but that's
+  // structure INSIDE each unit, not between units — picking the deepest one
+  // would slice spans across module boundaries and produce colliding,
+  // wrongly-scoped chunks instead of clean ones.
   let best = null;
   for (const [indent, matches] of [...byIndent.entries()].sort((a, b) => a[0] - b[0])) {
     if (matches.length >= 3) { best = matches; break; }
   }
-  return best ? _spansFromMatches(lines, best) : null;
-}
-
-// Dialect 2 — Markdown headers: "## Title" lines grouped by "#" depth.
-// Same rule as YAML: shallowest depth with >=3 repeats wins, since that's
-// the outer partition (chapter-level), not the incidental deeper structure
-// inside one chapter (which may itself repeat "### Fields" etc.).
-function _detectMarkdownBoundaries(body) {
-  const lines = body.split('\n');
-  const headerRe = /^(#{1,6})\s+(.+?)\s*$/;
-  const byDepth = new Map();
-  let inFence = false;
-  lines.forEach((line, i) => {
-    // Fenced code blocks (```...```) commonly contain shell/comment lines
-    // like "# do the thing" — a single '#' at column 0 that would otherwise
-    // be misread as a depth-1 document header and outrank the real headers
-    // (depth sorts shallowest-first). Skip anything inside a fence.
-    if (/^\s*```/.test(line)) { inFence = !inFence; return; }
-    if (inFence) return;
-    const m = line.match(headerRe);
-    if (!m) return;
-    const depth = m[1].length;
-    if (!byDepth.has(depth)) byDepth.set(depth, []);
-    byDepth.get(depth).push({ key: m[2], lineIdx: i });
-  });
-  // Depth 1 ("# Title") is conventionally the single document title, not a
-  // repeating sibling boundary — a stray "# comment" inside prose (or an
-  // unfenced shell snippet) would otherwise register as 3 "matches" and,
-  // being shallower, wrongly outrank the real "## chapter" partition.
-  // Prefer depth>=2; only fall back to depth 1 if nothing deeper qualifies.
-  let best = null;
-  for (const [depth, matches] of [...byDepth.entries()].filter(([d]) => d >= 2).sort((a, b) => a[0] - b[0])) {
-    if (matches.length >= 3) { best = matches; break; }
-  }
-  if (!best) {
-    const depth1 = byDepth.get(1);
-    if (depth1 && depth1.length >= 3) best = depth1;
-  }
-  return best ? _spansFromMatches(lines, best) : null;
-}
-
-// Dialect 3 — line-statement DSLs (e.g. genesis.spec's `domain "name"`):
-// a bare keyword at column 0 (or a shared indent), followed by a quoted or
-// bare identifier, repeated 3+ times. Grouped by keyword so unrelated
-// declaration types (domain vs axiom vs bind) never merge into one span set.
-function _detectDeclarationBoundaries(body) {
-  const lines = body.split('\n');
-  const declRe = /^(\s*)([a-zA-Z][\w-]*)\s+"?([\w][\w.\/-]*)"?\s*(\{|\bversion\b|$)/;
-  const byKeyword = new Map();
-  lines.forEach((line, i) => {
-    const m = line.match(declRe);
-    if (!m) return;
-    // Reject lines that are actually YAML "key: value" or comment lines —
-    // this detector is for bare `keyword identifier` statements only.
-    if (line.trim().startsWith('//') || line.trim().startsWith('#')) return;
-    if (/:/.test(line.slice(0, line.indexOf(m[3])))) return;
-    const groupKey = `${m[1].length}:${m[2]}`;
-    if (!byKeyword.has(groupKey)) byKeyword.set(groupKey, []);
-    byKeyword.get(groupKey).push({ key: m[3], lineIdx: i });
-  });
-  let best = null;
-  for (const matches of byKeyword.values()) {
-    if (matches.length >= 3 && (!best || matches.length > best.length)) best = matches;
-  }
-  return best ? _spansFromMatches(lines, best) : null;
-}
-
-function _spansFromMatches(lines, matches) {
-  const spans = matches.map((m, idx) => {
+  if (!best) return null;
+  const spans = best.map((m, idx) => {
     const startLine = m.lineIdx;
-    const endLine = idx + 1 < matches.length ? matches[idx + 1].lineIdx : lines.length;
+    const endLine = idx + 1 < best.length ? best[idx + 1].lineIdx : lines.length;
     return { key: m.key, text: lines.slice(startLine, endLine).join('\n').trim() };
   });
-  const preamble = lines.slice(0, matches[0].lineIdx).join('\n').trim();
+  const preamble = lines.slice(0, best[0].lineIdx).join('\n').trim();
   return { spans, preamble };
 }
 
