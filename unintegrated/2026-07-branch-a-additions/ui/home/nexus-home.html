@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  ui/home/nexus-home.html — decomposed homepage, additive alongside the
+  existing index.html (see shell.js header for why it's additive, not
+  a replacement, yet). Every module below is its own sovereign file —
+  "each page another file, as much as possible" — this file only
+  assembles them.
+-->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEXUS</title>
+  <link rel="stylesheet" href="shell.css" />
+  <link rel="stylesheet" href="/ui/toast/toast.css" />
+  <link rel="stylesheet" href="/ui/consent/consent-gate.css" />
+  <link rel="stylesheet" href="/ui/tv-shell/spotlight/spotlight.css" />
+</head>
+<body>
+  <!-- consent-gate.html's markup, inlined via fetch by shell in a future
+       pass; for now included directly so the overlay exists at boot
+       without an extra network round trip blocking first paint. -->
+  <div id="consent-gate-root" class="consent-gate hidden">
+    <div class="consent-gate__panel">
+      <h1 class="consent-gate__title">Before we start</h1>
+      <p class="consent-gate__body">
+        NEXUS can learn your patterns over time &mdash; how you phrase things,
+        what you tend to ask for, what "ambiguous" means for you specifically
+        &mdash; to cut down back-and-forth and get more precise over time.
+        This uses RFR2's relational/interaction modules against your real
+        conversation data, stored as decaying hypotheses (never hard facts,
+        never shared outside this system).
+      </p>
+      <p class="consent-gate__body consent-gate__body--muted">
+        This is off by default. You can change this later from the ledger
+        viewer. Nothing about you is modeled this way unless you say yes here.
+      </p>
+      <div class="consent-gate__actions">
+        <button id="consent-gate-deny"  class="consent-gate__btn consent-gate__btn--ghost">No, keep it off</button>
+        <button id="consent-gate-grant" class="consent-gate__btn consent-gate__btn--primary">Yes, learn my patterns</button>
+      </div>
+      <p class="consent-gate__footnote">Consent key: <code>rfr2_people_modeling</code> &middot; revocable anytime</p>
+    </div>
+  </div>
+
+  <div id="shell-channel-host"></div>
+
+  <script src="/ui/toast/toast.js"></script>
+  <script src="/ui/consent/consent-gate.js"></script>
+  <script src="shell.js"></script>
+</body>
+</html>

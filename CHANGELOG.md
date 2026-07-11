@@ -1,32 +1,5 @@
 # NEXUS Changelog
 
-## 2026-07-11 (2) — idea↔spec-engine phase linkage ("can't change the phase" root cause)
-
-- **idearium** — spec bumped v3.1.0 → v3.2.0. `createSpec` accepts
-  `ideaUuid`, stores it on the manifest (was read by `_promoteSpecToRepo`,
-  never written anywhere). `speceng.create` links `idea.linkedSpec` and
-  auto-advances `idea.phase` (seed/expanding/tensioned → specced).
-  `spec.promote` auto-advances the idea to `complete` (full build) or
-  `building` (partial) — caught and fixed a mid-implementation bug where
-  this nearly used RepoLayer's own synthetic tracking idea instead of the
-  real originating one. Root cause of the reported "can't change the
-  phase": the manual phase buttons always worked; the automatic
-  seed→specced→building→complete transition was simply never wired.
-- **idearium/spec-engine** (VERSION) — 1.2.0 → 1.3.0.
-- **idearium/repo** (RepoLayer) — addendum noting the ideaUuid vs
-  originIdeaUuid distinction for future readers of `_promoteSpecToRepo`.
-- **idearium UI** — `createSpecForIdea()` now opens the multi-template
-  modal instead of the template-less legacy path; the modal now actually
-  sends `ideaUuid` (previously captured on open, dropped before the
-  POST). Spec Library's builder view branches on spec-engine vs legacy
-  specs — spec-engine specs get a real chunk-status list and a "build
-  repository (end-state)" button that loops build calls to completion
-  and auto-promotes, instead of silently hitting legacy-only endpoints.
-- Verified live end to end: idea → linked spec (phase auto→specced) →
-  8/10 chunks built (2 failed, no live LLM agent in test sandbox) →
-  emerge-mode promote correctly refused → manual-mode promote succeeded
-  → idea phase advanced to `building` (correctly not `complete`).
-
 ## 2026-07-11 — idearium multi-template + repo file CRUD, tv-ui channels, Clear Glass UI decomposition
 
 - **idearium** — spec bumped v3.0.0 → v3.1.0. Multi-template spec composition

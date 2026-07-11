@@ -59,6 +59,15 @@ function getSpecEngine() {
   }
   return _specEngine;
 }
+let _copilotAdapter = null;
+function getCopilotAdapter() {
+  if (!_copilotAdapter) {
+    import('../copilot-adapter/index.js').then(m => { _copilotAdapter = m.default || m; }).catch(e => {
+      console.warn('[idearium/api] copilot-adapter load failed:', e.message);
+    });
+  }
+  return _copilotAdapter;
+}
 function getAgentSuite() {
   if (!_agentSuite) {
     import('../agent-suite/index.js').then(m => { _agentSuite = m.default || m; }).catch(e => {
@@ -140,7 +149,7 @@ function warpStatus() {
 // import resolves, so without pre-warming the FIRST speceng.build always
 // bypasses WARP. That is precisely the build whose output most needs to enter
 // the cache. Pre-warm after agent-suite, since the dispatch needs it.
-getSpecEngine(); getAgentSuite();
+getSpecEngine(); getAgentSuite(); getCopilotAdapter();
 setTimeout(() => { getWarpChunkDispatch().catch(() => {}); }, 100);  // pre-warm; failure already recorded by warpStatus()
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
@@ -153,7 +162,7 @@ import path from 'path';
 //    called it).
 let _repoLayer = null;
 function getRepoLayer() {
-  if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS() });
+  if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS(), specEngine: getSpecEngine });
   return _repoLayer;
 }
 
@@ -164,6 +173,12 @@ function getRepoLayer() {
 // already complete the moment it's imported. Same rules apply: mode:'emerge'
 // refuses to promote an unfinished spec rather than shipping a repo that
 // claims completeness it doesn't have.
+// §SIMPLIFIED 2026-07-11 — RepoLayer no longer needs a rebuilt files[] +
+// specText bundle handed to it; it indexes the manifest that already
+// exists by specUuid directly (see repo/index.js's redesign — "the spec
+// is the metadata, the repo is a thin index over it"). This function's
+// job shrinks to exactly one check: is the spec actually complete enough
+// to promote. Everything past that is one line.
 function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
   let manifest;
   try { manifest = se.loadSpec(specUuid); }
@@ -175,35 +190,9 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
       `(${pending.map(c => c.sectionId).join(', ')}). Build them, or promote with mode:'manual' to finish in the spec builder.` };
   }
 
-  const files = manifest.chunks
-    .sort((a, b) => a.chunkIdx - b.chunkIdx)
-    .map(c => {
-      const built = c.status === 'complete' && c.content;
-      const content = built
-        ? c.content
-        : `## ${c.sectionTitle || c.sectionId}\n\n<!-- TODO: not yet built — finish in the spec builder -->\n`;
-      return {
-        path: c.fileName || `${String(c.chunkIdx).padStart(2, '0')}-${c.sectionId}.md`,
-        content,
-        comp_id: c.comp_id || null,
-        seam_id: c.seam_id || null,
-        status: c.status,
-      };
-    });
-
-  const specText = `# ${manifest.name}\n\n` +
-    `<!-- promoted from spec ${specUuid} · mode:${mode} · ` +
-    `${manifest.chunks.length - pending.length}/${manifest.chunks.length} chunks built -->\n\n` +
-    `## File structure\n\n` +
-    files.map(f => `- \`${f.path}\`${f.comp_id ? ` — component: ${f.comp_id}` : ''} (${f.status})`).join('\n') +
-    `\n\n---\n\n` +
-    files.map(f => `### ${f.path}\n\n${f.content}`).join('\n\n');
-  files.unshift({ path: `${manifest.name.replace(/[^a-zA-Z0-9-_]/g, '-')}.spec`, content: specText, comp_id: 'index', seam_id: null, status: 'index' });
-
   const result = getRepoLayer().ingest({
     name: manifest.name,
-    files,
-    specText,
+    specUuid: manifest.uuid,
     source: `promote:${mode}`,
     parent: manifest.ideaUuid || null,
     promotedFromSpec: specUuid,
@@ -215,7 +204,7 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
 
   return {
     repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
-    // §BUG FIXED 2026-07-11 — result.ideaUuid above is RepoLayer.ingest()'s
+    // §MERGED 2026-07-11 — result.ideaUuid above is RepoLayer.ingest()'s
     // own SYNTHETIC "Repo: <name>" idea it always creates to track the
     // repo — not the idea that originated this spec. manifest.ideaUuid is
     // the real one; exposed separately so callers advancing the
@@ -359,6 +348,8 @@ function matchRoute(method, url) {
     ['POST',   ['api','spec-engine','specs',':uuid','promote'], 'spec.promote'],
     ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
     ['GET',    ['api','spec-engine','context'],             'speceng.context'],
+    // §GATE 2026-07-11 — copilot adapter boundary. See copilot-adapter/index.js.
+    ['POST',   ['api','copilot','suggest'],                 'copilot.suggest'],
     ['GET',    ['sse'],                   'sse'],
   ];
 
@@ -410,12 +401,10 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','fork'],        'repo.fork'],
     ['DELETE', ['api','repos',    ':uuid'],               'repo.archive'],
     ['GET',    ['api','repos',    ':uuid','lineage'],     'repo.lineage'],
-    // §FILE EDIT 2026-07-11 — repo files were browsable metadata only,
-    // never readable or writable through the API. path travels as a query
-    // param / body field (not a URL segment) so nested paths ('src/x.js')
-    // don't need wildcard route matching.
+    // §MERGED 2026-07-11 — file read/write/delete against a repo's
+    // content, resolved through spec-engine chunks (v2 has no content
+    // store of its own — see repo/index.js's file CRUD methods).
     ['GET',    ['api','repos',    ':uuid','file'],         'repo.file.read'],
-    ['PUT',    ['api','repos',    ':uuid','file'],         'repo.file.write'],
     ['POST',   ['api','repos',    ':uuid','file'],         'repo.file.write'],
     ['DELETE', ['api','repos',    ':uuid','file'],         'repo.file.delete'],
   ];
@@ -572,13 +561,9 @@ async function handle(req, res, route, query, body) {
       if (!idea) return err(res, 404, `idea not found: ${params.uuid}`);
       os.emit('idearium.spec.create', { name: body.name || `Spec: ${idea.text.slice(0,40)}`, ideaUuid: params.uuid, source:'api' });
       const spec = os.db.specs[os.db.specs.length - 1];
-      // §BUG FIXED 2026-07-11 — SpecCreateGate links idea.linkedSpec but
-      // never advances idea.phase. "promoted to a spec" produced an idea
-      // that still read 'seed' forever — the phase buttons worked fine
-      // when clicked manually (verified live), the automatic transition
-      // this whole state machine implies just never fired. Only advances
-      // forward (seed/expanding/tensioned → specced) — never regresses an
-      // idea that's already further along (building/complete/archived).
+      // §MERGED 2026-07-11 — SpecCreateGate links idea.linkedSpec but never
+      // advances idea.phase; only advances forward, never regresses an
+      // idea already further along.
       if (['seed','expanding','tensioned'].includes(idea.phase)) {
         os.emit('idearium.idea.phase', { uuid: params.uuid, phase: 'specced', source: 'api' });
       }
@@ -918,13 +903,10 @@ async function handle(req, res, route, query, body) {
         mode, chunksBuilt: result.chunksBuilt, chunksTotal: result.chunksTotal,
       });
 
-      // §BUG FIXED 2026-07-11 — same class of gap as spec creation: a
-      // promoted repo existing is real, visible end-state for an idea,
-      // and nothing advanced idea.phase to reflect it. A fully-built
-      // promotion (every chunk complete) reads as 'complete' — the closed
-      // loop actually closed. A partial 'manual' promotion (map-first
-      // templates, TODO placeholders for the rest) reads as 'building' —
-      // real progress, not finished. Never regresses 'archived'.
+      // §MERGED 2026-07-11 — advance the ORIGINATING idea's phase (not
+      // RepoLayer's synthetic tracking idea) to reflect real end-state:
+      // 'complete' for a fully-built promotion, 'building' for a partial
+      // one. Never regresses 'archived'.
       if (result.originIdeaUuid) {
         const idea = os.idea(result.originIdeaUuid);
         if (idea && idea.phase !== 'archived') {
@@ -938,6 +920,18 @@ async function handle(req, res, route, query, body) {
         mode, promotedFrom: specUuid,
         chunksBuilt: result.chunksBuilt, chunksTotal: result.chunksTotal,
       });
+    }
+
+    // §GATE 2026-07-11 — the adapter boundary itself. No intelligence lives
+    // here — see copilot-adapter/index.js's header for why that's deliberate.
+    // Callable today (the wizard's "ask copilot" button hits this), honestly
+    // reports connected:false until a real backend is registered.
+    case 'copilot.suggest': {
+      const ca = getCopilotAdapter();
+      if (!ca) return err(res, 503, 'copilot-adapter not ready');
+      const { context, goal, current_gate } = body;
+      const result = await ca.suggest({ context: context || {}, goal: goal || '', current_gate: current_gate || '' });
+      return ok(res, result);
     }
 
     case 'repo.ingest': {
@@ -966,17 +960,16 @@ async function handle(req, res, route, query, body) {
     case 'repo.lineage':
       return ok(res, { lineage: getRepoLayer().lineage(params.uuid) });
 
-    // §FILE EDIT 2026-07-11 — read/write/delete a real file inside a
-    // materialized repo. path is a query param on GET/DELETE, a body field
-    // on PUT/POST — never a URL segment, so nested paths need no wildcard
-    // routing and no extra escaping.
+    // §MERGED 2026-07-11 — path travels as a query param (GET/DELETE) or
+    // body field (POST), never a URL segment, so nested paths need no
+    // wildcard routing.
     case 'repo.file.read': {
       const filePath = query.path;
       if (!filePath) return err(res, 400, 'path required (?path=...)');
       const result = getRepoLayer().readFile(params.uuid, filePath);
       if (result.error) {
         const status = /repo not found/.test(result.error) ? 404
-                      : /no materialized files|ENOENT/.test(result.error) ? 404 : 400;
+                      : /not found in repo/.test(result.error) ? 404 : 400;
         return err(res, status, result.error);
       }
       return ok(res, result);
@@ -991,7 +984,7 @@ async function handle(req, res, route, query, body) {
         const status = /repo not found/.test(result.error) ? 404 : 400;
         return err(res, status, result.error);
       }
-      os.emit('idearium.repo.file.write', { repoUuid: params.uuid, path: result.path, bytes: result.bytes, created: result.created });
+      os.emit('idearium.repo.file.write', { repoUuid: params.uuid, path: result.path, created: result.created });
       return ok(res, result);
     }
 
@@ -1000,7 +993,7 @@ async function handle(req, res, route, query, body) {
       if (!filePath) return err(res, 400, 'path required');
       const result = getRepoLayer().deleteFile(params.uuid, filePath);
       if (result.error) {
-        const status = /repo not found/.test(result.error) ? 404 : 400;
+        const status = /repo not found/.test(result.error) ? 404 : /not found in repo/.test(result.error) ? 404 : 400;
         return err(res, status, result.error);
       }
       os.emit('idearium.repo.file.delete', { repoUuid: params.uuid, path: result.path });
@@ -1036,8 +1029,6 @@ async function handle(req, res, route, query, body) {
       if (!se) return err(res, 503, 'spec-engine not ready');
       const { name, type, description, agent, templateId, templateIds, buildEngine, ideaUuid } = body;
       if (!name) return err(res, 400, 'name required');
-      // §1.2 — a caller passing an ideaUuid that doesn't exist is a config
-      // error, not a spec silently created with a dangling link.
       if (ideaUuid && !os.idea(ideaUuid)) return err(res, 404, `idea not found: ${ideaUuid}`);
       try {
         // An unknown templateId/templateIds (or buildEngine) throws inside
@@ -1046,13 +1037,8 @@ async function handle(req, res, route, query, body) {
         const manifest = se.createSpec({ name, type, description, agent, templateId, templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
         os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateIds: manifest.templateIds, buildEngine: manifest.buildEngine, ideaUuid: manifest.ideaUuid });
 
-        // §BUG FIXED 2026-07-11 — spec-engine specs never linked back to
-        // the idea that spawned them, and the idea's phase never advanced
-        // past 'seed' — the whole reason "can't change the phase" looked
-        // broken (manual phase buttons worked fine; the automatic
-        // seed→specced transition this state machine implies never
-        // fired). Same rule as the legacy idea.spec path: only advances
-        // forward, never regresses an idea already further along.
+        // §MERGED 2026-07-11 — same phase-linkage fix as the legacy
+        // idea.spec path above, for spec-engine specs.
         if (ideaUuid) {
           const idea = os.idea(ideaUuid);
           if (idea) {
@@ -1132,21 +1118,7 @@ async function handle(req, res, route, query, body) {
         // verification are unchanged; WARP simply answers instantly when this
         // exact prompt has been built before. Falls back to the direct agent
         // path when WARP is not (yet) loaded — never a hard dependency.
-        // §BUILD-LOGIC SELECTOR 2026-07-11 — manifest.buildEngine (set at
-        // spec-creation time, exposed as the "build logic" dropdown in the
-        // UI) decides how this call resolves dispatchFn:
-        //   'auto'   — unchanged: WARP if loaded, silent fallback to direct.
-        //   'warp'   — WARP is mandatory. If it isn't loaded, the chunk fails
-        //              loudly instead of quietly downgrading to direct-agent
-        //              (§1.2 — a build declared WARP-built must actually be).
-        //   'direct' — WARP is bypassed on purpose, even if loaded (e.g. a
-        //              rebuild that must not read a stale cache entry).
-        const engineChoice = manifest.buildEngine || 'auto';
-        const warpFn = engineChoice === 'direct' ? null : await getWarpChunkDispatch();
-        if (engineChoice === 'warp' && !warpFn) {
-          se.failChunk(params.uuid, chunk.uuid, `buildEngine:'warp' required but WARP dispatch unavailable — ${warpStatus().error || 'not loaded'}`);
-          return err(res, 503, 'WARP build logic selected but unavailable — see warpStatus()');
-        }
+        const warpFn = await getWarpChunkDispatch();   // §awaited: the FIRST build must also populate the cache
         const dispatchFn = warpFn
           ? (prompt, dispatchOpts) => warpFn(prompt, { ...dispatchOpts, chunkTitle: chunk.title || chunk.sectionId })
           : (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts);
