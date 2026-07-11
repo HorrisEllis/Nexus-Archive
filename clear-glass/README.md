@@ -5,6 +5,43 @@
 Every behavior is a Gate on a Stream. No module talks to another directly.
 Commands arrive as Events. Gates transform them. SSE broadcasts results.
 
+## §ADDENDUM 2026-07-11 (2) — v3.3.0, fixed from a real crash log
+
+You ran this on a real Windows machine and it caught two things no amount
+of code review here would have: `app.disableHardwareAcceleration()` alone
+didn't stop the GPU process from being spawned for software compositing —
+on this machine that process itself failed to launch (`error_code=18`,
+`FATAL: GPU process isn't usable. Goodbye.`), crashing Clear Glass
+entirely and taking every provider window down with it (repeated `oom`/
+`launch-failed` on claude/chatgpt/gemini/perplexity as autopilot kept
+respawning into the same failure). Added `--disable-gpu`,
+`--disable-gpu-compositing`, `--disable-software-rasterizer` — removes
+the GPU process from the picture entirely instead of just deprioritizing
+it. Standard fix for this exact fatal error on constrained/virtualized
+Windows hosts.
+
+Separately: `copilot/bridge.js` had already self-diagnosed, across three
+prior debugging rounds, that `fetch()` fails against `bridge:9999`
+specifically (`ERR_STREAM_PREMATURE_CLOSE`) while `http.request()` against
+the identical URL/payload succeeds — confirmed live in your boot log
+("http.request FALLBACK succeeded where fetch() failed — status 200").
+Its own logged conclusion, "Real fix: switch this function to
+http.request permanently," is now the actual code — both bridge call
+sites (`_bridgeHandshake`, `_bridgeDispatch`) use `http.request` as
+primary rather than trying `fetch()` first and eating the failure. This
+likely also explains the guardian NCP connect/disconnect cycling in the
+same log — every co-pilot prompt and guardian command routes through
+`_bridgeDispatch`.
+
+Not fixed this round, flagged from the same log for later: `/cfr/field`
+returning without a numeric `tension` field (cfr-influence polling skips
+gracefully, doesn't crash, but the field itself is worth checking), 6
+systems with spec/code version drift (orchestrator, bridge, guardian,
+copilot, forge, spec-drift itself), 12 systems with no spec at all, and
+ErosmancerOS not running (`ECONNREFUSED 127.0.0.1:7432` — ClearGlass/Wire
+retries on first driver call rather than failing, so this may be
+intentional if you don't run it every session).
+
 ## §ADDENDUM 2026-07-11 — v3.2.0, renderer decomposed
 
 `renderer/browser.html` was 1879 lines with ~1600 of that as one inline

@@ -130,6 +130,19 @@ const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service t
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
 app.disableHardwareAcceleration();
+// §BUG FIXED 2026-07-11 — disableHardwareAcceleration() alone still lets
+// Electron spawn a GPU process for software compositing; on this machine
+// even THAT process fails to launch (error_code=18, "GPU process isn't
+// usable. Goodbye.") — a FATAL crash that killed the whole app, not just
+// one window (see the 2026-07-11 boot log: "crashes in window: 1/6",
+// autopilot restarting on a countdown toward its circuit breaker). These
+// three switches remove the GPU process from the picture entirely —
+// pure software rendering inside each renderer process, no separate GPU
+// process to fail. The standard fix for this exact fatal error on
+// constrained/virtualized/sandboxed Windows hosts.
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('disable-gpu-compositing');
+app.commandLine.appendSwitch('disable-software-rasterizer');
 // §CRITICAL fix 2026-06-30 — this was the actual cause of the 6-crash
 // circuit-breaker trip. requestSingleInstanceLock() failing produces a
 // CLEAN exit (code 0, no signal, zero log output) — indistinguishable from
