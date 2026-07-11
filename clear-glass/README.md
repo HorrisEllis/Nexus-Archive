@@ -42,6 +42,20 @@ ErosmancerOS not running (`ECONNREFUSED 127.0.0.1:7432` — ClearGlass/Wire
 retries on first driver call rather than failing, so this may be
 intentional if you don't run it every session).
 
+## §ADDENDUM 2026-07-11 (3) — v3.4.0, lighter by default
+
+Every boot was unconditionally spawning 4 hidden full Chromium renderer
+windows (claude, chatgpt, gemini, perplexity) via `providerHost.
+autoBootAll()`, whether or not you were about to use any of them —
+`src/gates/index.js` already boots a provider on-demand the instant
+something actually needs it, so the eager pre-warm was pure duplication
+of a lazy path that already worked. Default is now lazy-only — nothing
+pre-warms. Set `CG_AUTOBOOT_PROVIDERS=claude,chatgpt` to pre-warm
+specific ones back, or `CG_AUTOBOOT_PROVIDERS=all` for the old behavior.
+Combined with the GPU-crash fix above (which was itself causing repeat
+respawns of all 4 windows every time the crash loop fired), this should
+meaningfully cut idle resource use.
+
 ## §ADDENDUM 2026-07-11 — v3.2.0, renderer decomposed
 
 `renderer/browser.html` was 1879 lines with ~1600 of that as one inline

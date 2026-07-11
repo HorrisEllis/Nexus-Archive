@@ -612,21 +612,33 @@ async function bootstrap() {
     sse:         { emit: (t, d) => emit(t, d) },
     postEvent:   (type, data) => _postEvent(type, data),
   });
-  // §P-CG-01: auto-boot all NCP provider tabs as hidden background windows.
-  // Each provider (claude, chatgpt, gemini, perplexity) gets its own
-  // persistent session partition + Guardian userscript injected via
-  // executeJavaScript — replacing Tampermonkey + manual tab management.
-  // Staggered 1.5s apart to avoid fingerprint/auth collisions.
-  // Do NOT await — we boot async in the background so the rest of the app
-  // continues without waiting for the provider pages to fully load.
-  providerHost.autoBootAll({ show: false }).then(results => {
-    const ok  = results.filter(r => r.ok).length;
-    const bad = results.filter(r => !r.ok).map(r => r.providerId);
-    console.log(`[ClearGlass] NCP auto-boot: ${ok}/${results.length} providers started${bad.length ? ` (failed: ${bad.join(', ')})` : ''}`);
-    _postEvent('clear-glass.providers.booted', { ok, total: results.length, failed: bad });
-  }).catch(e => {
-    console.warn('[ClearGlass] NCP auto-boot failed:', e.message);
-  });
+  // §P-CG-01 — NCP provider tabs (claude, chatgpt, gemini, perplexity),
+  // each its own persistent session partition + Guardian userscript
+  // injected via executeJavaScript, replacing Tampermonkey + manual tab
+  // management. Boot is lazy by default now — see the fix note below.
+  // §BUG FIXED 2026-07-11 — this was unconditional: every boot spawned 4
+  // hidden full Chromium renderer windows (claude/chatgpt/gemini/
+  // perplexity), whether or not any of them were about to be used.
+  // src/gates/index.js already supports booting a provider on-demand the
+  // moment something actually needs it (`ph.start(providerId, ...)`) —
+  // auto-boot-all was pure eager duplication of a lazy path that already
+  // works. Default is now lazy-only (no pre-warm at all); set
+  // CG_AUTOBOOT_PROVIDERS to a comma-list ('claude,chatgpt') to pre-warm
+  // specific ones, or 'all' for the old behavior back.
+  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'none').trim();
+  if (autoBootSetting === 'none' || autoBootSetting === '') {
+    console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS to pre-warm specific providers.');
+  } else {
+    const only = autoBootSetting === 'all' ? null : autoBootSetting.split(',').map(s => s.trim()).filter(Boolean);
+    providerHost.autoBootAll({ show: false, only }).then(results => {
+      const ok  = results.filter(r => r.ok).length;
+      const bad = results.filter(r => !r.ok).map(r => r.providerId);
+      console.log(`[ClearGlass] NCP auto-boot: ${ok}/${results.length} providers started${bad.length ? ` (failed: ${bad.join(', ')})` : ''}`);
+      _postEvent('clear-glass.providers.booted', { ok, total: results.length, failed: bad });
+    }).catch(e => {
+      console.warn('[ClearGlass] NCP auto-boot failed:', e.message);
+    });
+  }
 
   // 8.9. Userscript manager
   // §fix 2026-06-30 — third real instance of the same hardcoded path,
