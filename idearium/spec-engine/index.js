@@ -148,6 +148,14 @@ export function createSpec({ name, type = 'component', description = '', agent =
 
   const specUuid  = crypto.randomUUID();
   const dedupKey  = _specDedupKey(name, type);
+
+  // §PHASE 6 2026-07-10 — the dedupKey has been computed and stored on every
+  // spec since day one and never read. Check it now: if a spec with the same
+  // name+type already exists, surface it. Non-blocking — the user may want a
+  // deliberate rebuild — but the caller now KNOWS, and can offer to reuse
+  // instead of paying full tokens to rebuild something already built.
+  const existing = findByDedupKey(name, type);
+
   const specDir   = path.join(SPECS_ROOT, specUuid);
   const now       = Date.now();
 
@@ -211,6 +219,10 @@ export function createSpec({ name, type = 'component', description = '', agent =
     // becomes a claim rather than a record.
     templateId:     templateId,
     templateSeeded: [],
+    // §PHASE 6 — non-null when a spec with the same name+type already existed.
+    // The caller can offer reuse; this spec is still created (deliberate rebuild
+    // is valid), but the redundancy is now visible instead of silent.
+    duplicateOf:    existing ? existing.uuid : null,
     chunks,
   };
 
@@ -527,6 +539,7 @@ export default {
   // `se.listTemplates is not a function` at runtime. Caught by calling the
   // live endpoint, not by reading the file.
   listTemplates, getTemplate, readSeed,
+  findByDedupKey, findPriorSection, importSpec,
   createSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
   buildChunkPrompt, archiveSpec, expandSpec,
@@ -538,4 +551,118 @@ export default {
 // (`import('../spec-engine/index.js')`). Without this, `se.listTemplates()`
 // in the `speceng.templates` action would be undefined at runtime: a declared
 // wire to nothing, caught before shipping rather than after.
+// §PHASE 6 2026-07-10 — intelligence in the loop: "query previous builds to
+// reduce tokens and redundancy." Two levers, both previously absent.
+//
+// findByDedupKey — the spec-level lever. dedupKey (sha1 of name::type) was
+// computed and STORED on every spec since day one, and never READ. Creating
+// "auth-system"/system twice made two specs and rebuilt every chunk of the
+// second at full token cost. This is the missing lookup.
+export function findByDedupKey(name, type = 'component') {
+  _ensureRoot();
+  const key = _specDedupKey(name, type);
+  for (const entry of fs.readdirSync(SPECS_ROOT, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    try {
+      const m = loadSpec(entry.name);
+      if (m.dedupKey === key) return { uuid: m.uuid, name: m.name, type: m.type, status: m.status, progress: m.progress };
+    } catch (_) {}
+  }
+  return null;
+}
+
+// findPriorSection — the chunk-level lever. The WARP exact cache reuses a chunk
+// only when the whole PROMPT matches, and a prompt includes the spec name — so
+// the same "purpose" section in two differently-named specs never hits. This
+// answers "has this exact section (sectionId + sectionDesc) already been built
+// somewhere?" so the caller can reuse the content instead of dispatching. It
+// returns the newest complete match, or null. Content-addressed on the section
+// contract, not the spec identity.
+export function findPriorSection(sectionId, sectionDesc = '', excludeSpecUuid = null) {
+  _ensureRoot();
+  let best = null;
+  for (const entry of fs.readdirSync(SPECS_ROOT, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    try {
+      const m = loadSpec(entry.name);
+      if (m.uuid === excludeSpecUuid) continue;
+      const chunk = (m.chunks || []).find(c =>
+        c.sectionId === sectionId &&
+        c.status === 'complete' &&
+        (!sectionDesc || c.sectionDesc === sectionDesc) &&
+        c.content && c.agent !== 'template');   // template seeds are spec-specific, not reusable content
+      if (chunk && (!best || (chunk.completedAt || 0) > (best.completedAt || 0))) {
+        best = { specUuid: m.uuid, specName: m.name, sectionId,
+          content: chunk.content, completedAt: chunk.completedAt, agent: chunk.agent };
+      }
+    } catch (_) {}
+  }
+  return best;
+}
+
+// §IMPORT 2026-07-10 — "need a way to import zip or .spec to build a repo."
+// Parse an uploaded .spec's top-level blocks and pre-fill matching sections
+// from the authored content. It is already written, so this costs ZERO tokens —
+// the same principle as template seeding, but for a whole authored spec. The
+// result is a normal spec-engine manifest: promotable to a repo, buildable for
+// any sections the .spec didn't cover.
+//
+// Parsing is intentionally simple and honest: it splits on the "# BLOCK N — X"
+// banners this format uses (see causal-nexus.spec) and, failing that, on
+// top-level "key:" headers. A block whose name fuzzy-matches a SPEC_SECTION
+// (meta, purpose/intent, schema/architecture, api/interfaces, events,
+// integration, tests/validation) fills that section. Unmatched blocks are
+// preserved verbatim in an appended "imported" meta note so nothing is lost
+// (§Information Must Never Be Lost).
+export function importSpec({ name, specText, author = 'import' }) {
+  if (!specText || !specText.trim()) throw new Error('importSpec: specText required');
+  const specName = name || (specText.match(/name:\s*(\S+)/)?.[1]) || `imported-${Date.now()}`;
+
+  // Split into blocks. Primary: "# BLOCK N — TITLE". Fallback: top-level keys.
+  const blocks = {};
+  const bannerRe = /#\s*BLOCK\s*\d+\s*[—-]\s*([A-Z][A-Z _]+)/g;
+  const banners = [...specText.matchAll(bannerRe)];
+  if (banners.length) {
+    for (let i = 0; i < banners.length; i++) {
+      const title = banners[i][1].trim().toLowerCase();
+      const start = banners[i].index;
+      const end = i + 1 < banners.length ? banners[i + 1].index : specText.length;
+      blocks[title] = specText.slice(start, end).trim();
+    }
+  }
+
+  // Map a block title to one of SPEC_SECTIONS. Explicit, auditable aliases.
+  const alias = {
+    meta: 'meta', intent: 'purpose', purpose: 'purpose', architecture: 'schema',
+    modules: 'schema', schema: 'schema', 'causal map': 'integration',
+    'event model': 'events', events: 'events', 'runtime model': 'integration',
+    interfaces: 'api', api: 'api', validation: 'tests', tests: 'tests',
+    snapshots: 'integration', 'evolution log': 'integration',
+  };
+
+  // Build the manifest, then complete every section a block maps to.
+  const manifest = createSpec({ name: specName, type: 'system', description: `imported from .spec`, author });
+  const filled = new Set();
+  const unmatched = [];
+  for (const [title, body] of Object.entries(blocks)) {
+    const sectionId = alias[title];
+    if (!sectionId) { unmatched.push(title); continue; }
+    const chunk = manifest.chunks.find(c => c.sectionId === sectionId && c.status !== 'complete');
+    if (chunk) {
+      completeChunk(manifest.uuid, chunk.uuid, `<!-- imported block: ${title} -->\n\n${body}`);
+      const fresh = loadSpec(manifest.uuid);
+      const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
+      if (fc) { fc.agent = 'import'; fc.agentModel = 'import:.spec'; }
+      saveSpec(fresh);
+      filled.add(sectionId);
+    }
+  }
+
+  const out = loadSpec(manifest.uuid);
+  out.importedBlocks = Object.keys(blocks);
+  out.importedUnmatched = unmatched;   // §nothing lost — recorded, not dropped
+  saveSpec(out);
+  return { manifest: out, blocksFound: Object.keys(blocks).length, sectionsFilled: [...filled], unmatched };
+}
+
 export { listTemplates, getTemplate, readSeed };

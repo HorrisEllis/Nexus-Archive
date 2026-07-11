@@ -1027,3 +1027,108 @@ The UI's `loadSpecs()` calls `/api/specs` — the empty one. And its `catch(e){}
 Verified end to end: 16 specs, **14 with at least one built section** (genesis specs correctly show `meta` done, 1/10). `tests/modules/spec-list-merge.test.mjs` 5/5.
 
 Both wire scans 0. spec-promote 5/5, idearium-warp-cache 7/7. The loop is now **visible** in the UI it produces specs for.
+
+---
+
+## PART 39 — Phase 6: intelligence in the loop. Query previous builds.
+
+*"Query previous builds to reduce tokens and redundancy."* Two levers, both previously absent — the second is the real token saver.
+
+### Lever 1 — spec dedup (the write-only key, finally read)
+
+`dedupKey` (sha1 of `name::type`) has been **computed and stored on every spec since day one, and never read.** Creating `auth-system`/system twice made two specs and rebuilt every chunk of the second at full cost. `findByDedupKey()` is the missing lookup; `createSpec` now sets `duplicateOf` on the manifest when a match exists. Non-blocking — a deliberate rebuild is valid — but the redundancy is now visible instead of silent, so the UI/tool can offer reuse.
+
+### Lever 2 — cross-spec chunk reuse (before spending a token)
+
+The WARP exact cache only hits when the whole **prompt** matches, and a prompt embeds the spec name — so the identical `purpose` section in two differently-named specs never reused. `findPriorSection(sectionId, sectionDesc, excludeSpecUuid)` answers "has this exact section already been built in another spec?" content-addressed on the **section contract**, not the spec identity.
+
+Wired into `speceng.build` *before* dispatch: if a prior build of this section exists, the chunk completes from that content with `source: 'reuse'`, `cost: 0`, and **the agent is never called.** Opt-out via `noReuse` for a deliberate fresh build. Proven live: a second spec's section returned `reused: true, from: <specUuid>` with zero dispatch.
+
+**Template seeds are correctly excluded** (`agent !== 'template'`): a template-seeded `meta` is spec-specific header content, not a reusable section body. Reusing it across specs would copy one spec's identity into another. Guarded and tested.
+
+### Token reduction, now three compounding layers in the build path
+
+1. **Template seeding** — 1 of 10 sections, deterministic, zero tokens (Part 32).
+2. **Cross-spec chunk reuse** — any section built in any prior spec, zero tokens (this part).
+3. **WARP exact cache** — identical prompt within the reuse-miss set, zero tokens from the 2nd build (Part 33/34).
+
+They apply in that order, each catching what the previous missed. `tests/modules/idearium-reuse.test.mjs` 8/8. Both wire scans 0, all idearium regressions green, cortex CONTRACT.
+
+**Phase map: 0,1,2,3,5,6 done. Remaining: Phase 4 (WARP spine on idearium's bus), Phase 8 (the mobile UI stack reading contract.live), Phase 9 (versionium).**
+
+---
+
+## PART 39 — Idearium UI: aborts, promote→repo, and file-structure-as-components
+
+Five screenshots. Two important facts read straight off them: (1) **the Spec Library WORKS** — 18 specs, section chips lighting (Part 38 landed). (2) The page is served from `file:///D:/Backups/Downloads/nexus-full-2/...` — a **stale download**, so some "blank" behavior is an older UI build, not a live bug. The fixes below are in the current tree.
+
+### "Operation was aborted" — the 1800ms health-check timeout
+
+The repeated abort toasts (image 4) were `fetchTimeout`'s **1800ms** default firing on a host under memory pressure (the 0xC0000409 cause). Writes already used 6000ms; health checks and exports used 1800. Raised the default to **5000ms** so a cold connection or loaded machine stops spuriously aborting. Idea-create itself was verified working server-side (0→1) — the failure was the client aborting, not the API.
+
+### "Click a spec → open the repository" did nothing
+
+Root cause: `RepoLayer.ingest` creates its OWN internal spec and stored *that* uuid, so a repo's `specUuid` never equalled the spec the user clicked. `openRepoFor()` matched on `specUuid`/`ideaUuid`, neither of which is the clicked spec's uuid for a promoted spec — so it found no repo and rendered blank. Fixed: `ingest` now records `promotedFromSpec` (the originating spec uuid), promote passes it, and the UI matches on it. Verified: repo `promotedFromSpec === clickedSpecUuid`.
+
+### "Specs need to generate with the file structure and files listed as components"
+
+`spec.promote` was collapsing every chunk into a single `.spec`. But each chunk already carries `fileName` + `comp_id` + `seam_id` (§5.1). Promote now emits **one repo file per chunk/component** plus a canonical index `.spec` (which lists the file structure as a README). The repo panel renders each file with its `comp_id` and status. Verified: a genesis promote produces **11 files** (index + 10 sections), each tagged with its component.
+
+### Still open (honest)
+
+- **Promote→idea and add-idea failing in the screenshot** are the stale `file://` build + the 1800ms abort. The current build's endpoints are proven working. Confirm against a fresh download served by the running idearium service, not the old `nexus-full-2` folder.
+- **File CONTENT isn't a clickable blob store** — the repo lists files and their content is in the promote artifact, but RepoLayer has no content-addressable store, so tree entries aren't yet openable in the IDE pane the way locally-picked folders are. That's real, larger work (RepoLayer needs a blob store), flagged not hidden.
+
+Regressions: spec-promote 5/5, spec-list-merge 5/5, both wire scans 0, idearium serves 200.
+
+---
+
+## PART 40 — Confidence bias, tool audit, and .spec import
+
+### "Copilot not talking / you reverted it" — verified NOT reverted
+
+Checked against the tree, not memory: the expectation-watcher is still attached, `copilot.error.detected` is still broadcast, orchestrator still proxies `copilot /api/prompt`, and copilot boots to **CONTRACT**. The wiring is intact. The screenshots load from `file:///D:/.../nexus-full-2/` — a stale download. The live wiring is present in the current tree.
+
+### "Confidence is fucked, uses lifeline for everything" — real bug, structural
+
+`copilot/lifeline.js` escalates to Guardian when estimated confidence is below **0.75**. But the heuristic's **base was 0.60**, and a normal answer reached only ~0.70 — **below the threshold by construction**, so lifeline fired on 100% of prompts regardless of actual quality. Fixed: base raised to **0.72** with meaningful length bonuses, so a substantive answer clears 0.75 and only thin/hedged/error responses escalate. Proven: normal answer 0.78 (KEEP), short 0.72 (escalate), hedged 0.32 (escalate), error 0.47 (escalate), long-detailed 0.92 (KEEP). Before, the normal answer scored 0.70 and escalated — the same as everything else.
+
+### "Tell me all the tools are good" — audited, all 8 real
+
+Every registered tool has a real `execute`, description, and parameter schema — no stubs: read_file, run_command, diagnose, move_data, run_pipeline, nexus_intelligence, run_closed_loop, query_recall.
+
+### ".spec / zip import to build a repo" — built, proven on the real file
+
+`importSpec()` parses a `.spec`'s `# BLOCK N — TITLE` banners and pre-fills matching sections from the **authored content** — zero tokens, the same principle as template seeding but for a whole spec. Explicit, auditable alias map (intent→purpose, architecture/modules→schema, interfaces→api, validation→tests, causal-map/runtime/snapshots/evolution→integration). Unmatched blocks are recorded in `importedUnmatched`, never dropped (§Information Must Never Be Lost).
+
+`POST /api/spec-engine/import {specText}` → manifest + `promoteUrl`. Proven end to end against the **real 3443-line causal-nexus.spec**: 11 blocks parsed → 7 sections filled → 70% complete at zero tokens → promote → **repo with 11 component files**, each tagged with its comp_id. The zip path lands the same way: extract, feed each `.spec` to import.
+
+`tests/modules/spec-import.test.mjs` 7/7. All idearium regressions green (spec-promote 5/5, spec-list-merge 5/5, idearium-reuse 8/8, warp-cache 7/7). copilot CONTRACT. Both wire scans 0.
+
+### Still requires a fresh build to confirm
+
+The add-idea / promote-in-brainstorm failures in the screenshots are the stale `file://` copy plus the old 1800ms abort (Part 39 raised it to 5000ms). These need retesting from a fresh unzip served by the running idearium service — not the `nexus-full-2` folder.
+
+---
+
+## PART 41 — Idearium UI: stop swallowing errors, and the first stack split
+
+### Silent failure was hiding the real bug
+
+Every loader (`loadIdeas`, `loadSpecs`, ...) ended in `catch(e){}` — a failed load rendered blank with **no signal**. "No ideas" looked identical whether the API returned empty or errored. That is exactly why the screenshots read as "blank" instead of surfacing a diagnosable error. All loaders now `console.warn` and toast on failure, so blank-vs-broken is distinguishable.
+
+### CORS was already correct
+
+The `file://`-served UI can reach `http://127.0.0.1:4800` because idearium sends `Access-Control-Allow-Origin: *`. So connectivity was never the blocker — confirming the screenshot failures were the stale build plus the old 1800ms abort (both since fixed).
+
+### First stack split — index.html + js/app.js
+
+The UI was a 2,335-line monolith. Extracted the main application block (starfield, API client, ideas, brainstorm, specs, repo — 841 lines) into `idearium/ui/js/app.js`, loaded via `<script src>`. HTML dropped to 1,493 lines; the app logic is now independently editable. Verified: the two script blocks share no functions, `<script src>` preserves global scope, `app.js` parses standalone.
+
+**A required server change caught by testing:** the split 404'd `app.js` because idearium only served `index.html` — which would have blanked the entire UI. Added static serving for `/js/` and `/css/` under the ui root, path-traversal guarded (verified: `/js/../../../etc/passwd` → 403). `app.js` now serves 200 with `application/javascript`.
+
+This is the first move of the Phase 8 stack breakdown. Next splits (per the request — "spec library, options, brainstorm/braindump, IDE, per-repo notes") extract each panel's logic from app.js into its own module, now that the mechanism (external js/ + static serving) is proven.
+
+**Note on orchestrator mirror:** orchestrator serves UIs from a mirrored `ui/<system>/` (via `npm run sync-ui`), while idearium serves its own from `idearium/ui/` (sovereign). The sovereign path is verified working with the split; the mirror needs `sync-ui` re-run after any UI edit, as its own header states.
+
+Regressions: spec-promote 5/5, spec-import 7/7, spec-list-merge 5/5, both wire scans 0.

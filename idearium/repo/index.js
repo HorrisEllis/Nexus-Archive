@@ -56,7 +56,7 @@ export class RepoLayer {
   // ── ingest — a tree of files (already extracted) becomes a tracked repo ─────
   // files: [{ path, bytes, content? }]  — content optional (manifest may omit big blobs)
   // Returns { repo, ideaUuid, specUuid }.
-  ingest({ name, files = [], source = 'drop', parent = null, specText = null } = {}) {
+  ingest({ name, files = [], source = 'drop', parent = null, specText = null, promotedFromSpec = null } = {}) {
     if (!name) return { error: 'repo name required' };
 
     // find the canonical .spec in the tree (the thing the UI groups by)
@@ -98,12 +98,19 @@ export class RepoLayer {
       name,
       ideaUuid,
       specUuid,
+      // §2026-07-10 — the ORIGINATING spec uuid (the one the user clicked in the
+      // Spec Library). ingest creates its own internal spec above, so specUuid
+      // never matches the clicked spec — clicking a spec found no repo and
+      // opened a blank panel. openRepoFor() now matches on this.
+      promotedFromSpec: promotedFromSpec || null,
       specPath:  specFile ? specFile.path : null,
       parent,                                  // fork lineage
       forks:     [],
       source,                                  // 'drop' | 'fork' | 'cli'
       fileCount: files.length,
-      files:     files.map(f => ({ path: f.path, bytes: f.bytes || (f.content ? f.content.length : 0) })),
+      // Preserve comp_id/seam_id so the repo panel can show each file as a
+      // component tied to its seam, not just a path+bytes row.
+      files:     files.map(f => ({ path: f.path, bytes: f.bytes || (f.content ? f.content.length : 0), comp_id: f.comp_id || null, seam_id: f.seam_id || null, status: f.status || null })),
       phase:     'building',
       createdAt: Date.now(),
       updatedAt: Date.now(),

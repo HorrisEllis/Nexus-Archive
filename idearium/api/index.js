@@ -287,6 +287,7 @@ function matchRoute(method, url) {
     ['GET',    ['api','spec-engine','specs'],               'speceng.list'],
     ['POST',   ['api','spec-engine','specs'],               'speceng.create'],
     // §ROUTED 2026-07-10 — the promote action that bridges a built spec to a repo.
+    ['POST',   ['api','spec-engine','import'],              'spec.import'],
     ['POST',   ['api','spec-engine','specs',':uuid','promote'], 'spec.promote'],
     ['POST',   ['api','spec-engine','wizard'],              'speceng.wizard'],
     ['GET',    ['api','spec-engine','context'],             'speceng.context'],
@@ -749,6 +750,32 @@ async function handle(req, res, route, query, body) {
     //       repo that looks complete.
     //   'manual' (spec builder) — same assembly, but pending chunks are allowed
     //       and marked as TODO sections, so a human finishes them in the builder.
+    // §IMPORT 2026-07-10 — "import zip or .spec to build a repo." Accepts raw
+    // .spec text, parses its blocks into a manifest with authored sections
+    // pre-filled (zero tokens), and returns a spec that is immediately
+    // promotable to a repo via spec.promote. The zip path lands the same way:
+    // extract, feed each .spec here.
+    case 'spec.import': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      const { specText, name } = body;
+      if (!specText) return err(res, 400, 'specText required (raw .spec file contents)');
+      try {
+        const result = se.importSpec({ name, specText });
+        os.emit('idearium.spec.imported', {
+          specUuid: result.manifest.uuid, name: result.manifest.name,
+          blocksFound: result.blocksFound, sectionsFilled: result.sectionsFilled.length,
+        });
+        return ok(res, {
+          manifest: result.manifest,
+          blocksFound: result.blocksFound,
+          sectionsFilled: result.sectionsFilled,
+          unmatched: result.unmatched,
+          promoteUrl: `/api/spec-engine/specs/${result.manifest.uuid}/promote`,
+        });
+      } catch (e) { return err(res, 400, `import failed: ${e.message}`); }
+    }
+
     case 'spec.promote': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
@@ -771,21 +798,36 @@ async function handle(req, res, route, query, body) {
       }
 
       // Assemble the artifact deterministically from real chunk content.
-      const sections = manifest.chunks
+      // §2026-07-10 — one repo file PER CHUNK/component, not a single collapsed
+      // .spec. Each chunk already carries fileName + comp_id + seam_id (§5.1),
+      // so the repo shows the real file structure with every file tied to its
+      // component and seam — "specs generate with the file structure and files
+      // listed as components." The canonical .spec is added alongside as an index.
+      const files = manifest.chunks
         .sort((a, b) => a.chunkIdx - b.chunkIdx)
         .map(c => {
-          const body_ = c.status === 'complete' && c.content
+          const built = c.status === 'complete' && c.content;
+          const content = built
             ? c.content
             : `## ${c.sectionTitle || c.sectionId}\n\n<!-- TODO: not yet built — finish in the spec builder -->\n`;
-          return body_;
+          return {
+            path: c.fileName || `${String(c.chunkIdx).padStart(2, '0')}-${c.sectionId}.md`,
+            content,
+            comp_id: c.comp_id || null,
+            seam_id: c.seam_id || null,
+            status: c.status,
+          };
         });
+
+      // Canonical index .spec: the whole thing in one file, as a repo README.
       const specText = `# ${manifest.name}\n\n` +
         `<!-- promoted from spec ${specUuid} · mode:${mode} · ` +
         `${manifest.chunks.length - pending.length}/${manifest.chunks.length} chunks built -->\n\n` +
-        sections.join('\n\n');
-
-      // A single canonical .spec file is the repo's physical artifact (§2.1).
-      const files = [{ path: `${manifest.name.replace(/[^a-zA-Z0-9-_]/g, '-')}.spec`, content: specText }];
+        `## File structure\n\n` +
+        files.map(f => `- \`${f.path}\`${f.comp_id ? ` — component: ${f.comp_id}` : ''} (${f.status})`).join('\n') +
+        `\n\n---\n\n` +
+        files.map(f => `### ${f.path}\n\n${f.content}`).join('\n\n');
+      files.unshift({ path: `${manifest.name.replace(/[^a-zA-Z0-9-_]/g, '-')}.spec`, content: specText, comp_id: 'index', seam_id: null, status: 'index' });
 
       const result = getRepoLayer().ingest({
         name: manifest.name,
@@ -793,6 +835,7 @@ async function handle(req, res, route, query, body) {
         specText,
         source: `promote:${mode}`,
         parent: manifest.ideaUuid || null,
+        promotedFromSpec: specUuid,
       });
       if (result.error) return err(res, 400, result.error);
 
@@ -897,6 +940,30 @@ async function handle(req, res, route, query, body) {
         const manifest = se.loadSpec(params.uuid);
         const chunk = se.nextPendingChunk(params.uuid);
         if (!chunk) return ok(res, { done: true, message: 'all chunks complete or building' });
+
+        // §PHASE 6 2026-07-10 — cross-spec chunk reuse, before spending a token.
+        // The WARP exact cache only hits when the whole PROMPT matches, and the
+        // prompt embeds the spec name — so the identical "purpose" section in
+        // two differently-named specs never reused. This asks the spec-engine
+        // whether this exact section (sectionId + sectionDesc) was already built
+        // in some other spec; if so, complete this chunk from that content and
+        // never dispatch. Content-addressed on the section contract, not the
+        // spec identity. Opt-out via body.noReuse for a deliberate fresh build.
+        if (!body.noReuse) {
+          try {
+            const prior = se.findPriorSection(chunk.sectionId, chunk.sectionDesc, params.uuid);
+            if (prior && prior.content) {
+              se.completeChunk(params.uuid, chunk.uuid, prior.content);
+              const um = se.loadSpec(params.uuid);
+              os.emit('idearium.spec-engine.chunk.complete', {
+                specUuid: params.uuid, chunkUuid: chunk.uuid, sectionId: chunk.sectionId,
+                progress: um.progress, source: 'reuse', reusedFrom: prior.specUuid, cost: 0, cacheHit: true,
+              });
+              return ok(res, { reused: true, from: prior.specUuid, sectionId: chunk.sectionId,
+                progress: um.progress, message: `reused '${chunk.sectionId}' from prior spec — 0 tokens` });
+            }
+          } catch (e) { console.warn('[idearium/api] prior-section reuse check failed, dispatching:', e.message); }
+        }
 
         // Get system context for the agent
         const systemContext = await as.getSystemContext().catch(() => '');
@@ -1097,6 +1164,27 @@ export function startAPI() {
 
     // Serve UI
     const cleanUrl = req.url.split('?')[0];
+    // §STACK SPLIT 2026-07-10 — serve UI static assets. The UI was broken out
+    // of a 2,335-line monolith into index.html + js/*.js (loaded via
+    // <script src>). Without serving js/ those files 404 and the whole UI goes
+    // blank. Path-traversal guarded: only files under ui/ are served.
+    if (req.method === 'GET' && (cleanUrl.startsWith('/js/') || cleanUrl.startsWith('/css/'))) {
+      const { readFileSync, existsSync } = await import('fs');
+      const { join, dirname, normalize } = await import('path');
+      const { fileURLToPath } = await import('url');
+      const __d = dirname(fileURLToPath(import.meta.url));
+      const uiRoot = join(__d, '..', 'ui');
+      const asset = normalize(join(uiRoot, cleanUrl));
+      if (!asset.startsWith(uiRoot)) { res.writeHead(403); res.end('forbidden'); return; }
+      if (existsSync(asset)) {
+        const type = asset.endsWith('.js') ? 'application/javascript'
+                   : asset.endsWith('.css') ? 'text/css' : 'text/plain';
+        res.writeHead(200, { 'Content-Type': type });
+        res.end(readFileSync(asset, 'utf8'));
+      } else { res.writeHead(404); res.end('not found'); }
+      return;
+    }
+
     if (req.method === 'GET' && (cleanUrl === '/' || cleanUrl === '/idearium' || cleanUrl === '/ui')) {
       const { readFileSync, existsSync } = await import('fs');
       const { join, dirname } = await import('path');
