@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     3.1.0
+    version:     3.2.0
     foundation:  nexus-system-foundation@1.0.0
     port:        4800
     uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001
@@ -12,6 +12,40 @@ spec:
       ideas to specs to gaps. High-weight edges = strong association.
 
   addendum:
+    - version: 3.2.0
+      date:    2026-07-11
+      changes: >
+        Idea↔spec-engine linkage, previously missing entirely: createSpec
+        now accepts ideaUuid, stores it on the manifest (was read by
+        _promoteSpecToRepo, never written by anything). speceng.create
+        links idea.linkedSpec and advances idea.phase seed/expanding/
+        tensioned → specced when given one. spec.promote advances the
+        ORIGINATING idea (manifest.ideaUuid, not RepoLayer's own synthetic
+        "Repo: X" tracking idea, a distinct bug caught mid-fix) to
+        'complete' on a fully-built promotion or 'building' on a partial
+        one — never regresses 'archived'. IdeaUpdateGate's allowed-fields
+        list gained 'linkedSpec' to make the link-write possible at all.
+        This is the actual fix for "can't change the phase" — the manual
+        phase buttons always worked (verified via direct API test, 12ms
+        response); the automatic seed→specced→building→complete
+        transition the state machine implies had just never been wired.
+        UI: createSpecForIdea() now opens the multi-template modal
+        (ideaUuid pre-filled) instead of posting straight to the
+        template-less legacy path; the modal actually sends ideaUuid now
+        (captured on open, previously dropped before the POST). Spec
+        Library's builder view branches on spec.chunks (spec-engine) vs
+        legacy sections — spec-engine specs get a real chunk-status list
+        and a "build repository (end-state)" button that loops
+        speceng.build to completion and auto-promotes, instead of
+        silently hitting legacy-only endpoints that didn't apply to them.
+      verified: >
+        Live end to end: idea created (phase seed) → linked spec created
+        with ideaUuid → phase auto-advanced to specced, linkedSpec set →
+        8/10 chunks built (2 failed — no live LLM agent in the test
+        sandbox, expected) → emerge-mode promote correctly refused →
+        manual-mode promote succeeded, 8/10 files real + 2 TODO → idea
+        phase advanced to 'building' (correctly not 'complete', matching
+        the partial build).
     - version: 3.1.0
       date:    2026-07-11
       changes: >

@@ -39,6 +39,12 @@
       "lastTs": 1783757240689,
       "intervals": [],
       "totalMs": 0
+    },
+    "idearium.idea.phase": {
+      "count": 1,
+      "lastTs": 1783758974906,
+      "intervals": [],
+      "totalMs": 0
     }
   },
   "baseline": {}

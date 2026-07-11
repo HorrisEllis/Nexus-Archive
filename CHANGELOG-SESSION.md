@@ -1,9 +1,57 @@
 # NEXUS v0.9.11 — Session Changelog (2026-07-11)
 **Date:** 2026-07-11
-**Session type:** Idearium multi-template pipeline, repo file CRUD, tv-ui channel decomposition, Clear Glass UI decomposition
+**Session type:** Idearium multi-template pipeline, repo file CRUD, tv-ui channel decomposition, Clear Glass UI decomposition, idea↔spec-engine phase linkage
 **By:** James Brooks (Erosmancer) + Claude
 
 ---
+
+## Round 2 — idea↔spec-engine phase linkage
+
+Reported as "can't change the phase" (idea detail panel, phase buttons
+appeared unresponsive). Root cause, found by testing the live endpoint
+directly rather than guessing from code: the manual phase-change endpoint
+worked correctly (12ms response, confirmed via direct API call) — the
+actual gap was that the automatic phase transitions the state machine
+implies (seed → specced when a spec is created, → building/complete when
+promoted) had never been wired for spec-engine specs, and were wired but
+buggy for legacy specs (linked the spec, never advanced the phase).
+
+Fixed:
+- `spec-engine.createSpec` accepts and stores `ideaUuid` on the manifest —
+  `_promoteSpecToRepo` already read this field; nothing had ever written it.
+- `speceng.create` API handler links `idea.linkedSpec` and advances
+  `idea.phase` to `specced` when given an `ideaUuid`.
+- `spec.promote` advances the idea to `complete` (fully built) or
+  `building` (partial promote). Caught mid-implementation: RepoLayer's
+  `ingest()` always creates its OWN synthetic "Repo: X" tracking idea —
+  the fix initially advanced that idea's phase instead of the real
+  originating one. `_promoteSpecToRepo` now returns both under distinct
+  names (`ideaUuid` = synthetic, `originIdeaUuid` = real).
+- `IdeaUpdateGate`'s allowed-fields list gained `linkedSpec` — the write
+  path didn't exist before this.
+- UI: `createSpecForIdea()` now opens the multi-template modal (was
+  posting to the template-less legacy endpoint). The modal's `ideaUuid`
+  was captured on open but never actually included in the create request
+  — fixed. Spec Library's builder view now branches on spec-engine vs
+  legacy specs (`Array.isArray(spec.chunks)`) — spec-engine specs
+  previously rendered action buttons wired to legacy-only endpoints that
+  didn't apply to them (wrong store, would 404 or no-op). New
+  `renderSpecEngineBuilder()` shows real chunk status and a "build
+  repository (end-state)" button (`buildAllAndPromote()`) that loops
+  `speceng.build` to completion and auto-promotes.
+
+**Verified live, full loop**: created idea (phase `seed`) → created
+linked spec with 2 templates (phase auto → `specced`, `linkedSpec` set)
+→ built 8/10 chunks (2 failed — no live LLM agent available in the test
+sandbox, expected and handled correctly, not a bug) → attempted
+emerge-mode promote (correctly refused: "cannot auto-promote: 2 of 10
+chunks not built") → manual-mode promote succeeded (8 real files + 2
+TODO placeholders, materialized to disk) → idea phase advanced to
+`building` (correctly not `complete`, matching the partial state).
+
+---
+
+## Round 1 — multi-template pipeline, repo file CRUD, tv-ui channels, Clear Glass
 
 ## Scope
 

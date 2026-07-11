@@ -504,6 +504,17 @@ function selectSpec(uuid) {
 }
 
 function renderSpecBuilder(spec) {
+  // §BUG FIXED 2026-07-11 — every spec in SPECS renders through this
+  // function regardless of origin, but saveSection/checkSpec/buildSpec
+  // below all call the LEGACY-only /api/specs/:uuid/* endpoints. A
+  // spec-engine spec's uuid was never in os.db.specs, so those calls
+  // either 404'd or silently did nothing — the action buttons looked
+  // present and did nothing real. `.chunks` only exists on spec-engine
+  // manifests (spec.list's merge spreads the raw manifest in) — use it
+  // as the discriminator and render a genuinely different, working
+  // action row for that case instead of the legacy one.
+  if (Array.isArray(spec.chunks)) return renderSpecEngineBuilder(spec);
+
   const conf = specConfidence(spec);
   const gaps = specGaps(spec);
   const sec = (spec.sections||[]).find(s=>s.id===BUILDER_ACTIVE_SECTION) || {};
@@ -535,6 +546,110 @@ function renderSpecBuilder(spec) {
     </div>
   `;
 }
+// §NEW 2026-07-11 — the working action row for a spec-engine spec: real
+// chunk status (not the legacy 9-section grid), a build-all-and-promote
+// one-click flow ("have it build the repository — end-state"), and an
+// open-repository link once one exists. Read-only chunk list for now —
+// spec-engine chunks are agent/template-built, not hand-edited inline
+// the way legacy sections are; editing an individual chunk's content is
+// a real follow-up, not something this pass claims to do.
+function renderSpecEngineBuilder(spec) {
+  const wrap = document.getElementById('spec-builder');
+  const chunks = spec.chunks || [];
+  const done = chunks.filter(c => c.status === 'complete').length;
+  const pct = chunks.length ? Math.round(done / chunks.length * 100) : 0;
+  const repo = API_REPOS.find(r => r.promotedFromSpec === spec.uuid);
+  const building = !!BUILD_IN_PROGRESS[spec.uuid];
+
+  wrap.innerHTML = `
+    <div class="builder-body">
+      <div class="ds" style="margin-bottom:0">
+        <div class="ds-label">spec-engine — ${escapeHtml((spec.templateIds||[]).join(', ') || 'no template')} · build logic: ${escapeHtml(spec.buildEngine||'auto')}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="tension-track" style="flex:1;height:6px"><div class="tension-fill" style="width:${pct}%;background:${pct===100?'var(--mint)':'var(--amber)'}"></div></div>
+          <span style="font-family:var(--mono);font-size:12px;font-weight:600">${done}/${chunks.length}</span>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">chunks</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${chunks.map(c => `
+            <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--b0)">
+              <span style="color:${c.status==='complete'?'var(--mint)':c.status==='building'?'var(--amber)':'var(--text3)'}">${c.status==='complete'?'✓':c.status==='building'?'…':'○'}</span>
+              <span style="flex:1;color:var(--text2)">${escapeHtml(c.sectionId)}</span>
+              <span style="color:var(--text3)">${escapeHtml(c.agent||'')}${c.agentModel&&c.agentModel.startsWith('template')?' (template)':''}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="action-row">
+        ${repo
+          ? `<button class="action-btn primary" onclick="openRepoFor('${spec.ideaUuid||''}', '${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">open repository →</button>`
+          : `<button class="action-btn primary" ${building?'disabled':''} onclick="buildAllAndPromote('${spec.uuid}')">${building?'building…':(done===chunks.length?'promote → repository':'build repository (end-state)')}</button>`
+        }
+        <button class="action-btn" onclick="exportSpec('${spec.uuid}')">export markdown</button>
+      </div>
+    </div>
+  `;
+}
+
+// specUuid -> true while a build-all-and-promote loop is running, so the
+// button can't be double-clicked into two concurrent loops.
+let BUILD_IN_PROGRESS = {};
+
+// The "system can build and repair itself" flow: repeatedly call
+// speceng.build (each call dispatches the NEXT pending chunk — WARP cache,
+// cross-spec reuse, or an agent, whichever resolves it) until every chunk
+// is complete or a chunk fails outright, then promote to a real repository.
+// "Repair" here means what the pipeline already gives us for free: WARP's
+// verification/retry ladder on each chunk build, and cross-spec reuse
+// pulling a known-good section instead of regenerating — this function's
+// job is just to drive that loop to completion and stop cleanly on a real
+// failure rather than spinning forever.
+async function buildAllAndPromote(specUuid) {
+  if (BUILD_IN_PROGRESS[specUuid]) return;
+  BUILD_IN_PROGRESS[specUuid] = true;
+  selectSpec(specUuid);
+  try {
+    const MAX_STEPS = 40; // generous ceiling — a stuck loop must stop, not spin (§1.2)
+    for (let i = 0; i < MAX_STEPS; i++) {
+      const spec = SPECS.find(s => s.uuid === specUuid);
+      const pending = (spec?.chunks || []).filter(c => c.status !== 'complete');
+      if (!pending.length) break;
+
+      const res = await api(`/api/spec-engine/specs/${specUuid}/build`, { method: 'POST', body: JSON.stringify({}) });
+      if (res.done) break;
+      // building/queued chunks resolve async server-side (SSE-driven) —
+      // give it a moment before checking again rather than hammering.
+      await new Promise(r => setTimeout(r, 1200));
+      await loadSpecs();
+      const fresh = SPECS.find(s => s.uuid === specUuid);
+      if (fresh) renderSpecBuilder(fresh);
+    }
+
+    await loadSpecs();
+    const spec = SPECS.find(s => s.uuid === specUuid);
+    const stillPending = (spec?.chunks || []).filter(c => c.status !== 'complete' && c.status !== 'building');
+    if (stillPending.length) {
+      toast(`build stopped — ${stillPending.length} chunk(s) still pending (${stillPending.map(c=>c.sectionId).join(', ')})`, 'err');
+      renderSpecBuilder(spec);
+      return;
+    }
+
+    toast('all chunks built — promoting to repository…', 'ok');
+    const promoted = await api(`/api/spec-engine/specs/${specUuid}/promote`, { method: 'POST', body: JSON.stringify({ mode: 'emerge' }) });
+    toast('repository built — end state reached', 'ok');
+    await loadSpecs(); await loadApiRepos();
+    if (spec?.ideaUuid) await loadIdeas(); // phase just advanced to 'complete'
+    openRepoFor(spec?.ideaUuid || null, specUuid, spec?.name || '');
+  } catch (e) {
+    toast(`build failed: ${e.message}`, 'err');
+  } finally {
+    BUILD_IN_PROGRESS[specUuid] = false;
+    const spec = SPECS.find(s => s.uuid === specUuid);
+    if (spec) renderSpecBuilder(spec);
+  }
+}
+
 function switchSection(uuid, sectionId) {
   BUILDER_ACTIVE_SECTION = sectionId;
   const spec = SPECS.find(s=>s.uuid===uuid);
@@ -636,11 +751,12 @@ async function submitNewSpec(mapToRepo) {
   const description = document.getElementById('ns-description').value.trim();
   const templateIds = selectedTemplateIds();
   const buildEngine = document.getElementById('ns-build-engine').value || 'auto';
+  const ideaUuid = NS_IDEA_UUID; // §BUG FIXED 2026-07-11 — was captured on open, never sent
 
   try {
     const r = await api('/api/spec-engine/specs', {
       method: 'POST',
-      body: JSON.stringify({ name, description, templateIds, buildEngine }),
+      body: JSON.stringify({ name, description, templateIds, buildEngine, ideaUuid: ideaUuid || undefined }),
     });
     const manifest = r.manifest || r;
     toast(`spec created${templateIds.length ? ` from [${templateIds.join(', ')}]` : ''} · build logic: ${buildEngine}`, 'ok');
@@ -653,23 +769,30 @@ async function submitNewSpec(mapToRepo) {
         toast('mapped to repository — compartments/axioms in, rest TODO', 'ok');
         closeNewSpecModal();
         await loadSpecs(); await loadApiRepos();
-        openRepoFor(null, manifest.uuid, name);
+        if (ideaUuid) await loadIdeas(); // picks up the idea's new phase + linkedSpec
+        openRepoFor(ideaUuid || null, manifest.uuid, name);
         return;
       } catch (e) { toast(`spec created, map-to-repo failed: ${e.message}`, 'err'); }
     }
 
     closeNewSpecModal();
     await loadSpecs();
+    if (ideaUuid) {
+      await loadIdeas();
+      const idea = IDEAS.find(i => i.uuid === ideaUuid);
+      if (idea) renderDetail(idea); // reflect the new phase + linked-spec immediately, not on next reload
+    }
   } catch (e) { toast(e.message, 'err'); }
 }
-async function createSpecForIdea(ideaUuid) {
+function createSpecForIdea(ideaUuid) {
   const idea = IDEAS.find(i=>i.uuid===ideaUuid); if (!idea) return;
-  try {
-    await api(`/api/ideas/${ideaUuid}/spec`, { method:'POST', body: JSON.stringify({name: (idea.text||'spec').slice(0,60)}) });
-    toast('spec created from idea','ok');
-    await loadIdeas(); await loadSpecs();
-    renderDetail(IDEAS.find(i=>i.uuid===ideaUuid));
-  } catch(e) { toast(e.message,'err'); }
+  // §BUG FIXED 2026-07-11 — this used to POST straight to the legacy
+  // /api/ideas/:uuid/spec path: no template picker, no buildEngine choice,
+  // and (separately fixed) that path never advanced idea.phase either.
+  // Routing through the same modal Brainstorm/Spec Library use means an
+  // idea-originated spec gets the same template composition and repo
+  // materialization as any other — one spec-creation path, not two.
+  openNewSpecModal({ ideaUuid, name: (idea.text||'spec').slice(0,60), description: idea.text||'' });
 }
 
 // ════════════════════════════════════════════════════

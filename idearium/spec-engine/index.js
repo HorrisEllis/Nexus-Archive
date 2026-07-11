@@ -37,9 +37,9 @@ const _require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const MODULE_ID   = 'idearium.spec-engine';
-const VERSION     = '1.2.0';  // +multi-template composition (templateIds[]), +buildEngine selector
-                               // (auto|warp|direct), +generalized section seeding (was meta-only).
-                               // See idearium.spec's addendum (v3.1.0, 2026-07-11) for the full list.
+const VERSION     = '1.3.0';  // +ideaUuid on createSpec/manifest — closes the gap where
+                               // _promoteSpecToRepo read manifest.ideaUuid but nothing wrote it.
+                               // See idearium.spec's addendum (v3.2.0, 2026-07-11).
 const COMP_ID     = 'idearium.spec-engine';
 const SEAM_PREFIX = 'idearium.spec-engine:v1:chunk';
 
@@ -185,7 +185,7 @@ function _seedSectionsFromTemplate(templateId, specName) {
 // SPEC_SECTIONS template. createSpec() below is now a thin wrapper that
 // passes SPEC_SECTIONS as its default — behavior for existing callers is
 // unchanged, byte for byte.
-function _buildManifest({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto' }) {
+function _buildManifest({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto', ideaUuid = null }) {
   _ensureRoot();
   if (!name) throw new Error('spec name required');
 
@@ -280,6 +280,13 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
     agent,                      // primary agent (Mistral first)
     agentPriority: ['ollama', 'chatgpt', 'claude'],  // LAW_I: local first
     buildEngine,                 // auto | warp | direct — §BUILD-LOGIC SELECTOR
+    // §BUG FIXED 2026-07-11 — api/index.js's _promoteSpecToRepo already
+    // read `manifest.ideaUuid` (to set the promoted repo's fork-parent),
+    // but nothing anywhere ever WROTE it — every spec-engine spec was
+    // created with no idea linkage at all, unlike the legacy idea.spec
+    // path. This is the other half: an idea that creates a spec-engine
+    // spec now actually gets linked to it.
+    ideaUuid,
     totalChunks: chunks.length,
     doneChunks:  0,
     failedChunks:0,
@@ -369,8 +376,8 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
   return manifest;
 }
 
-export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto' }) {
-  return _buildManifest({ name, type, description, agent, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine });
+export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto', ideaUuid = null }) {
+  return _buildManifest({ name, type, description, agent, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine, ideaUuid });
 }
 
 // ── Load spec manifest from disk ──────────────────────────────────────────────

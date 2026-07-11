@@ -3,14 +3,22 @@
  * UUID: idearium-repo-v001-000000000001
  * Version: 1.1.0
  *
- * §ADDENDUM 2026-07-11 — ingest() now materializes real files to disk
- * under dataDir/repos/<repoUuid>/ whenever it has file content to write
- * (repo.localPath/materializedCount record this), and three new methods
- * (readFile/writeFile/deleteFile) give the API real CRUD against those
- * materialized files. Previously this layer tracked path+bytes metadata
- * only — a "repo" was a JSON manifest with no actual files anywhere.
- * deleteFile moves bytes to a repo-local .trash/ rather than unlinking
- * (§7.4 — nothing discarded silently).
+ * §ADDENDUM 2026-07-11 (v1.1.0) — ingest() now materializes real files to
+ * disk under dataDir/repos/<repoUuid>/ whenever it has file content to
+ * write (repo.localPath/materializedCount record this), and three new
+ * methods (readFile/writeFile/deleteFile) give the API real CRUD against
+ * those materialized files. Previously this layer tracked path+bytes
+ * metadata only — a "repo" was a JSON manifest with no actual files
+ * anywhere. deleteFile moves bytes to a repo-local .trash/ rather than
+ * unlinking (§7.4 — nothing discarded silently).
+ *
+ * Related fix, api/index.js side, noted here since it's easy to miss:
+ * ingest() ALWAYS creates its own synthetic "Repo: <name>" idea to track
+ * the repo (see below) — that idea's uuid is NOT the idea that
+ * originated the promoted spec. _promoteSpecToRepo() now returns both
+ * under separate names (ideaUuid = the synthetic one, originIdeaUuid =
+ * the real one) after a caller advancing idea phase on promotion nearly
+ * advanced the wrong idea.
  *
  * THE MERGE (per the spec): a fork or a dropped zip is not "a file" — it is an
  * IDEA with a spec and a tree. Idearium already tracks ideas through phases

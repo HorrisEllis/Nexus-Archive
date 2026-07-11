@@ -932,6 +932,103 @@
       "createdAt": 1783756623771,
       "updatedAt": 1783756623771,
       "status": "active"
+    },
+    {
+      "uuid": "nexus-id-repo-bc6c06a5",
+      "name": "Waylight",
+      "ideaUuid": "55af30ea-3596-4ada-b3ab-5d21c51e60e0",
+      "specUuid": "12c1f92e-6d72-45b4-90d9-2705c098ed72",
+      "promotedFromSpec": "43a8b111-795d-4b01-b1ad-b4dde860f392",
+      "specPath": "Waylight.spec",
+      "localPath": "/home/claude/work/merged/nexus/idearium/data/repos/nexus-id-repo-bc6c06a5",
+      "materializedCount": 11,
+      "parent": "692aa2ab-981b-4d16-afde-d61317cd0dcf",
+      "forks": [],
+      "source": "promote:manual",
+      "fileCount": 11,
+      "files": [
+        {
+          "path": "Waylight.spec",
+          "bytes": 89005,
+          "comp_id": "index",
+          "seam_id": null,
+          "status": "index"
+        },
+        {
+          "path": "00-meta.md",
+          "bytes": 336,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:meta",
+          "status": "complete"
+        },
+        {
+          "path": "01-purpose.md",
+          "bytes": 1126,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:purpose",
+          "status": "complete"
+        },
+        {
+          "path": "02-axioms.md",
+          "bytes": 2466,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:axioms",
+          "status": "complete"
+        },
+        {
+          "path": "03-schema.md",
+          "bytes": 72039,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:schema",
+          "status": "complete"
+        },
+        {
+          "path": "04-api.md",
+          "bytes": 89,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:api",
+          "status": "complete"
+        },
+        {
+          "path": "05-events.md",
+          "bytes": 10401,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:events",
+          "status": "complete"
+        },
+        {
+          "path": "06-integration.md",
+          "bytes": 1330,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:integration",
+          "status": "complete"
+        },
+        {
+          "path": "07-failure_modes.md",
+          "bytes": 76,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:failure_modes",
+          "status": "failed"
+        },
+        {
+          "path": "08-build_order.md",
+          "bytes": 74,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:build_order",
+          "status": "failed"
+        },
+        {
+          "path": "09-tests.md",
+          "bytes": 93,
+          "comp_id": "idearium.spec-engine",
+          "seam_id": "idearium.spec-engine:v1:chunk:43a8b111:tests",
+          "status": "complete"
+        }
+      ],
+      "phase": "building",
+      "createdAt": 1783759397754,
+      "updatedAt": 1783759397754,
+      "status": "active"
     }
   ]
 }

@@ -215,6 +215,12 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
 
   return {
     repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
+    // §BUG FIXED 2026-07-11 — result.ideaUuid above is RepoLayer.ingest()'s
+    // own SYNTHETIC "Repo: <name>" idea it always creates to track the
+    // repo — not the idea that originated this spec. manifest.ideaUuid is
+    // the real one; exposed separately so callers advancing the
+    // ORIGINATING idea's phase don't silently advance the wrong idea.
+    originIdeaUuid: manifest.ideaUuid || null,
     mode, chunksBuilt: manifest.chunks.length - pending.length, chunksTotal: manifest.chunks.length,
   };
 }
@@ -566,6 +572,16 @@ async function handle(req, res, route, query, body) {
       if (!idea) return err(res, 404, `idea not found: ${params.uuid}`);
       os.emit('idearium.spec.create', { name: body.name || `Spec: ${idea.text.slice(0,40)}`, ideaUuid: params.uuid, source:'api' });
       const spec = os.db.specs[os.db.specs.length - 1];
+      // §BUG FIXED 2026-07-11 — SpecCreateGate links idea.linkedSpec but
+      // never advances idea.phase. "promoted to a spec" produced an idea
+      // that still read 'seed' forever — the phase buttons worked fine
+      // when clicked manually (verified live), the automatic transition
+      // this whole state machine implies just never fired. Only advances
+      // forward (seed/expanding/tensioned → specced) — never regresses an
+      // idea that's already further along (building/complete/archived).
+      if (['seed','expanding','tensioned'].includes(idea.phase)) {
+        os.emit('idearium.idea.phase', { uuid: params.uuid, phase: 'specced', source: 'api' });
+      }
       return ok(res, { spec });
     }
 
@@ -901,6 +917,22 @@ async function handle(req, res, route, query, body) {
         specUuid, repoUuid: result.repoUuid,
         mode, chunksBuilt: result.chunksBuilt, chunksTotal: result.chunksTotal,
       });
+
+      // §BUG FIXED 2026-07-11 — same class of gap as spec creation: a
+      // promoted repo existing is real, visible end-state for an idea,
+      // and nothing advanced idea.phase to reflect it. A fully-built
+      // promotion (every chunk complete) reads as 'complete' — the closed
+      // loop actually closed. A partial 'manual' promotion (map-first
+      // templates, TODO placeholders for the rest) reads as 'building' —
+      // real progress, not finished. Never regresses 'archived'.
+      if (result.originIdeaUuid) {
+        const idea = os.idea(result.originIdeaUuid);
+        if (idea && idea.phase !== 'archived') {
+          const donePhase = result.chunksBuilt === result.chunksTotal ? 'complete' : 'building';
+          os.emit('idearium.idea.phase', { uuid: result.originIdeaUuid, phase: donePhase, source: 'api' });
+        }
+      }
+
       return ok(res, {
         repoUuid: result.repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
         mode, promotedFrom: specUuid,
@@ -1002,14 +1034,34 @@ async function handle(req, res, route, query, body) {
     case 'speceng.create': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      const { name, type, description, agent, templateId, templateIds, buildEngine } = body;
+      const { name, type, description, agent, templateId, templateIds, buildEngine, ideaUuid } = body;
       if (!name) return err(res, 400, 'name required');
+      // §1.2 — a caller passing an ideaUuid that doesn't exist is a config
+      // error, not a spec silently created with a dangling link.
+      if (ideaUuid && !os.idea(ideaUuid)) return err(res, 404, `idea not found: ${ideaUuid}`);
       try {
         // An unknown templateId/templateIds (or buildEngine) throws inside
         // createSpec (§1.2) and surfaces as a 400 here rather than silently
         // creating an unseeded / mis-configured spec.
-        const manifest = se.createSpec({ name, type, description, agent, templateId, templateIds, buildEngine: buildEngine || 'auto' });
-        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateIds: manifest.templateIds, buildEngine: manifest.buildEngine });
+        const manifest = se.createSpec({ name, type, description, agent, templateId, templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
+        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateIds: manifest.templateIds, buildEngine: manifest.buildEngine, ideaUuid: manifest.ideaUuid });
+
+        // §BUG FIXED 2026-07-11 — spec-engine specs never linked back to
+        // the idea that spawned them, and the idea's phase never advanced
+        // past 'seed' — the whole reason "can't change the phase" looked
+        // broken (manual phase buttons worked fine; the automatic
+        // seed→specced transition this state machine implies never
+        // fired). Same rule as the legacy idea.spec path: only advances
+        // forward, never regresses an idea already further along.
+        if (ideaUuid) {
+          const idea = os.idea(ideaUuid);
+          if (idea) {
+            os.emit('idearium.idea.update', { uuid: ideaUuid, fields: { linkedSpec: manifest.uuid } });
+            if (['seed','expanding','tensioned'].includes(idea.phase)) {
+              os.emit('idearium.idea.phase', { uuid: ideaUuid, phase: 'specced', source: 'api' });
+            }
+          }
+        }
         return ok(res, { manifest });
       } catch(e) { return err(res, 500, e.message); }
     }
