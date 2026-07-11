@@ -20,6 +20,36 @@ const crypto = require('crypto');
 const path   = require('path');
 const fs     = require('fs');
 
+// §BUG FIXED 2026-07-11, extracted as a real shared function — "the
+// co-pilot in the tv-ui is showing json strings — fixed over and over but
+// keeps getting changed back." Root cause of the "keeps getting changed
+// back" part specifically: the two call sites that needed this fix each
+// had their OWN inline fallback chain (`r.text || r.result ||
+// JSON.stringify(r)`), and tests/modules/copilot-handshake-dispatch.test.js
+// tested a THIRD, independently-duplicated copy of the same logic rather
+// than importing the real function — so a fix applied to the real code
+// never touched what the test actually exercised, the test kept passing
+// against its own stale mock, and nothing caught a regression that
+// reintroduced the bug in either real call site. Extracting this once,
+// exporting it, and having the test import the real function (not a mock)
+// closes that loop — the test can no longer drift from the implementation.
+//
+// The bug itself: an upstream response can carry its text at `.text`,
+// nested at `.result.text`, or (older/other providers) directly as a
+// string at `.result`. Every UI consumer downstream treats the extracted
+// value as a plain string — `.slice()`, template-literal interpolation,
+// `textContent` assignment. Picking a raw object because it was first in
+// an `||` chain breaks all of those; this always returns a string.
+function extractDispatchText(r) {
+  if (!r || typeof r !== 'object') return null;
+  if (typeof r.text === 'string') return r.text;
+  if (typeof r.result === 'string') return r.result;
+  if (typeof r.result?.text === 'string') return r.result.text;
+  if (typeof r.output === 'string') return r.output;
+  if (typeof r.output?.text === 'string') return r.output.text;
+  return null; // caller decides the fallback — different callers want different diagnostic messages
+}
+
 const PORT     = parseInt(process.env.COPILOT_PORT || '3750');
 const GD_URL   = process.env.GUARDIAN_URL   || 'http://127.0.0.1:7820';
 const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
@@ -708,7 +738,8 @@ const server = http.createServer(async (req, res) => {
       if (agent === 'ollama') {
         const r = await _dispatchToOllama(promptText, '', { requestId, intent: 'ask' });
         if (!r?.ok) return { ok: false, error: r?.error || 'ollama dispatch failed', errorType: 'ollama_dispatch_failed' };
-        return { ok: true, output: r.text || r.result || JSON.stringify(r) };
+        const ollamaText = extractDispatchText(r);
+        return { ok: true, output: ollamaText ?? `[unstructured ollama response — keys: ${Object.keys(r).join(', ')}]` };
       }
       if (agent === 'claude' || agent === 'chatgpt') {
         const provCheck = await _fetch(`${GD_URL}/providers`, { method: 'GET', timeout: 3000 }).catch(() => null);
@@ -743,7 +774,31 @@ const server = http.createServer(async (req, res) => {
         }
         const dispatchRes = await _post(`${GD_URL}/command`, { provider: agent, prompt: promptText, source: 'copilot.fulfill' }, 10000).catch(e => ({ ok: false, error: e.message }));
         if (!dispatchRes?.ok) return { ok: false, error: dispatchRes?.error || 'guardian dispatch failed', errorType: 'guardian_dispatch_failed' };
-        return { ok: true, output: dispatchRes.result || dispatchRes.text || JSON.stringify(dispatchRes) };
+        // §BUG FIXED 2026-07-11 — "the co-pilot in the tv-ui is showing json
+        // strings." Root cause: `dispatchRes.result || dispatchRes.text ||
+        // JSON.stringify(dispatchRes)` picks whichever is truthy first —
+        // when guardian's /command returns `result` as an OBJECT (e.g.
+        // `{text: "...", modelUsed: "..."}`) rather than a plain string,
+        // that object wins the `||` chain and becomes `output` directly,
+        // never reaching the JSON.stringify fallback. Every UI consumer
+        // downstream (conversations.html, menu.js's CLI, spotlight) treats
+        // `output`/`response` as a string — .slice(), template-literal
+        // interpolation, textContent assignment. A few of those coerce an
+        // object into "[object Object]"; others explicitly fall back to
+        // JSON.stringify(x) when `.text` is missing, which is exactly
+        // where the visible raw JSON came from. Fixed at the source
+        // instead of chasing every consumer: extract the real text here,
+        // once, so `output` is a guaranteed string no matter what shape
+        // guardian's response takes.
+        const resultText = extractDispatchText(dispatchRes);
+        if (resultText === null) {
+          // No plain-text field found anywhere in the response — this IS
+          // worth surfacing as JSON (something is genuinely unstructured),
+          // but tagged so it's diagnosable as a fallback, not mistaken for
+          // a normal response.
+          console.warn(`[copilot] guardian /command response had no string .result/.result.text/.text field — ${JSON.stringify(Object.keys(dispatchRes))}`);
+        }
+        return { ok: true, output: resultText ?? `[unstructured guardian response — keys: ${Object.keys(dispatchRes).join(', ')}]` };
       }
       return { ok: false, error: `agent '${agent}' has no dispatch path wired in this endpoint yet`, errorType: 'dispatch_not_wired' };
     };
@@ -791,7 +846,7 @@ const server = http.createServer(async (req, res) => {
     if (mastermind?.analysis) contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0,400)}`;
 
     // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
-    let text = '', modelUsed = 'none';
+    let text = '', modelUsed = 'none', confidence = null, escalated = false, escalationReason = null;
     try {
       const life = await _lifeline.route(
         `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
@@ -799,7 +854,24 @@ const server = http.createServer(async (req, res) => {
       );
       text      = life?.text || '';
       modelUsed = life?.provider_used || 'none';
-      if (life?.escalated) broadcast('copilot.lifeline.escalated', { provider: life.provider_used });
+      confidence = life?.confidence ?? null;
+      escalated  = !!life?.escalated;
+      // §BUG FIXED 2026-07-11 — "the confidence score is over-relying on
+      // lifeline" is unverifiable without this: lifeline's route() already
+      // computes and returns confidence/escalated/ollama_offline on every
+      // response, but none of it reached storage — only provider_used did.
+      // Every escalation was invisible after the fact; the only place it
+      // existed was one console.log line and a fire-and-forget SSE
+      // broadcast nothing persisted or displayed. Now on the actual
+      // persisted record, so it's answerable from data instead of guessed:
+      // was this exchange high-confidence Ollama, or an escalation — and
+      // if an escalation, was it because confidence was low, or because
+      // Ollama was unreachable entirely (two very different problems that
+      // both look identical without this).
+      escalationReason = life?.ollama_offline ? 'ollama_unreachable'
+        : life?.escalated ? 'low_confidence'
+        : null;
+      if (life?.escalated) broadcast('copilot.lifeline.escalated', { provider: life.provider_used, confidence, reason: escalationReason });
     } catch(e) { text = `Dispatch failed: ${e.message}`; }
 
     // Persist (best-effort)
@@ -808,6 +880,7 @@ const server = http.createServer(async (req, res) => {
         uuid: crypto.randomUUID(), requestId, sessionId,
         prompt: prompt.slice(0,500), response: text.slice(0,2000),
         modelUsed, intent: 'ask', channel,
+        confidence, escalated, escalationReason,
         componentId: 'copilot.bridge.deliver', hookId: 'copilot.bridge.in',
         contextLayers: 7, fromStream: false, ts: Date.now()
       });
@@ -1043,6 +1116,17 @@ function register() {
   r.write(body); r.end();
 }
 
+// §BUG FIXED 2026-07-11 — this used to call server.listen() unconditionally
+// at module load, meaning any `require('./copilot/server.js')` — including
+// from a test wanting only extractDispatchText — started a real HTTP
+// server bound to :3750 as a side effect. This is very likely WHY
+// tests/modules/copilot-handshake-dispatch.test.js duplicated the dispatch
+// logic as an inline mock instead of importing the real functions: doing
+// so safely wasn't possible before this guard existed. Standard Node
+// pattern — only listen when this file is the actual entrypoint
+// (`node copilot/server.js`), not when something else requires it for
+// what it exports.
+if (require.main === module) {
 server.listen(PORT, () => {
   console.log(`[copilot] :${PORT} — v${VERSION} — P73/P103/P110/P112/AX-008 wired`);
   setTimeout(register, 1000);
@@ -1073,5 +1157,6 @@ server.listen(PORT, () => {
     console.log('[copilot] stream-digest started — activity persists to Cortex every 60s');
   } catch (e) { console.warn('[copilot] stream-digest not started:', e.message); }
 });
+}
 
-module.exports = { server, streamIngest, _resolveIntuitionResponse };
+module.exports = { server, streamIngest, _resolveIntuitionResponse, extractDispatchText };

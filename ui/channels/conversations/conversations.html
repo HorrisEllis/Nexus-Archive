@@ -70,16 +70,30 @@ async function convLoad() {
       const channel  = row.channel || '';
       const prompt   = (row.prompt || '').slice(0, 300);
       const response = (row.response || '').slice(0, 400);
+      // §NEW 2026-07-11 — in direct response to "the confidence score is
+      // over-relying on lifeline." This data has existed on lifeline's
+      // route() return value the whole time; nothing persisted or
+      // displayed it, so the claim was unverifiable either way. Now it's
+      // on the row (see copilot/server.js's chat_log persist) and shown
+      // here per-exchange.
+      const escalated = !!row.escalated;
+      const confidence = typeof row.confidence === 'number' ? row.confidence : null;
+      const escalationReason = row.escalationReason || null;
 
       const card = document.createElement('div');
       card.className = 'conv-card';
       const badgeClass = ['copilot','claude','chatgpt','ollama'].includes(provider) ? provider : 'copilot';
+
+      const escalationBadge = escalated
+        ? `<span class="conv-intent" style="color:${escalationReason==='ollama_unreachable'?'#e2495a':'#e8a233'}" title="${escalationReason==='ollama_unreachable'?'Ollama was unreachable — escalated by necessity, not by choice':'Ollama confidence was below threshold — escalated to Guardian'}">⇧ escalated${escalationReason==='ollama_unreachable'?' (ollama down)':''}</span>`
+        : (confidence !== null ? `<span class="conv-intent" style="color:rgba(255,255,255,.35)">conf ${Math.round(confidence*100)}%</span>` : '');
 
       card.innerHTML = `
         <div class="conv-card-head">
           <span class="conv-badge ${badgeClass}">${provider}</span>
           ${intent!=='—'?`<span class="conv-intent">${intent}</span>`:''}
           ${channel?`<span class="conv-intent" style="color:rgba(255,255,255,.18)">${channel}</span>`:''}
+          ${escalationBadge}
           <span class="conv-ts" style="margin-left:auto">${ago}</span>
         </div>
         <div class="conv-prompt">${_escHtml(prompt)}</div>
