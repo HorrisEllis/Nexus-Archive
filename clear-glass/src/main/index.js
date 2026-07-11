@@ -117,7 +117,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture, processMetrics;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -735,6 +735,15 @@ async function bootstrap() {
   // <!DOCTYPE...")).
   sse.app.get('/contract', (req, res) => res.json(CONTRACT));
   console.log(`[ClearGlass] SSE server :${SSE_PORT}`);
+
+  // 13.6. Process metrics — real answer to "what is actually running,"
+  // not an assertion about it. See process-metrics.js's header for why
+  // this exists now specifically.
+  const { ProcessMetrics } = require('../diagnostic/process-metrics');
+  processMetrics = new ProcessMetrics({ app, sse, providerHost });
+  sse.app.get('/api/metrics', (req, res) => res.json(processMetrics.snapshot()));
+  processMetrics.startPolling(5000);
+  console.log('[ClearGlass] Process metrics live — GET /api/metrics or watch process.metrics on the SSE stream');
 
   // 14. NEXUS registration
   await _registerWithNexus();

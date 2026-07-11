@@ -56,6 +56,30 @@ Combined with the GPU-crash fix above (which was itself causing repeat
 respawns of all 4 windows every time the crash loop fired), this should
 meaningfully cut idle resource use.
 
+## §ADDENDUM 2026-07-11 (4) — real process instrumentation, not more claims
+
+Every fix above this point was verified by syntax check and reading
+Electron's documented behavior — never by watching real numbers on a
+real machine, because this sandbox can't run Electron. That's a real
+limit, not something to explain away.
+
+**`src/diagnostic/process-metrics.js`** (new) polls `app.getAppMetrics()`
+— Electron's own real, OS-level list of every process it has spawned,
+with real CPU/memory numbers — and `app.getGPUFeatureStatus()`, which is
+Chromium's own report of whether GPU features are actually
+disabled, not our assumption that `--disable-gpu` worked. Streams as
+`process.metrics` over the existing SSE connection (`:7701/events`) and
+is available on demand at `GET /api/metrics`.
+
+**`tools/process-monitor.html`** (new) — open this directly in any
+browser (works as a plain `file://` page — CORS is already open on the
+SSE server) while Clear Glass is running. Live-updating: total process
+count, memory, a process-type breakdown, and a large unmissable banner
+that reads **"No GPU process running — the fix is holding"** in green,
+or **"N GPU process(es) running"** in red if it isn't. This is the
+direct, checkable answer to whether the 2026-07-11(1) GPU fix actually
+took effect on your specific machine — not my claim about it.
+
 ## §ADDENDUM 2026-07-11 — v3.2.0, renderer decomposed
 
 `renderer/browser.html` was 1879 lines with ~1600 of that as one inline
