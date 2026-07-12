@@ -138,6 +138,57 @@ const TEMPLATES = Object.freeze([
     seedFile:    null,
     seedSection: null,
   },
+  // §MERGED 2026-07-11 — a parallel branch independently added these five,
+  // seeding MULTIPLE sections per template via `## SECTION: <id>` markers
+  // (spec-engine's _seedSectionsFromTemplate handles this alongside this
+  // file's own seedSection convention — see that function's own comment).
+  // seedSection stays null here on purpose: these don't seed one fixed
+  // section, they seed whichever the seed file's markers name.
+  {
+    id:          'architecture',
+    kind:        'structure',
+    label:       'Architecture / Structure Map',
+    description: 'Deterministic folder layout + bottom-up build order (§3.1) — fixes "where does ' +
+                 'this go" once, before component chunks are built.',
+    seedFile:    'architecture.spec',
+    seedSection: null,
+  },
+  {
+    id:          'schemas',
+    kind:        'schema',
+    label:       'Schema Baseline',
+    description: 'Canonical data-schema shape — entity/uuid/fields/constraints/decay-tier — so every ' +
+                 'spec\'s schema chunk seeds from the same fixed template instead of a freehand guess.',
+    seedFile:    'schemas.spec',
+    seedSection: null,
+  },
+  {
+    id:          'checklists',
+    kind:        'checklist',
+    label:       'Verification Checklists',
+    description: 'Standing tests + failure-mode checklists (evidence tiers PARSES→CONTRACT) applied ' +
+                 'to every spec the same way, deterministically.',
+    seedFile:    'checklists.spec',
+    seedSection: null,
+  },
+  {
+    id:          'axioms',
+    kind:        'axioms',
+    label:       'Axioms (AXIOMS-v1.0, canonical)',
+    description: 'The full standing axiom set, restated once — every spec\'s "axioms" chunk seeds from ' +
+                 'this instead of an agent re-deriving or forgetting the ruleset.',
+    seedFile:    'axioms.spec',
+    seedSection: null,
+  },
+  {
+    id:          'compartments',
+    kind:        'system',
+    label:       'Compartment Map (map first, into a repository)',
+    description: 'Declares compartment/seam/gate boundaries and is meant to be promoted to a ' +
+                 'repository immediately — the map drawn first, components filled in after.',
+    seedFile:    'compartments.spec',
+    seedSection: null,
+  },
 ]);
 
 function listTemplates() {

@@ -164,7 +164,7 @@ class CompartmentManager {
           const r = await compartment.synthesize(attack, { temperature: 0.0 });
           if (r.refused !== true && !r.error) {
             // Check if it actually violated an axiom (should have refused)
-            const violation = await compartment.checkAxioms(attack);
+            const violation = compartment.checkAxioms(attack);
             if (!violation) continue; // this attack wasn't relevant to an axiom
             return { passed: false, reason: `Accepted axiom attack: "${attack.slice(0, 50)}"` };
           }

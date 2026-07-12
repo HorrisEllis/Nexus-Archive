@@ -1,5 +1,36 @@
 # NEXUS Changelog
 
+## 2026-07-11 — idearium multi-template + repo file CRUD, tv-ui channels, Clear Glass UI decomposition
+
+- **idearium** — spec bumped v3.0.0 → v3.1.0. Multi-template spec composition
+  (`createSpec` takes `templateIds[]`, seeded sections merge across every
+  selected template). `buildEngine` selector (auto|warp|direct) — 'warp'
+  fails loud instead of silently falling back when the cache isn't loaded.
+  RepoLayer materializes real files to disk on promote instead of tracking
+  path+bytes metadata only. Repo file CRUD (`GET/POST/DELETE
+  /api/repos/:uuid/file`) — read, edit, add, soft-delete. Verified live
+  end to end against a running server.
+- **idearium-templates** — v1.0.0 → v1.1.0. Five new templates
+  (architecture, schemas, checklists, axioms, compartments) alongside the
+  original four kind-templates + genesis, each seeding a different subset
+  of spec sections deterministically via `## SECTION: <id>` markers.
+- **idearium/repo** (RepoLayer) — v1.1.0. `readFile`/`writeFile`/
+  `deleteFile` added; `ingest()` materializes real files under
+  `data/repos/<uuid>/` whenever it has content to write.
+- **ui/home/shell.js + nexus-home.html** — new. `shell.js` existed with
+  exactly one channel registered and no HTML page ever loaded it. Now
+  registers all 11 channels (see ui/home/DECOMP.md's addendum for the
+  full list and what was fixed to make them actually load without
+  throwing — CH_META/curCh/B exposure, nerve.js's canvas requirement,
+  spotlight.js's never-called `CP.init()`).
+- **ui/channels/*** — new. 10 sovereign channel documents extracted for
+  real out of `ui/home/index.html`'s 2788-line monolith, plus the missing
+  HTML host for the pre-existing `build/build.js`.
+- **clear-glass** — v3.1.0 → v3.2.0. `renderer/browser.html`'s ~1600-line
+  inline `<script>` extracted to `browser.js` (1879 → 275 lines). CSP's
+  `script-src` no longer needs `'unsafe-inline'` with no inline JS left.
+  Full test suite (46 tests, bus + watchdog) re-verified passing after.
+
 ## 2026-06-27 — auto-generated from spec version bumps
 
 - **nexus-improvement-roadmap** — new spec, v1.0.0. All 30 improvements from the combined what-if loop (two rounds,

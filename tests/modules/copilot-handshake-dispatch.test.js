@@ -4,9 +4,28 @@
  * Tests the guardian handshake-before-dispatch logic added to
  * copilot/server.js's /api/prompt/fulfill (2026-06-29).
  *
- * The one invariant worth proving: GET /providers fires BEFORE
- * POST /command. A dispatch into an unconnected provider is exactly
- * the silent failure this session hunted all session. Ordering matters.
+ * §BUG FIXED 2026-07-11 — this file used to duplicate the entire
+ * dispatchFn as an inline mock (`makeDispatchFn`) rather than importing
+ * the real function from copilot/server.js. That's the actual mechanism
+ * behind a real, reported regression: "the co-pilot in the tv-ui is
+ * showing json strings — fixed over and over but keeps getting changed
+ * back." A fix applied to the real dispatch logic never touched what
+ * this test exercised (its own separate copy), so the test kept passing
+ * against a stale mock while the real code silently drifted back to the
+ * broken `r.text || r.result || JSON.stringify(r)` pattern. Now imports
+ * `extractDispatchText` — the real, exported function both dispatch
+ * branches actually call — so a regression in the real code fails this
+ * test, not just a regression in a copy of it.
+ *
+ * The one invariant worth proving beyond that: GET /providers fires
+ * BEFORE POST /command. A dispatch into an unconnected provider is
+ * exactly the silent failure this session hunted all session. Ordering
+ * matters. (This part of the mock stays a mock — proving call ORDER
+ * needs to intercept the HTTP calls, which the real function makes via
+ * module-level _fetch/_post closures that aren't independently
+ * injectable without a larger refactor. Flagged, not silently accepted:
+ * this half of the file is still testing a stand-in, not the real
+ * ordering code path.)
  */
 
 const assert = require('assert');
@@ -16,6 +35,11 @@ async function test(desc, fn) {
   try { await fn(); console.log(`  ✓ ${desc}`); passed++; }
   catch(e) { console.error(`  ✗ ${desc}\n    ${e.message}`); failed++; }
 }
+
+// The REAL function — see copilot/server.js's own comment on why this is
+// exported and guarded behind require.main so importing it here doesn't
+// also start a real server on :3750.
+const { extractDispatchText } = require('../../copilot/server.js');
 
 function makeDispatchFn({ providersResponse, commandResponse, ollamaResponse }) {
   const _fetch = async (url) => {
@@ -29,11 +53,16 @@ function makeDispatchFn({ providersResponse, commandResponse, ollamaResponse }) 
   const _dispatchToOllama = async () => ollamaResponse || { ok: true, text: 'ollama response' };
   const GD_URL = 'http://127.0.0.1:7820';
 
+  // Ordering/handshake logic stays a mock (see file header) — but text
+  // extraction now calls the REAL extractDispatchText, not a duplicated
+  // fallback chain, so this mock can no longer silently diverge from the
+  // implementation on the one thing that actually broke in production.
   return async function dispatchFn(agent, promptText) {
     if (agent === 'ollama') {
       const r = await _dispatchToOllama(promptText);
       if (!r?.ok) return { ok: false, error: r?.error || 'ollama dispatch failed', errorType: 'ollama_dispatch_failed' };
-      return { ok: true, output: r.text || r.result || JSON.stringify(r) };
+      const text = extractDispatchText(r);
+      return { ok: true, output: text ?? `[unstructured ollama response — keys: ${Object.keys(r).join(', ')}]` };
     }
     if (agent === 'claude' || agent === 'chatgpt') {
       const provCheck = await _fetch(`${GD_URL}/providers`).catch(() => null);
@@ -43,7 +72,8 @@ function makeDispatchFn({ providersResponse, commandResponse, ollamaResponse }) 
       }
       const dispatchRes = await _post(`${GD_URL}/command`).catch(e => ({ ok: false, error: e.message }));
       if (!dispatchRes?.ok) return { ok: false, error: dispatchRes?.error || 'guardian dispatch failed', errorType: 'guardian_dispatch_failed' };
-      return { ok: true, output: dispatchRes.result || dispatchRes.text || JSON.stringify(dispatchRes) };
+      const text = extractDispatchText(dispatchRes);
+      return { ok: true, output: text ?? `[unstructured guardian response — keys: ${Object.keys(dispatchRes).join(', ')}]` };
     }
     return { ok: false, error: `agent '${agent}' has no dispatch path`, errorType: 'dispatch_not_wired' };
   };
@@ -141,6 +171,36 @@ await test('CHD-10 flat providers shape resolved (provCheck[agent].connected)', 
   });
   const r = await fn('claude', 'test');
   assert.strictEqual(r.ok, true);
+});
+
+// §NEW 2026-07-11 — the actual regression this whole file's rewrite is
+// in response to. This is the ONE test that would have caught it: a
+// nested-object `.result` shape, exactly what guardian's real /command
+// endpoint returns in practice, never exercised before now (CHD-06 only
+// ever used a plain-string `.result`).
+await test('CHD-11 nested result.text object — output is the string, not the object or its JSON', async () => {
+  const fn = makeDispatchFn({
+    providersResponse: { providers: { claude: { connected: true } } },
+    commandResponse: { ok: true, result: { text: 'nested text field', modelUsed: 'claude-4' } },
+  });
+  const r = await fn('claude', 'test');
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(typeof r.output, 'string', `output must be a string, got ${typeof r.output}`);
+  assert.strictEqual(r.output, 'nested text field');
+  assert.ok(!r.output.includes('{'), `output leaked raw JSON: ${r.output}`);
+});
+
+await test('CHD-12 extractDispatchText — direct unit coverage of every shape', () => {
+  assert.strictEqual(extractDispatchText({ text: 'plain' }), 'plain');
+  assert.strictEqual(extractDispatchText({ result: 'plain result' }), 'plain result');
+  assert.strictEqual(extractDispatchText({ result: { text: 'nested' } }), 'nested');
+  assert.strictEqual(extractDispatchText({ output: 'via output' }), 'via output');
+  assert.strictEqual(extractDispatchText({ output: { text: 'nested output' } }), 'nested output');
+  // The one shape with genuinely no string anywhere — must return null,
+  // not a stringified object, so the CALLER decides the diagnostic message.
+  assert.strictEqual(extractDispatchText({ foo: 'bar', nested: { baz: 1 } }), null);
+  assert.strictEqual(extractDispatchText(null), null);
+  assert.strictEqual(extractDispatchText(undefined), null);
 });
 
 console.log(`\n  copilot-handshake-dispatch: ${passed} passed, ${failed} failed\n`);

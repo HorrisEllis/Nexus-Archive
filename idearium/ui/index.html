@@ -322,6 +322,12 @@ body{display:flex;flex-direction:column;position:relative}
 .ide-tabs{height:30px;border-bottom:1px solid var(--b0);display:flex;align-items:center;padding:0 10px;gap:8px;flex-shrink:0;font-family:var(--mono);font-size:10px;color:var(--text2)}
 .ide-code{flex:1;overflow:auto;padding:14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);white-space:pre;background:rgba(5,7,11,.4)}
 .ide-code .ln{color:var(--text3);display:inline-block;width:34px;text-align:right;margin-right:14px;user-select:none}
+.ide-editor{flex:1;overflow:auto;padding:14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);background:rgba(5,7,11,.4);border:none;outline:none;resize:none;white-space:pre;tab-size:2}
+.ide-editor:focus{background:rgba(5,7,11,.6)}
+.ide-tab-btn{background:var(--bg3,#1a1f2b);border:1px solid var(--b1,#2a2f3b);border-radius:4px;color:var(--text2);font-family:var(--mono);font-size:10px;padding:2px 8px;cursor:pointer;margin-left:auto}
+.ide-tab-btn:hover{border-color:var(--accent,#5af);color:var(--text)}
+.ide-tab-btn.danger:hover{border-color:var(--red,#e25);color:var(--red,#e25)}
+.ide-tab-dirty{color:var(--amber,#e8a233);font-size:9px;margin-left:4px}
 .repo-empty{display:flex;align-items:center;justify-content:center;height:100%;font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center;padding:30px;flex-direction:column;gap:12px}
 
 /* ════════════════════════════════════════════════════
@@ -509,8 +515,6 @@ body{display:flex;flex-direction:column;position:relative}
           <div class="spec-toolbar">
             <input class="search-input" id="spec-search" placeholder="search specs..." oninput="renderSpecList()">
             <button class="mode-btn" onclick="newSpecPrompt()">+ new spec</button>
-            <button class="mode-btn" onclick="document.getElementById('spec-import-input').click()">import .spec…</button>
-            <input type="file" id="spec-import-input" multiple accept=".spec,.md,.txt" style="display:none" onchange="importSpecFiles(this.files); this.value=''">
           </div>
           <div class="spec-list" id="spec-list"></div>
         </div>
@@ -547,6 +551,7 @@ body{display:flex;flex-direction:column;position:relative}
         <div class="ide-pane">
           <div class="ide-tabs" id="ide-tabs">no file open</div>
           <div class="ide-code" id="ide-code">// click a file in the tree to open it here</div>
+          <textarea class="ide-editor" id="ide-editor" style="display:none" spellcheck="false"></textarea>
         </div>
       </div>
     </section>
@@ -763,7 +768,6 @@ body{display:flex;flex-direction:column;position:relative}
     <h2>live .spec output</h2>
     <div class="output-controls">
       <button class="output-btn" onclick="saveToIdearium()">save to idearium</button>
-      <button class="output-btn" onclick="askCopilot()">ask copilot</button>
       <button class="output-btn" onclick="copyOutput()">copy</button>
       <button class="output-btn" onclick="downloadSpec()">download</button>
     </div>
@@ -1399,60 +1403,21 @@ function downloadSpec(){
 
 refresh();
 
-// §REROUTED 2026-07-11 — was posting to the legacy /api/specs system (one
-// blob dumped whole into a single 'intent' section, no chunking, no repo).
-// That made the wizard a second, cruder specification universe alongside
-// spec-engine's boundary-engine/chunk/auto-promote pipeline — exactly what
-// was ruled out when scoping this integration ("the wizard should not
-// create a second specification universe... the existing chunk
-// architecture is already the correct substrate"). Confirmed by direct
-// test (buildYAML()'s real output run through spec-engine.importSpec())
-// that the wizard's YAML decomposes cleanly through the same boundary
-// detector every other imported spec now uses — same endpoint as the Spec
-// Library's "import .spec…" button, same auto-promote-to-repo on completion.
 async function saveToIdearium(){
   if (!S.meta.name) { toast('meta → name is required before saving','err'); goTo('meta'); return; }
   try {
-    const yaml = buildYAML();
-    const res = await api('/api/spec-engine/import', { method: 'POST', body: JSON.stringify({ name: S.meta.name, specText: yaml }) });
-    const blocks = res.blocksFound ?? '?';
-    const filled = (res.sectionsFilled || []).length;
-    if (res.repoUuid) {
-      toast(`"${S.meta.name}" → ${blocks} block(s) → ${filled} chunk(s) → repo ${res.repoUuid.slice(0,8)} built`, 'ok');
-    } else if (res.repoError) {
-      toast(`"${S.meta.name}" imported (${filled} chunks) but repo build failed: ${res.repoError}`, 'err');
-    } else {
-      toast(`"${S.meta.name}" imported — ${blocks} block(s) → ${filled} chunk(s)`, 'ok');
+    const res = await api('/api/specs', { method:'POST', body: JSON.stringify({ name: S.meta.name }) });
+    const specUuid = res.spec && res.spec.uuid;
+    if (specUuid) {
+      const yaml = buildYAML();
+      const spec = res.spec;
+      const sections = spec.sections.map(s => s.id === 'intent' ? { ...s, content: yaml, complete: true } : s);
+      await api('/api/specs/' + specUuid, { method:'PATCH', body: JSON.stringify({ sections }) });
     }
+    toast('saved "' + S.meta.name + '" to Idearium', 'ok');
     await loadSpecs();
-    if (typeof loadApiRepos === 'function') await loadApiRepos();
     setView('spec');
   } catch(e) { toast('save failed: ' + e.message, 'err'); }
-}
-
-// §GATE 2026-07-11 — "build wizard with co-pilot assistance." The adapter
-// exists and is callable (copilot-adapter/index.js, POST /api/copilot/suggest)
-// but nothing is registered behind it yet — see that file's header for why
-// that's deliberate ("the gate, not the intelligence"). This hook makes the
-// gate actually reachable from the wizard instead of just backend-callable
-// with nothing pointed at it: current_gate is whichever nav section is open
-// right now, context is the wizard's live state, goal is whatever the person
-// asks. The honest-empty response is surfaced as-is, not smoothed over.
-async function askCopilot(){
-  const activeNav = document.querySelector('.nav-item.active');
-  const current_gate = activeNav ? activeNav.dataset.sec : '';
-  const goal = await themedPrompt(`ask copilot about "${current_gate}":`, 'ask copilot');
-  if (!goal) return;
-  try {
-    const res = await api('/api/copilot/suggest', { method: 'POST', body: JSON.stringify({ context: S, goal, current_gate }) });
-    if (!res.connected) {
-      toast(`copilot not connected — ${res.reason || 'adapter boundary only, no backend registered yet'}`, 'err');
-    } else if (res.suggestions && res.suggestions.length) {
-      toast(`copilot: ${res.suggestions.length} suggestion(s) · confidence ${res.confidence}`, 'ok');
-    } else {
-      toast('copilot connected but returned no suggestions', 'ok');
-    }
-  } catch(e) { toast('ask copilot failed: ' + e.message, 'err'); }
 }
 </script>
       </div>
@@ -1492,6 +1457,44 @@ async function askCopilot(){
     <div class="modal-actions">
       <button class="modal-btn" onclick="closeModal()">cancel</button>
       <button class="modal-btn confirm" onclick="submitIdea()">add idea</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Spec — template picker (architecture/schemas/checklists/axioms/
+     compartments/genesis/...), build-engine selector (WARP as build logic),
+     and a "map to repo now" fast path for map-first templates
+     (compartments/axioms) that promotes immediately instead of waiting for
+     every chunk to build. Opened from Brainstorm ("+ spec" on a captured
+     thought) and from the Spec Library ("+ new spec"). -->
+<div class="modal-overlay" id="new-spec-modal">
+  <div class="modal">
+    <div class="modal-title">+ New Spec</div>
+    <div class="field-group">
+      <div class="field-label">name <span class="req">*</span></div>
+      <input class="field-input" id="ns-name" placeholder="what is this?">
+    </div>
+    <div class="field-group">
+      <div class="field-label">description</div>
+      <textarea class="field-textarea" id="ns-description" rows="2" placeholder="optional — more context for the agent-built chunks"></textarea>
+    </div>
+    <div class="field-group">
+      <div class="field-label">architecture &amp; features — select any combination</div>
+      <div id="ns-templates" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;border:1px solid var(--b1);border-radius:4px;padding:8px;background:var(--bg2)"></div>
+      <div class="field-hint" style="font-size:10px;color:var(--text3);margin-top:4px">each checked template seeds its own sections deterministically (no agent) — pick architecture + axioms + schemas + checklists + compartments together for one composed spec</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">build logic</div>
+      <select class="field-select" id="ns-build-engine">
+        <option value="auto">Auto — WARP cache when available, silent fallback to direct agent</option>
+        <option value="warp">WARP (required) — fails loud if WARP isn't loaded, never silently downgrades</option>
+        <option value="direct">Direct agent — skip WARP's cache on purpose (e.g. forced fresh rebuild)</option>
+      </select>
+    </div>
+    <div class="modal-actions" style="flex-wrap:wrap">
+      <button class="modal-btn" onclick="closeNewSpecModal()">cancel</button>
+      <button class="modal-btn confirm" id="ns-map-btn" style="display:none" onclick="submitNewSpec(true)">create + map to repo now</button>
+      <button class="modal-btn confirm" onclick="submitNewSpec(false)">create spec</button>
     </div>
   </div>
 </div>

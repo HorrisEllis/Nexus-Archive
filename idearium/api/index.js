@@ -204,6 +204,12 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
 
   return {
     repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
+    // §MERGED 2026-07-11 — result.ideaUuid above is RepoLayer.ingest()'s
+    // own SYNTHETIC "Repo: <name>" idea it always creates to track the
+    // repo — not the idea that originated this spec. manifest.ideaUuid is
+    // the real one; exposed separately so callers advancing the
+    // ORIGINATING idea's phase don't silently advance the wrong idea.
+    originIdeaUuid: manifest.ideaUuid || null,
     mode, chunksBuilt: manifest.chunks.length - pending.length, chunksTotal: manifest.chunks.length,
   };
 }
@@ -395,6 +401,12 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','fork'],        'repo.fork'],
     ['DELETE', ['api','repos',    ':uuid'],               'repo.archive'],
     ['GET',    ['api','repos',    ':uuid','lineage'],     'repo.lineage'],
+    // §MERGED 2026-07-11 — file read/write/delete against a repo's
+    // content, resolved through spec-engine chunks (v2 has no content
+    // store of its own — see repo/index.js's file CRUD methods).
+    ['GET',    ['api','repos',    ':uuid','file'],         'repo.file.read'],
+    ['POST',   ['api','repos',    ':uuid','file'],         'repo.file.write'],
+    ['DELETE', ['api','repos',    ':uuid','file'],         'repo.file.delete'],
   ];
 
   for (const [m, pattern, action] of dynRoutes) {
@@ -549,6 +561,12 @@ async function handle(req, res, route, query, body) {
       if (!idea) return err(res, 404, `idea not found: ${params.uuid}`);
       os.emit('idearium.spec.create', { name: body.name || `Spec: ${idea.text.slice(0,40)}`, ideaUuid: params.uuid, source:'api' });
       const spec = os.db.specs[os.db.specs.length - 1];
+      // §MERGED 2026-07-11 — SpecCreateGate links idea.linkedSpec but never
+      // advances idea.phase; only advances forward, never regresses an
+      // idea already further along.
+      if (['seed','expanding','tensioned'].includes(idea.phase)) {
+        os.emit('idearium.idea.phase', { uuid: params.uuid, phase: 'specced', source: 'api' });
+      }
       return ok(res, { spec });
     }
 
@@ -884,6 +902,19 @@ async function handle(req, res, route, query, body) {
         specUuid, repoUuid: result.repoUuid,
         mode, chunksBuilt: result.chunksBuilt, chunksTotal: result.chunksTotal,
       });
+
+      // §MERGED 2026-07-11 — advance the ORIGINATING idea's phase (not
+      // RepoLayer's synthetic tracking idea) to reflect real end-state:
+      // 'complete' for a fully-built promotion, 'building' for a partial
+      // one. Never regresses 'archived'.
+      if (result.originIdeaUuid) {
+        const idea = os.idea(result.originIdeaUuid);
+        if (idea && idea.phase !== 'archived') {
+          const donePhase = result.chunksBuilt === result.chunksTotal ? 'complete' : 'building';
+          os.emit('idearium.idea.phase', { uuid: result.originIdeaUuid, phase: donePhase, source: 'api' });
+        }
+      }
+
       return ok(res, {
         repoUuid: result.repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
         mode, promotedFrom: specUuid,
@@ -929,6 +960,46 @@ async function handle(req, res, route, query, body) {
     case 'repo.lineage':
       return ok(res, { lineage: getRepoLayer().lineage(params.uuid) });
 
+    // §MERGED 2026-07-11 — path travels as a query param (GET/DELETE) or
+    // body field (POST), never a URL segment, so nested paths need no
+    // wildcard routing.
+    case 'repo.file.read': {
+      const filePath = query.path;
+      if (!filePath) return err(res, 400, 'path required (?path=...)');
+      const result = getRepoLayer().readFile(params.uuid, filePath);
+      if (result.error) {
+        const status = /repo not found/.test(result.error) ? 404
+                      : /not found in repo/.test(result.error) ? 404 : 400;
+        return err(res, status, result.error);
+      }
+      return ok(res, result);
+    }
+
+    case 'repo.file.write': {
+      const filePath = body.path;
+      if (!filePath) return err(res, 400, 'path required');
+      if (typeof body.content !== 'string') return err(res, 400, 'content (string) required');
+      const result = getRepoLayer().writeFile(params.uuid, filePath, body.content);
+      if (result.error) {
+        const status = /repo not found/.test(result.error) ? 404 : 400;
+        return err(res, status, result.error);
+      }
+      os.emit('idearium.repo.file.write', { repoUuid: params.uuid, path: result.path, created: result.created });
+      return ok(res, result);
+    }
+
+    case 'repo.file.delete': {
+      const filePath = query.path || body.path;
+      if (!filePath) return err(res, 400, 'path required');
+      const result = getRepoLayer().deleteFile(params.uuid, filePath);
+      if (result.error) {
+        const status = /repo not found/.test(result.error) ? 404 : /not found in repo/.test(result.error) ? 404 : 400;
+        return err(res, status, result.error);
+      }
+      os.emit('idearium.repo.file.delete', { repoUuid: params.uuid, path: result.path });
+      return ok(res, result);
+    }
+
     // ── Spec Engine handlers (Phase 40) ────────────────────────────────────────
 
     case 'speceng.list': {
@@ -956,14 +1027,27 @@ async function handle(req, res, route, query, body) {
     case 'speceng.create': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      const { name, type, description, agent, templateId } = body;
+      const { name, type, description, agent, templateId, templateIds, buildEngine, ideaUuid } = body;
       if (!name) return err(res, 400, 'name required');
+      if (ideaUuid && !os.idea(ideaUuid)) return err(res, 404, `idea not found: ${ideaUuid}`);
       try {
-        // An unknown templateId throws inside createSpec (§1.2) and surfaces
-        // as a 400 here rather than silently creating an unseeded spec that
-        // claims a template.
-        const manifest = se.createSpec({ name, type, description, agent, templateId });
-        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateId: templateId || null });
+        // An unknown templateId/templateIds (or buildEngine) throws inside
+        // createSpec (§1.2) and surfaces as a 400 here rather than silently
+        // creating an unseeded / mis-configured spec.
+        const manifest = se.createSpec({ name, type, description, agent, templateId, templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
+        os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateIds: manifest.templateIds, buildEngine: manifest.buildEngine, ideaUuid: manifest.ideaUuid });
+
+        // §MERGED 2026-07-11 — same phase-linkage fix as the legacy
+        // idea.spec path above, for spec-engine specs.
+        if (ideaUuid) {
+          const idea = os.idea(ideaUuid);
+          if (idea) {
+            os.emit('idearium.idea.update', { uuid: ideaUuid, fields: { linkedSpec: manifest.uuid } });
+            if (['seed','expanding','tensioned'].includes(idea.phase)) {
+              os.emit('idearium.idea.phase', { uuid: ideaUuid, phase: 'specced', source: 'api' });
+            }
+          }
+        }
         return ok(res, { manifest });
       } catch(e) { return err(res, 500, e.message); }
     }

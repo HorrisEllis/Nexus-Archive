@@ -19,7 +19,6 @@
  */
 
 function createMastermind({ jaaDB, getField, getCausalGraphClass }) {
-  const BEP_FREQUENCY_THRESHOLD = parseInt(process.env.CRYSTAL_FREQUENCY_THRESHOLD || '3');
   function buildRecentCausalGraph(limit = 300) {
     const CausalGraph = getCausalGraphClass();
     if (!CausalGraph) return null;
@@ -138,22 +137,6 @@ function createMastermind({ jaaDB, getField, getCausalGraphClass }) {
         minOccurrences: opts.minOccurrences ?? 2,
       });
       const recurring = (fractals || []).filter(f => (f.occurrenceCount || 0) >= (opts.minOccurrences ?? 2));
-
-      // §BUILT 2026-07-12 — "need what's missing built again, not flat or
-      // stubs." cortex/core/raid/snr-filter.js has read from `bep_patterns`
-      // since before this — its own comment describes matching against
-      // "Crystallised pattern — bep_patterns, crystallised, cluster match."
-      // Checked: nothing anywhere in this branch ever wrote to that table.
-      // A reader with no writer is the same failure mode as a stub, just
-      // with the honesty inverted — it degrades silently to "no match"
-      // forever instead of throwing. This closes it: a pattern crossing
-      // the same PATTERN_FREQUENCY_THRESHOLD crystal-lattice.js already
-      // uses (env CRYSTAL_FREQUENCY_THRESHOLD, default 3) gets written for
-      // real. Upserted by sequence, not inserted every call — repeated
-      // detection of the same pattern strengthens occurrenceCount instead
-      // of spamming duplicate rows.
-      _crystallizeBEPPatterns(recurring);
-
       return {
         ok: true,
         patternsFound: recurring.length,
@@ -166,36 +149,6 @@ function createMastermind({ jaaDB, getField, getCausalGraphClass }) {
       };
     } catch (_) {
       return null; // honest degrade — existing mastermind output unaffected
-    }
-  }
-
-  function _crystallizeBEPPatterns(recurring) {
-    const qualifying = recurring.filter(f => (f.occurrenceCount || 0) >= BEP_FREQUENCY_THRESHOLD);
-    if (!qualifying.length) return; // honest no-op — nothing crossed threshold yet
-    for (const f of qualifying) {
-      const sequence = f.typeSequence?.join(' → ');
-      if (!sequence) continue;
-      try {
-        // §FIXED before shipping — this called require('../memory/jaa-db.js')
-        // directly on first draft, bypassing the jaaDB already injected into
-        // this factory (see createMastermind's signature above). That would
-        // have grabbed a second, potentially different store instance in
-        // production, and made this function untestable through the same
-        // mock-jaaDB pattern tests/modules/mastermind-fractals.test.js
-        // already uses for everything else in this file. Use the one
-        // that's already here.
-        jaaDB.upsert('bep_patterns', {
-          sequence,
-          occurrenceCount:  f.occurrenceCount || 0,
-          chainLength:      f.chainLength || null,
-          selfSimilarity:   f.selfSimilarityScore ?? null,
-          crystallisedAt:   Date.now(),
-          source:           'mastermind.detectRecurringPatterns',
-        }, 'sequence');
-      } catch (e) {
-        // §1.2 — a failed write is logged, never silently dropped.
-        console.warn(`[mastermind] bep_patterns upsert failed for "${sequence}": ${e.message}`);
-      }
     }
   }
 }

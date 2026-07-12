@@ -448,120 +448,73 @@ ${buildToolsPrompt()}${domSection}`;
     return commands;
   }
 
+  // §BUG FIXED 2026-07-11 — three debugging rounds (2026-06-30 x3) each
+  // disproved the previous theory with real evidence, ending in a
+  // diagnostic fallback that finally proved it conclusively: fetch()
+  // fails against bridge:9999 specifically (ERR_STREAM_PREMATURE_CLOSE,
+  // undici's strict HTTP/1.1 parser reacting to how this particular
+  // server closes connections), while http.request() against the exact
+  // same URL/payload succeeds every time — confirmed live in the
+  // 2026-07-11 boot log ("http.request FALLBACK succeeded where fetch()
+  // failed — status 200"). That log's own conclusion: "Real fix: switch
+  // this function to http.request permanently." This is that fix,
+  // extracted once so both bridge call sites use it instead of trying
+  // fetch() first and eating the failure's latency/log noise every time.
+  _httpPostBridge(url, payload, timeoutMs = 5000, extraHeaders = {}) {
+    return new Promise((resolve, reject) => {
+      const http = require('http');
+      const body = JSON.stringify(payload);
+      const u = new URL(url);
+      const req = http.request({
+        hostname: u.hostname, port: u.port, path: u.pathname, method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), ...extraHeaders },
+        timeout: timeoutMs,
+      }, r => {
+        let buf = ''; r.on('data', c => buf += c);
+        r.on('end', () => resolve({ status: r.statusCode, ok: r.statusCode >= 200 && r.statusCode < 300, body: buf }));
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('http.request timeout')); });
+      req.write(body); req.end();
+    });
+  }
+
+  _httpPostBridgeAuthed(url, payload, token, timeoutMs = 30000) {
+    return this._httpPostBridge(url, payload, timeoutMs, { 'x-bridge-token': token });
+  }
+
   // ── Bridge handshake — establish trust token with Bridge :9999 ─────────
   async _bridgeHandshake() {
     const bridgeUrl = this.settings.bridgeUrl('/bridge/handshake');
     const secret    = process.env.BRIDGE_SECRET_COPILOT || 'nexus-copilot-internal-v1';
     const port      = this.settings.get().copilotPort || 3750;
 
-    // §fix 2026-06-30 — `timeout: 5000` below was dead code. The global
-    // fetch() (Node's native fetch, same one Electron uses) does NOT
-    // support a `timeout` option — it's silently ignored, not an error.
-    // Direct testing confirmed bridge/identity.js's handshake logic is
-    // correct (verified both in-process and via real HTTP against a live
-    // bridge instance — resolves cleanly, 200 OK, valid token, no hang).
-    // The "Premature close" errors are a transport-layer symptom: most
-    // likely autopilot restarting bridge mid-request during its own
-    // backoff/crash cycle (visible in the same log dump as repeated
-    // "[bridge] stable for 60s — backoff reset" lines, meaning bridge
-    // WAS unstable before that point). A real AbortController timeout
-    // at least bounds how long a hung/dying connection blocks retries,
-    // and distinguishes "nothing listening" from "connection died
-    // mid-response" in the log, which the prior single catch-all
-    // err.message did not.
-    const controller = new AbortController();
-    const timeoutId  = setTimeout(() => controller.abort(), 5000);
-
     try {
-      const res = await fetch(bridgeUrl, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ systemId: 'copilot', secret, port }),
-        signal:  controller.signal,
-      });
-      clearTimeout(timeoutId);
+      const res = await this._httpPostBridge(bridgeUrl, { systemId: 'copilot', secret, port }, 5000);
       if (!res.ok) {
         console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake HTTP ${res.status} — will retry`);
         setTimeout(() => this._bridgeHandshake(), 10000);
         return;
       }
-      const { token } = await res.json();
+      const { token } = JSON.parse(res.body);
       this._bridgeToken = token;
       await this.settings.setBridgeToken(token);
       console.log(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Bridge handshake OK — token issued`);
       this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
     } catch (err) {
-      clearTimeout(timeoutId);
-      // §fix 2026-06-30, round 3 — the "bridge may be restarting" theory
-      // in the prior comment here is DISPROVEN. Tested this session: (1)
-      // identity.handshake() in isolation — clean. (2) curl against a real
-      // booted bridge — clean. (3) Node's global fetch (same API Electron
-      // uses) against a real booted bridge — clean. (4) 9 CONCURRENT
-      // handshakes at once, simulating real multi-system boot — all 9
-      // resolved clean. The actual log this is debugging shows bridge
-      // "stable for 60s" — not restarting — while handshake fails every
-      // single retry, forever. Every layer I can test from this sandbox
-      // checks out; something specific to the real Windows/Electron
-      // runtime is the remaining candidate (firewall/AV intercepting
-      // loopback, or an Electron network-stack quirk I have no way to
-      // reproduce without a real Electron process). Logged honestly
-      // instead of re-guessing a cause I can't verify.
-      //
-      // Real, useful change: full error diagnostics (code/name/cause/stack)
-      // dumped once per failure type, so the NEXT occurrence is conclusive
-      // rather than another generic line — and a raw http.request fallback
-      // attempt, to rule out (or confirm) that this is specific to fetch()'s
-      // implementation rather than the network path itself.
-      console.error(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake error detail — code:${err.code} name:${err.name} cause:${err.cause?.code || err.cause?.message || 'none'} message:"${err.message}"`);
-      // §fix 2026-06-30 — this specific failure (the one this round's fix
-      // is in direct response to) now reaches the error-capture system,
-      // not just console. Emitted on the same 'error.captured' event type
-      // ErrorCapture uses, so it shows in the same UI surface as every
-      // other captured error — no separate, second error channel.
+      console.error(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake error detail — code:${err.code} name:${err.name} message:"${err.message}"`);
       if (this.sse) {
         try {
           this.sse.emit('error.captured', {
             id: `err-${Date.now()}-bridge-handshake`, ts: Date.now(), isoTime: new Date().toISOString(),
             source: 'main-process', type: 'bridgeHandshakeFailure',
             message: err.message, stack: err.stack, code: err.code, name: err.name,
-            extra: { cause: err.cause?.code || err.cause?.message || null },
           });
         } catch (_) {}
       }
-
-      let httpFallbackResult = null;
-      try {
-        httpFallbackResult = await new Promise((resolve, reject) => {
-          const http = require('http');
-          const payload = JSON.stringify({ systemId: 'copilot', secret, port });
-          const u = new URL(bridgeUrl);
-          const req = http.request({
-            hostname: u.hostname, port: u.port, path: u.pathname, method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-            timeout: 5000,
-          }, r => {
-            let buf = ''; r.on('data', c => buf += c);
-            r.on('end', () => resolve({ status: r.statusCode, body: buf }));
-          });
-          req.on('error', reject);
-          req.on('timeout', () => { req.destroy(); reject(new Error('http.request timeout')); });
-          req.write(payload); req.end();
-        });
-        console.log(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] http.request FALLBACK succeeded where fetch() failed — status ${httpFallbackResult.status}. This means the bug is specific to fetch()'s implementation, not the network path. Real fix: switch this function to http.request permanently.`);
-        const parsed = JSON.parse(httpFallbackResult.body);
-        if (parsed.token) {
-          this._bridgeToken = parsed.token;
-          await this.settings.setBridgeToken(parsed.token);
-          this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
-          return; // recovered via fallback — skip the retry below
-        }
-      } catch (fallbackErr) {
-        console.error(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] http.request fallback ALSO failed: ${fallbackErr.message} — confirms this is a real network-path issue, not fetch()-specific.`);
-      }
-
       const cause = err.code === 'ECONNREFUSED' ? 'bridge not listening yet'
-        : err.name === 'AbortError' ? 'no response within 5s'
-        : `connection closed mid-response (${err.message}) — see error detail line above for diagnosis`;
+        : err.message === 'http.request timeout' ? 'no response within 5s'
+        : `connection error (${err.message})`;
       console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake failed: ${cause} — retry in 10s`);
       setTimeout(() => this._bridgeHandshake(), 10000);
     }
@@ -575,35 +528,25 @@ ${buildToolsPrompt()}${domSection}`;
       await this._bridgeHandshake();
       if (!this._bridgeToken) throw new Error('[CoPilot/Bridge] No bridge token — handshake pending');
     }
-    const res = await fetch(this.settings.bridgeUrl('/bridge/request'), {
-      method:  'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        'x-bridge-token': this._bridgeToken,
-      },
-      body: JSON.stringify({
-        type,
-        source:  'clear-glass',
-        target,
-        payload,
-        tags:    ['clear-glass', target],
-      }),
-      timeout,
-    });
+    // §BUG FIXED 2026-07-11 — same fetch()-against-bridge:9999 quirk as
+    // _bridgeHandshake above (see that function's comment for the full
+    // evidence trail). This call site hits the identical host, so it's
+    // the same root cause, not a separate bug — every co-pilot prompt and
+    // every guardian command routed through the bridge went through this
+    // path, which likely explains the NCP connect/disconnect cycling in
+    // the same boot log this fix is responding to.
+    const res = await this._httpPostBridgeAuthed(this.settings.bridgeUrl('/bridge/request'), {
+      type, source: 'clear-glass', target, payload, tags: ['clear-glass', target],
+    }, this._bridgeToken, timeout);
     if (!res.ok) {
-      // §BUGFIX 2026-07-04: this used to throw just the status code —
-      // `[Bridge] ${target} dispatch HTTP ${res.status}` — discarding
-      // Bridge's actual response body, which already contains the real
-      // reason (validateRequest() puts a specific message there, e.g.
-      // "unknown type: copilot.prompt" — exactly the bug this same commit
-      // fixes in bridge/types.js). Read it so the next failure, whatever
-      // it turns out to be, is diagnosable from the UI instead of a bare
-      // status code that means "something, somewhere, rejected this."
+      // §BUGFIX 2026-07-04 (preserved) — read Bridge's actual error body
+      // (validateRequest() puts a specific message there) rather than
+      // throwing a bare status code.
       let detail = '';
-      try { const errBody = await res.json(); detail = errBody?.errors?.join('; ') || errBody?.error || ''; } catch (_) {}
+      try { const errBody = JSON.parse(res.body); detail = errBody?.errors?.join('; ') || errBody?.error || ''; } catch (_) {}
       throw new Error(`[Bridge] ${target} dispatch HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
     }
-    const data = await res.json();
+    const data = JSON.parse(res.body);
     if (!data.ok) throw new Error(`[Bridge] ${target} error: ${data.error || 'unknown'}`);
     return data.result?.response ?? data.result ?? data;
   }

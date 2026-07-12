@@ -1532,8 +1532,8 @@
       "totalMs": 136096553
     },
     "guardian.seam.watchdog.started": {
-      "count": 41,
-      "lastTs": 1782637761110,
+      "count": 42,
+      "lastTs": 1783839365461,
       "intervals": [
         24690937,
         11345268,
@@ -1574,9 +1574,10 @@
         1088037,
         10746300,
         245553,
-        1553029
+        1553029,
+        1201604351
       ],
-      "totalMs": 597126399
+      "totalMs": 1798730750
     },
     "guardian.tab.needed": {
       "count": 8,

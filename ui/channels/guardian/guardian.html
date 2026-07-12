@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS · GUARDIAN</title>
+<link rel="stylesheet" href="/ui/home/home.css">
+<style>
+  /* §SOVEREIGN CHANNEL 2026-07-11 — this channel is a standalone document,
+     openable and testable on its own (DECOMP.md benefit #3). It reuses
+     home.css for design tokens + existing component classes (.sys-tile,
+     .ch, etc.) rather than forking them, so it always matches the shell's
+     look without duplicating hundreds of class definitions. */
+  html,body{margin:0;padding:0;background:transparent;color:var(--text,#e8eef7);font-family:'Space Grotesk',sans-serif;height:100%}
+  .ch{display:block!important;position:static!important;width:100%;height:100%;animation:none!important}
+  .channel-root{padding:16px;height:100%;box-sizing:border-box;overflow:auto}
+</style>
+</head>
+<body>
+<div class="channel-root">
+<div class="ch" id="ch-guardian">
+    <div class="gd-grid">
+      <div class="gd-box">
+        <div class="box-head">Dispatch
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="gd-prov" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:#e0e8ff;font-family:'Space Mono',monospace;font-size:10px;padding:3px 6px;outline:none">
+              <option value="mistral">Mistral (local)</option>
+              <option value="claude">Claude</option>
+              <option value="chatgpt">ChatGPT</option>
+              <option value="gemini">Gemini</option>
+              <option value="perplexity">Perplexity</option>
+            </select>
+            <button class="btn primary" style="font-size:9px;padding:4px 10px" onclick="gdSend()">SEND</button>
+          </div>
+        </div>
+        <div class="box-body" style="overflow:visible;display:flex;flex-direction:column;gap:8px">
+          <textarea id="gd-prompt" rows="3" placeholder="Prompt..." onkeydown="if(event.key==='Enter'&&event.ctrlKey)gdSend()"></textarea>
+          <div id="gd-res" style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.5);min-height:20px;white-space:pre-wrap"></div>
+          <div id="gd-provider-status" style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.3)"></div>
+        </div>
+      </div>
+      <div class="gd-box">
+        <div class="box-head">Providers <button class="btn" style="font-size:9px;padding:3px 7px" onclick="gdLoadProvs()">↺</button></div>
+        <div class="box-body" id="gd-provs-el" style="display:flex;flex-direction:column;gap:5px"></div>
+      </div>
+      <div class="gd-box" style="grid-column:1/-1">
+        <div class="box-head">Jobs <span id="gd-job-count" style="color:rgba(255,255,255,.2)">0</span>
+          <button class="btn" style="font-size:9px;padding:3px 7px" onclick="gdLoadJobs()">↺</button>
+        </div>
+        <div class="box-body" id="gd-jobs-el"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/ui/lib/api.js"></script>
+<script>
+'use strict';
+// §API base ports — same map home/index.html uses (P{...}), duplicated
+// here on purpose: a sovereign channel must not depend on the shell's
+// global scope existing (it may be opened standalone, per DECOMP.md).
+const P={orch:9000,gd:7820,cx:3748,br:9999,idr:4800,em:4242,arch:3747,dg:7825};
+const B={orch:`http://127.0.0.1:${P.orch}`,gd:`http://127.0.0.1:${P.gd}`,cx:`http://127.0.0.1:${P.cx}`,br:`http://127.0.0.1:${P.br}`,idr:`http://127.0.0.1:${P.idr}`,em:`http://127.0.0.1:${P.em}`,arch:`http://127.0.0.1:${P.arch}`,dg:`http://127.0.0.1:${P.dg}`};
+
+async function gdLoadProvs(){
+  const d=await get(`${B.orch}/api/guardian/providers`);
+  const el=document.getElementById('gd-provs-el');
+  const provs=d?.providers||d?.connected||{};
+  const names=Object.keys(provs);
+  _providerState=provs;
+  updateProviderStatusLine();
+  if(!names.length){
+    el.innerHTML='<div style="color:rgba(255,255,255,.2);font-size:11px;line-height:1.8">No providers connected.<br>Open a tab and activate the userscript.</div>';
+    return;
+  }
+  el.innerHTML=names.map(n=>{
+    const p=provs[n]||{};
+    const busy=p.busy||p.status==='busy';
+    return `<div class="prov-pill ${busy?'':'live'}" style="${busy?'border-color:rgba(255,170,0,.3);color:#ffaa00':''}">
+      <span>${busy?'⏳':'●'}</span>${n}${busy?'<span style="font-size:8px;margin-left:4px">BUSY</span>':''}
+      ${!busy?`<button onclick="gdOpenNewTab('${n}')" style="margin-left:auto;background:none;border:1px solid rgba(255,255,255,.1);border-radius:4px;color:rgba(255,255,255,.4);font-size:8px;padding:1px 5px;cursor:pointer" title="Open new tab">+tab</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+function updateProviderStatusLine(){
+  const pr=document.getElementById('gd-prov')?.value||'claude';
+  const el=document.getElementById('gd-provider-status');if(!el)return;
+  const connected=Object.keys(_providerState);
+  if(!connected.length){el.textContent='No tabs connected — send will open a tab';el.style.color='rgba(255,170,0,.6)';return}
+  const match=connected.find(n=>n.toLowerCase().includes(pr.toLowerCase()));
+  if(match){
+    const busy=_providerState[match]?.busy;
+    el.textContent=busy?`${match} is busy — will route to next available`:`${match} ready`;
+    el.style.color=busy?'rgba(255,170,0,.6)':'rgba(0,255,136,.5)';
+  }else{
+    el.textContent=`${pr} not connected — send will open ${PROVIDER_URLS[pr]||'a new tab'}`;
+    el.style.color='rgba(255,170,0,.6)';
+  }
+}
+
+function gdOpenNewTab(provider){
+  const url=PROVIDER_URLS[provider||'claude'];
+  if(url)openClearGlass(url);
+}
+
+async function gdSend(){
+  const p=document.getElementById('gd-prompt').value.trim();
+  const pr=document.getElementById('gd-prov').value;
+  if(!p)return;
+  const res=document.getElementById('gd-res');
+  res.style.color='rgba(255,255,255,.5)';
+
+  // Check if provider is connected
+  const provs=await get(`${B.orch}/api/guardian/providers`);
+  const connected=Object.keys(provs?.providers||provs?.connected||{});
+  const hasProvider=connected.some(n=>n.toLowerCase().includes(pr.toLowerCase()));
+
+  if(!hasProvider){
+    // Open Clear Glass browser with the provider URL (no bare Chrome tabs)
+    const url=PROVIDER_URLS[pr];
+    res.textContent=`No ${pr} tab connected — opening Clear Glass. Install userscript then Send again.`;
+    res.style.color='rgba(255,170,0,.7)';
+    if(url) openClearGlass(url);
+    return;
+  }
+
+  // Check if this provider is busy (has an active streaming/processing job)
+  const jobs=await get(`${B.orch}/api/guardian/jobs`);
+  const jobList=Array.isArray(jobs)?jobs:(jobs?.jobs||[]);
+  const busy=jobList.some(j=>j.provider?.toLowerCase().includes(pr.toLowerCase())&&(j.status==='streaming'||j.status==='processing'));
+  if(busy){
+    // Find next available provider that's connected and not busy
+    const busyProviders=new Set(jobList.filter(j=>j.status==='streaming'||j.status==='processing').map(j=>j.provider?.toLowerCase()));
+    const available=connected.find(n=>!busyProviders.has(n.toLowerCase())&&n.toLowerCase()!==pr.toLowerCase());
+    if(available){
+      res.innerHTML=`${pr} is busy. Route to <b style="color:#00e5ff">${available}</b>? <button onclick="routeToProvider('${available}')" style="background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);border-radius:4px;color:#00e5ff;font-size:10px;padding:2px 8px;cursor:pointer;margin-left:8px">Use ${available}</button> <button onclick="openNewProviderTab('${pr}')" style="background:none;border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);font-size:10px;padding:2px 8px;cursor:pointer;margin-left:4px">Open new ${pr} tab</button>`;
+      res.style.color='rgba(255,170,0,.7)';
+      return;
+    }else{
+      // All connected providers busy — open a new tab
+      const url=PROVIDER_URLS[pr];
+      res.textContent=`All providers busy. Opening new ${pr} tab...`;
+      if(url) window.open(url,'_blank');
+      return;
+    }
+  }
+
+  // Timestamp is the source of truth for ordering
+  const jobTs=Date.now();
+  res.textContent=`Dispatching [${new Date(jobTs).toISOString().substr(11,8)}]...`;
+  res.style.color='rgba(255,255,255,.4)';
+
+  const d=await post(`${B.orch}/api/guardian/dispatch`,{command:'chat',prompt:p,provider:pr,meta:{ts:jobTs,source:'ui',ordered:true,seam_ts:jobTs}});
+  if(d?.jobId){
+    res.textContent=`Job ${d.jobId.slice(0,12)} — ${d.status||'queued'} [${new Date(jobTs).toISOString().substr(11,8)}]`;
+    res.style.color='rgba(0,229,255,.6)';
+    document.getElementById('gd-prompt').value='';
+  }else{
+    res.textContent=d?JSON.stringify(d):'Error: Guardian offline';
+    res.style.color='rgba(255,51,85,.7)';
+  }
+  gdLoadJobs();
+  setTimeout(gdLoadJobs,2000);
+}
+
+function openNewProviderTab(pr){const url=PROVIDER_URLS[pr];if(url)window.open(url,'_blank');}
+
+async function routeToProvider(pr){
+  document.getElementById('gd-prov').value=pr;
+  await gdSend();
+}
+
+async function gdCancelJob(jobId){
+  await post(`${B.orch}/api/guardian/queue/cancel/${jobId}`,{});
+  gdLoadJobs();
+}
+
+async function gdLoadJobs(){
+  const d=await get(`${B.orch}/api/guardian/jobs`);
+  const el=document.getElementById('gd-jobs-el');
+  const jobs=Array.isArray(d)?d:(d?.jobs||[]);
+  document.getElementById('gd-job-count').textContent=jobs.length||'0';
+  if(!jobs.length){el.innerHTML='<div style="color:rgba(255,255,255,.2);font-size:11px">No jobs yet</div>';return}
+  // Sort by timestamp (source of truth for order)
+  const sorted=jobs.slice(0,30).sort((a,b)=>(b.ts||b.createdAt||0)-(a.ts||a.createdAt||0));
+  el.innerHTML=sorted.map(j=>{
+    const ts=j.ts||j.createdAt?new Date(j.ts||j.createdAt).toISOString().substr(11,8):'';
+    const isActive=j.status==='streaming'||j.status==='processing'||j.status==='queued';
+    return `<div class="job-row">
+      <span class="j-st ${j.status||''}">${j.status||'?'}</span>
+      <span class="j-prov">${j.provider||'?'}</span>
+      <span class="j-txt">${(j.prompt||j.command||'').slice(0,100)}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:8px;color:rgba(255,255,255,.2)">${ts}</span>
+      ${isActive?`<button onclick="gdCancelJob('${j.id||j.uuid||''}')" style="margin-left:4px;background:none;border:1px solid rgba(255,51,85,.3);border-radius:4px;color:rgba(255,51,85,.6);font-size:8px;padding:1px 5px;cursor:pointer;flex-shrink:0">✕</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── init ──────────────────────────────────────────────────────────────────
+try { gdLoadProvs(); gdLoadJobs(); setInterval(gdLoadJobs, 6000); } catch(e) { console.warn('[channel:guardian] init failed:', e.message); }
+
+// ── this channel's own SSE subscription — sovereign, not dependent on the
+//    shell's single connection (matches DECOMP.md's "each channel can be
+//    opened independently... for debugging"). Shell-embedded use can still
+//    layer postMessage on top later without this needing to change. ──────
+try {
+  const es = new EventSource(`${B.orch}/sse`);
+  es.onmessage = (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      if (typeof window.onChannelEvent === 'function') window.onChannelEvent(d);
+    } catch(_) {}
+  };
+  es.onerror = () => { /* orchestrator not reachable — channel still renders, just static until it is */ };
+} catch(_) {}
+</script>
+</body>
+</html>

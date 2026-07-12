@@ -38,7 +38,16 @@ contextBridge.exposeInMainWorld('ClearGlass', {
 
   // ── Context ───────────────────────────────────────────────────────────
   context: {
+    // switchTo — switch which agent's context is active. Real, working,
+    // always was.
     switch: (payload) => ipcRenderer.invoke('context:switch', payload),
+    // §NEW 2026-07-11 — switchFingerprint (Chrome/Firefox/Safari/Edge
+    // spoofed identity). This never had an IPC channel at all before now
+    // — only reachable automatically (hostile-page detection) or via a
+    // copilot tool. Separate channel on purpose; see ipc/bridge.js's
+    // context:switch fix comment for why it's not sharing one with
+    // switchTo above.
+    switchFingerprint: (payload) => ipcRenderer.invoke('context:switchFingerprint', payload),
   },
 
   // ── API Settings ──────────────────────────────────────────────────────

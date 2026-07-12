@@ -76,84 +76,27 @@ class Compartment {
   // ── Axiom system ──────────────────────────────────────────────────────────
 
   /** Check if a proposed action violates any axiom. Returns null if safe, axiomId if violated. */
-  async checkAxioms(action) {
-    // Fast path — free, catches exact/near-exact phrasing immediately.
+  checkAxioms(action) {
     for (let i = 0; i < this.axioms.length; i++) {
-      if (this._axiomViolatedCheap(this.axioms[i], action)) {
+      if (this._axiomViolated(this.axioms[i], action)) {
         return `axiom-${i}`;
       }
     }
-    // §BUILT 2026-07-12 — "need what's missing built again, not flat or
-    // stubs." This file's own comment said it plainly: "This is the stub
-    // — full impl calls Ollama for semantic matching." The fast path
-    // above only ever caught an action that used the axiom's own negated
-    // words verbatim — "never delete files" was defeated by "remove the
-    // files" without a single shared token. This is the real check: one
-    // real LLM call (Law I — local-first, same _callLLM every synthesis
-    // already uses), evaluating every axiom together rather than one
-    // call per axiom, so a compartment with 5 axioms doesn't cost 5x the
-    // latency of a synthesis it's about to also pay for.
-    //
-    // Cost-bounding: only runs when the fast path found nothing. An
-    // exact-match violation never pays for an LLM round trip; a
-    // paraphrased one does, once, not per-axiom.
-    //
-    // Honest failure mode: if Ollama is unreachable, this reports
-    // "cannot verify" as a violation of a synthetic axiom-N id, not as
-    // silent safety. A gate that cannot check itself is not the same as
-    // a gate that checked and passed — collapsing those two into "allow"
-    // is exactly the kind of stub this was built to replace.
-    return this._checkAxiomsSemantic(action);
+    return null;
   }
 
-  _axiomViolatedCheap(axiom, action) {
-    if (typeof axiom !== 'string' || typeof action !== 'string') return false;
-    // "never X" / "must not X" / "do not X" / "no X" — all phrasings of
-    // the same negation shape. Still a literal substring match — this is
-    // the free pre-filter, not the real check. Real (paraphrase-resistant)
-    // checking is _checkAxiomsSemantic below.
-    const negMatch = axiom.match(/^(?:never|must not|do not|don't|no)\s+(.+)/i);
-    if (!negMatch) return false;
-    return action.toLowerCase().includes(negMatch[1].toLowerCase());
-  }
-
-  async _checkAxiomsSemantic(action) {
-    if (!this.axioms.length) return null;
-    const { model, host = '127.0.0.1', port = 11434 } = this.llmConfig;
-    if (!model) {
-      // No model configured at all — there was never a semantic layer to
-      // fall back on. Honest: report unverifiable, don't silently pass.
-      return 'axiom-unverifiable-no-model';
+  _axiomViolated(axiom, action) {
+    // Axiom enforcement is LLM-evaluated at gate time.
+    // At runtime, axioms are pattern-matched as semantic constraints.
+    // This is the stub — full impl calls Ollama for semantic matching.
+    if (typeof axiom === 'string' && typeof action === 'string') {
+      // Simple negation check: axiom "never X" violated if action contains X
+      const negMatch = axiom.match(/^never\s+(.+)/i);
+      if (negMatch) {
+        return action.toLowerCase().includes(negMatch[1].toLowerCase());
+      }
     }
-
-    const rules = this.axioms.map((a, i) => `${i}: ${a}`).join('\n');
-    const systemPrompt =
-      'You check one proposed action against a numbered list of rules for a sealed, ' +
-      'sovereign AI compartment. Reply with EXACTLY one line: either "OK" if the action ' +
-      'violates none of the rules, or "VIOLATION:<index>" naming the first rule it ' +
-      'violates. No other text, no explanation, no punctuation beyond what is shown.';
-    const userPrompt = `Rules:\n${rules}\n\nProposed action: ${action}`;
-
-    let reply;
-    try {
-      reply = await this._callLLM(systemPrompt, userPrompt, { timeoutMs: 8000 });
-    } catch (e) {
-      // §1.2 — an unreachable check is reported, never treated as a pass.
-      return 'axiom-unverifiable-llm-error';
-    }
-
-    const text = (typeof reply === 'string' ? reply : reply?.response || reply?.text || '').trim();
-    if (!text || reply?.error) return 'axiom-unverifiable-llm-error';
-    if (/^OK\b/i.test(text)) return null;
-
-    const m = text.match(/VIOLATION:\s*(\d+)/i);
-    if (m) {
-      const idx = parseInt(m[1], 10);
-      if (idx >= 0 && idx < this.axioms.length) return `axiom-${idx}`;
-    }
-    // Model replied but not in the required shape — treat as unverifiable
-    // rather than guessing which axiom (if any) it meant.
-    return 'axiom-unverifiable-malformed-reply';
+    return false;
   }
 
   emitAxiomFault(axiomId, context) {
@@ -207,7 +150,7 @@ class Compartment {
    * Axioms as hard constraints, conditions as soft constraints, context as phase.
    */
   async synthesize(intent, opts = {}) {
-    const axiomViolation = await this.checkAxioms(intent);
+    const axiomViolation = this.checkAxioms(intent);
     if (axiomViolation) {
       this.emitAxiomFault(axiomViolation, intent);
       return { refused: true, reason: 'axiom_violation', axiomId: axiomViolation };
@@ -285,13 +228,6 @@ Respond with structured JSON only. Never violate your axioms.`;
     const { model, host = '127.0.0.1', port = 11434 } = this.llmConfig;
     if (!model) return { error: 'no model configured', prompt: userPrompt };
 
-    // §FIXED 2026-07-12 — found while wiring the real axiom-integrity
-    // check: this had no timeout at all. A hung Ollama connection meant
-    // an unresolved Promise forever, not an error — synthesize() (and now
-    // checkAxioms) would just hang rather than fail honestly. opts.timeoutMs
-    // is a real, respected option now, not a name that looked like one.
-    const timeoutMs = opts.timeoutMs ?? 30000;
-
     const http = require('http');
     return new Promise((resolve) => {
       const body = JSON.stringify({
@@ -304,27 +240,18 @@ Respond with structured JSON only. Never violate your axioms.`;
         options: { temperature: opts.temperature ?? 0.3, num_predict: opts.maxTokens ?? 512 },
       });
 
-      let settled = false;
       const req = http.request({ hostname: host, port, path: '/api/chat', method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, (res) => {
         let data = '';
         res.on('data', c => data += c);
         res.on('end', () => {
-          if (settled) return;
-          settled = true;
           try {
             const parsed = JSON.parse(data);
             resolve(parsed.message?.content || parsed);
           } catch { resolve({ raw: data }); }
         });
       });
-      req.on('error', err => { if (!settled) { settled = true; resolve({ error: err.message }); } });
-      req.setTimeout(timeoutMs, () => {
-        if (settled) return;
-        settled = true;
-        req.destroy();
-        resolve({ error: `LLM call timed out after ${timeoutMs}ms` });
-      });
+      req.on('error', err => resolve({ error: err.message }));
       req.write(body);
       req.end();
     });

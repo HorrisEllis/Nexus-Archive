@@ -4,6 +4,22 @@
 # Date: 2026-06-05
 # Supersedes: ui/orchestrator/index.html (system monitor only)
 
+## §ADDENDUM 2026-07-11 — second entry point exists now
+
+This spec describes `ui/home/index.html`, the original monolith — still
+current, still accurate for that file. A second, additive entry point now
+also exists: `ui/home/nexus-home.html` + `ui/home/shell.js`, built against
+`ui/home/DECOMP.md`'s decomposition plan rather than this file's
+single-page component tree. It boots the same tv-shell modules (menu,
+spotlight, nerve) this spec lists under "COMPONENT TREE", but routes
+between real standalone documents under `ui/channels/` via iframe instead
+of toggling `.ch` div visibility inside one page. See DECOMP.md's own
+2026-07-11 addendum for exactly what's decomposed and what isn't yet.
+
+---
+
+
+
 ## SISO LAW
 The home is a SISO subscriber. It never talks to systems directly.
 All reads go through the Orchestrator (:9000) proxy.

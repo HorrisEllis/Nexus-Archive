@@ -186,8 +186,82 @@ async function registerCliCommand(plan, description, opts = {}) {
 /**
  * Generate a spec from the map plan.
  */
+// §NEW 2026-07-11 — real "pick the best architecture for the job," not the
+// LLM inventing structure from scratch on every single build. idearium's
+// spec-engine has real, deterministic architecture templates (this same
+// session added architecture/schemas/checklists/axioms/compartments plus
+// system-archetype templates minimal-kernel/api-service/event-system/
+// plugin-runtime/ai-agent-system) — until now, generateSpec() never used
+// any of them; every spec was a fresh LLM freeform generation with no
+// persisted architectural decision behind it. This selects the best-
+// matching templates by real signal (plan.purpose/usesCapabilities/name),
+// creates a REAL spec in idearium (persisted, versioned, rootHash-
+// tracked — an inspectable record of which architecture was chosen and
+// why, not just an LLM's ephemeral choice), and uses its deterministic
+// content as grounding context for the final YAML spec generation —
+// Emerge's compiler still gets the exact format it expects; the decision
+// behind it is now real and durable instead of reinvented every call.
+const IDEARIUM_URL = process.env.IDEARIUM_URL || 'http://127.0.0.1:4800';
+
+function _selectArchitectureTemplates(plan) {
+  const signal = `${plan.name || ''} ${plan.purpose || ''} ${(plan.usesCapabilities || []).join(' ')}`.toLowerCase();
+  const picks = ['compartments', 'axioms']; // always: every module gets a real map + the standing axiom set
+  const rules = [
+    { test: /\bapi\b|\brest\b|\bendpoint/,                     template: 'api-service' },
+    { test: /\bevent\b|\bqueue\b|\bpubsub\b|\bpub\/sub\b/,      template: 'event-system' },
+    { test: /\bplugin\b|\bextensible\b|\bmodular\b/,           template: 'plugin-runtime' },
+    { test: /\bagent\b|\bai\b|\bllm\b|\bassistant\b/,           template: 'ai-agent-system' },
+    { test: /.*/,                                              template: 'minimal-kernel' }, // fallback — always matches, always last
+  ];
+  for (const r of rules) {
+    if (r.test.test(signal)) { picks.push(r.template); break; } // first real match wins; minimal-kernel is the catch-all
+  }
+  picks.push('architecture', 'schemas', 'checklists');
+  return picks;
+}
+
+async function _tryIdeariumArchitecture(plan, opts) {
+  const templateIds = _selectArchitectureTemplates(plan);
+  try {
+    const res = await fetch(`${IDEARIUM_URL}/api/spec-engine/specs`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: plan.name, type: plan.targetSystem || 'component',
+        description: plan.purpose, templateIds, buildEngine: 'auto',
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const manifest = data.manifest;
+    if (!manifest) return null;
+
+    // Pull whatever sections idearium seeded deterministically (no agent
+    // dispatch — this is the real, zero-token architectural grounding).
+    const grounding = (manifest.chunks || [])
+      .filter(c => c.status === 'complete' && c.content)
+      .map(c => `### ${c.sectionId}\n${c.content.slice(0, 800)}`)
+      .join('\n\n');
+
+    return {
+      ideariumSpecUuid: manifest.uuid,
+      ideariumRootHash: manifest.rootHash,
+      templateIds,
+      grounding,
+    };
+  } catch (e) {
+    console.warn(`[module-builder] idearium architecture selection unreachable, falling back to freeform: ${e.message}`);
+    return null;
+  }
+}
+
 async function generateSpec(plan, opts = {}) {
   const requestId = opts.requestId || crypto.randomUUID();
+
+  // Real architecture selection first — deterministic templates, no LLM
+  // needed for this part, persisted and traceable in idearium regardless
+  // of whether the LLM call below succeeds.
+  const arch = await _tryIdeariumArchitecture(plan, opts);
 
   const specPrompt = `Generate a NEXUS spec for this module using the nexus-system-foundation template.
 
@@ -195,6 +269,7 @@ Module: ${plan.name}
 Purpose: ${plan.purpose}
 Target system: ${plan.targetSystem}
 Uses: ${(plan.usesCapabilities || []).join(', ')}
+${arch ? `\nA deterministic architecture was already selected for this module (idearium spec ${arch.ideariumSpecUuid}, templates: ${arch.templateIds.join(', ')}). Ground the spec below in this real, chosen structure — don't invent a different architecture:\n\n${arch.grounding}\n` : ''}
 
 The spec must:
 - Follow L0→L1→L2→L3→L4→L5 build order
@@ -210,10 +285,10 @@ Respond with the full spec in YAML format starting with "spec:"`;
 
   if (!result.ok) {
     // Fall back to template
-    return { ok: true, spec: SPEC_TEMPLATE(plan.name, plan.purpose, null, plan.targetSystem), fromTemplate: true };
+    return { ok: true, spec: SPEC_TEMPLATE(plan.name, plan.purpose, null, plan.targetSystem), fromTemplate: true, architecture: arch };
   }
 
-  return { ok: true, spec: result.text, confidence: result.confidence, requestId };
+  return { ok: true, spec: result.text, confidence: result.confidence, requestId, architecture: arch };
 }
 
 /**
@@ -352,6 +427,7 @@ async function build(description, opts = {}) {
 
   // Step 2: Generate spec + QC loop
   let spec    = null;
+  let architecture = null;
   let qcResult = null;
 
   while (iteration < MAX_ITER) {
@@ -359,6 +435,7 @@ async function build(description, opts = {}) {
 
     const specResult = await generateSpec(plan, { ...opts, requestId });
     spec = specResult.spec;
+    architecture = specResult.architecture || architecture;
 
     // Step 3: QC
     qcResult = await runQC(spec, plan, { ...opts, requestId });
@@ -406,6 +483,16 @@ Return the fixed spec only, starting with "spec:"`;
       qcSuggestions: qcResult?.suggestions || [],
       qcConfidence:  qcResult?.confidence || 0,
       iterations:    iteration,
+      // §NEW 2026-07-11 — the real, traceable architecture decision:
+      // which idearium templates were selected and the spec UUID/rootHash
+      // that grounded this build, so "which architecture did this use and
+      // why" is answerable from the contract itself, not lost the moment
+      // the LLM call that used it as context finished.
+      architecture:  architecture ? {
+        ideariumSpecUuid: architecture.ideariumSpecUuid,
+        ideariumRootHash: architecture.ideariumRootHash,
+        templateIds:      architecture.templateIds,
+      } : null,
     },
     priority: 'normal',
     ttlMs: 300000, // 5 minutes
@@ -421,6 +508,7 @@ Return the fixed spec only, starting with "spec:"`;
     ok:            true,
     passed:        qcResult?.passed || false,
     contract:      contract.uuid,
+    architecture,
     plan,
     qcResult,
     iterations:    iteration,

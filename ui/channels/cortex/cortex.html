@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS · CORTEX</title>
+<link rel="stylesheet" href="/ui/home/home.css">
+<style>
+  /* §SOVEREIGN CHANNEL 2026-07-11 — this channel is a standalone document,
+     openable and testable on its own (DECOMP.md benefit #3). It reuses
+     home.css for design tokens + existing component classes (.sys-tile,
+     .ch, etc.) rather than forking them, so it always matches the shell's
+     look without duplicating hundreds of class definitions. */
+  html,body{margin:0;padding:0;background:transparent;color:var(--text,#e8eef7);font-family:'Space Grotesk',sans-serif;height:100%}
+  .ch{display:block!important;position:static!important;width:100%;height:100%;animation:none!important}
+  .channel-root{padding:16px;height:100%;box-sizing:border-box;overflow:auto}
+</style>
+</head>
+<body>
+<div class="channel-root">
+<div class="ch" id="ch-cortex">
+    <div class="cx-layout">
+      <div class="gd-box" style="grid-row:1/3">
+        <div class="box-head">Event Stream <span id="cx-ev-count" style="color:var(--ok)">0</span></div>
+        <div class="box-body" id="cx-events-el"></div>
+      </div>
+      <div class="gd-box">
+        <div class="box-head">Open Loops <button class="btn" style="font-size:9px;padding:3px 7px" onclick="cxLoadGaps()">↺</button></div>
+        <div class="box-body" id="cx-gaps-el"></div>
+      </div>
+      <div class="gd-box">
+        <div class="box-head">Failures <button class="btn" style="font-size:9px;padding:3px 7px" onclick="cxLoadFails()">↺</button></div>
+        <div class="box-body" id="cx-fails-el"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/ui/lib/api.js"></script>
+<script>
+'use strict';
+// §API base ports — same map home/index.html uses (P{...}), duplicated
+// here on purpose: a sovereign channel must not depend on the shell's
+// global scope existing (it may be opened standalone, per DECOMP.md).
+const P={orch:9000,gd:7820,cx:3748,br:9999,idr:4800,em:4242,arch:3747,dg:7825};
+const B={orch:`http://127.0.0.1:${P.orch}`,gd:`http://127.0.0.1:${P.gd}`,cx:`http://127.0.0.1:${P.cx}`,br:`http://127.0.0.1:${P.br}`,idr:`http://127.0.0.1:${P.idr}`,em:`http://127.0.0.1:${P.em}`,arch:`http://127.0.0.1:${P.arch}`,dg:`http://127.0.0.1:${P.dg}`};
+
+async function cxLoadGaps(){
+  const d=await get(`${B.orch}/api/cortex/gaps?status=open`);const el=document.getElementById('cx-gaps-el');
+  const gaps=Array.isArray(d)?d:[];
+  if(!gaps.length){el.innerHTML='<div style="color:rgba(0,255,136,.4);font-size:11px">No open loops — ecology nominal</div>';return}
+  el.innerHTML=gaps.slice(0,20).map(g=>`<div class="gap-row ${g.severity||'low'}"><div class="gap-type-lbl">${g.loop_type||g.type||'gap'}${g.severity?' · '+g.severity:''}</div><div class="gap-body-txt">${(g.body||g.path||'').slice(0,120)}</div></div>`).join('');
+}
+
+async function cxLoadFails(){
+  const d=await get(`${B.orch}/api/cortex/failures`);const el=document.getElementById('cx-fails-el');
+  const fails=Array.isArray(d)?d:(d?.failures||[]);
+  if(!fails.length){el.innerHTML='<div style="color:rgba(255,255,255,.2);font-size:11px">No failures</div>';return}
+  el.innerHTML=fails.slice(0,10).map(f=>`<div class="gap-row high"><div class="gap-type-lbl">${f.source||'unknown'}</div><div class="gap-body-txt">${(f.error||'').slice(0,140)}</div></div>`).join('');
+}
+
+// ── init ──────────────────────────────────────────────────────────────────
+try { cxLoadGaps(); cxLoadFails(); } catch(e) { console.warn('[channel:cortex] init failed:', e.message); }
+
+// ── this channel's own SSE subscription — sovereign, not dependent on the
+//    shell's single connection (matches DECOMP.md's "each channel can be
+//    opened independently... for debugging"). Shell-embedded use can still
+//    layer postMessage on top later without this needing to change. ──────
+try {
+  const es = new EventSource(`${B.orch}/sse`);
+  es.onmessage = (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      if (typeof window.onChannelEvent === 'function') window.onChannelEvent(d);
+    } catch(_) {}
+  };
+  es.onerror = () => { /* orchestrator not reachable — channel still renders, just static until it is */ };
+} catch(_) {}
+</script>
+</body>
+</html>

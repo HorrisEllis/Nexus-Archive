@@ -194,7 +194,59 @@ class IpcBridge {
       if (!this.errorCapture) return { ok: false, error: 'errorCapture not initialized', errors: [] };
       return { ok: true, errors: this.errorCapture.getRecent(n || 50) };
     });
-    ipcMain.handle('context:switch', async (e, d) => rendererEmit('context.switch', d));
+    // §BUG FIXED 2026-07-11 — this emitted 'context.switch' (fire-and-forget,
+    // no return value) but the only thing that ever actually switches a
+    // fingerprint is ContextManager.switchFingerprint(), reached via a gate
+    // registered under 'context.fp.switch' — a DIFFERENT event name. Nothing
+    // in this app ever subscribed to plain 'context.switch', so every call
+    // through this channel silently did nothing. The real gate already
+    // works — it's how hostile-page detection auto-rotates fingerprints
+    // (main/index.js) and how copilot's context.fp.switch tool works.
+    // This was the one path a human clicking a UI control would have used,
+    // and it was the one path that didn't reach the real method. Calling
+    // it directly (not via the bus) also means the renderer gets back the
+    // actual new profile/UA instead of nothing, which a manual "switch my
+    // identity" action should show the user.
+    // §BUG FIXED 2026-07-11, CORRECTED 2026-07-11 — my first pass here
+    // was itself a mistake, caught on re-audit rather than left wrong:
+    // 'context:switch' already had a REAL, correctly-matched gate —
+    // `contextSwitchGate` in src/gates/index.js calls `ctxMgr.switchTo()`
+    // (switch which agent's context is active), and the original
+    // fire-and-forget `rendererEmit('context.switch', d)` genuinely
+    // reached it correctly, since gates and rendererEmit share the same
+    // bus. That path was never broken. What's actually true: no IPC
+    // channel or preload method for FINGERPRINT switching
+    // (`switchFingerprint`) ever existed at all — not a name mismatch,
+    // a channel that was simply never added, which is why only the
+    // automatic (hostile-detection) and copilot-tool paths could ever
+    // reach it. My first fix repurposed this channel for fingerprint
+    // switching instead of adding a new one — no existing caller broke
+    // (nothing in the renderer called context:switch before I added the
+    // identity badge), but it was the wrong channel for the job and left
+    // switchTo() itself unreachable by IPC. Restored to its real purpose;
+    // fingerprint switching gets its own channel below.
+    ipcMain.handle('context:switch', async (e, d) => {
+      if (!this.ctxMgr) return { ok: false, error: 'context manager not initialized' };
+      try {
+        const result = await this.ctxMgr.switchTo(d || {});
+        return { ok: true, ...result };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    });
+    // The channel the identity badge actually needs — genuinely new, not
+    // a repurposing of something else. Calls switchFingerprint() directly
+    // for the same reason context:switch now does: a manual user action
+    // should get back the real result (new mode + UA), not silence.
+    ipcMain.handle('context:switchFingerprint', async (e, d) => {
+      if (!this.ctxMgr) return { ok: false, error: 'context manager not initialized' };
+      try {
+        const result = await this.ctxMgr.switchFingerprint(d || {});
+        return { ok: true, ...result };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    });
     ipcMain.handle('api:get',        async ()    => this.apiSettings?.getPublic());
     ipcMain.handle('api:set',        async (e, d) => this.apiSettings?.set(d));
     ipcMain.handle('sse:port',       async ()    => this.sse?.port);
@@ -233,8 +285,25 @@ class IpcBridge {
     ipcMain.handle('providers:show',  async (e, d) => this.providerHost?.show(d.providerId));
 
     // Copilot extended
-    ipcMain.handle('copilot:build',    async (e, d) => rendererEmit('copilot.build', d));
-    ipcMain.handle('copilot:diagnose', async (e, d) => rendererEmit('copilot.diagnose', d));
+    // §BUG FIXED 2026-07-11 — same disease as context:switch above (see
+    // that handler's fix comment for the full pattern): these fired
+    // 'copilot.build'/'copilot.diagnose' on the LOCAL event bus, fire-and-
+    // forget, no return value — but the real, working implementations are
+    // this.copilot's own build()/diagnose() methods, which correctly
+    // dispatch through Bridge (:9999) to the real copilot service. No gate
+    // anywhere ever subscribed to the local event names these emitted, so
+    // both actions silently did nothing for any caller that used the IPC
+    // channel instead of calling this.copilot directly.
+    ipcMain.handle('copilot:build',    async (e, d) => {
+      if (!this.copilot) return { ok: false, error: 'copilot bridge not initialized' };
+      try { return await this.copilot.build(d || {}); }
+      catch (err) { return { ok: false, error: err.message }; }
+    });
+    ipcMain.handle('copilot:diagnose', async (e, d) => {
+      if (!this.copilot) return { ok: false, error: 'copilot bridge not initialized' };
+      try { return await this.copilot.diagnose(d || {}); }
+      catch (err) { return { ok: false, error: err.message }; }
+    });
     ipcMain.handle('url:listen',     async (e, d) => rendererEmit('url.listen', d));
     ipcMain.handle('mesh:spawn',     async (e, d) => rendererEmit('mesh.spawn', d));
     ipcMain.handle('mesh:route',     async (e, d) => rendererEmit('mesh.route', d));

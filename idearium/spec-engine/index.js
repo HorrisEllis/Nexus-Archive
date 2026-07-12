@@ -37,7 +37,9 @@ const _require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const MODULE_ID   = 'idearium.spec-engine';
-const VERSION     = '1.1.0';  // +templates, +templateId provenance (idearium-templates.spec v1.0.0)
+const VERSION     = '2.0.0';  // §MERGED 2026-07-11 — rootHash/boundary-engine/ingestFilesAsSpec
+                               // (parallel branch) + templateIds[]/buildEngine/ideaUuid (this branch)
+                               // reconciled into one mechanism. See CHANGES-2026-07-11-MERGE.md.
 const COMP_ID     = 'idearium.spec-engine';
 const SEAM_PREFIX = 'idearium.spec-engine:v1:chunk';
 
@@ -84,9 +86,9 @@ function _specDedupKey(name, type = 'component') {
 
 // ── Create a new spec with all chunks initialized ─────────────────────────────
 /**
- * _seedFromTemplate — deterministic, per-template seeding. Returns
- * { sectionId, content } or null. Two honest paths, not one blurred into
- * the other:
+ * _seedSectionsFromTemplate — deterministic, per-template seeding. Returns
+ * a { sectionId: content } map (possibly empty). Three honest paths, not
+ * blurred into one:
  *
  * (a) genesis (DSL, no other structural mapping) — the ONLY thing exactly
  *     and verifiably extractable is the header block: version, UUID, spine
@@ -114,29 +116,54 @@ function _specDedupKey(name, type = 'component') {
  * "dispatch every chunk normally" — never a half-filled chunk presented as
  * complete.
  */
-function _seedFromTemplate(templateId, specName) {
+// §MERGED 2026-07-11 — a seed file can carry multiple `## SECTION: <id>`
+// blocks, each seeding a different SPEC_SECTIONS id — see
+// _seedSectionsFromTemplate below for the full three-convention story.
+const SECTION_MARKER_RE = /^##\s*SECTION:\s*([a-z_]+)\s*$/gm;
+
+function _seedSectionsFromTemplate(templateId, specName) {
   const seed = readSeed(templateId);
-  if (!seed) return null;
+  const out = {};
+  if (!seed) return out;
   const template = getTemplate(templateId);
-  const seedSection = template?.seedSection || 'meta';
 
   if (templateId === 'genesis') {
     const content = _seedMetaFromGenesis(seed, specName, templateId);
-    return content ? { sectionId: seedSection, content } : null;
+    if (content) out.meta = content;
+    return out;
   }
 
-  // Path (b): verbatim section content, tagged with provenance — the same
-  // "already real, just needs a home" logic importSpec uses per-block.
-  const lines = [
-    `Seeded deterministically from template \`${templateId}\` — no agent dispatched.`,
-    ``,
-    `> Source: idearium/spec-engine/templates/${template.seedFile}`,
-    ``,
-    `---`,
-    ``,
-    seed.trim(),
-  ];
-  return { sectionId: seedSection, content: lines.join('\n') };
+  const validIds = new Set(SPEC_SECTIONS.map(s => s.id));
+  const markers = [...seed.matchAll(SECTION_MARKER_RE)];
+  if (markers.length) {
+    for (let i = 0; i < markers.length; i++) {
+      const id = markers[i][1];
+      if (!validIds.has(id)) continue; // §1.2 — unknown marker ignored, not silently misfiled
+      const start = markers[i].index + markers[i][0].length;
+      const end   = i + 1 < markers.length ? markers[i + 1].index : seed.length;
+      const body  = seed.slice(start, end).trim();
+      if (!body) continue;
+      out[id] = `Seeded deterministically from template \`${templateId}\` — no agent dispatched.\n\n${body}\n\n` +
+                `> Source: idearium/spec-engine/templates/${templateId}.spec § ${id}`;
+    }
+    return out;
+  }
+
+  // Fallback: seedSection convention — whole file, one section, verbatim.
+  const seedSection = template?.seedSection;
+  if (seedSection && validIds.has(seedSection)) {
+    const lines = [
+      `Seeded deterministically from template \`${templateId}\` — no agent dispatched.`,
+      ``,
+      `> Source: idearium/spec-engine/templates/${template.seedFile}`,
+      ``,
+      `---`,
+      ``,
+      seed.trim(),
+    ];
+    out[seedSection] = lines.join('\n');
+  }
+  return out;
 }
 
 function _seedMetaFromGenesis(seed, specName, templateId) {
@@ -174,16 +201,33 @@ function _seedMetaFromGenesis(seed, specName, templateId) {
 // SPEC_SECTIONS template. createSpec() below is now a thin wrapper that
 // passes SPEC_SECTIONS as its default — behavior for existing callers is
 // unchanged, byte for byte.
-function _buildManifest({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, sections = SPEC_SECTIONS }) {
+function _buildManifest({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto', ideaUuid = null }) {
   _ensureRoot();
   if (!name) throw new Error('spec name required');
 
+  // §MERGED 2026-07-11 — two independent sessions extended createSpec
+  // differently: this branch (single templateId, seedSection-based
+  // single-section seeding) and a parallel one (templateIds[] array,
+  // marker-based multi-section seeding, buildEngine selector, ideaUuid
+  // linkage). Reconciled here rather than picking one — see
+  // _seedSectionsFromTemplate below for how single-section and
+  // marker-based templates now both work through one mechanism.
+  const idList = (Array.isArray(templateIds) && templateIds.length) ? templateIds
+               : (templateId ? [templateId] : []);
+  const templates = idList.map(id => {
+    const t = getTemplate(id);
+    if (!t) throw new Error(`unknown templateId '${id}'. Known: ${listTemplates().map(x => x.id).join(', ')}`);
+    return t;
+  });
+  const template = templates[0] || null; // primary — back-compat for type/single-template readers
+
+  const VALID_ENGINES = ['auto', 'warp', 'direct'];
+  if (!VALID_ENGINES.includes(buildEngine)) {
+    throw new Error(`unknown buildEngine '${buildEngine}'. Known: ${VALID_ENGINES.join(', ')}`);
+  }
+
   // §1.2 — an unknown templateId is an error, not a silent fallback to none.
   // A spec that claims a template it never used is a lie in its own manifest.
-  const template = templateId ? getTemplate(templateId) : null;
-  if (templateId && !template) {
-    throw new Error(`unknown templateId '${templateId}'. Known: ${listTemplates().map(t => t.id).join(', ')}`);
-  }
   if (template) type = template.kind;
 
   const specUuid  = crypto.randomUUID();
@@ -245,6 +289,10 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
     status:      'building',    // pending | building | complete | archived
     agent,                      // primary agent (Mistral first)
     agentPriority: ['ollama', 'chatgpt', 'claude'],  // LAW_I: local first
+    buildEngine,                 // auto | warp | direct — §MERGED
+    // §MERGED 2026-07-11 — ideaUuid closes the gap where the promote path
+    // reads manifest.ideaUuid but nothing used to write it.
+    ideaUuid,
     totalChunks: chunks.length,
     doneChunks:  0,
     failedChunks:0,
@@ -257,7 +305,8 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
     // which sections were filled without an agent. A manifest that cannot say
     // where its content came from cannot be audited, and "deterministic" then
     // becomes a claim rather than a record.
-    templateId:     templateId,
+    templateId:     template ? template.id : null,   // primary (back-compat single-field readers)
+    templateIds:    templates.map(t => t.id),          // §MERGED — full composed set
     templateSeeded: [],
     // §PHASE 6 — non-null when a spec with the same name+type already existed.
     // The caller can offer reuse; this spec is still created (deliberate rebuild
@@ -272,50 +321,65 @@ function _buildManifest({ name, type = 'component', description = '', agent = 'o
   const manifestPath = path.join(specDir, 'manifest.json');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
-  // §SEEDED 2026-07-09 — the template's deterministic contribution, applied
-  // AFTER the manifest is on disk because completeChunk() reloads the spec to
-  // recompute progress. Reuses completeChunk rather than writing chunk files
-  // here: one code path owns "a chunk became complete", so progress, byteSize
-  // and the ledger stay correct by construction.
-  if (template) {
-    const seeded = _seedFromTemplate(templateId, name);
-    if (seeded) {
-      const targetChunk = manifest.chunks.find(c => c.sectionId === seeded.sectionId);
-      if (targetChunk) {
+  // §SEEDED 2026-07-09, §MERGED 2026-07-11 — the template's deterministic
+  // contribution, applied AFTER the manifest is on disk because
+  // completeChunk() reloads the spec to recompute progress. Composes
+  // across every selected template — first-listed template wins if two
+  // templates both seed the same section. _seedSectionsFromTemplate
+  // (below) handles BOTH template conventions that existed independently:
+  // a single `seedSection` (whole seed file → one section, this branch's
+  // original mechanism) and `## SECTION: <id>` markers (multi-section per
+  // template, the parallel branch's mechanism) — whichever the template's
+  // seed file actually uses.
+  if (templates.length) {
+    const seededMap = {}; // sectionId -> { content, fromTemplateId }
+    for (const t of templates) {
+      const perTemplate = _seedSectionsFromTemplate(t.id, name);
+      for (const [sectionId, content] of Object.entries(perTemplate)) {
+        if (seededMap[sectionId]) continue; // first pick wins
+        seededMap[sectionId] = { content, fromTemplateId: t.id };
+      }
+    }
+    const seededIds = Object.keys(seededMap);
+    if (seededIds.length) {
+      const actuallySeeded = [];
+      for (const sectionId of seededIds) {
+        const chunk = manifest.chunks.find(c => c.sectionId === sectionId);
+        if (!chunk) continue;
         try {
-          completeChunk(specUuid, targetChunk.uuid, seeded.content);
-
-          // §BUG FIXED 2026-07-09 — this previously set the chunk's `agent` on
-          // the stale in-memory object and then returned the freshly-loaded
-          // on-disk manifest, so the seeded chunk reported `agent: 'ollama'`.
-          // It claimed an LLM produced content no LLM ever touched. Provenance
-          // that lies is worse than provenance that is absent. Persist it.
-          const fresh = loadSpec(specUuid);
-          const fm = fresh.chunks.find(c => c.uuid === targetChunk.uuid);
-          if (fm) { fm.agent = 'template'; fm.agentModel = `template:${templateId}`; }
-          fresh.templateSeeded = [seeded.sectionId];
-          saveSpec(fresh);
-
-          console.log(`[${MODULE_ID}] seeded '${seeded.sectionId}' from template '${templateId}' — 1 of ${chunks.length} chunks needs no agent`);
-          return fresh;
+          completeChunk(specUuid, chunk.uuid, seededMap[sectionId].content);
+          actuallySeeded.push(sectionId);
         } catch (e) {
-          // §1.2 — a failed seed degrades to normal dispatch, loudly.
-          console.warn(`[${MODULE_ID}] template seed failed, chunk stays PENDING: ${e.message}`);
+          // §1.2 — a failed seed degrades that one chunk to normal dispatch, loudly.
+          console.warn(`[${MODULE_ID}] template seed failed for '${sectionId}', chunk stays PENDING: ${e.message}`);
         }
-      } else {
-        console.warn(`[${MODULE_ID}] template '${templateId}' targets section '${seeded.sectionId}' which isn't in this spec's section list — seed skipped, all chunks dispatch`);
+      }
+      if (actuallySeeded.length) {
+        // §BUG FIXED 2026-07-09 — provenance must be persisted on the fresh
+        // on-disk manifest, not the stale in-memory object, or a seeded
+        // chunk reports `agent: 'ollama'` for content no LLM ever touched.
+        const fresh = loadSpec(specUuid);
+        for (const sectionId of actuallySeeded) {
+          const fm = fresh.chunks.find(c => c.sectionId === sectionId);
+          if (fm) { fm.agent = 'template'; fm.agentModel = `template:${seededMap[sectionId].fromTemplateId}`; }
+        }
+        fresh.templateSeeded = actuallySeeded;
+        saveSpec(fresh);
+        console.log(`[${MODULE_ID}] seeded [${actuallySeeded.join(', ')}] from templates [${templates.map(t=>t.id).join(', ')}] — ` +
+          `${actuallySeeded.length} of ${chunks.length} chunks need no agent`);
+        return fresh;
       }
       return loadSpec(specUuid);
     }
-    console.warn(`[${MODULE_ID}] template '${templateId}' produced no deterministic seed — all ${chunks.length} chunks will dispatch`);
+    console.warn(`[${MODULE_ID}] templates [${templates.map(t=>t.id).join(', ')}] produced no deterministic seed — all ${chunks.length} chunks will dispatch`);
   }
 
   console.log(`[${MODULE_ID}] spec created: ${specUuid.slice(0,8)} "${name}" · ${chunks.length} chunks · agent:${agent}`);
   return manifest;
 }
 
-export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null }) {
-  return _buildManifest({ name, type, description, agent, author, templateId, sections: SPEC_SECTIONS });
+export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto', ideaUuid = null }) {
+  return _buildManifest({ name, type, description, agent, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine, ideaUuid });
 }
 
 // ── Load spec manifest from disk ──────────────────────────────────────────────
@@ -592,7 +656,7 @@ export default {
   createSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
   buildChunkPrompt, archiveSpec, expandSpec,
-  computeRootHash, findByRootHash, ingestFilesAsSpec,
+  computeRootHash, findByRootHash, ingestFilesAsSpec, addChunk, removeChunk,
   SPEC_SECTIONS, CHUNK_STATES,
   MODULE_ID, VERSION, COMP_ID,
 };
@@ -646,7 +710,13 @@ function _sha256(s) { return crypto.createHash('sha256').update(s).digest('hex')
 function _hashChunk(c) { return _sha256(_canonicalJSON({ sectionId: c.sectionId, content: c.content || '' })); }
 
 export function computeRootHash(manifest) {
-  const ordered = [...manifest.chunks]
+  // §BUG FIXED 2026-07-11 — a removed chunk (removeChunk, soft-delete)
+  // still had its content hashed in here, so rootHash never changed on
+  // removal — two repos differing only by "one has a deleted file" would
+  // report identical content identity, which is wrong: dedup/fork logic
+  // reads rootHash as "what this repo actually contains."
+  const ordered = manifest.chunks
+    .filter(c => c.status !== 'removed')
     .sort((a, b) => a.chunkIdx - b.chunkIdx)
     .map(c => ({ sectionId: c.sectionId, hash: _hashChunk(c) }));
   return _sha256(_canonicalJSON(ordered));
@@ -678,6 +748,66 @@ export function findByRootHash(rootHash) {
 // regardless of whether the content arrived as a parsed .spec block or a
 // raw file. The repo layer (repo/index.js) no longer needs its own content
 // store at all; it becomes a thin index over this.
+// §NEW 2026-07-11 — every existing chunk-creation path (createSpec,
+// ingestFilesAsSpec) builds a FIXED chunk list at spec-creation time.
+// Nothing could add one more chunk to an ALREADY-existing spec — needed
+// for the repo file editor's "add a file" action, since v2's repo has no
+// content store of its own to add a file TO except through spec-engine.
+// Same disk-write/rootHash-recompute path as every other chunk — this is
+// not a second mechanism, just a chunk list that can grow after creation.
+export function addChunk(specUuid, { sectionId, title = null, content = '' } = {}) {
+  if (!sectionId) throw new Error('addChunk: sectionId required');
+  const manifest = loadSpec(specUuid);
+  if (manifest.chunks.some(c => c.sectionId === sectionId)) {
+    throw new Error(`addChunk: section '${sectionId}' already exists on this spec — use completeChunk to edit it`);
+  }
+  const chunkUuid = crypto.randomUUID();
+  const chunkIdx  = manifest.chunks.length;
+  const specDir   = path.join(SPECS_ROOT, specUuid);
+  const now       = Date.now();
+  const chunk = {
+    uuid: chunkUuid, specUuid, chunkIdx,
+    sectionId, sectionTitle: title || sectionId, sectionDesc: `added file: ${sectionId}`,
+    comp_id: COMP_ID, seam_id: `${SEAM_PREFIX}:${specUuid.slice(0,8)}:${sectionId}`,
+    contract_id: `spec-contract:${specUuid.slice(0,8)}:${sectionId}:${chunkUuid.slice(0,8)}`,
+    filePath: path.join(specDir, `${chunkUuid}.md`),
+    fileName: `${String(chunkIdx).padStart(2,'0')}-${sectionId}.md`,
+    status: CHUNK_STATES.PENDING, agent: 'user', agentModel: null,
+    attempts: 0, failureMode: null, content: null, byteSize: 0,
+    createdAt: now, updatedAt: now, completedAt: null,
+    tags: [sectionId, manifest.type, manifest.name.toLowerCase().replace(/\s+/g,'-')],
+  };
+  manifest.chunks.push(chunk);
+  manifest.totalChunks = manifest.chunks.length;
+  saveSpec(manifest);
+  // §BUG FIXED 2026-07-11 — completeChunk() returns the single chunk it
+  // just completed, not the manifest. Returning that directly here left
+  // callers (repo/index.js's writeFile) doing `fresh.chunks.find(...)` on
+  // an object with no .chunks property at all — reliable crash on every
+  // "add a new file with content" call. Always return the fresh manifest.
+  if (content && content.trim()) completeChunk(specUuid, chunkUuid, content);
+  return loadSpec(specUuid);
+}
+
+// Soft-delete — §7.4 nothing discarded. The chunk stays on disk (its .md
+// file untouched) but is excluded from the repo's file listing and no
+// longer counts toward totalChunks/progress. Recomputes rootHash so a
+// repo's content identity reflects the removal.
+export function removeChunk(specUuid, chunkUuid) {
+  const manifest = loadSpec(specUuid);
+  const chunk = manifest.chunks.find(c => c.uuid === chunkUuid);
+  if (!chunk) throw new Error(`chunk ${chunkUuid} not found`);
+  chunk.status = 'removed';
+  chunk.updatedAt = Date.now();
+  manifest.totalChunks = manifest.chunks.filter(c => c.status !== 'removed').length;
+  manifest.doneChunks  = manifest.chunks.filter(c => c.status === CHUNK_STATES.COMPLETE).length;
+  manifest.progress    = manifest.totalChunks ? Math.round((manifest.doneChunks / manifest.totalChunks) * 100) : 0;
+  manifest.rootHash     = computeRootHash(manifest);
+  manifest.updatedAt   = Date.now();
+  saveSpec(manifest);
+  return loadSpec(specUuid);
+}
+
 export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
   if (!files.length) throw new Error('ingestFilesAsSpec: at least one file required');
   const seenIds = new Map();
