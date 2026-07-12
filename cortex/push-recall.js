@@ -17,11 +17,23 @@
  * wouldn't be better for a larger schema later), tag/tier-based push,
  * lexical scoring (real token-overlap, not a stub), recency scoring
  * (real exponential decay from event age), tier-priority weighting (the
- * spec's own 6-tier table, applied for real). What's NOT real yet:
- * lanes B/C/D (causal/failure/BEP) — those need the kernel causal graph,
- * fix_map, and bep_patterns table respectively, none of which exist as
- * queryable structures yet. Lane A (lexical) and E (recency) are fully
- * implemented; that's an honest 2-of-5 lanes, not a fake 5-of-5.
+ * spec's own 6-tier table, applied for real).
+ *
+ * §UPDATED 2026-07-12 — all 5 lanes are real now:
+ *   - lexical, recency: original, unchanged.
+ *   - failure: real fix_map lookup (cortex/memory/fix-map.js), token-
+ *     overlap against recorded failure signatures, weighted by recorded
+ *     success/failure confidence.
+ *   - bep: real bep_patterns lookup (cortex/memory/bep-lookup.js), token-
+ *     overlap against crystallized recurring-pattern sequences.
+ *   - causal: real causal-graph connectivity (cortex/memory/causal-lookup.js)
+ *     — but honestly conditional: only activates for a row tagged with an
+ *     id that's actually a node in the recent causal graph. A row with no
+ *     such tag scores 0 on this lane, which is a real constraint on when
+ *     it fires, not a weaker version of the other four.
+ * Each of the three new lanes is independently guarded (a missing
+ * dependency degrades that one lane to 0, never breaks the module) —
+ * this file's standalone-testability promise below still holds.
  *
  * Storage is an in-memory Map by design for this first version — wiring
  * to the real `jaaDB.insert()`/`jaaDB.tail()` cortex/boot.js already uses
@@ -31,6 +43,22 @@
  * being wired to its real host.
  */
 const crypto = require('crypto');
+// §GUARDED — push-recall.js's own header says it should be testable
+// standalone, without a live Cortex process. fix-map.js requires jaaDB,
+// which requires guardian/jaa-store — real dependencies that may not be
+// present in a standalone test context. A failed require here degrades
+// the failure lane to "not available," not a broken module.
+let fixMap = null;
+try { fixMap = require('./memory/fix-map.js'); }
+catch (e) { console.warn(`[push-recall] fix-map unavailable, failure lane will degrade honestly: ${e.message}`); }
+
+let bepLookup = null;
+try { bepLookup = require('./memory/bep-lookup.js'); }
+catch (e) { console.warn(`[push-recall] bep-lookup unavailable, bep lane will degrade honestly: ${e.message}`); }
+
+let causalLookup = null;
+try { causalLookup = require('./memory/causal-lookup.js'); }
+catch (e) { console.warn(`[push-recall] causal-lookup unavailable, causal lane will degrade honestly: ${e.message}`); }
 
 const VALID_TIERS = ['crystal', 'spec', 'session', 'recent', 'failure', 'index'];
 // §BUG FIXED 2026-07-06 — found by adversarial testing: push() accepted a
@@ -150,7 +178,42 @@ class CortexPushRecall {
         breakdown.recency = recencyScore * LANE_WEIGHTS.recency;
         score += breakdown.recency;
       }
-      // causal/failure/bep lanes intentionally not scored — see header.
+      // §BUILT 2026-07-12 — the failure lane, real now. Matches a row's
+      // content against recorded fix_map signatures (token overlap, same
+      // method the lexical lane already uses) and weights by recorded
+      // confidence. Honest degrade: no fix-map available, or no matching
+      // signature recorded yet, contributes 0 — same as any other lane
+      // finding nothing, not an error and not a fabricated match.
+      if (lanes.includes('failure') && fixMap) {
+        const fixes = fixMap.lookupFix(row.content, 1);
+        if (fixes.length) {
+          breakdown.failure = fixes[0].matchScore * (0.5 + 0.5 * fixes[0].confidence) * LANE_WEIGHTS.failure;
+          score += breakdown.failure;
+        }
+      }
+      // §BUILT 2026-07-12 — the bep lane, real now. Matches row content
+      // against recorded bep_patterns sequences (event-type chains, not
+      // prose — see bep-lookup.js's own honest-scope note on why this is
+      // a real but coarse signal, not semantic matching).
+      if (lanes.includes('bep') && bepLookup) {
+        const matches = bepLookup.lookupBEPMatch(row.content, 1);
+        if (matches.length) {
+          breakdown.bep = matches[0].matchScore * (0.5 + 0.5 * matches[0].strength) * LANE_WEIGHTS.bep;
+          score += breakdown.bep;
+        }
+      }
+      // §BUILT 2026-07-12 — the causal lane, real now. Only activates when
+      // a row was tagged with an id that's actually a node in the recent
+      // causal graph — see causal-lookup.js's honest-scope note. A row
+      // with no such tag scores 0 here, not a fabricated partial match.
+      if (lanes.includes('causal') && causalLookup) {
+        const causal = causalLookup.causalScore(row.tags);
+        if (causal) {
+          breakdown.causal = causal.score * LANE_WEIGHTS.causal;
+          score += breakdown.causal;
+        }
+      }
+      // (failure/bep/causal lanes scored above, each independently guarded)
       // A row requested under a lane this version can't compute still
       // gets scored on whatever real lanes it has, not zeroed out, so a
       // recall() call for 'debug_failure' (causal+failure+recency) still

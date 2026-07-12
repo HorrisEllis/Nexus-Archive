@@ -448,7 +448,6 @@ function renderBrainstorms() {
       </div>
       <div class="action-row">
         ${b.promoted ? `<span class="ic-tag" style="color:var(--mint)">promoted ✓</span>` : `<button class="action-btn primary" onclick="promoteBrainstorm('${b.id}')">promote → idea</button>`}
-        <button class="action-btn" onclick='openNewSpecModal({name:${JSON.stringify(b.text.slice(0,60))}, description:${JSON.stringify(b.text)}})'>+ spec</button>
         <button class="action-btn danger" onclick="deleteBrainstorm('${b.id}')">discard</button>
       </div>
     </div>
@@ -504,17 +503,6 @@ function selectSpec(uuid) {
 }
 
 function renderSpecBuilder(spec) {
-  // §BUG FIXED 2026-07-11 — every spec in SPECS renders through this
-  // function regardless of origin, but saveSection/checkSpec/buildSpec
-  // below all call the LEGACY-only /api/specs/:uuid/* endpoints. A
-  // spec-engine spec's uuid was never in os.db.specs, so those calls
-  // either 404'd or silently did nothing — the action buttons looked
-  // present and did nothing real. `.chunks` only exists on spec-engine
-  // manifests (spec.list's merge spreads the raw manifest in) — use it
-  // as the discriminator and render a genuinely different, working
-  // action row for that case instead of the legacy one.
-  if (Array.isArray(spec.chunks)) return renderSpecEngineBuilder(spec);
-
   const conf = specConfidence(spec);
   const gaps = specGaps(spec);
   const sec = (spec.sections||[]).find(s=>s.id===BUILDER_ACTIVE_SECTION) || {};
@@ -546,110 +534,6 @@ function renderSpecBuilder(spec) {
     </div>
   `;
 }
-// §NEW 2026-07-11 — the working action row for a spec-engine spec: real
-// chunk status (not the legacy 9-section grid), a build-all-and-promote
-// one-click flow ("have it build the repository — end-state"), and an
-// open-repository link once one exists. Read-only chunk list for now —
-// spec-engine chunks are agent/template-built, not hand-edited inline
-// the way legacy sections are; editing an individual chunk's content is
-// a real follow-up, not something this pass claims to do.
-function renderSpecEngineBuilder(spec) {
-  const wrap = document.getElementById('spec-builder');
-  const chunks = spec.chunks || [];
-  const done = chunks.filter(c => c.status === 'complete').length;
-  const pct = chunks.length ? Math.round(done / chunks.length * 100) : 0;
-  const repo = API_REPOS.find(r => r.promotedFromSpec === spec.uuid);
-  const building = !!BUILD_IN_PROGRESS[spec.uuid];
-
-  wrap.innerHTML = `
-    <div class="builder-body">
-      <div class="ds" style="margin-bottom:0">
-        <div class="ds-label">spec-engine — ${escapeHtml((spec.templateIds||[]).join(', ') || 'no template')} · build logic: ${escapeHtml(spec.buildEngine||'auto')}</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="tension-track" style="flex:1;height:6px"><div class="tension-fill" style="width:${pct}%;background:${pct===100?'var(--mint)':'var(--amber)'}"></div></div>
-          <span style="font-family:var(--mono);font-size:12px;font-weight:600">${done}/${chunks.length}</span>
-        </div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">chunks</div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          ${chunks.map(c => `
-            <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--b0)">
-              <span style="color:${c.status==='complete'?'var(--mint)':c.status==='building'?'var(--amber)':'var(--text3)'}">${c.status==='complete'?'✓':c.status==='building'?'…':'○'}</span>
-              <span style="flex:1;color:var(--text2)">${escapeHtml(c.sectionId)}</span>
-              <span style="color:var(--text3)">${escapeHtml(c.agent||'')}${c.agentModel&&c.agentModel.startsWith('template')?' (template)':''}</span>
-            </div>`).join('')}
-        </div>
-      </div>
-      <div class="action-row">
-        ${repo
-          ? `<button class="action-btn primary" onclick="openRepoFor('${spec.ideaUuid||''}', '${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">open repository →</button>`
-          : `<button class="action-btn primary" ${building?'disabled':''} onclick="buildAllAndPromote('${spec.uuid}')">${building?'building…':(done===chunks.length?'promote → repository':'build repository (end-state)')}</button>`
-        }
-        <button class="action-btn" onclick="exportSpec('${spec.uuid}')">export markdown</button>
-      </div>
-    </div>
-  `;
-}
-
-// specUuid -> true while a build-all-and-promote loop is running, so the
-// button can't be double-clicked into two concurrent loops.
-let BUILD_IN_PROGRESS = {};
-
-// The "system can build and repair itself" flow: repeatedly call
-// speceng.build (each call dispatches the NEXT pending chunk — WARP cache,
-// cross-spec reuse, or an agent, whichever resolves it) until every chunk
-// is complete or a chunk fails outright, then promote to a real repository.
-// "Repair" here means what the pipeline already gives us for free: WARP's
-// verification/retry ladder on each chunk build, and cross-spec reuse
-// pulling a known-good section instead of regenerating — this function's
-// job is just to drive that loop to completion and stop cleanly on a real
-// failure rather than spinning forever.
-async function buildAllAndPromote(specUuid) {
-  if (BUILD_IN_PROGRESS[specUuid]) return;
-  BUILD_IN_PROGRESS[specUuid] = true;
-  selectSpec(specUuid);
-  try {
-    const MAX_STEPS = 40; // generous ceiling — a stuck loop must stop, not spin (§1.2)
-    for (let i = 0; i < MAX_STEPS; i++) {
-      const spec = SPECS.find(s => s.uuid === specUuid);
-      const pending = (spec?.chunks || []).filter(c => c.status !== 'complete');
-      if (!pending.length) break;
-
-      const res = await api(`/api/spec-engine/specs/${specUuid}/build`, { method: 'POST', body: JSON.stringify({}) });
-      if (res.done) break;
-      // building/queued chunks resolve async server-side (SSE-driven) —
-      // give it a moment before checking again rather than hammering.
-      await new Promise(r => setTimeout(r, 1200));
-      await loadSpecs();
-      const fresh = SPECS.find(s => s.uuid === specUuid);
-      if (fresh) renderSpecBuilder(fresh);
-    }
-
-    await loadSpecs();
-    const spec = SPECS.find(s => s.uuid === specUuid);
-    const stillPending = (spec?.chunks || []).filter(c => c.status !== 'complete' && c.status !== 'building');
-    if (stillPending.length) {
-      toast(`build stopped — ${stillPending.length} chunk(s) still pending (${stillPending.map(c=>c.sectionId).join(', ')})`, 'err');
-      renderSpecBuilder(spec);
-      return;
-    }
-
-    toast('all chunks built — promoting to repository…', 'ok');
-    const promoted = await api(`/api/spec-engine/specs/${specUuid}/promote`, { method: 'POST', body: JSON.stringify({ mode: 'emerge' }) });
-    toast('repository built — end state reached', 'ok');
-    await loadSpecs(); await loadApiRepos();
-    if (spec?.ideaUuid) await loadIdeas(); // phase just advanced to 'complete'
-    openRepoFor(spec?.ideaUuid || null, specUuid, spec?.name || '');
-  } catch (e) {
-    toast(`build failed: ${e.message}`, 'err');
-  } finally {
-    BUILD_IN_PROGRESS[specUuid] = false;
-    const spec = SPECS.find(s => s.uuid === specUuid);
-    if (spec) renderSpecBuilder(spec);
-  }
-}
-
 function switchSection(uuid, sectionId) {
   BUILDER_ACTIVE_SECTION = sectionId;
   const spec = SPECS.find(s=>s.uuid===uuid);
@@ -685,114 +569,70 @@ async function exportSpec(uuid) {
     toast('exported','ok');
   } catch(e) { toast(e.message,'err'); }
 }
-function newSpecPrompt() {
-  openNewSpecModal();
-}
-
-// ════════════════════════════════════════════════════
-// NEW SPEC MODAL — template picker (architecture/schemas/checklists/axioms/
-// compartments/genesis/...) + WARP build-logic selector, wired to the real
-// spec-engine (GET/POST /api/spec-engine/...). "Map to repo now" is not a
-// separate backend action — it's create → spec.promote(mode:'manual') in
-// one click, which is exactly what the compartments/axioms templates are
-// designed for: their seeded chunks (meta/purpose/axioms/integration) are
-// enough to promote immediately, everything else lands as a TODO in the
-// repo skeleton until a follow-up spec fills it in.
-// ════════════════════════════════════════════════════
-let NS_TEMPLATES = null;
-let NS_IDEA_UUID = null; // set when opened from an idea, so the created repo can be linked later
-
-async function loadNewSpecTemplates() {
-  if (NS_TEMPLATES) return NS_TEMPLATES;
+async function newSpecPrompt() {
+  const name = await themedPrompt('spec name:', 'new spec');
+  if (!name) return;
   try {
-    const r = await api('/api/spec-engine/templates');
-    NS_TEMPLATES = r.templates || r.data || r || [];
-  } catch (e) { NS_TEMPLATES = []; }
-  return NS_TEMPLATES;
-}
-
-async function openNewSpecModal({ name = '', description = '', ideaUuid = null } = {}) {
-  NS_IDEA_UUID = ideaUuid;
-  document.getElementById('ns-name').value = name;
-  document.getElementById('ns-description').value = description;
-  document.getElementById('ns-build-engine').value = 'auto';
-
-  const templates = await loadNewSpecTemplates();
-  const wrap = document.getElementById('ns-templates');
-  wrap.innerHTML = templates.map(t => `
-    <label style="display:flex;align-items:flex-start;gap:8px;padding:4px 2px;cursor:pointer;font-size:11px;color:var(--text2)">
-      <input type="checkbox" class="ns-tpl-check" value="${t.id}" onchange="onNewSpecTemplateChange()" style="margin-top:2px">
-      <span><b style="color:var(--text)">${escapeHtml(t.label||t.id)}</b>${t.hasSeed ? ' <span style="color:var(--mint)">· deterministic</span>' : ''}<br>
-      <span style="color:var(--text3)">${escapeHtml(t.description||'')}</span></span>
-    </label>`).join('');
-
-  document.getElementById('new-spec-modal').classList.add('open');
-  document.getElementById('ns-name').focus();
-}
-function closeNewSpecModal() { document.getElementById('new-spec-modal').classList.remove('open'); }
-
-function selectedTemplateIds() {
-  return [...document.querySelectorAll('.ns-tpl-check:checked')].map(c => c.value);
-}
-
-function onNewSpecTemplateChange() {
-  // "map to repo now" only makes sense once the map-first templates
-  // (compartments, axioms) are among the selection — showing it for every
-  // combination would let someone promote a spec that's really just empty
-  // TODOs with a name attached.
-  const ids = selectedTemplateIds();
-  const mapWorthy = ids.includes('compartments') || ids.includes('axioms');
-  document.getElementById('ns-map-btn').style.display = mapWorthy ? '' : 'none';
-}
-
-async function submitNewSpec(mapToRepo) {
-  const name = document.getElementById('ns-name').value.trim();
-  if (!name) { toast('name required', 'err'); return; }
-  const description = document.getElementById('ns-description').value.trim();
-  const templateIds = selectedTemplateIds();
-  const buildEngine = document.getElementById('ns-build-engine').value || 'auto';
-  const ideaUuid = NS_IDEA_UUID; // §BUG FIXED 2026-07-11 — was captured on open, never sent
-
-  try {
-    const r = await api('/api/spec-engine/specs', {
-      method: 'POST',
-      body: JSON.stringify({ name, description, templateIds, buildEngine, ideaUuid: ideaUuid || undefined }),
-    });
-    const manifest = r.manifest || r;
-    toast(`spec created${templateIds.length ? ` from [${templateIds.join(', ')}]` : ''} · build logic: ${buildEngine}`, 'ok');
-
-    if (mapToRepo) {
-      try {
-        const promoted = await api(`/api/spec-engine/specs/${manifest.uuid}/promote`, {
-          method: 'POST', body: JSON.stringify({ mode: 'manual' }),
-        });
-        toast('mapped to repository — compartments/axioms in, rest TODO', 'ok');
-        closeNewSpecModal();
-        await loadSpecs(); await loadApiRepos();
-        if (ideaUuid) await loadIdeas(); // picks up the idea's new phase + linkedSpec
-        openRepoFor(ideaUuid || null, manifest.uuid, name);
-        return;
-      } catch (e) { toast(`spec created, map-to-repo failed: ${e.message}`, 'err'); }
-    }
-
-    closeNewSpecModal();
+    await api('/api/specs', { method:'POST', body: JSON.stringify({name}) });
+    toast('spec created','ok');
     await loadSpecs();
-    if (ideaUuid) {
-      await loadIdeas();
-      const idea = IDEAS.find(i => i.uuid === ideaUuid);
-      if (idea) renderDetail(idea); // reflect the new phase + linked-spec immediately, not on next reload
-    }
-  } catch (e) { toast(e.message, 'err'); }
+  } catch(e) { toast(e.message,'err'); }
 }
-function createSpecForIdea(ideaUuid) {
+// §IMPORT 2026-07-11 — "upload these and have it parse, import and build a
+// repo." Mirrors ingestDroppedFiles' shape (read as text client-side, POST,
+// toast, refresh) but targets /api/spec-engine/import instead of /api/repos:
+// each file becomes its own spec manifest (boundary-engine-parsed, chunks
+// pre-filled from the authored content — zero tokens), then auto-promotes
+// to a repo server-side the instant every chunk is complete. One file in,
+// one repo out, no intermediate manual step.
+async function importSpecFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  for (const f of files) {
+    const specText = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsText(f);
+    });
+    const name = f.name.replace(/\.[^/.]+$/, '');
+    try {
+      const res = await api('/api/spec-engine/import', { method: 'POST', body: JSON.stringify({ name, specText }) });
+      const blocks = res.blocksFound ?? '?';
+      const filled = (res.sectionsFilled || []).length;
+      if (res.repoUuid) {
+        toast(`"${name}" imported — ${blocks} block(s) → ${filled} chunk(s) → repo ${res.repoUuid.slice(0,8)} built`, 'ok');
+      } else if (res.repoError) {
+        toast(`"${name}" imported (${filled} chunks) but repo build failed: ${res.repoError}`, 'err');
+      } else {
+        toast(`"${name}" imported — ${blocks} block(s) → ${filled} chunk(s), not yet promoted`, 'ok');
+      }
+    } catch (e) {
+      toast(`import failed for "${f.name}": ${e.message}`, 'err');
+    }
+  }
+  await loadSpecs();
+  if (typeof loadApiRepos === 'function') await loadApiRepos();
+}
+
+// Drop zone: dragging .spec/.md files onto the Spec Library list imports
+// them the same way the toolbar button does.
+(function wireSpecDropzone(){
+  const zone = document.getElementById('spec-list');
+  if (!zone) return;
+  ['dragover','dragenter'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.style.outline = '1px dashed var(--accent, #5af)'; }));
+  ['dragleave','drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.style.outline = ''; }));
+  zone.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) importSpecFiles(e.dataTransfer.files); });
+})();
+
+async function createSpecForIdea(ideaUuid) {
   const idea = IDEAS.find(i=>i.uuid===ideaUuid); if (!idea) return;
-  // §BUG FIXED 2026-07-11 — this used to POST straight to the legacy
-  // /api/ideas/:uuid/spec path: no template picker, no buildEngine choice,
-  // and (separately fixed) that path never advanced idea.phase either.
-  // Routing through the same modal Brainstorm/Spec Library use means an
-  // idea-originated spec gets the same template composition and repo
-  // materialization as any other — one spec-creation path, not two.
-  openNewSpecModal({ ideaUuid, name: (idea.text||'spec').slice(0,60), description: idea.text||'' });
+  try {
+    await api(`/api/ideas/${ideaUuid}/spec`, { method:'POST', body: JSON.stringify({name: (idea.text||'spec').slice(0,60)}) });
+    toast('spec created from idea','ok');
+    await loadIdeas(); await loadSpecs();
+    renderDetail(IDEAS.find(i=>i.uuid===ideaUuid));
+  } catch(e) { toast(e.message,'err'); }
 }
 
 // ════════════════════════════════════════════════════
@@ -860,106 +700,14 @@ function renderApiRepoPanel(repo) {
   if (!repo) {
     document.getElementById('repo-badge').textContent = 'no repo linked to this idea';
     tree.innerHTML = `<div class="repo-empty">no repo linked yet<br><br>drop files below to attach one to this idea<br><br><button class="modal-btn confirm" onclick="document.getElementById('repo-drop-input').click()">drop repo files…</button></div>`;
-    CURRENT_API_REPO = null; ACTIVE_API_FILE = null; _showIdeEditor(false);
     return;
   }
-  document.getElementById('repo-badge').textContent = `${repo.fileCount} files · ${repo.phase}${repo.forks.length?` · ${repo.forks.length} fork(s)`:''}${repo.localPath?' · materialized on disk':''}`;
-  CURRENT_API_REPO = repo;
-  const statusLine = repo.localPath
-    ? `${repo.materializedCount||repo.fileCount} of ${repo.fileCount} files materialized as real files — <span style="color:var(--mint)">${escapeHtml(repo.localPath)}</span>`
-    : (repo.promotedFromSpec ? 'promoted from spec — file structure as components (no content-addressable store for this one — metadata only)' : 'manifest only — file content isn\'t stored yet');
-  const addBtn = `<div style="padding:4px 2px 10px"><button class="action-btn" onclick="addApiRepoFile('${repo.uuid}')">+ add file</button></div>`;
+  document.getElementById('repo-badge').textContent = `${repo.fileCount} files · ${repo.phase}${repo.forks.length?` · ${repo.forks.length} fork(s)`:''}`;
   tree.innerHTML = `
     <div class="repo-empty" style="text-align:left;padding:14px">
-      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">${statusLine}</div>
-      ${addBtn}
-      ${(repo.files||[]).map(f=>`
-        <div style="display:flex;align-items:center;gap:6px;padding:3px 0" class="api-file-row${ACTIVE_API_FILE===f.path?' active':''}">
-          <span style="font-family:var(--mono);font-size:11px;color:var(--text2);cursor:pointer;flex:1" onclick="openApiRepoFile('${repo.uuid}','${f.path.replace(/'/g,"\\'")}')">
-            ${escapeHtml(f.path)} <span style="color:var(--text3)">(${f.bytes}b)</span>${f.comp_id?`<br><span style="color:var(--accent);font-size:9px;padding-left:12px">▸ ${escapeHtml(f.comp_id)}${f.status?` · ${f.status}`:''}</span>`:''}
-          </span>
-          ${repo.localPath ? `<span style="cursor:pointer;color:var(--text3);font-size:12px;padding:0 4px" title="delete" onclick="event.stopPropagation();deleteApiRepoFile('${repo.uuid}','${f.path.replace(/'/g,"\\'")}')">×</span>` : ''}
-        </div>`).join('') || '<div style="color:var(--text3)">no files</div>'}
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">${repo.promotedFromSpec ? 'promoted from spec — file structure as components' : 'manifest only — file content isn\'t stored yet, see note'}</div>
+      ${(repo.files||[]).map(f=>`<div style="font-family:var(--mono);font-size:11px;padding:3px 0;color:var(--text2)">${escapeHtml(f.path)} <span style="color:var(--text3)">(${f.bytes}b)</span>${f.comp_id?`<br><span style="color:var(--accent);font-size:9px;padding-left:12px">▸ ${escapeHtml(f.comp_id)}${f.status?` · ${f.status}`:''}</span>`:''}</div>`).join('') || '<div style="color:var(--text3)">no files</div>'}
     </div>`;
-}
-
-// ════════════════════════════════════════════════════
-// API REPO FILE EDITOR — real read/write against a materialized repo,
-// via GET/POST/DELETE /api/repos/:uuid/file. Separate from openFile()
-// above, which is the read-only local-folder (File System Access) browser
-// — this is the API-backed path with actual save/add/delete.
-// ════════════════════════════════════════════════════
-let CURRENT_API_REPO = null;
-let ACTIVE_API_FILE = null;
-let API_FILE_DIRTY = false;
-
-function _showIdeEditor(show) {
-  document.getElementById('ide-code').style.display = show ? 'none' : '';
-  document.getElementById('ide-editor').style.display = show ? '' : 'none';
-}
-
-async function openApiRepoFile(repoUuid, filePath) {
-  if (API_FILE_DIRTY && !confirm(`discard unsaved changes to ${ACTIVE_API_FILE}?`)) return;
-  ACTIVE_API_FILE = filePath;
-  API_FILE_DIRTY = false;
-  renderApiRepoPanel(CURRENT_API_REPO);
-  document.getElementById('ide-tabs').innerHTML = `${escapeHtml(filePath)}` +
-    `<span class="ide-tab-dirty" id="ide-dirty" style="display:none">● unsaved</span>` +
-    `<button class="ide-tab-btn" onclick="saveApiRepoFile()">save</button>`;
-  try {
-    const r = await api(`/api/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`);
-    _showIdeEditor(true);
-    const ta = document.getElementById('ide-editor');
-    ta.value = r.content;
-    ta.oncancel = null;
-    ta.oninput = () => { API_FILE_DIRTY = true; const d = document.getElementById('ide-dirty'); if (d) d.style.display = ''; };
-  } catch (e) {
-    _showIdeEditor(false);
-    document.getElementById('ide-code').textContent = `// could not read file: ${e.message}`;
-  }
-}
-
-async function saveApiRepoFile() {
-  if (!CURRENT_API_REPO || !ACTIVE_API_FILE) return;
-  const content = document.getElementById('ide-editor').value;
-  try {
-    await api(`/api/repos/${CURRENT_API_REPO.uuid}/file`, {
-      method: 'POST', body: JSON.stringify({ path: ACTIVE_API_FILE, content }),
-    });
-    API_FILE_DIRTY = false;
-    const d = document.getElementById('ide-dirty'); if (d) d.style.display = 'none';
-    toast(`saved ${ACTIVE_API_FILE}`, 'ok');
-    await loadApiRepos();
-    const fresh = API_REPOS.find(r => r.uuid === CURRENT_API_REPO.uuid);
-    if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
-  } catch (e) { toast(`save failed: ${e.message}`, 'err'); }
-}
-
-async function addApiRepoFile(repoUuid) {
-  const filePath = await themedPrompt('new file path (e.g. src/notes.md):', 'add file');
-  if (!filePath) return;
-  try {
-    await api(`/api/repos/${repoUuid}/file`, {
-      method: 'POST', body: JSON.stringify({ path: filePath, content: '' }),
-    });
-    toast(`created ${filePath}`, 'ok');
-    await loadApiRepos();
-    const fresh = API_REPOS.find(r => r.uuid === repoUuid);
-    if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
-    openApiRepoFile(repoUuid, filePath);
-  } catch (e) { toast(`create failed: ${e.message}`, 'err'); }
-}
-
-async function deleteApiRepoFile(repoUuid, filePath) {
-  if (!confirm(`delete ${filePath}? (moved to .trash/, not permanently erased — §7.4)`)) return;
-  try {
-    await api(`/api/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' });
-    toast(`deleted ${filePath}`, 'ok');
-    if (ACTIVE_API_FILE === filePath) { ACTIVE_API_FILE = null; _showIdeEditor(false); document.getElementById('ide-tabs').textContent = 'no file open'; document.getElementById('ide-code').textContent = '// click a file in the tree to open it here'; }
-    await loadApiRepos();
-    const fresh = API_REPOS.find(r => r.uuid === repoUuid);
-    if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
-  } catch (e) { toast(`delete failed: ${e.message}`, 'err'); }
 }
 
 async function pickLocalRepo() {
@@ -1125,7 +873,7 @@ function toast(msg, type='ok') {
   setTimeout(()=>div.remove(), 2800);
 }
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { closeModal(); closeNewSpecModal(); }
+  if (e.key==='Escape') closeModal();
   if ((e.metaKey||e.ctrlKey) && e.key==='n') { e.preventDefault(); setView('ideas'); openModal(); }
 });
 

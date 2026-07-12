@@ -197,12 +197,8 @@ export class RepoLayer {
     let manifest = null, filesError = null;
     try { manifest = this.se ? this.se.loadSpec(r.specUuid) : null; }
     catch (e) { filesError = `spec ${r.specUuid} unreadable: ${e.message}`; }
-    // §BUG FIXED 2026-07-11 — removed chunks (deleteFile → removeChunk)
-    // were still showing up in the repo's file listing — the whole point
-    // of soft-delete is that a removed file stops being "in" the repo,
-    // it just isn't destroyed on disk.
     const files = manifest
-      ? manifest.chunks.filter(c => c.status !== 'removed').slice().sort((a,b)=>a.chunkIdx-b.chunkIdx).map(c => ({
+      ? manifest.chunks.slice().sort((a,b)=>a.chunkIdx-b.chunkIdx).map(c => ({
           path: c.fileName || `${String(c.chunkIdx).padStart(2,'0')}-${c.sectionId}.md`,
           bytes: c.byteSize || 0,
           comp_id: c.comp_id || null,
@@ -212,15 +208,6 @@ export class RepoLayer {
       : [];
     return {
       ...r,
-      // §BUG FIXED 2026-07-11 — r.rootHash is a snapshot taken once at
-      // ingest time. Editing/adding/removing a file after promotion (the
-      // whole point of the file-CRUD endpoints) changes the manifest's
-      // real rootHash but never touched this stored copy — every repo
-      // view after the first edit showed a rootHash that no longer
-      // matched what the repo actually contained. Live values from the
-      // manifest are the source of truth; the stored one is a fallback
-      // only for the (should-be-rare) case the manifest is unreadable.
-      rootHash: manifest ? manifest.rootHash : r.rootHash,
       phase: idea ? idea.phase : r.phase,
       tension: idea ? idea.tension : null,
       hasSpec: !!manifest,
@@ -236,58 +223,6 @@ export class RepoLayer {
     if (!r) return { error: 'not found' };
     r.status = 'archived'; r.updatedAt = Date.now(); this._save();   // §7.4 not deleted
     return { ok: true, uuid: repoUuid };
-  }
-
-  // ── file CRUD — v2 has no content store of its own, so these resolve
-  // through the repo's specUuid to spec-engine's chunks (the single
-  // source of truth this whole redesign exists to establish) rather than
-  // maintaining a second copy. §MERGED 2026-07-11.
-  _resolveChunk(repoUuid, relPath) {
-    const r = this.repos.repos.find(x => x.uuid === repoUuid);
-    if (!r) throw new Error('repo not found');
-    if (!this.se) throw new Error('repo layer has no spec-engine — cannot read/write content');
-    const manifest = this.se.loadSpec(r.specUuid);
-    const clean = (relPath || '').replace(/^\/+/, '');
-    const chunk = manifest.chunks.find(c =>
-      c.status !== 'removed' && (c.fileName === clean || c.sectionId === clean));
-    return { repo: r, manifest, chunk, clean };
-  }
-
-  readFile(repoUuid, relPath) {
-    try {
-      const { chunk, clean } = this._resolveChunk(repoUuid, relPath);
-      if (!chunk) return { error: `file not found in repo: ${relPath}` };
-      return { path: chunk.fileName || clean, content: chunk.content || '', bytes: chunk.byteSize || 0 };
-    } catch (e) { return { error: e.message }; }
-  }
-
-  writeFile(repoUuid, relPath, content) {
-    if (typeof content !== 'string') return { error: 'content must be a string' };
-    try {
-      const { manifest, chunk, clean } = this._resolveChunk(repoUuid, relPath);
-      if (chunk) {
-        // existing file — edit in place via the same completeChunk every
-        // other content write goes through (disk-verified, rootHash recomputed)
-        this.se.completeChunk(manifest.uuid, chunk.uuid, content);
-        return { ok: true, path: chunk.fileName, created: false };
-      }
-      // new file — no chunk for this path yet. sectionId must be a slug;
-      // reuse the path itself (minus extension noise) so fileName stays
-      // human-readable in the repo's file list.
-      const sectionId = clean.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() || `file-${Date.now()}`;
-      const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content });
-      const newChunk = fresh.chunks.find(c => c.sectionId === sectionId);
-      return { ok: true, path: newChunk?.fileName || clean, created: true };
-    } catch (e) { return { error: e.message }; }
-  }
-
-  deleteFile(repoUuid, relPath) {
-    try {
-      const { manifest, chunk } = this._resolveChunk(repoUuid, relPath);
-      if (!chunk) return { error: `file not found in repo: ${relPath}` };
-      this.se.removeChunk(manifest.uuid, chunk.uuid);
-      return { ok: true, path: chunk.fileName };
-    } catch (e) { return { error: e.message }; }
   }
 }
 

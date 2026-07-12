@@ -463,18 +463,3 @@ if (typeof window !== 'undefined') {
     navigate:(ch)            => typeof tuneById !== 'undefined' && tuneById(ch),
   };
 }
-
-// §BUG FIXED 2026-07-11 — CP.init() (wires click observation for confusion
-// detection + starts CFR polling) was defined and returned from the CP
-// IIFE, but nothing anywhere ever called it — not internally, and
-// window.Spotlight's public surface never exposed an `init` wrapper either.
-// The whole observation/CFR-polling half of this module has been dead code
-// since it was written. Runs after DOM is ready so _wireObservation()'s
-// getElementById lookups over OBS_TARGETS find real elements.
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => CP.init());
-  } else {
-    CP.init();
-  }
-}

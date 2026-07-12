@@ -26,17 +26,7 @@
   const ORCH          = window.__NEXUS_ORCH__ || 'http://127.0.0.1:9000';
 
   // ── Canvas setup ────────────────────────────────────────────────────────
-  // §BUG FIXED 2026-07-11 — getContext('2d') on a null canvas throws
-  // uncaught and halts the rest of this IIFE (same failure mode the
-  // codebase already documents and guards against for ui/home/index.html's
-  // #void particle canvas — see that file's §FIX 2026-06-21 comment).
-  // nerve.js previously had no such guard: any page that loaded this
-  // script without also injecting nerve.html's canvas+HUD markup first
-  // (exactly what ui/home/shell.js did until this fix) crashed on load.
   const canvas = document.getElementById('nerve-canvas');
-  if (!canvas) {
-    console.warn('[nerve] #nerve-canvas not found in DOM — nerve.html\'s fragment must be present before nerve.js loads. Skipping init.');
-  } else {
   const ctx    = canvas.getContext('2d');
   let W, H;
 
@@ -311,8 +301,4 @@
     nodes: ()   => ({ ...nodes }),
     wires: ()   => wires.slice(),
   };
-  } // §BUG FIXED 2026-07-11 — closes the `if (!canvas) {...} else {` guard added above.
-    // NexusNerve is intentionally left unexposed on window when the canvas
-    // never existed, rather than exposing an object whose methods would
-    // throw the moment anything called them (§1.2 — loud, not deferred).
 })();

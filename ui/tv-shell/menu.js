@@ -52,26 +52,7 @@ async function _copilotPrompt(prompt, outputEl) {
     prompt, sessionId: SESSION_ID, channel: 'menu', channelName: 'Menu'
   });
   if (outputEl) {
-    // §BUG FIXED 2026-07-11 — "co-pilot in the tv-ui is showing json
-    // strings, fixed over and over but keeps getting changed back."
-    // Traced /api/prompt's actual server-side code thoroughly (every
-    // branch — intuition fast-path, cortex intuition, the full lifeline
-    // ask pipeline) and found no JSON.stringify-into-.text leak in THIS
-    // endpoint specifically (that bug was real, but lived in
-    // /api/prompt/fulfill's dispatchFn — fixed separately, see
-    // copilot/server.js's extractDispatchText). This endpoint's own code
-    // looks correct on every path traced. Rather than keep guessing at a
-    // cause I can't reproduce live, this is the other half: a guard here
-    // that can never silently display malformed data, and that makes the
-    // NEXT occurrence immediately diagnosable instead of another round of
-    // "it's back, fix it again" with no trace of what shape broke.
-    const text = result?.text;
-    if (text !== undefined && typeof text !== 'string') {
-      console.error('[menu] /api/prompt returned non-string .text — this IS the json-strings bug if you\'re seeing it. Shape:', result);
-      outputEl.textContent = `[co-pilot response was not plain text — logged to console for diagnosis]\n${JSON.stringify(text, null, 2)}`;
-    } else {
-      outputEl.textContent = text || result?.error || 'No response';
-    }
+    outputEl.textContent = result?.text || result?.error || 'No response';
   }
   return result;
 }

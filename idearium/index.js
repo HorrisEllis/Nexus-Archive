@@ -373,7 +373,7 @@ class IdeaUpdateGate extends Gate {
     const { uuid, fields, causedBy = null } = event.data;
     const idea = this.os.db.ideas.find(i=>i.uuid===uuid);
     if (!idea) { stream.emit(new Event('idearium.error', { op:'idea.update', reason:`uuid not found: ${uuid}` })); return; }
-    const allowed = ['text','tags','compartment','resonanceWith','tensionWith','stability','linkedSpec'];
+    const allowed = ['text','tags','compartment','resonanceWith','tensionWith','stability'];
     for (const k of allowed) { if (fields[k] !== undefined) idea[k] = fields[k]; }
     idea.updatedAt = Date.now();
     idea.causedBy  = causedBy;

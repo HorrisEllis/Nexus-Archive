@@ -279,23 +279,6 @@
     flex-shrink: 0;
   }
 
-  /* §NEW 2026-07-11 — identity/fingerprint switcher, same visual language
-     as #agent-badge on purpose (same row, same interaction pattern —
-     click a badge, get a dropdown), distinct color so it doesn't read as
-     a duplicate of the agent-window switcher next to it. */
-  #identity-badge {
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 3px 8px;
-    background: rgba(180,120,255,0.08);
-    border: 1px solid rgba(180,120,255,0.25);
-    border-radius: 4px;
-    color: #b478ff;
-    white-space: nowrap;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
 
   #picker-btn {
     width: 28px; height: 28px;
@@ -494,35 +477,6 @@
   .agent-dd-item .dd-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
   .agent-dd-item.current { color: var(--accent); }
   .agent-dd-sep { height: 1px; background: var(--border); margin: 4px 2px; }
-
-  /* §NEW 2026-07-11 — identity dropdown, same box/section/item pattern as
-     the agent dropdown above (reuses .agent-dd-section-label/.agent-dd-sep
-     — no need to fork those, they're purely structural), own
-     #identity-dropdown positioning + its own item class so "current mode"
-     highlighting doesn't collide with the agent switcher's "current
-     window" highlighting. */
-  #identity-dropdown {
-    position: fixed;
-    display: none;
-    flex-direction: column;
-    min-width: 200px;
-    background: var(--bg-1);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
-    z-index: 200;
-    overflow: hidden;
-    padding: 6px;
-  }
-  #identity-dropdown.visible { display: flex; }
-  .identity-dd-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 7px 8px; border-radius: 6px; cursor: pointer;
-    font-size: 12px; color: var(--text);
-  }
-  .identity-dd-item:hover { background: var(--bg-3); color: var(--text-bright); }
-  .identity-dd-item.current { color: #b478ff; }
-  .identity-dd-item .dd-dot { width: 6px; height: 6px; border-radius: 50%; background: #b478ff; flex-shrink: 0; }
 
   /* ── Queue panel ──────────────────────────────────────────────────────── */
   #queue-panel {

@@ -246,19 +246,14 @@ class ProviderHost {
     return { ok: true, providerId, url: def.url, status: 'started' };
   }
 
-  // ── Auto-boot providers (called from main/index.js after app ready,
-  //    only when CG_AUTOBOOT_PROVIDERS opts in — lazy-only by default) ──
+  // ── Auto-boot all providers (called from main/index.js after app ready) ──
   async autoBootAll(opts = {}) {
-    const { only = null, ...startOpts } = opts;
-    let providers = listProviders();
-    if (Array.isArray(only)) {
-      providers = providers.filter(p => only.includes(p.id));
-    }
-    _log(`[ProviderHost] pre-warming ${providers.length} provider tab(s) (hidden)…`);
+    const providers = listProviders();
+    _log(`[ProviderHost] auto-booting ${providers.length} provider tabs (hidden)…`);
     const results = [];
     for (const def of providers) {
       try {
-        const r = await this.start(def.id, { show: false, ...startOpts });
+        const r = await this.start(def.id, { show: false, ...opts });
         results.push(r);
       } catch (e) {
         _logWarn(`[ProviderHost] failed to boot ${def.id}:`, e.message);

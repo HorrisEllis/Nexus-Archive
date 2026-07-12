@@ -33,6 +33,7 @@
  *   GET  /api/intelligence/intuition     — fast intuition answer
  *   POST /api/intelligence/intuition     — same, POST body
  *   POST /api/intelligence/mastermind    — causal analysis
+ *   POST /api/intelligence/mastermind/patterns — recurring causal-shape detection (RFR2 delta engine)
  *   POST /api/intelligence/adversarial   — inner-critic: scores & reconciles intuition vs mastermind
  *   GET  /api/intelligence/patterns      — pattern log
  *   GET  /api/intelligence/rca           — root cause analysis entries
@@ -269,7 +270,8 @@ function _contextSnapshot(intent) {
 }
 
 // ── Working memory ────────────────────────────────────────────────────────────
-let _workingMemory = {};
+// (working memory is now backed by the real `working_memory` JAA table —
+// see cortex/memory/decay.js and the /api/memory/working route below)
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 function json(res, status, data) {
@@ -449,6 +451,23 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/intelligence/mastermind') {
     const body = await readBody(req);
     json(res, 200, _mastermindAnalysis(body.prompt, body.context));
+    return;
+  }
+
+  // §RFR2 CONSUMER 2026-07-11 — detectRecurringPatterns (mastermind.js,
+  // the delta engine wired 2026-07-09) had exactly one caller anywhere in
+  // the codebase: its own test (tests/modules/mastermind-fractals.test.js).
+  // Real, tested, reachable from nowhere a person or another system could
+  // actually ask it a question. This route is that path — no new logic,
+  // just the missing door. Honest degrade preserved: a null result (no
+  // graph, bridge unavailable, <3 nodes) reports patternsFound: 0, not an
+  // error — matches detectRecurringPatterns' own contract.
+  if (p === '/api/intelligence/mastermind/patterns') {
+    const body = method === 'POST' ? await readBody(req) : {};
+    const limit = Number(body.limit ?? url.searchParams.get('limit')) || 300;
+    const opts = { minChainLen: body.minChainLen, minOccurrences: body.minOccurrences };
+    const result = await _mastermind.detectRecurringPatterns(limit, opts);
+    json(res, 200, result || { ok: true, patternsFound: 0, patterns: [], reason: 'no causal graph available yet' });
     return;
   }
 
@@ -647,13 +666,26 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §BUILT 2026-07-12 — "not flat or stubs." This used to be
+  // `_workingMemory = {...working, ...body}` — a single mutable object,
+  // no tiering, no expiry, gone the moment the process restarted anyway
+  // (which happened to match wipeOnRestart:true for the working tier by
+  // accident, not by design — a real restart lost it whether or not that
+  // was ever intended). Now backed by the real `working_memory` JAA table,
+  // tier-tagged, timestamped, and actually aged out by cortex/memory/decay.js
+  // on its real schedule (2h evictAfterMs) instead of only ever clearing
+  // on a restart nobody scheduled.
   if (p === '/api/memory/working') {
     if (method === 'POST') {
       const body = await readBody(req);
-      _workingMemory = { ..._workingMemory, ...body };
-      json(res, 200, { ok: true });
+      const key = body.key || 'default';
+      const inserted = jaaDB.upsert('working_memory', {
+        key, value: body.value ?? body, tier: 'working', ts: Date.now(),
+      }, 'key');
+      json(res, 200, { ok: true, id: inserted.id, key: inserted.key });
     } else {
-      json(res, 200, { ok: true, working: _workingMemory });
+      const rows = jaaDB.query('working_memory', {}).filter(r => !r._evicted);
+      json(res, 200, { ok: true, working: rows });
     }
     return;
   }
@@ -913,6 +945,11 @@ server.listen(PORT, '127.0.0.1', () => {
   // health poll so _health stops sitting at boot-time defaults.
   try { require('./core/raid').startHealthPoll(15000); } catch(e) {
     console.warn(`[cortex] RAID health poll failed to start: ${e.message}`);
+  }
+  // §BUILT 2026-07-12 — cortex.spec has declared MEMORY_TIERS since v3.2.0;
+  // this is what actually ages working/short-tier rows out on schedule.
+  try { require('./memory/decay').startDecayTicker(5 * 60 * 1000); } catch (e) {
+    console.warn(`[cortex] memory decay ticker failed to start: ${e.message}`);
   }
   // §GAP CLOSED 2026-07-06 — meta/spatial/system-lattice.js was real,
   // tested, and persisted, but nothing fed it in production — the

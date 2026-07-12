@@ -220,48 +220,27 @@ class DispatchGate extends Gate {
 class ResultGate extends Gate {
   constructor(ctx) { super('route.result'); this._ctx = ctx; }
   transform(event) {
-    const { req, ok, resolve, reject, data } = event.data;
-    // §BUG FIXED 2026-07-11 — THE actual root cause of "co-pilot showing
-    // json strings, over and over, fixed and keeps getting changed back."
-    // Traced across four separate UI surfaces (idearium's spec-engine
-    // dispatch, Clear Glass's copilot/bridge.js, ui/tv-shell/menu.js's
-    // CLI, and finally this one — the tv-shell's ChatGPT dispatch
-    // console) before finding it here: DispatchGate above ALREADY
-    // captures the real downstream response body correctly (`data`,
-    // accumulated from the HTTP response stream) and puts it on the
-    // route.result event. This gate — the one thing standing between a
-    // successful dispatch and the caller — destructured that event
-    // WITHOUT `data` and resolved with only `{ok, uuid, status}`. The
-    // actual answer was captured correctly and then discarded one line
-    // later, every single time, for every request that ever went through
-    // Bridge successfully. Every fix applied upstream of this (the
-    // fallback-chain fixes in copilot/server.js, the display guard in
-    // menu.js) was fixing a symptom of a response that was ALREADY empty
-    // by the time it left Bridge — which is exactly why they kept not
-    // sticking: there was nothing wrong with how those places displayed
-    // the response, because Bridge never sent one.
-    let parsed = null;
-    try { parsed = data ? JSON.parse(data) : null; } catch (_) { parsed = data || null; }
+    const { req, ok, resolve, reject } = event.data;
 
     if (ok) {
       this._ctx.ledger.update(req.uuid, {
         status:      STATUS.FULFILLED,
         completedAt: Date.now(),
-      }).then(() => resolve({ ok: true, uuid: req.uuid, status: STATUS.FULFILLED, response: parsed }));
+      }).then(() => resolve({ ok: true, uuid: req.uuid, status: STATUS.FULFILLED }));
     } else {
       // Dispatch reached target but target returned error
       if (req.attempts < MAX_ATTEMPTS) {
         // Re-queue for retry — emit back into route.request
         const retryReq = patchRequest(req, { status: STATUS.PENDING });
         this._ctx.ledger.update(req.uuid, { status: STATUS.PENDING }).then(() => {
-          resolve({ ok: false, uuid: req.uuid, status: STATUS.PENDING, retry: true, response: parsed });
+          resolve({ ok: false, uuid: req.uuid, status: STATUS.PENDING, retry: true });
         });
       } else {
         this._ctx.ledger.update(req.uuid, {
           status:    STATUS.FAILED,
           failedAt:  Date.now(),
           error:     `target returned ${event.data.status}`,
-        }).then(() => resolve({ ok: false, uuid: req.uuid, status: STATUS.FAILED, response: parsed }));
+        }).then(() => resolve({ ok: false, uuid: req.uuid, status: STATUS.FAILED }));
       }
     }
   }

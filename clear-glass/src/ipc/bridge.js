@@ -194,28 +194,7 @@ class IpcBridge {
       if (!this.errorCapture) return { ok: false, error: 'errorCapture not initialized', errors: [] };
       return { ok: true, errors: this.errorCapture.getRecent(n || 50) };
     });
-    // §BUG FIXED 2026-07-11 — this emitted 'context.switch' (fire-and-forget,
-    // no return value) but the only thing that ever actually switches a
-    // fingerprint is ContextManager.switchFingerprint(), reached via a gate
-    // registered under 'context.fp.switch' — a DIFFERENT event name. Nothing
-    // in this app ever subscribed to plain 'context.switch', so every call
-    // through this channel silently did nothing. The real gate already
-    // works — it's how hostile-page detection auto-rotates fingerprints
-    // (main/index.js) and how copilot's context.fp.switch tool works.
-    // This was the one path a human clicking a UI control would have used,
-    // and it was the one path that didn't reach the real method. Calling
-    // it directly (not via the bus) also means the renderer gets back the
-    // actual new profile/UA instead of nothing, which a manual "switch my
-    // identity" action should show the user.
-    ipcMain.handle('context:switch', async (e, d) => {
-      if (!this.ctxMgr) return { ok: false, error: 'context manager not initialized' };
-      try {
-        const result = await this.ctxMgr.switchFingerprint(d || {});
-        return { ok: true, ...result };
-      } catch (err) {
-        return { ok: false, error: err.message };
-      }
-    });
+    ipcMain.handle('context:switch', async (e, d) => rendererEmit('context.switch', d));
     ipcMain.handle('api:get',        async ()    => this.apiSettings?.getPublic());
     ipcMain.handle('api:set',        async (e, d) => this.apiSettings?.set(d));
     ipcMain.handle('sse:port',       async ()    => this.sse?.port);

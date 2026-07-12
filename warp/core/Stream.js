@@ -9,9 +9,28 @@
  * hook(kind, plugin) is the one extension point — scorer/crystallizer/
  * cascader all attach here, all pure-function-shaped like Gate, no
  * special-casing per kind.
+ *
+ * §COS MERGE 2026-07-11 — cos/siso/Stream.js forked from base SISO and
+ * added a ring buffer (tail/since for late-joining SSE clients and cos's
+ * events CLI), deregister() (compartment teardown), and direct SSE
+ * broadcast. Checked before merging: cos's own header already called
+ * these "COS extension over base SISO" — they were written as additions
+ * from day one, not a competing redesign. Ported verbatim, nothing of
+ * warp's existing axiom/hook/observer machinery touched.
+ *
+ * The one behavior change: gate.transform(event) is now called as
+ * gate.transform(event, this). Safe for every existing warp gate — an
+ * extra argument to a function that only declares one parameter is
+ * simply ignored in JS, not an error — and required for cos's real gates
+ * (cos/host/gates/*.js, 30+ of them), which call `stream.emit(...)`
+ * imperatively from inside transform() using that second argument.
+ * Checked: none of warp's own gates read a second parameter, so this
+ * cannot change anything for them.
  */
+const DEFAULT_RING_CAP = 500;
+
 class Stream {
-  constructor({ log = null, parentStreamId = null, axioms = [] } = {}) {
+  constructor({ log = null, parentStreamId = null, axioms = [], ringCap = DEFAULT_RING_CAP } = {}) {
     this.gates = new Map();
     this.axioms = [...axioms];
     this.pending = [];
@@ -22,6 +41,13 @@ class Stream {
     this.parentStreamId = parentStreamId;
     this._hooks = { scorer: [], crystallizer: [], cascader: [] };
     this._observers = new Map(); // event type -> [handler] — pub/sub, separate from gate routing
+
+    // §COS MERGE — ring buffer + SSE, ported from cos/siso/Stream.js
+    this._seq        = 0;
+    this._ringCap    = ringCap;
+    this._ring       = [];      // circular buffer of stamped events
+    this._wildcards  = [];      // onAny() observers — read-only, not gates
+    this._sseClients = new Set();
   }
 
   register(gate) {
@@ -29,6 +55,17 @@ class Stream {
       throw new Error(`[warp/Stream] Signature collision: '${gate.signature}'`);
     }
     this.gates.set(gate.signature, gate);
+  }
+
+  /**
+   * Unregister a gate by signature. No-op if not found.
+   * §COS MERGE — used by cos when compartments are destroyed and their
+   * gates deregistered. Warp itself never removes a gate once registered
+   * (no prior caller needed this) so this is additive, not a behavior
+   * change for any existing warp consumer.
+   */
+  deregister(signature) {
+    this.gates.delete(signature);
   }
 
   /**
@@ -47,6 +84,23 @@ class Stream {
       const arr = this._observers.get(type) || [];
       const i = arr.indexOf(handler);
       if (i >= 0) arr.splice(i, 1);
+    };
+  }
+
+  /**
+   * onAny(fn) — §COS MERGE. Subscribe to every event regardless of type,
+   * as a read-only observer. Distinct from on(type, handler) above (which
+   * is per-type warp pub/sub, already existed) — this is cos's wildcard
+   * fan-out, used for the events CLI and SSE relay. Kept as a separate
+   * method rather than overloading on() with an optional type — two
+   * different call shapes on one method name is exactly the kind of
+   * ambiguity this codebase's own "collision is a hard error" rule warns
+   * against; two named methods, no ambiguity.
+   */
+  onAny(fn) {
+    this._wildcards.push(fn);
+    return () => {
+      this._wildcards = this._wildcards.filter(f => f !== fn);
     };
   }
 
@@ -107,9 +161,31 @@ class Stream {
    * `async emit()` would silently convert that into an unhandled promise
    * rejection instead of a catchable throw — a real regression for the
    * one system already using this as its backbone, not a hypothetical.
+   *
+   * §COS MERGE 2026-07-11 — every emission now also: stamps into the ring
+   * buffer, fires wildcard (onAny) observers, and broadcasts to any
+   * subscribeSSE() clients. All three are additive side effects that run
+   * regardless of axiom/gate outcome — matching cos's original behavior
+   * where ring/wildcard/SSE saw every event unconditionally, not just
+   * claimed ones.
    */
   emit(event) {
     this.eventCount++;
+    const seq = ++this._seq;
+
+    const stamped = {
+      seq,
+      type: event.type,
+      payload: event.data,
+      timestamp: Date.now(),
+    };
+    this._ring.push(stamped);
+    if (this._ring.length > this._ringCap) this._ring.shift();
+    for (const fn of this._wildcards) {
+      try { fn(stamped); } catch (_) { /* an observer's error never breaks the stream */ }
+    }
+    this._broadcastSSE(stamped);
+
     for (const handler of this._observers.get(event.type) || []) {
       try { handler(event); } catch (_) { /* an observer's error never breaks the stream */ }
     }
@@ -141,7 +217,12 @@ class Stream {
       return;
     }
 
-    const produced = gate.transform(event);
+    // §COS MERGE — pass `this` (the stream) as a second argument. Every
+    // current warp gate declares transform(event) and simply never reads
+    // a second parameter — passing one is a no-op for them. Cos's gates
+    // declare transform(event, stream) and use it to call stream.emit(...)
+    // imperatively from inside their own transform body.
+    const produced = gate.transform(event, this);
 
     // Thenable check, not `produced instanceof Promise` — a caller could
     // hand back any promise-shaped object (e.g. from a different realm/
@@ -183,6 +264,35 @@ class Stream {
       axiomCount: this.axioms.length,
     };
   }
+
+  // ── §COS MERGE — ring buffer API ──────────────────────────────────────────
+  /** Return last N stamped events from the ring buffer. */
+  tail(n = 50) {
+    return this._ring.slice(-n);
+  }
+
+  /** Return all stamped events since a given seq number. */
+  since(afterSeq) {
+    return this._ring.filter(e => e.seq > afterSeq);
+  }
+
+  get seq() { return this._seq; }
+
+  // ── §COS MERGE — SSE API ──────────────────────────────────────────────────
+  subscribeSSE(client) {
+    this._sseClients.add(client);
+    return () => this._sseClients.delete(client);
+  }
+
+  _broadcastSSE(stamped) {
+    if (this._sseClients.size === 0) return;
+    const data = `data: ${JSON.stringify(stamped)}\n\n`;
+    for (const client of this._sseClients) {
+      try { client.write(data); } catch (_) { this._sseClients.delete(client); }
+    }
+  }
+
+  get sseClientCount() { return this._sseClients.size; }
 }
 
 module.exports = { Stream };

@@ -117,7 +117,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture, processMetrics;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -130,42 +130,6 @@ const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service t
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
 app.disableHardwareAcceleration();
-// §BUG FIXED 2026-07-11, REVISED 2026-07-11 — the first version of this
-// fix (app.commandLine.appendSwitch('disable-gpu') + disable-gpu-compositing
-// + disable-software-rasterizer) stopped the fatal crash-loop but broke
-// something worse: every window in this app is frame:false with
-// webviewTag:true (see the win = new BrowserWindow({...}) calls below) —
-// frameless windows AND <webview> tags both depend on the GPU process for
-// compositing, and fully removing that process is a known, documented
-// Electron/Chromium combination that renders a black window instead of
-// content. Confirmed live: the browser chrome painted fine (plain HTML/
-// CSS in the main renderer), the actual page content — loaded via
-// <webview>, which runs its own guest renderer with its own compositing
-// path — did not, on a real machine, via the process-monitor tool built
-// specifically to catch exactly this kind of "did the fix actually work"
-// question.
-//
-// error_code=18 on Windows is very commonly a SANDBOX initialization
-// failure specifically, not a GPU-capability failure in general —
-// --disable-gpu-sandbox targets that directly (removes the sandbox
-// restriction the process was failing to initialize under) while leaving
-// the GPU process itself, and therefore compositing for frameless windows
-// and webviews, intact. This is the standard, narrower fix for this
-// specific failure mode; the blanket --disable-gpu three-switch version
-// is what you reach for when a process shouldn't exist at all, which
-// wasn't true here — this app needs it to exist, just not to need the
-// sandbox it couldn't initialize.
-app.commandLine.appendSwitch('disable-gpu-sandbox');
-// Defensive companion, not the primary fix: even with the sandbox issue
-// addressed above, if the GPU process still crashes occasionally on this
-// machine, Chromium has its OWN internal crash-count circuit breaker that
-// permanently disables GPU usage after enough failures — which is a
-// second, independent circuit breaker stacked on top of autopilot's own
-// (the "crashes in window: 1/6" one). This doesn't prevent a crash; it
-// prevents Chromium's response to a crash from becoming the fatal
-// "GPU process isn't usable. Goodbye." app-kill, so a transient GPU
-// hiccup degrades to a slower frame instead of taking the whole app down.
-app.commandLine.appendSwitch('disable-gpu-process-crash-limit');
 // §CRITICAL fix 2026-06-30 — this was the actual cause of the 6-crash
 // circuit-breaker trip. requestSingleInstanceLock() failing produces a
 // CLEAN exit (code 0, no signal, zero log output) — indistinguishable from
@@ -635,33 +599,21 @@ async function bootstrap() {
     sse:         { emit: (t, d) => emit(t, d) },
     postEvent:   (type, data) => _postEvent(type, data),
   });
-  // §P-CG-01 — NCP provider tabs (claude, chatgpt, gemini, perplexity),
-  // each its own persistent session partition + Guardian userscript
-  // injected via executeJavaScript, replacing Tampermonkey + manual tab
-  // management. Boot is lazy by default now — see the fix note below.
-  // §BUG FIXED 2026-07-11 — this was unconditional: every boot spawned 4
-  // hidden full Chromium renderer windows (claude/chatgpt/gemini/
-  // perplexity), whether or not any of them were about to be used.
-  // src/gates/index.js already supports booting a provider on-demand the
-  // moment something actually needs it (`ph.start(providerId, ...)`) —
-  // auto-boot-all was pure eager duplication of a lazy path that already
-  // works. Default is now lazy-only (no pre-warm at all); set
-  // CG_AUTOBOOT_PROVIDERS to a comma-list ('claude,chatgpt') to pre-warm
-  // specific ones, or 'all' for the old behavior back.
-  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'none').trim();
-  if (autoBootSetting === 'none' || autoBootSetting === '') {
-    console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS to pre-warm specific providers.');
-  } else {
-    const only = autoBootSetting === 'all' ? null : autoBootSetting.split(',').map(s => s.trim()).filter(Boolean);
-    providerHost.autoBootAll({ show: false, only }).then(results => {
-      const ok  = results.filter(r => r.ok).length;
-      const bad = results.filter(r => !r.ok).map(r => r.providerId);
-      console.log(`[ClearGlass] NCP auto-boot: ${ok}/${results.length} providers started${bad.length ? ` (failed: ${bad.join(', ')})` : ''}`);
-      _postEvent('clear-glass.providers.booted', { ok, total: results.length, failed: bad });
-    }).catch(e => {
-      console.warn('[ClearGlass] NCP auto-boot failed:', e.message);
-    });
-  }
+  // §P-CG-01: auto-boot all NCP provider tabs as hidden background windows.
+  // Each provider (claude, chatgpt, gemini, perplexity) gets its own
+  // persistent session partition + Guardian userscript injected via
+  // executeJavaScript — replacing Tampermonkey + manual tab management.
+  // Staggered 1.5s apart to avoid fingerprint/auth collisions.
+  // Do NOT await — we boot async in the background so the rest of the app
+  // continues without waiting for the provider pages to fully load.
+  providerHost.autoBootAll({ show: false }).then(results => {
+    const ok  = results.filter(r => r.ok).length;
+    const bad = results.filter(r => !r.ok).map(r => r.providerId);
+    console.log(`[ClearGlass] NCP auto-boot: ${ok}/${results.length} providers started${bad.length ? ` (failed: ${bad.join(', ')})` : ''}`);
+    _postEvent('clear-glass.providers.booted', { ok, total: results.length, failed: bad });
+  }).catch(e => {
+    console.warn('[ClearGlass] NCP auto-boot failed:', e.message);
+  });
 
   // 8.9. Userscript manager
   // §fix 2026-06-30 — third real instance of the same hardcoded path,
@@ -758,15 +710,6 @@ async function bootstrap() {
   // <!DOCTYPE...")).
   sse.app.get('/contract', (req, res) => res.json(CONTRACT));
   console.log(`[ClearGlass] SSE server :${SSE_PORT}`);
-
-  // 13.6. Process metrics — real answer to "what is actually running,"
-  // not an assertion about it. See process-metrics.js's header for why
-  // this exists now specifically.
-  const { ProcessMetrics } = require('../diagnostic/process-metrics');
-  processMetrics = new ProcessMetrics({ app, sse, providerHost });
-  sse.app.get('/api/metrics', (req, res) => res.json(processMetrics.snapshot()));
-  processMetrics.startPolling(5000);
-  console.log('[ClearGlass] Process metrics live — GET /api/metrics or watch process.metrics on the SSE stream');
 
   // 14. NEXUS registration
   await _registerWithNexus();

@@ -80,6 +80,33 @@ Copied here, not wired — same rule as everything else in this folder.
 
 ## 2026-07-branch-b-cortex-v2/
 
+## CORRECTION 2026-07-12 — most of this section is unnecessary
+
+Checked properly before doing any "reconciliation" work: this tree (Branch A)
+already has its own real, tested, **wired** implementation of nearly
+everything staged below, independently developed, not a stale catch-up
+branch:
+
+| Staged here (Branch B) | This tree's own equivalent | Status |
+|---|---|---|
+| `cortex/liminal-space/index.js` (crystal writer) | `meta/crystal-lattice.js` | real, wired via `lib/compartment-engine.js` |
+| `cortex-intelligence-index.js` (BEP writer) | `cortex/intelligence/mastermind.js`'s `_crystallizeBEPPatterns` (built 2026-07-12) | real, tested |
+| `lib/meta/spatial/*` | `meta/spatial/*` (1134 lines — larger than Branch B's) | real, wired into `cortex/boot.js` + `idearium/api/index.js`, 2 test files |
+| `lib/meta/topo-kernel/*` | `meta/topo-kernel/*` (same name) | real, already wired |
+| `cortex/versionium/causality.js` | `meta/cfr/graph.js` | real, wired into cortex/RAID/spatial, has its own CLI (`cli/cfr-debug.js`), 5 test files |
+
+**Genuinely still absent from both branches**, checked one more time
+before concluding: `fix-map.js`, `suppression-score.js`,
+`trajectory-recorder.js`, `attractor-landscape.js` as dedicated files.
+`seam` as a general architectural concept is extensively built elsewhere
+(`lib/seam/`, `seams/seam-contracts.js`, `emerge/seams/`) — but not as the
+specific memory-primitive Mastevos v8.0 described.
+
+The files under `cortex/` and `lib/meta/` in this folder can be treated as
+reference-only from here — kept for provenance, not a to-do list.
+`cortex-v2.js` (the CLI) may still be worth a look on its own terms as an
+alternate interface, but not as something this tree is missing underneath.
+
 A **second, separate divergent branch** — `nexus-master`/`nexus-master__1_`
 (identical to each other) plus 13 numbered snapshots `nexus-system-12`
 through `nexus-system-24` (chronological — file counts climb 661→751 across
@@ -118,3 +145,22 @@ with this tree. Merging either one in means resolving that disagreement
 first — this folder holds both sides staged, not a recommendation for
 which one wins.
 
+
+
+## CORRECTION 2026-07-12
+
+Two entries under `2026-07-branch-a-additions/` above — `lib/compartment-engine.js`
+and `lib/autonomous-loop.js` (+ its orchestrator counterpart) — were staged
+as "missing from this branch, found in nexus-merged." That was wrong. Both
+files already existed in this tree, byte-identical to the nexus-merged
+copies (confirmed by diff). The comparison that flagged them as missing was
+run against a stale local copy of this package, not the true source tree.
+
+They are genuinely real and live here already:
+- `meta/crystal-lattice.js` — real crystallization writer, wired via
+  `lib/compartment-engine.js`'s `updateOnExecution()` calls on PASS/FAIL/DELETE.
+- `cortex/boot.js` already had a real reader for the `crystals` table
+  (`_buildPatterns()`), waiting on exactly that writer.
+
+The two staged copies under `2026-07-branch-a-additions/lib/` can be
+deleted — they are duplicates of files this tree already has, not additions.

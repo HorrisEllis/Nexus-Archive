@@ -658,25 +658,6 @@ const server = http.createServer(async (req, res) => {
   // directory and looked for 'index.html' underneath it. Check what's
   // actually at each candidate path by type, not by assuming the shape.
   if (M==='GET' && top==='ui' && sub) {
-    // §BUG FIXED 2026-07-11 — idearium's real UI directory is
-    // nexus/idearium/ui/, a sibling of UI_ROOT (nexus/ui/), not nested
-    // under it. Every other system's full-tab UI lives inside UI_ROOT,
-    // so the generic lookup below works for them; idearium's never has,
-    // and /ui/idearium has 404'd with "UI not found: idearium" since
-    // whenever the tv-shell's full-idearium-tab iframe (ch-idr-full) was
-    // built to point at it. tests/integration.test.js already asserts
-    // `GET /ui/idearium → serves idearium UI HTML, status 200` — this
-    // was a documented requirement failing silently, not a new one.
-    if (sub === 'idearium') {
-      const ideariumSubPath = rest || 'index.html';
-      const ideariumDirect = _safePath(path.join(ROOT, 'idearium', 'ui'), ideariumSubPath);
-      if (!ideariumDirect) return json(res, 403, { ok:false, error:'forbidden path' });
-      if (fs.existsSync(ideariumDirect) && fs.statSync(ideariumDirect).isFile()) {
-        return serveFile(res, ideariumDirect);
-      }
-      return json(res, 404, { ok:false, error:`idearium UI not found: ${ideariumSubPath} (looked in nexus/idearium/ui/)` });
-    }
-
     const subPath = rest ? path.join(sub, rest) : sub;
     const direct = _safePath(UI_ROOT, subPath);
     if (!direct) return json(res, 403, { ok:false, error:'forbidden path' });
