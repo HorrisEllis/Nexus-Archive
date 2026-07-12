@@ -5,6 +5,45 @@
 Every behavior is a Gate on a Stream. No module talks to another directly.
 Commands arrive as Events. Gates transform them. SSE broadcasts results.
 
+## §ADDENDUM 2026-07-11 (6) — v3.7.0, a real "built but never connected" gap closed
+
+Went looking for "expand the code, then rebuild the UI." First pass was
+wrong: I assumed the renderer barely called any of the real backend API
+and said so — that was a bad grep, not a real finding. `renderer/
+browser.js` already calls bookmarks, rewind, providers, cookies, DOM
+driver, mesh, diagnostics, and userscripts extensively. Corrected course
+and diffed the *actual* full IPC surface (`src/preload/index.js`) against
+every handler registered anywhere (`src/main/index.js` +
+`src/ipc/bridge.js`) to find the real gap instead of guessing from a
+narrower search.
+
+Found one, and it's a good one: `ContextManager.switchFingerprint()` —
+spoof this tab's browser identity as Chrome/Firefox/Safari/Edge, generate
+a fresh profile, swap the user agent — is real, complete, and already
+had two live callers: `main/index.js` auto-triggers it when a page shows
+hostile/blocking behavior, and it's registered as a copilot tool
+(`context.fp.switch`) so you can already ask co-pilot to do it. The only
+path that never worked was a human clicking something — the manual IPC
+handler (`context:switch`) emitted an event, `'context.switch'`, that
+nothing in the entire codebase ever subscribed to. The real gate is
+registered under `'context.fp.switch'` — one word different, silently
+wrong for as long as this handler has existed.
+
+Fixed the handler to call `switchFingerprint()` directly (and return the
+real result — new mode + UA — instead of firing into the void), and
+added the first manual UI for it: an identity badge next to the existing
+agent-window switcher, same interaction pattern (click → dropdown →
+pick), Chrome/Firefox/Safari/Edge. It also listens for
+`context.fp.switched` so it stays honest when hostile-detection rotates
+your fingerprint automatically — the badge won't say "Chrome" while
+you're actually spoofing Firefox because a page forced a rotation you
+didn't ask for.
+
+Not verified live — same Electron limitation as everything else marked
+this way in this file. Syntax-checked, and the full call chain traced by
+hand end to end (renderer → preload → ipc handler → ContextManager →
+back), but nobody has clicked the actual button yet.
+
 ## §ADDENDUM 2026-07-11 (5) — v3.6.0, a real regression from my own earlier fix
 
 The GPU crash fix in addendum (1) below stopped the fatal crash-loop, but

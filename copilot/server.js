@@ -888,20 +888,23 @@ const server = http.createServer(async (req, res) => {
 
     streamIngest({ type: 'copilot.answered', requestId, intent: 'ask', modelUsed });
 
-    // §BUG FIXED 2026-07-05: this pre-wrapped the answer in
-    // {result:{response:{...}}} to match what it assumed the bridge's
-    // eventual response shape would look like — but bridge/router.js's
-    // ResultGate already does that wrapping itself, once, around
-    // whatever raw body this endpoint returns. Pre-wrapping here meant
-    // the real payload ended up nested one level too deep
-    // (result.response.result.response.text instead of result.response.text),
-    // so Clear Glass's unwrap chain (_bridgeDispatch → _callNexusCopilot)
-    // always bottomed out on an object with no `.text` and no `.response`,
-    // silently returning ''. Confirmed live: the bridge tab showed
-    // {"ok":true,"uuid":...,"status":"fulfilled"} with no actual answer
-    // anywhere in it — the bare ledger-confirmation shape, not a bug in
-    // the ledger, a bug in what got put on the wire for it to confirm.
-    // Fix: return the flat answer. ResultGate wraps it exactly once.
+    // §BUG FIXED 2026-07-05, CORRECTED 2026-07-11: this originally
+    // pre-wrapped the answer in {result:{response:{...}}}, and got
+    // changed to the flat shape below on the theory that ResultGate
+    // already wraps a raw body once, so pre-wrapping here doubled it.
+    // That theory was half right and half wrong: pre-wrapping here WAS
+    // the wrong move, but ResultGate wasn't actually wrapping anything —
+    // it was destructuring the route.result event without ever pulling
+    // out `data` (DispatchGate's captured response body) at all, so the
+    // resolved value never contained ANY version of this endpoint's
+    // response, flat or nested. This fix looked right and WAS right,
+    // it just couldn't be verified from this side, since nothing
+    // downstream of router.js's ResultGate ever received whatever shape
+    // was sent here. Confirmed live, repeatedly, across sessions: the
+    // bridge tab kept showing {"ok":true,"uuid":...,"status":"fulfilled"}
+    // with no actual answer anywhere in it. The real fix is in
+    // bridge/router.js's ResultGate — this endpoint's shape was correct
+    // then and is correct now; it was never the actual problem.
     json(res, 200, { ok: true, text, modelUsed, contextLayers: 7, requestId, sessionId });
     return;
   }

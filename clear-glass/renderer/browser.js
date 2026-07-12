@@ -1428,6 +1428,84 @@ It will write and install it for you.`);
     if (agentDdVisible && !agentDropdown.contains(e.target) && e.target !== agentBadge) closeAgentDropdown();
   });
 
+  // ── Identity / fingerprint switcher dropdown ────────────────────────────
+  // §NEW 2026-07-11 — ContextManager.switchFingerprint() (Firefox/Chrome/
+  // Safari/Edge spoofed profiles) already worked for automatic hostile-page
+  // rotation and copilot's own context.fp.switch tool; this is the first
+  // manual control for it, now that ipc/bridge.js's context:switch handler
+  // actually reaches it (see that file's fix comment — it used to emit an
+  // event nothing subscribed to).
+  const identityBadge = document.getElementById('identity-badge');
+  const identityDropdown = document.getElementById('identity-dropdown');
+  const identityModeLabel = document.getElementById('identity-mode-label');
+  let identityDdVisible = false;
+  let currentIdentityMode = 'chrome'; // default profile Clear Glass boots with
+
+  const IDENTITY_MODES = [
+    { mode: 'chrome',  label: 'Chrome' },
+    { mode: 'firefox', label: 'Firefox' },
+    { mode: 'safari',  label: 'Safari' },
+    { mode: 'edge',    label: 'Edge' },
+  ];
+
+  function openIdentityDropdown() {
+    const rows = [];
+    rows.push(`<div class="agent-dd-section-label">Browser Identity</div>`);
+    for (const m of IDENTITY_MODES) {
+      rows.push(`<div class="identity-dd-item${m.mode === currentIdentityMode ? ' current' : ''}" data-mode="${m.mode}">
+        <span class="dd-dot"></span><span>${m.label}</span>
+      </div>`);
+    }
+    rows.push(`<div class="agent-dd-sep"></div>`);
+    rows.push(`<div style="padding:6px 8px;font-size:10px;color:var(--text-dim)">Generates a fresh spoofed profile for this tab and switches its user agent. Also happens automatically when a page shows hostile/blocking behavior.</div>`);
+
+    identityDropdown.innerHTML = rows.join('');
+    identityDropdown.querySelectorAll('[data-mode]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const mode = el.dataset.mode;
+        identityBadge.disabled = true;
+        try {
+          const result = await cg.context.switch({ agentId, mode });
+          if (result?.ok !== false) {
+            currentIdentityMode = mode;
+            identityModeLabel.textContent = mode;
+          } else {
+            console.warn('[identity] switch failed:', result?.error);
+          }
+        } catch (err) {
+          console.warn('[identity] switch failed:', err.message);
+        } finally {
+          identityBadge.disabled = false;
+          closeIdentityDropdown();
+        }
+      });
+    });
+
+    const rect = identityBadge.getBoundingClientRect();
+    identityDropdown.style.left = rect.left + 'px';
+    identityDropdown.style.top  = (rect.bottom + 6) + 'px';
+    identityDropdown.classList.add('visible');
+    identityDdVisible = true;
+  }
+  function closeIdentityDropdown() { identityDdVisible = false; identityDropdown.classList.remove('visible'); }
+
+  identityBadge.addEventListener('click', (e) => {
+    e.stopPropagation();
+    identityDdVisible ? closeIdentityDropdown() : openIdentityDropdown();
+  });
+  document.addEventListener('click', (e) => {
+    if (identityDdVisible && !identityDropdown.contains(e.target) && e.target !== identityBadge) closeIdentityDropdown();
+  });
+  // Reflect automatic hostile-detection-triggered switches (main/index.js
+  // emits context.fp.switch on hostile-page detection) so the badge stays
+  // truthful even when the user didn't click anything.
+  es.addEventListener('context.fp.switched', (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      if (d.agentId === agentId) { currentIdentityMode = d.mode; identityModeLabel.textContent = d.mode; }
+    } catch (_) {}
+  });
+
   // ── Right-click context menu ──────────────────────────────────────────
   const ctxMenu = document.getElementById('ctx-menu');
 

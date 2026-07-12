@@ -1987,7 +1987,13 @@ async function asSend(){
         source: 'tv-shell',
       }, 60000);
       out.textContent = '';
-      const text = result?.text || result?.response || JSON.stringify(result).slice(0, 400);
+      // §BUG FIXED 2026-07-11 — the real bug was upstream (bridge/router.js's
+      // ResultGate was discarding the actual response — see its own fix
+      // comment for the full story). This fallback chain could still pick
+      // JSON.stringify(result) if some future response genuinely has
+      // neither .text nor .response — kept as a last resort, but now it's
+      // actually a last resort instead of the routine outcome.
+      const text = result?.text || result?.response || (result ? `[unstructured response — keys: ${Object.keys(result).join(', ')}]` : 'No response');
       out.style.color = 'rgba(0,229,255,.92)';
       out.textContent = text;
       // Model tag

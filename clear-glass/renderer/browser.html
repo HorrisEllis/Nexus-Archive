@@ -41,6 +41,14 @@
 
   <button id="agent-badge" title="Agent context — click to switch">default ▾</button>
 
+  <!-- §NEW 2026-07-11 — the fingerprint identity switcher. ContextManager.
+       switchFingerprint() (Firefox/Chrome/Safari/Edge spoofed profiles)
+       already worked for automatic hostile-page rotation and for copilot's
+       own context.fp.switch tool — this is the first manual, user-facing
+       control for it. See ipc/bridge.js's context:switch handler fix for
+       why it never worked from a UI before this. -->
+  <button id="identity-badge" title="Browser identity — click to switch fingerprint">🎭 <span id="identity-mode-label">chrome</span> ▾</button>
+
   <div class="chrome-divider"></div>
 
   <!-- Page / session tools -->
@@ -181,6 +189,7 @@
 
 <!-- Agent window switcher dropdown -->
 <div id="agent-dropdown"></div>
+<div id="identity-dropdown"></div>
 
 <!-- Userscript manager panel -->
 <div id="userscript-panel">
