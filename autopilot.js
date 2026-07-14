@@ -230,12 +230,31 @@ function _spawnKernel(kernel, color) {
     return null;
   }
 
-  const proc = spawn(resolvedCmd, kernelArgs, {
+  // §CRASH ROOT CAUSE 2026-07-14 — from a real Windows console: clear-glass
+  // crash-looped with "'D:\Backups\Downloads\nexus-merged-0.9.13' is not
+  // recognized as an internal or external command." The install directory
+  // has a space in its name ("nexus-merged-0.9.13 (1)") — a completely
+  // normal thing for a real download folder to have, not a misconfiguration.
+  // shell:true is required for .cmd files on Windows (see comment below),
+  // but spawn() does NOT auto-quote the command string for you when shell
+  // is true — that's the caller's job, and nothing here was doing it. cmd.exe
+  // received the unquoted absolute path and split it at the first space,
+  // trying to run "D:\Backups\Downloads\nexus-merged-0.9.13" (truncated) as
+  // the command. Every kernel using a relative .cmd path (currently just
+  // clear-glass) resolves to an absolute path via resolvedCmd above and was
+  // equally exposed — this isn't clear-glass-specific, it's anything under
+  // shell:true with a space anywhere in the real install path.
+  const _needsQuoting = (s) => /\s/.test(s) && !(s.startsWith('"') && s.endsWith('"'));
+  const isShell = process.platform === 'win32' && kernel.cmd.endsWith('.cmd');
+  const spawnCmd  = isShell && _needsQuoting(resolvedCmd) ? `"${resolvedCmd}"` : resolvedCmd;
+  const spawnArgs = isShell ? kernelArgs.map(a => _needsQuoting(String(a)) ? `"${a}"` : a) : kernelArgs;
+
+  const proc = spawn(spawnCmd, spawnArgs, {
     cwd: resolvedCwd,
     env: { ...process.env, ...(kernel.env || {}) },
     stdio: ['ignore', 'pipe', 'pipe'],
     // .cmd files on Windows must run through the shell
-    shell: process.platform === 'win32' && kernel.cmd.endsWith('.cmd'),
+    shell: isShell,
   });
 
   s.proc = proc;
