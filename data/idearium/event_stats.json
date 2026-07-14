@@ -9,13 +9,14 @@
       "totalMs": 7773352
     },
     "idearium.spec-engine.created": {
-      "count": 3,
-      "lastTs": 1783764177577,
+      "count": 4,
+      "lastTs": 1783839526824,
       "intervals": [
         7773914,
-        8930
+        8930,
+        75349247
       ],
-      "totalMs": 7782844
+      "totalMs": 83132091
     },
     "idearium.spec-engine.chunk.complete": {
       "count": 5,

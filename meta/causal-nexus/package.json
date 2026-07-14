@@ -1,0 +1,22 @@
+{
+  "name": "@causal-nexus/compress",
+  "version": "6.0.0",
+  "type": "module",
+  "description": "Compression, timeline registry, and dynamic invariant baseline for Causal Nexus kernels",
+  "main": "modules/compress/index.js",
+  "bin": {
+    "nexus": "cli/nexus.js"
+  },
+  "exports": {
+    ".":       "./modules/compress/index.js",
+    "./cli":   "./cli/nexus.js",
+    "./ui":    "./ui/dashboard.html"
+  },
+  "scripts": {
+    "cli":   "node cli/nexus.js",
+    "repl":  "node cli/nexus.js repl",
+    "help":  "node cli/nexus.js --help"
+  },
+  "keywords": ["causal", "nexus", "compress", "timeline", "invariant", "snapshot"],
+  "license": "MIT"
+}

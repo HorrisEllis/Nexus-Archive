@@ -1,5 +1,22 @@
 # NEXUS Changelog
 
+## 2026-07-12 — session handoff, system 0.9.11 → 0.9.12
+
+Full session handoff written: **`HANDOFF-2026-07-11.md`** (repo root). Covers
+everything shipped this session (idearium, tv-ui, Clear Glass, copilot/
+Bridge's actual JSON-string root cause, the Emerge consumer that closes
+the build loop, loom's 57 real seeded wires, diagnostic's new automatic
+wire-integrity scan) with honest per-item verification status, plus four
+concrete open priorities (spec-drift cleanup, the never-chased
+cfr-influence bug, the unintegrated/ staging decisions, expanding loom's
+coverage) and a prioritized live-verification checklist. Read that first.
+
+Also fixed in passing: `lib/version.js`'s `idearium` entry was stuck at
+3.0.0 despite being bumped to 3.2.0 everywhere else this session — same
+class of drift this whole session was about, in my own bookkeeping.
+`system` version was 0.9.10 in lib/version.js vs 0.9.11 in package.json;
+both now 0.9.12.
+
 ## 2026-07-11 — idearium multi-template + repo file CRUD, tv-ui channels, Clear Glass UI decomposition
 
 - **idearium** — spec bumped v3.0.0 → v3.1.0. Multi-template spec composition

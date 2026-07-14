@@ -134,6 +134,60 @@ async function main() {
     }
   });
 
+  await check('a :param path segment (e.g. /proposals/:id/evaluate) matches a real id and extracts it into args — regression test for a real bug found this session', async () => {
+    const paramOps = [
+      { id: 'thing.list',     verb: 'list',     method: 'GET',  apiPath: '/things' },
+      { id: 'thing.evaluate', verb: 'evaluate', method: 'POST', apiPath: '/things/:id/evaluate' },
+    ];
+    scaffoldSystem('param-check', { port: 9914, operations: paramOps, outDir, dataDir });
+    const { createServer } = require(path.join(outDir, 'param-check', 'api', 'index.js'));
+    const server = createServer();
+    await new Promise(resolve => server.listen(9914, resolve));
+    try {
+      const body = await new Promise((resolve, reject) => {
+        const req = http.request('http://127.0.0.1:9914/things/abc123/evaluate', { method: 'POST' }, res => {
+          let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
+        });
+        req.on('error', reject);
+        req.end();
+      });
+      const parsed = JSON.parse(body);
+      assert.strictEqual(parsed.op, 'thing.evaluate', `expected the :id route to match a real id, got op="${parsed.op}"`);
+      assert.strictEqual(parsed.args.id, 'abc123', `expected :id to be extracted into args.id, got ${JSON.stringify(parsed.args)}`);
+    } finally {
+      await new Promise(resolve => server.close(resolve));
+    }
+  });
+
+  await check('a POST body is actually read and merged into args, not silently ignored — regression test for a real bug found this session', async () => {
+    const bodyOps = [
+      { id: 'thing.create', verb: 'create', method: 'POST', apiPath: '/things' },
+    ];
+    scaffoldSystem('body-check', { port: 9915, operations: bodyOps, outDir, dataDir });
+    const { createServer } = require(path.join(outDir, 'body-check', 'api', 'index.js'));
+    const server = createServer();
+    await new Promise(resolve => server.listen(9915, resolve));
+    try {
+      const body = await new Promise((resolve, reject) => {
+        const payload = JSON.stringify({ text: 'a real proposed value', causedBy: 'test-trigger-id' });
+        const req = http.request('http://127.0.0.1:9915/things', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+        }, res => {
+          let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
+        });
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
+      });
+      const parsed = JSON.parse(body);
+      assert.strictEqual(parsed.args.text, 'a real proposed value', `expected the POST body's text field to reach args, got ${JSON.stringify(parsed.args)}`);
+      assert.strictEqual(parsed.args.causedBy, 'test-trigger-id');
+    } finally {
+      await new Promise(resolve => server.close(resolve));
+    }
+  });
+
   await check('invalid system name is rejected before anything is written', async () => {
     assert.throws(() => scaffoldSystem('Bad Name!', { port: 1, operations, outDir, dataDir }), /lowercase/);
   });

@@ -43,6 +43,7 @@ const emerge          = require('./emerge.hooks');
 const copilot         = require('./copilot.hooks');
 const eravos           = require('./eravos.hooks');
 const ollama           = require('./ollama.hooks');
+const { structuredSideEffects } = require('./side-effect-parser.js');
 
 const SYSTEMS = {
   guardian:    guardianHooks,
@@ -89,6 +90,52 @@ function seamByComponent(componentId) {
 
 function active() {
   return allHooks().filter(h => h.status === 'active');
+}
+
+// §BUILT 2026-07-13 — the real payoff of hooks/side-effect-parser.js.
+// contract.sideEffects being prose meant "what depends on this table
+// changing" or "who listens for this event" had no answer except reading
+// every hook by hand. These three functions are that answer, queryable.
+
+// Every hook whose structured sideEffects include a write to this jaa
+// table. Call with the bare table name ('ideas'), not 'jaa:ideas' — the
+// jaa: prefix is an internal detail of how writes are stored, not
+// something a caller should need to know.
+function writersOf(table) {
+  const target = `jaa:${table}`;
+  return allHooks().filter(h => structuredSideEffects(h).writes.includes(target));
+}
+
+// Every hook whose structured sideEffects include emitting this event type.
+function emittersOf(eventType) {
+  return allHooks().filter(h => structuredSideEffects(h).emits.includes(eventType));
+}
+
+// The real "if I change this, what's affected" traversal. Given a hook id,
+// returns every OTHER hook that writes to a table this hook also writes to,
+// or emits an event this hook's `to.surface` plausibly consumes (matched by
+// system name, the only non-guessed signal available — an honest partial
+// match, not a full data-flow analysis). Returns { writers, possibleConsumers }
+// rather than a single flat list, since the two relationships are found by
+// different, differently-reliable methods and collapsing them would hide that.
+function affectedBy(hookId) {
+  const hook = byId(hookId);
+  if (!hook) return { writers: [], possibleConsumers: [] };
+  const eff = structuredSideEffects(hook);
+
+  const writers = eff.writes.flatMap(target => {
+    const table = target.replace(/^jaa:/, '');
+    return writersOf(table).filter(h => h.id !== hookId);
+  });
+
+  const possibleConsumers = allHooks().filter(h =>
+    h.id !== hookId && h.from?.surface && (h.from.surface === '*' || h.from.surface === hook.to?.surface)
+  );
+
+  return {
+    writers: [...new Map(writers.map(h => [h.id, h])).values()],
+    possibleConsumers: [...new Map(possibleConsumers.map(h => [h.id, h])).values()],
+  };
 }
 
 function summary() {
@@ -179,4 +226,8 @@ module.exports = {
   summary,
   seedArchitectRegistry,
   seamManifest,
+  structuredSideEffects,
+  writersOf,
+  emittersOf,
+  affectedBy,
 };

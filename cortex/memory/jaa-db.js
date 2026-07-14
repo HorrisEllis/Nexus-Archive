@@ -9,6 +9,7 @@
  *
  * API surface (mirrors what callers expect):
  *   jaaDB.insert(table, row)           → row
+ *   jaaDB.upsert(table, row, keyField?) → row
  *   jaaDB.get(table, where)            → row | null
  *   jaaDB.getById(table, id)           → row | null
  *   jaaDB.query(table, where?, opts?)  → row[]
@@ -34,6 +35,7 @@ function _getStore() {
 // Thin adapter — exposes the jaaDB call shape used across the codebase
 const jaaDB = {
   insert(table, row)             { return _getStore().insert(table, row); },
+  upsert(table, row, keyField)   { return _getStore().upsert(table, row, keyField); },
   get(table, where)              { return _getStore().get(table, where); },
   getById(table, id)             { return _getStore().get(table, { id }); },
   query(table, where, opts)      { return _getStore().all(table, where, opts); },

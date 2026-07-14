@@ -1,0 +1,66 @@
+{
+  "component": {
+    "nexus.nexus-healer": {
+      "id": "nexus.nexus-healer",
+      "namespace": "nexus-healer",
+      "name": "nexus-healer",
+      "version": "0.1.0",
+      "uuid": "nexus-nexus-healer-v1-0000-2026-0702-jamesbrooks-scaffold",
+      "registeredAt": 1784007187030
+    }
+  },
+  "seam": {},
+  "hook": {
+    "nexus.nexus-healer.propose": {
+      "id": "nexus.nexus-healer.propose",
+      "component_id": "nexus.nexus-healer",
+      "name": "propose",
+      "type": "api",
+      "direction": "out",
+      "uuid": "nexus-nexus-healer-hook-propose-v1-0000-2026-0702-jamesbrooks-scaffold",
+      "novelType": false,
+      "registeredAt": 1784007187032
+    },
+    "nexus.nexus-healer.list": {
+      "id": "nexus.nexus-healer.list",
+      "component_id": "nexus.nexus-healer",
+      "name": "list",
+      "type": "api",
+      "direction": "out",
+      "uuid": "nexus-nexus-healer-hook-list-v1-0000-2026-0702-jamesbrooks-scaffold",
+      "novelType": false,
+      "registeredAt": 1784007187035
+    },
+    "nexus.nexus-healer.evaluate": {
+      "id": "nexus.nexus-healer.evaluate",
+      "component_id": "nexus.nexus-healer",
+      "name": "evaluate",
+      "type": "api",
+      "direction": "out",
+      "uuid": "nexus-nexus-healer-hook-evaluate-v1-0000-2026-0702-jamesbrooks-scaffold",
+      "novelType": false,
+      "registeredAt": 1784007187037
+    },
+    "nexus.nexus-healer.merge": {
+      "id": "nexus.nexus-healer.merge",
+      "component_id": "nexus.nexus-healer",
+      "name": "merge",
+      "type": "api",
+      "direction": "out",
+      "uuid": "nexus-nexus-healer-hook-merge-v1-0000-2026-0702-jamesbrooks-scaffold",
+      "novelType": false,
+      "registeredAt": 1784007187038
+    },
+    "nexus.nexus-healer.archive": {
+      "id": "nexus.nexus-healer.archive",
+      "component_id": "nexus.nexus-healer",
+      "name": "archive",
+      "type": "api",
+      "direction": "out",
+      "uuid": "nexus-nexus-healer-hook-archive-v1-0000-2026-0702-jamesbrooks-scaffold",
+      "novelType": false,
+      "registeredAt": 1784007187042
+    }
+  },
+  "wire": {}
+}

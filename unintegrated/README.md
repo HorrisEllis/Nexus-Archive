@@ -118,3 +118,112 @@ with this tree. Merging either one in means resolving that disagreement
 first — this folder holds both sides staged, not a recommendation for
 which one wins.
 
+## CORRECTION 2026-07-12 — most of this section is unnecessary
+
+Checked properly before doing any "reconciliation" work: this tree (Branch A)
+already has its own real, tested, **wired** implementation of nearly
+everything staged below, independently developed, not a stale catch-up
+branch:
+
+| Staged here (Branch B) | This tree's own equivalent | Status |
+|---|---|---|
+| `cortex/liminal-space/index.js` (crystal writer) | `meta/crystal-lattice.js` | real, wired via `lib/compartment-engine.js` |
+| `cortex-intelligence-index.js` (BEP writer) | `cortex/intelligence/mastermind.js`'s `_crystallizeBEPPatterns` (built 2026-07-12) | real, tested |
+| `lib/meta/spatial/*` | `meta/spatial/*` (1134 lines — larger than Branch B's) | real, wired into `cortex/boot.js` + `idearium/api/index.js`, 2 test files |
+| `lib/meta/topo-kernel/*` | `meta/topo-kernel/*` (same name) | real, already wired |
+| `cortex/versionium/causality.js` | `meta/cfr/graph.js` | real, wired into cortex/RAID/spatial, has its own CLI (`cli/cfr-debug.js`), 5 test files |
+
+**Genuinely still absent from both branches**, checked one more time
+before concluding: `fix-map.js`, `suppression-score.js`,
+`trajectory-recorder.js`, `attractor-landscape.js` as dedicated files.
+`seam` as a general architectural concept is extensively built elsewhere
+(`lib/seam/`, `seams/seam-contracts.js`, `emerge/seams/`) — but not as the
+specific memory-primitive Mastevos v8.0 described.
+
+The files under `cortex/` and `lib/meta/` in this folder can be treated as
+reference-only from here — kept for provenance, not a to-do list.
+`cortex-v2.js` (the CLI) may still be worth a look on its own terms as an
+alternate interface, but not as something this tree is missing underneath.
+
+A **second, separate divergent branch** — `nexus-master`/`nexus-master__1_`
+(identical to each other) plus 13 numbered snapshots `nexus-system-12`
+through `nexus-system-24` (chronological — file counts climb 661→751 across
+them; `nexus-integrated-5` through `nexus-integrated-13`, checked
+separately, are this same branch's earlier history, same flat top-level
+shape, file counts 775 down to 667 continuing the same lineage backwards).
+This branch restructures cortex entirely differently from Branch A above —
+neither branch contains the other's work. `nexus-system-24` is the
+furthest point found on it.
+
+This branch is where the "signal/trajectory/memory layer" I reported as
+lost two turns ago actually lives — correction already delivered in full
+then; files staged here for real this time:
+
+| File | Corresponds to (old Mastevos v8.0 spec name) | Verified |
+|------|------|------|
+| `cortex/cortex-v2.js` | — (new, no v8.0 equivalent) | Real, 1356 lines, CLI hitting `/api/memory?table=crystals\|bep_patterns\|lattice_nodes` |
+| `cortex-intelligence-index.js` (from `cortex/intelligence/index.js`) | `crystalball/bep-engine.js` | Real — `jaaDB.insert('bep_patterns', p)` at line 321, confirmed by grep |
+| `cortex/liminal-space/index.js` | `crystalball/mcl.js` | Real — `jaaDB.insert('crystals', crystal)` at line 338 |
+| `cortex/versionium/index.js` + `causality.js` | `versionium/causality.js` (NEXUS-VERSIONIUM.spec) | Real, matches the spec's description closely |
+| `lib/meta/topo-kernel/*` | `foundation/topo-wire.js`, `core/signal/signal-topology.js` | Real module (index/bus/snr + 2 JSON schemas), not one file |
+| `lib/meta/spatial/*` | `core/trajectory/attractor-landscape.js` | Real — matches this tree's own `cortex.spec` module description ("Sigma engine + resonance lattice") |
+| `lib/meta/telemetry-codec/latent-model.js` | `core/signal/latent-model.js` | Exact filename match, just relocated — **but broken as shipped**: `node --check` fails. Its own `export const DIM = ...` (line 23) and `export class ServiceLatentModel {` (line 59) are both commented out in the source, while the class body and every `DIM.MOMENTUM`-style reference below them are not — a bare constructor sitting outside any class wrapper. Confirmed this is in the original file, not introduced by copying it here. Needs those two lines uncommented before it's even syntactically valid, let alone wired. |
+
+**Not found as dedicated files anywhere, in either branch** — `fix-map.js`,
+`seam.js` (as a memory primitive), `suppression-score.js`,
+`trajectory-recorder.js` as standalone files. Content-grep suggests these
+concepts are folded into `cortex/self-heal/index.js`, `cortex/healer/index.js`,
+and `cortex/memory/jaa-db.js` rather than living separately — not confirmed
+as full reimplementations, flagged as the next thing to actually trace
+rather than assumed either way.
+
+**Before integrating anything from this section**: Branch A and Branch B
+restructured cortex independently and disagree with each other, not just
+with this tree. Merging either one in means resolving that disagreement
+first — this folder holds both sides staged, not a recommendation for
+which one wins.
+
+
+
+## CORRECTION 2026-07-12
+
+Two entries under `2026-07-branch-a-additions/` above — `lib/compartment-engine.js`
+and `lib/autonomous-loop.js` (+ its orchestrator counterpart) — were staged
+as "missing from this branch, found in nexus-merged." That was wrong. Both
+files already existed in this tree, byte-identical to the nexus-merged
+copies (confirmed by diff). The comparison that flagged them as missing was
+run against a stale local copy of this package, not the true source tree.
+
+They are genuinely real and live here already:
+- `meta/crystal-lattice.js` — real crystallization writer, wired via
+  `lib/compartment-engine.js`'s `updateOnExecution()` calls on PASS/FAIL/DELETE.
+- `cortex/boot.js` already had a real reader for the `crystals` table
+  (`_buildPatterns()`), waiting on exactly that writer.
+
+The two staged copies under `2026-07-branch-a-additions/lib/` can be
+deleted — they are duplicates of files this tree already has, not additions.
+
+## 2026-07-12 — Causal Nexus v6 brought in (meta/causal-nexus/), not staged here
+
+This is NOT staged in unintegrated/ — it's live at `meta/causal-nexus/`.
+Noted here only so this file stays the map of what's where. The real,
+tested URCK kernel (`createKernel`) that `meta/rfr2/compress|clip|context|
+version-gate` were built against — confirmed genuinely absent from
+everywhere in this tree and from this very unintegrated/ folder two turns
+ago — was found in a fresh upload (causal-nexus-v6_0_0_1_.zip) and verified
+by running its real test suite: 722/722 passing across kernel, causality,
+sigma, clip, compress, context, ledger, version-gate, adapter-sandbox,
+observer-enforcement, modules, loader-context, and cross-domain invariants.
+
+Real, confirmed, deliberate conflict with the already-live `meta/cfr/`:
+both compute "sigma" and both build a causal graph, but on opposite
+philosophies — `meta/cfr/sigma.js` stores permanently at write time and
+never recomputes; the new engine is a pure observer that never stores by
+design. Resolved by direction, not by me picking a side: the new engine's
+live/recomputed reading is now the one to trust for "what is the regime
+right now," triggered on two real events (a source file changing, or a new
+high-sigma entry landing in the old permanent record) — see
+`meta/causal-nexus/recompute-trigger.cjs`. It writes to a new table,
+`sigma_live`, and does not touch or replace `sigma_records` — every
+existing consumer of the old permanent record (RAID, cortex health checks)
+is unaffected.

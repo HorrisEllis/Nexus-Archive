@@ -67,6 +67,20 @@ if (_replayed.length) {
 // that destructures a single object) while nothing ever exercised that path to
 // catch it. One function now. Both callers use it — that class of drift can't
 // recur because there's only one place left for it to recur in.
+// §BUILT 2026-07-14 — the real enforcement decision, kept pure and
+// separately testable on purpose: no I/O, no RAID call, no queue
+// construction — just "given this provider and this size, should this
+// go through the real chunker instead of a single raw dispatch."
+// Threshold matches spec-parser's own real maxChunkSize default (3000) —
+// content already past one real chunk's worth is exactly the case this
+// exists to catch, not just multi-chunk-sized content.
+const CHUNK_ENFORCED_PROVIDERS = Object.freeze(['ollama', 'chatgpt']);
+const CHUNK_ENFORCE_THRESHOLD  = 3000;
+
+function _shouldEnforceChunking(provider, combinedSize) {
+  return CHUNK_ENFORCED_PROVIDERS.includes(provider) && combinedSize > CHUNK_ENFORCE_THRESHOLD;
+}
+
 function _buildSeamQueue(specText, opts = {}) {
   const {
     provider     = 'chatgpt',
@@ -486,9 +500,9 @@ async function writeToNexus(job) {
 
 // ── job lifecycle ─────────────────────────────────────────────────────────────
 
-function createJob({ command, provider, prompt, content }) {
+function createJob({ command, provider, prompt, content, source }) {
   const id  = randomUUID();
-  const job = { id, command, provider, prompt, content: content || null,
+  const job = { id, command, provider, prompt, content: content || null, source: source || null,
     status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now() };
   jobs.set(id, job);
   console.log(`[guardian] job created: ${id} → ${provider} /${command}`);
@@ -523,6 +537,60 @@ function dispatchJob(job) {
 
 
 function _doDispatch(job) {
+  // §BUILT 2026-07-13 — "Guardian is supposed to use Clear Glass. It's
+  // NEXUS' browser. Give the co-pilot more access." Real, direct dispatch
+  // to Clear Glass's command surface instead of a chat provider — same
+  // pattern as mistral/ollama below (route directly, no NCP tab needed),
+  // because a browser action isn't a chat completion either.
+  if (job.provider === 'browser') {
+    // §BUILT 2026-07-14 — real physical browser control had zero
+    // approval gate before this, arguably the highest-stakes gap found
+    // in this audit (navigate/DOM-mutate/driver-exec are real actions
+    // with real side effects, not just text generation). 'browser' added
+    // to copilot's and cli's contracts specifically for this — see
+    // cortex/contract/index.js's own dated note.
+    let _approval;
+    try {
+      const raid = require('../cortex/core/raid');
+      _approval = raid._approveTool(job.source || 'unknown', String(job.command || ''), { action: 'browser' });
+    } catch (e) {
+      updateJob(job.id, { status: 'error', error: `RAID approval gate unavailable: ${e.message}` });
+      bus.emit('guardian.job.error', { jobId: job.id, error: 'raid_unavailable', provider: 'browser' });
+      return true;
+    }
+    if (!_approval.approved) {
+      updateJob(job.id, { status: 'error', error: `RAID denied browser dispatch: ${_approval.reason}` });
+      bus.emit('guardian.job.error', { jobId: job.id, error: _approval.reason, provider: 'browser' });
+      return true;
+    }
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log(`[guardian] browser job → Clear Glass :7702/cmd (${job.command})`);
+    const { dispatchBrowserCommand } = require('./clear-glass-bridge.js');
+    // job.content arrives as whatever the caller sent over HTTP — a real
+    // http.request caller (like the browser_action agent-tool) sends it
+    // JSON-stringified, since request bodies are strings; a direct
+    // in-process call might pass an object. Handle both rather than
+    // assume the shape and fail confusingly on the more common real path.
+    let cmdData = job.content;
+    if (typeof cmdData === 'string') {
+      try { cmdData = JSON.parse(cmdData); } catch (_) { cmdData = { raw: cmdData }; }
+    }
+    dispatchBrowserCommand({ eventType: job.command, data: cmdData || {} })
+      .then(result => {
+        if (result.ok) {
+          updateJob(job.id, { status: 'complete', response: JSON.stringify(result.result), completedAt: Date.now() });
+          bus.emit('guardian.job.complete', { jobId: job.id, provider: 'browser', command: job.command });
+        } else {
+          updateJob(job.id, { status: 'error', error: result.error });
+          bus.emit('guardian.job.error', { jobId: job.id, error: result.error, provider: 'browser' });
+        }
+      })
+      .catch(e => {
+        updateJob(job.id, { status: 'error', error: e.message });
+        bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'browser' });
+      });
+    return true;
+  }
   // Mistral routes directly to ollama-bridge — no NCP browser tab needed
   if (job.provider === 'mistral') {
     updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
@@ -2179,6 +2247,22 @@ function handleExtendedRoutes(req, res, url, method) {
     const queues = [..._activeQueues.values()].map(q => q.toJSON());
     pRes(res, 200, { ok:true, active: queues.length, queues }); return true;
   }
+  // §BUILT 2026-07-13 — lib/seam/chunk-lifecycle.js's canonical vocabulary
+  // existed with zero real cross-system callers; lib/seam/cross-system-
+  // status.js is the report it was built for. Real state from both
+  // idearium's spec manifests and this process's own queue_compartments
+  // JAA table, normalized through the existing translation tables — no
+  // third reimplementation of the state mapping.
+  if (method==='GET' && url.pathname==='/seam/status/cross-system') {
+    try {
+      const { status } = require('../lib/seam/cross-system-status.js');
+      const staleMs = url.searchParams.get('staleMs');
+      const result = status(staleMs ? { staleMs: parseInt(staleMs) } : {});
+      pRes(res, 200, { ok: true, ...result }); return true;
+    } catch (e) {
+      pRes(res, 500, { ok: false, error: e.message }); return true;
+    }
+  }
   if (method==='GET' && url.pathname.startsWith('/seam/queues/')) {
     const qid = url.pathname.split('/')[3];
     const q   = _activeQueues.get(qid);
@@ -2983,8 +3067,89 @@ function handleExtendedRoutes(req, res, url, method) {
         pRes(res, 400, { ok:false, error:'prompt required' }); return;
       }
 
+      // §BUILT 2026-07-14 — "small llm models, and ChatGPT.com/c needs to
+      // be able to generate the code from the endpoint. That's why
+      // chunking needs to be reinforced, not just an option." Checked
+      // the real gap first: chunking only ever ran through the explicit
+      // .spec/.specText/.specFile branch above — a raw prompt of any
+      // size, bound for any provider, skipped it entirely. Given LAW_I
+      // tries Ollama first for every raw dispatch, and ChatGPT is the
+      // fallback when RAID itself is unreachable, nearly every raw
+      // dispatch in this system lands on exactly the two targets that
+      // most need bounded input. This is the enforcement: large content
+      // bound for a small/local model or ChatGPT is chunked automatically,
+      // through the same real pipeline (_buildSeamQueue/parseSpec) the
+      // explicit .spec path already uses — not a second implementation.
+      if (_shouldEnforceChunking(provider, prompt.length + content.length)) {
+        try {
+          const raid = require('../cortex/core/raid');
+          // Same RAID approval gate the explicit .spec path already
+          // requires (§FIX 2026-06-21's own reasoning: the constraint
+          // layer applies "regardless of how the target was chosen") —
+          // this path chooses the target automatically by size, but the
+          // same gate still has to hold.
+          const approval = raid._approveTool(body.source || 'unknown', (prompt + content).slice(0, 200), { action: 'forge', proof: body.proof });
+          if (!approval.approved) {
+            pRes(res, 403, { ok: false, error: `RAID denied automatic chunking: ${approval.reason}` });
+            return;
+          }
+        } catch (e) {
+          pRes(res, 503, { ok: false, error: `RAID approval gate unavailable, refusing to auto-chunk without it: ${e.message}` });
+          return;
+        }
+
+        const specText = [prompt, content].filter(Boolean).join('\n\n');
+        try {
+          const { queue, plan } = _buildSeamQueue(specText, {
+            provider, title: body.title || `auto-chunked: ${command}`,
+            splitOn: body.splitOn || 'heading', maxChunkSize: body.maxChunkSize || 3000,
+          });
+          _physQueue.enqueue({
+            uuid: queue.uuid, content: specText, ext: 'spec',
+            tags: ['seam', 'auto-chunked', provider, plan.meta.name || 'unnamed'],
+            priority: body.priority || 'normal', source: body.source || 'api', project: body.project || null,
+            meta: { queueId: queue.uuid, totalChunks: plan.totalChunks },
+          });
+          if (ncp.isConnected(provider)) { queue.start(); }
+          else {
+            const pq = pendingQueue.get(provider) || [];
+            pq.push({ _seamQueue: queue });
+            pendingQueue.set(provider, pq);
+          }
+          pRes(res, 200, {
+            ok: true, type: 'seam', autoChunked: true,
+            queueId: queue.uuid, provider, total: plan.totalChunks + 1, meta: plan.meta,
+            status: ncp.isConnected(provider) ? 'dispatching' : 'queued_waiting_for_provider',
+          });
+        } catch (e) {
+          pRes(res, 400, { ok: false, error: 'auto-chunk spec parse failed: ' + e.message });
+        }
+        return;
+      }
+
+      // §BUILT 2026-07-14 — found during an invariant audit prompted by
+      // the chunking-enforcement fix: this was the actual ungated default
+      // case. The explicit .spec path and the auto-chunk path both went
+      // through RAID's approval gate; this — which is what nearly every
+      // small prompt in the system actually hits — never did. action:
+      // 'chat', not 'forge' — this is a plain dispatch, not a self-
+      // modification request, and copilot's own contract explicitly
+      // denies 'forge' by design (gating this with the wrong action name
+      // would have silently broken copilot's own basic dispatch).
+      try {
+        const raid = require('../cortex/core/raid');
+        const approval = raid._approveTool(body.source || 'unknown', (prompt + content).slice(0, 200), { action: 'chat', proof: body.proof });
+        if (!approval.approved) {
+          pRes(res, 403, { ok: false, error: `RAID denied dispatch: ${approval.reason}` });
+          return;
+        }
+      } catch (e) {
+        pRes(res, 503, { ok: false, error: `RAID approval gate unavailable, refusing to dispatch without it: ${e.message}` });
+        return;
+      }
+
       // §LAW II — createJob writes to JAA
-      const job = createJob({ command, provider, prompt, content });
+      const job = createJob({ command, provider, prompt, content, source: body.source || null });
       dispatchJob(job);
       pRes(res, 200, { ok:true, jobId: job.id, status: job.status, provider });
 

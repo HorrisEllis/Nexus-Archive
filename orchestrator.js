@@ -1779,6 +1779,8 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='seam' && uuid==='sessions')        return json(res,200,await GET('guardian','/seam/sessions'));
     if (M==='POST' && action==='seam' && uuid==='retry')           return json(res,200,await POST('guardian','/seam/retry',await readBody(req)));
     if (M==='GET'  && action==='seam' && uuid==='watchdog' && op==='status') return json(res,200,await GET('guardian','/seam/watchdog/status'));
+    // §BUILT 2026-07-13 — lib/seam/cross-system-status.js's real report.
+    if (M==='GET'  && action==='seam' && uuid==='status' && op==='cross-system') return json(res,200,await GET('guardian','/seam/status/cross-system'));
 
     // Events SSE proxy
     if (M==='GET' && action==='events') {

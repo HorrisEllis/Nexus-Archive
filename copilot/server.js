@@ -399,6 +399,54 @@ async function _injectSessionHistory(session, contextText) {
   } catch(_) { return contextText; }
 }
 
+// §BUILT 2026-07-13 — chunk_2 of docs/nexus-copilot-recall.spec: "copilot
+// AUTOMATICALLY pulls relevant recall into context before answering —
+// associative memory without the user asking." Deliberately distinct from
+// _injectSessionHistory above, not a variant of it:
+//   - session history = the last N messages of THIS session, by position,
+//     only on the first exchange (continuity — "what did we just say").
+//   - recall context = whatever's most RELEVANT to the CURRENT prompt,
+//     across ALL past sessions, on EVERY exchange (association — "what do
+//     we know about this topic, from whenever we discussed it").
+// Built on top of the real §1.2-adjacent bugfix in cortex/boot.js's sibling
+// route (POST /api/recall was silently dropping `query`) — checked that fix
+// lands before building this, since this chunk would have silently
+// inherited the same brokenness otherwise.
+//
+// Score threshold, not a fixed top-K alone — an irrelevant result with a
+// low score is worse than no result; injecting it would poison the prompt
+// exactly like this spec's own failure_modes_to_avoid warns against.
+const RECALL_CONTEXT_SCORE_THRESHOLD = 0.3;
+const RECALL_CONTEXT_TOP_K = 3;
+
+async function _injectRecallContext(prompt, contextText) {
+  if (!prompt || prompt.length < 8) return contextText; // too short to search meaningfully
+  try {
+    const mem = await _fetch(`${CX_URL}/api/recall`, {
+      method: 'POST',
+      timeout: 2500,
+      body: { intent: 'general', query: prompt },
+    });
+    // §FIXED 2026-07-13 — found by the relevant/irrelevant test this chunk's
+    // own drift_gate requires, not assumed correct: a prompt with zero real
+    // topical overlap ("explain quantum entanglement") was still surfacing
+    // freshly-pushed, completely unrelated content, because recency alone
+    // was enough to cross the score threshold. Fix: require an actual
+    // topical signal (lexical, causal, or bep score > 0) in addition to the
+    // threshold — recency can raise a genuinely relevant result's rank, but
+    // can't manufacture relevance alone.
+    const results = (mem?.results || [])
+      .filter(r => (r.score || 0) >= RECALL_CONTEXT_SCORE_THRESHOLD)
+      .filter(r => r.breakdown && ((r.breakdown.lexical || 0) > 0 || (r.breakdown.causal || 0) > 0 || (r.breakdown.bep || 0) > 0))
+      .slice(0, RECALL_CONTEXT_TOP_K);
+    if (!results.length) return contextText; // honest empty — nothing relevant enough, not a fabricated match
+    const block = results
+      .map(r => `  [score ${r.score.toFixed(2)}] ${(r.content || '').slice(0, 200)}`)
+      .join('\n');
+    return contextText + `\n\n=== RELEVANT PAST CONTEXT (${results.length} match${results.length===1?'':'es'}) ===\n${block}`;
+  } catch (_) { return contextText; } // best-effort — never blocks a real answer over a recall lookup
+}
+
 // ── Dispatch to Ollama sovereign system ───────────────────────────────────────
 async function _dispatchToOllama(prompt, context, opts = {}) {
   return _post(`${OL_URL}/api/jobs`, {
@@ -608,6 +656,25 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §NEW 2026-07-11 — copilot only ever PULLED events (subscribing out to
+  // Guardian/Cortex SSE streams via _connectGuardianStream/
+  // _connectCortexStream). No system without its own SSE server could
+  // ever push an event into copilot's stream/bus — which is exactly
+  // Emerge's situation (a compiler library, not a service, confirmed:
+  // no http.createServer anywhere under emerge/). Rather than build a
+  // whole SSE server just for Emerge's consumer to report
+  // accept/complete/fail, this is the general missing counterpart: any
+  // system can POST a well-formed event here and it reaches the same
+  // streamIngest() pull-based events already do — same ring buffer, same
+  // expectation-watcher, same /sse broadcast.
+  if (method === 'POST' && p === '/api/event') {
+    const body = await readBody(req);
+    if (!body?.type) { json(res, 400, { ok:false, error:'event.type required' }); return; }
+    streamIngest({ ...body, ts: body.ts || Date.now() });
+    json(res, 200, { ok: true });
+    return;
+  }
+
   if (method === 'POST' && p === '/api/build') {
     const body      = await readBody(req);
     const sessionId = body.sessionId || req.headers['x-session-id'];
@@ -616,6 +683,31 @@ const server = http.createServer(async (req, res) => {
     _modBuilder.build(body.description, { requestId: body.requestId, sessionId, skipGaps: body.skipGaps })
       .then(result => {
         broadcast('copilot.build.complete', { ok: result.ok, passed: result.passed });
+        // §NEW 2026-07-11 — the real trigger for the
+        // 'module-build-dispatched-then-accepted' expectation (see
+        // expectation-watcher.js's own comment on it). module-builder.js's
+        // build() only calls cq.dispatch() — which just writes a file —
+        // when result.passed is true; this is that dispatch, now made
+        // observable to the expectation watcher instead of invisible to
+        // everything except the filesystem. If Emerge ever gets a real
+        // consumer that calls cq.accept()/cq.complete() and emits a
+        // matching event, this expectation is exactly what will confirm
+        // it actually closed the loop — until then, it's the thing that
+        // keeps saying, correctly, that it hasn't.
+        if (result.passed && result.contract) {
+          try {
+            _copilotBus.emit('emerge.contract.dispatched', {
+              type: 'emerge.contract.dispatched',
+              payload: { contractUuid: result.contract, moduleName: result.plan?.name, requestId: result.requestId },
+              ts: Date.now(),
+            });
+            _copilotBus.emit('*', {
+              type: 'emerge.contract.dispatched',
+              payload: { contractUuid: result.contract, moduleName: result.plan?.name, requestId: result.requestId },
+              ts: Date.now(),
+            });
+          } catch (e) { console.warn('[copilot] failed to emit emerge.contract.dispatched:', e.message); }
+        }
         json(res, 200, result);
       })
       .catch(e => json(res, 500, { ok:false, error: e.message }));
@@ -668,6 +760,9 @@ const server = http.createServer(async (req, res) => {
 
     // §P103: inject session history on first exchange
     contextText = await _injectSessionHistory(session, contextText);
+    // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
+    // just session-start), best-effort, never blocks.
+    contextText = await _injectRecallContext(prompt, contextText);
 
     // §ADDED 2026-07-07 — persona support. A `persona` param (defaults to
     // 'default') selects a real personality profile (cortex/personas.js)
@@ -841,6 +936,9 @@ const server = http.createServer(async (req, res) => {
     let contextText = '';
     try { contextText = await _analysis.assembleContext(prompt, _stream, session); } catch(_) {}
     contextText = await _injectSessionHistory(session, contextText);
+    // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
+    // just session-start), best-effort, never blocks.
+    contextText = await _injectRecallContext(prompt, contextText);
 
     const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0,500), sessionId);
     if (mastermind?.analysis) contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0,400)}`;
@@ -1016,6 +1114,9 @@ const server = http.createServer(async (req, res) => {
 
     // §P103: session history injection (first exchange only)
     contextText = await _injectSessionHistory(session, contextText);
+    // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
+    // just session-start), best-effort, never blocks.
+    contextText = await _injectRecallContext(prompt, contextText);
 
     // §P110: Cortex MASTERMIND causal enrichment
     const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0, 500), sessionId);

@@ -85,6 +85,28 @@ const DEFAULT_EXPECTATIONS = [
     timeoutMs: 300000,
     message: (data) => `Pipeline ${data.pipelineId}'s build finished but verify/compare/promote never reached a terminal state within 5 minutes.`,
   },
+  {
+    // §NEW 2026-07-11 — the actual gap found while explaining "what
+    // should happen" when a build is requested: module-builder.js's
+    // build() writes a contract to emerge/input/<uuid>.json via
+    // cq.dispatch() and nothing on Emerge's side has ever consumed it —
+    // no accept(), no complete(), confirmed by grepping every file under
+    // emerge/ for any reference to the contract queue at all. This
+    // expectation makes that gap a permanent, automatic, observable test
+    // instead of a silent dead end: every real build request now checks
+    // itself, and until an Emerge-side consumer exists, this SHOULD fire
+    // on every single build — that's correct, not a bug in the
+    // expectation. It goes quiet only once Emerge actually picks
+    // contracts up.
+    id: 'module-build-dispatched-then-accepted',
+    trigger: 'emerge.contract.dispatched',
+    triggerMatch: () => true,
+    expect: 'emerge.contract.*',
+    expectMatch: (data, type) => type === 'emerge.contract.accepted' || type === 'emerge.contract.complete' || type === 'emerge.contract.failed',
+    linkKey: (data) => data.contractUuid,
+    timeoutMs: 360000, // contracts carry their own 5-minute ttlMs; give it a minute past that before calling it unheard
+    message: (data) => `Build contract ${data.contractUuid} ("${data.moduleName || 'unknown module'}") was dispatched to Emerge but nothing accepted or completed it within 6 minutes — Emerge has no consumer wired to emerge/input/ yet.`,
+  },
 ];
 
 function createExpectationWatcher(bus, { expectations = DEFAULT_EXPECTATIONS } = {}) {

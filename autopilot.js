@@ -71,6 +71,17 @@ const ALL_KERNELS = [
   { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'] },
   { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true },
   { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true },
+  // §NEW 2026-07-11 — emerge/consumer.js. Emerge itself is a compiler
+  // LIBRARY (no http.createServer anywhere under emerge/, confirmed by
+  // grep) — this is the process that was missing entirely, not a service
+  // that existed and wasn't supervised. Without it, every contract
+  // copilot/module-builder.js dispatches to emerge/input/ sits there
+  // forever; the 'module-build-dispatched-then-accepted' expectation
+  // (copilot/lib/expectation-watcher.js) exists specifically to make that
+  // failure loud instead of silent. optional: true — a build request
+  // that can't be picked up yet shouldn't trip the whole system's circuit
+  // breaker, same reasoning as copilot/loom above.
+  { name: 'emerge',       cmd: 'node', args: ['emerge/consumer.js'], optional: true },
   { name: 'loom',         cmd: 'node', args: ['loom/server.js'],    optional: true },
   // Clear Glass sovereign browser — Electron + inline wire bridge.
   // Registers itself AND ErosmancerOS with the orchestrator on boot.

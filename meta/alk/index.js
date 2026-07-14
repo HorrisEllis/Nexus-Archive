@@ -27,6 +27,7 @@
 const { randomUUID } = require('crypto');
 const fs             = require('fs');
 const path           = require('path');
+const { CausalGraph } = require('../cfr/graph.js');
 
 const ROOT      = path.join(__dirname, '../..');
 const DATA_DIR  = process.env.NEXUS_DATA_ROOT
@@ -152,28 +153,31 @@ function rewind(uuid, { reason = 'user-initiated rewind' } = {}) {
 }
 
 // ── ancestors(uuid) — walk the causedBy chain ────────────────────────────────
-// Returns [parent, grandparent, ...root] — nearest first.
+// Returns [parent, grandparent, ...root] — nearest first, excludes uuid itself.
+//
+// §CONSOLIDATED 2026-07-13 — was its own standalone causedBy walk, same
+// pattern as versionium/causality.js had before that got the same fix.
+// Delegates to meta/cfr/graph.js's CausalGraph now, which is already the
+// canonical implementation everywhere else in this tree (causal-lookup.js,
+// meta/causal/compound.js, versionium/causality.js). ALK's own contract is
+// different from both CausalGraph's native output (oldest-first, includes
+// the starting node) and versionium's (oldest-first, includes the starting
+// node) — ALK excludes the node itself and wants nearest-first. Preserved
+// exactly rather than silently changing callers' expectations: take
+// CausalGraph's oldest-first-including-self list, drop the last entry
+// (the starting node), reverse the rest.
 function ancestors(uuid) {
-  const chain = [];
-  let current = uuid;
-  const seen  = new Set();
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    const node = _index.get(current);
-    if (!node?.causedBy) break;
-    chain.push(node.causedBy);
-    current = node.causedBy;
-  }
-  return chain;
+  const graph = new CausalGraph();
+  for (const node of _index.values()) graph.ingest(node);
+  const withSelf = graph.ancestors(uuid, 50); // oldest-first, includes uuid
+  return withSelf.slice(0, -1).reverse().map(n => n.uuid); // nearest-first, uuids only — matches original return shape exactly
 }
 
 // ── descendants(uuid) — find all decisions caused by this one ─────────────────
 function descendants(uuid) {
-  const result = [];
-  for (const [, node] of _index) {
-    if (node.causedBy === uuid) result.push(node);
-  }
-  return result;
+  const graph = new CausalGraph();
+  for (const node of _index.values()) graph.ingest(node);
+  return graph.descendants(uuid, 50);
 }
 
 // ── query(filter) — search decisions ─────────────────────────────────────────

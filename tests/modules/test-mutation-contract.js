@@ -115,7 +115,7 @@ test('T-011', 'uninitialized module fails loudly, never silently no-ops (§1.2)'
   // Build a fresh, un-init'd instance by clearing the require cache —
   // proves the audit-first guard actually fires rather than asserting it
   // by reading the source.
-  delete require.cache[require.resolve('../../lib/mutation-contract')];
+  delete require.cache[require.resolve('../../orchestrator/lib/mutation-contract')];
   const freshMc = require('../../orchestrator/lib/mutation-contract');
   const r = freshMc.mutateProperty('test.widget.panel', 'comp_properties.style.color', '#000', { issuedVia: 'cli' });
   assert.strictEqual(r.ok, false);

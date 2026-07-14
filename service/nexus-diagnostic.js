@@ -35,6 +35,14 @@ const { createContractVerifier, loadContracts } = require('../meta/cfr/contract-
 const { createCFRField, computeRegime }         = require('../meta/cfr/field');
 const { createBaseline } = require('../lib/baseline');
 const { sigma, mean }    = require('../lib/baseline');
+// §NEW 2026-07-11 — loom/schema/axioms.js's loom.wire-endpoints-exist
+// axiom already HARD-rejects a dangling wire at declare time — real,
+// working, verified live. But nothing checks for the OTHER shape of the
+// same problem: a hook declared as an output that never got a wire at
+// all, which the axiom can't catch because it only fires when a wire is
+// actually being declared. This diagnostic makes that check periodic and
+// automatic instead of something someone has to think to run by hand.
+const { LoomDriver } = require('../loom/schema/index.js');
 // ── Meta layer: telemetry codec replaces hand-rolled stats where available ────
 let _metaTelemetry = null;
 function _getMetaTel() {
@@ -213,6 +221,77 @@ function startService() {
 
   // In-memory gap store (backed by ledger)
   const openGaps = new Map();
+
+  // §NEW 2026-07-11 — the actual gap this session found: "the diagnostic
+  // tool doesn't do much." It had real wire-validation logic
+  // (_extractWires/_validateWires below) — reachable, correct, but only
+  // via a manual GET /components call, and reading a THIRD data source
+  // (static registry-components.js files) separate from both loom's
+  // enforced registry and the real runtime code (IPC handlers, gate()
+  // registrations, event emitters) where every actual bug this session
+  // found was hand-written and unchecked. This is the periodic,
+  // automatic version, reading loom's REAL registry (the one now
+  // actually seeded — see loom/seed/2026-07-11-session-wires.js) —
+  // same onGap/openGaps/broadcast/ledger pattern the baseline monitors
+  // above already use, so a dangling wire shows up in the exact same
+  // place "[diag] GAP idearium: baseline_deviation sigma=0.3" already
+  // does, not a second, separate reporting surface nobody thinks to check.
+  function _wireIntegrityScan() {
+    let driver;
+    try { driver = new LoomDriver({}); }
+    catch (e) { console.warn('[diag] wire-integrity scan: loom unavailable —', e.message); return; }
+
+    const graph = driver.graph();
+    const hookById = new Map(graph.nodes.filter(n => n.kind === 'hook' || n.direction).map(n => [n.id, n]));
+    // Fall back to scanning raw nodes if `kind` isn't tagged the way expected —
+    // §1.2: a scan that silently finds nothing because of a shape mismatch
+    // is worse than one that errors loudly.
+    if (hookById.size === 0 && graph.nodes.length > 0) {
+      console.warn('[diag] wire-integrity scan: graph().nodes shape unexpected — 0 hooks matched out of', graph.nodes.length, 'nodes');
+    }
+
+    const wiredFrom = new Set(graph.edges.map(e => e.from));
+    const wiredTo   = new Set(graph.edges.map(e => e.to));
+
+    for (const node of graph.nodes) {
+      if (!node.direction) continue; // components have no direction; only hooks do
+      // §CORRECTED 2026-07-11 — caught by running this against the real
+      // seeded data, not just reading the logic: a webserver/api hook's
+      // 'in' direction means "an external client calls this," and by
+      // definition nothing inside the declared graph wires into it —
+      // the caller is a browser, not another component. Flagging those
+      // as dangling was a false positive on the very first real run.
+      // Only 'callto'/'direct'/'event_bus' in-hooks are suspicious when
+      // unwired, since those SHOULD have an internal source.
+      const isEntryPoint = node.direction === 'in' && (node.type === 'webserver' || node.type === 'api');
+      const isOrphanOut = node.direction === 'out' && !wiredFrom.has(node.id);
+      const isOrphanIn  = node.direction === 'in'  && !isEntryPoint && !wiredTo.has(node.id);
+      if (!isOrphanOut && !isOrphanIn) continue;
+
+      const gapKey = `wire-integrity:${node.id}`;
+      if (openGaps.has(gapKey)) continue; // don't re-open every scan — same dedup discipline as the stuck-contract gaps above
+
+      const gap = {
+        uuid: gapKey,
+        type: 'dangling-hook',
+        system: node.component_id || 'unknown',
+        hookId: node.id,
+        direction: node.direction,
+        detail: isOrphanOut
+          ? `hook '${node.id}' is declared as an OUTPUT but no wire connects it to anything — an emit/call with no possible listener`
+          : `hook '${node.id}' is declared as an INPUT but no wire ever targets it — dead code, or a caller that was never wired`,
+      };
+      openGaps.set(gap.uuid, gap);
+      broadcast({ type: 'gap.found', gap, ts: Date.now() });
+      try { ico.ledger.append('gaps', { ...gap, ts: Date.now() }); } catch (_) {}
+      console.log(`[diag] GAP ${gap.system}: ${gap.type} hook=${gap.hookId} (${gap.direction})`);
+    }
+  }
+  // Wire declarations don't change every 15s the way system health does —
+  // every 60s is frequent enough to catch a regression quickly without
+  // spamming a scan that reads the whole registry each time.
+  _wireIntegrityScan();
+  setInterval(_wireIntegrityScan, 60000);
 
   // ── CFR field — local diagnostic field, nudged by gap/poll events ──────────
   const cfrField = createCFRField();

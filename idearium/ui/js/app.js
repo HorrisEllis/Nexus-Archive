@@ -102,11 +102,34 @@ function openSSE() {
 function refreshOnEvent(ev) {
   // re-pull the relevant slice rather than trust a partial payload
   if (!ev || !ev.type) return;
-  if (ev.type.startsWith('idea.'))   { loadIdeas(); }
-  if (ev.type.startsWith('gap.'))    { loadGaps(); }
-  if (ev.type.startsWith('spec.'))   { loadSpecs(); }
-  if (ev.type==='push.complete')     { loadSnapshots(); }
-  if (ev.type==='snr.update')        { loadStats(); }
+  // §BUG FIXED 2026-07-11 — found via loom's wire-endpoints sweep (checking
+  // every os.emit(...) against what actually listens for it): two event-
+  // naming conventions coexist in idearium — bare ('spec.created',
+  // 'idea.updated', matching this dispatcher's original startsWith checks)
+  // and 'idearium.'-prefixed ('idearium.spec.built', 'idearium.spec.
+  // compiled', 'idearium.spec.imported', 'idearium.spec.promoted',
+  // 'idearium.queue.progress', 'idearium.repo.file.write/.delete'). Every
+  // event using the second convention silently triggered no UI refresh at
+  // all — not because refreshOnEvent had a bug in its logic, but because
+  // it only ever recognized the first convention's prefixes. Strip an
+  // optional leading 'idearium.' before matching so both conventions work
+  // the same way, instead of adding one narrow special case per event
+  // every time this happens again.
+  const t = ev.type.startsWith('idearium.') ? ev.type.slice('idearium.'.length) : ev.type;
+  if (t.startsWith('idea.'))   { loadIdeas(); }
+  if (t.startsWith('gap.'))    { loadGaps(); }
+  if (t.startsWith('spec.'))   { loadSpecs(); }
+  if (t==='push.complete')     { loadSnapshots(); }
+  if (t==='snr.update')        { loadStats(); }
+  if (t.startsWith('repo.')) {
+    loadApiRepos().then(() => {
+      if (CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid) {
+        const fresh = API_REPOS.find(r => r.uuid === CURRENT_API_REPO.uuid);
+        if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
+      }
+    });
+  }
+  if (t.startsWith('queue.'))  { if (typeof loadStats === 'function') loadStats(); }
 }
 
 // ════════════════════════════════════════════════════

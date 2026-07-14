@@ -1,0 +1,133 @@
+'use strict';
+/**
+ * guardian/clear-glass-bridge.js — real Guardian → Clear Glass command path
+ * UUID: nexus-guardian-clear-glass-bridge-v1-0000-2026-0713-jamesbrooks-001
+ * Version: 1.0.0
+ *
+ * §BUILT 2026-07-13 — "Guardian is supposed to use Clear Glass. It's
+ * NEXUS' browser." Checked before building: Guardian and Clear Glass only
+ * ever talked one direction — Clear Glass's userscripts open an
+ * EventSource INTO Guardian's NCP channel (:7820/channel). Guardian never
+ * called Clear Glass at all, despite a real, complete command surface
+ * sitting there unused: IpcBridge's POST /cmd (:7702) — real handlers for
+ * navigate, dom:query, dom:mutate, dom:pick, driver:exec, cookie
+ * save/restore.
+ *
+ * §THE REAL WIRE FORMAT — checked clear-glass/src/ipc/bridge.js directly
+ * rather than assumed: POST /cmd emits the command onto Clear Glass's own
+ * bus and responds immediately with {ok, requestId, emitted} — that
+ * response is an ACK that the command was accepted, not the result. The
+ * actual result arrives separately, over SSE (:7701/events, standard
+ * `event: <type>\ndata: <json>` format — checked clear-glass/src/sse/
+ * server.js's _write() directly), as an event named by stripping a verb
+ * suffix and appending '.result' (e.g. 'dom.query.request' →
+ * 'dom.query.result') — the exact regex Clear Glass itself uses is
+ * reused here, not re-derived, so the two can never silently drift apart.
+ *
+ * This is a real two-step round trip (POST to submit, SSE to collect),
+ * not a simple request/response — because that's genuinely how Clear
+ * Glass's own command surface works, not a simplification.
+ */
+
+const http = require('http');
+
+const CG_IPC_PORT = parseInt(process.env.CLEARGL_IPC_PORT || '7702');
+const CG_SSE_PORT = parseInt(process.env.CLEARGL_SSE_PORT || '7701');
+
+// Same transform Clear Glass's own /cmd handler uses to compute the
+// result event name from the request event name — reused verbatim so
+// this can't drift from the real implementation if it ever changes there.
+function _responseTypeFor(eventType) {
+  return eventType.replace(/\.(exec|request|send|run|create|save|restore|route|spawn|enqueue|listen)$/, '') + '.result';
+}
+
+function _randomId() {
+  return `gcb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * dispatchBrowserCommand({ eventType, data, timeoutMs }) — the real,
+ * complete round trip. Resolves with the actual result payload, or an
+ * honest { ok:false, error } — never silently times out into something
+ * that looks like a result.
+ */
+function dispatchBrowserCommand({ eventType, data = {}, timeoutMs = 15000 } = {}) {
+  return new Promise((resolve) => {
+    if (!eventType) { resolve({ ok: false, error: 'eventType is required' }); return; }
+
+    const requestId = _randomId();
+    const responseType = _responseTypeFor(eventType);
+    let settled = false;
+    let sseReq = null;
+    let timer = null;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (sseReq) { try { sseReq.destroy(); } catch (_) {} }
+      resolve(result);
+    };
+
+    timer = setTimeout(() => {
+      finish({ ok: false, error: `timeout waiting for ${responseType} (requestId ${requestId}) after ${timeoutMs}ms` });
+    }, timeoutMs);
+
+    // ── Step 1 — subscribe to the SSE result stream BEFORE submitting the
+    // command, so a fast response can never arrive before we're listening
+    // for it (a real race the opposite order would have).
+    sseReq = http.request({
+      hostname: '127.0.0.1', port: CG_SSE_PORT, path: '/events',
+      method: 'GET', headers: { Accept: 'text/event-stream' },
+    }, (res) => {
+      let buffer = '';
+      res.on('data', (chunk) => {
+        buffer += chunk.toString();
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const eventLine = raw.split('\n').find(l => l.startsWith('event: '));
+          const dataLine  = raw.split('\n').find(l => l.startsWith('data: '));
+          if (!eventLine || !dataLine) continue;
+          const type = eventLine.slice('event: '.length).trim();
+          if (type !== responseType) continue;
+          let payload;
+          try { payload = JSON.parse(dataLine.slice('data: '.length)); }
+          catch (_) { continue; }
+          if (payload.requestId !== requestId) continue; // a different in-flight command's result
+          finish({ ok: true, result: payload });
+        }
+      });
+      res.on('error', (e) => finish({ ok: false, error: `SSE stream error: ${e.message}` }));
+    });
+    sseReq.on('error', (e) => finish({ ok: false, error: `could not connect to Clear Glass SSE (:${CG_SSE_PORT}): ${e.message}` }));
+    sseReq.end();
+
+    // ── Step 2 — now that we're listening, submit the actual command.
+    const body = Buffer.from(JSON.stringify({ eventType, data, requestId }));
+    const cmdReq = http.request({
+      hostname: '127.0.0.1', port: CG_IPC_PORT, path: '/cmd', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': body.length },
+      timeout: 5000,
+    }, (res) => {
+      let ackBody = '';
+      res.on('data', c => ackBody += c);
+      res.on('end', () => {
+        let ack;
+        try { ack = JSON.parse(ackBody); } catch (_) { ack = null; }
+        if (!ack || ack.error) {
+          finish({ ok: false, error: `Clear Glass /cmd rejected the command: ${ack?.error || 'malformed response'}` });
+        }
+        // On success, do nothing here — the real result comes via SSE,
+        // caught by the listener above. This ack only confirms submission.
+      });
+    });
+    cmdReq.on('error', (e) => finish({ ok: false, error: `could not reach Clear Glass IPC bridge (:${CG_IPC_PORT}): ${e.message}` }));
+    cmdReq.on('timeout', () => { cmdReq.destroy(); finish({ ok: false, error: 'Clear Glass /cmd submission timed out' }); });
+    cmdReq.write(body);
+    cmdReq.end();
+  });
+}
+
+module.exports = { dispatchBrowserCommand, _responseTypeFor };

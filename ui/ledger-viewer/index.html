@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!--
+  ui/ledger-viewer/index.html — Ledger Viewer
+  UUID: nexus-ui-ledger-viewer-v1-0000-2026-0711-jamesbrooks-001
+  Version: 1.0.0
+
+  §GAP CLOSED 2026-07-11 — orchestrator.js already had everything a ledger
+  view needs: GET /api/ledger (filterable by system, paginated), and a
+  ledger.entry event broadcast over SSE on every ledgerWrite() (line ~401).
+  What didn't exist anywhere in the tree was a page that opens that door —
+  forge-shell/index.html has one static label ("nexus-led") describing the
+  ledger's ROLE in an architecture diagram, not a live view of its content.
+  This is that view. No new backend logic — it calls the two things that
+  were already there.
+
+  Two panes:
+    - History (left)  — GET /api/ledger on load + on filter change
+    - Live tail (right) — EventSource(`${ORCH}/sse`), filters for
+      type==='ledger.entry', prepends as they arrive. Matches the exact
+      EventSource pattern forge-shell/index.html already uses (§connectSSE).
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS — Ledger Viewer</title>
+<style>
+  :root {
+    --bg: #0b0d10; --panel: #12151a; --border: #22262e; --text: #d7dce2;
+    --dim: #6b7480; --accent: #5ac8fa; --ok: #35d07f; --warn: #f5a623; --err: #ff5f5f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.5 ui-monospace, 'SF Mono', Consolas, monospace;
+    height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  header h1 { font-size: 13px; font-weight: 600; margin: 0; letter-spacing: 0.04em; color: var(--accent); }
+  header .status { font-size: 11px; color: var(--dim); }
+  header .status.live { color: var(--ok); }
+  select, input[type=text] {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    font: inherit; padding: 4px 8px; border-radius: 4px;
+  }
+  .cols { flex: 1; display: flex; min-height: 0; }
+  .col { flex: 1; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--border); }
+  .col:last-child { border-right: none; }
+  .col-head {
+    padding: 8px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--dim); border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; justify-content: space-between;
+  }
+  .entries { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .entry {
+    padding: 6px 14px; border-bottom: 1px solid #1a1e24; display: flex; gap: 10px;
+    align-items: baseline; font-size: 12px;
+  }
+  .entry:hover { background: #14181e; }
+  .entry .ts { color: var(--dim); flex-shrink: 0; width: 70px; }
+  .entry .sys { flex-shrink: 0; width: 90px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .entry .type { flex-shrink: 0; color: var(--text); font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .entry .payload { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .entry.new { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { background: #1b3a2c; } to { background: transparent; } }
+  .empty { padding: 20px 14px; color: var(--dim); }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>◈ LEDGER VIEWER</h1>
+  <select id="system-filter"><option value="">all systems</option></select>
+  <input type="text" id="type-filter" placeholder="filter by type substring…">
+  <span style="flex:1"></span>
+  <span class="status" id="sse-status">connecting…</span>
+</header>
+
+<div class="cols">
+  <div class="col">
+    <div class="col-head"><span>History — GET /api/ledger</span><span id="hist-count">0</span></div>
+    <div class="entries" id="hist-entries"><div class="empty">loading…</div></div>
+  </div>
+  <div class="col">
+    <div class="col-head"><span>Live tail — SSE ledger.entry</span><span id="live-count">0</span></div>
+    <div class="entries" id="live-entries"><div class="empty">waiting for events…</div></div>
+  </div>
+</div>
+
+<script>
+const ORCH = location.origin.includes('9000') ? location.origin : 'http://127.0.0.1:9000';
+let liveCount = 0;
+
+function fmtTs(ts) {
+  const d = new Date(ts || Date.now());
+  return d.toTimeString().slice(0, 8);
+}
+
+function entryRow(e, isNew) {
+  const row = document.createElement('div');
+  row.className = 'entry' + (isNew ? ' new' : '');
+  const payloadStr = (() => {
+    try { return JSON.stringify(e.payload ?? e.data ?? {}); } catch { return ''; }
+  })();
+  row.innerHTML =
+    `<span class="ts">${fmtTs(e.ts)}</span>` +
+    `<span class="sys" title="${e.system || ''}">${e.system || '—'}</span>` +
+    `<span class="type" title="${e.type || ''}">${e.type || '—'}</span>` +
+    `<span class="payload" title="${payloadStr.replace(/"/g,'&quot;')}">${payloadStr}</span>`;
+  return row;
+}
+
+async function loadHistory() {
+  const sys = document.getElementById('system-filter').value;
+  const typeFilter = document.getElementById('type-filter').value.trim().toLowerCase();
+  const histBox = document.getElementById('hist-entries');
+  try {
+    const url = `${ORCH}/api/ledger?n=200` + (sys ? `&system=${encodeURIComponent(sys)}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'ledger fetch failed');
+
+    // populate the system filter dropdown from what the ledger actually has
+    const sel = document.getElementById('system-filter');
+    const have = new Set([...sel.options].map(o => o.value));
+    (data.systems || []).forEach(s => {
+      if (!have.has(s)) {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = `${s} (${data.counts?.[s] ?? '?'})`;
+        sel.appendChild(opt);
+      }
+    });
+
+    let entries = data.entries || [];
+    if (typeFilter) entries = entries.filter(e => (e.type || '').toLowerCase().includes(typeFilter));
+
+    histBox.innerHTML = '';
+    document.getElementById('hist-count').textContent = entries.length;
+    if (!entries.length) { histBox.innerHTML = '<div class="empty">no entries match</div>'; return; }
+    entries.forEach(e => histBox.appendChild(entryRow(e, false)));
+  } catch (err) {
+    histBox.innerHTML = `<div class="empty">/api/ledger unreachable: ${err.message}</div>`;
+  }
+}
+
+function connectSSE() {
+  const statusEl = document.getElementById('sse-status');
+  const liveBox = document.getElementById('live-entries');
+  let conn;
+  try {
+    conn = new EventSource(`${ORCH}/sse`);
+  } catch (err) {
+    statusEl.textContent = `SSE unavailable: ${err.message}`;
+    return;
+  }
+  conn.onopen = () => { statusEl.textContent = 'live'; statusEl.className = 'status live'; };
+  conn.onerror = () => {
+    statusEl.textContent = 'disconnected — retrying in 5s';
+    statusEl.className = 'status';
+    setTimeout(connectSSE, 5000);
+  };
+  conn.onmessage = (ev) => {
+    let data;
+    try { data = JSON.parse(ev.data); } catch { return; }
+    // orchestrator.js broadcasts { type:'ledger.entry', system, entry, ts }
+    // on every ledgerWrite() — this is the one message shape this view cares about.
+    if (data.type !== 'ledger.entry') return;
+    const typeFilter = document.getElementById('type-filter').value.trim().toLowerCase();
+    const sysFilter = document.getElementById('system-filter').value;
+    if (sysFilter && data.system !== sysFilter) return;
+    if (typeFilter && !(data.entry?.type || '').toLowerCase().includes(typeFilter)) return;
+
+    if (liveBox.querySelector('.empty')) liveBox.innerHTML = '';
+    const row = entryRow({ ...data.entry, system: data.system, ts: data.ts }, true);
+    liveBox.insertBefore(row, liveBox.firstChild);
+    liveCount++;
+    document.getElementById('live-count').textContent = liveCount;
+    // cap live pane at 300 rows so this tab doesn't grow without bound
+    while (liveBox.children.length > 300) liveBox.removeChild(liveBox.lastChild);
+  };
+}
+
+document.getElementById('system-filter').addEventListener('change', loadHistory);
+document.getElementById('type-filter').addEventListener('input', () => {
+  clearTimeout(window._tfDebounce);
+  window._tfDebounce = setTimeout(loadHistory, 250);
+});
+
+loadHistory();
+connectSSE();
+</script>
+</body>
+</html>

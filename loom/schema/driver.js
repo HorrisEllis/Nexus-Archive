@@ -30,7 +30,7 @@ const { Event } = require('../../warp/core');
 const { LoomRegistry } = require('./registry');
 const { makeLoomAxioms } = require('./axioms');
 const {
-  componentDeclareGate, seamDeclareGate, hookDeclareGate, wireDeclareGate,
+  componentDeclareGate, seamDeclareGate, hookDeclareGate, wireDeclareGate, concernDeclareGate,
 } = require('./gates');
 
 const KIND_TO_GATE = {
@@ -38,6 +38,7 @@ const KIND_TO_GATE = {
   seam: seamDeclareGate,
   hook: hookDeclareGate,
   wire: wireDeclareGate,
+  concern: concernDeclareGate,
 };
 
 class LoomDriver {

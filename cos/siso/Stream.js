@@ -1,4 +1,12 @@
 /**
+ * §SUPERSEDED 2026-07-11 — cos/siso/index.js now imports Stream from
+ * warp/core/Stream.js instead of this file. Nothing in the tree requires
+ * this file anymore (checked). Left in place, not deleted, per this
+ * codebase's own §7.4 (nothing discarded) — but it is dead code. See
+ * cos/siso/index.js's header for why the switch happened and what, if
+ * anything, warp/core/Stream.js had to gain to replace it.
+ */
+/**
  * siso/Stream.js
  * COMPARTMENT OS — SISO Core: Stream
  *

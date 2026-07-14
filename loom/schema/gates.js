@@ -14,7 +14,7 @@
  */
 const { Gate, Event } = require('../../warp/core');
 const {
-  COMPONENT_SCHEMA, SEAM_SCHEMA, HOOK_SCHEMA, WIRE_SCHEMA, KNOWN_HOOK_TYPES,
+  COMPONENT_SCHEMA, SEAM_SCHEMA, HOOK_SCHEMA, WIRE_SCHEMA, CONCERN_SCHEMA, KNOWN_HOOK_TYPES,
 } = require('./definitions');
 
 function _rejectEvent(kind, event, validation, extraReason) {
@@ -85,6 +85,24 @@ const wireDeclareGate = new Gate('loom.wire.declare', {
   },
 });
 
+// ── concern.declare — §BUILT 2026-07-14, the roadmap primitive ─────────────
+const VALID_SEVERITIES = Object.freeze(['low', 'medium', 'high']);
+const concernDeclareGate = new Gate('loom.concern.declare', {
+  schema: CONCERN_SCHEMA,
+  transform(event) {
+    const v = concernDeclareGate.validateOutput(event.data);
+    if (!v.ok) return [_rejectEvent('concern', event, v)];
+    if (!VALID_SEVERITIES.includes(event.data.severity)) {
+      return [_rejectEvent('concern', event, { missing: [], wrongType: [] },
+        `severity must be one of ${VALID_SEVERITIES.join('|')}, got '${event.data.severity}'`)];
+    }
+    // kind is open-ended, same philosophy as hook's type field — the real
+    // kinds of concern aren't known in advance and shouldn't be a closed
+    // enum a scanner has to fight to extend.
+    return [new Event('loom.concern.registered', { ...event.data })];
+  },
+});
+
 module.exports = {
-  componentDeclareGate, seamDeclareGate, hookDeclareGate, wireDeclareGate,
+  componentDeclareGate, seamDeclareGate, hookDeclareGate, wireDeclareGate, concernDeclareGate,
 };

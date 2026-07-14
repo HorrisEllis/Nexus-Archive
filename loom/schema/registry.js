@@ -20,7 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const KINDS = ['component', 'seam', 'hook', 'wire'];
+const KINDS = ['component', 'seam', 'hook', 'wire', 'concern'];
 
 class LoomRegistry {
   constructor({ dataDir = null } = {}) {

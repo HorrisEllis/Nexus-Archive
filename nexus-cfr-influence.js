@@ -186,8 +186,15 @@ function _logOnce(key, msg) {
 function _clearErrLog() { _lastErrLogged = null; }
 
 function _pollCFR() {
+  // §FIXED 2026-07-13 — "missing/non-numeric field(s): tension" in every
+  // boot log, every session, never chased until checked directly. This
+  // was polling 127.0.0.1:9999 (Bridge's port) — confirmed Bridge has no
+  // /cfr/field route at all, checked directly, not assumed. Cortex (3748)
+  // is where /cfr/field actually lives, with a real numeric tension field
+  // in its default state (_field.tension = 0.1, cortex/boot.js). Not a
+  // field-naming bug, not a cortex bug — a wrong port, the whole time.
   const req = http.request({
-    hostname: '127.0.0.1', port: 9999, path: '/cfr/field',
+    hostname: '127.0.0.1', port: 3748, path: '/cfr/field',
     method: 'GET', headers: { 'Accept': 'application/json' },
   }, res => {
     let body = '';

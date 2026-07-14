@@ -204,5 +204,46 @@ check('every declaration attempt has exactly one .declare entry in the StreamLog
     'expected follow-on registered/rejected events to also be logged (recursive audit)');
 });
 
+// ── 12. concern — §BUILT 2026-07-14, the roadmap primitive ─────────────────
+// Positioned after the audit-trail count check above (not before) so these
+// new declare() calls don't shift that test's hardcoded expected count.
+check('a real concern registers with its full real shape, including optional relatesTo/detail', () => {
+  const r = driver.declare('concern', {
+    id: 'concern-test-001', kind: 'closed-door', title: 'a real detected concern',
+    severity: 'medium', source: 'test', relatesTo: ['nexus.some-component'],
+    detail: { file: 'somewhere.js', consumers: 0 },
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.deepStrictEqual(r.stored.relatesTo, ['nexus.some-component']);
+});
+
+check('a concern with an invalid severity is schema-rejected, not silently accepted', () => {
+  const r = driver.declare('concern', {
+    id: 'concern-test-002', kind: 'closed-door', title: 'bad severity',
+    severity: 'catastrophic', source: 'test',
+  });
+  assert.strictEqual(r.ok, false);
+  assert.ok(r.reason.includes('rejected') || r.detail?.reason?.includes('severity'), JSON.stringify(r));
+});
+
+check('a concern missing required fields is schema-rejected with the real missing list, not a generic error', () => {
+  const r = driver.declare('concern', { id: 'concern-test-003', kind: 'closed-door' });
+  assert.strictEqual(r.ok, false);
+  assert.deepStrictEqual(r.detail.missing.sort(), ['severity', 'source', 'title']);
+});
+
+check('a real concern persists and is queryable back by id', () => {
+  const fetched = driver.registry.get('concern', 'concern-test-001');
+  assert.strictEqual(fetched.title, 'a real detected concern');
+});
+
+check('kind is open-ended (not a closed enum) — an unseen concern kind still registers, same philosophy as hook type', () => {
+  const r = driver.declare('concern', {
+    id: 'concern-test-004', kind: 'a-brand-new-kind-nobody-has-used-yet',
+    title: 'novel kind', severity: 'low', source: 'test',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+});
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);

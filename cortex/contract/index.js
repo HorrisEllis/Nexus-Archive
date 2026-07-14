@@ -16,14 +16,25 @@
  */
 
 const CONTRACTS = {
+  // §ADDED 2026-07-14 — 'browser' is a real action now (guardian's
+  // dispatch to Clear Glass, real physical browser control: navigate,
+  // DOM mutate, driver exec). It was added to guardian/server.js's
+  // dispatch two sessions ago without ever being gated here — found
+  // during an invariant audit prompted by a related fix (raw-prompt
+  // dispatch bypassing chunking the same way). copilot and cli are the
+  // two real sources that legitimately trigger it (the browser_action
+  // agent-tool, and direct operator use) — deliberately NOT added to
+  // guardian's or orchestrator's own contracts, since neither of those
+  // should be originating browser actions on their own.
+  //
   // Registered, known-internal sources. Add an entry here when a new
   // sovereign system needs to call _approveTool — don't widen _default.
   copilot: {
     trust_level:     'local',
-    allowed_actions: ['tool', 'chat', 'build', 'diagnose', 'ask'],
+    allowed_actions: ['tool', 'chat', 'build', 'diagnose', 'ask', 'browser'],
     denied_actions:  ['forge'],
     proof_required:  false,
-    rate_limits:     { tool: { max: 20, windowMs: 60000 } },
+    rate_limits:     { tool: { max: 20, windowMs: 60000 }, browser: { max: 15, windowMs: 60000 } },
   },
 
   guardian: {
@@ -36,7 +47,7 @@ const CONTRACTS = {
 
   cli: {
     trust_level:     'operator',
-    allowed_actions: ['tool', 'chat', 'build', 'diagnose', 'forge', 'ask'],
+    allowed_actions: ['tool', 'chat', 'build', 'diagnose', 'forge', 'ask', 'browser'],
     denied_actions:  [],
     proof_required:  false,
     rate_limits:     { tool: { max: 60, windowMs: 60000 } },

@@ -11,3 +11,4 @@
 {"ts":1783305827414,"moduleName":"spec-compiler-runtime","error":"cortex_unreachable","message":"GATE-COMPILER-005: write-back failed — Cortex unreachable"}
 {"ts":1783305879828,"moduleName":"spec-compiler-runtime","error":"cortex_unreachable","message":"GATE-COMPILER-005: write-back failed — Cortex unreachable"}
 {"ts":1783340708273,"moduleName":"spec-compiler-runtime","error":"cortex_unreachable","message":"GATE-COMPILER-005: write-back failed — Cortex unreachable"}
+{"ts":1783854526095,"moduleName":"test-daw-consumer","error":"cortex_unreachable","message":"GATE-COMPILER-005: write-back failed — Cortex unreachable"}

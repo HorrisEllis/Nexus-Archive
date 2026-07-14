@@ -1,7 +1,7 @@
 spec:
   meta:
     name:     copilot-expansion
-    version:  1.0.0
+    version:  1.2.0
     uuid:     nexus-copilot-expansion-v1-0000-2026-0627-jamesbrooks-001
     status:   active
     purpose: >
@@ -10,6 +10,90 @@ spec:
       co-pilot maps it, specs it, builds the module bottom-up, runs QC,
       gets it merged. Ollama is the primary model, Guardian is the fallback.
       Axioms are manageable via CLI and co-pilot. Everything is contractual.
+
+  addendum:
+    - version: 1.2.0
+      date:    2026-07-11
+      changes: >
+        The gap named in the 1.1.0 addendum below — a dispatched contract
+        with no Emerge-side consumer — is closed. emerge/consumer.js is
+        new: polls lib/contract-queue.js's pending('emerge') (the same
+        file-drop queue module-builder.js already wrote to — no new
+        queue mechanism), writes the contract's spec to disk, and runs it
+        through emerge/compiler/pipeline.js's compile() — a real,
+        complete code generator that existed with zero callers until now.
+        Reports accept/complete/fail two ways: into the contract's own
+        file (durable, no network needed) and as a POST to a new
+        copilot/server.js endpoint, POST /api/event → streamIngest() —
+        the missing push counterpart to copilot's previously pull-only
+        SSE-subscription pattern, since Emerge has no SSE server of its
+        own to be subscribed to (it's a library, not a service).
+
+        Added to autopilot.js's supervised kernel list (optional: true,
+        same as copilot/loom) — without this the consumer doesn't run at
+        all, contracts sit in emerge/input/ forever regardless of how
+        correct the consumer code is.
+
+        Verified live, the actual full loop, not simulated: dispatched a
+        real contract via lib/contract-queue.js exactly the way
+        module-builder.js does, ran the consumer, and it produced real
+        compiled output — TypeScript type definitions, package.json,
+        tsconfig.json — in data/emerge/builds/<uuid>/. First attempt
+        failed honestly (missing js-yaml dependency, now declared for
+        real in package.json, not just installed ad hoc) — the consumer's
+        own error handling caught it, called cq.fail(), and reported the
+        failure correctly rather than crashing. Second attempt, same
+        contract (auto-requeued by contract-queue's own retry logic),
+        succeeded end to end. The compiler was real and complete the
+        whole time; it had simply never been fed anything.
+    - version: 1.1.0
+      date:    2026-07-11
+      changes: >
+        Phase 4 (copilot/module-builder.js) was still marked "pending"
+        below despite being a real, substantial implementation —
+        map → generateSpec → QC loop (self-correcting, up to 3
+        iterations) → contract creation, all real, all working. Updated
+        its phase entry to reflect that.
+
+        Real gap found and left honestly documented, not silently
+        patched over: contract dispatch (Step 4 below) writes a real
+        file to emerge/input/<uuid>.json via lib/contract-queue.js's
+        dispatch() — a file-drop queue, not pub/sub — and nothing
+        anywhere under emerge/ has ever consumed it. Confirmed by
+        grepping every file in that directory for any reference to the
+        contract queue at all: zero. orchestrator/lib/contract-poller.js
+        only notices a contract sat too long and opens a gap about it;
+        it does not build anything either. The pipeline runs correctly
+        all the way to "here is a build contract" and then the contract
+        is never picked up.
+
+        THE EXPECTATIONS ADDENDUM (what should happen, made testable):
+        added expectation 'module-build-dispatched-then-accepted' to
+        copilot/lib/expectation-watcher.js's DEFAULT_EXPECTATIONS —
+        trigger emerge.contract.dispatched, expect emerge.contract.
+        accepted|complete|failed within 6 minutes, linked by contractUuid.
+        copilot/server.js's POST /api/build now emits the real trigger
+        event the moment cq.dispatch() actually fires (result.passed &&
+        result.contract), not a simulated one. This makes the gap above
+        a permanent, automatic, observable test instead of a silent dead
+        end — every real build request checks itself. Verified live,
+        both directions: fires the violation correctly when nothing
+        follows up (today's actual state — this SHOULD fire on every
+        build right now, that's correct, not a bug in the expectation),
+        and stays silent when a real follow-up arrives in time (the
+        state once Emerge gets a real consumer). Considered whether
+        bridge/causal/expectation.js's ExpectationEngine was a better
+        fit — it isn't; that engine is scoped specifically to Bridge's
+        SEAM queue state machine (expectedPath sequences over
+        SEAM_STATES), not a generic cross-system trigger→followup timing
+        check the way copilot's expectation-watcher already is.
+
+        NOT built this pass, and it's the actual next piece: an Emerge-
+        side consumer that watches emerge/input/, calls cq.accept() then
+        cq.complete()/cq.fail(), and does something real with the
+        module_build payload (spec, plan, architecture selection).
+        Until that exists, "request a build" reliably produces a real,
+        inspectable, well-formed contract — and reliably goes no further.
 
   axioms_enforced:
     - §AX-1   Map first, always
@@ -207,9 +291,9 @@ spec:
 
     - id: 4
       name: copilot/module-builder.js
-      status: pending
+      status: complete   # map/generateSpec/QC/contract real & verified; emerge/consumer.js closes the loop — verified live end to end
       builds: [spec generation, contract creation, bottom-up build flow]
-      deps: [phases 1-3, contract-queue ✓, emerge :4242]
+      deps: [phases 1-3, contract-queue ✓, emerge :4242 — dispatch ✓, consume/build ✓ (emerge/consumer.js)]
 
     - id: 5
       name: copilot/qc-pipeline.js
