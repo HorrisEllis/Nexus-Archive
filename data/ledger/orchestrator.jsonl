@@ -25,3 +25,10 @@
 {"_system":"orchestrator","_ts":1784102301444,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"recall.verify","type":"HARD","ms":3,"seqId":"ca9f3773"}}
 {"_system":"orchestrator","_ts":1784102301445,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ui.hotswap","type":"SOFT","ms":39,"seqId":"ca9f3773"}}
 {"_system":"orchestrator","_ts":1784102301445,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"cli.terminal","type":"SOFT","ms":0,"seqId":"ca9f3773"}}
+{"_system":"orchestrator","_ts":1784102579891,"type":"orchestrator.boot.started","payload":{"systemId":"orchestrator","port":9000,"version":"2.2.0","phases":7,"seqId":"471e5fdb","ts":1784102579875}}
+{"_system":"orchestrator","_ts":1784102579895,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"server.bound","type":"HARD","ms":0,"seqId":"471e5fdb"}}
+{"_system":"orchestrator","_ts":1784102579896,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ledger.writable","type":"HARD","ms":0,"seqId":"471e5fdb"}}
+{"_system":"orchestrator","_ts":1784102579906,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"health.verify","type":"HARD","ms":27,"seqId":"471e5fdb"}}
+{"_system":"orchestrator","_ts":1784102579972,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"recall.verify","type":"HARD","ms":3,"seqId":"471e5fdb"}}
+{"_system":"orchestrator","_ts":1784102579973,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ui.hotswap","type":"SOFT","ms":52,"seqId":"471e5fdb"}}
+{"_system":"orchestrator","_ts":1784102579974,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"cli.terminal","type":"SOFT","ms":0,"seqId":"471e5fdb"}}

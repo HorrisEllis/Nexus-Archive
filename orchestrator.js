@@ -2591,6 +2591,34 @@ try {
       const _http  = require('http');
       const cgPort = parseInt(cgWire.split(':').pop()) || 7704;
       const body   = JSON.stringify({ url: uiUrl, agentId: 'nexus-home' });
+
+      // §CRASH ROOT CAUSE 2026-07-15 — this whole phase polled :7704 for up
+      // to 60s and never once asked anything to actually START Clear
+      // Glass. Clear Glass is onDemand:true in autopilot (deliberately —
+      // "heaviest single process in the stack... nobody's controlling a
+      // browser unless something is actively using it") — dormant by
+      // design until requestSpawn() is called. Autopilot's real trigger
+      // surface (POST :7799/spawn/:name) exists and works; this caller
+      // was simply never updated to use it, so the 20x3s retry loop below
+      // was waiting out its full 60s against a process nobody had told to
+      // exist, every single boot. Fire the spawn request first — non-
+      // fatal if autopilot isn't running this session (e.g. orchestrator
+      // launched standalone), the poll loop below still runs as a fallback
+      // for that case exactly as it did before this fix.
+      try {
+        await new Promise((resolve) => {
+          const spawnReq = _http.request({
+            hostname: '127.0.0.1', port: 7799,
+            path: '/spawn/clear-glass', method: 'POST',
+            timeout: 35000, // requestSpawn's own default spawnTimeoutMs is 30s — give it margin
+          }, r => { r.resume(); r.on('end', resolve); });
+          spawnReq.on('error', () => resolve()); // autopilot not running, or clear-glass not registered — fall through to polling below regardless
+          spawnReq.on('timeout', () => { spawnReq.destroy(); resolve(); });
+          spawnReq.end();
+        });
+        console.log('[nexus] requested Clear Glass spawn via autopilot :7799');
+      } catch (_) { /* non-fatal by design, see comment above */ }
+
       const _tryOpen = () => new Promise((resolve, reject) => {
         const req = _http.request({
           hostname: '127.0.0.1', port: cgPort,
