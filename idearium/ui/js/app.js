@@ -77,9 +77,9 @@ function setConnUI(state, base) {
     : 'awaiting connection to nexus idearium service · :4800';
 }
 
-async function api(path, opts={}) {
+async function api(path, opts={}, timeoutMs=6000) {
   if (!API_BASE) throw new Error('not connected to nexus');
-  const r = await fetchTimeout(API_BASE + path, { headers:{'Content-Type':'application/json'}, ...opts }, 6000);
+  const r = await fetchTimeout(API_BASE + path, { headers:{'Content-Type':'application/json'}, ...opts }, timeoutMs);
   let data = {};
   try { data = await r.json(); } catch(_) {}
   if (!r.ok || data.ok === false) throw new Error(data.error || r.statusText || 'request failed');
@@ -929,8 +929,25 @@ async function openApiRepoFile(repoUuid, filePath) {
   document.getElementById('ide-tabs').innerHTML = `${escapeHtml(filePath)}` +
     `<span class="ide-tab-dirty" id="ide-dirty" style="display:none">● unsaved</span>` +
     `<button class="ide-tab-btn" onclick="saveApiRepoFile()">save</button>`;
+  // §TIMEOUT FIX 2026-07-15 — file reads share the repo's own spec-engine
+  // manifest with whatever chunk-import is currently running (completeChunk
+  // does synchronous readFileSync/writeFileSync per chunk — see
+  // spec-engine/index.js), so a read hitting mid-build genuinely can take
+  // longer than the API's general 6s default. 15s ceiling, plus one retry
+  // specifically on an aborted/timed-out request (not on a real 404 or
+  // other server error — those won't succeed on retry and shouldn't wait
+  // an extra 15s to say so).
+  const attempt = () => api(`/api/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`, {}, 15000);
   try {
-    const r = await api(`/api/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`);
+    let r;
+    try {
+      r = await attempt();
+    } catch (e) {
+      const isAbort = /aborted/i.test(e.message);
+      if (!isAbort) throw e;
+      console.warn(`[idearium] file read aborted (likely contended with an in-progress build), retrying once: ${filePath}`);
+      r = await attempt();
+    }
     _showIdeEditor(true);
     const ta = document.getElementById('ide-editor');
     ta.value = r.content;
