@@ -65,12 +65,12 @@ class Compartment {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   _emitBorn() {
-    this._kernel.emit('compartment.born', {
+    this._kernel.emit({ type: 'compartment.born', data: {
       compartmentId: this.id,
       name:          this.name,
       axioms:        [...this.axioms],
       state:         STATE.SANDBOX,
-    }, { source: `compartment:${this.id}` });
+    } });
   }
 
   // ── Axiom system ──────────────────────────────────────────────────────────
@@ -158,12 +158,12 @@ class Compartment {
 
   emitAxiomFault(axiomId, context) {
     this._state = STATE.AXIOM_FAULT;
-    this._kernel.emit('compartment.axiom.violated', {
+    this._kernel.emit({ type: 'compartment.axiom.violated', data: {
       compartmentId: this.id,
       axiomId,
       context,
       state: STATE.AXIOM_FAULT,
-    }, { source: `compartment:${this.id}` });
+    } });
   }
 
   // ── Conditions ────────────────────────────────────────────────────────────
@@ -244,11 +244,11 @@ class Compartment {
       }).catch(() => {});
     }
 
-    this._kernel.emit('compartment.synthesis.done', {
+    this._kernel.emit({ type: 'compartment.synthesis.done', data: {
       compartmentId: this.id,
       intent:        intent.slice ? intent.slice(0, 100) : intent,
       resultType:    typeof result,
-    }, { source: `compartment:${this.id}` });
+    } });
 
     return result;
   }
@@ -339,29 +339,29 @@ Respond with structured JSON only. Never violate your axioms.`;
     this._state       = STATE.GATING;
     this._currentGate = gateId;
 
-    this._kernel.emit('compartment.gate.started', {
+    this._kernel.emit({ type: 'compartment.gate.started', data: {
       compartmentId: this.id,
       gateId,
-    }, { source: `compartment:${this.id}` });
+    } });
 
     // Delegate actual test to the gate compartment
     const result = await gateCompartment.test(this, gateId);
 
     if (result.passed) {
       this._gatesPassed.push(gateId);
-      this._kernel.emit('compartment.gate.passed', {
+      this._kernel.emit({ type: 'compartment.gate.passed', data: {
         compartmentId: this.id,
         gateId,
         attempt: result.attempt || 1,
-      }, { source: `compartment:${this.id}` });
+      } });
 
       // Check if fully integrated
       if (BIRTH_GATES.every(g => this._gatesPassed.includes(g))) {
         this._state = STATE.INTEGRATED;
-        this._kernel.emit('compartment.integrated', {
+        this._kernel.emit({ type: 'compartment.integrated', data: {
           compartmentId: this.id,
           gatesPassed:   [...this._gatesPassed],
-        }, { source: `compartment:${this.id}` });
+        } });
       } else {
         this._state = STATE.SANDBOX;
       }
@@ -380,11 +380,11 @@ Respond with structured JSON only. Never violate your axioms.`;
         }).catch(() => {});
       }
 
-      this._kernel.emit('compartment.gate.failed', {
+      this._kernel.emit({ type: 'compartment.gate.failed', data: {
         compartmentId: this.id,
         gateId,
         reason: result.reason,
-      }, { source: `compartment:${this.id}` });
+      } });
 
       // Recycle — strip to axioms
       this._recycle(gateId, result.reason);
@@ -401,12 +401,12 @@ Respond with structured JSON only. Never violate your axioms.`;
     this._synthHistory = [];
     this._state      = STATE.RECYCLED;
 
-    this._kernel.emit('compartment.recycled', {
+    this._kernel.emit({ type: 'compartment.recycled', data: {
       compartmentId: this.id,
       failedGate,
       reason,
       axioms: [...this.axioms],  // axioms preserved through recycle
-    }, { source: `compartment:${this.id}` });
+    } });
   }
 
   // ── Bus connections ───────────────────────────────────────────────────────
@@ -416,10 +416,10 @@ Respond with structured JSON only. Never violate your axioms.`;
       throw new Error(`Compartment ${this.id} must be integrated before accepting bus connections`);
     }
     this._buses.set(busKernel.id, busKernel);
-    this._kernel.emit('compartment.bus.connected', {
+    this._kernel.emit({ type: 'compartment.bus.connected', data: {
       compartmentId: this.id,
       busId: busKernel.id,
-    }, { source: `compartment:${this.id}` });
+    } });
   }
 
   // ── Status ────────────────────────────────────────────────────────────────

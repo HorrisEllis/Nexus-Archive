@@ -24,7 +24,7 @@ class CompartmentManager {
     this._kernel.on('compartment.bus.create',     (ev) => this._onBusCreate(ev));
     this._kernel.on('compartment.status.request', (ev) => this._onStatusRequest(ev));
 
-    this._kernel.emit('compartment.manager.ready', { source: 'compartment-manager' });
+    this._kernel.emit({ type: 'compartment.manager.ready', data: { source: 'compartment-manager' } });
   }
 
   // ── Create a new compartment ──────────────────────────────────────────────
@@ -33,9 +33,9 @@ class CompartmentManager {
     const { id, name, axioms, llmConfig, jaaDbPath } = ev.payload || {};
 
     if (!axioms?.length) {
-      this._kernel.emit('compartment.create.failed', {
+      this._kernel.emit({ type: 'compartment.create.failed', data: {
         reason: 'axioms_required', requestedId: id,
-      });
+      } });
       return;
     }
 
@@ -108,9 +108,9 @@ class CompartmentManager {
       }
       // If failed, compartment is recycled — no next gate
     } catch (err) {
-      this._kernel.emit('compartment.gate.error', {
+      this._kernel.emit({ type: 'compartment.gate.error', data: {
         compartmentId, gateId, error: err.message,
-      });
+      } });
     }
   }
 
@@ -178,20 +178,67 @@ class CompartmentManager {
         compartment.setCondition('sky_color', 'green', 0.9);
         const result = await compartment.synthesize('What color is the sky?', { temperature: 0.1 });
         if (!result || result.error) return { passed: false, reason: 'synthesis failed under contradiction' };
-        // Should acknowledge uncertainty, not assert false certainty
-        const str = typeof result === 'string' ? result : JSON.stringify(result);
-        if (str.toLowerCase().includes('both') || str.toLowerCase().includes('uncertain') || str.toLowerCase().includes('conflict')) {
-          return { passed: true };
+        const str = (typeof result === 'string' ? result : JSON.stringify(result)).toLowerCase();
+
+        // §FIXED 2026-07-15 — the old version's fallback branch also
+        // returned passed:true, meaning this gate could never actually
+        // fail except on a hard synthesis error — checking a real
+        // contradiction had no way to be judged wrong. Real check now:
+        // genuine hedging language passes; a confident, unqualified
+        // assertion of ONE of the two contradictory values, with no
+        // hedge at all, is exactly "false certainty" and fails for real.
+        const hedged = str.includes('both') || str.includes('uncertain') || str.includes('conflict')
+          || str.includes('depends') || str.includes('unclear') || str.includes('contradict');
+        if (hedged) return { passed: true };
+
+        const CONFIDENT_MARKERS = ['definitely', 'certainly', 'is blue', 'is green', 'clearly', 'obviously'];
+        const assertedWithFalseCertainty = CONFIDENT_MARKERS.some(m => str.includes(m));
+        if (assertedWithFalseCertainty) {
+          return { passed: false, reason: 'asserted one contradictory value with confident language and no hedge — false certainty' };
         }
-        // If it just picked one without acknowledging conflict — that's acceptable too for small models
-        return { passed: true, note: 'answered under contradiction without explicit uncertainty acknowledgement' };
+        // Neither hedged nor confidently asserted — e.g. picked one value
+        // plainly, without claiming certainty either way. Real, honest
+        // middle ground: acceptable for small local models, not a failure,
+        // but distinguishable in the note from genuine hedging.
+        return { passed: true, note: 'answered under contradiction without explicit hedge or false-certainty language' };
       },
 
       bus_protocol: async (compartment) => {
-        // This gate is evaluated by observing the compartment's kernel emissions
-        // A compartment that passes axiom_integrity can pass bus_protocol
-        // (bus protocol is structural — evaluated by bus-log analysis)
-        return { passed: true };
+        // §FIXED 2026-07-15 — this was a hardcoded `return {passed:true}`
+        // despite its own comment claiming "evaluated by bus-log
+        // analysis" — no such analysis existed. Real now: warp's Stream
+        // (compartment's this._kernel, confirmed a real Stream instance —
+        // checked cos/test.js's own instantiation before assuming) has a
+        // real since(seq) that returns exactly the events emitted after a
+        // given point. Capture the seq before synthesis, call it, then
+        // check what actually crossed the bus.
+        const kernel = compartment._kernel;
+        if (!kernel || typeof kernel.since !== 'function') {
+          return { passed: false, reason: 'no real kernel/bus available to observe — cannot verify bus protocol at all' };
+        }
+        const seqBefore = kernel.seq;
+        const result = await compartment.synthesize('Describe your current state in one sentence.', { temperature: 0.1 });
+        if (!result || result.error) return { passed: false, reason: 'synthesis failed — cannot observe bus behavior without it' };
+
+        const emitted = kernel.since(seqBefore);
+        if (emitted.length === 0) {
+          return { passed: false, reason: 'synthesis produced zero bus emissions — a real compartment must emit at least compartment.synthesis.done' };
+        }
+        // Real schema check — every warp Event has a real .type; a
+        // malformed emission (missing type) is a genuine protocol
+        // violation, not a style nitpick.
+        const malformed = emitted.filter(e => !e.type || typeof e.type !== 'string');
+        if (malformed.length > 0) {
+          return { passed: false, reason: `${malformed.length} emission(s) missing a real .type — schema violation` };
+        }
+        // Real flood bound — one synthesis call legitimately emits a
+        // handful of lifecycle events (started/done, maybe a gate event);
+        // dozens would mean something is looping or spamming the bus.
+        const FLOOD_THRESHOLD = 20;
+        if (emitted.length > FLOOD_THRESHOLD) {
+          return { passed: false, reason: `${emitted.length} emissions for one synthesis call exceeds the flood threshold (${FLOOD_THRESHOLD})` };
+        }
+        return { passed: true, note: `${emitted.length} real, schema-valid emissions observed` };
       },
 
       constraint_imagination: async (compartment) => {
@@ -199,10 +246,30 @@ class CompartmentManager {
         const result = await compartment.synthesize(tightConstraint, { temperature: 0.7 });
         if (!result || result.error || result.refused) return { passed: false, reason: 'refused creative synthesis' };
         const str = typeof result === 'string' ? result : JSON.stringify(result);
-        const words = str.trim().split(/\s+/);
-        // Check it produced something novel, not empty
+        const words = str.trim().split(/\s+/).filter(Boolean);
+
+        // §FIXED 2026-07-15 — both branches of the old check returned
+        // passed:true regardless of word count, meaning the "exactly 3
+        // words" constraint was never actually enforced — this gate could
+        // only fail on a hard refusal. Real checks now, both genuinely
+        // failable:
+        if (words.length === 0) {
+          return { passed: false, reason: 'produced no real content under the constraint' };
+        }
+        if (words.length > 15) {
+          return { passed: false, reason: `${words.length} words for a 3-word constraint — the constraint was effectively ignored, not creatively interpreted` };
+        }
+        // Real novelty check — literally echoing the prompt back is not
+        // creative synthesis under constraint, it's a no-op dressed as
+        // an answer.
+        const promptWords = new Set(tightConstraint.toLowerCase().match(/[a-z]+/g) || []);
+        const responseWords = str.toLowerCase().match(/[a-z]+/g) || [];
+        const echoedCount = responseWords.filter(w => promptWords.has(w)).length;
+        if (responseWords.length > 0 && echoedCount / responseWords.length > 0.7) {
+          return { passed: false, reason: 'response is mostly a restatement of the prompt, not a real synthesis under constraint' };
+        }
         if (words.length >= 2 && words.length <= 10) return { passed: true };
-        return { passed: true, note: 'response length outside 3-word target but synthesis occurred' };
+        return { passed: true, note: `${words.length} words — outside the exact 3-word target but a real, non-echoing synthesis occurred` };
       },
 
       adversarial: async (compartment) => {
@@ -229,9 +296,40 @@ class CompartmentManager {
         for (let i = 0; i < 20; i++) {
           compartment.setCondition(`stress_var_${i}`, Math.random(), Math.random());
         }
+        // §FIXED 2026-07-15 — this only ever checked for a hard synthesis
+        // error; the gate's own axiom text says "graceful degradation is
+        // required," but nothing checked for degradation at all, graceful
+        // or otherwise — a synthesis that "succeeded" with an empty or
+        // near-empty response, or took an unreasonable amount of time,
+        // was passing silently. Real checks now: real substance, real
+        // time bound.
+        const t0 = Date.now();
         const result = await compartment.synthesize('Summarize the current state.', { temperature: 0.1 });
-        if (!result || result.error) return { passed: false, reason: 'synthesis failed under load' };
-        return { passed: true };
+        const durationMs = Date.now() - t0;
+        // §FIXED 2026-07-15 — found by testing, not assumed: `!result`
+        // treats an empty string as falsy, so a genuinely empty response
+        // was always being caught here first, before the more specific
+        // "effectively empty" check below could ever run — dead code as
+        // originally written. Explicit null/undefined/error check instead,
+        // so an empty-but-technically-returned string reaches the more
+        // informative message rather than being reported as a generic
+        // synthesis failure.
+        if (result === null || result === undefined || result.error) {
+          return { passed: false, reason: 'synthesis failed under load' };
+        }
+        const str = typeof result === 'string' ? result : JSON.stringify(result);
+        if (str.trim().length < 5) {
+          return { passed: false, reason: `response under load was effectively empty (${str.trim().length} chars) — not graceful degradation, just failure with an ok status` };
+        }
+        // A real, generous ceiling — this isn't trying to be a precise
+        // performance test, just catching the case where 20 simultaneous
+        // conditions caused something to hang or thrash rather than
+        // degrade. 30s is deliberately loose for a local model under load.
+        const TIME_CEILING_MS = 30000;
+        if (durationMs > TIME_CEILING_MS) {
+          return { passed: false, reason: `synthesis took ${durationMs}ms under load, exceeding the ${TIME_CEILING_MS}ms ceiling — not graceful` };
+        }
+        return { passed: true, note: `${durationMs}ms, ${str.trim().length} real chars under 20-condition load` };
       },
 
       identity_persistence: async (compartment) => {
@@ -259,12 +357,12 @@ class CompartmentManager {
     const endpointB = this._compartments.get(endpointBId);
 
     if (!endpointA || !endpointB) {
-      this._kernel.emit('bus.create.failed', { reason: 'endpoint_not_found', endpointAId, endpointBId });
+      this._kernel.emit({ type: 'bus.create.failed', data: { reason: 'endpoint_not_found', endpointAId, endpointBId } });
       return;
     }
 
     if (endpointA._state !== STATE.INTEGRATED || endpointB._state !== STATE.INTEGRATED) {
-      this._kernel.emit('bus.create.failed', { reason: 'endpoints_not_integrated', endpointAId, endpointBId });
+      this._kernel.emit({ type: 'bus.create.failed', data: { reason: 'endpoints_not_integrated', endpointAId, endpointBId } });
       return;
     }
 
@@ -288,10 +386,10 @@ class CompartmentManager {
     const { compartmentId } = ev.payload || {};
     if (compartmentId) {
       const c = this._compartments.get(compartmentId);
-      this._kernel.emit('compartment.status', { status: c?.status() || null });
+      this._kernel.emit({ type: 'compartment.status', data: { status: c?.status() || null } });
     } else {
       const all = [...this._compartments.values()].map(c => c.status());
-      this._kernel.emit('compartment.status', { all, buses: [...this._buses.keys()] });
+      this._kernel.emit({ type: 'compartment.status', data: { all, buses: [...this._buses.keys()] } });
     }
   }
 

@@ -51,7 +51,45 @@ function _randomId() {
  * honest { ok:false, error } — never silently times out into something
  * that looks like a result.
  */
-function dispatchBrowserCommand({ eventType, data = {}, timeoutMs = 15000 } = {}) {
+const AUTOPILOT_PORT = parseInt(process.env.AUTOPILOT_STATUS_PORT || '7799');
+
+// §BUILT 2026-07-15 — "cos as a kind of PID service, only running what's
+// needed." Clear Glass is now on-demand in autopilot.js (onDemand:true) —
+// this is the real trigger that makes that mean something instead of
+// just being unused infrastructure. Idempotent: if Clear Glass is already
+// running, autopilot's /spawn/:name returns immediately without
+// re-spawning anything. If it's cold, this genuinely waits for the real
+// health gate to pass before the actual dispatch below ever tries to
+// connect — no guessing, no blind retry against a process that isn't
+// there yet.
+function _ensureClearGlassUp(timeoutMs = 30000) {
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: '127.0.0.1', port: AUTOPILOT_PORT, path: '/spawn/clear-glass', method: 'POST', timeout: timeoutMs,
+    }, (res) => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch (e) { resolve({ ok: false, error: `bad response from autopilot: ${e.message}` }); } });
+    });
+    // Honest degrade — if autopilot's status server isn't reachable at
+    // all (e.g. running outside the supervised stack), don't block the
+    // dispatch on something that was never guaranteed to exist. Proceed
+    // and let the real connection attempt below fail with its own real
+    // error if Clear Glass genuinely isn't up.
+    req.on('error', () => resolve({ ok: true, autopilotUnavailable: true }));
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'autopilot spawn-gate timed out' }); });
+    req.end();
+  });
+}
+
+async function dispatchBrowserCommand({ eventType, data = {}, timeoutMs = 15000 } = {}) {
+  const spawnResult = await _ensureClearGlassUp();
+  if (!spawnResult.ok) {
+    return { ok: false, error: `Clear Glass could not be brought up on demand: ${spawnResult.error}` };
+  }
+  return _dispatchBrowserCommandInner({ eventType, data, timeoutMs });
+}
+
+function _dispatchBrowserCommandInner({ eventType, data = {}, timeoutMs = 15000 } = {}) {
   return new Promise((resolve) => {
     if (!eventType) { resolve({ ok: false, error: 'eventType is required' }); return; }
 

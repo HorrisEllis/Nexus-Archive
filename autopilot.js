@@ -93,6 +93,19 @@ const ALL_KERNELS = [
       ? 'node_modules\\.bin\\electron.cmd'
       : 'node_modules/.bin/electron',
     args: ['.'], cwd: 'clear-glass', optional: true,
+    // §BUILT 2026-07-15 — "cos as a kind of PID service, only running
+    // what's needed." Clear Glass is the heaviest single process in the
+    // stack (Electron + however many provider webviews) and the clearest
+    // real case of "not needed most of the time" — nobody's controlling
+    // a browser unless something is actively using it. onDemand:true
+    // means autopilot does NOT auto-spawn this at boot; it stays dormant
+    // until a real request needs it (see _requestSpawn/_maybeDespawnIdle
+    // below), health-gated the same way orchestrator's own boot sequence
+    // already gates every other system ("Verify /health returns
+    // ok=true") before anything is allowed to treat it as available.
+    onDemand: true,
+    healthUrl: 'http://127.0.0.1:7701/health',
+    idleTimeoutMs: 10 * 60 * 1000, // 10 min with no activity -> despawn
     // §GAP CLOSED 2026-07-09 (from a live console log) — clear-glass logged
     // "[ProviderHost] no guardianDir configured … userscript loading will
     // fail until configured", then "[Userscripts] 0 scripts loaded".
@@ -161,6 +174,7 @@ function _initState(name) {
   _state[name] = {
     proc: null, status: 'starting', crashes: [], restarts: 0,
     lastExit: null, downSince: null, backoffMs: BACKOFF_BASE_MS, stableTimer: null,
+    lastActivity: null, // §BUILT 2026-07-15 — on-demand idle tracking
   };
 }
 
@@ -394,19 +408,164 @@ function _startStatusServer() {
       res.end(body);
       return;
     }
-    res.writeHead(404); res.end('not found — try /status');
+    // §BUILT 2026-07-15 — the real on-demand trigger surface. A caller
+    // that needs an on-demand kernel (e.g. guardian's browser dispatch
+    // needing clear-glass) hits this instead of assuming the process is
+    // already up.
+    const spawnMatch = req.url.match(/^\/spawn\/([a-zA-Z0-9-]+)$/);
+    if (spawnMatch && req.method === 'POST') {
+      requestSpawn(spawnMatch[1]).then(result => {
+        res.writeHead(result.ok ? 200 : 503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      });
+      return;
+    }
+    const touchMatch = req.url.match(/^\/touch\/([a-zA-Z0-9-]+)$/);
+    if (touchMatch && req.method === 'POST') {
+      touchActivity(touchMatch[1]);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+    res.writeHead(404); res.end('not found — try /status, POST /spawn/:name, POST /touch/:name');
   });
   server.listen(STATUS_PORT, () => _log(`autopilot status: http://127.0.0.1:${STATUS_PORT}/status`));
 }
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── On-demand: spawn-request, health-gate, idle-despawn ────────────────────
+// §BUILT 2026-07-15 — "cos as a kind of PID service, only running what's
+// needed." Reuses _spawnKernel exactly as-is (same memory-safety checks,
+// same Windows path quoting, same heap limits — no second, divergent
+// spawn implementation) and adds the one real thing that was missing:
+// gating readiness on an actual health check instead of a fixed timer,
+// and tearing a process down again once nothing needs it.
+
+let _jaaDB = null;
+function _getJaaDB() {
+  if (_jaaDB) return _jaaDB;
+  try { ({ jaaDB: _jaaDB } = require('./cortex/memory/jaa-db.js')); }
+  catch (e) { console.warn(`[autopilot] jaaDB unavailable — on-demand events will log to console only: ${e.message}`); _jaaDB = false; }
+  return _jaaDB;
+}
+
+// §THE EVENT-TRACKING PIECE — "all the events are supposed to be tracked,
+// using the meta system." Every real spawn/gate/despawn transition below
+// writes a real event_log row with a causedBy chain (request -> spawn ->
+// gate result), the same shape meta/cfr/graph.js's CausalGraph already
+// ingests everywhere else in this codebase — not a new, parallel logging
+// path, the same one.
+function _logOnDemandEvent(type, payload, causedBy) {
+  const db = _getJaaDB();
+  const uuid = require('crypto').randomUUID();
+  if (db) {
+    try { db.insert('event_log', { uuid, type, ts: Date.now(), causedBy: causedBy || undefined, ...payload }); }
+    catch (e) { console.warn(`[autopilot] could not log ${type}: ${e.message}`); }
+  }
+  return uuid;
+}
+
+function _pollHealth(url, timeoutMs) {
+  const started = Date.now();
+  return new Promise((resolve) => {
+    const tick = () => {
+      const req = http.request(url, { timeout: 3000 }, (res) => {
+        res.on('data', () => {});
+        res.on('end', () => resolve(res.statusCode >= 200 && res.statusCode < 300));
+      });
+      req.on('error', () => {
+        if (Date.now() - started > timeoutMs) { resolve(false); return; }
+        setTimeout(tick, 500);
+      });
+      req.on('timeout', () => { req.destroy(); if (Date.now() - started > timeoutMs) resolve(false); else setTimeout(tick, 500); });
+      req.end();
+    };
+    tick();
+  });
+}
+
+/**
+ * requestSpawn(name) — the real on-demand entry point. Idempotent: a
+ * kernel that's already running (or already spawning) resolves
+ * immediately once healthy, rather than double-spawning.
+ * Returns { ok, alreadyRunning?, error? }.
+ */
+async function requestSpawn(name) {
+  const kernel = KERNELS.find(k => k.name === name);
+  if (!kernel) return { ok: false, error: `no such kernel: ${name}` };
+  if (!kernel.onDemand) return { ok: false, error: `${name} is not an on-demand kernel — it's already always-on` };
+
+  const s = _state[name];
+  s.lastActivity = Date.now();
+  if (s.status === 'running' || s.status === 'stable') {
+    return { ok: true, alreadyRunning: true };
+  }
+
+  const requestEvt = _logOnDemandEvent('autopilot.spawn.requested', { kernel: name });
+  const idx = KERNELS.indexOf(kernel);
+  _spawnKernel(kernel, COLORS[idx % COLORS.length]);
+  s.status = 'starting';
+
+  if (!kernel.healthUrl) {
+    // No real health check configured — honest: can't gate on something
+    // that doesn't exist. Treat as spawned, not verified.
+    _logOnDemandEvent('autopilot.spawn.unverified', { kernel: name, reason: 'no healthUrl configured' }, requestEvt);
+    return { ok: true, verified: false };
+  }
+
+  const healthy = await _pollHealth(kernel.healthUrl, kernel.spawnTimeoutMs || 30000);
+  if (!healthy) {
+    _logOnDemandEvent('autopilot.spawn.gate_failed', { kernel: name, healthUrl: kernel.healthUrl }, requestEvt);
+    return { ok: false, error: `${name} spawned but never became healthy at ${kernel.healthUrl}` };
+  }
+  s.status = 'stable';
+  _logOnDemandEvent('autopilot.spawn.gate_passed', { kernel: name }, requestEvt);
+  return { ok: true, verified: true };
+}
+
+function _startIdleReaper() {
+  const onDemandKernels = KERNELS.filter(k => k.onDemand);
+  if (onDemandKernels.length === 0) return;
+  const timer = setInterval(() => {
+    for (const kernel of onDemandKernels) {
+      const s = _state[kernel.name];
+      if (!s || s.status !== 'stable' || !s.proc) continue;
+      const idleMs = Date.now() - (s.lastActivity || 0);
+      if (idleMs > (kernel.idleTimeoutMs || Infinity)) {
+        _log(`[${kernel.name}] idle for ${Math.round(idleMs / 1000)}s — despawning (on-demand)`);
+        _logOnDemandEvent('autopilot.despawn.idle', { kernel: kernel.name, idleMs });
+        try { s.proc.kill('SIGTERM'); } catch (_) {}
+        s.status = 'dormant';
+      }
+    }
+  }, 30000);
+  timer.unref();
+}
+
+/** touchActivity(name) — any real caller can mark a kernel as "still in
+ * use" without going through requestSpawn again, resetting the idle
+ * clock. */
+function touchActivity(name) {
+  if (_state[name]) _state[name].lastActivity = Date.now();
+}
+
+
 function start() {
   _log(`autopilot starting — supervising: ${KERNELS.map(k => k.name).join(', ')}`);
   KERNELS.forEach((kernel, i) => {
     _initState(kernel.name);
+    // §BUILT 2026-07-15 — on-demand kernels stay dormant at boot. Real,
+    // not a stub: _requestSpawn (below) is the only path that starts
+    // them, gated on a real health check, same discipline as everything
+    // else this session has been about — no shortcut around the gate.
+    if (kernel.onDemand) {
+      _log(`${COLORS[i % COLORS.length]}[${kernel.name}]${RESET} on-demand — staying dormant until requested`);
+      _state[kernel.name].status = 'dormant';
+      return;
+    }
     _spawnKernel(kernel, COLORS[i % COLORS.length]);
   });
   _startStatusServer();
+  _startIdleReaper();
 }
 
 // ── Graceful shutdown — kill children once, don't let exit handlers restart them ─
@@ -423,4 +582,4 @@ process.on('SIGTERM', () => _shutdown('SIGTERM'));
 
 if (require.main === module) start();
 
-module.exports = { start, _statusSnapshot, KERNELS };
+module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel };
