@@ -668,6 +668,23 @@ const server = http.createServer(async (req, res) => {
     // `GET /ui/idearium → serves idearium UI HTML, status 200` — this
     // was a documented requirement failing silently, not a new one.
     if (sub === 'idearium') {
+      // §TRAILING-SLASH FIX 2026-07-15 — a request for the exact URL
+      // /ui/idearium (no trailing slash, no rest path) served index.html
+      // directly AT that URL. The browser has no way to know /ui/idearium
+      // is a directory — it treats the URL's last segment as the current
+      // "file," so index.html's own relative <script src="js/app.js">
+      // resolves against /ui/ (stripping 'idearium'), requesting
+      // /ui/js/app.js — 404, app.js never loads, every onclick handler
+      // that calls a function app.js defines throws ReferenceError. This
+      // is exactly what showed up live: "Loading failed for the <script>
+      // with source .../ui/js/app.js" plus "openModal is not defined" —
+      // not two bugs, one bug with two symptoms. Standard fix, same as
+      // any static file server: redirect to the trailing-slash URL first,
+      // so the browser's relative-URL base is actually the directory.
+      if (!rest && !u.pathname.endsWith('/')) {
+        res.writeHead(302, { Location: `${u.pathname}/` });
+        return res.end();
+      }
       const ideariumSubPath = rest || 'index.html';
       const ideariumDirect = _safePath(path.join(ROOT, 'idearium', 'ui'), ideariumSubPath);
       if (!ideariumDirect) return json(res, 403, { ok:false, error:'forbidden path' });
@@ -685,6 +702,15 @@ const server = http.createServer(async (req, res) => {
       const st = fs.statSync(direct);
       if (st.isFile()) return serveFile(res, direct);
       if (st.isDirectory()) {
+        // §TRAILING-SLASH FIX 2026-07-15 — same bug, same fix, for every
+        // other system UI this generic path serves (not just idearium's
+        // special-cased branch above). A directory hit with no trailing
+        // slash on the request URL needs a redirect before its index.html
+        // relative asset paths can resolve correctly.
+        if (!u.pathname.endsWith('/')) {
+          res.writeHead(302, { Location: `${u.pathname}/` });
+          return res.end();
+        }
         const idx = _safePath(UI_ROOT, path.join(subPath, 'index.html'));
         if (idx && fs.existsSync(idx)) return serveFile(res, idx);
       }
