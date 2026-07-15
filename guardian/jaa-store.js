@@ -312,10 +312,33 @@ class JaaStore {
     if (!tbl) return;
     const rows = [...tbl.values()];
     const file = this._file(table);
+    // §MULTI-PROCESS FIX 2026-07-15 — write to a temp file then rename over
+    // the target, instead of writeFileSync-ing the target directly. Doesn't
+    // fix the deeper issue (see below), but a rename is atomic at the
+    // filesystem level where an in-place write is not — a second process
+    // reading this file mid-write can no longer observe a truncated/
+    // corrupt partial JSON, and on Windows specifically a direct
+    // writeFileSync racing another process's open handle is a real EBUSY
+    // risk that a rename mostly sidesteps.
+    //
+    // §KNOWN LIMITATION, NOT FIXED HERE — this does NOT fix last-writer-
+    // wins data loss when multiple processes hold independent in-memory
+    // copies of the same table (confirmed real and reproducible: three
+    // concurrent processes writing distinct rows to one table, only the
+    // last flusher's rows survived — the other two processes' writes were
+    // silently overwritten, not merged). That needs either single-process
+    // ownership of each table (every other process goes through an API
+    // instead of opening its own JaaStore on the same directory) or real
+    // cross-process locking — bigger changes than a safe default belongs
+    // to. Flagging explicitly rather than papering over it with a fix that
+    // only handles the corruption half of the problem.
+    const tmpFile = `${file}.${process.pid}.${Date.now()}.tmp`;
     try {
-      fs.writeFileSync(file, JSON.stringify(rows, null, 0), 'utf8');
+      fs.writeFileSync(tmpFile, JSON.stringify(rows, null, 0), 'utf8');
+      fs.renameSync(tmpFile, file);
     } catch (e) {
       console.error(`[jaa] Flush error (${table}): ${e.message}`);
+      try { fs.unlinkSync(tmpFile); } catch (_) {} // best-effort cleanup, don't mask the real error
     }
   }
 

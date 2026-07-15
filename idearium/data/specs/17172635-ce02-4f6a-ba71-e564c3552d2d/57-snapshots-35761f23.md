@@ -1,0 +1,95 @@
+---
+chunk_uuid: 35761f23-fb62-411b-95e0-7ccfda733ecb
+spec_uuid: 17172635-ce02-4f6a-ba71-e564c3552d2d
+section: snapshots
+title: snapshots
+comp_id: idearium.spec-engine
+seam_id: idearium.spec-engine:v1:chunk:17172635:snapshots
+contract_id: spec-contract:17172635:snapshots:35761f23
+agent: import
+model: import:.spec
+status: complete
+completed_at: 2026-07-15T07:37:23.167Z
+---
+
+<!-- imported block: snapshots -->
+
+# BLOCK 10 — SNAPSHOTS
+  # ════════════════════════════════════════════════════════════════
+  snapshots:
+    - id: SNAP-001
+      spec_version: 6.0.0
+      timestamp: 2026-05-24T04:00:00Z
+      trigger: manual
+      state_hash: 7f3a1c9b4e2d0f8a6c5e3b1d9f7a2c0e4b8d6f1a3c7e5b2d0f4a8c6e3b9d1f
+      prior_snapshot: ""
+      delta_summary: >
+        Initial spec encoding for causal-nexus v6.0.0. 21 modules declared across 5 layers.
+        12 invariants declared and mapped to 8 gates. Guardian bridge interface declared.
+        Ledger (v6 new) specified with L-1..L-4 coverage. nexus-topo identified as separate package.
+      diff_ref: ""
+      causal_delta:
+        added: [kernel.ingest, adapter.bridge, ring.eviction, ledger.promoteIdea, version-gate.validate]
+        removed: []
+        modified: []
+      modules_changed: [identity, time, causality, projection, lazy, kernel, adapter, adapter-sandbox, observer, enforcement, delta, query, compress, persist, version-gate, context, clip, sigma, forge, loader, ledger]
+      invariants_status:
+        - invariant_id: INV-I1
+          status: passing
+          gate_id: GATE-002
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-I2
+          status: passing
+          gate_id: GATE-002
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-C1
+          status: passing
+          gate_id: GATE-003
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-C2
+          status: passing
+          gate_id: GATE-003
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-C3
+          status: passing
+          gate_id: GATE-003
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-C4
+          status: passing
+          gate_id: GATE-002
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-A2
+          status: passing
+          gate_id: GATE-002
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-VM1
+          status: passing
+          gate_id: GATE-007
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-L2
+          status: passing
+          gate_id: GATE-008
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-L4
+          status: passing
+          gate_id: GATE-008
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-H1
+          status: passing
+          gate_id: GATE-004
+          checked_at: 2026-05-24T04:00:00Z
+        - invariant_id: INV-H6
+          status: passing
+          gate_id: GATE-004
+          checked_at: 2026-05-24T04:00:00Z
+      patch_ref: ""
+      replay_tested: false
+      replay_test_at: ""
+      notes: >
+        First machine-readable spec. Encoded from source code, README, module UUIDs,
+        enforcement invariant registry, and ledger documentation.
+        replay_tested:false is expected for the initial bootstrap snapshot — no prior
+        WAL exists to replay against. First replay test will occur on SNAP-002.
+
+  # ════════════════════════════════════════════════════════════════
+  

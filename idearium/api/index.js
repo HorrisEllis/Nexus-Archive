@@ -217,6 +217,23 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
 const PORT    = parseInt(process.env.IDEARIUM_PORT   || '4800');
 const BINDING = process.env.IDEARIUM_BIND || '127.0.0.1';
 
+// §CRASH FIX 2026-07-15 — last-resort net. The /sse and static-file branches
+// above had their own uncaught-throw paths fixed directly (see their own
+// comments for the actual mechanism and why it matters — Node 22 crashes
+// the WHOLE process on an unhandled promise rejection by default, not just
+// the one request). This is the belt-and-suspenders version: if some other
+// branch nobody's found yet does the same thing, log it loudly and keep the
+// server alive rather than silently going dark to every poller and the UI.
+// §1.2 nothing silently fails — a caught-and-logged error is recoverable;
+// an unannounced process death that leaves ':4800 unreachable' with no
+// trace of why is exactly the failure mode this exists to prevent.
+process.on('unhandledRejection', (reason) => {
+  console.error('[API][FATAL-AVOIDED] unhandledRejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[API][FATAL-AVOIDED] uncaughtException:', err.stack || err.message);
+});
+
 // Idearium is internal-only — no LAN discovery, no remote tunnel.
 // All access goes through the orchestrator (:9000) proxy.
 
@@ -1280,17 +1297,33 @@ export function startAPI() {
     }
 
     // SSE
+    // §CRASH FIX 2026-07-15 — this branch, and the two static-file branches
+    // below it, sat OUTSIDE the try/catch that wraps matchRoute's dispatch —
+    // the only safety net this file has. Since the whole handler is
+    // `async (req,res) => {...}`, any synchronous throw here (e.g. res.write()
+    // on a connection the client already tore down) becomes an unhandled
+    // promise rejection, and Node 22's default behavior for that is to crash
+    // the ENTIRE process, not just fail the one request. That takes every
+    // other in-flight connection down with it — indistinguishable from the
+    // outside from "the server vanished," which is exactly what a poller
+    // sees as a socket hang up. Caught here the same way the main route
+    // dispatch already is.
     if (req.url === '/sse') {
-      res.writeHead(200, {
-        'Content-Type':  'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection':    'keep-alive',
-        ...CORS,
-      });
-      res.write(': connected\n\n');
-      os.addSSEClient(res);
-      // Send current state immediately on connect
-      res.write(`data: ${JSON.stringify({ type:'idearium.ready', payload: os.stats(), ts: Date.now() })}\n\n`);
+      try {
+        res.writeHead(200, {
+          'Content-Type':  'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection':    'keep-alive',
+          ...CORS,
+        });
+        res.write(': connected\n\n');
+        os.addSSEClient(res);
+        // Send current state immediately on connect
+        res.write(`data: ${JSON.stringify({ type:'idearium.ready', payload: os.stats(), ts: Date.now() })}\n\n`);
+      } catch (e) {
+        console.error('[API] /sse handler error (non-fatal, connection dropped):', e.message);
+        try { res.destroy(); } catch (_) {}
+      }
       return;
     }
 
@@ -1300,43 +1333,60 @@ export function startAPI() {
     // of a 2,335-line monolith into index.html + js/*.js (loaded via
     // <script src>). Without serving js/ those files 404 and the whole UI goes
     // blank. Path-traversal guarded: only files under ui/ are served.
+    //
+    // §CRASH FIX 2026-07-15 — both this branch and the one below were
+    // outside the file's only try/catch (see the /sse fix above for the
+    // full mechanism: an uncaught throw here crashes the whole process on
+    // Node 22, not just this one request). existsSync-then-readFileSync is
+    // also a TOCTOU race on its own (file can vanish between the two calls,
+    // e.g. mid-deploy) — another real way this could throw uncaught.
     if (req.method === 'GET' && (cleanUrl.startsWith('/js/') || cleanUrl.startsWith('/css/'))) {
-      const { readFileSync, existsSync } = await import('fs');
-      const { join, dirname, normalize } = await import('path');
-      const { fileURLToPath } = await import('url');
-      const __d = dirname(fileURLToPath(import.meta.url));
-      const uiRoot = join(__d, '..', 'ui');
-      const asset = normalize(join(uiRoot, cleanUrl));
-      if (!asset.startsWith(uiRoot)) { res.writeHead(403); res.end('forbidden'); return; }
-      if (existsSync(asset)) {
-        const type = asset.endsWith('.js') ? 'application/javascript'
-                   : asset.endsWith('.css') ? 'text/css' : 'text/plain';
-        res.writeHead(200, { 'Content-Type': type });
-        res.end(readFileSync(asset, 'utf8'));
-      } else { res.writeHead(404); res.end('not found'); }
+      try {
+        const { readFileSync, existsSync } = await import('fs');
+        const { join, dirname, normalize } = await import('path');
+        const { fileURLToPath } = await import('url');
+        const __d = dirname(fileURLToPath(import.meta.url));
+        const uiRoot = join(__d, '..', 'ui');
+        const asset = normalize(join(uiRoot, cleanUrl));
+        if (!asset.startsWith(uiRoot)) { res.writeHead(403); res.end('forbidden'); return; }
+        if (existsSync(asset)) {
+          const type = asset.endsWith('.js') ? 'application/javascript'
+                     : asset.endsWith('.css') ? 'text/css' : 'text/plain';
+          res.writeHead(200, { 'Content-Type': type });
+          res.end(readFileSync(asset, 'utf8'));
+        } else { res.writeHead(404); res.end('not found'); }
+      } catch (e) {
+        console.error('[API] static asset handler error (non-fatal):', e.message);
+        try { res.writeHead(500); res.end('internal error'); } catch (_) {}
+      }
       return;
     }
 
     if (req.method === 'GET' && (cleanUrl === '/' || cleanUrl === '/idearium' || cleanUrl === '/ui')) {
-      const { readFileSync, existsSync } = await import('fs');
-      const { join, dirname } = await import('path');
-      const { fileURLToPath } = await import('url');
-      const __d = dirname(fileURLToPath(import.meta.url));
-      // §DUPLICATE RESOLVED 2026-07-09 — idearium/ui/index.html and
-      // ui/idearium/index.html were BYTE-IDENTICAL 2,327-line files. Two
-      // copies of one UI drift the moment either is edited. The sovereign
-      // location wins: a system owns its own UI. orchestrator already serves
-      // the URL /ui/idearium from idearium/ui (orchestrator.js static map),
-      // so the second copy was a fallback nobody reached. Removed.
-      const uiPath = join(__d, '..', 'ui', 'index.html');
-      const uiPath2 = uiPath;
-      const finalPath = existsSync(uiPath) ? uiPath : uiPath2;
-      if (existsSync(finalPath)) {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(readFileSync(finalPath, 'utf8'));
-      } else {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end('<html><body style="background:#0a0a0c;color:#e2e2ea;font-family:monospace;padding:40px"><h2>◈ IDEARIUM</h2><p>UI not built yet</p></body></html>');
+      try {
+        const { readFileSync, existsSync } = await import('fs');
+        const { join, dirname } = await import('path');
+        const { fileURLToPath } = await import('url');
+        const __d = dirname(fileURLToPath(import.meta.url));
+        // §DUPLICATE RESOLVED 2026-07-09 — idearium/ui/index.html and
+        // ui/idearium/index.html were BYTE-IDENTICAL 2,327-line files. Two
+        // copies of one UI drift the moment either is edited. The sovereign
+        // location wins: a system owns its own UI. orchestrator already serves
+        // the URL /ui/idearium from idearium/ui (orchestrator.js static map),
+        // so the second copy was a fallback nobody reached. Removed.
+        const uiPath = join(__d, '..', 'ui', 'index.html');
+        const uiPath2 = uiPath;
+        const finalPath = existsSync(uiPath) ? uiPath : uiPath2;
+        if (existsSync(finalPath)) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(readFileSync(finalPath, 'utf8'));
+        } else {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end('<html><body style="background:#0a0a0c;color:#e2e2ea;font-family:monospace;padding:40px"><h2>◈ IDEARIUM</h2><p>UI not built yet</p></body></html>');
+        }
+      } catch (e) {
+        console.error('[API] UI-serve handler error (non-fatal):', e.message);
+        try { res.writeHead(500); res.end('internal error'); } catch (_) {}
       }
       return;
     }
