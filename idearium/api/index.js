@@ -876,6 +876,7 @@ async function handle(req, res, route, query, body) {
           blocksFound: result.blocksFound,
           sectionsFilled: result.sectionsFilled,
           unmatched: result.unmatched,
+          byteFidelity: result.byteFidelity,
           repoUuid: promote && !promote.error ? promote.repoUuid : null,
           repoError: promote && promote.error ? promote.error : null,
           promoteUrl: `/api/spec-engine/specs/${result.manifest.uuid}/promote`,

@@ -455,7 +455,7 @@ export function markChunkBuilding(specUuid, chunkUuid, { agent, model } = {}) {
 // ── Complete a chunk — write content to disk, verify, update contract ─────────
 // §1.1 — artifact must exist on disk before chunk is marked complete
 // §2.1 — file written before manifest updated
-export function completeChunk(specUuid, chunkUuid, content) {
+export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace = false } = {}) {
   if (!content || !content.trim()) {
     return failChunk(specUuid, chunkUuid, 'agent returned empty content');
   }
@@ -466,6 +466,16 @@ export function completeChunk(specUuid, chunkUuid, content) {
 
   const specDir  = path.join(SPECS_ROOT, specUuid);
   const filePath = path.join(specDir, `${String(chunk.chunkIdx).padStart(2,'0')}-${chunk.sectionId}-${chunkUuid.slice(0,8)}.md`);
+
+  // §BYTE-FIDELITY FIX 2026-07-14 — this used to unconditionally .trim()
+  // content here, downstream of every other caller's own choices about
+  // whitespace. Right call for agent-generated text (strips real LLM
+  // whitespace noise); wrong call for importSpec, which had already gone
+  // to the trouble of preserving exact source bytes up to this point, only
+  // to lose them at the actual write. preserveWhitespace: true skips it —
+  // default stays trim-on, so every other existing caller (agent builds,
+  // API completions, CLI) is unaffected.
+  const finalContent = preserveWhitespace ? content : content.trim();
 
   // §2.1 — write to disk first
   const fileContent = [
@@ -483,7 +493,7 @@ export function completeChunk(specUuid, chunkUuid, content) {
     `completed_at: ${new Date().toISOString()}`,
     `---`,
     ``,
-    content.trim(),
+    finalContent,
   ].join('\n');
 
   fs.writeFileSync(filePath, fileContent, 'utf8');
@@ -495,7 +505,7 @@ export function completeChunk(specUuid, chunkUuid, content) {
 
   chunk.status      = CHUNK_STATES.COMPLETE;
   chunk.filePath    = filePath;
-  chunk.content     = content.trim();
+  chunk.content     = finalContent;
   chunk.byteSize    = Buffer.byteLength(fileContent);
   chunk.updatedAt   = Date.now();
   chunk.completedAt = Date.now();
@@ -861,147 +871,13 @@ export function findPriorSection(sectionId, sectionDesc = '', excludeSpecUuid = 
   return best;
 }
 
-// §BOUNDARY ENGINE 2026-07-10 — "the system detects natural cognitive
-// boundaries and creates warp gates automatically" instead of a human (or a
-// hardcoded alias table) declaring them. Applied here at the cheapest honest
-// level: structural repetition. Within a block's body, find every line that
-// opens a new sibling unit. Group candidates by their grouping key (indent
-// depth for YAML, header depth for markdown, keyword for line-oriented
-// DSLs). The grouping with 3+ repeats IS the block's natural sibling
-// boundary. Returns null when no such repetition exists, so a small/flat
-// block is left whole.
-//
-// §GENERALIZED 2026-07-11 — real uploaded specs proved this needs to be
-// format-agnostic, not YAML-only. Same James-authored corpus, three
-// structurally different dialects:
-//   - YAML block style   (causal-nexus.spec, RHEON_VOID*, forge-ide.spec) —
-//     "  key:" sibling lines at a shared indent.
-//   - Flat YAML, no banners (NEXUS-GUARDIAN.spec, NEXUS-SPEC-v9, spec-parser.spec) —
-//     same shape, just no "# BLOCK N —" banners above it. Already handled:
-//     these fall to a single unbannered block, which is >SPLIT_THRESHOLD, so
-//     the YAML detector runs on the whole document and finds the top-level
-//     keys directly. No change needed for this dialect.
-//   - Markdown docs      (SYSTEM_SPEC_v1_0_0.md, spec-nexus-browser-automation.md) —
-//     no YAML keys at all, only "## N. TITLE" headers. YAML detector finds
-//     nothing → collapsed into one undivided chunk. Confirmed by direct test.
-//   - Line-statement DSL (genesis.spec) — no YAML, no markdown, only
-//     `domain "name"` declarations at column 0 with `// ── banner ──`
-//     comments for the preamble. Same failure as markdown.
-// The last two silently defeated the boundary engine — not a crash, just a
-// giant unsplit chunk, which is the same "information not lost but not
-// usefully bounded" failure the engine exists to prevent. Fixed by trying
-// three detectors in order and using the first that finds real repetition,
-// instead of only ever trying the YAML one.
-function _detectSubBoundaries(body) {
-  return _detectYamlBoundaries(body) || _detectMarkdownBoundaries(body) || _detectDeclarationBoundaries(body);
-}
-
-// Dialect 1 — YAML sibling keys: "  key:" lines grouped by indent depth.
-// The shallowest indent with >=3 repeats is the true outer partition (e.g.
-// the 21 module names in BLOCK 4). Deeper indents recur more often (every
-// module repeats "inputs:", "outputs:", ...) but that's structure INSIDE
-// each unit, not between units — picking the deepest one would slice spans
-// across module boundaries and produce colliding, wrongly-scoped chunks.
-function _detectYamlBoundaries(body) {
-  const lines = body.split('\n');
-  const keyLineRe = /^(\s+)([a-zA-Z][\w.-]*):\s*$/;
-  const byIndent = new Map();
-  lines.forEach((line, i) => {
-    const m = line.match(keyLineRe);
-    if (!m) return;
-    const indent = m[1].length;
-    if (!byIndent.has(indent)) byIndent.set(indent, []);
-    byIndent.get(indent).push({ key: m[2], lineIdx: i });
-  });
-  let best = null;
-  for (const [indent, matches] of [...byIndent.entries()].sort((a, b) => a[0] - b[0])) {
-    if (matches.length >= 3) { best = matches; break; }
-  }
-  return best ? _spansFromMatches(lines, best) : null;
-}
-
-// Dialect 2 — Markdown headers: "## Title" lines grouped by "#" depth.
-// Same rule as YAML: shallowest depth with >=3 repeats wins, since that's
-// the outer partition (chapter-level), not the incidental deeper structure
-// inside one chapter (which may itself repeat "### Fields" etc.).
-function _detectMarkdownBoundaries(body) {
-  const lines = body.split('\n');
-  const headerRe = /^(#{1,6})\s+(.+?)\s*$/;
-  const byDepth = new Map();
-  let inFence = false;
-  lines.forEach((line, i) => {
-    // Fenced code blocks (```...```) commonly contain shell/comment lines
-    // like "# do the thing" — a single '#' at column 0 that would otherwise
-    // be misread as a depth-1 document header and outrank the real headers
-    // (depth sorts shallowest-first). Skip anything inside a fence.
-    if (/^\s*```/.test(line)) { inFence = !inFence; return; }
-    if (inFence) return;
-    const m = line.match(headerRe);
-    if (!m) return;
-    const depth = m[1].length;
-    if (!byDepth.has(depth)) byDepth.set(depth, []);
-    byDepth.get(depth).push({ key: m[2], lineIdx: i });
-  });
-  // Depth 1 ("# Title") is conventionally the single document title, not a
-  // repeating sibling boundary — a stray "# comment" inside prose (or an
-  // unfenced shell snippet) would otherwise register as 3 "matches" and,
-  // being shallower, wrongly outrank the real "## chapter" partition.
-  // Prefer depth>=2; only fall back to depth 1 if nothing deeper qualifies.
-  let best = null;
-  for (const [depth, matches] of [...byDepth.entries()].filter(([d]) => d >= 2).sort((a, b) => a[0] - b[0])) {
-    if (matches.length >= 3) { best = matches; break; }
-  }
-  if (!best) {
-    const depth1 = byDepth.get(1);
-    if (depth1 && depth1.length >= 3) best = depth1;
-  }
-  return best ? _spansFromMatches(lines, best) : null;
-}
-
-// Dialect 3 — line-statement DSLs (e.g. genesis.spec's `domain "name"`):
-// a bare keyword at column 0 (or a shared indent), followed by a quoted or
-// bare identifier, repeated 3+ times. Grouped by keyword so unrelated
-// declaration types (domain vs axiom vs bind) never merge into one span set.
-function _detectDeclarationBoundaries(body) {
-  const lines = body.split('\n');
-  const declRe = /^(\s*)([a-zA-Z][\w-]*)\s+"?([\w][\w.\/-]*)"?\s*(\{|\bversion\b|$)/;
-  const byKeyword = new Map();
-  lines.forEach((line, i) => {
-    const m = line.match(declRe);
-    if (!m) return;
-    // Reject lines that are actually YAML "key: value" or comment lines —
-    // this detector is for bare `keyword identifier` statements only.
-    if (line.trim().startsWith('//') || line.trim().startsWith('#')) return;
-    if (/:/.test(line.slice(0, line.indexOf(m[3])))) return;
-    const groupKey = `${m[1].length}:${m[2]}`;
-    if (!byKeyword.has(groupKey)) byKeyword.set(groupKey, []);
-    byKeyword.get(groupKey).push({ key: m[3], lineIdx: i });
-  });
-  let best = null;
-  for (const matches of byKeyword.values()) {
-    if (matches.length >= 3 && (!best || matches.length > best.length)) best = matches;
-  }
-  return best ? _spansFromMatches(lines, best) : null;
-}
-
-function _spansFromMatches(lines, matches) {
-  const spans = matches.map((m, idx) => {
-    const startLine = m.lineIdx;
-    const endLine = idx + 1 < matches.length ? matches[idx + 1].lineIdx : lines.length;
-    return { key: m.key, text: lines.slice(startLine, endLine).join('\n').trim() };
-  });
-  const preamble = lines.slice(0, matches[0].lineIdx).join('\n').trim();
-  return { spans, preamble };
-}
-
-function _slug(s) {
-  return (s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'section';
-}
-
-// A block shorter than this is cheap enough to read as one chunk — splitting
-// it would just create noise, not clarity. Above it, density is exactly the
-// symptom the boundary engine is looking for.
-const SPLIT_THRESHOLD_CHARS = 1200;
+// §CONSOLIDATED 2026-07-14 — boundary detection, byte-fidelity checking, and
+// SPLIT_THRESHOLD_CHARS moved to lib/chunker/index.js so idearium isn't the
+// only system with this logic — loom (or anything else that needs to split
+// a document) gets the same real implementation, not a second one grown
+// independently later. See that file's header for the full history (the
+// three-dialect detector, the byte-fidelity trim bugs and their fixes).
+const { chunkDocument, structuralProfile, slug: _slug, SPLIT_THRESHOLD_CHARS } = _require('../../lib/chunker/index.js');
 
 // §IMPORT 2026-07-10 — "need a way to import zip or .spec to build a repo."
 // §REWRITTEN 2026-07-10 — the original version mapped every block through a
@@ -1026,58 +902,18 @@ export function importSpec({ name, specText, author = 'import' }) {
   if (!specText || !specText.trim()) throw new Error('importSpec: specText required');
   const specName = name || (specText.match(/name:\s*(\S+)/)?.[1]) || `imported-${Date.now()}`;
 
-  // Split into blocks. Primary: "# BLOCK N — TITLE". Fallback: the whole
-  // document is one block, so an unfamiliar format still imports instead of
-  // failing outright.
-  const blocks = {};
-  const bannerRe = /#\s*BLOCK\s*\d+\s*[—-]\s*([A-Z][A-Z _]+)/g;
-  const banners = [...specText.matchAll(bannerRe)];
-  if (banners.length) {
-    for (let i = 0; i < banners.length; i++) {
-      const title = banners[i][1].trim().toLowerCase();
-      const start = banners[i].index;
-      const end = i + 1 < banners.length ? banners[i + 1].index : specText.length;
-      blocks[title] = specText.slice(start, end).trim();
-    }
-  } else {
-    blocks['spec'] = specText.trim();
+  // §CONSOLIDATED 2026-07-14 — block splitting, sub-boundary detection, and
+  // the byte-fidelity self-check all now live in lib/chunker/index.js
+  // (chunkDocument). This is the same logic that used to be inline here —
+  // moved, not reimplemented, so idearium isn't the only caller of it.
+  const { queue, byteFidelity, blocksFound } = chunkDocument(specText);
+  const roundtrip = byteFidelity.verified;
+  if (!roundtrip) {
+    console.warn(`[idearium.spec-engine] importSpec: byte-fidelity check FAILED for "${specName}" — ` +
+      `reconstructed ${byteFidelity.reconstructedBytes}b vs source ${byteFidelity.sourceBytes}b, ` +
+      `first divergence at byte ${byteFidelity.firstDivergence}`);
   }
 
-  // Build the import queue: walk every block, split the dense ones on their
-  // own natural sub-boundaries, leave the rest whole.
-  const queue = [];
-  for (const [title, body] of Object.entries(blocks)) {
-    const slug = _slug(title);
-    const boundaries = body.length > SPLIT_THRESHOLD_CHARS ? _detectSubBoundaries(body) : null;
-
-    if (boundaries) {
-      let first = true;
-      for (const span of boundaries.spans) {
-        const content = (first && boundaries.preamble) ? `${boundaries.preamble}\n\n${span.text}` : span.text;
-        first = false;
-        queue.push({
-          id: `${slug}-${_slug(span.key)}`,
-          title: `${title} — ${span.key}`,
-          desc: `auto-split from "${title}" (natural boundary: ${span.key})`,
-          content, sourceBlock: title, sourceKey: span.key,
-        });
-      }
-    } else {
-      queue.push({ id: slug, title, desc: `imported block: ${title}`, content: body, sourceBlock: title, sourceKey: null });
-    }
-  }
-
-  // §QUEUED — chunk slots are built to match the queue 1:1, then drained in
-  // order. No fixed template, no shared buckets, nothing to overwrite.
-  // Defensive dedup: two different blocks producing the same slug (e.g. two
-  // sections both named "events") would otherwise collide on one chunk slot
-  // the same way the old alias table did. Disambiguate instead.
-  const seenIds = new Map();
-  for (const q of queue) {
-    const n = (seenIds.get(q.id) || 0) + 1;
-    seenIds.set(q.id, n);
-    if (n > 1) q.id = `${q.id}-${n}`;
-  }
   const sections = queue.map(q => ({ id: q.id, title: q.title, desc: q.desc }));
   const manifest = _buildManifest({ name: specName, type: 'system', description: 'imported from .spec', author, sections });
 
@@ -1087,19 +923,29 @@ export function importSpec({ name, specText, author = 'import' }) {
     if (!chunk) continue; // sections[] and queue[] are built 1:1 — should never miss
     markChunkBuilding(manifest.uuid, chunk.uuid, { agent: 'import', model: 'import:.spec' });
     const tag = q.sourceKey ? `imported: ${q.sourceBlock} → ${q.sourceKey}` : `imported block: ${q.sourceBlock}`;
-    completeChunk(manifest.uuid, chunk.uuid, `<!-- ${tag} -->\n\n${q.content}`);
+    completeChunk(manifest.uuid, chunk.uuid, `<!-- ${tag} -->\n\n${q.content}`, { preserveWhitespace: true });
     const fresh = loadSpec(manifest.uuid);
     const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
-    if (fc) { fc.agent = 'import'; fc.agentModel = 'import:.spec'; }
+    if (fc) {
+      fc.agent = 'import';
+      fc.agentModel = 'import:.spec';
+      // §COGNITIVE SEAM 2026-07-14 — "complexity is a shape, not a scalar."
+      // Real counts (deps/hookEvents/failureModes/invariantRefs) from the
+      // chunk's own content, kept as a vector, not collapsed to one score —
+      // enforcement (small, high invariant fan-out) vs kernel (large, spread
+      // across categories) need different handling, not the same number.
+      fc.structuralProfile = structuralProfile(q.content);
+    }
     saveSpec(fresh);
     filled.push(q.id);
   }
 
   const out = loadSpec(manifest.uuid);
-  out.importedBlocks = Object.keys(blocks);
+  out.importedBlocks = queue.map(q => q.sourceBlock).filter((v, i, a) => a.indexOf(v) === i);
   out.importedUnmatched = [];   // every block now produces at least one chunk — nothing to lose
+  out.byteFidelity = byteFidelity;
   saveSpec(out);
-  return { manifest: out, blocksFound: Object.keys(blocks).length, sectionsFilled: filled, unmatched: [] };
+  return { manifest: out, blocksFound, sectionsFilled: filled, unmatched: [], byteFidelity: out.byteFidelity };
 }
 
 export { listTemplates, getTemplate, readSeed };

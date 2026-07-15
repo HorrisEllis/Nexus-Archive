@@ -21,9 +21,10 @@
 import { Event, Gate, Stream, StreamLog } from '../siso/core/index.js';
 import { createRequire } from 'module';
 import { randomUUID }    from 'crypto';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { loadTable, syncTable, migrateOnce } from './lib/db.js';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 
@@ -59,11 +60,24 @@ const SNR_WINDOW = 50;
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
+// §DB-MIGRATION 2026-07-14 — "idearium needs to use a database, in cortex."
+// idearium was the last subsystem in NEXUS still on hand-rolled flat-file
+// JSON (idearium.json rewritten WHOLE on every single mutation — every idea
+// edit re-serialized every idea, every gap, every event, every snapshot's
+// full deep-cloned state). Everything else already shares cortex's real
+// store (guardian/jaa-store.js, tables-as-Maps, per-table debounced disk
+// flush) via cortex/memory/jaa-db.js. idearium/lib/db.js plugs into that
+// exact seam — see its header for the full rationale. This file no longer
+// owns any storage mechanics of its own, only table names and which keys
+// each gate touches.
+//
 // Was '../../data' — idearium/ -> .. -> nexus/ -> .. -> OUTSIDE the repo
 // entirely. Every "ideas 0 / specs 0" all session was this: loadDB() found
 // no file at the (wrong) resolved path and silently returned freshDB() —
 // never touching the real data at nexus/data/idearium.json. Same off-by-one
-// as the event ledger path, same root cause, fixed together.
+// as the event ledger path, same root cause, fixed together. The flat file
+// this bug describes is now only read ONCE, as a migration source (below) —
+// left on disk afterward, untouched, as an archive (§7.4).
 const DATA_DIR = join(__dir, '../data');
 const DB_FILE  = join(DATA_DIR, 'idearium.json');
 
@@ -71,30 +85,47 @@ function ensureDataDir() {
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function loadDB() {
-  ensureDataDir();
-  if (!existsSync(DB_FILE)) return freshDB();
-  try {
-    const raw = readFileSync(DB_FILE, 'utf8');
-    const db  = JSON.parse(raw);
-    if (db._version !== VERSION) {
-      console.warn(`[IdeaOS] DB version mismatch (${db._version} → ${VERSION}). Migrating.`);
-      return migrateDB(db);
-    }
-    return db;
-  } catch (err) {
-    throw new Error(`[IdeaOS] DB load failed: ${err.message}. File: ${DB_FILE}`);
-  }
+// idearium_<key> — kept out of cortex's own table namespace (artifacts,
+// gaps, ledger_entries, settings, ...); cortex's own 'gaps' are a different
+// thing (system-wide gap detection) from idearium's idea-gaps.
+const TABLES = {
+  ideas:     'idearium_ideas',
+  specs:     'idearium_specs',
+  gaps:      'idearium_gaps',
+  links:     'idearium_links',
+  snapshots: 'idearium_snapshots',
+  events:    'idearium_events',
+  snr:       'idearium_snr',
+  tensions:  'idearium_tensions',
+};
+
+function readLegacyFlatFile() {
+  if (!existsSync(DB_FILE)) return null;
+  try { return JSON.parse(readFileSync(DB_FILE, 'utf8')); }
+  catch (err) { console.error(`[IdeaOS] legacy flat-file unreadable, skipping migration: ${err.message}`); return null; }
 }
 
-function saveDB(db) {
+function loadDB() {
   ensureDataDir();
-  db._savedAt = Date.now();
-  db._version = VERSION;
-  try {
-    writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
-  } catch (err) {
-    throw new Error(`[IdeaOS] DB save failed: ${err.message}`);
+  const db = freshDB();
+  const legacy = readLegacyFlatFile();
+  for (const [key, table] of Object.entries(TABLES)) {
+    const mig = migrateOnce(table, legacy ? (legacy[key] || []) : [], 'uuid');
+    if (mig.migrated) console.log(`[IdeaOS] migrated ${mig.count} legacy '${key}' rows -> cortex table '${table}'`);
+    db[key] = loadTable(table);
+  }
+  return db;
+}
+
+// `keys`: which of db's arrays actually changed — only those tables get
+// diffed/written. Omit (or pass nothing) to sync everything, which stays
+// correct but loses the point of a per-table store; every call site below
+// names its keys explicitly.
+function saveDB(db, keys) {
+  const list = (keys && keys.length) ? keys : Object.keys(TABLES);
+  for (const key of list) {
+    if (!TABLES[key]) { console.error(`[IdeaOS][ERROR] saveDB: unknown table key '${key}'`); continue; }
+    syncTable(TABLES[key], db[key] || [], 'uuid');
   }
 }
 
@@ -111,20 +142,6 @@ function freshDB() {
     snr:       [],
     tensions:  [],
   };
-}
-
-function migrateDB(old) {
-  // Non-destructive: fold old data into fresh schema
-  const db = freshDB();
-  db.ideas     = old.ideas     || [];
-  db.specs     = old.specs     || [];
-  db.gaps      = old.gaps      || [];
-  db.links     = old.links     || [];
-  db.snapshots = old.snapshots || [];
-  db.events    = old.events    || [];
-  db.snr       = old.snr       || [];
-  db.tensions  = old.tensions  || [];
-  return db;
 }
 
 // ─── IdeaOS ───────────────────────────────────────────────────────────────────
@@ -361,7 +378,7 @@ class IdeaCreateGate extends Gate {
       causedBy, source, createdAt: Date.now(), updatedAt: Date.now(),
     };
     this.os.db.ideas.push(idea);
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['ideas']);
     stream.emit(new Event('idearium.idea.created', { idea }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.created', payload: idea, ts: Date.now() });
   }
@@ -377,7 +394,7 @@ class IdeaUpdateGate extends Gate {
     for (const k of allowed) { if (fields[k] !== undefined) idea[k] = fields[k]; }
     idea.updatedAt = Date.now();
     idea.causedBy  = causedBy;
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['ideas']);
     stream.emit(new Event('idearium.idea.updated', { idea }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.updated', payload: idea, ts: Date.now() });
   }
@@ -392,7 +409,7 @@ class IdeaPhaseGate extends Gate {
     if (!idea) { stream.emit(new Event('idearium.error', { op:'idea.phase', reason:`uuid not found: ${uuid}` })); return; }
     const prev = idea.phase;
     idea.phase = phase; idea.updatedAt = Date.now(); idea.causedBy = causedBy;
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['ideas']);
     stream.emit(new Event('idearium.idea.phase.changed', { uuid, from: prev, to: phase }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.updated', payload: idea, ts: Date.now() });
   }
@@ -415,7 +432,7 @@ class IdeaLinkGate extends Gate {
     if (linkType==='resonance') { if(!a.resonanceWith.includes(toUuid)) a.resonanceWith.push(toUuid); if(!b.resonanceWith.includes(fromUuid)) b.resonanceWith.push(fromUuid); }
     if (linkType==='tension')   { if(!a.tensionWith.includes(toUuid)) a.tensionWith.push(toUuid); if(!b.tensionWith.includes(fromUuid)) b.tensionWith.push(fromUuid); }
     a.updatedAt = b.updatedAt = Date.now();
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['ideas','links']);
     stream.emit(new Event('idearium.idea.linked', { link }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.linked', payload: link, ts: Date.now() });
   }
@@ -432,7 +449,7 @@ class IdeaTensionGate extends Gate {
     idea.tensionUpdatedAt = Date.now();
     const record = { uuid: randomUUID(), ideaUuid: uuid, score: result.score, components: result.components, ts: Date.now() };
     this.os.db.tensions.push(record);
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['ideas','tensions']);
     stream.emit(new Event('idearium.idea.tensioned', { uuid, tension: result }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.tensioned', payload: { uuid, tension: result }, ts: Date.now() });
   }
@@ -446,7 +463,7 @@ class IdeaArchiveGate extends Gate {
     const idea = this.os.db.ideas.find(i=>i.uuid===uuid);
     if (!idea) { stream.emit(new Event('idearium.error', { op:'idea.archive', reason:`uuid not found: ${uuid}` })); return; }
     idea.phase = 'archived'; idea.archiveReason = reason; idea.archivedAt = Date.now(); idea.causedBy = causedBy;
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['ideas']);
     stream.emit(new Event('idearium.idea.archived', { uuid, reason }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.archived', payload: { uuid, reason }, ts: Date.now() });
   }
@@ -470,7 +487,7 @@ class SpecCreateGate extends Gate {
       const idea = this.os.db.ideas.find(i=>i.uuid===ideaUuid);
       if (idea) { idea.linkedSpec = spec.uuid; idea.updatedAt = Date.now(); }
     }
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['specs','ideas']);
     stream.emit(new Event('idearium.spec.created', { spec }));
     this.os._broadcast({ uuid: randomUUID(), type: 'spec.created', payload: spec, ts: Date.now() });
   }
@@ -485,7 +502,7 @@ class SpecUpdateGate extends Gate {
     const allowed = ['name','phase','sections','modules','wired','buildOrder','agentAssignments'];
     for (const k of allowed) { if (fields[k] !== undefined) spec[k] = fields[k]; }
     spec.updatedAt = Date.now();
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['specs']);
     stream.emit(new Event('idearium.spec.updated', { spec }));
     this.os._broadcast({ uuid: randomUUID(), type: 'spec.updated', payload: spec, ts: Date.now() });
   }
@@ -504,7 +521,7 @@ class SpecCheckGate extends Gate {
     if (passed) spec.phase = 'specced';
     spec.updatedAt = Date.now();
     const ciRun = { uuid: randomUUID(), specUuid: uuid, status: passed?'passed':'failed', checks, passCount, failCount, durationMs: 0, causedBy: null, ts: Date.now() };
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['specs']);
     stream.emit(new Event('idearium.spec.checked', { spec, ciRun }));
     this.os._broadcast({ uuid: randomUUID(), type: 'spec.checked', payload: { spec, ciRun }, ts: Date.now() });
   }
@@ -528,7 +545,7 @@ class GapOpenGate extends Gate {
       const idea = this.os.db.ideas.find(i=>i.uuid===ideaUuid);
       if (idea && !idea.openGaps.includes(gap.uuid)) idea.openGaps.push(gap.uuid);
     }
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['gaps','ideas']);
     stream.emit(new Event('idearium.gap.opened', { gap }));
     this.os._broadcast({ uuid: randomUUID(), type: 'gap.created', payload: gap, ts: Date.now() });
   }
@@ -547,7 +564,7 @@ class GapResolveGate extends Gate {
       const idea = this.os.db.ideas.find(i=>i.uuid===uuid_);
       if (idea) idea.openGaps = idea.openGaps.filter(g=>g!==uuid);
     }
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['gaps','ideas']);
     stream.emit(new Event('idearium.gap.resolved', { gap }));
     this.os._broadcast({ uuid: randomUUID(), type: 'gap.resolved', payload: gap, ts: Date.now() });
   }
@@ -560,7 +577,7 @@ class GapIgnoreGate extends Gate {
     const gap = this.os.db.gaps.find(g=>g.uuid===uuid);
     if (!gap) { stream.emit(new Event('idearium.error', { op:'gap.ignore', reason:`gap not found: ${uuid}` })); return; }
     gap.status = 'ignored'; gap.ignoreReason = reason;
-    saveDB(this.os.db);
+    saveDB(this.os.db, ['gaps']);
     stream.emit(new Event('idearium.gap.ignored', { gap }));
     this.os._broadcast({ uuid: randomUUID(), type: 'gap.ignored', payload: gap, ts: Date.now() });
   }
@@ -609,7 +626,7 @@ class SnapshotGate extends Gate {
     // snr delta vs last snapshot
     if (os.db.snapshots.length) snap.snrDelta = Math.round((os.snr - (os.db.snapshots[0].snr||0)) * 1000)/1000;
     os.db.snapshots.unshift(snap);
-    saveDB(os.db);
+    saveDB(os.db, ['snapshots','ideas']);
     stream.emit(new Event('idearium.snapshot.committed', { snapshot: snap }));
     os._broadcast({ uuid: randomUUID(), type: 'push.complete', payload: snap, ts: Date.now() });
   }
@@ -635,7 +652,7 @@ class SnapshotRestoreGate extends Gate {
     os.db.specs = JSON.parse(JSON.stringify(target.state.specs));
     os.db.gaps  = JSON.parse(JSON.stringify(target.state.gaps));
     os.db.links = JSON.parse(JSON.stringify(target.state.links));
-    saveDB(os.db);
+    saveDB(os.db, ['ideas','specs','gaps','links']);
     stream.emit(new Event('idearium.snapshot.restored', { commitId: target.commitId }));
     os._broadcast({ uuid: randomUUID(), type: 'pull.complete', payload: { commitId: target.commitId }, ts: Date.now() });
   }
@@ -648,6 +665,13 @@ class SNRSampleGate extends Gate {
     const sample = { uuid: randomUUID(), eventType, snrValue: weight, ts: Date.now() };
     this.os.db.snr.push(sample);
     if (this.os.db.snr.length > 200) this.os.db.snr = this.os.db.snr.slice(-200);
+    // §GAP FIXED 2026-07-14 — this never called saveDB under the old model
+    // either; it survived only because saveDB(db) rewrote the WHOLE file on
+    // every unrelated mutation, so some later gate's save would catch this
+    // table by accident. The new per-table saveDB(db, keys) has no such
+    // accidental coverage — without this, snr history would still recalc
+    // live but stop surviving a restart.
+    saveDB(this.os.db, ['snr']);
     this.os._recalcSNR();
     this.os._broadcast({ uuid: randomUUID(), type: 'snr.update', payload: { snr: this.os.snr }, ts: Date.now() });
   }

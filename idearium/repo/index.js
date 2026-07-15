@@ -44,10 +44,12 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
+import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const COMPONENT_ID = 'nexus-id';   // idearium, in the UID registry
-const REPOS_FILE_NAME = 'idearium-repos.json';
+const REPOS_FILE_NAME = 'idearium-repos.json';  // legacy flat file — read once as a migration source, then left alone (§7.4)
+const REPOS_TABLE = 'idearium_repos';
 
 export class RepoLayer {
   constructor({ ideaOS, specEngine, dataDir } = {}) {
@@ -64,12 +66,20 @@ export class RepoLayer {
 
   get se() { return this._seGetter(); }
 
+  // §DB-MIGRATION 2026-07-14 — same move as idearium/index.js: repos.json
+  // was rewritten whole on every ingest/fork/archive/file-edit. Now backed
+  // by cortex's shared JaaStore (idearium/lib/db.js), one row per repo,
+  // one-time non-destructive fold of whatever was already in the flat file.
   _load() {
-    try { return JSON.parse(fs.readFileSync(this.reposFile, 'utf8')); }
-    catch { return { _version: 2, repos: [] }; }
+    let legacy = null;
+    try { legacy = JSON.parse(fs.readFileSync(this.reposFile, 'utf8')); }
+    catch { /* no legacy file, or unreadable — nothing to migrate */ }
+    const mig = migrateOnce(REPOS_TABLE, legacy ? (legacy.repos || []) : [], 'uuid');
+    if (mig.migrated) console.log(`[idearium/repo] migrated ${mig.count} legacy repo rows -> cortex table '${REPOS_TABLE}'`);
+    return { _version: 2, repos: loadTable(REPOS_TABLE) };
   }
   _save() {
-    try { fs.mkdirSync(this.dataDir, { recursive: true }); fs.writeFileSync(this.reposFile, JSON.stringify(this.repos, null, 2)); }
+    try { syncTable(REPOS_TABLE, this.repos.repos, 'uuid'); }
     catch (e) { console.error(`[idearium/repo] §1.2 save failed: ${e.message}`); }
   }
 
@@ -121,6 +131,11 @@ export class RepoLayer {
           uuid: ideaUuid, text: `Repo: ${name}`, phase: 'building',
           tension: 0.5, parent, createdAt: Date.now(), source: 'repo-ingest',
         });
+        // §GAP FIXED 2026-07-14 — this push had no matching save anywhere;
+        // it only ever reached disk if some unrelated IdeaOS gate happened
+        // to fire its (formerly whole-file) saveDB afterward. Persist it
+        // directly through the same table IdeaOS itself uses.
+        syncTable('idearium_ideas', this.os.db.ideas, 'uuid');
       }
     } catch (e) { console.warn(`[idearium/repo] idea create degraded: ${e.message}`); }
 
