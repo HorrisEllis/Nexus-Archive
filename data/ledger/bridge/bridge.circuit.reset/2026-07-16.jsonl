@@ -1,0 +1,1 @@
+{"uuid":"ef57d622-3aac-4a71-8683-c6ed81979725","system":"bridge","component":"bridge.circuit.reset","action":"registered","status":"ok","tags":["bridge"],"detail":"Reset circuit breaker for node","causedBy":"bridge","contractUuid":null,"session":null,"ts":1784169411483}

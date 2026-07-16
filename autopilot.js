@@ -49,6 +49,27 @@ const LOG_FILE = path.join(LOG_DIR, 'autopilot.log');
 try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch(_) {}
 
 // ── Kernel set — mirrors package.json's start:all, single source of truth ────
+// §FIXED 2026-07-16 — root cause of a live crash loop: "clear-glass ...
+// The system cannot find the path specified." The npm workspaces change
+// (added 2026-07-15 so `npm install` at root also installs clear-glass's
+// deps) can hoist `electron` to the ROOT node_modules/.bin instead of
+// clear-glass's own — npm's hoisting decision depends on whether anything
+// else in the workspace conflicts with electron's version, which nothing
+// currently does, so it hoisted. The clear-glass kernel below was hardcoded
+// to the pre-workspaces layout (clear-glass/node_modules/.bin/electron.cmd)
+// only, from the 2026-07-02 bugfix — that fix was correct for the layout
+// that existed then, but never anticipated the binary moving. Checking both
+// real locations on disk at boot, instead of assuming one, means this
+// doesn't silently break again the next time `npm install`'s hoisting
+// decision changes (e.g. once clear-glass gains a dependency that conflicts
+// with something at root and stops being hoistable).
+const _ELECTRON_BIN     = process.platform === 'win32' ? 'electron.cmd' : 'electron';
+const _ELECTRON_LOCAL   = path.join(ROOT, 'clear-glass', 'node_modules', '.bin', _ELECTRON_BIN);
+const _ELECTRON_HOISTED = path.join(ROOT, 'node_modules', '.bin', _ELECTRON_BIN);
+const _ELECTRON_CMD = fs.existsSync(_ELECTRON_LOCAL)
+  ? path.join('node_modules', '.bin', _ELECTRON_BIN)  // relative — resolved against clear-glass's cwd below, matches the 2026-07-02 fix's join logic
+  : _ELECTRON_HOISTED;                                 // absolute — root-hoisted install; resolvedCmd in _spawnKernel passes absolute paths through unchanged
+
 const ALL_KERNELS = [
   // §FIX 2026-06-20: orchestrator.js normally boots bridge/cortex/guardian/
   // idearium/architect/diagnostic itself via _bootSystems(). Autopilot is
@@ -89,9 +110,7 @@ const ALL_KERNELS = [
   // One-time: run `npm install` inside clear-glass/ before first boot.
   // Windows needs electron.cmd; Unix uses the symlink — detect at runtime.
   { name: 'clear-glass',
-    cmd: process.platform === 'win32'
-      ? 'node_modules\\.bin\\electron.cmd'
-      : 'node_modules/.bin/electron',
+    cmd: _ELECTRON_CMD,
     args: ['.'], cwd: 'clear-glass', optional: true,
     // §BUILT 2026-07-15 — "cos as a kind of PID service, only running
     // what's needed." Clear Glass is the heaviest single process in the

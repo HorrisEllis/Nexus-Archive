@@ -1,0 +1,907 @@
+[2026-07-15T08:09:06.802Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T08:09:06.806Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T08:09:06.816Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T08:09:06.825Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T08:09:06.835Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T08:09:06.845Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T08:09:06.855Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T08:09:06.865Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T08:09:06.876Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T08:09:06.888Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T08:09:06.900Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T08:09:06.912Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T08:09:06.926Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T08:09:06.939Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T08:09:06.943Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T08:09:07.035Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T08:10:06.819Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.836Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.836Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.850Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.865Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.867Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.881Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.896Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.911Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.912Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.926Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-15T08:10:06.942Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-15T08:10:07.054Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-15T08:19:07.089Z] [clear-glass] idle for 600s — despawning (on-demand)
+[2026-07-15T08:19:07.093Z] [31m[clear-glass][0m [31mexited[0m code=null signal=SIGTERM — crashes in window: 1/6
+[2026-07-15T08:19:07.093Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-15T08:19:10.097Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T08:19:10.484Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-15T08:19:10.485Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-15T08:19:13.486Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T08:19:13.754Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-15T08:19:13.754Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-15T08:19:17.768Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T08:19:18.036Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-15T08:19:18.036Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-07-15T08:19:26.047Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T08:19:26.342Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-07-15T08:19:26.342Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-07-15T08:19:42.354Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T08:19:42.632Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-07-15T08:19:42.632Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-15T08:32:37.204Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.204Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.213Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.214Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.222Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.223Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.231Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.231Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.238Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.239Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.247Z] [37m[diagnostic][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.248Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.256Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.257Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.267Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.270Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.279Z] [33m[guardian][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.279Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.286Z] [32m[cortex][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.286Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-07-15T08:32:37.295Z] [35m[bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T08:32:37.295Z] [35m[bridge][0m restarting in 1s (attempt 1)
+[2026-07-15T18:45:58.562Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T18:45:58.565Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T18:45:58.573Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T18:45:58.580Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T18:45:58.587Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T18:45:58.594Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T18:45:58.601Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T18:45:58.608Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T18:45:58.616Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T18:45:58.624Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T18:45:58.633Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T18:45:58.642Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T18:45:58.651Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T18:45:58.660Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T18:45:58.664Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T18:45:58.790Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T18:46:58.576Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.589Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.589Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.604Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.606Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.620Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.622Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.636Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.637Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.651Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.653Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.667Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-15T18:46:58.803Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-15T18:55:58.832Z] [clear-glass] idle for 600s — despawning (on-demand)
+[2026-07-15T18:55:58.836Z] [31m[clear-glass][0m [31mexited[0m code=null signal=SIGTERM — crashes in window: 1/6
+[2026-07-15T18:55:58.842Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-15T18:56:01.847Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T18:56:02.141Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-15T18:56:02.142Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-15T18:56:05.157Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T18:56:05.426Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-15T18:56:05.426Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-15T18:56:09.436Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T18:56:09.696Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-15T18:56:09.696Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-07-15T18:56:17.713Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T18:56:17.979Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-07-15T18:56:17.979Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-07-15T18:56:33.980Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T18:56:34.257Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-07-15T18:56:34.258Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-15T20:02:43.241Z] autopilot received SIGINT — stopping all kernels
+[2026-07-15T20:02:43.245Z] [33m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.252Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.253Z] [34m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.254Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.255Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.255Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.256Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.257Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.260Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.260Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.260Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:43.261Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:02:44.685Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T20:02:44.688Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T20:02:44.698Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T20:02:44.704Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T20:02:44.712Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T20:02:44.720Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T20:02:44.728Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T20:02:44.735Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T20:02:44.743Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T20:02:44.751Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T20:02:44.760Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T20:02:44.770Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T20:02:44.781Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T20:02:44.792Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T20:02:46.389Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T20:02:46.392Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T20:02:46.401Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T20:02:46.408Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T20:02:46.417Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T20:02:46.424Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T20:02:46.432Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T20:02:46.439Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T20:02:46.446Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T20:02:46.457Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T20:02:46.466Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T20:02:46.476Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T20:02:46.486Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T20:02:46.496Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T20:02:46.500Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T20:02:46.687Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:03:46.419Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.509Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.531Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.533Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.533Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.533Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.533Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.534Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.534Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.534Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.535Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.535Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-15T20:03:46.707Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-15T20:11:28.337Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:11:28.338Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-15T20:11:28.339Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:11:28.340Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-15T20:11:28.341Z] autopilot received SIGINT — stopping all kernels
+[2026-07-15T20:11:28.342Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.343Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.344Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.345Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.346Z] [31m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.347Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.348Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.348Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.349Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.350Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:28.360Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:11:29.353Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T20:11:29.358Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T20:12:48.025Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T20:12:48.029Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T20:12:48.037Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T20:12:48.044Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T20:12:48.051Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T20:12:48.060Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T20:12:48.068Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T20:12:48.076Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T20:12:48.084Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T20:12:48.093Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T20:12:48.102Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T20:12:48.111Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T20:12:48.121Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T20:12:48.131Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T20:12:48.136Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T20:12:48.326Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:13:48.051Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.051Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.066Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.068Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.082Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.084Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.098Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.100Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.114Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.115Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.130Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.146Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-15T20:13:48.353Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-15T20:23:18.272Z] [clear-glass] idle for 630s — despawning (on-demand)
+[2026-07-15T20:23:18.275Z] [31m[clear-glass][0m [31mexited[0m code=null signal=SIGTERM — crashes in window: 1/6
+[2026-07-15T20:23:18.284Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-15T20:23:21.285Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:23:23.133Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-15T20:23:23.134Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-15T20:23:26.146Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:23:27.919Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-15T20:23:27.919Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-15T20:23:31.923Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:23:33.738Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-15T20:23:33.738Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-07-15T20:23:41.741Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:23:43.564Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-07-15T20:23:43.565Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-07-15T20:23:59.570Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:24:01.374Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-07-15T20:24:01.375Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-15T20:26:47.889Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.899Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.900Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.901Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.902Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.902Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.903Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.903Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.904Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.905Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.905Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.906Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.907Z] [32m[cortex][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.907Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.908Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:26:47.908Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-07-15T20:26:47.909Z] autopilot received SIGINT — stopping all kernels
+[2026-07-15T20:26:47.916Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:26:47.917Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:26:47.917Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:26:47.918Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:26:48.913Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T20:26:48.917Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T20:26:48.921Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T20:26:48.926Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T20:26:48.931Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T20:26:48.937Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T20:26:48.943Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T20:26:48.950Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T20:26:57.200Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T20:26:57.203Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T20:26:57.212Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T20:26:57.218Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T20:26:57.226Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T20:26:57.233Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T20:26:57.242Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T20:26:57.249Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T20:26:57.257Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T20:26:57.266Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T20:26:57.276Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T20:26:57.285Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T20:26:57.296Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T20:26:57.306Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T20:26:57.310Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T20:26:57.513Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T20:27:57.219Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.233Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.234Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.236Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.248Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.250Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.264Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.279Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.281Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.294Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.311Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.313Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-15T20:27:57.533Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-15T20:30:08.617Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.626Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.627Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.628Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.628Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.629Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.629Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.629Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.631Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.631Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.631Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.631Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.632Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.632Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.633Z] [32m[cortex][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T20:30:08.633Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-07-15T20:30:08.634Z] autopilot received SIGINT — stopping all kernels
+[2026-07-15T20:30:08.635Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:30:08.635Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:30:08.637Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:30:08.638Z] [31m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:30:08.641Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T20:30:09.640Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T20:30:09.645Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T20:30:09.650Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T20:30:09.655Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T20:30:09.661Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T20:30:09.667Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T20:30:09.673Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T20:30:09.680Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T21:31:00.327Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T21:31:00.331Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T21:31:00.339Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T21:31:00.345Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T21:31:00.352Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T21:31:00.359Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T21:31:00.367Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T21:31:00.375Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T21:31:00.383Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T21:31:00.392Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T21:31:00.401Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T21:31:00.410Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T21:31:00.420Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T21:31:00.430Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T21:31:00.435Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T21:31:00.622Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:32:00.368Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.369Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.379Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.380Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.381Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.385Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.401Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.404Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.418Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.421Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.434Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.450Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-15T21:32:00.648Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-15T21:32:20.991Z] [36m[orchestrator][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-07-15T21:32:20.992Z] [36m[orchestrator][0m restarting in 1s (attempt 1)
+[2026-07-15T21:32:21.995Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T21:33:22.007Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T21:36:18.789Z] [36m[orchestrator][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 2/6
+[2026-07-15T21:36:18.790Z] [36m[orchestrator][0m restarting in 1s (attempt 2)
+[2026-07-15T21:36:18.801Z] [31m[clear-glass][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.801Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-15T21:36:18.810Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.811Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.818Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.819Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.829Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.830Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.838Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.839Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.846Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.847Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.859Z] [37m[diagnostic][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.859Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.871Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.872Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.885Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.885Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.897Z] [33m[guardian][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.898Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-07-15T21:36:18.907Z] [32m[cortex][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:36:18.908Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-07-15T21:38:45.415Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T21:38:45.418Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T21:38:45.425Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T21:38:45.431Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T21:38:45.438Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T21:38:45.445Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T21:38:45.452Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T21:38:45.460Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T21:38:45.467Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T21:38:45.476Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T21:38:45.484Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T21:38:45.494Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T21:38:45.504Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T21:38:45.513Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T21:38:45.518Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T21:38:45.814Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:39:45.436Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.437Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.452Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.453Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.468Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.469Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.485Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.486Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.502Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.503Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.518Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.519Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-15T21:39:45.837Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-15T21:49:15.652Z] [clear-glass] idle for 630s — despawning (on-demand)
+[2026-07-15T21:49:15.655Z] [31m[clear-glass][0m [31mexited[0m code=null signal=SIGTERM — crashes in window: 1/6
+[2026-07-15T21:49:15.656Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-15T21:49:18.663Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:49:20.478Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-15T21:49:20.478Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-15T21:49:23.494Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:49:25.307Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-15T21:49:25.307Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-15T21:49:29.320Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:49:31.122Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-15T21:49:31.122Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-07-15T21:49:39.137Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:49:40.914Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-07-15T21:49:40.915Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-07-15T21:49:56.919Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:49:58.734Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-07-15T21:49:58.734Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-15T21:50:58.571Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:50:58.582Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-15T21:50:58.583Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:50:58.584Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-15T21:50:58.584Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:50:58.584Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-15T21:50:58.585Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:50:58.586Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-15T21:50:58.587Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:50:58.587Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-15T21:50:58.587Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:50:58.588Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-15T21:50:58.589Z] autopilot received SIGINT — stopping all kernels
+[2026-07-15T21:50:58.591Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T21:50:58.596Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T21:50:58.597Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T21:50:58.598Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T21:50:58.598Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T21:50:58.599Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-15T21:50:59.591Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T21:50:59.596Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T21:50:59.602Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T21:50:59.606Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T21:50:59.612Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T21:50:59.617Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T21:55:44.211Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-15T21:55:44.214Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-15T21:55:44.222Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-15T21:55:44.228Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-15T21:55:44.235Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-15T21:55:44.242Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-15T21:55:44.250Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-15T21:55:44.257Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-15T21:55:44.265Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-15T21:55:44.273Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-15T21:55:44.284Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-15T21:55:44.295Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-15T21:55:44.304Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-15T21:55:44.314Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-15T21:55:44.318Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-15T21:55:44.643Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-15T21:56:21.461Z] [31m[clear-glass][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.462Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-15T21:56:21.469Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.469Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.475Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.476Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.483Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.484Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.491Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.492Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.501Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.502Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.510Z] [37m[diagnostic][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.512Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.521Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.521Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.535Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.536Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.547Z] [33m[guardian][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.548Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.556Z] [32m[cortex][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.557Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-07-15T21:56:21.565Z] [35m[bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-15T21:56:21.566Z] [35m[bridge][0m restarting in 1s (attempt 1)
+[2026-07-16T02:25:50.029Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T02:25:50.052Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T02:25:50.060Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T02:25:50.066Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T02:25:50.072Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T02:25:50.080Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T02:25:50.087Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T02:25:50.095Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T02:25:50.102Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T02:25:50.114Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T02:25:50.121Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T02:25:50.131Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T02:25:50.139Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T02:25:50.147Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T02:25:50.152Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-16T02:25:51.400Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:25:51.423Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-07-16T02:25:51.424Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-16T02:25:53.166Z] autopilot received SIGINT — stopping all kernels
+[2026-07-16T02:25:53.171Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.171Z] [33m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.172Z] [34m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.173Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.173Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.174Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.175Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.177Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.178Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.179Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.181Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:53.182Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:25:54.437Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:25:54.450Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-16T02:25:54.450Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-16T02:26:04.082Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T02:26:04.085Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T02:26:04.093Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T02:26:04.099Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T02:26:04.105Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T02:26:04.113Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T02:26:04.120Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T02:26:04.127Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T02:26:04.136Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T02:26:04.144Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T02:26:04.154Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T02:26:04.163Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T02:26:04.173Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T02:26:04.182Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T02:26:04.187Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-16T02:26:04.524Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:26:04.548Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-07-16T02:26:04.549Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-16T02:26:07.550Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:26:07.577Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-16T02:26:07.578Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-16T02:26:10.591Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:26:10.610Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-16T02:26:10.610Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-16T02:26:12.253Z] autopilot received SIGINT — stopping all kernels
+[2026-07-16T02:26:12.256Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.257Z] [33m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.258Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.258Z] [34m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.259Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.260Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.261Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.262Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.263Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.264Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.268Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:26:12.275Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:31:17.402Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T02:31:17.405Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T02:31:17.413Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T02:31:17.419Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T02:31:17.426Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T02:31:17.435Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T02:31:17.442Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T02:31:17.450Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T02:31:17.458Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T02:31:17.467Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T02:31:17.477Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T02:31:17.488Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T02:31:17.497Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T02:31:17.507Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T02:31:17.512Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-16T02:31:17.914Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:31:17.937Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-07-16T02:31:17.937Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-16T02:31:20.938Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:31:20.953Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-16T02:31:20.953Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-16T02:31:23.957Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:31:26.358Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-16T02:31:26.359Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-16T02:31:30.360Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:31:30.374Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-16T02:31:30.375Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-07-16T02:31:38.381Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:31:38.393Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-07-16T02:31:38.393Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-07-16T02:31:54.400Z] [31m[clear-glass][0m starting — node_modules\.bin\electron.cmd .
+[2026-07-16T02:31:54.414Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-07-16T02:31:54.414Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-16T02:32:17.417Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.430Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.431Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.443Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.445Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.458Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.459Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.475Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.486Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.502Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.503Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-16T02:32:17.515Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-16T02:35:19.720Z] autopilot received SIGINT — stopping all kernels
+[2026-07-16T02:35:19.724Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.725Z] [34m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.725Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.726Z] [33m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.727Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.729Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.729Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.730Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.733Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.733Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.734Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:19.741Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T02:35:21.290Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T02:35:21.293Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T02:35:21.302Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T02:35:21.308Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T02:35:21.315Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T02:35:21.322Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T02:35:21.330Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T02:35:21.338Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T02:35:21.346Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T02:35:21.354Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T02:35:21.363Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T02:35:21.372Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T02:35:21.382Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T02:35:21.392Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T02:35:23.306Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T02:35:23.309Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T02:35:23.317Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T02:35:23.324Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T02:35:23.332Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T02:35:23.339Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T02:35:23.346Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T02:35:23.353Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T02:35:23.361Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T02:35:23.370Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T02:35:23.378Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T02:35:23.387Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T02:35:23.397Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T02:35:23.407Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T02:35:23.412Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-16T02:35:23.746Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:35:23.774Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-07-16T02:35:23.774Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-16T02:35:26.784Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:35:26.797Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-16T02:35:26.798Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-16T02:35:29.803Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:35:30.937Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-16T02:35:30.937Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-16T02:35:34.944Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:35:34.960Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-16T02:35:34.960Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-07-16T02:35:42.971Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:35:42.984Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-07-16T02:35:42.984Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-07-16T02:35:58.986Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:35:59.000Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-07-16T02:35:59.001Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-16T02:36:23.321Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.336Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.337Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.352Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.353Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.368Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.369Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.384Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.385Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.400Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.401Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-16T02:36:23.416Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-16T02:36:50.349Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T02:36:50.352Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T02:36:50.363Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T02:36:50.372Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T02:36:50.381Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T02:36:50.390Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T02:36:50.400Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T02:36:50.410Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T02:36:50.421Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T02:36:50.432Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T02:36:50.444Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T02:36:50.457Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T02:36:50.471Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T02:36:50.485Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T02:36:55.804Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.805Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.810Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.811Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.816Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.817Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.825Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.825Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.830Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.831Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.840Z] [37m[diagnostic][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.841Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.847Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.847Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.858Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.859Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.866Z] [33m[guardian][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.866Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.875Z] [32m[cortex][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.875Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:55.883Z] [35m[bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T02:36:55.883Z] [35m[bridge][0m restarting in 1s (attempt 1)
+[2026-07-16T02:36:57.950Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T02:36:57.953Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T02:36:57.965Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T02:36:57.974Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T02:36:57.983Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T02:36:57.993Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T02:36:58.005Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T02:36:58.016Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T02:36:58.026Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T02:36:58.040Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T02:36:58.052Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T02:36:58.065Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T02:36:58.079Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T02:36:58.093Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T02:36:58.097Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-16T02:36:58.439Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:37:57.981Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-16T02:37:57.982Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-16T02:37:57.990Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.014Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.014Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.029Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.035Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.059Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.060Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.074Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.090Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.105Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-16T02:37:58.474Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-16T02:47:28.255Z] [clear-glass] idle for 630s — despawning (on-demand)
+[2026-07-16T02:47:28.259Z] [31m[clear-glass][0m [31mexited[0m code=null signal=SIGTERM — crashes in window: 1/6
+[2026-07-16T02:47:28.260Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-16T02:47:31.273Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:47:33.126Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-16T02:47:33.127Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-07-16T02:47:36.138Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:47:37.937Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-16T02:47:37.937Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-07-16T02:47:41.949Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:47:43.742Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-16T02:47:43.743Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-07-16T02:47:51.757Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:47:53.555Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-07-16T02:47:53.555Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-07-16T02:48:09.568Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T02:48:11.369Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-07-16T02:48:11.370Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-16T03:11:31.000Z] [36m[orchestrator][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-07-16T03:11:31.003Z] [36m[orchestrator][0m restarting in 1s (attempt 1)
+[2026-07-16T03:11:32.016Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T03:11:32.407Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T03:11:34.380Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-07-16T03:11:34.381Z] [31m[clear-glass][0m restarting in 30s (attempt 6)
+[2026-07-16T03:12:04.389Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T03:12:06.283Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-07-16T03:12:06.284Z] [31m[clear-glass][0m restarting in 30s (attempt 7)
+[2026-07-16T03:12:32.037Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-16T03:12:36.292Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T03:12:38.216Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-07-16T03:12:38.217Z] [31m[clear-glass][0m restarting in 30s (attempt 8)
+[2026-07-16T03:13:08.220Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T03:13:10.164Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-07-16T03:13:10.165Z] [31m[clear-glass][0m restarting in 30s (attempt 9)
+[2026-07-16T03:13:21.139Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:21.145Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:21.145Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:21.147Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:21.147Z] autopilot received SIGINT — stopping all kernels
+[2026-07-16T03:13:21.148Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.149Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.150Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.150Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.152Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.152Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.153Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.157Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.159Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:21.160Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T03:13:22.159Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T03:13:22.166Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T03:13:27.633Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T03:13:27.637Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T03:13:27.650Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T03:13:27.660Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T03:13:27.671Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T03:13:27.682Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T03:13:27.693Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T03:13:27.704Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T03:13:27.716Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T03:13:27.729Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T03:13:27.741Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T03:13:27.757Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T03:13:27.768Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T03:13:27.780Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T03:13:27.785Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-16T03:13:28.217Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T03:13:54.648Z] [32m[copilot][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.658Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.659Z] [33m[emerge][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.660Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.661Z] [34m[loom][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.661Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.673Z] [35m[ollama-bridge][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.675Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.677Z] [31m[architect][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.677Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.678Z] [37m[diagnostic][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.679Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.679Z] [33m[guardian][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.680Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.681Z] [36m[eravos][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.688Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.689Z] [34m[idearium][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.690Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-07-16T03:13:54.691Z] [31m[clear-glass][0m [31mexited[0m code=1073807364 signal=null — crashes in window: 1/6
+[2026-07-16T03:13:54.693Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-07-16T03:13:55.669Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T03:13:55.682Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T03:13:55.692Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T03:13:55.702Z] [32m[copilot][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.703Z] [32m[copilot][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.704Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T03:13:55.712Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T03:13:55.722Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T03:13:55.733Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T03:13:55.744Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T03:13:55.755Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T03:13:55.765Z] [33m[emerge][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.766Z] [33m[emerge][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.766Z] [34m[loom][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.767Z] [34m[loom][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.767Z] [35m[ollama-bridge][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.768Z] [35m[ollama-bridge][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.768Z] [31m[architect][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.769Z] [31m[architect][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.769Z] [37m[diagnostic][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.770Z] [37m[diagnostic][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.770Z] [33m[guardian][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.770Z] [33m[guardian][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.772Z] [36m[eravos][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.773Z] [36m[eravos][0m restarting in 2s (attempt 2)
+[2026-07-16T03:13:55.780Z] [34m[idearium][0m [31mexited[0m code=3221226091 signal=null — crashes in window: 2/6
+[2026-07-16T03:13:55.781Z] [34m[idearium][0m restarting in 2s (attempt 2)
+[2026-07-16T05:06:25.114Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-07-16T05:06:25.126Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T05:06:25.135Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-07-16T05:06:25.140Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-07-16T05:06:25.148Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-07-16T05:06:25.155Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-07-16T05:06:25.163Z] [31m[architect][0m starting — node architect/service.js
+[2026-07-16T05:06:25.170Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-07-16T05:06:25.182Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-07-16T05:06:25.190Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-07-16T05:06:25.198Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-07-16T05:06:25.207Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-07-16T05:06:25.214Z] [34m[loom][0m starting — node loom/server.js
+[2026-07-16T05:06:25.222Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-07-16T05:06:25.226Z] autopilot status: http://127.0.0.1:7799/status
+[2026-07-16T05:06:26.695Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-file-read-timeout-fix\nexus\node_modules\.bin\electron.cmd .
+[2026-07-16T05:07:25.150Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.150Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.164Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.165Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.179Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.180Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.195Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.211Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.212Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.227Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.228Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-07-16T05:07:25.243Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-07-16T05:07:26.718Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-07-16T05:08:24.591Z] [36m[orchestrator][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-07-16T05:08:24.592Z] [36m[orchestrator][0m restarting in 1s (attempt 1)
+[2026-07-16T05:08:25.608Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-07-16T05:08:27.661Z] autopilot received SIGINT — stopping all kernels
+[2026-07-16T05:08:27.663Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.664Z] [34m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.664Z] [33m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.666Z] [32m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.668Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.670Z] [35m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.674Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.675Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.676Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.680Z] [31m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.681Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.681Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-07-16T05:08:27.691Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)

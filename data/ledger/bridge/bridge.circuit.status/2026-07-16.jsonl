@@ -1,0 +1,1 @@
+{"uuid":"684699b0-6c36-4c10-9853-af92685f5c89","system":"bridge","component":"bridge.circuit.status","action":"registered","status":"ok","tags":["bridge"],"detail":"Circuit breaker state per node","causedBy":"bridge","contractUuid":null,"session":null,"ts":1784169411482}

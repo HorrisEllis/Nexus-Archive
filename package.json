@@ -6,6 +6,7 @@
   "license": "MIT",
   "private": true,
   "bin": {},
+  "workspaces": ["clear-glass", "architect", "cos", "emerge", "idearium", "siso"],
   "scripts": {
     "test": "node tests/brutal.test.js",
     "test:all": "node tests/brutal.test.js && node tests/pipeline.test.js && node tests/kernel.test.js && node tests/full.test.js && node tests/modules/run-all.js",

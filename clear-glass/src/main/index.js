@@ -181,15 +181,39 @@ app.commandLine.appendSwitch('disable-gpu-process-crash-limit');
 // instance exited next time, instead of a silent, info-free exit code 0.
 // (2) brief delay + retry-once before giving up, in case it's genuinely a
 // transient lock-release race rather than a real second instance running.
-if (!app.requestSingleInstanceLock()) {
-  console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] FATAL: requestSingleInstanceLock() failed — another instance holds the lock (or its lock file hasn't released yet). Exiting. If this fires on every restart attempt, the real fix is autopilot's restart backoff outracing Windows' lock-file cleanup, not this process itself.`);
+// §fix 2026-07-15 — the retry described in the comment above was never
+// actually implemented; requestSingleInstanceLock() only tried once and
+// quit immediately on failure, which is the exact behavior that tripped
+// the circuit breaker (6 clean exit(1)s in under a minute, autopilot's
+// 1s/2s/4s/8s/16s backoff outracing Windows' lock-file release). This
+// does one delayed retry before giving up for real.
+const LOCK_RETRY_DELAY_MS = 1500;
+const _sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function acquireSingleInstanceLockOrExit() {
+  if (app.requestSingleInstanceLock()) return true;
+
+  console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] requestSingleInstanceLock() failed on first attempt — another instance holds the lock (or its lock file hasn't released yet). Retrying once in ${LOCK_RETRY_DELAY_MS}ms in case this is a transient release race.`);
+  await _sleep(LOCK_RETRY_DELAY_MS);
+
+  if (app.requestSingleInstanceLock()) {
+    console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] requestSingleInstanceLock() succeeded on retry — proceeding with boot.`);
+    return true;
+  }
+
+  console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] FATAL: requestSingleInstanceLock() failed again after retry — a genuine second instance is running, not just a release race. Exiting. If this fires on every restart attempt, the real fix is autopilot's restart backoff outracing Windows' lock-file cleanup, not this process itself.`);
   app.quit();
   process.exit(1); // §fix — was exit(0), which is indistinguishable from a clean shutdown in any log or monitoring tool. A lock failure is a real failure; code 1 says so.
+  return false;
 }
-app.on('second-instance', () => { const w = windows.values().next().value; if (w) { w.show(); w.focus(); } });
-app.whenReady().then(bootstrap);
-app.on('window-all-closed', e => e.preventDefault()); // tray-first — never quit on last window close
-app.on('before-quit', shutdown);
+
+acquireSingleInstanceLockOrExit().then(acquired => {
+  if (!acquired) return; // already exited inside acquireSingleInstanceLockOrExit
+  app.on('second-instance', () => { const w = windows.values().next().value; if (w) { w.show(); w.focus(); } });
+  app.whenReady().then(bootstrap);
+  app.on('window-all-closed', e => e.preventDefault()); // tray-first — never quit on last window close
+  app.on('before-quit', shutdown);
+});
 
 // ── NEXUS HTTP helper — matches nexus-connect._req exactly ────────────────
 // Returns { ok, data, error, ms } — never throws
@@ -648,7 +672,15 @@ async function bootstrap() {
   // works. Default is now lazy-only (no pre-warm at all); set
   // CG_AUTOBOOT_PROVIDERS to a comma-list ('claude,chatgpt') to pre-warm
   // specific ones, or 'all' for the old behavior back.
-  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'none').trim();
+  // §fix 2026-07-15 — lazy-only was the wrong default for this setup:
+  // Guardian's whole point is these four userscripts actually running and
+  // holding an NCP connection, which can't happen if nothing ever boots
+  // them until some other code path happens to call ph.start(). Default
+  // now pre-warms the four Guardian-supported providers hidden in the
+  // background on every boot. Still fully overridable — set
+  // CG_AUTOBOOT_PROVIDERS=none to go back to lazy-only, or a specific
+  // comma-list / 'all' to change which ones boot.
+  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'claude,chatgpt,gemini,perplexity').trim();
   if (autoBootSetting === 'none' || autoBootSetting === '') {
     console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS to pre-warm specific providers.');
   } else {

@@ -153,9 +153,52 @@ getSpecEngine(); getAgentSuite(); getCopilotAdapter();
 setTimeout(() => { getWarpChunkDispatch().catch(() => {}); }, 100);  // pre-warm; failure already recorded by warpStatus()
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
+import { extractModulesViaGuardian } from '../spec-engine/guardian-extract.js';
+import { fileURLToPath as _fileURLToPath } from 'url';
+
+// §BUG CAUGHT 2026-07-15 — the legacy spec.build route (below) reads
+// `os.dataDir`, but IdeaOS (idearium/index.js) never sets `this.dataDir`
+// anywhere — it's always undefined, silently falling back to
+// path.join(process.cwd(), 'data'), which only happens to be right if the
+// process was launched from inside idearium/. Computed here the same way
+// spec-engine/index.js derives SPECS_ROOT — file-relative, not cwd-relative —
+// so compileIdeariumSpec's output actually lands next to data/specs/ instead
+// of wherever the launcher's cwd happened to be.
+const IDEARIUM_DATA_DIR = path.join(path.dirname(_fileURLToPath(import.meta.url)), '..', 'data');
 import { dispatchChunkWithVerification } from '../spec-engine/chunk-dispatch.js';
 import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
+import { loadTable } from '../lib/db.js';
+
+// §HISTORY 2026-07-15 — chunk retry trail + build-artifact list, read back
+// out of the append-only tables lib/cortex-listeners.js writes on
+// 'idearium.spec-engine.chunk.complete' / 'idearium.spec.build.completed'.
+// Attached to speceng.show rather than a new route — the UI already fetches
+// this endpoint to render the builder panel, and history belongs to the
+// same spec-detail request rather than a second round trip (decided on
+// review before wiring the UI). Each table read is independently guarded —
+// a jaa-db read failure on one must not blank the manifest the rest of the
+// response depends on (§1.2): a broken history comes back empty with a
+// loud console warning, never a 500 on the whole endpoint.
+const CHUNK_EVENTS_LIMIT = 200; // most-recent-first cap — a 58-chunk spec with retries can generate hundreds of rows; the UI needs a trail, not the full audit log on every request
+function _specHistory(specUuid) {
+  let chunkEvents = [];
+  try {
+    chunkEvents = loadTable('idearium_spec_chunk_events')
+      .filter(r => r.specUuid === specUuid)
+      .sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))
+      .slice(0, CHUNK_EVENTS_LIMIT);
+  } catch (e) { console.warn('[idearium/api] history: chunk_events read failed:', e.message); }
+
+  let buildArtifacts = [];
+  try {
+    buildArtifacts = loadTable('idearium_build_artifacts')
+      .filter(r => r.specUuid === specUuid)
+      .sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0)); // [0] = most recent, matches db.js's own "snapshots[0] is most recent" convention
+  } catch (e) { console.warn('[idearium/api] history: build_artifacts read failed:', e.message); }
+
+  return { chunkEvents, buildArtifacts };
+}
 
 // ── Repo layer singleton — each idea-as-repo lives here, not in a single
 //    hardcoded "Nexus folder". Wired in (previously dead code, zero routes
@@ -179,7 +222,19 @@ function getRepoLayer() {
 // is the metadata, the repo is a thin index over it"). This function's
 // job shrinks to exactly one check: is the spec actually complete enough
 // to promote. Everything past that is one line.
-function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
+// §GUARDIAN-COMPILE 2026-07-15 — closes the second half of the gap the
+// 2026-07-10 comment above named: "idea -> spec -> chunk -> dispatch ->
+// ARTIFACT -> repo" ended at a markdown archive, never at real code.
+// repo.ingest() below is UNCHANGED — the archive still always happens when
+// chunks are complete, independent of whether compile succeeds. Compile is
+// a second, separate outcome recorded on the result, not a precondition
+// for the repo existing.
+//
+// ideaOS is now a required first argument (was previously free-standing —
+// this function had no way to os.emit()). Every call site already has an
+// IdeaOS instance in scope (both call sites are inside api/index.js's
+// `handle()`, which does `const os = getIdeaOS()` at its top).
+async function _promoteSpecToRepo(ideaOS, se, specUuid, mode = 'emerge') {
   let manifest;
   try { manifest = se.loadSpec(specUuid); }
   catch (e) { return { error: `spec not found: ${specUuid}` }; }
@@ -202,6 +257,67 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
   const repoUuid = result.repo?.uuid || null;
   if (!repoUuid) return { error: 'ingest returned no repo — promotion did not create a repository' };
 
+  // ── Real code, not just archived prose ──────────────────────────────────
+  // Only attempted on 'emerge' (fully-built specs) — 'manual' promotions can
+  // have TODO-marked pending sections, and extracting/compiling from an
+  // admittedly-incomplete spec would be worse than not trying: a compile
+  // "succeeding" against placeholder content is a false signal.
+  let compiled = { ok: false, attempted: false };
+  if (mode === 'emerge') {
+    let extraction;
+    try {
+      extraction = await extractModulesViaGuardian(manifest, { specUuid: manifest.uuid });
+    } catch (e) {
+      extraction = { ok: false, error: `extraction threw: ${e.message}` };
+    }
+
+    if (extraction.ok) {
+      const translatedSpec = {
+        uuid: manifest.uuid,
+        name: manifest.name,
+        sections: [
+          { id: 'intent', content: manifest.chunks.find(c => c.sectionId === 'purpose')?.content || '' },
+          { id: 'module_hooks', content: extraction.yaml },
+        ],
+      };
+      const outputDir = path.join(IDEARIUM_DATA_DIR, 'compiled', manifest.uuid);
+      let compileResult;
+      try {
+        compileResult = await compileIdeariumSpec(translatedSpec, outputDir, { tier: 1 });
+      } catch (e) {
+        compileResult = { ok: false, error: e.message, step: 'compile-exception' };
+      }
+      compiled = {
+        ok: !!compileResult.ok, attempted: true, outputDir,
+        t0: compileResult.t0?.emitted?.length ?? 0,
+        t1: compileResult.t1?.emitted?.length ?? 0,
+        // Honest provenance label — distinct from compiler-bridge's own
+        // 'structured'/'fallback' so a caller can tell "Guardian extracted
+        // real modules and they compiled" apart from either of those paths.
+        extraction: 'guardian-extracted',
+        agent: extraction.agent,
+        error: compileResult.ok ? null : (compileResult.error || 'compile did not report ok'),
+      };
+    } else {
+      // §1.2 — no silent fallback into compiler-bridge's placeholder module.
+      // A failed extraction is reported as a failed compile, not papered over.
+      compiled = { ok: false, attempted: true, extraction: 'guardian-failed', error: extraction.error };
+    }
+
+    // Bus event — the ONLY thing that makes cortex-listeners.js persist this
+    // into idearium_build_artifacts. Fire regardless of ok/error so failed
+    // attempts are queryable too, not just successes. Named as a domain
+    // event (build completed), not the implementation (compileIdeariumSpec's
+    // internal compile() call) — same name the legacy spec.build route below
+    // now emits too, so one listener covers both entry points.
+    ideaOS.emit('idearium.spec.build.completed', {
+      specUuid: manifest.uuid, outputDir: compiled.outputDir || null,
+      t0: compiled.t0 ?? null, t1: compiled.t1 ?? null,
+      extraction: compiled.extraction || null, agent: compiled.agent || null,
+      ok: compiled.ok, error: compiled.error || null,
+    });
+  }
+
   return {
     repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
     // §MERGED 2026-07-11 — result.ideaUuid above is RepoLayer.ingest()'s
@@ -211,6 +327,7 @@ function _promoteSpecToRepo(se, specUuid, mode = 'emerge') {
     // ORIGINATING idea's phase don't silently advance the wrong idea.
     originIdeaUuid: manifest.ideaUuid || null,
     mode, chunksBuilt: manifest.chunks.length - pending.length, chunksTotal: manifest.chunks.length,
+    compiled, // { ok, attempted, outputDir, t0, t1, extraction, agent, error } — archive vs real code, distinguishable
   };
 }
 
@@ -309,6 +426,7 @@ const ROUTE_CAP = {
   'spec.check':       CAPS.WRITE_IDEAS,
   'spec.build':       CAPS.WRITE_IDEAS,
   'spec.export':      CAPS.READ_IDEAS,
+  'spec.archive':     CAPS.WRITE_IDEAS,
   'gap.list':         CAPS.READ_IDEAS,
   'gap.show':         CAPS.READ_IDEAS,
   'gap.open':         CAPS.WRITE_IDEAS,
@@ -401,6 +519,7 @@ function matchRoute(method, url) {
     ['GET',    ['api','queue',    ':queueId'],           'queue.show'],
     ['POST',   ['api','specs',    ':uuid','build'],       'spec.build'],
     ['GET',    ['api','specs',    ':uuid','export'],      'spec.export'],
+    ['DELETE', ['api','specs',    ':uuid'],               'spec.archive'],
     ['GET',    ['api','gaps',     ':uuid'],               'gap.show'],
     ['POST',   ['api','gaps',     ':uuid','resolve'],     'gap.resolve'],
     ['POST',   ['api','gaps',     ':uuid','ignore'],      'gap.ignore'],
@@ -414,6 +533,8 @@ function matchRoute(method, url) {
     ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','complete'], 'speceng.chunk.complete'],
     ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','fail'],     'speceng.chunk.fail'],
     ['POST',   ['api','spec-engine','specs',':uuid','archive'],    'speceng.archive'],
+    ['DELETE', ['api','spec-engine','specs',':uuid'],              'speceng.delete'],
+    ['POST',   ['api','spec-engine','specs',':uuid','restore'],    'speceng.restore'],
     ['POST',   ['api','spec-engine','specs',':uuid','expand'],     'speceng.expand'],
     ['POST',   ['api','repos',    ':uuid','fork'],        'repo.fork'],
     ['DELETE', ['api','repos',    ':uuid'],               'repo.archive'],
@@ -595,6 +716,14 @@ async function handle(req, res, route, query, body) {
       return ok(res, { archived: true });
     }
 
+    case 'spec.archive': {
+      const spec = os.spec(params.uuid);
+      if (!spec) return err(res, 404, `spec not found: ${params.uuid}`);
+      if (!body.reason) return err(res, 400, 'reason required (§M1 — nothing deleted)');
+      os.emit('idearium.spec.archive', { uuid: params.uuid, reason: body.reason, source:'api' });
+      return ok(res, { archived: true });
+    }
+
     // ── Specs ──────────────────────────────────────────────────────────────
 
     // §BUG FIXED 2026-07-10 — "the idearium ui has no specs." The Spec Library
@@ -606,7 +735,13 @@ async function handle(req, res, route, query, body) {
     // then spec-engine manifests, deduped by uuid. A spec-engine failure must
     // not blank the legacy list (§1.2).
     case 'spec.list': {
-      const legacy = os.specs(query) || [];
+      // §NEW 2026-07-16 — same reasoning as spec-engine's `deleted` filter
+      // in listSpecs(): os.specs(query) never excluded phase:'archived' on
+      // its own (specs() only filters by phase when explicitly asked), so
+      // archiving a legacy spec via the new SpecArchiveGate did nothing to
+      // this list without this. query.includeArchived=1 opts back in.
+      let legacy = os.specs(query) || [];
+      if (!query.includeArchived) legacy = legacy.filter(s => s.phase !== 'archived');
       let engine = [];
       try {
         const se = getSpecEngine();
@@ -710,11 +845,18 @@ async function handle(req, res, route, query, body) {
       }
 
       if (compileResult.ok) {
-        os.emit('idearium.spec.compiled', {
+        // §RENAMED 2026-07-15 — was 'idearium.spec.compiled' (named after the
+        // implementation call, compileIdeariumSpec). Renamed to the domain
+        // event so this legacy route and the newer guardian-promote path
+        // (api/index.js's _promoteSpecToRepo) feed the same cortex listener
+        // (lib/cortex-listeners.js) instead of two differently-named events.
+        os.emit('idearium.spec.build.completed', {
           specUuid: params.uuid, outputDir,
           t0: compileResult.t0?.emitted?.length ?? 0,
           t1: compileResult.t1?.emitted?.length ?? 0,
           topology: compileResult.topology || null,
+          extraction: 'legacy-sections', // honest provenance — this route parses os.spec()'s section shape, not a chunk-manifest
+          ok: true,
         });
         // Compile actually finished — phase was parked at 'building' above
         // and nothing ever moved it forward. Advance it now so the UI
@@ -876,7 +1018,7 @@ async function handle(req, res, route, query, body) {
         // but the failure is reported, not swallowed.
         let promote = null;
         if (result.manifest.status === 'complete') {
-          promote = _promoteSpecToRepo(se, result.manifest.uuid, 'emerge');
+          promote = await _promoteSpecToRepo(os, se, result.manifest.uuid, 'emerge');
           if (promote.error) {
             console.warn(`[idearium/api] auto-promote after import failed: ${promote.error}`);
           } else {
@@ -896,6 +1038,7 @@ async function handle(req, res, route, query, body) {
           byteFidelity: result.byteFidelity,
           repoUuid: promote && !promote.error ? promote.repoUuid : null,
           repoError: promote && promote.error ? promote.error : null,
+          compiled: promote && !promote.error ? (promote.compiled || { ok: false, attempted: false }) : null,
           promoteUrl: `/api/spec-engine/specs/${result.manifest.uuid}/promote`,
         });
       } catch (e) { return err(res, 400, `import failed: ${e.message}`); }
@@ -910,7 +1053,7 @@ async function handle(req, res, route, query, body) {
       if (mode !== 'emerge' && mode !== 'manual') {
         return err(res, 400, `unknown promote mode '${mode}' — use 'emerge' (automatic) or 'manual' (spec builder)`);
       }
-      const result = _promoteSpecToRepo(se, specUuid, mode);
+      const result = await _promoteSpecToRepo(os, se, specUuid, mode);
       if (result.error) {
         const status = /not found/.test(result.error) ? 404 : /cannot auto-promote/.test(result.error) ? 409 : 400;
         return err(res, status, result.error);
@@ -937,6 +1080,7 @@ async function handle(req, res, route, query, body) {
         repoUuid: result.repoUuid, ideaUuid: result.ideaUuid, specUuid: result.specUuid,
         mode, promotedFrom: specUuid,
         chunksBuilt: result.chunksBuilt, chunksTotal: result.chunksTotal,
+        compiled: result.compiled || { ok: false, attempted: false },
       });
     }
 
@@ -1075,7 +1219,7 @@ async function handle(req, res, route, query, body) {
       if (!se) return err(res, 503, 'spec-engine not ready');
       try {
         const manifest = se.loadSpec(params.uuid);
-        return ok(res, { manifest });
+        return ok(res, { manifest, history: _specHistory(params.uuid) });
       } catch(e) { return err(res, 404, e.message); }
     }
 
@@ -1206,6 +1350,26 @@ async function handle(req, res, route, query, body) {
         const archivePath = await se.archiveSpec(params.uuid);
         return ok(res, { archivePath });
       } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.delete': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      try {
+        const manifest = se.deleteSpec(params.uuid);
+        os.emit('idearium.spec.deleted', { specUuid: params.uuid, name: manifest.name });
+        return ok(res, { deleted: true, uuid: params.uuid, name: manifest.name });
+      } catch(e) { return err(res, 404, e.message); }
+    }
+
+    case 'speceng.restore': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      try {
+        const manifest = se.restoreSpec(params.uuid);
+        os.emit('idearium.spec.restored', { specUuid: params.uuid, name: manifest.name });
+        return ok(res, { manifest });
+      } catch(e) { return err(res, 404, e.message); }
     }
 
     case 'speceng.expand': {

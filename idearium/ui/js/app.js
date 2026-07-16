@@ -118,7 +118,13 @@ function refreshOnEvent(ev) {
   const t = ev.type.startsWith('idearium.') ? ev.type.slice('idearium.'.length) : ev.type;
   if (t.startsWith('idea.'))   { loadIdeas(); }
   if (t.startsWith('gap.'))    { loadGaps(); }
-  if (t.startsWith('spec.'))   { loadSpecs(); }
+  // §BUG FIXED 2026-07-15 — spec-engine's own chunk events are named
+  // 'idearium.spec-engine.chunk.complete'/'.queued', which — unlike every
+  // 'idearium.spec.*' event — does NOT start with 'spec.' (it's
+  // 'spec-engine.', a hyphen not a dot). Those events silently fell through
+  // every branch below and never refreshed anything, same class of bug as
+  // the 2026-07-11 fix above this function.
+  if (t.startsWith('spec.') || t.startsWith('spec-engine.')) { loadSpecs(); }
   if (t==='push.complete')     { loadSnapshots(); }
   if (t==='snr.update')        { loadStats(); }
   if (t.startsWith('repo.')) {
@@ -149,7 +155,12 @@ async function loadAll() {
 }
 async function loadIdeas()    { try { IDEAS = (await api('/api/ideas')).ideas || []; renderIdeaList(); if(SELECTED){const i=IDEAS.find(x=>x.uuid===SELECTED); if(i) renderDetail(i);} } catch(e){ console.warn('[idearium] loadIdeas failed:', e.message); toast('failed to load ideas: '+e.message,'err'); } }
 async function loadGaps()     { try { GAPS  = (await api('/api/gaps')).gaps  || []; renderIdeaList(); } catch(e){ console.warn('[idearium] loadGaps failed:', e.message); } }
-async function loadSpecs()    { try { SPECS = (await api('/api/specs')).specs|| []; renderSpecList(); renderArchitect(); } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
+// §BUG FIXED 2026-07-15 — loadIdeas() re-renders the open idea detail panel
+// on every refresh (see the line above); loadSpecs() never did the same for
+// an open spec builder. An SSE-driven chunk/build event updated the spec
+// list and status chips but left a currently-open builder panel showing
+// stale chunk statuses until the user reselected the spec by hand.
+async function loadSpecs()    { try { SPECS = (await api('/api/specs')).specs|| []; renderSpecList(); renderArchitect(); if (SELECTED_SPEC) { const s = SPECS.find(x=>x.uuid===SELECTED_SPEC); if (s) renderSpecBuilder(s); } } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
 async function loadSnapshots(){ try { SNAPSHOTS = (await api('/api/snapshots')).snapshots || []; renderVersionium(); } catch(e){ console.warn('[idearium] loadSnapshots failed:', e.message); } }
 async function loadStats()    { try { STATS = (await api('/api/stats')).stats; } catch(e){ console.warn('[idearium] loadStats failed:', e.message); } updateStats(); }
 // Ideas/Repo merge: repos are no longer their own rail tab — they're looked
@@ -157,6 +168,82 @@ async function loadStats()    { try { STATS = (await api('/api/stats')).stats; }
 // client-side cache loadAll() refreshes alongside everything else.
 let API_REPOS = [];
 async function loadApiRepos() { try { API_REPOS = (await api('/api/repos')).repos || []; } catch(e){} }
+
+// §NEW 2026-07-15 — chunk retry trail + build artifacts for a spec-engine
+// spec, read from speceng.show's `history` block. Kept out of SPECS/loadSpecs
+// entirely: it's per-spec detail, not list data, and fetching it for every
+// spec on every list refresh would be wasted work for specs nobody has open.
+// Fetched lazily by renderSpecHistoryPanel() only while that spec's builder
+// panel is actually mounted, and rendered into its own sub-panel so a slow
+// or failed history fetch never blocks the chunk list/action row above it
+// (already-known synchronous data) from showing immediately.
+let SPEC_HISTORY = {};
+let _historyFetchInFlight = new Set();
+
+async function renderSpecHistoryPanel(specUuid) {
+  if (_historyFetchInFlight.has(specUuid)) return;
+  _historyFetchInFlight.add(specUuid);
+  try {
+    const res = await api(`/api/spec-engine/specs/${specUuid}`);
+    SPEC_HISTORY[specUuid] = res.history || { chunkEvents: [], buildArtifacts: [] };
+  } catch (e) {
+    console.warn('[idearium] history fetch failed:', e.message);
+    SPEC_HISTORY[specUuid] = SPEC_HISTORY[specUuid] || { chunkEvents: [], buildArtifacts: [] };
+  } finally {
+    _historyFetchInFlight.delete(specUuid);
+  }
+  // The user may have navigated to a different spec (or away entirely)
+  // while this was in flight — only touch the DOM if it's still relevant.
+  if (SELECTED_SPEC !== specUuid) return;
+  const panel = document.getElementById('spec-history-panel');
+  if (panel) panel.innerHTML = buildSpecHistoryHtml(specUuid);
+  const badge = document.getElementById('spec-compiled-badge');
+  if (badge) badge.outerHTML = buildCompiledBadgeHtml(specUuid);
+}
+
+function buildCompiledBadgeHtml(specUuid) {
+  const hist = SPEC_HISTORY[specUuid];
+  if (!hist) return `<span id="spec-compiled-badge" style="font-family:var(--mono);font-size:9px;color:var(--text3)">checking build status…</span>`;
+  const latest = (hist.buildArtifacts || [])[0]; // [0] = most recent, per _specHistory's sort
+  if (!latest) return `<span id="spec-compiled-badge" style="font-family:var(--mono);font-size:9px;color:var(--text3)">not compiled yet</span>`;
+  if (latest.ok) {
+    return `<span id="spec-compiled-badge" style="font-family:var(--mono);font-size:9px;color:var(--mint)">✓ compiled · ${escapeHtml(latest.extraction||'')}${latest.agent?` · ${escapeHtml(latest.agent)}`:''}</span>`;
+  }
+  return `<span id="spec-compiled-badge" style="font-family:var(--mono);font-size:9px;color:var(--coral)" title="${escapeHtml(latest.error||'')}">✗ compile failed — ${escapeHtml((latest.error||'unknown error').slice(0,70))}</span>`;
+}
+
+function buildSpecHistoryHtml(specUuid) {
+  const hist = SPEC_HISTORY[specUuid];
+  if (!hist) return `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:6px 0">loading history…</div>`;
+  const { chunkEvents=[], buildArtifacts=[] } = hist;
+  if (!chunkEvents.length && !buildArtifacts.length) {
+    return `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:6px 0">no build history yet</div>`;
+  }
+  const fmtTime = ts => ts ? new Date(ts).toLocaleString() : '—';
+  const artifactsHtml = buildArtifacts.map(a => `
+    <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;padding:4px 0;border-bottom:1px solid var(--b0)">
+      <span style="color:${a.ok?'var(--mint)':'var(--coral)'}">${a.ok?'✓':'✗'}</span>
+      <span style="flex:1;color:var(--text2)">${escapeHtml(a.extraction||'—')}${a.agent?` · ${escapeHtml(a.agent)}`:''}${a.error?` · ${escapeHtml(a.error.slice(0,80))}`:''}</span>
+      <span style="color:var(--text3);flex-shrink:0">${fmtTime(a.ts)}</span>
+    </div>`).join('');
+  const eventsHtml = chunkEvents.map(e => `
+    <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;padding:3px 0;border-bottom:1px solid var(--b0)">
+      <span style="color:${e.cacheHit?'var(--mint)':'var(--amber)'}" title="${e.cacheHit?'cache/reuse hit':'built'}">${e.cacheHit?'⚡':'●'}</span>
+      <span style="flex:1;color:var(--text2)">${escapeHtml(e.sectionId||'')}</span>
+      <span style="color:var(--text3)">${escapeHtml(e.source||'')}${e.reusedFrom?' (reused)':''}${e.cost!=null?` · ${e.cost} tok`:''}</span>
+      <span style="color:var(--text3);flex-shrink:0">${fmtTime(e.ts)}</span>
+    </div>`).join('');
+  return `
+    <details style="margin-top:4px" ${buildArtifacts.length?'open':''}>
+      <summary style="cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--text2)">build artifacts (${buildArtifacts.length})</summary>
+      ${artifactsHtml || `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:4px 0">none yet</div>`}
+    </details>
+    <details style="margin-top:8px">
+      <summary style="cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--text2)">chunk history (${chunkEvents.length}${chunkEvents.length===200?'+':''})</summary>
+      ${eventsHtml || `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:4px 0">none yet</div>`}
+    </details>
+  `;
+}
 
 
 function updateStats() {
@@ -370,6 +457,45 @@ async function archiveIdea(uuid) {
   try { await api(`/api/ideas/${uuid}`, { method:'DELETE', body: JSON.stringify({reason}) }); SELECTED=null; document.getElementById('detail-area').innerHTML='<div class="detail-empty">idea archived</div>'; toast('archived','ok'); await loadIdeas(); }
   catch(e) { toast(e.message,'err'); }
 }
+// §NEW 2026-07-16 — nothing on disk is destroyed (spec-engine/index.js's
+// deleteSpec just flips a flag — same §7.4/§M1 pattern as archiveIdea
+// above), so this doesn't need a themedPrompt reason like archiveIdea does.
+// A plain confirm() is enough since it's reversible via restoreSpec.
+async function deleteSpec(uuid, name) {
+  if (!confirm(`remove "${name}" from the spec library?\n\nnothing on disk is deleted — this can be undone.`)) return;
+  try {
+    await api(`/api/spec-engine/specs/${uuid}`, { method: 'DELETE' });
+    if (SELECTED_SPEC === uuid) {
+      SELECTED_SPEC = null;
+      document.getElementById('spec-builder').innerHTML = '<div class="detail-empty">select or create a spec to open the builder</div>';
+    }
+    toast('removed from library', 'ok');
+    await loadSpecs();
+  } catch(e) { toast(e.message, 'err'); }
+}
+async function restoreSpec(uuid) {
+  try { await api(`/api/spec-engine/specs/${uuid}/restore`, { method: 'POST' }); toast('restored', 'ok'); await loadSpecs(); }
+  catch(e) { toast(e.message, 'err'); }
+}
+// §NEW 2026-07-16 — legacy specs (no .chunks — the pre-spec-engine
+// 9-section format) live in a different store than deleteSpec() above
+// covers, and follow the same §M1 "reason required, nothing deleted"
+// convention as archiveIdea. Separate function because the requirement
+// (reason) and the endpoint (/api/specs, not /api/spec-engine/specs) both
+// differ from the spec-engine path.
+async function archiveSpec(uuid, name) {
+  const reason = await themedPrompt('archive reason (required — §M1, nothing deleted):', `archive "${name}"`);
+  if (!reason) return;
+  try {
+    await api(`/api/specs/${uuid}`, { method: 'DELETE', body: JSON.stringify({reason}) });
+    if (SELECTED_SPEC === uuid) {
+      SELECTED_SPEC = null;
+      document.getElementById('spec-builder').innerHTML = '<div class="detail-empty">select or create a spec to open the builder</div>';
+    }
+    toast('archived', 'ok');
+    await loadSpecs();
+  } catch(e) { toast(e.message, 'err'); }
+}
 async function openGapPrompt(ideaUuid) {
   const description = await themedPrompt('gap description:', 'open gap');
   if (!description) return;
@@ -504,11 +630,27 @@ function renderSpecList() {
     const conf = specConfidence(spec);
     const gaps = specGaps(spec);
     const chips = (spec.sections||[]).map(s=>`<span class="section-chip ${s.content?'done':(s.required?'missing':'')}" title="${s.title}">${s.id.slice(0,4)}</span>`).join('');
+    // §NEW 2026-07-16 — quick delete right on the card, not just inside the
+    // builder. `.chunks` is the same origin discriminator renderSpecBuilder
+    // uses (§BUG FIXED 2026-07-11) — legacy specs aren't spec-engine
+    // manifests and deleteSpec's DELETE route only knows about those, so the
+    // button only shows where it'll actually work.
+    // §FIXED 2026-07-16 — this used to only render for spec-engine specs
+    // (`.chunks` present), which is exactly why deleting the legacy
+    // e2e-check-spec/test junk (no .chunks — old 9-section format) had no
+    // button anywhere. Both origins get one now, routed to the function
+    // that matches their actual store.
+    const delBtn = spec.chunks
+      ? `<button class="action-btn danger" style="padding:1px 6px;font-size:9px" onclick="event.stopPropagation(); deleteSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">×</button>`
+      : `<button class="action-btn danger" style="padding:1px 6px;font-size:9px" onclick="event.stopPropagation(); archiveSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">×</button>`;
     return `
       <div class="spec-card${SELECTED_SPEC===spec.uuid?' selected':''}" onclick="selectSpec('${spec.uuid}')">
         <div class="spec-card-top">
           <span class="spec-name">${escapeHtml(spec.name)}</span>
-          <span class="ic-status st-${spec.phase}">${spec.phase}</span>
+          <span style="display:flex;align-items:center;gap:6px">
+            <span class="ic-status st-${spec.phase}">${spec.phase}</span>
+            ${delBtn}
+          </span>
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">confidence ${conf}% · ${gaps.length} gap${gaps.length===1?'':'s'} · v${spec.version||'1.0.0'}</div>
         <div class="section-grid">${chips}</div>
@@ -565,6 +707,7 @@ function renderSpecBuilder(spec) {
         <button class="action-btn" onclick="buildSpec('${spec.uuid}')">compile / build</button>
         <button class="action-btn" onclick="exportSpec('${spec.uuid}')">export markdown</button>
         <button class="action-btn" onclick="openRepoFor('${spec.ideaUuid||''}', '${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">open repository →</button>
+        <button class="action-btn danger" onclick="archiveSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">archive</button>
       </div>
     </div>
   `;
@@ -587,7 +730,10 @@ function renderSpecEngineBuilder(spec) {
   wrap.innerHTML = `
     <div class="builder-body">
       <div class="ds" style="margin-bottom:0">
-        <div class="ds-label">spec-engine — ${escapeHtml((spec.templateIds||[]).join(', ') || 'no template')} · build logic: ${escapeHtml(spec.buildEngine||'auto')}</div>
+        <div class="ds-label" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span>spec-engine — ${escapeHtml((spec.templateIds||[]).join(', ') || 'no template')} · build logic: ${escapeHtml(spec.buildEngine||'auto')}</span>
+          ${buildCompiledBadgeHtml(spec.uuid)}
+        </div>
         <div style="display:flex;align-items:center;gap:10px">
           <div class="tension-track" style="flex:1;height:6px"><div class="tension-fill" style="width:${pct}%;background:${pct===100?'var(--mint)':'var(--amber)'}"></div></div>
           <span style="font-family:var(--mono);font-size:12px;font-weight:600">${done}/${chunks.length}</span>
@@ -604,15 +750,21 @@ function renderSpecEngineBuilder(spec) {
             </div>`).join('')}
         </div>
       </div>
+      <div class="field-group">
+        <div class="field-label">build history</div>
+        <div id="spec-history-panel">${buildSpecHistoryHtml(spec.uuid)}</div>
+      </div>
       <div class="action-row">
         ${repo
           ? `<button class="action-btn primary" onclick="openRepoFor('${spec.ideaUuid||''}', '${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">open repository →</button>`
           : `<button class="action-btn primary" ${building?'disabled':''} onclick="buildAllAndPromote('${spec.uuid}')">${building?'building…':(done===chunks.length?'promote → repository':'build repository (end-state)')}</button>`
         }
         <button class="action-btn" onclick="exportSpec('${spec.uuid}')">export markdown</button>
+        <button class="action-btn danger" onclick="deleteSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">remove from library</button>
       </div>
     </div>
   `;
+  renderSpecHistoryPanel(spec.uuid); // async — fills in the badge + panel above once the fetch resolves
 }
 
 // specUuid -> true while a build-all-and-promote loop is running, so the

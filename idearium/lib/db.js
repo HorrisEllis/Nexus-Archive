@@ -109,4 +109,17 @@ export function migrateOnce(table, legacyRows, idField = 'uuid') {
   return { migrated: true, count: legacyRows.length };
 }
 
+/**
+ * Append one row to a table without touching the rest of it — a real
+ * single-row jaaDB.insert(), not loadTable()+push+syncTable()'s full-table
+ * diff. For append-only history (event rows, build artifacts) where nothing
+ * is ever mutated or deleted, syncTable's delete-what's-missing semantics do
+ * the wrong thing (and cost an O(n) reload) for what is really just "add
+ * one row." Row must carry its own `.uuid` — reused as jaaDB's row id.
+ */
+export function appendRow(table, row) {
+  if (row.uuid == null) throw new Error(`[idearium/db] appendRow(${table}): row missing uuid`);
+  return jaaDB.insert(table, { ...row, id: row.uuid });
+}
+
 export { jaaDB };

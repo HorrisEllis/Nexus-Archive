@@ -32,6 +32,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { getTemplate, listTemplates, readSeed } from './templates.js';
+import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
 
 const _require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -45,6 +46,46 @@ const SEAM_PREFIX = 'idearium.spec-engine:v1:chunk';
 
 // ── Spec storage root ─────────────────────────────────────────────────────────
 const SPECS_ROOT = path.join(__dirname, '..', 'data', 'specs');
+
+// ── Cortex mirror tables ──────────────────────────────────────────────────────
+// §DB-MIGRATION 2026-07-15 — spec-engine was the one manifest store still on
+// ad-hoc flat-file JSON while repo/index.js and idearium/index.js already run
+// through cortex's shared jaaDB (see idearium/lib/db.js's own header). Disk
+// stays the source of truth (§2.2 above is unchanged) — these tables are a
+// queryable mirror, kept in sync on every saveSpec(), not a second store to
+// reconcile by hand.
+const MANIFEST_TABLE = 'idearium_spec_manifests';
+const CHUNK_TABLE     = 'idearium_spec_chunks';
+
+// One-time, non-destructive fold of whatever's already on disk into cortex —
+// same convention idearium/lib/db.js's migrateOnce() documents (never
+// overwrites rows already in the DB, never touches the source files).
+function _migrateManifestsOnce() {
+  if (!fs.existsSync(SPECS_ROOT)) return;
+  let dirs;
+  try { dirs = fs.readdirSync(SPECS_ROOT, { withFileTypes: true }).filter(d => d.isDirectory()); }
+  catch (e) { console.error(`[${MODULE_ID}] manifest migration scan failed: ${e.message}`); return; }
+
+  const legacy = [];
+  for (const d of dirs) {
+    const p = path.join(SPECS_ROOT, d.name, 'manifest.json');
+    if (!fs.existsSync(p)) continue;
+    try { legacy.push(JSON.parse(fs.readFileSync(p, 'utf8'))); }
+    catch (e) { console.warn(`[${MODULE_ID}] skipping unreadable manifest ${d.name}: ${e.message}`); }
+  }
+  if (!legacy.length) return;
+
+  const migManifests = migrateOnce(MANIFEST_TABLE, legacy, 'uuid');
+  if (migManifests.migrated) {
+    console.log(`[${MODULE_ID}] migrated ${migManifests.count} manifests -> cortex '${MANIFEST_TABLE}'`);
+  }
+  const allChunks = legacy.flatMap(m => (m.chunks || []).map(c => ({ ...c, specUuid: m.uuid })));
+  const migChunks = migrateOnce(CHUNK_TABLE, allChunks, 'uuid');
+  if (migChunks.migrated) {
+    console.log(`[${MODULE_ID}] migrated ${migChunks.count} chunks -> cortex '${CHUNK_TABLE}'`);
+  }
+}
+_migrateManifestsOnce(); // runs once at module load, mirrors repo/index.js's constructor-time _load()
 
 // ── Standard spec sections (the seam boundaries) ─────────────────────────────
 // Each section = one chunk = one SEAM contract = one file on disk.
@@ -394,17 +435,37 @@ export function saveSpec(manifest) {
   const specDir = path.join(SPECS_ROOT, manifest.uuid);
   fs.mkdirSync(specDir, { recursive: true });
   manifest.updatedAt = Date.now();
+  // §2.1 disk before behavior — the write cortex mirrors below can lag or
+  // fail without losing anything; this line is the one that must not.
   fs.writeFileSync(path.join(specDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+
+  // Cortex mirror — queryable index over the same manifest, not a second
+  // source of truth (§2.2 unchanged: disk is still what loadSpec() reads).
+  try {
+    const manifestRows = loadTable(MANIFEST_TABLE).filter(m => m.uuid !== manifest.uuid);
+    manifestRows.push(manifest);
+    syncTable(MANIFEST_TABLE, manifestRows, 'uuid');
+
+    const chunkRows = loadTable(CHUNK_TABLE).filter(c => c.specUuid !== manifest.uuid);
+    for (const c of manifest.chunks) chunkRows.push({ ...c, specUuid: manifest.uuid });
+    syncTable(CHUNK_TABLE, chunkRows, 'uuid');
+  } catch (e) {
+    // §1.2 loud, non-fatal — disk write above already succeeded.
+    console.error(`[${MODULE_ID}] cortex mirror sync failed for ${manifest.uuid}: ${e.message}`);
+  }
 }
 
 // ── List all specs ────────────────────────────────────────────────────────────
-export function listSpecs() {
+export function listSpecs({ includeDeleted = false } = {}) {
   _ensureRoot();
   const specs = [];
   for (const entry of fs.readdirSync(SPECS_ROOT, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     try {
       const manifest = loadSpec(entry.name);
+      // §NEW 2026-07-16 — see deleteSpec() below. Soft-deleted specs stay on
+      // disk (§7.4 nothing discarded) but drop out of the library by default.
+      if (manifest.deleted && !includeDeleted) continue;
       specs.push({
         uuid:        manifest.uuid,
         name:        manifest.name,
@@ -417,6 +478,8 @@ export function listSpecs() {
         createdAt:   manifest.createdAt,
         updatedAt:   manifest.updatedAt,
         version:     manifest.version,
+        deleted:     !!manifest.deleted,
+        deletedAt:   manifest.deletedAt || null,
         // §2026-07-10 — lightweight per-section status for the UI's Spec Library
         // chips. Id/title/done only, NOT content: the list must stay small even
         // with many specs. The detail view loads full chunk content on demand.
@@ -580,6 +643,33 @@ function _assembleFullSpec(manifest) {
   manifest.specPath = specPath;
 }
 
+// ── Soft-delete / restore a spec ──────────────────────────────────────────────
+// §NEW 2026-07-16 — archiveSpec() above compresses a *complete* spec to a
+// .tar.gz for storage; it does NOT remove it from listSpecs()'s output. There
+// was no way to actually get a spec out of the Spec Library UI short of
+// deleting its directory by hand on disk — which is exactly what produced a
+// 71-spec pile of test/probe fixtures from earlier dev sessions. Consistent
+// with §7.4 elsewhere in this codebase ("nothing discarded — archived, not
+// deleted") and with how repo.file.delete already works (a status flag
+// filtered out of listings, not a real fs delete — see repo/index.js
+// deleteFile → removeChunk): this sets a flag, listSpecs() filters it out by
+// default, nothing on disk is touched or destroyed. restoreSpec reverses it.
+export function deleteSpec(specUuid) {
+  const manifest = loadSpec(specUuid);
+  manifest.deleted = true;
+  manifest.deletedAt = Date.now();
+  saveSpec(manifest);
+  return manifest;
+}
+
+export function restoreSpec(specUuid) {
+  const manifest = loadSpec(specUuid);
+  manifest.deleted = false;
+  manifest.deletedAt = null;
+  saveSpec(manifest);
+  return manifest;
+}
+
 // ── Compress spec directory to archive ────────────────────────────────────────
 // Called when user navigates away or explicitly archives.
 // §2.2 — archive path stored in manifest so it's always findable.
@@ -665,7 +755,7 @@ export default {
   findByDedupKey, findPriorSection, importSpec,
   createSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
-  buildChunkPrompt, archiveSpec, expandSpec,
+  buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec,
   computeRootHash, findByRootHash, ingestFilesAsSpec, addChunk, removeChunk,
   SPEC_SECTIONS, CHUNK_STATES,
   MODULE_ID, VERSION, COMP_ID,

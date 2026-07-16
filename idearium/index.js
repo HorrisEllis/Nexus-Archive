@@ -19,6 +19,7 @@
  */
 
 import { Event, Gate, Stream, StreamLog } from '../siso/core/index.js';
+import { registerCortexListeners } from './lib/cortex-listeners.js';
 import { createRequire } from 'module';
 import { randomUUID }    from 'crypto';
 import { readFileSync, existsSync, mkdirSync } from 'fs';
@@ -171,6 +172,10 @@ export class IdeaOS {
     } catch(e) { this._evLedger = null; console.error(`[idearium][ERROR] cfr ledger init failed: ${e.message}`); }
 
     this._registerGates();
+    // Side-channel observer, not a gate — persists chunk completions and
+    // build artifacts into cortex as they happen. See lib/cortex-listeners.js.
+    try { registerCortexListeners(this); }
+    catch (e) { console.error(`[IdeaOS] cortex listener registration failed: ${e.message}`); }
     this._recalcSNR();
     console.log(`[IdeaOS] v${VERSION} — ${this.db.ideas.length} ideas, ${this.db.gaps.filter(g=>g.status==='open').length} open gaps, SNR ${this.snr.toFixed(3)}`);
   }
@@ -186,6 +191,7 @@ export class IdeaOS {
     S.register(new IdeaLinkGate(this));
     S.register(new IdeaTensionGate(this));
     S.register(new IdeaArchiveGate(this));
+    S.register(new SpecArchiveGate(this));
     S.register(new SpecCreateGate(this));
     S.register(new SpecUpdateGate(this));
     S.register(new SpecCheckGate(this));
@@ -490,6 +496,25 @@ class SpecCreateGate extends Gate {
     saveDB(this.os.db, ['specs','ideas']);
     stream.emit(new Event('idearium.spec.created', { spec }));
     this.os._broadcast({ uuid: randomUUID(), type: 'spec.created', payload: spec, ts: Date.now() });
+  }
+}
+
+// §NEW 2026-07-16 — legacy specs (this.os.db.specs, the pre-spec-engine
+// 9-section format) had create/update/check/build gates but no way to get
+// one OUT of the list short of editing the JSON file by hand. Mirrors
+// IdeaArchiveGate above exactly — same §M1 requirement (reason required,
+// nothing deleted), same phase-flag mechanism, same event/broadcast shape.
+class SpecArchiveGate extends Gate {
+  constructor(os) { super('idearium.spec.archive'); this.os = os; }
+  transform(event, stream) {
+    const { uuid, reason, causedBy = null } = event.data;
+    if (!reason) { stream.emit(new Event('idearium.error', { op:'spec.archive', reason:'archiveReason required (§M1 — nothing deleted)' })); return; }
+    const spec = this.os.db.specs.find(s=>s.uuid===uuid);
+    if (!spec) { stream.emit(new Event('idearium.error', { op:'spec.archive', reason:`uuid not found: ${uuid}` })); return; }
+    spec.phase = 'archived'; spec.archiveReason = reason; spec.archivedAt = Date.now(); spec.causedBy = causedBy;
+    saveDB(this.os.db, ['specs']);
+    stream.emit(new Event('idearium.spec.archived', { uuid, reason }));
+    this.os._broadcast({ uuid: randomUUID(), type: 'spec.archived', payload: { uuid, reason }, ts: Date.now() });
   }
 }
 
