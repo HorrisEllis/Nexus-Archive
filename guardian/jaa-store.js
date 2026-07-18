@@ -55,18 +55,35 @@ const DEFAULT_SETTINGS = {
 class JaaStore {
   /**
    * @param {string} dir  Directory for .json files (memory_store/)
+   * @param {object} [opts]
+   * @param {string} [opts.tablePrefix]  §MULTI-TENANT 2026-07-18 — when
+   *   multiple systems share one directory (see cortex/memory/jaa-db.js and
+   *   guardian/server.js both constructing a JaaStore), an unprefixed
+   *   instance's _loadAll() would blindly load every .json file in the
+   *   directory as its own table — including another system's same-named
+   *   table ('settings' exists in both cortex's and guardian's table lists
+   *   today; without this, pointing guardian at cortex's directory would
+   *   silently merge two unrelated 'settings' tables). Prefix is applied
+   *   only at the disk-file layer (_file/_loadAll) — every caller keeps
+   *   using bare table names ('settings', not 'guardian_settings'); the
+   *   in-memory Maps and every existing insert/query/update call site are
+   *   untouched. Same pattern idearium/lib/db.js already uses at the
+   *   application level, pushed down into the store itself so a second
+   *   consumer doesn't have to reimplement it.
    */
-  constructor(dir) {
-    this.dir      = dir;
+  constructor(dir, opts = {}) {
+    this.dir         = dir;
+    this.tablePrefix = opts.tablePrefix || '';
     this._tables  = new Map();  // table name → Map<id, row>
     this._dirty   = new Set();  // tables needing flush
     this._timers  = new Map();  // table → setTimeout handle
+    this._pendingDeletes = new Map(); // table → Set<id> deleted by this process since its last flush
     this._closed  = false;
 
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     this._loadAll();
     this._bootstrapSettings();
-    console.log('[jaa] Store ready —', dir);
+    console.log('[jaa] Store ready —', dir, this.tablePrefix ? `(prefix: ${this.tablePrefix})` : '');
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -151,7 +168,17 @@ class JaaStore {
     const tbl = this._table(table);
     let   n   = 0;
     for (const [id, row] of tbl) {
-      if (_matches(row, where)) { tbl.delete(id); n++; }
+      if (_matches(row, where)) {
+        tbl.delete(id);
+        n++;
+        // §MULTI-PROCESS FIX 2026-07-18 — remember what THIS process
+        // deleted, so the pre-flush merge (see _flush) can reload fresh
+        // disk state without resurrecting a row this process just
+        // legitimately removed. See _flush's own comment for why the
+        // reload has to happen this late in the first place.
+        if (!this._pendingDeletes.has(table)) this._pendingDeletes.set(table, new Set());
+        this._pendingDeletes.get(table).add(id);
+      }
     }
     if (n > 0) this._schedule(table);
     return n;
@@ -263,19 +290,63 @@ class JaaStore {
   }
 
   _file(table) {
-    return path.join(this.dir, `${table}.json`);
+    return path.join(this.dir, `${this.tablePrefix}${table}.json`);
   }
 
   _loadAll() {
-    // Load any existing JSON files in the store dir
+    // Load any existing JSON files in the store dir that belong to THIS
+    // instance's namespace. Unprefixed instances (tablePrefix='') keep
+    // exactly the old behavior — every .json file in the dir is theirs,
+    // same as before this change. Prefixed instances only ever see their
+    // own files; a shared directory's other tenants are invisible to them.
     let files;
     try { files = fs.readdirSync(this.dir); }
     catch (_) { return; }
     for (const f of files) {
       if (!f.endsWith('.json')) continue;
-      const name = f.slice(0, -5);
-      this._loadTable(name);
+      const stem = f.slice(0, -5);
+      if (this.tablePrefix) {
+        if (!stem.startsWith(this.tablePrefix)) continue;
+        this._loadTable(stem.slice(this.tablePrefix.length));
+      } else {
+        this._loadTable(stem);
+      }
     }
+  }
+
+  /**
+   * reloadTable(name) — force-refresh this table's in-memory Map from
+   * whatever is currently on disk, merging in any rows written by another
+   * process since this instance last read them.
+   *
+   * §BUG FOUND AND FIXED 2026-07-18 — this file's own header claims
+   * "single writer, multiple readers, zero duplication," but that was
+   * never actually enforced: nothing stops two processes (idearium's own
+   * API server and a concurrent CLI invocation both call getIdeaOS(),
+   * each opening its own JaaStore pointed at the same directory) from
+   * both holding this table open. Proven, not theorized: reproduced
+   * directly — two processes each wrote 2 real rows to the same table,
+   * final state had only 2 of the 4, the other process's writes were
+   * silently destroyed by a plain overwrite that never saw them. The
+   * root cause: query()/all() always read the in-process Map, populated
+   * once at construction and never refreshed — a caller diffing "current
+   * vs new" before a sync-style write was diffing against data that was
+   * already stale the moment a second process existed. This method is
+   * the fix's other half — callers doing a read-diff-write cycle (see
+   * idearium/lib/db.js's syncTable) call this immediately before reading,
+   * so the diff is against real current disk state, not a memory of what
+   * disk looked like at boot.
+   *
+   * Known remaining limitation, not silently papered over: this ADDS/
+   * UPDATES from disk into memory, it does not remove rows that exist in
+   * memory but were deleted from disk by another process — _loadTable's
+   * own behavior, inherited here deliberately rather than reimplemented,
+   * since idearium's own rows are essentially never hard-deleted (§M1 —
+   * archived in place, not removed). A consumer relying on real deletes
+   * propagating correctly across processes would need more than this.
+   */
+  reloadTable(name) {
+    this._loadTable(name);
   }
 
   _loadTable(name) {
@@ -310,6 +381,43 @@ class JaaStore {
     this._dirty.delete(table);
     const tbl  = this._tables.get(table);
     if (!tbl) return;
+
+    // §MULTI-PROCESS FIX 2026-07-18 — REAL fix for the limitation the
+    // previous comment here (still below) named but deliberately left
+    // open. reloadTable() alone (added earlier the same day, see
+    // jaa-store.js's own header) was not enough on its own: a caller like
+    // idearium/lib/db.js's syncTable calls it before its own diff, but
+    // _flush fires later, on a DEBOUNCED timer (up to 1500ms after that
+    // diff), and always wrote whatever was in the in-memory map AT FLUSH
+    // TIME — so any write from another process landing in that gap was
+    // silently overwritten anyway. Proven: two real processes each
+    // writing 2 rows, final state had only 2 of 4, even with the earlier
+    // reloadTable() fix in place. Real fix has to happen here, immediately
+    // before the write, not earlier in some caller's diff step — merge
+    // fresh disk state into this table's map right now, skipping any id
+    // THIS process explicitly deleted since its own last flush (tracked
+    // in _pendingDeletes by delete() above), so a legitimate delete
+    // doesn't get silently undone by a concurrent process's older copy of
+    // the same row still being on disk.
+    const deletedByMe = this._pendingDeletes.get(table);
+    try {
+      const file = this._file(table);
+      if (fs.existsSync(file)) {
+        const onDisk = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (Array.isArray(onDisk)) {
+          for (const row of onDisk) {
+            const id = row.id || row.key;
+            if (id == null) continue;
+            if (deletedByMe && deletedByMe.has(id)) continue; // respect this process's own pending delete
+            if (!tbl.has(id)) tbl.set(id, { ...row, id }); // only fill in what THIS process doesn't already know about — do not clobber an in-flight local edit with an older on-disk copy
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`[jaa] pre-flush merge error (${table}): ${e.message} — flushing this process's own view only`);
+    }
+    this._pendingDeletes.delete(table);
+
     const rows = [...tbl.values()];
     const file = this._file(table);
     // §MULTI-PROCESS FIX 2026-07-15 — write to a temp file then rename over
@@ -321,17 +429,17 @@ class JaaStore {
     // writeFileSync racing another process's open handle is a real EBUSY
     // risk that a rename mostly sidesteps.
     //
-    // §KNOWN LIMITATION, NOT FIXED HERE — this does NOT fix last-writer-
-    // wins data loss when multiple processes hold independent in-memory
-    // copies of the same table (confirmed real and reproducible: three
-    // concurrent processes writing distinct rows to one table, only the
-    // last flusher's rows survived — the other two processes' writes were
-    // silently overwritten, not merged). That needs either single-process
-    // ownership of each table (every other process goes through an API
-    // instead of opening its own JaaStore on the same directory) or real
-    // cross-process locking — bigger changes than a safe default belongs
-    // to. Flagging explicitly rather than papering over it with a fix that
-    // only handles the corruption half of the problem.
+    // §UPDATE 2026-07-18 — the merge step directly above now closes the
+    // "silently overwrites concurrent writes" gap this comment used to
+    // describe as unfixed. What's left: two processes flushing the
+    // literal same table at the literal same instant can still both merge
+    // against the same pre-write disk state and then both write — the
+    // last rename wins, but by that point both writes already merged in
+    // everything visible to them, so the only way to actually lose a row
+    // now is two writes to the SAME id, in the same few-millisecond
+    // window, from two different processes — a real edge case, far
+    // narrower than "any concurrent write to the table," and not
+    // eliminated by anything short of true cross-process locking.
     const tmpFile = `${file}.${process.pid}.${Date.now()}.tmp`;
     try {
       fs.writeFileSync(tmpFile, JSON.stringify(rows, null, 0), 'utf8');

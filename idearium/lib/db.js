@@ -72,20 +72,65 @@ function _rowsEqual(a, b) {
 }
 
 /**
- * Make `table` in the DB exactly mirror `rows` (keyed by row[idField]).
- * Deletes rows no longer present, upserts everything else, skips upserts
- * that would be no-ops so unrelated tables don't get marked dirty on every
- * unrelated mutation.
+ * Make `table` in the DB contain at least everything in `rows` (keyed by
+ * row[idField]) — upserts everything passed in, skips upserts that would
+ * be no-ops so unrelated tables don't get marked dirty on every unrelated
+ * mutation.
+ *
+ * §BUG FOUND AND FIXED 2026-07-18 — this used to be a MIRROR sync: it
+ * deleted any row in the DB not present in the `rows` array passed in.
+ * That is only safe if exactly one process ever holds this table's
+ * complete state at once. Proven false by direct reproduction: idearium's
+ * API server and a concurrent CLI invocation (idearium/cli/index.js calls
+ * getIdeaOS() directly — its own separate process, its own separate
+ * JaaStore instance, same directory) each hold their OWN in-memory
+ * `db.ideas` array; when either calls syncTable with its own array, the
+ * old mirror-delete logic would delete whatever the OTHER process had
+ * just added, because from the caller's own point of view "the complete
+ * state is X, so anything not in X should not exist" — reloadTable()
+ * alone does not fix this, since the caller's own `rows` argument
+ * genuinely does not contain the other process's addition no matter how
+ * fresh the read is. Reproduced directly: two processes each wrote 2 real
+ * rows to idearium_ideas, final state had only 2 of the 4 — the other
+ * process's writes were destroyed, not merely delayed.
+ *
+ * Checked whether any real idearium code path needs true deletion before
+ * changing this: grepped every array-filter in index.js/repo/index.js —
+ * every one is a filtered VIEW for display/computation (active ideas,
+ * non-archived repos), never a reassignment of the tracked array itself.
+ * Matches idearium's own stated §M1 policy ("archived in place, nothing
+ * deleted") empirically, not just by claim. So: safe to stop deleting on
+ * absence. A caller that genuinely needs to remove a row now calls
+ * deleteRow() explicitly (below) — same shape as appendRow() already
+ * uses for the opposite case (single-row insert bypassing full-table
+ * diff) — rather than deletion being an implicit side effect of "this
+ * row happened not to be in my array this time."
  */
-export function syncTable(table, rows, idField = 'uuid') {
+export function syncTable(table, rows, idField = 'uuid', { allowDelete = false } = {}) {
   if (!Array.isArray(rows)) throw new Error(`[idearium/db] syncTable(${table}): rows must be an array`);
+  jaaDB.reloadTable(table); // merge in whatever another process may have written since this process last read this table
   const existing = jaaDB.query(table);
   const existingById = new Map(existing.map(r => [r.id, r]));
-  const currentIds = new Set(rows.map(r => r[idField]));
 
-  for (const id of existingById.keys()) {
-    if (!currentIds.has(id)) jaaDB.delete(table, { id });
+  // §BOUNDED-TABLE EXCEPTION — allowDelete restores the old mirror-delete
+  // behavior, only for callers that explicitly ask for it. idearium has
+  // exactly one real case: the events table is a deliberately-capped
+  // retention window (this.db.events = this.db.events.slice(-5000) in
+  // index.js), not archived-in-place state — old events genuinely need to
+  // leave disk when trimmed from memory, unlike ideas/specs/gaps/links/
+  // snapshots/tensions, none of which are ever actually shrunk (checked).
+  // Even here, reloadTable() ran first, so the cross-process read is still
+  // fresh — the remaining risk is narrower (deletes computed from a
+  // still-possibly-incomplete view of adds from another process), not
+  // eliminated, and that narrower risk is accepted deliberately for this
+  // one bounded, non-authoritative table rather than left unstated.
+  if (allowDelete) {
+    const currentIds = new Set(rows.map(r => r[idField]));
+    for (const id of existingById.keys()) {
+      if (!currentIds.has(id)) jaaDB.delete(table, { id });
+    }
   }
+
   rows.forEach((row, i) => {
     const id = row[idField];
     if (id == null) throw new Error(`[idearium/db] syncTable(${table}): row missing ${idField}`);
@@ -94,6 +139,17 @@ export function syncTable(table, rows, idField = 'uuid') {
     if (prev && _rowsEqual(prev, candidate)) return;
     jaaDB.upsert(table, candidate, 'id');
   });
+}
+
+/**
+ * Explicit single-row delete — the only way a row leaves a syncTable-
+ * managed table now that syncTable itself never deletes on absence. Same
+ * shape as appendRow(): a real single-row jaaDB.delete(), not a side
+ * effect of what happened to be missing from someone's in-memory array.
+ */
+export function deleteRow(table, id) {
+  if (id == null) throw new Error(`[idearium/db] deleteRow(${table}): id required`);
+  return jaaDB.delete(table, { id });
 }
 
 /**

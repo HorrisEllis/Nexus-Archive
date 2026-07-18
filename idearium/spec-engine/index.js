@@ -430,6 +430,26 @@ export function loadSpec(specUuid) {
   return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 }
 
+// §EXPORT 2026-07-18 — real reconstruction of the original .spec text, for
+// export. For an IMPORTED spec this is byte-exact: strips the
+// `<!-- imported: ... -->\n\n` tag importSpec() prepends to every chunk
+// (see spec-engine's own byte-fidelity work) and concatenates in chunkIdx
+// order — the same reconstruction importSpec() already verifies against
+// the source at import time, run in reverse. For an agent-BUILT spec
+// there's no "original" to recover — this still returns something real
+// and useful (chunk content concatenated with section headers), just not
+// a claim of exactness, since none was ever made for that path.
+const _IMPORT_TAG_RE = /^<!-- imported[^>]*-->\n\n/;
+export function reconstructSpecText(specUuid) {
+  const manifest = loadSpec(specUuid);
+  const chunks = manifest.chunks.slice().sort((a, b) => a.chunkIdx - b.chunkIdx);
+  const wasImported = chunks.some(c => c.agent === 'import');
+  if (wasImported) {
+    return chunks.map(c => (c.content || '').replace(_IMPORT_TAG_RE, '')).join('');
+  }
+  return chunks.map(c => `# ${c.sectionTitle || c.sectionId}\n\n${c.content || ''}`).join('\n\n---\n\n');
+}
+
 // ── Save spec manifest to disk ────────────────────────────────────────────────
 export function saveSpec(manifest) {
   const specDir = path.join(SPECS_ROOT, manifest.uuid);
@@ -485,8 +505,9 @@ export function listSpecs({ includeDeleted = false } = {}) {
         // with many specs. The detail view loads full chunk content on demand.
         chunks: (manifest.chunks || []).map(c => ({
           sectionId: c.sectionId, sectionTitle: c.sectionTitle,
-          chunkIdx: c.chunkIdx, status: c.status,
+          chunkIdx: c.chunkIdx, status: c.status, byteSize: c.byteSize || 0,
         })),
+        totalBytes: (manifest.chunks || []).reduce((sum, c) => sum + (c.byteSize || 0), 0),
       });
     } catch (_) {}
   }
@@ -757,6 +778,7 @@ export default {
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
   buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec,
   computeRootHash, findByRootHash, ingestFilesAsSpec, addChunk, removeChunk,
+  reconstructSpecText,
   SPEC_SECTIONS, CHUNK_STATES,
   MODULE_ID, VERSION, COMP_ID,
 };

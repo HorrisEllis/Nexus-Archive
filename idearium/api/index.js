@@ -545,6 +545,7 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','file'],         'repo.file.read'],
     ['POST',   ['api','repos',    ':uuid','file'],         'repo.file.write'],
     ['DELETE', ['api','repos',    ':uuid','file'],         'repo.file.delete'],
+    ['GET',    ['api','repos',    ':uuid','export'],       'repo.export'],
   ];
 
   for (const [m, pattern, action] of dynRoutes) {
@@ -1162,6 +1163,51 @@ async function handle(req, res, route, query, body) {
       return ok(res, result);
     }
 
+    // §EXPORT 2026-07-18 — "the export, needs to be the .spec file
+    // compressed repo." Two things bundled into one real download: the
+    // reconstructed .spec (byte-exact for imported specs — see
+    // reconstructSpecText's own header for how) at the archive root, and
+    // every real repo file underneath a folder named for the repo. One
+    // zip, both formats, not a choice you have to make.
+    case 'repo.export': {
+      const repoLayer = getRepoLayer();
+      const repo = repoLayer.get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+
+      const safeName = (repo.name || 'repo').replace(/[^a-z0-9-_]+/gi, '_');
+      const entries = [];
+
+      try {
+        const specText = se.reconstructSpecText(repo.specUuid);
+        entries.push({ path: `${safeName}.spec`, content: specText });
+      } catch (e) {
+        console.error(`[API] repo.export: spec reconstruction failed for ${params.uuid}: ${e.message}`);
+        // Non-fatal — still ship the repo files even if the .spec side failed.
+      }
+
+      let readErrors = 0;
+      for (const f of repo.files) {
+        const rf = repoLayer.readFile(params.uuid, f.path);
+        if (rf.error) { readErrors++; continue; }
+        entries.push({ path: `${safeName}/${f.path}`, content: rf.content });
+      }
+      if (!entries.length) return err(res, 500, 'export produced no files — repo may be empty or unreadable');
+
+      const { createZip } = _require('../../lib/zip-writer.js');
+      const zipBuf = createZip(entries);
+
+      console.log(`[API] repo.export: ${params.uuid} -> ${entries.length} entries (${readErrors} read errors), ${zipBuf.length}b`);
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${safeName}.zip"`,
+        'Content-Length': zipBuf.length,
+        ...CORS,
+      });
+      return res.end(zipBuf);
+    }
+
     // ── Spec Engine handlers (Phase 40) ────────────────────────────────────────
 
     case 'speceng.list': {
@@ -1589,22 +1635,6 @@ export function startAPI() {
     // ESM: use createRequire for CJS modules
     const _require = createRequire(import.meta.url);
 
-// ── Meta: Spatial Lattice — resonance-weighted idea/spec/gap graph ────────────
-let _latticeEng = null;
-function _getLattice() {
-  if (_latticeEng) return _latticeEng;
-  try {
-    const { LatticeEngine } = _require('../../meta/spatial/lattice.js');
-    _latticeEng = new LatticeEngine({ threshold: 0.3 });
-  } catch(_) {}
-  return _latticeEng;
-}
-function _latticeAdd(id, label, tags=[]) {
-  try { const l=_getLattice(); if(l) l.add({id,label:label.slice(0,80),tags}); } catch(_) {}
-}
-function _latticeLink(a, b, w=0.7, t='associated') {
-  try { const l=_getLattice(); if(l) { _latticeAdd(a,a); _latticeAdd(b,b); l.connect(a,b,w,t); } } catch(_) {}
-}
     const { BootSequence } = _require('../../lib/boot-sequence');
 
     const seq = new BootSequence({

@@ -973,23 +973,43 @@ function createSpecForIdea(ideaUuid) {
 // ════════════════════════════════════════════════════
 // ARCHITECT — blueprint tree derived from real compiled specs
 // ════════════════════════════════════════════════════
-function renderArchitect() {
+async function renderArchitect() {
   const wrap = document.getElementById('architect-wrap');
-  const built = SPECS.filter(s => ['specced','building','complete'].includes(s.phase));
-  if (!built.length) { wrap.innerHTML = `<div class="detail-empty">no specced/built ideas yet — compile a spec in the Library to see its blueprint here</div>`; return; }
-  wrap.innerHTML = `<div class="blueprint-tree">` + built.map(spec => {
-    const idea = IDEAS.find(i=>i.uuid===spec.ideaUuid);
-    const children = (spec.sections||[]).map(s => `
+  // §DATA-SOURCE FIX 2026-07-18 — this used to read SPECS (loaded from
+  // /api/specs — the LEGACY lightweight spec system: db.specs inside
+  // IdeaOS, auto-stub sections with placeholder content, a checklist/
+  // wiring tracker, not real content — see idearium/index.js's own header
+  // history for "two separate spec systems"). Every node showed "1 chars"
+  // because that's genuinely what was there: a stub, not your actual
+  // spec-engine chunks. The real content — what you've been editing in
+  // the Repository panel — lives entirely in spec-engine's manifests,
+  // reached via /api/spec-engine/specs, a completely different store this
+  // view never queried. Fixed to read from there instead.
+  let realSpecs = [];
+  try {
+    const r = await api('/api/spec-engine/specs');
+    realSpecs = (r.specs || []).filter(s => !s.deleted && s.totalChunks > 0);
+  } catch (e) {
+    wrap.innerHTML = `<div class="detail-empty">could not load spec-engine specs: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+  if (!realSpecs.length) { wrap.innerHTML = `<div class="detail-empty">no compiled specs yet — import or build one to see its blueprint here</div>`; return; }
+  wrap.innerHTML = `<div class="blueprint-tree">` + realSpecs.map(spec => {
+    const children = (spec.chunks || []).map(c => {
+      const complete = c.status === 'complete';
+      const label = complete ? `${c.byteSize.toLocaleString()}b` : c.status;
+      return `
       <div class="bp-node">
-        <span class="bp-dot ${s.content?'':'gray'}"></span>
-        <span class="bp-label">${s.id.replace(/_/g,' ')}</span>
-        <span class="bp-meta">${s.content ? (s.content.length+' chars') : 'empty'}</span>
-      </div>`).join('');
+        <span class="bp-dot ${complete ? '' : 'gray'}"></span>
+        <span class="bp-label">${escapeHtml((c.sectionTitle || c.sectionId || '').replace(/_/g,' '))}</span>
+        <span class="bp-meta">${label}</span>
+      </div>`;
+    }).join('');
     return `
       <div class="bp-node">
         <span class="bp-dot"></span>
         <span class="bp-label" style="font-size:13px;color:var(--sky)">${escapeHtml(spec.name)}</span>
-        <span class="bp-meta">${spec.phase} · v${spec.version||'1.0.0'}${idea?` · from "${escapeHtml((idea.text||'').slice(0,30))}"`:''}</span>
+        <span class="bp-meta">${spec.status} · v${spec.version||'1.0.0'} · ${spec.doneChunks}/${spec.totalChunks} chunks · ${(spec.totalBytes||0).toLocaleString()}b total</span>
       </div>
       <div class="bp-children">${children}</div>
     `;
@@ -1125,6 +1145,37 @@ async function saveApiRepoFile() {
     const fresh = API_REPOS.find(r => r.uuid === CURRENT_API_REPO.uuid);
     if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
   } catch (e) { toast(`save failed: ${e.message}`, 'err'); }
+}
+
+// §EXPORT 2026-07-18 — "the export, needs to be the .spec file compressed
+// repo." Real zip (application/zip, not JSON), so this bypasses api()'s
+// JSON-parsing wrapper and goes through fetchTimeout directly — same
+// pattern the legacy exportSpec() already used for its markdown download.
+// 20s ceiling: a 71-spec / 1000+ chunk instance building this archive
+// server-side is real work, not just a network round-trip.
+async function exportApiRepo() {
+  if (!CURRENT_API_REPO) { toast('no repo loaded — open one first', 'err'); return; }
+  toast('exporting…', 'ok');
+  try {
+    const r = await fetchTimeout(API_BASE + `/api/repos/${CURRENT_API_REPO.uuid}/export`, {}, 20000);
+    if (!r.ok) {
+      let msg = r.statusText;
+      try { msg = (await r.json()).error || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : `${(CURRENT_API_REPO.name || 'repo').replace(/[^a-z0-9-_]+/gi, '_')}.zip`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast(`exported ${filename}`, 'ok');
+  } catch (e) {
+    toast(`export failed: ${e.message}`, 'err');
+  }
 }
 
 async function addApiRepoFile(repoUuid) {

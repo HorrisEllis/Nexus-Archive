@@ -4,8 +4,16 @@
  * UUID: nexus-cortex-jaa-db-v1-0000-2026-0628-001
  *
  * Re-exports a shared JaaStore instance pointed at the cortex data dir.
- * All modules that do `require('./cortex/memory/jaa-db')` get the same
- * live store — single writer, multiple readers, zero duplication.
+ *
+ * §CORRECTED 2026-07-18 — this used to say "single writer, multiple
+ * readers, zero duplication." That was never actually true: every process
+ * that requires this file gets its OWN JaaStore instance (module-level
+ * singleton is per-process, not cross-process) pointed at the same
+ * directory — idearium's API server and a concurrent CLI invocation are
+ * two real, separate writers today, proven by direct reproduction (see
+ * guardian/jaa-store.js's reloadTable() for the full account). What's
+ * true is "one file per table, JSON-array format, shared by convention"
+ * — not single-writer. reloadTable() below exists because of this.
  *
  * API surface (mirrors what callers expect):
  *   jaaDB.insert(table, row)           → row
@@ -16,6 +24,7 @@
  *   jaaDB.tail(table, n)               → row[]
  *   jaaDB.update(table, where, values) → count
  *   jaaDB.delete(table, where)         → count
+ *   jaaDB.reloadTable(table)           → void — refresh from disk before a read-diff-write cycle
  *   jaaDB.uid()                        → uuid string
  *   uid()                              → uuid string (named export compat)
  */
@@ -43,6 +52,7 @@ const jaaDB = {
   update(table, where, values)   { return _getStore().update(table, where, values); },
   delete(table, where)           { return _getStore().delete(table, where); },
   count(table, where)            { return _getStore().count(table, where); },
+  reloadTable(table)              { return _getStore().reloadTable(table); },
   uid()                          { return _uid(); },
   // raw store access for modules that need it
   _store()                       { return _getStore(); },

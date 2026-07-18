@@ -1653,12 +1653,27 @@ bus.emit = function(type, data) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  JAA STORE — Pure-JS relational store, zero native deps
-//  Persists to memory_store/*.json (same dir as memory server)
-//  Memory server and main API share the same store — ONE source of truth
+//  §MIGRATED 2026-07-18 — "migrate all of the data nexus uses to cortex."
+//  Was its own separate store at guardian/memory_store/, now shares
+//  cortex's directory (data/cortex/memory/) with a guardian_ table prefix
+//  — same seam idearium's own DB migration used earlier, pushed down into
+//  JaaStore itself this time (see jaa-store.js's constructor comment) so
+//  guardian didn't need its own copy of that logic.
+//  Existing data (195 artifacts, 168 chat_log entries, 3227 events, 207
+//  gaps, 85 jobs, 196 ledger entries, 52 queue_compartments, 9
+//  seam_sessions, 123 settings) migrated once via a standalone script —
+//  verified via fresh reload + byte-exact spot checks on real rows before
+//  this line was ever changed. Old guardian/memory_store/*.json files are
+//  left on disk untouched, not deleted (§7.4 archived, not discarded).
+//  cfr_state.json and event_stats.json were NOT part of this migration —
+//  they're single-object state snapshots, not row-based JaaStore tables
+//  (not in the _ensureTable list below), and their actual writer wasn't
+//  found in this file to migrate safely. Flagged, not silently skipped.
 // ══════════════════════════════════════════════════════════════════════════════
 
-const STORE_DIR = process.env.MEMORY_STORE_DIR || path.join(__dirname, 'memory_store');
-const jaa = new JaaStore(STORE_DIR);
+const CORTEX_STORE_DIR = process.env.MEMORY_STORE_DIR || path.join(__dirname, '..', 'data', 'cortex', 'memory');
+const STORE_DIR = CORTEX_STORE_DIR; // kept as STORE_DIR — referenced elsewhere in this file
+const jaa = new JaaStore(STORE_DIR, { tablePrefix: 'guardian_' });
 // Ensure guardian-specific tables exist on first run
 ['seam_sessions','queue_compartments','pa_sessions','jobs','artifacts',
  'gaps','failures','ledger','downloads','sessions','timeline_events',
@@ -3715,7 +3730,18 @@ server.on('request', (req, res) => {
 function startMemoryServer() {
   const MEMORY_PORT  = process.env.MEMORY_PORT  || 7823;
   const MEMORY_HOST  = '0.0.0.0';
-  const STORE_DIR    = process.env.MEMORY_STORE_DIR || path.join(__dirname, 'memory_store');
+  // §MIGRATED 2026-07-18 — same move as the main jaa store above (see that
+  // comment for the full migration record). This function predates
+  // JaaStore's prefix support and reads/writes the same physical files
+  // (artifacts.json, ledger.json, downloads.json, jobs.json) as the main
+  // API's JaaStore instance via its own separate fs.readFileSync/
+  // writeFileSync calls, not through the JaaStore class at all — "memory
+  // server and main API share the same store" (see original comment,
+  // still true) meant same directory + same filenames, not same code.
+  // Kept sharing exactly those same physical files at the new location by
+  // reusing the identical guardian_ prefix in storeFile() below.
+  const STORE_DIR    = process.env.MEMORY_STORE_DIR || path.join(__dirname, '..', 'data', 'cortex', 'memory');
+  const TABLE_PREFIX = 'guardian_';
   const MAX_ARTIFACTS = 10000;
   const MAX_LEDGER    = 5000;
 
@@ -3723,7 +3749,7 @@ function startMemoryServer() {
 
   // ── Persistence ─────────────────────────────────────────────────────────────
 
-  function storeFile(name) { return path.join(STORE_DIR, `${name}.json`); }
+  function storeFile(name) { return path.join(STORE_DIR, `${TABLE_PREFIX}${name}.json`); }
 
   function loadStore(name, fallback) {
     try {

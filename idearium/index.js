@@ -28,6 +28,62 @@ import { fileURLToPath } from 'url';
 import { loadTable, syncTable, migrateOnce } from './lib/db.js';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
+const _require = createRequire(import.meta.url);
+
+// §WIRED 2026-07-18 — "resonance-weighted idea/spec/gap graph" (meta/spatial/
+// lattice.js's own header) existed, fully built, and was never called from
+// anywhere — api/index.js declared _latticeAdd/_latticeLink twice (once at
+// module scope, once as dead code accidentally pasted inside the boot
+// callback where it was unreachable) and neither copy had a single real
+// caller anywhere in the codebase. Moved here deliberately, not left in
+// api/index.js: idearium's own header above says "CLI and API are
+// projections... All state lives here" — wiring this into API route
+// handlers instead of the actual Gates would mean CLI-driven idea/spec/gap
+// creation silently skipped lattice tracking while API-driven creation
+// didn't, an inconsistency between two entry points to the same state
+// change. Wired into the Gates themselves so it applies uniformly
+// regardless of entry point.
+// §KNOWN LIMITATION, NOT SILENTLY HIDDEN — LatticeGraph itself is pure
+// in-memory (a JS Map, no jaaDB/cortex-write call anywhere in that file) —
+// this graph does not survive a process restart. Wiring it in is still a
+// real improvement (empty and unreachable -> populated and queryable for
+// the life of the process) but persistence is separate, larger work,
+// flagged here rather than assumed.
+let _latticeEng = null;
+function _getLattice() {
+  if (_latticeEng) return _latticeEng;
+  try {
+    const { LatticeEngine } = _require('../meta/spatial/lattice.js');
+    _latticeEng = new LatticeEngine({ threshold: 0.3 });
+  } catch (e) {
+    console.error(`[idearium] lattice init failed (non-fatal, tracking disabled this process): ${e.message}`);
+  }
+  return _latticeEng;
+}
+// Lattice tracking is enrichment, not core state — a failure here must
+// never block or corrupt the actual idea/spec/gap mutation it is
+// observing (§1.2 applies to the mutation, not to this side channel).
+function _latticeAdd(id, label, tags = []) {
+  try { const l = _getLattice(); if (l) l.add({ id, label: String(label || id).slice(0, 80), tags }); } catch (_) {}
+}
+function _latticeLink(a, b, w = 0.7, t = 'associated') {
+  try {
+    const l = _getLattice();
+    if (!l) return;
+    // §BUG FOUND AND FIXED 2026-07-18 — this used to call _latticeAdd(a,a)
+    // unconditionally as a defensive "make sure the node exists" step
+    // before connecting. LatticeGraph.addNode() has no existence check —
+    // it always overwrites — so linking two nodes that already had real
+    // labels (an idea's own text, a spec's own name) silently replaced
+    // both labels with their bare UUIDs. Caught by testing: linked two
+    // real ideas, read the neighbor list back, the label was a UUID
+    // instead of the idea's actual text. Only add-if-missing now.
+    const g = l.graph();
+    if (!g.getNode(a)) _latticeAdd(a, a);
+    if (!g.getNode(b)) _latticeAdd(b, b);
+    l.connect(a, b, w, t);
+  } catch (_) {}
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -122,11 +178,21 @@ function loadDB() {
 // diffed/written. Omit (or pass nothing) to sync everything, which stays
 // correct but loses the point of a per-table store; every call site below
 // names its keys explicitly.
+//
+// §CROSS-PROCESS FIX 2026-07-18 — syncTable() itself no longer deletes on
+// absence by default (see lib/db.js's own header for the full account: a
+// concurrent CLI invocation and the API server are two real separate
+// processes, proven to silently destroy each other's writes under the old
+// mirror-delete behavior). 'events' is the one table here that is
+// genuinely a bounded window (this.db.events = this.db.events.slice(-5000)
+// below) rather than archived-in-place state, so it alone opts back into
+// delete-on-absence — everything else (ideas/specs/gaps/links/snapshots/
+// tensions/snr) gets the safe default.
 function saveDB(db, keys) {
   const list = (keys && keys.length) ? keys : Object.keys(TABLES);
   for (const key of list) {
     if (!TABLES[key]) { console.error(`[IdeaOS][ERROR] saveDB: unknown table key '${key}'`); continue; }
-    syncTable(TABLES[key], db[key] || [], 'uuid');
+    syncTable(TABLES[key], db[key] || [], 'uuid', { allowDelete: key === 'events' });
   }
 }
 
@@ -358,7 +424,16 @@ export class IdeaOS {
       events:       this.db.events.length,
       snr:          this.snr,
       savedAt:      this.db._savedAt,
+      lattice:      _getLattice() ? _getLattice().size() : { nodes: 0, edges: 0 },
     };
+  }
+
+  // Real query surface for the lattice wired above — a graph nobody can
+  // read is exactly as useless as one nobody writes to.
+  latticeNeighbors(id) {
+    const l = _getLattice();
+    if (!l) return [];
+    return l.neighbors(id).map(n => ({ id: n.node.id, label: n.node.label, tags: n.node.tags, weight: n.weight }));
   }
 }
 
@@ -385,6 +460,7 @@ class IdeaCreateGate extends Gate {
     };
     this.os.db.ideas.push(idea);
     saveDB(this.os.db, ['ideas']);
+    _latticeAdd(uuid, text, tags);
     stream.emit(new Event('idearium.idea.created', { idea }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.created', payload: idea, ts: Date.now() });
   }
@@ -439,6 +515,10 @@ class IdeaLinkGate extends Gate {
     if (linkType==='tension')   { if(!a.tensionWith.includes(toUuid)) a.tensionWith.push(toUuid); if(!b.tensionWith.includes(fromUuid)) b.tensionWith.push(fromUuid); }
     a.updatedAt = b.updatedAt = Date.now();
     saveDB(this.os.db, ['ideas','links']);
+    // linkType ('resonance'/'tension') maps directly onto the lattice's own
+    // edge type field — real semantic match already present in the data,
+    // not a mapping invented for this wiring.
+    _latticeLink(fromUuid, toUuid, linkType === 'tension' ? 0.5 : 0.7, linkType);
     stream.emit(new Event('idearium.idea.linked', { link }));
     this.os._broadcast({ uuid: randomUUID(), type: 'idea.linked', payload: link, ts: Date.now() });
   }
@@ -494,6 +574,8 @@ class SpecCreateGate extends Gate {
       if (idea) { idea.linkedSpec = spec.uuid; idea.updatedAt = Date.now(); }
     }
     saveDB(this.os.db, ['specs','ideas']);
+    _latticeAdd(spec.uuid, name, ['spec']);
+    if (ideaUuid) _latticeLink(ideaUuid, spec.uuid, 0.9, 'spec-of');
     stream.emit(new Event('idearium.spec.created', { spec }));
     this.os._broadcast({ uuid: randomUUID(), type: 'spec.created', payload: spec, ts: Date.now() });
   }
@@ -571,6 +653,9 @@ class GapOpenGate extends Gate {
       if (idea && !idea.openGaps.includes(gap.uuid)) idea.openGaps.push(gap.uuid);
     }
     saveDB(this.os.db, ['gaps','ideas']);
+    _latticeAdd(gap.uuid, description, ['gap', type||'unresolved']);
+    if (ideaUuid) _latticeLink(ideaUuid, gap.uuid, 0.6, 'gap-in');
+    if (specUuid) _latticeLink(specUuid, gap.uuid, 0.6, 'gap-in');
     stream.emit(new Event('idearium.gap.opened', { gap }));
     this.os._broadcast({ uuid: randomUUID(), type: 'gap.created', payload: gap, ts: Date.now() });
   }
