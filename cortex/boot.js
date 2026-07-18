@@ -723,17 +723,39 @@ const server = http.createServer(async (req, res) => {
   // tier-tagged, timestamped, and actually aged out by cortex/memory/decay.js
   // on its real schedule (2h evictAfterMs) instead of only ever clearing
   // on a restart nobody scheduled.
+  // §BUGS FOUND AND FIXED 2026-07-19 — checked every real caller before
+  // touching this, not just the boot.js side:
+  //   1. guardian/userscript-claude.js's _memFetch reads `d.rows || d.memory`
+  //      — neither field ever existed in this response (only `working` did),
+  //      so the userscript's working-memory panel has always silently
+  //      rendered empty. Fixed here, not in the userscript: this is the side
+  //      I can actually verify: added `rows` and `memory` as aliases for the
+  //      exact same array, existing `working` field untouched — nothing that
+  //      already reads `working` changes behavior.
+  //   2. No system-scoping at all — every row keyed by a bare `key` with no
+  //      owner, so two systems writing the same key (e.g. both use "focus"
+  //      or "context") would silently overwrite each other via the upsert.
+  //      Added an optional `system` field/query param, folded into the
+  //      upsert key as `${system}:${key}` — defaults to 'global' when not
+  //      provided, so any existing caller that never passed one keeps
+  //      exactly its old behavior (same default namespace it was already
+  //      implicitly sharing), while a caller that opts in gets real
+  //      isolation from every other system.
   if (p === '/api/memory/working') {
     if (method === 'POST') {
       const body = await readBody(req);
+      const system = body.system || 'global';
       const key = body.key || 'default';
+      const scopedKey = `${system}:${key}`;
       const inserted = jaaDB.upsert('working_memory', {
-        key, value: body.value ?? body, tier: 'working', ts: Date.now(),
+        key: scopedKey, system, localKey: key, value: body.value ?? body, tier: 'working', ts: Date.now(),
       }, 'key');
-      json(res, 200, { ok: true, id: inserted.id, key: inserted.key });
+      json(res, 200, { ok: true, id: inserted.id, key: inserted.localKey, system: inserted.system });
     } else {
-      const rows = jaaDB.query('working_memory', {}).filter(r => !r._evicted);
-      json(res, 200, { ok: true, working: rows });
+      const systemFilter = url.searchParams.get('system');
+      let rows = jaaDB.query('working_memory', {}).filter(r => !r._evicted);
+      if (systemFilter) rows = rows.filter(r => r.system === systemFilter);
+      json(res, 200, { ok: true, working: rows, rows, memory: rows });
     }
     return;
   }

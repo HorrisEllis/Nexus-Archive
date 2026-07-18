@@ -76,6 +76,18 @@ class LoomRegistry {
    * add — disk-first write. Returns the stored record. Throws if the
    * id already exists (callers should axiom-check has() first — this
    * is the enforcement backstop, not the primary gate).
+   *
+   * §WIRED 2026-07-19 — cortex-sync.js's record() existed, complete,
+   * write-through to Cortex's real loom_events table via the same
+   * lib/cortex-write.js every other durable system uses (guardian,
+   * eravos, copilot, ollama) — and was never once called from here, the
+   * only real mutation path this registry has. registry.json was the
+   * only place any of this ever landed. Wired directly after the disk
+   * write that was already the source of truth — cortex-sync's own
+   * header already documents why this matters (durable history + CFR
+   * replay, not registry.json's one-shot flat file) and that record()
+   * is fire-and-forget/buffer-safe, so this cannot make add() itself
+   * fail or block on Cortex being reachable.
    */
   add(kind, record) {
     if (!KINDS.includes(kind)) throw new Error(`[loom/registry] unknown kind: ${kind}`);
@@ -84,6 +96,7 @@ class LoomRegistry {
     }
     this._state[kind][record.id] = { ...record, registeredAt: Date.now() };
     this._persist();
+    try { require('./cortex-sync').record('add', kind, this._state[kind][record.id]); } catch (_) {}
     return this._state[kind][record.id];
   }
 
