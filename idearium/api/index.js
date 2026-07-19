@@ -168,7 +168,18 @@ const IDEARIUM_DATA_DIR = path.join(path.dirname(_fileURLToPath(import.meta.url)
 import { dispatchChunkWithVerification } from '../spec-engine/chunk-dispatch.js';
 import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
-import { loadTable } from '../lib/db.js';
+import fs from 'fs';
+import { loadTable, appendRow, deleteRow } from '../lib/db.js';
+
+// §PROJECTS 2026-07-19 — "a place to store projects, easily." A flat
+// binary shelf for whole project archives (zips built elsewhere — MASTERMIND
+// builds, eravos snapshots, clear-glass-lite, whatever lands in Downloads),
+// deliberately NOT run through RepoLayer/spec-engine. Repos are for specs
+// with idea/lineage tracking; this is just "keep this zip somewhere I can
+// find it again" — one row per file (uuid, name, filename, diskName, size,
+// uploadedAt) in idearium_projects, raw bytes on disk under data/projects/.
+const PROJECTS_DIR = path.join(IDEARIUM_DATA_DIR, 'projects');
+try { fs.mkdirSync(PROJECTS_DIR, { recursive: true }); } catch (e) { console.warn('[idearium/api] could not create projects dir:', e.message); }
 
 // §HISTORY 2026-07-15 — chunk retry trail + build-artifact list, read back
 // out of the append-only tables lib/cortex-listeners.js writes on
@@ -471,6 +482,11 @@ function matchRoute(method, url) {
     ['POST',   ['api','cli','exec'],      'cli.exec'],      // unified CLI axiom
     ['GET',    ['api','repos'],           'repo.list'],
     ['POST',   ['api','repos'],           'repo.ingest'],
+    // ── Projects (§PROJECTS 2026-07-19) — flat zip shelf, separate from repos ──
+    ['GET',    ['api','projects'],                    'project.list'],
+    ['POST',   ['api','projects'],                    'project.upload'],
+    ['GET',    ['api','projects', ':uuid','download'],'project.download'],
+    ['DELETE', ['api','projects', ':uuid'],            'project.delete'],
     // ── Spec Engine (Phase 40) ─────────────────────────────────────────────
     // §ROUTED 2026-07-09 — the action alone is unreachable; idearium dispatches
     // by (method, segments) -> action. A handler with no route is an orphan.
@@ -1206,6 +1222,62 @@ async function handle(req, res, route, query, body) {
         ...CORS,
       });
       return res.end(zipBuf);
+    }
+
+    // ── Projects: flat zip shelf (§PROJECTS 2026-07-19) ────────────────────────
+    // No RepoLayer, no spec-engine, no idea/lineage tracking — just "store this
+    // zip, list it, get it back." One row in idearium_projects per file, raw
+    // bytes on disk at data/projects/<uuid>-<safeName>. Content travels over
+    // this JSON API as base64 (this router has no multipart parser); fine at
+    // local, internal-only scale.
+    case 'project.list': {
+      const rows = loadTable('idearium_projects').slice().sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+      return ok(res, { projects: rows });
+    }
+
+    case 'project.upload': {
+      const { name, filename, contentBase64 } = body;
+      if (!filename) return err(res, 400, 'filename required');
+      if (!contentBase64) return err(res, 400, 'contentBase64 required (base64-encoded file contents)');
+      let buf;
+      try { buf = Buffer.from(contentBase64, 'base64'); } catch (e) { return err(res, 400, 'invalid base64 content'); }
+      if (!buf.length) return err(res, 400, 'empty file');
+      const uuid = crypto.randomUUID();
+      const safeName = filename.replace(/[^a-z0-9-_.]+/gi, '_');
+      const diskName = `${uuid}-${safeName}`;
+      try { fs.writeFileSync(path.join(PROJECTS_DIR, diskName), buf); }
+      catch (e) { return err(res, 500, `write failed: ${e.message}`); }
+      const row = {
+        uuid, name: (name || filename.replace(/\.[^/.]+$/, '')).slice(0, 200),
+        filename: safeName, diskName, size: buf.length, uploadedAt: Date.now(),
+      };
+      appendRow('idearium_projects', row);
+      os.emit('idearium.project.uploaded', { uuid, name: row.name, size: row.size });
+      return ok(res, { project: row });
+    }
+
+    case 'project.download': {
+      const row = loadTable('idearium_projects').find(r => r.uuid === params.uuid);
+      if (!row) return err(res, 404, `project not found: ${params.uuid}`);
+      const filePath = path.join(PROJECTS_DIR, row.diskName);
+      if (!fs.existsSync(filePath)) return err(res, 404, 'project file missing on disk');
+      const buf = fs.readFileSync(filePath);
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${row.filename}"`,
+        'Content-Length': buf.length,
+        ...CORS,
+      });
+      return res.end(buf);
+    }
+
+    case 'project.delete': {
+      const row = loadTable('idearium_projects').find(r => r.uuid === params.uuid);
+      if (!row) return err(res, 404, `project not found: ${params.uuid}`);
+      try { fs.unlinkSync(path.join(PROJECTS_DIR, row.diskName)); } catch (e) { /* non-fatal — row cleanup still proceeds */ }
+      deleteRow('idearium_projects', params.uuid);
+      os.emit('idearium.project.deleted', { uuid: params.uuid, name: row.name });
+      return ok(res, { deleted: true, uuid: params.uuid });
     }
 
     // ── Spec Engine handlers (Phase 40) ────────────────────────────────────────

@@ -262,8 +262,27 @@ function updateStats() {
 // ════════════════════════════════════════════════════
 function setView(v) {
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
-  document.querySelectorAll('.rail-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  document.querySelectorAll('.tab-btn, .tab-sub').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  document.querySelectorAll('.tab-group').forEach(g=>{
+    const groupBtn = g.querySelector('.tab-group-btn');
+    const views = (groupBtn?.dataset.views || '').split(',');
+    if (groupBtn) groupBtn.classList.toggle('active', views.includes(v));
+    g.classList.remove('open');
+  });
+  if (v === 'projects') loadProjects();
 }
+
+// Top-tab subnav dropdowns (Create ▾ / Build ▾) — hover works via CSS,
+// this adds click/tap support (touch + keyboard-driven clicks) on top of it.
+function toggleTabGroup(e, btn) {
+  e.stopPropagation();
+  const group = btn.closest('.tab-group');
+  document.querySelectorAll('.tab-group').forEach(g => { if (g !== group) g.classList.remove('open'); });
+  group.classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.tab-group.open').forEach(g => g.classList.remove('open'));
+});
 
 // ════════════════════════════════════════════════════
 // EVENT LOG
@@ -1371,6 +1390,110 @@ document.addEventListener('keydown', e => {
   if (e.key==='Escape') { closeModal(); closeNewSpecModal(); }
   if ((e.metaKey||e.ctrlKey) && e.key==='n') { e.preventDefault(); setView('ideas'); openModal(); }
 });
+
+// ════════════════════════════════════════════════════
+// PROJECTS — a flat shelf for whole zip archives (not tied to ideas/specs;
+// that's what Versionium/RepoLayer already covers). Just: drop zips, keep
+// them, list them, get one back. Backed by GET/POST /api/projects and
+// GET .../:uuid/download, DELETE .../:uuid.
+// ════════════════════════════════════════════════════
+let PROJECTS = [];
+
+function formatBytes(n) {
+  if (!n && n !== 0) return '—';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
+  return `${(n/(1024*1024)).toFixed(1)} MB`;
+}
+
+async function loadProjects() {
+  try {
+    const res = await api('/api/projects');
+    PROJECTS = res.projects || [];
+  } catch (e) { /* stays whatever it was — likely offline */ }
+  renderProjectList();
+  const badgeText = `${PROJECTS.length} project${PROJECTS.length===1?'':'s'}`;
+  const b1 = document.getElementById('proj-header-badge'); if (b1) b1.textContent = badgeText;
+  const b2 = document.getElementById('proj-count-badge'); if (b2) b2.textContent = PROJECTS.length || '';
+}
+
+function renderProjectList() {
+  const list = document.getElementById('project-list');
+  if (!list) return;
+  const q = (document.getElementById('project-search')?.value || '').toLowerCase();
+  const items = PROJECTS.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.filename||'').toLowerCase().includes(q))
+                        .sort((a,b) => (b.uploadedAt||0)-(a.uploadedAt||0));
+  if (!items.length) {
+    list.innerHTML = `<div class="detail-empty">${CONNECTED ? (PROJECTS.length ? 'no projects match that filter' : 'no projects yet — drop a zip above') : 'not connected to nexus'}</div>`;
+    return;
+  }
+  list.innerHTML = items.map(p => `
+    <div class="project-card">
+      <span class="pc-icon">🗜</span>
+      <span class="pc-name" title="${p.filename}">${p.name || p.filename}</span>
+      <span class="pc-meta">${formatBytes(p.size)} · ${p.uploadedAt ? new Date(p.uploadedAt).toLocaleDateString() : '—'}</span>
+      <button onclick="downloadProject('${p.uuid}')">download</button>
+      <button class="danger" onclick="deleteProject('${p.uuid}','${(p.name||p.filename||'').replace(/'/g,"\\'")}')">delete</button>
+    </div>
+  `).join('');
+}
+
+async function uploadProjectFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  const zone = document.getElementById('project-drop');
+  const textEl = document.getElementById('project-drop-text');
+  const defaultText = 'drop zips here, or click to choose files — select as many at once as you like';
+  if (zone) { zone.classList.add('drag'); zone.style.pointerEvents = 'none'; }
+  let okCount = 0, failCount = 0;
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    if (textEl) textEl.textContent = `storing ${i+1}/${files.length} — ${f.name}`;
+    try {
+      const contentBase64 = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result.split(',')[1] || '');
+        r.onerror = reject;
+        r.readAsDataURL(f); // base64 — binary-safe, unlike readAsText
+      });
+      await api('/api/projects', { method: 'POST', body: JSON.stringify({
+        name: f.name.replace(/\.[^/.]+$/, ''), filename: f.name, contentBase64,
+      }) }, 30000);
+      okCount++;
+    } catch (e) { failCount++; console.error(`[projects] upload failed for ${f.name}:`, e.message); }
+  }
+  if (zone) { zone.classList.remove('drag'); zone.style.pointerEvents = ''; }
+  if (textEl) textEl.textContent = defaultText;
+  document.getElementById('project-file-input').value = '';
+  if (okCount) toast(`stored ${okCount} project${okCount>1?'s':''}${failCount?`, ${failCount} failed`:''}`, failCount ? 'err' : 'ok');
+  else if (failCount) toast(`upload failed`, 'err');
+  await loadProjects();
+}
+
+function downloadProject(uuid) {
+  if (!API_BASE) return toast('not connected to nexus', 'err');
+  window.open(API_BASE + `/api/projects/${uuid}/download`, '_blank');
+}
+
+async function deleteProject(uuid, name) {
+  if (!confirm(`delete "${name}"? this removes the stored zip — it can't be undone.`)) return;
+  try {
+    await api(`/api/projects/${uuid}`, { method: 'DELETE' });
+    toast(`deleted "${name}"`, 'ok');
+    await loadProjects();
+  } catch (e) { toast(`delete failed: ${e.message}`, 'err'); }
+}
+
+(function wireProjectDropzone() {
+  const zone = document.getElementById('project-drop');
+  if (!zone) return;
+  ['dragover','dragenter'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.add('drag'); }));
+  ['dragleave'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('drag'); }));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation(); zone.classList.remove('drag');
+    if (e.dataTransfer?.files?.length) uploadProjectFiles(e.dataTransfer.files);
+  });
+})();
 
 // ════════════════════════════════════════════════════
 // INIT — no seed data. Connect to real nexus, render empty states until then.
