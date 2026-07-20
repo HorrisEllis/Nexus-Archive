@@ -2763,6 +2763,25 @@ try {
   } catch(e) {
     console.warn('  [user-model] init skipped:', e.message);
   }
+  // Pressure relay — resource-monitor emits 'nexus.resource.pressure' on
+  // THIS process's bus; the consumer (cortex/self-heal/escalation.js, which
+  // maps it to the memory_pressure fault class) lives in the cortex process.
+  // Relay over the same POST /api/event path guardian already uses. Built
+  // 2026-07-20 from a live crash log: guardian+orchestrator both died
+  // 0xC0000409 under 16.7% free memory two minutes after this event fired
+  // with no consumer anywhere.
+  try {
+    nexusBus.on('nexus.resource.pressure', (e) => {
+      POST('cortex', '/api/event', {
+        type: 'nexus.resource.pressure',
+        payload: e?.payload || e,
+        source: 'orchestrator/resource-monitor',
+      }).catch(() => {}); // cortex briefly down: supervisor handles it; next transition re-relays
+    });
+    console.log('  [pressure-relay] nexus.resource.pressure → cortex /api/event');
+  } catch(e) {
+    console.warn('  [pressure-relay] skipped:', e.message);
+  }
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');
     const uiReg = require('./orchestrator/lib/ui-registry');

@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cortex
-    version:     3.2.0
+    version:     3.3.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3748
     uuid:        nexus-cortex-v3-0000-2026-0615-jamesbrooks-001
@@ -257,3 +257,35 @@ spec:
       - "Component registry loads existing components from JAA"
       - "Health endpoint returns ok:true"
       - "Contract endpoint returns valid contract shape"
+
+  # ── ADDENDUM 2026-07-20 (v3.3.0) — organ completion, spec catching up to code ──
+  addendum_2026_07_20:
+    summary: >
+      All six organs now exist as real, bus-wired SISO gates, built bottom-up
+      across Phases 0-6 (see docs_out/cortex-phase-map.md for the full audit
+      trail including every bug found and fixed along the way).
+    organs_built:
+      - "self-heal/escalation — friction ledger. Subscribes anomaly.detected, HEAL_REQUESTED, nexus.resource.pressure. Emits escalation.friction.increased (exact name liminal-space listens for, payload field newFric) + escalation.failure_mode."
+      - "self-heal — 5-level ladder. Level from fault_taxonomy count. L0 forge_patches/fix_map replay, L1 the 8 safe patterns, L2 propose-only (never auto-applies), L3 12-engine deep scan, L4 failure_modes + human action item. SEMANTIC_GAP_TYPES excluded (§7.2)."
+      - "gap-finder — anomaly.detected (high/critical) + sigma.event.halt_risk → deduped cortex.gap.found ({gap: row} shape)."
+      - "orion — pure classifier (§14.2): anomaly/sigma → cortex.orion.classified, shaped to RAID _decide()'s real contract."
+      - "raid — bus-wired: cortex.orion.classified → same _decide() → cortex.raid.decided. KNOWN GAP (§10.3): boot.js's /api/raid/decide route still calls its own lighter _raidDecide, not this engine — two truth layers, tracked, not fixed."
+    event_name_corrections: >
+      Spec previously said cortex.escalation.friction_increased; deployed
+      listener contract is escalation.friction.increased with payload field
+      newFric. Code conformed to the deployed contract; spec now records it.
+    foundation_fixes: >
+      Three sibling bugs fixed at the source in guardian/jaa-store.js _matches():
+      predicate-function where clauses silently matched ALL rows; string where
+      clauses silently matched NONE. Plus jaa-db.js bare-number limit fix and
+      the JaaDB class (JSONL journal, tier decay, queryWeighted) built against
+      its pre-existing 52-test pinned contract. tc.drift.signal renamed +
+      payload-remapped in liminal-space. _checkCrystallisation §14.4 loop guard.
+      intelligence _patternScanCursor accumulation + monotonic crystallised
+      latch (root cause of the infinite re-announce spam).
+    pressure_reflex: >
+      nexus.resource.pressure (resource-monitor, transitions only) now relayed
+      orchestrator→cortex /api/event and consumed by escalation as the
+      memory_pressure fault class: pressure→L1 (+0.20), critical→L3 (+0.50),
+      ok→recordSuccess decay. Built from the 2026-07-20 live 0xC0000409
+      double-crash log, where the event fired with zero consumers.

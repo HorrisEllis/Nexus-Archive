@@ -1,12 +1,19 @@
 {
   "name": "nexus",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "description": "NEXUS \u2014 sovereign AI orchestration platform",
   "author": "James Brooks (Erosmancer)",
   "license": "MIT",
   "private": true,
   "bin": {},
-  "workspaces": ["clear-glass", "architect", "cos", "emerge", "idearium", "siso"],
+  "workspaces": [
+    "clear-glass",
+    "architect",
+    "cos",
+    "emerge",
+    "idearium",
+    "siso"
+  ],
   "scripts": {
     "test": "node tests/brutal.test.js",
     "test:all": "node tests/brutal.test.js && node tests/pipeline.test.js && node tests/kernel.test.js && node tests/full.test.js && node tests/modules/run-all.js",

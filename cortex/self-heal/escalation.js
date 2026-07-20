@@ -88,6 +88,48 @@ function _onAnomalyDetected(event) {
   _emitFrictionChange(type, result, { cause: 'anomaly.detected', anomalyUuid, sessionId });
 }
 
+// ── nexus.resource.pressure → memory_pressure friction ────────────────────────
+// §BUILT 2026-07-20, from a live crash log: guardian and orchestrator both
+// died with 0xC0000409 under 16.7% free memory, two minutes AFTER
+// resource-monitor emitted 'nexus.resource.pressure' on the bus — an event
+// that, until this handler, had zero consumers. The system knew and had no
+// reflex. 'memory_pressure' has been one of KNOWN_FAULT_CLASSES since
+// Phase 1 (docs/self-heal.spec) — this wires the real signal to the fault
+// class that was defined to receive it. Cross-process path: orchestrator's
+// resource-monitor emits on its bus → orchestrator relays to cortex
+// POST /api/event (the same path guardian already uses) → cortex re-emits
+// in-process → this handler.
+//   level 'pressure' → raiseFriction level 1   (0.20)
+//   level 'critical' → raiseFriction level 3   (0.50 — two criticals = FAILURE_MODE)
+//   level 'ok'       → recordSuccess           (friction decays ×0.5, not amnesia)
+// Transitions only (resource-monitor's own contract), so sustained pressure
+// cannot march friction up on repetition alone — oscillation damping beyond
+// that is future work, named in docs/escalation.spec addendum, not built here.
+function _onResourcePressure(event) {
+  const { level, reasons } = event?.payload || {};
+  if (!level) return;
+  if (level === 'ok') {
+    const result = faultTaxonomy.recordSuccess('memory_pressure');
+    if (result && _bus) {
+      _bus.emit('escalation.friction.increased', {
+        faultClass: 'memory_pressure', newFric: result.friction, band: result.band,
+        cause: 'pressure_recovered',
+      });
+    }
+    return;
+  }
+  const ladderLevel = level === 'critical' ? 3 : 1;
+  let result;
+  try {
+    result = faultTaxonomy.raiseFriction('memory_pressure', ladderLevel,
+      { example: { reasons, level, ts: Date.now() } });
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] pressure raiseFriction failed: ${e.message}`);
+    return;
+  }
+  _emitFrictionChange('memory_pressure', result, { cause: 'nexus.resource.pressure', level });
+}
+
 // ── HEAL_REQUESTED → refuse if already in FAILURE_MODE, otherwise no-op ────────
 // (this organ tracks friction; self-heal, Phase 3, is what actually attempts fixes)
 function _onHealRequested(event) {
@@ -167,6 +209,7 @@ function init(cfg = {}) {
   if (cfg.bus) {
     wireAnomalyTrigger(cfg.bus);
     cfg.bus.on('HEAL_REQUESTED', _onHealRequested);
+    cfg.bus.on('nexus.resource.pressure', _onResourcePressure);
   }
   console.log(`[${MODULE_ID}] v${VERSION} — friction ledger active${_bus ? ' (bus-wired)' : ' (no bus — test mode)'}`);
   return { ok: true };
@@ -176,6 +219,7 @@ function stop() {
   if (_bus) {
     _bus.off('anomaly.detected', _onAnomalyDetected);
     _bus.off('HEAL_REQUESTED', _onHealRequested);
+    _bus.off('nexus.resource.pressure', _onResourcePressure);
   }
   _bus = null; // avoid a stale reference outliving the listeners that used it
 }

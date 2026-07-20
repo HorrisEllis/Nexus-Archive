@@ -1,5 +1,57 @@
 # NEXUS Changelog
 
+## 2026-07-20 — cortex organ completion, three store bugs fixed at source, suite 604/61 → 681/0, system 0.9.12 → 0.9.13
+
+The full audit trail lives in **`docs_out/cortex-phase-map.md`** — read that
+for the phase-by-phase account including every bug found. Summary:
+
+**Foundation (three sibling bugs, all in the same `_matches()` family,
+each reproduced before fixing, all fixed at the source in
+`guardian/jaa-store.js` / `cortex/memory/jaa-db.js`):** predicate-function
+`where` clauses silently matched EVERY row; string `where` clauses silently
+matched NONE (every `update(table, uuid, ...)` call in the codebase was a
+no-op); bare-number `limit` args were silently dropped. Plus: the `JaaDB`
+class built against its pre-existing 52-test pinned contract (JSONL journal,
+tier decay, `queryWeighted`) — `cos/manager.js`'s sovereign per-compartment
+memory now actually works instead of silently falling back to shared.
+
+**Cortex organs (Phases 0-6, bottom-up, each gated on tests against real
+data):** `fault-taxonomy` (schema + sole write authority), `escalation`
+(friction ledger — now also consumes `nexus.resource.pressure` as the
+`memory_pressure` fault class, built from the live 0xC0000409 double-crash
+log where the event fired with zero consumers), `self-heal` (5-level
+ladder, L2 propose-only), `gap-finder`, `orion` (pure classifier), `raid`
+bus-wired. Real organs array in `boot.js` (T-015 finally passes honestly).
+`intelligence` accumulation fix (`_patternScanCursor` + monotonic
+crystallised latch) — root cause of the infinite re-announce spam from the
+session's opening screenshot.
+
+**User model:** wired live (was fully built, 24 tests, zero callers —
+init + hydration from 200 real chat prompts + gap/error bus feeds), plus
+`radiate()` spreading-activation over the lattice. First real radiate:
+center `guardian`, ring 1 idearium/health/cfr/copilot/ollama/bridge/emerge.
+
+**Boot phases:** autopilot now boots in 4 health-gated phases
+(orchestrator → guardian/diagnostic/bridge/cortex → app layer → emerge)
+derived from observed dependency evidence; `_pollHealth` fixed to retry
+through booting-503s. Clear-glass stays on-demand.
+
+**Specs:** cortex.spec → 3.3.0 (spec catching up to code — closes one real
+drift gap), escalation → 1.2.0, self-heal → 1.1.0, all with dated
+addendums. NEW: `docs/handshake-ledger.spec` (0.1.0-spec, spec-first per
+§3.1 — signed cross-system handoff receipts for RFR2 verification; nothing
+built yet, deliberately).
+
+**Known open, tracked, not hidden:** boot.js's `/api/raid/decide` route
+still uses its own lighter `_raidDecide` (two truth layers, §10.3);
+`sigma_records` grows unboundedly (13,329 → 13,944 in one short run —
+eviction/compaction is the next item that worsens on its own);
+`cortex/heartbeat` spec'd-but-unbuilt (blocks `pipeline.test.js`);
+`chat_log` has two writers with two schemas (§10.1); oscillation damping
+named in escalation.spec addendum, not built; the 12 unspecced modules
+spec-drift reports (now 12, not 13 — handshake-ledger got its spec first).
+
+
 ## 2026-07-12 — session handoff, system 0.9.11 → 0.9.12
 
 Full session handoff written: **`HANDOFF-2026-07-11.md`** (repo root). Covers

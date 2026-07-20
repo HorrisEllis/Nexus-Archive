@@ -181,5 +181,49 @@ test('T-013', 'health() reports bus-wired state accurately', () => {
   escalation.stop();
 });
 
+
+test('T-014', "nexus.resource.pressure level 'pressure' raises memory_pressure friction at ladder level 1", () => {
+  reset();
+  const bus = makeBus();
+  escalation.init({ bus });
+  bus.emit('nexus.resource.pressure', { level: 'pressure', reasons: ['free memory 18% < 20%'] });
+  assert.strictEqual(_raiseCalls.length, 1);
+  assert.strictEqual(_raiseCalls[0].fc, 'memory_pressure');
+  assert.strictEqual(_raiseCalls[0].level, 1);
+  escalation.stop();
+});
+
+test('T-015', "level 'critical' raises at ladder level 3 — two criticals reach FAILURE_MODE", () => {
+  reset();
+  const bus = makeBus();
+  let failureMode = false;
+  bus.on('escalation.failure_mode', () => { failureMode = true; });
+  escalation.init({ bus });
+  bus.emit('nexus.resource.pressure', { level: 'critical', reasons: ['free memory 4% < 5%'] }); // 0.50
+  bus.emit('nexus.resource.pressure', { level: 'critical', reasons: ['free memory 3% < 5%'] }); // 1.00
+  assert.strictEqual(failureMode, true, 'two criticals must trip FAILURE_MODE');
+  escalation.stop();
+});
+
+test('T-016', "level 'ok' (recovery) decays friction via recordSuccess, never raises", () => {
+  reset();
+  _rows.memory_pressure = { faultClass: 'memory_pressure', friction: 0.4, count: 2 };
+  const bus = makeBus();
+  escalation.init({ bus });
+  bus.emit('nexus.resource.pressure', { level: 'ok', reasons: [] });
+  assert.strictEqual(_successCalls.length, 1);
+  assert.strictEqual(_raiseCalls.length, 0);
+  escalation.stop();
+});
+
+test('T-017', 'pressure event with no level is ignored, not thrown', () => {
+  reset();
+  const bus = makeBus();
+  escalation.init({ bus });
+  assert.doesNotThrow(() => bus.emit('nexus.resource.pressure', { reasons: ['x'] }));
+  assert.strictEqual(_raiseCalls.length, 0);
+  escalation.stop();
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
