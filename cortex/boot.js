@@ -75,6 +75,12 @@ const SYSTEM  = 'cortex';
 
 // ── JAA memory store ──────────────────────────────────────────────────────────
 const { jaaDB, uid } = require('./memory/jaa-db');
+// §GAP CLOSED 2026-07-19 — nexus-bus.js already existed at repo root, already
+// documented as "the common event fabric," and other systems (guardian,
+// orchestrator) were already POSTing to cortex's /api/event with it in mind
+// — but this file never required it, so nothing arriving at /api/event ever
+// reached an in-process listener. Fixed at the two points below.
+const bus = require('../nexus-bus');
 let _openLoopTaxonomy = null;
 function _getTaxonomy() {
   if (_openLoopTaxonomy !== null) return _openLoopTaxonomy;
@@ -382,6 +388,13 @@ const server = http.createServer(async (req, res) => {
       source: body.source || 'unknown', ts: body.ts || Date.now(),
       causedBy: body.causedBy || null }; // §sensation 2026-06-29 — was missing
     jaaDB.insert('event_log', row);
+    // §GAP CLOSED 2026-07-19 — this endpoint is how guardian/orchestrator
+    // already push events into cortex, but it only ever wrote to
+    // event_log. Nothing in-process (liminal-space, or anything else
+    // subscribed to `bus`) ever saw these live. Emit is additive — the
+    // event_log write and JSON response above are unchanged.
+    try { bus.emit(row.type, body.payload || {}, { source: row.source, causedBy: row.causedBy }); }
+    catch (e) { console.warn(`[cortex] bus.emit failed for ${row.type}: ${e.message}`); }
     json(res, 200, { ok: true, id: row.id });
     return;
   }
@@ -407,6 +420,8 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const row  = { id: uid(), ...body, status: body.status || 'open', ts: Date.now() };
       jaaDB.insert('gaps', row);
+      try { bus.emit('cortex.gap.found', { gap: row }, { source: row.source || 'cortex' }); }
+      catch (e) { console.warn(`[cortex] bus.emit(cortex.gap.found) failed: ${e.message}`); }
       json(res, 200, { ok: true, id: row.id });
       return;
     }
@@ -624,9 +639,57 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §GAP CLOSED 2026-07-19 — liminal-space was init'd with a real bus above
+  // but had no HTTP surface at all; no way to see its state without
+  // reading JAA directly. Read-only, mirrors its own status()/list().
+  if (p === '/api/liminal-space/status' && method === 'GET') {
+    json(res, 200, require('./liminal-space').status());
+    return;
+  }
+  if (p === '/api/liminal-space/list' && method === 'GET') {
+    const fp = url.searchParams.get('focalPoint') || undefined;
+    json(res, 200, { ok: true, items: require('./liminal-space').list(fp) });
+    return;
+  }
+
   if (p === '/api/intelligence/rca') {
     const limit = parseInt(url.searchParams.get('limit') || '5');
     json(res, 200, { ok: true, rca: _buildRCA(limit) });
+    return;
+  }
+
+  // §GAP CLOSED 2026-07-19 — three endpoints intelligence/index.js provides
+  // that nothing above already handles (checked: no existing /reuse,
+  // /failures, or POST /event route in this file). Called directly with
+  // this file's own json(res, status, obj) convention rather than through
+  // handleRequest() — that function expects a json(status, obj) callback
+  // shape (different arg order) built for a standalone router, and reusing
+  // it here would mean writing an adapter for one call site. Simpler and
+  // safer to call the three underlying exports directly.
+  if (p === '/api/intelligence/reuse' && method === 'GET') {
+    const q = url.searchParams.get('q') || '';
+    const intel = require('./intelligence');
+    const all = intel.getReuseIndex();
+    const results = q ? all.filter(r => r.intent?.includes(q) || r.keywords?.some(k => k.includes(q))) : all.slice(0, 50);
+    json(res, 200, { ok: true, results, total: results.length });
+    return;
+  }
+
+  if (p === '/api/intelligence/failures' && method === 'GET') {
+    const failures = require('./intelligence').getFailures();
+    json(res, 200, { ok: true, failures: Object.values(failures), total: Object.keys(failures).length });
+    return;
+  }
+
+  if (p === '/api/intelligence/event' && method === 'POST') {
+    const body = await readBody(req);
+    if (body?.type) {
+      jaaDB.insert('event_log', {
+        uuid: uid(), type: body.type, payload: body.payload || {},
+        source: body.source || 'external', causedBy: body.causedBy || null, ts: Date.now(),
+      });
+    }
+    json(res, 200, { ok: true });
     return;
   }
 
@@ -1021,6 +1084,49 @@ server.listen(PORT, '127.0.0.1', () => {
   try { require('./memory/decay').startDecayTicker(5 * 60 * 1000); } catch (e) {
     console.warn(`[cortex] memory decay ticker failed to start: ${e.message}`);
   }
+  // §GAP CLOSED 2026-07-19 — versionium/index.js, versionium/causality.js,
+  // liminal-space/index.js and intelligence/index.js existed fully written
+  // and tested (unintegrated/2026-07-branch-b-cortex-v2) but were never
+  // require()'d from anywhere — dead code sitting next to boot.js. All four
+  // are self-contained: init(cfg)/stop(), unref'd intervals, no dependency
+  // on anything not already in this tree. Starting them here is purely
+  // additive — nothing else in boot.js calls into them yet, so this cannot
+  // change any existing route's behavior.
+  //
+  // liminal-space's init(cfg) takes a cfg.bus (Node EventEmitter) to
+  // subscribe to events like 'cortex.gap.found' / 'forge.patch.proposed'.
+  // Turned out that bus already existed — nexus-bus.js at repo root,
+  // documented as "the common event fabric," already used by guardian and
+  // orchestrator to POST into cortex's /api/event — but boot.js never
+  // required it, so nothing arriving there ever reached an in-process
+  // listener. Now required above as `bus`, wired into /api/event and
+  // /api/gaps (POST) so both cross-process events and cortex's own gap
+  // creation fan out live, and passed to liminal-space for real below.
+  try {
+    require('./versionium').init({ pollMs: 3000 });
+    console.log('[cortex] versionium (causal version control) active');
+  } catch (e) {
+    console.warn(`[cortex] versionium failed to start: ${e.message}`);
+  }
+  try {
+    require('./versionium/causality').init({ pollMs: 5000 });
+    console.log('[cortex] versionium/causality active');
+  } catch (e) {
+    console.warn(`[cortex] versionium/causality failed to start: ${e.message}`);
+  }
+  try {
+    require('./liminal-space').init({ bus });
+    console.log('[cortex] liminal-space active (live on nexus-bus)');
+  } catch (e) {
+    console.warn(`[cortex] liminal-space failed to start: ${e.message}`);
+  }
+  try {
+    require('./intelligence').init({});
+    console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active');
+  } catch (e) {
+    console.warn(`[cortex] intelligence/index failed to start: ${e.message}`);
+  }
+
   // §GAP CLOSED 2026-07-06 — meta/spatial/system-lattice.js was real,
   // tested, and persisted, but nothing fed it in production — the
   // "standing, continuously-updated" half of nexus-relationship-shape.spec

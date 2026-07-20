@@ -40,6 +40,7 @@
 'use strict';
 
 const { jaaDB, uid } = require('../memory/jaa-db');
+const bus = require('../../nexus-bus');
 
 const MODULE_ID = 'cortex/intelligence';
 const VERSION   = '1.0.0';
@@ -322,6 +323,8 @@ async function _scanPatterns() {
       _patternIndex.push(p);
       if (p.crystallised) {
         _log('pattern crystallised: ' + _humanPattern(p));
+        try { bus.emit('cortex.intelligence.pattern_crystallised', { pattern: p }, { source: MODULE_ID }); }
+        catch (e) { console.warn(`[${MODULE_ID}] bus.emit failed: ${e.message}`); }
       }
     }
 
