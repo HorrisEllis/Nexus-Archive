@@ -54,6 +54,13 @@ const CROSS_LEDGER_MS   = 90_000;   // cross-ledger analysis every 90s
 let _intervals  = [];
 let _cfg        = {};
 let _lastPatternScan  = 0;
+// High-water mark for pattern accumulation (tests/modules/intelligence.test.js).
+// Events at or before this ts have already been counted by a prior scan —
+// without it, counts recomputed from the same sliding window every tick,
+// so heartbeat-paced pairs hovered at the crystallisation threshold and
+// re-announced "pattern crystallised" forever. Advanced only at the end of
+// a successful scan; boot hydration is the only other legitimate writer.
+let _patternScanCursor = 0;
 let _lastFailureScan  = 0;
 let _lastReuseBuild   = 0;
 let _lastCrossLedger  = 0;
@@ -189,6 +196,8 @@ async function _scanPatterns() {
 
     // ── Co-occurrence analysis ────────────────────────────────────────────────
     // Which event types always appear together within 5 seconds?
+    // Only pairs whose LATER event is past the scan cursor count — the same
+    // pair of events is counted exactly once across overlapping windows.
     const WINDOW_MS = 5000;
     const coOccur = {};
     for (let i = 0; i < events.length; i++) {
@@ -197,6 +206,7 @@ async function _scanPatterns() {
         const b = events[j];
         if (!a.ts || !b.ts) continue;
         if (b.ts - a.ts > WINDOW_MS) break;
+        if (b.ts <= _patternScanCursor) continue; // already counted by a prior scan
         const key = [a.type, b.type].sort().join('::');
         coOccur[key] = (coOccur[key] || 0) + 1;
       }
@@ -204,10 +214,12 @@ async function _scanPatterns() {
 
     // ── Failure precursor analysis ────────────────────────────────────────────
     // What event types appear in the 30s before a failure/error/gap?
+    // Only failures past the cursor are processed — each failure's precursor
+    // window is counted exactly once, on the scan that first sees it.
     const failureEvents = events.filter(e =>
-      e.type?.includes('error') || e.type?.includes('fail') ||
-      e.type?.includes('gap.found') || e.type?.includes('collapse') ||
-      e.type?.includes('tidal')
+      (e.type?.includes('error') || e.type?.includes('fail') ||
+       e.type?.includes('gap.found') || e.type?.includes('collapse') ||
+       e.type?.includes('tidal')) && e.ts > _patternScanCursor
     );
     const precursorCounts = {};
     for (const failure of failureEvents) {
@@ -248,10 +260,15 @@ async function _scanPatterns() {
     // ── Crystallise patterns ──────────────────────────────────────────────────
     // A pattern is crystallised when it has occurred > 3 times with consistent conditions
     const newPatterns = [];
+    const announcements = []; // patterns that JUST crossed into crystallised this scan
 
-    // High-frequency co-occurrences → structural pattern
+    // High-frequency co-occurrences → structural pattern.
+    // New signature: insert. Existing: ACCUMULATE — count is cumulative across
+    // scans (the cursor above guarantees this batch's count is only new
+    // occurrences), and crystallised is a monotonic latch: once true, boundary
+    // noise on later scans can never flip it back or re-announce it.
     for (const [pair, count] of Object.entries(coOccur)) {
-      if (count < 3) continue;
+      if (count < 3 && !_patternIndex.find(p => p.signature === pair)) continue;
       const [typeA, typeB] = pair.split('::');
       const existing = _patternIndex.find(p => p.signature === pair);
       if (!existing) {
@@ -268,14 +285,30 @@ async function _scanPatterns() {
           source:      MODULE_ID,
           ts:          now,
         });
+      } else {
+        const newCount = (existing.count || 0) + count;
+        const wasCrystallised = !!existing.crystallised;
+        const nowCrystallised = wasCrystallised || newCount >= 10; // monotonic latch
+        const patch = {
+          count:       newCount,
+          confidence:  Math.min(1, newCount / 20),
+          actionable:  newCount >= 5,
+          crystallised: nowCrystallised,
+          description: `"${typeA}" and "${typeB}" co-occur within 5s — ${newCount} observations`,
+          ts:          now,
+        };
+        jaaDB.update('bep_patterns', existing.uuid, patch);
+        Object.assign(existing, patch);
+        if (!wasCrystallised && nowCrystallised) announcements.push(existing);
       }
     }
 
-    // Strong failure precursors → warning pattern
+    // Strong failure precursors → warning pattern.
+    // Same accumulate + latch semantics as co-occurrence.
     for (const [precursorType, data] of Object.entries(precursorCounts)) {
-      if (data.count < 3) continue;
       const sig = `precursor::${precursorType}`;
       const existing = _patternIndex.find(p => p.signature === sig);
+      if (data.count < 3 && !existing) continue;
       if (!existing) {
         newPatterns.push({
           uuid:           uid(),
@@ -292,10 +325,29 @@ async function _scanPatterns() {
           source:         MODULE_ID,
           ts:             now,
         });
+      } else {
+        const newCount = (existing.count || 0) + data.count;
+        const wasCrystallised = !!existing.crystallised;
+        const nowCrystallised = wasCrystallised || newCount >= 10; // monotonic latch
+        const patch = {
+          count:       newCount,
+          confidence:  Math.min(1, newCount / 10),
+          crystallised: nowCrystallised,
+          description: `"${precursorType}" precedes failures ${newCount} times — watch this event type`,
+          ts:          now,
+        };
+        jaaDB.update('bep_patterns', existing.uuid, patch);
+        Object.assign(existing, patch);
+        if (!wasCrystallised && nowCrystallised) announcements.push(existing);
       }
     }
 
-    // Bottleneck signals → recurring open gaps of same type
+    // Bottleneck signals → recurring open gaps of same type.
+    // DIFFERENT semantics, deliberately: count is the CURRENT open-gap
+    // snapshot (gaps close — an accumulated total would claim a bottleneck
+    // that's been fixed), but crystallised still latches: it only clears
+    // when the count fully clears to 0 (at which point the count<2 guard
+    // stops touching the row), never from 5→4 boundary noise.
     for (const [gapType, count] of topGaps) {
       if (count < 2) continue;
       const sig = `bottleneck::${gapType}`;
@@ -314,7 +366,28 @@ async function _scanPatterns() {
           source:      MODULE_ID,
           ts:          now,
         });
+      } else {
+        const wasCrystallised = !!existing.crystallised;
+        const nowCrystallised = wasCrystallised || count >= 5;
+        const patch = {
+          count, // snapshot, not accumulated
+          confidence:  Math.min(1, count / 10),
+          crystallised: nowCrystallised,
+          description: `Gap type "${gapType}" appears ${count} times — recurring bottleneck`,
+          ts:          now,
+        };
+        jaaDB.update('bep_patterns', existing.uuid, patch);
+        Object.assign(existing, patch);
+        if (!wasCrystallised && nowCrystallised) announcements.push(existing);
       }
+    }
+
+    // Announce updates that just crossed into crystallised (exactly once,
+    // on the crossing scan — the latch above guarantees no re-announce)
+    for (const p of announcements) {
+      _log('pattern crystallised: ' + _humanPattern(p));
+      try { bus.emit('cortex.intelligence.pattern_crystallised', { pattern: p }, { source: MODULE_ID }); }
+      catch (e) { console.warn(`[${MODULE_ID}] bus.emit failed: ${e.message}`); }
     }
 
     // Write new patterns to JAA
@@ -345,6 +418,10 @@ async function _scanPatterns() {
       },
       source:  MODULE_ID, causedBy: null, ts: now,
     });
+
+    // Advance the high-water mark — every event at or before `now` has been
+    // counted by this scan; the next scan only counts genuinely new events.
+    _patternScanCursor = now;
 
   } catch(e) {
     _err('_scanPatterns', e);
@@ -852,4 +929,5 @@ module.exports = {
   getPatterns:  () => _patternIndex,
   getFailures:  () => _failureIndex,
   getReuseIndex:() => _reuseIndex,
+  _scanPatterns, // exported for direct testing (intelligence.test.js pins this)
 };

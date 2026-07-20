@@ -51,6 +51,7 @@ const MEMORY_TIERS = Object.freeze({
 const TABLE_TIERS = Object.freeze({
   // WORKING
   working_memory:   'working',
+  active_traces:    'working',  // pinned by tests/modules/jaa-db.test.js §INV eviction cycleId test
 
   // SHORT-TERM
   cortex_memory:    'short',

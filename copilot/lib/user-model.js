@@ -247,6 +247,65 @@ function _latticeLink(a, b, strength = 0.3) {
   } catch(_) {}
 }
 
+// ── Radiate — spreading activation over the lattice ───────────────────────────
+// "The user in the middle, variables propagating outward." Starts at a center
+// node (default: the highest-confidence node — the strongest current signal)
+// and walks links outward ring by ring. Activation attenuates per hop:
+//   activation(neighbor) = activation(node) × linkStrength × neighborConfidence
+// Multiple paths to the same node: the strongest wins (max, not sum — sum
+// would reward dense noise over strong signal). Nodes below `min` activation
+// are cut. Deterministic for a given lattice state (§14.2) — same rows in,
+// same rings out. Cycles can't loop: a node is activated at most once.
+function radiate(center = null, opts = {}) {
+  const jaa = _getJaa() || _jaa;
+  if (!jaa) return { center: null, rings: [], nodes: 0 };
+  const maxDepth = opts.depth ?? 3;
+  const min = opts.min ?? 0.05;
+
+  let rows;
+  try { rows = jaa.query('user_lattice', () => true, 2000) || []; }
+  catch (_) { return { center: null, rings: [], nodes: 0 }; }
+  if (!rows.length) return { center: null, rings: [], nodes: 0 };
+
+  const byTopic = new Map(rows.map(r => [r.topic, r]));
+  let start = center ? byTopic.get(center) : null;
+  if (!start) {
+    // Honest fallback, stated in the result: strongest node, not a fabricated center
+    start = rows.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+  }
+
+  const activation = new Map([[start.topic, Math.max(min, start.confidence ?? 0.3)]]);
+  const rings = [[{ topic: start.topic, nodeType: start.nodeType || 'topic', activation: +activation.get(start.topic).toFixed(4) }]];
+  let frontier = [start.topic];
+
+  for (let d = 1; d <= maxDepth && frontier.length; d++) {
+    const next = new Map();
+    for (const t of frontier) {
+      const node = byTopic.get(t);
+      if (!node) continue;
+      const a = activation.get(t);
+      for (const [nb, strength] of Object.entries(node.links || {})) {
+        if (activation.has(nb)) continue; // already activated on a shorter path
+        const nbNode = byTopic.get(nb);
+        const propagated = a * strength * (nbNode?.confidence ?? 0.3);
+        if (propagated < min) continue;
+        if (!next.has(nb) || next.get(nb) < propagated) next.set(nb, propagated);
+      }
+    }
+    if (!next.size) break;
+    const ring = [];
+    for (const [t, a] of next.entries()) {
+      activation.set(t, a);
+      ring.push({ topic: t, nodeType: byTopic.get(t)?.nodeType || 'topic', activation: +a.toFixed(4) });
+    }
+    ring.sort((x, y) => y.activation - x.activation);
+    rings.push(ring);
+    frontier = ring.map(r => r.topic);
+  }
+
+  return { center: start.topic, centerWasFallback: !center || !byTopic.has(center), rings, nodes: activation.size };
+}
+
 const NEXUS_TERMS = new Set([
   'guardian','cortex','orchestrator','idearium','bridge','architect','emerge',
   'diagnostic','gaps','jobs','seam','raid','ncp','ollama','mistral','qwen',
@@ -488,6 +547,7 @@ module.exports = {
   recordChannelVisit, recordIntent, recordError,
   buildUserContext, buildContextSummary: buildUserContext,  // alias
   getRelated, getHypotheses,
+  radiate,
   saveNote, recentNotes,
   effectiveConfidence, deriveFromChatLog, checkContradictions,
   validateWiring,

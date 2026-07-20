@@ -62,4 +62,211 @@ function _uid() {
   return require('crypto').randomUUID();
 }
 
-module.exports = { jaaDB, uid: _uid };
+// ═══════════════════════════════════════════════════════════════════════════════
+// JaaDB class — append-only JSONL journal store with tier-based decay.
+//
+// §BUILT 2026-07-20 against a pinned contract that predates it: 52 tests in
+// tests/modules/jaa-db.test.js, plus tests/pipeline.test.js, plus a live
+// caller — cos/manager.js's `new JaaDB({ root }); await db.open()` for
+// sovereign per-compartment memory, which until now silently fell back to
+// SHARED memory through a bare catch{} because this class didn't exist.
+// Searched unintegrated/ and the whole tree first: no prior implementation
+// anywhere — the tests were written against code that never landed.
+//
+// Deliberately a DIFFERENT storage design than JaaStore (guardian/jaa-store.js):
+// JaaStore is JSON-array-per-table, last-write-wins; this is an append-only
+// journal (one JSONL line per insert, `{_mutation:true, uuid, ...patch}` lines
+// for updates, replayed in order on open). The pinned tests specify the
+// journal format on disk byte-for-byte (they append raw lines and expect
+// correct replay), so wrapping JaaStore was not an option.
+//
+// Tier semantics come from tiers.js — the single authority (§10.1), not
+// duplicated here.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const fs = require('fs');
+const { TABLE_TIERS, MEMORY_TIERS, tierConfig } = require('./tiers.js');
+const ALL_TABLES = Object.freeze(Object.keys(TABLE_TIERS));
+
+class JaaDB {
+  constructor(opts = {}) {
+    // cos/manager.js passes { root }; the test suite passes { dir }. Both real.
+    this.dir = opts.dir || opts.root || null;
+    this._tables = {};
+    this._streams = new Map();   // table → WriteStream (lazy)
+    this._nextRowId = 1;
+    this._ready = false;
+  }
+
+  async open(dir) {
+    if (this._ready) return this;
+    this.dir = dir || this.dir;
+    if (!this.dir) throw new Error('[JaaDB] open() requires a directory ({dir}/{root} in constructor or open(dir))');
+    fs.mkdirSync(this.dir, { recursive: true });
+
+    for (const t of ALL_TABLES) if (!this._tables[t]) this._tables[t] = [];
+
+    let maxRowId = 0;
+    for (const f of fs.readdirSync(this.dir).filter(f => f.endsWith('.jsonl'))) {
+      const table = f.slice(0, -6);
+      if (!this._tables[table]) this._tables[table] = [];
+      const raw = fs.readFileSync(path.join(this.dir, f), 'utf8');
+      for (const line of raw.split('\n')) {
+        if (!line.trim()) continue;
+        let obj;
+        try { obj = JSON.parse(line); } catch (_) { continue; } // corrupt line: skipped, neighbours survive
+        if (obj && obj._mutation) {
+          const row = this._tables[table].find(r => r.uuid === obj.uuid);
+          if (row) {
+            const { _mutation, uuid, ...patch } = obj;
+            Object.assign(row, patch);
+          }
+          continue;
+        }
+        this._tables[table].push(obj);
+        if (typeof obj._rowId === 'number' && obj._rowId > maxRowId) maxRowId = obj._rowId;
+      }
+    }
+    this._nextRowId = maxRowId + 1;
+
+    fs.writeFileSync(path.join(this.dir, '.cortex.pid'), String(process.pid));
+    this._ready = true;
+    return this;
+  }
+
+  async close() {
+    const closings = [];
+    for (const stream of this._streams.values()) {
+      closings.push(new Promise((resolve) => {
+        stream.end(() => resolve());
+      }));
+    }
+    this._streams.clear();
+    await Promise.all(closings);
+    this._ready = false;
+  }
+
+  _append(table, obj) {
+    let stream = this._streams.get(table);
+    if (!stream) {
+      stream = fs.createWriteStream(path.join(this.dir, `${table}.jsonl`), { flags: 'a' });
+      this._streams.set(table, stream);
+    }
+    stream.write(JSON.stringify(obj) + '\n');
+  }
+
+  insert(table, row) {
+    if (!this._tables[table]) this._tables[table] = []; // undeclared table: provisions silently
+    const full = { ...row, _rowId: this._nextRowId++, _ts: Date.now() };
+    this._tables[table].push(full);
+    this._append(table, full);
+    return full;
+  }
+
+  get(table, uuid) {
+    const rows = this._tables[table];
+    if (!rows) return null;
+    return rows.find(r => r.uuid === uuid && !r._evicted) || null;
+  }
+
+  update(table, uuid, values) {
+    const rows = this._tables[table];
+    if (!rows) return null;
+    const row = rows.find(r => r.uuid === uuid && !r._evicted);
+    if (!row) return null;
+    const _updatedAt = Date.now();
+    Object.assign(row, values, { _updatedAt });
+    this._append(table, { _mutation: true, uuid, ...values, _updatedAt });
+    return row;
+  }
+
+  query(table, where, limit) {
+    const rows = this._tables[table] || [];
+    const pred = typeof where === 'function' ? where
+      : typeof where === 'string' ? (r) => r.uuid === where || r.id === where
+      : where && typeof where === 'object' ? (r) => Object.entries(where).every(([k, v]) => r[k] === v)
+      : () => true;
+    const out = [];
+    for (const r of rows) {
+      if (r._evicted || r._mutation) continue;
+      if (!pred(r)) continue;
+      out.push(r);
+      if (limit && out.length >= limit) break;
+    }
+    return out;
+  }
+
+  count(table, where) {
+    return this.query(table, where).length;
+  }
+
+  tail(table, n = 10) {
+    return (this._tables[table] || []).filter(r => !r._evicted && !r._mutation).slice(-n);
+  }
+
+  _weightFor(table, row, now = Date.now()) {
+    const tierName = TABLE_TIERS[table];
+    const config = tierName ? tierConfig(tierName) : null;
+    if (!config || config.halfLifeMs == null) return 1.0; // long tier / unknown table: full weight
+    const rowTs = row.ts ?? row._ts ?? row.createdAt;
+    if (rowTs == null) return 1.0; // no age signal — don't guess an age
+    const age = Math.max(0, now - rowTs);
+    return Math.min(1, Math.pow(0.5, age / config.halfLifeMs));
+  }
+
+  queryWeighted(table, where, limit) {
+    const now = Date.now();
+    return this.query(table, where, limit).map(r => ({ ...r, _weight: this._weightFor(table, r, now) }));
+  }
+
+  _tickDecay() {
+    const cycleId = _uid();
+    const now = Date.now();
+    let tablesChecked = 0;
+
+    for (const [table, tierName] of Object.entries(TABLE_TIERS)) {
+      const config = tierConfig(tierName);
+      if (!config || config.evictAfterMs == null) continue; // long tier: never evicts (incl. decay_log itself)
+      tablesChecked++;
+      for (const row of (this._tables[table] || [])) {
+        if (row._evicted || row._mutation) continue;
+        const rowTs = row.ts ?? row._ts ?? row.createdAt;
+        if (rowTs == null) continue; // no age signal — leave it, don't guess
+        const age = now - rowTs;
+        if (age < config.evictAfterMs) continue;
+
+        const weightAtEviction = this._weightFor(table, row, now);
+        row._evicted = true;
+        row._evictedAt = now;
+        this._append(table, { _mutation: true, uuid: row.uuid, _evicted: true, _evictedAt: now });
+        this.insert('decay_log', {
+          uuid: _uid(), cycleId, table, rowUuid: row.uuid,
+          rowType: row.type ?? null, ageMs: age, weightAtEviction,
+          evictedAt: now, ts: now,
+        });
+      }
+    }
+
+    this.insert('decay_log', {
+      uuid: _uid(), cycleId, _isCycleSummary: true, tablesChecked,
+      workingMemorySize: (this._tables['working_memory'] || []).length,
+      ts: now,
+    });
+    return { cycleId, tablesChecked };
+  }
+
+  get stats() {
+    const counts = {};
+    for (const [t, rows] of Object.entries(this._tables)) {
+      counts[t] = rows.filter(r => !r._evicted && !r._mutation).length;
+    }
+    const tiers = { working: [], short: [], long: [] };
+    for (const t of ALL_TABLES) {
+      const tier = TABLE_TIERS[t];
+      (tiers[tier] = tiers[tier] || []).push({ table: t, rows: counts[t] || 0 });
+    }
+    return { counts, tiers };
+  }
+}
+
+module.exports = { jaaDB, uid: _uid, JaaDB, TABLE_TIERS, MEMORY_TIERS, ALL_TABLES };

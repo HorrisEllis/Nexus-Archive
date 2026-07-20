@@ -476,6 +476,12 @@ function _matches(row, where) {
   // where clauses (the other real convention — fault-taxonomy.js, fix-map.js)
   // are unaffected by this branch.
   if (typeof where === 'function') return !!where(row);
+  // Third sibling, same family, also reproduced before fixing: update(table,
+  // someUuidString, values) — the convention copilot/lib/user-model.js and
+  // orchestrator/lib/spec-drift.js both use. Object.entries() on a string
+  // yields indexed characters ([['0','m'],...]), so it matched nothing and
+  // every such update was a silent no-op. A string where matches by id or uuid.
+  if (typeof where === 'string') return row.id === where || row.uuid === where;
   for (const [k, v] of Object.entries(where)) {
     if (v === null || v === undefined) {
       if (row[k] != null) return false;

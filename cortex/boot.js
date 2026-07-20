@@ -1114,41 +1114,27 @@ server.listen(PORT, '127.0.0.1', () => {
   } catch (e) {
     console.warn(`[cortex] versionium/causality failed to start: ${e.message}`);
   }
-  try {
-    require('./liminal-space').init({ bus });
-    console.log('[cortex] liminal-space active (live on nexus-bus)');
-  } catch (e) {
-    console.warn(`[cortex] liminal-space failed to start: ${e.message}`);
-  }
-  try {
-    require('./self-heal/escalation').init({ bus });
-    console.log('[cortex] self-heal/escalation active (live on nexus-bus) — closes liminal-space\'s escalation.friction.increased listener');
-  } catch (e) {
-    console.warn(`[cortex] self-heal/escalation failed to start: ${e.message}`);
-  }
-  try {
-    require('./self-heal').init({ bus });
-    console.log('[cortex] self-heal active (live on nexus-bus) — 5-level escalation ladder');
-  } catch (e) {
-    console.warn(`[cortex] self-heal failed to start: ${e.message}`);
-  }
-  try {
-    require('./gap-finder').init({ bus });
-    console.log('[cortex] gap-finder active (live on nexus-bus) — anomaly.detected + sigma.event.* → cortex.gap.found');
-  } catch (e) {
-    console.warn(`[cortex] gap-finder failed to start: ${e.message}`);
-  }
-  try {
-    require('./orion').init({ bus });
-    console.log('[cortex] orion active (live on nexus-bus) — anomaly/sigma → cortex.orion.classified');
-  } catch (e) {
-    console.warn(`[cortex] orion failed to start: ${e.message}`);
-  }
-  try {
-    require('./core/raid').init({ bus });
-    console.log('[cortex] raid bus-wired (live on nexus-bus) — cortex.orion.classified → cortex.raid.decided (existing direct-call route unaffected)');
-  } catch (e) {
-    console.warn(`[cortex] raid bus-wiring failed to start: ${e.message}`);
+  // ── Organs array — one line per bus-wired SISO organ ────────────────────────
+  // Replaces six structurally-identical try/catch blocks that accreted one
+  // Phase at a time (the exact monolith-bottleneck pattern the organ model
+  // exists to prevent — tests/modules/test-liminal-space.js T-015 has pinned
+  // this shape since before any of these organs existed). Every organ shares
+  // the same contract: init({ bus }), console log convention, isolated failure.
+  const organs = [
+    { name: 'liminal-space',        path: './liminal-space',        note: 'live on nexus-bus' },
+    { name: 'self-heal/escalation', path: './self-heal/escalation', note: 'friction ledger — closes liminal-space\'s escalation.friction.increased listener' },
+    { name: 'self-heal',            path: './self-heal',            note: '5-level escalation ladder' },
+    { name: 'gap-finder',           path: './gap-finder',           note: 'anomaly.detected + sigma.event.* → cortex.gap.found' },
+    { name: 'orion',                path: './orion',                note: 'anomaly/sigma → cortex.orion.classified' },
+    { name: 'raid',                 path: './core/raid',            note: 'cortex.orion.classified → cortex.raid.decided (direct-call route unaffected)' },
+  ];
+  for (const organ of organs) {
+    try {
+      require(organ.path).init({ bus });
+      console.log(`[cortex] ${organ.name} active (${organ.note})`);
+    } catch (e) {
+      console.warn(`[cortex] ${organ.name} failed to start: ${e.message}`);
+    }
   }
   try {
     require('./intelligence').init({});

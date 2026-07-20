@@ -2730,6 +2730,39 @@ try {
   } catch(e) {
     console.warn('  [quick-notes] init skipped:', e.message);
   }
+  // User model — was fully built and tested (copilot/lib/user-model.js, 24
+  // tests) but never init'd by any live code: user_model_hypotheses had one
+  // row, the lattice had zero. Wired here: init + hydrate from the REAL
+  // chat_log history (no bus event fires on chat writes — lib/chat-logger.js
+  // writes straight to JAA — so history hydration is the honest live feed),
+  // plus the two real bus events that do exist for errors/gaps. The lattice's
+  // own updates were silent no-ops until today's jaa-store string-where fix.
+  try {
+    const { jaaDB } = require('./cortex/memory/jaa-db');
+    const userModel = require('./copilot/lib/user-model');
+    userModel.init(jaaDB);
+    try { userModel.deriveFromChatLog(100); } catch(e) { console.warn('  [user-model] chat-log derive skipped:', e.message); }
+    try {
+      // Real chat_log schema (verified against the live 253 rows): one row
+      // per exchange with { prompt, response, channel, intent } — NOT the
+      // { role, content } turn format lib/chat-logger.js writes. The user's
+      // words are in `prompt`.
+      const exchanges = jaaDB.query('chat_log', r => r.prompt, 200);
+      for (const ex of exchanges) userModel.recordIntent(ex.intent || 'chat', ex.prompt, ex.channel);
+      console.log(`  [user-model] lattice hydrated from ${exchanges.length} real user prompts`);
+    } catch(e) { console.warn('  [user-model] lattice hydration skipped:', e.message); }
+    nexusBus.on('cortex.gap.found', (e) => {
+      const gap = e?.payload?.gap;
+      if (gap?.type) userModel.recordError(`${gap.type}: ${gap.body || ''}`, gap.source, gap.meta?.severity || 'medium');
+    });
+    nexusBus.on('copilot.error.detected', (e) => {
+      const p = e?.payload || {};
+      if (p.errorText || p.message) userModel.recordError(p.errorText || p.message, p.channel, p.severity || 'medium');
+    });
+    console.log('  [user-model] hypotheses + lattice live');
+  } catch(e) {
+    console.warn('  [user-model] init skipped:', e.message);
+  }
   try {
     const { jaaDB } = require('./cortex/memory/jaa-db');
     const uiReg = require('./orchestrator/lib/ui-registry');
