@@ -379,6 +379,50 @@ function _toolHealthSnapshot() {
   return snap;
 }
 
+// ── Phase 6 — bus wiring (§14.1: event → gate → event) ────────────────────────
+// RAID existed as a real, tested decision engine (_decide/_health/_weights)
+// but was never bus-wired — only reachable via a direct function call.
+// This closes that: cortex.orion.classified (Phase 5) → _decide() → cortex.raid.decided.
+// The existing direct-call path is untouched; this is an additional consumer
+// of the same _decide(), not a replacement for it (§3.4 — the route was
+// already proven at the raw-code layer; this is the same code, bus-triggered).
+let _bus = null;
+
+function _onOrionClassified(event) {
+  const classification = event?.payload;
+  if (!classification?.faultClass) return;
+
+  const call = {
+    prompt: classification.intent,
+    intent: classification.intent,
+    faultClass: classification.faultClass,
+    context: {
+      cfrRegime: classification.context?.cfrRegime,
+      cfrSigmaFloor: classification.context?.cfrSigmaFloor,
+      componentId: classification.context?.componentId,
+      causedBy: classification.context?.causedBy,
+      sessionId: classification.context?.sessionId,
+    },
+  };
+
+  const decision = _decide(call, _health, _weights);
+  if (_bus) _bus.emit('cortex.raid.decided', {
+    decision, faultClass: classification.faultClass, causedBy: classification.context?.causedBy,
+  }, { source: MODULE_ID });
+}
+
+function init(cfg = {}) {
+  _bus = cfg.bus || null;
+  if (_bus) _bus.on('cortex.orion.classified', _onOrionClassified);
+  console.log(`[${MODULE_ID}] v${VERSION} — bus-wired to cortex.orion.classified${_bus ? '' : ' (no bus — test mode)'}`);
+  return { ok: true };
+}
+
+function stop() {
+  if (_bus) _bus.off('cortex.orion.classified', _onOrionClassified);
+  _bus = null;
+}
+
 module.exports = {
   MODULE_ID, VERSION,
   _decide, _cluster, _health, _weights,
@@ -387,4 +431,5 @@ module.exports = {
   recordOutcome,
   startHealthPoll, stopHealthPoll,
   _approveTool, _toolHealthSnapshot,
+  init, stop, _onOrionClassified,
 };

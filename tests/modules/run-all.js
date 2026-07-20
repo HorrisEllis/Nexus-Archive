@@ -49,6 +49,12 @@ const SUITES = [
   'test-mutation-contract.js',
   'test-intelligence-bridge.js',
   'test-liminal-space.js',
+  'test-fault-taxonomy.js',
+  'test-escalation.js',
+  'test-self-heal.js',
+  'test-gap-finder.js',
+  'test-orion.js',
+  'test-raid-orion-wiring.js',
   'test-snr-filter.js',
   'test-ui-registry.js',
   // Added 2026-07-06 — built alongside cortex/core/raid/snr-filter.js and

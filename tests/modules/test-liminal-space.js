@@ -164,7 +164,7 @@ test('T-014', 'each focal point has a named invariant', () => {
 
 // T-015: one line in organs array
 test('T-015', 'liminal-space is ONE LINE in organs array', () => {
-  const boot = require('fs').readFileSync('/tmp/nexus-work/cortex/boot.js', 'utf8');
+  const boot = require('fs').readFileSync(require('path').join(__dirname, '../../cortex/boot.js'), 'utf8');
   assert.ok(boot.includes("{ name: 'liminal-space'"));
   // Verify no other organ file was changed
   // Verify it appears in the organs array specifically

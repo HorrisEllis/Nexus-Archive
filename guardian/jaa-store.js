@@ -465,6 +465,17 @@ class JaaStore {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function _matches(row, where) {
+  // §the systemic fix — `where` arrives as a predicate function at the
+  // overwhelming majority of real call sites across this codebase
+  // (raid/snr-filter.js, cortex/intelligence, lib/replay-engine.js,
+  // lib/constitutional-ai.js, orchestrator/request-handler.js, and others).
+  // Object.entries() on a function returns [], so the loop below never ran
+  // and every one of those calls silently matched every row in the table,
+  // ignoring the predicate entirely — reproduced directly: querying `gaps`
+  // for a type that doesn't exist anywhere still returned rows. Object-shape
+  // where clauses (the other real convention — fault-taxonomy.js, fix-map.js)
+  // are unaffected by this branch.
+  if (typeof where === 'function') return !!where(row);
   for (const [k, v] of Object.entries(where)) {
     if (v === null || v === undefined) {
       if (row[k] != null) return false;

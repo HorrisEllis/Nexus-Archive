@@ -132,7 +132,7 @@ function init(cfg = {}) {
     _bus.on('cortex.gap.found',                    _onGapFound);
     _bus.on('cortex.intelligence.pattern_crystallised', _onPatternCrystallised);
     _bus.on('escalation.friction.increased',        _onFrictionChange);
-    _bus.on('behavioral.drift.signal',              _onDriftSignal);
+    _bus.on('tc.drift.signal',                      _onDriftSignal);
     _bus.on('guardian.job.complete',                _onJobComplete);
     _bus.on('forge.patch.proposed',                 _onPatchProposed);
     _bus.on('cortex.gap.resolved',                  _onGapResolved);
@@ -154,7 +154,7 @@ function stop() {
     _bus.off('cortex.gap.found',                    _onGapFound);
     _bus.off('cortex.intelligence.pattern_crystallised', _onPatternCrystallised);
     _bus.off('escalation.friction.increased',        _onFrictionChange);
-    _bus.off('behavioral.drift.signal',              _onDriftSignal);
+    _bus.off('tc.drift.signal',                      _onDriftSignal);
     _bus.off('guardian.job.complete',                _onJobComplete);
     _bus.off('forge.patch.proposed',                 _onPatchProposed);
     _bus.off('cortex.gap.resolved',                  _onGapResolved);
@@ -279,9 +279,12 @@ function dissolve(uuid, reason = 'non_real') {
 function _checkCrystallisation(focalPoint, newItem) {
   const space = FOCAL_POINTS[focalPoint];
 
-  // Group by type to count confirmed instances
+  // Group by type to count confirmed instances.
+  // §14.4 — exclude items already crystallised: without this, a bucket that
+  // crossed threshold once re-fires _crystallise() (and its forward-inference
+  // dump) on every subsequent item held here, forever.
   const byType = {};
-  for (const item of space.items.filter(i => !i.resolved && !i.dissolved)) {
+  for (const item of space.items.filter(i => !i.resolved && !i.dissolved && !i.crystallised)) {
     if (!byType[item.type]) byType[item.type] = [];
     byType[item.type].push(item);
   }
@@ -477,13 +480,13 @@ function _onFrictionChange(event) {
 }
 
 function _onDriftSignal(event) {
-  const { axis, concern } = event.payload || {};
-  if (!axis) return;
+  const { serviceId, signal, confidence, evidence } = event.payload || {};
+  if (!signal) return;
   // Behavioral drift → L1/L2 (coherence surface — AI and system disagreeing)
   hold('L1/L2', {
-    text:       concern || `Behavioral drift on axis: ${axis}`,
+    text:       evidence || `Behavioral drift on ${serviceId || 'unknown service'}: ${signal}`,
     type:       'behavioral_drift',
-    confidence: 0.65,
+    confidence: typeof confidence === 'number' ? confidence : 0.65,
     meta:       event.payload,
   }, 'behavioral-boundary');
   _updateVelocity('L2/L4', 0.12);

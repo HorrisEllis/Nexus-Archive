@@ -47,7 +47,7 @@ const jaaDB = {
   upsert(table, row, keyField)   { return _getStore().upsert(table, row, keyField); },
   get(table, where)              { return _getStore().get(table, where); },
   getById(table, id)             { return _getStore().get(table, { id }); },
-  query(table, where, opts)      { return _getStore().all(table, where, opts); },
+  query(table, where, opts)      { return _getStore().all(table, where, typeof opts === 'number' ? { limit: opts } : opts); },
   tail(table, n)                 { return _getStore().all(table, {}, { orderBy: 'id', order: 'DESC', limit: n || 10 }); },
   update(table, where, values)   { return _getStore().update(table, where, values); },
   delete(table, where)           { return _getStore().delete(table, where); },

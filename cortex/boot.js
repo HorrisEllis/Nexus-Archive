@@ -1121,6 +1121,36 @@ server.listen(PORT, '127.0.0.1', () => {
     console.warn(`[cortex] liminal-space failed to start: ${e.message}`);
   }
   try {
+    require('./self-heal/escalation').init({ bus });
+    console.log('[cortex] self-heal/escalation active (live on nexus-bus) — closes liminal-space\'s escalation.friction.increased listener');
+  } catch (e) {
+    console.warn(`[cortex] self-heal/escalation failed to start: ${e.message}`);
+  }
+  try {
+    require('./self-heal').init({ bus });
+    console.log('[cortex] self-heal active (live on nexus-bus) — 5-level escalation ladder');
+  } catch (e) {
+    console.warn(`[cortex] self-heal failed to start: ${e.message}`);
+  }
+  try {
+    require('./gap-finder').init({ bus });
+    console.log('[cortex] gap-finder active (live on nexus-bus) — anomaly.detected + sigma.event.* → cortex.gap.found');
+  } catch (e) {
+    console.warn(`[cortex] gap-finder failed to start: ${e.message}`);
+  }
+  try {
+    require('./orion').init({ bus });
+    console.log('[cortex] orion active (live on nexus-bus) — anomaly/sigma → cortex.orion.classified');
+  } catch (e) {
+    console.warn(`[cortex] orion failed to start: ${e.message}`);
+  }
+  try {
+    require('./core/raid').init({ bus });
+    console.log('[cortex] raid bus-wired (live on nexus-bus) — cortex.orion.classified → cortex.raid.decided (existing direct-call route unaffected)');
+  } catch (e) {
+    console.warn(`[cortex] raid bus-wiring failed to start: ${e.message}`);
+  }
+  try {
     require('./intelligence').init({});
     console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active');
   } catch (e) {
