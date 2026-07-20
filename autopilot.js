@@ -78,20 +78,51 @@ const ALL_KERNELS = [
   // and every one but the first to bind throws EADDRINUSE. NEXUS_SUPERVISED
   // tells orchestrator.js to skip its internal boot and just be the HTTP/UI
   // front end — autopilot owns spawning every sub-system instead.
-  { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' } },
+  // §BOOT PHASES 2026-07-20 — derived from real boot-log evidence, not
+  // guessed. Every symptom in the 17:55 and 18:04 live logs traced to all
+  // 12 kernels spawning in the same instant:
+  //   - orchestrator's gap-relay hit ECONNREFUSED on guardian:7820 and
+  //     diagnostic:7825 (spawned same tick, not yet listening)
+  //   - contract poller logged contract.unreachable for systems mid-boot
+  //   - six processes parsed the ENTIRE shared JAA store simultaneously —
+  //     the memory spike that OOM-killed the gemini renderer at 17:56
+  // Phase N+1 does not begin until every phase-N kernel passes its real
+  // /health gate (or its timeout expires LOUDLY — a slow system delays
+  // boot, it must never deadlock it, §1.2). Same _pollHealth discipline
+  // the on-demand path has used since 2026-07-15, applied to the whole
+  // sequence. Phasing also serializes the JAA load spikes instead of
+  // stacking all of them.
+  //   Phase 1: orchestrator — registration authority (§AXIOM: everyone
+  //            registers with it) + the bus + gap-relay live here
+  //   Phase 2: guardian + diagnostic (gap-relay's two dial targets),
+  //            bridge (trust relay), cortex (memory core)
+  //   Phase 3: the app layer — everything that registers and serves
+  //   Phase 4: emerge — reports to copilot:3750, so copilot must be up
+  //   clear-glass: onDemand, unchanged — no phase, dormant until requested
+  { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' },
+    phase: 1, healthUrl: 'http://127.0.0.1:9000/health' },
   // §FIX 2026-06-20: bridge/server.js only exports createBridgeServer() — it
   // has no bootstrap code and never calls .start(), so running it directly
   // loads, does nothing, and exits 0 immediately. bridge/index.js is the
   // actual entrypoint: it boots via BootSequence and calls server.start().
-  { name: 'bridge',       cmd: 'node', args: ['bridge/index.js'] },
-  { name: 'cortex',       cmd: 'node', args: ['cortex/boot.js'] },
-  { name: 'guardian',     cmd: 'node', args: ['guardian/server.js'] },
-  { name: 'idearium',     cmd: 'node', args: ['idearium/api/index.js'] },
-  { name: 'architect',    cmd: 'node', args: ['architect/service.js'] },
-  { name: 'diagnostic',   cmd: 'node', args: ['service/nexus-diagnostic.js'] },
-  { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'] },
-  { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true },
-  { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true },
+  { name: 'bridge',       cmd: 'node', args: ['bridge/index.js'],
+    phase: 2, healthUrl: 'http://127.0.0.1:9999/health' },
+  { name: 'cortex',       cmd: 'node', args: ['cortex/boot.js'],
+    phase: 2, healthUrl: 'http://127.0.0.1:3748/health' },
+  { name: 'guardian',     cmd: 'node', args: ['guardian/server.js'],
+    phase: 2, healthUrl: 'http://127.0.0.1:7820/health' },
+  { name: 'idearium',     cmd: 'node', args: ['idearium/api/index.js'],
+    phase: 3, healthUrl: 'http://127.0.0.1:4800/health' },
+  { name: 'architect',    cmd: 'node', args: ['architect/service.js'],
+    phase: 3, healthUrl: 'http://127.0.0.1:3747/health' },
+  { name: 'diagnostic',   cmd: 'node', args: ['service/nexus-diagnostic.js'],
+    phase: 2, healthUrl: 'http://127.0.0.1:7825/health' },
+  { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'],
+    phase: 3, healthUrl: 'http://127.0.0.1:3751/health' },
+  { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true,
+    phase: 3, healthUrl: 'http://127.0.0.1:3749/health' },
+  { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true,
+    phase: 3, healthUrl: 'http://127.0.0.1:3750/health' },
   // §NEW 2026-07-11 — emerge/consumer.js. Emerge itself is a compiler
   // LIBRARY (no http.createServer anywhere under emerge/, confirmed by
   // grep) — this is the process that was missing entirely, not a service
@@ -102,8 +133,12 @@ const ALL_KERNELS = [
   // failure loud instead of silent. optional: true — a build request
   // that can't be picked up yet shouldn't trip the whole system's circuit
   // breaker, same reasoning as copilot/loom above.
-  { name: 'emerge',       cmd: 'node', args: ['emerge/consumer.js'], optional: true },
-  { name: 'loom',         cmd: 'node', args: ['loom/server.js'],    optional: true },
+  // phase 4 — reports to copilot:3750, so copilot (phase 3) must be up.
+  // No healthUrl: emerge is a file-watcher with no HTTP server (confirmed
+  // above) — process-alive is the only honest readiness signal it has.
+  { name: 'emerge',       cmd: 'node', args: ['emerge/consumer.js'], optional: true, phase: 4 },
+  { name: 'loom',         cmd: 'node', args: ['loom/server.js'],    optional: true,
+    phase: 3, healthUrl: 'http://127.0.0.1:3752/health' },
   // Clear Glass sovereign browser — Electron + inline wire bridge.
   // Registers itself AND ErosmancerOS with the orchestrator on boot.
   // optional: true — missing Electron install won't trip the circuit breaker.
@@ -489,7 +524,14 @@ function _pollHealth(url, timeoutMs) {
     const tick = () => {
       const req = http.request(url, { timeout: 3000 }, (res) => {
         res.on('data', () => {});
-        res.on('end', () => resolve(res.statusCode >= 200 && res.statusCode < 300));
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) { resolve(true); return; }
+          // Non-2xx while booting means "not ready yet", not "failed" —
+          // retry until the timeout, same as a connection error. The old
+          // behavior resolved false on the FIRST 503 and never retried.
+          if (Date.now() - started > timeoutMs) { resolve(false); return; }
+          setTimeout(tick, 500);
+        });
       });
       req.on('error', () => {
         if (Date.now() - started > timeoutMs) { resolve(false); return; }
@@ -567,6 +609,63 @@ function touchActivity(name) {
   if (_state[name]) _state[name].lastActivity = Date.now();
 }
 
+// ── Phased boot ───────────────────────────────────────────────────────────────
+
+/**
+ * _phasePlan(kernels) — pure (§14.2): groups always-on kernels by phase,
+ * ascending. Kernels with no phase declared land in a final catch-all phase
+ * rather than being silently skipped (§1.2). onDemand kernels are excluded —
+ * they have their own gated entry point (requestSpawn).
+ */
+function _phasePlan(kernels) {
+  const active = kernels.filter(k => !k.onDemand);
+  const declared = active.filter(k => Number.isFinite(k.phase));
+  const undeclared = active.filter(k => !Number.isFinite(k.phase));
+  const byPhase = new Map();
+  for (const k of declared) {
+    if (!byPhase.has(k.phase)) byPhase.set(k.phase, []);
+    byPhase.get(k.phase).push(k);
+  }
+  const plan = [...byPhase.entries()].sort(([a], [b]) => a - b).map(([phase, list]) => ({ phase, kernels: list }));
+  if (undeclared.length) {
+    const last = (plan.length ? plan[plan.length - 1].phase : 0) + 1;
+    plan.push({ phase: last, kernels: undeclared, undeclared: true });
+  }
+  return plan;
+}
+
+const PHASE_GATE_TIMEOUT_MS = 30000;
+
+async function _bootPhases() {
+  const plan = _phasePlan(KERNELS);
+  for (const { phase, kernels, undeclared } of plan) {
+    _log(`── boot phase ${phase} — ${kernels.map(k => k.name).join(', ')}${undeclared ? ' (no phase declared — booted last, loudly)' : ''}`);
+    for (const kernel of kernels) {
+      const idx = KERNELS.indexOf(kernel);
+      _spawnKernel(kernel, COLORS[idx % COLORS.length]);
+    }
+    // Gate: every kernel in this phase must pass its real /health check
+    // before the next phase begins. A kernel with no healthUrl (emerge —
+    // no HTTP server exists to ask) is spawned-not-verified, stated as such.
+    // A gate timeout is LOUD and boot continues — the old behavior was
+    // full parallelism, so proceeding past a slow system is never worse
+    // than what every previous boot already did (§1.2: no silent deadlock,
+    // no silent skip).
+    await Promise.all(kernels.map(async (kernel) => {
+      if (!kernel.healthUrl) {
+        _log(`[${kernel.name}] phase ${phase} — no healthUrl (no HTTP surface) — spawned, not verified`);
+        return;
+      }
+      const healthy = await _pollHealth(kernel.healthUrl, kernel.spawnTimeoutMs || PHASE_GATE_TIMEOUT_MS);
+      if (healthy) {
+        _log(`[${kernel.name}] phase ${phase} gate passed — ${kernel.healthUrl}`);
+      } else {
+        _log(`[${kernel.name}] ⚠ phase ${phase} gate TIMED OUT after ${(kernel.spawnTimeoutMs || PHASE_GATE_TIMEOUT_MS) / 1000}s — ${kernel.healthUrl} never answered ok. Continuing boot; supervisor backoff/restart still applies.`);
+      }
+    }));
+  }
+  _log(`── boot sequence complete — ${plan.length} phase(s)`);
+}
 
 function start() {
   _log(`autopilot starting — supervising: ${KERNELS.map(k => k.name).join(', ')}`);
@@ -579,10 +678,9 @@ function start() {
     if (kernel.onDemand) {
       _log(`${COLORS[i % COLORS.length]}[${kernel.name}]${RESET} on-demand — staying dormant until requested`);
       _state[kernel.name].status = 'dormant';
-      return;
     }
-    _spawnKernel(kernel, COLORS[i % COLORS.length]);
   });
+  _bootPhases().catch(e => _log(`⚠ phased boot error: ${e.message} — kernels already spawned keep running under supervision`));
   _startStatusServer();
   _startIdleReaper();
 }
@@ -601,4 +699,4 @@ process.on('SIGTERM', () => _shutdown('SIGTERM'));
 
 if (require.main === module) start();
 
-module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel };
+module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS };

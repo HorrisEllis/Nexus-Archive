@@ -56,6 +56,7 @@ const SUITES = [
   'test-orion.js',
   'test-raid-orion-wiring.js',
   'test-user-model-radiate.js',
+  'test-boot-phases.js',
   'test-snr-filter.js',
   'test-ui-registry.js',
   // Added 2026-07-06 — built alongside cortex/core/raid/snr-filter.js and
