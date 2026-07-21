@@ -51,7 +51,7 @@ function buildSpecFromSession(session) {
 
 
 
-const { HookRegistry }          = require('./src/hooks/Registry');
+const { HookRegistry }          = require('../lib/hook-registry'); // moved 2026-07-20, docs/hooks-migration.spec
 const { Blueprint, SNRGate, Translate, scanTopology } = require('./src/spec/Blueprint');
 const { createCFRLedger }       = require('../meta/cfr');
 // Living hook registry — the canonical wire map for all NEXUS systems
@@ -196,8 +196,13 @@ async function boot() {
   // Phase 2 HARD: Bus
   const busEmit = createBusEmit(cfrLedger);
 
-  // Phase 3 HARD: Hook Registry
-  console.log('[architect] §3.1 Phase 2: Hook Registry');
+  // Phase 3 HARD: Hook Registry — READ VIEW ONLY since 2026-07-20.
+  // Loom owns all writes (docs/hooks-migration.spec). Architect never
+  // dirties 'hooks'/'hook_bindings', so its JaaStore flush can never
+  // resurrect loom's deletes. Blueprint's `hooks: registry` dependency was
+  // verified decorative (zero registry calls in Blueprint.js) but is kept
+  // wired for the read surface it was presumably meant to have.
+  console.log('[architect] §3.1 Phase 2: Hook Registry (read view — loom owns writes)');
   const registry = new HookRegistry({ jaa, busEmit });
   registry.init();
 
@@ -208,24 +213,14 @@ async function boot() {
   const translate  = new Translate();
   const handleCompileRoute = createCompileRoutes ? createCompileRoutes({ jaa, busEmit, architectRoot: __dirname }) : null;
 
-  // ── Seed built-in hooks (first boot) ────────────────────────────────────
-  if (registry.list().length === 0) {
-    _seedBuiltinHooks(registry);
-  }
-
   // ── §FIX-ROADMAP-62: sync from canonical registry, not hooks/*.hooks.js ──
   // lib/component-registry.js is canonical (decision: runtime+CLI already
   // depend on it). hooks/*.hooks.js is no longer read here — it drifted
   // immediately when hand-maintained separately (Addendum #2 audit). The
   // sync is idempotent and safe to re-run; it only manages hooks it tagged
   // itself, never built-ins or hand-authored hooks.
-  const { syncFromComponentRegistry } = require('./src/hooks/sync-from-component-registry');
-  syncFromComponentRegistry(registry).catch(e =>
-    console.warn(`[architect] component-registry sync failed: ${e.message}`));
-  const _hookSyncInterval = setInterval(() => {
-    syncFromComponentRegistry(registry).catch(() => {});
-  }, 30000);
-  if (_hookSyncInterval.unref) _hookSyncInterval.unref();
+  // §MOVED 2026-07-20: seeding + syncFromComponentRegistry now run in loom,
+  // the write authority (docs/hooks-migration.spec).
 
   // Phase 5 HARD: HTTP server
   console.log(`[architect] §3.1 Phase 4: HTTP :${PORT}`);
@@ -299,46 +294,13 @@ async function boot() {
           if (!hook) return json(res, 404, { ok: false, error: 'hook not found' });
           return json(res, 200, { ok: true, hook });
         }
-        // POST /api/hooks — register
-        if (method === 'POST' && !id) {
-          const body = await readBody(req);
-          try {
-            const hook = registry.register(body);
-            busEmit('architect.hook.registered', { uuid: hook.uuid, name: hook.name });
-            return json(res, 201, { ok: true, hook });
-          } catch(e) { return json(res, 400, { ok: false, error: e.message }); }
-        }
-        // PATCH /api/hooks/:id — update
-        if (method === 'PATCH' && id) {
-          const body = await readBody(req);
-          try {
-            const hook = registry.update(id, body);
-            return json(res, 200, { ok: true, hook });
-          } catch(e) { return json(res, 400, { ok: false, error: e.message }); }
-        }
-        // DELETE /api/hooks/:id — deprecate (soft) or remove (hard)
-        if (method === 'DELETE' && id) {
-          const { hard, reason, causedBy } = await readBody(req).catch(() => ({}));
-          try {
-            if (hard) { registry.remove(id); return json(res, 200, { ok: true, removed: id }); }
-            registry.deprecate(id, reason || 'deprecated', causedBy || 'api');
-            return json(res, 200, { ok: true, deprecated: id });
-          } catch(e) { return json(res, 400, { ok: false, error: e.message }); }
-        }
-        // POST /api/hooks/wire
-        if (method === 'POST' && id === 'wire') {
-          const { fromId, toId, notes, causedBy } = await readBody(req);
-          try {
-            const binding = registry.wire(fromId, toId, { notes, causedBy });
-            return json(res, 201, { ok: true, binding });
-          } catch(e) { return json(res, 400, { ok: false, error: e.message }); }
-        }
-        // DELETE /api/hooks/unwire/:bindingId
-        if (method === 'DELETE' && id === 'unwire') {
-          const bindingId = seg[3];
-          try { registry.unwire(bindingId); return json(res, 200, { ok: true }); }
-          catch(e) { return json(res, 400, { ok: false, error: e.message }); }
-        }
+        // §MOVED 2026-07-20 — all hook mutations (register/update/deprecate/
+        // remove/wire/unwire) live on LOOM :3752 now, the write authority
+        // (docs/hooks-migration.spec). 410 with a pointer, loud not silent (§1.2).
+        return json(res, 410, { ok: false,
+          error: 'hook mutations moved to loom',
+          use: `http://127.0.0.1:3752/api/hooks${id ? '/' + id : ''}`,
+          spec: 'docs/hooks-migration.spec' });
         // GET /api/hooks/validate
         if (method === 'GET' && id === 'validate') {
           return json(res, 200, { ok: true, report: registry.validate() });
@@ -641,57 +603,7 @@ async function boot() {
 }
 
 // ── Seed built-in hooks (the canonical NEXUS hook declarations) ─────────────
-function _seedBuiltinHooks(registry) {
-  const seeds = [
-    // architect → cortex
-    { name: 'architect-event-bus', intent: 'Emit architect events to cortex event_log', type: 'event-bus',
-      direction: 'unidirectional', from: { surface: 'architect', layer: 1 }, to: { surface: 'cortex', layer: 1 },
-      schema: { input: null, output: { type: 'object', properties: { type: { type: 'string' }, payload: { type: 'object' } } }, errors: [] },
-      contract: { axioms: ['§A-2'], sideEffects: ['cortex.event_log.write'], idempotent: false, replayable: true, snrGated: false },
-      config: { eventType: 'architect.*', causalEdgeType: 'causal', deduplication: false, ringBuffer: true },
-      causedBy: 'seed', status: 'active', tags: ['core','bus'], notes: 'Primary bus wire between architect and cortex',
-    },
-    // architect → orchestrator registration
-    { name: 'architect-orchestrator-register', intent: 'Register architect service with NEXUS orchestrator on boot', type: 'api',
-      direction: 'unidirectional', from: { surface: 'architect', layer: 1 }, to: { surface: 'orchestrator', layer: 1 },
-      schema: { input: { type: 'object', properties: { systemId: { type: 'string' }, port: { type: 'number' } } }, output: null, errors: [{ code: 'ORCH_OFFLINE', description: 'Orchestrator not reachable', recoverable: true }] },
-      contract: { axioms: ['§A-2','§5.2'], sideEffects: ['orchestrator.registry.write'], idempotent: true, replayable: false, snrGated: false, timeout: 5000 },
-      config: { method: 'POST', path: '/api/register', timeout: 5000, retryPolicy: { maxAttempts: 3, backoff: 'exponential', baseMs: 1000 } },
-      causedBy: 'seed', status: 'active', tags: ['core','registration'],
-    },
-    // hook registry → JAA write
-    { name: 'hook-registry-jaa', intent: 'Persist hook registry mutations to JAA before acting (§I-18)', type: 'direct',
-      direction: 'unidirectional', from: { surface: 'hook-registry', layer: 2 }, to: { surface: 'jaa', layer: 0 },
-      schema: { input: { type: 'object', properties: { op: { type: 'string' }, data: { type: 'object' } } }, output: null, errors: [] },
-      contract: { axioms: ['§I-18','§2.1'], sideEffects: ['jaa.hooks.write'], idempotent: false, replayable: false, snrGated: false },
-      config: { functionRef: 'jaa.insert', sync: true },
-      causedBy: 'seed', status: 'active', tags: ['persistence','core'],
-    },
-    // SNR gate → ollama (§I-6: SNR gate runs before any output reaches ollama)
-    { name: 'snr-to-ollama', intent: 'Route SNR-scored output to Ollama for local LLM inference (§I-6)', type: 'ollama',
-      direction: 'unidirectional', from: { surface: 'snr-gate', layer: 7 }, to: { surface: 'ollama', layer: 7 },
-      schema: { input: { type: 'object', properties: { score: { type: 'number' }, recommendation: { type: 'string' } } }, output: { type: 'object', properties: { completion: { type: 'string' } } }, errors: [{ code: 'SNR_TOO_LOW', description: 'SNR score below 0.45 threshold', recoverable: false }] },
-      contract: { axioms: ['§I-6','§I-15','§A-5'], sideEffects: ['ollama.inference'], idempotent: false, replayable: false, snrGated: true, timeout: 30000 },
-      config: { model: 'qwen2:0.5b', temperature: 0.7, maxTokens: 2000, contextWindow: 4096, snrRequired: true },
-      causedBy: 'seed', status: 'seed', tags: ['snr','ollama','output'],
-    },
-    // Architect webserver hook (self-declaration — §I-3: all surfaces declare hooks)
-    { name: 'architect-http-server', intent: 'Architect HTTP API surface at :3747', type: 'webserver',
-      direction: 'sink', from: { surface: '*', layer: 0 }, to: { surface: 'architect', layer: 6 },
-      schema: { input: null, output: { type: 'object', properties: { ok: { type: 'boolean' } } }, errors: [] },
-      contract: { axioms: ['§A-2','§I-3'], sideEffects: [], idempotent: false, replayable: false, snrGated: false },
-      config: { port: 3747, method: 'GET', path: '/*', cors: { origins: ['*'], credentials: false }, auth: { required: false, type: 'none' } },
-      bindings: { cli: 'architect serve', event: 'architect.http.request' },
-      causedBy: 'seed', status: 'active', tags: ['webserver','core'],
-    },
-  ];
-
-  for (const seed of seeds) {
-    try { registry.register(seed); }
-    catch(e) { /* already registered or name conflict — skip */ }
-  }
-  console.log(`[architect] seeded ${seeds.length} built-in hooks`);
-}
+// §MOVED 2026-07-20 — _seedBuiltinHooks lives in loom now (write authority, docs/hooks-migration.spec)
 
 // ── Entry point ────────────────────────────────────────────────────────────
 if (require.main === module) {

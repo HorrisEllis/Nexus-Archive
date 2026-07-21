@@ -58,6 +58,7 @@ const TABLE_TIERS = Object.freeze({
   gaps:             'short',
   event_log:        'short',
   sigma_records:    'short',
+  sigma_rollups:    'long',   // compacted hourly history of sigma_records — never decays (§0.3: compressed, not destroyed)
   meta_observations:'short',
   sigma_live:       'short',
 

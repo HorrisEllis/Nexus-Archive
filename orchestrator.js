@@ -157,6 +157,7 @@ const SYS = {
   eravos:     { port:3751, host:'127.0.0.1', label:'ERAVOS',        color:'#a78bfa', healthPath:'/health' },
   ollama:     { port:3749, host:'127.0.0.1', label:'Ollama Bridge', color:'#00ff88', healthPath:'/health' },
   copilot:    { port:3750, host:'127.0.0.1', label:'Co-pilot',      color:'#cc44ff', healthPath:'/health' },
+  loom:       { port:3752, host:'127.0.0.1', label:'Loom',          color:'#e879f9', healthPath:'/health' },
   autopilot:  { port:7799,  host:'127.0.0.1', label:'Autopilot',   color:'#fbbf24' },
 };
 
@@ -804,6 +805,28 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     const cbody = (M==='POST'||M==='PUT') ? await readBody(req) : null;
     const result = compReg.handleRequest(M, csub, crest, cbody, u.searchParams);
     return json(res, result._status || (result.ok===false ? 400 : 200), result);
+  }
+  // §Phase B 2026-07-20 — capability-registry (copilot-expansion.spec phase 3).
+  // Co-pilot's emergent tool surface: a LIVE projection of component-registry
+  // (not a static list), so anything module-builder registers is immediately a
+  // usable tool. clear-glass/src/copilot/bridge.js fetches /prompt over HTTP and
+  // falls back to its static tools.js only if this is unreachable.
+  if (u.pathname === '/api/capabilities' || u.pathname === '/api/capabilities/prompt' || u.pathname === '/api/capabilities/resolve') {
+    let compReg, capReg;
+    try {
+      compReg = require('./lib/component-registry');
+      capReg  = require('./lib/capability-registry');
+      capReg.init(compReg);
+    } catch(e) { return json(res,503,{ok:false,error:'capability-registry not loaded: '+e.message}); }
+    if (u.pathname === '/api/capabilities/prompt') {
+      const fixed = (() => { try { return require('./clear-glass/src/copilot/tools').TOOLS; } catch { return []; } })();
+      res.writeHead(200, { 'Content-Type':'text/plain' });
+      return res.end(capReg.buildToolsPrompt(fixed));
+    }
+    if (u.pathname === '/api/capabilities/resolve') {
+      return json(res, 200, capReg.resolve(u.searchParams.get('q') || ''));
+    }
+    return json(res, 200, { ok:true, capabilities: capReg.capabilities(), health: capReg.health() });
   }
     if (M==='GET' && u.pathname==='/sse') {
     res.writeHead(200, { 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache',
@@ -1832,14 +1855,16 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='health')                        return json(res,200,await GET('architect','/health'));
     if (M==='GET'  && action==='spec')                          return json(res,200,await GET('architect','/api/spec'));
 
-    // Hooks
+    // Hooks — §2026-07-20 write authority moved architect → loom (docs/hooks-migration.spec).
+    // Reads stay on architect (its read view + Blueprint context); every mutation goes to loom :3752.
     if (M==='GET'  && action==='hooks' && !action2)             return json(res,200,await GET('architect',`/api/hooks${url.search||''}`));
-    if (M==='GET'  && action==='hooks' && action2)              return json(res,200,await GET('architect',`/api/hooks/${action2}`));
-    if (M==='POST' && action==='hooks' && !action2)             return json(res,200,await POST('architect','/api/hooks',await readBody(req)));
-    if (M==='PATCH'&& action==='hooks' && action2)              return json(res,200,await POST('architect',`/api/hooks/${action2}`,await readBody(req)));
-    if (M==='DELETE'&&action==='hooks' && action2)              return json(res,200,await POST('architect',`/api/hooks/${action2}`,await readBody(req)));
-    if (M==='POST' && action==='hooks' && action2==='wire')     return json(res,200,await POST('architect','/api/hooks/wire',await readBody(req)));
     if (M==='GET'  && action==='hooks' && action2==='validate') return json(res,200,await GET('architect','/api/hooks/validate'));
+    if (M==='GET'  && action==='hooks' && action2)              return json(res,200,await GET('architect',`/api/hooks/${action2}`));
+    if (M==='POST' && action==='hooks' && action2==='wire')     return json(res,200,await POST('loom','/api/hooks/wire',await readBody(req)));
+    if (M==='POST' && action==='hooks' && action2==='unwire')   return json(res,200,await POST('loom','/api/hooks/unwire',await readBody(req)));
+    if (M==='POST' && action==='hooks' && !action2)             return json(res,200,await POST('loom','/api/hooks',await readBody(req)));
+    if (M==='PATCH'&& action==='hooks' && action2)              return json(res,200,await sysReq('loom','PATCH', `/api/hooks/${action2}`,await readBody(req)));
+    if (M==='DELETE'&&action==='hooks' && action2)              return json(res,200,await sysReq('loom','DELETE',`/api/hooks/${action2}`,await readBody(req)));
     if (M==='GET'  && action==='hooks' && action2==='graph')    return json(res,200,await GET('architect',`/api/hooks/graph${url.search||''}`));
 
     // Blueprints
@@ -2425,6 +2450,15 @@ if (nexusBus) {
     sigmaWriter.init({ compositeIntervalMs: 30000 });
     console.log('[orchestrator] §P106: sigma-writer wired — sigma_records now populates');
   } catch(e) { console.warn('[orchestrator] sigma-writer init failed:', e.message); }
+  // Compaction belongs to the same write authority, same process (§10.1) —
+  // rolls expired sigma_records (>24h, tiers.js short tier) into hourly
+  // sigma_rollups, then hard-deletes them. Built 2026-07-20: 13,944 rows
+  // and growing, parsed whole by six processes at every boot, was the
+  // measured driver of the OOM/0xC0000409 crashes.
+  try {
+    const { jaaDB } = require('./cortex/memory/jaa-db');
+    require('./orchestrator/lib/sigma-compaction').start(jaaDB);
+  } catch(e) { console.warn('[orchestrator] sigma-compaction init failed:', e.message); }
   console.log('[orchestrator] nexus interconnect: bus+cfr+heal+knowledge+sigma active');
 }
 

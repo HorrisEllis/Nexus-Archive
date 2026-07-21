@@ -557,8 +557,16 @@ async function requestSpawn(name) {
 
   const s = _state[name];
   s.lastActivity = Date.now();
-  if (s.status === 'running' || s.status === 'stable') {
-    return { ok: true, alreadyRunning: true };
+  // §FIX 2026-07-20 — guard was `running`/`stable` only. A clear-glass caught
+  // mid-lifecycle is `starting` (spawn in flight) or `online` (alive but not
+  // yet marked stable). A second requestSpawn in either state launched a
+  // SECOND Electron, and the two raced requestSingleInstanceLock() — the exact
+  // two-genuine-instances crash in the 2026-07-20 log (distinct from the
+  // lock-RELEASE race minRestartDelay already handles). Any state where a
+  // process exists or is being launched must short-circuit, not re-spawn.
+  const ALIVE_OR_SPAWNING = new Set(['starting', 'online', 'running', 'stable']);
+  if (ALIVE_OR_SPAWNING.has(s.status)) {
+    return { ok: true, alreadyRunning: true, state: s.status };
   }
 
   const requestEvt = _logOnDemandEvent('autopilot.spawn.requested', { kernel: name });

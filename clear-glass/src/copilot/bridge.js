@@ -304,22 +304,42 @@ class CoPilotBridge {
   }
 
   // ── Build system prompt for NEXUS copilot ────────────────────────────
-  _buildCgContext(agentId, domContext) {
+  // §Phase B 2026-07-20 — tool surface is now EMERGENT: fetched live from
+  // orchestrator's capability-registry (a projection of component-registry),
+  // so anything NEXUS builds at runtime is immediately a usable tool. Falls
+  // back to the static tools.js list only if orchestrator is unreachable —
+  // never leaves Co-pilot with no tools. Cached ~5s to avoid a fetch per turn.
+  async _liveToolsPrompt() {
+    const now = Date.now();
+    if (this._toolsCache && (now - this._toolsCache.ts) < 5000) return this._toolsCache.text;
+    try {
+      const r = await fetch('http://127.0.0.1:9000/api/capabilities/prompt', { timeout: 2000 });
+      if (r.ok) {
+        const text = await r.text();
+        this._toolsCache = { text, ts: now };
+        return text;
+      }
+    } catch (_) { /* fall through to static */ }
+    return buildToolsPrompt(); // static fallback — Co-pilot always has tools
+  }
+
+  async _buildCgContext(agentId, domContext) {
     const domSection = domContext
       ? `\n\n## Live Browser DOM (Agent: ${agentId})\n\`\`\`json\n${JSON.stringify(domContext, null, 2).slice(0, 3000)}\n\`\`\``
       : '';
+    const toolsPrompt = await this._liveToolsPrompt();
 
     return `## Clear Glass Browser Context
 Agent ID: ${agentId}
 Browser: Clear Glass — NEXUS sovereign browser (Electron/Chromium)
 You are fully in control. Issue tool calls as \`\`\`driver JSON blocks.
 
-${buildToolsPrompt()}${domSection}`;
+${toolsPrompt}${domSection}`;
   }
 
   // ── Call NEXUS copilot — routed through Bridge :9999 ─────────────────
   async _callNexusCopilot({ message, agentId, domContext, systemExtra, msgId }) {
-    const cgContext = this._buildCgContext(agentId, domContext);
+    const cgContext = await this._buildCgContext(agentId, domContext);
     const result = await this._bridgeDispatch('copilot', 'copilot.prompt', {
       prompt:      message,
       channel:     'clear-glass',
@@ -343,7 +363,7 @@ ${buildToolsPrompt()}${domSection}`;
     if (!s.fallbackApiKey) {
       return { text: 'NEXUS copilot offline. No fallback API key configured — set one in NEXUS Settings.', modelUsed: 'none' };
     }
-    const cgContext = this._buildCgContext(agentId, domContext);
+    const cgContext = await this._buildCgContext(agentId, domContext);
     const res = await fetch(s.fallbackEndpoint || 'https://api.anthropic.com/v1/messages', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': s.fallbackApiKey, 'anthropic-version': '2023-06-01' },

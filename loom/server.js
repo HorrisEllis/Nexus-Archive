@@ -139,12 +139,127 @@ function readRawBody(req, maxBytes = 500 * 1024 * 1024) {
   });
 }
 
+
+// ── HOOK REGISTRY — loom is the write authority (docs/hooks-migration.spec) ──
+// §2026-07-20: loom's banner claimed "component/hook/wire/seam registry"
+// since v1.1.0 with zero hook code behind it; architect carried the duty by
+// default and was never meant to. The registry class is shared library
+// (lib/hook-registry.js, moved via git mv from architect); loom owns every
+// write — seeding, the component-registry sync loop, and all HTTP mutations.
+// Architect keeps a read-only view for Blueprint and existing GET consumers.
+let hookRegistry = null;
+try {
+  const { HookRegistry } = require('../lib/hook-registry');
+  const { jaaDB } = require('../cortex/memory/jaa-db');
+  hookRegistry = new HookRegistry({ jaa: jaaDB });
+  hookRegistry.init();
+  const _seedBuiltinHooks = (registry) => {
+    const seeds = [
+      // architect → cortex
+      { name: 'architect-event-bus', intent: 'Emit architect events to cortex event_log', type: 'event-bus',
+        direction: 'unidirectional', from: { surface: 'architect', layer: 1 }, to: { surface: 'cortex', layer: 1 },
+        schema: { input: null, output: { type: 'object', properties: { type: { type: 'string' }, payload: { type: 'object' } } }, errors: [] },
+        contract: { axioms: ['§A-2'], sideEffects: ['cortex.event_log.write'], idempotent: false, replayable: true, snrGated: false },
+        config: { eventType: 'architect.*', causalEdgeType: 'causal', deduplication: false, ringBuffer: true },
+        causedBy: 'seed', status: 'active', tags: ['core','bus'], notes: 'Primary bus wire between architect and cortex',
+      },
+      // architect → orchestrator registration
+      { name: 'architect-orchestrator-register', intent: 'Register architect service with NEXUS orchestrator on boot', type: 'api',
+        direction: 'unidirectional', from: { surface: 'architect', layer: 1 }, to: { surface: 'orchestrator', layer: 1 },
+        schema: { input: { type: 'object', properties: { systemId: { type: 'string' }, port: { type: 'number' } } }, output: null, errors: [{ code: 'ORCH_OFFLINE', description: 'Orchestrator not reachable', recoverable: true }] },
+        contract: { axioms: ['§A-2','§5.2'], sideEffects: ['orchestrator.registry.write'], idempotent: true, replayable: false, snrGated: false, timeout: 5000 },
+        config: { method: 'POST', path: '/api/register', timeout: 5000, retryPolicy: { maxAttempts: 3, backoff: 'exponential', baseMs: 1000 } },
+        causedBy: 'seed', status: 'active', tags: ['core','registration'],
+      },
+      // hook registry → JAA write
+      { name: 'hook-registry-jaa', intent: 'Persist hook registry mutations to JAA before acting (§I-18)', type: 'direct',
+        direction: 'unidirectional', from: { surface: 'hook-registry', layer: 2 }, to: { surface: 'jaa', layer: 0 },
+        schema: { input: { type: 'object', properties: { op: { type: 'string' }, data: { type: 'object' } } }, output: null, errors: [] },
+        contract: { axioms: ['§I-18','§2.1'], sideEffects: ['jaa.hooks.write'], idempotent: false, replayable: false, snrGated: false },
+        config: { functionRef: 'jaa.insert', sync: true },
+        causedBy: 'seed', status: 'active', tags: ['persistence','core'],
+      },
+      // SNR gate → ollama (§I-6: SNR gate runs before any output reaches ollama)
+      { name: 'snr-to-ollama', intent: 'Route SNR-scored output to Ollama for local LLM inference (§I-6)', type: 'ollama',
+        direction: 'unidirectional', from: { surface: 'snr-gate', layer: 7 }, to: { surface: 'ollama', layer: 7 },
+        schema: { input: { type: 'object', properties: { score: { type: 'number' }, recommendation: { type: 'string' } } }, output: { type: 'object', properties: { completion: { type: 'string' } } }, errors: [{ code: 'SNR_TOO_LOW', description: 'SNR score below 0.45 threshold', recoverable: false }] },
+        contract: { axioms: ['§I-6','§I-15','§A-5'], sideEffects: ['ollama.inference'], idempotent: false, replayable: false, snrGated: true, timeout: 30000 },
+        config: { model: 'qwen2:0.5b', temperature: 0.7, maxTokens: 2000, contextWindow: 4096, snrRequired: true },
+        causedBy: 'seed', status: 'seed', tags: ['snr','ollama','output'],
+      },
+      // Architect webserver hook (self-declaration — §I-3: all surfaces declare hooks)
+      { name: 'architect-http-server', intent: 'Architect HTTP API surface at :3747', type: 'webserver',
+        direction: 'sink', from: { surface: '*', layer: 0 }, to: { surface: 'architect', layer: 6 },
+        schema: { input: null, output: { type: 'object', properties: { ok: { type: 'boolean' } } }, errors: [] },
+        contract: { axioms: ['§A-2','§I-3'], sideEffects: [], idempotent: false, replayable: false, snrGated: false },
+        config: { port: 3747, method: 'GET', path: '/*', cors: { origins: ['*'], credentials: false }, auth: { required: false, type: 'none' } },
+        bindings: { cli: 'architect serve', event: 'architect.http.request' },
+        causedBy: 'seed', status: 'active', tags: ['webserver','core'],
+      },
+    ];
+
+    for (const seed of seeds) {
+      try { registry.register(seed); }
+      catch(e) { /* already registered or name conflict — skip */ }
+    }
+    console.log(`[architect] seeded ${seeds.length} built-in hooks`);
+    };
+  if (hookRegistry.list().length === 0) _seedBuiltinHooks(hookRegistry);
+  const { syncFromComponentRegistry } = require('../lib/hook-sync-from-component-registry');
+  syncFromComponentRegistry(hookRegistry).catch(e => console.warn(`[loom] hook sync failed: ${e.message}`));
+  const _hookSync = setInterval(() => syncFromComponentRegistry(hookRegistry).catch(() => {}), 30000);
+  if (_hookSync.unref) _hookSync.unref();
+  console.log(`[loom] hook registry active — ${hookRegistry.list().length} hooks (write authority)`);
+} catch (e) {
+  console.warn('[loom] hook registry init failed:', e.message);
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const p = url.pathname;
   const method = req.method;
 
   try {
+    // ── /api/hooks — full CRUD + wire/unwire (write authority) ──────────────
+    if (hookRegistry && p.startsWith('/api/hooks')) {
+      const seg = p.split('/').filter(Boolean); // api, hooks, [id], [verb]
+      const id = seg[2];
+      if (method === 'GET' && !id) {
+        const filter = {};
+        for (const k of ['type', 'status']) { const v = url.searchParams.get(k); if (v) filter[k] = v; }
+        const layer = url.searchParams.get('layer'); if (layer) filter.layer = parseInt(layer);
+        return json(res, 200, { ok: true, hooks: hookRegistry.list(filter), summary: hookRegistry.summary() });
+      }
+      if (method === 'GET' && id) {
+        const hook = hookRegistry.get(id);
+        return hook ? json(res, 200, { ok: true, hook }) : json(res, 404, { ok: false, error: 'hook not found' });
+      }
+      if (method === 'POST' && id === 'wire') {
+        const { fromId, toId, notes, causedBy } = await readBody(req);
+        try { return json(res, 200, { ok: true, binding: hookRegistry.wire(fromId, toId, { notes, causedBy }) }); }
+        catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      }
+      if (method === 'POST' && id === 'unwire') {
+        const { bindingId } = await readBody(req);
+        try { hookRegistry.unwire(bindingId); return json(res, 200, { ok: true }); }
+        catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      }
+      if (method === 'POST' && !id) {
+        try { return json(res, 200, { ok: true, hook: hookRegistry.register(await readBody(req)) }); }
+        catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      }
+      if (method === 'PATCH' && id) {
+        try { return json(res, 200, { ok: true, hook: hookRegistry.update(id, await readBody(req)) }); }
+        catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      }
+      if (method === 'DELETE' && id) {
+        const body = await readBody(req).catch(() => ({}));
+        if (body && body.hard) { hookRegistry.remove(id); return json(res, 200, { ok: true, removed: id }); }
+        hookRegistry.deprecate(id, (body && body.reason) || 'deprecated', (body && body.causedBy) || 'api');
+        return json(res, 200, { ok: true, deprecated: id });
+      }
+    }
+
     if (method === 'GET' && (p === '/' || p === '/ui')) {
       const html = fs.readFileSync(path.join(__dirname, 'ui', 'index.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

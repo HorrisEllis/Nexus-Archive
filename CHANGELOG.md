@@ -1,5 +1,74 @@
 # NEXUS Changelog
 
+## 2026-07-20 (later) — hook registry: architect → loom migration (§10.1 ownership correction)
+
+James: architect "got hook duty, never intended — it's supposed to build
+architecture." Confirmed by evidence, not taken on faith: architect ran the
+hook registry (269 hooks, full CRUD, seeding, a 30s component-registry sync
+loop) while loom's boot banner had claimed "component/hook/wire/seam
+registry" since v1.1.0 with ZERO hook code behind it. And Blueprint — the
+actual architecture builder — received `hooks: registry` in its constructor
+and never called it once (grep -c: 0). The dependency was decorative.
+
+Migration (docs/hooks-migration.spec, written first per §3.1):
+- Registry class → lib/hook-registry.js (shared, git mv, history preserved).
+  Sync module likewise → lib/hook-sync-from-component-registry.js.
+- LOOM is now the write authority (§10.1): owns seeding, the sync loop, and
+  every /api/hooks mutation (register/update/deprecate/remove/wire/unwire).
+  Since architect never dirties hooks/hook_bindings, loom's deletes can't be
+  resurrected by architect's flush — same safety argument as sigma-compaction.
+- ARCHITECT keeps a read-only registry view (Blueprint context + existing GET
+  consumers unbroken) and answers every hook mutation with a loud 410 pointing
+  to loom :3752 — redirection, not silent breakage (§1.2).
+- orchestrator proxy split: /api/architect/hooks reads → architect, writes →
+  loom (loom added to the SYS proxy table — it was absent; the new routes
+  would have 500'd as "unknown system: loom" without this, caught before ship).
+- 6 ownership-contract tests (test-hook-ownership.js): real CRUD against a real
+  store + static proof of who-owns-what. The real-store test caught two of my
+  own wrong fixture assumptions (hook type enum, meta.status path) — the
+  registry's validation was right, my test was wrong, both times.
+
+loom → 1.2.0. Suite: 699 passed, 0 failed.
+
+### Idearium projects overlap — traced, not patched (honest)
+Both candidate layers inspected: idearium's own CSS layout chain (100vh flex
+column, 38px topbar, 44px tabbar, flex view-area, absolute views) is
+structurally correct, and tv-shell's idearium iframe (width/height:100%,
+identical to five working full-UI channels) is correct. The squeeze is an
+interaction only visible at real viewport height. Playwright can render it in
+one screenshot but its browser binary download (cdn.playwright.dev /
+playwright.azureedge.net) is outside the network allowlist — add those two
+domains and next session confirms the pixel cause. Left untouched rather than
+guess-patching a correct-reading layout and risking the direct :4800 view.
+Not data loss: "no projects yet" is honest — Projects is the flat zip shelf
+(added 07-19), separate from the 3 repos under Build.
+
+
+## 2026-07-20 (later) — sigma_records compaction: the unbounded-growth item, closed
+
+`orchestrator/lib/sigma-compaction.js` — hourly rollups + real hard-delete,
+owned by sigma-writer's own process (§10.1; JaaStore's flush only protects
+deletes made by the deleting process, so compaction anywhere else would race
+resurrection — cortex verified to never dirty this table). Retention = the
+24h short tier sigma_records was declared as in tiers.js all along (decay
+never actually ran on it: its tombstone update was one of the string-where
+silent no-ops fixed earlier today, and tombstones never shrank the file
+anyway). Expired rows roll into `sigma_rollups` (long tier — count, avg/max
+sigma, warn/halt counts, top types per hour) BEFORE deletion: compressed
+history, not destroyed (§0.3). Merge-by-bucket makes a crash between
+rollup-write and delete idempotent. Boot compaction + every 10min.
+
+Verified against the real backlog, not just mocks: 13,329 rows → 8 hourly
+rollups accounting for all 13,329, file 0KB on disk after flush. 8 new
+tests including a real JaaStore round-trip proving deletes persist across
+reload (which also caught a test-side bug: a 600ms sleep racing the store's
+1500ms flush debounce — fixed by using the store's own close() contract).
+Every reader confirmed to want only recent rows before setting retention
+(boot.js tail-200, intelligence last-200, autonomous-loop latest-1; the
+30-day macro-compiler in version.js's notes is another tree's module and
+does not exist here). Suite: 693 passed, 0 failed.
+
+
 ## 2026-07-20 — cortex organ completion, three store bugs fixed at source, suite 604/61 → 681/0, system 0.9.12 → 0.9.13
 
 The full audit trail lives in **`docs_out/cortex-phase-map.md`** — read that

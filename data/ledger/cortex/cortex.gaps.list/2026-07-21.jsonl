@@ -1,0 +1,2 @@
+{"uuid":"0464839d-cb87-47fe-baef-7f0fc53c86a0","system":"cortex","component":"cortex.gaps.list","action":"registered","status":"ok","tags":["memory","healing","monitoring"],"detail":"List open gaps with severity and friction score","causedBy":null,"contractUuid":null,"session":null,"ts":1784593756903}
+{"uuid":"b6d5a9fa-b481-4acb-b914-12ee1da8a0f4","system":"cortex","component":"cortex.gaps.list","action":"updated","status":"ok","tags":["memory","healing","monitoring"],"detail":"Updated description","causedBy":null,"contractUuid":null,"session":null,"ts":1784593757363}
