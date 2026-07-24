@@ -255,6 +255,7 @@ function _spawnKernel(kernel, color) {
   if (s.stableTimer) { clearTimeout(s.stableTimer); s.stableTimer = null; }
 
   _log(`${color}[${kernel.name}]${RESET} starting — ${kernel.cmd} ${kernel.args.join(' ')}`);
+  _warpEmit('autopilot.kernel.spawn', { kernel: kernel.name });
 
   const path = require('path');
   const resolvedCwd = kernel.cwd ? path.join(ROOT, kernel.cwd) : ROOT;
@@ -391,6 +392,7 @@ function _spawnKernel(kernel, color) {
     // "crashes in window: 1/6" one line later; the system was lying to itself.)
     if (s.status === 'stopping' || s.status === 'dormant') {
       const wasIdleDespawn = s.status === 'dormant';
+      _warpEmit(wasIdleDespawn ? 'autopilot.kernel.despawn' : 'autopilot.kernel.stop', { kernel: kernel.name, code, signal });
       s.status = wasIdleDespawn ? 'dormant' : 'stopped';
       _log(`${color}[${kernel.name}]${RESET} ${wasIdleDespawn
         ? 'despawned cleanly (idle, on-demand — will respawn on request)'
@@ -398,6 +400,7 @@ function _spawnKernel(kernel, color) {
       return;
     }
 
+    _warpEmit('autopilot.kernel.crash', { kernel: kernel.name, code, signal, crashesInWindow: s.crashes.length + 1 });
     s.crashes.push(Date.now());
     s.crashes = _prune(s.crashes);
     s.status = 'down';
@@ -407,6 +410,7 @@ function _spawnKernel(kernel, color) {
 
     if (s.crashes.length >= CIRCUIT_MAX_CRASHES) {
       s.status = 'circuit_open';
+      _warpEmit('autopilot.circuit.open', { kernel: kernel.name, crashes: s.crashes.length });
       _log(`${color}[${kernel.name}]${RESET} \x1b[31m§CIRCUIT BREAKER TRIPPED\x1b[0m — ${s.crashes.length} crashes in ${Math.round(CIRCUIT_WINDOW_MS/60000)}min. ` +
            `Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.`);
       _writeCircuitGap(kernel.name, s);
@@ -478,6 +482,46 @@ function _statusSnapshot() {
   return out;
 }
 
+// ── §WARP SPINE 2026-07-24 — James: "make sure you're always using warp."
+// His own standing intent (lib/warp-bus.js header, 2026-07-09): "warp is
+// the spine for each system, supposed to be." Autopilot had zero WARP —
+// every spawn, despawn, crash, circuit-break, and now every tablet ledger
+// read was invisible movement, the exact property behind every bug the
+// tablet spec catalogs ("the system could not see itself doing it").
+//
+// This uses warp/core DIRECTLY (Stream + StreamLog + Axiom) rather than
+// lib/warp-bus.js's WarpSpine adapter, deliberately: WarpSpine attaches to
+// an existing nexus-bus, and autopilot has none — requiring the nexus-bus
+// singleton here would pull its wired relay listeners into the supervisor
+// (side effects a supervisor must not inherit, §5.12). warp/core is the
+// actual primitive layer and imports nothing outside warp/ (its own
+// decoupling rule). Axioms mirror defaultAxioms() from lib/warp-bus.js —
+// same checks, same severities — so autopilot events are held to the same
+// contract as bus events everywhere else. Advisory (hard axioms reject the
+// event from the stream with a loud log, per warp's own semantics), never
+// process-fatal: a supervisor that dies of its own telemetry is a worse
+// failure than the one it was recording.
+const { Stream }    = require('./warp/core/Stream.js');
+const { StreamLog } = require('./warp/core/StreamLog.js');
+const { Axiom }     = require('./warp/core/Axiom.js');
+
+const _warpLog = new StreamLog('DATA');
+const _warp = new Stream({
+  log: _warpLog,
+  axioms: [
+    new Axiom('type-is-string', { check: e => typeof e.type === 'string' && e.type.length > 0, severity: 'hard' }),
+    new Axiom('has-id',         { check: e => !!(e.uuid || e.id), severity: 'hard' }),
+    new Axiom('has-ts',         { check: e => Number.isFinite(e.ts), severity: 'hard' }),
+  ],
+});
+function _warpEmit(type, data) {
+  // Event's constructor enforces its own contract loudly (throws on a bad
+  // type) — that's correct at build time, but a telemetry emit must never
+  // kill the supervisor at runtime, so contain here and report (§1.2).
+  try { _warp.emit(new (require('./warp/core/Event.js').Event)(type, data)); }
+  catch (e) { console.error(`[warp:autopilot] emit failed for '${type}': ${e.message}`); }
+}
+
 function _startStatusServer() {
   if (!STATUS_PORT) return;
   const server = http.createServer((req, res) => {
@@ -506,9 +550,103 @@ function _startStatusServer() {
       res.end(JSON.stringify({ ok: true }));
       return;
     }
-    res.writeHead(404); res.end('not found — try /status, POST /spawn/:name, POST /touch/:name');
+    // §TABLET T1 2026-07-24 — ledger explorer read surface
+    // (docs/nexus-tablet.spec, phase T1: "browse system → hook → day →
+    // events from the live tree with ZERO writes to NEXUS").
+    //
+    // Lives on autopilot deliberately, per the spec's connection law: "the
+    // tablet talks to ONE endpoint. Autopilot resolves the rest" — and its
+    // observation law: DISK-BACKED, not live-API-backed, so the explorer
+    // still answers when the system whose ledger you're reading is wedged.
+    // These routes do exactly three things and write NOTHING:
+    //   GET /ledger                        → systems (top-level dirs)
+    //   GET /ledger/:system                → hooks (subdirs) + loose .jsonl files
+    //   GET /ledger/:system/:hook          → day files
+    //   GET /ledger/:system/:hook/:day     → parsed events from that day
+    // Every path segment is validated against a strict allowlist pattern —
+    // no dots-as-traversal, no separators — so the surface cannot be walked
+    // outside data/ledger/ (§4.3; lens 6: what does this assume I won't try).
+    if (req.method === 'GET' && req.url.startsWith('/ledger')) {
+      _warpEmit('autopilot.ledger.read', { path: req.url.split('?')[0] });
+      _handleLedgerRead(req, res);
+      return;
+    }
+    // §WARP SPINE — the map, generated from what actually ran (tail of the
+    // StreamLog + live counters), readable by the tablet from the same
+    // single endpoint as everything else.
+    if (req.method === 'GET' && req.url.startsWith('/warp')) {
+      const body = JSON.stringify({
+        ok: true,
+        events: _warp.eventCount,
+        seq: _warp.seq,
+        tail: _warp.tail(100),
+        ts: Date.now(),
+      });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(body);
+      return;
+    }
+    res.writeHead(404); res.end('not found — try /status, POST /spawn/:name, POST /touch/:name, GET /ledger, GET /warp');
   });
   server.listen(STATUS_PORT, () => _log(`autopilot status: http://127.0.0.1:${STATUS_PORT}/status`));
+}
+
+// ── §TABLET T1 — ledger explorer read handlers ─────────────────────────────
+const LEDGER_ROOT = path.join(ROOT, 'data', 'ledger');
+// One segment: letters, digits, dot, dash, underscore. A single leading dot
+// or any '..' is rejected outright — '.' only ever appears INSIDE hook names
+// (cortex.gaps.list) and day names (2026-07-24.jsonl), never leading.
+const SEG_OK = /^[a-zA-Z0-9_-][a-zA-Z0-9._-]*$/;
+const _segSafe = (s) => typeof s === 'string' && s.length <= 128 && SEG_OK.test(s) && !s.includes('..');
+
+function _ledgerJson(res, code, obj) {
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.end(JSON.stringify(obj));
+}
+
+function _handleLedgerRead(req, res) {
+  const parts = req.url.split('?')[0].split('/').filter(Boolean).slice(1); // drop 'ledger'
+  if (parts.length > 3) return _ledgerJson(res, 400, { ok: false, error: 'at most /ledger/:system/:hook/:day' });
+  if (!parts.every(_segSafe)) return _ledgerJson(res, 400, { ok: false, error: 'invalid path segment' });
+
+  const fsPath = path.join(LEDGER_ROOT, ...parts);
+  // Belt-and-braces on top of segment validation: the resolved path must
+  // still be inside the ledger root. Never trust one check alone (§4.3).
+  if (!path.resolve(fsPath).startsWith(path.resolve(LEDGER_ROOT))) {
+    return _ledgerJson(res, 400, { ok: false, error: 'path escapes ledger root' });
+  }
+
+  try {
+    if (parts.length === 3 || (parts.length >= 1 && fsPath.endsWith('.jsonl'))) {
+      // Leaf: a day file (or a loose top-level .jsonl like orchestrator.jsonl).
+      // Parse per-line; corrupt lines are REPORTED, not silently dropped (§1.2).
+      const raw = fs.readFileSync(fsPath.endsWith('.jsonl') ? fsPath : fsPath + '.jsonl', 'utf8');
+      const events = []; let corrupt = 0;
+      for (const line of raw.split('\n')) {
+        if (!line.trim()) continue;
+        try { events.push(JSON.parse(line)); } catch (_) { corrupt++; }
+      }
+      // Bounded response: ?limit=N (default 500, max 5000), newest last.
+      const limitRaw = new URL(req.url, 'http://x').searchParams.get('limit');
+      const limit = Math.min(Math.max(parseInt(limitRaw || '500', 10) || 500, 1), 5000);
+      const slice = events.length > limit ? events.slice(-limit) : events;
+      return _ledgerJson(res, 200, {
+        ok: true, path: parts.join('/'), total: events.length,
+        returned: slice.length, corruptLines: corrupt, events: slice,
+      });
+    }
+
+    // Directory listing: systems, hooks, or day files.
+    const entries = fs.readdirSync(fsPath, { withFileTypes: true });
+    const dirs  = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const files = entries.filter(e => e.isFile() && e.name.endsWith('.jsonl'))
+      .map(e => { const st = fs.statSync(path.join(fsPath, e.name)); return { name: e.name, bytes: st.size, mtime: st.mtimeMs }; })
+      .sort((a, b) => a.name < b.name ? -1 : 1);
+    return _ledgerJson(res, 200, { ok: true, path: parts.join('/') || '(root)', dirs, files });
+  } catch (e) {
+    if (e.code === 'ENOENT') return _ledgerJson(res, 404, { ok: false, error: `not found: ${parts.join('/')}` });
+    return _ledgerJson(res, 500, { ok: false, error: `${e.code || ''} ${e.message}` });
+  }
 }
 
 // ── On-demand: spawn-request, health-gate, idle-despawn ────────────────────
@@ -736,4 +874,4 @@ process.on('SIGTERM', () => _shutdown('SIGTERM'));
 
 if (require.main === module) start();
 
-module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS };
+module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead };

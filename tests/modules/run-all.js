@@ -20,6 +20,7 @@ const MODULES_DIR = __dirname;
 const SUITES = [
   'jaa-db.test.js',
   'jaa-store-multiprocess.test.js',
+  'test-jaa-flush-lock.js',
   'spec-container.test.js',
   'queue.test.js',
   'baseline.test.js',
@@ -67,6 +68,8 @@ const SUITES = [
   'test-clear-glass-single-instance.js',
   'test-idearium-cjs-under-esm.js',
   'test-cortex-heartbeat.js',
+  'test-tablet-ledger-api.js',
+  'test-autopilot-warp-spine.js',
   'test-consumer-registry.js',
   'test-spawn-guard.js',
   'test-capability-registry.js',

@@ -453,71 +453,142 @@ class JaaStore {
     const tbl  = this._tables.get(table);
     if (!tbl) return;
 
-    // §MULTI-PROCESS FIX 2026-07-18 — REAL fix for the limitation the
-    // previous comment here (still below) named but deliberately left
-    // open. reloadTable() alone (added earlier the same day, see
-    // jaa-store.js's own header) was not enough on its own: a caller like
-    // idearium/lib/db.js's syncTable calls it before its own diff, but
-    // _flush fires later, on a DEBOUNCED timer (up to 1500ms after that
-    // diff), and always wrote whatever was in the in-memory map AT FLUSH
-    // TIME — so any write from another process landing in that gap was
-    // silently overwritten anyway. Proven: two real processes each
-    // writing 2 rows, final state had only 2 of 4, even with the earlier
-    // reloadTable() fix in place. Real fix has to happen here, immediately
-    // before the write, not earlier in some caller's diff step — merge
-    // fresh disk state into this table's map right now, skipping any id
-    // THIS process explicitly deleted since its own last flush (tracked
-    // in _pendingDeletes by delete() above), so a legitimate delete
-    // doesn't get silently undone by a concurrent process's older copy of
-    // the same row still being on disk.
-    const deletedByMe = this._pendingDeletes.get(table);
+    // §MP-001 ROOT-CAUSE FIX 2026-07-24 — cross-process lock around the
+    // whole read-merge-write cycle. Third occurrence of this bug class
+    // (first closed 2026-07-15 with atomic rename, second 2026-07-18 with
+    // the pre-flush merge below) — §17.7 says the third occurrence
+    // promotes to architecture, and the 2026-07-18 comment below already
+    // named the missing primitive itself: "not eliminated by anything
+    // short of true cross-process locking." This is that primitive.
+    //
+    // PROVEN, not theorized, before building: deterministic reproduction
+    // (frozen interleaving: B reads disk → A's entire flush lands → B
+    // writes) destroys A's WHOLE BATCH, not just same-id collisions — the
+    // old comment's "only way to lose a row is two writes to the SAME id
+    // in the same few-millisecond window" claim was wrong, and matches
+    // the whole-batch loss the (previously orphaned) MP-001 test showed
+    // intermittently.
+    //
+    // Mechanism: O_EXCL lock file per table. 'wx' open is atomic at the
+    // OS level (fails if the file exists) — the standard zero-dependency
+    // cross-process mutex on every platform including Windows. Holder
+    // writes its pid; a lock older than LOCK_STALE_MS is presumed
+    // abandoned (holder crashed mid-flush) and broken loudly, not
+    // silently. If the lock can't be acquired within LOCK_WAIT_MS, we
+    // re-schedule this flush rather than proceeding unlocked — a delayed
+    // write is recoverable, a clobbered one is not (§16.3: an invalid
+    // state is refused, not passed through). Data stays safe in this
+    // process's in-memory map + _dirty flag the entire time.
+    if (!this._acquireFlushLock(table)) {
+      this._dirty.add(table);        // keep it flagged
+      this._schedule(table, 250);    // retry soon — lock holder's flush is ms-scale
+      return;
+    }
+
     try {
-      const file = this._file(table);
-      if (fs.existsSync(file)) {
-        const onDisk = JSON.parse(fs.readFileSync(file, 'utf8'));
-        if (Array.isArray(onDisk)) {
-          for (const row of onDisk) {
-            const id = row.id || row.key;
-            if (id == null) continue;
-            if (deletedByMe && deletedByMe.has(id)) continue; // respect this process's own pending delete
-            if (!tbl.has(id)) tbl.set(id, { ...row, id }); // only fill in what THIS process doesn't already know about — do not clobber an in-flight local edit with an older on-disk copy
+      const deletedByMe = this._pendingDeletes.get(table);
+      try {
+        const file = this._file(table);
+        if (fs.existsSync(file)) {
+          const onDisk = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (Array.isArray(onDisk)) {
+            for (const row of onDisk) {
+              const id = row.id || row.key;
+              if (id == null) continue;
+              if (deletedByMe && deletedByMe.has(id)) continue; // respect this process's own pending delete
+              if (!tbl.has(id)) tbl.set(id, { ...row, id }); // only fill in what THIS process doesn't already know about — do not clobber an in-flight local edit with an older on-disk copy
+            }
           }
         }
+      } catch (e) {
+        console.error(`[jaa] pre-flush merge error (${table}): ${e.message} — flushing this process's own view only`);
       }
-    } catch (e) {
-      console.error(`[jaa] pre-flush merge error (${table}): ${e.message} — flushing this process's own view only`);
-    }
-    this._pendingDeletes.delete(table);
+      this._pendingDeletes.delete(table);
 
-    const rows = [...tbl.values()];
-    const file = this._file(table);
-    // §MULTI-PROCESS FIX 2026-07-15 — write to a temp file then rename over
-    // the target, instead of writeFileSync-ing the target directly. Doesn't
-    // fix the deeper issue (see below), but a rename is atomic at the
-    // filesystem level where an in-place write is not — a second process
-    // reading this file mid-write can no longer observe a truncated/
-    // corrupt partial JSON, and on Windows specifically a direct
-    // writeFileSync racing another process's open handle is a real EBUSY
-    // risk that a rename mostly sidesteps.
-    //
-    // §UPDATE 2026-07-18 — the merge step directly above now closes the
-    // "silently overwrites concurrent writes" gap this comment used to
-    // describe as unfixed. What's left: two processes flushing the
-    // literal same table at the literal same instant can still both merge
-    // against the same pre-write disk state and then both write — the
-    // last rename wins, but by that point both writes already merged in
-    // everything visible to them, so the only way to actually lose a row
-    // now is two writes to the SAME id, in the same few-millisecond
-    // window, from two different processes — a real edge case, far
-    // narrower than "any concurrent write to the table," and not
-    // eliminated by anything short of true cross-process locking.
-    const tmpFile = `${file}.${process.pid}.${Date.now()}.tmp`;
-    try {
-      fs.writeFileSync(tmpFile, JSON.stringify(rows, null, 0), 'utf8');
-      fs.renameSync(tmpFile, file);
-    } catch (e) {
-      console.error(`[jaa] Flush error (${table}): ${e.message}`);
-      try { fs.unlinkSync(tmpFile); } catch (_) {} // best-effort cleanup, don't mask the real error
+      const rows = [...tbl.values()];
+      const file = this._file(table);
+      // §MULTI-PROCESS FIX 2026-07-15 — write to a temp file then rename over
+      // the target, instead of writeFileSync-ing the target directly. A rename
+      // is atomic at the filesystem level where an in-place write is not — a
+      // second process reading this file mid-write can never observe a
+      // truncated/corrupt partial JSON.
+      //
+      // §UPDATE 2026-07-18 — pre-flush merge added (above).
+      // §UPDATE 2026-07-24 — the residual race that comment left open
+      // ("two processes flushing the same table at the same instant both
+      // merge against the same pre-write disk state") is now closed by the
+      // flush lock wrapping this whole section: read-merge-write is a
+      // critical section, exactly one process at a time.
+      const tmpFile = `${file}.${process.pid}.${Date.now()}.tmp`;
+      try {
+        fs.writeFileSync(tmpFile, JSON.stringify(rows, null, 0), 'utf8');
+        fs.renameSync(tmpFile, file);
+      } catch (e) {
+        console.error(`[jaa] Flush error (${table}): ${e.message}`);
+        try { fs.unlinkSync(tmpFile); } catch (_) {} // best-effort cleanup, don't mask the real error
+      }
+    } finally {
+      this._releaseFlushLock(table);
+    }
+  }
+
+  // ── §MP-001 cross-process flush lock ────────────────────────────────────────
+  // O_EXCL ('wx') create is the atomic primitive; everything else is policy:
+  //   - spin briefly (LOCK_WAIT_MS) — flushes are milliseconds, contention rare
+  //   - a stale lock (holder crashed mid-flush) is broken LOUDLY after
+  //     LOCK_STALE_MS, never silently (§1.2)
+  //   - failure to acquire → caller re-schedules; never proceeds unlocked
+
+  _lockFile(table) { return this._file(table) + '.lock'; }
+
+  _acquireFlushLock(table) {
+    const LOCK_WAIT_MS  = 200;   // total time to spin before giving up this attempt
+    const LOCK_STALE_MS = 10000; // a flush takes ms — 10s means the holder died
+    const lockPath = this._lockFile(table);
+    const deadline = Date.now() + LOCK_WAIT_MS;
+
+    for (;;) {
+      try {
+        const fd = fs.openSync(lockPath, 'wx'); // atomic create-or-fail
+        fs.writeSync(fd, String(process.pid));
+        fs.closeSync(fd);
+        return true;
+      } catch (e) {
+        if (e.code !== 'EEXIST') {
+          // Unexpected FS error (permissions, disk). Loud, and do NOT
+          // proceed unlocked — the caller re-schedules.
+          console.error(`[jaa] flush-lock error (${table}): ${e.code} ${e.message}`);
+          return false;
+        }
+        // Lock held. Stale?
+        try {
+          const st = fs.statSync(lockPath);
+          if (Date.now() - st.mtimeMs > LOCK_STALE_MS) {
+            const holder = (() => { try { return fs.readFileSync(lockPath, 'utf8'); } catch (_) { return '?'; } })();
+            console.error(`[jaa] BREAKING STALE FLUSH LOCK (${table}) — held by pid ${holder} for >${LOCK_STALE_MS}ms, presumed crashed mid-flush. (§1.2 — loud, never silent.)`);
+            try { fs.unlinkSync(lockPath); } catch (_) {}
+            continue; // retry the atomic create immediately
+          }
+        } catch (_) { /* lock vanished between EEXIST and stat — retry */ continue; }
+
+        if (Date.now() >= deadline) return false;
+        // Synchronous ms-scale busy-wait, deliberately: _flush is already a
+        // synchronous fs function on a debounce timer, its callers hold no
+        // locks of their own, and the expected hold time is single-digit ms.
+        const until = Date.now() + 5;
+        while (Date.now() < until) { /* spin 5ms */ }
+      }
+    }
+  }
+
+  _releaseFlushLock(table) {
+    try { fs.unlinkSync(this._lockFile(table)); }
+    catch (e) {
+      // ENOENT here means someone broke our lock as stale mid-flush (we
+      // held it >10s — shouldn't happen, worth hearing about). Anything
+      // else is a real FS problem. Either way: loud, not swallowed.
+      if (e.code !== 'ENOENT') console.error(`[jaa] flush-lock release error (${table}): ${e.code} ${e.message}`);
+      else console.error(`[jaa] flush lock (${table}) was already gone at release — a peer broke it as stale; this process's flush exceeded the ${10000}ms stale threshold`);
     }
   }
 

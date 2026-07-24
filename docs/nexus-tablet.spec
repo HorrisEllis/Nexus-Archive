@@ -201,6 +201,24 @@ spec:
       blockers: none
       why_first: "Data exists TODAY. Smallest real surface, immediately useful, proves the decoupled disk-backed read path before anything animated depends on it."
       gate: "browse system → hook → day → events from the live tree with ZERO writes to NEXUS."
+      status_2026_07_24: >
+        BUILT AND GATE-VERIFIED. Two pieces: (1) read-only /ledger routes on
+        autopilot's status server (GET /ledger[/:system[/:hook[/:day]]] —
+        disk-backed per the observation law, strict per-segment allowlist +
+        resolved-path containment per §4.3, corrupt jsonl lines counted and
+        reported per §1.2, ?limit bounds responses); (2) tablet/index.html —
+        single file, single endpoint (autopilot :7799, ?port= the only knob),
+        zero hardcoded system ports, zero persistent state, zero write verbs.
+        Gate walked live against the real 462-file tree (13/13 including
+        hostile traversal/null-byte/over-deep inputs) and pinned permanently
+        in tests/modules/test-tablet-ledger-api.js (12 tests, registered:
+        planted-tree browse walk, corrupt-line reporting, limit semantics,
+        hostile inputs, byte-identical-after-read zero-write proof, and UI
+        law conformance checks). Honest limitation: the page's rendering is
+        verified by contract (every field it dereferences proven present in
+        real responses) — no browser exists in the build sandbox, so pixels
+        were not seen. The next real browser session that opens it is the
+        final visual check.
     T2_container_shell:
       blockers: none
       gate: "one container per system: API map, DB tables, file tree, live events, real test invocation. Read-only."

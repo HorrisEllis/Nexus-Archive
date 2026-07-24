@@ -120,29 +120,36 @@ spec:
 
   known_open_issues:
     MP-001_concurrent_write_race:
-      status: OPEN, not fixed by this spec or by commit 0ba006d
-      test: tests/modules/jaa-store-multiprocess.test.js (was orphaned —
-            not registered in tests/modules/run-all.js until 2026-07-24;
-            now registered)
-      symptom: >
-        3 real spawned processes writing 11 rows each to the same table
-        concurrently — intermittently, rows from an entire process's
-        batch go missing (confirmed via 15+ isolated runs: fails on both
-        the pre- and post-recursion-fix code at a similar rate, so it
-        predates and is independent of that fix).
-      hypothesis: >
-        _flush()'s read-merge-write is not atomic ACROSS processes. If
-        process B's disk read happens before process A's write+rename
-        lands, and B's own write+rename lands AFTER A's, B's write
-        reflects pre-A state — A's entire batch is not in B's merged
-        view and gets clobbered on rename. The code's own long-standing
-        comment (still in _flush()) claims data loss is limited to "two
-        writes to the SAME id, in the same few-millisecond window" — the
-        observed failure mode (whole batches disappearing, not single
-        rows) suggests that claim is incomplete. Not yet proven to the
-        line; flagged per §17.7 (second occurrence of this bug class —
-        promote to investigation, not another patch) rather than
-        patched speculatively.
+      status: FIXED 2026-07-24 — root-caused and closed, not patched
+      test: >
+        tests/modules/jaa-store-multiprocess.test.js (real 3-process test,
+        15/15 clean post-fix vs ~1-2 failures per 15 pre-fix) plus
+        tests/modules/test-jaa-flush-lock.js (5 tests: deterministic
+        frozen-interleaving reproduction, stale-lock recovery, fresh-lock
+        deferral, single-process no-change, per-table independence).
+      root_cause_proven: >
+        The hypothesis below was confirmed DETERMINISTICALLY before
+        fixing (not statistically from the flaky test): a one-shot
+        readFileSync hook froze the exact interleaving — B reads disk
+        (stale) → A's entire flush lands (write+rename) → B writes.
+        Result: A's whole 2-row batch destroyed, exactly the whole-batch
+        loss the real-process test showed intermittently. This proved the
+        pre-fix comment's "only same id, same instant" claim wrong — the
+        blast radius was any full batch, not colliding ids.
+      fix: >
+        Cross-process lock (O_EXCL 'wx' create — atomic on every
+        platform, zero dependencies §5.5) around _flush's ENTIRE
+        read-merge-write cycle, per-table (<table>.json.lock). Cannot
+        acquire within 200ms → the flush re-schedules itself (250ms) with
+        the table still dirty — a delayed write is recoverable, an
+        unlocked one is the data-loss path (§16.3: refuse the invalid
+        state, never pass through). A lock older than 10s (a flush takes
+        single-digit ms) is presumed a crashed holder and broken LOUDLY
+        (§1.2), never silently. §17.7 satisfied: third occurrence of this
+        bug class (2026-07-15 rename, 2026-07-18 merge, now this) —
+        promoted to the missing architectural primitive the 2026-07-18
+        comment itself named ("not eliminated by anything short of true
+        cross-process locking") rather than a fourth patch.
     stats_hardcoded_table_list: >
       stats() reports counts for a fixed 8-table list written into the
       method itself (artifacts, gaps, ledger_entries, sessions, jobs,
