@@ -70,6 +70,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `intelligence-bridge.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `intelligence.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `jaa-db.spec` | 6.0.0 | 2026-07-24 | ✓ CHECKED, correction — this spec governs the `JaaDB` append-only journal class (`new JaaDB({dir})`, `cortex/memory/jaa-db.js` lines 110-289), confirmed by its exact exports list. It does NOT govern `JaaStore` (`guardian/jaa-store.js`) despite the similar file/name — different class, different persistence model (JSONL append-only vs full-snapshot JSON), no shared code. My prior entry here (same date, since corrected) wrongly attributed `JaaStore`'s undocumented `skipTables` mechanism to this spec as drift. That was wrong — this spec is untouched and accurate for what it actually governs. See the new note below the table for the real, still-open finding: `JaaStore` has no spec at all. |
+| `jaa-store.spec` | 1.0.0 | 2026-07-24 | ✓ NEW — first spec ever written for `guardian/jaa-store.js` (class `JaaStore`), the shared persistence layer for 9+ processes. Written from live code (§3.3), not proposed. Documents the real construction options (`tablePrefix`/`tables`/`skipTables`), the 3-way where-clause dispatch, the multi-process merge-on-flush mechanism, and the 2026-07-24b recursion fix. Two known-open issues named explicitly rather than hidden: the still-unfixed MP-001 concurrent-write race, and `stats()`'s hardcoded table list. Closes the §17.1/§8.5 gap flagged two commits ago. |
 | `lib.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `liminal-space.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `liminal.spec` | 1.0.0 | — | not yet checked against live code this pass |
@@ -81,6 +82,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `eravos-agnostic-canvas.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — organism/wire/pack/transport already domain-agnostic by construction; proposes CFR field, causal graph, and component/seam map all become organism types in the existing canvas instead of four separate renderers. |
 | `cortex-intelligence.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — Phase 84/85 corrected: INTUITION/MASTERMIND are inline functions in cortex/boot.js, not separate files, simpler than billed. Closing-the-gap path scoped small (wiring, not building); counterfactual half is Phase 109, not a MASTERMIND patch. |
 | `versionium.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — no implementation exists under this name (lib/version.js is a flat string). Real shape built from primitives already proven this session: idearium's commit graph (branch/parentId bug still open), file-integrity's hashing, rfr2-nexus's compress/clip/context (diff vs replay-engine.js still undone). |
+| `warp.spec` | 1.4.0 | 2026-07-24 | ✓ CHECKED — real implementation at `warp/core`, `warp/dispatch`, `warp/plugins` (13 real primitives: Event/Gate/Stream/StreamLog/Axiom + unified dispatch). Was never entered in this registry despite existing and being actively used (idearium's chunk-dispatch: `[idearium/api] WARP chunk dispatch active — exact cache in the build path`, confirmed live in the 2026-07-24 boot log) — §6.3 gap, now closed. Also moved this session from the legacy `warp/warp.spec` to the standard `warp/spec/warp.spec` layout (orchestrator's own spec-drift checker flagged it live: "◇ warp: spec at legacy path... standard is warp/spec/warp.spec"); `warp/MANIFEST.json`'s `spec` field updated to match. |
 | `nexus-decomposition-architecture.spec` | 1.0.0 | 2026-06-29 | ✓ NEW — consolidates this session's full design arc (component/seam/wire/variable/UI/event/handoff/hot-swap). Status: proposed, not yet built — see build_order. |
 | `nexus-improvement-roadmap.spec` | 1.0.0 | 2026-06-29 | ⚠ PARTIAL — IMP-02 corrected proposed→built (lib/file-integrity.js, verified). Other 29 items still uniformly 'proposed', not re-audited. |
 | `nexus-organisms.spec` | 1.0.0 | — | not yet checked against live code this pass |
@@ -133,6 +135,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | Spec | Version | Date | Status |
 |---|---|---|---|
 | `raid-simulation-engine.spec` | 0.1.0 | 2026-07-01 | proposed — Phase 5 in build order. New module `cortex/core/raid/simulation.js`, wraps _decide() without modifying it. Completes RAID Layer 2 fitness (role_confidence, topological_proximity, snrTierGate become real values). |
+| `rfr2.spec` | 1.0.0 | 2026-07-24 | ✓ NEW — first spec for `meta/rfr2/*` (13 modules). Written from live code (§3.3). Records Job 1 (9 modules converted ESM→CJS, commit 9cff74a) as done, and Job 2 (clip/compress/context — blocked on kernel/sigma/adapter missing from the rfr2 tree, real copies confirmed present in `meta/causal-nexus/modules/`) as an open, undecided harvest-vs-mark-incomplete choice. Closes the §17.1/§8.5 gap noted in the 2026-07-24 session block below. |
 | `nexus-intelligence-system.spec` | 0.1.0 | 2026-07-01 | proposed — master spec for the 7-layer intelligence stack. Names the three genuine gaps and the dependency-ordered 8-phase build path to close them. |
 
 | `alk-gl-intelligence-canvas.spec` | 0.1.0 | 2026-07-01 | proposed — new driver module `canvas-intelligence.js` reading from intelligence system instead of audio. ALK-GL, canvas-cfr pattern, Eravos organisms all unchanged. One new data source. Phase 1-6 build order inside. |
@@ -155,23 +158,72 @@ below, not glossed over. 17 have been, with real findings, across sessions
 Two runtime files with real consumers and no dedicated governing spec — found
 while auditing the JaaStore recursion fix and rfr2 CJS conversion against
 AXIOMS v3.1 §8.5 ("do not build anything without creating a spec file
-first"). Both violate that law retroactively; neither corrected yet —
-flagged for a decision, not fixed unilaterally.
+first"). One closed same session, one still open.
 
-- **`guardian/jaa-store.js` (class `JaaStore`)** — no spec. NOT the same
-  class `jaa-db.spec` governs (that's `JaaDB`, a different file/class
-  entirely — see the corrected `jaa-db.spec` row above). `JaaStore` is
-  mentioned only incidentally, as a byproduct of unrelated work: `cortex.spec`
+- **`guardian/jaa-store.js` (class `JaaStore`)** — CLOSED. `docs/jaa-store.spec`
+  v1.0.0 written from live code (§3.3), registered above. Was mentioned only
+  incidentally before this — as a byproduct of unrelated work: `cortex.spec`
   (`cortex/spec/cortex.spec`, `foundation_fixes`) records three `_matches()`
   where-clause bugs fixed at its source, and `hooks-migration.spec` mentions
-  it once in passing (multi-process flush note). Neither documents
-  `JaaStore`'s actual contract — constructor options (`tablePrefix`, `tables`
-  allowlist, `skipTables` exclusion), the `_loadAll`/`_table` lazy-load
-  mechanism, or `_flush`'s cross-process merge semantics (the mechanism at
-  the center of both the 2026-07-24 recursion fix and the still-open MP-001
-  race). This file is the shared persistence layer for 9+ processes — real
-  weight, no dedicated spec.
-- **`meta/rfr2/*`** — no spec anywhere in `docs/`. 13 real modules, Job 1
-  (9 converted ESM→CJS this session) landed without one.
+  it once in passing (multi-process flush note) — neither documented its
+  actual contract. NOT the same class `jaa-db.spec` governs (see that row's
+  correction above).
+- **`meta/rfr2/*`** — CLOSED. `docs/rfr2.spec` v1.0.0 written from live
+  code, registered above. Job 1 (9 modules converted) recorded as done;
+  Job 2 (clip/compress/context) recorded as an open, undecided
+  harvest-vs-mark-incomplete choice — the spec existing doesn't mean
+  the underlying work is finished, only that it's now honestly tracked.
+
+## Session 2026-07-24 (cont.) — widening P0.3, real findings
+
+James: "widen" — from the rfr2-only scope to the mind map's actual
+Tier-0 item (meta/ + idearium ESM/CJS interop, "highest-leverage fix
+in the system" per the 2026-07-21 full audit). Mapped current state
+before touching anything (§3.3); it reframed the item substantially.
+
+- **The ESM/CJS "fault line" is smaller than the 2026-07-21 audit's
+  framing suggested, on THIS runtime.** Verified directly: Node 22.12+
+  supports synchronous `require()` of real ES modules natively
+  (confirmed live — `require('./meta/causal-nexus/modules/kernel/index.js')`,
+  genuine `import` syntax, loads with zero conversion). The audit was
+  written before this was checked against the actual installed Node
+  (v22.22.2, confirmed in the 2026-07-24 boot log). `package.json`
+  still declares `"engines": {"node": ">=18.0.0"}` — where this
+  wouldn't work — so this is a real fact to weigh, not a green light
+  to abandon conversion work: if <22.12 support genuinely matters,
+  mechanical CJS conversion (Job 1's approach) or the async
+  `lib/rfr2-bridge.js` remain the only portable options. Not decided
+  here which floor the project actually needs — flagged for James.
+- **meta/causal-nexus/ (36 of the 39 "ESM in meta/" files) should NOT
+  be mechanically converted.** Already decided 2026-07-21: causal-nexus
+  is the near-dead ancestor (2 consumers), rfr2 is canonical, harvest
+  3 modules (kernel/sigma/adapter — see rfr2.spec's corrected Job 2
+  section) then retire the tree. Converting 36 files' syntax just
+  before deleting most of them would be pure waste (§0.5/§16.5).
+- **A real, load-bearing bug found and fixed while mapping this.**
+  `idearium/lib/event-ledger.js` and `idearium/lib/spec-container.js`
+  are genuinely CJS (`require()`/`module.exports`, zero `import`/
+  `export` of their own) but sat inside `idearium/`'s `"type":"module"`
+  tree, so Node force-interpreted them as ES modules — every call threw
+  `ReferenceError: require is not defined in ES module scope`. Caught
+  by try/catch at both real call sites (`orchestrator/lib/sigma-writer.js`,
+  `idearium/repo/watcher.js`), so the failure was loud at the require()
+  boundary but silently absorbed one level up: `_getLedger()` had been
+  permanently null forever, and every `.spec` archive ingested through
+  `watcher.js` had been failing verification and never actually
+  ingesting, logged as if it were a hash-mismatch/corrupt-archive
+  problem — never was. Fixed by renaming both to `.cjs` (Node honors
+  that extension as CommonJS regardless of an enclosing type:module) —
+  not by rewriting them to real ESM, they never needed to be. All 3
+  real call sites updated to the explicit `.cjs` path (a bare require()
+  does not auto-resolve `.cjs`). `tests/modules/spec-container.test.js`
+  existed, was orphaned (never registered in run-all.js), and would
+  have crashed on its own require() if run — now registered, 9/9 pass
+  for real, functional coverage (hash-mismatch rejection, truncated-
+  archive detection, header parsing). New regression suite
+  `test-idearium-cjs-under-esm.js` (7 tests) pins the fix and scans
+  the rest of `idearium/` for the same pattern (found none — siso/ and
+  meta/causal-nexus/, the other two `type:module` scopes in the repo,
+  checked too, also clean). Full suite: 783 passed / 0 failed.
 
 

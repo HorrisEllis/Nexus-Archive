@@ -14,7 +14,7 @@ const fs     = require('fs');
 const os     = require('os');
 const path   = require('path');
 const crypto = require('crypto');
-const specContainer = require('../../idearium/lib/spec-container');
+const specContainer = require('../../idearium/lib/spec-container.cjs');
 
 let passed = 0, failed = 0;
 async function test(id, desc, fn) {

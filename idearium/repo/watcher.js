@@ -98,7 +98,21 @@ export class RepoWatcher {
     const fallbackName = path.basename(specPath, '.spec');
     let verified;
     try {
-      const { verifyAndDecode } = require('../../idearium/lib/spec-container.js');
+      // §FIX 2026-07-24 — this require() ALWAYS threw before the .cjs
+      // rename: idearium/package.json sets "type":"module" for its whole
+      // tree, so plain-CJS spec-container.js (require()/module.exports,
+      // zero import/export of its own) was force-interpreted as an ES
+      // module by Node, and `require('fs')` inside it threw
+      // "ReferenceError: require is not defined in ES module scope" on
+      // every single call. Caught right here by this try/catch, logged
+      // below as if it were a hash-mismatch/corrupt-archive verify
+      // failure — every .spec ingested through this path has been
+      // silently (from the caller's view) failing verification and never
+      // actually ingesting, for as long as this code has existed. Fixed
+      // by renaming the file to spec-container.cjs (Node honors .cjs as
+      // CommonJS regardless of an enclosing type:module), not by
+      // rewriting it to real ESM — it never needed to be ESM.
+      const { verifyAndDecode } = require('../../idearium/lib/spec-container.cjs');
       verified = verifyAndDecode(specPath);
     } catch (e) {
       // Hash mismatch, corrupt archive, missing archive block, or this is a

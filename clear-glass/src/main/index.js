@@ -201,9 +201,21 @@ async function acquireSingleInstanceLockOrExit() {
     return true;
   }
 
-  console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] FATAL: requestSingleInstanceLock() failed again after retry — a genuine second instance is running, not just a release race. Exiting. If this fires on every restart attempt, the real fix is autopilot's restart backoff outracing Windows' lock-file cleanup, not this process itself.`);
+  console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] requestSingleInstanceLock() failed again after retry — another instance is genuinely already running (Electron's requestSingleInstanceLock() only returns false when a live instance holds it right now — not an ambiguous "maybe a stale file" state). That instance's own 'second-instance' handler will show/focus its window. This launch has done its job just by acquiring-then-losing the lock race — exiting cleanly, not as an error. If you expected a NEW window instead, the running instance is what you're seeing (or should be — check its tray icon if tray-first hiding is on).`);
   app.quit();
-  process.exit(1); // §fix — was exit(0), which is indistinguishable from a clean shutdown in any log or monitoring tool. A lock failure is a real failure; code 1 says so.
+  // §FIX 2026-07-24 — was exit(1) with "FATAL" wording. That was correct for
+  // the 2026-06-30 case this function was originally built for (a genuine
+  // crash-loop, autopilot's own respawn outracing lock release — see the
+  // comment block above), but wrong for the much more common, completely
+  // benign case: a user (or a stray script) launches clear-glass while a
+  // legitimate instance is already running, e.g. tray-resident from an
+  // earlier session (see the idle-vs-open fix, same day — the whole POINT
+  // of that fix is clear-glass staying alive while in genuine use, which
+  // means a second launch attempt hitting this path is not just possible,
+  // it's the EXPECTED outcome of that fix working). Exiting 1/"FATAL" here
+  // misreports a working singleton handoff as a crash — to a human reading
+  // the log, and to anything that checks this process's exit code.
+  process.exit(0);
   return false;
 }
 
@@ -295,6 +307,56 @@ function _startHeartbeat() {
   ping();
   _heartbeatInterval = setInterval(ping, 10000);
   if (_heartbeatInterval.unref) _heartbeatInterval.unref();
+}
+
+// ── Idle-vs-open: tell autopilot this instance is genuinely in use ────────
+// §FIX 2026-07-24 (James) — "when the electron instance is open, it
+// shouldn't be considered idle." autopilot.js's idle reaper despawns an
+// on-demand kernel 10 minutes after its lastActivity timestamp — but
+// lastActivity was only ever set once, at requestSpawn() time (see
+// autopilot.js's requestSpawn/_startIdleReaper). Nothing in clear-glass
+// ever called autopilot's POST /touch/:name to reset that clock, so a
+// window left open and actively used for >10 minutes still got despawned
+// as idle — the process would vanish out from under an active user.
+//
+// Fix: while at least one real window is visible, ping autopilot's touch
+// endpoint periodically. Background tabs (bgTabs) deliberately do NOT
+// count — those are hidden-by-design automation contexts, not "someone is
+// looking at this," and counting them would defeat idle-despawn entirely
+// for any session that ever opened one.
+//
+// AUTOPILOT_STATUS_PORT is set on this process's env by autopilot itself
+// at spawn time (see autopilot.js's ALL_KERNELS clear-glass entry, added
+// alongside this fix — it can't be assumed to be the 7799 default, since
+// --status-port= or AUTOPILOT_STATUS_PORT could have overridden it in the
+// parent). Unset or 0 means the status server is disabled — nothing to
+// call, so this becomes a no-op rather than retrying against a server
+// that was never started.
+const AUTOPILOT_STATUS_PORT = parseInt(process.env.AUTOPILOT_STATUS_PORT || '0', 10);
+let _autopilotTouchTimer = null;
+
+function _anyWindowVisible() {
+  for (const w of windows.values()) {
+    try { if (!w.isDestroyed() && w.isVisible()) return true; } catch (_) {}
+  }
+  try { if (settingsWin && !settingsWin.isDestroyed() && settingsWin.isVisible()) return true; } catch (_) {}
+  return false;
+}
+
+function _touchAutopilotIfOpen() {
+  if (!AUTOPILOT_STATUS_PORT || !_anyWindowVisible()) return;
+  // Fire-and-forget, same convention as _postEvent — autopilot being
+  // unreachable isn't something a visibility ping should surface to the
+  // user. Worst case this cycle's touch is missed and the next one
+  // (60s later, well inside the 10-minute idle window) catches it.
+  _ncReq(AUTOPILOT_STATUS_PORT, 'POST', `/touch/${MODULE_ID}`, null, 2000);
+}
+
+function _startAutopilotActivityHeartbeat() {
+  if (_autopilotTouchTimer) return;
+  _touchAutopilotIfOpen(); // immediate — don't wait a full interval after the window that just opened
+  _autopilotTouchTimer = setInterval(_touchAutopilotIfOpen, 60000);
+  if (_autopilotTouchTimer.unref) _autopilotTouchTimer.unref();
 }
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -803,6 +865,7 @@ async function bootstrap() {
   // 14. NEXUS registration
   await _registerWithNexus();
   _startHeartbeat();
+  _startAutopilotActivityHeartbeat();
 
   // 14.5. Wire — ErosmancerOS registration + :7704 HTTP server (non-fatal)
   _startWire().catch(err => console.warn(`[ClearGlass/Wire] start failed (non-fatal): ${err.message}`));
@@ -1130,6 +1193,7 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
     win.show();
     // DevTools: F12 / Ctrl+Shift+I only — never auto-open
   });
+  win.on('show', () => _touchAutopilotIfOpen());
 
   // F12 / Ctrl+Shift+I toggles renderer DevTools
   win.webContents.on('before-input-event', (event, input) => {
@@ -1266,6 +1330,7 @@ function openSettingsWindow() {
   });
   settingsWin.loadFile(path.join(__dirname, '../../renderer/settings.html'));
   settingsWin.on('closed', () => { settingsWin = null; });
+  settingsWin.on('show', () => _touchAutopilotIfOpen());
 }
 
 function closeSettingsWindow() {

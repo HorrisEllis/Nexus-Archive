@@ -209,6 +209,19 @@ if (statusArg) {
 }
 // --status-port=0 or AUTOPILOT_STATUS_PORT=0 disables it (checked via !STATUS_PORT below).
 
+// §BUILT 2026-07-24 — clear-glass needs to know the REAL status port to call
+// POST /touch/clear-glass (see the idle-vs-open fix below), and it can't just
+// assume DEFAULT_STATUS_PORT: --status-port= or AUTOPILOT_STATUS_PORT could
+// have overridden it above. ALL_KERNELS is a plain array literal defined
+// before STATUS_PORT is resolved, so this has to happen here, not inline in
+// that literal. STATUS_PORT === 0 means the status server is disabled
+// entirely — pass 0 through so clear-glass knows not to bother calling it,
+// rather than silently retrying against a server that was never started.
+{
+  const cg = ALL_KERNELS.find(k => k.name === 'clear-glass');
+  if (cg) cg.env = { ...(cg.env || {}), AUTOPILOT_STATUS_PORT: String(STATUS_PORT) };
+}
+
 const KERNELS = ALL_KERNELS.filter(k => !ONLY_NAMES || ONLY_NAMES.has(k.name));
 
 const COLORS = ['\x1b[36m','\x1b[35m','\x1b[32m','\x1b[33m','\x1b[34m','\x1b[31m','\x1b[37m'];

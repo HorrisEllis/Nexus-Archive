@@ -71,7 +71,15 @@ function _getBus() {
 }
 function _getLedger() {
   if (_ledger) return _ledger;
-  try { _ledger = require('../../idearium/lib/event-ledger'); } catch (_) {}
+  // §FIX 2026-07-24 — this ALWAYS threw before the .cjs rename: plain-CJS
+  // event-ledger.js was force-interpreted as ESM by idearium/package.json's
+  // "type":"module" (its whole tree), so `require('fs')` inside it threw
+  // "ReferenceError: require is not defined in ES module scope" on every
+  // call. Caught right here, so _ledger has been permanently null and
+  // every record/checkAnomaly/scanInvariants call through this accessor
+  // has been a silent no-op for as long as this existed. Fixed by renaming
+  // to event-ledger.cjs, not by rewriting it to ESM — it never needed to be.
+  try { _ledger = require('../../idearium/lib/event-ledger.cjs'); } catch (_) {}
   return _ledger;
 }
 function _getCFR() {
