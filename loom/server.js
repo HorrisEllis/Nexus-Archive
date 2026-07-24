@@ -279,7 +279,17 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (method === 'GET' && p === '/health') {
-      return json(res, 200, { ok: true, systemId: SYSTEM_ID, version: VERSION });
+      // §2026-07-24 — loom is the registry authority (§17.1), so its health
+      // reports what it owns. The UI tile binds to these; without them it
+      // renders "—" forever. §12.6: every system owes a live diagnostic surface.
+      let hooks = null, components = null;
+      try { if (hookRegistry) hooks = hookRegistry.list().length; } catch (_) {}
+      try { components = require('../lib/component-registry').list().length; } catch (_) {}
+      return json(res, 200, {
+        ok: true, systemId: SYSTEM_ID, version: VERSION,
+        hooks: { total: hooks },
+        components: { total: components },
+      });
     }
 
     // Same shape as every other sovereign system's /contract (phase 137

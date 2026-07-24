@@ -202,8 +202,25 @@ async function boot() {
   // resurrect loom's deletes. Blueprint's `hooks: registry` dependency was
   // verified decorative (zero registry calls in Blueprint.js) but is kept
   // wired for the read surface it was presumably meant to have.
+  //
+  // §FIX 2026-07-24 (§10.3 competing truth, found in a live boot log):
+  // architect reported "replayed 269 hooks" while loom's canonical registry
+  // reported 230 — because this registry was reading architect's PRIVATE
+  // store (createJAA(DATA_DIR) → architect/data/), a second hooks database
+  // nothing else could see, holding stale rows from before the migration.
+  // The read view must read the SAME data loom writes: the canonical Cortex
+  // store. Architect's own tables (snr_results, spec_wizard_sessions,
+  // topology_maps, its event_log) stay on its local store — only the hook
+  // registry is repointed, so this is a read-surface correction, not a
+  // storage migration.
   console.log('[architect] §3.1 Phase 2: Hook Registry (read view — loom owns writes)');
-  const registry = new HookRegistry({ jaa, busEmit });
+  let hookJaa = jaa;
+  try {
+    hookJaa = require('../cortex/memory/jaa-db').jaaDB;
+  } catch (e) {
+    console.warn(`[architect] canonical hook store unavailable (${e.message}) — falling back to local store; hook counts may diverge from loom (§10.3)`);
+  }
+  const registry = new HookRegistry({ jaa: hookJaa, busEmit });
   registry.init();
 
   // Phase 4 HARD: Spec Engine

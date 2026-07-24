@@ -261,3 +261,34 @@ spec:
       verify against real rows. Step (a) requires a live system, i.e. James's
       machine, not this sandbox.
     axioms_engaged: [§8.4, §1.1, §16.5, §16.7, §10.3, §0.1]
+
+  # ── ADDENDUM 2026-07-24 — §10.3 ROOT CAUSE FOUND AND CLOSED (live boot log) ──
+  the_269_vs_230_divergence:
+    observed: >
+      Live boot: loom reported "hook registry active — 230 hooks (write
+      authority)" while architect reported "replayed 269 hooks". Two systems,
+      both claiming the hooks, disagreeing — visible on the dashboard.
+    root_cause: >
+      NOT a code-path subtlety — TWO SEPARATE DATABASES. Loom's HookRegistry was
+      built on require('../cortex/memory/jaa-db').jaaDB (the canonical Cortex
+      store). Architect's was built on createJAA(DATA_DIR) → architect/data/ —
+      its own PRIVATE store, holding 269 stale rows from before the 2026-07-20
+      ownership migration, invisible to every other system.
+    why_the_migration_missed_it: >
+      hooks-migration.spec moved WRITE AUTHORITY to loom and made architect a
+      read view — correctly. But it never checked that the read view was reading
+      the SAME STORE. Ownership moved; the data source did not follow.
+    fix_applied:
+      - "architect/service.js: HookRegistry now constructed with the canonical jaa-db. Falls back to the local store with a LOUD warning if unavailable (§1.2), never silently diverges again."
+      - "Architect's OWN tables (snr_results, spec_wizard_sessions, topology_maps, its event_log) stay on its local store — this is a read-surface correction, not a storage migration."
+      - "UI identity corrected in all 3 shells: architect's description changed from 'Hook registry, SNR gate, blueprint engine, topology scanner' to 'Builds architecture for specs and repositories. SNR gate, blueprint engine.' The Hooks metric moved OFF architect's tile."
+      - "LOOM GIVEN ITS OWN TILE — it had none in any shell despite being the registry authority. 'Builds and maps NEXUS. Component, hook, wire, and seam registry + contracts.' Shows Hooks + Components."
+      - "loom /health extended to report hooks.total and components.total (§12.6 — the tile needs real fields; a system that owns a registry must be able to report it)."
+    verified: "Both registries now resolve to the same store — proven by constructing both against jaa-db and comparing counts. 2 new pinning tests (T-007, T-008). Suite 724/0."
+    projection_now_works: >
+      Same boot also confirmed FIX-ROADMAP-62's projection finally firing:
+      "[architect/hooks-sync] 226 created, 0 updated, 0 unchanged, 0 failed
+      (226 canonical components)" — hooks are now genuinely DERIVED from the
+      canonical component registry, and persisted (230 rows on disk = 226
+      projected + 4 seeded). P1's blocker is gone.
+    axioms_engaged: [§10.3, §17.1, §8.4, §1.2, §12.6, §5.3]

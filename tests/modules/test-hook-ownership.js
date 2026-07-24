@@ -74,5 +74,21 @@ test('T-006', 'old class location is gone — one shared source (§10.3)', () =>
   assert.ok(fs.existsSync(path.join(__dirname, '../../lib/hook-registry.js')));
 });
 
+
+test('T-007', 'architect reads the CANONICAL hook store, not a private one (§10.3)', () => {
+  // The 269-vs-230 divergence: architect built its HookRegistry on
+  // createJAA(DATA_DIR) — its own private store — so it reported a stale hook
+  // count nothing else could see. The read view must read what loom writes.
+  assert.ok(/cortex\/memory\/jaa-db/.test(archSrc),
+    'architect must require the canonical jaa-db for its hook registry');
+  assert.ok(/new HookRegistry\(\{\s*jaa:\s*hookJaa/.test(archSrc),
+    'architect HookRegistry must be constructed with the canonical store, not its local jaa');
+});
+
+test('T-008', 'loom /health reports the registry it owns (§12.6)', () => {
+  assert.ok(/hooks:\s*\{\s*total/.test(loomSrc), 'loom health must report hook total');
+  assert.ok(/components:\s*\{\s*total/.test(loomSrc), 'loom health must report component total');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
