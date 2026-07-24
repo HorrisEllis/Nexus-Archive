@@ -1602,8 +1602,24 @@ function _kernelEmit(type, data, ts) {
 
 // Event ledger — §LAW II: every bus emit written to ledger first
 // ── CFR-Ω Ledger — every bus.emit written with sigma + delta + CFR snapshot ──
+// §CONSOLIDATION 2026-07-24 — James: data is "stored in cortex" (his
+// 2026-07-18 directive, "migrate all of the data nexus uses to cortex",
+// reconfirmed today over the mind map's P0.1 out-migration, which is now
+// dead). This ledger was the flagged straggler: the 2026-07-18 migration
+// comment below says cfr_state.json/event_stats.json's "actual writer
+// wasn't found in this file to migrate safely" — the writer was THIS LINE,
+// ~60 lines above that comment, the whole time. ledgerDir pointed at
+// guardian/memory_store/ — the legacy SOURCE-TREE folder, holding an
+// 8.7MB live event_log.jsonl entirely outside the data/ root. Moved to
+// data/guardian/ledger/cfr — the exact pattern bridge already uses
+// (data/bridge/ledger/cfr, bridge/index.js:73). CFR stream/state files
+// are append-only jsonl + single-object JSON snapshots, NOT row-based
+// tables, so they belong under the cortex-governed data root as files —
+// not inside the shared JaaStore (the 07-18 comment's reasoning on that
+// point was correct and stands). Existing memory_store files migrated
+// once by copy; originals left untouched (§7.4 archived, not discarded).
 const _evLedger = createCFRLedger({
-  ledgerDir: require('path').join(__dirname, 'memory_store'),
+  ledgerDir: require('path').join(__dirname, '..', 'data', 'guardian', 'ledger', 'cfr'),
   systemId:  'guardian',
   onEvent:   null, // downstream consumers can add onEvent hooks here
   onGap: (gap) => {

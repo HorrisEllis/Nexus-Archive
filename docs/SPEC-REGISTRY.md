@@ -271,3 +271,41 @@ not built. Full suite (module tests only, `pipeline.test.js` is a
 separate top-level suite outside `run-all.js`): 810 passed / 0 failed.
 
 
+
+## Session 2026-07-24 (cont.) — storage direction DECIDED, first consolidation executed
+
+James resolved the §10.3 competing-truth between his own two directives:
+his 2026-07-18 "migrate all of the data nexus uses to cortex" (executed:
+guardian_/idearium_ tables in the shared store) vs the 2026-07-21 mind
+map's P0.1 "migrate strays to owners" (out-migration, never executed).
+**His word: "1. stored in cortex." P0.1's out-migration is DEAD.** The
+consolidation direction stands; remaining work is completing it, not
+reversing it.
+
+First straggler consolidated same turn: guardian's CFR ledger
+(cfr_state.json / event_stats.json / event_log.jsonl — 8.7MB live).
+The 2026-07-18 migration comment claimed its writer "wasn't found in
+this file to migrate safely" — the writer was in the SAME FILE, ~60
+lines above that comment (guardian/server.js:1606,
+ledgerDir: guardian/memory_store/ — a live write target inside the
+SOURCE tree, outside data/ entirely). Moved to data/guardian/ledger/cfr
+(bridge's exact existing pattern). Data migrated by copy, byte-exact
+verified; originals archived in place (§7.4). Functional resume proven:
+30 event types + non-default CFR field (friction 0.0941, regime
+resonant) loaded from the migrated files, not fresh defaults. CLI
+helper paths updated (cfr-debug examples, diagnose listing). Pinned:
+test-guardian-cfr-consolidation.js (5 tests incl. a repo-wide
+live-reference scan). Suite: 836/0.
+
+**Consolidation still remaining (mapped, not yet executed):** (a) the
+dual ledger roots — guardian-service/diagnostic/bridge services write
+data/<system>/ledger/*.ndjson while the canonical hook tree is
+data/ledger/<system>/<hook>/<day>.jsonl; two truths about what
+happened. (b) orchestrator's CFR ledger writes loose files at the
+data/ledger TREE ROOT (event_log.jsonl, cfr_state.json,
+event_stats.json, orchestrator.jsonl mixed among system dirs) —
+untidy but already under the data root; lower priority than (a).
+(c) ~35 assorted flat data files across architect/bridge/diagnostic/
+emerge/orchestrator that never went through any migration — need
+per-file writer identification before touching, same discipline as
+this one.

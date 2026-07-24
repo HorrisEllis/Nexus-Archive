@@ -433,11 +433,11 @@ ${col(C.bold, 'Commands:')}
   ${col(C.cyan, 'root-cause')} <jobId> <ledger.jsonl>     Root cause for a job ID
 
 ${col(C.bold, 'Examples:')}
-  node cli/cfr-debug.js replay guardian/memory_store/event_log.jsonl
+  node cli/cfr-debug.js replay data/guardian/ledger/cfr/event_log.jsonl
   node cli/cfr-debug.js replay data/cortex/event_log.jsonl --min-sigma=0.5
-  node cli/cfr-debug.js watch  guardian/memory_store/event_log.jsonl
+  node cli/cfr-debug.js watch  data/guardian/ledger/cfr/event_log.jsonl
   node cli/cfr-debug.js live   http://127.0.0.1:7820
-  node cli/cfr-debug.js root-cause abc123 guardian/memory_store/event_log.jsonl
+  node cli/cfr-debug.js root-cause abc123 data/guardian/ledger/cfr/event_log.jsonl
 `);
 }
 

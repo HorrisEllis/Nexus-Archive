@@ -70,6 +70,8 @@ const SUITES = [
   'test-cortex-heartbeat.js',
   'test-tablet-ledger-api.js',
   'test-autopilot-warp-spine.js',
+  'test-guardian-cfr-consolidation.js',
+  'test-ico-ledger-writethrough.js',
   'test-consumer-registry.js',
   'test-spawn-guard.js',
   'test-capability-registry.js',

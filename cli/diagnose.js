@@ -467,7 +467,7 @@ async function diagGuardian() {
     ['guardian/lab/lab.js',             'LLM testing lab'],
     ['guardian/interaction-contract.json', 'API contract declaration'],
     ['lib/ncp.js',                      'NCP — _write() must be inside createNCPServer'],
-    ['guardian/memory_store',           'JAA store directory'],
+    ['data/guardian/ledger/cfr',        'guardian CFR ledger (moved from guardian/memory_store 2026-07-24)'],
   ];
   const SOFT_FILES = [
     ['guardian/ui/index.html',          'Forge IDE UI'],
