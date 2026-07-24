@@ -232,8 +232,14 @@ State the current phase, last known state, active bugs, and intent before any im
 **§8.2 Nothing Passes the Idea Gate Without Surviving Hostile Review**
 Every idea must survive adversarial pressure before it becomes a spec.
 
-**§8.3 SISO and Jaa Are Load-Order Prerequisites**
-If SISO and Jaa are not present at session start, await upload before proceeding.
+**§8.3 WARP and Jaa Are Load-Order Prerequisites**
+If WARP and Jaa are not present at session start, await upload before proceeding.
+
+**§8.4 Don't go in blind.**
+Always scan the file and the dependancies and consumers before changing and editing any file or code. Always check within nexus first, try to always account redundancy.
+
+**§8.5 Always use the Component achitecture.**
+Always use a component based architecture. The core components that are immutable are what make up the code/foundation. The kernal, engine and/or runtime that the entire project relies on. Do not build anything, without creating a spec file first. The rest is additive to the foundation. Modules/components are isolated and connected via an event bus. The backend code first, foundation first, config files, components with component id/parent/child id for each module and how it connects to the foundation, using the hook and wire registry with consumers and context to map the system completely, then the event bus, then each module one at a time, js first, config, manifest, registry and readme, then the js, then the next module/component. then once each component is complete, then the event driven interaction contract with handshake verification. ui last using the interaction contract and toasts for errors. event ledgers with each type, time of event, relation, and context. each interaction uses a gated event listener with a toast for errors, and event logging to the ledger.
 
 ---
 

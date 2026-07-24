@@ -1,5 +1,39 @@
 # NEXUS Changelog
 
+## 2026-07-21 — RAID as universal entry point (the spine): start-point-agnostic routing
+
+James named the actual architecture: "the request comes from co-pilot or one
+of the UIs, but goes to RAID — the start point doesn't matter, as long as it
+goes to RAID." RAID is the switchboard for the whole system; Cortex is the
+flight recorder. Every surface funnels to RAID, RAID routes, no surface holds
+a hard pointer to any fulfilling system, and every system is hot-swappable.
+
+Built (all bus-dispatched, per James's explicit "yes" to bus over HTTP):
+- cortex/core/raid/envelope.js — the universal request shape every surface
+  produces. Carries a `trail` that logs every system+status+ts it passes
+  through (the "input → tagged → output, every hop logged" ledger). stamp()
+  is immutable — nothing lost (§0.3).
+- cortex/core/raid/router.js — any surface emits raid.route.request; router
+  resolves the target via the LIVE capability-registry (Phase B, hot-swappable),
+  emits raid.route.decided; target fulfills → raid.route.fulfilled; surface
+  hears it over SSE. No match → raid.route.no_route (honest, §1.2). RAID names
+  the target, never calls it — fully decoupled. New decision path; does NOT
+  touch _decide()'s existing provider selection.
+- Wired live in cortex boot, fed the real capability-registry.
+
+Verified against the REAL 217-capability registry: "gap" from copilot →
+idearium, "guardian" from cli → guardian — both routed with no surface knowing
+the target; nonsense → no_route. Hot-swap proven: swap the provider in the
+registry, RAID routes to the new one, caller unchanged (R-002).
+
+10 router tests + envelope tests. raid.spec → 6.3.0 (universal_router addendum).
+Suite: 724 passed, 0 failed.
+
+Follow-on (incremental, not this commit): convert each surface to route-through-
+RAID one at a time, each verified, system booting throughout. The spine is in
+and proven; the migration rides on top of it.
+
+
 ## 2026-07-20 (later) — hook registry: architect → loom migration (§10.1 ownership correction)
 
 James: architect "got hook duty, never intended — it's supposed to build

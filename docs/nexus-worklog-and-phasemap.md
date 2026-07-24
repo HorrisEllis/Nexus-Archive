@@ -24,6 +24,16 @@ Full detail in CHANGELOG.md. In brief, all with tests, ending at 699 passed / 0 
 - ACTUAL BUG (autopilot.js:560): `requestSpawn`'s guard only skips re-spawn for status `'running'`/`'stable'`. A clear-glass mid-crash-loop is `'starting'`/`'restarting'`/`'crashed'` — guard misses it, `_spawnKernel` runs again, two Electron instances race the lock.
 - STILL TO VERIFY before the fix: exact state-string values the supervisor sets during restart, so the widened guard matches reality (one more trace, not an assumption).
 
+## Phase RAID-SPINE — universal entry point — ✓ DONE 2026-07-21  [the architecture James named]
+Any surface → RAID → target, start-point-agnostic, bus-dispatched, Cortex logs every hop.
+envelope.js (universal request shape + immutable trail ledger) + router.js (resolve
+target via live capability-registry, raid.route.request → decided → fulfilled/no_route).
+Hot-swappable: swap provider in registry, RAID routes to new one, no surface changes.
+Verified live vs real 217-cap registry (copilot→idearium, cli→guardian). RAID names
+target, never calls it. New path, doesn't touch _decide() provider selection. raid.spec
+6.3.0. 10 tests. Suite 724/0. FOLLOW-ON: convert each surface to route-through-RAID,
+one at a time, verified, booting throughout.
+
 ## Forward phasemap — bottom-up, smallest first
 
 ### Phase A — clear-glass spawn-guard fix  [SMALLEST, do first]

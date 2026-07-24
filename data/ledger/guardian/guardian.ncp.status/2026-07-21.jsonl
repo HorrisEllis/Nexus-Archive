@@ -1,1 +1,2 @@
 {"uuid":"db6acee3-7f27-4576-967f-1b5388329985","system":"guardian","component":"guardian.ncp.status","action":"registered","status":"ok","tags":[],"detail":"Guardian NCP provider status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1784593757367}
+{"uuid":"43307a62-33a5-465b-861d-07260189dea5","system":"guardian","component":"guardian.ncp.status","action":"registered","status":"ok","tags":[],"detail":"Guardian NCP provider status","causedBy":"guardian","contractUuid":null,"session":null,"ts":1784621033192}

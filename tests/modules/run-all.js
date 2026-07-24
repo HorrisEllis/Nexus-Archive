@@ -61,6 +61,7 @@ const SUITES = [
   'test-hook-ownership.js',
   'test-spawn-guard.js',
   'test-capability-registry.js',
+  'test-raid-router.js',
   'test-snr-filter.js',
   'test-ui-registry.js',
   // Added 2026-07-06 — built alongside cortex/core/raid/snr-filter.js and

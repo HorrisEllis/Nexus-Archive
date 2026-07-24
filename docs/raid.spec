@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        raid
-    version:     6.2.0
+    version:     6.3.0
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-raid-v1-0000-2026-0615-jamesbrooks-001
     purpose: >
@@ -48,3 +48,36 @@ spec:
       denies 'tool' explicitly.
     consumer: guardian/agents/co-pilot — see docs/copilot.spec
     tests: "9/9 PASSING — tests/modules/raid-approve-tool.test.js"
+
+  # ── ADDENDUM 2026-07-21 (v6.3.0) — RAID as universal entry point ──
+  universal_router:
+    principle: >
+      James, 2026-07-21: "the request comes from co-pilot or one of the UIs,
+      but goes to RAID — that way the start point doesn't matter, as long as
+      it goes to RAID." RAID is the switchboard for the WHOLE system, not just
+      provider selection. Any surface (Co-pilot, any UI, CLI, SSE flow) funnels
+      every request to RAID; RAID routes; no surface knows about any fulfilling
+      system; every fulfilling system is hot-swappable.
+    two_decisions: >
+      RAID now decides TWO things, on two independent paths that don't touch
+      each other: (1) which AI AGENT — the existing _decide() (ollama first,
+      claude last, pure); (2) which SYSTEM fulfills a request — the NEW router
+      (cortex/core/raid/router.js).
+    mechanism:
+      - "cortex/core/raid/envelope.js — the universal request shape. Every surface wraps its request in make(intent, {from, payload, capability?}). The envelope accumulates a `trail` (every system + status + ts it passed through) — the 'input → tagged → output, every hop logged' ledger."
+      - "Any surface emits raid.route.request { envelope }."
+      - "Router resolves the target via the LIVE capability-registry (Phase B) — hot-swappable: swap the provider, the registry re-announces, RAID routes to the new one, no surface changes. Capability namespace = owning system (idearium.gap.find → idearium), no separate mapping table (§10.1)."
+      - "Router stamps ROUTED, emits raid.route.decided { envelope, capability }. Target system subscribes and checks envelope.target === its id — RAID names the target, never calls it (fully decoupled)."
+      - "Target calls fulfill() → raid.route.fulfilled/failed. Surface hears the answer over SSE."
+      - "No match → raid.route.no_route, honest, never silently dropped (§1.2)."
+    verified: >
+      Live against the real 217-capability registry: 'gap' from copilot → idearium,
+      'guardian' from cli → guardian, both resolved with no surface knowing the
+      target; nonsense intent → no_route. 10 unit tests (test-raid-router.js) incl.
+      start-point-agnostic (R-001) and hot-swap (R-002). §14.4: router never
+      consumes its own emissions.
+    not_yet: >
+      Surfaces still call systems the old (hard-pointer) way in most paths. This
+      landed the SPINE + proved it with the router live in cortex boot. Converting
+      each surface to route-through-RAID is the incremental follow-on — one surface
+      at a time, each verified, system booting throughout (the bottom-up plan).

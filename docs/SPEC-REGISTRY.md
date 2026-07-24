@@ -136,3 +136,15 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `nexus-intelligence-system.spec` | 0.1.0 | 2026-07-01 | proposed — master spec for the 7-layer intelligence stack. Names the three genuine gaps and the dependency-ordered 8-phase build path to close them. |
 
 | `alk-gl-intelligence-canvas.spec` | 0.1.0 | 2026-07-01 | proposed — new driver module `canvas-intelligence.js` reading from intelligence system instead of audio. ALK-GL, canvas-cfr pattern, Eravos organisms all unchanged. One new data source. Phase 1-6 build order inside. |
+
+## Session 2026-07-20/21 — organs, spine, consolidation (§6.3 entries on creation)
+
+| Spec | Version | Last drift-check | Status |
+|---|---|---|---|
+| `hooks-migration.spec` | 1.0.0 | 2026-07-20 | ✓ Phase 1 IMPLEMENTED same session. Registry class → lib/hook-registry.js (git mv); loom = write authority (seed+sync+CRUD/wire); architect = read view + 410 pointer; orchestrator proxy reads→architect writes→loom. Blueprint's registry dep verified decorative (grep -c: 0). 6 ownership tests. |
+| `registry-consolidation.spec` | 0.1.0-spec | 2026-07-21 | SPEC ONLY, no code. Maps all 3 registries + their real consumers (component: 12+, hook: 6, wire/seam: none-exists). §8.5 mandates the MISSING consumer side. 4 phases, P1 = consumer side on hook-registry (smallest, loom already owns it). Architect-fork objection recorded per §8.2/§17.3, OPEN. |
+| `handshake-ledger.spec` | 0.1.0-spec | 2026-07-20 | SPEC ONLY, deliberately not built. Signed cross-system handoff receipts; bridge = sole writer (§10.1); RFR2 CQL = verification surface; 5 laws incl. no eternal 'pending'. Written spec-first so it doesn't become unspecced module #13. |
+| `raid.spec` (addendum) | 6.3.0 | 2026-07-21 | ✓ UPDATED — universal_router addendum. RAID now decides TWO things on independent paths: which AI agent (existing _decide, untouched) and which SYSTEM fulfills a request (new router.js + envelope.js). Verified live vs real 217-cap registry. |
+| `cortex.spec` (addendum) | 3.3.0 | 2026-07-20 | ✓ UPDATED — organs Phases 0-6 addendum, event-name corrections (deployed contract is `escalation.friction.increased`/`newFric`), foundation fixes (3 jaa-store _matches bugs at source), pressure reflex. Closes one of the 10 drift gaps. |
+| `escalation.spec` (addendum) | 1.2.0 | 2026-07-20 | ✓ UPDATED — BUILT + new `nexus.resource.pressure` input → memory_pressure fault class. Oscillation damping NAMED as future work, not built. |
+| `self-heal.spec` (addendum) | 1.1.0 | 2026-07-20 | ✓ UPDATED — BUILT. 5-level ladder, level from fault_taxonomy count, L2 propose-only. SEMANTIC_GAP_TYPES flagged as a §7.2 judgment call, not found spec. |

@@ -1,0 +1,2 @@
+{"uuid":"65b1e5ea-6a07-460a-abb1-94095400b6d1","system":"test","component":"test.widget.panel","action":"registered","status":"ok","tags":[],"detail":"test-only component for mutation-contract verification","causedBy":null,"contractUuid":null,"session":null,"ts":1784855581699}
+{"uuid":"0b2ffa4d-b084-47fe-9e6c-276078b6dece","system":"test","component":"test.widget.panel","action":"registered","status":"ok","tags":[],"detail":"test-only component for mutation-contract verification","causedBy":null,"contractUuid":null,"session":null,"ts":1784855767486}

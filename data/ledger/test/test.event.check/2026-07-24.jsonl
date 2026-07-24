@@ -1,0 +1,2 @@
+{"uuid":"51f2d201-7b52-4ab8-bee4-610b17591c20","system":"test","component":"test.event.check","action":"registered","status":"ok","tags":[],"detail":"Test event emission","causedBy":null,"contractUuid":null,"session":null,"ts":1784855579803}
+{"uuid":"2e0966e0-54ff-4c77-b0c4-1331c791c884","system":"test","component":"test.event.check","action":"registered","status":"ok","tags":[],"detail":"Test event emission","causedBy":null,"contractUuid":null,"session":null,"ts":1784855765640}

@@ -1,0 +1,2 @@
+{"uuid":"79e00f24-3d0a-4778-b28b-abcd049ee3d3","system":"test","component":"test.echo.ping","action":"registered","status":"ok","tags":[],"detail":"test-only component for grammar-fallback verification","causedBy":null,"contractUuid":null,"session":null,"ts":1784855581508}
+{"uuid":"edb57602-e0b6-424b-9d2e-1e229f978499","system":"test","component":"test.echo.ping","action":"registered","status":"ok","tags":[],"detail":"test-only component for grammar-fallback verification","causedBy":null,"contractUuid":null,"session":null,"ts":1784855767285}

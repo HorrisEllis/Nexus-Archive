@@ -1136,6 +1136,19 @@ server.listen(PORT, '127.0.0.1', () => {
       console.warn(`[cortex] ${organ.name} failed to start: ${e.message}`);
     }
   }
+  // §2026-07-21 — RAID universal entry point. Any surface emits
+  // raid.route.request; the router resolves the target via the live
+  // capability-registry (hot-swappable) and emits raid.route.decided. Start
+  // point doesn't matter — everything funnels to RAID, RAID routes, Cortex
+  // logs every hop. Fed the same capability-registry Phase B exposed.
+  try {
+    const capabilityRegistry = require('../lib/capability-registry');
+    try { capabilityRegistry.init(require('../lib/component-registry')); } catch (_) {}
+    require('./core/raid/router').init({ bus, capabilityRegistry });
+    console.log('[cortex] raid/router active — universal entry point (any surface → raid.route.request → raid.route.decided)');
+  } catch (e) {
+    console.warn(`[cortex] raid/router failed to start: ${e.message}`);
+  }
   try {
     require('./intelligence').init({});
     console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active');
