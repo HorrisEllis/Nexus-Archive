@@ -367,9 +367,21 @@ function _spawnKernel(kernel, color) {
     s.lastExit = { code, signal, ts: Date.now() };
     if (s.stableTimer) { clearTimeout(s.stableTimer); s.stableTimer = null; }
 
-    if (s.status === 'stopping') {
-      s.status = 'stopped';
-      _log(`${color}[${kernel.name}]${RESET} stopped cleanly (autopilot shutdown)`);
+    // §FIX 2026-07-24 — an INTENTIONAL stop is not a crash. Two statuses mean
+    // "autopilot did this on purpose": 'stopping' (global shutdown) and
+    // 'dormant' (idle reaper despawning an on-demand kernel).
+    // The idle reaper's deliberate SIGTERM was previously counted as crash 1/6,
+    // which triggered an immediate restart that raced the dying Electron's
+    // single-instance lock → exit(1) → crash 2/6 … → CIRCUIT BREAKER TRIPPED.
+    // The whole clear-glass restart storm came from despawn being misread as
+    // failure. (§1.2 — the log said "despawning (on-demand)" and then
+    // "crashes in window: 1/6" one line later; the system was lying to itself.)
+    if (s.status === 'stopping' || s.status === 'dormant') {
+      const wasIdleDespawn = s.status === 'dormant';
+      s.status = wasIdleDespawn ? 'dormant' : 'stopped';
+      _log(`${color}[${kernel.name}]${RESET} ${wasIdleDespawn
+        ? 'despawned cleanly (idle, on-demand — will respawn on request)'
+        : 'stopped cleanly (autopilot shutdown)'}`);
       return;
     }
 
@@ -602,8 +614,12 @@ function _startIdleReaper() {
       if (idleMs > (kernel.idleTimeoutMs || Infinity)) {
         _log(`[${kernel.name}] idle for ${Math.round(idleMs / 1000)}s — despawning (on-demand)`);
         _logOnDemandEvent('autopilot.despawn.idle', { kernel: kernel.name, idleMs });
-        try { s.proc.kill('SIGTERM'); } catch (_) {}
+        // §FIX 2026-07-24 — set status BEFORE kill(). The exit handler reads
+        // s.status to decide crash-vs-intentional; if kill() fires the exit
+        // callback before this assignment lands, the despawn is misread as a
+        // crash and the restart storm begins.
         s.status = 'dormant';
+        try { s.proc.kill('SIGTERM'); } catch (_) {}
       }
     }
   }, 30000);

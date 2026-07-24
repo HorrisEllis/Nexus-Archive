@@ -35,9 +35,28 @@ const { JaaStore } = require('../../guardian/jaa-store');
 const DATA_DIR = path.join(__dirname, '../../data/cortex/memory');
 
 // Singleton — one store for the whole process
+//
+// §MEASURED 2026-07-24: the store is 14MB on disk and NINE processes each
+// load all of it (cortex, guardian, orchestrator, loom, copilot, diagnostic,
+// idearium, healer, agents) — roughly 400-600MB of RAM across the system
+// holding nine copies of the same tables. That is the driver behind the
+// recurring "free memory < 20%" pressure, the 0xC0000409 crashes, and the
+// ERR_NO_BUFFER_SPACE socket exhaustion in the 2026-07-24 boot log.
+//
+// 77% of the store is TWO tables — idearium_spec_chunks (5.4MB) and
+// idearium_spec_manifests (5.4MB) — whose ONLY consumers are
+// idearium/spec-engine/index.js and idearium/lib/cortex-listeners.js
+// (verified by grep, not assumed). Eight processes were holding 10.8MB each
+// of data they never touch.
+//
+// These are skipped at preload. They still lazy-load on first access, so
+// idearium reads them exactly as before — it just pays the load cost once,
+// and nobody else pays it at all. No caller's behavior changes (§5.14).
+const HEAVY_SINGLE_CONSUMER_TABLES = ['idearium_spec_chunks', 'idearium_spec_manifests'];
+
 let _store = null;
 function _getStore() {
-  if (!_store) _store = new JaaStore(DATA_DIR);
+  if (!_store) _store = new JaaStore(DATA_DIR, { skipTables: HEAVY_SINGLE_CONSUMER_TABLES });
   return _store;
 }
 

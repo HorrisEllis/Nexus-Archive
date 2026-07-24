@@ -414,6 +414,21 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Consumer graph (§8.5) ────────────────────────────────────────────────
+  // The bidirectional map: who produces what, who consumes it, and what is
+  // emitted into the void. Derived from observed behaviour, never declared.
+  if (p === '/api/consumers') {
+    try {
+      const cr = require('../lib/consumer-registry');
+      const view = url.searchParams.get('view');
+      if (view === 'unconsumed') return json(res, 200, cr.unconsumed());
+      if (view === 'producers')  return json(res, 200, { producers: cr.producers() });
+      return json(res, 200, cr.graph());
+    } catch (e) {
+      return json(res, 503, { ok: false, error: `consumer-registry unavailable: ${e.message}` });
+    }
+  }
+
   // ── Gaps ─────────────────────────────────────────────────────────────────
   if (p === '/api/gaps') {
     if (method === 'POST') {
@@ -1136,11 +1151,21 @@ server.listen(PORT, '127.0.0.1', () => {
       console.warn(`[cortex] ${organ.name} failed to start: ${e.message}`);
     }
   }
-  // §2026-07-21 — RAID universal entry point. Any surface emits
-  // raid.route.request; the router resolves the target via the live
-  // capability-registry (hot-swappable) and emits raid.route.decided. Start
-  // point doesn't matter — everything funnels to RAID, RAID routes, Cortex
-  // logs every hop. Fed the same capability-registry Phase B exposed.
+  // §Phase P1 2026-07-24 — the CONSUMER side of the registry (§8.5).
+  // Scan found: hook_bindings EMPTY (wire() only reachable via loom's HTTP
+  // route, nothing calls it), component.events populated on 0 of 217. So
+  // relationships are not DECLARED anywhere — but they ARE observable:
+  // event_log holds real producer data, and this bus knows its subscribers.
+  // Wired here specifically because subscriber counts can only be read from
+  // inside a process that holds the bus.
+  try {
+    const consumerRegistry = require('../lib/consumer-registry');
+    const { jaaDB } = require('./memory/jaa-db');
+    consumerRegistry.init({ jaa: jaaDB, bus });
+    console.log('[cortex] consumer-registry active — derives producer/consumer graph from observed behaviour (event_log + live bus)');
+  } catch (e) {
+    console.warn(`[cortex] consumer-registry failed to start: ${e.message}`);
+  }
   try {
     const capabilityRegistry = require('../lib/capability-registry');
     try { capabilityRegistry.init(require('../lib/component-registry')); } catch (_) {}

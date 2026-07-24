@@ -59,6 +59,8 @@ const SUITES = [
   'test-boot-phases.js',
   'test-sigma-compaction.js',
   'test-hook-ownership.js',
+  'test-jaa-selective-load.js',
+  'test-consumer-registry.js',
   'test-spawn-guard.js',
   'test-capability-registry.js',
   'test-raid-router.js',

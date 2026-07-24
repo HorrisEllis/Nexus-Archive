@@ -43,6 +43,22 @@ test('T-003', 'unknown kernel is rejected cleanly', async () => {
   assert.strictEqual(r.ok, false);
 });
 
+
+test('T-004', 'an idle despawn (dormant) is NOT counted as a crash — the restart-storm root cause', () => {
+  // Live log 2026-07-24: "idle for 630s — despawning (on-demand)" was followed
+  // one line later by "crashes in window: 1/6", then a restart that raced the
+  // dying Electron's lock -> 6 crashes -> CIRCUIT BREAKER TRIPPED.
+  const src = require('fs').readFileSync(require('path').join(__dirname,'../../autopilot.js'),'utf8');
+  assert.ok(/s\.status === 'stopping' \|\| s\.status === 'dormant'/.test(src),
+    'exit handler must treat dormant (idle despawn) as an intentional stop, not a crash');
+  // and the status must be set BEFORE the kill, or the exit can race it
+  const reaper = src.slice(src.indexOf('_startIdleReaper'));
+  const setIdx = reaper.indexOf("s.status = 'dormant'");
+  const killIdx = reaper.indexOf("s.proc.kill('SIGTERM')");
+  assert.ok(setIdx > -1 && killIdx > -1 && setIdx < killIdx,
+    'dormant status must be assigned before kill() to avoid the exit-callback race');
+});
+
 (async () => {
   for (const { id, desc, fn } of _t) {
     try { await fn(); console.log(`  ✓ ${id} ${desc}`); passed++; }

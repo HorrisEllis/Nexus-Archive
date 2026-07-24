@@ -292,3 +292,37 @@ spec:
       canonical component registry, and persisted (230 rows on disk = 226
       projected + 4 seeded). P1's blocker is gone.
     axioms_engaged: [§10.3, §17.1, §8.4, §1.2, §12.6, §5.3]
+
+  # ── ADDENDUM 2026-07-24 — P1 BUILT (consumer side), derived not declared ──
+  p1_implemented:
+    scan_findings_that_shaped_it:
+      - "hook_bindings: EMPTY. wire()/unwire()/_bindings all exist and work, but wire() is reachable ONLY from loom/server.js:239 (HTTP route). Nothing calls it automatically. Live boot: 230 hooks, 0 bindings."
+      - "component.events: the field exists on all 217 components, populated on ZERO. The schema has the slot; nothing fills it."
+      - "event_log: 738 real events across 15 distinct sources — REAL producer data."
+      - "nexus-bus on(type,fn): subscribers observable at runtime via listenerCount."
+    conclusion: >
+      Relationships are NOT declared anywhere in this system — but they ARE
+      observable. Building a query over hook_bindings would have returned
+      '0 consumers' for all 230 hooks: technically correct, practically
+      meaningless. So the consumer registry DERIVES the graph from what the
+      system actually did (§13.4 — the map must match the territory; a
+      hand-maintained wiring list is a second truth layer waiting to diverge).
+    built: lib/consumer-registry.js
+      producers: "mined from event_log — source → event types emitted, with counts"
+      consumers: "read from the live bus — listenerCount per event type"
+      unconsumed: "produced types with zero live subscribers — 'emitted into the void'"
+      graph: "the bidirectional map §8.5 asks for"
+    critical_safety_1_2: >
+      consumers() returns NULL, not 0, when the bus is unavailable — 'unknown'
+      and 'nobody' are different answers, and conflating them would falsely
+      report every hook in the system as dormant. unconsumed() likewise returns
+      {observed:false} rather than claiming everything is unconsumed. Two tests
+      pin exactly this (T-003, T-004).
+    wired: "cortex/boot.js — specifically there, because subscriber counts can only be read from inside a process that holds the bus. Exposed at GET /api/consumers[?view=unconsumed|producers]."
+    verified_against_real_data: "15 sources, 27 producer→event edges, 23 distinct event types mined from the live 738-event log."
+    honest_limit: >
+      Subscriber counts reflect ONE process's bus (cortex). Cross-process
+      consumers are not yet visible — a system subscribing in its own process
+      is invisible here. Named, not hidden. Closing that needs each process to
+      report its subscriptions, which is a further phase.
+    axioms_engaged: [§8.5, §8.4, §1.2, §13.4, §16.5, §10.3]

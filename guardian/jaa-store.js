@@ -79,6 +79,18 @@ class JaaStore {
     this._timers  = new Map();  // table → setTimeout handle
     this._pendingDeletes = new Map(); // table → Set<id> deleted by this process since its last flush
     this._closed  = false;
+    // §2026-07-24 — optional selective-load allowlist. See _loadAll(). Omitted
+    // = load everything (unchanged behavior). Declared = preload only these;
+    // anything else lazily loads on first access with a warning.
+    this._only = Array.isArray(opts.tables) && opts.tables.length
+      ? new Set(opts.tables) : null;
+    // §2026-07-24 — the inverse: skip named tables at preload. For a SHARED
+    // singleton store (cortex/memory/jaa-db.js serves every process) no fixed
+    // allowlist could be correct for all of them, but an exclusion of known
+    // heavy single-consumer tables is. Excluded tables still lazy-load on
+    // first access via _table(), so the one real consumer is unaffected.
+    this._skip = Array.isArray(opts.skipTables) && opts.skipTables.length
+      ? new Set(opts.skipTables) : null;
 
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     this._loadAll();
@@ -285,7 +297,32 @@ class JaaStore {
   // ══════════════════════════════════════════════════════════════════════════
 
   _table(name) {
-    if (!this._tables.has(name)) this._tables.set(name, new Map());
+    if (!this._tables.has(name)) {
+      // §FIX 2026-07-24 — SAFETY for the `tables` allowlist. Previously this
+      // created an empty Map for any unknown table, which is correct when the
+      // table genuinely doesn't exist yet. But with a selective-load allowlist,
+      // a process that under-declares would read a table that EXISTS ON DISK as
+      // empty — silently losing data, the worst failure class in this codebase
+      // (§1.2: fail loudly, never silently). So: if we skipped this table at
+      // load time and a file for it exists, load it now, on first access.
+      // Worst case is a slower first read; never a wrong answer.
+      if ((this._only && !this._only.has(name)) || (this._skip && this._skip.has(name))) {
+        try {
+          if (fs.existsSync(this._file(name))) {
+            // Warn ONCE per table, not per access. Without this guard the
+            // message fires on every _table() call — thousands of lines in a
+            // single run, which would drown the boot log it's meant to inform.
+            if (!this._warnedTables) this._warnedTables = new Set();
+            if (!this._warnedTables.has(name)) {
+              this._warnedTables.add(name);
+              console.warn(`[jaa] '${name}' was not in this store's declared tables — loading on demand. Add it to the tables list to preload.`);
+            }
+            this._loadTable(name);
+          }
+        } catch (_) { /* fall through to empty map */ }
+      }
+      if (!this._tables.has(name)) this._tables.set(name, new Map());
+    }
     return this._tables.get(name);
   }
 
@@ -299,6 +336,25 @@ class JaaStore {
     // exactly the old behavior — every .json file in the dir is theirs,
     // same as before this change. Prefixed instances only ever see their
     // own files; a shared directory's other tenants are invisible to them.
+    //
+    // §FIX 2026-07-24 — MEASURED memory finding, not a theory: the store is
+    // 14MB on disk and NINE processes each load all of it (cortex, guardian,
+    // orchestrator, loom, copilot, diagnostic, idearium, healer, agents).
+    // Parsed to JS objects that is roughly 400-600MB of RAM holding nine
+    // copies of the same tables — the driver behind the recurring
+    // "free memory < 20%" pressure, the 0xC0000409 crashes, and the
+    // ERR_NO_BUFFER_SPACE socket exhaustion in the 2026-07-24 log.
+    // 77% of it is two tables (idearium_spec_chunks 5.4MB +
+    // idearium_spec_manifests 5.4MB) that ONLY idearium reads — verified by
+    // grep: idearium/spec-engine/index.js and idearium/lib/cortex-listeners.js
+    // are the sole consumers. Eight processes hold 10.8MB each of data they
+    // never touch.
+    //
+    // `tables` is an OPT-IN allowlist. Omitted → every table loads, exactly
+    // as before, so no existing caller changes behavior (§5.14 — same
+    // contract, replaceable implementation). A process that declares its
+    // tables loads only those; anything it later asks for still works,
+    // because _table() lazily loads on first access (see below).
     let files;
     try { files = fs.readdirSync(this.dir); }
     catch (_) { return; }
@@ -307,8 +363,13 @@ class JaaStore {
       const stem = f.slice(0, -5);
       if (this.tablePrefix) {
         if (!stem.startsWith(this.tablePrefix)) continue;
-        this._loadTable(stem.slice(this.tablePrefix.length));
+        const name = stem.slice(this.tablePrefix.length);
+        if (this._only && !this._only.has(name)) continue;
+        if (this._skip && this._skip.has(name)) continue;
+        this._loadTable(name);
       } else {
+        if (this._only && !this._only.has(stem)) continue;
+        if (this._skip && this._skip.has(stem)) continue;
         this._loadTable(stem);
       }
     }
