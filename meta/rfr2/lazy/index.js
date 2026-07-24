@@ -8,15 +8,17 @@
  * implementation is provided.
  */
 
-export function eventTsToWindow(event, windowMs) {
+function eventTsToWindow(event, windowMs) {
   if (!event || !event.ts) return null;
   return Math.floor(event.ts / (windowMs || 1000));
 }
 
-export function lazy(fn) {
+function lazy(fn) {
   let computed = false, value;
   return () => {
     if (!computed) { value = fn(); computed = true; }
     return value;
   };
 }
+
+module.exports = { eventTsToWindow, lazy };

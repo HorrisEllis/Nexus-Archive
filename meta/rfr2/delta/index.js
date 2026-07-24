@@ -37,24 +37,23 @@
  * @hook ef133825-4823-4ad3-b156-4c16ac20ce3c  ZOOM_LEVELS
  */
 
-import { newEventId }        from '../identity/index.js';
-import { eventTsToWindow }   from '../lazy/index.js';
-
+const { newEventId } = require('../identity/index.js');
+const { eventTsToWindow } = require('../lazy/index.js');
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 /** @hook 339a1033-8919-465f-b9d5-71802442ac85 */
-export const LATENCY_WINDOW    = 50;
+const LATENCY_WINDOW    = 50;
 /** @hook 62e32268-eb88-47fe-b48c-b89faaf1abf2 */
-export const THROUGHPUT_WINDOW = 100;
+const THROUGHPUT_WINDOW = 100;
 
 // Deprecated threshold constants — exported for backward compatibility only.
 // Do not use in new code. Judgment belongs in the σ layer.
 /** @hook 7fd8b41e-95bc-438d-9d98-ab8925c9203e @deprecated */
-export const BOTTLENECK_THRESHOLD    = 0.7;
+const BOTTLENECK_THRESHOLD    = 0.7;
 /** @hook d0234be7-bfe3-42bd-9c93-8f8cea822754 @deprecated */
-export const FAN_OUT_ALERT_THRESHOLD = 8;
+const FAN_OUT_ALERT_THRESHOLD = 8;
 /** @hook 0fa077b8-30ca-4b11-9b6f-df32c211cfe2 @deprecated */
-export const DEPTH_ALERT_THRESHOLD   = 15;
+const DEPTH_ALERT_THRESHOLD   = 15;
 
 // ── Single-event kinematic delta ──────────────────────────────────────────────
 
@@ -72,7 +71,7 @@ export const DEPTH_ALERT_THRESHOLD   = 15;
  *
  * @hook c2237d17-ca86-4938-ba4c-83975cef1681  delta:computeEventDelta
  */
-export function computeEventDelta(ev, parent, parentDepth, recentGaps, recentRate, prevRate, childCount, recentDepths) {
+function computeEventDelta(ev, parent, parentDepth, recentGaps, recentRate, prevRate, childCount, recentDepths) {
   // S-field: latency z-score vs rolling baseline
   const gap = parent ? (ev.eventTs - parent.eventTs) : 0;
   let latencyImpact = 0;
@@ -126,7 +125,7 @@ export function computeEventDelta(ev, parent, parentDepth, recentGaps, recentRat
  *
  * @hook 67240917-2b71-4c71-b990-f70d8fb63815  delta:computeDeltaStream
  */
-export function computeDeltaStream(events, findById, edgeMeta, getChildren) {
+function computeDeltaStream(events, findById, edgeMeta, getChildren) {
   const deltas      = new Array(events.length);
   const gapWindow   = [];
   const depthWindow = [];
@@ -186,14 +185,14 @@ export function computeDeltaStream(events, findById, edgeMeta, getChildren) {
  * Replacement: σ layer (sigma.js, future module). UUID 3bb7a99 retained.
  * @hook e3bb7a99-ec6a-4515-96a7-21e30b8bd1bd  delta:detectBottlenecks
  */
-export function detectBottlenecks(_deltas, _threshold) { return []; }
+function detectBottlenecks(_deltas, _threshold) { return []; }
 
 /**
  * @deprecated R4: depended on anomalyType removed from delta.
  * Replacement: σ layer (sigma.js). UUID 060b1fc1 retained.
  * @hook 060b1fc1-bbf7-4d27-8780-025609afd030  delta:clusterByAnomaly
  */
-export function clusterByAnomaly(_events, _deltas, _ticksPerBucket) { return []; }
+function clusterByAnomaly(_events, _deltas, _ticksPerBucket) { return []; }
 
 // ── Throughput timeline ───────────────────────────────────────────────────────
 
@@ -207,7 +206,7 @@ export function clusterByAnomaly(_events, _deltas, _ticksPerBucket) { return [];
  *
  * @hook 728a38ea-5e0b-4389-a3b8-8f2b34c4bbad  delta:computeThroughputTimeline
  */
-export function computeThroughputTimeline(events, windowSize) {
+function computeThroughputTimeline(events, windowSize) {
   const buckets = new Map();
 
   for (let i = 0; i < events.length; i++) {
@@ -245,7 +244,7 @@ export function computeThroughputTimeline(events, windowSize) {
  * L4 — fractal summaries
  * @hook ef133825-4823-4ad3-b156-4c16ac20ce3c  delta:ZOOM_LEVELS
  */
-export const ZOOM_LEVELS = Object.freeze({ L0: 0, L1: 1, L2: 2, L3: 3, L4: 4 });
+const ZOOM_LEVELS = Object.freeze({ L0: 0, L1: 1, L2: 2, L3: 3, L4: 4 });
 
 // ── L1: Chain compression ─────────────────────────────────────────────────────
 
@@ -254,7 +253,7 @@ export const ZOOM_LEVELS = Object.freeze({ L0: 0, L1: 1, L2: 2, L3: 3, L4: 4 });
  * into a single chain node. Returns compressed event list.
  * @hook 24ded596-d004-4c08-aa21-ee215fa87bf2  delta:compressToL1
  */
-export function compressToL1(events, getChildren, edgeMeta) {
+function compressToL1(events, getChildren, edgeMeta) {
   const compressed = [];
   const absorbed   = new Set();
 
@@ -307,7 +306,7 @@ export function compressToL1(events, getChildren, edgeMeta) {
  * Each detected macro becomes a node positioned after its trigger event.
  * @hook f86550cf-140f-4f57-895f-3dd125d977be  delta:overlayMacros
  */
-export function overlayMacros(events, macros) {
+function overlayMacros(events, macros) {
   if (!macros.length) return events;
 
   const macroByTrigger = new Map();
@@ -347,7 +346,7 @@ export function overlayMacros(events, macros) {
  *
  * @hook e3a6c710-7d0f-4997-8a2f-953f6568f730  delta:detectFractals
  */
-export function detectFractals(events, getChildren, edgeMeta, {
+function detectFractals(events, getChildren, edgeMeta, {
   minChainLen    = 3,
   minOccurrences = 3,
   maxChainLen    = 8,
@@ -419,7 +418,7 @@ export function detectFractals(events, getChildren, edgeMeta, {
  * The live graph is NEVER modified. Branches accumulate in a registry.
  * @hook b70350bf-59b9-4589-9ed8-b72c26a244cc  delta:createGraphBranch
  */
-export function createGraphBranch(zone, snapshotEvents, currentSeq) {
+function createGraphBranch(zone, snapshotEvents, currentSeq) {
   return Object.freeze({
     id:                 newEventId(),
     type:               'graph-branch',
@@ -439,7 +438,7 @@ export function createGraphBranch(zone, snapshotEvents, currentSeq) {
  * Registry accumulating graph branches (forked causal universes).
  * @hook a97b25f7-73e4-4cdf-9a86-f25a2bcdd8ff  delta:createBranchRegistry
  */
-export function createBranchRegistry() {
+function createBranchRegistry() {
   const branches = [];
 
   function addBranch(branch) { branches.push(branch); return branch; }
@@ -453,3 +452,5 @@ export function createBranchRegistry() {
 
   return { addBranch, getById, getAll, findEventInBranch, clear, get count() { return branches.length; } };
 }
+
+module.exports = { computeEventDelta, computeDeltaStream, detectBottlenecks, clusterByAnomaly, computeThroughputTimeline, compressToL1, overlayMacros, detectFractals, createGraphBranch, createBranchRegistry, LATENCY_WINDOW, THROUGHPUT_WINDOW, BOTTLENECK_THRESHOLD, FAN_OUT_ALERT_THRESHOLD, DEPTH_ALERT_THRESHOLD, ZOOM_LEVELS };

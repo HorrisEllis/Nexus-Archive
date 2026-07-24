@@ -38,7 +38,7 @@
 // ── Error type ────────────────────────────────────────────────────────────────
 
 /** @hook 9d1e6545-276d-475c-8ddb-dcc6429108c6  query:CQLSyntaxError */
-export class CQLSyntaxError extends Error {
+class CQLSyntaxError extends Error {
   constructor(message, pos) {
     super(`CQL syntax error${pos != null ? ` at position ${pos}` : ''}: ${message}`);
     this.name   = 'CQLSyntaxError';
@@ -49,7 +49,7 @@ export class CQLSyntaxError extends Error {
 // ── QueryResult ───────────────────────────────────────────────────────────────
 
 /** @hook 7363e176-91fc-49a1-ada7-568cc2554fbb  query:QueryResult */
-export const QueryResult = {
+const QueryResult = {
   create(fields) {
     return Object.freeze({
       ok: true, events: [], total: 0, durationMs: 0, scope: 'events', plan: null, error: null,
@@ -322,7 +322,7 @@ function sortResults(results, orderBy, kernel) {
  * Parse a CQL string into an AST. Throws CQLSyntaxError on failure.
  * @hook 5cc1be94-7745-4587-8fdd-a5cc8438fc6f  query:parseQuery
  */
-export function parseQuery(cql) {
+function parseQuery(cql) {
   if (typeof cql !== 'string' || !cql.trim()) throw new CQLSyntaxError('query string is empty');
   return parse(lex(cql.trim()));
 }
@@ -338,7 +338,7 @@ export function parseQuery(cql) {
  *
  * @hook e19f0811-1eb6-4a79-83eb-284301a1d090  query:execQuery
  */
-export function execQuery(ast, kernel, opts = {}) {
+function execQuery(ast, kernel, opts = {}) {
   const t0 = performance.now();
   try {
     const { scope, conditions, orderBy, limit } = ast;
@@ -397,7 +397,7 @@ export function execQuery(ast, kernel, opts = {}) {
  * Build a secondary index over events for repeated queries on a stable snapshot.
  * @hook 5c3dd26c-4514-4792-b22f-88b7f0ff5ee5  query:createQueryIndex
  */
-export function createQueryIndex(events, fields = ['type', 'source']) {
+function createQueryIndex(events, fields = ['type', 'source']) {
   const index = new Map();
   for (const ev of events) {
     for (const field of fields) {
@@ -420,9 +420,11 @@ export function createQueryIndex(events, fields = ['type', 'source']) {
  * Parse and execute a CQL query string in one call.
  * @hook 27d96495-ec9a-478f-99f3-bb23633440b6  query:query
  */
-export function query(cql, kernel, opts = {}) {
+function query(cql, kernel, opts = {}) {
   let ast;
   try   { ast = parseQuery(cql); }
   catch (e) { return QueryResult.create({ ok: false, error: e.message }); }
   return execQuery(ast, kernel, opts);
 }
+
+module.exports = { parseQuery, execQuery, createQueryIndex, query, CQLSyntaxError, QueryResult };

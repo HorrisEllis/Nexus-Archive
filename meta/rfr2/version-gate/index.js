@@ -45,10 +45,10 @@
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 /** @hook f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c  version-gate:CURRENT_FORMAT_VERSION */
-export const CURRENT_FORMAT_VERSION = 1;
+const CURRENT_FORMAT_VERSION = 1;
 
 /** @hook a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d  version-gate:CURRENT_KERNEL_VERSION */
-export const CURRENT_KERNEL_VERSION = '4.5.2';
+const CURRENT_KERNEL_VERSION = '4.5.2';
 
 // Accepted magic strings — both legacy (URCK-*) and spec-canonical (NEX-*)
 // Migration M-001 upgrades URCK-* → NEX-* within this gate.
@@ -59,7 +59,7 @@ const MAGIC_BP           = 'NEX-BP';
 const MAGIC_CLIP         = 'NEX-CLIP';
 
 /** @hook e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b  version-gate:SUPPORTED_MAGICS */
-export const SUPPORTED_MAGICS = new Set([
+const SUPPORTED_MAGICS = new Set([
   MAGIC_SNAP_LEGACY, MAGIC_BP_LEGACY,
   MAGIC_SNAP, MAGIC_BP, MAGIC_CLIP,
 ]);
@@ -79,7 +79,7 @@ const ARTIFACT_TYPE = {
  * Hard stop — never caught silently.
  * @hook d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a  version-gate:GateValidationError
  */
-export class GateValidationError extends Error {
+class GateValidationError extends Error {
   constructor(message, context = {}) {
     super(`[version-gate] ${message}`);
     this.name    = 'GateValidationError';
@@ -147,7 +147,7 @@ const MIGRATIONS = [
  * @returns {object} artifact — unchanged, validated
  * @throws {GateValidationError}
  */
-export function validate(artifact) {
+function validate(artifact) {
   // 1. Null / type guard
   if (artifact === null || artifact === undefined || typeof artifact !== 'object') {
     throw new GateValidationError('artifact must be a non-null object', { received: typeof artifact });
@@ -211,7 +211,7 @@ export function validate(artifact) {
  * @param {object} artifact — validated artifact from validate()
  * @returns {object} migrated artifact — may be same reference if no migrations applied
  */
-export function migrate(artifact) {
+function migrate(artifact) {
   let current = artifact;
   for (const migration of MIGRATIONS) {
     if (migration.predicate(current)) {
@@ -239,7 +239,7 @@ export function migrate(artifact) {
  *   opts.kernelVersion {string}  override kernel version (default: CURRENT_KERNEL_VERSION)
  * @returns {{ validate, migrate, artifactType, migrations }}
  */
-export function createVersionGate(opts = {}) {
+function createVersionGate(opts = {}) {
   const kernelVersion = opts.kernelVersion || CURRENT_KERNEL_VERSION;
   const kernelMajor   = majorOf(kernelVersion);
 
@@ -315,3 +315,5 @@ export function createVersionGate(opts = {}) {
     formatVersion: CURRENT_FORMAT_VERSION,
   };
 }
+
+module.exports = { validate, migrate, createVersionGate, GateValidationError, CURRENT_FORMAT_VERSION, CURRENT_KERNEL_VERSION, SUPPORTED_MAGICS };

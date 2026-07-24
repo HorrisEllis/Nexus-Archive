@@ -35,10 +35,10 @@
 // ── Context type labels (mirrors context module — no import to avoid cycle) ──
 
 /** @hook c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4f  observer:OBSERVER_BUS_LIVE */
-export const OBSERVER_BUS_LIVE   = 'live';
+const OBSERVER_BUS_LIVE   = 'live';
 
 /** @hook d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a  observer:OBSERVER_BUS_REPLAY */
-export const OBSERVER_BUS_REPLAY = 'replay';
+const OBSERVER_BUS_REPLAY = 'replay';
 
 // ── createObserverBus ─────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ export const OBSERVER_BUS_REPLAY = 'replay';
  * @param {string} contextType — 'live' | 'replay'
  * @returns {ObserverBus}
  */
-export function createObserverBus(scopeId, contextType) {
+function createObserverBus(scopeId, contextType) {
   if (!scopeId || typeof scopeId !== 'string') {
     throw new Error('[observer] createObserverBus: scopeId must be a non-empty string');
   }
@@ -181,3 +181,5 @@ export function createObserverBus(scopeId, contextType) {
 
   return _bus;
 }
+
+module.exports = { createObserverBus, OBSERVER_BUS_LIVE, OBSERVER_BUS_REPLAY };

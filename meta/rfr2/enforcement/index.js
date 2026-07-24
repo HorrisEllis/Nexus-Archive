@@ -44,7 +44,7 @@
  * Thrown by RuntimeGuard on invariant violation. Hard stop — never caught silently.
  * @hook b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9e  enforcement:InvariantViolationError
  */
-export class InvariantViolationError extends Error {
+class InvariantViolationError extends Error {
   constructor(invariantId, message, context = {}) {
     super(`[enforcement] INVARIANT VIOLATION ${invariantId}: ${message}`);
     this.name        = 'InvariantViolationError';
@@ -63,7 +63,7 @@ export class InvariantViolationError extends Error {
  *
  * @hook a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8d  enforcement:INVARIANTS
  */
-export const INVARIANTS = Object.freeze([
+const INVARIANTS = Object.freeze([
   // Identity (2)
   { id: 'I-1', group: 'identity',   severity: 'hard', description: 'event.id is UUID v4 — never deterministic, never reused' },
   { id: 'I-2', group: 'identity',   severity: 'hard', description: 'contentHash is orthogonal to eventId — same payload → same hash, different id' },
@@ -101,7 +101,7 @@ export const INVARIANTS = Object.freeze([
 // Build lookup by id
 const _INVARIANT_MAP = new Map(INVARIANTS.map(inv => [inv.id, inv]));
 
-export function getInvariant(id) {
+function getInvariant(id) {
   return _INVARIANT_MAP.get(id) || null;
 }
 
@@ -116,7 +116,7 @@ export function getInvariant(id) {
  *
  * @hook f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7c  enforcement:createRuntimeGuard
  */
-export function createRuntimeGuard() {
+function createRuntimeGuard() {
   let _assertionCount = 0;
   let _violationCount = 0;
 
@@ -167,7 +167,7 @@ export function createRuntimeGuard() {
  *
  * @hook e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b  enforcement:createBoundaryIndex
  */
-export function createBoundaryIndex() {
+function createBoundaryIndex() {
   // invariantId → { inv, status, lastCheckedAt, violationCount, lastViolation }
   const _index = new Map();
 
@@ -280,7 +280,7 @@ export function createBoundaryIndex() {
  * @param {object} [opts]
  *   opts.sampleSize {number}  max events to sample for I-1 (default 500)
  */
-export function checkKernelInvariants(kernel, boundaryIndex, opts = {}) {
+function checkKernelInvariants(kernel, boundaryIndex, opts = {}) {
   const guard      = createRuntimeGuard();
   const sampleSize = opts.sampleSize || 500;
   const violations = [];
@@ -331,3 +331,5 @@ export function checkKernelInvariants(kernel, boundaryIndex, opts = {}) {
   const checked = 8; // number of checks above
   return { ok: violations.length === 0, checked, violations };
 }
+
+module.exports = { getInvariant, createRuntimeGuard, createBoundaryIndex, checkKernelInvariants, InvariantViolationError, INVARIANTS };

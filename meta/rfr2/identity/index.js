@@ -32,7 +32,7 @@
  *
  * @hook ef3cfe89-14ac-4ba3-8be5-063e61706281  identity:newEventId
  */
-export function newEventId() {
+function newEventId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
@@ -55,7 +55,7 @@ export function newEventId() {
  * Validate UUID v4 format.
  * @hook edd9d9de-942b-473e-be4d-efc1cb84d136  identity:isValidEventId
  */
-export function isValidEventId(id) {
+function isValidEventId(id) {
   return typeof id === 'string' &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 }
@@ -66,7 +66,7 @@ export function isValidEventId(id) {
  *                                             ^^^^^^^^^^^^ — last 12, always unique
  * @hook af248063-94bf-4d41-9de7-a5fce817464e  identity:shortId
  */
-export function shortId(id) {
+function shortId(id) {
   if (!id) return '?';
   const parts = id.split('-');
   return parts[parts.length - 1] || id.slice(-12);
@@ -81,7 +81,7 @@ export function shortId(id) {
  *
  * @hook 954aad52-dd1d-4c2b-ae24-b27b5449dcba  identity:canonicalize
  */
-export function canonicalize(v) {
+function canonicalize(v) {
   if (v === null || v === undefined) return 'null';
   if (typeof v === 'boolean') return v ? 'true' : 'false';
   if (typeof v === 'number') return String(v);
@@ -99,7 +99,7 @@ export function canonicalize(v) {
  * Deterministic, fast. NOT used for EventID generation.
  * @hook 0d5dbf41-cc98-4887-a739-17c1a0d25310  identity:hash64
  */
-export function hash64(s) {
+function hash64(s) {
   let h1 = 0x811c9dc5 | 0, h2 = 0xc4a6c57b | 0;
   for (let i = 0; i < s.length; i++) {
     const c = s.charCodeAt(i);
@@ -120,7 +120,7 @@ export function hash64(s) {
  *
  * @hook 5e713385-e414-4ab8-80a0-8553df445bc4  identity:contentHash
  */
-export function contentHash(type, payload, source) {
+function contentHash(type, payload, source) {
   return hash64(canonicalize({ type, payload: payload ?? {}, source: source ?? 'unknown' }));
 }
 
@@ -132,7 +132,7 @@ export function contentHash(type, payload, source) {
  *
  * @hook 501e6181-c77c-496a-ae2a-c419659f43c1  identity:dedupKey
  */
-export function dedupKey(type, payload, source, replayOf) {
+function dedupKey(type, payload, source, replayOf) {
   return contentHash(type, payload, source) + '::' + (replayOf || '');
 }
 
@@ -143,7 +143,7 @@ export function dedupKey(type, payload, source, replayOf) {
  * O(n) — use only in tests and validation gates.
  * @hook e526d3ad-f3b8-42c1-8a0b-d603f6501674  identity:assertUniqueIds
  */
-export function assertUniqueIds(events) {
+function assertUniqueIds(events) {
   const seen = new Set();
   for (const ev of events) {
     if (seen.has(ev.id)) throw new Error(`Identity violation: duplicate event ID ${ev.id}`);
@@ -151,3 +151,5 @@ export function assertUniqueIds(events) {
   }
   return true;
 }
+
+module.exports = { newEventId, isValidEventId, shortId, canonicalize, hash64, contentHash, dedupKey, assertUniqueIds };

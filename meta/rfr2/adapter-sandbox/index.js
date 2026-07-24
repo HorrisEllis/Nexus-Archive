@@ -35,15 +35,15 @@
 
 // ── Policy constants ──────────────────────────────────────────────────────────
 
-export const POLICY_READ_ONLY  = 'READ_ONLY';
-export const POLICY_LOCAL_ONLY = 'LOCAL_ONLY';
-export const POLICY_FULL       = 'FULL';
+const POLICY_READ_ONLY  = 'READ_ONLY';
+const POLICY_LOCAL_ONLY = 'LOCAL_ONLY';
+const POLICY_FULL       = 'FULL';
 
-export const VALID_POLICIES = new Set([POLICY_READ_ONLY, POLICY_LOCAL_ONLY, POLICY_FULL]);
+const VALID_POLICIES = new Set([POLICY_READ_ONLY, POLICY_LOCAL_ONLY, POLICY_FULL]);
 
 // ── Error type ────────────────────────────────────────────────────────────────
 
-export class AdapterRegistrationError extends Error {
+class AdapterRegistrationError extends Error {
   constructor(message, context = {}) {
     super(`[adapter-sandbox] ${message}`);
     this.name    = 'AdapterRegistrationError';
@@ -61,7 +61,7 @@ export class AdapterRegistrationError extends Error {
  *
  * @hook e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b  adapter-sandbox:createNullAdapter
  */
-export function createNullAdapter(shape, name, policy) {
+function createNullAdapter(shape, name, policy) {
   const nullMethods = {};
   for (const key of Object.keys(shape)) {
     if (typeof shape[key] === 'function') {
@@ -86,7 +86,7 @@ export function createNullAdapter(shape, name, policy) {
  *
  * @hook b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e  adapter-sandbox:createAdapterSandbox
  */
-export function createAdapterSandbox() {
+function createAdapterSandbox() {
   const _registry = new Map(); // name → { name, factory, policy, registeredAt }
 
   // ── register ─────────────────────────────────────────────────────────────
@@ -190,3 +190,5 @@ export function createAdapterSandbox() {
     get size() { return _registry.size; },
   };
 }
+
+module.exports = { createNullAdapter, createAdapterSandbox, AdapterRegistrationError, POLICY_READ_ONLY, POLICY_LOCAL_ONLY, POLICY_FULL, VALID_POLICIES };

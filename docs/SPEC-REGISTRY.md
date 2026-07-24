@@ -69,7 +69,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `idearium.spec` | 3.0.0 | 2026-06-29 | ✓ AX-008 closed session 5/7 (idearium→copilot wire built and verified) — this spec's axioms list updated to match. |
 | `intelligence-bridge.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `intelligence.spec` | 1.0.0 | — | not yet checked against live code this pass |
-| `jaa-db.spec` | 6.0.0 | — | not yet checked against live code this pass |
+| `jaa-db.spec` | 6.0.0 | 2026-07-24 | ✓ CHECKED, correction — this spec governs the `JaaDB` append-only journal class (`new JaaDB({dir})`, `cortex/memory/jaa-db.js` lines 110-289), confirmed by its exact exports list. It does NOT govern `JaaStore` (`guardian/jaa-store.js`) despite the similar file/name — different class, different persistence model (JSONL append-only vs full-snapshot JSON), no shared code. My prior entry here (same date, since corrected) wrongly attributed `JaaStore`'s undocumented `skipTables` mechanism to this spec as drift. That was wrong — this spec is untouched and accurate for what it actually governs. See the new note below the table for the real, still-open finding: `JaaStore` has no spec at all. |
 | `lib.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `liminal-space.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `liminal.spec` | 1.0.0 | — | not yet checked against live code this pass |
@@ -149,3 +149,29 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `escalation.spec` (addendum) | 1.2.0 | 2026-07-20 | ✓ UPDATED — BUILT + new `nexus.resource.pressure` input → memory_pressure fault class. Oscillation damping NAMED as future work, not built. |
 | `self-heal.spec` (addendum) | 1.1.0 | 2026-07-20 | ✓ UPDATED — BUILT. 5-level ladder, level from fault_taxonomy count, L2 propose-only. SEMANTIC_GAP_TYPES flagged as a §7.2 judgment call, not found spec. |
 | `nexus-tablet.spec` | 0.4.0-spec | 2026-07-24 | SPEC ONLY, no code. REVISED v0.1.0→v0.2.0: the CONTAINER is the organising primitive (v0.1.0's parallel-surfaces layout was a dashboard; James corrected it). Each container holds one system's CLI/API-map/DBs/files/tests/events/config/user-model/snapshot. Autopilot as connection broker (one endpoint, remote-capable). Observe/mutate boundary: observation unrestricted AND disk-backed (console must survive an unhealthy system); mutation only via owning system's API. Change governance: user-live vs system-in-COS; ledger(what happened)+registry(what is, a projection)+cortex(authority); sigma scores config deviation; CFR stamps conditions; RFR2 attributes causality; anomalous change raises friction via existing escalation. 5 blockers named: B1 single-process consumers, B2 ESM/CJS, B3 UI unverifiable, B4 COS unwired, B5 replay-engine orphaned. 8 phases; T1-T3 have ZERO blockers. v0.1.0 preserved per §0.3. |
+
+## Session 2026-07-24 — real gaps found, §17.1 (every artifact has an owner)
+
+Two runtime files with real consumers and no dedicated governing spec — found
+while auditing the JaaStore recursion fix and rfr2 CJS conversion against
+AXIOMS v3.1 §8.5 ("do not build anything without creating a spec file
+first"). Both violate that law retroactively; neither corrected yet —
+flagged for a decision, not fixed unilaterally.
+
+- **`guardian/jaa-store.js` (class `JaaStore`)** — no spec. NOT the same
+  class `jaa-db.spec` governs (that's `JaaDB`, a different file/class
+  entirely — see the corrected `jaa-db.spec` row above). `JaaStore` is
+  mentioned only incidentally, as a byproduct of unrelated work: `cortex.spec`
+  (`cortex/spec/cortex.spec`, `foundation_fixes`) records three `_matches()`
+  where-clause bugs fixed at its source, and `hooks-migration.spec` mentions
+  it once in passing (multi-process flush note). Neither documents
+  `JaaStore`'s actual contract — constructor options (`tablePrefix`, `tables`
+  allowlist, `skipTables` exclusion), the `_loadAll`/`_table` lazy-load
+  mechanism, or `_flush`'s cross-process merge semantics (the mechanism at
+  the center of both the 2026-07-24 recursion fix and the still-open MP-001
+  race). This file is the shared persistence layer for 9+ processes — real
+  weight, no dedicated spec.
+- **`meta/rfr2/*`** — no spec anywhere in `docs/`. 13 real modules, Job 1
+  (9 converted ESM→CJS this session) landed without one.
+
+

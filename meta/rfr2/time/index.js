@@ -24,7 +24,7 @@
  *
  * @hook 4ed4b385-c2c6-47a6-8d89-0c4cc8b6dadd  time:createClock
  */
-export function createClock() {
+function createClock() {
   let _tick = 0;
   let _seq  = 0;
 
@@ -51,7 +51,7 @@ export function createClock() {
  * Never used for ordering or gate window logic (T-2).
  * @hook c7a6165e-3885-4e3c-b48b-29007da1bf34  time:wallNow
  */
-export function wallNow() {
+function wallNow() {
   return Date.now();
 }
 
@@ -61,7 +61,7 @@ export function wallNow() {
  * Returns -1, 0, or 1.
  * @hook a4daa9f1-9f59-4bde-8d6c-77e74e606096  time:causalOrder
  */
-export function causalOrder(a, b) {
+function causalOrder(a, b) {
   if (a.seq < b.seq) return -1;
   if (a.seq > b.seq) return  1;
   return 0;
@@ -72,7 +72,7 @@ export function causalOrder(a, b) {
  * For full causal precedence including edges, use the causal engine.
  * @hook 136bf8d9-3d8b-422d-97e9-65854d45d1a5  time:seqPrecedes
  */
-export function seqPrecedes(a, b) {
+function seqPrecedes(a, b) {
   return a.seq < b.seq;
 }
 
@@ -80,7 +80,7 @@ export function seqPrecedes(a, b) {
  * Format a wall-clock timestamp for display → HH:MM:SS.mmm
  * @hook f98b6248-2864-4c23-9b0f-a6836cb75d24  time:formatWallTs
  */
-export function formatWallTs(ms) {
+function formatWallTs(ms) {
   const d = new Date(ms);
   return String(d.getHours()).padStart(2, '0') + ':'
        + String(d.getMinutes()).padStart(2, '0') + ':'
@@ -92,6 +92,8 @@ export function formatWallTs(ms) {
  * Format an event-time tick for display → [ets:N]
  * @hook cea615e8-c09e-4091-8be5-790b06388c3b  time:formatEventTs
  */
-export function formatEventTs(tick) {
+function formatEventTs(tick) {
   return `[ets:${tick}]`;
 }
+
+module.exports = { createClock, wallNow, causalOrder, seqPrecedes, formatWallTs, formatEventTs };
