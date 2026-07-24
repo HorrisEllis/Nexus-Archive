@@ -66,6 +66,7 @@ const SUITES = [
   'test-clear-glass-idle-vs-open.js',
   'test-clear-glass-single-instance.js',
   'test-idearium-cjs-under-esm.js',
+  'test-cortex-heartbeat.js',
   'test-consumer-registry.js',
   'test-spawn-guard.js',
   'test-capability-registry.js',

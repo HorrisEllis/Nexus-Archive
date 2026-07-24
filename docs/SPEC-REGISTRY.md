@@ -226,4 +226,48 @@ before touching anything (§3.3); it reframed the item substantially.
   meta/causal-nexus/, the other two `type:module` scopes in the repo,
   checked too, also clean). Full suite: 783 passed / 0 failed.
 
+## Session 2026-07-24 (cont.) — cortex heartbeat gap, from a pasted boot log
+
+James pasted a live boot log showing `[watchdog] cortex → OFFLINE`
+during a busy multi-system boot window. Traced to root cause, not
+patched blind: `orchestrator.js`'s `allHealth()` only flags a system
+OFFLINE when BOTH the direct `/health` GET fails (3s timeout) AND the
+registry's `lastSeen` is >15s stale (the fallback that should absorb a
+transient miss). Checked every one of orchestrator's 3
+`REQUIRED_SYSTEMS`: guardian, idearium, copilot, and ollama-bridge all
+send a recurring `POST /api/heartbeat` (10s interval) that keeps
+`lastSeen` fresh — cortex sent none, ever. It only had the one-time
+`/api/register` at boot, so after the first 15 seconds of runtime it
+ran with zero protection against any transient event-loop delay (e.g.
+the synchronous multi-table JAA load every system does at boot — the
+exact congestion visible in the pasted log's surrounding lines).
+Confirmed this wasn't a process crash — autopilot's own "stable for
+60s" fired seconds after the OFFLINE flag, meaning the process itself
+was fine, only the HTTP health check briefly went unanswered.
+
+Fixed: `cortex/boot.js` gained `_startHeartbeat()`, called once
+registration succeeds, mirroring idearium's real working pattern
+exactly (same interval, same payload shape, same fire-and-forget error
+handling) rather than inventing something new. Pinned with
+`tests/modules/test-cortex-heartbeat.js` (4 tests, including a real
+HTTP round-trip against a live throwaway server proving the actual
+payload arrives).
+
+**Separate, bigger, NOT fixed here:** `tests/pipeline.test.js` — a
+712-line, 10-section integration suite (heartbeat/project_registry,
+gap-finder, healer, self-heal, snapshot/replay, agent-tools, full
+pipeline, contract+RAID enforcement) — `require`s `../cortex/heartbeat`
+at line 92, a file that does not exist anywhere in the repo. Confirmed
+directly (not assumed): that require throws `MODULE_NOT_FOUND`
+immediately, meaning **none of the 10 sections in this file have ever
+been able to run**, not just the heartbeat one. This is a different,
+larger concept than the outbound heartbeat just fixed above — the
+test's own section name ("Heartbeat — project_registry population")
+implies a local polling/population mechanism, not an outbound ping —
+and building it blind from a test's expectations alone is exactly the
+kind of real, scope-bearing decision this session has been deliberately
+NOT making unilaterally. Flagged with its full blast radius quantified,
+not built. Full suite (module tests only, `pipeline.test.js` is a
+separate top-level suite outside `run-all.js`): 810 passed / 0 failed.
+
 

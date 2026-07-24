@@ -1060,9 +1060,50 @@ function _register() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
     timeout: 4000,
-  }, () => console.log(`[cortex] registered with orchestrator :${u.port}`));
+  }, () => { console.log(`[cortex] registered with orchestrator :${u.port}`); _startHeartbeat(); });
   req.on('error', () => setTimeout(_register, 5000));
   req.write(body); req.end();
+}
+
+// §FIX 2026-07-24 — cortex was the only one of orchestrator's 3
+// REQUIRED_SYSTEMS (cortex/guardian/idearium) with no outbound heartbeat.
+// guardian, idearium, copilot, and ollama-bridge all POST /api/heartbeat
+// on a 10s interval; cortex only ever sent the one-time /api/register at
+// boot. orchestrator's watchdog (systemWatchdog(), 10s tick) flips a
+// system to OFFLINE only when BOTH the direct /health GET fails/times out
+// (3s) AND the registry's lastSeen is >15s stale (allHealth()'s regOnline
+// fallback) — for every other required system, a transient health-check
+// miss gets absorbed by that fallback because their heartbeat keeps
+// lastSeen fresh. Cortex had no heartbeat, so lastSeen only got set once,
+// at boot registration — meaning after the first 15 seconds of runtime,
+// cortex was running on the raw 3-second health-check timeout ALONE, with
+// no safety net, for its entire lifetime. A single momentary event-loop
+// block (e.g. synchronous JAA table loading during a busy multi-system
+// boot window — this codebase's other systems load 30+ tables the same
+// way) was enough to trip a real "[watchdog] cortex → OFFLINE" even
+// though the process never crashed (confirmed live: autopilot's own
+// "stable for 60s" fired seconds later — the process was fine, only the
+// HTTP health check was momentarily unanswered). Mirrors idearium's real,
+// working heartbeat pattern (idearium/api/index.js) exactly, not invented
+// fresh — same interval, same payload shape, same fire-and-forget error
+// handling.
+let _heartbeatStarted = false;
+function _startHeartbeat() {
+  if (_heartbeatStarted) return; // _register() can retry; never double-start the interval
+  _heartbeatStarted = true;
+  const u = new URL(`${OR_URL}/api/heartbeat`);
+  const timer = setInterval(() => {
+    const body = JSON.stringify({ systemId: SYSTEM, port: PORT, status: 'online' });
+    const req = http.request({
+      hostname: u.hostname, port: u.port || 9000, path: u.pathname,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 2000,
+    });
+    req.on('error', () => {}); // fire-and-forget, matches every other system's heartbeat
+    req.write(body); req.end();
+  }, 10000);
+  if (timer.unref) timer.unref();
 }
 
 // ── Poll CFR field from orchestrator every 5s ─────────────────────────────────
