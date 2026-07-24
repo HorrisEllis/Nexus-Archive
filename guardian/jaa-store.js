@@ -317,6 +317,16 @@ class JaaStore {
               this._warnedTables.add(name);
               console.warn(`[jaa] '${name}' was not in this store's declared tables — loading on demand. Add it to the tables list to preload.`);
             }
+            // §FIX 2026-07-24b — create the slot BEFORE loading. _loadTable()
+            // calls this._table(name) internally to get the Map to populate;
+            // without this line that call re-enters this same lazy-load branch
+            // (map still doesn't exist, skip-list still matches) and recurses
+            // forever, re-reading and re-parsing the whole file at every level
+            // since none of the stack frames ever return — that's the exact
+            // heap-OOM idearium hit on first access to a skip-listed table.
+            // Pre-setting an empty Map here means _loadTable's this._table()
+            // call hits the has(name) branch and returns immediately instead.
+            this._tables.set(name, new Map());
             this._loadTable(name);
           }
         } catch (_) { /* fall through to empty map */ }

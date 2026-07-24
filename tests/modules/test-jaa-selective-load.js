@@ -87,5 +87,29 @@ test('T-007', 'the real shared store skips the two heavy idearium tables (the me
     'the two heavy single-consumer tables must be named');
 });
 
+test('T-008', 'REGRESSION 2026-07-24b: lazy-load of an excluded table must not recurse — _table() must not call itself via _loadTable() before the slot exists', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jaa-recursion-'));
+  // A realistically-sized file (~1MB, 2000 rows) — small enough for a fast
+  // test, large enough that unbounded recursion would blow the stack/heap
+  // in this same run rather than silently completing anyway.
+  const rows = [];
+  for (let i = 0; i < 2000; i++) rows.push({ uuid: `r${i}`, payload: 'x'.repeat(500) });
+  fs.writeFileSync(path.join(dir, 'heavy.json'), JSON.stringify(rows));
+
+  const s = new JaaStore(dir, { skipTables: ['heavy'] });
+  assert.ok(!s._tables.has('heavy'), 'precondition: heavy not preloaded');
+
+  // This is what actually broke idearium in production: _loadTable(name)
+  // calls this._table(name) to get the Map to fill, and if _table()'s
+  // lazy branch hadn't created that Map slot FIRST, the inner call
+  // re-entered the same lazy branch and recursed — each level re-reading
+  // and re-parsing the whole file, none of the stack frames ever
+  // returning, until the heap limit was hit. On idearium's real 5.4MB
+  // tables that happened in under a second on boot.
+  const result = s.all('heavy', {});
+  assert.strictEqual(result.length, 2000, 'must return every real row, not recurse or drop data');
+  assert.strictEqual(result[0].uuid, 'r0');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
