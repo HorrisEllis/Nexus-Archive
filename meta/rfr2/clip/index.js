@@ -28,25 +28,24 @@
 
 'use strict';
 
-import { newEventId }                 from '../identity/index.js';
-import { createKernel }               from '../kernel/index.js';
-import { snapshot as kernelSnapshot } from '../compress/index.js';
-import { createReplayContext }        from '../context/index.js';
-import { computeDeltaStream }          from '../delta/index.js';
-import { CURRENT_FORMAT_VERSION,
-         CURRENT_KERNEL_VERSION }     from '../version-gate/index.js';
-import { EDGE_CAUSAL_EXPLICIT,
+const { newEventId } = require('../identity/index.js');
+const { createKernel } = require('../kernel/index.js');
+const { snapshot: kernelSnapshot } = require('../compress/index.js');
+const { createReplayContext } = require('../context/index.js');
+const { computeDeltaStream } = require('../delta/index.js');
+const { CURRENT_FORMAT_VERSION,
+         CURRENT_KERNEL_VERSION } = require('../version-gate/index.js');
+const { EDGE_CAUSAL_EXPLICIT,
          EDGE_CAUSAL_RULE,
-         EDGE_CAUSAL_ADAPTER }        from '../causality/index.js';
-import { classify as sigmaClassify } from '../sigma/index.js';
-
+         EDGE_CAUSAL_ADAPTER } = require('../causality/index.js');
+const { classify: sigmaClassify } = require('../sigma/index.js');
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 /** @hook b6c7d8e9-f0a1-4b2c-3d4e-5f6a7b8c9d0e  clip:CLIP_MAGIC */
-export const CLIP_MAGIC = 'NEX-CLIP';
+const CLIP_MAGIC = 'NEX-CLIP';
 
 /** @hook c7d8e9f0-a1b2-4c3d-4e5f-6a7b8c9d0e1f  clip:DEFAULT_STABILITY_THRESHOLDS */
-export const DEFAULT_STABILITY_THRESHOLDS = Object.freeze({
+const DEFAULT_STABILITY_THRESHOLDS = Object.freeze({
   gapDrift:   0.30,
   sigmaDrift: 0.50,
   slopeDrift: 0.01,
@@ -60,7 +59,7 @@ export const DEFAULT_STABILITY_THRESHOLDS = Object.freeze({
  *
  * @hook a5b6c7d8-e9f0-4a1b-2c3d-4e5f6a7b8c9d  clip:computeStabilityProfile
  */
-export function computeStabilityProfile(gaps) {
+function computeStabilityProfile(gaps) {
   const n = gaps.length;
   if (n < 2) {
     return Object.freeze({
@@ -105,7 +104,7 @@ export function computeStabilityProfile(gaps) {
  *   opts.sigmaEngine            {object}   ignored until Phase R5
  * @returns {object} frozen NEX-CLIP
  */
-export function snapshotRange(kernel, opts = {}) {
+function snapshotRange(kernel, opts = {}) {
   const { seqStart, seqEnd, attachStabilityProfile = true } = opts;
 
   if (typeof seqStart !== 'number' || typeof seqEnd !== 'number') {
@@ -224,7 +223,7 @@ export function snapshotRange(kernel, opts = {}) {
  *   opts.ringCap  {number}
  * @returns {ReplayContext}
  */
-export function restoreClip(clip, params = {}, opts = {}) {
+function restoreClip(clip, params = {}, opts = {}) {
   if (!clip || clip.magic !== CLIP_MAGIC) {
     throw new Error(`[clip] restoreClip: artifact must be NEX-CLIP, got '${clip?.magic}'`);
   }
@@ -249,7 +248,7 @@ export function restoreClip(clip, params = {}, opts = {}) {
  * @param {object}   [thresholds]    — override DEFAULT_STABILITY_THRESHOLDS
  * @returns {object} frozen StabilityValidationResult
  */
-export function validateClipStability(clip, liveDeltaStream, thresholds = {}) {
+function validateClipStability(clip, liveDeltaStream, thresholds = {}) {
   const t = { ...DEFAULT_STABILITY_THRESHOLDS, ...thresholds };
 
   if (!clip?.stabilityProfile) {
@@ -311,3 +310,5 @@ function _inferParameters(entryEvs) {
   }
   return params;
 }
+
+module.exports = { computeStabilityProfile, snapshotRange, restoreClip, validateClipStability, CLIP_MAGIC, DEFAULT_STABILITY_THRESHOLDS };

@@ -23,9 +23,8 @@
  * @hook 35e6caf0-88bb-49d0-8d50-722fb2b4ce7a  compressionReport
  */
 
-import { createKernel } from '../kernel/index.js';
-import { createAdapter } from '../adapter/index.js';
-
+const { createKernel } = require('../kernel/index.js');
+const { createAdapter } = require('../adapter/index.js');
 const FORMAT_VERSION = 1;
 const SNAP_MAGIC     = 'URCK-SNAP';
 const BP_MAGIC       = 'URCK-BP';
@@ -70,7 +69,7 @@ function applyPl(base, delta) {
  * Serialize a kernel to a compact snapshot object.
  * @hook e225d4f3-d576-415a-bfac-0c26ae773d7e  compress:snapshot
  */
-export function snapshot(kernel) {
+function snapshot(kernel) {
   const all     = kernel.getAll();
   const primary = all.filter(isPrimary);
 
@@ -122,7 +121,7 @@ export function snapshot(kernel) {
  * Restore a kernel from a snapshot. New UUIDs assigned (I-1). Gate events re-emitted.
  * @hook d1ddb145-4b84-4db6-8cd4-8fa666be116f  compress:restore
  */
-export function restore(snap, opts = {}) {
+function restore(snap, opts = {}) {
   if (!snap || snap.magic !== SNAP_MAGIC) throw new Error('restore: not a valid URCK snapshot');
   if (snap.fmt !== FORMAT_VERSION)        throw new Error(`restore: format v${snap.fmt} unsupported`);
 
@@ -167,7 +166,7 @@ export function restore(snap, opts = {}) {
  * Extract structural digest: vocabulary, causal grammar, macro patterns, invariants.
  * @hook cb527b7a-af1d-4bba-9df3-60cf360bb81a  compress:blueprint
  */
-export function blueprint(kernel) {
+function blueprint(kernel) {
   const events  = kernel.getAll();
   const primary = events.filter(isPrimary);
   const n       = events.length;
@@ -236,7 +235,7 @@ export function blueprint(kernel) {
  * Output: T type constants + GRAMMAR map + MACROS + gate stubs + createFromBlueprint() factory.
  * @hook de525186-dfe2-47dd-a904-1b58304c7ff1  compress:compile
  */
-export function compile(bp, { ringCap = 1_000_000, includeSeed = true, format = 'esm' } = {}) {
+function compile(bp, { ringCap = 1_000_000, includeSeed = true, format = 'esm' } = {}) {
   if (!bp || bp.magic !== BP_MAGIC) throw new Error('compile: invalid blueprint');
 
   const L = [];
@@ -309,7 +308,7 @@ export function compile(bp, { ringCap = 1_000_000, includeSeed = true, format = 
 /**
  * @hook 35e6caf0-88bb-49d0-8d50-722fb2b4ce7a  compress:compressionReport
  */
-export function compressionReport(kernel, snap) {
+function compressionReport(kernel, snap) {
   const rawB  = JSON.stringify(kernel.getAll()).length;
   const snapB = JSON.stringify(snap).length;
   const ratio = rawB > 0 && snapB > 0 ? Math.max(1, Math.round(rawB / snapB * 10) / 10) : 1;
@@ -320,3 +319,5 @@ export function compressionReport(kernel, snap) {
     summary: `${(rawB/1024).toFixed(1)} KB raw → ${(snapB/1024).toFixed(1)} KB snap (${ratio}×)`,
   };
 }
+
+module.exports = { snapshot, restore, blueprint, compile, compressionReport };

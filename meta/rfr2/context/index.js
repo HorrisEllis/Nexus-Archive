@@ -53,22 +53,21 @@
 
 'use strict';
 
-import { createKernel }                from '../kernel/index.js';
-import { restore }                     from '../compress/index.js';
-import { computeDeltaStream }          from '../delta/index.js';
-import {
+const { createKernel } = require('../kernel/index.js');
+const { restore } = require('../compress/index.js');
+const { computeDeltaStream } = require('../delta/index.js');
+const {
   createAdapterSandbox,
   POLICY_READ_ONLY, POLICY_LOCAL_ONLY, POLICY_FULL,
-} from '../adapter-sandbox/index.js';
-import { classify as sigmaClassify } from '../sigma/index.js';
-
+} = require('../adapter-sandbox/index.js');
+const { classify: sigmaClassify } = require('../sigma/index.js');
 // ── Context type constants ────────────────────────────────────────────────────
 
 /** @hook b4c5d6e7-f8a9-4b0c-1d2e-3f4a5b6c7d8e  context:CONTEXT_LIVE */
-export const CONTEXT_LIVE   = 'live';
+const CONTEXT_LIVE   = 'live';
 
 /** @hook c5d6e7f8-a9b0-4c1d-2e3f-4a5b6c7d8e9f  context:CONTEXT_REPLAY */
-export const CONTEXT_REPLAY = 'replay';
+const CONTEXT_REPLAY = 'replay';
 
 // ── createLiveContext ─────────────────────────────────────────────────────────
 
@@ -88,7 +87,7 @@ export const CONTEXT_REPLAY = 'replay';
  * @param {object}  [sandbox]       — AdapterSandbox instance (optional)
  * @returns {LiveContext}
  */
-export function createLiveContext(kernel, sandbox = null) {
+function createLiveContext(kernel, sandbox = null) {
   if (!kernel || typeof kernel.ingest !== 'function') {
     throw new Error('[context] createLiveContext: kernel must be a valid kernel instance');
   }
@@ -154,7 +153,7 @@ export function createLiveContext(kernel, sandbox = null) {
  *   opts.ringCap   {number}          ring capacity override
  * @returns {ReplayContext}
  */
-export function createReplayContext(snapshot, opts = {}) {
+function createReplayContext(snapshot, opts = {}) {
   if (!snapshot || typeof snapshot !== 'object') {
     throw new Error('[context] createReplayContext: snapshot must be a non-null object');
   }
@@ -295,3 +294,5 @@ let _contextSeq = 0;
 function _newContextId(type) {
   return `ctx:${type}:${++_contextSeq}:${Date.now().toString(36)}`;
 }
+
+module.exports = { createLiveContext, createReplayContext, CONTEXT_LIVE, CONTEXT_REPLAY };

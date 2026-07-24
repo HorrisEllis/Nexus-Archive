@@ -6,15 +6,20 @@ async function test(id, desc, fn) {
   catch (e) { console.error(`  ✗ ${id} ${desc}\n    ${e.message}`); failed++; }
 }
 
-// §2026-07-24 JOB 1 — meta/rfr2's 10 working modules (identity, lazy, time,
-// observer, adapter-sandbox, query, delta, enforcement, version-gate, plus
-// the index barrel) were real ESM (`export function` / `export const`) with
-// zero working consumers via plain require — only lib/rfr2-bridge.js's
-// async dynamic import() could load them at all. Converted mechanically to
-// CJS (module.exports = { ... }, imports → require()). clip/compress/context
-// are Job 2 — deliberately NOT converted here, they import ../kernel/,
-// ../sigma/, ../adapter/, none of which exist in the rfr2 tree; converting
-// their syntax wouldn't make them load.
+// §2026-07-24 JOB 1 — meta/rfr2's 9 working modules (identity, lazy, time,
+// observer, adapter-sandbox, query, delta, enforcement, version-gate) were
+// real ESM (`export function` / `export const`) with zero working consumers
+// via plain require — only lib/rfr2-bridge.js's async dynamic import() could
+// load them at all. Converted mechanically to CJS.
+//
+// §2026-07-24 JOB 2 — clip/compress/context imported kernel/sigma/adapter,
+// none of which existed in rfr2. Harvested all three (plus `causality`, a
+// real transitive dependency of kernel discovered while reading it — not in
+// the original 3-module scope) from meta/causal-nexus/modules/ (decided
+// canonical-vs-ancestor per the 2026-07-21 audit: rfr2 wins, causal-nexus is
+// the near-dead ancestor). All 4 harvested modules converted to CJS
+// alongside clip/compress/context. rfr2 is now 13/13 real CJS modules — no
+// remaining ESM island.
 
 const EXPECTED_EXPORTS = {
   'identity':       ['newEventId', 'isValidEventId', 'shortId', 'canonicalize', 'hash64', 'contentHash', 'dedupKey', 'assertUniqueIds'],
@@ -26,6 +31,15 @@ const EXPECTED_EXPORTS = {
   'enforcement':    ['getInvariant', 'createRuntimeGuard', 'createBoundaryIndex', 'checkKernelInvariants', 'InvariantViolationError', 'INVARIANTS'],
   'version-gate':   ['validate', 'migrate', 'createVersionGate', 'GateValidationError', 'CURRENT_FORMAT_VERSION', 'CURRENT_KERNEL_VERSION', 'SUPPORTED_MAGICS'],
   'delta':          ['computeEventDelta', 'computeDeltaStream', 'detectBottlenecks', 'clusterByAnomaly', 'computeThroughputTimeline', 'compressToL1', 'overlayMacros', 'detectFractals', 'createGraphBranch', 'createBranchRegistry', 'LATENCY_WINDOW', 'THROUGHPUT_WINDOW', 'BOTTLENECK_THRESHOLD', 'FAN_OUT_ALERT_THRESHOLD', 'DEPTH_ALERT_THRESHOLD', 'ZOOM_LEVELS'],
+  // Job 2 — harvested + converted
+  'causality':      ['isCausalEdge', 'createEdge', 'createCausalStore', 'createCalltoMap', 'EDGE_CAUSAL_EXPLICIT', 'EDGE_CAUSAL_RULE', 'EDGE_CAUSAL_ADAPTER', 'EDGE_OBSERVATIONAL', 'CAUSAL_EDGE_TYPES'],
+  'sigma':          ['computeFeatureTree', 'classify', 'createSigmaEngine', 'REGIMES', 'DOMINANT_CAUSES', 'DEFAULT_CONSTRAINT_CONFIG'],
+  'adapter':        ['createAdapter'],
+  'kernel':         ['gateOutput', 'createKernel', 'BUILTIN_GATES'],
+  'clip':           ['computeStabilityProfile', 'snapshotRange', 'restoreClip', 'validateClipStability', 'CLIP_MAGIC', 'DEFAULT_STABILITY_THRESHOLDS'],
+  'compress':       ['snapshot', 'restore', 'blueprint', 'compile', 'compressionReport'],
+  'context':        ['createLiveContext', 'createReplayContext', 'CONTEXT_LIVE', 'CONTEXT_REPLAY'],
+  'forge':          ['forgeModule', 'forgePatch', 'forgeGate', 'forgeHook', 'ForgePatchRecord'],
 };
 
 (async () => {
@@ -69,11 +83,101 @@ const EXPECTED_EXPORTS = {
     assert.strictEqual(typeof delta.computeDeltaStream, 'function');
   });
 
-  await test('T-job2-untouched', 'clip/compress/context are deliberately left as ESM — Job 2, not yet converted', () => {
+  await test('T-job2-barrel', 'the 4 newly-harvested modules resolve through the barrel too', () => {
+    const rfr2 = require('../../meta/rfr2/index.js');
+    assert.strictEqual(typeof rfr2.kernel.createKernel, 'function');
+    assert.strictEqual(typeof rfr2.sigma.classify, 'function');
+    assert.strictEqual(typeof rfr2.adapter.createAdapter, 'function');
+    assert.strictEqual(typeof rfr2.causality.createCausalStore, 'function');
+  });
+
+  await test('T-kernel-functional', 'kernel.createKernel() actually ingests events and builds a real causal graph', () => {
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const k = createKernel();
+    const e1 = k.ingest('test:start', { x: 1 }, { source: 'test' });
+    const e2 = k.ingest('test:child', { x: 2 }, { source: 'test', causedBy: e1.id });
+    assert.strictEqual(k.length, 2);
+    assert.strictEqual(k.edgeCount, 1);
+    const trace = k.traceToRoot(e2.id);
+    assert.deepStrictEqual(trace.path, [e1.id, e2.id]);
+  });
+
+  await test('T-sigma-functional', 'sigma.classify() actually classifies a real kinematic window into a real regime', () => {
+    const { classify, REGIMES } = require('../../meta/rfr2/sigma/index.js');
+    const window = [
+      { latencyImpact: 0.1, throughputChange: 0.1, structuralDeviation: 0.1 },
+      { latencyImpact: 0.9, throughputChange: 0.9, structuralDeviation: 0.1 },
+      { latencyImpact: 0.1, throughputChange: 0.9, structuralDeviation: 0.1 },
+    ];
+    const result = classify(window);
+    assert.ok(Object.values(REGIMES).includes(result.regime));
+  });
+
+  await test('T-adapter-functional', 'adapter.createAdapter() actually translates a real bus event through a real kernel', () => {
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { createAdapter } = require('../../meta/rfr2/adapter/index.js');
+    const k = createKernel();
+    const adapter = createAdapter(k);
+    const ev = adapter.handle('page:navigated', { sessionId: 's1' });
+    assert.strictEqual(ev.type, 'page:navigated');
+  });
+
+  await test('T-compress-round-trip', 'compress.snapshot()/restore() actually round-trips a real kernel — the whole point of Job 2', () => {
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { snapshot, restore } = require('../../meta/rfr2/compress/index.js');
+    const k = createKernel();
+    k.ingest('test:a', { v: 1 }, { source: 'test' });
+    const e2 = k.ingest('test:b', { v: 2 }, { source: 'test', causedBy: k.getAll()[0].id });
+    k.ingest('test:c', { v: 3 }, { source: 'test', causedBy: e2.id });
+    const snap = snapshot(k);
+    assert.strictEqual(snap.magic, 'URCK-SNAP');
+    const restored = restore(snap);
+    assert.strictEqual(restored.length, k.length);
+    assert.strictEqual(restored.edgeCount, k.edgeCount);
+  });
+
+  await test('T-clip-functional', 'clip.snapshotRange() actually extracts a bounded causal subgraph with a real stability profile', () => {
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { snapshotRange } = require('../../meta/rfr2/clip/index.js');
+    const k = createKernel();
+    k.ingest('test:a', {}, { source: 'test' });
+    k.ingest('test:b', {}, { source: 'test' });
+    const all = k.getAll();
+    const clip = snapshotRange(k, { seqStart: all[0].seq, seqEnd: all[all.length - 1].seq });
+    assert.strictEqual(clip.magic, 'NEX-CLIP');
+    assert.ok(clip.stabilityProfile);
+  });
+
+  await test('T-context-functional', 'context.createLiveContext() actually wraps a real kernel', () => {
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { createLiveContext, CONTEXT_LIVE } = require('../../meta/rfr2/context/index.js');
+    const k = createKernel();
+    const ctx = createLiveContext(k);
+    assert.strictEqual(typeof ctx, 'object');
+    assert.ok(CONTEXT_LIVE);
+  });
+
+  await test('T-job2b-forge-functional', 'forge module has the real 4-entry-point shape (async functions), harvested as the actual live nexus-healer consumer', () => {
+    const { forgeModule, forgePatch, forgeGate, forgeHook, ForgePatchRecord } = require('../../meta/rfr2/forge/index.js');
+    for (const fn of [forgeModule, forgePatch, forgeGate, forgeHook]) {
+      assert.strictEqual(fn.constructor.name, 'AsyncFunction', 'forge entry points must remain async functions after conversion');
+    }
+    assert.strictEqual(typeof ForgePatchRecord, 'object');
+  });
+
+  await test('T-job2b-nexus-healer-migrated', 'nexus-healer/api/index.js points at the new rfr2 location, not the old causal-nexus path', () => {
     const fs = require('fs');
-    for (const name of ['clip', 'compress', 'context']) {
+    const src = fs.readFileSync(require.resolve('../../nexus-healer/api/index.js'), 'utf8');
+    assert.ok(/require\(['"]\.\.\/\.\.\/meta\/rfr2\/forge\/index\.js['"]\)/.test(src), 'must require meta/rfr2/forge/index.js');
+    assert.ok(!/require\(['"]\.\.\/\.\.\/meta\/causal-nexus/.test(src), 'must not still require anything from meta/causal-nexus');
+  });
+
+  await test('T-job2-no-esm-remains', 'rfr2 has zero remaining ESM — all 14 modules are real CJS now', () => {
+    const fs = require('fs');
+    const names = ['identity', 'lazy', 'time', 'observer', 'adapter-sandbox', 'query', 'delta', 'enforcement', 'version-gate', 'causality', 'sigma', 'adapter', 'kernel', 'clip', 'compress', 'context', 'forge'];
+    for (const name of names) {
       const src = fs.readFileSync(require.resolve(`../../meta/rfr2/${name}/index.js`), 'utf8');
-      assert.ok(/^export /m.test(src), `${name} should still be ESM until Job 2 (kernel/sigma/adapter harvest) lands`);
+      assert.ok(!/^export /m.test(src) && !/^import /m.test(src), `${name} must have zero remaining ESM syntax`);
     }
   });
 

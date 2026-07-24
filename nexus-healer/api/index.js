@@ -74,10 +74,16 @@ async function dispatch(opId, args) {
       catch (e) { return { ok: false, error: `could not read targetFile "${args.targetFile}": ${e.message}` }; }
 
       // forge now routes through Guardian/RAID (LAW_I) — see
-      // meta/causal-nexus/modules/forge/index.js's own §FIXED note. This
-      // call never decides a provider itself.
+      // meta/rfr2/forge/index.js's own §FIXED note. This call never
+      // decides a provider itself.
+      // §FIX 2026-07-24 — was meta/causal-nexus/modules/forge/index.js.
+      // Migrated to meta/rfr2/forge (harvested + converted to real CJS
+      // same session, rfr2.spec Job 2b) — rfr2 is the decided-canonical
+      // tree (2026-07-21 audit), causal-nexus is the near-dead ancestor.
+      // Functionally identical (harvested verbatim, only the module
+      // system changed), so this is a path update, not a behavior change.
       let forge;
-      try { forge = require('../../meta/causal-nexus/modules/forge/index.js'); }
+      try { forge = require('../../meta/rfr2/forge/index.js'); }
       catch (e) { return { ok: false, error: `forge module unavailable: ${e.message}` }; }
 
       let rec;
