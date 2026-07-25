@@ -92,15 +92,23 @@ const ALL_KERNELS = [
   // the on-demand path has used since 2026-07-15, applied to the whole
   // sequence. Phasing also serializes the JAA load spikes instead of
   // stacking all of them.
-  //   Phase 1: orchestrator — registration authority (§AXIOM: everyone
-  //            registers with it) + the bus + gap-relay live here
-  //   Phase 2: guardian + diagnostic (gap-relay's two dial targets),
-  //            bridge (trust relay), cortex (memory core)
+  //   §REORDERED 2026-07-24 (James: "cortex first, gated each step")
+  //   Phase 1: cortex — the MEMORY CORE and, since James's 2026-07-24
+  //            storage decision ("stored in cortex"), the data root every
+  //            other system's writes land in. Bringing the store up before
+  //            its writers is the correct dependency order; it was phase 2
+  //            only because orchestrator held the registration authority.
+  //            Safe to lead, verified not assumed: cortex/boot.js's
+  //            _register() is fire-and-forget with a 5s retry on error
+  //            (cortex/boot.js:1050) — it never blocks on orchestrator
+  //            existing, so a later orchestrator is picked up automatically.
+  //   Phase 2: orchestrator (registration authority + bus + gap-relay),
+  //            guardian + diagnostic (gap-relay's dial targets), bridge
   //   Phase 3: the app layer — everything that registers and serves
   //   Phase 4: emerge — reports to copilot:3750, so copilot must be up
   //   clear-glass: onDemand, unchanged — no phase, dormant until requested
   { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' },
-    phase: 1, healthUrl: 'http://127.0.0.1:9000/health' },
+    phase: 2, healthUrl: 'http://127.0.0.1:9000/health' },
   // §FIX 2026-06-20: bridge/server.js only exports createBridgeServer() — it
   // has no bootstrap code and never calls .start(), so running it directly
   // loads, does nothing, and exits 0 immediately. bridge/index.js is the
@@ -108,7 +116,7 @@ const ALL_KERNELS = [
   { name: 'bridge',       cmd: 'node', args: ['bridge/index.js'],
     phase: 2, healthUrl: 'http://127.0.0.1:9999/health' },
   { name: 'cortex',       cmd: 'node', args: ['cortex/boot.js'],
-    phase: 2, healthUrl: 'http://127.0.0.1:3748/health' },
+    phase: 1, healthUrl: 'http://127.0.0.1:3748/health' },
   { name: 'guardian',     cmd: 'node', args: ['guardian/server.js'],
     phase: 2, healthUrl: 'http://127.0.0.1:7820/health' },
   { name: 'idearium',     cmd: 'node', args: ['idearium/api/index.js'],
@@ -526,7 +534,9 @@ function _startStatusServer() {
   if (!STATUS_PORT) return;
   const server = http.createServer((req, res) => {
     if (req.url === '/status') {
-      const body = JSON.stringify({ ok: true, kernels: _statusSnapshot(), ts: Date.now() }, null, 2);
+      // §1.2 — a halted boot must be visible to any observer (the tablet
+      // reads this), not only to whoever was watching the terminal.
+      const body = JSON.stringify({ ok: true, kernels: _statusSnapshot(), boot: _bootResult, ts: Date.now() }, null, 2);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(body);
       return;
@@ -1149,20 +1159,113 @@ async function _bootPhases() {
     // full parallelism, so proceeding past a slow system is never worse
     // than what every previous boot already did (§1.2: no silent deadlock,
     // no silent skip).
-    await Promise.all(kernels.map(async (kernel) => {
+    const results = await Promise.all(kernels.map(async (kernel) => {
       if (!kernel.healthUrl) {
         _log(`[${kernel.name}] phase ${phase} — no healthUrl (no HTTP surface) — spawned, not verified`);
-        return;
+        return { kernel, gated: false, healthy: null };
       }
       const healthy = await _pollHealth(kernel.healthUrl, kernel.spawnTimeoutMs || PHASE_GATE_TIMEOUT_MS);
       if (healthy) {
         _log(`[${kernel.name}] phase ${phase} gate passed — ${kernel.healthUrl}`);
+        _warpEmit('autopilot.phase.gate_passed', { kernel: kernel.name, phase });
       } else {
-        _log(`[${kernel.name}] ⚠ phase ${phase} gate TIMED OUT after ${(kernel.spawnTimeoutMs || PHASE_GATE_TIMEOUT_MS) / 1000}s — ${kernel.healthUrl} never answered ok. Continuing boot; supervisor backoff/restart still applies.`);
+        const secs = (kernel.spawnTimeoutMs || PHASE_GATE_TIMEOUT_MS) / 1000;
+        _log(`[${kernel.name}] ⚠ phase ${phase} gate STALLED after ${secs}s — ${kernel.healthUrl} never answered ok`);
+        _warpEmit('autopilot.phase.gate_stalled', { kernel: kernel.name, phase, optional: !!kernel.optional });
       }
+      return { kernel, gated: true, healthy };
     }));
+
+    // §BOOT DISCIPLINE 2026-07-24 (James: "stopping on faults, running the
+    // diagnostic tool each time it stalls").
+    //
+    // Previous behavior: a stalled gate logged a warning and boot marched on.
+    // That was defensible when this replaced full parallelism — proceeding was
+    // never worse than what came before — but it means a broken foundation
+    // silently carries every later phase on top of it, which is the exact
+    // "authoritative-looking and mostly wrong" shape the rest of this session
+    // has been removing.
+    //
+    // Now: a stall runs the real diagnostic tool (cli/diagnose.js — the same
+    // one a human would run, never a parallel reimplementation, §16.4), and a
+    // stalled REQUIRED kernel HALTS the boot sequence.
+    //
+    // optional:true kernels (ollama-bridge, copilot, emerge, loom) explicitly
+    // do NOT halt: they are declared optional precisely because NEXUS is
+    // useful without them, and halting on one would make the boot stricter
+    // than the architecture actually is.
+    //
+    // Already-spawned kernels are deliberately LEFT RUNNING on a halt. They
+    // are healthy, they are under supervision, and killing working systems to
+    // punish a broken sibling would turn one fault into an outage. What stops
+    // is the sequence — no NEW phase is started on a broken foundation.
+    const stalled = results.filter(r => r.gated && r.healthy === false);
+    if (stalled.length) {
+      for (const { kernel } of stalled) await _runDiagnosticOnStall(kernel, phase);
+      const blocking = stalled.filter(r => !r.kernel.optional).map(r => r.kernel.name);
+      if (blocking.length) {
+        _log(`── ✖ BOOT HALTED at phase ${phase} — required kernel(s) never became healthy: ${blocking.join(', ')}`);
+        _log(`   Phases after ${phase} were NOT started (${plan.length - phase} remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.`);
+        _log(`   Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.`);
+        _warpEmit('autopilot.boot.halted', { phase, blocking, phasesSkipped: plan.length - phase });
+        return { halted: true, phase, blocking };
+      }
+      _log(`   (stalled kernel(s) ${stalled.map(r => r.kernel.name).join(', ')} are optional:true — boot continues, as declared)`);
+    }
   }
   _log(`── boot sequence complete — ${plan.length} phase(s)`);
+  _warpEmit('autopilot.boot.complete', { phases: plan.length });
+  return { halted: false, phases: plan.length };
+}
+
+// Run the REAL diagnostic tool on a stall. Never a reimplementation: this is
+// cli/diagnose.js, the same command a human runs, so its output means the same
+// thing here as it does in a terminal (§16.4, and §10.3 — a second diagnostic
+// would be a second truth about system health).
+//
+// Bounded and contained: 25s cap, output tailed, and any failure to run the
+// diagnostic is itself reported rather than masking the original stall. A
+// diagnostic that hangs must not become the reason boot never finishes.
+let _bootResult = null;   // surfaced on /status so a halt is visible, not just logged
+const DIAGNOSTIC_TIMEOUT_MS = 25000;
+function _runDiagnosticOnStall(kernel, phase) {
+  return new Promise((resolve) => {
+    _log(`   ↳ running diagnostic for stalled '${kernel.name}' (phase ${phase}) — cli/diagnose.js ${kernel.name}`);
+    _warpEmit('autopilot.diagnostic.run', { kernel: kernel.name, phase });
+    let proc;
+    try {
+      const { spawn } = require('child_process');
+      proc = spawn(process.execPath, [path.join(ROOT, 'cli', 'diagnose.js'), kernel.name], { cwd: ROOT });
+    } catch (e) {
+      _log(`   ↳ diagnostic could not start: ${e.message} — original stall of '${kernel.name}' stands unexplained`);
+      return resolve();
+    }
+    let out = '';
+    const cap = (c) => { out += c.toString(); if (out.length > 40000) out = out.slice(-40000); };
+    proc.stdout.on('data', cap);
+    proc.stderr.on('data', cap);
+    const timer = setTimeout(() => {
+      _log(`   ↳ diagnostic for '${kernel.name}' exceeded ${DIAGNOSTIC_TIMEOUT_MS / 1000}s — killed. Partial output below.`);
+      try { proc.kill('SIGKILL'); } catch (_) {}
+    }, DIAGNOSTIC_TIMEOUT_MS);
+    proc.on('error', (e) => {
+      clearTimeout(timer);
+      _log(`   ↳ diagnostic failed to run for '${kernel.name}': ${e.message}`);
+      resolve();
+    });
+    proc.on('exit', (code) => {
+      clearTimeout(timer);
+      const tail = out.split('\n').filter(Boolean).slice(-25);
+      if (tail.length) {
+        _log(`   ↳ diagnostic for '${kernel.name}' (exit ${code}) —`);
+        for (const line of tail) _log(`      ${line}`);
+      } else {
+        _log(`   ↳ diagnostic for '${kernel.name}' produced no output (exit ${code})`);
+      }
+      _warpEmit('autopilot.diagnostic.done', { kernel: kernel.name, phase, exitCode: code, lines: tail.length });
+      resolve();
+    });
+  });
 }
 
 function start() {
@@ -1178,7 +1281,12 @@ function start() {
       _state[kernel.name].status = 'dormant';
     }
   });
-  _bootPhases().catch(e => _log(`⚠ phased boot error: ${e.message} — kernels already spawned keep running under supervision`));
+  _bootPhases()
+    .then(r => { _bootResult = r; })
+    .catch(e => {
+      _bootResult = { halted: true, error: e.message };
+      _log(`⚠ phased boot error: ${e.message} — kernels already spawned keep running under supervision`);
+    });
   _startStatusServer();
   _startIdleReaper();
 }
@@ -1197,4 +1305,4 @@ process.on('SIGTERM', () => _shutdown('SIGTERM'));
 
 if (require.main === module) start();
 
-module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead, _handleContractProxy, _handleTablesRead, _handleFilesRead, _handleRunTests, _handleGraphRead };
+module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead, _handleContractProxy, _handleTablesRead, _handleFilesRead, _handleRunTests, _handleGraphRead, _bootPhases, _runDiagnosticOnStall, _getBootResult: () => _bootResult };

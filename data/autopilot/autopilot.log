@@ -1016,3 +1016,348 @@
 [2026-07-25T04:01:15.195Z] autopilot status: http://127.0.0.1:7933/status
 [2026-07-25T04:03:02.827Z] autopilot status: http://127.0.0.1:7921/status
 [2026-07-25T04:08:15.432Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-25T05:13:28.460Z] ── boot phase 1 — fakerequired
+[2026-07-25T05:13:28.478Z] [36m[fakerequired][0m starting — node -e setTimeout(()=>{},9999)
+[2026-07-25T05:13:31.534Z] [fakerequired] ⚠ phase 1 gate STALLED after 3s — http://127.0.0.1:59997/health never answered ok
+[2026-07-25T05:13:31.535Z]    ↳ running diagnostic for stalled 'fakerequired' (phase 1) — cli/diagnose.js fakerequired
+[2026-07-25T05:13:31.761Z]    ↳ diagnostic for 'fakerequired' (exit 1) —
+[2026-07-25T05:13:31.761Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:13:31.761Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:13:31.761Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:13:31.761Z]       [90m  Node v22.22.2  |  7/25/2026, 5:13:31 AM[0m
+[2026-07-25T05:13:31.761Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:13:31.761Z]       ReferenceError: Cannot access 'DEEP' before initialization
+[2026-07-25T05:13:31.761Z]           at runAll (/home/claude/work/nexus/cli/diagnose.js:1061:3)
+[2026-07-25T05:13:31.761Z]           at Object.<anonymous> (/home/claude/work/nexus/cli/diagnose.js:1094:1)
+[2026-07-25T05:13:31.761Z]           at Module._compile (node:internal/modules/cjs/loader:1705:14)
+[2026-07-25T05:13:31.761Z]           at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-07-25T05:13:31.762Z]           at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-07-25T05:13:31.762Z]           at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-07-25T05:13:31.762Z]           at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-07-25T05:13:31.762Z]           at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-07-25T05:13:31.762Z]           at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-07-25T05:13:31.762Z]           at node:internal/main/run_main_module:36:49
+[2026-07-25T05:13:31.762Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: fakerequired
+[2026-07-25T05:13:31.762Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-25T05:13:31.762Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-25T05:13:39.259Z] ── boot phase 1 — fakeoptional
+[2026-07-25T05:13:39.261Z] [36m[fakeoptional][0m starting — node -e setTimeout(()=>{},9999)
+[2026-07-25T05:13:41.790Z] [fakeoptional] ⚠ phase 1 gate STALLED after 2.5s — http://127.0.0.1:59995/health never answered ok
+[2026-07-25T05:13:41.792Z]    ↳ running diagnostic for stalled 'fakeoptional' (phase 1) — cli/diagnose.js fakeoptional
+[2026-07-25T05:13:41.921Z]    ↳ diagnostic for 'fakeoptional' (exit 1) —
+[2026-07-25T05:13:41.921Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:13:41.921Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:13:41.921Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:13:41.921Z]       [90m  Node v22.22.2  |  7/25/2026, 5:13:41 AM[0m
+[2026-07-25T05:13:41.921Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:13:41.921Z]       ReferenceError: Cannot access 'DEEP' before initialization
+[2026-07-25T05:13:41.921Z]           at runAll (/home/claude/work/nexus/cli/diagnose.js:1061:3)
+[2026-07-25T05:13:41.921Z]           at Object.<anonymous> (/home/claude/work/nexus/cli/diagnose.js:1094:1)
+[2026-07-25T05:13:41.921Z]           at Module._compile (node:internal/modules/cjs/loader:1705:14)
+[2026-07-25T05:13:41.921Z]           at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-07-25T05:13:41.921Z]           at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-07-25T05:13:41.921Z]           at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-07-25T05:13:41.921Z]           at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-07-25T05:13:41.921Z]           at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-07-25T05:13:41.921Z]           at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-07-25T05:13:41.921Z]           at node:internal/main/run_main_module:36:49
+[2026-07-25T05:13:41.922Z]    (stalled kernel(s) fakeoptional are optional:true — boot continues, as declared)
+[2026-07-25T05:13:41.922Z] ── boot phase 2 — goodlater
+[2026-07-25T05:13:41.922Z] [35m[goodlater][0m starting — node -e setTimeout(()=>{},9999)
+[2026-07-25T05:13:41.925Z] [goodlater] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:13:41.925Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:14:24.194Z] ── boot phase 1 — bgRequired
+[2026-07-25T05:14:24.195Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:14:26.223Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-25T05:14:26.224Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-25T05:14:26.310Z]    ↳ diagnostic for 'bgRequired' (exit 1) —
+[2026-07-25T05:14:26.310Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:14:26.310Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:14:26.310Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:14:26.310Z]       [90m  Node v22.22.2  |  7/25/2026, 5:14:26 AM[0m
+[2026-07-25T05:14:26.310Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:14:26.310Z]       ReferenceError: Cannot access 'DEEP' before initialization
+[2026-07-25T05:14:26.310Z]           at runAll (/home/claude/work/nexus/cli/diagnose.js:1061:3)
+[2026-07-25T05:14:26.311Z]           at Object.<anonymous> (/home/claude/work/nexus/cli/diagnose.js:1094:1)
+[2026-07-25T05:14:26.311Z]           at Module._compile (node:internal/modules/cjs/loader:1705:14)
+[2026-07-25T05:14:26.311Z]           at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-07-25T05:14:26.311Z]           at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-07-25T05:14:26.311Z]           at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-07-25T05:14:26.311Z]           at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-07-25T05:14:26.311Z]           at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-07-25T05:14:26.311Z]           at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-07-25T05:14:26.311Z]           at node:internal/main/run_main_module:36:49
+[2026-07-25T05:14:26.311Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-25T05:14:26.311Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-25T05:14:26.311Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-25T05:14:26.312Z] ── boot phase 1 — bgOptional
+[2026-07-25T05:14:26.312Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:14:28.325Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-25T05:14:28.325Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-25T05:14:28.465Z]    ↳ diagnostic for 'bgOptional' (exit 1) —
+[2026-07-25T05:14:28.466Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:14:28.466Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:14:28.466Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:14:28.466Z]       [90m  Node v22.22.2  |  7/25/2026, 5:14:28 AM[0m
+[2026-07-25T05:14:28.466Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:14:28.466Z]       ReferenceError: Cannot access 'DEEP' before initialization
+[2026-07-25T05:14:28.466Z]           at runAll (/home/claude/work/nexus/cli/diagnose.js:1061:3)
+[2026-07-25T05:14:28.466Z]           at Object.<anonymous> (/home/claude/work/nexus/cli/diagnose.js:1094:1)
+[2026-07-25T05:14:28.466Z]           at Module._compile (node:internal/modules/cjs/loader:1705:14)
+[2026-07-25T05:14:28.466Z]           at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-07-25T05:14:28.466Z]           at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-07-25T05:14:28.466Z]           at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-07-25T05:14:28.466Z]           at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-07-25T05:14:28.466Z]           at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-07-25T05:14:28.466Z]           at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-07-25T05:14:28.466Z]           at node:internal/main/run_main_module:36:49
+[2026-07-25T05:14:28.466Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-25T05:14:28.466Z] ── boot phase 2 — bgAfter
+[2026-07-25T05:14:28.466Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:14:28.469Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:14:28.469Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:14:28.473Z] ── boot phase 1 — bgDiag
+[2026-07-25T05:14:28.473Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:14:30.482Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-25T05:14:30.482Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-25T05:14:30.667Z]    ↳ diagnostic for 'bgDiag' (exit 1) —
+[2026-07-25T05:14:30.667Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:14:30.667Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:14:30.667Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:14:30.667Z]       [90m  Node v22.22.2  |  7/25/2026, 5:14:30 AM[0m
+[2026-07-25T05:14:30.667Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:14:30.667Z]       ReferenceError: Cannot access 'DEEP' before initialization
+[2026-07-25T05:14:30.667Z]           at runAll (/home/claude/work/nexus/cli/diagnose.js:1061:3)
+[2026-07-25T05:14:30.667Z]           at Object.<anonymous> (/home/claude/work/nexus/cli/diagnose.js:1094:1)
+[2026-07-25T05:14:30.667Z]           at Module._compile (node:internal/modules/cjs/loader:1705:14)
+[2026-07-25T05:14:30.667Z]           at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-07-25T05:14:30.667Z]           at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-07-25T05:14:30.667Z]           at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-07-25T05:14:30.667Z]           at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-07-25T05:14:30.667Z]           at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-07-25T05:14:30.667Z]           at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-07-25T05:14:30.667Z]           at node:internal/main/run_main_module:36:49
+[2026-07-25T05:14:30.667Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-25T05:14:30.667Z] ── boot sequence complete — 1 phase(s)
+[2026-07-25T05:14:30.668Z] ── boot phase 1 — bgClean1
+[2026-07-25T05:14:30.668Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:14:30.670Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:14:30.673Z] ── boot phase 2 — bgClean2
+[2026-07-25T05:14:30.673Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:14:30.675Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:14:30.676Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:15:15.320Z] ── boot phase 1 — bgRequired
+[2026-07-25T05:15:15.321Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:17.341Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-25T05:15:17.341Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-25T05:15:17.413Z]    ↳ diagnostic for 'bgRequired' (exit 1) —
+[2026-07-25T05:15:17.413Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:15:17.413Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:15:17.413Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:15:17.413Z]       [90m  Node v22.22.2  |  7/25/2026, 5:15:17 AM[0m
+[2026-07-25T05:15:17.413Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:15:17.413Z]       Unknown system: bgRequired
+[2026-07-25T05:15:17.414Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:15:17.414Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-25T05:15:17.414Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-25T05:15:17.414Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-25T05:15:17.414Z] ── boot phase 1 — bgOptional
+[2026-07-25T05:15:17.414Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:19.426Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-25T05:15:19.426Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-25T05:15:19.499Z]    ↳ diagnostic for 'bgOptional' (exit 1) —
+[2026-07-25T05:15:19.500Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:15:19.500Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:15:19.500Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:15:19.500Z]       [90m  Node v22.22.2  |  7/25/2026, 5:15:19 AM[0m
+[2026-07-25T05:15:19.500Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:15:19.500Z]       Unknown system: bgOptional
+[2026-07-25T05:15:19.500Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:15:19.500Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-25T05:15:19.500Z] ── boot phase 2 — bgAfter
+[2026-07-25T05:15:19.500Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:19.502Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:15:19.502Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:15:19.505Z] ── boot phase 1 — bgDiag
+[2026-07-25T05:15:19.505Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:21.517Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-25T05:15:21.517Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-25T05:15:21.628Z]    ↳ diagnostic for 'bgDiag' (exit 1) —
+[2026-07-25T05:15:21.629Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:15:21.629Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:15:21.629Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:15:21.629Z]       [90m  Node v22.22.2  |  7/25/2026, 5:15:21 AM[0m
+[2026-07-25T05:15:21.629Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:15:21.629Z]       Unknown system: bgDiag
+[2026-07-25T05:15:21.629Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:15:21.629Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-25T05:15:21.629Z] ── boot sequence complete — 1 phase(s)
+[2026-07-25T05:15:21.630Z] ── boot phase 1 — bgClean1
+[2026-07-25T05:15:21.630Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:21.633Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:15:21.633Z] ── boot phase 2 — bgClean2
+[2026-07-25T05:15:21.633Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:21.640Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:15:21.640Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:15:48.701Z] ── boot phase 1 — bgRequired
+[2026-07-25T05:15:48.702Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:50.729Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-25T05:15:50.730Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-25T05:15:50.811Z]    ↳ diagnostic for 'bgRequired' (exit 1) —
+[2026-07-25T05:15:50.812Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:15:50.812Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:15:50.812Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:15:50.812Z]       [90m  Node v22.22.2  |  7/25/2026, 5:15:50 AM[0m
+[2026-07-25T05:15:50.812Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:15:50.812Z]       Unknown system: bgRequired
+[2026-07-25T05:15:50.812Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:15:50.813Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-25T05:15:50.813Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-25T05:15:50.813Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-25T05:15:50.813Z] ── boot phase 1 — bgOptional
+[2026-07-25T05:15:50.813Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:52.827Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-25T05:15:52.828Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-25T05:15:52.933Z]    ↳ diagnostic for 'bgOptional' (exit 1) —
+[2026-07-25T05:15:52.934Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:15:52.934Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:15:52.934Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:15:52.934Z]       [90m  Node v22.22.2  |  7/25/2026, 5:15:52 AM[0m
+[2026-07-25T05:15:52.934Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:15:52.934Z]       Unknown system: bgOptional
+[2026-07-25T05:15:52.934Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:15:52.934Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-25T05:15:52.934Z] ── boot phase 2 — bgAfter
+[2026-07-25T05:15:52.934Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:52.941Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:15:52.941Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:15:52.942Z] ── boot phase 1 — bgDiag
+[2026-07-25T05:15:52.942Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:54.953Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-25T05:15:54.953Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-25T05:15:55.030Z]    ↳ diagnostic for 'bgDiag' (exit 1) —
+[2026-07-25T05:15:55.030Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:15:55.030Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:15:55.030Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:15:55.030Z]       [90m  Node v22.22.2  |  7/25/2026, 5:15:55 AM[0m
+[2026-07-25T05:15:55.030Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:15:55.030Z]       Unknown system: bgDiag
+[2026-07-25T05:15:55.030Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:15:55.030Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-25T05:15:55.030Z] ── boot sequence complete — 1 phase(s)
+[2026-07-25T05:15:55.031Z] ── boot phase 1 — bgClean1
+[2026-07-25T05:15:55.031Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:55.036Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:15:55.036Z] ── boot phase 2 — bgClean2
+[2026-07-25T05:15:55.036Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:15:55.041Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:15:55.041Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:15:55.311Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-25T05:16:21.404Z] ── boot phase 1 — bgRequired
+[2026-07-25T05:16:21.405Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:16:23.432Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-25T05:16:23.434Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-25T05:16:23.514Z]    ↳ diagnostic for 'bgRequired' (exit 1) —
+[2026-07-25T05:16:23.514Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:16:23.514Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:16:23.514Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:16:23.514Z]       [90m  Node v22.22.2  |  7/25/2026, 5:16:23 AM[0m
+[2026-07-25T05:16:23.514Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:16:23.514Z]       Unknown system: bgRequired
+[2026-07-25T05:16:23.514Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:16:23.514Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-25T05:16:23.515Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-25T05:16:23.515Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-25T05:16:23.515Z] ── boot phase 1 — bgOptional
+[2026-07-25T05:16:23.515Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:16:25.526Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-25T05:16:25.526Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-25T05:16:25.613Z]    ↳ diagnostic for 'bgOptional' (exit 1) —
+[2026-07-25T05:16:25.614Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:16:25.614Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:16:25.614Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:16:25.614Z]       [90m  Node v22.22.2  |  7/25/2026, 5:16:25 AM[0m
+[2026-07-25T05:16:25.614Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:16:25.614Z]       Unknown system: bgOptional
+[2026-07-25T05:16:25.614Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:16:25.614Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-25T05:16:25.614Z] ── boot phase 2 — bgAfter
+[2026-07-25T05:16:25.615Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:16:25.616Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:16:25.620Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:16:25.621Z] ── boot phase 1 — bgDiag
+[2026-07-25T05:16:25.621Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:16:27.629Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-25T05:16:27.629Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-25T05:16:27.709Z]    ↳ diagnostic for 'bgDiag' (exit 1) —
+[2026-07-25T05:16:27.709Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:16:27.709Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:16:27.709Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:16:27.709Z]       [90m  Node v22.22.2  |  7/25/2026, 5:16:27 AM[0m
+[2026-07-25T05:16:27.709Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:16:27.709Z]       Unknown system: bgDiag
+[2026-07-25T05:16:27.709Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:16:27.710Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-25T05:16:27.710Z] ── boot sequence complete — 1 phase(s)
+[2026-07-25T05:16:27.711Z] ── boot phase 1 — bgClean1
+[2026-07-25T05:16:27.711Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:16:27.713Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:16:27.713Z] ── boot phase 2 — bgClean2
+[2026-07-25T05:16:27.713Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:16:27.718Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:16:27.718Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:16:27.964Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-25T05:17:11.300Z] ── boot phase 1 — bgRequired
+[2026-07-25T05:17:11.301Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:17:13.325Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-25T05:17:13.326Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-25T05:17:13.407Z]    ↳ diagnostic for 'bgRequired' (exit 1) —
+[2026-07-25T05:17:13.407Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:17:13.407Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:17:13.407Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:17:13.407Z]       [90m  Node v22.22.2  |  7/25/2026, 5:17:13 AM[0m
+[2026-07-25T05:17:13.407Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:17:13.407Z]       Unknown system: bgRequired
+[2026-07-25T05:17:13.407Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:17:13.408Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-25T05:17:13.408Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-25T05:17:13.408Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-25T05:17:13.408Z] ── boot phase 1 — bgOptional
+[2026-07-25T05:17:13.408Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:17:15.424Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-25T05:17:15.424Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-25T05:17:15.498Z]    ↳ diagnostic for 'bgOptional' (exit 1) —
+[2026-07-25T05:17:15.498Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:17:15.498Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:17:15.498Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:17:15.499Z]       [90m  Node v22.22.2  |  7/25/2026, 5:17:15 AM[0m
+[2026-07-25T05:17:15.499Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:17:15.499Z]       Unknown system: bgOptional
+[2026-07-25T05:17:15.499Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:17:15.499Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-25T05:17:15.499Z] ── boot phase 2 — bgAfter
+[2026-07-25T05:17:15.499Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:17:15.502Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:17:15.502Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:17:15.503Z] ── boot phase 1 — bgDiag
+[2026-07-25T05:17:15.503Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:17:17.515Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-25T05:17:17.515Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-25T05:17:17.595Z]    ↳ diagnostic for 'bgDiag' (exit 1) —
+[2026-07-25T05:17:17.595Z]       [1m[36m╔══════════════════════════════════════════════════════╗[0m
+[2026-07-25T05:17:17.595Z]       [1m[36m║  NEXUS System Diagnostic Sequencer                   ║[0m
+[2026-07-25T05:17:17.595Z]       [1m[36m╚══════════════════════════════════════════════════════╝[0m
+[2026-07-25T05:17:17.595Z]       [90m  Node v22.22.2  |  7/25/2026, 5:17:17 AM[0m
+[2026-07-25T05:17:17.595Z]       [90m  Root: /home/claude/work/nexus[0m
+[2026-07-25T05:17:17.595Z]       Unknown system: bgDiag
+[2026-07-25T05:17:17.595Z]       Available: orchestrator, cortex, guardian, idearium, emerge, all
+[2026-07-25T05:17:17.596Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-25T05:17:17.596Z] ── boot sequence complete — 1 phase(s)
+[2026-07-25T05:17:17.597Z] ── boot phase 1 — bgClean1
+[2026-07-25T05:17:17.597Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:17:17.601Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:17:17.601Z] ── boot phase 2 — bgClean2
+[2026-07-25T05:17:17.601Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-25T05:17:17.605Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-25T05:17:17.605Z] ── boot sequence complete — 2 phase(s)
+[2026-07-25T05:17:17.848Z] autopilot status: http://127.0.0.1:7921/status

@@ -73,6 +73,7 @@ const SUITES = [
   'test-config-governance.js',
   'test-bus-subscriptions.js',
   'test-tablet-graph-api.js',
+  'test-autopilot-boot-gates.js',
   'test-autopilot-warp-spine.js',
   'test-guardian-cfr-consolidation.js',
   'test-ico-ledger-writethrough.js',

@@ -33,11 +33,20 @@ test('T-003', 'a kernel with no phase lands in a final catch-all phase, flagged,
   assert.ok(plan[1].phase > plan[0].phase);
 });
 
-test('T-004', 'the REAL kernel table plans in the intended order: orchestrator → core → apps → emerge', () => {
+test('T-004', 'the REAL kernel table plans in the intended order: cortex → orchestrator+core → apps → emerge', () => {
+  // §UPDATED 2026-07-24 — this assertion encoded the ORIGINAL intent
+  // (orchestrator first, as registration authority). James changed that
+  // intent: "can we make sure that autopilot boots in phases, like cortex
+  // first, gated each step." Cortex is the memory core AND, since his
+  // 2026-07-24 storage decision, the data root every other system writes
+  // into — so the store now comes up before its writers. The test moved with
+  // the declared intent rather than being deleted to make the reorder pass,
+  // and the reorder was verified safe first: cortex/boot.js's _register() is
+  // fire-and-forget with a 5s retry, so it never blocks on orchestrator.
   const plan = _phasePlan(ALL_KERNELS);
-  assert.deepStrictEqual(plan[0].kernels.map(k => k.name), ['orchestrator']);
+  assert.deepStrictEqual(plan[0].kernels.map(k => k.name), ['cortex']);
   assert.deepStrictEqual(plan[1].kernels.map(k => k.name).sort(),
-    ['bridge', 'cortex', 'diagnostic', 'guardian']);
+    ['bridge', 'diagnostic', 'guardian', 'orchestrator']);
   assert.ok(plan[2].kernels.map(k => k.name).includes('copilot'));
   assert.deepStrictEqual(plan[3].kernels.map(k => k.name), ['emerge']);
   // clear-glass must NOT appear anywhere — it's onDemand

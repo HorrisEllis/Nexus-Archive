@@ -25,6 +25,7 @@ const { randomUUID } = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
 const FIX  = process.argv.includes('--fix');
+const DEEP = process.argv.includes('--deep');   // §see the note further down: this used to be declared after its own use site, which killed the whole tool
 const WATCH= process.argv.includes('--watch');
 const TARGET = process.argv.slice(2).find(a => !a.startsWith('--')) || 'all';
 
@@ -1476,4 +1477,16 @@ async function runRecursiveScan(opts = {}) {
 }
 
 // ── Wire --deep flag into runAll ────────────────────────────────────────────
-const DEEP = process.argv.includes('--deep');
+// §MOVED 2026-07-24 — DEEP was declared HERE (line ~1479) but read inside
+// runAll() at ~1061, and runAll() is invoked at ~1094 — i.e. BEFORE this
+// const was ever evaluated. `const` is not hoisted-and-initialised like
+// `var`, so every single invocation of this tool died with
+// "ReferenceError: Cannot access 'DEEP' before initialization", for every
+// target, with no output beyond the banner. The diagnostic sequencer was
+// 100% dead and had been silently so — nothing ran it automatically, and by
+// hand the banner printed first, so it LOOKED like it had started working.
+// Declaration now sits with the other flags at the top of the file (see FIX /
+// WATCH / TARGET). Found the moment autopilot's new boot gate tried to run it
+// on a stall (James, 2026-07-24: "running the diagnostic tool each time it
+// stalls") — the classic case of a thing being broken precisely because
+// nothing was watching it.
