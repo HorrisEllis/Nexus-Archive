@@ -309,3 +309,70 @@ untidy but already under the data root; lower priority than (a).
 emerge/orchestrator that never went through any migration — need
 per-file writer identification before touching, same discipline as
 this one.
+
+## Session 2026-07-24 (cont.) — tablet T2/T3 built, B1 blocker closed
+
+- **T2 container shell** — 4 routes on autopilot (contract proxy with the
+  port taken from each kernel's own healthUrl so no second topology map
+  exists; disk-backed JAA table reads; data subtree listing; real test
+  invocation via a new `--filter` on the REAL run-all.js). Container view
+  added to tablet/index.html. 14 tests. **Real flaw found and fixed at the
+  class:** the test-invocation route allowed recursion — a suite filtering
+  on a term matching itself makes the spawned runner re-run it, forever.
+  Passed standalone (unregistered), failed the instant the full suite ran.
+  Fixed both in the test AND architecturally (`NEXUS_TEST_RUN_DEPTH` guard
+  on the route), because `_testRunActive` can never catch it — each nested
+  run is a fresh process with its own state.
+- **T3 change governance** — `lib/config-governance.js`, all five gate
+  steps, deliberately thin: CFR's `record()` supplies the stamp+sigma,
+  `component-ledger.write()` the canonical write+registry projection,
+  `escalation.js` the friction. Emits `anomaly.detected` rather than
+  computing friction, so no second truth about system health (§10.3).
+  10 tests against real modules, nothing mocked; anomaly forced by
+  threshold, never by a faked sigma score. **Not wired to any caller yet** —
+  recorded honestly rather than claimed.
+- **B1 CLOSED** — `lib/bus-subscriptions.js`. `consumer-registry.consumers()`
+  read only the local EventEmitter while NEXUS runs 9+ processes, so every
+  remote subscriber was invisible and `unconsumed()` called real work
+  "emitted into the void." Now every process publishes its own subscription
+  snapshot to the shared store and reads aggregate from disk (§5.12
+  decoupling + the tablet's disk-backed observation law). **Staleness is not
+  liveness:** live and stale counts are reported separately and never
+  summed — a crashed process's last snapshot must not be drawn as live
+  wiring. `consumers()` still returns a number for every existing caller
+  (§5.14); `consumersDetailed()` adds the per-system breakdown and names its
+  source. 12 tests. Two API assumptions were wrong on first attempt and are
+  now pinned: JaaStore has no `find()` (it's `all()`), and `upsert()` MERGES
+  — which would have kept an unsubscribed event type alive as a live edge
+  forever; `insert()` with an explicit id does the required full replace.
+  **T4 is now blocked only on publishers being wired into each system's
+  boot** (the library is proven; no system calls `publish()` yet).
+
+### B1 publishers wired (2026-07-24, same session)
+
+`lib/bus-subscriptions.js` now has real producers, not just a proven library:
+- **cortex** publishes from `_startHeartbeat()` — i.e. after registration
+  succeeds, which is after boot wired its listeners. Publishing at module
+  load would snapshot an empty bus and record cortex as consuming nothing.
+- **orchestrator** publishes from `startWatchdog()` — after the server binds,
+  same reasoning. It is a heavy subscriber (sigma-writer, request-handler,
+  CFR influence poller) and every one of those listeners was invisible to
+  other processes before this.
+Both wrap the start in try/catch with a loud failure: observability must
+never be the reason a system fails to boot.
+
+**Honest scope limit — guardian CANNOT publish, and this is not an oversight.**
+Its bus is a custom `_kernelEmit()` that forwards over HTTP to
+orchestrator/cortex; it is not an EventEmitter and has no introspectable
+subscriber set, so there is nothing to snapshot. Forcing a fake publish would
+have put zeros in the map that read as "guardian consumes nothing." Recorded
+rather than papered over. Any future EventEmitter-style bus in guardian can be
+wired in one line.
+
+**Store-facade compatibility fixed while wiring:** this codebase has two live
+store facades — `JaaStore` (read-many = `all()`) and `cortex/memory/jaa-db.js`'s
+`jaaDB` (read-many = `query()`, no `.all` on the facade). The first draft
+supported only `all()`, which would have returned `observed:false` for cortex
+and orchestrator — both of which hold the `jaaDB` shape — making the whole
+cross-process map read as "no subscribers anywhere." Caught before wiring, not
+after. Both shapes now supported and pinned (T-B1-015).

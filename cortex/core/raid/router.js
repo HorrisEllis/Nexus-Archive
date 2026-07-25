@@ -63,6 +63,65 @@ function _resolveTarget(envelope) {
   return { system: top.namespace, capability: top.name };
 }
 
+// ── §T4 TRAIL PERSISTENCE 2026-07-24 ────────────────────────────────────────
+// Until now the trail existed ONLY on the in-flight envelope object, so the
+// tablet's brain view could not animate real routing — the data was gone the
+// moment a request finished. This module's own header called the envelope "the
+// ledger record"; that was aspirational, nothing wrote it down.
+//
+// Written at every stamp point, keyed by envelopeId with insert() (a FULL
+// REPLACE, deliberately — envelopeLib.stamp() returns a NEW envelope carrying
+// the CUMULATIVE trail, so the newest write always holds every prior hop.
+// upsert() would merge and is not needed; insert-by-id is both correct and
+// cheaper).
+//
+// Persisting at ROUTED as well as at the terminal states is the point, not an
+// accident: an envelope that gets routed and never fulfilled is a STUCK
+// REQUEST, and a trail store that only records completions would be blind to
+// exactly the failure worth seeing (§1.2).
+//
+// Never throws into the routing path: a request must not fail because its
+// telemetry could not be written. Loud, then continue.
+let _jaaCache;
+function _jaa() {
+  if (_jaaCache === undefined) {
+    try { ({ jaaDB: _jaaCache } = require('../../memory/jaa-db')); }
+    catch (e) { _jaaCache = null; console.error(`[${MODULE_ID}] trail store unavailable: ${e.message}`); }
+  }
+  return _jaaCache;
+}
+
+function _persistTrail(envelope) {
+  const jaa = _jaa();
+  if (!jaa) return false;
+  try {
+    const last = envelope.trail[envelope.trail.length - 1] || {};
+    jaa.insert('raid_trails', {
+      id: envelope.envelopeId,
+      envelopeId: envelope.envelopeId,
+      intent: envelope.intent,
+      from: envelope.from,
+      target: envelope.target || null,
+      status: envelope.status,
+      terminal: envelope.status === STATUS.FULFILLED
+             || envelope.status === STATUS.FAILED
+             || envelope.status === STATUS.NO_ROUTE,
+      hops: envelope.trail.length,
+      trail: envelope.trail,
+      firstTs: envelope.trail[0]?.ts ?? null,
+      lastTs: last.ts ?? null,
+      // Real elapsed time across the whole route — the number a trail
+      // animation needs, and impossible to recover after the fact.
+      elapsedMs: (last.ts ?? 0) - (envelope.trail[0]?.ts ?? 0),
+      ts: Date.now(),
+    });
+    return true;
+  } catch (e) {
+    console.error(`[${MODULE_ID}] trail persist failed for ${envelope.envelopeId}: ${e.message}`);
+    return false;
+  }
+}
+
 function _onRouteRequest(event) {
   const envelope = event?.payload?.envelope;
   if (!envelopeLib.isValid(envelope)) {
@@ -74,12 +133,14 @@ function _onRouteRequest(event) {
   if (!target) {
     const dead = envelopeLib.stamp(envelope, MODULE_ID, STATUS.NO_ROUTE,
       { note: `no system provides "${envelope.intent}"` });
+    _persistTrail(dead);
     if (_bus) _bus.emit('raid.route.no_route', { envelope: dead }, { source: MODULE_ID, causedBy: envelope.envelopeId });
     return;
   }
 
   const routed = envelopeLib.stamp(envelope, MODULE_ID, STATUS.ROUTED,
     { target: target.system, note: `→ ${target.system} via ${target.capability}` });
+  _persistTrail(routed);
   // The target system subscribes to raid.route.decided and checks
   // envelope.target === its own system id. Fully decoupled: RAID names the
   // target, it doesn't call it.
@@ -98,6 +159,7 @@ function fulfill(envelope, result, opts = {}) {
   const done = envelopeLib.stamp(envelope, opts.system || envelope.target || 'unknown',
     failed ? STATUS.FAILED : STATUS.FULFILLED,
     { result, note: opts.note });
+  _persistTrail(done);
   if (_bus) _bus.emit(failed ? 'raid.route.failed' : 'raid.route.fulfilled',
     { envelope: done }, { source: opts.system || 'unknown', causedBy: envelope.envelopeId });
   return done;
@@ -134,4 +196,13 @@ function stop() {
   _bus = null;
 }
 
-module.exports = { MODULE_ID, VERSION, init, stop, health, route, fulfill, _resolveTarget, _onRouteRequest };
+// trails(limit) — read persisted trails newest-first. The brain view's real
+// animation source, and the only way a completed route is observable at all.
+function trails(limit = 100) {
+  const jaa = _jaa();
+  if (!jaa) return { observed: false, reason: 'no trail store', trails: [] };
+  try { return { observed: true, trails: jaa.tail('raid_trails', limit) || [] }; }
+  catch (e) { return { observed: false, reason: e.message, trails: [] }; }
+}
+
+module.exports = { MODULE_ID, VERSION, init, stop, health, route, fulfill, _resolveTarget, _onRouteRequest, trails, _persistTrail };

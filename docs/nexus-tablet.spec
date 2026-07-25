@@ -220,14 +220,157 @@ spec:
         were not seen. The next real browser session that opens it is the
         final visual check.
     T2_container_shell:
+      status_2026_07_24: >
+        BUILT AND GATE-VERIFIED. Four routes on autopilot's status server,
+        same laws as T1: GET /contract-map/:system (proxy to the system's
+        own /contract — port taken from the kernel's OWN healthUrl, so no
+        second topology map exists to drift, §5.14), GET /tables[/:name]
+        (JAA store read straight off disk per the observation law; corrupt
+        tables report rows:-1 rather than vanishing, §1.2; ?limit bounds),
+        GET /files/:system[/...] (data subtree listing; same segment
+        allowlist + containment as T1), POST /run-tests/:system (spawns THE
+        REAL tests/modules/run-all.js with a new --filter flag — never a
+        per-container copy, which the spec's own failure-mode list names as
+        guaranteed two-truths drift). tablet/index.html gained a Containers
+        view: per-system panels for API map, JAA tables, file tree, and a
+        real test-run button. Still one file, one endpoint, no persistent
+        state; exactly one write verb in the whole page (the test
+        invocation, which reads and proves rather than mutating state — T1's
+        blunt "no POST" assertion was reconciled to this precisely, not
+        weakened). Pinned: test-tablet-container-api.js (14 tests,
+        registered). Suite 855/0.
+      real_flaw_found_and_fixed_at_the_class: >
+        The test-invocation route made recursion possible: a suite that
+        POSTs /run-tests with a filter matching ITSELF causes the spawned
+        runner to re-run that suite, which spawns another runner, forever.
+        Hit it directly — T2-009 filtered on 'tablet', which matched its own
+        file once registered. It passed standalone (not yet registered) and
+        failed the moment the full suite ran: a false green caught within
+        minutes. Fixed BOTH levels: the test now filters on a term that
+        cannot match itself, AND the route refuses to spawn when
+        NEXUS_TEST_RUN_DEPTH is set (stamped on every run it spawns), which
+        kills the whole class rather than this one instance. _testRunActive
+        alone could never catch it — each nested run is a fresh process with
+        its own state, so the guard had to ride in the environment.
+      honest_limitation: >
+        Same as T1: no browser in the build sandbox. The container view is
+        verified by contract (every field it dereferences proven present in
+        real responses) plus an actual parse check of the inline script —
+        that parse check earned its place immediately, catching two real
+        syntax breaks from the edit that added the view.
+
       blockers: none
       gate: "one container per system: API map, DB tables, file tree, live events, real test invocation. Read-only."
     T3_change_governance:
       blockers: none
       gate: "a config change is written to the ledger with CFR conditions stamped, projected to the registry, scored by sigma, and an anomalous one raises friction."
+      status_2026_07_24: >
+        BUILT AND GATE-VERIFIED, all five steps, against REAL modules —
+        lib/config-governance.js (recordConfigChange). Deliberately THIN:
+        every capability the gate names already existed and was already
+        load-bearing, so this module contributes the ORDERING and the
+        DECISION, not reimplementations (§16.4/§16.5). meta/cfr/ledger.js's
+        record() supplies steps 2+4 in one pass — it already scores sigma
+        against the type's baseline using the PRE-update field, then updates
+        the field, so the stamped snapshot is the condition the system was
+        in WHEN the change landed; that ordering is the CFR ledger's and was
+        not re-derived. lib/component-ledger.js's write() supplies steps 1+3
+        (physical day file + JAA mirror = the registry projection, since the
+        registry is a projection over the ledger and never an independent
+        truth + event_log breadcrumb for the pattern engine).
+        cortex/self-heal/escalation.js supplies step 5: this module EMITS
+        'anomaly.detected' and never computes friction itself, because
+        duplicating escalation's thresholds would create exactly the second
+        truth about system health §10.3 forbids.
+      verification: >
+        tests/modules/test-config-governance.js (10 tests, registered).
+        Nothing in the pipeline is mocked (§1.3): the friction test wires
+        the ACTUAL escalation module to a real bus and asserts a real
+        escalation.friction.increased payload — {faultClass, newFric, band,
+        count, cause, anomalyUuid}, a shape read off a live emit rather than
+        guessed. Anomalousness is forced by lowering the per-call threshold,
+        NEVER by injecting a fake sigma score: a fabricated score would
+        exercise the branch while proving nothing about whether real sigma
+        output can reach it. Also pinned: §1.1 refusals (no system / no key
+        / no value all throw rather than writing anonymous change), deletes,
+        actor provenance (the spec's user-live vs system-initiated
+        distinction recorded at write time, not inferred later), structural
+        value comparison (so a re-read is not logged as a change and floods
+        nothing), and honest degradation — with no CFR ledger the change is
+        still governed and reports sigma:null rather than fabricating 0,
+        which would read as "verified nominal".
+      not_yet_wired: >
+        No system CALLS recordConfigChange() yet — the pipeline is built,
+        proven, and available, but every existing config write path still
+        bypasses it. Wiring the real callers (guardian settings, cortex
+        thresholds, raid_tunables) is separate work touching live write
+        paths in 3+ systems and was NOT smuggled in behind a "T3 done"
+        claim. The gate as written is met; universal enforcement is not the
+        same statement.
     T4_brain_view:
       blockers: [B1, B2]
       gate: "real RAID envelope trails animate along real consumer-graph edges, coloured by real CFR/sigma."
+      status_2026_07_24: >
+        PARTIAL — and the partiality is recorded, not hidden. B1 and B2 are
+        both closed (B2 by the rfr2 CJS completion; B1 by
+        lib/bus-subscriptions.js with cortex + orchestrator publishing), so
+        two of the gate's three clauses are met with REAL data: real
+        consumer-graph edges (cross-process, which did not exist before B1)
+        and real CFR colouring (read from cfr_state.json on disk, per the
+        observation law). Built: GET /graph on autopilot (nodes = union of
+        subscription publishers and event_log sources, so an emit-only system
+        is never silently missing; producer edges weighted by real event
+        counts; consumer edges joined from B1's map; ?events bounded, ceiling
+        2000) plus a Brain view in tablet/index.html.
+      third_clause_CLOSED_same_session: >
+        Trails are now PERSISTED. cortex/core/raid/router.js gained
+        _persistTrail(), writing to a raid_trails table on EVERY stamp —
+        no_route, routed, fulfilled, failed — keyed by envelopeId with
+        insert() so hops advance ONE row in place rather than appending a row
+        per hop (envelopeLib.stamp() returns a new envelope carrying the
+        CUMULATIVE trail, so the newest write always holds every prior hop).
+        Persisting at the NON-TERMINAL routed state is the deliberate part: an
+        envelope routed and never fulfilled is a STUCK REQUEST, and a store
+        that only recorded completions would be blind to exactly the failure
+        worth seeing. Real elapsedMs is captured because it is unrecoverable
+        after the fact. Never throws into the routing path. /graph now serves
+        real trails and the brain view animates them — each pulse walks the
+        ACTUAL recorded hop sequence, skipping any hop whose system is not a
+        node on the graph rather than inventing a path, coloured by the real
+        CFR regime. Two tests were SUPERSEDED rather than deleted (T4-005,
+        T4-008 previously asserted the UI must disclose that trails did not
+        exist): the assertions moved with the code, and say so in comments.
+      superseded_note_original_finding: >
+        Per-request RAID envelope TRAILS cannot be animated because they are
+        not persisted anywhere. cortex/core/raid/router.js's own header states
+        the design — "the envelope's trail + the event log together are the
+        ledger" — i.e. the trail lives on the in-flight envelope object and
+        only the routing EVENTS reach disk. There is no trail store to read.
+        Synthesising trails would be precisely the "authoritative-looking and
+        mostly wrong" failure this spec's own failure_modes list warns about,
+        so the endpoint reports routing as real event_log activity, declares
+        the limitation in its own payload (notes.raidTrails), and the UI
+        states it to the user. Persisting envelope trails is REAL SEPARATE
+        WORK (a new store + a writer in router.js) and was not smuggled in
+        behind a "T4 done" claim.
+      hardest_correctness_property: >
+        The unknown-vs-zero distinction. With no process having published
+        subscriptions, every producer edge would naively read
+        unconsumed:true — "everything is emitted into the void" — when the
+        truth is "not observed yet." Conflating those is the same class of
+        error B1 itself fixed. So unconsumed and liveConsumerCount are null
+        (not false, not 0) whenever no publisher has reported, the payload
+        says so in notes.consumers, and the UI shows a warning band instead
+        of a confident empty graph. Asserted directly by T4-004.
+      two_own_bugs_caught_by_reading_real_output: >
+        (1) The first draft asserted unconsumed:true for every edge in
+        exactly the no-publisher case described above — caught by looking at
+        real output rather than trusting the code. (2) It also assumed
+        cfr_state.json contained a `regime` field; the real file persists
+        only the four axes, so regime came back undefined. Now derived via
+        meta/cfr/field.computeRegime rather than reimplementing thresholds
+        (which would be a second truth, §10.3).
+      pinned_by: "tests/modules/test-tablet-graph-api.js (9 tests, registered)"
     T5_interaction_instrumentation:
       gate: "the tablet's own hrefs/buttons carry sigma scores and visibly change state — the thesis applied to itself."
     T6_copilot_surface:

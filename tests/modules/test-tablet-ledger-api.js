@@ -139,7 +139,18 @@ const GET = (p) => new Promise((resolve) => {
       assert.ok(html.includes("get('port') || 7799"), 'must default to autopilot :7799 — the single endpoint');
       assert.ok(!/374[89]|3750|9000|7705/.test(html), 'must contain ZERO per-system ports — no hardcoded topology, that is the exact hard-pointer problem the connection law exists to prevent');
       assert.ok(!/(localStorage|sessionStorage)\s*[.\[]/.test(html), 'must own no persistent state (§5.12) — comment mentions fine, CALLS are not');
-      assert.ok(!/method\s*:\s*['"](POST|PUT|DELETE)/i.test(html), 'must never write — T1 gate says ZERO writes to NEXUS');
+      // §RECONCILED 2026-07-24 when T2 landed: this assertion originally
+      // read "zero write verbs, full stop". T2's container shell adds
+      // exactly ONE POST — /run-tests/:system, which spawns the real test
+      // runner. That is not a mutation of NEXUS state (it reads and
+      // proves), so the T1 gate's "ZERO writes to NEXUS" still holds; the
+      // blunt no-POST check was measuring the wrong thing. Tightened
+      // rather than deleted: exactly one write verb, and it must be the
+      // test invocation — anything else is a real regression.
+      const writeVerbs = html.match(/method:\s*'(POST|PUT|DELETE)'/gi) || [];
+      assert.strictEqual(writeVerbs.length, 1, `exactly one write verb permitted (the test invocation); found ${writeVerbs.length}: ${writeVerbs.join(', ')}`);
+      assert.ok(/fetch\(BASE \+ '\/run-tests\/'/.test(html), 'the single write verb must be the /run-tests invocation, nothing else');
+      assert.ok(!/PUT|DELETE/.test(html), 'no PUT/DELETE anywhere — the ledger surface stays strictly read-only');
       assert.ok(html.includes('corrupt line'), 'must surface the corrupt-line count (§1.2) — never hide damage');
     });
   } finally {

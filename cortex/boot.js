@@ -1088,9 +1088,35 @@ function _register() {
 // fresh — same interval, same payload shape, same fire-and-forget error
 // handling.
 let _heartbeatStarted = false;
+// §B1 2026-07-24 — publish cortex's bus subscriptions to the shared store so
+// the consumer graph spans processes. Before this, lib/consumer-registry.js
+// could only see the subscribers of whichever process happened to be asking,
+// so cortex's listeners were invisible to everyone else and its own
+// unconsumed() calls reported other systems' real work as "emitted into the
+// void."
+//
+// Deliberately called from _startHeartbeat (i.e. AFTER registration succeeds,
+// which is after boot has wired its listeners) rather than at module load.
+// Publishing at the top of boot would snapshot a bus that has subscribed to
+// nothing yet and record cortex as consuming zero events — a real footgun the
+// library's own doc comment warns about. The 10s republish also means any
+// listener wired later is picked up within one interval rather than never.
+function _startSubscriptionPublisher() {
+  try {
+    const busSubs = require('../lib/bus-subscriptions');
+    busSubs.publishPeriodically({ systemId: SYSTEM, bus, jaa: jaaDB, intervalMs: 10000 });
+    console.log(`[cortex] bus subscriptions publishing to the shared store (§B1)`);
+  } catch (e) {
+    // Never fatal: the connectome is observability, and a system must not
+    // fail to boot because the map could not be updated (§1.2 — loud).
+    console.error(`[cortex] subscription publisher failed to start: ${e.message}`);
+  }
+}
+
 function _startHeartbeat() {
   if (_heartbeatStarted) return; // _register() can retry; never double-start the interval
   _heartbeatStarted = true;
+  _startSubscriptionPublisher();
   const u = new URL(`${OR_URL}/api/heartbeat`);
   const timer = setInterval(() => {
     const body = JSON.stringify({ systemId: SYSTEM, port: PORT, status: 'online' });

@@ -491,6 +491,31 @@ function startWatchdog() {
     await systemWatchdog();
     setInterval(systemWatchdog, WATCHDOG_INTERVAL);
   }, 2000);
+  _startSubscriptionPublisher();
+}
+
+// §B1 2026-07-24 — publish orchestrator's own bus subscriptions to the shared
+// store (lib/bus-subscriptions.js), so the cross-process consumer graph
+// includes them. Orchestrator is a heavy subscriber — sigma-writer,
+// request-handler and the CFR influence poller all wire listeners here — and
+// every one of them was invisible to any other process's consumer-registry
+// before this.
+//
+// Shares startWatchdog's timing deliberately: both run after the server has
+// bound, which is after this process's listeners are wired. Publishing earlier
+// would snapshot an empty bus and record orchestrator as consuming nothing.
+function _startSubscriptionPublisher() {
+  try {
+    if (!nexusBus) { console.warn('[orc] §B1 subscription publisher skipped — no nexus-bus in this process'); return; }
+    const { jaaDB } = require('./cortex/memory/jaa-db');
+    require('./lib/bus-subscriptions').publishPeriodically({
+      systemId: 'orchestrator', bus: nexusBus, jaa: jaaDB, intervalMs: 10000,
+    });
+    console.log('[orc] bus subscriptions publishing to the shared store (§B1)');
+  } catch (e) {
+    // Observability must never be the reason orchestrator fails to start.
+    console.error(`[orc] §B1 subscription publisher failed to start: ${e.message}`);
+  }
 }
 
 // ── Serve control panel ──────────────────────────────────────────────────────

@@ -69,6 +69,10 @@ const SUITES = [
   'test-idearium-cjs-under-esm.js',
   'test-cortex-heartbeat.js',
   'test-tablet-ledger-api.js',
+  'test-tablet-container-api.js',
+  'test-config-governance.js',
+  'test-bus-subscriptions.js',
+  'test-tablet-graph-api.js',
   'test-autopilot-warp-spine.js',
   'test-guardian-cfr-consolidation.js',
   'test-ico-ledger-writethrough.js',
@@ -132,7 +136,16 @@ async function runSuite(file) {
 async function main() {
   console.log('\n══ NEXUS MODULE TESTS — Fractal Adversarial Suite ══\n');
 
-  for (const suite of SUITES) {
+  // §TABLET T2 2026-07-24 — --filter=<substring> runs only matching suites
+  // (used by autopilot's /run-tests/:system container route; the tablet
+  // invokes THE REAL runner, never a parallel copy — the spec's own
+  // failure-mode list names 'per-container tests defined separately from
+  // run-all.js' as guaranteed two-truths drift).
+  const _filterArg = process.argv.find(a => a.startsWith('--filter='));
+  const _filter = _filterArg ? _filterArg.slice(9).toLowerCase() : null;
+  const _active = _filter ? SUITES.filter(s => s.toLowerCase().includes(_filter)) : SUITES;
+  if (_filter) console.log(`[run-all] filter '${_filter}' — ${_active.length} of ${SUITES.length} suites`);
+  for (const suite of _active) {
     const fp = path.join(MODULES_DIR, suite);
     if (!fs.existsSync(fp)) {
       console.log(`  SKIP (not found): ${suite}`);

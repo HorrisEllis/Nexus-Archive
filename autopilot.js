@@ -571,6 +571,40 @@ function _startStatusServer() {
       _handleLedgerRead(req, res);
       return;
     }
+    // §TABLET T2 2026-07-24 — container shell routes (docs/nexus-tablet.spec
+    // phase T2: "one container per system: API map, DB tables, file tree,
+    // live events, real test invocation. Read-only."). Same laws as T1:
+    // one endpoint, disk-backed where possible, zero writes to NEXUS state.
+    if (req.method === 'GET' && req.url.startsWith('/graph')) {
+      _warpEmit('autopilot.graph.read', { path: req.url.split('?')[0] });
+      _handleGraphRead(req, res);
+      return;
+    }
+    if (req.method === 'GET' && req.url.startsWith('/contract-map/')) {
+      _warpEmit('autopilot.container.contract', { path: req.url });
+      _handleContractProxy(req, res);
+      return;
+    }
+    if (req.method === 'GET' && req.url.startsWith('/tables')) {
+      _warpEmit('autopilot.container.tables', { path: req.url.split('?')[0] });
+      _handleTablesRead(req, res);
+      return;
+    }
+    if (req.method === 'GET' && req.url.startsWith('/files/')) {
+      _warpEmit('autopilot.container.files', { path: req.url });
+      _handleFilesRead(req, res);
+      return;
+    }
+    // Test invocation is the one POST in the container surface — it runs
+    // THE REAL tests/modules/run-all.js with --filter, never a parallel
+    // copy (the spec's own failure-mode list: separate per-container tests
+    // are guaranteed two-truths drift). Executing tests reads and proves;
+    // it does not mutate system state.
+    if (req.method === 'POST' && req.url.startsWith('/run-tests/')) {
+      _warpEmit('autopilot.container.tests', { path: req.url });
+      _handleRunTests(req, res);
+      return;
+    }
     // §WARP SPINE — the map, generated from what actually ran (tail of the
     // StreamLog + live counters), readable by the tablet from the same
     // single endpoint as everything else.
@@ -589,6 +623,295 @@ function _startStatusServer() {
     res.writeHead(404); res.end('not found — try /status, POST /spawn/:name, POST /touch/:name, GET /ledger, GET /warp');
   });
   server.listen(STATUS_PORT, () => _log(`autopilot status: http://127.0.0.1:${STATUS_PORT}/status`));
+}
+
+// ── §TABLET T4 — connectome graph handler ──────────────────────────────────
+// GET /graph → the real system connectome, entirely from DISK.
+//
+// What is REAL here, and where each part comes from:
+//   nodes    systems that have published bus subscriptions (§B1,
+//            lib/bus-subscriptions.js) plus every distinct event_log source —
+//            union, so a system that emits but subscribes to nothing still
+//            appears rather than silently vanishing from the map.
+//   edges    CROSS-PROCESS consumer edges (§B1). Before B1 closed, these did
+//            not exist: consumer counts came from one process's local
+//            EventEmitter, so a brain view drawn then would have been, in the
+//            spec's own words, "authoritative-looking and mostly wrong."
+//   flow     recent real events from event_log, so movement shown is movement
+//            that happened.
+//   cfr      the live CFR field snapshot for colouring.
+//
+// What is deliberately ABSENT, per §1.2 rather than faked: per-request RAID
+// envelope TRAILS. cortex/core/raid/router.js's own header states the design —
+// "the envelope's trail + the event log together are the ledger" — i.e. the
+// trail lives on the in-flight envelope object and only the routing EVENTS are
+// persisted. There is no per-request trail store to read, so this endpoint
+// reports routing activity from event_log and does NOT synthesise trails.
+// Animating invented trails is exactly the confident-and-wrong failure the
+// tablet spec warns about.
+function _handleGraphRead(req, res) {
+  try {
+    const { jaaDB } = require('./cortex/memory/jaa-db');
+    const busSubs   = require('./lib/bus-subscriptions');
+
+    const subs  = busSubs.all(jaaDB);
+    const edgeR = busSubs.edges(jaaDB);
+
+    // Producers from the real event log. Bounded — this is a live UI read,
+    // not an analytics job.
+    const limitRaw = new URL(req.url, 'http://x').searchParams.get('events');
+    const evLimit  = Math.min(Math.max(parseInt(limitRaw || '300', 10) || 300, 1), 2000);
+    let events = [];
+    try { events = jaaDB.tail('event_log', evLimit) || []; } catch (_) { events = []; }
+
+    const producerTypes = new Map(); // "source→type" edge weights
+    const sources = new Set();
+    for (const e of events) {
+      const src = e.source || e.system;
+      const type = e.type || e.action;
+      if (!src || !type) continue;
+      sources.add(src);
+      const k = `${src}\u0000${type}`;
+      producerTypes.set(k, (producerTypes.get(k) || 0) + 1);
+    }
+
+    // Nodes = union of subscription publishers and event_log sources.
+    const nodeMap = new Map();
+    for (const s of (subs.systems || [])) {
+      nodeMap.set(s.systemId, {
+        id: s.systemId, publishes: true, stale: s.stale,
+        subscriptionTypes: s.types, listeners: s.totalListeners, emitted: 0,
+      });
+    }
+    for (const src of sources) {
+      if (!nodeMap.has(src)) {
+        nodeMap.set(src, { id: src, publishes: false, stale: null, subscriptionTypes: 0, listeners: 0, emitted: 0 });
+      }
+    }
+    for (const [k, n] of producerTypes) {
+      const src = k.split('\u0000')[0];
+      const node = nodeMap.get(src);
+      if (node) node.emitted += n;
+    }
+
+    // Producer edges: source → event type, with the consuming systems attached
+    // from B1's cross-process map. THIS is the join that makes an edge real —
+    // a producer and a consumer of the same type, observed independently.
+    const consumersByType = new Map((edgeR.edges || []).map(e => [e.type, e]));
+    // A readable-but-empty subscription table is NOT the same fact as
+    // "no system consumes anything." Distinguish them explicitly.
+    const anyPublisher = !!(subs.observed && (subs.systems || []).length > 0);
+    const flowEdges = [];
+    for (const [k, weight] of producerTypes) {
+      const [source, type] = k.split('\u0000');
+      const c = consumersByType.get(type);
+      flowEdges.push({
+        source, type, weight,
+        consumers: c ? c.systems.filter(s => !s.stale).map(s => s.systemId) : [],
+        liveConsumerCount: anyPublisher ? (c ? c.live : 0) : null,
+        // "Emitted into the void" is only a claim we can make when at least
+        // one process has actually published its subscriptions. With no
+        // publishers reporting, EVERY edge would otherwise read
+        // unconsumed:true — which is not "nothing consumes this", it is "we
+        // cannot see yet", and conflating those two is precisely the
+        // confident-and-wrong failure B1 and this whole spec exist to
+        // prevent. null means unknown; it is never coerced to a number.
+        unconsumed: anyPublisher ? (!c || c.live === 0) : null,
+      });
+    }
+    flowEdges.sort((a, b) => b.weight - a.weight);
+
+    // §T4 REAL TRAILS 2026-07-24 — now persisted by cortex/core/raid/router.js
+    // (they were in-memory only until this session, which is why the first cut
+    // of this endpoint honestly refused to animate them). Read from the same
+    // shared store, so they survive the process that produced them.
+    let trails = [], trailsObserved = false;
+    try {
+      const t = jaaDB.tail('raid_trails', 60) || [];
+      trails = t.map(r => ({
+        envelopeId: r.envelopeId, intent: r.intent, from: r.from, target: r.target,
+        status: r.status, terminal: r.terminal, hops: r.hops,
+        elapsedMs: r.elapsedMs, lastTs: r.lastTs,
+        // the hop sequence is what an animation walks
+        path: (r.trail || []).map(h => ({ system: h.system, status: h.status, ts: h.ts })),
+      }));
+      trailsObserved = true;
+    } catch (_) { trails = []; trailsObserved = false; }
+
+    // CFR for colouring — read from disk so it survives a wedged cortex.
+    let cfr = null;
+    try {
+      const p = path.join(ROOT, 'data', 'guardian', 'ledger', 'cfr', 'cfr_state.json');
+      if (fs.existsSync(p)) {
+        cfr = JSON.parse(fs.readFileSync(p, 'utf8'));
+        // cfr_state.json persists the four axes only — `regime` is DERIVED,
+        // not stored (verified by reading the real file, after the first draft
+        // assumed a regime field and got undefined). Derive it with the same
+        // function the rest of NEXUS uses rather than reimplementing the
+        // thresholds here, which would be a second truth (§10.3).
+        if (cfr && cfr.regime === undefined) {
+          try { cfr.regime = require('./meta/cfr/field').computeRegime(cfr); }
+          catch (_) { cfr.regime = null; }
+        }
+      }
+    } catch (_) { cfr = null; }
+
+    return _ledgerJson(res, 200, {
+      ok: true,
+      nodes: [...nodeMap.values()].sort((a, b) => (a.id < b.id ? -1 : 1)),
+      edges: flowEdges.slice(0, 400),
+      consumerEdges: (edgeR.edges || []).slice(0, 200),
+      trails,
+      trailsObserved,
+      cfr,
+      subscriptionsObserved: !!subs.observed,
+      staleAfterMs: busSubs.STALE_MS,
+      eventsSampled: events.length,
+      // §1.2 — the map states its own limits inline, so a reader of the raw
+      // API (not just the UI) cannot mistake absence for emptiness.
+      notes: {
+        raidTrails: trailsObserved
+          ? (trails.length
+              ? 'real persisted RAID envelope trails from raid_trails — every hop with real timestamps; nothing synthesised'
+              : 'trail store readable but EMPTY — no route has been persisted yet (router.js writes on every stamp). Empty is not "routing does not happen"; it is "none observed yet".')
+          : 'trail store UNREADABLE — trails absent, not zero',
+        consumers: !subs.observed
+          ? `UNREADABLE — ${subs.reason || 'store unavailable'}; consumer counts are absent, not zero`
+          : anyPublisher
+            ? 'cross-process, from lib/bus-subscriptions (§B1)'
+            : 'store readable but NO system has published subscriptions yet (cortex/orchestrator publish on boot) — consumer counts are UNKNOWN (null), not zero',
+      },
+    });
+  } catch (e) {
+    return _ledgerJson(res, 500, { ok: false, error: `${e.code || ''} ${e.message}` });
+  }
+}
+
+// ── §TABLET T2 — container shell handlers ──────────────────────────────────
+
+// Contract proxy: GET /contract-map/:system → that system's own GET /contract.
+// The port comes from the kernel's OWN healthUrl — no second topology map to
+// drift (§5.14: depend on the contract, not a hardcoded address).
+function _handleContractProxy(req, res) {
+  const name = req.url.split('?')[0].split('/')[2] || '';
+  const kernel = (ALL_KERNELS || KERNELS).find(k => k.name === name && k.healthUrl);
+  if (!kernel) return _ledgerJson(res, 404, { ok: false, error: `no kernel '${name}' with a health surface` });
+  const u = new URL(kernel.healthUrl);
+  const pr = http.get({ hostname: u.hostname, port: u.port, path: '/contract', timeout: 3000 }, (up) => {
+    let d = '';
+    up.on('data', c => d += c);
+    up.on('end', () => {
+      try { _ledgerJson(res, up.statusCode || 200, JSON.parse(d)); }
+      catch { _ledgerJson(res, 502, { ok: false, error: `'${name}' /contract returned non-JSON`, raw: d.slice(0, 200) }); }
+    });
+  });
+  pr.on('error', e => _ledgerJson(res, 503, { ok: false, error: `'${name}' unreachable: ${e.message}` }));
+  pr.setTimeout(3000, () => { pr.destroy(); _ledgerJson(res, 504, { ok: false, error: `'${name}' /contract timeout` }); });
+}
+
+// JAA tables: GET /tables → every table + row count; GET /tables/:name →
+// rows (?limit=N, default 100, max 1000). DISK-BACKED (observation law):
+// reads the store's real .json files directly — answers even when every
+// system holding the store in memory is wedged. Read-only by construction.
+const JAA_STORE_DIR = path.join(ROOT, 'data', 'cortex', 'memory');
+function _handleTablesRead(req, res) {
+  const parts = req.url.split('?')[0].split('/').filter(Boolean).slice(1);
+  if (parts.length > 1) return _ledgerJson(res, 400, { ok: false, error: 'at most /tables/:name' });
+  if (parts.length === 1 && !_segSafe(parts[0])) return _ledgerJson(res, 400, { ok: false, error: 'invalid table name' });
+  try {
+    if (parts.length === 0) {
+      const tables = fs.readdirSync(JAA_STORE_DIR)
+        .filter(f => f.endsWith('.json'))
+        .map(f => {
+          const st = fs.statSync(path.join(JAA_STORE_DIR, f));
+          let rows = null;
+          try { const parsed = JSON.parse(fs.readFileSync(path.join(JAA_STORE_DIR, f), 'utf8')); rows = Array.isArray(parsed) ? parsed.length : null; }
+          catch (_) { rows = -1; } // corrupt reported, not hidden (§1.2)
+          return { name: f.replace(/\.json$/, ''), bytes: st.size, rows };
+        })
+        .sort((a, b) => a.name < b.name ? -1 : 1);
+      return _ledgerJson(res, 200, { ok: true, dir: 'data/cortex/memory', tables });
+    }
+    const file = path.join(JAA_STORE_DIR, parts[0] + '.json');
+    if (!path.resolve(file).startsWith(path.resolve(JAA_STORE_DIR))) return _ledgerJson(res, 400, { ok: false, error: 'path escapes store' });
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!Array.isArray(parsed)) return _ledgerJson(res, 200, { ok: true, table: parts[0], rows: 1, shape: 'single-object', data: parsed });
+    const limitRaw = new URL(req.url, 'http://x').searchParams.get('limit');
+    const limit = Math.min(Math.max(parseInt(limitRaw || '100', 10) || 100, 1), 1000);
+    return _ledgerJson(res, 200, { ok: true, table: parts[0], total: parsed.length, returned: Math.min(limit, parsed.length), rows: parsed.slice(-limit) });
+  } catch (e) {
+    if (e.code === 'ENOENT') return _ledgerJson(res, 404, { ok: false, error: `no such table: ${parts[0] || '(root)'}` });
+    return _ledgerJson(res, 500, { ok: false, error: `${e.code || ''} ${e.message}` });
+  }
+}
+
+// File tree: GET /files/:system[/*] → data/<system> subtree listing (dirs +
+// file names/sizes/mtimes, no contents — the ledger routes read contents
+// where reading is the point). Same segment allowlist + containment as T1.
+function _handleFilesRead(req, res) {
+  const parts = req.url.split('?')[0].split('/').filter(Boolean).slice(1);
+  if (!parts.length || parts.length > 6) return _ledgerJson(res, 400, { ok: false, error: '/files/:system[/subpath], max depth 6' });
+  if (!parts.every(_segSafe)) return _ledgerJson(res, 400, { ok: false, error: 'invalid path segment' });
+  const base = path.join(ROOT, 'data');
+  const fsPath = path.join(base, ...parts);
+  if (!path.resolve(fsPath).startsWith(path.resolve(base))) return _ledgerJson(res, 400, { ok: false, error: 'path escapes data root' });
+  try {
+    const entries = fs.readdirSync(fsPath, { withFileTypes: true });
+    const dirs  = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const files = entries.filter(e => e.isFile()).map(e => {
+      const st = fs.statSync(path.join(fsPath, e.name));
+      return { name: e.name, bytes: st.size, mtime: st.mtimeMs };
+    }).sort((a, b) => a.name < b.name ? -1 : 1);
+    return _ledgerJson(res, 200, { ok: true, path: parts.join('/'), dirs, files });
+  } catch (e) {
+    if (e.code === 'ENOENT') return _ledgerJson(res, 404, { ok: false, error: `not found: ${parts.join('/')}` });
+    if (e.code === 'ENOTDIR') return _ledgerJson(res, 400, { ok: false, error: 'not a directory — this route lists, the ledger routes read' });
+    return _ledgerJson(res, 500, { ok: false, error: `${e.code || ''} ${e.message}` });
+  }
+}
+
+// Real test invocation: POST /run-tests/:system spawns THE REAL runner with
+// --filter=<system>. Returns the tail of output + pass/fail on completion.
+// One run at a time (overlapping runs corrupt each other's timing-sensitive
+// suites on one machine).
+let _testRunActive = false;
+function _handleRunTests(req, res) {
+  const name = req.url.split('?')[0].split('/')[2] || '';
+  if (!_segSafe(name)) return _ledgerJson(res, 400, { ok: false, error: 'invalid system name' });
+  // §RECURSION GUARD 2026-07-24 — refuse to spawn a test runner from
+  // inside a test runner. Found the hard way: a suite that POSTs here
+  // with a filter matching ITSELF makes the spawned runner re-run that
+  // suite, which spawns another runner, forever. _testRunActive can't
+  // catch it (each nested run is a fresh process with its own state), so
+  // the guard has to ride in the environment. Depth is bounded at 1: the
+  // tablet's own invocation is depth 0, anything it spawns is depth 1 and
+  // may not spawn further.
+  if (process.env.NEXUS_TEST_RUN_DEPTH) {
+    return _ledgerJson(res, 409, { ok: false, error: 'refusing to spawn a test run from inside a test run (recursion guard)' });
+  }
+  if (_testRunActive) return _ledgerJson(res, 409, { ok: false, error: 'a test run is already active — one at a time' });
+  _testRunActive = true;
+  const { spawn } = require('child_process');
+  const proc = spawn(process.execPath, [path.join(ROOT, 'tests', 'modules', 'run-all.js'), `--filter=${name}`], {
+    cwd: ROOT,
+    env: { ...process.env, NEXUS_TEST_RUN_DEPTH: '1' },
+  });
+  let out = '';
+  const cap = (c) => { out += c.toString(); if (out.length > 60000) out = out.slice(-60000); };
+  proc.stdout.on('data', cap); proc.stderr.on('data', cap);
+  const timer = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, 180000);
+  proc.on('exit', (code) => {
+    clearTimeout(timer);
+    _testRunActive = false;
+    const totalMatch = out.match(/TOTAL:\s+(\d+) passed\s+(\d+) failed/);
+    _warpEmit('autopilot.container.tests.done', { system: name, code, passed: totalMatch ? +totalMatch[1] : null, failed: totalMatch ? +totalMatch[2] : null });
+    _ledgerJson(res, 200, {
+      ok: code === 0, exitCode: code,
+      passed: totalMatch ? +totalMatch[1] : null,
+      failed: totalMatch ? +totalMatch[2] : null,
+      tail: out.split('\n').slice(-40).join('\n'),
+    });
+  });
 }
 
 // ── §TABLET T1 — ledger explorer read handlers ─────────────────────────────
@@ -874,4 +1197,4 @@ process.on('SIGTERM', () => _shutdown('SIGTERM'));
 
 if (require.main === module) start();
 
-module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead };
+module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead, _handleContractProxy, _handleTablesRead, _handleFilesRead, _handleRunTests, _handleGraphRead };
