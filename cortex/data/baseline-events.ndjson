@@ -20426,3 +20426,5 @@
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178506155,"_ts":1784178506155}
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178506669,"_ts":1784178506669}
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178507193,"_ts":1784178507193}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251350,"_ts":1785031251350}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251869,"_ts":1785031251869}

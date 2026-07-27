@@ -19823,3 +19823,5 @@
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1784178506159,"_ts":1784178506159}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1784178506678,"_ts":1784178506678}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1784178507197,"_ts":1784178507197}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251423,"_ts":1785031251423}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251925,"_ts":1785031251925}

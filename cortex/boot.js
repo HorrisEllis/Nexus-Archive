@@ -1209,6 +1209,30 @@ server.listen(PORT, '127.0.0.1', () => {
     { name: 'gap-finder',           path: './gap-finder',           note: 'anomaly.detected + sigma.event.* → cortex.gap.found' },
     { name: 'orion',                path: './orion',                note: 'anomaly/sigma → cortex.orion.classified' },
     { name: 'raid',                 path: './core/raid',            note: 'cortex.orion.classified → cortex.raid.decided (direct-call route unaffected)' },
+    // §SWITCHED ON 2026-07-24 (James: "Yes to the core"). intelligence/index.js
+    // is 933 lines that had NEVER RUN: nothing outside its own directory
+    // required it, init() was never called, and neither bep_patterns.json nor
+    // failures.json had ever been created — _scanPatterns() had never once
+    // executed. Its three sibling modules (intuition/mastermind/adversarial)
+    // WERE live and reachable, which is exactly why the absence went unnoticed:
+    // the /api/intelligence/* routes answered, so the core behind them was
+    // assumed to be running.
+    //
+    // Why this is not a new competing pattern engine (§10.3): copilot —
+    // THE MIND — reads p.precursor/p.outcome/p.confidence, which is
+    // bep_patterns' shape, while cortex's _buildPatterns() serves
+    // /api/intelligence/patterns from the crystals table. So the mind has
+    // always been asking for THIS core's output and being handed a different
+    // engine's. Switching it on supplies what copilot was written to consume;
+    // it does not invent a rival. (Whether _buildPatterns then serves
+    // bep_patterns, both, or stays as-is remains James's call — recorded in
+    // docs/nexus-sentinel.spec, deliberately NOT decided here.)
+    //
+    // Dry-run before wiring confirmed init() is clean: four staggered unref'd
+    // scans plus a 10s-delayed initial build that hydrates _failureIndex from
+    // the persisted fault_taxonomy table, so there is no cold-start amnesia.
+    // Failure is isolated by the loop's own try/catch, same as every organ.
+    { name: 'intelligence',         path: './intelligence',         note: 'pattern recognition + failure taxonomy → bep_patterns/failures (was never running)' },
   ];
   for (const organ of organs) {
     try {

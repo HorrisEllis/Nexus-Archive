@@ -168,6 +168,10 @@ function canonRows() {
     });
   } finally {
     fs.rmSync(CANON_DIR, { recursive: true, force: true });
+    // §2026-07-24 — the day file was cleaned but component-ledger's JAA mirror
+    // (component_ledger + event_log) was not, so rows leaked into the live
+    // store and surfaced as phantom systems in the brain view.
+    require('./_purge-test-rows').purgeTestRows(SYS);
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);
