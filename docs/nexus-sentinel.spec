@@ -708,6 +708,37 @@ spec:
   phases:
     S1_cli_and_contract:
       blockers: none
+      status_2026_07_27: >
+        BUILT AND GATE-VERIFIED. sentinel/interaction-contract.json (the single
+        declaration) + cli/sentinel.js (derived from it). Gate met: `sentinel
+        contract` emits real machine-readable JSON, and `sentinel status` and
+        `sentinel faults list` return REAL data from cortex WITH NOTHING
+        RUNNING — 7 real faults, live schema and intake coverage. The CLI reads
+        the store directly, which is the one place SEN-9's no-require rule is
+        deliberately not applied to the DATA path: routing through HTTP would
+        make the tool as dead as everything else exactly when it is needed.
+        It never calls another system's LOGIC, and every mutation still goes
+        through the governed writer.
+      contract_drift_is_fatal: >
+        The CLI verifies at startup that its handlers match the contract in
+        BOTH directions and exits 3 on mismatch. Proven by removing a handler
+        and confirming refusal. This is the rule that stops a fifth diagnostic
+        surface appearing the way the first four did: a command not in the
+        contract does not exist, and a declared command with no handler is a
+        lie the contract is telling.
+      declared_vs_live: >
+        Routes carry status LIVE or DECLARED. S4's routes are declared and not
+        yet served, and say so — a contract implying unbuilt routes work is the
+        same class of lie as the hardcoded lattice diagram.
+      two_real_findings_from_the_tests: >
+        (1) --json output was polluted by cortex's "[jaa] Loaded N rows"
+        chatter landing inside the payload, making it unparseable for any
+        caller. A machine-readable flag emitting unparseable output is worse
+        than none. Store chatter now goes to stderr so stdout carries only the
+        payload, and remains visible to a human. Caught by the test suite, not
+        by reading the code. (2) One of my own assertions matched a
+        single-line comment that is wrapped across two lines in the source —
+        fixed the test, not the code.
       gate: >
         `sentinel contract` emits a real machine-readable contract, and
         `sentinel status` + `sentinel faults list` return REAL data read from

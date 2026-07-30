@@ -126,8 +126,21 @@ problem is both narrower and sharper:
 - I described the intelligence core as maintaining pattern memory. **Wrong at
   the time — it had never executed.** Now true, as of today.
 
-**Still open at L3:** intelligence reads **no causal graph** (verified by grep),
-so "why" is temporal adjacency rather than causation. And `_buildPatterns()`
+**CLOSED 2026-07-24 — intelligence now reads the causal graph.** Precursor
+detection was pure temporal adjacency: every event in the 30s before a failure
+counted as reliably preceding trouble, so the noisiest system won every time
+regardless of whether it caused anything. `meta/cfr/graph.js`'s `CausalGraph`
+already existed and `mastermind.js` had used it since 2026-07-06 — intelligence
+simply never wired to it, so "why" was answered by a clock. Now `ancestors()`
+walks real `causedBy` edges. Deliberately NOT "only count causal ancestors":
+adjacency is still counted, because real precursors exist that never carried a
+`causedBy`, and dropping them would trade one blindness for another. What
+changed is that the two are now **distinguishable** — `evidence:
+'causal-ancestor'` vs `'temporal-adjacency'`. Timing mattered: the core was
+switched on the same session, so it would otherwise have started writing
+coincidences into `bep_patterns` as findings.
+
+**Still open at L3:** And `_buildPatterns()`
 serves copilot from `crystals` while copilot reads `bep_patterns`' shape.
 
 ---
