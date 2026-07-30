@@ -1,4 +1,5 @@
 'use strict';
+let _tensionWarned = false;   // §1.2 warn-once for the missing cortex/healer canonical scorer
 // service/nexus-diagnostic.js — System Auditing + Monitoring Service
 // UUID: nexus-diagnostic-service-v1-0000-4000-0000-000000000001
 //
@@ -377,6 +378,55 @@ function startService() {
       });
     } catch {}
 
+    // ── §COMPETING TRUTH FIXED 2026-07-24 ─────────────────────────────────
+    // Until now this probe alone decided `online`, with a 2s timeout and NO
+    // registry fallback — while orchestrator/allHealth() decides the same
+    // question with a 3s probe OR a registry lastSeen within 15s. So a system
+    // that was alive but briefly slow to answer was ONLINE TO ORCHESTRATOR AND
+    // OFFLINE TO DIAGNOSTIC AT THE SAME MOMENT (§10.3 competing truth).
+    //
+    // That was not a cosmetic disagreement. Diagnostic acts on its answer: it
+    // raises a `system_offline` gap and fires HEAL_REQUESTED. So the divergence
+    // was a SPURIOUS-HEAL GENERATOR, and it fired hardest exactly when the
+    // system was under load and slow — i.e. when a stampede of heal attempts
+    // is the last thing wanted.
+    //
+    // Orchestrator is the registration authority (every system registers and
+    // heartbeats there), so it OWNS liveness. Diagnostic now defers to it
+    // rather than maintaining a private opinion: a system this probe missed is
+    // only declared offline if orchestrator has not heard from it either.
+    // Consulted over HTTP, never by require (decoupling law) — and a failure
+    // to reach orchestrator leaves the local probe's answer standing, with the
+    // degradation NAMED rather than silently trusted.
+    let onlineSource = 'probe';
+    if (!online) {
+      try {
+        const reg = await new Promise((resolve) => {
+          const rq = http.get(`http://127.0.0.1:9000/api/registry`, { timeout: 1500 }, r => {
+            let b = ''; r.on('data', d => b += d);
+            r.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(null); } });
+          });
+          rq.on('error', () => resolve(null));
+          rq.on('timeout', () => { rq.destroy(); resolve(null); });
+        });
+        // Shape verified against orchestrator.js's registryAll(), not guessed:
+        // { ok, registry: { <systemId>: { ...entry, lastSeen, online } }, ts }.
+        // My first pass assumed a `systems` array and would have silently
+        // found nothing — the fallback would have looked wired and never
+        // fired, which is the failure mode this whole session keeps finding.
+        const entry = reg && reg.registry && reg.registry[name];
+        const lastSeen = entry && (entry.lastSeen || entry.ts);
+        if (lastSeen && (Date.now() - lastSeen) < 15000) {
+          online = true;
+          onlineSource = 'registry-fallback';
+          console.warn(`[diagnostic] '${name}' missed its ${cfg.healthPath} probe but registered ${Math.round((Date.now()-lastSeen)/1000)}s ago — treating as ONLINE, matching orchestrator. No gap raised.`);
+        }
+      } catch (_) {
+        onlineSource = 'probe-only(registry unreachable)';
+      }
+    }
+    state.onlineSource = onlineSource;
+
     // Feed to baseline
     monitors[name].observe({
       type:      online ? 'health.ok' : 'health.fail',
@@ -553,16 +603,29 @@ function startService() {
               gapUuid = finalGap.uuid;
               openGaps.set(gapKey, finalGap);
               broadcast({ type: 'gap.found', gap: finalGap });
-              // Emit on nexus-bus
-              try {
-                const bus = require('../nexus-bus');
-                bus.emit('HEAL_REQUESTED', {
-                  gapType: 'system_offline', modulePath: name,
-                  body: gap.body, sigma: 0.8,
-                  source: 'diagnostic.remediation', ts: Date.now(),
-                  gapUuid: finalGap.uuid, dedup_key: finalGap.dedup_key,
-                });
-              } catch(_) {}
+              // §ROOT-CAUSE FIX 2026-07-24 — third instance of the same bug
+              // (see the remediation sweep and the /gaps/:uuid/fix route).
+              // This emitted HEAL_REQUESTED on THIS process's nexus-bus for a
+              // ladder that lives in cortex's process, so a detected offline
+              // system never actually triggered healing. Routed through
+              // cortex's /api/event, which ledgers it and re-emits where the
+              // ladder listens. Fire-and-forget by design — gap detection must
+              // not block on the heal dispatch — but the failure is REPORTED
+              // (§1.2), where the old catch(_) swallowed it.
+              const CORTEX_URL = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
+              fetch(`${CORTEX_URL}/api/event`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'HEAL_REQUESTED',
+                  payload: {
+                    gapType: 'system_offline', modulePath: name,
+                    body: gap.body, sigma: 0.8,
+                    gapUuid: finalGap.uuid, dedup_key: finalGap.dedup_key,
+                  },
+                  source: 'diagnostic.remediation', causedBy: finalGap.uuid, ts: Date.now(),
+                }),
+              }).catch(e => console.error(`[diagnostic] HEAL_REQUESTED (system_offline:${name}) could not reach cortex: ${e.message}`));
             }
           } catch(e) {
             // gap-predicate not available — fall back to original behavior
@@ -937,8 +1000,53 @@ function startService() {
       // Phase 3: If RAID/guardian failed, use escalation ladder (self-heal)
       if (!guardianDispatched) {
         try {
-          const escModule = require('../cortex/self-heal/escalation');
-          const result = await escModule.escalate(gap);
+          // §ROOT-CAUSE FIX 2026-07-24 — this block was broken three ways and
+          // had NEVER once worked, silently, because the whole thing sits in
+          // a catch(e) that swallowed the failure:
+          //
+          //   1. WRONG MODULE. It required self-heal/escalation.js (the
+          //      FRICTION LEDGER) when it wanted self-heal/index.js (the
+          //      5-LEVEL LADDER). Two different organs.
+          //   2. NONEXISTENT FUNCTION. escalation.js has no escalate() and
+          //      never did — its exports are init/stop/health/
+          //      wireAnomalyTrigger/recordAttemptOutcome/SEVERITY_TO_LEVEL.
+          //      So this threw TypeError on the first line, every time.
+          //   3. WRONG TRANSPORT even if 1+2 were right. The ladder is a
+          //      CORTEX ORGAN (cortex/boot.js organs[]), running in cortex's
+          //      process. This service is a separate process. A direct
+          //      require would have loaded a second, uninitialised copy with
+          //      no bus and no listeners — not the live ladder.
+          //
+          // The ladder's real entry is event-driven: it subscribes to
+          // HEAL_REQUESTED and expects { gapType, gapUuid, body, modulePath }.
+          // The correct cross-process route is cortex's POST /api/event,
+          // which writes the event to event_log AND re-emits it on cortex's
+          // own bus (cortex/boot.js, §GAP CLOSED 2026-07-19) — so the live
+          // ladder actually hears it, and §LAW II is satisfied because the
+          // request is ledgered before it acts.
+          //
+          // This also DELETES a cross-directory require of cortex internals,
+          // which is a prerequisite for self-heal ever becoming sovereign.
+          const CORTEX = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
+          const hres = await fetch(`${CORTEX}/api/event`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'HEAL_REQUESTED',
+              payload: {
+                gapUuid:    gap.uuid,
+                gapType:    gap.type,
+                modulePath: gap.file || gap.system || '',
+                body:       gap.body || '',
+                sigma:      gap.sigma || 0,
+              },
+              source:   'diagnostic.remediation',
+              causedBy: gap.uuid,
+              ts:       Date.now(),
+            }),
+          });
+          if (!hres.ok) throw new Error(`cortex /api/event returned ${hres.status}`);
+          const result = await hres.json();
           _logRemediation({ action: 'escalation_ladder', gapUuid: gap.uuid, gapType: gap.type });
 
           // §23.21 — THE SPAM FIX. This branch never updated gap status, so
@@ -1438,31 +1546,49 @@ function startService() {
 
       let triggered = false;
       try {
-        const bus = require('../nexus-bus');
-        bus.emit('HEAL_REQUESTED', {
-          gapUuid:    gapId,
-          gapType:    gap.type,
-          modulePath: gap.file || gap.system || '',
-          body:       gap.body || '',
-          sigma:      gap.sigma || 0,
-          causedBy:   gapId,
-          ts:         Date.now(),
-          source:     'diagnostic.ui',
+        // §ROOT-CAUSE FIX 2026-07-24 — this had the same defect as the
+        // remediation sweep's Phase 3 (fixed above): it emitted
+        // HEAL_REQUESTED on THIS process's nexus-bus and set triggered=true,
+        // but the 5-level ladder is a CORTEX ORGAN in cortex's process. A
+        // nexus-bus emit is an in-process EventEmitter call — it reached
+        // nobody. And because require('../nexus-bus') never throws, the
+        // catch() fallback that DID work (POST to cortex) was dead code that
+        // could not run. Net effect: the UI's "fix this gap" button reported
+        // success and healed nothing, every time.
+        //
+        // The HTTP route is now the PRIMARY path, not the fallback: cortex's
+        // POST /api/event writes to event_log AND re-emits on cortex's own
+        // bus, where the ladder actually listens. Ledger-first satisfies
+        // §LAW II; nothing acts on an event that was not written down.
+        const CORTEX = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
+        const hres = await fetch(`${CORTEX}/api/event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'HEAL_REQUESTED',
+            payload: {
+              gapUuid:    gapId,
+              gapType:    gap.type,
+              modulePath: gap.file || gap.system || '',
+              body:       gap.body || '',
+              sigma:      gap.sigma || 0,
+            },
+            source:   'diagnostic.ui',
+            causedBy: gapId,
+            ts:       Date.now(),
+          }),
         });
+        if (!hres.ok) throw new Error(`cortex /api/event returned ${hres.status}`);
         triggered = true;
-      } catch(_) {
-        // nexus-bus not available — write to cortex event_log for pickup
-        try {
-          await fetch('http://127.0.0.1:3748/api/event', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'HEAL_REQUESTED',
-              payload: { gapUuid: gapId, gapType: gap.type, source: 'diagnostic.ui' },
-              source: 'diagnostic', ts: Date.now(),
-            }),
-          }).catch(() => {});
-        } catch(_) {}
+      } catch(err) {
+        // §1.2 — cortex unreachable is a REAL, reportable failure, not a
+        // silent no-op. It was previously swallowed as `catch(_)`.
+        console.error(`[diagnostic] HEAL_REQUESTED for gap ${gapId} could not reach cortex: ${err.message}`);
+        // §16.5 — the old fallback here POSTed to the SAME cortex endpoint
+        // that just failed, so it could only ever fail again. Retrying an
+        // identical call is not resilience, it is theatre that makes a dead
+        // path look like a guarded one. Removed. triggered stays false and
+        // the caller is told the truth below.
       }
 
       res.writeHead(200, CORS);
@@ -1587,7 +1713,21 @@ function startService() {
 
     // Score each open gap and group by system
     let scoreTension;
-    try { scoreTension = require('../cortex/healer/index').scoreTension; } catch(_) {}
+    try { scoreTension = require('../cortex/healer/index').scoreTension; }
+    catch (e) {
+      // §1.2 2026-07-24 — this was `catch(_) {}`. cortex/healer/index.js does
+      // NOT EXIST (verified: MODULE_NOT_FOUND), so scoreTension has always
+      // been undefined and every tension number below is the crude
+      // severity==='high' ? 2 : 1 fallback, not real scoring. meta/gap/
+      // predicate.js:435 requires the same phantom for what its own comment
+      // calls "the canonical number". A missing canonical scorer is a real
+      // degradation and must be visible, not swallowed. Logged once per sweep
+      // rather than per gap so it informs without flooding.
+      if (!_tensionWarned) {
+        _tensionWarned = true;
+        console.warn(`[diagnostic] cortex/healer/index.js is MISSING (${e.code}) — gap tension is the crude severity fallback, not canonical scoring. Same phantom is required by meta/gap/predicate.js.`);
+      }
+    }
     const gapTensionBySystem = {};
     if (!Array.isArray(allOpenGaps)) allOpenGaps = [];
     for (const gap of allOpenGaps) {

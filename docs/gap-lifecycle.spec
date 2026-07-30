@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        gap-lifecycle
-    version:     1.1.0
+    version:     1.0.0
     uuid:        nexus-gap-lifecycle-v1-0000-2026-0622-jamesbrooks-001
     phase:       23.7
     status:      draft
@@ -521,63 +521,3 @@ spec:
     §2.3: gap state is always observable — EXPIRED and BLOCKED are visible states
     §3.1: build order above — data schema before logic before dispatch before UI
     §5.1: every gap has UUID, dedup_key, and event bus registration
-
-  # ── ADDENDUM 2026-07-25 (v1.1.0) — causal edges on gap creation ──
-  causal_linkage:
-    finding: >
-      The live v43 event_log showed ~75% of events with a null causedBy. The
-      cross-system what-if / RFR2 causal walk could only traverse the ~25% that
-      carried a parent (liminal's 228 pattern-based edges + guardian's 76 coarse
-      self-tags). Gaps were part of the null 75%.
-    root_cause: >
-      gap-finder._createGap's two callers (_onAnomalyDetected, _onSigmaHaltRisk)
-      ALREADY captured the triggering event's uuid — anomalyUuid / sigmaUuid —
-      into gap.meta, but it was never written to gap.causedBy. The causal parent
-      was in hand and dropped one field short of the graph.
-    wired: >
-      commit 79aeee5. _createGap now sets
-      causedBy = meta.anomalyUuid || meta.sigmaUuid || meta.causedBy || null,
-      using liminal-space's existing causedBy:<uuid> convention (§16.5 — extend
-      the mechanism that already runs, do not invent a second causal store).
-    effect: >
-      Every anomaly- and sigma-triggered gap now links to the event that caused
-      it. cortex becomes the SECOND real causal writer alongside liminal. The
-      walkable causal subgraph extends to the liminal↔cortex pair with both ends
-      writing edges — the densest cross-system what-if target from the live map.
-    tests: "test-gap-finder.js T-010 (anomaly), T-011 (sigma). Suite 902/0."
-    extended_2026_07_25b:
-      forge: >
-        cortex/self-heal L2 (commit 7422286): the forge patch proposal captured
-        gapUuid but never wrote causedBy. Now causedBy = gapUuid, making the
-        gap → proposed-fix chain walkable — the Intent-layer substrate (what the
-        system PROPOSED, traced to its cause).
-      copilot: >
-        adversarial (commit 7422286): 326 events = 163 run.complete + 163
-        violation.detected, paired by runId. The violation now carries
-        causedBy = runId (the run is its cause). run.complete correctly gets no
-        parent — it is the causal root; a fabricated edge would be false (§1.2,
-        pinned by test T-003).
-      result: >
-        FOUR real causal writers now — liminal (pattern), cortex/gap-finder
-        (anomaly+sigma), forge/self-heal (gap→fix), copilot (run→violation). The
-        high-volume zero-causal systems from the live map are closed. The what-if
-        substrate is populated across the densest flows, not just liminal's 25%.
-    guardian_resolved_2026_07_25c:
-      finding: >
-        The 78 guardian causal events (causedBy:'guardian') were NOT gaps needing
-        a real chain — they are guardian.ncp.status heartbeats (median 373s apart,
-        a provider-alive ping). A heartbeat has no cause; it is a timer firing.
-        causedBy:'guardian' was a CATEGORY ERROR — a false self-loop, not a coarse
-        edge to upgrade.
-      wired: >
-        commit at ledgerWrite choke point (orchestrator.js): a causedBy equal to
-        the emitting system's own name is nulled. Real cross-event and
-        cross-system causedBy pass through untouched. The fix is to STOP
-        fabricating the edge, not to invent a parent for a parentless event
-        (§1.2 — never a false edge). Covers ALL systems at one choke point, so
-        no future self-loop can recur.
-      result: "The causal graph now contains only real edges. 4 real causal writers (liminal, gap-finder, self-heal, copilot) + zero false self-loops. The 'coarse guardian tag' item is closed — by removal, not upgrade."
-    still_open:
-      - "the what-if walk itself is unbuilt — these wires populate its substrate, mapped onto raid-simulation-engine.spec, not a new authority."
-      - "friction (fault_taxonomy) still 0 rows, system_lattice still 0 — unchanged, honest."
-    axioms_engaged: [§16.5, §0.3, §5.1, §14.2, §1.2]

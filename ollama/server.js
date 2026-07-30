@@ -499,11 +499,11 @@ const server = http.createServer(async (req, res) => {
 
 // ── Register with orchestrator ────────────────────────────────────────────────
 function register() {
-  const components = require('../lib/component-registry').normalizeDeclarations(require('./registry-components'));
+  const components = require('./registry-components');
   const body = JSON.stringify({
     systemId: SYSTEM_ID, port: PORT, version: VERSION, status: 'online',
     meta: { label:'OLLAMA', color:'#00ff88' },
-    components,
+    components: components.components || [],
   });
   const u = new URL(`${ORCH_URL}/api/register`);
   const r = http.request({

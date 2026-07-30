@@ -19844,3 +19844,5 @@
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178506156,"_ts":1784178506156}
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178506671,"_ts":1784178506671}
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178507196,"_ts":1784178507196}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251341,"_ts":1785031251341}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251852,"_ts":1785031251852}

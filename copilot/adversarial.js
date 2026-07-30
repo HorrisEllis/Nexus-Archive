@@ -182,11 +182,8 @@ async function run(stream = []) {
   });
 
   if (results.violations > 0) {
-    // §CAUSAL WIRE 2026-07-25 — a violation is CAUSED BY the run that found it.
-    // Both events already share runId; writing it as causedBy makes the
-    // run → violation chain walkable. copilot (the highest-volume emitter, 326
-    // events, previously 0 causal) joins liminal + cortex + forge as a causal
-    // writer, using the same causedBy convention (§16.5).
+    // §CAUSAL WIRE (ported from v44) — a violation is CAUSED BY the run that
+    // found it; both share runId. run.complete stays parentless (causal root).
     await _writeToCortex('adversarial.violation.detected', { runId, count: results.violations, results }, runId);
   }
 

@@ -134,31 +134,5 @@ test('T-009', 'stop() removes all three listeners', () => {
   assert.strictEqual(_tables.gaps.length, 0);
 });
 
-test('T-010', 'CAUSAL WIRE: an anomaly gap records causedBy = the triggering event uuid', () => {
-  reset();
-  const bus = makeTestBus();
-  let found = null;
-  bus.on('cortex.gap.found', (e) => { found = e; });
-  gapFinder.init({ bus });
-  bus.emit('anomaly.detected', { anomalyUuid: 'evt-abc-123', type: 'kernel_stall', severity: 'high' });
-  assert.ok(found, 'gap must be created');
-  assert.strictEqual(found.payload.gap.causedBy, 'evt-abc-123',
-    'gap must link to the event that caused it — the 75%-null fix');
-  gapFinder.stop();
-});
-
-test('T-011', 'CAUSAL WIRE: a sigma halt-risk gap records causedBy = the sigma event uuid', () => {
-  reset();
-  const bus = makeTestBus();
-  let found = null;
-  bus.on('cortex.gap.found', (e) => { found = e; });
-  gapFinder.init({ bus });
-  bus.emit('sigma.event.halt_risk', { uuid: 'sig-xyz-789', type: 'overload', sigma: 0.8 });
-  assert.ok(found, 'gap must be created');
-  assert.strictEqual(found.payload.gap.causedBy, 'sig-xyz-789',
-    'sigma-triggered gap must link to its sigma event');
-  gapFinder.stop();
-});
-
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

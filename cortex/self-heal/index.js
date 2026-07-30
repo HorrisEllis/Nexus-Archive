@@ -115,13 +115,9 @@ function _attemptLevel1(gapType, gapUuid, modulePath) {
 function _attemptLevel2(gapType, gapUuid, body) {
   const proposal = {
     uuid: uid(), faultClass: gapType, status: 'proposed', // never 'verified' from here
-    // §CAUSAL WIRE 2026-07-25 — the gap that triggered this patch IS its causal
-    // parent. gapUuid was already captured but never written to causedBy, so
-    // forge patches were part of the null-causedBy 75%. Same fix as gap-finder:
-    // link to the trigger using liminal's causedBy:<uuid> convention (§16.5).
-    // forge/self-heal now joins liminal + cortex as a real causal writer, so the
-    // chain gap → proposed-fix is walkable: the intent layer can trace what the
-    // system proposed and why, back to the gap that caused it.
+    // §CAUSAL WIRE (ported from v44) — the gap that triggered this patch IS its
+    // causal parent. gapUuid was captured but never written to causedBy, so the
+    // gap → proposed-fix chain wasn't walkable. Now it is (§16.5).
     causedBy: gapUuid || null,
     body: body || null, successRate: 0, ts: Date.now(), proposedBy: MODULE_ID, gapUuid,
   };

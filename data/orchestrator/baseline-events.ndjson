@@ -39565,3 +39565,7 @@
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178506894,"_ts":1784178506894}
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178507415,"_ts":1784178507415}
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178507417,"_ts":1784178507417}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251374,"_ts":1785031251374}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251506,"_ts":1785031251506}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031252010,"_ts":1785031252010}
+{"type":"health.fail","latencyMs":0,"error":true,"ts":1785031252010,"_ts":1785031252010}
