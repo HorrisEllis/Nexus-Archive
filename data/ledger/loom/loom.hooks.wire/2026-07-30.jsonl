@@ -1,0 +1,1 @@
+{"uuid":"021cf5de-06f1-4666-9e69-044da0248144","system":"loom","component":"loom.hooks.wire","action":"registered","status":"ok","tags":["loom","write","wire"],"detail":"Wire a hook→hook binding (fromId→toId) — the consumer-edge write path","causedBy":null,"contractUuid":null,"session":null,"ts":1785441719098}

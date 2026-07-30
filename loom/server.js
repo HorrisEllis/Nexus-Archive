@@ -477,9 +477,17 @@ const server = http.createServer(async (req, res) => {
 
 // ── Register with orchestrator — same pattern every sovereign system uses ──
 function register() {
+  // §2026-07-25 — loom used to POST components:[] — the registry authority
+  // registered ZERO of its own capabilities, so RAID could not route to any of
+  // loom's routes (hooks, wire, graph, impact, scaffold...). The mapmaker was
+  // not on the map. Now it declares its real capabilities from
+  // loom/registry-components.js (bare array, normalized like cortex's fix).
+  let _rc = [];
+  try { _rc = require('../lib/component-registry').normalizeDeclarations(require('./registry-components')); }
+  catch (e) { console.warn(`[loom] registry-components load failed: ${e.message}`); }
   const body = JSON.stringify({
     systemId: SYSTEM_ID, port: PORT, version: VERSION, status: 'online',
-    meta: { label: 'LOOM', color: '#33bb88' }, components: [],
+    meta: { label: 'LOOM', color: '#33bb88' }, components: _rc,
   });
   const u = new URL(`${OR_URL}/api/register`);
   const r = http.request({ hostname: u.hostname, port: u.port || 9000, path: u.pathname,

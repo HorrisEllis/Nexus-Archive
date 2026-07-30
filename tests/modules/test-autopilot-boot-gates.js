@@ -59,7 +59,7 @@ const IDLE = { cmd: process.execPath, args: ['-e', 'setTimeout(()=>{},9999)'] };
 
   await test('BG-002', 'the reorder is SAFE, verified in cortex\'s source: its registration is fire-and-forget with retry, so it never blocks on orchestrator', async () => {
     const cortexSrc = fs.readFileSync(path.join(ROOT, 'cortex/boot.js'), 'utf8');
-    const reg = cortexSrc.slice(cortexSrc.indexOf('function _register'), cortexSrc.indexOf('function _register') + 900);
+    const reg = cortexSrc.slice(cortexSrc.indexOf('function _register'), cortexSrc.indexOf('function _register') + 1400);
     assert.ok(/req\.on\('error',\s*\(\)\s*=>\s*setTimeout\(_register/.test(reg),
       'cortex must retry registration on error rather than awaiting orchestrator — this is what makes cortex-first safe');
     assert.ok(!/await .*register/.test(reg), 'registration must not be awaited at boot');

@@ -170,6 +170,35 @@ function init(cfg = {}) {
     _buildReuseIndex();
   }, 10_000);
 
+  // §T6 / self-registration 2026-07-25 — "the registry needs to be updated
+  // always. That way the system understands itself." The intelligence faculties
+  // ran and answered at HTTP endpoints, but were registered as 0 of 217
+  // components — so RAID could not resolve them and the mind was reachable
+  // AROUND RAID, never THROUGH it. Intelligence is the reference adopter of the
+  // self-registration convention (lib/self-register): it announces its real
+  // capabilities at boot, they flow through the existing projection chain
+  // (component → capability registry → RAID resolver), and RAID can now route to
+  // the mind. Every other system copies this pattern (§16.5).
+  try {
+    require('../../lib/self-register').registerSelf('intelligence', [
+      { name: 'context',  description: 'pre-request context for a given intent — what the system knows before acting',
+        route: { method: 'GET', path: '/api/intelligence/context' } },
+      { name: 'patterns', description: 'crystallised BEP patterns — recurring structures the system has learned',
+        route: { method: 'GET', path: '/api/intelligence/patterns' } },
+      { name: 'failures', description: 'failure mode taxonomy — known fault classes and their precursors',
+        route: { method: 'GET', path: '/api/intelligence/failures' } },
+      { name: 'reuse',    description: 'SEAM reuse candidates for a query — what already exists to reuse',
+        route: { method: 'GET', path: '/api/intelligence/reuse' } },
+      { name: 'mastermind', description: 'strategic causal pattern analysis over gaps and RFR2 delta',
+        route: { method: 'GET', path: '/api/intelligence/mastermind' } },
+      { name: 'adversarial', description: 'adversarial critique — attack a proposal to find its weaknesses',
+        route: { method: 'GET', path: '/api/intelligence/adversarial' } },
+    ], { version: VERSION, registeredBy: MODULE_ID });
+    _log('registered intelligence capabilities — RAID can now route to the mind');
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] self-registration failed: ${e.message}`);
+  }
+
   _log(`v${VERSION} — intelligence core online`);
 }
 
@@ -221,56 +250,8 @@ async function _scanPatterns() {
        e.type?.includes('gap.found') || e.type?.includes('collapse') ||
        e.type?.includes('tidal')) && e.ts > _patternScanCursor
     );
-    // §CAUSAL GRAPH WIRED 2026-07-24 ─────────────────────────────────────────
-    // Until now this was pure TEMPORAL ADJACENCY: every event in the 30s
-    // before a failure counted as a "precursor". That is the classic
-    // correlation-as-causation error, and at this scale it is not subtle —
-    // in a busy 30s window, dozens of entirely unrelated events all get
-    // scored as reliably preceding trouble, and the noisiest system in the
-    // codebase wins every time regardless of whether it caused anything.
-    //
-    // meta/cfr/graph.js's CausalGraph already exists, is already used by
-    // mastermind (cortex/intelligence/mastermind.js:24), and offers
-    // ancestors() — a real causal walk over causedBy edges. It was simply
-    // never wired here. So "why" was being answered by a clock.
-    //
-    // Now: an event in the window that is a genuine causal ANCESTOR of the
-    // failure is weighted heavily and flagged causal:true. Adjacency is
-    // still counted — dropping it would lose real precursors that never
-    // carried a causedBy — but it is now DISTINGUISHABLE from causation
-    // rather than silently equated with it. A precursor known by evidence
-    // and one known by coincidence must not look the same (§0.1).
-    let _graph = null;
-    try {
-      const { CausalGraph } = require('../../meta/cfr/graph');
-      if (CausalGraph) {
-        _graph = new CausalGraph();
-        for (const e of events) _graph.ingest(e);
-      }
-    } catch (e) {
-      // §1.2 — losing the graph degrades precursors back to adjacency. That
-      // is a real loss of fidelity and must be stated, not silently absorbed.
-      console.warn(`[${MODULE_ID}] causal graph unavailable (${e.message}) — precursors fall back to temporal adjacency only`);
-    }
-
     const precursorCounts = {};
     for (const failure of failureEvents) {
-      // Real causal ancestry, walked over causedBy edges rather than guessed
-      // from timestamps. Bounded depth: a chain longer than 8 hops says more
-      // about the graph than about this failure.
-      let ancestorIds = new Set();
-      if (_graph) {
-        try {
-          const fid = failure.uuid || failure.id;
-          if (fid) {
-            const chain = _graph.ancestors(fid, 8);
-            for (const a of (Array.isArray(chain) ? chain : (chain?.path || []))) {
-              ancestorIds.add(typeof a === 'string' ? a : (a.uuid || a.id));
-            }
-          }
-        } catch (_) { /* a single unwalkable failure must not kill the scan */ }
-      }
-
       const window = events.filter(e =>
         e.ts && failure.ts &&
         e.ts < failure.ts &&
@@ -278,24 +259,11 @@ async function _scanPatterns() {
         e.type !== failure.type
       );
       for (const p of window) {
-        const pid = p.uuid || p.id;
-        const isCausal = pid && ancestorIds.has(pid);
-        if (!precursorCounts[p.type]) {
-          precursorCounts[p.type] = { count: 0, causalCount: 0, failureTypes: {} };
-        }
+        if (!precursorCounts[p.type]) precursorCounts[p.type] = { count: 0, failureTypes: {} };
         precursorCounts[p.type].count++;
-        if (isCausal) precursorCounts[p.type].causalCount++;
         precursorCounts[p.type].failureTypes[failure.type] =
           (precursorCounts[p.type].failureTypes[failure.type] || 0) + 1;
       }
-    }
-    // Mark which precursors are backed by real causal evidence rather than
-    // co-occurrence. Consumers can now tell the two apart; before, they could
-    // not, because the distinction did not exist in the data.
-    for (const t of Object.keys(precursorCounts)) {
-      const pc = precursorCounts[t];
-      pc.causal = pc.causalCount > 0;
-      pc.evidence = pc.causalCount > 0 ? 'causal-ancestor' : 'temporal-adjacency';
     }
 
     // ── Sigma spike chain analysis ────────────────────────────────────────────

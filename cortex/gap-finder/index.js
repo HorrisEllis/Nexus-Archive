@@ -55,8 +55,18 @@ function _createGap(gapType, body, source, meta = {}) {
     return { created: false, gap: existing };
   }
 
+  // §CAUSAL WIRE 2026-07-25 — the triggering event's uuid IS the causal parent.
+  // Both callers already capture it (anomalyUuid / sigmaUuid) into meta but it
+  // was never written to causedBy, so the gap graph could not be walked — the
+  // real cause of the 75%-null causedBy coverage in the live event_log. Record
+  // it using liminal's exact convention (causedBy: <uuid>), so a gap now links
+  // to the event that caused it and cortex joins liminal as a real causal writer
+  // (§16.5 — extend the mechanism that already runs, don't invent a second).
+  const causedBy = meta.anomalyUuid || meta.sigmaUuid || meta.causedBy || null;
+
   const gap = {
     uuid: uid(), type: gapType, body, source, status: 'open',
+    causedBy,
     dedup_key, occurrences: 1, detectedAt: Date.now(), lastSeenAt: Date.now(),
     meta,
   };

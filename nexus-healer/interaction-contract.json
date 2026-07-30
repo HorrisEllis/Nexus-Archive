@@ -1,7 +1,6 @@
 {
   "id": "nexus-healer-v1",
   "version": "0.1.0",
-  "uuid": "nexus-healer-contract-v1-0000-4000-0000-000000000001",
   "namespace": "nexus-healer",
   "port": 3753,
   "transport": {

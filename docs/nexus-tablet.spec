@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        nexus-tablet
-    version:     0.4.0-spec
+    version:     0.5.0-spec
     status:      SPEC ONLY — no code. Revised 2026-07-24 (v0.1.0 → v0.2.0).
                  Per §8.5 (spec before build) and §3.3 (map before build).
     uuid:        nexus-tablet-v0-0000-2026-0724-001
@@ -28,15 +28,21 @@ spec:
       - "T1 ledger explorer — data exists on disk today"
       - "T2 container shell — read-only; needs autopilot.spec + loom.spec first (GAP_1)"
       - "T3 change governance — PROVISIONAL: sigma-over-config and CFR-on-ledger are UNVERIFIED"
-    blocked:
-      - "T4 brain view — B1 (consumer graph is single-process; most edges do not exist yet) + B2 (ESM/CJS)"
-      - "T6 cognitive layer / copilot — cognitive tools are NOT registered as RAID capabilities (mind-map Tier 3, unbuilt)"
-      - "T7 rewind — B5 (replay-engine orphaned, API unread)"
-      - "T8 autonomy sandbox — B4 (COS unwired)"
-    frequently_assumed_but_absent:
-      - "CPU/RAM per system — casually assumed by reviewers; NOT collected anywhere today."
-      - "cross-process subscriber counts — the connectome's edges. Single-process only."
-      - "executable CLI grammar — component `grammar` may be descriptive text, not commands. Unverified."
+    built_in_v43:
+      - "T1 ledger explorer — BUILT, gate-verified (be49d7a)"
+      - "T2 container shell — BUILT, gate-verified (d624b07)"
+      - "T3 change governance — BUILT, all five gate steps, real modules (6f78964)"
+      - "T4 brain view — BUILT: real edges, real CFR, RAID envelope trails persisted+animated (ab99ce4, 7a553ed)"
+    still_open:
+      - "GAP_1 — autopilot.spec + loom.spec still missing; the two systems the tablet most depends on (broker + registry authority) remain unspecced."
+      - "T6 cognitive layer / copilot — cognitive tools NOT registered as RAID capabilities (mind-map Tier 3, unbuilt)."
+      - "T7 rewind — OBSERVE HALF WIRED (cortex boot triggers replay.snapshot on boot/5min/gap/sigma; the SYSTEM REWIND timeline now populates from the snapshots table the UI already read). RESTORE half still blocked on the absent meta/rfr2/kernel — we capture the timeline, we do not revert to it. Matches the observe/mutate boundary."
+      - "T8 autonomy sandbox — COS (B4) largely unwired."
+      - "guardian coarse causal self-tag — the one causal writer still to upgrade."
+    resolved_this_session:
+      - "B1 (cross-process consumers) — CLOSED (c0a5416). The connectome's edges are no longer single-process."
+      - "B2 rfr2 portion — CLOSED. rfr2 is 14/14 CJS; causal attribution is no longer ESM-blocked."
+      - "causal edge population — 4 real writers now (liminal, gap-finder, self-heal, copilot); the what-if substrate is populated across the densest flows."
 
   thesis: >
     "All movement needs to be seen." (James, 2026-07-24)
@@ -530,17 +536,21 @@ spec:
       for it. Implementation blockers can be scheduled immediately.
       Architectural blockers require a prerequisite project first.
     categories:
+      RESOLVED_2026_07_25:
+        meaning: "was blocked; this session closed it. Recorded so no one re-does done work (§13.4 — the map must match the territory)."
+        items:
+          - "B2 (rfr2 portion) — RESOLVED. rfr2 is 14/14 CJS (rfr2.spec 1.0.0 DONE); the CJS core can require() it directly. RFR2 causal attribution is no longer ESM-blocked. Note: meta/causal-nexus's OTHER ESM files remain, but rfr2 — the part the tablet needs — is out."
+          - "B1 — RESOLVED (commit c0a5416 + 0357f81). Cross-process subscriber counts: each process publishes its subscription snapshot to a shared store via lib/bus-subscriptions.js; consumer-registry reads the cross-process map. The brain view's edge set is no longer single-process."
       ARCHITECTURAL:
         meaning: "cannot be built until another subsystem exists or a structural constraint is resolved"
         examples:
-          - "RFR2 causal attribution — blocked by the ESM/CJS fault line (B2). meta/ (45 ESM files) cannot be imported by the CJS core."
-          - "Brain view — blocked by B1: the consumer graph is single-process, so most edges do not exist to draw."
           - "Cognitive layer — cognitive tools are not registered as RAID capabilities (mind-map Tier 3, unbuilt)."
       IMPLEMENTATION:
         meaning: "the architecture is correct and the pieces exist; the wiring does not"
         examples:
-          - "CFR stamping onto ledger entries — CFR is live, CJS, and unaffected by B2."
+          - "CFR stamping onto ledger entries — CFR is live, CJS, and unaffected."
           - "COS autonomy sandbox — cos/manager.js exists (orphaned); sovereign per-compartment memory became real 2026-07-20."
+          - "Brain view — now IMPLEMENTATION, not architectural: B1+B2 resolved, real edges + real CFR are available (tablet T4 built in v43, ab99ce4/7a553ed). Remaining work is wiring, not a prerequisite project."
       UNKNOWN_UNTIL_READ:
         meaning: >
           NOT YET CLASSIFIABLE. The file exists but its API has not been read,

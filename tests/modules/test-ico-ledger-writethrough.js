@@ -88,7 +88,6 @@ try {
 } finally {
   // Clean the canonical tree of this run's collision-proof system dir.
   try { fs.rmSync(CANON_SYS_DIR, { recursive: true, force: true }); } catch (_) {}
-  try { require('./_purge-test-rows').purgeTestRows(SYS); } catch (_) {}   // §2026-07-24 — also purge the JAA mirror, not just the day file
   try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch (_) {}
 }
 

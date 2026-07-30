@@ -54,10 +54,10 @@ const KNOWN_GOOD = [
   { prompt: 'what gaps are open', expect_intent: 'tool' },
 ];
 
-async function _writeToCortex(type, payload) {
+async function _writeToCortex(type, payload, causedBy = null) {
   const body = JSON.stringify({ table: 'event_log', row: {
     uuid: crypto.randomUUID(), type, source: 'copilot.adversarial',
-    payload, ts: Date.now()
+    payload, causedBy, ts: Date.now()
   }});
   return new Promise(res => {
     const u = new URL(`${CX_URL}/api/memory/insert`);
@@ -182,7 +182,12 @@ async function run(stream = []) {
   });
 
   if (results.violations > 0) {
-    await _writeToCortex('adversarial.violation.detected', { runId, count: results.violations, results });
+    // §CAUSAL WIRE 2026-07-25 — a violation is CAUSED BY the run that found it.
+    // Both events already share runId; writing it as causedBy makes the
+    // run → violation chain walkable. copilot (the highest-volume emitter, 326
+    // events, previously 0 causal) joins liminal + cortex + forge as a causal
+    // writer, using the same causedBy convention (§16.5).
+    await _writeToCortex('adversarial.violation.detected', { runId, count: results.violations, results }, runId);
   }
 
   _running = false;

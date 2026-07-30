@@ -1048,11 +1048,19 @@ const server = http.createServer(async (req, res) => {
 
 // ── Register with orchestrator ────────────────────────────────────────────────
 function _register() {
-  const components = require('./registry-components');
+  // §FIX 2026-07-25 — cortex exports a BARE ARRAY from registry-components.js,
+  // but this read `components.components || []`, so cortex sent ZERO of its 39
+  // declared capabilities to the registry, silently, every boot. The registry
+  // did not know cortex's own capabilities. registry-components files split two
+  // ways across systems (bare array vs {components}); normalize BOTH shapes so
+  // the registration path is consistent regardless of export style. This is the
+  // "registry must always know what exists" principle at the registration path
+  // itself (§1.2 — a silent [] is the worst failure class).
+  const components = require('../lib/component-registry').normalizeDeclarations(require('./registry-components'));
   const body = JSON.stringify({
     systemId: SYSTEM, port: PORT, version: VERSION, status: 'online',
     meta: { label: 'CORTEX', color: '#2dd4bf' },
-    components: components.components || [],
+    components,
   });
   const u   = new URL(`${OR_URL}/api/register`);
   const req = http.request({
@@ -1209,30 +1217,6 @@ server.listen(PORT, '127.0.0.1', () => {
     { name: 'gap-finder',           path: './gap-finder',           note: 'anomaly.detected + sigma.event.* → cortex.gap.found' },
     { name: 'orion',                path: './orion',                note: 'anomaly/sigma → cortex.orion.classified' },
     { name: 'raid',                 path: './core/raid',            note: 'cortex.orion.classified → cortex.raid.decided (direct-call route unaffected)' },
-    // §SWITCHED ON 2026-07-24 (James: "Yes to the core"). intelligence/index.js
-    // is 933 lines that had NEVER RUN: nothing outside its own directory
-    // required it, init() was never called, and neither bep_patterns.json nor
-    // failures.json had ever been created — _scanPatterns() had never once
-    // executed. Its three sibling modules (intuition/mastermind/adversarial)
-    // WERE live and reachable, which is exactly why the absence went unnoticed:
-    // the /api/intelligence/* routes answered, so the core behind them was
-    // assumed to be running.
-    //
-    // Why this is not a new competing pattern engine (§10.3): copilot —
-    // THE MIND — reads p.precursor/p.outcome/p.confidence, which is
-    // bep_patterns' shape, while cortex's _buildPatterns() serves
-    // /api/intelligence/patterns from the crystals table. So the mind has
-    // always been asking for THIS core's output and being handed a different
-    // engine's. Switching it on supplies what copilot was written to consume;
-    // it does not invent a rival. (Whether _buildPatterns then serves
-    // bep_patterns, both, or stays as-is remains James's call — recorded in
-    // docs/nexus-sentinel.spec, deliberately NOT decided here.)
-    //
-    // Dry-run before wiring confirmed init() is clean: four staggered unref'd
-    // scans plus a 10s-delayed initial build that hydrates _failureIndex from
-    // the persisted fault_taxonomy table, so there is no cold-start amnesia.
-    // Failure is isolated by the loop's own try/catch, same as every organ.
-    { name: 'intelligence',         path: './intelligence',         note: 'pattern recognition + failure taxonomy → bep_patterns/failures (was never running)' },
   ];
   for (const organ of organs) {
     try {
@@ -1264,6 +1248,29 @@ server.listen(PORT, '127.0.0.1', () => {
     console.log('[cortex] raid/router active — universal entry point (any surface → raid.route.request → raid.route.decided)');
   } catch (e) {
     console.warn(`[cortex] raid/router failed to start: ${e.message}`);
+  }
+  try {
+    // §T7 2026-07-25 — populate SYSTEM REWIND. replay-engine.snapshot() captures
+    // a scored state summary (open gaps, high-friction count, liminal velocity,
+    // crystallised patterns, recent-event rate, active fault classes) — exactly
+    // what the rewind timeline's sigma-colour legend reads. It was orphaned:
+    // complete API, nothing ever called snapshot(), so the UI showed "No
+    // snapshots". This wires the OBSERVE half only — periodic + on the events
+    // that matter (a gap opening, a sigma halt-risk). RESTORE stays blocked on
+    // the absent meta/rfr2/kernel (per hooks/cortex.hooks.js:586); we capture the
+    // timeline, we do not claim to revert to it (§1.2 — the observe/mutate
+    // boundary the tablet spec draws).
+    const replay = require('../lib/replay-engine');
+    replay.snapshot({ trigger: 'boot' });
+    const _snapInterval = setInterval(() => {
+      try { replay.snapshot({ trigger: 'periodic' }); } catch (_) {}
+    }, 300_000); // every 5 min — matches _captureState's recent-events window
+    if (_snapInterval.unref) _snapInterval.unref();
+    bus.on('cortex.gap.found', () => { try { replay.snapshot({ trigger: 'gap.found' }); } catch (_) {} });
+    bus.on('sigma.event.halt_risk', () => { try { replay.snapshot({ trigger: 'sigma.halt_risk' }); } catch (_) {} });
+    console.log('[cortex] replay snapshots active — timeline populates on boot, every 5min, and on gap/sigma events (observe only; restore blocked on rfr2 kernel)');
+  } catch (e) {
+    console.warn(`[cortex] replay snapshot wiring failed: ${e.message}`);
   }
   try {
     require('./intelligence').init({});

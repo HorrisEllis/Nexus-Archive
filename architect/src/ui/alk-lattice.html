@@ -41,7 +41,7 @@ varying vec3 vCol;
 varying float vAlpha;
 void main(){
   gl_Position = uMVP * vec4(aPos, 1.0);
-  gl_PointSize = 14.0;   // §2026-07-24 — 6.0 was effectively invisible at devicePixelRatio 2
+  gl_PointSize = 6.0;
   vCol = aCol;
   vAlpha = aAlpha;
 }`;
@@ -136,122 +136,53 @@ function sendPrompt(text) {
   .catch(() => console.log('[ALK] sendPrompt (guardian offline):', text));
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   §LIVE DATA 2026-07-24 — James: "No mock. Only real data, the
-   artifact/contract moving through the system, events, chunks."
+// nodes: { label, x, y, z, color, info }
+const nodes = [
+  // kernel
+  { label:'ALKKernel',      x:0,     y:0,      z:-1.8, color:PURPLE, r:0.13, info:'emit · subscribe · registerGate · §K1–K8' },
 
-   WHAT THIS REPLACED: a hardcoded `const nodes = [...]` of 20 hand-placed,
-   hand-labelled nodes ("ALKKernel", "Feed Generator", …) with hand-authored
-   edges. It was a DIAGRAM — a picture of the architecture somebody typed in
-   — rendered convincingly enough to be mistaken for an instrument. It could
-   not go wrong, because it was never right in the first place: it showed the
-   same thing whether NEXUS was healthy, wedged, or not running at all. The
-   original is preserved in git history.
+  // primitives ring z=-0.8
+  { label:'Clock',          x:0,     y: 0.55,  z:-0.8, color:TEAL,   r:0.07, info:'logical tick · monotone · §K4' },
+  { label:'Gate Chain',     x: 0.52, y: 0.17,  z:-0.8, color:PURPLE, r:0.07, info:'block · transform · inject · §K2' },
+  { label:'Ring Buffer',    x: 0.32, y:-0.45,  z:-0.8, color:PURPLE, r:0.07, info:'bounded · evicts · prunes §K5' },
+  { label:'Lattice Graph',  x:-0.32, y:-0.45,  z:-0.8, color:PURPLE, r:0.07, info:'causal · semantic · temporal' },
+  { label:'Subscriptions',  x:-0.52, y: 0.17,  z:-0.8, color:PURPLE, r:0.07, info:'pattern · * · ** · §K3' },
 
-   WHAT IT IS NOW: every node, edge and moving artifact below comes from
-   autopilot's /graph, which reads the live store and the real input/output
-   folders. Nothing here is placeholder, and nothing is padded when a feed is
-   empty — an empty feed renders as STILLNESS, because "nothing is moving" is
-   a real and important state. A brain that always looks busy is a liar.
+  // modules ring z=0
+  { label:'BehaviorModule', x:0,     y: 0.90,  z: 0,   color:TEAL,   r:0.07, info:'cross-modal · somatic · verbal · ocular' },
+  { label:'VideoModule',    x: 0.78, y: 0.45,  z: 0,   color:TEAL,   r:0.07, info:'FaceMesh · Pose · Hands · cue taxonomy' },
+  { label:'TextModule',     x: 0.78, y:-0.45,  z: 0,   color:TEAL,   r:0.07, info:'transcript · friction · AssocEngine · Markov' },
+  { label:'CFR kernel',     x:0,     y:-0.90,  z: 0,   color:TEAL,   r:0.07, info:'physics · render · rewind · constraint field' },
+  { label:'pat-from-pcm',   x:-0.78, y:-0.45,  z: 0,   color:TEAL,   r:0.07, info:'PCM → PAT signal converter' },
+  { label:'ALKModule base', x:-0.78, y: 0.45,  z: 0,   color:GRAY,   r:0.07, info:'uuid · ns · _emit · _sub · §K6' },
 
-   SOURCES (all real, all verified against live rows before wiring):
-     nodes    ← union of §B1 cross-process subscription publishers and
-                real event_log sources
-     edges    ← real producer→consumer edges, weighted by observed counts
-     chunks   ← idearium_spec_chunks           (1937 real rows)
-     artifacts← guardian_artifacts             (195 real rows)
-     contracts← live <system>/input|output/*.json with their addenda chain
-     trails   ← raid_trails, real routing paths with real elapsed times
-     cfr      ← cfr_state.json on disk
+  // resonance engine z=+1.2
+  { label:'Resonance Engine',x:0,    y:0,      z: 1.2, color:AMBER,  r:0.10, info:'IDL · Feed · Scorer · Axes · Mode Classifier' },
+  { label:'Feed Generator',  x: 0.55,y: 0.32,  z: 1.2, color:AMBER,  r:0.06, info:'generates feed from lattice events' },
+  { label:'Scorer',          x: 0.55,y:-0.32,  z: 1.2, color:AMBER,  r:0.06, info:'scores + ranks feed items' },
+  { label:'Axes Computation',x:-0.55,y:-0.32,  z: 1.2, color:AMBER,  r:0.06, info:'computes signal axes from events' },
+  { label:'Mode Classifier', x:-0.55,y: 0.32,  z: 1.2, color:AMBER,  r:0.06, info:'IDL mode classification · idl-v0.2' },
+];
 
-   POSITIONS are DERIVED, not authored: a stable hash of the system name
-   fixes each node's angle, so the layout is deterministic across reloads
-   (a node does not wander between refreshes) while never being hand-placed.
-   ═══════════════════════════════════════════════════════════════════════ */
+// edges: [from_idx, to_idx, alpha]
+const edges = [
+  // kernel ↔ primitives
+  [0,1,0.4],[0,2,0.4],[0,3,0.4],[0,4,0.4],[0,5,0.4],
+  // kernel ↔ modules (thinner — bus mediated)
+  [0,6,0.18],[0,7,0.18],[0,8,0.18],[0,9,0.18],[0,10,0.18],[0,11,0.18],
+  // primitives ring (lateral — loose association)
+  [1,2,0.12],[2,3,0.12],[3,4,0.12],[4,5,0.12],[5,1,0.12],
+  // modules ↔ primitives (functional)
+  [2,6,0.25],[2,7,0.25],[3,8,0.25],[4,9,0.25],
+  // resonance ↔ kernel
+  [0,12,0.3],
+  // resonance sub-nodes ↔ center
+  [12,13,0.35],[12,14,0.35],[12,15,0.35],[12,16,0.35],
+  // resonance ↔ modules (signal flow)
+  [12,6,0.2],[12,8,0.2],[12,9,0.2],
+];
 
-const GRAPH_URL = (new URLSearchParams(location.search).get('graph'))
-                || 'http://127.0.0.1:7799/graph';
-
-let nodes = [];
-let edges = [];
-let movers = [];          // artifacts/chunks/contracts currently in the system
-let liveState = { connected:false, reason:'connecting…', ts:0, cfr:null };
-
-/* Deterministic angle from a name — same node, same place, every reload. */
-function _angleFor(name){
-  let h = 0;
-  for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) >>> 0;
-  return (h % 3600) / 3600 * Math.PI * 2;
-}
-function _colourFor(n){
-  if (n.stale) return AMBER;                       // published, then went quiet
-  if (n.publishes) return PURPLE;                  // a real §B1 publisher
-  if (n.emitted > 0) return TEAL;                  // emits but never subscribed
-  return GRAY;                                     // present, silent
-}
-
-function applyGraph(g){
-  const sys = g.nodes || [];
-  nodes = sys.map((n, i) => {
-    const a = _angleFor(n.id);
-    // Radius carries meaning: heavier emitters sit closer to the core.
-    const weight = Math.min(1, Math.log2((n.emitted || 0) + 1) / 8);
-    const r = 0.85 - weight * 0.35;
-    return {
-      label: n.id,
-      x: Math.cos(a) * r,
-      y: Math.sin(a) * r,
-      z: -0.8 + weight * 0.9,
-      color: _colourFor(n),
-      r: 0.05 + weight * 0.08,
-      info: `${n.emitted||0} events emitted · ${n.subscriptionTypes||0} subscription types · `
-          + `${n.listeners||0} listeners${n.publishes ? '' : ' · publishes no subscriptions'}`
-          + (n.stale ? ' · STALE' : ''),
-    };
-  });
-
-  const idx = new Map(nodes.map((n,i)=>[n.label,i]));
-  edges = [];
-  for (const e of (g.edges || [])) {
-    const a = idx.get(e.source);
-    if (a === undefined || !e.consumers || !e.consumers.length) continue;
-    for (const c of e.consumers) {
-      const b = idx.get(c);
-      if (b === undefined || b === a) continue;
-      edges.push([a, b, Math.min(0.65, 0.12 + Math.log2(e.weight+1)/14)]);
-    }
-  }
-
-  // Movers — the artifacts and contracts actually in the system right now.
-  const m = g.movement || {};
-  movers = [
-    ...(m.chunks    || []).map(x => ({...x, home:'idearium'})),
-    ...(m.artifacts || []).map(x => ({...x, home:'guardian'})),
-    ...(m.contracts || []).map(x => ({...x, home:x.to || x.from})),
-  ];
-
-  liveState = {
-    connected:true, ts:Date.now(), cfr:g.cfr || null,
-    reason:`${nodes.length} systems · ${edges.length} edges · ${movers.length} in flight`
-         + (g.trailsObserved ? ` · ${(g.trails||[]).length} trails` : ''),
-  };
-}
-
-async function refreshGraph(){
-  try {
-    const r = await fetch(GRAPH_URL, { cache:'no-store' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const g = await r.json();
-    applyGraph(g);
-  } catch (e) {
-    // §1.2 — an unreachable feed is STATED, never rendered as an empty
-    // universe. A blank lattice and a dead endpoint must not look identical.
-    liveState = { connected:false, reason:`autopilot unreachable — ${e.message}`, ts:Date.now(), cfr:null };
-    nodes = []; edges = []; movers = [];
-  }
-  rebuildBuffers();
-}
-
+// ── build VBO data ──
 // We'll draw: edges as lines, nodes as billboarded quads (just points for now + labels via overlay)
 function mkBuf(data) {
   const b = gl.createBuffer();
@@ -277,31 +208,6 @@ function buildPoints() {
   const v = [];
   for (const n of nodes) {
     v.push(n.x,n.y,n.z,...n.color,0.95);
-  }
-  // §MOVERS — the artifacts, spec-chunks and contracts actually in the system
-  // right now, each orbiting the system that holds it. These are REAL rows: if
-  // a store is empty nothing is drawn, and that emptiness is the honest
-  // picture rather than a defect in the view.
-  const byHome = new Map();
-  for (const m of movers) {
-    if (!byHome.has(m.home)) byHome.set(m.home, []);
-    byHome.get(m.home).push(m);
-  }
-  const t = performance.now() / 1000;
-  for (const [home, list] of byHome) {
-    const host = nodes.find(n => n.label === home);
-    if (!host) continue;                      // never invent a position
-    list.forEach((m, i) => {
-      const phase = (i / list.length) * Math.PI * 2 + t * 0.25;
-      const orb   = host.r + 0.045 + (i % 3) * 0.018;
-      const col   = m.kind === 'contract'   ? WHITE
-                  : m.kind === 'spec-chunk' ? TEAL
-                  :                           AMBER;
-      v.push(host.x + Math.cos(phase) * orb,
-             host.y + Math.sin(phase) * orb,
-             host.z + 0.05,
-             ...col, 0.75);
-    });
   }
   return v;
 }
@@ -338,30 +244,15 @@ function buildRings() {
 
 const STRIDE = 7 * 4; // 7 floats * 4 bytes
 
-// §LIVE — buffers are rebuilt whenever real data arrives. They were const +
-// STATIC_DRAW built once at load, which was correct for a hardcoded diagram
-// and impossible for a live instrument.
-let lineData  = [], pointData = [], spineData = [], ringData = [];
-let lineBuf   = mkBuf([]), pointBuf = mkBuf([]), spineBuf = mkBuf([]), ringBuf = mkBuf([]);
+let lineData  = buildLines();
+let pointData = buildPoints();
+let spineData = buildSpine();
+let ringData  = buildRings();
 
-// Points rebuild per frame because movers orbit; lines/spine/rings change
-// only when the graph itself does, so they stay on the slower path.
-function rebuildPoints(){
-  pointData = buildPoints();
-  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointData), gl.DYNAMIC_DRAW);
-}
-
-function rebuildBuffers(){
-  lineData  = buildLines();
-  pointData = buildPoints();
-  spineData = buildSpine();
-  ringData  = buildRings();
-  for (const [buf,data] of [[lineBuf,lineData],[pointBuf,pointData],[spineBuf,spineData],[ringBuf,ringData]]) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.DYNAMIC_DRAW);
-  }
-}
+const lineBuf  = mkBuf(lineData);
+const pointBuf = mkBuf(pointData);
+const spineBuf = mkBuf(spineData);
+const ringBuf  = mkBuf(ringData);
 
 function bindBuf(buf) {
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -502,7 +393,6 @@ function drawLabels(mvp, w, h, pr) {
 let t0 = performance.now();
 
 function render(ts) {
-  if (movers.length) rebuildPoints();   // §LIVE — movers orbit, so points refresh per frame
   requestAnimationFrame(render);
   const dt = (ts - t0) / 1000; t0 = ts;
   if (autoSpin) rotY_ += dt * 0.25;
@@ -543,21 +433,10 @@ function render(ts) {
   for (let i=0;i<nodes.length;i++) {
     // we can't change pointSize per vertex in this setup so we just draw
   }
-  // §FIX 2026-07-24 — was nodes.length, which silently dropped every mover:
-  // buildPoints() appends artifacts/chunks/contracts AFTER the system nodes,
-  // so a count of nodes.length rendered the systems and discarded the
-  // movement. The buffer had the data; the draw call refused to look at it.
-  // Exactly the "declared but never executed" shape, in a draw call.
-  gl.drawArrays(gl.POINTS, 0, pointData.length / 7);
+  gl.drawArrays(gl.POINTS, 0, nodes.length);
 
   drawLabels(mvp, w, h, pr);
 }
 
 requestAnimationFrame(render);
-
-// §LIVE — first fetch immediately, then poll. 4s is deliberate: this reads
-// the store on every call, and a tighter loop would make the observer a load
-// source on the system it is observing.
-refreshGraph();
-setInterval(refreshGraph, 4000);
 </script>

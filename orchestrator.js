@@ -388,7 +388,16 @@ try {
 function ledgerWrite(system, type, payload = {}) {
   // §LAW II — event-ledger writes first, before anything else sees this event
   if (_eventLedger) {
-    _eventLedger.record(type, payload, { source: system, causedBy: payload.causedBy || null });
+    // §CAUSAL HYGIENE 2026-07-25 — a causedBy that merely equals the emitting
+    // system's own name is NOT a causal edge; it's a self-loop that pollutes the
+    // causal graph. These are status/heartbeat pings (e.g. guardian.ncp.status
+    // with causedBy:'guardian') — a heartbeat has no cause, it's a timer firing.
+    // Null is the honest value. This was the last "coarse causal tag" in the
+    // live map; the fix is to STOP fabricating the edge, not to invent a real
+    // one for an event that has no parent (§1.2 — never a false edge).
+    const rawCause = payload.causedBy || null;
+    const causedBy = (rawCause === system) ? null : rawCause;
+    _eventLedger.record(type, payload, { source: system, causedBy });
   }
   const entry = { _system: system, _ts: Date.now(), type, payload };
   const ring  = LEDGER[system] || (LEDGER[system] = []);

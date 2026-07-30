@@ -748,59 +748,6 @@ function _handleGraphRead(req, res) {
       trailsObserved = true;
     } catch (_) { trails = []; trailsObserved = false; }
 
-    // §MOVEMENT 2026-07-24 (James: "No mock. Only real data, the
-    // artifact/contract moving through the system, events, chunks").
-    // Every array below is REAL rows from the live store — nothing
-    // synthesised, nothing placeholder. Where a store is empty that is
-    // reported as empty, never padded: an empty movement list means "none
-    // observed", and the renderer must show stillness rather than invent
-    // motion. Bounded because this is a live UI read.
-    const movement = { artifacts: [], chunks: [], contracts: [], trailCount: 0 };
-    try {
-      movement.artifacts = (jaaDB.tail('guardian_artifacts', 40) || []).map(a => ({
-        id: a.uuid || a.id, system: 'guardian', kind: a.type || a.kind || 'artifact',
-        label: String(a.name || a.title || a.path || a.uuid || '').slice(0, 60),
-        ts: a.ts || a.createdAt || null,
-      }));
-    } catch (_) {}
-    try {
-      movement.chunks = (jaaDB.tail('idearium_spec_chunks', 40) || []).map(c => ({
-        id: c.uuid || c.id, system: 'idearium', kind: 'spec-chunk',
-        label: String(c.specName || c.name || c.chunkId || c.uuid || '').slice(0, 60),
-        ts: c.ts || c.createdAt || null,
-      }));
-    } catch (_) {}
-    // Contracts genuinely in flight, read from the real input/output folders
-    // rather than a table — that IS where a contract lives. Their addenda are
-    // the journey the artifact accumulated (lib/contract-queue.js).
-    try {
-      const seen = new Set();
-      for (const sysDir of fs.readdirSync(ROOT, { withFileTypes: true })) {
-        if (!sysDir.isDirectory() || sysDir.name.startsWith('.') || sysDir.name === 'node_modules') continue;
-        for (const box of ['input', 'output']) {
-          const d = path.join(ROOT, sysDir.name, box);
-          if (!fs.existsSync(d)) continue;
-          for (const f of fs.readdirSync(d)) {
-            if (!f.endsWith('.json') || movement.contracts.length >= 40) continue;
-            try {
-              const c = JSON.parse(fs.readFileSync(path.join(d, f), 'utf8'));
-              if (!c || !c.uuid || seen.has(c.uuid)) continue;
-              seen.add(c.uuid);
-              movement.contracts.push({
-                id: c.uuid, kind: 'contract', label: String(c.intent || '').slice(0, 60),
-                from: c.fromSystem, to: c.toSystem, status: c.status,
-                hops: Array.isArray(c.addenda) ? c.addenda.length : 0,
-                // the real path this artifact travelled, system by system
-                path: (c.addenda || []).map(a => ({ system: a.system, action: a.action, ts: a.ts })),
-                ts: c.updatedAt || c.createdAt || null,
-              });
-            } catch (_) {}
-          }
-        }
-      }
-    } catch (_) {}
-    movement.trailCount = trails.length;
-
     // CFR for colouring — read from disk so it survives a wedged cortex.
     let cfr = null;
     try {
@@ -826,7 +773,6 @@ function _handleGraphRead(req, res) {
       consumerEdges: (edgeR.edges || []).slice(0, 200),
       trails,
       trailsObserved,
-      movement,
       cfr,
       subscriptionsObserved: !!subs.observed,
       staleAfterMs: busSubs.STALE_MS,
