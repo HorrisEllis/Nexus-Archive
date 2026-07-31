@@ -42,6 +42,11 @@ const ROOT     = __dirname;
 // memory tables; guardian holds job state).
 const DEFAULT_MAX_OLD_SPACE_MB = Number(process.env.NEXUS_MAX_OLD_SPACE_MB || 1024);
 const MEM_BACKOFF_MS = 15000;
+// §PRIORITY — halt floor for kernel.critical kernels (default gate is 10%,
+// see lib/resource-monitor's DEFAULT_THRESHOLDS.freeMemHaltPct). Lower, not
+// zero: a critical kernel spawning into truly exhausted memory still fails
+// with the same 'spawn UNKNOWN' this whole guard exists to prevent.
+const CRITICAL_HALT_PCT = Number(process.env.NEXUS_CRITICAL_HALT_PCT || 0.05);
 const { ResourceMonitor } = require('./lib/resource-monitor');
 const _resourceMonitor = new ResourceMonitor({ name: 'autopilot', intervalMs: 15000 }).start();
 const LOG_DIR  = path.join(ROOT, 'data', 'autopilot');
@@ -108,23 +113,23 @@ const ALL_KERNELS = [
   //   Phase 4: emerge — reports to copilot:3750, so copilot must be up
   //   clear-glass: onDemand, unchanged — no phase, dormant until requested
   { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' },
-    phase: 2, healthUrl: 'http://127.0.0.1:9000/health' },
+    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:9000/health' },
   // §FIX 2026-06-20: bridge/server.js only exports createBridgeServer() — it
   // has no bootstrap code and never calls .start(), so running it directly
   // loads, does nothing, and exits 0 immediately. bridge/index.js is the
   // actual entrypoint: it boots via BootSequence and calls server.start().
   { name: 'bridge',       cmd: 'node', args: ['bridge/index.js'],
-    phase: 2, healthUrl: 'http://127.0.0.1:9999/health' },
+    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:9999/health' },
   { name: 'cortex',       cmd: 'node', args: ['cortex/boot.js'],
-    phase: 1, healthUrl: 'http://127.0.0.1:3748/health' },
+    critical: true, phase: 1, healthUrl: 'http://127.0.0.1:3748/health' },
   { name: 'guardian',     cmd: 'node', args: ['guardian/server.js'],
-    phase: 2, healthUrl: 'http://127.0.0.1:7820/health' },
+    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:7820/health' },
   { name: 'idearium',     cmd: 'node', args: ['idearium/api/index.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:4800/health' },
   { name: 'architect',    cmd: 'node', args: ['architect/service.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:3747/health' },
   { name: 'diagnostic',   cmd: 'node', args: ['service/nexus-diagnostic.js'],
-    phase: 2, healthUrl: 'http://127.0.0.1:7825/health' },
+    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:7825/health' },
   { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:3751/health' },
   { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true,
@@ -155,6 +160,14 @@ const ALL_KERNELS = [
   { name: 'clear-glass',
     cmd: _ELECTRON_CMD,
     args: ['.'], cwd: 'clear-glass', optional: true,
+    // §PRIORITY 2026-07-31 — the heaviest single process in the stack
+    // (Electron + four provider webviews) gets a HIGHER halt floor than the
+    // default 10%, so it's the first thing refused under pressure, not the
+    // same as everything else. Directly answers the failure mode below:
+    // cortex OOM'd, then couldn't restart at 6-7% free while clear-glass —
+    // requested unconditionally on every boot despite onDemand — held its
+    // memory.
+    haltPctOverride: 0.15,
     // §BUILT 2026-07-15 — "cos as a kind of PID service, only running
     // what's needed." Clear Glass is the heaviest single process in the
     // stack (Electron + however many provider webviews) and the clearest
@@ -307,7 +320,24 @@ function _spawnKernel(kernel, color) {
     ? [`--max-old-space-size=${heapMB}`, ...kernel.args]
     : kernel.args;
 
-  if (!_resourceMonitor.spawnSafe()) {
+  // §PRIORITY 2026-07-31 — from a real Windows console: cortex (phase 1, the
+  // memory core everything else writes through) OOM-crashed, then couldn't
+  // restart because the machine was at 6-7% free — and Clear Glass (Electron
+  // + four live provider webviews, the single heaviest process here) was
+  // gated by the exact same threshold as cortex. There was no concept of
+  // priority: every kernel got the same 10% halt floor regardless of how
+  // essential it was or how much memory it itself was consuming. Two-sided
+  // fix, both real: critical kernels (kernel.critical) get a LOWER halt
+  // floor so they're refused only in genuine last-resort conditions; heavy
+  // optional kernels (kernel.haltPctOverride) get a HIGHER one so they back
+  // off first, preserving headroom for the ones everything depends on. This
+  // does not make a critical spawn succeed when there is truly no memory —
+  // it changes who gets refused first when there's a little left.
+  const spawnGateOverrides = kernel.critical
+    ? { freeMemHaltPct: CRITICAL_HALT_PCT }
+    : (kernel.haltPctOverride != null ? { freeMemHaltPct: kernel.haltPctOverride } : undefined);
+
+  if (!_resourceMonitor.spawnSafe(spawnGateOverrides)) {
     const s = _resourceMonitor.current();
     console.error(`[autopilot] REFUSING to spawn ${kernel.name}: only ${(s.system.freeMemPct * 100).toFixed(1)}% memory free. ` +
                   `Spawning now would fail with 'spawn UNKNOWN' and be miscounted as a crash. Retrying in ${MEM_BACKOFF_MS / 1000}s.`);
