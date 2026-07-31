@@ -1,7 +1,11 @@
 'use strict';
 /**
- * cli/co-pilot.js — NEXUS Unified Co-Pilot Console
- * (renamed from cli/nexus-cli.js — Phase 68, "cli.js Renamed and Expanded")
+ * copilot/cli.js — NEXUS Unified Co-Pilot Console
+ * (renamed from cli/nexus-cli.js — Phase 68, "cli.js Renamed and Expanded";
+ *  moved from cli/co-pilot.js into copilot/ — consolidation pass — every
+ *  other subsystem's CLI lives in its own folder and is wired into the
+ *  unified dispatcher, see guardian/cli.js, cockpit/cli.js, cli/nexus.js's
+ *  MODULE_CLI table. This file was the one exception.)
  * UUID: nexus-cli-runtime-v1-0000-4000-0000-000000000001
  * Version: 1.1.0
  *
@@ -197,7 +201,7 @@ async function _talkToCopilot(prompt, command) {
     const CP_URL = process.env.COPILOT_URL || 'http://127.0.0.1:3750';
     const resp = await new Promise((resolve, reject) => {
       const body = JSON.stringify({
-        prompt:    rest,
+        prompt,
         channel:   'cli',
         sessionId: _sessionId || 'cli-session',
       });
