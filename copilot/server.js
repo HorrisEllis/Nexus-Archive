@@ -457,8 +457,16 @@ async function _dispatchToOllama(prompt, context, opts = {}) {
     // applies. See lifeline.js's matching fix for the full explanation.
     ...(opts.model ? { model: opts.model } : {}),
     intent:      opts.intent || 'ask',
-    componentId: 'copilot.prompt',
-    hookId:      'copilot.prompt.to-ollama',
+    // §FIXED 2026-07-31 — these two were hardcoded, so every caller's own
+    // identity was silently discarded: tool-runtime passed
+    // componentId 'copilot.tool-runtime' / hookId 'copilot.tool-runtime.to-ollama'
+    // and both were overwritten here, making tool-loop dispatch indistinguishable
+    // from a plain prompt in the ledger. That is not cosmetic — R1's baseline
+    // (docs/copilot-omniscience-phasemap.spec) has to separate the two paths to
+    // measure anything, and it could not. Defaults are unchanged, so every
+    // existing caller that passes nothing behaves exactly as before (§5.14).
+    componentId: opts.componentId || 'copilot.prompt',
+    hookId:      opts.hookId      || 'copilot.prompt.to-ollama',
     requestId:   opts.requestId,
     sessionId:   opts.sessionId,
     contractId:  'nexus-interaction-contract-v1::copilot',
@@ -525,30 +533,41 @@ function sseSend(res, event, data) {
 }
 
 // Poll Ollama job and stream token chunks to SSE response
-// §PHASEMAP P1 — headless job poll for the tool-loop (no SSE res coupling).
-// runToolLoop needs a plain (jobRef) => { text, toolCalls } resolver; the
-// streaming poll above is tied to an HTTP res. Same /api/jobs/:id status shape,
-// no streaming side-effects. Carries tool_calls through if ollama returns them.
-async function _pollOllamaJobHeadless(jobRef) {
-  const jobId = jobRef?.jobId || jobRef;
-  if (!jobId) return { text: '', toolCalls: null };
-  const MAX_WAIT = 90;
-  let lastText = '';
-  for (let i = 0; i < MAX_WAIT; i++) {
-    await new Promise(r => setTimeout(r, 1000));
-    try {
-      const status = await _fetch(`${OL_URL}/api/jobs/${jobId}`, { timeout: 3000 });
-      const job = status?.job;
-      if (!job) continue;
-      if (job.result && job.result.length > lastText.length) lastText = job.result;
-      if (job.status === 'complete') {
-        return { text: job.result || lastText, modelUsed: job.model || 'ollama',
-          toolCalls: job.tool_calls || job.toolCalls || null };
-      }
-      if (job.status === 'failed') return { text: lastText, modelUsed: 'ollama', failed: true, toolCalls: null };
-    } catch (_) {}
+// §PHASEMAP P1 — tool-capable model turn for the agent loop.
+//
+// REPLACES _pollOllamaJobHeadless (added 2026-07-31, removed the same day).
+// That function polled /api/jobs for a `tool_calls` field the job record has
+// never had and can never have: /api/jobs resolves to Ollama /api/generate,
+// which has no `tools` param. It was 20 lines of poll that could only ever
+// return toolCalls:null, which is precisely why the loop always exited at
+// iteration 1. Deleted rather than left in place (§16.5) — a path that cannot
+// work is not a fallback.
+//
+// This calls the bridge's POST /api/chat/tools: ONE model turn, tools declared,
+// tool_calls back, no queue between iterations of our loop. copilot keeps the
+// loop, which is what lets it own the system prompt, the memory (P2) and the
+// stream (P3) — and what lets guardian do the same with its own providers at
+// P4 without depending on copilot at all.
+const TOOL_CHAT_TIMEOUT_MS = 90000;
+
+async function _chatWithToolsOnce(messages, toolSchemas, opts = {}) {
+  const r = await _fetch(`${OL_URL}/api/chat/tools`, {
+    method: 'POST',
+    timeout: opts.timeoutMs || TOOL_CHAT_TIMEOUT_MS,
+    body: {
+      messages,
+      tools: toolSchemas,
+      ...(opts.model ? { model: opts.model } : {}),
+    },
+  });
+  // §1.3 — the bridge answers {ok:false, error} on a real model-host failure.
+  // Surfacing that as an exception keeps "the model host is down" distinct from
+  // "the model chose not to call a tool"; collapsing them would make the loop
+  // answer confidently out of a failed call.
+  if (!r || r.ok === false) {
+    throw new Error(`[copilot] tool chat failed: ${r?.error || 'no response from ollama bridge'}`);
   }
-  return { text: lastText, modelUsed: 'ollama', timedOut: true, toolCalls: null };
+  return { text: r.text || '', toolCalls: r.toolCalls || [], model: r.model };
 }
 
 async function _streamOllamaJob(jobId, res, sessionId) {
@@ -1035,35 +1054,45 @@ const server = http.createServer(async (req, res) => {
 
   // ── §PHASEMAP P1: POST /api/prompt/tools — agentic tool-loop ───────────────
   // Co-pilot runs the sovereign agent-tools loop (lib/agent-tools) with its OWN
-  // ollama dispatch injected as callModel. The model can request tools mid-turn
-  // (read_file, diagnose, query-recall, run-command, ...) and the loop executes
-  // them for real, feeding results back. Additive: the existing /api/prompt path
-  // is untouched. P2 (memory) and P3 (stream) enrich the run via opts without
+  // model call injected. The model can request tools mid-turn (read_file,
+  // diagnose, query-recall, run-command, ...) and the loop executes them for
+  // real, feeding results back. Additive: the existing /api/prompt path is
+  // untouched. P2 (memory) and P3 (stream) enrich the run via opts without
   // changing this contract.
+  //
+  // §FIXED 2026-07-31 — this posted to /api/jobs with `tools` in the opts, and
+  // /api/jobs resolves to Ollama /api/generate, which has no tools param. No
+  // tool could ever fire; the loop returned a guess at iteration 1, silently.
+  // Now goes through the bridge's POST /api/chat/tools (one model turn, tools
+  // declared, tool_calls back) via _chatWithToolsOnce.
   if (method === 'POST' && p === '/api/prompt/tools') {
     let body = ''; req.on('data', c => body += c);
     req.on('end', async () => {
       try {
-        const { prompt, sessionId, maxIterations } = JSON.parse(body || '{}');
+        const { prompt, sessionId, maxIterations, model } = JSON.parse(body || '{}');
         if (!prompt) { json(res, 400, { ok: false, error: 'prompt required' }); return; }
         const toolRuntime = require('./tool-runtime');
         const requestId = crypto.randomUUID();
-
-        const dispatch = (convo, sysContext, opts) =>
-          _dispatchToOllama(convo, sysContext, { ...opts, intent: 'tool-loop', requestId, sessionId });
+        const startedAt = Date.now();
 
         const result = await toolRuntime.run({
           userPrompt: prompt,
-          dispatch,
-          pollJob: _pollOllamaJobHeadless,
+          chat: (messages, toolSchemas) => _chatWithToolsOnce(messages, toolSchemas, { model }),
           maxIterations: maxIterations || 6,
           // P2/P3 injected here once wired: memory: <user-model digest>, streamDigest: <live stream>
         });
 
+        // §R1 — the ledger row carries what the baseline needs to compare paths:
+        // iterations is the model round-trip count for this request, and
+        // contextChars is what we spent to get it. Recorded from the start so
+        // the R band never has to reconstruct a "before" number after the fact.
         await _persist('chat_log', { uuid: crypto.randomUUID(), requestId, sessionId,
           prompt: String(prompt).slice(0, 500), response: (result.text || '').slice(0, 2000),
           modelUsed: 'ollama', intent: 'tool-loop', toolsUsed: result.toolCallLog.map(t => t.name),
-          iterations: result.iterations, componentId: 'copilot.prompt.tools',
+          iterations: result.iterations,
+          contextChars: toolRuntime.buildSystemPrompt({}).length + String(prompt).length,
+          durationMs: Date.now() - startedAt,
+          componentId: 'copilot.prompt.tools',
           hookId: 'copilot.prompt.tools.reply', ts: Date.now() });
 
         json(res, 200, { ok: true, text: result.text, iterations: result.iterations,
@@ -1331,4 +1360,10 @@ server.listen(PORT, () => {
 });
 }
 
-module.exports = { server, streamIngest, _resolveIntuitionResponse, extractDispatchText };
+// §PHASEMAP P1 — _chatWithToolsOnce exported so the tool wire is testable
+// against a real HTTP round trip rather than a duplicated copy of itself.
+// The 1.0.0 test fabricated the model's side and passed against a defect
+// precisely because the real wire had no way to be exercised (§12.1 —
+// tests are proof, and a test that asserts on its own copy of the logic
+// proves nothing about the logic that ships).
+module.exports = { server, streamIngest, _resolveIntuitionResponse, extractDispatchText, _chatWithToolsOnce };

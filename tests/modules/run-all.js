@@ -57,6 +57,7 @@ const SUITES = [
   'test-self-heal.js',
   'test-gap-finder.js',
   'test-copilot-tool-runtime.js',
+  'test-ollama-chat-tools.js',
   'test-self-register.js',
   'test-registration-shape.js',
   'test-causal-hygiene.js',

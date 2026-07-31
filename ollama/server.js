@@ -101,36 +101,16 @@ setInterval(async () => {
 // tools param) with tools declared. qwen2.5-coder (DEFAULT_MODEL)
 // confirmed to support Ollama's native tool-calling before this was
 // built, not assumed.
-function _callOllamaChatWithTools(model, messages, toolSchemas, timeoutMs) {
-  const body = JSON.stringify({ model, messages, tools: toolSchemas, stream: false });
-  return new Promise((resolve, reject) => {
-    const u = new URL(`${OLLAMA_HOST}/api/chat`);
-    const req = http.request({
-      hostname: u.hostname, port: u.port || 11434, path: u.pathname, method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: timeoutMs || 60000,
-    }, r => {
-      let d = '';
-      r.on('data', c => d += c);
-      r.on('end', () => {
-        try {
-          const parsed = JSON.parse(d);
-          const msg = parsed.message || {};
-          resolve({
-            text: msg.content || '',
-            toolCalls: (msg.tool_calls || []).map(tc => ({
-              id: tc.id, name: tc.function?.name, arguments: tc.function?.arguments,
-            })),
-          });
-        } catch (e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('ollama chat request timeout')); });
-    req.write(body);
-    req.end();
-  });
-}
+//
+// §MOVED 2026-07-31 (§16.5) — this was inline here as
+// _callOllamaChatWithTools and therefore untestable: server.listen(PORT)
+// runs at module scope, so requiring this file to reach the function binds
+// :3749 and starts the health interval. It now lives in ollama/chat-tools.js
+// and is required below. Not duplicated — the inline copy is gone. The
+// argument-shape normalisation that used to be missing here (Ollama returns
+// `arguments` as an object, OpenAI-compatible frontends return it as a JSON
+// string) now happens once, in that module.
+const chatTools = require('./chat-tools');
 
 // POST /api/jobs/tools — same job shape as /api/jobs, but runs through
 // the real agent-tools loop (lib/agent-tools/index.js) instead of a
@@ -138,11 +118,20 @@ function _callOllamaChatWithTools(model, messages, toolSchemas, timeoutMs) {
 // existing one — a tool-enabled request has a different real cost and
 // latency profile (multiple model round-trips possible), a caller
 // should opt into that explicitly.
+//
+// §NOTE 2026-07-31 — this runs the loop INSIDE the bridge with the bridge's
+// own fixed system prompt, so it carries no caller memory, no live stream and
+// no pre-flight context. That is fine for a caller who wants "answer this
+// using tools" and nothing more. Callers who own context (copilot, and
+// guardian at P4) drive the loop themselves and use POST /api/chat/tools
+// below for the model turn instead. Both sit on the SAME loop implementation
+// (lib/agent-tools) and the SAME model primitive (chat-tools.callChatWithTools)
+// — two entry points, one loop, no second dispatch path (§10.3).
 async function _dispatchWithTools(prompt, model, maxIterations) {
   const { runToolLoop } = require('../lib/agent-tools/index.js');
   const systemPrompt = 'You are a coding assistant with access to a read_file tool for reading real files in this project. Use it when you need to see a file\'s actual content before answering.';
   return runToolLoop(
-    (messages, toolSchemas) => _callOllamaChatWithTools(model, messages, toolSchemas),
+    (messages, toolSchemas) => chatTools.callChatWithTools(OLLAMA_HOST, model, messages, toolSchemas),
     systemPrompt, prompt, { maxIterations: maxIterations || 6 }
   );
 }
@@ -405,6 +394,41 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, { ok: true, text: result.text, iterations: result.iterations, toolCallLog: result.toolCallLog });
     } catch (e) {
       json(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // POST /api/chat/tools — ONE model turn with tools declared, tool_calls
+  // returned. §PHASEMAP P1 (closes p1_open_drift). This is NOT a loop and NOT
+  // a job: it is the model primitive a loop is built from, for callers that
+  // drive their own loop and own their own system prompt / memory / stream
+  // (copilot now, guardian at P4). Synchronous by design — a job id to poll
+  // would put the queue between every iteration of somebody else's loop.
+  //
+  // Why this had to exist at all: /api/jobs resolves to Ollama /api/generate,
+  // which has no `tools` param, so a queued job can never carry tools and its
+  // result can never carry tool_calls. copilot was passing `tools` into
+  // /api/jobs and silently getting a plain answer every time.
+  if (method === 'POST' && p === '/api/chat/tools') {
+    const body = await readBody(req);
+    if (!Array.isArray(body.messages) || !body.messages.length) {
+      json(res, 400, { ok: false, error: 'messages required — a non-empty OpenAI-shaped array' }); return;
+    }
+    if (!_ollamaOnline) { json(res, 503, { ok: false, error: 'Ollama host unreachable' }); return; }
+    const model = body.model || DEFAULT_MODEL;
+    try {
+      const r = await chatTools.callChatWithTools(
+        OLLAMA_HOST, model, body.messages, body.tools || [], body.timeoutMs
+      );
+      broadcast('ollama.chat.tools.complete', {
+        model, toolCallCount: r.toolCalls.length, textLen: (r.text || '').length,
+      });
+      json(res, 200, { ok: true, text: r.text, toolCalls: r.toolCalls, model: r.model });
+    } catch (e) {
+      // Loud and specific (§1.2/§1.3) — the caller's loop must be able to tell
+      // "the model host failed" from "the model chose not to call a tool".
+      broadcast('ollama.chat.tools.failed', { model, error: e.message });
+      json(res, 502, { ok: false, error: e.message });
     }
     return;
   }

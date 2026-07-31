@@ -40,6 +40,13 @@ const components=[
       out:[{id:'copilot.prompt.stream.chunk',wires_to:['ui.copilot.stream'],tags:['streaming']}],
     }
   }),
+  _c('prompt.tools','POST','/api/prompt/tools','Agentic tool-loop entry — runs the sovereign lib/agent-tools runToolLoop with copilot\'s own model dispatch injected as callModel (§PHASEMAP P1, copilot/tool-runtime.js). Returns {text, iterations, toolCallLog}. LIVE as of 2026-07-31 — tools fire for real: the loop calls the bridge\'s POST /api/chat/tools (one model turn, tools declared, tool_calls back) via _chatWithToolsOnce. It previously posted to /api/jobs, which resolves to Ollama /api/generate and has no tools param, so no tool could ever fire and the loop answered from a guess at iteration 1; that path is deleted, not deprecated. Proven by a real HTTP round trip in tests/modules/test-copilot-tool-runtime.js, not a fabricated wire.',{
+    grammar:['tools','cp tools','tool loop','copilot tools'],tags:['entry-point','agentic'],
+    hooks:{
+      in:[{id:'copilot.prompt.tools.receive',intent:['ask','build','diagnose','tool','action'],contract:'nexus-interaction-contract-v1::copilot',tags:['entry-point','agentic']}],
+      out:[{id:'copilot.prompt.tools.reply',wires_to:['ui.copilot.receive'],tags:['response']}]
+    }
+  }),
   _c('health','GET','/health','Co-pilot health'),
   _c('contract','GET','/contract','Co-pilot interaction contract'),
 ];
