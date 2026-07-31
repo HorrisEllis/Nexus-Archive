@@ -54,10 +54,10 @@ const KNOWN_GOOD = [
   { prompt: 'what gaps are open', expect_intent: 'tool' },
 ];
 
-async function _writeToCortex(type, payload, causedBy = null) {
+async function _writeToCortex(type, payload) {
   const body = JSON.stringify({ table: 'event_log', row: {
     uuid: crypto.randomUUID(), type, source: 'copilot.adversarial',
-    payload, causedBy, ts: Date.now()
+    payload, ts: Date.now()
   }});
   return new Promise(res => {
     const u = new URL(`${CX_URL}/api/memory/insert`);
@@ -182,9 +182,7 @@ async function run(stream = []) {
   });
 
   if (results.violations > 0) {
-    // §CAUSAL WIRE (ported from v44) — a violation is CAUSED BY the run that
-    // found it; both share runId. run.complete stays parentless (causal root).
-    await _writeToCortex('adversarial.violation.detected', { runId, count: results.violations, results }, runId);
+    await _writeToCortex('adversarial.violation.detected', { runId, count: results.violations, results });
   }
 
   _running = false;
