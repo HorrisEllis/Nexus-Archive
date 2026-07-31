@@ -1048,11 +1048,11 @@ const server = http.createServer(async (req, res) => {
 
 // ── Register with orchestrator ────────────────────────────────────────────────
 function _register() {
-  const components = require('./registry-components');
+  const components = require('../lib/component-registry').normalizeDeclarations(require('./registry-components'));
   const body = JSON.stringify({
     systemId: SYSTEM, port: PORT, version: VERSION, status: 'online',
     meta: { label: 'CORTEX', color: '#2dd4bf' },
-    components: components.components || [],
+    components,
   });
   const u   = new URL(`${OR_URL}/api/register`);
   const req = http.request({

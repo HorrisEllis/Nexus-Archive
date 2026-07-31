@@ -115,6 +115,10 @@ function _attemptLevel1(gapType, gapUuid, modulePath) {
 function _attemptLevel2(gapType, gapUuid, body) {
   const proposal = {
     uuid: uid(), faultClass: gapType, status: 'proposed', // never 'verified' from here
+    // §CAUSAL WIRE (ported from v44) — the gap that triggered this patch IS its
+    // causal parent. gapUuid was captured but never written to causedBy, so the
+    // gap → proposed-fix chain wasn't walkable. Now it is (§16.5).
+    causedBy: gapUuid || null,
     body: body || null, successRate: 0, ts: Date.now(), proposedBy: MODULE_ID, gapUuid,
   };
   try {

@@ -170,6 +170,32 @@ function init(cfg = {}) {
     _buildReuseIndex();
   }, 10_000);
 
+  // §self-registration (ported from v44 2026-07-30) — "the registry must
+  // update always, so the system understands itself." The faculties ran at HTTP
+  // endpoints but were 0 components — reachable AROUND RAID, never THROUGH it.
+  // Intelligence is the reference adopter: it announces its capabilities at boot,
+  // they flow through the projection chain (component → capability → RAID
+  // resolver), and RAID can route to the mind. Every system copies this (§16.5).
+  try {
+    require('../../lib/self-register').registerSelf('intelligence', [
+      { name: 'context',  description: 'pre-request context for a given intent — what the system knows before acting',
+        route: { method: 'GET', path: '/api/intelligence/context' } },
+      { name: 'patterns', description: 'crystallised BEP patterns — recurring structures the system has learned',
+        route: { method: 'GET', path: '/api/intelligence/patterns' } },
+      { name: 'failures', description: 'failure mode taxonomy — known fault classes and their precursors',
+        route: { method: 'GET', path: '/api/intelligence/failures' } },
+      { name: 'reuse',    description: 'SEAM reuse candidates for a query — what already exists to reuse',
+        route: { method: 'GET', path: '/api/intelligence/reuse' } },
+      { name: 'mastermind', description: 'strategic causal pattern analysis over gaps and RFR2 delta',
+        route: { method: 'GET', path: '/api/intelligence/mastermind' } },
+      { name: 'adversarial', description: 'adversarial critique — attack a proposal to find its weaknesses',
+        route: { method: 'GET', path: '/api/intelligence/adversarial' } },
+    ], { version: VERSION, registeredBy: MODULE_ID });
+    _log('registered intelligence capabilities — RAID can now route to the mind');
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] self-registration failed: ${e.message}`);
+  }
+
   _log(`v${VERSION} — intelligence core online`);
 }
 

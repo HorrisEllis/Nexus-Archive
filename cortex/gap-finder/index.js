@@ -55,8 +55,16 @@ function _createGap(gapType, body, source, meta = {}) {
     return { created: false, gap: existing };
   }
 
+  // §CAUSAL WIRE (ported from v44 2026-07-30) — the triggering event's uuid IS
+  // the causal parent. Both callers capture it (anomalyUuid/sigmaUuid) into meta
+  // but it was never written to causedBy, so the gap graph could not be walked.
+  // v56 wired causal READING (intelligence stopped using temporal adjacency);
+  // this wires causal WRITING so there are real edges to read (§16.5).
+  const causedBy = meta.anomalyUuid || meta.sigmaUuid || meta.causedBy || null;
+
   const gap = {
     uuid: uid(), type: gapType, body, source, status: 'open',
+    causedBy,
     dedup_key, occurrences: 1, detectedAt: Date.now(), lastSeenAt: Date.now(),
     meta,
   };

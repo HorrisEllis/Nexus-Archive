@@ -479,7 +479,7 @@ const server = http.createServer(async (req, res) => {
 function register() {
   const body = JSON.stringify({
     systemId: SYSTEM_ID, port: PORT, version: VERSION, status: 'online',
-    meta: { label: 'LOOM', color: '#33bb88' }, components: [],
+    meta: { label: 'LOOM', color: '#33bb88' }, components: require('../lib/component-registry').normalizeDeclarations(require('./registry-components')),
   });
   const u = new URL(`${OR_URL}/api/register`);
   const r = http.request({ hostname: u.hostname, port: u.port || 9000, path: u.pathname,
