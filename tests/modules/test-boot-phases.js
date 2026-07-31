@@ -48,9 +48,13 @@ test('T-004', 'the REAL kernel table plans in the intended order: cortex → orc
   assert.deepStrictEqual(plan[1].kernels.map(k => k.name).sort(),
     ['bridge', 'diagnostic', 'guardian', 'orchestrator']);
   assert.ok(plan[2].kernels.map(k => k.name).includes('copilot'));
-  assert.deepStrictEqual(plan[3].kernels.map(k => k.name), ['emerge']);
-  // clear-glass must NOT appear anywhere — it's onDemand
-  for (const p of plan) assert.ok(!p.kernels.some(k => k.name === 'clear-glass'));
+  // §UPDATED 2026-07-30 — clear-glass is now BACKGROUND (James: "make sure
+  // clear-glass runs in the background"), phase 4 alongside emerge as the
+  // heaviest process booting last. It previously asserted phase 4 == ['emerge']
+  // and that clear-glass appeared nowhere (onDemand). The test moves with the
+  // declared intent, same as its 2026-07-24 update. On-demand behaviour is
+  // preserved behind CLEAR_GLASS_ON_DEMAND=1.
+  assert.deepStrictEqual(plan[3].kernels.map(k => k.name).sort(), ['clear-glass', 'emerge']);
 });
 
 test('T-005', 'every always-on kernel except emerge declares a healthUrl (emerge has no HTTP surface)', () => {

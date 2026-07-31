@@ -20428,11 +20428,3 @@
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178507193,"_ts":1784178507193}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251350,"_ts":1785031251350}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251869,"_ts":1785031251869}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417898367,"_ts":1785417898367}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417898916,"_ts":1785417898916}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417899419,"_ts":1785417899419}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417913434,"_ts":1785417913434}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417913937,"_ts":1785417913937}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417914439,"_ts":1785417914439}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417914940,"_ts":1785417914940}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417915442,"_ts":1785417915442}

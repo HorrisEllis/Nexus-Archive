@@ -84,20 +84,21 @@ test('CGI-004', 'REAL touchActivity() resets lastActivity — the exact function
   assert.ok(Date.now() - after < 1000, 'touchActivity must set lastActivity to (approximately) now');
 });
 
-test('CGI-005', 'REAL idle-reaper math: a kernel touched moments ago is NOT past idleTimeoutMs; one that was never touched after a long-ago spawn IS', () => {
+test('CGI-005', 'REAL idle-reaper math: touched-recently is NOT idle; never-touched-since-long-ago-spawn IS (on-demand mode)', () => {
   delete require.cache[require.resolve(AUTOPILOT_PATH)];
   const mod = require(AUTOPILOT_PATH);
   const kernel = mod.ALL_KERNELS.find(k => k.name === 'clear-glass');
-  assert.strictEqual(kernel.idleTimeoutMs, 10 * 60 * 1000, 'precondition: 10 minute idle timeout, as configured');
+  // §2026-07-30 — clear-glass is now BACKGROUND by default (idleTimeoutMs:0, no
+  // idle-despawn). The idle-reaper MATH is still what this tests, so validate it
+  // against the on-demand timeout value the reaper uses when CLEAR_GLASS_ON_DEMAND=1.
+  const IDLE = 10 * 60 * 1000;
+  assert.strictEqual(kernel.idleTimeoutMs, 0, 'background default: idle reaper disabled (0)');
 
-  // Reproduces the exact bug: spawned 11 minutes ago, window has been open
-  // and in active use the whole time (simulated by a touch 30s ago, as the
-  // real 60s heartbeat would have done).
   const untouched = { lastActivity: Date.now() - (11 * 60 * 1000) };
   const touchedRecently = { lastActivity: Date.now() - (30 * 1000) };
 
-  const isIdle = (s) => (Date.now() - s.lastActivity) > kernel.idleTimeoutMs;
-  assert.strictEqual(isIdle(untouched), true, 'never-touched-since-spawn must still be correctly detected as idle (the reaper must still work for genuinely unused instances)');
+  const isIdle = (s) => (Date.now() - s.lastActivity) > IDLE;
+  assert.strictEqual(isIdle(untouched), true, 'never-touched-since-spawn must be detected as idle when the reaper is armed');
   assert.strictEqual(isIdle(touchedRecently), false, 'THE BUG: a window touched 30s ago (i.e. open and in use) must NOT be flagged idle, regardless of how long ago the process originally spawned');
 });
 

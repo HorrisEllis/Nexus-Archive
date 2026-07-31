@@ -12,12 +12,17 @@ const ap = require('../../autopilot.js');
 // _state and assert the short-circuit — the exact logic that failed live.
 
 function findOnDemand() {
-  return ap.KERNELS.find(k => k.onDemand);
+  // §2026-07-30 — clear-glass is now background-by-default (on-demand only via
+  // CLEAR_GLASS_ON_DEMAND=1). The requestSpawn short-circuit guard applies to
+  // ANY kernel that can be spawned on request, so test it against clear-glass
+  // by name — the guard logic (don't double-spawn an alive kernel) is what
+  // matters, independent of the onDemand default.
+  return ap.KERNELS.find(k => k.onDemand) || ap.KERNELS.find(k => k.name === 'clear-glass');
 }
 
-test('T-001', 'an on-demand kernel exists to guard (clear-glass)', () => {
+test('T-001', 'a spawnable kernel exists to guard (clear-glass)', () => {
   const k = findOnDemand();
-  assert.ok(k, 'expected at least one onDemand kernel');
+  assert.ok(k, 'expected clear-glass or an onDemand kernel to guard');
 });
 
 for (const state of ['starting', 'online', 'running', 'stable']) {

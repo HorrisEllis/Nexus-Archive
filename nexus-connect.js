@@ -246,53 +246,9 @@ async function registerWithOrchestrator(systemId, port, meta = {}, components = 
     // Then post to ledger
     await postLedger(systemId, `${systemId}.registered`, { port, ...meta });
   } else {
-    // §FIX 2026-07-30 — found in James's real boot log. This logged
-    // "standalone — orchestrator offline" and GAVE UP FOREVER. In phase 2 all
-    // four kernels start in parallel, so whichever reaches this line before
-    // orchestrator has bound :9000 stays permanently unregistered. In that
-    // boot, guardian happened to be slow enough to succeed and BRIDGE LOST THE
-    // RACE — so bridge ran healthy, served traffic, and was invisible to the
-    // registration authority for the whole session.
-    //
-    // Invisible-but-working is the worst failure shape in this codebase: the
-    // registry is what health, contract verification and the connectome all
-    // read, so bridge was simultaneously fine and absent from every map.
-    //
-    // Retries with backoff instead. Bounded, because a system that cannot
-    // register after this long has a real problem that silence would hide.
-    console.log(`[nexus-connect §AXIOM] ${systemId} standalone — orchestrator offline; retrying (it may still be starting)`);
-    _scheduleRegisterRetry(systemId, port, meta, components);
+    console.log(`[nexus-connect §AXIOM] ${systemId} standalone — orchestrator offline`);
   }
   return r;
-}
-
-// Retry registration until orchestrator answers. Deliberately not infinite:
-// after REGISTER_MAX_ATTEMPTS the failure is stated loudly rather than retried
-// silently forever, because "still trying" that never ends is indistinguishable
-// from "gave up" to anyone reading the log.
-const REGISTER_MAX_ATTEMPTS = 10;
-const _registerRetries = new Map();
-function _scheduleRegisterRetry(systemId, port, meta, components) {
-  const attempt = (_registerRetries.get(systemId) || 0) + 1;
-  _registerRetries.set(systemId, attempt);
-  if (attempt > REGISTER_MAX_ATTEMPTS) {
-    console.error(`[nexus-connect §AXIOM] ${systemId} FAILED to register after ${REGISTER_MAX_ATTEMPTS} attempts — it is running but INVISIBLE to the registry, so health, contract verification and the connectome will all omit it`);
-    return;
-  }
-  const delay = Math.min(1000 * Math.pow(1.6, attempt - 1), 15000);
-  const t = setTimeout(async () => {
-    const r = await _req('orchestrator', 'POST', '/api/register', {
-      systemId, port, meta, ts: Date.now(), components,
-    }, 5000).catch(() => ({ ok: false }));
-    if (r && r.ok) {
-      _registerRetries.delete(systemId);
-      console.log(`[nexus-connect §AXIOM] ${systemId} registered with orchestrator (attempt ${attempt})`);
-      await postLedger(systemId, `${systemId}.registered`, { port, ...meta, lateRegistration: true, attempts: attempt }).catch(() => {});
-    } else {
-      _scheduleRegisterRetry(systemId, port, meta, components);
-    }
-  }, delay);
-  if (t.unref) t.unref();   // registration retry must never hold a process open
 }
 
 // ── Heartbeat — all systems ping orchestrator every 10s ───────────────────────

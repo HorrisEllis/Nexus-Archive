@@ -1064,34 +1064,6 @@ async function runAll() {
     return;
   }
 
-  // Generic reachability check for a kernel with no dedicated suite. Reads the
-  // port from autopilot's OWN kernel table rather than a second hardcoded map,
-  // so it can never drift from what is actually supervised (§10.3).
-  async function diagPortsFor(name) {
-    let kernels = [];
-    try { ({ ALL_KERNELS: kernels } = require(path.join(ROOT, 'autopilot.js'))); } catch (_) {}
-    const k = (kernels || []).find(x => x.name === name);
-    if (!k) { console.log(`   '${name}' is not a supervised kernel — nothing further to check.`); return; }
-    if (!k.healthUrl) { console.log(`   '${name}' declares no healthUrl (no HTTP surface) — liveness cannot be probed.`); return; }
-    const u = new URL(k.healthUrl);
-    await new Promise((resolve) => {
-      const rq = require('http').get({ hostname: u.hostname, port: u.port, path: u.pathname, timeout: 3000 }, (res) => {
-        let b = ''; res.on('data', c => b += c);
-        res.on('end', () => {
-          console.log(`   ${k.healthUrl} → HTTP ${res.statusCode}`);
-          if (res.statusCode !== 200) {
-            console.log(`   The port is OPEN but the health route did not return 200.`);
-            console.log(`   That usually means the route is NOT SERVED — check the kernel actually implements ${u.pathname}.`);
-          }
-          console.log(`   body: ${b.slice(0, 200)}`);
-          resolve();
-        });
-      });
-      rq.on('error', (e) => { console.log(`   ${k.healthUrl} → UNREACHABLE (${e.code || e.message}) — the process is not listening on that port.`); resolve(); });
-      rq.on('timeout', () => { rq.destroy(); console.log(`   ${k.healthUrl} → TIMEOUT — listening but not answering.`); resolve(); });
-    });
-  }
-
   if (TARGET === 'all') {
     // §AXIOM: orchestrator first
     for (const fn of Object.values(SYSTEM_MAP)) { await fn(); }
@@ -1101,30 +1073,9 @@ async function runAll() {
   } else if (SYSTEM_MAP[TARGET]) {
     await SYSTEM_MAP[TARGET]();
   } else {
-    // §FIX 2026-07-30 — found in James's real boot log. autopilot's
-    // stall-diagnostic invokes `cli/diagnose.js <kernel>` for whichever kernel
-    // failed its gate, but SYSTEM_MAP only covers 5 of the 13 supervised
-    // kernels. So for bridge, diagnostic, architect, eravos, ollama-bridge,
-    // copilot, loom and clear-glass the diagnostic printed "Unknown system"
-    // and exited 1 — meaning the one moment it was designed for produced NO
-    // diagnosis at all. It happened exactly as designed and told us nothing.
-    //
-    // A diagnostic that cannot diagnose the thing that broke must not exit
-    // silently useless. It now falls back to the CROSS-SYSTEM checks, which
-    // apply to any kernel, and says plainly that no system-specific suite
-    // exists — so the operator learns something either way (§1.2).
-    console.log(`\n⚠  No system-specific diagnostic suite exists for "${TARGET}".`);
-    console.log(`   Suites available: ${Object.keys(SYSTEM_MAP).join(', ')}, all`);
-    console.log(`   Running cross-system checks instead — these apply to every kernel.\n`);
-    try {
-      await diagCrossSystem();
-      // Port reachability is the single most useful fact about a kernel that
-      // failed a health gate, and it needs no per-system suite to establish.
-      await diagPortsFor(TARGET);
-    } catch (e) {
-      console.log(`   cross-system diagnostic failed: ${e.message}`);
-    }
-    process.exit(2);   // 2 = "ran, but no specific suite" — distinct from 1
+    console.log(`Unknown system: ${TARGET}`);
+    console.log(`Available: ${Object.keys(SYSTEM_MAP).join(', ')}, all`);
+    process.exit(1);
   }
 
   printGapReport();

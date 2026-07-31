@@ -30,42 +30,29 @@ const HOST = process.env.GUARDIAN_HOST || '127.0.0.1';
 const PORT = process.env.GUARDIAN_HTTP_PORT || 7820;
 const BASE = `http://${HOST}:${PORT}`;
 
-// ── HTTP helpers ──────────────────────────────────────────────────────────────
+// ── HTTP helpers — delegate to the shared command-core (§2026-07-30) ──────────
+// cli.js used to have its own http get/post. Now the transport lives in
+// copilot/command-core.js, the ONE path every co-pilot surface uses (CLI +
+// browser UIs). cli.js is a thin wrapper: it adds stdout, watch, and process
+// semantics around the shared core.
+const _core = require('../copilot/command-core');
+const _coreOpts = { base: BASE };
 
 function get(endpoint) {
-  return new Promise((resolve, reject) => {
-    http.get(`${BASE}${endpoint}`, res => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch { reject(new Error('Bad JSON response')); }
-      });
-    }).on('error', () => reject(new Error(
-      `Cannot reach guardian server at ${BASE}\nStart it: node server/server.js`
-    )));
+  return _core.get(endpoint, _coreOpts).then(r => {
+    if (r && r.ok === false && /transport:/.test(r.error || '')) {
+      throw new Error(`Cannot reach guardian server at ${BASE}\nStart it: node server/server.js`);
+    }
+    return r;
   });
 }
 
 function post(endpoint, body) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify(body);
-    const req  = http.request(`${BASE}${endpoint}`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
-    }, res => {
-      let out = '';
-      res.on('data', c => out += c);
-      res.on('end', () => {
-        try { resolve(JSON.parse(out)); }
-        catch { reject(new Error('Bad JSON response')); }
-      });
-    });
-    req.on('error', () => reject(new Error(
-      `Cannot reach guardian server at ${BASE}\nStart it: node server/server.js`
-    )));
-    req.write(data);
-    req.end();
+  return _core.post(endpoint, body, _coreOpts).then(r => {
+    if (r && r.ok === false && /transport:/.test(r.error || '')) {
+      throw new Error(`Cannot reach guardian server at ${BASE}\nStart it: node server/server.js`);
+    }
+    return r;
   });
 }
 

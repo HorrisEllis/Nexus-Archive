@@ -73,6 +73,7 @@ textarea#pi::placeholder{color:var(--text3)}
 .rs.active{color:var(--amber)}.rs.verified{color:var(--green)}.rs.escalated{color:var(--red)}
 .rb{font-family:var(--mono);font-size:8.5px;background:var(--amber-dim);border:1px solid rgba(255,170,0,.4);color:var(--amber);padding:2px 8px;border-radius:10px;cursor:pointer;margin-top:4px}
 </style>
+<script src="/copilot/command-core.js"></script>
 </head>
 <body>
 <div id="shell">
@@ -218,7 +219,7 @@ async function send(){const prompt=document.getElementById('pi').value.trim();if
   try{
     const prov=await api(`${GD}/providers`);const tabLive=!!prov?.channels?.[PROVIDER];
     if(tabLive){
-      const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,meta:{source:'chatgpt-console',chatMode:true}});
+      const r=(window.GuardianCommand)?await window.GuardianCommand.ask(PROVIDER, ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt, {base:GD, source:'chatgpt-console'}):await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,meta:{source:'chatgpt-console',chatMode:true}});
       if(r?.jobId){document.getElementById('ss-tok').textContent='→ ChatGPT tab';const job=await pollJob(r.jobId);finalStream(msgEl,job?.response||job?.responseText||'(no response — check ChatGPT tab)');document.getElementById('ss-tok').textContent='ChatGPT NCP';}
       else{finalStream(msgEl,'✗ dispatch failed: '+(r?.error||'unknown'));}
     } else {

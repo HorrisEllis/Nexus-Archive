@@ -1,5 +1,4 @@
 'use strict';
-const _bootedAt = Date.now();   // §health — real uptime, not a guess
 let _tensionWarned = false;   // §1.2 warn-once for the missing cortex/healer canonical scorer
 // service/nexus-diagnostic.js — System Auditing + Monitoring Service
 // UUID: nexus-diagnostic-service-v1-0000-4000-0000-000000000001
@@ -1367,48 +1366,6 @@ function startService() {
     }
 
     // Status
-    // §CRITICAL FIX 2026-07-30 — found by James's real boot log, and it was
-    // the highest-impact defect of the session.
-    //
-    // This service served /cfr/health, /audit/health and /status but NEVER
-    // /health — while autopilot has always gated it on
-    // http://127.0.0.1:7825/health. So diagnostic could NEVER pass its phase
-    // gate. That was survivable while a stalled gate only logged a warning,
-    // which is precisely why it went unnoticed for so long: the boot printed a
-    // warning nobody read and carried on.
-    //
-    // Today's halt-on-fault turned that latent misconfiguration into a TOTAL
-    // OUTAGE: boot halted at phase 2, so phases 3-4 never started and
-    // idearium, architect, eravos, ollama-bridge, copilot, emerge and loom all
-    // failed to boot. Diagnostic then correctly reported "idearium has been
-    // offline for 30s" — it was right, and the reason was that the gate had
-    // stopped the boot.
-    //
-    // The halt behaved exactly as designed and exposed a real defect. But a
-    // system that is alive and serving MUST be able to say so on the
-    // universal route every other kernel honours (§10.3: one way to ask
-    // "are you healthy"). Reports degraded rather than merely ok:true —
-    // liveness and correctness are different questions.
-    if (url.pathname === '/health') {
-      const monitored = Object.keys(systemState).length;
-      const offline = Object.values(systemState).filter(s => !s.online).length;
-      res.writeHead(200, CORS);
-      res.end(JSON.stringify({
-        ok: true,                       // this service is alive and serving
-        system: 'diagnostic',
-        // no VERSION constant exists in this module's scope — caught by RUNNING
-        // the route, not by reading it back. Reported from the spec-drift
-        // source of truth instead of inventing a second version string (§5.4).
-        version: require('../package.json').version || null,
-        uptimeMs: Date.now() - _bootedAt,
-        monitoring: monitored,
-        systemsOffline: offline,        // what it OBSERVES, not its own health
-        openGaps: openGaps.size,
-        ts: Date.now(),
-      }));
-      return;
-    }
-
     if (url.pathname === '/status') {
       const summary = {};
       for (const [name, state] of Object.entries(systemState)) {

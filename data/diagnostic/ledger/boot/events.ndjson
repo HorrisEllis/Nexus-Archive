@@ -14,5 +14,3 @@
 {"type":"service.start","port":7825,"pid":12336,"ts":1784171607975,"_ts":1784171607975}
 {"type":"service.start","port":7825,"pid":14240,"ts":1784178385590,"_ts":1784178385591}
 {"type":"service.start","port":7825,"pid":630,"ts":1785031250699,"_ts":1785031250699}
-{"type":"service.start","port":7825,"pid":557,"ts":1785417897229,"_ts":1785417897229}
-{"type":"service.start","port":7825,"pid":578,"ts":1785417913332,"_ts":1785417913332}

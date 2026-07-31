@@ -680,6 +680,15 @@ const server = http.createServer(async (req, res) => {
     else if (!asset) return json(res, 403, { ok:false, error:'forbidden path' });
   }
 
+  // ── Shared co-pilot command core (§2026-07-30) ─────────────────────────────
+  // copilot/command-core.js is the ONE command path every co-pilot surface
+  // uses — cli.js requires it in Node, browser UIs load it as a <script>. Served
+  // here so /copilot/command-core.js resolves in the browser. Only this one
+  // file is exposed, not the whole guardian dir (path-guarded).
+  if (M==='GET' && u.pathname==='/copilot/command-core.js') {
+    return serveFile(res, path.join(ROOT, 'copilot', 'command-core.js'));
+  }
+
   // ── System UIs ───────────────────────────────────────────────────────────
   // §ROUTER-FIX-2026-06-20: fs.existsSync() is true for directories as well
   // as files — a request for a directory path (e.g. /ui/agents/chatgpt, a

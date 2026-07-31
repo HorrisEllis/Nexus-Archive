@@ -19824,11 +19824,3 @@
 {"type":"health.ok","latencyMs":0,"error":false,"ts":1784178507199,"_ts":1784178507199}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251424,"_ts":1785031251424}
 {"type":"health.fail","latencyMs":0,"error":true,"ts":1785031251926,"_ts":1785031251926}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417898443,"_ts":1785417898443}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417898951,"_ts":1785417898951}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417899452,"_ts":1785417899452}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417913444,"_ts":1785417913444}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417913946,"_ts":1785417913946}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417914448,"_ts":1785417914448}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417914950,"_ts":1785417914950}
-{"type":"health.fail","latencyMs":0,"error":true,"ts":1785417915454,"_ts":1785417915454}

@@ -42,11 +42,6 @@ const ROOT     = __dirname;
 // memory tables; guardian holds job state).
 const DEFAULT_MAX_OLD_SPACE_MB = Number(process.env.NEXUS_MAX_OLD_SPACE_MB || 1024);
 const MEM_BACKOFF_MS = 15000;
-// §PRIORITY — halt floor for kernel.critical kernels (default gate is 10%,
-// see lib/resource-monitor's DEFAULT_THRESHOLDS.freeMemHaltPct). Lower, not
-// zero: a critical kernel spawning into truly exhausted memory still fails
-// with the same 'spawn UNKNOWN' this whole guard exists to prevent.
-const CRITICAL_HALT_PCT = Number(process.env.NEXUS_CRITICAL_HALT_PCT || 0.05);
 const { ResourceMonitor } = require('./lib/resource-monitor');
 const _resourceMonitor = new ResourceMonitor({ name: 'autopilot', intervalMs: 15000 }).start();
 const LOG_DIR  = path.join(ROOT, 'data', 'autopilot');
@@ -113,23 +108,23 @@ const ALL_KERNELS = [
   //   Phase 4: emerge — reports to copilot:3750, so copilot must be up
   //   clear-glass: onDemand, unchanged — no phase, dormant until requested
   { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' },
-    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:9000/health' },
+    phase: 2, healthUrl: 'http://127.0.0.1:9000/health' },
   // §FIX 2026-06-20: bridge/server.js only exports createBridgeServer() — it
   // has no bootstrap code and never calls .start(), so running it directly
   // loads, does nothing, and exits 0 immediately. bridge/index.js is the
   // actual entrypoint: it boots via BootSequence and calls server.start().
   { name: 'bridge',       cmd: 'node', args: ['bridge/index.js'],
-    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:9999/health' },
+    phase: 2, healthUrl: 'http://127.0.0.1:9999/health' },
   { name: 'cortex',       cmd: 'node', args: ['cortex/boot.js'],
-    critical: true, phase: 1, healthUrl: 'http://127.0.0.1:3748/health' },
+    phase: 1, healthUrl: 'http://127.0.0.1:3748/health' },
   { name: 'guardian',     cmd: 'node', args: ['guardian/server.js'],
-    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:7820/health' },
+    phase: 2, healthUrl: 'http://127.0.0.1:7820/health' },
   { name: 'idearium',     cmd: 'node', args: ['idearium/api/index.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:4800/health' },
   { name: 'architect',    cmd: 'node', args: ['architect/service.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:3747/health' },
   { name: 'diagnostic',   cmd: 'node', args: ['service/nexus-diagnostic.js'],
-    critical: true, phase: 2, healthUrl: 'http://127.0.0.1:7825/health' },
+    phase: 2, healthUrl: 'http://127.0.0.1:7825/health' },
   { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:3751/health' },
   { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true,
@@ -160,14 +155,6 @@ const ALL_KERNELS = [
   { name: 'clear-glass',
     cmd: _ELECTRON_CMD,
     args: ['.'], cwd: 'clear-glass', optional: true,
-    // §PRIORITY 2026-07-31 — the heaviest single process in the stack
-    // (Electron + four provider webviews) gets a HIGHER halt floor than the
-    // default 10%, so it's the first thing refused under pressure, not the
-    // same as everything else. Directly answers the failure mode below:
-    // cortex OOM'd, then couldn't restart at 6-7% free while clear-glass —
-    // requested unconditionally on every boot despite onDemand — held its
-    // memory.
-    haltPctOverride: 0.15,
     // §BUILT 2026-07-15 — "cos as a kind of PID service, only running
     // what's needed." Clear Glass is the heaviest single process in the
     // stack (Electron + however many provider webviews) and the clearest
@@ -178,9 +165,20 @@ const ALL_KERNELS = [
     // below), health-gated the same way orchestrator's own boot sequence
     // already gates every other system ("Verify /health returns
     // ok=true") before anything is allowed to treat it as available.
-    onDemand: true,
+    // §2026-07-30 (James: "make sure clear-glass runs in the background").
+    // Was onDemand:true (dormant until requested, despawn after 10min idle).
+    // Now it spawns at boot and stays alive — running in the background — so
+    // co-pilot's provider tabs are always connected and Guardian always has an
+    // answerer, rather than the first request paying a cold Electron spawn.
+    // Still optional:true (a missing Electron does not trip the circuit breaker)
+    // and still health-gated. idleTimeoutMs:0 disables the idle reaper so a
+    // backgrounded, idle Clear Glass is NOT despawned. Set CLEAR_GLASS_ON_DEMAND=1
+    // to restore the old dormant behaviour without a code change.
+    onDemand: process.env.CLEAR_GLASS_ON_DEMAND === '1',
+    background: true,
+    phase: 4,
     healthUrl: 'http://127.0.0.1:7701/health',
-    idleTimeoutMs: 10 * 60 * 1000, // 10 min with no activity -> despawn
+    idleTimeoutMs: process.env.CLEAR_GLASS_ON_DEMAND === '1' ? 10 * 60 * 1000 : 0, // 0 = never idle-despawn (background)
     // §GAP CLOSED 2026-07-09 (from a live console log) — clear-glass logged
     // "[ProviderHost] no guardianDir configured … userscript loading will
     // fail until configured", then "[Userscripts] 0 scripts loaded".
@@ -320,24 +318,7 @@ function _spawnKernel(kernel, color) {
     ? [`--max-old-space-size=${heapMB}`, ...kernel.args]
     : kernel.args;
 
-  // §PRIORITY 2026-07-31 — from a real Windows console: cortex (phase 1, the
-  // memory core everything else writes through) OOM-crashed, then couldn't
-  // restart because the machine was at 6-7% free — and Clear Glass (Electron
-  // + four live provider webviews, the single heaviest process here) was
-  // gated by the exact same threshold as cortex. There was no concept of
-  // priority: every kernel got the same 10% halt floor regardless of how
-  // essential it was or how much memory it itself was consuming. Two-sided
-  // fix, both real: critical kernels (kernel.critical) get a LOWER halt
-  // floor so they're refused only in genuine last-resort conditions; heavy
-  // optional kernels (kernel.haltPctOverride) get a HIGHER one so they back
-  // off first, preserving headroom for the ones everything depends on. This
-  // does not make a critical spawn succeed when there is truly no memory —
-  // it changes who gets refused first when there's a little left.
-  const spawnGateOverrides = kernel.critical
-    ? { freeMemHaltPct: CRITICAL_HALT_PCT }
-    : (kernel.haltPctOverride != null ? { freeMemHaltPct: kernel.haltPctOverride } : undefined);
-
-  if (!_resourceMonitor.spawnSafe(spawnGateOverrides)) {
+  if (!_resourceMonitor.spawnSafe()) {
     const s = _resourceMonitor.current();
     console.error(`[autopilot] REFUSING to spawn ${kernel.name}: only ${(s.system.freeMemPct * 100).toFixed(1)}% memory free. ` +
                   `Spawning now would fail with 'spawn UNKNOWN' and be miscounted as a crash. Retrying in ${MEM_BACKOFF_MS / 1000}s.`);
@@ -1133,21 +1114,28 @@ function _pollHealth(url, timeoutMs) {
 async function requestSpawn(name) {
   const kernel = KERNELS.find(k => k.name === name);
   if (!kernel) return { ok: false, error: `no such kernel: ${name}` };
-  if (!kernel.onDemand) return { ok: false, error: `${name} is not an on-demand kernel — it's already always-on` };
 
-  const s = _state[name];
+  const s = _state[name] || (_state[name] = { status: 'dormant' });
   s.lastActivity = Date.now();
-  // §FIX 2026-07-20 — guard was `running`/`stable` only. A clear-glass caught
-  // mid-lifecycle is `starting` (spawn in flight) or `online` (alive but not
-  // yet marked stable). A second requestSpawn in either state launched a
-  // SECOND Electron, and the two raced requestSingleInstanceLock() — the exact
-  // two-genuine-instances crash in the 2026-07-20 log (distinct from the
-  // lock-RELEASE race minRestartDelay already handles). Any state where a
+  // §FIX 2026-07-20 / amended 2026-07-30 — an ALREADY-ALIVE kernel short-circuits
+  // FIRST, before the on-demand check. A request to spawn something that is
+  // already up is always a no-op success, whether it's an on-demand kernel or a
+  // background one (clear-glass became background 2026-07-30). Guard was
+  // `running`/`stable` only; a clear-glass caught mid-lifecycle is `starting`
+  // (spawn in flight) or `online` (alive, not yet stable). A second requestSpawn
+  // in either state launched a SECOND Electron racing requestSingleInstanceLock()
+  // — the two-genuine-instances crash in the 2026-07-20 log. Any state where a
   // process exists or is being launched must short-circuit, not re-spawn.
   const ALIVE_OR_SPAWNING = new Set(['starting', 'online', 'running', 'stable']);
   if (ALIVE_OR_SPAWNING.has(s.status)) {
     return { ok: true, alreadyRunning: true, state: s.status };
   }
+
+  // Not alive: only an on-demand kernel may be spawned on request. A background
+  // or always-on kernel that is DOWN is autopilot's job to restart, not a
+  // caller's — surface that rather than racing the supervisor.
+  if (!kernel.onDemand) return { ok: false, error: `${name} is not an on-demand kernel — it's always-on; autopilot manages its lifecycle` };
+
 
   const requestEvt = _logOnDemandEvent('autopilot.spawn.requested', { kernel: name });
   const idx = KERNELS.indexOf(kernel);
@@ -1179,7 +1167,10 @@ function _startIdleReaper() {
       const s = _state[kernel.name];
       if (!s || s.status !== 'stable' || !s.proc) continue;
       const idleMs = Date.now() - (s.lastActivity || 0);
-      if (idleMs > (kernel.idleTimeoutMs || Infinity)) {
+      // idleTimeoutMs of 0 means "background — never idle-despawn" (explicit,
+      // not the 0-is-falsy accident). Only a positive timeout arms the reaper.
+      const idleLimit = kernel.idleTimeoutMs > 0 ? kernel.idleTimeoutMs : Infinity;
+      if (idleMs > idleLimit) {
         _log(`[${kernel.name}] idle for ${Math.round(idleMs / 1000)}s — despawning (on-demand)`);
         _logOnDemandEvent('autopilot.despawn.idle', { kernel: kernel.name, idleMs });
         // §FIX 2026-07-24 — set status BEFORE kill(). The exit handler reads

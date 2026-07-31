@@ -10,6 +10,7 @@
      Replaced with system font stack that renders identically at these sizes. -->
 <link rel="stylesheet" href="/ui/tv-shell/tv-shell.css">
 <script src="/ui/lib/api.js"></script>
+<script src="/copilot/command-core.js"></script>
 </head>
 <body>
 <canvas id="void"></canvas>
@@ -1995,40 +1996,45 @@ async function asSend(){
   thinking.style.cssText='opacity:.4;font-style:italic';
   out.appendChild(thinking);
 
-  // ── Co-pilot mode: route through Bridge :9999 → copilot :3750 ──────────────
+  // ── Co-pilot: route through the shared command-core (§2026-07-30) ──────────
+  // Was: _bridgeDispatch('copilot',...) through Bridge :9999 — which broke when
+  // Bridge stopped routing to copilot ("co-pilot isn't hooked in anymore"). Now
+  // it uses window.GuardianCommand, the SAME core guardian/cli.js uses, so every
+  // co-pilot surface shares one command path (§10.3). If command-core didn't
+  // load, fall back to the bridge path rather than lose co-pilot entirely.
   if (_asMode === 'copilot') {
     try {
-      let uiSnapshot = null;
-      try { uiSnapshot = JSON.parse(window.NEXUS_UI_STATE.snapshot()); } catch(_) {}
-      const result = await _bridgeDispatch('copilot', 'copilot.prompt', {
-        prompt: q,
-        channel: CH_META[curCh]?.id || 'ch-overview',
-        channelName: CH_META[curCh]?.name || 'Overview',
-        uiState: uiSnapshot,
-        source: 'tv-shell',
-      }, 60000);
+      let result;
+      if (window.GuardianCommand) {
+        // provider is chosen by the channel; default to the general 'ask' verb
+        const provider = CH_META[curCh]?.provider || 'claude';
+        const r = await window.GuardianCommand.ask(provider, q, { base: B.gd, source: 'tv-shell', timeoutMs: 60000 });
+        if (!r.ok) throw new Error(r.error || 'command-core error');
+        result = r;
+      } else {
+        // fallback: the legacy bridge path, so co-pilot still works if the core script failed to load
+        result = await _bridgeDispatch('copilot', 'copilot.prompt', {
+          prompt: q,
+          channel: CH_META[curCh]?.id || 'ch-overview',
+          channelName: CH_META[curCh]?.name || 'Overview',
+          source: 'tv-shell',
+        }, 60000);
+      }
       out.textContent = '';
-      // §BUG FIXED 2026-07-11 — the real bug was upstream (bridge/router.js's
-      // ResultGate was discarding the actual response — see its own fix
-      // comment for the full story). This fallback chain could still pick
-      // JSON.stringify(result) if some future response genuinely has
-      // neither .text nor .response — kept as a last resort, but now it's
-      // actually a last resort instead of the routine outcome.
-      const text = result?.text || result?.response || (result ? `[unstructured response — keys: ${Object.keys(result).join(', ')}]` : 'No response');
+      const text = result?.text || result?.response || result?.result?.response || (result ? `[unstructured response — keys: ${Object.keys(result).join(', ')}]` : 'No response');
       out.style.color = 'rgba(0,229,255,.92)';
       out.textContent = text;
-      // Model tag
       if (result?.modelUsed) {
         const m = document.createElement('div');
         m.style.cssText='font-size:10px;opacity:.35;margin-top:4px;font-family:monospace';
-        m.textContent = `✦ via ${result.modelUsed} (bridge)`;
+        m.textContent = `✦ via ${result.modelUsed}`;
         out.appendChild(m);
       }
-      _logToData('ui.copilot.response', { promptLen: q.length, hasText: !!text });
+      _logToData('ui.copilot.response', { promptLen: q.length, hasText: !!text, path: window.GuardianCommand ? 'command-core' : 'bridge-fallback' });
     } catch(err) {
       out.textContent = '';
       out.style.color = 'rgba(255,100,100,.8)';
-      out.textContent = `Co-pilot bridge error: ${err.message}`;
+      out.textContent = `Co-pilot error: ${err.message}`;
       _logToData('ui.copilot.error', { error: err.message });
     }
     return;
