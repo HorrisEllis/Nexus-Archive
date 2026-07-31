@@ -11,6 +11,7 @@
 //   nexus /cockpit <args>    — pass-through to cockpit/cli.js (forge commands)
 //   nexus /cortex <args>     — pass-through to cortex/cortex.js
 //   nexus /idearium <args>   — pass-through to idearium/cli/index.js
+//   nexus /copilot <args>    — pass-through to copilot/cli.js (or /cp alias)
 //   nexus /ollama <args>     — ollama direct commands
 // //
 // ════════════════════════════════════════════════════════════════════════════
@@ -79,6 +80,7 @@ const rest  = () => args.filter(a => !a.startsWith('--')).slice(1).join(' ');
 // nexus /cockpit pipeline list  →  node cockpit/cli.js pipeline list
 // nexus /cortex gaps  →  node cortex/cortex.js gaps
 // nexus /idearium idea list  →  node idearium/cli/index.js idea list
+// nexus /copilot "what gaps are open?"  →  node copilot/cli.js "what gaps are open?"
 
 const MODULE_CLI = {
   '/guardian': path.join(ROOT, 'guardian/cli.js'),
@@ -86,6 +88,8 @@ const MODULE_CLI = {
   '/forge':    path.join(ROOT, 'cockpit/cli.js'),   // alias
   '/cortex':   path.join(ROOT, 'cortex/cortex.js'),
   '/idearium': path.join(ROOT, 'idearium/cli/index.js'),
+  '/copilot':  path.join(ROOT, 'copilot/cli.js'),   // moved from cli/co-pilot.js — consolidation pass
+  '/cp':       path.join(ROOT, 'copilot/cli.js'),   // alias
 };
 
 function passthrough(cliPath, restArgs) {
@@ -145,7 +149,7 @@ const CMDS = {
       }
     }
     console.log('');
-    info(`nexus help  ·  nexus /guardian  ·  nexus /cockpit  ·  nexus /cortex  ·  nexus /idearium`);
+    info(`nexus help  ·  nexus /guardian  ·  nexus /cockpit  ·  nexus /cortex  ·  nexus /idearium  ·  nexus /copilot`);
   },
 
   // ── HELP ───────────────────────────────────────────────────────────────────
@@ -198,6 +202,7 @@ ${C.bold}Examples:${C.reset}
   nexus /cockpit seam compile spec.md
   nexus /cortex ask "what gaps are open?"
   nexus /idearium idea add "build something new"
+  nexus /copilot "what gaps are open?"
   nexus /ollama pull qwen2.5-coder:1.5b
   nexus /ollama run "explain this code"
 

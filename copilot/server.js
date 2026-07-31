@@ -525,6 +525,32 @@ function sseSend(res, event, data) {
 }
 
 // Poll Ollama job and stream token chunks to SSE response
+// §PHASEMAP P1 — headless job poll for the tool-loop (no SSE res coupling).
+// runToolLoop needs a plain (jobRef) => { text, toolCalls } resolver; the
+// streaming poll above is tied to an HTTP res. Same /api/jobs/:id status shape,
+// no streaming side-effects. Carries tool_calls through if ollama returns them.
+async function _pollOllamaJobHeadless(jobRef) {
+  const jobId = jobRef?.jobId || jobRef;
+  if (!jobId) return { text: '', toolCalls: null };
+  const MAX_WAIT = 90;
+  let lastText = '';
+  for (let i = 0; i < MAX_WAIT; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const status = await _fetch(`${OL_URL}/api/jobs/${jobId}`, { timeout: 3000 });
+      const job = status?.job;
+      if (!job) continue;
+      if (job.result && job.result.length > lastText.length) lastText = job.result;
+      if (job.status === 'complete') {
+        return { text: job.result || lastText, modelUsed: job.model || 'ollama',
+          toolCalls: job.tool_calls || job.toolCalls || null };
+      }
+      if (job.status === 'failed') return { text: lastText, modelUsed: 'ollama', failed: true, toolCalls: null };
+    } catch (_) {}
+  }
+  return { text: lastText, modelUsed: 'ollama', timedOut: true, toolCalls: null };
+}
+
 async function _streamOllamaJob(jobId, res, sessionId) {
   let lastText = '';
   const MAX_WAIT = 90; // seconds
@@ -1004,6 +1030,48 @@ const server = http.createServer(async (req, res) => {
     // bridge/router.js's ResultGate — this endpoint's shape was correct
     // then and is correct now; it was never the actual problem.
     json(res, 200, { ok: true, text, modelUsed, contextLayers: 7, requestId, sessionId });
+    return;
+  }
+
+  // ── §PHASEMAP P1: POST /api/prompt/tools — agentic tool-loop ───────────────
+  // Co-pilot runs the sovereign agent-tools loop (lib/agent-tools) with its OWN
+  // ollama dispatch injected as callModel. The model can request tools mid-turn
+  // (read_file, diagnose, query-recall, run-command, ...) and the loop executes
+  // them for real, feeding results back. Additive: the existing /api/prompt path
+  // is untouched. P2 (memory) and P3 (stream) enrich the run via opts without
+  // changing this contract.
+  if (method === 'POST' && p === '/api/prompt/tools') {
+    let body = ''; req.on('data', c => body += c);
+    req.on('end', async () => {
+      try {
+        const { prompt, sessionId, maxIterations } = JSON.parse(body || '{}');
+        if (!prompt) { json(res, 400, { ok: false, error: 'prompt required' }); return; }
+        const toolRuntime = require('./tool-runtime');
+        const requestId = crypto.randomUUID();
+
+        const dispatch = (convo, sysContext, opts) =>
+          _dispatchToOllama(convo, sysContext, { ...opts, intent: 'tool-loop', requestId, sessionId });
+
+        const result = await toolRuntime.run({
+          userPrompt: prompt,
+          dispatch,
+          pollJob: _pollOllamaJobHeadless,
+          maxIterations: maxIterations || 6,
+          // P2/P3 injected here once wired: memory: <user-model digest>, streamDigest: <live stream>
+        });
+
+        await _persist('chat_log', { uuid: crypto.randomUUID(), requestId, sessionId,
+          prompt: String(prompt).slice(0, 500), response: (result.text || '').slice(0, 2000),
+          modelUsed: 'ollama', intent: 'tool-loop', toolsUsed: result.toolCallLog.map(t => t.name),
+          iterations: result.iterations, componentId: 'copilot.prompt.tools',
+          hookId: 'copilot.prompt.tools.reply', ts: Date.now() });
+
+        json(res, 200, { ok: true, text: result.text, iterations: result.iterations,
+          toolCallLog: result.toolCallLog, requestId });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+    });
     return;
   }
 
