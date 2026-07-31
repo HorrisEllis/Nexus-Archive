@@ -6,24 +6,10 @@ is entered here on creation. This registry is updated every time a spec is
 checked for drift, not just when it's written — a spec not in this table
 is unaccounted for.
 
-**115 spec files exist in `docs/` as of 2026-07-31** (the "88" this header
-claimed was true when written and has been stale for some time — corrected by
-counting, not by estimate). Most have not been checked against live code —
-that's stated honestly below, not glossed over. 18 have been, with real
-findings, across sessions 3 through 7 plus `copilot-omniscience-phasemap.spec`
-this pass. The rest is real work still ahead, not assumed clean.
-
-**§6.3 coverage audit, 2026-07-31** — every `docs/*.spec` filename checked
-against this table. 5 are unregistered and remain so pending their own pass;
-naming them is the point, since an unregistered spec is unaccounted for and
-silence here would be the actual breach:
-`alk-gl-intelligence-canvas-face.spec`, `idearium-templates.spec`,
-`nexus-system-foundation-addendum-v1.2.0.spec`,
-`nexus-tablet-v0.1.0-superseded.spec`, `warp-devkit-addendum-v1.4.1.spec`.
-The table also carries more rows than there are files in `docs/` — some rows
-point at specs living in system subdirs (`warp/spec/`, `cortex/spec/`), and
-whether any point at nothing is not yet checked. Not resolved this pass; not
-claimed clean either.
+**88 spec files exist in `docs/` as of this session.** Most have not been
+checked against live code in this conversation — that's stated honestly
+below, not glossed over. 17 have been, with real findings, across sessions
+3 through 7. The other 71 are real work still ahead, not assumed clean.
 
 ## Status legend
 - ✓ — checked against live code, no drift found (or drift found and closed)
@@ -57,7 +43,6 @@ claimed clean either.
 | `contract-queue.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `contracts.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `copilot-expansion.spec` | 1.0.0 | — | not yet checked against live code this pass |
-| `copilot-omniscience-phasemap.spec` | 0.2.0 | 2026-07-31 | ✓ CHECKED — spec entered late (created with commit `2b17979`, unregistered until this pass — §6.3 breach, closed). Drift found in code, not text, and closed the same day: **P1's gate was not met.** `_dispatchToOllama` never forwarded `opts.tools`; `/api/jobs` → `/api/generate` has no tools param; `job.tool_calls` never existed, so the loop always exited at iteration 1 with a guess. Test T-002 could not catch it — it fabricated `pollJob` and asserted `assert.ok(result)`, which passes on `{"error":"file not found"}`. Closed by extracting `ollama/chat-tools.js` (moved out of `server.js`, which binds `:3749` on require and was therefore untestable), adding `POST /api/chat/tools`, rewriting `copilot/tool-runtime.js` to 2.0.0 on that primitive, and DELETING the job-based adapter and `_pollOllamaJobHeadless` rather than leaving them as a second path (§16.5). Also fixed: `_dispatchToOllama` discarded every caller's `componentId`/`hookId`. Now proven by real HTTP round trip, mutation-checked. `/api/chat/tools`, `/api/jobs/tools` and `/api/prompt/tools` all declared in their component registries — none were. Amended to 0.2.0: R band (R1–R6, context economy) inserted between P1 and P2; P2/P3 rewritten from blob-injection to retrieval-under-budget. |
 | `copilot-migration-and-new-capabilities.spec` | 1.1.0 | 2026-06-29 | ✓ filed session 6 — MIG-01 resolved, MIG-02 resolved differently than proposed, MIG-03 unverifiable (file not in tree), capability_cli_authoring built session 6. |
 | `copilot.spec` | 2.0.0 | — | not yet checked against live code this pass |
 | `cortex-dual-cognition.spec` | 1.0.0 | — | not yet checked against live code this pass |
