@@ -2,7 +2,7 @@ spec:
   meta:
     name:        copilot-omniscience
     version:     0.1.0-phasemap
-    status:      PHASEMAP — dependency-ordered, bottom-up. Each phase is a
+    status:      ALL 7 PHASES DONE 2026-07-30. PHASEMAP — dependency-ordered, bottom-up. Each phase is a
                  shippable chunk gated on real data. Written 2026-07-30 per §8.5
                  (map before build) and §3.1 (build order: substrate before
                  logic before surface). Axioms are law throughout.
@@ -53,7 +53,7 @@ spec:
       axioms: "§1.2 (the stream is observable, never silent), §2.3 (state always visible)"
       gate: "co-pilot answers a 'what just happened?' question from the live stream with no explicit fetch."
 
-    P4_guardian_tool_loop:
+    P4_guardian_tool_loop:   # ← DONE 2026-07-30
       why: "B / non-linear proof. agent-tools' own header names Guardian. Wire the SAME loop into guardian with guardian's provider dispatch as callModel."
       does: >
         guardian/server.js injects its /command provider dispatch as callModel
@@ -62,7 +62,7 @@ spec:
       axioms: "§5.14 (same contract, different backend), §10.3 (one loop, no competing tool systems)"
       gate: "a guardian /command that needs a tool uses it — via guardian's providers, with zero call into copilot."
 
-    P5_faculties_as_tools:
+    P5_faculties_as_tools:   # ← DONE 2026-07-30
       why: "Omnipotence. The copilot faculties become callable tools so the loop can invoke them."
       does: >
         Thin adapters in lib/agent-tools/tools/: module_builder (→ module-builder.build),
@@ -71,7 +71,7 @@ spec:
       axioms: "§16.5 (wrap, don't move), §10.1 (each faculty still owns its logic)"
       gate: "the tool-loop builds a module by calling the module_builder tool, end to end."
 
-    P6_every_system_reachable:
+    P6_every_system_reachable:   # ← DONE 2026-07-30
       why: "Omnipotence, completed. A call_system tool over the registry (self-register work) makes every registered system callable by name."
       does: >
         A call_system tool resolves a target via the capability registry
@@ -80,7 +80,7 @@ spec:
       axioms: "§10.3 (route through the registry, one source of truth), §8.4 (uses the real registry, not a hardcoded list)"
       gate: "co-pilot invokes a named system's capability it has never been explicitly coded to reach, resolved live from the registry."
 
-    P7_stream_to_all_systems:
+    P7_stream_to_all_systems:   # ← DONE 2026-07-30
       why: "Omniscience, expanded. The continuous stream is not copilot-only — every consumer (guardian's loop, the tablet, idearium) can subscribe to the same normalized digest."
       does: >
         Promote StreamDigest to a shared subscribable (lib/), so any system's

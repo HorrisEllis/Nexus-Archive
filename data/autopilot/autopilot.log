@@ -3672,3 +3672,1058 @@
 [2026-07-31T12:35:19.929Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
 [2026-07-31T12:35:19.929Z] ── boot sequence complete — 2 phase(s)
 [2026-07-31T12:35:31.274Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-31T18:15:42.327Z] ── boot phase 1 — bgRequired
+[2026-07-31T18:15:42.328Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:15:44.351Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-31T18:15:44.351Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-31T18:15:52.377Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:15:52.378Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:15:52.382Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:02.441Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:16:02.441Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:16:02.444Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:06.853Z]    ↳ diagnostic for 'bgRequired' (exit 2) —
+[2026-07-31T18:16:06.853Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:16:06.854Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:16:06.854Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:16:06.854Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:16:06.854Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:16:06.854Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:16:06.854Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:16:06.854Z]          'bgRequired' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:16:06.855Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-31T18:16:06.855Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-31T18:16:06.855Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-31T18:16:06.855Z] ── boot phase 1 — bgOptional
+[2026-07-31T18:16:06.855Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:08.870Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-31T18:16:08.871Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-31T18:16:12.502Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:16:12.504Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:16:12.505Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:16.895Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:16:16.895Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:16:16.896Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:22.571Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:16:22.571Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:16:22.572Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:26.960Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:16:26.960Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:16:26.961Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:30.901Z]    ↳ diagnostic for 'bgOptional' (exit 2) —
+[2026-07-31T18:16:30.901Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:16:30.902Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:16:30.903Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:16:30.903Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:16:30.903Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:16:30.903Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:16:30.903Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:16:30.903Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:16:30.903Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:16:30.903Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:16:30.903Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:16:30.903Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:16:30.903Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:16:30.903Z]          'bgOptional' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:16:30.903Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-31T18:16:30.904Z] ── boot phase 2 — bgAfter
+[2026-07-31T18:16:30.904Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:30.906Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:16:30.906Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:16:30.906Z] ── boot phase 1 — bgDiag
+[2026-07-31T18:16:30.906Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:32.627Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-07-31T18:16:32.627Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-07-31T18:16:32.628Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:32.921Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-31T18:16:32.921Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-31T18:16:37.027Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:16:37.027Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:16:37.028Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:40.968Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:16:40.968Z] [35m[bgAfter][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:16:40.969Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:40.974Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:16:40.974Z] [36m[bgDiag][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:16:40.977Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:42.666Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-07-31T18:16:42.666Z] [36m[bgRequired][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-31T18:16:47.090Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:16:47.090Z] [36m[bgOptional][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:16:47.091Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:51.062Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:16:51.062Z] [35m[bgAfter][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:16:51.064Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:51.070Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:16:51.070Z] [36m[bgDiag][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:16:51.073Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:53.718Z]    ↳ diagnostic for 'bgDiag' (exit 2) —
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:16:53.718Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:16:53.718Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:16:53.718Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:16:53.718Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:16:53.718Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:16:53.718Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:16:53.718Z]          'bgDiag' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:16:53.719Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-31T18:16:53.719Z] ── boot sequence complete — 1 phase(s)
+[2026-07-31T18:16:53.720Z] ── boot phase 1 — bgClean1
+[2026-07-31T18:16:53.720Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:53.721Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:16:53.721Z] ── boot phase 2 — bgClean2
+[2026-07-31T18:16:53.721Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:16:53.730Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:16:53.730Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:17:04.550Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-31T18:29:53.303Z] ── boot phase 1 — bgRequired
+[2026-07-31T18:29:53.304Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:29:55.331Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-31T18:29:55.332Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-31T18:30:03.350Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:30:03.352Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:30:03.353Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:13.415Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:30:13.415Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:30:13.416Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:16.234Z]    ↳ diagnostic for 'bgRequired' (exit 2) —
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:30:16.235Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:30:16.236Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:30:16.236Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:30:16.236Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:30:16.236Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:30:16.236Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:30:16.236Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:30:16.236Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:30:16.236Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:30:16.236Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:30:16.236Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:30:16.236Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:30:16.236Z]          'bgRequired' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:30:16.236Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-31T18:30:16.236Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-31T18:30:16.236Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-31T18:30:16.237Z] ── boot phase 1 — bgOptional
+[2026-07-31T18:30:16.237Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:18.252Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-31T18:30:18.252Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-31T18:30:23.481Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:30:23.481Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:30:23.483Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:26.285Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:30:26.287Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:30:26.288Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:33.543Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:30:33.543Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:30:33.544Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:36.345Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:30:36.345Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:30:36.346Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:38.221Z]    ↳ diagnostic for 'bgOptional' (exit 2) —
+[2026-07-31T18:30:38.221Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:30:38.222Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:30:38.222Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:30:38.222Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:30:38.222Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:30:38.222Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:30:38.222Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:30:38.222Z]          'bgOptional' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:30:38.222Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-31T18:30:38.222Z] ── boot phase 2 — bgAfter
+[2026-07-31T18:30:38.222Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:38.224Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:30:38.225Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:30:38.225Z] ── boot phase 1 — bgDiag
+[2026-07-31T18:30:38.225Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:40.240Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-31T18:30:40.240Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-31T18:30:43.602Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-07-31T18:30:43.602Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-07-31T18:30:43.603Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:46.417Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:30:46.417Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:30:46.419Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:48.289Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:30:48.289Z] [36m[bgDiag][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:30:48.292Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:48.296Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:30:48.297Z] [35m[bgAfter][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:30:48.300Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:53.665Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-07-31T18:30:53.665Z] [36m[bgRequired][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-31T18:30:56.500Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:30:56.500Z] [36m[bgOptional][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:30:56.502Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:58.393Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:30:58.393Z] [36m[bgDiag][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:30:58.394Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:30:58.400Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:30:58.400Z] [35m[bgAfter][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:30:58.404Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:31:00.800Z]    ↳ diagnostic for 'bgDiag' (exit 2) —
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:31:00.800Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:31:00.800Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:31:00.800Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:31:00.800Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:31:00.800Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:31:00.800Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:31:00.800Z]          'bgDiag' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:31:00.800Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-31T18:31:00.800Z] ── boot sequence complete — 1 phase(s)
+[2026-07-31T18:31:00.801Z] ── boot phase 1 — bgClean1
+[2026-07-31T18:31:00.801Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:31:00.805Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:31:00.805Z] ── boot phase 2 — bgClean2
+[2026-07-31T18:31:00.805Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:31:00.808Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:31:00.808Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:31:11.636Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-31T18:32:58.382Z] ── boot phase 1 — bgRequired
+[2026-07-31T18:32:58.383Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:00.410Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-31T18:33:00.412Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-31T18:33:08.430Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:33:08.432Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:33:08.434Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:18.501Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:33:18.501Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:33:18.503Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:20.286Z]    ↳ diagnostic for 'bgRequired' (exit 2) —
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:33:20.287Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:33:20.288Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:33:20.288Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:33:20.288Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:33:20.288Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:33:20.288Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:33:20.288Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:33:20.288Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:33:20.288Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:33:20.288Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:33:20.288Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:33:20.288Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:33:20.288Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:33:20.288Z]          'bgRequired' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:33:20.288Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-31T18:33:20.288Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-31T18:33:20.288Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-31T18:33:20.289Z] ── boot phase 1 — bgOptional
+[2026-07-31T18:33:20.289Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:22.298Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-31T18:33:22.299Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-31T18:33:28.577Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:33:28.577Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:33:28.578Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:30.330Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:33:30.330Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:33:30.332Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:38.631Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:33:38.632Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:33:38.633Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:40.394Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:33:40.394Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:33:40.395Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:42.432Z]    ↳ diagnostic for 'bgOptional' (exit 2) —
+[2026-07-31T18:33:42.432Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:33:42.432Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:33:42.432Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:33:42.432Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:33:42.432Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:33:42.432Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:33:42.433Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:33:42.433Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:33:42.433Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:33:42.433Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:33:42.433Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:33:42.433Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:33:42.433Z]          'bgOptional' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:33:42.433Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-31T18:33:42.433Z] ── boot phase 2 — bgAfter
+[2026-07-31T18:33:42.433Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:42.437Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:33:42.437Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:33:42.438Z] ── boot phase 1 — bgDiag
+[2026-07-31T18:33:42.438Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:44.447Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-31T18:33:44.447Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-31T18:33:48.698Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-07-31T18:33:48.698Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-07-31T18:33:48.700Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:50.453Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:33:50.453Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:33:50.454Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:52.503Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:33:52.504Z] [36m[bgDiag][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:33:52.504Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:33:52.504Z] [35m[bgAfter][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:33:52.505Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:52.508Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:33:58.767Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-07-31T18:33:58.767Z] [36m[bgRequired][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-31T18:34:00.514Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:34:00.514Z] [36m[bgOptional][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:34:00.515Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:34:02.593Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:34:02.593Z] [36m[bgDiag][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:34:02.594Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:34:02.605Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:34:02.605Z] [35m[bgAfter][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:34:02.608Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:34:04.339Z]    ↳ diagnostic for 'bgDiag' (exit 2) —
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:34:04.339Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:34:04.339Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:34:04.339Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:34:04.339Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:34:04.339Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:34:04.339Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:34:04.339Z]          'bgDiag' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:34:04.339Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-31T18:34:04.339Z] ── boot sequence complete — 1 phase(s)
+[2026-07-31T18:34:04.340Z] ── boot phase 1 — bgClean1
+[2026-07-31T18:34:04.340Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:34:04.342Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:34:04.342Z] ── boot phase 2 — bgClean2
+[2026-07-31T18:34:04.344Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:34:04.348Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:34:04.348Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:34:14.983Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-31T18:34:54.244Z] ── boot phase 1 — bgRequired
+[2026-07-31T18:34:54.245Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:34:56.270Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-31T18:34:56.272Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-31T18:35:04.295Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:35:04.295Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:35:04.298Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:14.361Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:35:14.362Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:35:14.363Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:17.060Z]    ↳ diagnostic for 'bgRequired' (exit 2) —
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:35:17.061Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:35:17.062Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:35:17.062Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:35:17.062Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:35:17.062Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:35:17.062Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:35:17.062Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:35:17.062Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:35:17.062Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:35:17.062Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:35:17.062Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:35:17.062Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:35:17.062Z]          'bgRequired' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:35:17.062Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-31T18:35:17.062Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-31T18:35:17.062Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-31T18:35:17.062Z] ── boot phase 1 — bgOptional
+[2026-07-31T18:35:17.062Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:19.073Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-31T18:35:19.074Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-31T18:35:24.426Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:35:24.426Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:35:24.428Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:27.102Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:35:27.102Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:35:27.103Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:34.490Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:35:34.490Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:35:34.491Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:37.169Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:35:37.169Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:35:37.171Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:39.534Z]    ↳ diagnostic for 'bgOptional' (exit 2) —
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:35:39.534Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:35:39.535Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:35:39.535Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:35:39.535Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:35:39.535Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:35:39.535Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:35:39.535Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:35:39.535Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:35:39.535Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:35:39.535Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:35:39.535Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:35:39.535Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:35:39.535Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:35:39.535Z]          'bgOptional' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:35:39.535Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-31T18:35:39.535Z] ── boot phase 2 — bgAfter
+[2026-07-31T18:35:39.535Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:39.536Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:35:39.540Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:35:39.541Z] ── boot phase 1 — bgDiag
+[2026-07-31T18:35:39.541Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:41.553Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-31T18:35:41.553Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-31T18:35:44.550Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-07-31T18:35:44.550Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-07-31T18:35:44.551Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:47.238Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:35:47.238Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:35:47.239Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:49.596Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:35:49.597Z] [35m[bgAfter][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:35:49.598Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:49.609Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:35:49.609Z] [36m[bgDiag][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:35:49.610Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:54.622Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-07-31T18:35:54.622Z] [36m[bgRequired][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-31T18:35:57.305Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:35:57.305Z] [36m[bgOptional][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:35:57.306Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:59.682Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:35:59.682Z] [35m[bgAfter][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:35:59.683Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:35:59.696Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:35:59.696Z] [36m[bgDiag][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:35:59.700Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:36:02.784Z]    ↳ diagnostic for 'bgDiag' (exit 2) —
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:36:02.784Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:36:02.784Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:36:02.784Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:36:02.784Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:36:02.784Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:36:02.784Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:36:02.784Z]          'bgDiag' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:36:02.785Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-31T18:36:02.785Z] ── boot sequence complete — 1 phase(s)
+[2026-07-31T18:36:02.786Z] ── boot phase 1 — bgClean1
+[2026-07-31T18:36:02.786Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:36:02.789Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:36:02.789Z] ── boot phase 2 — bgClean2
+[2026-07-31T18:36:02.789Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:36:02.793Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:36:02.793Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:36:13.562Z] autopilot status: http://127.0.0.1:7921/status
+[2026-07-31T18:38:00.311Z] ── boot phase 1 — bgRequired
+[2026-07-31T18:38:00.312Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:02.346Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-07-31T18:38:02.347Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-07-31T18:38:10.387Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:38:10.387Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:38:10.389Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:20.456Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:38:20.456Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:38:20.459Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:22.487Z]    ↳ diagnostic for 'bgRequired' (exit 2) —
+[2026-07-31T18:38:22.487Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:38:22.487Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:38:22.487Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:38:22.487Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:38:22.487Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:38:22.487Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:38:22.487Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:38:22.488Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:38:22.488Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:38:22.488Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:38:22.488Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:38:22.488Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:38:22.488Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:38:22.488Z]          'bgRequired' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:38:22.489Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-07-31T18:38:22.489Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-07-31T18:38:22.489Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-07-31T18:38:22.490Z] ── boot phase 1 — bgOptional
+[2026-07-31T18:38:22.490Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:24.501Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-07-31T18:38:24.502Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-07-31T18:38:30.522Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:38:30.522Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:38:30.523Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:32.533Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:38:32.533Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:38:32.534Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:40.581Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:38:40.582Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:38:40.583Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:42.610Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:38:42.610Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:38:42.611Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:45.206Z]    ↳ diagnostic for 'bgOptional' (exit 2) —
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:38:45.207Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:38:45.207Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:38:45.207Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:38:45.207Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:38:45.207Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:38:45.207Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:38:45.207Z]          'bgOptional' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:38:45.207Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-07-31T18:38:45.208Z] ── boot phase 2 — bgAfter
+[2026-07-31T18:38:45.208Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:45.213Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:38:45.213Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:38:45.213Z] ── boot phase 1 — bgDiag
+[2026-07-31T18:38:45.213Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:47.223Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-07-31T18:38:47.223Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-07-31T18:38:50.642Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-07-31T18:38:50.642Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-07-31T18:38:50.643Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:52.682Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-07-31T18:38:52.682Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-07-31T18:38:52.683Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:55.271Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:38:55.271Z] [35m[bgAfter][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:38:55.272Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:38:55.280Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-07-31T18:38:55.280Z] [36m[bgDiag][0m restarting in NaNs (attempt 1)
+[2026-07-31T18:38:55.285Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:39:00.701Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-07-31T18:39:00.701Z] [36m[bgRequired][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-07-31T18:39:02.754Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-07-31T18:39:02.754Z] [36m[bgOptional][0m restarting in NaNs (attempt 4)
+[2026-07-31T18:39:02.755Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:39:05.354Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:39:05.354Z] [35m[bgAfter][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:39:05.355Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:39:05.366Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-07-31T18:39:05.366Z] [36m[bgDiag][0m restarting in NaNs (attempt 2)
+[2026-07-31T18:39:05.367Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:39:07.496Z]    ↳ diagnostic for 'bgDiag' (exit 2) —
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/memory/jaa-db
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../cortex/snapshot/index
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./constitutional-ai
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../nexus-bus
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./open-loop-taxonomy
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/adversary-suite
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ../meta/crystal-lattice
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/lib/compartment-engine.js → ./case-library
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../ollama-runtime
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../cortex/snapshot/index
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/orchestrator-lib/autonomous-loop.js → ../../cortex/memory/jaa-db
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-a-additions/tests/compartment-engine.test.js → ../../lib/compartment-engine
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/cortex-intelligence-index.js → ../memory/jaa-db
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/liminal-space/index.js → ../memory/jaa-db
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../memory/jaa-db
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/causality.js → ../../meta/cfr/graph.js
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/2026-07-branch-b-cortex-v2/cortex/versionium/index.js → ../memory/jaa-db
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/kernel/index.js
+[2026-07-31T18:39:07.496Z]       [31m✗[0m   BROKEN: unintegrated/rfr2-nexus/compress/index.js → ./src/adapter/index.js
+[2026-07-31T18:39:07.496Z]       [1m  Diagnostic service:[0m
+[2026-07-31T18:39:07.496Z]       [33m⚠[0m   Diagnostic service :7825 not running
+[2026-07-31T18:39:07.496Z]       [36m↻[0m FIX: Start diagnostic service
+[2026-07-31T18:39:07.496Z]       [90m    Command : [36mnode service/nexus-diagnostic.js[0m[0m
+[2026-07-31T18:39:07.496Z]       [90m    Why     : Provides continuous system monitoring, gap detection, friction scoring[0m
+[2026-07-31T18:39:07.496Z]          'bgDiag' is not a supervised kernel — nothing further to check.
+[2026-07-31T18:39:07.496Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-07-31T18:39:07.496Z] ── boot sequence complete — 1 phase(s)
+[2026-07-31T18:39:07.497Z] ── boot phase 1 — bgClean1
+[2026-07-31T18:39:07.498Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:39:07.501Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:39:07.501Z] ── boot phase 2 — bgClean2
+[2026-07-31T18:39:07.501Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-07-31T18:39:07.504Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-07-31T18:39:07.504Z] ── boot sequence complete — 2 phase(s)
+[2026-07-31T18:39:18.147Z] autopilot status: http://127.0.0.1:7921/status
+[2026-08-01T06:32:29.153Z] ── boot phase 1 — bgRequired
+[2026-08-01T06:32:29.154Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:32:31.184Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-08-01T06:32:31.186Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-08-01T06:32:39.216Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:32:39.216Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:32:39.218Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:32:49.311Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:32:49.312Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:32:49.313Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:32:56.196Z]    ↳ diagnostic for 'bgRequired' exceeded 25s — killed. Partial output below.
+[2026-08-01T06:32:56.203Z]    ↳ diagnostic for 'bgRequired' (exit null) —
+[2026-08-01T06:32:56.204Z]       [1m  Integration health across all running systems:[0m
+[2026-08-01T06:32:56.204Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-01T06:32:56.204Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-01T06:32:56.204Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:32:56.204Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-01T06:32:56.204Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-01T06:32:56.204Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-01T06:32:56.204Z]       [36m↻[0m FIX: Start cortex
+[2026-08-01T06:32:56.204Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-01T06:32:56.204Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-01T06:32:56.204Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-01T06:32:56.204Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-01T06:32:56.204Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-01T06:32:56.204Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-01T06:32:56.204Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-01T06:32:56.204Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-01T06:32:56.204Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-01T06:32:56.204Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-01T06:32:56.204Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-01T06:32:56.204Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-01T06:32:56.204Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-01T06:32:56.204Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:32:56.204Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-01T06:32:56.204Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-01T06:32:56.204Z]       [1m  JS syntax integrity:[0m
+[2026-08-01T06:32:56.205Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-08-01T06:32:56.205Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-08-01T06:32:56.205Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-08-01T06:32:56.205Z] ── boot phase 1 — bgOptional
+[2026-08-01T06:32:56.205Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:32:58.225Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-08-01T06:32:58.226Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-08-01T06:32:59.404Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-01T06:32:59.404Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-08-01T06:32:59.405Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:06.277Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:33:06.277Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:33:06.278Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:09.496Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-08-01T06:33:09.497Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-08-01T06:33:09.499Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:16.353Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:33:16.353Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:33:16.354Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:19.592Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-08-01T06:33:19.592Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-08-01T06:33:19.594Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:23.235Z]    ↳ diagnostic for 'bgOptional' exceeded 25s — killed. Partial output below.
+[2026-08-01T06:33:23.239Z]    ↳ diagnostic for 'bgOptional' (exit null) —
+[2026-08-01T06:33:23.239Z]       [1m  Integration health across all running systems:[0m
+[2026-08-01T06:33:23.239Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-01T06:33:23.239Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-01T06:33:23.239Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:33:23.239Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-01T06:33:23.239Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-01T06:33:23.239Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-01T06:33:23.239Z]       [36m↻[0m FIX: Start cortex
+[2026-08-01T06:33:23.239Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-01T06:33:23.239Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-01T06:33:23.239Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-01T06:33:23.239Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-01T06:33:23.239Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-01T06:33:23.239Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-01T06:33:23.240Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-01T06:33:23.240Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-01T06:33:23.240Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-01T06:33:23.240Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-01T06:33:23.240Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-01T06:33:23.240Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-01T06:33:23.240Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-01T06:33:23.240Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:33:23.240Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-01T06:33:23.240Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-01T06:33:23.240Z]       [1m  JS syntax integrity:[0m
+[2026-08-01T06:33:23.240Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-08-01T06:33:23.240Z] ── boot phase 2 — bgAfter
+[2026-08-01T06:33:23.240Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:23.247Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-01T06:33:23.247Z] ── boot sequence complete — 2 phase(s)
+[2026-08-01T06:33:23.247Z] ── boot phase 1 — bgDiag
+[2026-08-01T06:33:23.248Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:25.260Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-08-01T06:33:25.260Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-08-01T06:33:26.433Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-01T06:33:26.433Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-08-01T06:33:26.434Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:29.681Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-08-01T06:33:29.681Z] [36m[bgRequired][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-08-01T06:33:33.334Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:33:33.334Z] [35m[bgAfter][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:33:33.335Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:33.354Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:33:33.354Z] [36m[bgDiag][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:33:33.360Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:36.517Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-08-01T06:33:36.517Z] [36m[bgOptional][0m restarting in NaNs (attempt 4)
+[2026-08-01T06:33:36.518Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:43.452Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:33:43.452Z] [35m[bgAfter][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:33:43.454Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:43.475Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:33:43.475Z] [36m[bgDiag][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:33:43.477Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:46.607Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-08-01T06:33:46.607Z] [36m[bgOptional][0m restarting in NaNs (attempt 5)
+[2026-08-01T06:33:46.609Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:50.266Z]    ↳ diagnostic for 'bgDiag' exceeded 25s — killed. Partial output below.
+[2026-08-01T06:33:50.270Z]    ↳ diagnostic for 'bgDiag' (exit null) —
+[2026-08-01T06:33:50.270Z]       [1m  Integration health across all running systems:[0m
+[2026-08-01T06:33:50.270Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-01T06:33:50.270Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-01T06:33:50.270Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:33:50.270Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-01T06:33:50.270Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-01T06:33:50.270Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-01T06:33:50.270Z]       [36m↻[0m FIX: Start cortex
+[2026-08-01T06:33:50.270Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-01T06:33:50.270Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-01T06:33:50.270Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-01T06:33:50.270Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-01T06:33:50.270Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-01T06:33:50.270Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-01T06:33:50.270Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-01T06:33:50.270Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-01T06:33:50.270Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-01T06:33:50.270Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-01T06:33:50.270Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-01T06:33:50.270Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-01T06:33:50.270Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-01T06:33:50.270Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:33:50.270Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-01T06:33:50.270Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-01T06:33:50.270Z]       [1m  JS syntax integrity:[0m
+[2026-08-01T06:33:50.270Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-08-01T06:33:50.270Z] ── boot sequence complete — 1 phase(s)
+[2026-08-01T06:33:50.273Z] ── boot phase 1 — bgClean1
+[2026-08-01T06:33:50.273Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:50.276Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-01T06:33:50.276Z] ── boot phase 2 — bgClean2
+[2026-08-01T06:33:50.276Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:33:50.283Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-01T06:33:50.287Z] ── boot sequence complete — 2 phase(s)
+[2026-08-01T06:34:01.991Z] autopilot status: http://127.0.0.1:7921/status
+[2026-08-01T06:45:47.298Z] ── boot phase 1 — bgRequired
+[2026-08-01T06:45:47.300Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:45:49.337Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-08-01T06:45:49.339Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-08-01T06:45:57.370Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:45:57.371Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:45:57.376Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:07.456Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:46:07.458Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:46:07.459Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:14.347Z]    ↳ diagnostic for 'bgRequired' exceeded 25s — killed. Partial output below.
+[2026-08-01T06:46:14.352Z]    ↳ diagnostic for 'bgRequired' (exit null) —
+[2026-08-01T06:46:14.353Z]       [1m  Integration health across all running systems:[0m
+[2026-08-01T06:46:14.353Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-01T06:46:14.354Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-01T06:46:14.354Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:46:14.354Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-01T06:46:14.354Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-01T06:46:14.354Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-01T06:46:14.354Z]       [36m↻[0m FIX: Start cortex
+[2026-08-01T06:46:14.354Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-01T06:46:14.354Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-01T06:46:14.354Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-01T06:46:14.354Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-01T06:46:14.354Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-01T06:46:14.354Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-01T06:46:14.355Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-01T06:46:14.355Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-01T06:46:14.355Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-01T06:46:14.355Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-01T06:46:14.355Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-01T06:46:14.355Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-01T06:46:14.355Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-01T06:46:14.355Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:46:14.355Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-01T06:46:14.355Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-01T06:46:14.355Z]       [1m  JS syntax integrity:[0m
+[2026-08-01T06:46:14.359Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-08-01T06:46:14.359Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-08-01T06:46:14.359Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-08-01T06:46:14.360Z] ── boot phase 1 — bgOptional
+[2026-08-01T06:46:14.360Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:16.374Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-08-01T06:46:16.375Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-08-01T06:46:17.541Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-01T06:46:17.541Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-08-01T06:46:17.543Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:24.461Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:46:24.461Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:46:24.462Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:27.637Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-08-01T06:46:27.637Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-08-01T06:46:27.639Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:34.558Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:46:34.559Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:46:34.560Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:37.733Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-08-01T06:46:37.733Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-08-01T06:46:37.735Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:41.383Z]    ↳ diagnostic for 'bgOptional' exceeded 25s — killed. Partial output below.
+[2026-08-01T06:46:41.388Z]    ↳ diagnostic for 'bgOptional' (exit null) —
+[2026-08-01T06:46:41.388Z]       [1m  Integration health across all running systems:[0m
+[2026-08-01T06:46:41.388Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-01T06:46:41.388Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-01T06:46:41.388Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:46:41.388Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-01T06:46:41.388Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-01T06:46:41.388Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-01T06:46:41.388Z]       [36m↻[0m FIX: Start cortex
+[2026-08-01T06:46:41.388Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-01T06:46:41.388Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-01T06:46:41.388Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-01T06:46:41.388Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-01T06:46:41.388Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-01T06:46:41.388Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-01T06:46:41.389Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-01T06:46:41.389Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-01T06:46:41.389Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-01T06:46:41.389Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-01T06:46:41.389Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-01T06:46:41.389Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-01T06:46:41.389Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-01T06:46:41.389Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:46:41.389Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-01T06:46:41.389Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-01T06:46:41.389Z]       [1m  JS syntax integrity:[0m
+[2026-08-01T06:46:41.389Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-08-01T06:46:41.389Z] ── boot phase 2 — bgAfter
+[2026-08-01T06:46:41.389Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:41.395Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-01T06:46:41.395Z] ── boot sequence complete — 2 phase(s)
+[2026-08-01T06:46:41.396Z] ── boot phase 1 — bgDiag
+[2026-08-01T06:46:41.396Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:43.415Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-08-01T06:46:43.415Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-08-01T06:46:44.680Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-01T06:46:44.680Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-08-01T06:46:44.681Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:47.821Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-08-01T06:46:47.821Z] [36m[bgRequired][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-08-01T06:46:51.481Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:46:51.481Z] [36m[bgDiag][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:46:51.481Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:51.487Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-01T06:46:51.487Z] [35m[bgAfter][0m restarting in NaNs (attempt 1)
+[2026-08-01T06:46:51.489Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:46:54.764Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-08-01T06:46:54.764Z] [36m[bgOptional][0m restarting in NaNs (attempt 4)
+[2026-08-01T06:46:54.765Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:47:01.601Z] [35m[bgAfter][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:47:01.601Z] [35m[bgAfter][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:47:01.602Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:47:01.623Z] [36m[bgDiag][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-01T06:47:01.623Z] [36m[bgDiag][0m restarting in NaNs (attempt 2)
+[2026-08-01T06:47:01.625Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:47:04.850Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-08-01T06:47:04.850Z] [36m[bgOptional][0m restarting in NaNs (attempt 5)
+[2026-08-01T06:47:04.851Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:47:08.423Z]    ↳ diagnostic for 'bgDiag' exceeded 25s — killed. Partial output below.
+[2026-08-01T06:47:08.427Z]    ↳ diagnostic for 'bgDiag' (exit null) —
+[2026-08-01T06:47:08.427Z]       [1m  Integration health across all running systems:[0m
+[2026-08-01T06:47:08.427Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-01T06:47:08.427Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-01T06:47:08.427Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:47:08.427Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-01T06:47:08.427Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-01T06:47:08.428Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-01T06:47:08.428Z]       [36m↻[0m FIX: Start cortex
+[2026-08-01T06:47:08.428Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-01T06:47:08.428Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-01T06:47:08.428Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-01T06:47:08.428Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-01T06:47:08.428Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-01T06:47:08.428Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-01T06:47:08.428Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-01T06:47:08.428Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-01T06:47:08.428Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-01T06:47:08.428Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-01T06:47:08.428Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-01T06:47:08.428Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-01T06:47:08.428Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-01T06:47:08.428Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-01T06:47:08.428Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-01T06:47:08.428Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-01T06:47:08.428Z]       [1m  JS syntax integrity:[0m
+[2026-08-01T06:47:08.428Z]    (stalled kernel(s) bgDiag are optional:true — boot continues, as declared)
+[2026-08-01T06:47:08.428Z] ── boot sequence complete — 1 phase(s)
+[2026-08-01T06:47:08.432Z] ── boot phase 1 — bgClean1
+[2026-08-01T06:47:08.432Z] [36m[bgClean1][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:47:08.435Z] [bgClean1] phase 1 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-01T06:47:08.435Z] ── boot phase 2 — bgClean2
+[2026-08-01T06:47:08.435Z] [35m[bgClean2][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-01T06:47:08.443Z] [bgClean2] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-01T06:47:08.443Z] ── boot sequence complete — 2 phase(s)
+[2026-08-01T06:47:20.145Z] autopilot status: http://127.0.0.1:7921/status

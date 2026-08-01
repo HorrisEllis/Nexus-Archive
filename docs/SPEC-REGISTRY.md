@@ -395,3 +395,4 @@ after. Both shapes now supported and pinned (T-B1-015).
   nothing was lost with it. Git preserves the history — retired, not
   destroyed. Suite unchanged at 926 before/after removal, now 933 with the
   pinning tests.
+| `docs/raid-warp-verification-phasemap.spec` | 0.2.0-phasemap | 2026-07-30 | RAID as the verification spine, governed by AXIOMS-v3.1 (87 laws parsed), new code via WARP logic (warp/core Axiom→Gate→Stream), drift accounted per phase. Supersedes raid-verification-spine v0.1.0. 11 phases (Part I verify spine + Part II co-pilot bridge): record→constitution→COS-isolate→sigma/drift→compare→rewind→one raid.verify() GateFusion; then P8 UI-as-tools, P9 gated-events-to-copilot, P10 diagnose+notify, P11 diagnose+repair-on-prompt (co-pilot as the bridge: user↔UI↔NEXUS). Connects built systems (constitutional-ai, cos/playground, replay-engine, sigma, meta/bda) that RAID does not yet drive. NOT YET BUILT — phasemap only. |

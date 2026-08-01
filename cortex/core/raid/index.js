@@ -309,6 +309,50 @@ const contracts = require('../../contract');
 const _toolCalls = new Map(); // source -> [{ ts, action, approved }]
 const RATE_WINDOW_MS = 60000;
 
+// §PHASEMAP P1 (docs/raid-warp-verification-phasemap.spec) — RAID records every
+// tool decision. Traceability floor: RAID must SEE before it can VERIFY (§17.6
+// auditable, §1.2 observable, §9.2 ledger-before-dispatch). Built OUTWARD from
+// the existing _toolCalls recorder (§8.6 reuse before build), and PERSISTED to
+// cortex (§2.2 storage is source of truth — the in-memory Maps die on restart;
+// cortex is the persistent data). Append-only (§0.3 nothing lost). No blocking
+// here — pure record; the verify gates arrive in P2-P5.
+const _RAID_DECISIONS_TABLE = 'raid_decisions';
+function recordDecision(decision = {}) {
+  const { uid } = require('../../memory/jaa-db');
+  const row = {
+    uuid:      uid ? uid() : `raid-dec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    kind:      'tool.decision',
+    source:    decision.source || 'unknown',
+    tool:      decision.tool || decision.action || 'unknown',
+    argsDigest: decision.argsDigest || _digestArgs(decision.args),
+    outcome:   decision.outcome || 'executed',   // executed | error | denied
+    approved:  decision.approved !== false,
+    error:     decision.error || null,
+    causedBy:  decision.causedBy || null,         // §9.6 session/decision chain
+    eventTs:   decision.eventTs || Date.now(),    // §3.2 logical time is the ordering axis
+    ts:        Date.now(),
+  };
+  // Persist to cortex (§2.2). Fail loud but never break the caller (§1.2) — a
+  // recording failure is logged, the tool still runs (P1 is observe-only).
+  try {
+    const { jaaDB } = require('../../memory/jaa-db');
+    jaaDB.insert(_RAID_DECISIONS_TABLE, row);
+  } catch (e) {
+    console.warn(`[raid] recordDecision persist failed (${e.message}) — decision not lost from memory`, row.uuid);
+  }
+  return row;
+}
+
+// Stable digest of tool args so the record is queryable/comparable without
+// storing arbitrary payloads (§17.5 provenance, bounded).
+function _digestArgs(args) {
+  if (args == null) return null;
+  try {
+    const s = typeof args === 'string' ? args : JSON.stringify(args);
+    return require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+  } catch { return null; }
+}
+
 function _pruneCalls(source) {
   const now = Date.now();
   const calls = (_toolCalls.get(source) || []).filter(c => now - c.ts < RATE_WINDOW_MS);
@@ -322,6 +366,43 @@ function _approveTool(source, command, opts = {}) {
   }
 
   const action   = opts.action || 'tool';
+
+  // §PHASEMAP P2 — CONSTITUTION GATE (docs/raid-warp-verification-phasemap.spec).
+  // The cheapest, most fundamental check runs FIRST (§17.10 — hard axioms run
+  // first and are never skipped). constitutional-ai.check() is a HARD WARP axiom
+  // (weight 1.0): a BLOCK-severity violation denies immediately, naming the
+  // axiom (§1.2 specific). A WARN/held result is NOT a hard denial — it falls
+  // through to the contract checks below (constitution's own severity model:
+  // BLOCK = deny, WARN = held territory). §8.6 — built on the existing
+  // check(req, ctx), not a reimplementation. Skipped only if the caller can't
+  // supply an intent (constitution requires ctx.intent) — logged, never silent.
+  if (opts.intent) {
+    try {
+      const constitution = require('../../../lib/constitutional-ai');
+      const verdict = constitution.check(
+        { source, action, command },
+        { intent: opts.intent, jaa: opts.jaa }
+      );
+      if (verdict && verdict.pass === false && verdict.severity === 'block') {
+        // Hard constitutional violation — deny, name the axiom (§1.2, §16.3).
+        recordDecision({ source, tool: action, outcome: 'denied',
+          approved: false, error: `constitution:${verdict.axiom}: ${verdict.reason}`,
+          causedBy: opts.causedBy });
+        return { approved: false, source, reason: `constitution denied — ${verdict.axiom}: ${verdict.reason}`,
+          axiom: verdict.axiom, blast_radius: verdict.blast_radius,
+          alternatives: verdict.alternatives || [] };
+      }
+      // WARN/held or pass → continue to contract checks. The verdict is attached
+      // so the caller sees it (§17.6 auditable).
+      opts._constitutionVerdict = verdict;
+    } catch (e) {
+      // §1.2 — constitution unreachable is loud, not silent. Fail CLOSED for a
+      // consequential action would be safest, but P2's scope is the check itself;
+      // a broken constitution module is a system fault surfaced, not a swallow.
+      console.warn(`[raid] constitution check unavailable for '${action}': ${e.message}`);
+    }
+  }
+
   const contract = contracts.get(source);
   const isDefault = !contracts.CONTRACTS[source];
 
@@ -430,6 +511,6 @@ module.exports = {
   _roleConfidence, _topologicalProximity, setCausalGraph,
   recordOutcome,
   startHealthPoll, stopHealthPoll,
-  _approveTool, _toolHealthSnapshot,
+  _approveTool, _toolHealthSnapshot, recordDecision,
   init, stop, _onOrionClassified,
 };

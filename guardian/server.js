@@ -2974,6 +2974,53 @@ function handleExtendedRoutes(req, res, url, method) {
   }
 
   // ── POST /command — dispatch a job (raw) or SEAM queue (with spec) ──────────
+  // ── §PHASEMAP P4: POST /command/tools — Guardian's agentic tool-loop ────────
+  // The SAME sovereign loop copilot uses (lib/agent-tools), wired with Guardian's
+  // OWN provider backend: createJob → dispatchJob (NCP → browser tab) → resolve
+  // the job. Guardian gets the 10 tools talking to claude/chatgpt/gemini, with
+  // zero dependency on copilot. Additive: /command is untouched.
+  if (method === 'POST' && url.pathname === '/command/tools') {
+    bodyJ(req).then(async body => {
+      const prompt = body.prompt;
+      if (!prompt) { pRes(res, 400, { ok: false, error: 'prompt required' }); return; }
+      const provider = body.provider || 'claude';
+      try {
+        const toolRuntime = require('./tool-runtime');
+
+        // Guardian's callModel backend: create a job, dispatch via NCP, resolve
+        // it by polling the jobs Map until the provider tab answers.
+        const createAndDispatch = async (p) => {
+          const job = createJob({ command: 'tools', provider, prompt: p });
+          if (ncp.isConnected(provider)) dispatchJob(job);
+          else bus.emit('guardian.tab.needed', { provider, url: null, jobId: job.id });
+          return job.id;
+        };
+        const resolveJob = async (jobId) => {
+          const MAX = 90;
+          for (let i = 0; i < MAX; i++) {
+            await new Promise(r => setTimeout(r, 1000));
+            const job = jobs.get(jobId);
+            if (!job) return { text: '', toolCalls: null };
+            if (job.status === 'complete') return { text: job.response || '', toolCalls: job.tool_calls || job.toolCalls || null, provider };
+            if (job.status === 'error') return { text: job.error || '', toolCalls: null };
+          }
+          return { text: '', toolCalls: null, timedOut: true };
+        };
+
+        const result = await toolRuntime.run({
+          userPrompt: prompt, createAndDispatch, resolveJob, provider,
+          maxIterations: body.maxIterations || 6,
+          streamDigest: body.streamDigest || '',
+        });
+        pRes(res, 200, { ok: true, text: result.text, iterations: result.iterations,
+          toolCallLog: result.toolCallLog, provider });
+      } catch (e) {
+        pRes(res, 500, { ok: false, error: e.message });
+      }
+    }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
+    return;
+  }
+
   if (method==='POST' && url.pathname==='/command') {
     bodyJ(req).then(async body => {
 
