@@ -1,0 +1,1 @@
+[{"uuid":"a4678768-6772-466c-acdd-19a3b1cc6dab","trigger":"raid.verify.fail","requestId":null,"actor":"p6","state":{"ts":1785605703026,"context":"raid.verify.fail","openGaps":35,"highFriction":0,"liminalActive":0,"crystallisedPatterns":0,"recentEvents":110,"activeFaultClasses":[]},"ts":1785605703026,"id":"53a4416b-064f-4d40-a072-c29a5517911b"}]

@@ -554,6 +554,72 @@ function validateWiring() {
   return { ok: jaaOk, jaa: jaaOk, taxonomy: taxonomyOk };
 }
 
+// ── §PHASEMAP UM4 — the editable, self-optimizing surface ────────────────────
+// (docs/cortex-schema-registry-phasemap.spec). The user-model is not just read +
+// auto-updated; the user OR co-pilot can EDIT it and the model tunes from those
+// edits — "an editable surface to optimize itself" (James). Built OUTWARD from
+// the existing jaa.update archive pattern (§8.6 — decay already archives with a
+// reason; these are user-directed edits through the same door). §0.3 — nothing
+// is destroyed; a rejected hypothesis is archived, not deleted, so the edit
+// history is preserved (and drift-observed via UM1's schema).
+
+/**
+ * pinHypothesis(uuid) — lock a hypothesis at high confidence, immune to decay.
+ * The user affirming "yes, this is me" should not fade. Returns the updated row.
+ */
+function pinHypothesis(uuid) {
+  const jaa = _getJaa() || _jaa;
+  if (!jaa) return { error: 'user-model not initialized' };
+  const h = (jaa.query('user_model_hypotheses', r => r.uuid === uuid, 1) || [])[0];
+  if (!h) return { error: `no hypothesis ${uuid}` };
+  jaa.update('user_model_hypotheses', uuid, {
+    confidence: 0.95, pinned: true, decayRate: 0, lastEdited: Date.now(), editedBy: 'user',
+  });
+  return { ok: true, uuid, pinned: true };
+}
+
+/**
+ * rejectHypothesis(uuid, reason) — the user says "no, that's not me". Archived
+ * (not deleted — §0.3) with a user reason, so it won't resurface and the
+ * correction is itself data.
+ */
+function rejectHypothesis(uuid, reason = 'user_rejected') {
+  const jaa = _getJaa() || _jaa;
+  if (!jaa) return { error: 'user-model not initialized' };
+  const h = (jaa.query('user_model_hypotheses', r => r.uuid === uuid, 1) || [])[0];
+  if (!h) return { error: `no hypothesis ${uuid}` };
+  jaa.update('user_model_hypotheses', uuid, {
+    status: 'archived', archivedAt: Date.now(), archiveReason: reason,
+    confidence: 0, lastEdited: Date.now(), editedBy: 'user',
+  });
+  return { ok: true, uuid, rejected: true, reason };
+}
+
+/**
+ * correctHypothesis(uuid, newClaim, claimType) — the user fixes a wrong read:
+ * reject the mistaken hypothesis AND observe the right one (at high confidence,
+ * since it's a direct correction). This is the model optimizing FROM an edit.
+ */
+function correctHypothesis(uuid, newClaim, claimType = 'preference') {
+  if (!newClaim) return { error: 'a corrected claim is required' };
+  const rej = rejectHypothesis(uuid, 'user_corrected');
+  // a direct correction is high-signal — seed it strong so it surfaces.
+  const created = _observeCore(newClaim, claimType, { via: 'user-correction', correctedFrom: uuid }, 0.8);
+  return { ok: true, rejected: rej.uuid || uuid, corrected: newClaim, created: created && created.uuid };
+}
+
+/**
+ * editableSurface(minConf) — the list a UI/CLI edits against: every active
+ * hypothesis with its uuid, claim, confidence, pinned flag. This is what the
+ * user (or co-pilot) sees to pin/reject/correct.
+ */
+function editableSurface(minConf = 0) {
+  const jaa = _getJaa() || _jaa;
+  if (!jaa) return [];
+  return (jaa.query('user_model_hypotheses', r => r.status === 'active' && (r.confidence || 0) >= minConf, 200) || [])
+    .map(h => ({ uuid: h.uuid, claim: h.claim, claimType: h.claimType, confidence: h.confidence, pinned: !!h.pinned }));
+}
+
 module.exports = {
   init, stop, observe,
   recordChannelVisit, recordIntent, recordError,
@@ -563,6 +629,7 @@ module.exports = {
   saveNote, recentNotes,
   effectiveConfidence, deriveFromChatLog, checkContradictions,
   validateWiring,
+  pinHypothesis, rejectHypothesis, correctHypothesis, editableSurface,  // §UM4 editable surface
   CATEGORY,
   MODULE_ID, VERSION,
 };

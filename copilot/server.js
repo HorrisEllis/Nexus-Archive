@@ -425,6 +425,35 @@ const RECALL_CONTEXT_TOP_K = 3;
 // co-pilot knows the user and adjusts on every response. Injected like the other
 // context layers (§8.6 same pattern as _injectRecallContext). Non-fatal: a
 // user-model hiccup never breaks a response (§1.2).
+// §PHASEMAP UM3 (docs/cortex-schema-registry-phasemap.spec) — richer capture.
+// The model already supports channel/topic/preference/communication_style
+// categories (observe), but the prompt paths only ever fed it intent strings.
+// This extracts lightweight, real signals from a prompt — the channel used, the
+// verbosity, an explicit correction — and feeds them as low-confidence
+// observations that ACCRETE over time (§13.1 intent logged, §0.3 nothing lost).
+// Low initial confidence (0.15 delta) so a single prompt nudges rather than
+// asserts; repetition is what builds a real hypothesis. Non-fatal (§1.2).
+function _captureUserSignals(prompt, channel) {
+  try {
+    const um = require('./lib/user-model');
+    if (!um.observe || !prompt) return;
+    // channel preference — which surface the user reaches for.
+    if (channel && channel !== 'unknown') {
+      um.observe(`uses the ${channel} channel`, 'channel', { via: 'signal-capture' }, 0.15);
+    }
+    // verbosity / communication style — a real, cheap signal from length.
+    const words = prompt.trim().split(/\s+/).length;
+    const style = words <= 6 ? 'terse prompts' : words >= 40 ? 'detailed prompts' : null;
+    if (style) {
+      um.observe(`writes ${style}`, 'communication_style', { via: 'signal-capture', words }, 0.15);
+    }
+    // explicit correction — the user pushing back is a high-value signal.
+    if (/\b(no,|not what|that'?s wrong|incorrect|actually,|i said|try again)\b/i.test(prompt)) {
+      um.observe('corrects co-pilot when it misunderstands', 'communication_style', { via: 'signal-capture' }, 0.2);
+    }
+  } catch (_) { /* capture is best-effort — never affects the response (§1.2) */ }
+}
+
 function _injectUserModel(contextText) {
   try {
     const um = require('./lib/user-model');
@@ -801,6 +830,7 @@ const server = http.createServer(async (req, res) => {
 
     // §P103: inject session history on first exchange
     contextText = _injectUserModel(contextText);   // §UM2 — know the user on every path
+    _captureUserSignals(prompt, channel);   // §UM3 — richer capture
     contextText = await _injectSessionHistory(session, contextText);
     // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
     // just session-start), best-effort, never blocks.
@@ -978,6 +1008,7 @@ const server = http.createServer(async (req, res) => {
     let contextText = '';
     try { contextText = await _analysis.assembleContext(prompt, _stream, session); } catch(_) {}
     contextText = _injectUserModel(contextText);   // §UM2 — know the user on every path
+    _captureUserSignals(prompt, channel);   // §UM3 — richer capture
     contextText = await _injectSessionHistory(session, contextText);
     // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
     // just session-start), best-effort, never blocks.
@@ -1231,6 +1262,7 @@ const server = http.createServer(async (req, res) => {
 
     // §P103: session history injection (first exchange only)
     contextText = _injectUserModel(contextText);   // §UM2 — know the user on every path
+    _captureUserSignals(prompt, channel);   // §UM3 — richer capture
     contextText = await _injectSessionHistory(session, contextText);
     // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
     // just session-start), best-effort, never blocks.

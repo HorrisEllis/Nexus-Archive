@@ -73,14 +73,14 @@ spec:
       gate: "a drifting run is flagged with regime + score (§13.4 drift as data)."
       axioms: [§17.10, §11.3, §13.4, §1.2]
 
-    P5_compare_contract_vs_output:
+    P5_compare_contract_vs_output:   # ← DONE 2026-07-30, contract-breach first-class, 1132/0
       does: "CompareEngine diffs run output vs contract/golden. Regression/mismatch → fail (§5.14 output honours contract, §16.3 invariant sacred)."
       warp: "compare as a HARD axiom (a contract breach is never soft-skippable)."
       drift: "golden baseline is versioned; a golden update is a logged decision (§17.3)."
       gate: "an output regressing against its contract is caught (§12.3 expectation vs reality)."
       axioms: [§5.14, §16.3, §17.10, §12.3]
 
-    P6_rewind_on_fail:
+    P6_rewind_on_fail:   # ← DONE 2026-07-30, failed decisions replayable, 1137/0
       does: "any P2-P5 fail → replay-engine snapshots the decision point; failure becomes replayable training data (§0.3 nothing lost, §7.4 dead branches are data)."
       warp: "snapshot trigger is a WARP stream subscriber on any deny verdict."
       drift: "snapshots accumulate the drift history — the timeline §13.4 wants."

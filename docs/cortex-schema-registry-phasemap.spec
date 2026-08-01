@@ -107,9 +107,9 @@ spec:
     UM2_query_on_every_path:   # ← DONE 2026-07-30, all 3 paths, 1113/0
       does: "§8.4 map the 3 prompt paths first, then inject buildUserContext() into /api/prompt, /stream, /fulfill — not just the tool-loop. Every response queries the model first."
       gate: "a plain /api/prompt response reflects a known user preference without being told."
-    UM3_richer_capture:
+    UM3_richer_capture:   # ← DONE 2026-07-30, accreting signals, 1120/0
       does: "capture more than intent strings — phrasing/tone/correction signals as observations, confidence-weighted (the existing observe() already supports this; feed it more)."
-    UM4_editable_self_optimizing_surface:
+    UM4_editable_self_optimizing_surface:   # ← DONE 2026-07-30, pin/reject/correct, 1127/0
       does: "the user-model is editable via cortex (schema-registry P4 makes schemas editable; this makes the MODEL editable): user or co-pilot can correct/pin a hypothesis, and co-pilot adjusts from it. The 'editable surface to optimize itself.'"
       depends: "schema-registry P4 (editable cortex rows)."
       gate: "editing a hypothesis changes how co-pilot responds next; nothing is lost (§0.3)."

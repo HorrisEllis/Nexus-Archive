@@ -408,6 +408,35 @@ async function verifyInIsolation({ source, action, specPath, outputDir, testComm
   // verdict onto verify + record (§17.6 auditable).
   const verified = !!(result && result.ok);
 
+  // §PHASEMAP P5 — COMPARE CONTRACT vs OUTPUT. The pipeline ALREADY gates on
+  // regressions (CompareEngine vs golden → ok:false, stage:'compare') — §16.5,
+  // don't duplicate the gate. P5's job is to make a contract-vs-output mismatch
+  // LEGIBLE as what it is (§16.2 reads like a story): a compare-stage failure is
+  // a distinct, first-class signal in the verdict + record, not lumped with build
+  // or validate failures. This is the "comparison engine between contract and
+  // outputs" surfaced to RAID.
+  const compareFailed = !verified && result?.stage === 'compare';
+  const regressions = (result?.compareReport?.regression?.regressions) || result?.regressions || [];
+
+  // §PHASEMAP P6 — REWIND ON FAIL. A failed verification (P2-P5) is snapshotted
+  // so the decision point is replayable and inspectable — the failure becomes
+  // training data, not a lost event (§0.3 nothing lost, §7.4 dead branches are
+  // data, §0.1 evidence over memory). §8.6 built on the real replay-engine
+  // snapshot() API. Non-fatal: a snapshot hiccup never changes the verdict.
+  let snapshotId = null;
+  if (!verified) {
+    try {
+      const replay = require('../../../lib/replay-engine');
+      const snap = replay.snapshot({
+        trigger: 'raid.verify.fail',
+        actor: source,
+        requestId: opts.requestId || null,
+        action, stage: result?.stage, contractBreach: compareFailed,
+      });
+      snapshotId = snap && snap.snapshotId || null;
+    } catch (_) { /* replay unavailable — the fail is still recorded, just not replayable */ }
+  }
+
   // §PHASEMAP P4 — SIGMA + BEHAVIORAL DRIFT SCORING. Score the isolated run:
   // sigma (divergence from baseline) + BDA (behavioral regime). These are SOFT
   // signals (§17.10 — weight 0.3, they FLAG, they do not by themselves hard-fail
@@ -421,20 +450,26 @@ async function verifyInIsolation({ source, action, specPath, outputDir, testComm
     source, tool: action,
     outcome: verified ? 'executed' : 'denied',
     approved: verified,
-    error: verified ? null : `isolation verify failed at stage '${result?.stage || 'unknown'}'`,
+    error: verified ? null
+      : (compareFailed ? `contract breach: output regressed vs golden (${regressions.length} regression${regressions.length === 1 ? '' : 's'})`
+                       : `isolation verify failed at stage '${result?.stage || 'unknown'}'`),
     causedBy: opts.causedBy,
     meta: { branchId: result?.branchId, stage: result?.stage,
-      sigma: drift.sigma, regime: drift.regime, drifted: drift.drifted },
+      sigma: drift.sigma, regime: drift.regime, drifted: drift.drifted,
+      contractBreach: compareFailed, regressionCount: regressions.length,
+      snapshotId },
   });
   return {
     verified,
     stage: result?.stage,
     branchId: result?.branchId,
-    regressions: result?.regressions || [],
-    realTargetTouched: verified,   // pipeline only checks out to the real dir on pass
-    sigma: drift.sigma,            // §P4 divergence score (soft signal)
-    regime: drift.regime,          // §P4 behavioral regime (soft signal)
-    drifted: drift.drifted,        // §P4 true if sigma spike or unstable regime
+    contractBreach: compareFailed,   // §P5 — a contract-vs-output mismatch, distinct from other failures
+    regressions,                     // §P5 — the specific regressions (what broke the contract)
+    snapshotId,                      // §P6 — a failed decision is replayable from this snapshot
+    realTargetTouched: verified,     // pipeline only checks out to the real dir on pass
+    sigma: drift.sigma,              // §P4 divergence score (soft signal)
+    regime: drift.regime,            // §P4 behavioral regime (soft signal)
+    drifted: drift.drifted,          // §P4 true if sigma spike or unstable regime
     driftReason: drift.reason,
     result,
   };
