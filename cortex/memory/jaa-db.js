@@ -60,9 +60,50 @@ function _getStore() {
   return _store;
 }
 
+// §PHASEMAP P3 (docs/cortex-schema-registry-phasemap.spec) — observe-on-write.
+// After a row is inserted, consult the schema-registry and record a schema_drift
+// row if the row deviates from the table's schema. NON-BLOCKING: the insert has
+// already succeeded and returned; observation is a side-channel (§13.4 integrity
+// by observation, not lockdown — James: fluid, not rigid). Recursion-guarded:
+// the registry's OWN writes (schemas, schema_drift) must not trigger observation,
+// or an insert would loop. §16.5 — wraps the facade, never touches the shared
+// JaaStore class the 9 processes depend on.
+const _OBSERVE_SKIP = new Set(['schemas', 'schema_drift', 'event_log', 'component_ledger']);
+let _observing = false;   // reentrancy guard
+function _observeWrite(table, row) {
+  if (_observing) return;
+  if (_OBSERVE_SKIP.has(table)) return;   // never observe the observer's own tables
+  _observing = true;
+  try {
+    const reg = require('../../lib/schema-registry');
+    const schema = reg.getSchema(table);
+    if (!schema) return;   // unschematized table = unobserved, not drift (fluid)
+    const verdict = reg.checkShape(table, row);
+    if (verdict && verdict.drift) {
+      // Record the deviation as data (the already-named SCHEMA_VIOLATION fault).
+      _getStore().insert('schema_drift', {
+        uuid: _uid(),
+        kind: 'schema_drift',
+        table,
+        rowUuid: row && row.uuid || null,
+        schemaVersion: verdict.schemaVersion,
+        missing: verdict.missing,
+        typeMismatches: verdict.typeMismatches,
+        unexpected: verdict.unexpected,
+        ts: Date.now(),
+      });
+    }
+  } catch (_) {
+    // §1.2 — a schema-registry failure must NEVER break a write. Observation is
+    // best-effort; the data is already safely stored.
+  } finally {
+    _observing = false;
+  }
+}
+
 // Thin adapter — exposes the jaaDB call shape used across the codebase
 const jaaDB = {
-  insert(table, row)             { return _getStore().insert(table, row); },
+  insert(table, row)             { const r = _getStore().insert(table, row); _observeWrite(table, r); return r; },
   upsert(table, row, keyField)   { return _getStore().upsert(table, row, keyField); },
   get(table, where)              { return _getStore().get(table, where); },
   getById(table, id)             { return _getStore().get(table, { id }); },

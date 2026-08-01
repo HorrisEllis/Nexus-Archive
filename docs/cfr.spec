@@ -59,3 +59,7 @@ spec:
   still_open:
     - id: cfr-volume-thresholds
       description: "Exact truncation-log-cost ratio (5-10% placeholder) and per-system ring overrides for systems other than guardian/raid/idearium need tuning against real event volume once this runs."
+
+---
+## ADDENDUM 2026-07-30 — RAID verification spine P4 (docs/raid-warp-verification-phasemap.spec)
+meta/cfr/sigma now has a NEW CONSUMER: RAID's verifyInIsolation (P4) calls computeSigma(event, baseline, cfrState) to score each isolated consequential run's divergence. A score ≥ 0.7 flags the run as drifted — a SOFT signal (§17.10 weight 0.3), non-blocking on its own. The score persists to cortex's raid_decisions.meta for audit (§17.6).

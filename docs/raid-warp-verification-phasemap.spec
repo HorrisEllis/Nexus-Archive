@@ -8,6 +8,12 @@ spec:
                  Stream → StreamLog). Drift accounted for at every phase.
     uuid:        nexus-raid-warp-verification-v0-0000-2026-0730-001
     axioms_read: "AXIOMS-v3.1, 2026-07-06 — Groups 0-17, 87 laws, parsed in full."
+    related_phasemaps: >
+      This spine WRITES raid_decisions to cortex with no enforced shape — the
+      direct motivator for docs/cortex-schema-registry-phasemap.spec, which is
+      the integrity foundation beneath it and folds in the user-model work.
+      One chain: RAID verify (this, P1-P4 done) → schema-registry → user-model
+      trustworthy+queried-everywhere. Not three competing plans (§10.3, §13.4).
 
   governing_axioms:
     build_order:   "§3.1 bottom-up, phase gated · §3.3 map before build (this doc) · §3.4 raw→lib→API→CLI→UI · §16.1 close nearest gap first"
@@ -53,14 +59,14 @@ spec:
       gate: "an axiom-violating action is denied, naming the axiom (§12.2 the test can fail)."
       axioms: [§17.10, §16.3, §1.2, §0.1]
 
-    P3_cos_isolate_and_verify:
+    P3_cos_isolate_and_verify:   # ← DONE 2026-07-30, sync callers untouched, 1077/0
       does: "consequential actions run in a COS compartment (BranchEngine.fork → SandboxRunner.run) before touching real state; commit only on PASS (§1.1, §2.1 no mutation before pass)."
       warp: "the isolate→verify step is a WARP Gate; SandboxRunner result is the axiom check (hard)."
       drift: "'consequential' is a declared, versioned predicate — its scope drift is tracked, not silent."
       gate: "a failing action is caught in the sandbox; real target untouched (§1.1)."
       axioms: [§1.1, §2.1, §17.10, §5.9]
 
-    P4_sigma_drift_score:
+    P4_sigma_drift_score:   # ← DONE 2026-07-30, soft signals, 1083/0
       does: "score the sandboxed run: sigma (halt-risk) + meta/bda (behavioral regime). Spike/unstable regime → soft-fail signal to RAID."
       warp: "sigma+bda as SOFT axioms (§17.10 weight 0.3, may skip on identical verified digest, skip logged)."
       drift: "THIS is the drift engine itself, now also applied to gates (§13.4). bda regime on the verdict stream."

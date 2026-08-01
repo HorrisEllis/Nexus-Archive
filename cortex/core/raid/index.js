@@ -328,6 +328,7 @@ function recordDecision(decision = {}) {
     outcome:   decision.outcome || 'executed',   // executed | error | denied
     approved:  decision.approved !== false,
     error:     decision.error || null,
+    meta:      decision.meta || null,             // §17.5 — structured, queryable decision metadata (e.g. P4 sigma/regime), NOT hashed away
     causedBy:  decision.causedBy || null,         // §9.6 session/decision chain
     eventTs:   decision.eventTs || Date.now(),    // §3.2 logical time is the ordering axis
     ts:        Date.now(),
@@ -358,6 +359,129 @@ function _pruneCalls(source) {
   const calls = (_toolCalls.get(source) || []).filter(c => now - c.ts < RATE_WINDOW_MS);
   _toolCalls.set(source, calls);
   return calls;
+}
+
+// §PHASEMAP P3 — COS ISOLATE AND VERIFY (docs/raid-warp-verification-phasemap.spec).
+// A consequential action is verified in a COS compartment BEFORE it touches real
+// state (§1.1 nothing real until proven, §2.1 no mutation before pass). §8.4:
+// _approveTool has 6 live callers, all synchronous — so P3 does NOT make it
+// async. Instead this is a SEPARATE async verify the sandbox path opts into,
+// leaving every existing caller untouched (§0.4 more optionality, not a breaking
+// change). §8.6/§16.5: it DELEGATES to lib/execution-pipeline (which already
+// chains BranchEngine.fork → SandboxRunner.run → CompareEngine) — the isolation
+// machinery is reused, not rebuilt. commit-only-on-PASS is the pipeline's own
+// guarantee (§2.1). A non-consequential action returns { verified:true,
+// skipped:'not-consequential' } fast — the sandbox is earned, not universal
+// (§16.4 complexity earns its existence).
+const _CONSEQUENTIAL_ACTIONS = new Set(['forge', 'build', 'delete', 'rollback', 'repair', 'migrate', 'scaffold']);
+function _isConsequential(action, opts = {}) {
+  if (opts.consequential === true) return true;
+  if (opts.consequential === false) return false;
+  return _CONSEQUENTIAL_ACTIONS.has(action);
+}
+
+async function verifyInIsolation({ source, action, specPath, outputDir, testCommand, opts = {} } = {}) {
+  // Not consequential → no sandbox needed. Fast path, recorded (§17.6).
+  if (!_isConsequential(action, opts)) {
+    recordDecision({ source, tool: action, outcome: 'executed', approved: true,
+      causedBy: opts.causedBy, args: { verify: 'skipped-not-consequential' } });
+    return { verified: true, skipped: 'not-consequential', action };
+  }
+  // Consequential → run the existing isolate→verify→compare pipeline (§8.6 reuse).
+  if (!specPath) {
+    return { verified: false, error: 'verifyInIsolation: specPath required for a consequential action (§1.2)' };
+  }
+  let pipeline;
+  try { pipeline = require('../../../lib/execution-pipeline'); }
+  catch (e) { return { verified: false, error: `execution-pipeline unavailable: ${e.message}` }; }
+
+  let result;
+  try {
+    result = await pipeline.runPipeline(specPath, { outputDir, testCommand });
+  } catch (e) {
+    recordDecision({ source, tool: action, outcome: 'error', approved: false,
+      error: `isolation verify threw: ${e.message}`, causedBy: opts.causedBy });
+    return { verified: false, error: `isolation verify threw: ${e.message}` };
+  }
+
+  // The pipeline never touched the real target unless it PASSED (§2.1). Map its
+  // verdict onto verify + record (§17.6 auditable).
+  const verified = !!(result && result.ok);
+
+  // §PHASEMAP P4 — SIGMA + BEHAVIORAL DRIFT SCORING. Score the isolated run:
+  // sigma (divergence from baseline) + BDA (behavioral regime). These are SOFT
+  // signals (§17.10 — weight 0.3, they FLAG, they do not by themselves hard-fail
+  // a run that otherwise passed). A sigma spike or an unstable regime
+  // (DYSREGULATED/COLLAPSING) is surfaced to the caller and recorded, so a run
+  // that "passed" but drifted is visible (§13.4 drift is data). §8.6 — built on
+  // the real computeSigma(event, baseline, cfrState) + bda.observe({role,text}).
+  const drift = _scoreRun({ source, action, result, verified, opts });
+
+  recordDecision({
+    source, tool: action,
+    outcome: verified ? 'executed' : 'denied',
+    approved: verified,
+    error: verified ? null : `isolation verify failed at stage '${result?.stage || 'unknown'}'`,
+    causedBy: opts.causedBy,
+    meta: { branchId: result?.branchId, stage: result?.stage,
+      sigma: drift.sigma, regime: drift.regime, drifted: drift.drifted },
+  });
+  return {
+    verified,
+    stage: result?.stage,
+    branchId: result?.branchId,
+    regressions: result?.regressions || [],
+    realTargetTouched: verified,   // pipeline only checks out to the real dir on pass
+    sigma: drift.sigma,            // §P4 divergence score (soft signal)
+    regime: drift.regime,          // §P4 behavioral regime (soft signal)
+    drifted: drift.drifted,        // §P4 true if sigma spike or unstable regime
+    driftReason: drift.reason,
+    result,
+  };
+}
+
+// §P4 helper — score a completed run for divergence + behavioral drift. Soft,
+// non-throwing: a scoring failure degrades to { drifted:false } rather than
+// breaking the verify (§1.2 — the score is best-effort context, not a gate).
+const _SIGMA_SPIKE = 0.7;   // divergence above this is a flagged spike
+const _UNSTABLE_REGIMES = new Set(['DYSREGULATED', 'COLLAPSING']);
+function _scoreRun({ source, action, result, verified, opts = {} }) {
+  let sigma = null, regime = null, drifted = false, reasons = [];
+  // Sigma — divergence of this run's shape from baseline (§8.6 real API).
+  try {
+    const { computeSigma } = require('../../../meta/cfr/sigma');
+    const event = { type: `raid.verify.${action}`, source, ok: verified, stage: result?.stage };
+    const baseline = opts.sigmaBaseline || {};
+    const s = computeSigma(event, baseline, opts.cfrState || {}, opts.intervalMs || 0);
+    sigma = s && typeof s.score === 'number' ? s.score : null;
+    if (sigma != null && sigma >= _SIGMA_SPIKE) { drifted = true; reasons.push(`sigma spike ${sigma}`); }
+  } catch (e) { reasons.push(`sigma unavailable: ${e.message}`); }
+  // BDA — behavioral regime of the run's narrative (§8.6 real API, §0.1 verified:
+  // meta/bda exports the BDAKernel CLASS, not a factory. Instantiate once (cached)
+  // so it accumulates observation history — drift is measured across runs, not
+  // per-run in isolation. observe() returns { pendulum: { regime } }.
+  try {
+    const kernel = _bdaKernel();
+    if (kernel) {
+      const text = `verify ${action} by ${source}: ${verified ? 'passed' : 'failed'} at ${result?.stage || 'unknown'}`;
+      const obs = kernel.observe({ role: 'assistant', text });
+      regime = obs?.pendulum?.regime || null;
+      if (regime && _UNSTABLE_REGIMES.has(regime)) { drifted = true; reasons.push(`unstable regime ${regime}`); }
+    }
+  } catch (e) { reasons.push(`bda unavailable: ${e.message}`); }
+  return { sigma, regime, drifted, reason: reasons.join('; ') || null };
+}
+
+// Cached BDA kernel — one instance accumulates the observation history drift
+// analysis needs (a fresh kernel per call would always read STABLE).
+let _bdaKernelInstance = null;
+function _bdaKernel() {
+  if (_bdaKernelInstance) return _bdaKernelInstance;
+  try {
+    const bda = require('../../../meta/bda');
+    if (bda && bda.BDAKernel) _bdaKernelInstance = new bda.BDAKernel();
+  } catch (_) { _bdaKernelInstance = null; }
+  return _bdaKernelInstance;
 }
 
 function _approveTool(source, command, opts = {}) {
@@ -511,6 +635,6 @@ module.exports = {
   _roleConfidence, _topologicalProximity, setCausalGraph,
   recordOutcome,
   startHealthPoll, stopHealthPoll,
-  _approveTool, _toolHealthSnapshot, recordDecision,
+  _approveTool, _toolHealthSnapshot, recordDecision, verifyInIsolation,
   init, stop, _onOrionClassified,
 };

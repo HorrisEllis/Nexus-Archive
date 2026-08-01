@@ -68,6 +68,18 @@ function _ensureProfile() {
 function init(jaaDB) {
   _jaa = jaaDB;
   _ensureProfile();
+  // §PHASEMAP UM1 (docs/cortex-schema-registry-phasemap.spec) — declare the
+  // user-model's SHAPE so it becomes trustworthy: the model is only worth
+  // querying on every response (UM2) if its integrity is observed. Derives the
+  // schema from the REAL rows just loaded (§0.1) and registers it, so writes to
+  // user_model_hypotheses are schema-observed (P3) from here on. Non-fatal — a
+  // registry hiccup must never stop the user-model from working (§1.2).
+  try {
+    const reg = require('../../lib/schema-registry');
+    for (const t of ['user_model_hypotheses', 'user_lattice']) {
+      if (!reg.getSchema(t)) reg.registerSchema(t, { owner: 'user-model' });
+    }
+  } catch (_) { /* registry unavailable — user-model still works, just unobserved */ }
   // Run decay once on boot, then daily
   _runDecay();
   _decayTimer = setInterval(_runDecay, DECAY_INTERVAL_MS);

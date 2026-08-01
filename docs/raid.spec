@@ -81,3 +81,11 @@ spec:
       landed the SPINE + proved it with the router live in cortex boot. Converting
       each surface to route-through-RAID is the incremental follow-on — one surface
       at a time, each verified, system booting throughout (the bottom-up plan).
+
+---
+## ADDENDUM 2026-07-30 — RAID verification spine P4 (docs/raid-warp-verification-phasemap.spec)
+RAID gained verifyInIsolation() — a consequential action is isolated (via lib/execution-pipeline: BranchEngine→SandboxRunner→CompareEngine, P3) and then SCORED (P4): sigma divergence (meta/cfr/sigma.computeSigma) + behavioral regime (meta/bda BDAKernel.observe). These are SOFT signals (§17.10 weight 0.3): they flag drift, they do not by themselves hard-fail a passing run. Scores persist to cortex's raid_decisions table in a queryable `meta` field (§17.5 — not hashed into argsDigest). recordDecision (P1) + constitution gate (P2) + isolate (P3) + drift score (P4) now compose. _approveTool remains synchronous — its 6 live callers are untouched (§8.4).
+
+---
+## ADDENDUM 2026-07-30 — cortex schema-registry P3 (docs/cortex-schema-registry-phasemap.spec)
+raid_decisions writes are now schema-OBSERVED. jaaDB.insert consults lib/schema-registry after appending; a row deviating from the raid_decisions schema records a schema_drift row — NON-BLOCKING (the decision write always succeeds, §13.4 integrity by observation). This is why the `meta` field mattered (P4 addendum): a decision carrying sigma/regime in `meta` conforms only if the schema knows `meta`. Re-derive the schema (schema-registry.registerSchema) after adding fields so the shape stays current. The observer skips its own tables (schemas, schema_drift) and high-volume tables (event_log, component_ledger) to avoid noise/recursion.

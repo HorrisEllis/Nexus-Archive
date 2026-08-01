@@ -419,6 +419,21 @@ async function _injectSessionHistory(session, contextText) {
 const RECALL_CONTEXT_SCORE_THRESHOLD = 0.3;
 const RECALL_CONTEXT_TOP_K = 3;
 
+// §PHASEMAP UM2 (docs/cortex-schema-registry-phasemap.spec) — query the
+// user-model on EVERY prompt path, not just the tool-loop. buildUserContext()
+// reads the confidence-weighted hypotheses (now schema-observed, UM1) so
+// co-pilot knows the user and adjusts on every response. Injected like the other
+// context layers (§8.6 same pattern as _injectRecallContext). Non-fatal: a
+// user-model hiccup never breaks a response (§1.2).
+function _injectUserModel(contextText) {
+  try {
+    const um = require('./lib/user-model');
+    const model = um.buildUserContext ? um.buildUserContext() : '';
+    if (model && model.trim()) return `${model}\n\n${contextText}`;
+  } catch (_) { /* user-model unavailable — respond without it */ }
+  return contextText;
+}
+
 async function _injectRecallContext(prompt, contextText) {
   if (!prompt || prompt.length < 8) return contextText; // too short to search meaningfully
   try {
@@ -785,6 +800,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // §P103: inject session history on first exchange
+    contextText = _injectUserModel(contextText);   // §UM2 — know the user on every path
     contextText = await _injectSessionHistory(session, contextText);
     // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
     // just session-start), best-effort, never blocks.
@@ -961,6 +977,7 @@ const server = http.createServer(async (req, res) => {
     // Full context assembly — same path as /api/prompt
     let contextText = '';
     try { contextText = await _analysis.assembleContext(prompt, _stream, session); } catch(_) {}
+    contextText = _injectUserModel(contextText);   // §UM2 — know the user on every path
     contextText = await _injectSessionHistory(session, contextText);
     // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
     // just session-start), best-effort, never blocks.
@@ -1213,6 +1230,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // §P103: session history injection (first exchange only)
+    contextText = _injectUserModel(contextText);   // §UM2 — know the user on every path
     contextText = await _injectSessionHistory(session, contextText);
     // §BUILT 2026-07-13 — chunk_2: associative recall, every exchange (not
     // just session-start), best-effort, never blocks.
