@@ -663,6 +663,66 @@ function stop() {
   _bus = null;
 }
 
+// ── §PHASEMAP P7 — the ONE fused verify every system calls (WARP GateFusion) ──
+// (docs/raid-warp-verification-phasemap.spec). verify(decision) composes the
+// whole spine into a single call: constitution gate (P2, hard + cheap, runs
+// FIRST and short-circuits — §17.10) → isolate+drift+compare+rewind (P3-P6 via
+// verifyInIsolation) → one unified verdict, recorded (P1). §16.5 — this COMPOSES
+// the pieces built in P1-P6, it does not reimplement them. §10.3 — agent-tools,
+// the execution-pipeline, and the autonomous loop all call THIS, so there is one
+// spine, not N verification paths. The StreamLog audit trail is the decision
+// record every step already writes (§17.6).
+//
+// @param {object} decision
+//   source, action, intent  — for the constitution gate (P2)
+//   specPath, outputDir, testCommand — for isolation (P3-P6), if consequential
+//   opts — passthrough (causedBy, requestId, sigmaBaseline, ...)
+// @returns {Promise<{approved, stage, reason, axiom?, contractBreach?, sigma?, regime?, drifted?, snapshotId?, verdicts}>}
+async function verify(decision = {}) {
+  const { source, action = 'tool', intent, specPath, outputDir, testCommand, opts = {} } = decision;
+  const verdicts = {};
+
+  // ── Gate 1: constitution (P2) — hard, cheap, FIRST. A block short-circuits the
+  // whole chain before any sandbox cost (§17.10 hard axioms run first).
+  const approval = _approveTool(source, action, { action, intent, causedBy: opts.causedBy, jaa: opts.jaa });
+  verdicts.constitution = { approved: approval.approved, axiom: approval.axiom, reason: approval.reason };
+  if (!approval.approved) {
+    // Denied at the constitution/contract gate — no isolation needed. Already
+    // recorded by _approveTool (P1/P2 compose).
+    return {
+      approved: false, stage: 'constitution',
+      reason: approval.reason, axiom: approval.axiom,
+      blast_radius: approval.blast_radius, alternatives: approval.alternatives || [],
+      verdicts,
+    };
+  }
+
+  // ── Gate 2: isolate → drift → compare → rewind (P3-P6). Only runs if the
+  // constitution gate passed. For a non-consequential action this returns fast
+  // (verified:true, skipped). verifyInIsolation records the decision (P1) and
+  // snapshots on fail (P6).
+  const iso = await verifyInIsolation({ source, action, specPath, outputDir, testCommand, opts });
+  verdicts.isolation = {
+    verified: iso.verified, stage: iso.stage, skipped: iso.skipped,
+    contractBreach: iso.contractBreach, sigma: iso.sigma, regime: iso.regime,
+    drifted: iso.drifted, snapshotId: iso.snapshotId,
+  };
+
+  // ── Fused verdict: approved iff constitution passed AND isolation verified.
+  return {
+    approved: approval.approved && iso.verified,
+    stage: iso.verified ? 'approved' : (iso.stage || 'isolation'),
+    reason: iso.verified ? 'all gates passed'
+      : (iso.contractBreach ? 'contract breach: output regressed vs golden'
+                            : `verification failed at stage '${iso.stage || 'unknown'}'`),
+    contractBreach: iso.contractBreach,
+    sigma: iso.sigma, regime: iso.regime, drifted: iso.drifted,
+    regressions: iso.regressions,
+    snapshotId: iso.snapshotId,   // §P6 — a failed fused verify is replayable
+    verdicts,                     // the per-gate breakdown (§17.6 legible)
+  };
+}
+
 module.exports = {
   MODULE_ID, VERSION,
   _decide, _cluster, _health, _weights,
@@ -670,6 +730,6 @@ module.exports = {
   _roleConfidence, _topologicalProximity, setCausalGraph,
   recordOutcome,
   startHealthPoll, stopHealthPoll,
-  _approveTool, _toolHealthSnapshot, recordDecision, verifyInIsolation,
+  _approveTool, _toolHealthSnapshot, recordDecision, verifyInIsolation, verify,
   init, stop, _onOrionClassified,
 };

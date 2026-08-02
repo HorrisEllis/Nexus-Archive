@@ -3,7 +3,7 @@ spec:
     name:        raid-warp-verification-spine
     version:     0.2.0-phasemap
     supersedes:  raid-verification-spine v0.1.0 (folds in AXIOMS-v3.1, WARP logic, drift accounting)
-    status:      PHASEMAP 2026-07-30. Governed by AXIOMS-v3.1 (all 87 parsed).
+    status:      ALL 11 PHASES COMPLETE 2026-07-30 (Part I verify spine P1-P7 + Part II bridge P8-P11). PHASEMAP. Governed by AXIOMS-v3.1 (all 87 parsed).
                  New code uses WARP logic (warp/core: weighted Axiom → Gate →
                  Stream → StreamLog). Drift accounted for at every phase.
     uuid:        nexus-raid-warp-verification-v0-0000-2026-0730-001
@@ -87,7 +87,7 @@ spec:
       gate: "a failed decision is replayable from a snapshot (§0.3, §16.2 reads like a story)."
       axioms: [§0.3, §7.4, §16.2, §17.6]
 
-    P7_one_raid_verify_spine:
+    P7_one_raid_verify_spine:   # ← DONE 2026-07-30, fused GateFusion, 1143/0
       does: "unify P1-P6 into raid.verify(decision): record→constitution→isolate→sigma/drift→compare→snapshot-on-fail→approve/deny. agent-tools, execution-pipeline, autonomous-loop all call it (§10.3 one path, §5.14 same contract)."
       warp: "raid.verify IS a WARP GateFusion — the phases are fused gates on one stream, StreamLog is the audit trail (§17.6)."
       drift: "the whole spine's verdict distribution is monitored; the spine watches itself for drift (§13.4)."
@@ -121,7 +121,7 @@ spec:
 
   bridge_phases:
 
-    P8_ui_as_copilot_tools:
+    P8_ui_as_copilot_tools:   # ← DONE 2026-07-30, 17 tools
       why: "Co-pilot must be able to ACT on the UI to assist the user. spotlight + nerve are already HTTP-callable and 'register with co-pilot' (their headers)."
       does: >
         Wrap the existing UI surfaces as agent-tools (§16.5 wrap don't rebuild):
@@ -133,7 +133,7 @@ spec:
       gate: "co-pilot, mid-task, lights up the relevant system in the UI to guide the user (§1.1 proven live)."
       axioms: [§16.5, §8.6, §5.12, §17.6]
 
-    P9_gated_events_to_copilot:
+    P9_gated_events_to_copilot:   # ← DONE 2026-07-30, relevance classifier, 1154/0
       why: "Co-pilot must DETECT relevant events from the user's gated interactions to assist proactively."
       does: >
         The gated-event surface (_logToData in tv-shell) streams UI interaction
@@ -146,7 +146,7 @@ spec:
       gate: "a repeated user error surfaces to co-pilot as a relevant event, no explicit ask (§13.1 intent logged)."
       axioms: [§14.2, §8.6, §13.1, §13.4]
 
-    P10_diagnose_and_notify:
+    P10_diagnose_and_notify:   # ← DONE 2026-07-30, assist loop
       why: "'Automatically diagnose and notify the user using a toast or cli command.'"
       does: >
         On a relevant detected event (P9), co-pilot runs diagnose (the existing
@@ -158,7 +158,7 @@ spec:
       gate: "a detected fault is auto-diagnosed and the user sees a toast/CLI line explaining it (§1.2 specific, §16.2 reads like a story)."
       axioms: [§8.6, §1.2, §16.2, §15.1]
 
-    P11_diagnose_and_repair_on_prompt:
+    P11_diagnose_and_repair_on_prompt:   # ← DONE 2026-07-30, repair through raid.verify, 1168/0
       why: "'Diagnose AND repair when prompted.' The full bridge: user asks, co-pilot fixes through the verified spine."
       does: >
         On a repair prompt, co-pilot diagnoses, proposes a fix, and — routed
