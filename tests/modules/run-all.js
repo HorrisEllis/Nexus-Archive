@@ -78,6 +78,7 @@ const SUITES = [
   'test-assist-loop.js',
   'test-repair-on-prompt.js',
   'test-copilot-window.js',
+  'test-cli-consolidation.js',
   'test-shared-stream.js',
   'test-self-register.js',
   'test-registration-shape.js',

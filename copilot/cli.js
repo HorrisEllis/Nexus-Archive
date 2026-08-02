@@ -284,8 +284,62 @@ async function exec(input) {
     return;
   }
 
-  // Resolve command
-  const resolved = ge.resolve(trimmed);
+  // §CONSOLIDATION 2026-07-30 (James: "the only cli should have co-pilot
+  // available to talk to, and also every system and cli command that updates
+  // dynamically"). Folded IN from the retired cli/nexus.js dispatcher: a
+  // /system prefix passes through to that system's own CLI, so this one CLI
+  // reaches EVERY system — alongside co-pilot talk (above) and the live
+  // registry grammar (below). §10.3 one CLI, not competing entries.
+  if (trimmed.startsWith('/')) {
+    const [sysTok, ...rest] = trimmed.split(/\s+/);
+
+    // §2026-07-30 (James: "tv-ui, the cli needs to also use it") — /tv drives the
+    // tv-ui from the one CLI, via the same /api/ui surface co-pilot's UI tools
+    // use. /tv spotlight <target> | /tv nerve on|off | /tv clear.
+    if (sysTok === '/tv') {
+      const [sub, arg] = rest;
+      const uiPost = (p, body) => new Promise((resolve) => {
+        const http = require('http');
+        const data = Buffer.from(JSON.stringify(body || {}));
+        const req = http.request({ hostname: process.env.NEXUS_UI_HOST || '127.0.0.1',
+          port: process.env.NEXUS_UI_PORT || 3000, path: p, method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': data.length }, timeout: 5000 },
+          res => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve({ ok: res.statusCode < 400, status: res.statusCode })); });
+        req.on('error', e => resolve({ error: `tv-ui unreachable: ${e.message}` }));
+        req.on('timeout', () => { req.destroy(); resolve({ error: 'tv-ui timeout' }); });
+        req.write(data); req.end();
+      });
+      let r;
+      if (sub === 'spotlight' && arg) r = await uiPost('/api/ui/spotlight/on', { target: arg, ttl: 8000 });
+      else if (sub === 'nerve') r = await uiPost(`/api/ui/nerve/${arg === 'off' ? 'off' : 'on'}`, {});
+      else if (sub === 'clear') r = await uiPost('/api/ui/spotlight/off', {});
+      else { console.log(c.dim('  /tv spotlight <target> | /tv nerve on|off | /tv clear')); return; }
+      console.log(r.error ? c.dim(`  ${r.error}`) : c.g(`  ✓ tv-ui: ${sub} ${arg || ''}`));
+      return;
+    }
+
+    const MODULE_CLI = {
+      '/guardian': 'guardian/cli.js',
+      '/cockpit':  'cockpit/cli.js',
+      '/forge':    'cockpit/cli.js',
+      '/cortex':   'cortex/cortex.js',
+      '/idearium': 'idearium/cli/index.js',
+      '/nexus':    'cli/nexus.js',       // utility commands: status, jobs, watch, gaps, snr, tag, ...
+      '/copilot':  'copilot/cli.js',
+      '/cp':       'copilot/cli.js',
+    };
+    const rel = MODULE_CLI[sysTok];
+    if (!rel) {
+      console.log(c.dim(`  unknown system "${sysTok}" — known: ${Object.keys(MODULE_CLI).join(', ')}`));
+      return;
+    }
+    const { spawnSync } = require('child_process');
+    const p = require('path');
+    const cliPath = p.join(__dirname, '..', rel);
+    if (!require('fs').existsSync(cliPath)) { console.log(c.dim(`  CLI not found: ${rel}`)); return; }
+    spawnSync(process.execPath, [cliPath, ...rest], { stdio: 'inherit', env: { ...process.env } });
+    return;
+  }
   if (!resolved) {
     // Grammar engine couldn't resolve — try Qwen 0.5b reasoning layer
     const qwenAvail = await clr.isAvailable();
