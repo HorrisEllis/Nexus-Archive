@@ -398,6 +398,15 @@ Flags: ${C.muted}--json${C.reset} (raw JSON output on any command)
 const cmd = args[0];
 if (!cmd || cmd === 'help') {
   CMDS.help();
+} else if (cmd === '/window' || cmd === '/w') {
+  // §2026-07-30 — open the co-pilot CLI in a NEW terminal window, connected to
+  // every system through co-pilot (grammar-driven console, registry-live).
+  const { openCopilotWindow } = require('./copilot-window');
+  const r = openCopilotWindow(args.slice(1));
+  if (r.mode === 'window') {
+    console.log(`  co-pilot CLI opened in a new window — connected to NEXUS through co-pilot.`);
+    process.exit(0);
+  }
 } else if (cmd.startsWith('/')) {
   CMDS.passthrough(cmd.slice(1), args.slice(1));
 } else if (typeof CMDS[cmd] === 'function') {

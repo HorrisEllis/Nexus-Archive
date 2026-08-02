@@ -77,6 +77,7 @@ const SUITES = [
   'test-relevance-classify.js',
   'test-assist-loop.js',
   'test-repair-on-prompt.js',
+  'test-copilot-window.js',
   'test-shared-stream.js',
   'test-self-register.js',
   'test-registration-shape.js',
