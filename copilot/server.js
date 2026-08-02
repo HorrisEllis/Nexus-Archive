@@ -1017,6 +1017,17 @@ const server = http.createServer(async (req, res) => {
     const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0,500), sessionId);
     if (mastermind?.analysis) contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0,400)}`;
 
+    // §PHASEMAP CA1 — if the user asks how the system/co-pilot is doing, answer
+    // with a REAL status poll (health + gaps + loom wiring) instead of routing to
+    // the LLM, which produced the canned "I don't have enough context" reply.
+    try {
+      const _status = require('./system-status');
+      if (_status.isStatusQuery(prompt)) {
+        const rep = await _status.statusReport();
+        return json(res, 200, { text: rep.text, model_used: 'nexus-status', confidence: 1, escalated: false, status: rep.status, requestId });
+      }
+    } catch (_) { /* status poll unavailable — fall through to the normal path */ }
+
     // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
     let text = '', modelUsed = 'none', confidence = null, escalated = false, escalationReason = null;
     try {

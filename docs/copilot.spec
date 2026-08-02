@@ -211,3 +211,20 @@ spec:
     - 'session survives Guardian restart'
     - 'context-assembler reads from :3748 not :7820'
     - 'wire context (requestId, componentId, hookId) on every CFR entry'
+
+---
+## ADDENDUM 2026-07-30 — CA1 status report + awareness/routing arc (docs/copilot-awareness-routing-phasemap.spec)
+Co-pilot gained a real status path (copilot/system-status.js): a status query ("how are you", "system status", "how is nexus doing") is intercepted BEFORE the LLM dispatch and answered by POLLING live health across 7 systems + open gaps + loom's wired-component count (§16.2 legible). This replaces the canned "I don't have enough context" reply. §8.6 — composes existing /health + gaps + loom (:3752), no new monitoring. Non-fatal (unreachable source → 'unknown', never throws).
+Mapped next (docs/copilot-awareness-routing-phasemap.spec, NOT yet built): CA2 tool self-awareness (per-tool edge-case + how-to-use notes injected into context), CA3 tool-first (look for a tool BEFORE the lifeline offer), CA4 capability-extend ("no is not an answer" → unmet request becomes a module_builder/forge gap), CA5 intent routing (see raid.spec addendum), CA6 editable routing/token/constraint config (cortex rows), CA7 ClearGlass multi-account gear.
+
+---
+## ADDENDUM 2026-07-30 — CHUNK A complete: co-pilot is self-aware (CA1+CA2+CA3)
+CA2 (lib/agent-tools/tool-guide.js): every one of the 17 tools now carries an operational usage note — how/when to use it, its edge cases, and when to prefer it over another — injected into the co-pilot system prompt (tool-runtime.js). Descriptions say WHAT a tool does; the guide says HOW and WHEN. The guide is versioned (GUIDE_VERSION) so a tool's behavior drifting from its note is detectable (§12.5). CA3: the system prompt now instructs TOOL-FIRST — co-pilot looks for a tool that fulfills the request before answering from memory or escalating (this runs conceptually ahead of the lifeline offer). Together with CA1 (status), CHUNK A ships "co-pilot is self-aware": it knows the system's state, its own tools, and reaches for them first.
+
+---
+## ADDENDUM 2026-07-30 — CHUNK B complete: co-pilot extends itself (CA4)
+CA4 (copilot/capability-extend.js): "no is not an answer." When no tool AND no agent can fulfill a request (shouldExtend detects the both-failed point), co-pilot files a capability_extension gap through cortex's existing gap engine (POST /api/gaps → gaps table + cortex.gap.found bus, which gap-finder/forge already consume) and answers "I can't do that with what I have YET — but I've logged it as a capability to build." The unmet request becomes tracked work routed toward module_builder, never a bare refusal (§1.2 loud, not a dead end). §8.6 builds on the existing gap engine + module_builder; §0.4 turns "I can't" into "not yet".
+
+---
+## ADDENDUM 2026-07-30 — CHUNK D: CA7 ClearGlass multi-account (backend)
+CA7 (lib/account-registry.js): providers (claude/chatgpt/gemini/perplexity) can now have MULTIPLE account slots (James: "login to multiple accounts in ClearGlass like an app password"), stored as editable cortex rows (provider_accounts table). addAccount/listAccounts/getAccountForRoute/setAccountStatus/removeAccount. CA5 routing now carries route.account (default or named) so ClearGlass logs into the right account for the chosen provider. SECURITY: credentials are stored as a REFERENCE (key name / app-password id, e.g. "kc:claude-work"), NOT a raw secret — the real secret lives in the OS/Electron credential store the ClearGlass shell resolves at login. A failed account is observable (§1.2), removal archives (§0.3). HONEST SCOPE: the tv-ui GEAR and the LIVE multi-account login are Electron-side and prove out on James's machine; this backend is the read/write surface they use. Full awareness/routing arc CA1-CA7 built, suite 1223/0.

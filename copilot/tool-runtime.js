@@ -101,7 +101,9 @@ async function run(o = {}) {
   // the live continuous stream (P3). Both are optional and injected, so P1
   // works alone and P2/P3 enrich it without changing this contract.
   const systemPrompt = [
-    'You are the NEXUS co-pilot. You have tools; use them to read files, run diagnostics, query memory, and act on the system. Prefer using a tool over guessing.',
+    'You are the NEXUS co-pilot. You have tools; use them to read files, run diagnostics, query memory, and act on the system.',
+    'ALWAYS look for a tool that can fulfill the request before answering from memory or escalating. Prefer a tool over a guess.',
+    (() => { try { return 'YOUR TOOLS (how and when to use them):\n' + require('../lib/agent-tools/tool-guide').toolGuide(); } catch { return ''; } })(),
     o.memory ? `\nWHAT YOU REMEMBER ABOUT THIS USER AND SYSTEM:\n${o.memory}` : '',
     o.streamDigest ? `\nLIVE SYSTEM STREAM (most recent events):\n${o.streamDigest}` : '',
   ].filter(Boolean).join('\n');

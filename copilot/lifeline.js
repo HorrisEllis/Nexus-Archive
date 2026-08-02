@@ -315,7 +315,26 @@ async function route(prompt, opts = {}) {
       return result;
     }
 
-    // ── 2. Ollama confidence low — escalate to Guardian (lifeline) ──────────
+    // ── 2. Ollama confidence low ────────────────────────────────────────────
+    // §FLUID 2026-07-30 (James: "have co-pilot ask me if I want to use lifeline").
+    // When askBeforeEscalate is set, DON'T auto-escalate — return the low-confidence
+    // answer plus an offer, and let the user decide (§0.4 the user stays in
+    // control). The auto path below is unchanged when the flag isn't set, so
+    // nothing that relied on auto-escalation breaks.
+    if (opts.askBeforeEscalate) {
+      const result = {
+        ok: true, text: ollamaResult.text,
+        confidence: ollamaResult.confidence,
+        provider_used: 'ollama', escalated: false,
+        offer_lifeline: true,                          // the UI/CLI shows the offer
+        offer_reason: `Ollama confidence ${(ollamaResult.confidence * 100).toFixed(0)}% is below ${(CONFIDENCE_THRESHOLD * 100).toFixed(0)}%`,
+        requestId,
+      };
+      _persist({ ...opts, prompt, requestId }, result, 'lifeline_offered');
+      return result;
+    }
+
+    // ── 2b. auto-escalate to Guardian (lifeline) ────────────────────────────
     console.log(`[lifeline] Ollama confidence ${ollamaResult.confidence.toFixed(2)} < ${CONFIDENCE_THRESHOLD} — escalating to Guardian`);
 
     const guardianResult = await _tryGuardian(prompt, { ...opts, requestId });
