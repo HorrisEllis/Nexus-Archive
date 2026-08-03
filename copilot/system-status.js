@@ -79,7 +79,7 @@ async function statusReport() {
  */
 function isStatusQuery(prompt = '') {
   const p = prompt.toLowerCase().trim();
-  return /\b(how are you|how('?s| is) (it going|the system|nexus|everything)|status report|system status|are you (ok|okay|good|healthy)|you doing)\b/.test(p);
+  return /\b(how are you|how('?s| is) (it going|the system|nexus|everything)|status report|system status|are you (ok|okay|good|healthy)|you doing|run diagnostics?|diagnostics?|what('?s| is) wrong|health check|how is nexus (doing|running))\b/.test(p);
 }
 
 module.exports = { pollStatus, statusReport, isStatusQuery, MODULE_ID: 'copilot-system-status', VERSION: '1.0.0' };

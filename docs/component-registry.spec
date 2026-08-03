@@ -583,3 +583,62 @@ spec:
     - id: T-016
       description: "Architecture test: new system registers 4 components → grammar tree contains them, no shell code touched"
       tier: T2
+
+# ════════════════════════════════════════════════════════════════════════════
+# ADDENDUM 2026-07-30 — FORGE-CodeFactory alignment + tier/seam concepts
+# (source: FORGE-CODEFACTORY Living Doc v0.15 + Sigma Similarity 2c)
+#
+# CodeFactory (formerly CODEX) introduces concepts the NEXUS registry should
+# adopt WITHOUT creating a competing truth layer (§10.3). Recorded here so the
+# registry stays the single source of truth and CodeFactory's Blueprint layer
+# becomes a PRODUCER into it, not a second copy.
+#
+# TIER (new, from CodeFactory §2a) — structural, not self-declared:
+#   tier: component  → smallest executable unit; runs standalone; no producer required.
+#   tier: mod        → built on ≥1 component; INVALID to register with zero
+#                      component-tier producers. Enforced at register, not documented.
+#   The existing registry entry gains an optional `tier` field; a mod-tier entry
+#   whose producers contain no component-tier entry is rejected (§1.1 validated on
+#   register). This is the structural form of "a Mod can't exist without a Component".
+#
+# ONE-WRITE-AUTHORITY (CodeFactory §2a v0.13 correction, already NEXUS law):
+#   edges (wires) are owned EXCLUSIVELY by the wire registry; a component entry
+#   never stores wires_in/wires_out redundantly. Consumers/producers stay on the
+#   component; wires are queried from the wire registry. Matches NEXUS's existing
+#   one-write-authority invariant — no change needed, recorded for CodeFactory parity.
+#
+# SEAM (from CodeFactory §Layer 2a, adopted from seam-block.spec):
+#   the deterministic boundary contract between two entries — richer than a wire.
+#   { seam_uuid, boundary_name, side_a, side_b, acceptance_criterion, mock_ref,
+#     contract_version, fault_codes[] }. NEXUS already has seam-component-registry.spec
+#   + seam-block; CodeFactory uses a derivative (seam-block.codefactory.spec), same
+#   relationship seam-block.nexus.spec has to canonical. No second seam schema.
+#
+# SIGMA — TWO DISTINCT MEASUREMENTS (CodeFactory 2c, important):
+#   drift-sigma      → current state vs baseline (registry/topology change; §2a).
+#                      This is what NEXUS RAID/CFR already compute.
+#   similarity-sigma → artifact A vs artifact B (dedup, clustering, pattern
+#                      discovery). NEW, MUST NOT share the drift-sigma scalar.
+#   Six dimensions: structure, interface, behavior, dependency, semantic, usage.
+#   Weighted per purpose (dedup vs promotion vs discovery — no universal weight).
+#   Anti-generalization guard: high σ_structure + low σ_semantic → DO NOT MERGE
+#   (shape similarity without intent similarity is rejected).
+#   NOTE (§0.1): this maps onto NEXUS's OB10 sigma-role insight — sigma is one
+#   score serving many roles; CodeFactory's drift-vs-similarity split is the same
+#   principle (one computeSigma, interpreted by purpose), and OB10's per-component
+#   sigma_intent is where a NEXUS component would declare which sigma it means.
+#
+# PROMOTION STATES (CodeFactory 2c) — observed → candidate → pattern → component
+#   → module. Promotion requires EVIDENCE (occurrence count + seam validation +
+#   behavioral evidence), not just similarity. A registry entry could carry a
+#   promotion_state to track how a capability earned its place.
+#
+# ARCHITECT / ERAVOS CONSOLIDATION (§10.3 — flagged, NOT auto-resolved):
+#   CodeFactory's Blueprint Index overlaps Architect's topology-declaration role.
+#   Per §10.3 (one source of truth) the resolution is: loom stays the registry-
+#   truth; Architect stays the topology declarer WITHIN loom; CodeFactory's
+#   Blueprint layer is a PRODUCER into that truth, not a competing registry.
+#   CodeFactory does NOT replace Architect or Eravos — it raises a consolidation
+#   question resolved by making it read from loom, not own a second copy.
+#   This is a DESIGN DECISION for James, recorded not enacted.
+# ════════════════════════════════════════════════════════════════════════════

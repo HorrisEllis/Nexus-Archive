@@ -22,6 +22,45 @@ seed.push(['component', driver.declare('component', {
   id: 'nexus.architect', namespace: 'architect', name: 'The Architect', version: '1.1.0',
   uuid: 'architect-spec-0000-2026-0530-rheon-002',
 })]);
+
+// §PHASEMAP observability/tablet (2026-07-30) — register the tablet + diagnostic
+// components built this session, so loom's registry reflects them (§always-update).
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.tablet', namespace: 'tablet', name: 'NEXUS Tablet', version: '2.0.0',
+  uuid: 'nexus-tablet-homepage-v2-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.copilot.diagnostics', namespace: 'copilot', name: 'Live Diagnostics (OB1)', version: '1.0.0',
+  uuid: 'nexus-copilot-diagnostics-v1-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.copilot.diagnostic-sweep', namespace: 'copilot', name: 'Diagnostic Sweep (OB2)', version: '1.0.0',
+  uuid: 'nexus-copilot-diagnostic-sweep-v1-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.sigma-roles', namespace: 'meta', name: 'Sigma Roles (OB10)', version: '1.0.0',
+  uuid: 'nexus-sigma-roles-v1-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.pattern-leverage', namespace: 'meta', name: 'Pattern Leverage (OB8)', version: '1.0.0',
+  uuid: 'nexus-pattern-leverage-v1-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.edge-cases', namespace: 'meta', name: 'Edge Cases (OB11)', version: '1.0.0',
+  uuid: 'nexus-edge-cases-v1-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.tablet.map3d', namespace: 'tablet', name: '3D Map (OB9)', version: '1.0.0',
+  uuid: 'nexus-tablet-map3d-v1-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.copilot.optimizer', namespace: 'copilot', name: 'Optimizer (OB7)', version: '1.0.0',
+  uuid: 'nexus-copilot-optimizer-v1-0000-2026-0730-001',
+})]);
+seed.push(['component', driver.declare('component', {
+  id: 'nexus.copilot.movement-map', namespace: 'copilot', name: 'Movement Map + Bottlenecks (OB3/OB4)', version: '1.0.0',
+  uuid: 'nexus-copilot-movement-map-v1-0000-2026-0730-001',
+})]);
 seed.push(['hook', driver.declare('hook', {
   id: 'loom.hook.declare', component_id: 'nexus.loom', name: 'declare',
   type: 'callto', direction: 'in',

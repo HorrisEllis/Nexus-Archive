@@ -1023,10 +1023,18 @@ const server = http.createServer(async (req, res) => {
     try {
       const _status = require('./system-status');
       if (_status.isStatusQuery(prompt)) {
+        // OB1 — a DEEP diagnostic query ("how is nexus doing", "diagnostics",
+        // "what's wrong") gets the full live report; a light "how are you" gets
+        // the status line.
+        const wantsDeep = /\b(diagnostic|diagnose|what('?s| is) wrong|how is nexus (doing|running)|full status|deep|health check)\b/i.test(prompt);
+        if (wantsDeep) {
+          const rep = await require('./diagnostics').diagnoseText();
+          return json(res, 200, { text: rep.text, model_used: 'nexus-diagnostics', confidence: 1, escalated: false, report: rep.report, requestId });
+        }
         const rep = await _status.statusReport();
         return json(res, 200, { text: rep.text, model_used: 'nexus-status', confidence: 1, escalated: false, status: rep.status, requestId });
       }
-    } catch (_) { /* status poll unavailable — fall through to the normal path */ }
+    } catch (_) { /* status/diagnostic poll unavailable — fall through to the normal path */ }
 
     // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
     let text = '', modelUsed = 'none', confidence = null, escalated = false, escalationReason = null;
@@ -1130,6 +1138,25 @@ const server = http.createServer(async (req, res) => {
           const { normalizeStream } = require('./stream-digest');
           streamDigest = normalizeStream(_stream, 30) || '';
         } catch (_) {}
+
+        // §PHASEMAP OB6 — continuous diagnostic injection. Append a BOUNDED live
+        // health + bottleneck summary to the stream digest, so co-pilot's context
+        // continuously carries system state + movement (not just raw events).
+        // Bounded to one health line + the single worst bottleneck so it enriches
+        // rather than drowns the signal (OB6 drift note). Non-fatal.
+        try {
+          const diag = await require('./diagnostics').diagnose();
+          const parts = [];
+          if (diag.health) parts.push(`${diag.health.online}/${diag.health.total} systems online`);
+          if (diag.gaps && diag.gaps.open) parts.push(`${diag.gaps.open} open gaps`);
+          if (diag.regime && diag.regime.state && diag.regime.state !== 'stable') parts.push(`CFR regime ${diag.regime.state}`);
+          if (parts.length) streamDigest += `\nLIVE DIAGNOSTICS: ${parts.join(', ')}.`;
+          // top bottleneck (OB4) if the movement map has recent flow
+          const mm = require('./movement-map');
+          const graph = mm.buildMovementGraph((_stream || []).slice(-40));
+          const bn = mm.detectBottlenecks(graph, {});
+          if (bn.length) streamDigest += ` BOTTLENECK: ${bn[0].why} (score ${bn[0].score}).`;
+        } catch (_) { /* diagnostics injection is best-effort */ }
 
         const result = await toolRuntime.run({
           userPrompt: prompt,
