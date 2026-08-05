@@ -633,3 +633,54 @@ spec:
         system can propose amendments to its own constitution and no one sees
         them. The tablet is the review bench. It closes the loop WITHOUT
         creating a write path.
+
+# ════════════════════════════════════════════════════════════════════════════
+# ADDENDUM 2026-07-30 — observability arc (OB1-OB11) + CA7 gear reconciliation
+# Reconciles the observability/tablet phasemap work with THIS spec's container
+# model, so the two tablet designs are one (§10.3), not competing.
+#
+# ALIGNMENT — the OB5 homepage IS the container model:
+#   The observability phasemap's OB5 built a box-per-system homepage → click →
+#   that system's diagnostics menu. That is exactly this spec's container_model
+#   ("one container per system, holds EVERYTHING about that system"). No conflict;
+#   OB5 is a first, partial cut of the container. Its panels map onto
+#   each_container_holds as:
+#     OB5 "summary/diagnostics"  → (new) live health/gaps/regime (OB1/OB2)
+#     OB5 "event stream"         → each_container_holds.events
+#     OB5 "snapshots"            → each_container_holds.snapshot (replay engine)
+#     OB5 "cli" (per-system)     → each_container_holds.cli (emergent grammar)
+#     OB5 "edge cases"           → (new, OB11) — ADD to each_container_holds
+#     OB5 loom "versions/repo/roadmap" → (new) — loom-specific container panels
+#   GREW 2026-07-30: OB5 now has api_map (→/contract-map), databases (→/tables),
+#   files (→/files), tests (→/run-tests, the REAL run-all.js). COMPLETED
+#   2026-07-30: config (port/resolution/governed-edits), user_model (→copilot
+#   getHypotheses), controls (spawn/touch →autopilot). The CA7 account gear lives
+#   in the COPILOT container's controls panel — registers a provider slot via
+#   copilot; credentials stored as a REFERENCE, never raw in the UI (decoupling
+#   law). each_container_holds is now fully surfaced. The tablet IS the container.
+#
+# NEW additions the container model should absorb (from the observability arc):
+#   - OB1/OB2 live diagnostics + fault detection → a container "diagnostics" panel.
+#   - OB3/OB4 movement + bottlenecks → a cross-container "flow" view (T4 brain view
+#     extended: the brain view's honest-render law IS §1.1, already shared).
+#   - OB6 continuous ollama injection → the cognitive layer (T6) already feeds
+#     copilot; OB6 is that feed carrying diagnostics.
+#   - OB8 leverage / OB10 sigma-roles / OB11 edge-cases → the T3 change-governance
+#     + T6 cognitive tier (sigma-over-config was PROVISIONAL/unverified in T3;
+#     OB10 gives it the role-interpretation it needed).
+#   - OB9 the 3D map → an EXTENSION of T4 brain view into 3D, same no-fake law.
+#
+# CA7 GEAR (multi-account login) — where it fits:
+#   The CA7 account-registry backend (lib/account-registry.js) is built; the tv-ui
+#   GEAR is unbuilt. Per this spec it belongs in each_container_holds.config
+#   (ports/thresholds/toggles) OR a dedicated "accounts" panel on the copilot
+#   container. It must obey change_governance (edits are governed, not raw) and the
+#   decoupling_law (the gear owns no authoritative state — the registry does).
+#
+# DRIFT FLAGGED (§10.3, honest) — OB5 hardcodes 7 system ports; THIS spec's
+#   connection.principle is "the tablet talks to ONE endpoint, autopilot resolves
+#   the rest" (the hard-pointer problem RAID eliminated). OB5's port map is the
+#   exact anti-pattern this spec names. RESOLUTION (not yet done): OB5 should route
+#   through autopilot's status server, not hardcode ports. Recorded as the next
+#   tablet correction. Until then OB5 works but violates the decoupling ideal.
+# ════════════════════════════════════════════════════════════════════════════

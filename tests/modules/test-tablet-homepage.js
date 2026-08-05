@@ -15,8 +15,8 @@ const HTML = fs.readFileSync(path.join(ROOT, 'tablet/homepage.html'), 'utf8');
 const SERVER = fs.readFileSync(path.join(ROOT, 'copilot/server.js'), 'utf8');
 
 test('T-001', 'OB5: a box per system (all 7)', () => {
-  const n = (HTML.match(/id:'(orchestrator|guardian|cortex|idearium|bridge|loom|copilot)'/g) || []).length;
-  assert.strictEqual(n, 7);
+  // systems resolve from autopilot; the fallback + META still name all 7
+  for (const id of ['orchestrator','guardian','cortex','idearium','bridge','loom','copilot']) assert.ok(HTML.includes(id+':'), 'system '+id+' in META');
 });
 test('T-002', 'OB5: rendered as an ACTUAL tablet (device frame)', () => {
   assert.ok(/class="tablet"/.test(HTML) && /\.screen/.test(HTML), 'must have a tablet device frame + screen');
@@ -50,6 +50,24 @@ test('T-008', 'OB5: live OB1 data, honest empty states, no browser storage (§1.
   assert.ok(/run diagnostics/.test(HTML) && /lastDiag/.test(HTML), 'live diagnostics');
   assert.ok(/class="empty"/.test(HTML), 'honest empty states');
   assert.ok(!/localStorage|sessionStorage/.test(HTML), 'no browser storage');
+});
+test('T-008b', 'OB5: systems resolve via autopilot ONE endpoint, not hardcoded ports (§10.3)', () => {
+  assert.ok(/resolveSystems/.test(HTML) && /7799/.test(HTML), 'must resolve through autopilot status server');
+  assert.ok(/RESOLVED_VIA/.test(HTML), 'must track resolution provenance');
+  assert.ok(/await resolveSystems/.test(HTML), 'must resolve before render');
+});
+test('T-008c', 'OB5: the fuller container panels are wired to real autopilot endpoints (each_container_holds)', () => {
+  for (const p of ['api map','databases','files','tests']) assert.ok(HTML.includes("'"+p+"'"), 'container panel '+p);
+  assert.ok(/contract-map/.test(HTML), 'api map → /contract-map');
+  assert.ok(/\/tables/.test(HTML), 'databases → /tables');
+  assert.ok(/run-tests/.test(HTML), 'tests → the REAL run-all.js');
+  assert.ok(/unreachable/.test(HTML), 'honest empty/unreachable states (no fakes)');
+});
+test('T-008d', 'OB5: config/user_model/controls panels + CA7 gear complete the container', () => {
+  for (const p of ['config','user model','controls']) assert.ok(HTML.includes("'"+p+"'"), 'container panel '+p);
+  assert.ok(/spawn\//.test(HTML) && /touch\//.test(HTML), 'controls → autopilot spawn/touch');
+  assert.ok(/accts-copilot/.test(HTML) && /acct-add/.test(HTML), 'CA7 account gear on the copilot container');
+  assert.ok(/reference|never raw/.test(HTML), 'credentials as reference, not raw (decoupling law)');
 });
 test('T-009', 'OB6: continuous stream digest enriched with bounded live diagnostics', () => {
   assert.ok(/OB6/.test(SERVER) && /LIVE DIAGNOSTICS/.test(SERVER));

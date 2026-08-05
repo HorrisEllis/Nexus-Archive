@@ -1036,6 +1036,32 @@ const server = http.createServer(async (req, res) => {
       }
     } catch (_) { /* status/diagnostic poll unavailable — fall through to the normal path */ }
 
+    // §CONTAINER PANELS — structured queries the tablet's config/user_model/
+    // controls panels consume via this same endpoint (decoupling law: the tablet
+    // talks to co-pilot, never the modules directly). Non-fatal; fall through.
+    try {
+      if (/^\s*list accounts\b/i.test(prompt) || /\bshow (my )?accounts\b/i.test(prompt)) {
+        const ar = require('../lib/account-registry');
+        const accounts = ar.listAccounts ? ar.listAccounts() : [];
+        const text = accounts.length ? `${accounts.length} account slot(s): ${accounts.map(a => `${a.provider}/${a.label}${a.active ? '' : ' (inactive)'}`).join(', ')}.` : 'No account slots registered yet.';
+        return json(res, 200, { text, model_used: 'nexus-accounts', confidence: 1, escalated: false, accounts, requestId });
+      }
+      const addAcct = prompt.match(/^\s*add account\s+(\w+)\s+(\S+)/i);
+      if (addAcct) {
+        const ar = require('../lib/account-registry');
+        const row = ar.addAccount ? ar.addAccount(addAcct[1], addAcct[2], {}) : null;
+        const text = row && !row.error ? `Registered ${addAcct[1]}/${addAcct[2]} (credentials stored as a reference, not raw).` : `Could not add: ${(row && row.error) || 'registry unavailable'}.`;
+        return json(res, 200, { text, model_used: 'nexus-accounts', confidence: 1, escalated: false, account: row, requestId });
+      }
+      if (/^\s*user[- ]model\b/i.test(prompt) || /\bwhat do you know about me\b/i.test(prompt)) {
+        const um = require('./lib/user-model');
+        let hyps = [];
+        try { hyps = um.getHypotheses ? um.getHypotheses(10) : []; } catch { hyps = []; }
+        const text = (hyps && hyps.length) ? `${hyps.length} hypotheses tracked (confidence-weighted).` : 'No user-model hypotheses yet.';
+        return json(res, 200, { text, model_used: 'nexus-user-model', confidence: 1, escalated: false, hypotheses: hyps, requestId });
+      }
+    } catch (_) { /* container-panel query unavailable — fall through */ }
+
     // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
     let text = '', modelUsed = 'none', confidence = null, escalated = false, escalationReason = null;
     try {

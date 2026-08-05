@@ -1,0 +1,1 @@
+{"uuid":"b8121bc8-3412-44c5-86dc-9ae584233507","system":"liminal","component":"liminal.spaces.hold","action":"registered","status":"ok","tags":[],"detail":"Manually inject unresolved item","causedBy":"liminal","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:313","ts":1785902389974}

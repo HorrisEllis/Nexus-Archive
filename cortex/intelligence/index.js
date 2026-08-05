@@ -188,6 +188,8 @@ function init(cfg = {}) {
         route: { method: 'GET', path: '/api/intelligence/reuse' } },
       { name: 'mastermind', description: 'strategic causal pattern analysis over gaps and RFR2 delta',
         route: { method: 'GET', path: '/api/intelligence/mastermind' } },
+      { name: 'relational-field', description: 'the Relational Field Reader — traces the causal CONDITIONS behind friction/tension via RFR2 causality (traceToRoot) + characterizes the deviation via RFR2 sigma. RFR2 wired into the intelligence.',
+        route: { method: 'GET', path: '/api/intelligence/relational-field' } },
       { name: 'adversarial', description: 'adversarial critique — attack a proposal to find its weaknesses',
         route: { method: 'GET', path: '/api/intelligence/adversarial' } },
     ], { version: VERSION, registeredBy: MODULE_ID });

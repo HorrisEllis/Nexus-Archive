@@ -201,18 +201,49 @@
 
 <script>
 const COPILOT = `http://127.0.0.1:3750`;
+// §TABLET-SPEC connection law: "the tablet talks to ONE endpoint, autopilot
+// resolves the rest" — no hardcoded port map (the hard-pointer anti-pattern RAID
+// eliminated). Systems are resolved from autopilot's status server (:7799); the
+// static metadata below is a LABELED FALLBACK only (icons/labels/cli + last-
+// resort ports), used when autopilot's status server is unreachable so the
+// tablet still renders, honestly degraded.
+const AUTOPILOT = `http://127.0.0.1:7799`;
 
-// Icons CONSISTENT with tv-shell tile-icons; names Capitalized.
-const SYSTEMS = [
-  { id:'orchestrator', label:'Orchestrator', icon:'⬡', port:9000, cli:'/orchestrator', desc:'Root kernel · SSE bus' },
-  { id:'guardian',     label:'Guardian',     icon:'⚡', port:7820, cli:'/guardian',     desc:'NCP channel · AI jobs' },
-  { id:'cortex',       label:'Cortex',       icon:'◈', port:3748, cli:'/cortex',       desc:'Memory · gaps · RAID' },
-  { id:'idearium',     label:'Idearium',     icon:'◐', port:4800, cli:'/idearium',     desc:'Idea lattice · specs' },
-  { id:'bridge',       label:'Bridge',       icon:'⟁', port:9999, cli:'/bridge',       desc:'P2P trust relay' },
-  { id:'loom',         label:'Loom',         icon:'◈', port:3752, cli:'/nexus',        desc:'Registry · versions · roadmap' },
-  { id:'copilot',      label:'Co-pilot',     icon:'✦', port:3750, cli:'/copilot',      desc:'Senses · acts · fixes' },
-];
-const CORE_PANELS = ['summary','event stream','snapshots','diagnostics','edge cases'];
+const SYSTEM_META = {
+  orchestrator:{ label:'Orchestrator', icon:'⬡', cli:'/orchestrator', desc:'Root kernel · SSE bus' },
+  guardian:    { label:'Guardian',     icon:'⚡', cli:'/guardian',     desc:'NCP channel · AI jobs' },
+  cortex:      { label:'Cortex',       icon:'◈', cli:'/cortex',       desc:'Memory · gaps · RAID' },
+  idearium:    { label:'Idearium',     icon:'◐', cli:'/idearium',     desc:'Idea lattice · specs' },
+  bridge:      { label:'Bridge',       icon:'⟁', cli:'/bridge',       desc:'P2P trust relay' },
+  loom:        { label:'Loom',         icon:'◈', cli:'/nexus',        desc:'Registry · versions · roadmap' },
+  copilot:     { label:'Co-pilot',     icon:'✦', cli:'/copilot',      desc:'Senses · acts · fixes' },
+  architect:   { label:'Architect',    icon:'△', cli:'/architect',    desc:'Topology declarer' },
+  diagnostic:  { label:'Diagnostic',   icon:'⊕', cli:'/diagnose',     desc:'Live health checks' },
+};
+const FALLBACK_PORTS = { orchestrator:9000, guardian:7820, cortex:3748, idearium:4800, bridge:9999, loom:3752, copilot:3750, architect:3747, diagnostic:7825 };
+
+let SYSTEMS = [];
+let RESOLVED_VIA = 'fallback';
+
+async function resolveSystems(){
+  // ONE endpoint: autopilot's status server lists every kernel + its status.
+  try {
+    const r = await fetch(`${AUTOPILOT}/`, { signal: AbortSignal.timeout(2500) });
+    const j = await r.json();
+    if (j && j.kernels) {
+      RESOLVED_VIA = 'autopilot';
+      SYSTEMS = Object.keys(j.kernels).map(id => {
+        const meta = SYSTEM_META[id] || { label:id.charAt(0).toUpperCase()+id.slice(1), icon:'●', cli:`/${id}`, desc:'' };
+        return { id, ...meta, port:FALLBACK_PORTS[id]||'—', _live:j.kernels[id] };
+      });
+      for (const id of ['copilot','loom']) if (!SYSTEMS.find(s=>s.id===id)) SYSTEMS.push({ id, ...SYSTEM_META[id], port:FALLBACK_PORTS[id] });
+      return;
+    }
+  } catch { /* autopilot unreachable — labeled fallback below */ }
+  RESOLVED_VIA = 'fallback';
+  SYSTEMS = ['orchestrator','guardian','cortex','idearium','bridge','loom','copilot'].map(id => ({ id, ...SYSTEM_META[id], port:FALLBACK_PORTS[id] }));
+}
+const CORE_PANELS = ['summary','event stream','snapshots','diagnostics','edge cases','api map','databases','files','tests','config','user model','controls'];
 const LOOM_EXTRA  = ['cortex','versions','repository','roadmap'];
 
 const $ = s => document.querySelector(s);
@@ -309,17 +340,78 @@ function fillPanel(sys,kind,body){
     content=`<div class="empty">Rewind points from the replay engine — surfaced on boot.</div>`;
   } else if(kind==='versions'){
     content=`<div class="row"><span class="k">system</span><span class="v" id="loom-ver">reading…</span></div>`;
+  } else if(kind==='api map'){
+    content=`<div class="row"><span class="k">routes</span><span class="v" id="apimap-${sys.id}">loading from /contract-map…</span></div>`;
+  } else if(kind==='databases'){
+    content=`<div class="row"><span class="k">JAA tables</span><span class="v" id="tables-${sys.id}">loading from /tables…</span></div>`;
+  } else if(kind==='files'){
+    content=`<div class="row"><span class="k">data tree</span><span class="v" id="files-${sys.id}">loading from /files…</span></div>`;
+  } else if(kind==='tests'){
+    content=`<div class="row"><span class="k">suite</span><span class="v">runs the REAL run-all.js filtered to ${sys.label}</span></div>
+      <div class="savebar"><button class="savebtn" id="runtests-${sys.id}">▶ run ${sys.label} tests</button><span class="v" id="testout-${sys.id}"></span></div>`;
+  } else if(kind==='config'){
+    content=`<div class="row"><span class="k">port</span><span class="v">${sys.port}</span></div>
+      <div class="row"><span class="k">resolved via</span><span class="v">${RESOLVED_VIA}</span></div>
+      <div class="row"><span class="k">edits</span><span class="v">governed — config changes route through change-governance, not raw writes</span></div>`;
+  } else if(kind==='user model'){
+    content=`<div class="row"><span class="k">hypotheses</span><span class="v" id="um-${sys.id}">loading…</span></div>`;
+  } else if(kind==='controls'){
+    // controls = spawn/despawn/restart + (for copilot) the CA7 account gear.
+    content=`<div class="row"><span class="k">lifecycle</span><span class="v">
+        <button class="savebtn" id="spawn-${sys.id}">▶ spawn</button>
+        <button class="savebtn" id="touch-${sys.id}">↻ touch</button>
+        <span class="v" id="ctlout-${sys.id}"></span></span></div>`;
+    if(sys.id==='copilot'){
+      content+=`<div class="row"><span class="k">accounts (CA7)</span><span class="v" id="accts-copilot">loading…</span></div>
+        <div class="savebar"><input class="cli-in" id="acct-provider" placeholder="provider (claude/chatgpt/gemini/perplexity)" style="max-width:210px">
+          <input class="cli-in" id="acct-label" placeholder="label" style="max-width:110px">
+          <button class="savebtn" id="acct-add">+ add slot</button></div>
+        <div class="row"><span class="k">note</span><span class="v">the gear registers a slot; credentials live as a REFERENCE in the registry, never raw here (decoupling law).</span></div>`;
+    }
   } else { content=`<div class="empty">${cap(kind)} lives in Loom — wired to the live registry on boot.</div>`; }
 
   body.innerHTML=content+`
     <div class="savebar"><span class="k">notes</span><span class="saved" id="sv-${sys.id}-${cssId(kind)}">saved</span></div>
     <textarea class="note" id="nt-${sys.id}-${cssId(kind)}" placeholder="Track ${sys.label}'s ${kind}…">${window.__nexusNotes[noteKey]||''}</textarea>
-    <div class="savebar"><button class="savebtn">save note</button></div>`;
-  body.querySelector('.savebtn').addEventListener('click',()=>{
+    <div class="savebar"><button class="savebtn note-save">save note</button></div>`;
+  body.querySelector('.note-save').addEventListener('click',()=>{
     window.__nexusNotes[noteKey]=body.querySelector('.note').value;
     const f=body.querySelector('.saved'); f.classList.add('show'); setTimeout(()=>f.classList.remove('show'),1200);
   });
   if(kind==='versions')jpost('system status').then(r=>{const el=$('#loom-ver');if(el)el.textContent=(r&&r.text)?((r.text.match(/[0-9]+\.[0-9]+\.[0-9]+/)||['—'])[0]):'—';});
+
+  // container panels — wired to autopilot's :7799 endpoints (the ONE endpoint).
+  // Each shows real data or an honest "unreachable"/"none" — never a fake (§1.1).
+  const apGet = async (p) => { try{ const r=await fetch(`${AUTOPILOT}${p}`,{signal:AbortSignal.timeout(3000)}); return await r.json(); }catch{ return null; } };
+  if(kind==='api map'){
+    apGet(`/contract-map/${sys.id}`).then(j=>{ const el=$(`#apimap-${sys.id}`); if(!el)return;
+      el.textContent = j && j.routes ? `${j.routes.length} routes` : (j && j.paths ? `${Object.keys(j.paths).length} paths` : 'no contract exposed (or autopilot :7799 unreachable)'); });
+  } else if(kind==='databases'){
+    apGet(`/tables`).then(j=>{ const el=$(`#tables-${sys.id}`); if(!el)return;
+      el.textContent = j && j.tables ? `${j.tables.length} JAA tables` : (Array.isArray(j) ? `${j.length} tables` : 'no tables (or autopilot :7799 unreachable)'); });
+  } else if(kind==='files'){
+    apGet(`/files/${sys.id}`).then(j=>{ const el=$(`#files-${sys.id}`); if(!el)return;
+      el.textContent = j && (j.files||j.entries) ? `${(j.files||j.entries).length} entries` : 'no data tree (or autopilot :7799 unreachable)'; });
+  } else if(kind==='tests'){
+    const btn=$(`#runtests-${sys.id}`);
+    if(btn)btn.addEventListener('click',async()=>{ const out=$(`#testout-${sys.id}`); out.textContent=' running…';
+      try{ const r=await fetch(`${AUTOPILOT}/run-tests/${sys.id}`,{method:'POST',signal:AbortSignal.timeout(120000)}); const j=await r.json();
+        out.textContent = j && (j.passed!=null) ? ` ${j.passed} passed, ${j.failed||0} failed` : ' (no result — is autopilot :7799 up?)';
+      }catch{ out.textContent=' (autopilot :7799 unreachable)'; } });
+  } else if(kind==='user model'){
+    jpost('user model').then(r=>{ const el=$(`#um-${sys.id}`); if(!el)return;
+      el.textContent = r && r.hypotheses ? `${r.hypotheses.length} tracked (confidence-weighted)` : (r && r.text ? r.text : 'unavailable (co-pilot :3750?)'); });
+  } else if(kind==='controls'){
+    const sp=$(`#spawn-${sys.id}`), tc=$(`#touch-${sys.id}`), out=$(`#ctlout-${sys.id}`);
+    if(sp)sp.addEventListener('click',async()=>{ out.textContent=' spawning…'; try{ const r=await fetch(`${AUTOPILOT}/spawn/${sys.id}`,{method:'POST',signal:AbortSignal.timeout(8000)}); const j=await r.json(); out.textContent=j&&j.ok?' spawned':' '+((j&&j.error)||'failed'); }catch{ out.textContent=' (autopilot :7799 unreachable)'; } });
+    if(tc)tc.addEventListener('click',async()=>{ out.textContent=' touching…'; try{ const r=await fetch(`${AUTOPILOT}/touch/${sys.id}`,{method:'POST',signal:AbortSignal.timeout(8000)}); const j=await r.json(); out.textContent=j&&j.ok?' touched':' failed'; }catch{ out.textContent=' (autopilot :7799 unreachable)'; } });
+    if(sys.id==='copilot'){
+      jpost('list accounts').then(r=>{ const el=$('#accts-copilot'); if(!el)return; el.textContent = r&&r.accounts ? (r.accounts.length?r.accounts.map(a=>`${a.provider}/${a.label}`).join(', '):'none yet') : (r&&r.text?r.text:'unavailable'); });
+      const add=$('#acct-add');
+      if(add)add.addEventListener('click',async()=>{ const p=$('#acct-provider').value.trim(), l=$('#acct-label').value.trim(); if(!p||!l)return;
+        const r=await jpost(`add account ${p} ${l}`); const el=$('#accts-copilot'); if(el)el.textContent=(r&&r.text)?r.text:'(add routed — refresh to confirm)'; });
+    }
+  } else { /* other panels have no async load */ }
 }
 
 // floating menu
@@ -332,7 +424,14 @@ function toggleMenu(force){ const b=$('#nexus-menu-btn'),p=$('#nexus-menu-panel'
 $('#nexus-menu-btn').addEventListener('click',()=>toggleMenu());
 
 function tick(){ $('#clock').textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
-renderGrid(); refreshHealth(); tick(); setInterval(refreshHealth,15000); setInterval(tick,10000);
+// boot: resolve systems from autopilot (ONE endpoint) BEFORE rendering the grid.
+(async function boot(){
+  await resolveSystems();
+  renderGrid(); refreshHealth(); tick();
+  // show how systems were resolved (autopilot vs fallback) — honest provenance
+  const st=$('#pulse'); if(st && RESOLVED_VIA==='fallback') st.title='systems from fallback list — autopilot status server (:7799) unreachable';
+  setInterval(refreshHealth,15000); setInterval(tick,10000);
+})();
 </script>
 </body>
 </html>
