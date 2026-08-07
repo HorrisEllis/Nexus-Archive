@@ -82,6 +82,7 @@
   }
   .app .nm { font-size:14px; font-weight:700; letter-spacing:.02em; }
   .app .pt { color:var(--faint); font-size:11px; }
+  .ver-tag { color:var(--ac); font-size:9px; opacity:.8; }
   .app .hb { display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10px; color:var(--dim); }
   .dot { width:7px; height:7px; border-radius:50%; background:var(--faint); flex:none; box-shadow:0 0 6px transparent; }
   .dot.ok{background:var(--ok); box-shadow:0 0 6px rgba(58,210,159,.6);}
@@ -260,7 +261,7 @@ function renderGrid(){
   for(const s of SYSTEMS){
     const a=document.createElement('div');
     a.className='app'; a.tabIndex=0; a.setAttribute('role','button');
-    a.innerHTML=`<span class="ico">${s.icon}</span><div class="nm">${s.label}</div><div class="pt">:${s.port}</div>
+    a.innerHTML=`<span class="ico">${s.icon}</span><div class="nm">${s.label}</div><div class="pt">:${s.port} <span class="ver-tag" id="ver-${s.id}"></span></div>
       <div class="hb"><span class="dot" id="dot-${s.id}"></span><span id="stat-${s.id}">checking…</span></div>`;
     a.addEventListener('click',()=>openSystem(s));
     a.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();openSystem(s);} });
@@ -278,6 +279,13 @@ async function refreshHealth(){
     const st=(h.systems&&h.systems[s.id])||'unknown';
     const dot=$(`#dot-${s.id}`), stat=$(`#stat-${s.id}`); if(!dot)continue;
     dot.className='dot '+(st==='online'?'ok':st==='unknown'?'':'bad'); stat.textContent=st;
+    // per-system version — each system's /health returns { version, ... } (James:
+    // "each system needs the version displayed"). Read from the resolved port.
+    if(s.port && s.port!=='—'){
+      fetch(`http://127.0.0.1:${s.port}/health`,{signal:AbortSignal.timeout(2500)})
+        .then(r=>r.json()).then(d=>{ const v=$(`#ver-${s.id}`); if(v&&d&&d.version)v.textContent='v'+d.version; })
+        .catch(()=>{});
+    }
   }
 }
 
