@@ -200,6 +200,23 @@ function startService() {
   });
 
   // Per-system baseline monitors
+  // ── §P3 CRASH FIX 2026-08-07 — sseClients + broadcast HOISTED here, above the
+  // monitor setup below. They were declared at ~line 320, but onGap callbacks
+  // registered during setup (line ~215) call broadcast(); if a gap fires while
+  // monitors are still being created, `const sseClients` is in the temporal dead
+  // zone → "Cannot access 'sseClients' before initialization" → the CIRCUIT OPEN
+  // crash loop on James's boots. Declaring before first possible use removes it.
+  const sseClients = new Set();
+  function broadcast(msg) {
+    const payload = 'data: ' + JSON.stringify(msg) + '\n\n';
+    for (const res of sseClients) {
+      try { res.write(payload); } catch { sseClients.delete(res); }
+    }
+    // §P3 — also fan the diagnostic event into the live stream, so autopilot,
+    // intelligence, and co-pilot see diagnostic findings like any other system.
+    try { const f = require('../lib/ledger-fanin'); f.emit && f.emit({ type: `diagnostic.${msg.type || 'event'}`, source: 'diagnostic', payload: msg, ts: msg.ts || Date.now() }); } catch (_) {}
+  }
+
   const monitors = {};
   for (const [name, cfg] of Object.entries(SYSTEMS)) {
     monitors[name] = createBaseline({
@@ -316,14 +333,7 @@ function startService() {
     });
   }
 
-  // SSE clients
-  const sseClients = new Set();
-  function broadcast(msg) {
-    const payload = 'data: ' + JSON.stringify(msg) + '\n\n';
-    for (const res of sseClients) {
-      try { res.write(payload); } catch { sseClients.delete(res); }
-    }
-  }
+  // SSE clients — declared above (hoisted for the crash fix); broadcast() too.
 
   // ── Contract verifier — validates runtime behavior vs interaction contracts ──
   const contracts = loadContracts(ROOT);

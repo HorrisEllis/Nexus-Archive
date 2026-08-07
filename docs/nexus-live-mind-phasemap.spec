@@ -53,7 +53,7 @@ spec:
       drift: "each system's boot differs — some emit already, some need a ledger bridged. Per-system wiring is the surface."
       axioms: [§8.6, §1.1, §1.2]
 
-    P2_snapshot_on_sigma:
+    P2_snapshot_on_sigma:   # ← DONE 2026-08-07, suite 1326/0. snapshot-trigger rebuilt (§0.3, lost between trees) + wired to the live sigma stream.
       depends_on: P1
       does: >
         Wire the snapshot-trigger to fire on EVERY sigma detected in the system
@@ -65,7 +65,7 @@ spec:
       drift: "sigma volume — debounce/meaningfulness gate tuned live so it snapshots meaningfully, not every tick."
       axioms: [§13.4, §16.4]
 
-    P3_diagnostic_kernel:
+    P3_diagnostic_kernel:   # ← DONE 2026-08-07. Fixed the CIRCUIT OPEN crash (sseClients TDZ) + added lib/diagnostic-causal (conditions behind findings via RFR2 + live substrate).
       depends_on: [P1, P2]
       does: >
         A real diagnostic kernel with the same architecture as other systems: CLI
@@ -146,3 +146,41 @@ never breaks the ledger write. §0.1 caught a real regression — the boot log w
 stdout and broke systems that parse autopilot's status JSON; moved to stderr.
 Proves fully on James's boot (the sandbox verifies the wiring + fan-out + coverage).
 Suite 1319/0. Next: P2 snapshot-on-sigma, riding this live stream.
+
+---
+## P2 COMPLETE 2026-08-07
+The replay engine snapshots on every sigma. lib/snapshot-trigger.js (rebuilt — §0.3,
+it was lost between trees; design in docs/snapshot-trigger-phasemap.spec) subscribes
+the P1 fan-in and, on any sigma.spike/delta.tension event (the exact cfr/ledger
+events at 0.70/0.75 thresholds — the 0.80-0.82 tensions from James's screenshots),
+uses the relational-field reader (RFR2 causality.traceToRoot) to trace the CONDITIONS
+that created it, then fires replay.snapshot tagged with the causal root + severity.
+Debounced (§16.4, no storm), severity-gated (only real sigmas), §1.2 a snapshot
+failure never breaks the stream. timeline() surfaces sigma snapshots as revertable
+debug points (James: "the timeline as a tool for debugging and reverting"). Wired at
+autopilot boot via wireFanin. In loom's graph. 7 tests, suite 1326/0.
+
+---
+## P3 COMPLETE 2026-08-07
+Two parts. (1) FIXED the CIRCUIT OPEN crash: service/nexus-diagnostic.js declared
+`const sseClients` at ~line 320, but onGap callbacks registered during monitor
+setup call broadcast(); a gap firing mid-setup hit the temporal dead zone →
+"Cannot access 'sseClients' before initialization" → crash loop on James's boots.
+Hoisted sseClients + broadcast above first use; broadcast now also fans diagnostic
+events into the live stream (autopilot/intelligence/co-pilot see them). (2) ADDED
+lib/diagnostic-causal.js — the causal layer: for each gap/tension/friction finding
+it traces the CONDITIONS that created it (relational-field/RFR2), and joins the
+live substrate — fan-in coverage (silent systems = blind spots), the sigma
+snapshot timeline, and loom's self-model (capabilities served by nothing, stale
+dupes). "Gaps/tension/friction AND the conditions that created them." §8.6 composes
+P1/P2 + loom scanners; no new detection. 5 tests, suite 1331/0.
+
+---
+## P4 (partial) 2026-08-07 — capability enumeration slice
+Budget-scoped slice of P4: co-pilot answers "what can you do?" with its REAL
+toolbox from loom. copilot/lib/capabilities.js: whatCanIDo() reads the capability-map
+scanner (255 declared, verified against source) and returns 239 SERVED capabilities
+grouped across 12 systems — §1.1, no phantom tools advertised. copilot/server.js
+intercepts "what can you do / list tools / what can <system> do". §8.6 composes the
+existing scanner. 4 tests. The rest of P4 (NEXUS self-model, query routing) + P5/P6
+remain. In loom's graph.

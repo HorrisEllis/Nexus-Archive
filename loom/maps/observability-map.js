@@ -52,6 +52,12 @@ const FILES = [
     []],
   ['lib/activity-log/index.js',   'nexus.lib.activity-log',
     ['nexus.lib.ledger-fanin']],
+  ['copilot/lib/capabilities.js', 'nexus.copilot.capabilities',
+    ['nexus.loom.scanners.capability-map']],  // P4 slice — co-pilot's real toolbox from loom
+  ['lib/diagnostic-causal.js',    'nexus.lib.diagnostic-causal',
+    ['nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.lib.snapshot-trigger']],  // P3 — conditions behind findings
+  ['lib/snapshot-trigger.js',     'nexus.lib.snapshot-trigger',
+    ['nexus.lib.replay-engine', 'nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin']],  // P2 — snapshot on every sigma, tracing conditions via RFR2
   ['lib/ledger-fanin/boot.js',    'nexus.lib.ledger-fanin.boot',
     ['nexus.lib.ledger-fanin', 'nexus.lib.activity-log']],  // P1 — subscribes intelligence/autopilot/copilot/logging to the fan-in at boot  // subscribes the fan-in → persists all activity + errors to cortex  // the unified event fan-in — every system emits, every consumer subscribes once
   ['ui/agents/gemini/code-suite.html', 'nexus.ui.gemini.code-suite',

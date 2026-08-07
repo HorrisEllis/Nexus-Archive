@@ -1040,6 +1040,17 @@ const server = http.createServer(async (req, res) => {
     // controls panels consume via this same endpoint (decoupling law: the tablet
     // talks to co-pilot, never the modules directly). Non-fatal; fall through.
     try {
+      if (/\b(what can you do|what can i do|list (your )?(tools|capabilities)|full (list of )?(tools|capabilities)|what (are your|tools do you have))\b/i.test(prompt)) {
+        const cap = require('./lib/capabilities');
+        const r = cap.whatCanIDo();
+        return json(res, 200, { text: r.text, model_used: 'nexus-capabilities', confidence: 1, escalated: false, capabilities: r.systems, total: r.total, requestId });
+      }
+      const perSys = prompt.match(/\bwhat can (\w+) do\b/i);
+      if (perSys && !/\byou\b/i.test(perSys[1])) {
+        const cap = require('./lib/capabilities');
+        const r = cap.capabilitiesForSystem(perSys[1].toLowerCase());
+        return json(res, 200, { text: r.text, model_used: 'nexus-capabilities', confidence: 1, escalated: false, capabilities: r.capabilities, requestId });
+      }
       if (/^\s*list accounts\b/i.test(prompt) || /\bshow (my )?accounts\b/i.test(prompt)) {
         const ar = require('../lib/account-registry');
         const accounts = ar.listAccounts ? ar.listAccounts() : [];
