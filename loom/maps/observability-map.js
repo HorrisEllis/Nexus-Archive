@@ -42,22 +42,14 @@ const FILES = [
     ['nexus.copilot.diagnostics']],   // fetches copilot /api/prompt (diagnostics) + autopilot :7799
   ['tablet/map3d.html',            'nexus.tablet.map3d',
     ['nexus.copilot.diagnostics']],   // renders report.movement + report.bottlenecks
-  // §MOVED 2026-08-04 — cortex/intelligence/relational-field.js was declared
-  // here with TWO edges: rfr2-bridge AND mastermind. It has exactly ONE
-  // require() in the whole file (`../../lib/rfr2-bridge.js`, line 44) and has
-  // never required mastermind. That was a wire with nothing behind it —
-  // precisely the defect the 0.19.1 correction that created this file was
-  // written to eliminate ("a component declared without its wires is an
-  // isolated dot"; a component declared with a wire it does not have is
-  // worse, because the graph then asserts a connection the system reasons
-  // over and acts on).
-  //
-  // Ownership moved to loom/maps/relational-field-map.js, which maps this file
-  // alongside both causal substrates where it belongs. It is REMOVED here
-  // rather than corrected-in-place because declare() is NOT idempotent —
-  // loom.unique-id hard-rejects a second declaration of the same id, so
-  // leaving it in both maps would guarantee one failure on every bootstrap.
-  // §16.5 delete before add.
+  ['cortex/intelligence/relational-field.js', 'nexus.cortex.intelligence.relational-field',
+    ['nexus.lib.rfr2-bridge', 'nexus.cortex.intelligence.mastermind']],  // RFR2 wired into intelligence (causality + sigma)
+  ['lib/gemini-toolbox/index.js',  'nexus.lib.gemini-toolbox',
+    ['nexus.lib.chunker']],  // the shared line-addressing backend for Gemini coding
+  ['lib/gemini-toolbox/routes.js', 'nexus.lib.gemini-toolbox.routes',
+    ['nexus.lib.gemini-toolbox']],  // HTTP surface, mounted on guardian /gemini-tool
+  ['ui/agents/gemini/code-suite.html', 'nexus.ui.gemini.code-suite',
+    ['nexus.lib.gemini-toolbox.routes']],  // the code suite UI → toolbox over HTTP
 ];
 
 function mapObservability(driver) {

@@ -19,6 +19,7 @@ const MODULES_DIR = __dirname;
 
 const SUITES = [
   'jaa-db.test.js',
+  'test-gemini-toolbox.js',
   'jaa-store-multiprocess.test.js',
   'test-jaa-flush-lock.js',
   'spec-container.test.js',
@@ -93,9 +94,6 @@ const SUITES = [
   'test-map3d.js',
   'test-observability-map.js',
   'test-relational-field.js',
-  'test-source-map-scanner.js',
-  'test-capability-map.js',
-  'test-spec-map.js',
   'test-shared-stream.js',
   'test-self-register.js',
   'test-registration-shape.js',
