@@ -1051,6 +1051,12 @@ const server = http.createServer(async (req, res) => {
         const r = cap.capabilitiesForSystem(perSys[1].toLowerCase());
         return json(res, 200, { text: r.text, model_used: 'nexus-capabilities', confidence: 1, escalated: false, capabilities: r.capabilities, requestId });
       }
+      // §P4 — NEXUS self-awareness: rundown / what's wrong / versions, from real state.
+      try {
+        const na = require('./lib/nexus-awareness');
+        const ans = await na.answerAbout(prompt, {});
+        if (ans) return json(res, 200, { text: ans.text, model_used: 'nexus-awareness', confidence: 1, escalated: false, detail: ans, requestId });
+      } catch (_) { /* awareness unavailable — fall through to normal path */ }
       if (/^\s*list accounts\b/i.test(prompt) || /\bshow (my )?accounts\b/i.test(prompt)) {
         const ar = require('../lib/account-registry');
         const accounts = ar.listAccounts ? ar.listAccounts() : [];

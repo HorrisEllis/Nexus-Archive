@@ -80,7 +80,7 @@ spec:
       drift: "the existing diagnostic crashes on boot — fixing vs replacing is the decision; map the existing one first (§8.4 scan callers)."
       axioms: [§1.1, §1.2, §8.4, §17.6]
 
-    P4_copilot_awareness:
+    P4_copilot_awareness:   # ← DONE 2026-08-07. capabilities (what can you do) + nexus-awareness (rundown/whats-wrong/versions from real state).
       depends_on: [P1, P3]
       does: >
         Co-pilot becomes fully system-aware using loom + diagnostic + intelligence
@@ -184,3 +184,16 @@ grouped across 12 systems — §1.1, no phantom tools advertised. copilot/server
 intercepts "what can you do / list tools / what can <system> do". §8.6 composes the
 existing scanner. 4 tests. The rest of P4 (NEXUS self-model, query routing) + P5/P6
 remain. In loom's graph.
+
+---
+## P4 COMPLETE 2026-08-07
+Co-pilot is system-aware. Two modules, both composing existing substrate (§8.6):
+copilot/lib/capabilities.js — "what can you do" → 239 SERVED capabilities from
+loom, grouped by system (§1.1 no phantom tools; cached to not block the request
+thread). copilot/lib/nexus-awareness.js — the mind's model of its body: systemRundown()
+(real capabilities + 51 versioned systems + live fan-in coverage + loom self-model),
+whatsWrong() (routes to the P3 diagnostic-causal kernel — findings WITH their
+conditions), answerAbout() routes rundown/what's-wrong/versions questions to real
+state and returns null for non-NEXUS prompts (never hijacks normal chat). Wired via
+copilot/server.js intercepts, guarded + cached (the failed-to-fetch lesson). In
+loom's graph. 9 P4 tests total. P5 (dynamic/user-aware) + P6 (programmable) remain.

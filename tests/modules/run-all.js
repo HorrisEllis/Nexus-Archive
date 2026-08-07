@@ -23,6 +23,7 @@ const SUITES = [
   'test-p2-snapshot-sigma.js',
   'test-p3-diagnostic-causal.js',
   'test-p4-capabilities.js',
+  'test-p4-awareness.js',
   'test-activity-log.js',
   'test-ledger-fanin.js',
   'test-gemini-toolbox.js',

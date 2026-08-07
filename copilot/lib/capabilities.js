@@ -10,10 +10,24 @@
  * scanner; §1.1 only reports capabilities whose routes are actually served.
  */
 
+let _cache = null, _cacheAt = 0;
+const _CACHE_MS = 60_000;   // the tree doesn't change mid-session; scan at most once a minute
+
 /**
  * whatCanIDo(opts) — the grouped, real toolbox. Returns { systems, total, text }.
+ * Cached: verifyRoutes reads the whole source tree (~300ms), which must NOT run
+ * synchronously on every co-pilot request — that can stall the request past the
+ * UI's fetch timeout ("failed to fetch"). Cached for a minute; the tree is static
+ * within a session.
  */
 function whatCanIDo(opts = {}) {
+  if (!opts.capabilityMap && _cache && (Date.now() - _cacheAt) < _CACHE_MS) return _cache;
+  const result = _compute(opts);
+  if (!opts.capabilityMap) { _cache = result; _cacheAt = Date.now(); }
+  return result;
+}
+
+function _compute(opts = {}) {
   let decls, served;
   try {
     const cap = opts.capabilityMap || require('../../loom/scanners/capability-map');

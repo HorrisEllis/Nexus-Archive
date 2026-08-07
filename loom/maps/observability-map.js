@@ -52,6 +52,8 @@ const FILES = [
     []],
   ['lib/activity-log/index.js',   'nexus.lib.activity-log',
     ['nexus.lib.ledger-fanin']],
+  ['copilot/lib/nexus-awareness.js','nexus.copilot.nexus-awareness',
+    ['nexus.copilot.capabilities', 'nexus.lib.diagnostic-causal', 'nexus.lib.ledger-fanin']],  // P4 — co-pilot's model of nexus
   ['copilot/lib/capabilities.js', 'nexus.copilot.capabilities',
     ['nexus.loom.scanners.capability-map']],  // P4 slice — co-pilot's real toolbox from loom
   ['lib/diagnostic-causal.js',    'nexus.lib.diagnostic-causal',
