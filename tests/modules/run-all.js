@@ -19,6 +19,8 @@ const MODULES_DIR = __dirname;
 
 const SUITES = [
   'jaa-db.test.js',
+  'test-p1-fanin-live.js',
+  'test-activity-log.js',
   'test-ledger-fanin.js',
   'test-gemini-toolbox.js',
   'jaa-store-multiprocess.test.js',

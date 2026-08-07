@@ -53,3 +53,6 @@ idearium/data/specs/*/
 dist/
 build/
 *.asar
+
+# All runtime state — never committed (§2.2, CLAUDE.md rule)
+data/

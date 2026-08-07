@@ -49,7 +49,11 @@ const FILES = [
   ['lib/gemini-toolbox/routes.js', 'nexus.lib.gemini-toolbox.routes',
     ['nexus.lib.gemini-toolbox']],  // HTTP surface, mounted on guardian /gemini-tool
   ['lib/ledger-fanin/index.js',   'nexus.lib.ledger-fanin',
-    []],  // the unified event fan-in — every system emits, every consumer subscribes once
+    []],
+  ['lib/activity-log/index.js',   'nexus.lib.activity-log',
+    ['nexus.lib.ledger-fanin']],
+  ['lib/ledger-fanin/boot.js',    'nexus.lib.ledger-fanin.boot',
+    ['nexus.lib.ledger-fanin', 'nexus.lib.activity-log']],  // P1 — subscribes intelligence/autopilot/copilot/logging to the fan-in at boot  // subscribes the fan-in → persists all activity + errors to cortex  // the unified event fan-in — every system emits, every consumer subscribes once
   ['ui/agents/gemini/code-suite.html', 'nexus.ui.gemini.code-suite',
     ['nexus.lib.gemini-toolbox.routes']],  // the code suite UI → toolbox over HTTP
 ];

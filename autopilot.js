@@ -49,6 +49,22 @@ const MEM_BACKOFF_MS = 15000;
 const CRITICAL_HALT_PCT = Number(process.env.NEXUS_CRITICAL_HALT_PCT || 0.05);
 const { ResourceMonitor } = require('./lib/resource-monitor');
 const _resourceMonitor = new ResourceMonitor({ name: 'autopilot', intervalMs: 15000 }).start();
+
+// ── §P1 nexus-live-mind 2026-08-07 — wire the nervous system live ────────────
+// The producer side is done: lib/component-ledger.write() emits every system's
+// events into lib/ledger-fanin. Here, at the boot entry point, we subscribe the
+// consumers — activity-log (→ cortex event_log + error_log), intelligence, and
+// autopilot itself — so the stream "all points towards autopilot" for real.
+// §1.2 — wrapped; a fan-in wiring failure must never stop the boot.
+let _faninEvents = [];   // autopilot's live view of the whole-system stream
+try {
+  const { wireFanin } = require('./lib/ledger-fanin/boot');
+  const _fw = wireFanin({
+    onAutopilot: (row) => { _faninEvents.push(row); if (_faninEvents.length > 1000) _faninEvents.shift(); },
+  });
+  console.error(`[autopilot] §P1 fan-in wired: ${_fw.wired.join(', ')}${_fw.skipped.length ? ' (deferred: ' + _fw.skipped.map(s => s[0]).join(',') + ')' : ''}`);
+} catch (e) { console.error(`[autopilot] §P1 fan-in wiring skipped: ${e.message}`); }
+
 const LOG_DIR  = path.join(ROOT, 'data', 'autopilot');
 const LOG_FILE = path.join(LOG_DIR, 'autopilot.log');
 try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch(_) {}
