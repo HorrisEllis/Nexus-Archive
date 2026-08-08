@@ -181,6 +181,7 @@ body{display:flex;flex-direction:column;position:relative}
     <button class="rail-btn" data-view="registry" onclick="setView('registry')">◇<span class="rail-label">Registry</span></button>
     <button class="rail-btn" data-view="scaffold" onclick="setView('scaffold')">✎<span class="rail-label">Scaffold</span></button>
     <button class="rail-btn" data-view="iterations" onclick="setView('iterations')">▦<span class="rail-label">Iterations</span></button>
+    <button class="rail-btn" data-view="roadmap" onclick="setView('roadmap')">◈<span class="rail-label">Roadmap</span></button>
   </nav>
 
   <main class="view-area">
@@ -208,6 +209,12 @@ body{display:flex;flex-direction:column;position:relative}
             <div class="pillar-icon">▦</div>
             <div class="pillar-name">Iterations</div>
             <div class="pillar-desc">Drop in old build zips — sha256 identity, real file diff against the last one, lineage tracked.</div>
+          </div>
+          <div class="pillar" onclick="setView('roadmap')">
+            <div class="pillar-step">04 — BECOME</div>
+            <div class="pillar-icon">◈</div>
+            <div class="pillar-name">Roadmap</div>
+            <div class="pillar-desc">Every phase across every phasemap, split by system — not just what NEXUS is, what it's becoming.</div>
           </div>
         </div>
         <div class="welcome-foot">loom/server.js :3752</div>
@@ -272,6 +279,21 @@ body{display:flex;flex-direction:column;position:relative}
           </div>
           <div class="upload-progress" id="upload-progress"><div class="bar" id="upload-bar"></div></div>
           <div class="pbody" id="rev-list"><div class="empty">no revisions ingested yet</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-roadmap">
+      <div class="body2" style="grid-template-columns:1fr">
+        <div class="left">
+          <div class="ph"><span class="ph-title">Roadmap — what each system is becoming</span><span class="ph-badge live" id="roadmap-summary-badge"></span></div>
+          <div class="kind-tabs" id="roadmap-filter-tabs" style="padding-top:10px">
+            <button class="kind-tab active" data-status="">all</button>
+            <button class="kind-tab" data-status="done">done</button>
+            <button class="kind-tab" data-status="in-progress">in progress</button>
+            <button class="kind-tab" data-status="pending">pending</button>
+          </div>
+          <div class="pbody" id="roadmap-list"><div class="empty">loading…</div></div>
         </div>
       </div>
     </section>
@@ -450,7 +472,46 @@ function uploadZip(file) {
   xhr.send(file);
 }
 
-loadRegistry(); loadTemplates(); loadRevisions(); connectEvents();
+// §LP3 — roadmap view. Same api()/esc() helpers as registry/scaffold, same
+// .reg-item/.kind-tab styling — this is a fourth pane, not a new UI.
+let roadmapData = null, roadmapFilter = '';
+const STATUS_DOT = { done: 'var(--mint)', 'in-progress': 'var(--sky2)', pending: 'var(--amber)' };
+
+async function loadRoadmap() {
+  const d = await api('/api/phasemap');
+  if (!d.ok) { document.getElementById('roadmap-list').innerHTML = '<div class="empty">roadmap unavailable</div>'; return; }
+  roadmapData = d;
+  document.getElementById('roadmap-summary-badge').textContent = d.summary.text;
+  renderRoadmap();
+}
+
+function renderRoadmap() {
+  if (!roadmapData) return;
+  const el = document.getElementById('roadmap-list');
+  const systems = Object.keys(roadmapData.bySystem).sort((a, b) => roadmapData.bySystem[b].length - roadmapData.bySystem[a].length);
+  el.innerHTML = systems.map(sys => {
+    let list = roadmapData.bySystem[sys];
+    if (roadmapFilter) list = list.filter(p => p.status === roadmapFilter);
+    if (!list.length) return '';
+    const done = list.filter(p => p.status === 'done').length;
+    return `<div class="reg-item">
+      <div class="id">${esc(sys)} <span style="color:var(--text3)">— ${done}/${list.length} done</span></div>
+      <div class="meta">${list.map(p =>
+        `<span style="color:${STATUS_DOT[p.status] || 'var(--text3)'}">●</span> ${esc(p.id)} <span style="color:var(--text3)">(${esc(p.map)})</span>`
+      ).join('&nbsp;&nbsp;')}</div>
+    </div>`;
+  }).join('') || '<div class="empty">no phases match this filter</div>';
+}
+
+document.getElementById('roadmap-filter-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.kind-tab'); if (!btn) return;
+  document.querySelectorAll('#roadmap-filter-tabs .kind-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  roadmapFilter = btn.dataset.status;
+  renderRoadmap();
+});
+
+loadRegistry(); loadTemplates(); loadRevisions(); loadRoadmap(); connectEvents();
 </script>
 </body>
 </html>

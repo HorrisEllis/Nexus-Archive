@@ -84,6 +84,14 @@ const FILES = [
     ['nexus.lib.replay-engine', 'nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin']],  // P2 — snapshot on every sigma, tracing conditions via RFR2
   ['lib/scheduler.js',            'nexus.lib.scheduler',
     ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.lib.agent-pull']],  // CA1 — schedule tasks/jobs/alarms/timed payloads, RAID-gated
+  ['lib/triggers.js',             'nexus.lib.triggers',
+    ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.lib.agent-pull']],  // CA2 — fire an action WHEN a fan-in condition matches, RAID-gated (scheduler's reactive twin)
+  ['lib/chains.js',               'nexus.lib.chains',
+    ['nexus.copilot.self-model', 'nexus.lib.agent-pull', 'nexus.lib.ledger-fanin']],  // CA3 — sequential agent/command/http/fn steps, RAID-gated per step, halts on failure
+  ['lib/connections.js',          'nexus.lib.connections',
+    ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin']],  // CA4 — scoped http/sse connection tool, default-deny domain allowlist, RAID-gated
+  ['lib/system-control.js',       'nexus.lib.system-control',
+    ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.guardian.clear-glass-bridge']],  // CA5 — governed settings (get/set/revert) + governed clear-glass incl. DOM storage
   ['lib/nexus-cli-interface.js',  'nexus.lib.nexus-cli-interface',
     ['nexus.copilot.capabilities', 'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.grammar-router', 'nexus.loom.scanners.phasemap-map']],  // --cli interface routing to the co-pilot additions
   ['lib/autopilot-intelligence.js','nexus.lib.autopilot-intelligence',

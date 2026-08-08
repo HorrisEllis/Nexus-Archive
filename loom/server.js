@@ -47,6 +47,13 @@ const { LoomIngest } = require('./ingest/index');
 // actually calls.
 const { scaffoldSystem } = require('./templates/system-scaffold');
 const path = require('path');
+// §LP3 2026-08-08 — loom-phasemap-section-phasemap.spec's LP1+LP2 (the
+// scanner + bySystem grouping) shipped as a pure lib module and, same
+// pattern as cortexSync/LoomIngest/scaffoldSystem above, was never wired to
+// an endpoint. /api/phasemap[/:system] below is that wire — loom's roadmap
+// section (what each system is BECOMING), served live off loadAll()/
+// forSystem(), not cached, same as every other read surface in this file.
+const phasemapMap = require('./scanners/phasemap-map');
 
 const SYSTEM_ID = 'loom';
 const PORT      = parseInt(process.env.LOOM_PORT || '3752');
@@ -330,6 +337,19 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'GET' && p === '/api/graph') {
       return json(res, 200, { ok: true, graph: driver.registry.graph() });
+    }
+    // §LP3 — the phasemap section. Bare /api/phasemap is the whole roadmap
+    // (loadAll() + summary()); /api/phasemap/:system is one system's roadmap
+    // (forSystem()) — the same has/get shape /api/registry/:kind already uses
+    // below, so the UI's fetch pattern doesn't need anything new either.
+    if (method === 'GET' && p === '/api/phasemap') {
+      const all = phasemapMap.loadAll();
+      return json(res, 200, { ok: true, ...all, summary: phasemapMap.summary() });
+    }
+    if (method === 'GET' && p.startsWith('/api/phasemap/')) {
+      const system = decodeURIComponent(p.slice('/api/phasemap/'.length));
+      if (!system) return json(res, 400, { ok: false, error: 'system required' });
+      return json(res, 200, { ok: true, roadmap: phasemapMap.forSystem(system) });
     }
     // §part_2 2026-07-10 — the semantic query layer. context-graph resolves
     // wires to component-level relations with intent; impact answers "if this

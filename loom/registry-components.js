@@ -14,7 +14,7 @@
  * guardian/architect/cortex use.
  */
 
-const V = '1.2.0';
+const V = '1.3.0';
 const NS = 'loom';
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -59,4 +59,8 @@ module.exports = [
   _c('revisions.list',    'GET',  '/api/revisions',          'List registry revisions'),
   _c('revisions.get',     'GET',  '/api/revisions/:id',      'Read one revision'),
   _c('templates',         'GET',  '/api/templates',          'Available scaffold templates'),
+
+  // ── Roadmap (LP3 — what each system is BECOMING, not just what it is) ───
+  _c('phasemap',          'GET',  '/api/phasemap',           'Every phase across every phasemap, tagged by system + status'),
+  _c('phasemap.system',   'GET',  '/api/phasemap/:system',   'One system\'s roadmap — done/pending phase breakdown', { tags: ['analysis'] }),
 ];

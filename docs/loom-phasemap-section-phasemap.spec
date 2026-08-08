@@ -41,6 +41,16 @@ spec:
       depends_on: LP2
       does: "add it as a SECTION in loom: a loom/maps/phasemap-map.js + a loom UI/API surface so the roadmap-per-system is part of loom's self-model alongside components + specs."
       gate:  "loom exposes the per-system phasemap section; clicking/querying a system shows its roadmap."
+      status: >
+        DONE 2026-08-08. /api/phasemap + /api/phasemap/:system wired in
+        loom/server.js (same route shape as /api/graph — no new pattern).
+        Both registered in loom/registry-components.js v1.3.0 (the exact gap
+        that file's own header warns against: a real route that never made it
+        into loom's own map of itself). UI: 4th rail button + welcome pillar
+        + view-roadmap section in loom/ui/index.html, reusing .reg-item/
+        .kind-tab styling verbatim — fetches /api/phasemap live, filters by
+        done/in-progress/pending, grouped by system. 8 tests added
+        (loom/test/phasemap-map.test.js — LP1+LP2 had shipped with none).
 
   first_build: "LP1 — the phasemap scanner. Reads all 13 maps, tags by system."
 
@@ -51,5 +61,13 @@ phase (id, status done/pending/in-progress, depends_on), and tags each by the
 SYSTEM it concerns. loom now knows what each system is BECOMING, not just what it
 is: 95 phases across 15 maps, 19 systems, 48 done / 45 pending. loadAll() +
 forSystem(sys) + summary(). In loom's graph alongside capability-map + spec-map.
-5 tests. REMAINING: LP3 — a loom UI/API surface for the section (the scanner + data
-layer is done; this is presentation).
+5 tests. REMAINING (as of LP1+LP2): LP3 — a loom UI/API surface for the section.
+
+---
+## LP3 COMPLETE 2026-08-08 — the roadmap is presented, not just modeled
+/api/phasemap + /api/phasemap/:system in loom/server.js, registered in
+loom/registry-components.js (v1.3.0), a live view-roadmap section in
+loom/ui/index.html. All three phases of this spec are DONE. loom now both
+knows what NEXUS is becoming (LP1+LP2) and can show anyone who asks (LP3).
+8 tests (loom/test/phasemap-map.test.js), all passing against the real docs
+tree. REMAINING: none — spec closed.
