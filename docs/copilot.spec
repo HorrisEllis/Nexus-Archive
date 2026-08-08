@@ -252,3 +252,19 @@ OB9 (tablet/map3d.html): a real three.js/WebGL 3D map of NEXUS. Nodes = systems/
 ---
 ## ADDENDUM 2026-07-30 — tablet container complete + CA7 gear placed
 The tablet (OB5) now surfaces the full each_container_holds per system: summary, event stream, snapshots, diagnostics, edge cases (OB11), api_map (→autopilot /contract-map), databases (→/tables), files (→/files), tests (→/run-tests, the REAL run-all.js), config (port/resolution/governed-edits), user_model (→copilot 'user model' → getHypotheses), controls (spawn/touch →autopilot). CA7 GEAR PLACED: the copilot container's controls panel carries the account gear — 'list accounts' + 'add account <provider> <label>' route through copilot to lib/account-registry; credentials stored as a REFERENCE in the registry, never raw in the UI (decoupling law). New copilot intercepts: 'list accounts', 'add account …', 'user model'. All panels show real data or an honest unreachable state (§1.1). Suite 1276/0.
+
+---
+## ADDENDUM 2026-08-07 — identity, governance, agent-switch, NEXUS model (P5/P6)
+copilot/lib/self-model.js wires EXISTING lib modules into co-pilot (§8.6, no new
+engines): lib/reflection.trackIdentityEvidence (identity evidence), lib/constitutional-ai
+getIdentityKernel + check (identity kernel + governance gate), lib/agent-router.routeAgent
+(switch to a different model/agent, incl. clear-glass), lib/intent-classifier.classify
+(intent + RISK_LEVEL). New co-pilot behaviors: "who am I / what's my name" → whoAmI()
+answers from real user-model hypotheses + reflection evidence, and ASKS BACK when
+there's no evidence (never fabricates identity — §1.1/§user_wellbeing). "switch to
+<agent>" → routeAgent. governAction() = intent-classify + constitutional check (the
+gate a programmable/automated action passes — P6 foundation). buildNexusModel()
+assembles the model of NEXUS (capabilities/versions/self-model/live coverage) and
+persists it to cortex's self_model table — "the model of nexus it uses for nexus
+questions" now lives in the brain. Guarded + cached (failed-to-fetch lesson). In
+loom's graph. 6 tests.

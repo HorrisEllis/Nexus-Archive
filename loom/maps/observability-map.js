@@ -44,14 +44,32 @@ const FILES = [
     ['nexus.copilot.diagnostics']],   // renders report.movement + report.bottlenecks
   ['cortex/intelligence/relational-field.js', 'nexus.cortex.intelligence.relational-field',
     ['nexus.lib.rfr2-bridge', 'nexus.cortex.intelligence.mastermind']],  // RFR2 wired into intelligence (causality + sigma)
+  ['lib/gemini-toolbox/injection.js', 'nexus.lib.gemini-injection',
+    ['nexus.lib.gemini-toolbox', 'nexus.lib.gemini-agent-contracts', 'nexus.lib.fs-tree']],  // P2 — tree/parseAny/recall injection payload
+  ['lib/gemini-toolbox/agent-contracts.js', 'nexus.lib.gemini-agent-contracts',
+    ['nexus.lib.gemini-toolbox', 'nexus.lib.agent-router']],  // P1 — per-agent contracts (identity/axioms/scoped toolbox)
+  ['lib/chunk-service.js',        'nexus.lib.chunk-service',
+    ['nexus.lib.chunker']],  // chunking consolidated through RAID — canonical chunker as one capability
+  ['lib/agent-pull.js',           'nexus.lib.agent-pull',
+    ['nexus.lib.gemini-agent-contracts', 'nexus.lib.chunk-service', 'nexus.lib.schema-registry', 'nexus.lib.tool-index']],  // AP1 — agents pull schemas/contracts/chunks/capabilities, scoped
+  ['lib/tool-index.js',           'nexus.lib.tool-index',
+    []],  // living tool index in cortex — file/dir/consumer/intent/edge-cases populate over time
+  ['lib/fs-tree.js',              'nexus.lib.fs-tree',
+    []],  // agnostic file-structure tree — promoted from gemini injection, any system uses it
+  ['lib/line-edit.js',            'nexus.lib.line-edit',
+    []],  // agnostic line addressing + verified edits — promoted from gemini-toolbox
   ['lib/gemini-toolbox/index.js',  'nexus.lib.gemini-toolbox',
-    ['nexus.lib.chunker']],  // the shared line-addressing backend for Gemini coding
+    ['nexus.lib.chunker', 'nexus.lib.line-edit']],  // the shared line-addressing backend for Gemini coding
   ['lib/gemini-toolbox/routes.js', 'nexus.lib.gemini-toolbox.routes',
     ['nexus.lib.gemini-toolbox']],  // HTTP surface, mounted on guardian /gemini-tool
   ['lib/ledger-fanin/index.js',   'nexus.lib.ledger-fanin',
     []],
   ['lib/activity-log/index.js',   'nexus.lib.activity-log',
     ['nexus.lib.ledger-fanin']],
+  ['copilot/lib/self-model.js',   'nexus.copilot.self-model',
+    ['nexus.copilot.user-model', 'nexus.copilot.nexus-awareness']],  // P5/P6 — identity + governance + agent-switch + nexus model, wired from lib/reflection, lib/constitutional-ai, lib/agent-router, lib/intent-classifier
+  ['copilot/lib/grammar-router.js','nexus.copilot.grammar-router',
+    ['nexus.lib.grammar-engine', 'nexus.copilot.capabilities']],  // P5 — dynamic grammar engine in the conversational path
   ['copilot/lib/nexus-awareness.js','nexus.copilot.nexus-awareness',
     ['nexus.copilot.capabilities', 'nexus.lib.diagnostic-causal', 'nexus.lib.ledger-fanin']],  // P4 — co-pilot's model of nexus
   ['copilot/lib/capabilities.js', 'nexus.copilot.capabilities',

@@ -1,0 +1,1 @@
+{"uuid":"0d5b039e-6d64-449b-8313-14c174f4ae1f","system":"bridge","component":"b","action":"error","status":"failed","tags":[],"detail":null,"causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"modules/test-p1-fanin-live.js:61","ts":1786165731447}

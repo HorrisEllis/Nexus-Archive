@@ -94,7 +94,7 @@ spec:
       drift: "co-pilot's current server has intercepts (status/diagnostics/accounts/user-model); extend that pattern, don't replace."
       axioms: [§1.1, §16.2]
 
-    P5_copilot_dynamic_and_user_aware:
+    P5_copilot_dynamic_and_user_aware:   # ← IN PROGRESS 2026-08-07: dynamic GRAMMAR ENGINE wired into co-pilots conversational path (the existing lib/grammar-engine trie, registry-owned, grows automatically). user-model "who am I" part still to come.
       depends_on: P4
       does: >
         Co-pilot becomes DYNAMIC and user-aware. "Who am I?"/"what's my name?" →
@@ -106,7 +106,7 @@ spec:
       drift: "don't over-claim knowledge of the user — answer from hypotheses with their confidence, per §1.1."
       axioms: [§1.1, user_wellbeing]
 
-    P6_copilot_programmable:
+    P6_copilot_programmable:   # ← FOUNDATION WIRED 2026-08-07: governAction (intent-classifier + constitutional-ai check) + switchAgent (agent-router) wired from existing lib. Schedule/workflow automation still to come.
       depends_on: [P4, P5]
       does: >
         Co-pilot becomes programmable: schedule tasks, automate the system, create
@@ -197,3 +197,36 @@ conditions), answerAbout() routes rundown/what's-wrong/versions questions to rea
 state and returns null for non-NEXUS prompts (never hijacks normal chat). Wired via
 copilot/server.js intercepts, guarded + cached (the failed-to-fetch lesson). In
 loom's graph. 9 P4 tests total. P5 (dynamic/user-aware) + P6 (programmable) remain.
+
+---
+## P5 (grammar engine) 2026-08-07 — the dynamic grammar engine, in the mind
+James: "expand P5 exponentially — dynamic grammar engine." There already WAS one
+(lib/grammar-engine.js, §8.6): reads the component registry grammar tree, builds a
+trie, resolves NL → {componentId, params, confidence}, live-rebuilds on
+component.registered. co-pilot's CLI used it; its CONVERSATIONAL path did not —
+that was the gap. copilot/lib/grammar-router.js brings it into co-pilot's chat:
+route(prompt) resolves any natural-language request to a real capability via the
+trie. THE EXPONENTIAL PART: co-pilot's chat went from ~7 hand-written regex
+intercepts to understanding ALL 239 capabilities — and every future one — with
+zero new regex, because the grammar is generated FROM loom's registry. §1.1
+confidence-gated (high → route, low → fall through to LLM; a confident wrong match
+is worse than a miss — the misfire-tracker exists for this). §1.2 never blocks,
+never throws to the caller. Wired as the FIRST resolution step in copilot/server.js.
+6 tests. In loom's graph. REMAINING in P5: the user-model "who am I / what's my
+name" conversational answers.
+
+---
+## P5 COMPLETE + P6 FOUNDATION 2026-08-07 — wired from existing lib (James: "check lib for more")
+Checking lib/ first (§8.6) revealed the substrate already existed — these were
+WIRING jobs, not builds. copilot/lib/self-model.js composes: lib/reflection
+(trackIdentityEvidence), lib/constitutional-ai (getIdentityKernel/check), lib/agent-router
+(routeAgent — switch model/agent), lib/intent-classifier (classify/risk).
+- P5 who-am-I: whoAmI() from real user-model + reflection evidence; asks back when
+  unknown (never fabricates). recordIdentityEvidence() → reflection.
+- P6 foundation: governAction() = intent + constitutional gate; switchAgent() =
+  agent-router (the "switch to clear-glass agent" ask).
+- NEXUS MODEL IN CORTEX: buildNexusModel() assembles capabilities/versions/self-model/
+  coverage and persists to cortex's self_model table (the brain). "The model of nexus
+  it uses for nexus questions" now lives in cortex.
+Registry updated with real wires; copilot.spec addendum added. 6 tests.
+REMAINING in P6: scheduling, workflows, full automation (all RAID-governed).

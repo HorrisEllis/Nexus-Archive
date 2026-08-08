@@ -791,6 +791,7 @@ const server = http.createServer(async (req, res) => {
     const channel   = body.channel || 'unknown';
     const sessionId = body.sessionId || req.headers['x-session-id'] || crypto.randomUUID();
     const requestId = crypto.randomUUID();
+    let requestGrammar = null;   // §P5 — what the grammar engine resolved this prompt to (if anything)
     const session   = _getSession(sessionId, channel);
     session.exchanges++;
 
@@ -1036,10 +1037,39 @@ const server = http.createServer(async (req, res) => {
       }
     } catch (_) { /* status/diagnostic poll unavailable — fall through to the normal path */ }
 
+    // §P5 DYNAMIC GRAMMAR — resolve the prompt through the registry grammar trie
+    // FIRST. This understands ALL capabilities (and future ones) via loom's
+    // registry, not hand-written regex. High-confidence → we know the exact
+    // capability the user means (surfaced for routing/telemetry); low-confidence
+    // → fall through to the specific intercepts + LLM below. §1.2 never blocks.
+    try {
+      const gr = require('./lib/grammar-router');
+      const resolved = await gr.route(prompt, {});
+      if (resolved && resolved.routed) {
+        // Record what the grammar understood; the specific handlers below still
+        // produce the answer. This makes co-pilot's understanding legible and is
+        // the hook where a future turn dispatches directly to the capability.
+        requestGrammar = resolved;
+      }
+    } catch (_) { /* grammar unavailable — fall through, never block */ }
+
     // §CONTAINER PANELS — structured queries the tablet's config/user_model/
     // controls panels consume via this same endpoint (decoupling law: the tablet
     // talks to co-pilot, never the modules directly). Non-fatal; fall through.
     try {
+      // §P5 who-am-I / §P6 switch-agent — wired from the existing reflection +
+      // constitutional-ai + agent-router modules via copilot/lib/self-model.
+      if (/\b(who am i|what('?s| is) my name|what do you know about me|who do you think i am)\b/i.test(prompt)) {
+        const sm = require('./lib/self-model');
+        const who = sm.whoAmI({});
+        return json(res, 200, { text: who.text, model_used: 'nexus-identity', confidence: who.known ? 0.8 : 0.3, escalated: false, hypotheses: who.hypotheses, requestId });
+      }
+      const switchM = prompt.match(/\b(switch to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
+      if (switchM && /\b(agent|model)\b/i.test(prompt)) {
+        const sm = require('./lib/self-model');
+        const r = sm.switchAgent({ intent: 'directed', directed: switchM[2].toLowerCase(), prompt });
+        return json(res, 200, { text: r.ok ? `Routing to ${JSON.stringify(r.agent)}.` : `Could not switch: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
+      }
       if (/\b(what can you do|what can i do|list (your )?(tools|capabilities)|full (list of )?(tools|capabilities)|what (are your|tools do you have))\b/i.test(prompt)) {
         const cap = require('./lib/capabilities');
         const r = cap.whatCanIDo();

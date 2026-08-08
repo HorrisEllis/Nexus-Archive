@@ -1,0 +1,1 @@
+{"uuid":"fdb063a9-3eea-4366-86eb-660994f20d47","system":"liminal","component":"liminal.spaces.list","action":"registered","status":"ok","tags":["memory","liminal"],"detail":"List all five interstitial spaces","causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:313","ts":1786165745410}

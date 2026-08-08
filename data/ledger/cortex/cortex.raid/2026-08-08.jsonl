@@ -1,0 +1,1 @@
+{"uuid":"7f79b277-dbbd-46a5-8f45-ff7e766da013","system":"cortex","component":"cortex.raid","action":"verify","status":"ok","tags":[],"detail":null,"causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"modules/test-p1-fanin-live.js:29","ts":1786165731360}
