@@ -12,4 +12,3 @@
 {"action":"system_recovered","system":"orchestrator","downMs":30358,"ts":1784178430945}
 {"action":"gap_escalated","type":"system_offline","system":"emerge","port":4242,"severity":"high","offlineMs":30359,"fix":"Start emerge: node emerge/boot.js or node service/emerge-service.js","body":"emerge offline for 30s — :4242 not responding","gapUuid":"2820b410-bfe6-4a02-9070-ea86603c78e6","ts":1784178431101}
 {"action":"system_recovered","system":"forge-shell","downMs":30515,"ts":1784178431103}
-{"action":"forge_shell_unavailable","reason":"orchestrator offline","fix":"Start orchestrator","ts":1786177113142}

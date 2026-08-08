@@ -1,0 +1,154 @@
+spec:
+  meta:
+    name:        raid-routing-fidelity
+    version:     0.1.0-phasemap
+    status:      PHASEMAP 2026-08-08. Mapped before build (§3.3). Build nothing yet.
+    uuid:        nexus-raid-routing-fidelity-v0-0000-2026-0808-001
+    author:      James Brooks
+    intent: >
+      Make the RAID engine the GOVERNING ROUTING LAYER: the chunk system chunks
+      work into contracts, each contract is routed THROUGH RAID, and RAID decides
+      — by signal-to-noise + fidelity ("which agent aligns with this request
+      best?") — which agent/system receives it. Chunking stops being character-
+      based (3000 chars is meaningless for token-limited agents) and becomes
+      contract-based, sized to each agent's real token budget. Every cross-system
+      handoff is a governed handshake. Per-agent configs (tokens, accounts) live
+      in cortex as fluid databases; the system adjusts itself over time (cortex
+      fitness); every system exposes what's changeable via API/CLI, hooked to loom.
+
+    the_core_reframe: >
+      James: "the chunk size is crap — 3000 characters isn't useful because it's
+      tokens, the measurement unit with AI. Each agent needs its own. This is why
+      I said move it to the RAID engine — every contract gets sent to the right
+      signal-to-noise filter with fidelity scoring: what agent aligns with this
+      request the best, highest fidelity? The chunking needs to interconnect with
+      the RAID engine's signal-to-noise. RAID is the governing layer; everything
+      goes through it to move to another system."
+
+  MAJOR_8.6_FINDING:   # most of this ALREADY EXISTS — verified 2026-08-08
+    - "cortex/core/raid/snr-filter.js — the SNR + FIDELITY gate already exists, wired into RAID _decide() as a pre-gate. Spec: docs/raid-snr-filter.spec. 'fidelity is how much context resolves the task.' THE SPINE EXISTS."
+    - "lib/agent-router.js — per-agent token configs ALREADY THERE: chatgpt {maxTokens:900,chunk:true}, claude {maxTokens:200000}, gemini {1M/65k}, + intent→agent routing (perplexity=research, chatgpt=general...). The 900-token chunking reason is even documented."
+    - "lib/account-registry.js — multi-account slots per provider, app-password-style login ('login to multiple accounts in ClearGlass like an app password' — James's exact ask, BUILT). Stored as editable cortex rows."
+    - "guardian/clear-glass-bridge.js + guardian/api-dispatch.js — the guardian↔clear-glass handshake + chunk intake path exist."
+    - "lib/chunk-service.js (this session) — chunking already routes through RAID (chunkGoverned)."
+    - "enforcement-index.js (uploaded, NOT yet in tree) — 25-invariant runtime enforcement (RuntimeGuard + BoundaryIndex). Candidate to integrate for the handshake/governance guarantees."
+    So this arc is ~70% WIRING existing pieces + extending them, NOT building from scratch. Honesty: verify each against source before wiring (§1.1).
+
+  substrate_this_session:   # the live nervous system these route over
+    - "lib/ledger-fanin + boot — every event; handoffs emit here."
+    - "cortex/intelligence/relational-field (RFR2) + CFR — conditions + regime for fitness."
+    - "lib/gemini-toolbox/agent-contracts — per-agent contracts + scoped toolboxes."
+    - "lib/agent-pull + lib/tool-index — pull toolbox + living index (AP1)."
+
+  governing_axioms:
+    - "§3.3 map first (this file). §8.6 reuse — verified most exists; extend, don't rebuild."
+    - "§10.3 one source of truth — one router (RAID), one config store (cortex), one chunker (lib/chunker)."
+    - "§RAID governs every handoff. §1.1 declared≠real (verify the existing pieces work as claimed). §1.2 nothing silently fails."
+    - "§always: update loom maps + component/consumer registries, spec addenda, nothing lost."
+
+  # ── DEPENDENCY-ORDERED PHASES ───────────────────────────────────────────────
+  phases:
+
+    RR1_verify_and_wire_the_snr_fidelity_gate:
+      priority: FOUNDATION — the spine already exists; prove it, then route contracts through it.
+      does: >
+        Verify cortex/core/raid/snr-filter.js does real SNR + fidelity scoring
+        (§1.1 — declared≠real). Then route a CONTRACT (not a raw call) through it:
+        RAID scores each candidate agent's fidelity for a contract and picks the
+        highest. Confirm the intent→agent + AGENT_CONSTRAINTS path feeds it.
+      reuse: "snr-filter + agent-router AGENT_CONSTRAINTS + raid router — all exist."
+      gate:  "a contract routed through RAID returns the best-fidelity agent + its token budget; a low-SNR/unknown call is gated, not mis-routed."
+      build_vs_wire: "mostly VERIFY + thin wire. The scoring exists."
+
+    RR2_contract_based_chunking:
+      depends_on: RR1
+      does: >
+        Replace character-based chunking with CONTRACT-based, TOKEN-sized chunking.
+        lib/chunk-service chunks work into contracts; each contract is sized to the
+        TARGET agent's real token budget (from AGENT_CONSTRAINTS: chatgpt 900,
+        claude 200k, gemini 1M, ollama 4k-128k, perplexity). The chunker asks RAID
+        'who's the best agent for this?' (RR1), THEN sizes to that agent. Chunking
+        interconnects with RAID's SNR, per James.
+      reuse: "lib/chunker (boundary detection) + chunk-service + AGENT_CONSTRAINTS + RR1."
+      gate:  "a large input chunks into agent-sized contracts (900-token chunks for chatgpt, larger for claude/gemini), not fixed 3000-char blocks."
+      build_vs_wire: "extend chunk-service — token estimator + per-agent sizing. Real build, but small."
+
+    RR3_per_agent_config_in_cortex:
+      depends_on: RR1
+      does: >
+        Consolidate per-agent config (token limits, accounts, availability) into a
+        fluid cortex database — one editable source, not constants in agent-router.
+        Sync to James's real accounts (account-registry, already multi-account).
+        chatgpt 900, claude, ollama (4k-128k per RAM), gemini, perplexity. Each
+        config changeable via API + CLI, hooked to loom.
+      reuse: "account-registry (multi-account, cortex rows) + agent-router constraints + schema-registry."
+      gate:  "agent configs read from cortex (editable live); changing a token limit or adding an account changes routing with no code change."
+      build_vs_wire: "wire agent-router constants → cortex rows; account-registry already exists."
+
+    RR4_governed_handshake_on_handoff:
+      depends_on: [RR1, RR2]
+      does: >
+        Every cross-system contract handoff is a governed HANDSHAKE through RAID —
+        especially Guardian (accepts chunks) and clear-glass. Handshake = the
+        receiving system acknowledges the contract + its constraints before work
+        starts. Consider integrating the uploaded enforcement-index.js (25
+        invariants, RuntimeGuard) as the handshake's guarantee layer.
+      reuse: "guardian/clear-glass-bridge + api-dispatch + RAID router + ledger-fanin (handoff events)."
+      gate:  "a contract handed to guardian/clear-glass is acknowledged with its constraints; a handoff that violates an invariant is stopped (enforcement)."
+      build_vs_wire: "wire the existing bridge through RAID + optionally integrate enforcement module."
+
+    RR5_clearglass_accounts_and_features:
+      depends_on: RR3
+      does: >
+        Hook account-registry to clear-glass: app-password-style multi-account
+        logins in the tv-ui top-right. Break the clear-glass userscripts into
+        FEATURES, added one by one, each with SSE/API I/O for input/output. A tool
+        to set up a browser-bridge (BBB) for a webpage + an API for SSE.
+      reuse: "account-registry (built) + clear-glass shell + tv-ui + userscripts."
+      gate:  "a user adds an account via tv-ui top-right; a userscript feature works through clear-glass with SSE I/O."
+      build_vs_wire: "wire account-registry→clear-glass + tv-ui; decompose userscripts (real work)."
+
+    RR6_cortex_fitness_and_fluid_configs:
+      depends_on: [RR3, RR4]
+      does: >
+        The system adjusts itself over time (cortex fitness): routing/chunking/
+        config tuned by observed performance (fan-in + RFR2 + CFR). Everything
+        fluid — each system exposes its changeable config + API + CLI as cortex
+        rows + loom-hooked commands. This is the agent-intelligence-loop AP4
+        (optimizer) generalized to the whole system.
+      reuse: "cortex fitness + intelligence + fan-in + loom + the agent-intelligence-loop AP3/AP4."
+      gate:  "a persistently low-fidelity route is auto-adjusted (RAID-governed); every system's config is discoverable + changeable via loom."
+      build_vs_wire: "the big one — composes AP4 + fitness. Depends on the agent-intelligence-loop arc."
+
+    RR7_per_system_dashboards_in_tablet:
+      depends_on: []   # independent — a UI concern
+      does: >
+        Each system, clicked in nexus-tablet, opens a performance dashboard like
+        the checkmk reference James shared: per-system CPU/RAM/throughput/latency/
+        errors/requests panels, fed by the fan-in + activity-log + health. A
+        cockpit view per system.
+      reuse: "tablet homepage (per-system tiles) + activity-log + fan-in + health endpoints."
+      gate:  "clicking a system tile opens a live per-system metrics dashboard."
+      build_vs_wire: "UI build — reads existing telemetry; can be done independently anytime."
+
+  ordering_rationale: >
+    RR1 first — the SNR/fidelity gate is the spine and it already exists; verify +
+    wire it. RR2 (contract chunking) and RR3 (config in cortex) both build on RR1's
+    routing. RR4 (handshake) needs routing + chunking. RR5 (clear-glass accounts)
+    needs the config store. RR6 (fitness) is the capstone — it composes the
+    agent-intelligence-loop's AP4 optimizer over the whole system. RR7 (dashboards)
+    is independent UI, do anytime.
+
+  honest_risks:
+    - "7 phases — a large ARC. Each ships whole + tested + committed, one at a time."
+    - "MOST of the spine exists (§8.6) — so RR1/RR3/RR4 are lighter than they look; RR2/RR5/RR6 are real builds."
+    - "RR6 (fitness) depends on the agent-intelligence-loop arc (AP2-AP4) being built first — they're the same optimizer."
+    - "enforcement-index.js integration (RR4) — read it fully + verify against the tree's invariant model before wiring (§1.1)."
+    - "Everything routing-live proves on James's boot; sandbox verifies scoring/chunking/config logic."
+
+  cross_arc_note: >
+    This arc and docs/agent-intelligence-loop-phasemap.spec CONVERGE at fitness:
+    RR6 IS the agent-intelligence-loop AP4 optimizer applied system-wide. Build the
+    loop's AP2-AP4 first, then RR6 is their generalization. One optimizer, not two.
+
+  first_build: "RR1 — verify + wire the existing SNR/fidelity gate to route contracts. Recommended start."

@@ -76,6 +76,8 @@ const FILES = [
     ['nexus.loom.scanners.capability-map']],  // P4 slice — co-pilot's real toolbox from loom
   ['lib/diagnostic-causal.js',    'nexus.lib.diagnostic-causal',
     ['nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.lib.snapshot-trigger']],  // P3 — conditions behind findings
+  ['lib/integrity-revert.js',     'nexus.lib.integrity-revert',
+    ['nexus.lib.file-integrity', 'nexus.lib.snapshot-trigger', 'nexus.lib.replay-engine']],  // integrity sigma → guarded revert (only when broken)
   ['lib/snapshot-trigger.js',     'nexus.lib.snapshot-trigger',
     ['nexus.lib.replay-engine', 'nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin']],  // P2 — snapshot on every sigma, tracing conditions via RFR2
   ['lib/ledger-fanin/boot.js',    'nexus.lib.ledger-fanin.boot',
