@@ -1,4 +1,13 @@
 spec:
+  SUPERSEDED_NOTICE: >
+    §10.3 RESOLVED 2026-08-08. This map is the EARLIER DESIGN of the RAID
+    verification spine (v0.1.0, 2026-07-30). It was FULFILLED and superseded by
+    docs/raid-warp-verification-phasemap.spec (v0.2.0), whose status is "ALL 11
+    PHASES COMPLETE" and whose P1-P7 are the SAME spine, actually built in
+    cortex/core/raid/index.js (verify(), verifyInIsolation(), isolate→drift→
+    compare→rewind). The phases below are DONE via that map. Kept for history
+    (§0.3 nothing lost), not an open roadmap. Do not treat P1-P7 here as pending.
+
   meta:
     name:        raid-verification-spine
     version:     0.1.0-phasemap
@@ -39,7 +48,7 @@ spec:
 
   phases:
 
-    P1_raid_records_every_tool_decision:
+    P1_raid_records_every_tool_decision:   # ← DONE (via raid-warp-verification, §10.3 superseded)
       why_first: "Traceability is the floor. Before RAID can VERIFY, it must SEE. 'Track each request through the system.'"
       does: >
         agent-tools executeTool() sends every tool call to RAID as a decision
@@ -48,7 +57,7 @@ spec:
       axioms: "§1.2 observable never silent, §0.3 nothing lost"
       gate: "a tool call appears as a RAID decision record with its outcome, queryable."
 
-    P2_constitution_on_the_approve_path:
+    P2_constitution_on_the_approve_path:   # ← DONE (via raid-warp-verification, §10.3 superseded)
       why: "The cheapest, most fundamental check first — axioms before execution."
       does: >
         _approveTool calls constitutional-ai.check() for consequential actions.
@@ -57,7 +66,7 @@ spec:
       axioms: "§ the axioms themselves; §1.2 fail loud with the reason"
       gate: "an action that violates an axiom is denied by RAID, naming the axiom."
 
-    P3_isolate_and_verify_via_cos:
+    P3_isolate_and_verify_via_cos:   # ← DONE (via raid-warp-verification, §10.3 superseded)
       why: "'Isolate each contract and test.' Consequential actions run in a COS compartment before they touch anything real."
       does: >
         For actions RAID flags as consequential, route through
@@ -67,7 +76,7 @@ spec:
       axioms: "§1.1 nothing real until proven, §2.1 no mutation before pass"
       gate: "a failing action is caught in the sandbox; the real target is untouched."
 
-    P4_sigma_and_drift_scoring:
+    P4_sigma_and_drift_scoring:   # ← DONE (via raid-warp-verification, §10.3 superseded)
       why: "'Verify using the sigma system and behavioral drift engine.' Score the isolated run."
       does: >
         The sandboxed run is scored: sigma (halt-risk/drift floor) + meta/bda
@@ -76,7 +85,7 @@ spec:
       axioms: "§1.2 the score is observable, §13.4 the map matches the run"
       gate: "a drifting/sigma-spiking run is flagged with its regime + score."
 
-    P5_compare_contract_vs_output:
+    P5_compare_contract_vs_output:   # ← DONE (via raid-warp-verification, §10.3 superseded)
       why: "'Comparison engine between contract and outputs.' Did the output match what the contract promised?"
       does: >
         CompareEngine diffs the run's output against the contract/golden. A
@@ -85,7 +94,7 @@ spec:
       axioms: "§5.14 output must honour the contract, §13.4 map matches territory"
       gate: "an output that regresses against its contract is caught by compare."
 
-    P6_rewind_on_fail:
+    P6_rewind_on_fail:   # ← DONE (via raid-warp-verification, §10.3 superseded)
       why: "'Using rewind engine to isolate.' A failed verification snapshots for replay/inspection."
       does: >
         On any verification fail (P2–P5), replay-engine snapshots the decision
@@ -94,7 +103,7 @@ spec:
       axioms: "§0.3 nothing lost, §0.1 evidence over memory"
       gate: "a failed decision is recoverable + replayable from a snapshot."
 
-    P7_one_raid_verify_entrypoint:
+    P7_one_raid_verify_entrypoint:   # ← DONE (via raid-warp-verification, §10.3 superseded)
       why: "Unify P1–P6 into ONE call every surface uses, so the whole system works through one spine."
       does: >
         A single raid.verify(decision) that runs the chain: record → constitution

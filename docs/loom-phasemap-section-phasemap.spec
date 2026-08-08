@@ -29,11 +29,11 @@ spec:
     - "docs/SPEC-REGISTRY.md — the registry every spec is listed in."
 
   phases:
-    LP1_phasemap_scanner:
+    LP1_phasemap_scanner:   # ← DONE 2026-08-08. loom/scanners/phasemap-map.js — 95 phases across 15 maps, tagged by system.
       does: "loom/scanners/phasemap-map.js — read every docs/*phasemap*.spec, extract phases (id, does, gate, status done/pending, depends_on), tag each with its SYSTEM (cortex/guardian/raid/copilot/loom/clear-glass/gemini-agents/...) parsed from the phase content + reuse lines."
       reuse: "spec-map scanner pattern."
       gate:  "the scanner returns every phase across all 13 maps, each tagged with its system + done/pending status."
-    LP2_split_by_system:
+    LP2_split_by_system:   # ← DONE 2026-08-08. bySystem grouping + forSystem() roadmap.
       depends_on: LP1
       does: "group the consolidated phases by system/feature — so 'what is cortex becoming', 'what is raid becoming', etc. is answerable."
       gate:  "phases grouped by system; each system's roadmap (done + pending) is listable."
@@ -43,3 +43,13 @@ spec:
       gate:  "loom exposes the per-system phasemap section; clicking/querying a system shows its roadmap."
 
   first_build: "LP1 — the phasemap scanner. Reads all 13 maps, tags by system."
+
+---
+## LP1+LP2 COMPLETE 2026-08-08 — the phasemap section is in loom
+loom/scanners/phasemap-map.js reads all 15 docs/*phasemap*.spec, extracts every
+phase (id, status done/pending/in-progress, depends_on), and tags each by the
+SYSTEM it concerns. loom now knows what each system is BECOMING, not just what it
+is: 95 phases across 15 maps, 19 systems, 48 done / 45 pending. loadAll() +
+forSystem(sys) + summary(). In loom's graph alongside capability-map + spec-map.
+5 tests. REMAINING: LP3 — a loom UI/API surface for the section (the scanner + data
+layer is done; this is presentation).

@@ -31,6 +31,7 @@ const SUITES = [
   'test-agnostic-lib-tools.js',
   'test-ap1-agent-pull.js',
   'test-integrity-revert.js',
+  'test-loom-phasemap.js',
   'test-activity-log.js',
   'test-ledger-fanin.js',
   'test-gemini-toolbox.js',

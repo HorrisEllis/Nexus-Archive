@@ -54,6 +54,8 @@ const FILES = [
     ['nexus.lib.gemini-agent-contracts', 'nexus.lib.chunk-service', 'nexus.lib.schema-registry', 'nexus.lib.tool-index']],  // AP1 — agents pull schemas/contracts/chunks/capabilities, scoped
   ['lib/tool-index.js',           'nexus.lib.tool-index',
     []],  // living tool index in cortex — file/dir/consumer/intent/edge-cases populate over time
+  ['loom/scanners/phasemap-map.js','nexus.loom.scanners.phasemap-map',
+    []],  // the phasemap SECTION of loom — roadmap per system (what each is becoming)
   ['lib/fs-tree.js',              'nexus.lib.fs-tree',
     []],  // agnostic file-structure tree — promoted from gemini injection, any system uses it
   ['lib/line-edit.js',            'nexus.lib.line-edit',
