@@ -45,6 +45,7 @@ const SUITES = [
   'orchestrator-cli.test.js',
   'interaction-contract.test.js',
   'uid.test.js',
+  'ledger-tail.test.js',
   'alk.test.js',
   'healer.test.js',
   'constitutional-ai.test.js',
