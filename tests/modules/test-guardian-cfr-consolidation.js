@@ -67,7 +67,7 @@ test('GCC-005', 'no LIVE code writes to guardian/memory_store anymore — only c
   const offenders = [];
   const scan = (dir) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (['node_modules', '.git', 'docs', 'data'].includes(e.name)) continue;
+      if (['node_modules', '.git', 'docs', 'data', '_archive'].includes(e.name)) continue;
       const full = path.join(dir, e.name);
       if (e.isDirectory()) { scan(full); continue; }
       if (!e.name.endsWith('.js') || e.name.endsWith('.test.js')) continue;

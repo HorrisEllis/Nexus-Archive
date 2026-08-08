@@ -63,6 +63,23 @@ try {
     onAutopilot: (row) => { _faninEvents.push(row); if (_faninEvents.length > 1000) _faninEvents.shift(); },
   });
   console.error(`[autopilot] §P1 fan-in wired: ${_fw.wired.join(', ')}${_fw.skipped.length ? ' (deferred: ' + _fw.skipped.map(s => s[0]).join(',') + ')' : ''}`);
+
+  // §2026-08-08 — wire + VERIFY the whole intelligence substrate at boot:
+  // intelligence (learner) + RFR2 (relational-field) + CFR (field/regime) +
+  // baseline behaviour + sigma→snapshot + emergence (pattern detection). One
+  // coherent bundle, reported honestly (§1.1 declared≠real). §1.2 never dies here.
+  // GATED to real boot only: starting intelligence emits its own stdout logs,
+  // which corrupt the status JSON that a spawned status-probe autopilot prints.
+  // So only wire it when this is the actual orchestrator entry, not a probe
+  // (--status-port) and not a require() (require.main !== module). §0.1 fix.
+  const _isProbe = process.argv.slice(2).some(a => a.startsWith('--status-port='));
+  if (require.main === module && !_isProbe) {
+    try {
+      const { wireIntelligence } = require('./lib/autopilot-intelligence');
+      const _iw = wireIntelligence({ snapshotAlreadyAttached: true });
+      console.error(`[autopilot] ${_iw.report}`);
+    } catch (e) { console.error(`[autopilot] intelligence substrate wiring skipped: ${e.message}`); }
+  }
 } catch (e) { console.error(`[autopilot] §P1 fan-in wiring skipped: ${e.message}`); }
 
 const LOG_DIR  = path.join(ROOT, 'data', 'autopilot');
@@ -232,6 +249,7 @@ const CIRCUIT_WINDOW_MS   = 5 * 60 * 1000;
 const argv = process.argv.slice(2);
 const onlyArg = argv.find(a => a.startsWith('--only='));
 const statusArg = argv.find(a => a.startsWith('--status-port='));
+const CLI_MODE = argv.includes('--cli');   // §2026-08-08 — launch the interactive CLI after boot
 const ONLY_NAMES = onlyArg ? new Set(onlyArg.split('=')[1].split(',').map(s => s.trim())) : null;
 const DEFAULT_STATUS_PORT = 7799;
 let STATUS_PORT;
@@ -1404,5 +1422,16 @@ process.on('SIGINT',  () => _shutdown('SIGINT'));
 process.on('SIGTERM', () => _shutdown('SIGTERM'));
 
 if (require.main === module) start();
+
+// §2026-08-08 — --cli: after boot, launch the interactive CLI interface with a
+// help menu, routing to the co-pilot additions (capabilities, awareness, self-
+// model, grammar). Gated to real boot (require.main), never during a probe.
+if (require.main === module && CLI_MODE && !statusArg) {
+  // give the boot a moment to bring systems up, then open the CLI.
+  setTimeout(() => {
+    try { require('./lib/nexus-cli-interface').start({ onClose: () => {} }); }
+    catch (e) { console.error(`[autopilot] --cli interface failed to start: ${e.message}`); }
+  }, 3000);
+}
 
 module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead, _handleContractProxy, _handleTablesRead, _handleFilesRead, _handleRunTests, _handleGraphRead, _bootPhases, _runDiagnosticOnStall, _getBootResult: () => _bootResult };

@@ -230,3 +230,30 @@ WIRING jobs, not builds. copilot/lib/self-model.js composes: lib/reflection
   it uses for nexus questions" now lives in cortex.
 Registry updated with real wires; copilot.spec addendum added. 6 tests.
 REMAINING in P6: scheduling, workflows, full automation (all RAID-governed).
+
+---
+## AUTOPILOT INTELLIGENCE WIRING 2026-08-08 (James: "completely update autopilot, wire in intelligence/RFR2/emergence/CFR/sigmas/baseline")
+lib/autopilot-intelligence.js — the ONE place autopilot wires + VERIFIES the whole
+intelligence substrate at boot: intelligence (learner, started idempotently) + RFR2
+(relational-field) + CFR (meta/cfr field/regime) + baseline behaviour + sigma→
+snapshot (P2) + emergence (intelligence's pattern-detection scan). wireIntelligence()
+returns a wired/missing report (§1.1 declared≠real — verifies reachability, doesn't
+claim). §8.6 composes existing modules; §1.2 a missing faculty degrades honestly,
+boot never dies. Wired into autopilot.js boot alongside the P1 fan-in. On first live
+run it immediately crystallised real patterns (incl. "kernel circuit open recurs 92×
+— systemic bottleneck") — the substrate detecting emergence live. 4 tests. In loom's
+graph. "emergence" clarified: not a separate module — it's intelligence's pattern
+detection over the stream.
+
+---
+## --cli INTERFACE 2026-08-08 (James: "npm run start:all --cli for a cli interface with a help menu, add the co-pilot additions")
+lib/nexus-cli-interface.js — an interactive CLI with a help menu, launched by
+autopilot on --cli (npm run start:all:cli, or node autopilot.js --cli). Routes to
+the co-pilot additions built this session (§8.6): capabilities ("what can you do" →
+239 real capabilities), nexus-awareness (rundown / what's wrong), self-model (who am
+i / switch agent), grammar-router (natural language → capability), + the loom
+phasemap section (roadmap [system]). Everything answered from REAL state. §1.2 every
+command degrades honestly; unknown input never throws the REPL. Gated to real boot
+(require.main, not a status probe) so it never interferes with spawned-status
+parsing. npm script start:all:cli added (npm swallows --cli as its own arg, so a
+dedicated script is the reliable form). 8 tests. In loom's graph.

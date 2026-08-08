@@ -82,6 +82,12 @@ const FILES = [
     ['nexus.lib.file-integrity', 'nexus.lib.snapshot-trigger', 'nexus.lib.replay-engine']],  // integrity sigma → guarded revert (only when broken)
   ['lib/snapshot-trigger.js',     'nexus.lib.snapshot-trigger',
     ['nexus.lib.replay-engine', 'nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin']],  // P2 — snapshot on every sigma, tracing conditions via RFR2
+  ['lib/scheduler.js',            'nexus.lib.scheduler',
+    ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.lib.agent-pull']],  // CA1 — schedule tasks/jobs/alarms/timed payloads, RAID-gated
+  ['lib/nexus-cli-interface.js',  'nexus.lib.nexus-cli-interface',
+    ['nexus.copilot.capabilities', 'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.grammar-router', 'nexus.loom.scanners.phasemap-map']],  // --cli interface routing to the co-pilot additions
+  ['lib/autopilot-intelligence.js','nexus.lib.autopilot-intelligence',
+    ['nexus.cortex.intelligence', 'nexus.cortex.intelligence.relational-field', 'nexus.lib.baseline', 'nexus.lib.snapshot-trigger', 'nexus.lib.ledger-fanin']],  // autopilot boot — wire+verify the whole intelligence substrate
   ['lib/ledger-fanin/boot.js',    'nexus.lib.ledger-fanin.boot',
     ['nexus.lib.ledger-fanin', 'nexus.lib.activity-log']],  // P1 — subscribes intelligence/autopilot/copilot/logging to the fan-in at boot  // subscribes the fan-in → persists all activity + errors to cortex  // the unified event fan-in — every system emits, every consumer subscribes once
   ['ui/agents/gemini/code-suite.html', 'nexus.ui.gemini.code-suite',
