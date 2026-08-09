@@ -412,3 +412,20 @@ after. Both shapes now supported and pinned (T-B1-015).
 | `docs/loom-phasemap-section-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-08 | LP1+LP2+LP3 ALL DONE 2026-08-08. Consolidates all 16 phasemaps → splits phases by system → live in loom as a section. loom/scanners/phasemap-map.js (LP1+LP2) + /api/phasemap + /api/phasemap/:system in loom/server.js, registered in loom/registry-components.js v1.3.0, live view-roadmap in loom/ui/index.html (LP3). 8 tests (loom/test/phasemap-map.test.js). Verified live: 102 phases / 16 phasemaps / 19 systems, 58 done / 2 in progress / 42 pending. Spec closed. |
 | `docs/nexus-system-standardization-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-08 | THE TARGET ARCHITECTURE: every system standardized — own folder, config, event-driven handshake-gated interaction contracts, full logging (error.log + event ledger + SSE to cortex), diagnostics-reads-and-fixes, dynamic commands, persistent cortex data, hashed integrity, fully decoupled via contracts/APIs. Census shows the pattern exists in fragments (guardian has config+contract, others don't) — this STANDARDIZES it. SS0 clear clutter → SS1 manifest → SS2 config → SS3 handshake contracts → SS4 logging → SS5 diagnostics-fix → SS6 dynamic/fluid → SS7 decoupling audit. The spine all other maps hang on. SS6 converges with raid-routing RR6 + agent-loop AP4. |
 | `docs/copilot-autonomous-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-08 | ALL SEVEN PHASES DONE 2026-08-08 — spec closed. CA1 scheduler, CA2 triggers/conditions, CA3 pipeline chains, CA4 http/sse connections, CA5 system control + governed clear-glass/DOM, CA6 self-building commands, CA7 constant autonomy. lib/scheduler.js, lib/triggers.js, lib/chains.js, lib/connections.js, lib/system-control.js, lib/command-builder.js, lib/constant-autonomy.js — all registered in loom/maps/observability-map.js. 67 tests total (7+10+8+8+10+14+10), all passing against real substrate (real HTTP/SSE servers, the real live capability registry, real autonomous-loop execution). Four spec assumptions checked against real code and corrected where wrong; two real bugs caught by tests before shipping; one pre-existing unrelated bug in compartment-engine surfaced and noted, not scope-crept into fixing. |
+
+---
+## Doc cleanup 2026-08-09
+Eleven superseded docs moved from `docs/` to `_archive/superseded-docs-2026-08-09/`
+(git-mv'd, history intact, per §0.3 — archived, never deleted). Each checked
+for live references before moving, not archived on filename appearance alone:
+`docs/PHASE-MAP-TEMP.md` looked like the obvious first candidate (its name)
+and was explicitly **not** archived — `tests/modules/test-health-authority.js`
+(HA-008) reads it live and asserts it still holds a specific historical
+correction record. Two live-code docblock comments and one live doc's prose
+reference were updated to point at the new archive location rather than left
+dangling. Full rationale per file: `_archive/superseded-docs-2026-08-09/README.md`.
+`docs/NEXUS-PHASE-MAP.md` (the old monolithic phase map, 1287 lines, phases
+0-125) was deliberately left for a separate, more careful pass — referenced
+by three other docs, too large to archive on a quick read. `loom/maps/`
+checked too: both files there (`observability-map.js`, `warp-map.js`) are
+actively current, nothing to clean.

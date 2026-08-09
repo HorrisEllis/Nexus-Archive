@@ -6,7 +6,7 @@
  * Declares every Guardian capability to the orchestrator on boot.
  */
 
-const V = '3.6.1';
+const V = '3.6.2';   // §5.4 fix 2026-08-08 — was 3.6.1, drifted from canonical lib/version.js's services.guardian (3.6.2)
 const NS = 'guardian';
 function _c(id, method, path, desc, opts = {}) {
   return {

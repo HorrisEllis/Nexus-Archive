@@ -2,7 +2,7 @@
 /**
  * ui/tv-shell/tutorial/tutorial.js — Guided Tutorial Orchestrator
  * UUID: nexus-tutorial-engine-v1-0000-2026-0706-jamesbrooks-001
- * Expansion map Phase D (docs/NEXUS-EXPANSION-MAP-2026-07-06.md §2.6).
+ * Expansion map Phase D (_archive/superseded-docs-2026-08-09/NEXUS-EXPANSION-MAP-2026-07-06.md §2.6 — archived 2026-08-09, superseded by per-feature phasemaps, §0.3).
  *
  * All three primitives were real and never orchestrated: toast (idearium
  * UI has one; tv-shell gets a minimal one here), Spotlight (window.CP —

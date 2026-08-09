@@ -4,7 +4,7 @@
  * comp_id: nexus.bridge.registry
  * uuid: nexus-bridge-registry-v1-0000-2026-0627-jamesbrooks-001
  */
-const V='3.0.0';const NS='bridge';
+const V='3.2.0';const NS='bridge';   // §5.4 fix 2026-08-08 — was 3.0.0, drifted from canonical lib/version.js's services.bridge (3.2.0)
 function _c(id,method,path,desc,opts={}){
   return{id:`${NS}.${id}`,namespace:NS,name:id,version:V,
     grammar:opts.grammar||[id.replace(/\./g,' ')],

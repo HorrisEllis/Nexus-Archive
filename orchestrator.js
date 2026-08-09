@@ -2614,7 +2614,13 @@ try {
       try { cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')); } catch (_) {}
       if (cfg.openTerminalOnBoot !== true) return;  // explicit opt-in only
       _cliOpened = true;
-      const VERSION = '3.0.0';
+      // §5.4 fix 2026-08-08 — was hardcoded '3.0.0', independent of
+      // lib/version.js's services.orchestrator (2.2.0 at the time), the
+      // exact drift the comment near this function's own NEXUS_VERSION
+      // import already warned about for a different spot in this same
+      // file. require() is cached/idempotent — no cost to sourcing fresh
+      // here instead of trusting closure scope across a 2600-line file.
+      const VERSION = require('./lib/version').services.orchestrator;
       const spawn = spawnChild;
       const cliScript = path.join(ROOT, 'cli', 'nexus-repl.js');
       const args = [cliScript, '--repl', `--port=${PORT}`];
@@ -2891,7 +2897,9 @@ try {
 
   // ────────────────────────────────────────────────────────────────────────────
   // Record own boot to ledger
-  const VERSION = '3.0.0';
+  // §5.4 fix 2026-08-08 — same drift as the CLI-open spot above: hardcoded
+  // '3.0.0' independent of lib/version.js's services.orchestrator.
+  const VERSION = require('./lib/version').services.orchestrator;
   ledgerWrite('orchestrator','orchestrator.booted',{ version:VERSION, port:PORT });
   startWatchdog();
 

@@ -68,6 +68,52 @@ for (const f of files) {
   }
 }
 
+// RULE: §5.4 — versions persist across the entire project. Every known
+// per-system version literal must match lib/version.js's services registry
+// (the file every "canonical: lib/version.js — §5.4" comment in this repo
+// points to). Runs on EVERY commit, not just ones touching these files —
+// drift is a property of the whole tree at any moment, not just of a diff,
+// and the whole point of enforcing this is that it can't come back via an
+// unrelated commit either. HARD BLOCK: §5.4's own text calls drift "a bug,
+// not an oversight," the same severity as the data/ rule above.
+//
+// Found 2026-08-08 while running buildNexusModel() live and checking its
+// output against reality: loom/registry-components.js had drifted from
+// lib/version.js (1.2.0 vs 1.3.0). A wider sweep of every other tracked
+// system found four more (bridge, cortex, guardian, emerge) plus two
+// hardcoded literals in orchestrator.js that had drifted from an import
+// already sitting in scope for exactly this reason. All fixed same session;
+// this block is what stops it happening again silently.
+const VERSION_SOURCES = [
+  { system: 'bridge',       file: 'bridge/registry-components.js',       re: /const V\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'cortex',       file: 'cortex/registry-components.js',       re: /const V\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'guardian',     file: 'guardian/registry-components.js',     re: /const V\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'idearium',     file: 'idearium/index.js',                   re: /export const VERSION\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'architect',    file: 'architect/registry-components.js',    re: /const V\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'emerge',       file: 'emerge/registry-components.js',       re: /const V\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'eravos',       file: 'eravos/server.js',                    re: /const VERSION\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'ollama-bridge', file: 'ollama/server.js',                   re: /const VERSION\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'clear-glass',  file: 'clear-glass/registry-components.js',  re: /const V\s*=\s*'([\d.]+[\w.-]*)'/ },
+  { system: 'loom',         file: 'loom/registry-components.js',         re: /const V\s*=\s*'([\d.]+[\w.-]*)'/ },
+];
+try {
+  const canonical = require(path.join(ROOT, 'lib/version.js')).services || {};
+  for (const src of VERSION_SOURCES) {
+    const full = path.join(ROOT, src.file);
+    if (!fs.existsSync(full)) continue;   // file moved/removed — not this check's job to flag
+    const content = fs.readFileSync(full, 'utf8');
+    const m = content.match(src.re);
+    if (!m) continue;   // pattern not found — file restructured; not a drift claim without evidence
+    const declared = m[1];
+    const expected = canonical[src.system];
+    if (expected && declared !== expected) {
+      errors.push(`§5.4 version drift: ${src.file} declares ${declared}, lib/version.js's services.${src.system} says ${expected} — one of them is wrong, fix before committing`);
+    }
+  }
+} catch (e) {
+  warnings.push(`§5.4 version-drift check could not run: ${e.message}`);
+}
+
 if (warnings.length) {
   console.warn('\n⚠ NEXUS working-agreement warnings:');
   for (const w of warnings) console.warn('  · ' + w);

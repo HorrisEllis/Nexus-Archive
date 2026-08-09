@@ -599,7 +599,7 @@ checked against live code this session and are resolved, not just assumed):
 - **12 sovereign-system spec fixes + new `eravos.spec`** from a prior session's
   audit (`sovereign-system-specs-fixed.zip`, delivered inside
   `NEXUS-SESSION-COMPLETE-1.zip`). Full audit trail preserved as
-  `docs/SOVEREIGN-SPEC-AUDIT-2026-06-28.md`. Headline findings: `architect`
+  `_archive/superseded-docs-2026-08-09/SOVEREIGN-SPEC-AUDIT-2026-06-28.md` (archived 2026-08-09, §0.3). Headline findings: `architect`
   had a three-way version drift across `lib/version.js` (1.0.0), its own old
   spec (2.0.0, describing an unbuilt v2), and a hardcoded `'3.0.0'` string in
   `service.js`'s boot event — a drift `spec-drift.js` itself can't see, since

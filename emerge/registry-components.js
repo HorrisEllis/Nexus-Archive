@@ -4,7 +4,7 @@
  * comp_id: nexus.emerge.registry
  * uuid: nexus-emerge-registry-v1-0000-2026-0627-jamesbrooks-001
  */
-const V='1.0.0';const NS='emerge';
+const V='1.1.0';const NS='emerge';   // §5.4 fix 2026-08-08 — was 1.0.0, drifted from canonical lib/version.js's services.emerge (1.1.0)
 function _c(id,method,path,desc,opts={}){
   return{id:`${NS}.${id}`,namespace:NS,name:id,version:V,
     grammar:opts.grammar||[id.replace(/\./g,' '),'emerge '+id.split('.')[0]],
