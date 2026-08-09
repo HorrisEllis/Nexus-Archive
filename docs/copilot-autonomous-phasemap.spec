@@ -36,7 +36,7 @@ spec:
       priority: FOUNDATION — the missing atom. Everything time-based needs it.
       does: "lib/scheduler.js — schedule a task/job/alarm/payload for a time or interval; deliver to an agent/system/command at that time. Persisted in cortex (survives reboot). Every fire is RAID-gated + logged to the fan-in."
       gate: "co-pilot schedules 'deliver payload X to agent Y at time T'; it fires once at T, governed + logged; survives a reboot."
-    CA2_triggers_conditions:
+    CA2_triggers_conditions:   # ← DONE 2026-08-08. lib/triggers.js — fan-in condition→action, RAID-gated. 10 tests.
       depends_on: CA1
       does: "a trigger/condition engine — fire an action WHEN a condition holds (a sigma, a metric, an event on the fan-in). Composes the fan-in + relational-field. 'when X, do Y'."
       gate: "a condition on the live stream fires its action once when met; RAID-gated."
@@ -53,7 +53,7 @@ spec:
         could all pass the fire-count guard before the first fire's async
         delivery had incremented it. Fixed by reserving the fire slot
         synchronously before any await.
-    CA3_pipeline_chains:
+    CA3_pipeline_chains:   # ← DONE 2026-08-08. lib/chains.js — sequential steps, RAID-gated, halts on failure. 8 tests.
       depends_on: [CA1, CA2]
       does: "stepwise chains + pipeline automation — a sequence of steps (each a command/agent/http/sse call), with routing between steps. Composes lib/execution-pipeline + agent-router."
       gate: "a multi-step pipeline runs end to end, routing payloads step→step, halting on failure."
@@ -71,7 +71,7 @@ spec:
         CA1/CA2's single-action isolation — a later step may depend on an
         earlier one's real output). 8 tests, including a real local-server
         HTTP round trip and a real connection-refused halt.
-    CA4_connections:
+    CA4_connections:   # ← DONE 2026-08-08. lib/connections.js — scoped http/sse, default-deny allowlist, RAID-gated. 8 tests.
       depends_on: CA1
       does: "http/api/sse/remote connection tools for automation — co-pilot opens + uses connections (incl. remote services) as automation steps. Scoped + RAID-gated."
       gate: "co-pilot makes an http/sse call as a pipeline step; a remote connection is governed + logged."
@@ -85,7 +85,7 @@ spec:
         the scope check. 8 tests, including a real SSE stream against a
         local test server (data delivered, close() verified to stop
         delivery) and closeAll() for leak safety.
-    CA5_system_control_and_clearglass:
+    CA5_system_control_and_clearglass:   # ← DONE 2026-08-08. lib/system-control.js — governed settings + governed clear-glass/DOM. 10 tests.
       depends_on: [CA1, CA4]
       does: "co-pilot changes system settings (the SS2 per-system configs) + full clear-glass access incl. DOM storage. RAID-gated; every change logged + revertible (integrity-revert)."
       gate: "co-pilot changes a setting (governed, logged, revertible) + drives clear-glass incl. DOM storage."
@@ -112,14 +112,47 @@ spec:
         settings-revert logic (prior===null was indistinguishable from
         prior===undefined, so a first-ever setting could be "reverted" to a
         fake null instead of correctly refusing) before it shipped.
-    CA6_self_building_commands:
+    CA6_self_building_commands:   # ← DONE 2026-08-08. lib/command-builder.js — resolves real capabilities, stores in tool-index, runs via CA3. 14 tests.
       depends_on: [CA1, CA3]
       does: "'hey nexus, make me a command for <component> to <ability>' — co-pilot BUILDS a command (dynamic, from the grammar + capability registry), stores it in the cortex tool management system (tool-index), hooks it into loom. Self-extension."
       gate: "a natural-language 'make me a command' produces a real, stored, loom-registered command co-pilot can then run."
-    CA7_constant_autonomy:
+      status: >
+        DONE 2026-08-08. lib/command-builder.js. Resolves against the REAL
+        capability registry (copilot/lib/capabilities.js — loom's route-
+        verified capability-map), word-overlap scoring against name/
+        description, refuses (does not fabricate) when nothing scores.
+        Stored in lib/tool-index.js — ALREADY in loom's model
+        (observability-map), so "hooks it into loom" is satisfied through
+        an existing wire, not a new scanner. runCommand() executes via
+        CA3's lib/chains.js. §HONEST BOUNDARY: execution is a chains.js
+        'system' delivery descriptor, not a live cross-system HTTP call —
+        no port registry exists anywhere in NEXUS for a command to resolve
+        at runtime (checked before assuming one); building one is real new
+        infrastructure this phase didn't ask for. 14 tests, all against the
+        real live capability registry (loom.health, loom.graph — genuine
+        matches, not fixtures).
+    CA7_constant_autonomy:   # ← DONE 2026-08-08. lib/constant-autonomy.js — propose/govern/execute loop on CA1's scheduler, halts on ambiguity. 10 tests.
       depends_on: [CA1, CA2, CA6]
       does: "co-pilot runs CONSTANTLY — what-ifs forming connections with intelligence/cortex/components, polling, diagnosing — on lib/autonomous-loop, governed. The agent-intelligence-loop AP4/AP5 + this = the always-on mind."
       gate: "co-pilot autonomously polls + proposes connections/fixes on a loop, every action RAID-gated, halting on ambiguity."
+      status: >
+        DONE 2026-08-08. lib/constant-autonomy.js — built on CA1's
+        scheduler for the interval (no second interval mechanism invented)
+        and on the ALREADY-EXISTING lib/autonomous-loop.run() for
+        execution (classify→case-library-check→spawn→execute); this file
+        adds the missing propose step + the extra governAction gate the
+        phasemap's gate line requires (autonomous-loop's own case-library
+        check is a different, learned "don't repeat this," not a live
+        permission check). Default proposal source is REAL: tool-index
+        edge cases + fan-in coverage gaps, not a stub poll — a cycle with
+        nothing to act on halts cleanly (stage: no-proposal), which is
+        success, not failure (§user_wellbeing). Every cycle logged to the
+        fan-in individually (§15.2). 10 tests, including a real run through
+        autonomous-loop with a custom executor — which surfaced a
+        pre-existing, non-fatal circular-ref bug in compartment-engine's
+        own persistence flush ("[jaa] Flush error (case_index)"), unrelated
+        to CA7, noted here rather than silently absorbed or scope-crept
+        into fixing (§17.7 — first occurrence, not yet a pattern).
 
   clutter_note: >
     James flagged cockpit/cli/orchestrator + duplicate docs. Confirmed duplicates:
@@ -143,3 +176,18 @@ fan-in's existing sigma.* events) — same discipline kernel-surface.js's own
 header insists on. All five modules registered in
 loom/maps/observability-map.js. REMAINING: CA6 self-building commands, CA7
 constant autonomy — neither started.
+
+---
+## CA6+CA7 COMPLETE 2026-08-08 — the full autonomous co-pilot phasemap is closed
+All seven phases done: CA1 scheduler, CA2 triggers, CA3 chains, CA4
+connections, CA5 system control, CA6 self-building commands, CA7 constant
+autonomy. 67 tests across the seven modules (7+10+8+8+10+14+10), all passing.
+Four spec assumptions were checked against real code across the whole arc and
+corrected where wrong (CA3's execution-pipeline, CA5's integrity-revert, CA5's
+clear-glass DOM storage already existing, CA6/CA7's assumed port-resolution
+infrastructure that doesn't exist anywhere in NEXUS) — none silently built on.
+Two real bugs caught by tests before shipping (CA2's fan-in race, CA5's
+null-vs-undefined revert bug). One pre-existing, unrelated bug surfaced and
+noted, not fixed out of scope (compartment-engine's circular-ref flush error).
+All seven modules registered in loom/maps/observability-map.js. This spec is
+closed.

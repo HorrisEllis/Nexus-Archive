@@ -92,6 +92,10 @@ const FILES = [
     ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin']],  // CA4 — scoped http/sse connection tool, default-deny domain allowlist, RAID-gated
   ['lib/system-control.js',       'nexus.lib.system-control',
     ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.guardian.clear-glass-bridge']],  // CA5 — governed settings (get/set/revert) + governed clear-glass incl. DOM storage
+  ['lib/command-builder.js',      'nexus.lib.command-builder',
+    ['nexus.copilot.self-model', 'nexus.copilot.capabilities', 'nexus.lib.tool-index', 'nexus.lib.chains']],  // CA6 — self-building commands: resolve a real capability, store in tool-index (loom-registered), run via CA3
+  ['lib/constant-autonomy.js',    'nexus.lib.constant-autonomy',
+    ['nexus.lib.scheduler', 'nexus.lib.autonomous-loop', 'nexus.lib.tool-index', 'nexus.lib.ledger-fanin', 'nexus.copilot.self-model']],  // CA7 — propose/govern/execute on a loop (CA1's scheduler), halts on ambiguity, every cycle traceable
   ['lib/nexus-cli-interface.js',  'nexus.lib.nexus-cli-interface',
     ['nexus.copilot.capabilities', 'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.grammar-router', 'nexus.loom.scanners.phasemap-map']],  // --cli interface routing to the co-pilot additions
   ['lib/autopilot-intelligence.js','nexus.lib.autopilot-intelligence',

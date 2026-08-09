@@ -12,7 +12,22 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const ROOT = path.resolve(__dirname, '..');
+// §BUGFIX 2026-08-08 — path.resolve(__dirname, '..') assumed this file is
+// where its own header comment says to install it (a SYMLINK at
+// .git/hooks/pre-commit -> ../../scripts/precommit-check.js), so __dirname
+// would resolve to scripts/ either way. It was installed as a plain COPY
+// instead — __dirname resolves to .git/hooks, so ROOT became .git itself.
+// That's silent when run manually (git diff --cached still finds the repo
+// by walking up from a bad cwd), but git's own hook invocation sets
+// GIT_INDEX_FILE as a path RELATIVE to the intended repo root — resolved
+// against the wrong ROOT here, it pointed at a nonexistent .git/.git/index,
+// and the check fell back to stale/wrong staged-file data. Found by direct
+// comparison: `git diff --cached --name-only` run manually was clean; the
+// exact same command inside this hook, invoked BY git commit, was not.
+// `git rev-parse --show-toplevel` is correct regardless of whether this
+// file is a symlink, a copy, or moved again — it asks git, not the
+// filesystem, where the repo root is.
+const ROOT = execSync('git rev-parse --show-toplevel').toString().trim();
 
 function staged() {
   try { return execSync('git diff --cached --name-only', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean); }

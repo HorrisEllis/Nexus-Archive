@@ -29,7 +29,16 @@ const SYSTEMS = ['cortex', 'guardian', 'bridge', 'orchestrator', 'loom', 'copilo
   'clear-glass', 'idearium', 'emerge', 'architect', 'raid', 'intelligence',
   'gemini', 'agent', 'tablet', 'diagnostic', 'chunk', 'replay', 'snapshot'];
 
-const PHASE_RE = /^\s{2,6}([A-Z]{1,3}\d+[A-Za-z0-9_]*):(.*)$/;   // P1_, AP1_, RR1_, SS0_, LP1_
+const PHASE_RE = /^\s{2,6}([A-Z]{1,3}\d+_[A-Za-z0-9_]*):(.*)$/;   // P1_, AP1_, RR1_, SS0_, LP1_ — the underscore is load-bearing
+// §BUGFIX 2026-08-08 — same investigation as the _tagSystem fix above. The
+// prior regex (`[A-Za-z0-9_]*` — zero-or-more, no underscore required)
+// matched copilot-awareness-routing-phasemap.spec's drift_watch dict (bare
+// `CA5:`, `CA6:`, `CA7:` entries describing what KIND of drift to watch for,
+// not phases) as if they were pending phases, alongside the REAL
+// `CA5_intent_routing` etc. a few lines below — inflating every roadmap
+// query with fake pending entries. Checked across all 16 phasemap files
+// before tightening: every genuine phase declaration has an underscore
+// suffix; the drift dict was the only bare match anywhere in the corpus.
 
 function _phasemapFiles() {
   let out = [];
@@ -42,8 +51,16 @@ function _phasemapFiles() {
 }
 
 function _tagSystem(text) {
-  const low = text.toLowerCase();
-  const hits = SYSTEMS.filter(s => low.includes(s));
+  // §BUGFIX 2026-08-08 — found while answering "show me every phase left for
+  // co-pilot": 'copilot' never matched because this codebase spells it
+  // "co-pilot" everywhere in prose (only the file/namespace form is
+  // unhyphenated). CA7_constant_autonomy's own does: line says "co-pilot
+  // runs CONSTANTLY" and was silently tagged cortex/raid/intelligence/agent
+  // instead — a real, done phase invisible to its own system's roadmap.
+  // Strip hyphens from both sides of the match so "co-pilot" and "copilot"
+  // (and any other system name someone hyphenates in prose) match the same.
+  const low = text.toLowerCase().replace(/-/g, '');
+  const hits = SYSTEMS.filter(s => low.includes(s.replace(/-/g, '')));
   return hits.length ? hits : ['general'];
 }
 
