@@ -115,6 +115,40 @@ async function buildNexusModel(opts = {}) {
     model = { ...model, capabilities: rundown.capabilities, versions: rundown.versions, selfModel: rundown.selfModel, live: rundown.live, summary: rundown.text };
   } catch (e) { model.error = e.message; }
 
+  // §2026-08-09 — the model of NEXUS now includes where NEXUS is uncertain
+  // about itself, not just what it declares/serves. lib/gap-field.js is the
+  // unified system + user-model gap pipeline (James: "gap field... this is
+  // also for modeling me"). Same honest-degrade discipline as the rest of
+  // this function — a missing gap-field doesn't fail the whole model.
+  try {
+    const gf = opts.gapField || require('../../lib/gap-field');
+    const system = gf.openGaps({ domain: 'system', limit: 500 });
+    const userModel = gf.openGaps({ domain: 'user-model', limit: 500 });
+    model.gaps = {
+      systemOpen: system.length,
+      userModelOpen: userModel.length,
+      topSystem: system.slice(0, 5).map(g => ({ type: g.type, source: g.source, occurrences: g.occurrences })),
+      topUserModel: userModel.slice(0, 5).map(g => ({ type: g.type, source: g.source, occurrences: g.occurrences })),
+    };
+  } catch (e) { model.gaps = { error: e.message }; }
+
+  // §2026-08-09 — "it needs to update the models of me and itself... each
+  // system needs a model? Baysesian updating?" (James). This is the "itself"
+  // half: co-pilot's own confidence in its conversational pattern-matching,
+  // per pattern, Bayesian-updated on every confirm/reject (copilot/lib/
+  // intent-learning.js). A model of NEXUS that only lists what it CAN do
+  // without also carrying how SURE it is about understanding requests isn't
+  // actually self-aware about its own limits.
+  try {
+    const il = opts.intentLearning || require('./intent-learning');
+    const patterns = il.allPatterns();
+    model.intentConfidence = {
+      trackedPatterns: patterns.length,
+      lowConfidence: patterns.filter(p => p.confidence < 0.4).map(p => ({ patternId: p.patternId, confidence: p.confidence, confirmations: p.confirmations, rejections: p.rejections })),
+      highConfidence: patterns.filter(p => p.confidence >= 0.8).map(p => p.patternId),
+    };
+  } catch (e) { model.intentConfidence = { error: e.message }; }
+
   // Persist to cortex self_model table (the brain). Best-effort, non-blocking.
   if (opts.persist !== false) {
     try {

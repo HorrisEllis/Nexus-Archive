@@ -1,0 +1,1 @@
+{"uuid":"659ac8ac-3e0b-4474-9ef4-5443449ec4f2","system":"guardian","component":"guardian.ncp.status","action":"registered","status":"ok","tags":[],"detail":"Guardian NCP provider status","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:313","ts":1786463171256}

@@ -648,6 +648,101 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §WIRED 2026-08-09 — the idea review surface. Idearium is the landing zone;
+  // lib/idea-provenance.js is the discipline that keeps a machine proposal
+  // distinguishable from one the user had.
+  if (p === '/ideas' && method === 'GET') {
+    try {
+      const html = require('fs').readFileSync(require('path').join(__dirname, 'ui/ideas.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  if (p === '/api/ideas' && method === 'GET') {
+    try {
+      const P = require('../lib/idea-provenance.js');
+      const f = {};
+      for (const k of ['origin', 'status', 'about', 'system']) {
+        const v = url.searchParams.get(k); if (v) f[k] = v;
+      }
+      const rows = (Object.keys(f).length ? P.list(f) : P.pending());
+      json(res, 200, { ok: true, ideas: rows.map(r => ({
+        slug: r.slug, text: r.text, tags: r.tags,
+        origin: P.originOf(r), status: P.statusOf(r),
+        evidenceFull: r.evidence || [],
+        reviewedBy: r.reviewedBy, reviewNote: r.reviewNote,
+      })) });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  if (p === '/api/ideas/stats' && method === 'GET') {
+    try { json(res, 200, require('../lib/idea-provenance.js').stats()); }
+    catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // The ONLY path that can accept. idea-provenance refuses any accept whose
+  // reviewerKind is not "user" — enforced there, not here, so a second caller
+  // cannot route around it.
+  if (p === '/api/ideas/review' && method === 'POST') {
+    try {
+      const body = await readBody(req);
+      const P = require('../lib/idea-provenance.js');
+      json(res, 200, P.review(body.slug, body.decision, {
+        reviewer: body.reviewer, reviewerKind: body.reviewerKind, note: body.note,
+      }));
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // §WIRED 2026-08-08 — lib/movement.js and lib/manifest.js had no HTTP
+  // surface, so only the CLI could reach them. §1.1: a module the rest of the
+  // system cannot call is not integrated, it is merely present. These are the
+  // same snapshots `nexus movement` renders — one data layer, three consumers
+  // (CLI, copilot tool, tablet).
+  //
+  // Read-only. GET because they compute nothing and persist nothing.
+  if (p === '/api/movement' && method === 'GET') {
+    try {
+      const system = url.searchParams.get('system');
+      const M = require('../lib/movement.js');
+      if (!system) { json(res, 200, { ok: true, systems: M.systems() }); return; }
+      const win = parseInt(url.searchParams.get('windowMs') || '', 10) || 24 * 3600e3;
+      json(res, 200, M.collect(system, { windowMs: win }));
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // Manifest drift for one system. `?baseline=1` STORES the current manifest
+  // instead of comparing — explicit on purpose, because a baseline that
+  // updates itself can never report drift.
+  if (p === '/api/manifest' && method === 'GET') {
+    try {
+      const system = url.searchParams.get('system');
+      if (!system) { json(res, 400, { ok: false, error: 'system required' }); return; }
+      const M = require('../lib/manifest.js');
+      const fsx = require('fs'), pth = require('path');
+      const dir = pth.join(__dirname, '..', 'data', 'manifests');
+      const store = pth.join(dir, `${system}.json`);
+
+      if (url.searchParams.get('baseline') === '1') {
+        const m = M.capture(system);
+        if (!m.ok) { json(res, 404, m); return; }
+        fsx.mkdirSync(dir, { recursive: true });
+        fsx.writeFileSync(store, JSON.stringify(m));
+        json(res, 200, { ok: true, stored: true, system, fileCount: m.fileCount, complete: m.complete });
+        return;
+      }
+      let prev = null;
+      if (fsx.existsSync(store)) { try { prev = JSON.parse(fsx.readFileSync(store, 'utf8')); } catch (_) {} }
+      json(res, 200, M.drift(system, prev, { expected: url.searchParams.get('expected') === '1' }));
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   if (p === '/api/intelligence/patterns') {
     const limit = parseInt(url.searchParams.get('limit') || '5');
     json(res, 200, { ok: true, patterns: _buildPatterns(limit) });

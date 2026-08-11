@@ -530,13 +530,22 @@ function checkContradictions() {
       const hA = active.find(h => h.claim?.toLowerCase().includes(a.toLowerCase()));
       const hB = active.find(h => h.claim?.toLowerCase().includes(b.toLowerCase()));
       if (hA && hB && hA.confidence >= 0.65 && hB.confidence >= 0.65) {
-        // Only flag and open gap when BOTH are high confidence
-        try { jaa.insert('gaps', {
-          uuid: require('crypto').randomUUID(),
-          type: 'CONFLICT', severity: 'medium', status: 'open',
-          body: `Contradiction: "${hA.claim}" vs "${hB.claim}"`,
-          source: MODULE_ID, ts: Date.now(),
-        }); } catch(_) {}
+        // §2026-08-09 UNIFIED — was a raw jaa.insert() here with NO dedup
+        // check at all: every call to checkContradictions() that found the
+        // same live contradiction would insert a fresh duplicate gap row.
+        // Real bug, found while unifying with gap-finder/diagnostic-causal
+        // per James's "gap field, agnostic, also for modeling me." Now
+        // shares gap-field's dedup/occurrence-bump/causal-wire treatment —
+        // a user-model contradiction is domain:'user-model' but otherwise
+        // the exact same kind of record as a system anomaly gap.
+        try {
+          const gapField = require('../../lib/gap-field');
+          gapField.report({
+            type: 'CONFLICT', domain: 'user-model', severity: 'medium',
+            body: `Contradiction: "${hA.claim}" vs "${hB.claim}"`,
+            source: MODULE_ID, meta: { hypothesisA: hA.uuid, hypothesisB: hB.uuid },
+          });
+        } catch (_) {}
         flagged.push({ a: hA, b: hB });
       }
     }

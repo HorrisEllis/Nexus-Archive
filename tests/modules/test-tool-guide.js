@@ -19,7 +19,11 @@ const at = require(path.join(ROOT, 'lib/agent-tools'));
 
 test('T-001', 'CA2: EVERY registered tool has a usage note (full coverage)', () => {
   const names = at.getToolSchemas().map(s => s.function.name);
-  const missing = names.filter(n => !NOTES[n]);
+  // §2026-08-09 — coverage is judged against noteFor(), not NOTES directly.
+  // A tool copilot FORGED at runtime cannot have a hand-written note; it
+  // self-documents from its definition. Judging against NOTES alone would fail
+  // the moment a forged tool exists, which is a false negative, not a gap.
+  const missing = names.filter(n => !noteFor(n));
   assert.strictEqual(missing.length, 0, `tools without a note: ${missing.join(', ')}`);
 });
 

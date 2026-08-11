@@ -1,0 +1,1 @@
+{"uuid":"a4726e62-d2ce-46cf-a7c6-b638dbfb2ef5","system":"test","component":"test.echo.ping","action":"registered","status":"ok","tags":[],"detail":"test-only component for grammar-fallback verification","causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:313","ts":1786463172984}

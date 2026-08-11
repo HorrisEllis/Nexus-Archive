@@ -14,7 +14,7 @@
  * guardian/architect/cortex use.
  */
 
-const V = '1.3.0';
+const V = '1.5.0';
 const NS = 'loom';
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -63,4 +63,12 @@ module.exports = [
   // ── Roadmap (LP3 — what each system is BECOMING, not just what it is) ───
   _c('phasemap',          'GET',  '/api/phasemap',           'Every phase across every phasemap, tagged by system + status'),
   _c('phasemap.system',   'GET',  '/api/phasemap/:system',   'One system\'s roadmap — done/pending phase breakdown', { tags: ['analysis'] }),
+
+  // ── Gap field (2026-08-09 — where NEXUS is currently uncertain about itself) ─
+  _c('gaps',               'GET', '/api/gaps',               'Every open gap, system + user-model domains, agnostic pipeline'),
+  _c('gaps.domain',        'GET', '/api/gaps/:domain',       'Open gaps for one domain (system | user-model)', { tags: ['analysis'] }),
+
+  // ── Friction + tension (2026-08-09 — live-proxied from the real diagnostic kernel) ─
+  _c('friction',           'GET', '/api/friction',           'Per-system friction score, proxied live from the diagnostic kernel (:7825)', { tags: ['analysis'] }),
+  _c('tension',            'GET', '/api/tension',            'Per-system tension (friction + gap accumulation), proxied live from the diagnostic kernel', { tags: ['analysis'] }),
 ];

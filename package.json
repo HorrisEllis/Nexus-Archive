@@ -23,7 +23,8 @@
     "start:core": "node autopilot.js --only=orchestrator,bridge,cortex,guardian",
     "autopilot": "node autopilot.js",
     "autopilot:status": "node autopilot.js --status-port=7799",
-    "start:all:cli": "node autopilot.js --cli"
+    "start:all:cli": "node autopilot.js --cli",
+    "movement": "node cli/nexus-movement.js"
   },
   "engines": {
     "node": ">=18.0.0"

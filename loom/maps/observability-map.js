@@ -56,6 +56,8 @@ const FILES = [
     []],  // living tool index in cortex — file/dir/consumer/intent/edge-cases populate over time
   ['loom/scanners/phasemap-map.js','nexus.loom.scanners.phasemap-map',
     []],  // the phasemap SECTION of loom — roadmap per system (what each is becoming)
+  ['loom/server.js',              'nexus.loom.server',
+    ['nexus.lib.gap-field', 'nexus.lib.connections', 'nexus.loom.scanners.phasemap-map']],  // §2026-08-09 — the process itself: /api/phasemap, /api/gaps, /api/friction, /api/tension — the last two proxy the real diagnostic kernel (:7825) live via CA4's connections.js, not a second computation
   ['lib/fs-tree.js',              'nexus.lib.fs-tree',
     []],  // agnostic file-structure tree — promoted from gemini injection, any system uses it
   ['lib/line-edit.js',            'nexus.lib.line-edit',
@@ -69,15 +71,29 @@ const FILES = [
   ['lib/activity-log/index.js',   'nexus.lib.activity-log',
     ['nexus.lib.ledger-fanin']],
   ['copilot/lib/self-model.js',   'nexus.copilot.self-model',
-    ['nexus.copilot.user-model', 'nexus.copilot.nexus-awareness']],  // P5/P6 — identity + governance + agent-switch + nexus model, wired from lib/reflection, lib/constitutional-ai, lib/agent-router, lib/intent-classifier
+    ['nexus.copilot.user-model', 'nexus.copilot.nexus-awareness', 'nexus.lib.gap-field', 'nexus.copilot.intent-learning']],  // P5/P6 — identity + governance + agent-switch + nexus model, wired from lib/reflection, lib/constitutional-ai, lib/agent-router, lib/intent-classifier. §2026-08-09 — buildNexusModel() now includes gap-field's system+user-model gap summary AND intent-learning's per-pattern confidence — a model of NEXUS that only lists what it can do without also carrying how sure it is isn't actually self-aware.
   ['copilot/lib/grammar-router.js','nexus.copilot.grammar-router',
     ['nexus.lib.grammar-engine', 'nexus.copilot.capabilities']],  // P5 — dynamic grammar engine in the conversational path
+  ['copilot/lib/autonomy-router.js','nexus.copilot.autonomy-router',
+    ['nexus.lib.scheduler', 'nexus.lib.triggers', 'nexus.lib.system-control', 'nexus.lib.command-builder', 'nexus.lib.constant-autonomy', 'nexus.copilot.capabilities', 'nexus.copilot.intent-learning', 'nexus.copilot.user-model', 'nexus.lib.idea-provenance']],  // §2026-08-09 — the wire from co-pilot's actual conversation to CA1-CA7. Landed in the wrong route on the first attempt (/bridge/deliver, not /api/prompt — the primary entry); moved after a real HTTP call against the live server proved it wasn't reached. v2: propose-then-confirm for every state-changing action, confidence-gated via intent-learning, both models updated on outcome. §2026-08-11 — "log this idea" wired to idea-provenance.js, tagged origin:user (never origin:agent — that distinction is idea-provenance's whole reason for existing).
+  ['copilot/lib/intent-learning.js','nexus.copilot.intent-learning',
+    ['nexus.cortex.memory.jaa-db']],  // §2026-08-09 — Bayesian-ish confidence per intent-resolution PATTERN, not per claim about James (that's user-model.js's job) — co-pilot's model of its OWN understanding. +0.10 confirm, -0.15 reject, mirrors user-model.js's exact confirm/decay math rather than a new formula.
+  ['lib/agent-build-learning.js', 'nexus.lib.agent-build-learning',
+    ['nexus.cortex.memory.jaa-db', 'nexus.lib.agent-router']],  // §2026-08-11 — a THIRD Bayesian model, same math again: which agent tends to actually produce a working build. Seeded from agent-router's DEFAULT_FALLBACK as a real prior, not a blank 0.5 — James's own encoded judgment shouldn't be thrown away just because nothing's been recorded yet.
+  ['lib/chunk-build-orchestrator.js', 'nexus.lib.chunk-build-orchestrator',
+    ['nexus.lib.execution-pipeline', 'nexus.lib.agent-router', 'nexus.lib.agent-build-learning', 'nexus.lib.gap-field']],  // §2026-08-11 — James: "if a chunk fails to build, switch agents... try them all, unless it's a system failure." Exhausts the full roster before giving up (stronger evidence for "needs human review" than any partial attempt); a rate-limit/timeout is a skipped turn, not a failed one, and doesn't count. Full exhaustion reports through gap-field, same "what's open right now" view as everything else.
   ['copilot/lib/nexus-awareness.js','nexus.copilot.nexus-awareness',
     ['nexus.copilot.capabilities', 'nexus.lib.diagnostic-causal', 'nexus.lib.ledger-fanin']],  // P4 — co-pilot's model of nexus
   ['copilot/lib/capabilities.js', 'nexus.copilot.capabilities',
     ['nexus.loom.scanners.capability-map']],  // P4 slice — co-pilot's real toolbox from loom
   ['lib/diagnostic-causal.js',    'nexus.lib.diagnostic-causal',
-    ['nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.lib.snapshot-trigger']],  // P3 — conditions behind findings
+    ['nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.lib.snapshot-trigger', 'nexus.lib.gap-field']],  // P3 — conditions behind findings; now defaults findings from gap-field (§2026-08-09 unification)
+  ['lib/gap-field.js',            'nexus.lib.gap-field',
+    ['nexus.cortex.memory.jaa-db']],  // §2026-08-09 — the single agnostic gap-report entry point: system anomalies + user-model contradictions, one dedup rule, one causal-wire convention
+  ['cortex/gap-finder/index.js',  'nexus.cortex.gap-finder',
+    ['nexus.lib.gap-field']],  // system anomaly.detected + sigma.event.* → gap-field.report(); was writing directly to 'gaps' with its own inline dedup before the unification — that logic is now shared, not duplicated
+  ['lib/intent-classifier.js',    'nexus.lib.intent-classifier',
+    ['nexus.lib.gap-field']],  // §2026-08-09 — the SIXTH independent gap-writer found (James asked to verify "intention" was really wired in): _emitLowConfidenceGap() had a raw jaaDB.insert with no dedup, same bug class as user-model's checkContradictions. Now shares gap-field's dedup/occurrence treatment. Verified live: two identical low-confidence classifications bump occurrences 1->2, not two rows.
   ['lib/integrity-revert.js',     'nexus.lib.integrity-revert',
     ['nexus.lib.file-integrity', 'nexus.lib.snapshot-trigger', 'nexus.lib.replay-engine']],  // integrity sigma → guarded revert (only when broken)
   ['lib/snapshot-trigger.js',     'nexus.lib.snapshot-trigger',

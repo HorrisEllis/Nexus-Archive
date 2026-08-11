@@ -1073,7 +1073,12 @@ const server = http.createServer(async (req, res) => {
       if (/\b(what can you do|what can i do|list (your )?(tools|capabilities)|full (list of )?(tools|capabilities)|what (are your|tools do you have))\b/i.test(prompt)) {
         const cap = require('./lib/capabilities');
         const r = cap.whatCanIDo();
-        return json(res, 200, { text: r.text, model_used: 'nexus-capabilities', confidence: 1, escalated: false, capabilities: r.systems, total: r.total, requestId });
+        // §2026-08-09 — CA1-CA7 aren't HTTP-routed capabilities, so
+        // whatCanIDo()'s route-verified list (correctly) doesn't include
+        // them. "What can you do" was silently omitting a real, working
+        // part of the answer — this appends it rather than leaving it out.
+        const autonomyNote = ' Plus autonomy: I can schedule recurring tasks, react to conditions, change and revert system settings, build my own commands for things I can do, and run a constant background check on open problems — ask me directly, e.g. "schedule X every N minutes" or "make me a command for <system> to <ability>".';
+        return json(res, 200, { text: r.text + autonomyNote, model_used: 'nexus-capabilities', confidence: 1, escalated: false, capabilities: r.systems, total: r.total, requestId });
       }
       const perSys = prompt.match(/\bwhat can (\w+) do\b/i);
       if (perSys && !/\byou\b/i.test(perSys[1])) {
@@ -1107,6 +1112,18 @@ const server = http.createServer(async (req, res) => {
         const text = (hyps && hyps.length) ? `${hyps.length} hypotheses tracked (confidence-weighted).` : 'No user-model hypotheses yet.';
         return json(res, 200, { text, model_used: 'nexus-user-model', confidence: 1, escalated: false, hypotheses: hyps, requestId });
       }
+      // §2026-08-09 — CA1-CA7, the autonomous layer built and tested this
+      // session, wired into the actual conversation for the first time.
+      // Same pattern as every intercept above: a real lib module, called
+      // directly, not grammar-engine auto-dispatch (nothing uses that path
+      // yet for any capability — see copilot/lib/autonomy-router.js's own
+      // header for why). "co-pilot needs to work and have access to all of
+      // its tools" (James) — this is that wire.
+      try {
+        const ar = require('./lib/autonomy-router');
+        const auto = await ar.route(prompt, { sessionId, channel });
+        if (auto) return json(res, 200, { text: auto.text, model_used: 'nexus-autonomy', confidence: 1, escalated: false, detail: auto.detail, requestId });
+      } catch (_) { /* autonomy layer unavailable — fall through, never block */ }
     } catch (_) { /* container-panel query unavailable — fall through */ }
 
     // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
@@ -1322,6 +1339,24 @@ const server = http.createServer(async (req, res) => {
       // Log it and fall through to the existing, working ask pipeline.
       console.warn('[copilot] intent routing failed, falling through to ask:', e.message);
     }
+
+    // §2026-08-09 — CA1-CA7, the autonomous layer, wired into the PRIMARY
+    // entry point. First attempt landed only in /bridge/deliver (Bridge's
+    // relay path) — checked with a real HTTP call against THIS route and
+    // found it wasn't reached here at all, /api/prompt has its own separate
+    // handler with its own fall-through chain (_intents.route(), then the
+    // intuition fast-path below). Same "try, return early on match, else
+    // fall through" shape as _intents.route() just above, so this doesn't
+    // change what already works.
+    try {
+      const ar = require('./lib/autonomy-router');
+      const auto = await ar.route(prompt, { sessionId, channel });
+      if (auto) {
+        streamIngest({ type: 'copilot.answered', requestId, modelUsed: 'nexus-autonomy' });
+        json(res, 200, { ok: true, text: auto.text, modelUsed: 'nexus-autonomy', intent: 'autonomy', requestId, sessionId, channel, detail: auto.detail });
+        return;
+      }
+    } catch (e) { console.warn('[copilot] autonomy routing failed, falling through:', e.message); }
 
     broadcast('copilot.prompt.received', { prompt: prompt.slice(0,100), channel, sessionId });
 

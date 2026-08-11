@@ -54,6 +54,16 @@ const path = require('path');
 // section (what each system is BECOMING), served live off loadAll()/
 // forSystem(), not cached, same as every other read surface in this file.
 const phasemapMap = require('./scanners/phasemap-map');
+const gapField = require('../lib/gap-field');
+const connections = require('../lib/connections');
+// §2026-08-09 — friction/tension live IN-MEMORY inside the diagnostic
+// kernel's running process (unlike gaps, which share jaaDB's on-disk store
+// — a require() can't reach them). loom reaches them the way any cross-
+// process call should: scoped, governed, through CA4's connections.js,
+// not a raw fetch. Default-deny elsewhere in NEXUS; here the one thing in
+// scope is the diagnostic kernel itself, on localhost, nothing else.
+connections.registerScope('diagnostic-kernel', { allowedDomains: ['127.0.0.1', 'localhost'], allowedMethods: ['GET'] });
+const DIAG_URL = process.env.DIAGNOSTIC_URL || 'http://127.0.0.1:7825';
 
 const SYSTEM_ID = 'loom';
 const PORT      = parseInt(process.env.LOOM_PORT || '3752');
@@ -350,6 +360,38 @@ const server = http.createServer(async (req, res) => {
       const system = decodeURIComponent(p.slice('/api/phasemap/'.length));
       if (!system) return json(res, 400, { ok: false, error: 'system required' });
       return json(res, 200, { ok: true, roadmap: phasemapMap.forSystem(system) });
+    }
+    // §2026-08-09 — the gap field, live in loom. "Loom is supposed to be the
+    // system that expands the system" (James) — phasemap showed what NEXUS
+    // is becoming; this shows where it's currently uncertain about itself,
+    // system-domain and user-model-domain gaps through the same agnostic
+    // pipeline (lib/gap-field.js), same has/get shape as phasemap above.
+    if (method === 'GET' && p === '/api/gaps') {
+      const domain = url.searchParams.get('domain') || null;
+      const gaps = gapField.openGaps({ domain, limit: 200 });
+      return json(res, 200, { ok: true, gaps, count: gaps.length, domain: domain || 'all' });
+    }
+    if (method === 'GET' && p.startsWith('/api/gaps/')) {
+      const domain = decodeURIComponent(p.slice('/api/gaps/'.length));
+      if (!domain) return json(res, 400, { ok: false, error: 'domain required' });
+      const gaps = gapField.openGaps({ domain, limit: 200 });
+      return json(res, 200, { ok: true, gaps, count: gaps.length, domain });
+    }
+    // §2026-08-09 — friction + tension, proxied live from the real diagnostic
+    // kernel (service/nexus-diagnostic.js, :7825), not recomputed here. Its
+    // own /friction and /tension endpoints already exist and are real —
+    // this is loom asking the kernel, honestly, not a second implementation.
+    // If the kernel isn't up, that's the truth of the answer, not papered
+    // over with a fake 200.
+    if (method === 'GET' && p === '/api/friction') {
+      const r = await connections.call({ scope: 'diagnostic-kernel', url: `${DIAG_URL}/friction`, timeoutMs: 4000 });
+      if (!r.ok) return json(res, 502, { ok: false, error: 'diagnostic kernel unreachable', reason: r.reason });
+      return json(res, 200, r.body);
+    }
+    if (method === 'GET' && p === '/api/tension') {
+      const r = await connections.call({ scope: 'diagnostic-kernel', url: `${DIAG_URL}/tension`, timeoutMs: 4000 });
+      if (!r.ok) return json(res, 502, { ok: false, error: 'diagnostic kernel unreachable', reason: r.reason });
+      return json(res, 200, r.body);
     }
     // §part_2 2026-07-10 — the semantic query layer. context-graph resolves
     // wires to component-level relations with intent; impact answers "if this

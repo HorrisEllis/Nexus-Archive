@@ -66,6 +66,7 @@ spec:
       axioms: [§13.4, §16.4]
 
     P3_diagnostic_kernel:   # ← DONE 2026-08-07. Fixed the CIRCUIT OPEN crash (sseClients TDZ) + added lib/diagnostic-causal (conditions behind findings via RFR2 + live substrate).
+      priority: FOUNDATION — everything else assumes the stream is actually flowing.
       depends_on: [P1, P2]
       does: >
         A real diagnostic kernel with the same architecture as other systems: CLI
@@ -79,6 +80,31 @@ spec:
       gate:  "diagnostic kernel boots clean (no sseClients crash), CLI runs, findings persist to cortex, SSE→autopilot, findings include causal conditions."
       drift: "the existing diagnostic crashes on boot — fixing vs replacing is the decision; map the existing one first (§8.4 scan callers)."
       axioms: [§1.1, §1.2, §8.4, §17.6]
+      addendum_2026_08_09: >
+        CORRECTION, not a quiet edit (§0.3): P3 was marked DONE having built
+        diagnostic-causal.js, but diagnoseDeep(findings) took findings as a
+        parameter with no real default — its one live caller (copilot/lib/
+        nexus-awareness.js) passed opts.findings || [], so "finds gaps/
+        tension/friction" was never actually true by default; it only
+        explained whatever a caller happened to hand it. Separately,
+        cortex/gap-finder/index.js — a DIFFERENT, older organ, still live
+        in cortex/boot.js — was independently writing anomaly/sigma gaps to
+        the same 'gaps' table this whole time, unreconciled, exactly what
+        §10.3 on this file's own header says shouldn't happen. A third,
+        independent writer was found in the same pass: copilot/lib/
+        user-model.js's checkContradictions() ("modeling James" — conflicting
+        high-confidence hypotheses) was ALSO writing to 'gaps' directly, with
+        no dedup check at all — a real bug, inserting a duplicate row on
+        every call that found the same live contradiction.
+        FIXED: lib/gap-field.js is now the one agnostic entry point — domain:
+        'system' | 'user-model', same dedup/occurrence/causal-wire treatment
+        either way (James: "needs to stay agnostic, gap field... this is also
+        for modeling me, reducing ambiguity"). gap-finder and
+        checkContradictions both route through it instead of their own inline
+        writes; diagnoseDeep() now defaults to gap-field's real open gaps
+        instead of silently accepting an empty array. 8 tests
+        (tests/modules/test-gap-field.js), all three producers + the
+        loop-closing default verified against the real store, not mocked.
 
     P4_copilot_awareness:   # ← DONE 2026-08-07. capabilities (what can you do) + nexus-awareness (rundown/whats-wrong/versions from real state).
       depends_on: [P1, P3]

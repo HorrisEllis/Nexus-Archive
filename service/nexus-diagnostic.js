@@ -217,6 +217,29 @@ function startService() {
     try { const f = require('../lib/ledger-fanin'); f.emit && f.emit({ type: `diagnostic.${msg.type || 'event'}`, source: 'diagnostic', payload: msg, ts: msg.ts || Date.now() }); } catch (_) {}
   }
 
+  // §2026-08-09 — James: "did you ever build the kernel for that?" This
+  // kernel has ALWAYS written its own gaps to ico.ledger.append('gaps', ...)
+  // — an append-only history, separate from every other gap-writer in NEXUS.
+  // gap-field.js unified gap-finder + user-model.checkContradictions +
+  // diagnostic-causal into one queryable "what's open right now" table, but
+  // never reached THIS kernel — the one that actually boots as a service.
+  // Dual-write, not a replacement: the ledger stays (real history worth
+  // keeping), this ALSO puts the same gap on gap-field's table so "what's
+  // open right now" is complete, kernel included.
+  function _reportToGapField(gap) {
+    try {
+      const gapField = require('../lib/gap-field');
+      gapField.report({
+        type: gap.type,
+        body: gap.body || gap.detail || gap.message || gap.type,
+        source: gap.system || gap.source || 'diagnostic-kernel',
+        domain: 'system',
+        severity: gap.severity || 'medium',
+        meta: { kernelGapUuid: gap.uuid, hookId: gap.hookId, direction: gap.direction },
+      });
+    } catch (e) { console.warn(`[diag] gap-field dual-write failed (non-fatal, ledger write still happened): ${e.message}`); }
+  }
+
   const monitors = {};
   for (const [name, cfg] of Object.entries(SYSTEMS)) {
     monitors[name] = createBaseline({
@@ -231,6 +254,7 @@ function startService() {
         openGaps.set(gap.uuid, gap);
         broadcast({ type: 'gap.found', gap, ts: Date.now() });
         ico.ledger.append('gaps', { ...gap, ts: Date.now() });
+        _reportToGapField(gap);
         const cfrSnap = cfrFeed('cortex.gap.found', gap.sigma || 0);
         broadcast({ type: 'cfr.update', cfr: cfrSnap, ts: Date.now() });
         console.log(`[diag] GAP ${name}: ${gap.type} sigma=${gap.sigma}`);
@@ -303,6 +327,7 @@ function startService() {
       openGaps.set(gap.uuid, gap);
       broadcast({ type: 'gap.found', gap, ts: Date.now() });
       try { ico.ledger.append('gaps', { ...gap, ts: Date.now() }); } catch (_) {}
+      _reportToGapField(gap);
       console.log(`[diag] GAP ${gap.system}: ${gap.type} hook=${gap.hookId} (${gap.direction})`);
     }
   }
@@ -351,6 +376,7 @@ function startService() {
           source:   'contract-verifier',
           ts:       Date.now(),
         });
+        _reportToGapField({ type: v.type, body: v.message, system: v.system, severity: v.severity > 0.7 ? 'high' : v.severity > 0.4 ? 'medium' : 'low' });
         // Broadcast to diagnostic SSE
         _broadcast({ type: v.type, ...v });
       }
@@ -502,6 +528,7 @@ function startService() {
                 openGaps.set(`stuck:${state.uuid}`, gap);
                 broadcast({ type: 'gap.found', gap });
                 ico.ledger.append('gaps', gap);
+                _reportToGapField(gap);
               }
             }
           }

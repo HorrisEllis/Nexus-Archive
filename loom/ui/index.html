@@ -182,6 +182,7 @@ body{display:flex;flex-direction:column;position:relative}
     <button class="rail-btn" data-view="scaffold" onclick="setView('scaffold')">✎<span class="rail-label">Scaffold</span></button>
     <button class="rail-btn" data-view="iterations" onclick="setView('iterations')">▦<span class="rail-label">Iterations</span></button>
     <button class="rail-btn" data-view="roadmap" onclick="setView('roadmap')">◈<span class="rail-label">Roadmap</span></button>
+    <button class="rail-btn" data-view="gaps" onclick="setView('gaps')">◬<span class="rail-label">Gaps</span></button>
   </nav>
 
   <main class="view-area">
@@ -215,6 +216,12 @@ body{display:flex;flex-direction:column;position:relative}
             <div class="pillar-icon">◈</div>
             <div class="pillar-name">Roadmap</div>
             <div class="pillar-desc">Every phase across every phasemap, split by system — not just what NEXUS is, what it's becoming.</div>
+          </div>
+          <div class="pillar" onclick="setView('gaps')">
+            <div class="pillar-step">05 — QUESTION</div>
+            <div class="pillar-icon">◬</div>
+            <div class="pillar-name">Gaps</div>
+            <div class="pillar-desc">Where NEXUS is currently uncertain about itself — system anomalies and user-model ambiguity, one agnostic field.</div>
           </div>
         </div>
         <div class="welcome-foot">loom/server.js :3752</div>
@@ -294,6 +301,20 @@ body{display:flex;flex-direction:column;position:relative}
             <button class="kind-tab" data-status="pending">pending</button>
           </div>
           <div class="pbody" id="roadmap-list"><div class="empty">loading…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-gaps">
+      <div class="body2" style="grid-template-columns:1fr">
+        <div class="left">
+          <div class="ph"><span class="ph-title">Gap field — where NEXUS is uncertain about itself</span><span class="ph-badge live" id="gaps-summary-badge"></span></div>
+          <div class="kind-tabs" id="gaps-filter-tabs" style="padding-top:10px">
+            <button class="kind-tab active" data-domain="">all</button>
+            <button class="kind-tab" data-domain="system">system</button>
+            <button class="kind-tab" data-domain="user-model">user-model</button>
+          </div>
+          <div class="pbody" id="gaps-list"><div class="empty">loading…</div></div>
         </div>
       </div>
     </section>
@@ -511,7 +532,39 @@ document.getElementById('roadmap-filter-tabs').addEventListener('click', e => {
   renderRoadmap();
 });
 
-loadRegistry(); loadTemplates(); loadRevisions(); loadRoadmap(); connectEvents();
+loadRegistry(); loadTemplates(); loadRevisions(); loadRoadmap(); loadGaps(); connectEvents();
+
+// §2026-08-09 — gap field view. Same pattern as roadmap above: one fetch,
+// one filter-tab set, .reg-item styling reused verbatim.
+let gapsData = null, gapsFilter = '';
+const SEVERITY_DOT = { critical: 'var(--coral)', high: 'var(--coral)', medium: 'var(--amber)', low: 'var(--text3)' };
+
+async function loadGaps() {
+  const d = await api(gapsFilter ? `/api/gaps/${encodeURIComponent(gapsFilter)}` : '/api/gaps');
+  if (!d.ok) { document.getElementById('gaps-list').innerHTML = '<div class="empty">gap field unavailable</div>'; return; }
+  gapsData = d;
+  document.getElementById('gaps-summary-badge').textContent = `${d.count} open gap${d.count === 1 ? '' : 's'} — ${d.domain}`;
+  renderGaps();
+}
+
+function renderGaps() {
+  if (!gapsData) return;
+  const el = document.getElementById('gaps-list');
+  const gaps = gapsData.gaps || [];
+  if (!gaps.length) { el.innerHTML = '<div class="empty">no open gaps — clean</div>'; return; }
+  el.innerHTML = gaps.map(g => `<div class="reg-item">
+      <div class="id"><span style="color:${SEVERITY_DOT[g.severity] || 'var(--text3)'}">●</span> ${esc(g.type)} <span style="color:var(--text3)">(${esc(g.domain)} · ${esc(g.source || 'unknown')})</span></div>
+      <div class="meta">${esc(g.body || '')} — ${g.occurrences || 1}× seen, last ${new Date(g.lastSeenAt || g.detectedAt).toLocaleString()}</div>
+    </div>`).join('');
+}
+
+document.getElementById('gaps-filter-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.kind-tab'); if (!btn) return;
+  document.querySelectorAll('#gaps-filter-tabs .kind-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  gapsFilter = btn.dataset.domain;
+  loadGaps();
+});
 </script>
 </body>
 </html>

@@ -26,7 +26,7 @@
  *   already applied to escalation.js).
  */
 
-const { jaaDB, uid } = require('../memory/jaa-db');
+const gapField = require('../../lib/gap-field');
 
 const MODULE_ID = 'cortex/gap-finder';
 const VERSION = '1.0.0';
@@ -36,43 +36,16 @@ const SEVERITY_MAP = Object.freeze({ low: 'low', medium: 'medium', high: 'high',
 
 let _bus = null;
 
-function _dedupKey(type, source) {
-  return `${type}::${source || 'unknown'}`;
-}
-
-function _existingOpenGap(dedupKey) {
-  const rows = jaaDB.query('gaps', r => r.dedup_key === dedupKey && r.status === 'open', 1);
-  return rows[0] || null;
-}
-
 function _createGap(gapType, body, source, meta = {}) {
-  const dedup_key = _dedupKey(gapType, source);
-  const existing = _existingOpenGap(dedup_key);
-  if (existing) {
-    // Already open — bump occurrence count rather than duplicate (§0.3 — nothing lost, the recurrence is data)
-    try { jaaDB.update('gaps', { id: existing.id }, { occurrences: (existing.occurrences || 1) + 1, lastSeenAt: Date.now() }); }
-    catch (e) { console.warn(`[${MODULE_ID}] gap occurrence bump failed: ${e.message}`); }
-    return { created: false, gap: existing };
-  }
-
-  // §CAUSAL WIRE (ported from v44 2026-07-30) — the triggering event's uuid IS
-  // the causal parent. Both callers capture it (anomalyUuid/sigmaUuid) into meta
-  // but it was never written to causedBy, so the gap graph could not be walked.
-  // v56 wired causal READING (intelligence stopped using temporal adjacency);
-  // this wires causal WRITING so there are real edges to read (§16.5).
-  const causedBy = meta.anomalyUuid || meta.sigmaUuid || meta.causedBy || null;
-
-  const gap = {
-    uuid: uid(), type: gapType, body, source, status: 'open',
-    causedBy,
-    dedup_key, occurrences: 1, detectedAt: Date.now(), lastSeenAt: Date.now(),
-    meta,
-  };
-  try { jaaDB.insert('gaps', gap); }
-  catch (e) { console.warn(`[${MODULE_ID}] gap write failed: ${e.message}`); return { created: false, gap: null }; }
-
-  if (_bus) _bus.emit('cortex.gap.found', { gap }, { source: MODULE_ID });
-  return { created: true, gap };
+  // §2026-08-09 UNIFIED — was this file's own inline dedup+insert (see
+  // git history for the original); now routes through lib/gap-field.js so
+  // gap-finder's system-anomaly gaps, user-model.checkContradictions'
+  // "modeling James" gaps, and diagnostic-causal's reader all share ONE
+  // table, ONE dedup rule, ONE causal-wire convention — agnostic to which
+  // producer called it (James: "needs to stay agnostic, gap field").
+  const result = gapField.report({ type: gapType, body, source, domain: 'system', severity: meta.severity || 'medium', meta });
+  if (result.created && _bus) _bus.emit('cortex.gap.found', { gap: result.gap }, { source: MODULE_ID });
+  return result;
 }
 
 function _onAnomalyDetected(event) {

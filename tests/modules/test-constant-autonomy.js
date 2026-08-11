@@ -54,22 +54,31 @@ const toolIndex = require(path.join(__dirname, '../..', 'lib/tool-index'));
     assert.strictEqual(r.stage, 'propose-error');
   });
 
-  await test('T-006', 'defaultPropose surfaces a real tool-index edge case when one exists', async () => {
+  await test('T-006', 'defaultPropose surfaces a real tool-index edge case when gap-field has nothing (signal isolated)', async () => {
     toolIndex._resetForTest();
     toolIndex.register({ id: 'unit-test-tool', file: 'x.js', dir: 'lib', provides: 'testing' });
     toolIndex.record({ tool: 'unit-test-tool', ok: false, edgeCase: 'simulated failure for CA7 test', consumer: 'unit-test' });
-    const p = ca.defaultPropose({});
+    const p = ca.defaultPropose({ gapField: { openGaps: () => [] } });
     assert.ok(p, 'expected a proposal from the real edge-case signal');
     assert.strictEqual(p.kind, 'investigate-edge-case');
     assert.strictEqual(p.subject, 'unit-test-tool');
   });
 
-  await test('T-007', 'defaultPropose surfaces a coverage gap when an expected system is missing', async () => {
+  await test('T-007', 'defaultPropose surfaces a coverage gap when gap-field and tool-index both have nothing (signal isolated)', async () => {
     toolIndex._resetForTest();   // clear the edge-case signal from T-006 so this test isolates the coverage path
-    const p = ca.defaultPropose({ expectedSystems: ['a-system-that-will-never-emit-xyz'] });
+    const p = ca.defaultPropose({ expectedSystems: ['a-system-that-will-never-emit-xyz'], gapField: { openGaps: () => [] } });
     assert.ok(p);
     assert.strictEqual(p.kind, 'coverage-gap');
     assert.strictEqual(p.subject, 'a-system-that-will-never-emit-xyz');
+  });
+
+  await test('T-011', 'defaultPropose checks gap-field FIRST — a real open gap outranks tool-index and coverage', async () => {
+    const p = ca.defaultPropose({
+      gapField: { openGaps: () => [{ uuid: 'g1', type: 'test-gap', domain: 'system', source: 'unit-test', severity: 'high', lastSeenAt: Date.now() }] },
+    });
+    assert.ok(p);
+    assert.strictEqual(p.kind, 'investigate-gap');
+    assert.strictEqual(p.subject, 'g1');
   });
 
   await test('T-008', 'start() arms an interval task on CA1\'s scheduler (reuses it, no second interval primitive)', async () => {
