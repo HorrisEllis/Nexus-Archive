@@ -49,6 +49,9 @@ class RewindEngine {
     this.ctxMgr = ctxMgr;  // ContextMgr — needed to resolve the real session for cookie snapshot/restore
     this._sessions = new Map(); // agentId → RewindSession[]
     this._autoTimers = new Map();
+    // §PERF 2026-08-12 — see _persist()/_flushDirty() below.
+    this._dirty = new Set();
+    this._flushTimer = null;
   }
 
   async init() {
@@ -236,12 +239,43 @@ class RewindEngine {
     this._autoTimers.set(agentId, timer);
   }
 
+  // §PERF 2026-08-12 — was fs.writeFileSync() called synchronously on
+  // every single snapshot (every ~30s of idle per tab, or 2s after a nav
+  // event), blocking Electron's single main thread for the whole app —
+  // not just this tab — while it serialized and wrote potentially-large
+  // stateBlobs (full localStorage/sessionStorage contents). Now: mark
+  // dirty and let a short debounce timer do one async write per agent,
+  // collapsing bursts (e.g. several quick navs) into a single write.
   _persist(agentId) {
-    try {
+    this._dirty.add(agentId);
+    if (this._flushTimer) return;
+    this._flushTimer = setTimeout(() => this._flushDirty(), 1000);
+    if (this._flushTimer.unref) this._flushTimer.unref();
+  }
+
+  _flushDirty() {
+    this._flushTimer = null;
+    const agentIds = [...this._dirty];
+    this._dirty.clear();
+    for (const agentId of agentIds) {
       const fp   = path.join(REWIND_DIR, `${agentId.replace(/[^a-z0-9-]/gi, '_')}.json`);
       const data = this._sessions.get(agentId) || [];
-      fs.writeFileSync(fp, JSON.stringify(data, null, 2), 'utf8');
-    } catch (_) {}
+      fs.writeFile(fp, JSON.stringify(data, null, 2), 'utf8', () => {}); // best-effort, non-blocking
+    }
+  }
+
+  // Called from shutdown() so a pending debounce doesn't lose the very
+  // latest snapshot if the app quits inside the 1s window.
+  flushSync() {
+    if (this._flushTimer) { clearTimeout(this._flushTimer); this._flushTimer = null; }
+    for (const agentId of this._dirty) {
+      try {
+        const fp   = path.join(REWIND_DIR, `${agentId.replace(/[^a-z0-9-]/gi, '_')}.json`);
+        const data = this._sessions.get(agentId) || [];
+        fs.writeFileSync(fp, JSON.stringify(data, null, 2), 'utf8');
+      } catch (_) {}
+    }
+    this._dirty.clear();
   }
 
   _loadIfNeeded(agentId) {

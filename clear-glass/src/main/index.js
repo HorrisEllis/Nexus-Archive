@@ -108,6 +108,7 @@ const RewindEngine      = require('../rewind/engine');
 const ProviderHost      = require('../providers/host');
 const UserscriptManager = require('../userscripts/manager');
 const { registerAll }   = require('../gates/index');
+const { BoundedQueue }  = require('../core/bounded-queue'); // §PERF 2026-08-12
 const COMPONENTS        = require('../../seam/registry-components');
 const CONTRACT          = require('../../registry-components');   // flat contract shape for orchestrator
 const EROS_COMPONENTS   = require('../../wire/eros-registry-components');
@@ -124,6 +125,8 @@ let driver      = null;   // ClearDriver        — set in bootstrap()
 let urlListener = null;   // UrlListener        — set in bootstrap()
 let apiSettings = null;   // ApiSettings        — set in bootstrap()
 let _heartbeatInterval = null;
+let _domDrainTimer = null;    // §PERF 2026-08-12
+let _cookieDrainTimer = null; // §PERF 2026-08-12
 const windows        = new Map(); // agentId → BrowserWindow (visible)
 const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service tabs)
 
@@ -782,6 +785,17 @@ async function bootstrap() {
   const diag = new DiagnosticEngine({ driver, dom, sse: { emit: (t, d) => emit(t, d) } });
   await diag.init();
 
+  // §PERF 2026-08-12 — bounded queues for the two event streams that used
+  // to have no gate and grew Stream.pending without limit: DOM mutations
+  // (continuous, coalesced by nodeId — intermediate states don't matter)
+  // and cookie changes (infrequent, capped but not coalesced — each one
+  // can matter individually). See src/core/bounded-queue.js.
+  const domMutationsQueue = new BoundedQueue({
+    max: 300, name: 'dom.mutations',
+    coalesceKey: (e) => e.data?.changes?.[0]?.nodeId ?? `${e.data?.agentId || ''}:${Math.random()}`,
+  });
+  const cookieEventQueue = new BoundedQueue({ max: 200, name: 'cookie.event' });
+
   // 12. Register all gates on bus
   registerAll(bus, {
     driver,
@@ -804,7 +818,41 @@ async function bootstrap() {
     rewind,
     providerHost,
     userscripts,
+    domMutationsQueue,
+    cookieEventQueue,
   });
+
+  // §PERF 2026-08-12 — drain timers. Push is O(1) and cheap (done in the
+  // gates above); all the actual broadcast work happens here, batched, on
+  // a fixed cadence, instead of once per raw event. 250ms is imperceptible
+  // for a human watching a live DOM feed but collapses however many
+  // mutations fired in that window into a single SSE write. Cookie events
+  // are rarer, so a shorter interval costs little and keeps auth-relevant
+  // changes closer to real time.
+  _domDrainTimer = setInterval(() => {
+    const batch = domMutationsQueue.drain();
+    if (batch.length) {
+      sse.emit('dom.mutations.batch', {
+        count: batch.length,
+        dropped: domMutationsQueue.dropped,
+        coalesced: domMutationsQueue.coalesced,
+        changes: batch.map(e => e.data),
+      });
+    }
+  }, 250);
+  if (_domDrainTimer.unref) _domDrainTimer.unref();
+
+  _cookieDrainTimer = setInterval(() => {
+    const batch = cookieEventQueue.drain();
+    if (batch.length) {
+      sse.emit('cookie.event.batch', {
+        count: batch.length,
+        dropped: cookieEventQueue.dropped,
+        events: batch.map(e => e.data),
+      });
+    }
+  }, 50);
+  if (_cookieDrainTimer.unref) _cookieDrainTimer.unref();
 
   // Wire copilot to bus + dom after gates are registered
   if (copilot?.wire) {
@@ -1343,6 +1391,9 @@ async function shutdown() {
   _postEvent('clear-glass.shutdown', { uuid: MODULE_UUID });
 
   if (_heartbeatInterval) clearInterval(_heartbeatInterval);
+  if (_domDrainTimer)     clearInterval(_domDrainTimer);    // §PERF 2026-08-12
+  if (_cookieDrainTimer)  clearInterval(_cookieDrainTimer); // §PERF 2026-08-12
+  if (rewind?.flushSync)  rewind.flushSync(); // §PERF 2026-08-12 — persist debounced last snapshot before quit
 
   await Promise.allSettled([
     providerHost?.stopAll(),

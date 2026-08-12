@@ -76,6 +76,31 @@ const domTokenScanGate = (dom) => gate('dom.tokens', (event, stream) => {
     .catch(err   => stream.emit(new Event('dom.error', { op: 'tokens', error: err.message })));
 });
 
+// §PERF 2026-08-12 — 'dom.mutations' fires continuously (every DOM change
+// across every provider tab's MutationObserver, subtree:true) and used to
+// have NO gate at all, so every single one fell into Stream.pending and
+// stayed there forever. Now it's gated, and the gate does the cheapest
+// possible thing — push onto a bounded, coalescing queue — instead of
+// broadcasting per-event. Coalesced by nodeId: intermediate mutation
+// states for the same node are collapsed to its latest state, which is
+// the right tradeoff here (nobody needs every intermediate keystroke of a
+// streaming response, just "this node's current text"). A drain timer in
+// main/index.js flushes this on a fixed cadence as one batched broadcast.
+const domMutationsGate = (queue) => gate('dom.mutations', (event) => {
+  queue.push(event);
+});
+
+// §PERF 2026-08-12 — 'cookie.event' fires on every cookie change across
+// every context's session partition and also had no gate (silent
+// unbounded-pending growth). Gated here into a bounded, NON-coalescing
+// queue — unlike DOM mutations, cookie changes are infrequent and each
+// one can matter individually (auth, session rotation), so we cap
+// instead of merge. A drain timer batches the broadcast without losing
+// discrete events under normal load.
+const cookieEventGate = (queue) => gate('cookie.event', (event) => {
+  queue.push(event);
+});
+
 // ── Context gates ─────────────────────────────────────────────────────────
 const contextCreateGate = (ctxMgr) => gate('context.create', (event, stream) => {
   ctxMgr.create(event.data)
@@ -347,6 +372,7 @@ function registerAll(bus, deps) {
     driver, dom, ctxMgr, vault, copilot, mesh, diag, urlListener, seam,
     openFn, closeFn, minimizeFn, hideFn, maximizeFn, getStatusFn, options,
     bookmarks, rewind, providerHost, userscripts,
+    domMutationsQueue, cookieEventQueue, // §PERF 2026-08-12
   } = deps;
 
   const gates = [
@@ -359,6 +385,7 @@ function registerAll(bus, deps) {
     dom        && domMutateGate(dom),
     dom        && domPickGate(dom),
     dom        && domTokenScanGate(dom),
+    domMutationsQueue && domMutationsGate(domMutationsQueue),
     // Context
     ctxMgr     && contextCreateGate(ctxMgr),
     ctxMgr     && contextSwitchGate(ctxMgr),
@@ -368,6 +395,7 @@ function registerAll(bus, deps) {
     vault      && cookieRestoreGate(vault),
     vault      && cookieSnapshotGate(vault, ctxMgr),
     vault      && cookieHealthGate(vault, ctxMgr),
+    cookieEventQueue && cookieEventGate(cookieEventQueue),
     // Copilot
     copilot    && copilotMessageGate(copilot),
     copilot    && copilotClearGate(copilot),
@@ -438,6 +466,7 @@ module.exports = {
   gate,
   // Export individual factories for testing
   driverExecGate, domQueryGate, domMutateGate, domPickGate,
+  domMutationsGate, cookieEventGate, // §PERF 2026-08-12
   contextCreateGate, contextSwitchGate, cookieSaveGate, cookieRestoreGate,
   copilotMessageGate, meshSpawnGate, meshRouteGate, diagRunGate,
   urlListenGate, windowOpenGate, windowCloseGate, windowMinimizeGate, windowHideGate,

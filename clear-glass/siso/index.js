@@ -110,6 +110,20 @@ class Stream {
     if (gate) {
       gate.transform(event, this);
     } else {
+      // §PERF 2026-08-12 — was unbounded: any event type with no
+      // registered gate accumulated here forever (this is what let
+      // 'dom.mutations' — never gated, fired continuously by every
+      // provider tab's MutationObserver — grow without limit for the
+      // life of the process). Now capped like StreamLog already is,
+      // with a one-time warning so a missing gate is loud, not silent.
+      if (this.pending.length >= 500) {
+        this.pending.shift();
+        if (!this._warnedUngated) this._warnedUngated = new Set();
+        if (!this._warnedUngated.has(event.type)) {
+          this._warnedUngated.add(event.type);
+          console.warn(`[SISO/Stream] '${event.type}' has no registered gate — falling back to bounded pending (cap 500). Register a gate for this type.`);
+        }
+      }
       this.pending.push(event);
     }
 
