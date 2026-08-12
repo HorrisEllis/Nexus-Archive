@@ -19,7 +19,7 @@ function test(desc, fn) {
   catch(e) { console.error(`  ✗ ${desc}\n    ${e.message}`); failed++; }
 }
 
-const { ErrorCapture } = require('/home/claude/new_nexus/extracted/clear-glass/src/diagnostic/error-capture.js');
+const { ErrorCapture } = require('../../clear-glass/src/diagnostic/error-capture.js');
 
 test('ECT-01 capture() returns a row with all required fields', () => {
   const ec = new ErrorCapture({ logDir: fs.mkdtempSync(path.join(os.tmpdir(), 'ec-test-')) });
@@ -99,6 +99,30 @@ test('ECT-09 each capture gets a unique id even when called rapidly', () => {
   const ids = new Set();
   for (let i = 0; i < 50; i++) ids.add(ec.capture({ source: 'main-process', type: 'x', message: 'x' }).id);
   assert.strictEqual(ids.size, 50, 'all 50 ids should be unique');
+});
+
+// ── §R8 2026-08-12 — optional gapField reporter, mirroring the existing sse pattern ──
+test('ECT-10 a real caught error reports a real gap when gapField is wired, with location and error populated', () => {
+  const reported = [];
+  const gapField = { report: (g) => { reported.push(g); return { created: true }; } };
+  const ec = new ErrorCapture({ gapField, logDir: fs.mkdtempSync(path.join(os.tmpdir(), 'ec-test-')) });
+  ec.captureFromRenderer({ type: 'rendererError', message: 'real test error', stack: 'Error: x\n  at y:1:1', url: 'app://panel.html' });
+  assert.strictEqual(reported.length, 1);
+  assert.strictEqual(reported[0].type, 'clear-glass.renderer-error');
+  assert.strictEqual(reported[0].location, 'app://panel.html');
+  assert.strictEqual(reported[0].error, 'Error: x\n  at y:1:1');
+});
+
+test('ECT-11 without gapField wired, capture behaves exactly as before — no error, no attempted report', () => {
+  const ec = new ErrorCapture({ logDir: fs.mkdtempSync(path.join(os.tmpdir(), 'ec-test-')) });
+  assert.doesNotThrow(() => ec.capture({ source: 'main-process', type: 'x', message: 'no gapField wired' }));
+});
+
+test('ECT-12 a gapField failure never breaks capture itself — same discipline as the sse push (§1.2)', () => {
+  const throwingGapField = { report: () => { throw new Error('simulated gap-field failure'); } };
+  const ec = new ErrorCapture({ gapField: throwingGapField, logDir: fs.mkdtempSync(path.join(os.tmpdir(), 'ec-test-')) });
+  assert.doesNotThrow(() => ec.capture({ source: 'main-process', type: 'x', message: 'must survive a gapField throw' }));
+  assert.strictEqual(ec.getRecent()[0].message, 'must survive a gapField throw');
 });
 
 console.log(`\n  error-capture: ${passed} passed, ${failed} failed\n`);

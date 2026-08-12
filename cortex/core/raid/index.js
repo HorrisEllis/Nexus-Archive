@@ -397,7 +397,20 @@ async function verifyInIsolation({ source, action, specPath, outputDir, testComm
 
   let result;
   try {
-    result = await pipeline.runPipeline(specPath, { outputDir, testCommand });
+    // §BUGFIX 2026-08-12 — was calling runPipeline(specPath, {outputDir,
+    // testCommand}), a bare string as the first argument. runPipeline's
+    // real signature destructures {specPath, outputDir, provider,
+    // testCommand, ...} FROM its first argument — a string has no
+    // .specPath property, so this has been silently resolving to
+    // specPath:undefined on every real call, failing immediately at the
+    // 'validate' stage with 'specPath required'. Confirmed live before
+    // fixing: reproducing this exact call pattern returns
+    // {ok:false,stage:'validate',error:'specPath required'} every time.
+    // This means the P3-P6 isolation/verify/compare/rewind spine — the
+    // real safety backbone for every consequential action in NEXUS — has
+    // never actually run for real. Found while checking repair-on-
+    // prompt.js's real dependencies before wiring R3 to them.
+    result = await pipeline.runPipeline({ specPath, outputDir, testCommand });
   } catch (e) {
     recordDecision({ source, tool: action, outcome: 'error', approved: false,
       error: `isolation verify threw: ${e.message}`, causedBy: opts.causedBy });

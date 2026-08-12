@@ -119,14 +119,58 @@ function recordSuccess(faultClass, decayFactor = 0.5) {
   return { ...existing, ...values, band: bandFor(newFriction) };
 }
 
+// §R7 2026-08-12 — the function service/nexus-diagnostic.js's /tension
+// route has always tried to call and never found (it required a directory,
+// cortex/healer, that never existed — cortex/self-heal is the real one, and
+// even this file didn't have scoreTension). James's phasemap: "build a real
+// scoreTension(gap) using fault-taxonomy's own FRICTION_THRESHOLDS instead
+// of the silent fallback (gap.severity==='high'?2:1)."
+//
+// A gap-field gap and a fault_taxonomy row are different shapes (checked
+// before building, not assumed compatible) — a gap is a one-off event, a
+// fault class accumulates over repeated occurrences. This bridges them
+// honestly: if this gap's TYPE already maps to a real fault class with
+// real accumulated history, that real number is returned — it reflects
+// something that's actually happened repeatedly, richer than any single
+// gap could say alone. If not (true right now for every current gap type
+// — fault_taxonomy has zero rows, the escalation organ that would
+// populate it was never built), this computes a fresh score using the
+// SAME real, doc-specced delta table raiseFriction() uses, not an
+// invented number — genuinely better than the old severity===  'high'?2:1
+// fallback, honest about not being "real accumulated friction" either.
+const GAP_TYPE_TO_FAULT_CLASS = Object.freeze({
+  'kernel_circuit_open': 'circuit_breaker',
+  'dangling-hook': 'import_error',
+  'chunk-build.all-agents-unreachable': 'api_degraded',
+  'lifeline.provider-timeout': 'timeout',
+  'lifeline.provider-failure': 'api_degraded',
+});
+
+function scoreTension(gap) {
+  if (!gap) return FRICTION_DELTA_BY_LEVEL[0];
+  const faultClass = GAP_TYPE_TO_FAULT_CLASS[gap.type] || null;
+  if (faultClass) {
+    const existing = getFaultClass(faultClass);
+    if (existing) return existing.friction;   // real, accumulated — reflects real repeated occurrence
+  }
+  // No mapped fault class, or no accumulated history yet — a fresh, honest
+  // estimate from the same real delta table, keyed by the same severity
+  // levels raiseFriction() itself uses (0=low,1=medium,2=high,3=critical),
+  // not a guess unrelated to the rest of this module's own math.
+  const level = gap.severity === 'critical' ? 3 : gap.severity === 'high' ? 2 : gap.severity === 'medium' ? 1 : 0;
+  return FRICTION_DELTA_BY_LEVEL[level];
+}
+
 module.exports = {
   MODULE_ID,
   TABLE,
   FRICTION_THRESHOLDS,
   FRICTION_DELTA_BY_LEVEL,
   KNOWN_FAULT_CLASSES,
+  GAP_TYPE_TO_FAULT_CLASS,
   bandFor,
   getFaultClass,
   raiseFriction,
   recordSuccess,
+  scoreTension,
 };

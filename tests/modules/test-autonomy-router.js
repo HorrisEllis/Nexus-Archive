@@ -23,7 +23,11 @@ function newSession() { return `test-session-${Date.now()}-${sid++}`; }
     const s = newSession();
     const r = await ar.route('schedule proposal-only-task every 5 minutes', { sessionId: s });
     assert.ok(r);
-    assert.ok(/Confirm\?/.test(r.text));
+    // §2026-08-12 — was asserting the literal old "Confirm?" suffix, which
+    // James correctly flagged as making every proposal feel templated and
+    // was removed on purpose. The real requirement is that a proposal
+    // reads as a genuine question, not that it contains that exact word.
+    assert.ok(/\?/.test(r.text), 'a proposal must read as a real question');
     assert.strictEqual(scheduler.list().some(t => t.name === 'proposal-only-task'), false, 'must not execute before confirmation');
   });
 

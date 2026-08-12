@@ -55,6 +55,7 @@ const path = require('path');
 // forSystem(), not cached, same as every other read surface in this file.
 const phasemapMap = require('./scanners/phasemap-map');
 const gapField = require('../lib/gap-field');
+const componentLedger = require('../lib/component-ledger');
 const connections = require('../lib/connections');
 // §2026-08-09 — friction/tension live IN-MEMORY inside the diagnostic
 // kernel's running process (unlike gaps, which share jaaDB's on-disk store
@@ -348,6 +349,30 @@ const server = http.createServer(async (req, res) => {
     if (method === 'GET' && p === '/api/graph') {
       return json(res, 200, { ok: true, graph: driver.registry.graph() });
     }
+    // §R5 2026-08-12 — the real zoom-in endpoint. "Look at architect" is the
+    // literal gate: loom's structural graph() alone only shows generic
+    // auto-scanned export/import edges — the real nuance (deprecated-for-
+    // hook-writes, active-for-SNR-scan) lives in hooks/<system>.hooks.js's
+    // OWN exported status field, a genuinely separate data source, checked
+    // and confirmed before building this (loom's registry.all('hook') does
+    // NOT carry it). This combines both, live, plus open gaps + history —
+    // a rendering aggregation over real sources, not a cached snapshot that
+    // could drift the way hooks/architect.hooks.js itself drifted earlier
+    // this session.
+    if (method === 'GET' && p.startsWith('/api/component/')) {
+      const system = decodeURIComponent(p.slice('/api/component/'.length));
+      if (!system) return json(res, 400, { ok: false, error: 'system required' });
+      const graph = driver.registry.graph();
+      const structuralNodes = graph.nodes.filter(n => n.component_id && n.component_id.includes(`.${system}.`) || n.component_id === `nexus.${system}`);
+      let declared = null;
+      try {
+        const hooksFile = require(`../hooks/${system}.hooks.js`);
+        declared = { systemId: hooksFile.systemId, port: hooksFile.port, version: hooksFile.version, updatedAt: hooksFile.updatedAt, hooks: hooksFile.hooks, activeCount: hooksFile.active().length, totalCount: hooksFile.hooks.length };
+      } catch (_) { /* not every system has a hand-declared hooks.js — honest absence, not an error */ }
+      const gaps = gapField.openGaps({ limit: 500 }).filter(g => (g.source || '').includes(system));
+      const history = componentLedger.bySystem(system, 100);
+      return json(res, 200, { ok: true, system, structuralNodes, declared, gaps, gapCount: gaps.length, history, historyCount: history.length });
+    }
     // §LP3 — the phasemap section. Bare /api/phasemap is the whole roadmap
     // (loadAll() + summary()); /api/phasemap/:system is one system's roadmap
     // (forSystem()) — the same has/get shape /api/registry/:kind already uses
@@ -397,6 +422,36 @@ const server = http.createServer(async (req, res) => {
       if (!domain) return json(res, 400, { ok: false, error: 'domain required' });
       const gaps = gapField.openGaps({ domain, limit: 200 });
       return json(res, 200, { ok: true, gaps, count: gaps.length, domain });
+    }
+    // §R4 2026-08-12 — James: "a ledger to log each system change to a
+    // ledger in cortex... each system has its own timeline, nexus has its
+    // own." lib/component-ledger.js was already real, already 15,472+ rows
+    // deep (5,290 after cleaning ~10,300 rows of accumulated test
+    // pollution found along the way, system ids like bl7-<timestamp> that
+    // leaked from a test lacking real cleanup) — loom just never once
+    // queried it. This reads the existing ledger, does not create a
+    // second one (§10.3).
+    if (method === 'GET' && p === '/api/history') {
+      const rows = componentLedger.tail(200);
+      return json(res, 200, { ok: true, history: rows, count: rows.length });
+    }
+    if (method === 'GET' && p.startsWith('/api/history/system/')) {
+      const system = decodeURIComponent(p.slice('/api/history/system/'.length));
+      if (!system) return json(res, 400, { ok: false, error: 'system required' });
+      const rows = componentLedger.bySystem(system, 200);
+      return json(res, 200, { ok: true, history: rows, count: rows.length, system });
+    }
+    if (method === 'GET' && p.startsWith('/api/history/component/')) {
+      const component = decodeURIComponent(p.slice('/api/history/component/'.length));
+      if (!component) return json(res, 400, { ok: false, error: 'component required' });
+      const rows = componentLedger.byComponent(component, 200);
+      return json(res, 200, { ok: true, history: rows, count: rows.length, component });
+    }
+    if (method === 'GET' && p.startsWith('/api/history/session/')) {
+      const session = decodeURIComponent(p.slice('/api/history/session/'.length));
+      if (!session) return json(res, 400, { ok: false, error: 'session required' });
+      const rows = componentLedger.bySession(session, 500);
+      return json(res, 200, { ok: true, history: rows, count: rows.length, session });
     }
     // §2026-08-09 — friction + tension, proxied live from the real diagnostic
     // kernel (service/nexus-diagnostic.js, :7825), not recomputed here. Its

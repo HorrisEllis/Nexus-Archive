@@ -183,6 +183,7 @@ body{display:flex;flex-direction:column;position:relative}
     <button class="rail-btn" data-view="iterations" onclick="setView('iterations')">▦<span class="rail-label">Iterations</span></button>
     <button class="rail-btn" data-view="roadmap" onclick="setView('roadmap')">◈<span class="rail-label">Roadmap</span></button>
     <button class="rail-btn" data-view="gaps" onclick="setView('gaps')">◬<span class="rail-label">Gaps</span></button>
+    <button class="rail-btn" data-view="map" onclick="setView('map')">⬡<span class="rail-label">Map</span></button>
   </nav>
 
   <main class="view-area">
@@ -315,6 +316,19 @@ body{display:flex;flex-direction:column;position:relative}
             <button class="kind-tab" data-domain="user-model">user-model</button>
           </div>
           <div class="pbody" id="gaps-list"><div class="empty">loading…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-map">
+      <div class="body2" style="grid-template-columns:1fr 1.4fr">
+        <div class="left">
+          <div class="ph"><span class="ph-title">NEXUS — 12 systems</span><span class="ph-badge live" id="map-summary-badge"></span></div>
+          <div class="pbody" id="map-system-list"><div class="empty">loading…</div></div>
+        </div>
+        <div class="left">
+          <div class="ph"><span class="ph-title" id="map-detail-title">Select a system to zoom in</span></div>
+          <div class="pbody" id="map-detail"><div class="empty">nothing selected</div></div>
         </div>
       </div>
     </section>
@@ -532,7 +546,7 @@ document.getElementById('roadmap-filter-tabs').addEventListener('click', e => {
   renderRoadmap();
 });
 
-loadRegistry(); loadTemplates(); loadRevisions(); loadRoadmap(); loadGaps(); connectEvents();
+loadRegistry(); loadTemplates(); loadRevisions(); loadRoadmap(); loadGaps(); loadMapSystems(); connectEvents();
 
 // §2026-08-09 — gap field view. Same pattern as roadmap above: one fetch,
 // one filter-tab set, .reg-item styling reused verbatim.
@@ -565,6 +579,47 @@ document.getElementById('gaps-filter-tabs').addEventListener('click', e => {
   gapsFilter = btn.dataset.domain;
   loadGaps();
 });
+
+// §R5 2026-08-12 — the zoomable node map. NEXUS -> 12 systems (derived
+// live from the real graph's component_id namespaces, not hardcoded) ->
+// zoom into one for its real declared hooks (with real status — the
+// "look at architect" gate), open gaps, and history. A rendering layer
+// over /api/graph + /api/component/:system + R4's history, not a
+// seventh data source.
+async function loadMapSystems() {
+  const d = await api('/api/graph');
+  if (!d.ok) { document.getElementById('map-system-list').innerHTML = '<div class="empty">graph unavailable</div>'; return; }
+  const systems = new Set();
+  (d.graph.nodes || []).forEach(n => {
+    const m = (n.component_id || '').match(/^nexus\.([a-z0-9_-]+)\./);
+    if (m) systems.add(m[1]);
+  });
+  const list = [...systems].sort();
+  document.getElementById('map-summary-badge').textContent = `${list.length} systems`;
+  document.getElementById('map-system-list').innerHTML = list.map(s =>
+    `<div class="reg-item" style="cursor:pointer" onclick="loadMapDetail('${esc(s)}')"><div class="id">${esc(s)}</div></div>`
+  ).join('');
+}
+
+async function loadMapDetail(system) {
+  document.getElementById('map-detail-title').textContent = system;
+  document.getElementById('map-detail').innerHTML = '<div class="empty">loading…</div>';
+  const d = await api(`/api/component/${encodeURIComponent(system)}`);
+  if (!d.ok) { document.getElementById('map-detail').innerHTML = '<div class="empty">unavailable</div>'; return; }
+  const parts = [];
+  if (d.declared) {
+    parts.push(`<div class="reg-item"><div class="id">declared hooks — ${d.declared.activeCount}/${d.declared.totalCount} active</div></div>`);
+    parts.push(...d.declared.hooks.map(h => {
+      const dot = h.status === 'active' ? 'var(--ok, #4caf50)' : 'var(--text3)';
+      return `<div class="reg-item"><div class="id"><span style="color:${dot}">●</span> ${esc(h.name)} <span style="color:var(--text3)">(${esc(h.status || 'unknown')})</span></div><div class="meta">${esc((h.intent || '').slice(0, 140))}</div></div>`;
+    }));
+  } else {
+    parts.push('<div class="empty">no hand-declared hooks file for this system — structural graph only</div>');
+  }
+  parts.push(`<div class="reg-item"><div class="id">${d.gapCount} open gap${d.gapCount === 1 ? '' : 's'}</div></div>`);
+  parts.push(`<div class="reg-item"><div class="id">${d.historyCount} recent ledger entries</div></div>`);
+  document.getElementById('map-detail').innerHTML = parts.join('');
+}
 </script>
 </body>
 </html>

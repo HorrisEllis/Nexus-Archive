@@ -22,3 +22,6 @@
 {"type":"service.stop","reason":"SIGTERM","ts":1786478575065,"_ts":1786478575065}
 {"type":"service.start","port":7825,"pid":957,"ts":1786478600292,"_ts":1786478600292}
 {"type":"service.stop","reason":"SIGTERM","ts":1786478629506,"_ts":1786478629506}
+{"type":"service.start","port":7825,"pid":539,"ts":1786541266644,"_ts":1786541266644}
+{"type":"service.start","port":7825,"pid":559,"ts":1786541299952,"_ts":1786541299952}
+{"type":"service.stop","reason":"SIGTERM","ts":1786541304577,"_ts":1786541304577}

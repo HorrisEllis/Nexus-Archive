@@ -81,8 +81,17 @@ async function checkPending(sessionId, prompt, opts = {}) {
 function _propose(sessionId, patternId, prompt, confirmText, execute) {
   _pending.set(sessionId, { patternId, execute, prompt, proposedAt: Date.now() });
   const conf = learning.getConfidence(patternId);
-  const hedge = conf < 0.4 ? " (I'm not very confident I'm reading this right, so please double-check)" : '';
-  return { text: `${confirmText}${hedge} Confirm?`, detail: { pending: true, patternId, confidence: conf } };
+  // §2026-08-12 — James: "the co-pilot feels stiff." Found it: confirmText
+  // is already a real question ("Schedule 'X' every 5 minutes?"), and this
+  // function was appending a second, identical " Confirm?" onto every
+  // single proposal regardless of content — the exact kind of templated
+  // repetition that makes something feel like a form instead of a
+  // conversation. Dropped. The hedge (only shown when confidence is
+  // genuinely low) shortened to match how a person actually talks, not a
+  // liability disclaimer.
+  const hedge = conf < 0.4 ? " (not totally sure I've got this right —" : '';
+  const text = hedge ? `${confirmText}${hedge} let me know if I misread it)` : confirmText;
+  return { text, detail: { pending: true, patternId, confidence: conf } };
 }
 
 async function route(prompt = '', opts = {}) {

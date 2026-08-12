@@ -197,6 +197,9 @@ const SUITES = [
   'test-agent-build-learning.js',
   'test-lifeline-contracts.js',
   'test-lifeline-fault-logging.js',
+  'test-stub-scanner.js',
+  'test-autonomous-repair.js',
+  'test-nerve-gap-bridge.js',
 ];
 
 let totalPassed = 0;

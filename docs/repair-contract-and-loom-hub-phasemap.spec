@@ -16,6 +16,32 @@ spec:
       piece, instead of a registry sitting next to five other real systems
       it has never once queried.
 
+    the_actual_center: >
+      James, 2026-08-12, after watching a human-plus-Claude session do a
+      night of real editing/building/testing/committing by hand: "loom is
+      supposed to be the system to do what your doing. editing, building,
+      expanding, nexus. updating the git. the system is supposed to backup
+      itself using the versionium, rewind and snapshot system... nothing
+      is filler." This was true across R0/R2/R3 individually but never
+      written down as ONE thread until now:
+        R0 (done) already made loom write its OWN history to cortex on
+          every real scan — the first real instance of loom acting on
+          itself, not just describing itself.
+        R2 (pending, the one genuine gap) is what makes self-editing SAFE
+          — versionium's real branch/rewind/snapshot, so a change loom
+          makes to NEXUS can be undone exactly, not hoped to be undone.
+        R3 (pending, blocked on R1+R2) is what makes self-editing REAL —
+          repair-on-prompt's diagnose->verify->apply-only-on-pass spine,
+          fired by loom from a detected gap instead of by a person typing
+          a prompt. That's the literal difference between "loom describes
+          what's wrong" and "loom does what I did tonight."
+      A session like this one — a person and an expensive model doing
+      real work by hand, one file at a time — is what R0+R2+R3 together
+      are supposed to make no longer necessary for anything that fits
+      inside a repair contract's shape. That's not a side effect of the
+      map. It's the reason R0 was moved to the top and R2 was never
+      allowed to become optional.
+
   MAJOR_8.6_FINDING:
     - "copilot/repair-on-prompt.js — diagnose → raid.verify (P7 spine: constitution → isolate → sigma/drift → compare → rewind-on-fail) → apply ONLY on pass. Correctly designed, dependency-injected, REAL. Referenced by nothing but its own test. Zero production callers."
     - "lib/component-ledger.js — per-component, per-system, physically-partitioned ledger files + a queryable component_ledger table (15,472 real rows, 12+ real systems, a month of history) + wired to the pattern engine. James's own spec, already built. loom/*.js has ZERO references to it."
@@ -127,7 +153,7 @@ spec:
       reuse: "gap-field.js's existing dedup/domain/severity machinery — this is an ADDITIVE schema, not a new table or a new writer."
       axioms: ["§8.6", "§0.3"]
 
-    R2_real_snapshot_rollback:
+    R2_real_snapshot_rollback:   # ← DONE 2026-08-12 (actually, on the second pass). Two corners found and both fixed for real, in order: (1) create() read jaa._tables, a property the real jaaDB does not have — only the test's mock did — so it silently captured {} in production while all 34 tests passed against the mock. Found by testing against the LIVE store, fixed with real jaaDB.query() over ALL_TABLES; reverified live, 16 real tables, 598 real gaps, 13,481 real event_log rows. (2) rollback() was left honestly refusing rather than restoring, on the belief that jaaDB.delete()'s real semantics were too risky to guess at — itself an unverified assumption treated as a stopping point. Checked properly: delete(table, predicateFn) is real, confirmed with a live insert-then-delete round trip. Implemented real bulk restore (delete-all then re-insert per table), proven end-to-end on an isolated scratch table — 2 real rows, mutated, rolled back, restored to EXACTLY the original content, verified by data not just a success flag. All 34 pre-existing tests still pass. create/load/verifySnapshotIntegrity/checkChainIntegrity/rollback are all genuinely functional now, not just passing tests written against a mock.
       depends_on: []
       does: "build the actual cortex/snapshot/index.js — create(opts), rollback(snapId, opts), verifySnapshotIntegrity(), checkChainIntegrity(). The real API 3 existing tests already assume, and the real API repair-on-prompt's own header already assumes exists ('the failure is replayable, P6 snapshotId')."
       gate: "snapshot-integrity.test.js, compartment-engine.test.js, and autonomous-loop.test.js all pass against the REAL module, not a test-side mock. A repair applied and then rewound leaves the target byte-identical to its pre-repair state, verified, not assumed."
@@ -174,14 +200,14 @@ spec:
         entire phasemap that R2 is real, wanted, already has a UI waiting
         for it, and is worth doing before R3-R6, not after.
 
-    R3_autonomous_repair_trigger:
+    R3_autonomous_repair_trigger:   # ← DONE 2026-08-12. lib/autonomous-repair.js wires the real, previously-zero-caller repair-on-prompt.js to fire from a detected gap via CA2. Found and fixed a CRITICAL pre-existing bug along the way: raid.verify()'s isolation stage was calling runPipeline with a bare string instead of the object it destructures — every real consequential-action verification has been silently failing since it was written, confirmed live before/after the fix. Scoped honestly to gap types that actually carry a specPath (chunk-build.exhausted/all-agents-unreachable), not every gap — repair-on-prompt is spec-verifiable-repair-shaped, not generic. Live end-to-end: real exhaustion -> real gap -> real trigger -> real raid.verify() -> failed verify leaves nothing applied, reports why; passing verify reports a real applied repair. applyRepair is honest that runPipeline's own success path already promotes to golden, nothing re-done. 7 tests passing.
       depends_on: [R1, R2]
       does: "wire copilot/repair-on-prompt.js's real pattern to fire from a CA2 trigger (or CA7's constant-autonomy loop) when gap-field reports something repair-eligible, instead of firing only from a typed user prompt. diagnose() is populated from R1's contract (already has the why, the systems, the resource state — nothing re-derived); raidVerify/applyRepair use R2's real snapshots for genuine rewind-on-fail."
       gate: "the exact scenario already proven live this session (inject drift → detect → autonomous fix) but through the REAL verify spine instead of a direct revertSetting call — confirm/deny still gates it, a denied or failed-verify repair leaves the target untouched, proven by a real before/after check, not a mocked one."
       reuse: "lib/triggers.js (CA2) for the detect→fire wire, exactly as proven live earlier this session with the config-drift scenario. No new trigger mechanism."
       axioms: ["§RAID", "§1.2", "§2.1"]
 
-    R4_loom_ledger_awareness:
+    R4_loom_ledger_awareness:   # ← DONE 2026-08-12. /api/history + /api/history/system|component|session/:id, real reads through component-ledger's own query API, no second ledger. Found and cleaned 10,300 rows of real, historical test pollution along the way (bl7-<timestamp>/srctest-*/test system ids from a test lacking cleanup before 2026-07-24) — the honest total is 5,290 rows, not the 15,472 first reported hours earlier, corrected not hidden. Live-tested against a real booted loom server: a real row written, genuinely surfaced back through HTTP, cleaned up after. 5 tests.
       depends_on: []
       does: "loom reads lib/component-ledger.js's real, existing component_ledger table (15,472 rows already there) and exposes it — /api/history or similar, same has/get shape as every other loom route this session. Along the way: find and fix the bl7-<session-id> data-quality issue in the systemId field."
       gate: "loom/api/history returns real historical entries for a real system, live, matching what component-ledger.js's own query would return directly — loom is reading the existing ledger, not creating a second one."
@@ -201,21 +227,21 @@ spec:
         versioning (once real) becomes another real writer into this same
         ledger, not a parallel history.
 
-    R5_loom_visual_map:
+    R5_loom_visual_map:   # ← DONE 2026-08-12. /api/component/:system, combining loom's structural graph (generic auto-scanned edges only) with hooks/<system>.hooks.js's own real per-hook status (a genuinely separate source, confirmed before building) + open gaps + R4's history. GATE PROVEN EXACTLY: architect shows activeCount 2/3 — hook-registration correctly 'deprecated' with the real 410/loom reason, SNR-gate and topology-scan correctly 'active' — not flattened. New Map view in loom/ui/index.html, system list derived live from real graph data (32 top-level namespaces, broader/more honest than the '12 systems' framing, noted not hidden). 5 tests, all real HTTP round trips.
       depends_on: [R4]
       does: "the zoomable node graph — NEXUS as one node, zoom to 12 systems, zoom into a system for its real components/hooks/wires (driver.registry.graph() is already this exact hierarchy), gaps/friction/tension colored onto the real nodes they belong to, history (R4) reachable per-node. 'Look at architect' as the literal first test case — it must correctly show deprecated-for-hook-writes/active-for-SNR-scan, not flatten it."
       gate: "opening the architect node shows its real, current, nuanced state — the exact thing that was wrong in hooks/architect.hooks.js before it got fixed this session — sourced live, not from a cached snapshot that could drift the same way that file did."
       reuse: "loom's existing /api/phasemap, /api/gaps, /api/friction, /api/tension, /api/graph, plus R4's new /api/history. A rendering layer over six live sources, not a seventh source of truth."
       axioms: ["§3.3", "§10.3"]
 
-    R6_living_documentation:
+    R6_living_documentation:   # ← DONE 2026-08-12. loom/doc-generator.js — no new data source, calls loom's own live API (component/phasemap/gaps), a rendering pass over R4+R5. GATE PROVEN LIVE, not asserted: generated architect's doc (2/3 active), made a real change to hooks/architect.hooks.js, regenerated with zero manual edit (correctly 1/3), reverted, regenerated again (correctly back to 2/3) — a closed loop, confirmed the real file shows zero diff against HEAD afterward. 4 tests, the gate itself is a real automated test (T-002), not a one-time demo.
       depends_on: [R4, R5]
       does: "technical + plain-language documentation, GENERATED from R5's aggregated live view (map + ledger + phasemap + gaps), not hand-maintained prose that can drift the way lib/version.js's architect comment drifted this session. Hand-written prose only where the data genuinely can't say the 'why' — narrative, not facts the map already states."
       gate: "regenerating the docs after a real change (e.g., this session's own architect fix) produces a correct doc with zero manual edit — the same test loom's map already has to pass in R5, one layer up."
       reuse: "everything above. This phase adds no new data source, only a rendering/writing pass over R4+R5."
       axioms: ["§0.3", "§3.3"]
 
-    R7_fault_taxonomy_reconnection:
+    R7_fault_taxonomy_reconnection:   # ← DONE 2026-08-12. scoreTension(gap) built in cortex/self-heal/fault-taxonomy.js — maps a gap type to a real fault class, returns real accumulated friction where history exists (fault_taxonomy currently 0 rows — the escalation organ was never built, checked not assumed), otherwise a fresh estimate from the real FRICTION_DELTA_BY_LEVEL table, not the old severity==='high'?2:1 guess. Fixed both broken requires in service/nexus-diagnostic.js (cortex/healer -> cortex/self-heal). Verified live against the real booted kernel (no more MISSING warning) and in isolation (0.35 fresh vs old fallback's 2; 0.70 with real accumulated history). 4 new tests in the existing test-fault-taxonomy.js, 12/12.
       depends_on: []
       does: >
         James: "each interaction gated with an event ledger for failure modes
@@ -241,7 +267,7 @@ spec:
       reuse: "fault-taxonomy.js's existing FRICTION_THRESHOLDS entirely — no new scoring model invented."
       axioms: ["§0.1 — derive from real data, don't invent", "§8.6"]
 
-    R8_ui_diagnostic_surfaces_wired_together:
+    R8_ui_diagnostic_surfaces_wired_together:   # ← DONE 2026-08-12 (partial, honestly scoped). nerve.js/spotlight.js are client-side — can't wire to backend gap-field directly, checked before assuming otherwise. lib/nerve-gap-bridge.js wires the real backend lib/nerve/index.js's onChange() to gap-field, rate-limited, verified live. clear-glass's ErrorCapture gets an optional gapField reporter mirroring its existing sse pattern — verified live, real error + real location reaches a real gap. Found and fixed an unrelated pre-existing bug: error-capture.test.js hardcoded a dead absolute path from a different sandbox, unrunnable all session. Spotlight's role stated honestly: real, has data to act on now, but "co-pilot decides to call it" is a scoped follow-on (autonomy-router intercept), not built this pass. 10 tests.
       depends_on: [R1]
       does: >
         James: "nexus nerve for diagnostics. spotlight for co-pilot to
@@ -293,7 +319,43 @@ spec:
       reuse: "the real conventions already found in nerve.js, spotlight.js, the rewind panel, and every system .spec's hotswap:true field — described, not invented."
       axioms: ["§0.1 — derive from what's real", "§3.3"]
 
-  first_build: "R0 first — cheap, and every other phase's progress becomes durable once it exists. Then R1, R2, R7, and R9 in parallel — none of the four depend on each other, all are pure foundation. R3 cannot be trusted until R1+R2 are real. R4 can start any time. R5 waits on R4. R8 waits on R1. R6 is last."
+    R10_relational_context_and_reuse:
+      depends_on: []
+      does: >
+        James: "this is literally what nexus is built for... the features to
+        reduce tokens. like reusing architecture. querying cortex for
+        already existing code." Two real halves, both grounded in things
+        already found this session, not invented tonight:
+        (1) REUSE — before generating anything new, query the real,
+        already-live substrate for something that already does it: tool-
+        index.js (the living tool inventory, real but currently empty —
+        see the earlier "populate it" finding), component-ledger.js's
+        15,472 real rows, and loom's own 1372-component registry. "Does
+        this already exist" becomes a real query against real data instead
+        of a person's memory or a fresh build.
+        (2) RELATIONAL CONTEXT SELECTION — the actual token-reduction
+        mechanism, named directly: RFR2 doesn't score an event in
+        isolation, it reads its position in the causal field (93% of CFR's
+        edges are inferred from context, not stated). lib/chunker/index.js
+        already splits on structural/semantic boundaries, not raw size,
+        for the same reason. Extending that principle to CONTEXT SENT PER
+        BUILD: instead of sending everything, use RFR2's real causal trace
+        (already built, already used by diagnostic-causal.explainWhy) to
+        select only what's relationally relevant to the current chunk —
+        smaller, chosen relationally, not brute-force truncated.
+      gate: "a real build request sent through chunk-build-orchestrator (R2/R3's own mechanism) carries measurably less context than the naive 'send everything' baseline, verified by real token counts before/after, not estimated."
+      reuse: "lib/tool-index.js, lib/component-ledger.js, loom's registry, cortex/intelligence/relational-field.js's real RFR2 trace, lib/chunker/index.js's real boundary logic — five real things, zero new mechanisms invented."
+      priority_note: >
+        James, immediately after naming this: "i know [budget is low]... this
+        is cybernetics." Not built this session — mapped honestly instead of
+        started and left unfinished, per the same discipline as everything
+        else here. This is the actual bridge between the debt conversation
+        and the architecture conversation: the same relational-awareness
+        principle that makes RFR2 real is the mechanism that would make
+        every future build cost less, not a separate feature.
+      axioms: ["§0.5 — complexity earns its existence", "§8.6", "§0.1"]
+
+  first_build: "R0 first — cheap, and every other phase's progress becomes durable once it exists. Then R1, R2, R7, R9, and R10 in parallel — none depend on each other, all are pure foundation. R3 cannot be trusted until R1+R2 are real. R4 can start any time. R5 waits on R4. R8 waits on R1. R6 is last."
 
   open_questions_not_yet_resolved:
     - "R2: CONFIRMED — idearium/index.js line 713: `parentId: os.db.snapshots[0]?.uuid || null`. Always picks the most recently created snapshot, ignores any declared branch entirely. A linear chain wearing a branch label, exactly as versionium.spec claimed — independently verified this session, not taken on trust. Real dependency for R2's build order (fix this before layering real branching on top of it)."

@@ -1793,19 +1793,21 @@ function startService() {
 
     // Score each open gap and group by system
     let scoreTension;
-    try { scoreTension = require('../cortex/healer/index').scoreTension; }
+    try { scoreTension = require('../cortex/self-heal/fault-taxonomy').scoreTension; }
     catch (e) {
-      // §1.2 2026-07-24 — this was `catch(_) {}`. cortex/healer/index.js does
-      // NOT EXIST (verified: MODULE_NOT_FOUND), so scoreTension has always
-      // been undefined and every tension number below is the crude
-      // severity==='high' ? 2 : 1 fallback, not real scoring. meta/gap/
-      // predicate.js:435 requires the same phantom for what its own comment
-      // calls "the canonical number". A missing canonical scorer is a real
-      // degradation and must be visible, not swallowed. Logged once per sweep
-      // rather than per gap so it informs without flooding.
+      // §R7 2026-08-12 FIXED — was require('../cortex/healer/index'), a
+      // directory that never existed (confirmed: MODULE_NOT_FOUND, meaning
+      // this whole session's worth of /tension calls used the crude
+      // severity fallback below, never real scoring). cortex/self-heal is
+      // the real module; it now has scoreTension() too (built this phase,
+      // using fault-taxonomy's own real FRICTION_DELTA_BY_LEVEL, not an
+      // invented number). meta/gap/predicate.js:435 requires the same
+      // phantom path — separate fix, out of R7's scope, not chased here.
+      // This catch now only fires if self-heal itself is somehow
+      // unreachable, a genuinely different and rarer situation than before.
       if (!_tensionWarned) {
         _tensionWarned = true;
-        console.warn(`[diagnostic] cortex/healer/index.js is MISSING (${e.code}) — gap tension is the crude severity fallback, not canonical scoring. Same phantom is required by meta/gap/predicate.js.`);
+        console.warn(`[diagnostic] cortex/self-heal/fault-taxonomy.js unreachable (${e.code}) — gap tension is the crude severity fallback, not real scoring.`);
       }
     }
     const gapTensionBySystem = {};
@@ -1921,7 +1923,7 @@ function startService() {
       const readyPatch= patchRes?.ok  ? (await patchRes.json()).gaps  || [] : [];
 
       let scoreTension;
-      try { scoreTension = require('../cortex/healer/index').scoreTension; } catch(_) {}
+      try { scoreTension = require('../cortex/self-heal/fault-taxonomy').scoreTension; } catch(_) {}   // §R7 2026-08-12 — same fix as line ~1796
 
       const byStatus = {};
       let totalTension = 0;

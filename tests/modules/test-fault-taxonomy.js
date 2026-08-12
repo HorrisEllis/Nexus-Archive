@@ -98,5 +98,36 @@ test('T-008', 'raiseFriction with no faultClass throws (missing required input i
   assert.throws(() => ft.raiseFriction(null, 0), /faultClass is required/);
 });
 
+// ── §R7 2026-08-12 — scoreTension(gap), the function service/nexus-
+//    diagnostic.js's /tension route always tried to call and never found
+//    (cortex/healer never existed) ────────────────────────────────────────
+test('T-009', 'scoreTension for a mapped gap type with real accumulated history returns the REAL friction, not a guess', () => {
+  reset();
+  ft.raiseFriction('circuit_breaker', 2);
+  ft.raiseFriction('circuit_breaker', 2);   // 0.35 + 0.35 = 0.70, real accumulated history
+  const t = ft.scoreTension({ type: 'kernel_circuit_open', severity: 'high' });
+  assert.strictEqual(t, 0.70, 'must return the REAL accumulated friction for the mapped fault class, not recompute from severity');
+});
+
+test('T-010', 'scoreTension for an unmapped or never-seen gap type falls back to a fresh, honest estimate — the same real delta table, not an invented number', () => {
+  reset();
+  const high = ft.scoreTension({ type: 'totally-unmapped-gap-type', severity: 'high' });
+  const low = ft.scoreTension({ type: 'totally-unmapped-gap-type', severity: 'low' });
+  assert.strictEqual(high, ft.FRICTION_DELTA_BY_LEVEL[2], 'must reuse the real delta table, not a separate arbitrary formula');
+  assert.strictEqual(low, ft.FRICTION_DELTA_BY_LEVEL[0]);
+  assert.notStrictEqual(high, 2, 'must NOT be the old crude fallback (severity===\'high\'?2:1)');
+});
+
+test('T-011', 'scoreTension never throws on a null/malformed gap — a missing tension score must never crash the caller (§1.2)', () => {
+  reset();
+  assert.doesNotThrow(() => ft.scoreTension(null));
+  assert.doesNotThrow(() => ft.scoreTension({}));
+});
+
+test('T-012', 'GAP_TYPE_TO_FAULT_CLASS is exported and real — a mapped gap type genuinely resolves to a known fault class', () => {
+  assert.strictEqual(ft.GAP_TYPE_TO_FAULT_CLASS['kernel_circuit_open'], 'circuit_breaker');
+  assert.ok(ft.KNOWN_FAULT_CLASSES.includes(ft.GAP_TYPE_TO_FAULT_CLASS['kernel_circuit_open']), 'the mapped target must itself be a real, known fault class');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

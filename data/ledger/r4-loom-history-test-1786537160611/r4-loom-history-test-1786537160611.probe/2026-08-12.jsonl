@@ -1,0 +1,1 @@
+{"uuid":"dd807f14-6884-41ec-9734-2dfc0dd924f7","system":"r4-loom-history-test-1786537160611","component":"r4-loom-history-test-1786537160611.probe","action":"test-write","status":"info","tags":[],"detail":null,"causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"test/history-routes.test.js:17","ts":1786537160614}

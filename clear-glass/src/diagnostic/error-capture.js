@@ -23,12 +23,20 @@ const fs   = require('fs');
 const path = require('path');
 
 class ErrorCapture {
-  constructor({ sse, logDir } = {}) {
+  constructor({ sse, logDir, gapField } = {}) {
     this.sse      = sse || null;
     this.logDir   = logDir || path.join(process.env.HOME || process.env.USERPROFILE || '.', '.clear-glass', 'errors');
     this.recent   = []; // ring buffer, last 200 — UI can ask for this on connect
     this.MAX_RECENT = 200;
     this._installed = false;
+    // §R8 2026-08-12 — James: "co-pilot should be able to use clear-glass
+    // to understand where the user is accessing the system and what isn't
+    // working." Optional, mirroring the existing `sse` pattern exactly
+    // (same constructor shape, same fire-and-forget discipline) — a real
+    // caught error now ALSO reaches gap-field, not just this file's local
+    // log + SSE, which had zero connection to anything else in NEXUS until
+    // now.
+    this.gapField = gapField || null;
   }
 
   init() {
@@ -87,6 +95,18 @@ class ErrorCapture {
 
     if (this.sse) {
       try { this.sse.emit('error.captured', row); } catch (_) {}
+    }
+
+    if (this.gapField) {
+      try {
+        this.gapField.report({
+          type: 'clear-glass.renderer-error', body: message || 'unlabeled error',
+          source: source || 'clear-glass', domain: 'system',
+          severity: type === 'uncaughtException' ? 'high' : 'medium',
+          error: stack || message, location: url || null,
+          meta: { code, name, agentId, extra },
+        });
+      } catch (_) { /* §1.2 — same discipline as the sse push above: a gap-report failure must never break error capture itself */ }
     }
 
     return row;

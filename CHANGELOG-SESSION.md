@@ -1,4 +1,87 @@
-# NEXUS v0.9.11 — Session Changelog (2026-07-11)
+# NEXUS — Session Changelog (2026-08-12)
+**Date:** 2026-08-12
+**Session type:** CA2-CA10, gap-field unification, lifeline contracts, loom-as-hub phasemap
+**By:** James Brooks + Claude
+
+---
+
+## Current progress
+
+**Built, tested, committed, verified live (not just claimed):**
+- CA1-CA7 full autonomous co-pilot layer (scheduler/triggers/chains/connections/
+  system-control/self-building-commands/constant-autonomy), then wired into
+  co-pilot's actual conversation (`copilot/lib/autonomy-router.js`) — real
+  HTTP round trips proved it, not just unit tests.
+- Six independent gap-writers found and unified into `lib/gap-field.js`,
+  including the real diagnostic kernel and a sixth (`intent-classifier.js`)
+  found while verifying "intention" was wired in.
+- `copilot/lib/lifeline-contracts.js` — per-intent response validation;
+  three real silent-failure paths in `lifeline.js` fixed (verified with a
+  real stand-in HTTP server, not mocked).
+- Autonomy-router v2 — flexible matching (7/12 -> 12/12 on real phrasing
+  tests), propose-then-confirm for every state-changing action, Bayesian
+  confidence in both the user-model and co-pilot's own `intent-learning.js`.
+- `lib/chunk-build-orchestrator.js` + `lib/agent-build-learning.js` — tries
+  every agent before giving up (per James's own correction of my first,
+  wrong proposal), skips infra failures without counting them, seeded from
+  `agent-router.js`'s real `DEFAULT_FALLBACK` order.
+- `docs/repair-contract-and-loom-hub-phasemap.spec` — 11 phases (R0-R10),
+  mapped bottom-up. **R0 and R1 are DONE and verified live**: loom's
+  scanner now persists real phasemap history to cortex
+  (`phasemap_history`), including a real bug caught and fixed (a phase-id
+  field collision that was silently overwriting different phases' rows
+  across files that reuse generic ids like P5/P6).
+- A real, live audit pulled from the actual registry: 1372 components,
+  1712 hooks, 1341 wires, 245 working capabilities (16 declared-dead),
+  584 open gaps (471 of them dangling hooks).
+- Several real bugs found and fixed along the way, not just built around:
+  `gap-finder`'s stale export crash, the architect-registry stale claim,
+  a false-green test runner (crashed suites were rendering ✓), `/tension`'s
+  broken `cortex/healer` require (confirmed `scoreTension()` was never
+  built under either name).
+
+**Total: 27 commits this session** (`e161ac2` through `b8865b5`),
+138+ tests added, all passing, full session sweep clean each time.
+
+## What's next — R2 through R10, in dependency order
+
+- **R2** (real snapshot/rollback) — the one genuine gap in the whole map,
+  not just a disconnection. `cortex/snapshot/index.js` doesn't exist;
+  a real UI panel (`ui/tv-shell/index.html`'s SYSTEM REWIND) has been
+  waiting for it, honestly showing `?` instead of faking data. Idearium's
+  branch bug is CONFIRMED (`idearium/index.js:713`, parentId always
+  picks the most recent snapshot regardless of branch) — fix that before
+  building real branching on top of it. `versionium.spec` has the real
+  build order already worked out.
+- **R3** (autonomous repair trigger) — wire the already-correct,
+  already-built `copilot/repair-on-prompt.js` (zero production callers
+  right now) to fire from a detected gap. Blocked on R2.
+- **R4** (loom reads the real 15,472-row `component-ledger`) — loom has
+  never once queried it.
+- **R5** (the zoomable node map) — loom already has the data
+  (`driver.registry.graph()`); this is a rendering pass, not a new
+  source of truth. "Look at architect" is the correctness test.
+- **R6** (generated documentation) — over R4+R5, not hand-written prose
+  that can drift.
+- **R7** (fault taxonomy reconnection) — `cortex/self-heal/fault-taxonomy.js`
+  is real; `/tension`'s reference to it is broken. Small, well-diagnosed.
+- **R8** (nerve + spotlight + error-capture wired together) — all three
+  real, none connected to each other or to gap-field yet.
+- **R9** (UI design philosophy) — genuinely absent, write it from the
+  real conventions already observed.
+- **R10** (relational context selection + architecture reuse) — the
+  actual token-reduction mechanism: RFR2's real causal-field scoring
+  and the chunker's real boundary logic, applied to what context a
+  build actually needs to send. Mapped, not built, this session.
+
+**The standing instruction, now real, not aspirational:** before building
+anything next, run it through `chunk-build-orchestrator` so a cheaper
+agent gets the first attempt — the system built tonight is meant to save
+money starting with whatever session picks this up next.
+
+---
+
+
 **Date:** 2026-07-11
 **Session type:** Idearium multi-template pipeline, repo file CRUD, tv-ui channel decomposition, Clear Glass UI decomposition
 **By:** James Brooks (Erosmancer) + Claude
