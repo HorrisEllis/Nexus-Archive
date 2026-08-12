@@ -200,6 +200,7 @@ const SUITES = [
   'test-stub-scanner.js',
   'test-autonomous-repair.js',
   'test-nerve-gap-bridge.js',
+  'test-relational-context.js',
 ];
 
 let totalPassed = 0;

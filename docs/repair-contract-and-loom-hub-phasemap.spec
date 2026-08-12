@@ -301,7 +301,7 @@ spec:
       reuse: "gap-field.js's report() as the single sink for all three sources — no new table, no new writer pattern."
       axioms: ["§8.6", "§10.3", "§0.3"]
 
-    R9_ui_design_philosophy:
+    R9_ui_design_philosophy:   # ← DONE 2026-08-12. docs/UI-DESIGN-PHILOSOPHY.md — 6 rules, every one cited from a real file that already follows it (nerve.js's sovereignty, the rewind panel's honest '?', nerve's field-driven pulse, 4 real specs' hotswap:true, spotlight's dual API, this session's own confirm-prompt fix). Gate proven immediately: checked R5's real /api/component/:system and autonomy-router's real prompts against the document's own checklist — both compliant, verified precisely not assumed.
       depends_on: []
       does: >
         James: "ui has a design philosophy." Checked, genuinely absent —
@@ -319,7 +319,7 @@ spec:
       reuse: "the real conventions already found in nerve.js, spotlight.js, the rewind panel, and every system .spec's hotswap:true field — described, not invented."
       axioms: ["§0.1 — derive from what's real", "§3.3"]
 
-    R10_relational_context_and_reuse:
+    R10_relational_context_and_reuse:   # ← DONE 2026-08-12. lib/relational-context.js — reuses loom's real contextGraph(), no new graph derivation. REAL BUG FOUND AND FIXED: traversal direction was backwards from the ACTUAL ingested wire semantic, which contradicts impactOf()'s own comment — verified against a known-true relationship (gap-field really calls diagnostic-causal) instead of trusting the comment. GATE PROVEN with real numbers: gap-field's real relevant context is 4 files/6,702 tokens vs a 237,508-token naive baseline — 97% real, measured reduction. Also found: loom's live registry doesn't reflect every entry added this session (agent-build-learning, stub-scanner absent) — a real, separate sync gap, noted not chased. 6 tests, including a regression lock-in for the direction fix.
       depends_on: []
       does: >
         James: "this is literally what nexus is built for... the features to
