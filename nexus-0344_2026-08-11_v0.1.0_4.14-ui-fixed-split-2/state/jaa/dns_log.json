@@ -1,0 +1,61 @@
+{
+  "seq": 8,
+  "rows": [
+    {
+      "_id": 1,
+      "_ts": 1786233560798,
+      "name": "legacyzone.test",
+      "type": "A",
+      "answers": 1
+    },
+    {
+      "_id": 2,
+      "_ts": 1786233637561,
+      "name": "second-zone.test",
+      "type": "A",
+      "answers": 1
+    },
+    {
+      "_id": 3,
+      "_ts": 1786233637564,
+      "name": "legacyzone.test",
+      "type": "A",
+      "answers": 1
+    },
+    {
+      "_id": 4,
+      "_ts": 1786234116987,
+      "name": "realcustomer.com",
+      "type": "A",
+      "answers": 1
+    },
+    {
+      "_id": 5,
+      "_ts": 1786234116988,
+      "name": "anything.realcustomer.com",
+      "type": "A",
+      "answers": 0
+    },
+    {
+      "_id": 6,
+      "_ts": 1786234224193,
+      "name": "realcustomer.com",
+      "type": "A",
+      "answers": 1
+    },
+    {
+      "_id": 7,
+      "_ts": 1786234224202,
+      "name": "anything.realcustomer.com",
+      "type": "A",
+      "answers": 1
+    },
+    {
+      "_id": 8,
+      "_ts": 1786234224204,
+      "name": "another-one.realcustomer.com",
+      "type": "A",
+      "answers": 1
+    }
+  ]
+}

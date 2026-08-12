@@ -1,0 +1,221 @@
+[2026-08-08T23:41:40.092Z] [INFO] [optimizer] optimizer engine ready
+[2026-08-08T23:41:40.168Z] [INFO] [optimizer] optimizer engine on :4006
+[2026-08-12T01:58:13.192Z] [INFO] [optimizer] optimizer engine ready
+[2026-08-12T01:58:13.193Z] [INFO] [optimizer] optimizer engine on :4006
+[2026-08-12T02:03:13.045Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:08:13.046Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:13:13.064Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:18:13.076Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:23:13.082Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:28:13.093Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:33:13.095Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:38:13.106Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:43:13.121Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:48:13.121Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:53:13.122Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T02:58:13.122Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:03:13.137Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:08:13.136Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:13:13.145Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:18:13.151Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:23:13.158Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:28:13.164Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:33:13.169Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:38:13.183Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:43:13.184Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:43:16.607Z] [INFO] [optimizer] optimizer engine ready
+[2026-08-12T03:43:16.608Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:16.855Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:17.167Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:17.479Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:17.792Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:18.103Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:18.416Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:18.729Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:19.041Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:19.371Z] [WARN] [optimizer] (node:3884) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.372Z] [WARN] [optimizer] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.375Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:19.684Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:19.995Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:20.310Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:20.622Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:20.932Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:21.245Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:21.555Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:21.857Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:22.169Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:22.480Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:22.791Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:23.106Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:23.418Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:23.731Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:24.042Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:24.356Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:24.655Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:24.964Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:25.277Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:25.605Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:25.935Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:26.255Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:26.562Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:26.870Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:27.182Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:27.495Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:27.810Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:28.122Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:28.420Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:28.732Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:29.044Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:29.356Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:29.671Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:29.982Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:30.294Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:30.604Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:30.921Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:31.230Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:31.543Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:31.854Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:32.165Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:32.496Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:32.809Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:33.123Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:33.433Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:33.746Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:34.060Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:34.371Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:34.681Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:35.010Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:35.309Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:35.622Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:35.935Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:36.249Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:36.558Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:36.873Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:37.193Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:37.496Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:37.809Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:38.121Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:38.432Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:38.745Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:39.048Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:39.352Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:39.667Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:39.981Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:40.294Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:40.606Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:40.919Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:41.244Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:41.575Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:41.892Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:42.204Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:42.510Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:42.827Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:43.140Z] [WARN] [optimizer] port 4006 in use — trying :4007
+[2026-08-12T03:43:43.959Z] [INFO] [optimizer] optimizer engine on :4006
+[2026-08-12T03:43:43.960Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.961Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.962Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.962Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.963Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.964Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.965Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.966Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.967Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.968Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.968Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.969Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.970Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.971Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.973Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.974Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.975Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.976Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.976Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.977Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.978Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.979Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.979Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.980Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.981Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.982Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.983Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.984Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.984Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.985Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.986Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.987Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.987Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.988Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.989Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.990Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.990Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.991Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.992Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.993Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.996Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.996Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.996Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.997Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.997Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.998Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:43.998Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.000Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.000Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.001Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.002Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.003Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.003Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.004Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.005Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.006Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.006Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.007Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.008Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.008Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.011Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.012Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.013Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.014Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.015Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.016Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.017Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.017Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.018Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.019Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.020Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.020Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.021Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.022Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.023Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.024Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.025Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.027Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.028Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.028Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.029Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.030Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.031Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.032Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.033Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:44.033Z] [INFO] [optimizer] on :4007
+[2026-08-12T03:43:47.355Z] [INFO] [optimizer] optimizer engine ready
+[2026-08-12T03:43:47.356Z] [INFO] [optimizer] optimizer engine on :4006
+[2026-08-12T03:48:47.247Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:53:47.253Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T03:58:47.257Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:03:47.262Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:08:47.272Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:13:47.283Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:18:47.294Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:23:47.295Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:28:47.304Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:33:47.310Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:38:47.316Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:43:47.320Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:48:47.327Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:53:47.333Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T04:58:47.340Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T05:03:47.354Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T05:08:47.363Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)
+[2026-08-12T05:13:47.378Z] [INFO] [optimizer] cache hit rate: n/a (0 items, 0.00MB)

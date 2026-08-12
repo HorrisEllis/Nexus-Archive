@@ -1,0 +1,105 @@
+{
+  "seq": 10,
+  "rows": [
+    {
+      "_id": 1,
+      "_ts": 1786511733862,
+      "id": "proxy",
+      "name": "Reverse Proxy",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 0,
+      "lastCheck": 1786511733860
+    },
+    {
+      "_id": 2,
+      "_ts": 1786511733864,
+      "id": "dns",
+      "name": "DNS",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 0,
+      "lastCheck": 1786511733863
+    },
+    {
+      "_id": 3,
+      "_ts": 1786511733866,
+      "id": "smtp",
+      "name": "SMTP",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 1,
+      "lastCheck": 1786511733866
+    },
+    {
+      "_id": 4,
+      "_ts": 1786511733869,
+      "id": "tls",
+      "name": "TLS / ACME",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 0,
+      "lastCheck": 1786511733868
+    },
+    {
+      "_id": 5,
+      "_ts": 1786511733872,
+      "id": "auth",
+      "name": "Auth",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 1,
+      "lastCheck": 1786511733871
+    },
+    {
+      "_id": 6,
+      "_ts": 1786511733875,
+      "id": "billing",
+      "name": "Billing",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 1,
+      "lastCheck": 1786511733874
+    },
+    {
+      "_id": 7,
+      "_ts": 1786511733877,
+      "id": "cache",
+      "name": "Cache",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 1,
+      "lastCheck": 1786511733877
+    },
+    {
+      "_id": 8,
+      "_ts": 1786511733880,
+      "id": "storage",
+      "name": "Storage",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 0,
+      "lastCheck": 1786511733879
+    },
+    {
+      "_id": 9,
+      "_ts": 1786511733882,
+      "id": "queue",
+      "name": "Queue",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 0,
+      "lastCheck": 1786511733881
+    },
+    {
+      "_id": 10,
+      "_ts": 1786511733884,
+      "id": "catalog",
+      "name": "Catalog",
+      "up": true,
+      "uptime": "100.00",
+      "latency": 1,
+      "lastCheck": 1786511733884
+    }
+  ]
+}

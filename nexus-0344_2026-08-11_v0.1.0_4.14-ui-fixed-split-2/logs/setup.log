@@ -1,0 +1,36 @@
+[2026-08-07T19:33:53.160Z] [INFO] [setup] setup engine ready
+[2026-08-07T19:33:53.171Z] [INFO] [setup] setup engine on :4011
+[2026-08-07T19:34:43.912Z] [INFO] [setup] setup engine ready
+[2026-08-07T19:34:43.924Z] [INFO] [setup] setup engine on :4011
+[2026-08-07T19:35:53.094Z] [INFO] [setup] setup engine ready
+[2026-08-07T19:35:53.095Z] [INFO] [setup] setup engine on :4011
+[2026-08-07T19:36:24.493Z] [INFO] [setup] setup engine ready
+[2026-08-07T19:36:24.493Z] [INFO] [setup] setup engine on :4011
+[2026-08-07T19:36:27.315Z] [INFO] [setup] setup: IP settled at 198.51.100.42 — auto re-running glue+tls
+[2026-08-07T19:36:27.318Z] [INFO] [setup] setup: auto re-run succeeded
+[2026-08-07T19:36:55.605Z] [INFO] [setup] setup engine ready
+[2026-08-07T19:36:55.621Z] [INFO] [setup] setup engine on :4011
+[2026-08-07T19:36:58.364Z] [INFO] [setup] setup: IP settled at 198.51.100.42 — auto re-running glue+tls
+[2026-08-07T19:36:58.398Z] [INFO] [setup] setup: auto re-run succeeded
+[2026-08-08T22:27:29.719Z] [INFO] [setup] setup engine ready
+[2026-08-08T22:27:29.720Z] [INFO] [setup] setup engine on :4011
+[2026-08-08T23:33:31.317Z] [INFO] [setup] setup engine ready
+[2026-08-08T23:33:31.318Z] [INFO] [setup] setup engine on :4011
+[2026-08-08T23:33:48.395Z] [INFO] [setup] setup engine ready
+[2026-08-08T23:33:48.396Z] [INFO] [setup] setup engine on :4011
+[2026-08-08T23:34:09.041Z] [INFO] [setup] setup engine ready
+[2026-08-08T23:34:09.042Z] [INFO] [setup] setup engine on :4011
+[2026-08-08T23:34:19.043Z] [INFO] [setup] setup engine ready
+[2026-08-08T23:34:19.061Z] [INFO] [setup] setup engine on :4011
+[2026-08-08T23:41:40.570Z] [INFO] [setup] setup engine ready
+[2026-08-08T23:41:40.623Z] [INFO] [setup] setup engine on :4011
+[2026-08-11T00:38:23.890Z] [INFO] [setup] setup engine ready
+[2026-08-11T00:38:23.920Z] [INFO] [setup] setup engine on :4011
+[2026-08-12T01:58:13.212Z] [INFO] [setup] setup engine ready
+[2026-08-12T01:58:13.213Z] [INFO] [setup] setup engine on :4011
+[2026-08-12T03:43:16.639Z] [INFO] [setup] setup engine ready
+[2026-08-12T03:43:16.639Z] [WARN] [setup] setup: port 4011 in use — trying :4012
+[2026-08-12T03:43:16.934Z] [INFO] [setup] setup engine on :4011
+[2026-08-12T03:43:16.935Z] [INFO] [setup] setup: on :4012
+[2026-08-12T03:43:47.376Z] [INFO] [setup] setup engine ready
+[2026-08-12T03:43:47.377Z] [INFO] [setup] setup engine on :4011

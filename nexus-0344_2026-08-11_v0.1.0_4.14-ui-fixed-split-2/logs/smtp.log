@@ -1,0 +1,18 @@
+[2026-08-08T23:41:40.302Z] [INFO] [smtp] DKIM key generated. Add DNS TXT record:
+[2026-08-08T23:41:40.303Z] [INFO] [smtp]   default._domainkey.anonymousservers.info  TXT  "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4tO1dp4QthW0mHxpKbqJvdUNNtnLgeAWBTiWqwg758pmIxUi1jRblwS9bUy0uG9XKv13TonJn20TlbbXvzH2nmUBEGXc3zuJIvECBHk2kdJiNZTxfeAuJgYubA1TqRTKCOINjpmLKWOUM/Q8685DdNzOMNw5vb1/4p1iecckq/1oqjYeKKGV7WJei9Qvtadc+6DPxVwQB4aKgRuBZwX24PaOUkQq0MlmDtNWgPIzNRvhxalBaJUbgndN7zrfuUznrsLVj414a/tpFp7Uv89AH4a2DEPv7w+5DSr2l3ym9Hm4iHvOAOswwc1XU1giIH2CDtj9LQw8odVYcIlNzRreowIDAQAB"
+[2026-08-08T23:41:40.447Z] [INFO] [smtp] smtp engine ready
+[2026-08-08T23:41:40.447Z] [INFO] [smtp] SMTP inbound on :2525
+[2026-08-08T23:41:40.447Z] [INFO] [smtp] SMTP submission on :587
+[2026-08-12T01:58:13.175Z] [INFO] [smtp] smtp engine ready
+[2026-08-12T01:58:13.176Z] [INFO] [smtp] SMTP inbound on :2525
+[2026-08-12T01:58:13.177Z] [INFO] [smtp] SMTP submission on :587
+[2026-08-12T03:43:16.595Z] [INFO] [smtp] smtp engine ready
+[2026-08-12T03:43:16.596Z] [WARN] [smtp] SMTP inbound port 2525 in use — trying :2526
+[2026-08-12T03:43:16.597Z] [WARN] [smtp] SMTP submission port 587 in use — trying :588
+[2026-08-12T03:43:16.792Z] [INFO] [smtp] SMTP inbound on :2526
+[2026-08-12T03:43:16.793Z] [INFO] [smtp] SMTP inbound on :2526
+[2026-08-12T03:43:16.794Z] [INFO] [smtp] SMTP submission on :588
+[2026-08-12T03:43:16.795Z] [INFO] [smtp] SMTP submission on :588
+[2026-08-12T03:43:47.345Z] [INFO] [smtp] smtp engine ready
+[2026-08-12T03:43:47.346Z] [INFO] [smtp] SMTP inbound on :2525
+[2026-08-12T03:43:47.346Z] [INFO] [smtp] SMTP submission on :587

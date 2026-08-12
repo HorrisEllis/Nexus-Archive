@@ -1,0 +1,442 @@
+[2026-08-07T19:10:04.495Z] [INFO] [dns] dns engine starting
+[2026-08-07T19:10:04.533Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-07T19:10:04.542Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-07T19:10:09.618Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.55
+[2026-08-07T19:10:09.618Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.55
+[2026-08-07T19:10:09.620Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase1test.local.
+[2026-08-07T19:10:09.621Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase1test.local.
+[2026-08-07T19:10:09.621Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase1test.local. hostmaster.phase1test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:10:13.900Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.55
+[2026-08-07T19:10:13.914Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.55
+[2026-08-07T19:10:13.915Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase1test.local.
+[2026-08-07T19:10:13.915Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase1test.local.
+[2026-08-07T19:10:13.917Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase1test.local. hostmaster.phase1test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:10:14.228Z] [ERROR] [dns] parse error: The value of "offset" is out of range. It must be >= 0 and <= 73. Received 76
+[2026-08-07T19:11:36.114Z] [INFO] [dns] dns engine starting
+[2026-08-07T19:11:36.137Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-07T19:11:36.150Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-07T19:11:41.225Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.55
+[2026-08-07T19:11:41.226Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.55
+[2026-08-07T19:11:41.226Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase1test.local.
+[2026-08-07T19:11:41.227Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase1test.local.
+[2026-08-07T19:11:41.227Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase1test.local. hostmaster.phase1test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:11:43.403Z] [INFO] [dns] zone hot-updated: test-record TXT -> hello-world
+[2026-08-07T19:11:43.818Z] [INFO] [dns] zone record deleted: test-record TXT
+[2026-08-07T19:33:52.874Z] [INFO] [dns] dns engine starting
+[2026-08-07T19:33:52.899Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-07T19:33:52.920Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-07T19:33:58.165Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:33:58.166Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:33:58.168Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:33:58.168Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:33:58.169Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:34:04.262Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:34:04.262Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:34:04.263Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:34:04.280Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:34:04.281Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:34:12.753Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:34:12.754Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:34:12.755Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:34:12.756Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:34:12.756Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:34:43.840Z] [INFO] [dns] dns engine starting
+[2026-08-07T19:34:43.880Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-07T19:34:43.880Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-07T19:34:48.934Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:34:48.935Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:34:48.936Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:34:48.938Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:34:48.938Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:34:51.729Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:34:51.731Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:34:51.732Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:34:51.732Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:34:51.736Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:35:03.776Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:35:03.777Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:35:03.778Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:35:03.778Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:35:03.779Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:35:08.826Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:35:08.834Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:35:08.835Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:35:08.835Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:35:08.835Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:35:20.921Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:35:20.921Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:35:20.921Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:35:20.922Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:35:20.922Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:35:20.925Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:35:20.928Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:35:20.928Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:35:20.929Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:35:20.929Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:35:57.830Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:35:57.831Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:35:57.831Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase3test.local.
+[2026-08-07T19:35:57.842Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase3test.local.
+[2026-08-07T19:35:57.842Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase3test.local. hostmaster.phase3test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:36:24.472Z] [INFO] [dns] dns engine starting
+[2026-08-07T19:36:24.473Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-07T19:36:24.473Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-07T19:36:29.541Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.99
+[2026-08-07T19:36:29.542Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.99
+[2026-08-07T19:36:29.542Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase4test.local.
+[2026-08-07T19:36:29.543Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase4test.local.
+[2026-08-07T19:36:29.543Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase4test.local. hostmaster.phase4test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:36:55.512Z] [INFO] [dns] dns engine starting
+[2026-08-07T19:36:55.523Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-07T19:36:55.552Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-07T19:36:58.393Z] [INFO] [dns] zone hot-updated: ns1 A -> 198.51.100.42
+[2026-08-07T19:36:58.395Z] [INFO] [dns] zone hot-updated: ns2 A -> 198.51.100.42
+[2026-08-07T19:36:58.396Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase4test.local.
+[2026-08-07T19:36:58.396Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase4test.local.
+[2026-08-07T19:36:58.398Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase4test.local. hostmaster.phase4test.local. 2026062701 3600 900 604800 300
+[2026-08-07T19:37:00.629Z] [INFO] [dns] zone hot-updated: ns1 A -> 198.51.100.42
+[2026-08-07T19:37:00.629Z] [INFO] [dns] zone hot-updated: ns2 A -> 198.51.100.42
+[2026-08-07T19:37:00.630Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase4test.local.
+[2026-08-07T19:37:00.630Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase4test.local.
+[2026-08-07T19:37:00.631Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase4test.local. hostmaster.phase4test.local. 2026062701 3600 900 604800 300
+[2026-08-08T22:27:29.533Z] [INFO] [dns] dns engine starting
+[2026-08-08T22:27:29.586Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-08T22:27:29.616Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-08T22:27:34.745Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.200
+[2026-08-08T22:27:34.745Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.200
+[2026-08-08T22:27:34.745Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase5test.local.
+[2026-08-08T22:27:34.746Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase5test.local.
+[2026-08-08T22:27:34.746Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase5test.local. hostmaster.phase5test.local. 2026062701 3600 900 604800 300
+[2026-08-08T22:27:43.182Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.200
+[2026-08-08T22:27:43.183Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.200
+[2026-08-08T22:27:43.184Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.phase5test.local.
+[2026-08-08T22:27:43.185Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.phase5test.local.
+[2026-08-08T22:27:43.189Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.phase5test.local. hostmaster.phase5test.local. 2026062701 3600 900 604800 300
+[2026-08-08T23:33:30.960Z] [INFO] [dns] dns engine starting
+[2026-08-08T23:33:31.016Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-08T23:33:31.060Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-08T23:33:36.293Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.150
+[2026-08-08T23:33:36.294Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.150
+[2026-08-08T23:33:36.296Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.tlstest.local.
+[2026-08-08T23:33:36.296Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.tlstest.local.
+[2026-08-08T23:33:36.296Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.tlstest.local. hostmaster.tlstest.local. 2026062701 3600 900 604800 300
+[2026-08-08T23:34:18.973Z] [INFO] [dns] dns engine starting
+[2026-08-08T23:34:18.974Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-08T23:34:18.999Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-08T23:34:24.062Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.150
+[2026-08-08T23:34:24.063Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.150
+[2026-08-08T23:34:24.064Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.tlstest.local.
+[2026-08-08T23:34:24.066Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.tlstest.local.
+[2026-08-08T23:34:24.067Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.tlstest.local. hostmaster.tlstest.local. 2026062701 3600 900 604800 300
+[2026-08-08T23:34:26.799Z] [INFO] [dns] zone hot-updated: ns1 A -> 203.0.113.150
+[2026-08-08T23:34:26.799Z] [INFO] [dns] zone hot-updated: ns2 A -> 203.0.113.150
+[2026-08-08T23:34:26.801Z] [INFO] [dns] zone hot-updated: @ NS -> ns1.tlstest.local.
+[2026-08-08T23:34:26.802Z] [INFO] [dns] zone hot-updated: @ NS -> ns2.tlstest.local.
+[2026-08-08T23:34:26.806Z] [INFO] [dns] zone hot-updated: @ SOA -> ns1.tlstest.local. hostmaster.tlstest.local. 2026062701 3600 900 604800 300
+[2026-08-08T23:41:38.034Z] [INFO] [dns] dns engine starting
+[2026-08-08T23:41:38.147Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-08T23:41:38.267Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-08T23:41:40.327Z] [INFO] [dns] zone hot-updated: default._domainkey TXT -> v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4tO1dp4QthW0mHxpKbqJvdUNNtnLgeAWBTiWqwg758pmIxUi1jRblwS9bUy0uG9XKv13TonJn20TlbbXvzH2nmUBEGXc3zuJIvECBHk2kdJiNZTxfeAuJgYubA1TqRTKCOINjpmLKWOUM/Q8685DdNzOMNw5vb1/4p1iecckq/1oqjYeKKGV7WJei9Qvtadc+6DPxVwQB4aKgRuBZwX24PaOUkQq0MlmDtNWgPIzNRvhxalBaJUbgndN7zrfuUznrsLVj414a/tpFp7Uv89AH4a2DEPv7w+5DSr2l3ym9Hm4iHvOAOswwc1XU1giIH2CDtj9LQw8odVYcIlNzRreowIDAQAB
+[2026-08-08T23:59:15.187Z] [INFO] [dns] dns: migrated legacy single-zone config into multi-zone (primary domain: legacyzone.test)
+[2026-08-08T23:59:15.189Z] [INFO] [dns] dns engine starting
+[2026-08-08T23:59:15.197Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-08T23:59:15.198Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-08T23:59:37.579Z] [INFO] [dns] dns engine starting
+[2026-08-08T23:59:37.581Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-08T23:59:37.582Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-08T23:59:37.583Z] [INFO] [dns] zone created: second-zone.test
+[2026-08-08T23:59:37.587Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-08T23:59:43.641Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-08T23:59:50.681Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-09T00:00:25.004Z] [INFO] [dns] dns engine starting
+[2026-08-09T00:00:25.009Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-09T00:00:25.011Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-09T00:00:25.013Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-09T00:00:26.053Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-09T00:00:28.092Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-09T00:00:32.134Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-09T00:00:40.171Z] [INFO] [dns] zone hot-updated: [second-zone.test] @ A -> 20.20.20.20
+[2026-08-09T00:00:49.078Z] [INFO] [dns] dns engine starting
+[2026-08-09T00:00:49.092Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-09T00:00:49.092Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-09T00:02:48.537Z] [INFO] [dns] dns: migrated legacy single-zone config into multi-zone (primary domain: anonymousservers.info)
+[2026-08-09T00:02:48.547Z] [INFO] [dns] dns engine starting
+[2026-08-09T00:02:48.549Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-09T00:02:48.552Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-09T00:02:56.651Z] [INFO] [dns] zone created: customer-site.com
+[2026-08-09T00:02:56.663Z] [INFO] [dns] zone hot-updated: [customer-site.com] @ A -> 198.51.100.5
+[2026-08-09T00:03:02.500Z] [INFO] [dns] zone hot-updated: [customer-site.com] _sip._tcp SRV -> 10 5 5060 sipserver.customer-site.com.
+[2026-08-09T00:03:02.545Z] [INFO] [dns] zone removed: customer-site.com
+[2026-08-09T00:03:08.660Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] legacy-caller-test A -> 9.9.9.9
+[2026-08-09T00:08:27.628Z] [INFO] [dns] dns: migrated legacy single-zone config into multi-zone (primary domain: anonymousservers.info)
+[2026-08-09T00:08:27.643Z] [INFO] [dns] dns engine starting
+[2026-08-09T00:08:27.697Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-09T00:08:27.698Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-09T00:08:30.082Z] [INFO] [dns] zone created: realcustomer.com
+[2026-08-09T00:08:30.085Z] [INFO] [dns] zone hot-updated: [realcustomer.com] @ A -> 127.0.0.1
+[2026-08-09T00:08:30.087Z] [INFO] [dns] zone hot-updated: [realcustomer.com] * CNAME -> @
+[2026-08-09T00:08:37.517Z] [INFO] [dns] zone hot-updated: [realcustomer.com] @ A -> 127.0.0.1
+[2026-08-09T00:08:37.518Z] [INFO] [dns] zone hot-updated: [realcustomer.com] * CNAME -> @
+[2026-08-09T00:10:15.097Z] [INFO] [dns] dns engine starting
+[2026-08-09T00:10:15.101Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-09T00:10:15.102Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-11T00:38:23.570Z] [INFO] [dns] dns: migrated legacy single-zone config into multi-zone (primary domain: anonymousservers.info)
+[2026-08-11T00:38:23.586Z] [INFO] [dns] dns engine starting
+[2026-08-11T00:38:23.624Z] [INFO] [dns] UDP/DNS listening on :5353
+[2026-08-11T00:38:23.660Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-12T01:58:13.152Z] [INFO] [dns] dns: migrated legacy single-zone config into multi-zone (primary domain: anonymousservers.info)
+[2026-08-12T01:58:13.153Z] [INFO] [dns] dns engine starting
+[2026-08-12T01:58:13.154Z] [WARN] [dns] UDP port 5353 in use (mDNS/Bonjour?) — trying :5354
+[2026-08-12T01:58:13.154Z] [INFO] [dns] TCP/DNS listening on :5353
+[2026-08-12T01:58:13.156Z] [INFO] [dns] UDP/DNS listening on :5354
+[2026-08-12T01:58:13.574Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T01:58:18.169Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns1 A -> 24.21.239.115
+[2026-08-12T01:58:18.170Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns2 A -> 24.21.239.115
+[2026-08-12T01:58:18.171Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns1.anonymousservers.info.
+[2026-08-12T01:58:18.172Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns2.anonymousservers.info.
+[2026-08-12T01:58:18.173Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ SOA -> ns1.anonymousservers.info. hostmaster.anonymousservers.info. 2026062701 3600 900 604800 300
+[2026-08-12T01:58:18.185Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ A -> 24.21.239.115
+[2026-08-12T01:58:18.187Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] mail A -> 24.21.239.115
+[2026-08-12T01:58:18.187Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns1 A -> 24.21.239.115
+[2026-08-12T01:58:18.188Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns2 A -> 24.21.239.115
+[2026-08-12T01:58:18.189Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ A -> 24.21.239.115
+[2026-08-12T01:58:33.008Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-tunnel TXT -> https://circles-width-lifetime-posters.trycloudflare.com
+[2026-08-12T01:59:13.762Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:00:13.666Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:00:18.985Z] [INFO] [dns] zone created: anonymoussservers.info
+[2026-08-12T02:00:18.987Z] [INFO] [dns] zone hot-updated: [anonymoussservers.info] @ A -> 127.0.0.1
+[2026-08-12T02:00:18.988Z] [INFO] [dns] zone hot-updated: [anonymoussservers.info] * CNAME -> @
+[2026-08-12T02:01:12.654Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns1 A -> 24.21.239.115
+[2026-08-12T02:01:12.656Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns2 A -> 24.21.239.115
+[2026-08-12T02:01:12.656Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns1.anonymousservers.info.
+[2026-08-12T02:01:12.656Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns2.anonymousservers.info.
+[2026-08-12T02:01:12.657Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ SOA -> ns1.anonymousservers.info. hostmaster.anonymousservers.info. 2026062701 3600 900 604800 300
+[2026-08-12T02:01:13.436Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:02:13.573Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:03:13.390Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:04:13.538Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:05:13.411Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:06:13.539Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:07:13.522Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:08:13.537Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:09:13.537Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:10:13.731Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:11:13.486Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:12:13.572Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:13:13.579Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:14:13.586Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:15:13.531Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:16:13.537Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:17:13.684Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:18:13.616Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:19:13.729Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:20:13.534Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:21:13.721Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:22:13.612Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:23:13.640Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:24:13.605Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:25:13.580Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:26:13.626Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:27:13.641Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:28:13.760Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:29:13.859Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:30:13.674Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:31:13.648Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:32:13.649Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:33:13.683Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:34:13.738Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:35:13.780Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:36:13.695Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:37:13.987Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:38:13.706Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:39:13.918Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:40:13.723Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:41:13.784Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:42:13.817Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:43:13.923Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:44:13.844Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:45:13.945Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:46:13.859Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:47:13.749Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:48:13.835Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:49:13.970Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:50:13.864Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:51:13.917Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:52:14.002Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:53:13.987Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:54:13.861Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:55:14.470Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:56:14.114Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:57:14.111Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:58:13.909Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T02:59:13.925Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:00:14.127Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:01:14.035Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:02:14.084Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:03:14.100Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:04:14.094Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:05:14.100Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:06:14.004Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:07:14.007Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:08:14.065Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:09:13.958Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:10:14.175Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:11:14.190Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:12:13.995Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:13:14.171Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:14:14.100Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:15:14.165Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:16:14.205Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:17:14.015Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:18:14.121Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:19:14.221Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:20:14.238Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:21:14.237Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:22:14.158Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:23:14.246Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:24:14.165Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:25:14.132Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:26:14.108Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:27:14.141Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:28:14.301Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:29:14.175Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:30:14.354Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:31:14.132Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:32:14.298Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:33:14.299Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:34:14.307Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:35:14.211Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:36:14.214Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:37:14.221Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:38:14.431Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:39:14.221Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:40:14.240Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:41:14.251Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:42:14.237Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:43:14.217Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:43:16.569Z] [INFO] [dns] dns engine starting
+[2026-08-12T03:43:16.569Z] [WARN] [dns] UDP port 5353 in use (mDNS/Bonjour?) — trying :5354
+[2026-08-12T03:43:16.570Z] [WARN] [dns] TCP port 5353 in use — trying :5354
+[2026-08-12T03:43:16.570Z] [WARN] [dns] UDP port 5354 in use (mDNS/Bonjour?) — trying :5355
+[2026-08-12T03:43:16.571Z] [INFO] [dns] TCP/DNS listening on :5354
+[2026-08-12T03:43:16.572Z] [WARN] [dns] UDP port 5355 in use (mDNS/Bonjour?) — trying :5356
+[2026-08-12T03:43:16.574Z] [INFO] [dns] UDP/DNS listening on :5356
+[2026-08-12T03:43:16.908Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:43:21.593Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns1 A -> 24.21.239.115
+[2026-08-12T03:43:21.594Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns2 A -> 24.21.239.115
+[2026-08-12T03:43:21.594Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns1.anonymousservers.info.
+[2026-08-12T03:43:21.595Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns2.anonymousservers.info.
+[2026-08-12T03:43:21.596Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ SOA -> ns1.anonymousservers.info. hostmaster.anonymousservers.info. 2026062701 3600 900 604800 300
+[2026-08-12T03:43:21.606Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ A -> 24.21.239.115
+[2026-08-12T03:43:21.607Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] mail A -> 24.21.239.115
+[2026-08-12T03:43:21.609Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns1 A -> 24.21.239.115
+[2026-08-12T03:43:21.609Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns2 A -> 24.21.239.115
+[2026-08-12T03:43:21.610Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ A -> 24.21.239.115
+[2026-08-12T03:43:33.555Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-tunnel TXT -> https://random-achievement-indicates-praise.trycloudflare.com
+[2026-08-12T03:43:47.312Z] [INFO] [dns] dns engine starting
+[2026-08-12T03:43:47.313Z] [INFO] [dns] UDP/DNS listening on :5354
+[2026-08-12T03:43:47.315Z] [INFO] [dns] TCP/DNS listening on :5354
+[2026-08-12T03:43:47.610Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:43:52.328Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns1 A -> 24.21.239.115
+[2026-08-12T03:43:52.329Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns2 A -> 24.21.239.115
+[2026-08-12T03:43:52.330Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns1.anonymousservers.info.
+[2026-08-12T03:43:52.331Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ NS -> ns2.anonymousservers.info.
+[2026-08-12T03:43:52.332Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ SOA -> ns1.anonymousservers.info. hostmaster.anonymousservers.info. 2026062701 3600 900 604800 300
+[2026-08-12T03:43:52.344Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ A -> 24.21.239.115
+[2026-08-12T03:43:52.345Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] mail A -> 24.21.239.115
+[2026-08-12T03:43:52.346Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns1 A -> 24.21.239.115
+[2026-08-12T03:43:52.346Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] ns2 A -> 24.21.239.115
+[2026-08-12T03:43:52.347Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] @ A -> 24.21.239.115
+[2026-08-12T03:44:07.142Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-tunnel TXT -> https://virgin-youth-poll-interpretation.trycloudflare.com
+[2026-08-12T03:44:47.609Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:45:47.636Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:46:48.064Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:47:47.550Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:48:47.824Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:49:48.392Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:50:47.861Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:51:47.768Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:52:47.759Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:53:47.782Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:54:47.655Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:55:47.690Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:56:47.687Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:57:47.808Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:58:47.765Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T03:59:47.831Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:00:47.736Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:01:47.913Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:02:47.737Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:03:47.778Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:04:47.795Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:05:47.887Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:06:47.815Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:07:47.817Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:08:47.769Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:09:47.844Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:10:47.986Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:11:47.892Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:12:47.799Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:13:47.998Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:14:47.846Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:15:47.959Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:16:47.948Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:17:47.923Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:18:48.034Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:19:47.910Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:20:47.831Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:21:47.940Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:22:47.822Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:23:47.817Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:24:47.930Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:25:47.956Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:26:50.218Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:27:47.823Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:28:47.977Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:29:47.843Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:30:47.890Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:31:48.074Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:32:48.002Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:33:48.001Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:34:47.968Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:35:47.989Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:36:48.076Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:37:48.016Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:38:48.091Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:39:48.138Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:40:48.236Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:41:48.051Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:42:48.147Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:43:48.147Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:44:48.275Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:45:48.239Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:46:48.172Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:47:48.170Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:48:48.585Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:49:48.167Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:50:48.153Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:51:48.196Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:52:48.194Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:53:48.307Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:54:48.253Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:55:48.420Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:56:48.219Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:57:48.329Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:58:48.430Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T04:59:48.410Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:00:48.560Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:01:48.457Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:02:48.338Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:03:48.355Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:04:48.369Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:05:48.511Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:06:48.571Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:07:48.334Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:08:48.623Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:09:48.486Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:10:48.855Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:11:48.456Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:12:48.396Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:13:48.397Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:14:48.497Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800
+[2026-08-12T05:15:48.629Z] [INFO] [dns] zone hot-updated: [anonymousservers.info] _nexus-peer TXT -> f8599a8ea9bb5b3f@24.21.239.115:7800

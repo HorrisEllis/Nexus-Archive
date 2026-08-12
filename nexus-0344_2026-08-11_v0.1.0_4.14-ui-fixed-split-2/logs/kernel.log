@@ -1,0 +1,1755 @@
+[2026-08-07T08:32:31.156Z] [INFO] [KERNEL] nexus up — engines: __test_routea, __test_routeb
+[2026-08-07T08:32:31.176Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T08:32:44.613Z] [INFO] [KERNEL] nexus up — engines: __test_routea, __test_routeb
+[2026-08-07T08:32:44.613Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T08:33:04.767Z] [INFO] [KERNEL] spawning __test_routea (restarts: 0)
+[2026-08-07T08:33:04.774Z] [INFO] [KERNEL] spawning __test_routeb (restarts: 0)
+[2026-08-07T08:33:04.780Z] [INFO] [KERNEL] nexus up — engines: __test_routea, __test_routeb
+[2026-08-07T08:33:04.780Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T08:33:05.361Z] [WARN] [KERNEL] __test_routea exited (code=0) — restart in 1000ms
+[2026-08-07T08:33:06.363Z] [INFO] [KERNEL] spawning __test_routea (restarts: 1)
+[2026-08-07T08:33:06.905Z] [WARN] [KERNEL] __test_routea exited (code=0) — restart in 2000ms
+[2026-08-07T08:33:08.907Z] [INFO] [KERNEL] spawning __test_routea (restarts: 2)
+[2026-08-07T08:33:09.454Z] [WARN] [KERNEL] __test_routea exited (code=0) — restart in 4000ms
+[2026-08-07T08:33:11.718Z] [INFO] [KERNEL] stopped __test_routea
+[2026-08-07T08:33:11.718Z] [INFO] [KERNEL] stopped __test_routeb
+[2026-08-07T08:34:39.915Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-07T08:34:39.919Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-07T08:34:39.928Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy
+[2026-08-07T08:34:39.928Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T08:34:39.997Z] [WARN] [KERNEL] deploy exited (code=1) — restart in 1000ms
+[2026-08-07T08:34:40.031Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-07T08:34:40.032Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-07T08:34:40.998Z] [INFO] [KERNEL] spawning deploy (restarts: 1)
+[2026-08-07T08:34:41.044Z] [WARN] [KERNEL] deploy exited (code=1) — restart in 2000ms
+[2026-08-07T08:34:43.047Z] [INFO] [KERNEL] spawning deploy (restarts: 2)
+[2026-08-07T08:34:43.133Z] [WARN] [KERNEL] deploy exited (code=1) — restart in 4000ms
+[2026-08-07T08:34:44.474Z] [INFO] [KERNEL] stopped webserver
+[2026-08-07T08:34:44.474Z] [INFO] [KERNEL] stopped deploy
+[2026-08-07T08:35:07.145Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-07T08:35:07.150Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-07T08:35:07.160Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy
+[2026-08-07T08:35:07.161Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T08:35:07.302Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-07T08:35:07.325Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-07T08:35:07.326Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-07T08:35:10.702Z] [INFO] [KERNEL] stopped webserver
+[2026-08-07T08:35:10.703Z] [INFO] [KERNEL] stopped deploy
+[2026-08-07T08:35:23.914Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-07T08:35:23.926Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-07T08:35:23.935Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy
+[2026-08-07T08:35:23.936Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T08:35:24.025Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-07T08:35:24.039Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-07T08:35:24.040Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-07T08:35:31.246Z] [INFO] [KERNEL] stopped webserver
+[2026-08-07T08:35:31.247Z] [INFO] [KERNEL] stopped deploy
+[2026-08-07T12:43:54.627Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-07T12:43:54.655Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-07T12:43:54.666Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy
+[2026-08-07T12:43:54.666Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T12:43:54.970Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-07T12:43:55.014Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-07T12:43:55.014Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-07T12:44:22.598Z] [INFO] [KERNEL] stopped webserver
+[2026-08-07T12:44:22.598Z] [INFO] [KERNEL] stopped deploy
+[2026-08-07T12:46:50.362Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-07T12:46:50.367Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-07T12:46:50.378Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-07T12:46:50.380Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy, ui
+[2026-08-07T12:46:50.380Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T12:46:50.695Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-07T12:46:50.760Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-07T12:46:50.787Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-07T12:46:50.788Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-07T12:47:10.869Z] [INFO] [KERNEL] stopped webserver
+[2026-08-07T12:47:10.872Z] [INFO] [KERNEL] stopped deploy
+[2026-08-07T12:47:10.872Z] [INFO] [KERNEL] stopped ui
+[2026-08-07T12:47:32.804Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-07T12:47:32.812Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-07T12:47:32.821Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy
+[2026-08-07T12:47:32.821Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T12:47:32.926Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-07T12:47:32.943Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-07T12:47:32.943Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-07T12:48:32.729Z] [INFO] [KERNEL] stopped webserver
+[2026-08-07T12:48:32.729Z] [INFO] [KERNEL] stopped deploy
+[2026-08-07T12:48:47.309Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-07T12:48:47.315Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-07T12:48:47.322Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy
+[2026-08-07T12:48:47.322Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T12:48:47.454Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-07T12:48:47.461Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-07T12:48:47.462Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-07T12:49:17.321Z] [INFO] [KERNEL] stopped webserver
+[2026-08-07T12:49:17.322Z] [INFO] [KERNEL] stopped deploy
+[2026-08-07T19:10:04.197Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-07T19:10:04.223Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-07T19:10:04.234Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-07T19:10:04.250Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue
+[2026-08-07T19:10:04.251Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:10:04.542Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:10:04.543Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:10:04.623Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-07T19:11:04.096Z] [INFO] [KERNEL] stopped dns
+[2026-08-07T19:11:04.096Z] [INFO] [KERNEL] stopped ddns
+[2026-08-07T19:11:04.096Z] [INFO] [KERNEL] stopped glue
+[2026-08-07T19:11:11.434Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-07T19:11:11.439Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-07T19:11:11.439Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:11:11.479Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-07T19:11:26.210Z] [INFO] [KERNEL] stopped ui
+[2026-08-07T19:11:35.941Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-07T19:11:35.947Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-07T19:11:35.949Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-07T19:11:35.956Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-07T19:11:35.965Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, ui
+[2026-08-07T19:11:35.966Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:11:36.149Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:11:36.150Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:11:36.235Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-07T19:11:36.246Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-07T19:11:46.942Z] [INFO] [KERNEL] stopped dns
+[2026-08-07T19:11:46.942Z] [INFO] [KERNEL] stopped ddns
+[2026-08-07T19:11:46.942Z] [INFO] [KERNEL] stopped glue
+[2026-08-07T19:11:46.942Z] [INFO] [KERNEL] stopped ui
+[2026-08-07T19:30:54.845Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-07T19:30:54.884Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-07T19:30:54.896Z] [INFO] [KERNEL] nexus up — engines: firewall, ui
+[2026-08-07T19:30:54.898Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:30:55.346Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-07T19:31:06.628Z] [INFO] [KERNEL] stopped firewall
+[2026-08-07T19:31:06.633Z] [INFO] [KERNEL] stopped ui
+[2026-08-07T19:33:52.674Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-07T19:33:52.682Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-07T19:33:52.688Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-07T19:33:52.715Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-07T19:33:52.725Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-07T19:33:52.728Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, setup
+[2026-08-07T19:33:52.729Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:33:52.920Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:33:52.921Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:33:53.169Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-07T19:33:53.171Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-07T19:34:42.622Z] [INFO] [KERNEL] stopped dns
+[2026-08-07T19:34:42.623Z] [INFO] [KERNEL] stopped ddns
+[2026-08-07T19:34:42.624Z] [INFO] [KERNEL] stopped firewall
+[2026-08-07T19:34:42.624Z] [INFO] [KERNEL] stopped glue
+[2026-08-07T19:34:42.625Z] [INFO] [KERNEL] stopped setup
+[2026-08-07T19:34:43.683Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-07T19:34:43.687Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-07T19:34:43.696Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-07T19:34:43.701Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-07T19:34:43.706Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-07T19:34:43.720Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, setup
+[2026-08-07T19:34:43.720Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:34:43.880Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:34:43.880Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:34:43.924Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-07T19:34:43.942Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-07T19:35:14.844Z] [WARN] [KERNEL] glue exited (code=null) — restart in 1000ms
+[2026-08-07T19:35:15.844Z] [INFO] [KERNEL] spawning glue (restarts: 1)
+[2026-08-07T19:35:15.897Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-07T19:35:52.558Z] [INFO] [KERNEL] stopped setup
+[2026-08-07T19:35:53.059Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-07T19:35:53.095Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-07T19:36:01.248Z] [INFO] [KERNEL] stopped dns
+[2026-08-07T19:36:01.248Z] [INFO] [KERNEL] stopped ddns
+[2026-08-07T19:36:01.249Z] [INFO] [KERNEL] stopped firewall
+[2026-08-07T19:36:01.249Z] [INFO] [KERNEL] stopped glue
+[2026-08-07T19:36:01.249Z] [INFO] [KERNEL] stopped setup
+[2026-08-07T19:36:24.263Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-07T19:36:24.266Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-07T19:36:24.276Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-07T19:36:24.280Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-07T19:36:24.282Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-07T19:36:24.295Z] [INFO] [KERNEL] spawning __test_ipsender (restarts: 0)
+[2026-08-07T19:36:24.304Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, setup, __test_ipsender
+[2026-08-07T19:36:24.304Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:36:24.473Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:36:24.473Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:36:24.493Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-07T19:36:24.536Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-07T19:36:49.211Z] [INFO] [KERNEL] stopped dns
+[2026-08-07T19:36:49.211Z] [INFO] [KERNEL] stopped ddns
+[2026-08-07T19:36:49.211Z] [INFO] [KERNEL] stopped firewall
+[2026-08-07T19:36:49.211Z] [INFO] [KERNEL] stopped glue
+[2026-08-07T19:36:49.211Z] [INFO] [KERNEL] stopped setup
+[2026-08-07T19:36:49.211Z] [INFO] [KERNEL] stopped __test_ipsender
+[2026-08-07T19:36:55.358Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-07T19:36:55.366Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-07T19:36:55.372Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-07T19:36:55.376Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-07T19:36:55.384Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-07T19:36:55.388Z] [INFO] [KERNEL] spawning __test_ipsender (restarts: 0)
+[2026-08-07T19:36:55.400Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, setup, __test_ipsender
+[2026-08-07T19:36:55.400Z] [INFO] [KERNEL] control socket ready
+[2026-08-07T19:36:55.552Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:36:55.552Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-07T19:36:55.622Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-07T19:36:55.639Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-07T19:37:05.630Z] [INFO] [KERNEL] stopped dns
+[2026-08-07T19:37:05.630Z] [INFO] [KERNEL] stopped ddns
+[2026-08-07T19:37:05.630Z] [INFO] [KERNEL] stopped firewall
+[2026-08-07T19:37:05.630Z] [INFO] [KERNEL] stopped glue
+[2026-08-07T19:37:05.630Z] [INFO] [KERNEL] stopped setup
+[2026-08-07T19:37:05.630Z] [INFO] [KERNEL] stopped __test_ipsender
+[2026-08-08T22:27:29.063Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-08T22:27:29.082Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-08T22:27:29.092Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-08T22:27:29.101Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-08T22:27:29.116Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-08T22:27:29.124Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-08T22:27:29.132Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-08T22:27:29.148Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, tls, setup, ui
+[2026-08-08T22:27:29.149Z] [INFO] [KERNEL] control socket ready
+[2026-08-08T22:27:29.616Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T22:27:29.616Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T22:27:29.716Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-08T22:27:29.720Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-08T22:27:29.751Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-08T22:27:29.802Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-08T22:27:47.434Z] [INFO] [KERNEL] stopped ddns
+[2026-08-08T22:27:47.935Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-08T22:28:07.771Z] [INFO] [KERNEL] stopped dns
+[2026-08-08T22:28:07.775Z] [INFO] [KERNEL] stopped tls
+[2026-08-08T22:28:07.775Z] [INFO] [KERNEL] stopped firewall
+[2026-08-08T22:28:07.775Z] [INFO] [KERNEL] stopped glue
+[2026-08-08T22:28:07.775Z] [INFO] [KERNEL] stopped setup
+[2026-08-08T22:28:07.775Z] [INFO] [KERNEL] stopped ui
+[2026-08-08T22:28:07.775Z] [INFO] [KERNEL] stopped ddns
+[2026-08-08T23:32:15.423Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-08T23:32:15.442Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-08T23:32:15.453Z] [INFO] [KERNEL] nexus up — engines: webserver, deploy
+[2026-08-08T23:32:15.453Z] [INFO] [KERNEL] control socket ready
+[2026-08-08T23:32:15.721Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-08T23:32:15.745Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-08T23:32:15.746Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-08T23:32:45.755Z] [INFO] [KERNEL] stopped webserver
+[2026-08-08T23:32:45.757Z] [INFO] [KERNEL] stopped deploy
+[2026-08-08T23:33:30.705Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-08T23:33:30.713Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-08T23:33:30.715Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-08T23:33:30.723Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-08T23:33:30.731Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-08T23:33:30.739Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-08T23:33:30.751Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, tls, setup
+[2026-08-08T23:33:30.751Z] [INFO] [KERNEL] control socket ready
+[2026-08-08T23:33:31.059Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:33:31.060Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:33:31.293Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-08T23:33:31.318Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-08T23:33:31.556Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-08T23:33:47.856Z] [INFO] [KERNEL] stopped setup
+[2026-08-08T23:33:48.358Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-08T23:33:48.396Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-08T23:34:08.506Z] [INFO] [KERNEL] stopped setup
+[2026-08-08T23:34:09.006Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-08T23:34:09.042Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-08T23:34:10.640Z] [INFO] [KERNEL] stopped dns
+[2026-08-08T23:34:10.640Z] [INFO] [KERNEL] stopped ddns
+[2026-08-08T23:34:10.640Z] [INFO] [KERNEL] stopped tls
+[2026-08-08T23:34:10.640Z] [INFO] [KERNEL] stopped firewall
+[2026-08-08T23:34:10.640Z] [INFO] [KERNEL] stopped glue
+[2026-08-08T23:34:10.640Z] [INFO] [KERNEL] stopped setup
+[2026-08-08T23:34:18.769Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-08T23:34:18.777Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-08T23:34:18.783Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-08T23:34:18.788Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-08T23:34:18.789Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-08T23:34:18.800Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-08T23:34:18.807Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, tls, setup
+[2026-08-08T23:34:18.808Z] [INFO] [KERNEL] control socket ready
+[2026-08-08T23:34:18.974Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:34:18.999Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:34:19.061Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-08T23:34:19.068Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-08T23:34:19.349Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-08T23:34:30.839Z] [INFO] [KERNEL] stopped dns
+[2026-08-08T23:34:30.839Z] [INFO] [KERNEL] stopped ddns
+[2026-08-08T23:34:30.843Z] [INFO] [KERNEL] stopped tls
+[2026-08-08T23:34:30.844Z] [INFO] [KERNEL] stopped firewall
+[2026-08-08T23:34:30.845Z] [INFO] [KERNEL] stopped glue
+[2026-08-08T23:34:30.846Z] [INFO] [KERNEL] stopped setup
+[2026-08-08T23:41:35.134Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-08T23:41:35.304Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-08T23:41:35.337Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-08T23:41:35.517Z] [INFO] [KERNEL] spawning proxy (restarts: 0)
+[2026-08-08T23:41:35.680Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-08T23:41:35.890Z] [INFO] [KERNEL] spawning auth (restarts: 0)
+[2026-08-08T23:41:36.111Z] [INFO] [KERNEL] spawning signal (restarts: 0)
+[2026-08-08T23:41:36.276Z] [INFO] [KERNEL] spawning smtp (restarts: 0)
+[2026-08-08T23:41:36.459Z] [INFO] [KERNEL] spawning cache (restarts: 0)
+[2026-08-08T23:41:36.621Z] [INFO] [KERNEL] spawning storage (restarts: 0)
+[2026-08-08T23:41:36.744Z] [INFO] [KERNEL] spawning queue (restarts: 0)
+[2026-08-08T23:41:36.867Z] [INFO] [KERNEL] spawning billing (restarts: 0)
+[2026-08-08T23:41:36.902Z] [INFO] [KERNEL] spawning monitor (restarts: 0)
+[2026-08-08T23:41:36.991Z] [INFO] [KERNEL] spawning optimizer (restarts: 0)
+[2026-08-08T23:41:37.200Z] [INFO] [KERNEL] spawning catalog (restarts: 0)
+[2026-08-08T23:41:37.279Z] [INFO] [KERNEL] spawning registrar (restarts: 0)
+[2026-08-08T23:41:37.347Z] [INFO] [KERNEL] spawning provisioner (restarts: 0)
+[2026-08-08T23:41:37.400Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-08T23:41:37.511Z] [INFO] [KERNEL] spawning peer (restarts: 0)
+[2026-08-08T23:41:37.583Z] [INFO] [KERNEL] spawning tunnel (restarts: 0)
+[2026-08-08T23:41:37.643Z] [INFO] [KERNEL] spawning autodns (restarts: 0)
+[2026-08-08T23:41:37.683Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-08T23:41:37.725Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-08T23:41:37.846Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-08T23:41:37.899Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-08T23:41:37.981Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, tls, proxy, firewall, auth, signal, smtp, cache, storage, queue, billing, monitor, optimizer, catalog, registrar, provisioner, glue, peer, tunnel, autodns, webserver, deploy, setup, ui
+[2026-08-08T23:41:37.982Z] [INFO] [KERNEL] control socket ready
+[2026-08-08T23:41:38.147Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:41:38.267Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:41:39.408Z] [INFO] [KERNEL] auth claimed port 4001
+[2026-08-08T23:41:39.651Z] [INFO] [KERNEL] storage claimed port 9100
+[2026-08-08T23:41:39.779Z] [INFO] [KERNEL] cache claimed port 4002
+[2026-08-08T23:41:39.931Z] [INFO] [KERNEL] billing claimed port 4003
+[2026-08-08T23:41:40.168Z] [INFO] [KERNEL] optimizer claimed port 4006
+[2026-08-08T23:41:40.219Z] [INFO] [KERNEL] catalog claimed port 4005
+[2026-08-08T23:41:40.260Z] [INFO] [KERNEL] provisioner claimed port 4008
+[2026-08-08T23:41:40.327Z] [INFO] [KERNEL] monitor claimed port 4004
+[2026-08-08T23:41:40.327Z] [INFO] [KERNEL] registrar claimed port 4007
+[2026-08-08T23:41:40.419Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-08T23:41:40.447Z] [INFO] [KERNEL] smtp claimed port 2525
+[2026-08-08T23:41:40.447Z] [INFO] [KERNEL] smtp claimed port 587
+[2026-08-08T23:41:40.591Z] [INFO] [KERNEL] tunnel claimed port 7801
+[2026-08-08T23:41:40.606Z] [INFO] [KERNEL] autodns claimed port 7802
+[2026-08-08T23:41:40.627Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-08T23:41:40.743Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-08T23:41:40.752Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-08T23:41:40.787Z] [INFO] [KERNEL] peer claimed port 7800
+[2026-08-08T23:41:40.815Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-08T23:41:40.815Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-08T23:41:40.918Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-08T23:42:14.349Z] [WARN] [KERNEL] dns exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.349Z] [WARN] [KERNEL] ddns exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] tls exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] proxy exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] firewall exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] auth exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] signal exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] smtp exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] cache exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] storage exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.350Z] [WARN] [KERNEL] queue exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] billing exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] monitor exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] optimizer exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] catalog exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] registrar exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] provisioner exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] glue exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] peer exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] tunnel exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] autodns exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] webserver exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] deploy exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] setup exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.351Z] [WARN] [KERNEL] ui exited (code=null) — restart in 1000ms
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped dns
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped ddns
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped tls
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped proxy
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped firewall
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped auth
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped signal
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped smtp
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped cache
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped storage
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped queue
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped billing
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped monitor
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped optimizer
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped catalog
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped registrar
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped provisioner
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped glue
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped peer
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped tunnel
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped autodns
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped webserver
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped deploy
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped setup
+[2026-08-08T23:42:14.352Z] [INFO] [KERNEL] stopped ui
+[2026-08-08T23:59:15.072Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-08T23:59:15.094Z] [INFO] [KERNEL] nexus up — engines: dns
+[2026-08-08T23:59:15.095Z] [INFO] [KERNEL] control socket ready
+[2026-08-08T23:59:15.198Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:59:15.199Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:59:36.453Z] [INFO] [KERNEL] stopped dns
+[2026-08-08T23:59:37.504Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-08T23:59:37.509Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 0)
+[2026-08-08T23:59:37.516Z] [INFO] [KERNEL] nexus up — engines: dns, __test_dns_client
+[2026-08-08T23:59:37.516Z] [INFO] [KERNEL] control socket ready
+[2026-08-08T23:59:37.581Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:59:37.583Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-08T23:59:42.592Z] [WARN] [KERNEL] __test_dns_client exited (code=1) — restart in 1000ms
+[2026-08-08T23:59:43.594Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 1)
+[2026-08-08T23:59:48.645Z] [WARN] [KERNEL] __test_dns_client exited (code=1) — restart in 2000ms
+[2026-08-08T23:59:50.647Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 2)
+[2026-08-08T23:59:55.694Z] [WARN] [KERNEL] __test_dns_client exited (code=1) — restart in 4000ms
+[2026-08-08T23:59:57.469Z] [INFO] [KERNEL] stopped dns
+[2026-08-08T23:59:57.469Z] [INFO] [KERNEL] stopped __test_dns_client
+[2026-08-09T00:00:24.939Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-09T00:00:24.942Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 0)
+[2026-08-09T00:00:24.952Z] [INFO] [KERNEL] nexus up — engines: dns, __test_dns_client
+[2026-08-09T00:00:24.952Z] [INFO] [KERNEL] control socket ready
+[2026-08-09T00:00:25.011Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:00:25.011Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:00:25.019Z] [WARN] [KERNEL] __test_dns_client exited (code=0) — restart in 1000ms
+[2026-08-09T00:00:26.021Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 1)
+[2026-08-09T00:00:26.057Z] [WARN] [KERNEL] __test_dns_client exited (code=0) — restart in 2000ms
+[2026-08-09T00:00:28.059Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 2)
+[2026-08-09T00:00:28.097Z] [WARN] [KERNEL] __test_dns_client exited (code=0) — restart in 4000ms
+[2026-08-09T00:00:32.101Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 3)
+[2026-08-09T00:00:32.138Z] [WARN] [KERNEL] __test_dns_client exited (code=0) — restart in 8000ms
+[2026-08-09T00:00:40.141Z] [INFO] [KERNEL] spawning __test_dns_client (restarts: 4)
+[2026-08-09T00:00:40.175Z] [WARN] [KERNEL] __test_dns_client exited (code=0) — restart in 16000ms
+[2026-08-09T00:00:40.760Z] [INFO] [KERNEL] stopped dns
+[2026-08-09T00:00:40.760Z] [INFO] [KERNEL] stopped __test_dns_client
+[2026-08-09T00:00:49.017Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-09T00:00:49.021Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-09T00:00:49.030Z] [INFO] [KERNEL] nexus up — engines: dns, ui
+[2026-08-09T00:00:49.030Z] [INFO] [KERNEL] control socket ready
+[2026-08-09T00:00:49.092Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:00:49.093Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:00:49.095Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-09T00:01:19.021Z] [INFO] [KERNEL] stopped dns
+[2026-08-09T00:01:19.031Z] [INFO] [KERNEL] stopped ui
+[2026-08-09T00:02:48.473Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-09T00:02:48.481Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-09T00:02:48.482Z] [INFO] [KERNEL] nexus up — engines: dns, ui
+[2026-08-09T00:02:48.482Z] [INFO] [KERNEL] control socket ready
+[2026-08-09T00:02:48.551Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:02:48.552Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:02:48.559Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-09T00:03:12.656Z] [INFO] [KERNEL] stopped dns
+[2026-08-09T00:03:12.657Z] [INFO] [KERNEL] stopped ui
+[2026-08-09T00:08:27.168Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-09T00:08:27.190Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-09T00:08:27.197Z] [INFO] [KERNEL] spawning proxy (restarts: 0)
+[2026-08-09T00:08:27.209Z] [INFO] [KERNEL] spawning registrar (restarts: 0)
+[2026-08-09T00:08:27.219Z] [INFO] [KERNEL] nexus up — engines: dns, registrar, proxy, tls
+[2026-08-09T00:08:27.220Z] [INFO] [KERNEL] control socket ready
+[2026-08-09T00:08:27.698Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:08:27.698Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:08:27.819Z] [INFO] [KERNEL] registrar claimed port 4007
+[2026-08-09T00:08:28.155Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-09T00:09:07.023Z] [INFO] [KERNEL] stopped dns
+[2026-08-09T00:09:07.023Z] [INFO] [KERNEL] stopped tls
+[2026-08-09T00:09:07.024Z] [INFO] [KERNEL] stopped proxy
+[2026-08-09T00:09:07.024Z] [INFO] [KERNEL] stopped registrar
+[2026-08-09T00:10:15.058Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-09T00:10:15.061Z] [INFO] [KERNEL] nexus up — engines: dns
+[2026-08-09T00:10:15.062Z] [INFO] [KERNEL] control socket ready
+[2026-08-09T00:10:15.102Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:10:15.102Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-09T00:10:31.287Z] [INFO] [KERNEL] stopped dns
+[2026-08-09T00:31:25.846Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-09T00:31:25.876Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-09T00:31:25.877Z] [INFO] [KERNEL] control socket ready
+[2026-08-09T00:31:25.995Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-09T00:31:28.958Z] [INFO] [KERNEL] stopped ui
+[2026-08-09T00:32:47.317Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-09T00:32:47.324Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-09T00:32:47.325Z] [INFO] [KERNEL] control socket ready
+[2026-08-09T00:32:47.367Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-09T00:33:07.264Z] [INFO] [KERNEL] stopped ui
+[2026-08-11T00:10:54.098Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-11T00:10:54.118Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-11T00:10:54.118Z] [INFO] [KERNEL] control socket ready
+[2026-08-11T00:10:54.196Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-11T00:11:13.815Z] [INFO] [KERNEL] stopped ui
+[2026-08-11T00:12:15.277Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-11T00:12:15.285Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-11T00:12:15.285Z] [INFO] [KERNEL] control socket ready
+[2026-08-11T00:12:15.320Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-11T00:12:40.223Z] [INFO] [KERNEL] stopped ui
+[2026-08-11T00:13:38.802Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-11T00:13:38.809Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-11T00:13:38.809Z] [INFO] [KERNEL] control socket ready
+[2026-08-11T00:13:38.839Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-11T00:14:08.749Z] [INFO] [KERNEL] stopped ui
+[2026-08-11T00:15:45.701Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-11T00:15:45.706Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-11T00:15:45.706Z] [INFO] [KERNEL] control socket ready
+[2026-08-11T00:15:45.743Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-11T00:16:10.653Z] [INFO] [KERNEL] stopped ui
+[2026-08-11T00:37:48.624Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-11T00:37:48.644Z] [INFO] [KERNEL] nexus up — engines: ui
+[2026-08-11T00:37:48.644Z] [INFO] [KERNEL] control socket ready
+[2026-08-11T00:37:48.720Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-11T00:38:18.591Z] [INFO] [KERNEL] stopped ui
+[2026-08-11T00:38:23.208Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-11T00:38:23.215Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-11T00:38:23.217Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-11T00:38:23.226Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-11T00:38:23.230Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-11T00:38:23.234Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-11T00:38:23.242Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-11T00:38:23.254Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-11T00:38:23.259Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-11T00:38:23.278Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, glue, firewall, tls, webserver, deploy, setup, ui
+[2026-08-11T00:38:23.279Z] [INFO] [KERNEL] control socket ready
+[2026-08-11T00:38:23.659Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-11T00:38:23.660Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-11T00:38:23.905Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-11T00:38:23.920Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-11T00:38:23.920Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-11T00:38:23.983Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-11T00:38:24.006Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-11T00:38:24.006Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-11T00:38:24.343Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-11T00:38:32.000Z] [INFO] [KERNEL] stopped dns
+[2026-08-11T00:38:32.000Z] [INFO] [KERNEL] stopped ddns
+[2026-08-11T00:38:32.000Z] [INFO] [KERNEL] stopped tls
+[2026-08-11T00:38:32.000Z] [INFO] [KERNEL] stopped firewall
+[2026-08-11T00:38:32.000Z] [INFO] [KERNEL] stopped glue
+[2026-08-11T00:38:32.000Z] [INFO] [KERNEL] stopped webserver
+[2026-08-11T00:38:32.002Z] [INFO] [KERNEL] stopped deploy
+[2026-08-11T00:38:32.010Z] [INFO] [KERNEL] stopped setup
+[2026-08-11T00:38:32.010Z] [INFO] [KERNEL] stopped ui
+[2026-08-12T01:58:12.867Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-12T01:58:12.877Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-12T01:58:12.884Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-12T01:58:12.892Z] [INFO] [KERNEL] spawning proxy (restarts: 0)
+[2026-08-12T01:58:12.900Z] [INFO] [KERNEL] spawning relay (restarts: 0)
+[2026-08-12T01:58:12.910Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-12T01:58:12.919Z] [INFO] [KERNEL] spawning auth (restarts: 0)
+[2026-08-12T01:58:12.928Z] [INFO] [KERNEL] spawning signal (restarts: 0)
+[2026-08-12T01:58:12.938Z] [INFO] [KERNEL] spawning smtp (restarts: 0)
+[2026-08-12T01:58:12.948Z] [INFO] [KERNEL] spawning cache (restarts: 0)
+[2026-08-12T01:58:12.959Z] [INFO] [KERNEL] spawning storage (restarts: 0)
+[2026-08-12T01:58:12.971Z] [INFO] [KERNEL] spawning queue (restarts: 0)
+[2026-08-12T01:58:12.983Z] [INFO] [KERNEL] spawning billing (restarts: 0)
+[2026-08-12T01:58:12.994Z] [INFO] [KERNEL] spawning monitor (restarts: 0)
+[2026-08-12T01:58:13.006Z] [INFO] [KERNEL] spawning optimizer (restarts: 0)
+[2026-08-12T01:58:13.019Z] [INFO] [KERNEL] spawning catalog (restarts: 0)
+[2026-08-12T01:58:13.031Z] [INFO] [KERNEL] spawning registrar (restarts: 0)
+[2026-08-12T01:58:13.045Z] [INFO] [KERNEL] spawning provisioner (restarts: 0)
+[2026-08-12T01:58:13.057Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-12T01:58:13.068Z] [INFO] [KERNEL] spawning peer (restarts: 0)
+[2026-08-12T01:58:13.081Z] [INFO] [KERNEL] spawning tunnel (restarts: 0)
+[2026-08-12T01:58:13.092Z] [INFO] [KERNEL] spawning autodns (restarts: 0)
+[2026-08-12T01:58:13.104Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-12T01:58:13.115Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-12T01:58:13.127Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-12T01:58:13.138Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-12T01:58:13.149Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, tls, proxy, relay, firewall, auth, signal, smtp, cache, storage, queue, billing, monitor, optimizer, catalog, registrar, provisioner, glue, peer, tunnel, autodns, webserver, deploy, setup, ui
+[2026-08-12T01:58:13.150Z] [INFO] [KERNEL] control socket ready
+[2026-08-12T01:58:13.155Z] [INFO] [KERNEL] dns claimed port 5353
+[2026-08-12T01:58:13.157Z] [INFO] [KERNEL] dns claimed port 5354
+[2026-08-12T01:58:13.164Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-12T01:58:13.169Z] [INFO] [KERNEL] proxy claimed port 8080
+[2026-08-12T01:58:13.175Z] [INFO] [KERNEL] auth claimed port 4001
+[2026-08-12T01:58:13.177Z] [INFO] [KERNEL] smtp claimed port 2525
+[2026-08-12T01:58:13.178Z] [INFO] [KERNEL] smtp claimed port 587
+[2026-08-12T01:58:13.180Z] [INFO] [KERNEL] cache claimed port 4002
+[2026-08-12T01:58:13.188Z] [INFO] [KERNEL] storage claimed port 9100
+[2026-08-12T01:58:13.190Z] [INFO] [KERNEL] billing claimed port 4003
+[2026-08-12T01:58:13.192Z] [INFO] [KERNEL] monitor claimed port 4004
+[2026-08-12T01:58:13.194Z] [INFO] [KERNEL] optimizer claimed port 4006
+[2026-08-12T01:58:13.196Z] [INFO] [KERNEL] catalog claimed port 4005
+[2026-08-12T01:58:13.201Z] [INFO] [KERNEL] registrar claimed port 4007
+[2026-08-12T01:58:13.202Z] [INFO] [KERNEL] provisioner claimed port 4008
+[2026-08-12T01:58:13.203Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-12T01:58:13.204Z] [INFO] [KERNEL] peer claimed port 7800
+[2026-08-12T01:58:13.206Z] [INFO] [KERNEL] tunnel claimed port 7801
+[2026-08-12T01:58:13.209Z] [INFO] [KERNEL] autodns claimed port 7802
+[2026-08-12T01:58:13.211Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-12T01:58:13.214Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-12T01:58:13.224Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-12T01:58:13.273Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-12T03:43:16.341Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-12T03:43:16.348Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-12T03:43:16.354Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-12T03:43:16.360Z] [INFO] [KERNEL] spawning proxy (restarts: 0)
+[2026-08-12T03:43:16.366Z] [INFO] [KERNEL] spawning relay (restarts: 0)
+[2026-08-12T03:43:16.373Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-12T03:43:16.379Z] [INFO] [KERNEL] spawning auth (restarts: 0)
+[2026-08-12T03:43:16.386Z] [INFO] [KERNEL] spawning signal (restarts: 0)
+[2026-08-12T03:43:16.394Z] [INFO] [KERNEL] spawning smtp (restarts: 0)
+[2026-08-12T03:43:16.403Z] [INFO] [KERNEL] spawning cache (restarts: 0)
+[2026-08-12T03:43:16.411Z] [INFO] [KERNEL] spawning storage (restarts: 0)
+[2026-08-12T03:43:16.420Z] [INFO] [KERNEL] spawning queue (restarts: 0)
+[2026-08-12T03:43:16.429Z] [INFO] [KERNEL] spawning billing (restarts: 0)
+[2026-08-12T03:43:16.438Z] [INFO] [KERNEL] spawning monitor (restarts: 0)
+[2026-08-12T03:43:16.448Z] [INFO] [KERNEL] spawning optimizer (restarts: 0)
+[2026-08-12T03:43:16.461Z] [INFO] [KERNEL] spawning catalog (restarts: 0)
+[2026-08-12T03:43:16.470Z] [INFO] [KERNEL] spawning registrar (restarts: 0)
+[2026-08-12T03:43:16.479Z] [INFO] [KERNEL] spawning provisioner (restarts: 0)
+[2026-08-12T03:43:16.493Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-12T03:43:16.501Z] [INFO] [KERNEL] spawning peer (restarts: 0)
+[2026-08-12T03:43:16.510Z] [INFO] [KERNEL] spawning tunnel (restarts: 0)
+[2026-08-12T03:43:16.520Z] [INFO] [KERNEL] spawning autodns (restarts: 0)
+[2026-08-12T03:43:16.528Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-12T03:43:16.538Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-12T03:43:16.547Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-12T03:43:16.556Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-12T03:43:16.565Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, tls, proxy, relay, firewall, auth, signal, smtp, cache, storage, queue, billing, monitor, optimizer, catalog, registrar, provisioner, glue, peer, tunnel, autodns, webserver, deploy, setup, ui
+[2026-08-12T03:43:16.566Z] [WARN] [KERNEL] control socket error: listen EADDRINUSE: address already in use \\.\pipe\nexus
+[2026-08-12T03:43:16.572Z] [INFO] [KERNEL] dns claimed port 5354
+[2026-08-12T03:43:16.575Z] [INFO] [KERNEL] dns claimed port 5356
+[2026-08-12T03:43:16.581Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-12T03:43:16.583Z] [INFO] [KERNEL] tls claimed port 8880
+[2026-08-12T03:43:16.643Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-12T03:43:16.644Z] [INFO] [KERNEL] ui claimed port 9001
+[2026-08-12T03:43:16.686Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-12T03:43:16.689Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-12T03:43:16.689Z] [INFO] [KERNEL] webserver claimed port 7701
+[2026-08-12T03:43:16.792Z] [INFO] [KERNEL] smtp claimed port 2526
+[2026-08-12T03:43:16.794Z] [INFO] [KERNEL] smtp claimed port 2526
+[2026-08-12T03:43:16.795Z] [INFO] [KERNEL] smtp claimed port 588
+[2026-08-12T03:43:16.796Z] [INFO] [KERNEL] smtp claimed port 588
+[2026-08-12T03:43:16.808Z] [INFO] [KERNEL] storage claimed port 9100
+[2026-08-12T03:43:16.809Z] [INFO] [KERNEL] storage claimed port 9101
+[2026-08-12T03:43:16.902Z] [INFO] [KERNEL] autodns claimed port 7802
+[2026-08-12T03:43:16.903Z] [INFO] [KERNEL] autodns claimed port 7803
+[2026-08-12T03:43:16.934Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-12T03:43:16.935Z] [INFO] [KERNEL] setup claimed port 4012
+[2026-08-12T03:43:43.144Z] [WARN] [KERNEL] ui exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.153Z] [WARN] [KERNEL] setup exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.160Z] [WARN] [KERNEL] deploy exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.167Z] [WARN] [KERNEL] webserver exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.174Z] [WARN] [KERNEL] autodns exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.181Z] [WARN] [KERNEL] tunnel exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.189Z] [WARN] [KERNEL] peer exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.195Z] [WARN] [KERNEL] glue exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.202Z] [WARN] [KERNEL] provisioner exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.208Z] [WARN] [KERNEL] registrar exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.216Z] [WARN] [KERNEL] catalog exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.222Z] [WARN] [KERNEL] optimizer exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.229Z] [WARN] [KERNEL] monitor exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.237Z] [WARN] [KERNEL] billing exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.244Z] [WARN] [KERNEL] queue exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.251Z] [WARN] [KERNEL] storage exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.259Z] [WARN] [KERNEL] cache exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.266Z] [WARN] [KERNEL] smtp exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.273Z] [WARN] [KERNEL] signal exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.279Z] [WARN] [KERNEL] auth exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.286Z] [WARN] [KERNEL] firewall exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.293Z] [WARN] [KERNEL] relay exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.301Z] [WARN] [KERNEL] proxy exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.309Z] [WARN] [KERNEL] tls exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.317Z] [WARN] [KERNEL] ddns exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:43.454Z] [INFO] [KERNEL] peer claimed port 7800
+[2026-08-12T03:43:43.455Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.457Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.458Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.458Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.459Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.460Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.461Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.461Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.462Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.463Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.465Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.465Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.466Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.467Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.467Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.468Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.469Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.470Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.470Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.471Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.472Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.473Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.473Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.474Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.475Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.475Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.476Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.477Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.478Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.478Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.481Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.482Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.483Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.483Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.484Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.485Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.485Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.486Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.487Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.488Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:43.488Z] [INFO] [KERNEL] provisioner claimed port 4008
+[2026-08-12T03:43:43.489Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.490Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.491Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.492Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.492Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.493Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.494Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.497Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.498Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.499Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.500Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.501Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.501Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.502Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.503Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.505Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.506Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.506Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.507Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.508Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.509Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.510Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.513Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.513Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.514Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.514Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.515Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.515Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.516Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.516Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.517Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.518Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.519Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.520Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.521Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.521Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.522Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.523Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.524Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.525Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.525Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.526Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.527Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.528Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.529Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.530Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.531Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.534Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.534Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.535Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.536Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.537Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.538Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.539Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.539Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.540Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.541Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.542Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.542Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.543Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.544Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.545Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.546Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.547Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.548Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.549Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.550Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.550Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.551Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.552Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.553Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.554Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.554Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.555Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.556Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.559Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.559Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.560Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.561Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.562Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.563Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.564Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.565Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.565Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.566Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.567Z] [INFO] [KERNEL] provisioner claimed port 4009
+[2026-08-12T03:43:43.568Z] [INFO] [KERNEL] tunnel claimed port 7801
+[2026-08-12T03:43:43.569Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.569Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.570Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.571Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.574Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.575Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.576Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.576Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.577Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.578Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.579Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.579Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.580Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.581Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.582Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.582Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.583Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.584Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.585Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.586Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.586Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.589Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.589Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.590Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.591Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.592Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.593Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.593Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.594Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.595Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.596Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.597Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.598Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.599Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.600Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.600Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.601Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.602Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.604Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.605Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.605Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.606Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.607Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.608Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.608Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.609Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.610Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.610Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.611Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.612Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.613Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.613Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.614Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.615Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.616Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.617Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.617Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.618Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.621Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.621Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.622Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.623Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.624Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.624Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.625Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.626Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.626Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.627Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.628Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.629Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.629Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.630Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.631Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.631Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.632Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.633Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.634Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.636Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.637Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.637Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.638Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.639Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.639Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.640Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.641Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.642Z] [INFO] [KERNEL] tunnel claimed port 7802
+[2026-08-12T03:43:43.643Z] [INFO] [KERNEL] auth claimed port 4001
+[2026-08-12T03:43:43.644Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.644Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.645Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.646Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.647Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.647Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.648Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.648Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.649Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.652Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.653Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.653Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.654Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.655Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.656Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.656Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.657Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.658Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.658Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.659Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.660Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.661Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.661Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.662Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.663Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.663Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.664Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.665Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.666Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.668Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.668Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.669Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.670Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.671Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.671Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.672Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.673Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.674Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.674Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.675Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.677Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.677Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.678Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.679Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.680Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.681Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.684Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.684Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.685Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.686Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.687Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.688Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.689Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.690Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.691Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.691Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.692Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.693Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.694Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.695Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.696Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.697Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.700Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.701Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.701Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.702Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.703Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.704Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.704Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.705Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.706Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.707Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.708Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.708Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.709Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.710Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.711Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.712Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.715Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.716Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.717Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.718Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.719Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.720Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.721Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.722Z] [INFO] [KERNEL] auth claimed port 4002
+[2026-08-12T03:43:43.723Z] [INFO] [KERNEL] billing claimed port 4003
+[2026-08-12T03:43:43.724Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.725Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.725Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.726Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.727Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.728Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.731Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.732Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.733Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.733Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.734Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.735Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.736Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.736Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.737Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.738Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.739Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.739Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.740Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.741Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.742Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.743Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.744Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.744Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.745Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.746Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.747Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.748Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.749Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.750Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.751Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.751Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.752Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.753Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.754Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.755Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.756Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.756Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.757Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.758Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.759Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.762Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.763Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.764Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.765Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.765Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.766Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.767Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.768Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.768Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.769Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.770Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.771Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.772Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.772Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.773Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.774Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.776Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.778Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.778Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.779Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.780Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.781Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.781Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.782Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.783Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.784Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.785Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.785Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.786Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.787Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.788Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.788Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.789Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.790Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.792Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.793Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.794Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.795Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.795Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.796Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.797Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.798Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.798Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.799Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.800Z] [INFO] [KERNEL] billing claimed port 4004
+[2026-08-12T03:43:43.801Z] [INFO] [KERNEL] registrar claimed port 4007
+[2026-08-12T03:43:43.802Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.803Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.804Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.804Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.805Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.806Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.809Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.810Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.810Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.811Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.812Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.813Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.814Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.815Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.815Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.816Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.817Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.818Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.818Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.819Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.820Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.821Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.821Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.822Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.824Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.825Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.826Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.826Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.827Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.828Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.829Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.829Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.830Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.831Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.832Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.833Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.834Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.835Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.835Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.836Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.837Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.839Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.840Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.841Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.841Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.842Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.843Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.844Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.844Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.845Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.846Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.847Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.848Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.849Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.850Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.851Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.852Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.853Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.856Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.857Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.857Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.858Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.859Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.860Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.861Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.861Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.862Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.863Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.863Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.864Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.865Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.866Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.867Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.868Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.870Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.871Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.872Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.873Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.873Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.874Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.875Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.876Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.877Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.878Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.878Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.879Z] [INFO] [KERNEL] registrar claimed port 4008
+[2026-08-12T03:43:43.880Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-12T03:43:43.881Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.882Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.882Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.883Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.885Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.886Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.887Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.888Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.888Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.889Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.890Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.891Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.892Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.893Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.893Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.894Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.895Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.896Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.896Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.898Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.899Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.900Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.902Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.903Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.904Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.904Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.905Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.906Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.907Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.908Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.908Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.909Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.910Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.911Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.911Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.913Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.913Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.914Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.915Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.917Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.918Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.919Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.920Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.920Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.921Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.922Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.923Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.924Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.924Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.925Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.926Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.927Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.928Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.928Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.929Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.930Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.930Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.931Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.934Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.935Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.936Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.936Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.937Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.938Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.939Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.939Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.940Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.941Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.942Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.942Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.943Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.944Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.944Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.945Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.946Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.947Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.950Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.951Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.953Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.953Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.954Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.955Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.956Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.957Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.957Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.958Z] [INFO] [KERNEL] deploy claimed port 4011
+[2026-08-12T03:43:43.959Z] [INFO] [KERNEL] optimizer claimed port 4006
+[2026-08-12T03:43:43.960Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.961Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.962Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.963Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.964Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.965Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.966Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.966Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.967Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.968Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.969Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.969Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.970Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.971Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.973Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.974Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.975Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.976Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.977Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.977Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.978Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.979Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.980Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.981Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.982Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.982Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.983Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.984Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.985Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.986Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.986Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.987Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.988Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.989Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.989Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.990Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.991Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.992Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.992Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.993Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.996Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.996Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.997Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.997Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.998Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.998Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:43.998Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.000Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.001Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.002Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.002Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.003Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.004Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.005Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.005Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.006Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.007Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.008Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.008Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.009Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.012Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.013Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.014Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.015Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.015Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.016Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.017Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.018Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.018Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.019Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.020Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.021Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.022Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.022Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.023Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.024Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.026Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.027Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.028Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.029Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.030Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.030Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.031Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.032Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.033Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.034Z] [INFO] [KERNEL] optimizer claimed port 4007
+[2026-08-12T03:43:44.035Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-12T03:43:44.035Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.036Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.037Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.038Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.039Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.040Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.040Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.043Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.043Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.044Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.045Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.046Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.047Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.048Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.049Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.050Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.051Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.051Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.052Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.053Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.054Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.055Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.055Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.056Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.059Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.059Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.060Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.061Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.062Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.063Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.064Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.065Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.066Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.067Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.068Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.069Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.069Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.070Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.071Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.072Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.073Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.073Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.075Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.076Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.077Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.078Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.079Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.079Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.080Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.081Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.082Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.083Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.084Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.085Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.086Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.088Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.089Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.090Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.091Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.092Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.092Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.093Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.094Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.095Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.096Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.097Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.097Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.099Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.099Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.100Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.101Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.102Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.104Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.105Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.105Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.106Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.107Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.108Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.109Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.109Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.110Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.111Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.111Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.113Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.113Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.114Z] [INFO] [KERNEL] glue claimed port 4010
+[2026-08-12T03:43:44.115Z] [INFO] [KERNEL] monitor claimed port 4004
+[2026-08-12T03:43:44.116Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.117Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.118Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.120Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.121Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.122Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.123Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.123Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.124Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.125Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.126Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.127Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.127Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.128Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.129Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.130Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.130Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.132Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.133Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.133Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.136Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.137Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.138Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.139Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.140Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.141Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.141Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.142Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.143Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.145Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.146Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.147Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.147Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.148Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.149Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.152Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.152Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.153Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.154Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.155Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.155Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.156Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.157Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.157Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.158Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.159Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.160Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.160Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.161Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.162Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.163Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.164Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.165Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.165Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.167Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.168Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.169Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.169Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.170Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.171Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.172Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.172Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.173Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.174Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.175Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.176Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.176Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.177Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.178Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.179Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.180Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.180Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.181Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.184Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.185Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.186Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.187Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.187Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.188Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.189Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.190Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.190Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.191Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.192Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.193Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.193Z] [INFO] [KERNEL] monitor claimed port 4005
+[2026-08-12T03:43:44.195Z] [INFO] [KERNEL] catalog claimed port 4005
+[2026-08-12T03:43:44.196Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.196Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.199Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.200Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.201Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.201Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.202Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.203Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.204Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.205Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.205Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.206Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.208Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.208Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.209Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.210Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.211Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.212Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.212Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.215Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.215Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.216Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.216Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.217Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.217Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.218Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.219Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.220Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.221Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.221Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.222Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.223Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.224Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.224Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.225Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.226Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.227Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.228Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.229Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.232Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.232Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.233Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.234Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.235Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.236Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.237Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.238Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.239Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.239Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.240Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.241Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.242Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.243Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.244Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.247Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.248Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.248Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.249Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.250Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.250Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.251Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.252Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.253Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.253Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.254Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.255Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.256Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.256Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.257Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.258Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.259Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.259Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.261Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.262Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.263Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.264Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.264Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.265Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.266Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.267Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.268Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.269Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.270Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.270Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.271Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.272Z] [INFO] [KERNEL] catalog claimed port 4006
+[2026-08-12T03:43:44.273Z] [INFO] [KERNEL] cache claimed port 4002
+[2026-08-12T03:43:44.274Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.274Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.275Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.278Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.278Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.279Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.280Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.281Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.282Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.282Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.283Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.284Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.284Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.285Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.286Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.287Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.287Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.288Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.289Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.290Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.290Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.291Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.293Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.294Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.295Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.296Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.296Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.297Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.298Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.299Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.299Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.300Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.301Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.301Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.302Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.303Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.304Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.304Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.305Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.308Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.308Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.309Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.310Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.311Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.311Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.312Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.313Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.313Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.314Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.315Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.316Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.317Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.317Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.318Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.319Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.319Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.320Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.321Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.324Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.325Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.325Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.326Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.327Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.328Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.329Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.330Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.330Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.331Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.332Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.333Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.334Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.334Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.335Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.336Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.337Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.338Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.340Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.341Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.341Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.342Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.343Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.343Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.344Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.345Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.346Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.346Z] [INFO] [KERNEL] cache claimed port 4003
+[2026-08-12T03:43:44.348Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.349Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.350Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.351Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.352Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.353Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.354Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.358Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.358Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.359Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.360Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.361Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.363Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.364Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.365Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.366Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.367Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.368Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.369Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.373Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.373Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.374Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.375Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.376Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.377Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.378Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.379Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.380Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.381Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.382Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.383Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.384Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.385Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.386Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.388Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.389Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.390Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.391Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.392Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.393Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.394Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.396Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.397Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.398Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.399Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.400Z] [INFO] [KERNEL] peer claimed port 7801
+[2026-08-12T03:43:44.978Z] [WARN] [KERNEL] ui exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:44.986Z] [WARN] [KERNEL] setup exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:44.992Z] [WARN] [KERNEL] deploy exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:44.999Z] [WARN] [KERNEL] webserver exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.006Z] [WARN] [KERNEL] autodns exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.014Z] [WARN] [KERNEL] tunnel exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.022Z] [WARN] [KERNEL] peer exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.030Z] [WARN] [KERNEL] glue exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.036Z] [WARN] [KERNEL] provisioner exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.044Z] [WARN] [KERNEL] registrar exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.051Z] [WARN] [KERNEL] catalog exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.059Z] [WARN] [KERNEL] optimizer exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.067Z] [WARN] [KERNEL] monitor exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.076Z] [WARN] [KERNEL] billing exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.083Z] [WARN] [KERNEL] queue exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.090Z] [WARN] [KERNEL] storage exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.098Z] [WARN] [KERNEL] cache exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.106Z] [WARN] [KERNEL] smtp exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.113Z] [WARN] [KERNEL] signal exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.120Z] [WARN] [KERNEL] auth exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.127Z] [WARN] [KERNEL] firewall exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.134Z] [WARN] [KERNEL] relay exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.142Z] [WARN] [KERNEL] proxy exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.150Z] [WARN] [KERNEL] tls exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:45.157Z] [WARN] [KERNEL] ddns exited (code=3221225786) — restart in 1000ms
+[2026-08-12T03:43:47.113Z] [INFO] [KERNEL] spawning dns (restarts: 0)
+[2026-08-12T03:43:47.119Z] [INFO] [KERNEL] spawning ddns (restarts: 0)
+[2026-08-12T03:43:47.124Z] [INFO] [KERNEL] spawning tls (restarts: 0)
+[2026-08-12T03:43:47.129Z] [INFO] [KERNEL] spawning proxy (restarts: 0)
+[2026-08-12T03:43:47.135Z] [INFO] [KERNEL] spawning relay (restarts: 0)
+[2026-08-12T03:43:47.140Z] [INFO] [KERNEL] spawning firewall (restarts: 0)
+[2026-08-12T03:43:47.147Z] [INFO] [KERNEL] spawning auth (restarts: 0)
+[2026-08-12T03:43:47.153Z] [INFO] [KERNEL] spawning signal (restarts: 0)
+[2026-08-12T03:43:47.159Z] [INFO] [KERNEL] spawning smtp (restarts: 0)
+[2026-08-12T03:43:47.165Z] [INFO] [KERNEL] spawning cache (restarts: 0)
+[2026-08-12T03:43:47.172Z] [INFO] [KERNEL] spawning storage (restarts: 0)
+[2026-08-12T03:43:47.180Z] [INFO] [KERNEL] spawning queue (restarts: 0)
+[2026-08-12T03:43:47.188Z] [INFO] [KERNEL] spawning billing (restarts: 0)
+[2026-08-12T03:43:47.196Z] [INFO] [KERNEL] spawning monitor (restarts: 0)
+[2026-08-12T03:43:47.205Z] [INFO] [KERNEL] spawning optimizer (restarts: 0)
+[2026-08-12T03:43:47.213Z] [INFO] [KERNEL] spawning catalog (restarts: 0)
+[2026-08-12T03:43:47.222Z] [INFO] [KERNEL] spawning registrar (restarts: 0)
+[2026-08-12T03:43:47.232Z] [INFO] [KERNEL] spawning provisioner (restarts: 0)
+[2026-08-12T03:43:47.241Z] [INFO] [KERNEL] spawning glue (restarts: 0)
+[2026-08-12T03:43:47.249Z] [INFO] [KERNEL] spawning peer (restarts: 0)
+[2026-08-12T03:43:47.257Z] [INFO] [KERNEL] spawning tunnel (restarts: 0)
+[2026-08-12T03:43:47.265Z] [INFO] [KERNEL] spawning autodns (restarts: 0)
+[2026-08-12T03:43:47.273Z] [INFO] [KERNEL] spawning webserver (restarts: 0)
+[2026-08-12T03:43:47.282Z] [INFO] [KERNEL] spawning deploy (restarts: 0)
+[2026-08-12T03:43:47.291Z] [INFO] [KERNEL] spawning setup (restarts: 0)
+[2026-08-12T03:43:47.300Z] [INFO] [KERNEL] spawning ui (restarts: 0)
+[2026-08-12T03:43:47.308Z] [INFO] [KERNEL] nexus up — engines: dns, ddns, tls, proxy, relay, firewall, auth, signal, smtp, cache, storage, queue, billing, monitor, optimizer, catalog, registrar, provisioner, glue, peer, tunnel, autodns, webserver, deploy, setup, ui
+[2026-08-12T03:43:47.309Z] [INFO] [KERNEL] control socket ready
+[2026-08-12T03:43:47.314Z] [INFO] [KERNEL] dns claimed port 5354
+[2026-08-12T03:43:47.317Z] [INFO] [KERNEL] dns claimed port 5354
+[2026-08-12T03:43:47.322Z] [INFO] [KERNEL] tls claimed port 80
+[2026-08-12T03:43:47.326Z] [INFO] [KERNEL] proxy claimed port 8080
+[2026-08-12T03:43:47.339Z] [INFO] [KERNEL] auth claimed port 4001
+[2026-08-12T03:43:47.341Z] [INFO] [KERNEL] cache claimed port 4002
+[2026-08-12T03:43:47.346Z] [INFO] [KERNEL] smtp claimed port 2525
+[2026-08-12T03:43:47.347Z] [INFO] [KERNEL] smtp claimed port 587
+[2026-08-12T03:43:47.350Z] [INFO] [KERNEL] storage claimed port 9100
+[2026-08-12T03:43:47.351Z] [INFO] [KERNEL] billing claimed port 4003
+[2026-08-12T03:43:47.354Z] [INFO] [KERNEL] monitor claimed port 4004
+[2026-08-12T03:43:47.357Z] [INFO] [KERNEL] optimizer claimed port 4006
+[2026-08-12T03:43:47.360Z] [INFO] [KERNEL] catalog claimed port 4005
+[2026-08-12T03:43:47.362Z] [INFO] [KERNEL] provisioner claimed port 4008
+[2026-08-12T03:43:47.363Z] [INFO] [KERNEL] registrar claimed port 4007
+[2026-08-12T03:43:47.365Z] [INFO] [KERNEL] glue claimed port 4009
+[2026-08-12T03:43:47.367Z] [INFO] [KERNEL] peer claimed port 7800
+[2026-08-12T03:43:47.369Z] [INFO] [KERNEL] tunnel claimed port 7801
+[2026-08-12T03:43:47.371Z] [INFO] [KERNEL] autodns claimed port 7802
+[2026-08-12T03:43:47.375Z] [INFO] [KERNEL] deploy claimed port 4010
+[2026-08-12T03:43:47.377Z] [INFO] [KERNEL] setup claimed port 4011
+[2026-08-12T03:43:47.391Z] [INFO] [KERNEL] ui claimed port 9000
+[2026-08-12T03:43:47.425Z] [INFO] [KERNEL] webserver claimed port 7700
+[2026-08-12T03:43:47.426Z] [INFO] [KERNEL] webserver claimed port 7701

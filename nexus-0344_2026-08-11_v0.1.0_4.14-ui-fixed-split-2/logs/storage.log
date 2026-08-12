@@ -1,0 +1,10 @@
+[2026-08-08T23:41:39.519Z] [INFO] [storage] storage engine ready
+[2026-08-08T23:41:39.651Z] [INFO] [storage] storage engine on :9100
+[2026-08-12T01:58:13.186Z] [INFO] [storage] storage engine ready
+[2026-08-12T01:58:13.187Z] [INFO] [storage] storage engine on :9100
+[2026-08-12T03:43:16.600Z] [INFO] [storage] storage engine ready
+[2026-08-12T03:43:16.601Z] [WARN] [storage] port 9100 in use — trying :9101
+[2026-08-12T03:43:16.808Z] [INFO] [storage] storage engine on :9100
+[2026-08-12T03:43:16.809Z] [INFO] [storage] on :9101
+[2026-08-12T03:43:47.348Z] [INFO] [storage] storage engine ready
+[2026-08-12T03:43:47.349Z] [INFO] [storage] storage engine on :9100

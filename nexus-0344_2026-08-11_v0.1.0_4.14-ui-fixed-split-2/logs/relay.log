@@ -1,0 +1,8 @@
+[2026-08-12T01:58:13.181Z] [WARN] [relay] relay key generated (no openssl — cert placeholder)
+[2026-08-12T01:58:13.182Z] [INFO] [relay] PSK generated: D:\Backups\Downloads\nexus-4.14-ui-fixed-split\nexus\conf\relay\psk — copy this to your edge node
+[2026-08-12T01:58:13.182Z] [INFO] [relay] relay engine starting in client mode
+[2026-08-12T01:58:13.183Z] [WARN] [relay] relay client: relayHost not set in conf/relay.conf — skipping
+[2026-08-12T03:43:16.587Z] [INFO] [relay] relay engine starting in client mode
+[2026-08-12T03:43:16.588Z] [WARN] [relay] relay client: relayHost not set in conf/relay.conf — skipping
+[2026-08-12T03:43:47.331Z] [INFO] [relay] relay engine starting in client mode
+[2026-08-12T03:43:47.332Z] [WARN] [relay] relay client: relayHost not set in conf/relay.conf — skipping

@@ -1,0 +1,182 @@
+[2026-08-08T23:41:39.407Z] [INFO] [auth] auth engine ready
+[2026-08-08T23:41:39.407Z] [INFO] [auth] auth engine listening on :4001
+[2026-08-12T01:58:13.174Z] [INFO] [auth] auth engine ready
+[2026-08-12T01:58:13.174Z] [INFO] [auth] auth engine listening on :4001
+[2026-08-12T03:43:16.593Z] [INFO] [auth] auth engine ready
+[2026-08-12T03:43:16.594Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:16.759Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:17.074Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:17.399Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:17.712Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:18.025Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:18.338Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:18.650Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:18.963Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:19.275Z] [WARN] [auth] (node:14912) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.275Z] [WARN] [auth] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.276Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:19.605Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:19.916Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:20.245Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:20.557Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:20.869Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:21.182Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:21.494Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:21.808Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:22.116Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:22.432Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:22.758Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:23.072Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:23.384Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:23.698Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:24.010Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:24.322Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:24.637Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:24.940Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:25.245Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:25.557Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:25.871Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:26.182Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:26.494Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:26.807Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:27.121Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:27.434Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:27.744Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:28.058Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:28.370Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:28.681Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:28.993Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:29.305Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:29.618Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:29.932Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:30.244Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:30.557Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:30.868Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:31.171Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:31.480Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:31.792Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:32.103Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:32.416Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:32.729Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:33.042Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:33.363Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:33.667Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:33.980Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:34.293Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:34.604Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:34.916Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:35.228Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:35.557Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:35.868Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:36.183Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:36.496Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:36.806Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:37.121Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:37.433Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:37.743Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:38.072Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:38.400Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:38.725Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:39.027Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:39.337Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:39.651Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:39.963Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:40.277Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:40.588Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:40.916Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:41.249Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:41.573Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:41.897Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:42.203Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:42.512Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:42.825Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:43.138Z] [WARN] [auth] port 4001 in use — trying :4002
+[2026-08-12T03:43:43.642Z] [INFO] [auth] auth engine listening on :4001
+[2026-08-12T03:43:43.643Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.644Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.644Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.645Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.646Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.647Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.647Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.648Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.649Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.650Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.652Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.653Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.654Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.654Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.655Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.656Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.657Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.657Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.658Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.659Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.659Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.660Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.661Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.662Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.662Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.663Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.664Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.665Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.665Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.668Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.668Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.669Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.670Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.670Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.671Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.672Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.673Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.674Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.674Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.675Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.676Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.677Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.678Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.678Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.680Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.680Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.681Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.684Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.685Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.685Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.686Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.688Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.689Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.689Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.690Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.691Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.692Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.693Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.694Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.695Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.696Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.696Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.697Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.700Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.701Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.702Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.703Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.703Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.704Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.705Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.706Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.706Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.707Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.708Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.709Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.710Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.711Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.711Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.713Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.716Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.717Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.718Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.719Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.719Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.720Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:43.721Z] [INFO] [auth] on :4002
+[2026-08-12T03:43:47.338Z] [INFO] [auth] auth engine ready
+[2026-08-12T03:43:47.339Z] [INFO] [auth] auth engine listening on :4001

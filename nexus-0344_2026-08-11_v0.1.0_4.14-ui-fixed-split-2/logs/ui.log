@@ -1,0 +1,83 @@
+[2026-08-07T12:46:50.683Z] [INFO] [ui] ui engine ready
+[2026-08-07T12:46:50.694Z] [INFO] [ui] ui engine ready
+[2026-08-07T12:46:50.694Z] [INFO] [ui] ui control panel on :9000
+[2026-08-07T12:46:50.695Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-07T19:11:11.478Z] [INFO] [ui] ui engine ready
+[2026-08-07T19:11:11.479Z] [INFO] [ui] ui engine ready
+[2026-08-07T19:11:11.479Z] [INFO] [ui] ui control panel on :9000
+[2026-08-07T19:11:11.479Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-07T19:11:36.245Z] [INFO] [ui] ui engine ready
+[2026-08-07T19:11:36.245Z] [INFO] [ui] ui engine ready
+[2026-08-07T19:11:36.246Z] [INFO] [ui] ui control panel on :9000
+[2026-08-07T19:11:36.246Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-07T19:30:55.340Z] [INFO] [ui] ui engine ready
+[2026-08-07T19:30:55.343Z] [INFO] [ui] ui engine ready
+[2026-08-07T19:30:55.344Z] [INFO] [ui] ui control panel on :9000
+[2026-08-07T19:30:55.345Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-08T22:27:29.701Z] [INFO] [ui] ui engine ready
+[2026-08-08T22:27:29.716Z] [INFO] [ui] ui engine ready
+[2026-08-08T22:27:29.716Z] [INFO] [ui] ui control panel on :9000
+[2026-08-08T22:27:29.716Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-08T23:41:40.737Z] [INFO] [ui] ui engine ready
+[2026-08-08T23:41:40.747Z] [INFO] [ui] ui engine ready
+[2026-08-08T23:41:40.751Z] [INFO] [ui] ui control panel on :9000
+[2026-08-08T23:41:40.752Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-09T00:00:49.094Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:00:49.095Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:00:49.095Z] [INFO] [ui] ui control panel on :9000
+[2026-08-09T00:00:49.095Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-09T00:02:48.557Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:02:48.558Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:02:48.558Z] [INFO] [ui] ui control panel on :9000
+[2026-08-09T00:02:48.559Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-09T00:31:25.993Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:31:25.994Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:31:25.995Z] [INFO] [ui] ui control panel on :9000
+[2026-08-09T00:31:25.995Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-09T00:32:47.365Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:32:47.367Z] [INFO] [ui] ui engine ready
+[2026-08-09T00:32:47.367Z] [INFO] [ui] ui control panel on :9000
+[2026-08-09T00:32:47.367Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-11T00:10:54.194Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:10:54.196Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:10:54.196Z] [INFO] [ui] ui control panel on :9000
+[2026-08-11T00:10:54.196Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-11T00:12:15.319Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:12:15.320Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:12:15.320Z] [INFO] [ui] ui control panel on :9000
+[2026-08-11T00:12:15.320Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-11T00:13:38.837Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:13:38.838Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:13:38.839Z] [INFO] [ui] ui control panel on :9000
+[2026-08-11T00:13:38.839Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-11T00:15:45.741Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:15:45.742Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:15:45.743Z] [INFO] [ui] ui control panel on :9000
+[2026-08-11T00:15:45.743Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-11T00:37:48.718Z] [INFO] [ui] ui: loaded static assets — app.js (60060B), style.css (8549B)
+[2026-08-11T00:37:48.719Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:37:48.719Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:37:48.719Z] [INFO] [ui] ui control panel on :9000
+[2026-08-11T00:37:48.720Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-11T00:38:23.881Z] [INFO] [ui] ui: loaded static assets — app.js (60060B), style.css (8549B)
+[2026-08-11T00:38:23.881Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:38:23.905Z] [INFO] [ui] ui engine ready
+[2026-08-11T00:38:23.905Z] [INFO] [ui] ui control panel on :9000
+[2026-08-11T00:38:23.905Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-12T01:58:13.222Z] [INFO] [ui] ui: loaded static assets — app.js (60060B), style.css (8549B)
+[2026-08-12T01:58:13.222Z] [INFO] [ui] ui engine ready
+[2026-08-12T01:58:13.223Z] [INFO] [ui] ui engine ready
+[2026-08-12T01:58:13.223Z] [INFO] [ui] ui control panel on :9000
+[2026-08-12T01:58:13.224Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-12T03:43:16.640Z] [INFO] [ui] ui: loaded static assets — app.js (60060B), style.css (8549B)
+[2026-08-12T03:43:16.640Z] [INFO] [ui] ui engine ready
+[2026-08-12T03:43:16.641Z] [WARN] [ui] port 9000 in use — trying :9001
+[2026-08-12T03:43:16.642Z] [INFO] [ui] ui engine ready
+[2026-08-12T03:43:16.642Z] [INFO] [ui] ui control panel on :9000
+[2026-08-12T03:43:16.643Z] [INFO] [ui] open: http://localhost:9000
+[2026-08-12T03:43:16.644Z] [INFO] [ui] ui on :9001
+[2026-08-12T03:43:47.387Z] [INFO] [ui] ui: loaded static assets — app.js (60060B), style.css (8549B)
+[2026-08-12T03:43:47.387Z] [INFO] [ui] ui engine ready
+[2026-08-12T03:43:47.388Z] [INFO] [ui] ui engine ready
+[2026-08-12T03:43:47.390Z] [INFO] [ui] ui control panel on :9000
+[2026-08-12T03:43:47.390Z] [INFO] [ui] open: http://localhost:9000

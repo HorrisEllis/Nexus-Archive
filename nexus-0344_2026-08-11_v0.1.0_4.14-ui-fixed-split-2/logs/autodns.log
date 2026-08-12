@@ -1,0 +1,17 @@
+[2026-08-08T23:41:40.606Z] [INFO] [autodns] autodns engine ready
+[2026-08-08T23:41:40.606Z] [INFO] [autodns] autodns engine on :7802
+[2026-08-08T23:41:45.627Z] [WARN] [autodns] autodns: could not detect public IP
+[2026-08-12T01:58:13.207Z] [INFO] [autodns] autodns engine ready
+[2026-08-12T01:58:13.208Z] [INFO] [autodns] autodns engine on :7802
+[2026-08-12T01:58:18.184Z] [INFO] [autodns] autodns: IP changed → 24.21.239.115
+[2026-08-12T01:58:18.184Z] [INFO] [autodns] autodns: peer-gossip ✓
+[2026-08-12T03:43:16.631Z] [INFO] [autodns] autodns engine ready
+[2026-08-12T03:43:16.632Z] [WARN] [autodns] port 7802 in use — trying :7803
+[2026-08-12T03:43:16.902Z] [INFO] [autodns] autodns engine on :7802
+[2026-08-12T03:43:16.903Z] [INFO] [autodns] on :7803
+[2026-08-12T03:43:21.605Z] [INFO] [autodns] autodns: IP changed → 24.21.239.115
+[2026-08-12T03:43:21.606Z] [INFO] [autodns] autodns: peer-gossip ✓
+[2026-08-12T03:43:47.370Z] [INFO] [autodns] autodns engine ready
+[2026-08-12T03:43:47.371Z] [INFO] [autodns] autodns engine on :7802
+[2026-08-12T03:43:52.342Z] [INFO] [autodns] autodns: IP changed → 24.21.239.115
+[2026-08-12T03:43:52.343Z] [INFO] [autodns] autodns: peer-gossip ✓

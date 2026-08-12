@@ -1,0 +1,89 @@
+[2026-08-07T08:34:40.018Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-07T08:34:40.024Z] [INFO] [webserver] webserver: default vhost created — localhost
+[2026-08-07T08:34:40.030Z] [INFO] [webserver] webserver: engine ready
+[2026-08-07T08:34:40.031Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-07T08:34:40.031Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-07T08:34:40.031Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-07T08:35:07.304Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-07T08:35:07.305Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-07T08:35:07.324Z] [INFO] [webserver] webserver: engine ready
+[2026-08-07T08:35:07.325Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-07T08:35:07.325Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-07T08:35:07.326Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-07T08:35:09.638Z] [INFO] [webserver] webserver: vhost added — test.local [static]
+[2026-08-07T08:35:24.029Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-07T08:35:24.030Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-07T08:35:24.032Z] [INFO] [webserver] webserver: vhost loaded — test.local [static]
+[2026-08-07T08:35:24.038Z] [INFO] [webserver] webserver: engine ready
+[2026-08-07T08:35:24.039Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-07T08:35:24.039Z] [INFO] [webserver] webserver: 2 vhost(s) active — localhost, test.local
+[2026-08-07T08:35:24.040Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-07T12:43:54.984Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-07T12:43:54.987Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-07T12:43:55.013Z] [INFO] [webserver] webserver: engine ready
+[2026-08-07T12:43:55.014Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-07T12:43:55.014Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-07T12:43:55.014Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-07T12:44:00.410Z] [INFO] [webserver] webserver: vhost added — test.local [static]
+[2026-08-07T12:44:19.406Z] [INFO] [webserver] webserver: vhost added — phpsite.local [php]
+[2026-08-07T12:46:50.755Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-07T12:46:50.756Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-07T12:46:50.786Z] [INFO] [webserver] webserver: engine ready
+[2026-08-07T12:46:50.787Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-07T12:46:50.787Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-07T12:46:50.788Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-07T12:47:00.443Z] [INFO] [webserver] webserver: vhost added — uitest.local [static]
+[2026-08-07T12:47:32.930Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-07T12:47:32.932Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-07T12:47:32.942Z] [INFO] [webserver] webserver: engine ready
+[2026-08-07T12:47:32.942Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-07T12:47:32.943Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-07T12:47:32.943Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-07T12:47:35.741Z] [INFO] [webserver] webserver: vhost added — hv.local [static]
+[2026-08-07T12:48:47.442Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-07T12:48:47.453Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-07T12:48:47.460Z] [INFO] [webserver] webserver: engine ready
+[2026-08-07T12:48:47.461Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-07T12:48:47.461Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-07T12:48:47.462Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-07T12:48:50.215Z] [INFO] [webserver] webserver: vhost added — hv.local [static]
+[2026-08-08T23:32:15.722Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-08T23:32:15.727Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-08T23:32:15.744Z] [INFO] [webserver] webserver: engine ready
+[2026-08-08T23:32:15.745Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-08T23:32:15.745Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-08T23:32:15.746Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-08T23:32:23.756Z] [INFO] [webserver] webserver: vhost added — hc.local [static]
+[2026-08-08T23:32:33.949Z] [INFO] [webserver] webserver: vhost added — hc2.local [static]
+[2026-08-08T23:41:40.740Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-08T23:41:40.747Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-08T23:41:40.811Z] [INFO] [webserver] webserver: engine ready
+[2026-08-08T23:41:40.815Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-08T23:41:40.815Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-08T23:41:40.815Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-11T00:38:23.956Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-11T00:38:23.974Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-11T00:38:24.002Z] [INFO] [webserver] webserver: engine ready
+[2026-08-11T00:38:24.005Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-11T00:38:24.006Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-11T00:38:24.006Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-12T01:58:13.258Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-12T01:58:13.259Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-12T01:58:13.271Z] [INFO] [webserver] webserver: engine ready
+[2026-08-12T01:58:13.272Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-12T01:58:13.273Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-12T01:58:13.274Z] [WARN] [webserver] webserver: cache server error — listen EADDRINUSE: address already in use 127.0.0.1:7701
+[2026-08-12T03:43:16.671Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-12T03:43:16.672Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-12T03:43:16.684Z] [WARN] [webserver] webserver: port 7700 in use — trying :7701
+[2026-08-12T03:43:16.686Z] [INFO] [webserver] webserver: cache server on :7701
+[2026-08-12T03:43:16.687Z] [INFO] [webserver] webserver: engine ready
+[2026-08-12T03:43:16.687Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-12T03:43:16.688Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-12T03:43:16.689Z] [INFO] [webserver] webserver: listening on :7701
+[2026-08-12T03:43:47.411Z] [WARN] [webserver] webserver: PHP not found — static/proxy only (install php-cgi to enable PHP)
+[2026-08-12T03:43:47.412Z] [INFO] [webserver] webserver: vhost loaded — localhost [static]
+[2026-08-12T03:43:47.424Z] [INFO] [webserver] webserver: engine ready
+[2026-08-12T03:43:47.424Z] [INFO] [webserver] webserver: listening on :7700
+[2026-08-12T03:43:47.425Z] [INFO] [webserver] webserver: 1 vhost(s) active — localhost
+[2026-08-12T03:43:47.426Z] [INFO] [webserver] webserver: cache server on :7701

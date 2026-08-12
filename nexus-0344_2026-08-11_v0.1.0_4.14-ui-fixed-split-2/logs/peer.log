@@ -1,0 +1,190 @@
+[2026-08-08T23:41:40.419Z] [INFO] [peer] peer identity created: f8599a8ea9bb5b3f
+[2026-08-08T23:41:40.785Z] [INFO] [peer] peer engine ready
+[2026-08-08T23:41:40.787Z] [INFO] [peer] peer engine on :7800
+[2026-08-08T23:41:41.100Z] [WARN] [peer] peer: could not detect public IP
+[2026-08-12T01:58:13.203Z] [INFO] [peer] peer identity loaded: f8599a8ea9bb5b3f…
+[2026-08-12T01:58:13.204Z] [INFO] [peer] peer engine ready
+[2026-08-12T01:58:13.204Z] [INFO] [peer] peer engine on :7800
+[2026-08-12T01:58:13.352Z] [INFO] [peer] peer: public IP 24.21.239.115
+[2026-08-12T03:43:16.614Z] [INFO] [peer] peer identity loaded: f8599a8ea9bb5b3f…
+[2026-08-12T03:43:16.628Z] [INFO] [peer] peer engine ready
+[2026-08-12T03:43:16.628Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:16.856Z] [INFO] [peer] peer: public IP 24.21.239.115
+[2026-08-12T03:43:16.906Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:17.214Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:17.524Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:17.837Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:18.165Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:18.479Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:18.792Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:19.104Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:19.417Z] [WARN] [peer] (node:18112) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.417Z] [WARN] [peer] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.419Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:19.729Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:20.042Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:20.345Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:20.652Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:20.964Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:21.276Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:21.587Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:21.900Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:22.213Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:22.533Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:22.839Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:23.152Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:23.463Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:23.777Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:24.088Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:24.401Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:24.714Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:25.028Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:25.340Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:25.650Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:25.962Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:26.275Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:26.586Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:26.913Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:27.236Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:27.541Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:27.854Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:28.165Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:28.479Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:28.791Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:29.104Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:29.431Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:29.759Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:30.088Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:30.411Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:30.713Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:31.026Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:31.338Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:31.650Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:31.963Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:32.273Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:32.588Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:32.901Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:33.213Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:33.526Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:33.838Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:34.150Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:34.450Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:34.760Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:35.072Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:35.385Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:35.696Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:36.008Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:36.312Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:36.619Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:36.932Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:37.243Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:37.557Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:37.870Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:38.171Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:38.479Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:38.791Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:39.104Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:39.416Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:39.728Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:40.037Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:40.340Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:40.651Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:40.963Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:41.275Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:41.587Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:41.897Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:42.199Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:42.510Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:42.823Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:43.143Z] [WARN] [peer] port 7800 in use — trying :7801
+[2026-08-12T03:43:43.453Z] [INFO] [peer] peer engine on :7800
+[2026-08-12T03:43:43.455Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.456Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.457Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.458Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.459Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.459Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.460Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.461Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.462Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.462Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.464Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.465Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.466Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.467Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.467Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.468Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.469Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.469Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.470Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.471Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.472Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.472Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.473Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.474Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.474Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.475Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.476Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.477Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.477Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.478Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.480Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.481Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.482Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.483Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.483Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.484Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.485Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.486Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.486Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:43.487Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.348Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.349Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.350Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.351Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.352Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.352Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.353Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.357Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.358Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.359Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.360Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.361Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.362Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.363Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.365Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.366Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.367Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.367Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.369Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.370Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.373Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.374Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.375Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.375Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.376Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.377Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.378Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.379Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.381Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.381Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.382Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.383Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.384Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.385Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.388Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.389Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.390Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.391Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.392Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.393Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.394Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.395Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.396Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.397Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.398Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:44.399Z] [INFO] [peer] on :7801
+[2026-08-12T03:43:47.366Z] [INFO] [peer] peer identity loaded: f8599a8ea9bb5b3f…
+[2026-08-12T03:43:47.367Z] [INFO] [peer] peer engine ready
+[2026-08-12T03:43:47.367Z] [INFO] [peer] peer engine on :7800
+[2026-08-12T03:43:47.577Z] [INFO] [peer] peer: public IP 24.21.239.115

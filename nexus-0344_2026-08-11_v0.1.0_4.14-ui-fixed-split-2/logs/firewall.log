@@ -1,0 +1,163 @@
+[2026-08-07T19:30:55.327Z] [INFO] [firewall] firewall engine ready
+[2026-08-07T19:30:55.369Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:30:55.369Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:31:00.386Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:31:00.387Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-07T19:33:52.988Z] [INFO] [firewall] firewall engine ready
+[2026-08-07T19:33:53.064Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:33:53.064Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:33:58.059Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:33:58.059Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-07T19:33:59.220Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:34:04.225Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:34:04.241Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:34:07.726Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:34:12.729Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:34:12.738Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:34:43.916Z] [INFO] [firewall] firewall engine ready
+[2026-08-07T19:34:43.948Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:34:43.948Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:34:46.689Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:34:48.953Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:34:48.953Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-07T19:34:51.693Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:34:51.708Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:34:58.746Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:35:03.750Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:35:03.759Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:35:03.799Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:35:08.801Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:35:08.810Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:35:15.850Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:35:20.855Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:35:20.863Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:36:24.492Z] [INFO] [firewall] firewall engine ready
+[2026-08-07T19:36:24.532Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:36:24.532Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:36:29.536Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:36:29.537Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-07T19:36:55.574Z] [INFO] [firewall] firewall engine ready
+[2026-08-07T19:36:55.628Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-07T19:36:55.628Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-07T19:37:00.632Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-07T19:37:00.632Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-08T22:27:29.664Z] [INFO] [firewall] firewall engine ready
+[2026-08-08T22:27:29.764Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-08T22:27:29.764Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-08T22:27:34.768Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-08T22:27:34.768Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-08T22:27:38.130Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-08T22:27:43.138Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-08T22:27:43.147Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-08T23:33:31.242Z] [INFO] [firewall] firewall engine ready
+[2026-08-08T23:33:31.331Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-08T23:33:31.331Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-08T23:33:36.336Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-08T23:33:36.337Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-08T23:34:10.040Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-08T23:34:19.023Z] [INFO] [firewall] firewall engine ready
+[2026-08-08T23:34:19.075Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-08T23:34:19.075Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-08T23:34:21.728Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-08T23:34:24.079Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-08T23:34:24.079Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-08T23:34:26.732Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-08T23:34:26.747Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-08T23:41:38.739Z] [INFO] [firewall] firewall engine ready
+[2026-08-08T23:41:39.231Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-08T23:41:39.231Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-08T23:41:44.231Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-08T23:41:44.232Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-11T00:38:23.816Z] [INFO] [firewall] firewall engine ready
+[2026-08-11T00:38:23.926Z] [WARN] [firewall] sysfw: skipping OS firewall — tool not available (linux)
+[2026-08-11T00:38:23.926Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-11T00:38:28.929Z] [WARN] [firewall] upnp: no UPnP gateway responded — automatic port forwarding unavailable, manual router setup required
+[2026-08-11T00:38:28.929Z] [WARN] [firewall] upnp: automatic forwarding unavailable (no UPnP gateway responded) — forward ports manually on your router if needed
+[2026-08-12T01:58:13.170Z] [INFO] [firewall] firewall engine ready
+[2026-08-12T01:58:13.171Z] [INFO] [firewall] sysfw: applying 6 rule(s) via netsh on win32
+[2026-08-12T01:58:13.172Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-12T01:58:13.172Z] [INFO] [firewall] upnp: gateway found — requesting port mappings
+[2026-08-12T01:58:13.173Z] [INFO] [firewall] upnp: ✓ TCP/80 forwarded
+[2026-08-12T01:58:13.210Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T01:58:13.311Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T01:58:13.406Z] [INFO] [firewall] upnp: ✓ TCP/443 forwarded
+[2026-08-12T01:58:13.428Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTP (skipping)
+[2026-08-12T01:58:13.543Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTPS (skipping)
+[2026-08-12T01:58:13.663Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP (skipping)
+[2026-08-12T01:58:13.755Z] [INFO] [firewall] upnp: ✓ TCP/53 forwarded
+[2026-08-12T01:58:13.777Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP2 (skipping)
+[2026-08-12T01:58:13.894Z] [WARN] [firewall] sysfw: rule already exists — NEXUS UI (skipping)
+[2026-08-12T01:58:13.895Z] [INFO] [firewall] sysfw: OS firewall rules applied
+[2026-08-12T01:58:14.165Z] [INFO] [firewall] upnp: ✓ UDP/53 forwarded
+[2026-08-12T01:58:14.574Z] [INFO] [firewall] upnp: ✓ TCP/587 forwarded
+[2026-08-12T01:58:14.878Z] [INFO] [firewall] upnp: ✓ TCP/2525 forwarded
+[2026-08-12T01:58:15.135Z] [INFO] [firewall] upnp: all ports forwarded automatically — no router login needed
+[2026-08-12T02:01:09.236Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-12T02:01:09.787Z] [INFO] [firewall] upnp: gateway found — requesting port mappings
+[2026-08-12T02:01:09.806Z] [INFO] [firewall] upnp: ✓ TCP/80 forwarded
+[2026-08-12T02:01:10.094Z] [INFO] [firewall] upnp: ✓ TCP/443 forwarded
+[2026-08-12T02:01:10.368Z] [INFO] [firewall] upnp: ✓ TCP/53 forwarded
+[2026-08-12T02:01:10.648Z] [INFO] [firewall] upnp: ✓ UDP/53 forwarded
+[2026-08-12T02:01:10.928Z] [INFO] [firewall] upnp: ✓ TCP/587 forwarded
+[2026-08-12T02:01:11.274Z] [INFO] [firewall] upnp: ✓ TCP/2525 forwarded
+[2026-08-12T02:01:11.530Z] [INFO] [firewall] sysfw: applying 6 rule(s) via netsh on win32
+[2026-08-12T02:01:11.640Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T02:01:11.756Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T02:01:11.872Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTP (skipping)
+[2026-08-12T02:01:11.989Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTPS (skipping)
+[2026-08-12T02:01:12.106Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP (skipping)
+[2026-08-12T02:01:12.223Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP2 (skipping)
+[2026-08-12T02:01:12.339Z] [WARN] [firewall] sysfw: rule already exists — NEXUS UI (skipping)
+[2026-08-12T03:43:16.590Z] [INFO] [firewall] firewall engine ready
+[2026-08-12T03:43:16.591Z] [INFO] [firewall] sysfw: applying 6 rule(s) via netsh on win32
+[2026-08-12T03:43:16.592Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-12T03:43:16.592Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-12T03:43:16.633Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T03:43:16.634Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-12T03:43:16.657Z] [INFO] [firewall] upnp: gateway found — requesting port mappings
+[2026-08-12T03:43:16.670Z] [INFO] [firewall] upnp: gateway found — requesting port mappings
+[2026-08-12T03:43:16.679Z] [INFO] [firewall] upnp: ✓ TCP/80 forwarded
+[2026-08-12T03:43:16.680Z] [INFO] [firewall] upnp: gateway found — requesting port mappings
+[2026-08-12T03:43:16.726Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T03:43:16.843Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTP (skipping)
+[2026-08-12T03:43:16.852Z] [INFO] [firewall] upnp: ✓ TCP/53 forwarded
+[2026-08-12T03:43:16.853Z] [INFO] [firewall] upnp: ✓ TCP/53 forwarded
+[2026-08-12T03:43:16.960Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTPS (skipping)
+[2026-08-12T03:43:16.970Z] [INFO] [firewall] upnp: ✓ TCP/443 forwarded
+[2026-08-12T03:43:17.075Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP (skipping)
+[2026-08-12T03:43:17.165Z] [INFO] [firewall] upnp: ✓ UDP/53 forwarded
+[2026-08-12T03:43:17.169Z] [INFO] [firewall] upnp: ✓ UDP/53 forwarded
+[2026-08-12T03:43:17.193Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP2 (skipping)
+[2026-08-12T03:43:17.246Z] [INFO] [firewall] upnp: ✓ TCP/53 forwarded
+[2026-08-12T03:43:17.308Z] [WARN] [firewall] sysfw: rule already exists — NEXUS UI (skipping)
+[2026-08-12T03:43:17.308Z] [INFO] [firewall] sysfw: OS firewall rules applied
+[2026-08-12T03:43:17.415Z] [INFO] [firewall] upnp: DNS mapping corrected to real bound ports
+[2026-08-12T03:43:17.431Z] [INFO] [firewall] upnp: DNS mapping corrected to real bound ports
+[2026-08-12T03:43:17.526Z] [INFO] [firewall] upnp: ✓ UDP/53 forwarded
+[2026-08-12T03:43:17.793Z] [INFO] [firewall] upnp: ✓ TCP/587 forwarded
+[2026-08-12T03:43:18.074Z] [INFO] [firewall] upnp: ✓ TCP/2525 forwarded
+[2026-08-12T03:43:18.338Z] [INFO] [firewall] upnp: all ports forwarded automatically — no router login needed
+[2026-08-12T03:43:47.333Z] [INFO] [firewall] firewall engine ready
+[2026-08-12T03:43:47.334Z] [INFO] [firewall] sysfw: applying 6 rule(s) via netsh on win32
+[2026-08-12T03:43:47.335Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-12T03:43:47.335Z] [INFO] [firewall] upnp: gateway found — requesting port mappings
+[2026-08-12T03:43:47.336Z] [INFO] [firewall] upnp: ✓ TCP/80 forwarded
+[2026-08-12T03:43:47.337Z] [INFO] [firewall] upnp: discovering router gateway…
+[2026-08-12T03:43:47.391Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T03:43:47.493Z] [WARN] [firewall] sysfw: rule already exists — NEXUS DNS (skipping)
+[2026-08-12T03:43:47.609Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTP (skipping)
+[2026-08-12T03:43:47.615Z] [INFO] [firewall] upnp: ✓ TCP/443 forwarded
+[2026-08-12T03:43:47.616Z] [INFO] [firewall] upnp: gateway found — requesting port mappings
+[2026-08-12T03:43:47.725Z] [WARN] [firewall] sysfw: rule already exists — NEXUS HTTPS (skipping)
+[2026-08-12T03:43:47.842Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP (skipping)
+[2026-08-12T03:43:47.893Z] [INFO] [firewall] upnp: ✓ TCP/53 forwarded
+[2026-08-12T03:43:47.959Z] [WARN] [firewall] sysfw: rule already exists — NEXUS SMTP2 (skipping)
+[2026-08-12T03:43:48.045Z] [INFO] [firewall] upnp: ✓ TCP/53 forwarded
+[2026-08-12T03:43:48.076Z] [WARN] [firewall] sysfw: rule already exists — NEXUS UI (skipping)
+[2026-08-12T03:43:48.076Z] [INFO] [firewall] sysfw: OS firewall rules applied
+[2026-08-12T03:43:48.290Z] [INFO] [firewall] upnp: ✓ UDP/53 forwarded
+[2026-08-12T03:43:48.332Z] [INFO] [firewall] upnp: ✓ UDP/53 forwarded
+[2026-08-12T03:43:48.565Z] [INFO] [firewall] upnp: ✓ TCP/587 forwarded
+[2026-08-12T03:43:48.590Z] [INFO] [firewall] upnp: DNS mapping corrected to real bound ports
+[2026-08-12T03:43:48.849Z] [INFO] [firewall] upnp: ✓ TCP/2525 forwarded
+[2026-08-12T03:43:49.120Z] [INFO] [firewall] upnp: all ports forwarded automatically — no router login needed

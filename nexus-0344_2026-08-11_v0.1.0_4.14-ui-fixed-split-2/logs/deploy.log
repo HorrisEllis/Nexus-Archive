@@ -1,0 +1,253 @@
+[2026-08-07T08:34:39.988Z] [WARN] [deploy] /home/claude/nexus/engines/deploy.js:11
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]  * (release directories under sites/*/releases), and its own execution. It
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]                                               ^
+[2026-08-07T08:34:39.989Z] [WARN] [deploy] SyntaxError: Unexpected token ')'
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]     at wrapSafe (node:internal/modules/cjs/loader:1637:18)
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]     at Module._compile (node:internal/modules/cjs/loader:1679:20)
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]     at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]     at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]     at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-08-07T08:34:39.989Z] [WARN] [deploy]     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-08-07T08:34:39.990Z] [WARN] [deploy]     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-08-07T08:34:39.990Z] [WARN] [deploy]     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-08-07T08:34:39.990Z] [WARN] [deploy]     at node:internal/main/run_main_module:36:49
+[2026-08-07T08:34:39.994Z] [WARN] [deploy] Node.js v22.22.2
+[2026-08-07T08:34:41.040Z] [WARN] [deploy] /home/claude/nexus/engines/deploy.js:11
+[2026-08-07T08:34:41.040Z] [WARN] [deploy]  * (release directories under sites/*/releases), and its own execution. It
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]                                               ^
+[2026-08-07T08:34:41.041Z] [WARN] [deploy] SyntaxError: Unexpected token ')'
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at wrapSafe (node:internal/modules/cjs/loader:1637:18)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at Module._compile (node:internal/modules/cjs/loader:1679:20)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-08-07T08:34:41.041Z] [WARN] [deploy]     at node:internal/main/run_main_module:36:49
+[2026-08-07T08:34:41.041Z] [WARN] [deploy] Node.js v22.22.2
+[2026-08-07T08:34:43.128Z] [WARN] [deploy] /home/claude/nexus/engines/deploy.js:11
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]  * (release directories under sites/*/releases), and its own execution. It
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]                                               ^
+[2026-08-07T08:34:43.129Z] [WARN] [deploy] SyntaxError: Unexpected token ')'
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at wrapSafe (node:internal/modules/cjs/loader:1637:18)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at Module._compile (node:internal/modules/cjs/loader:1679:20)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at Object..js (node:internal/modules/cjs/loader:1838:10)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at Module.load (node:internal/modules/cjs/loader:1441:32)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at Function._load (node:internal/modules/cjs/loader:1263:12)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[2026-08-07T08:34:43.129Z] [WARN] [deploy]     at node:internal/main/run_main_module:36:49
+[2026-08-07T08:34:43.130Z] [WARN] [deploy] Node.js v22.22.2
+[2026-08-07T08:35:07.299Z] [INFO] [deploy] deploy engine ready
+[2026-08-07T08:35:07.301Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-07T08:35:09.647Z] [INFO] [deploy] deploy: test.local <- msiovzd9-e3420ea0 (3 files, 90B, mode=replace)
+[2026-08-07T08:35:24.024Z] [INFO] [deploy] deploy engine ready
+[2026-08-07T08:35:24.025Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-07T12:43:54.965Z] [INFO] [deploy] deploy engine ready
+[2026-08-07T12:43:54.970Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-07T12:44:00.420Z] [INFO] [deploy] deploy: test.local <- msixs00v-ed5ce29c (3 files, 90B, mode=replace)
+[2026-08-07T12:44:03.776Z] [INFO] [deploy] deploy: test.local <- msixs2m4-54adede9 (1 files, 11B, mode=replace)
+[2026-08-07T12:44:19.413Z] [INFO] [deploy] deploy: phpsite.local <- msixseoh-bf3cb7ce (2 files, 28B, mode=replace)
+[2026-08-07T12:46:50.759Z] [INFO] [deploy] deploy engine ready
+[2026-08-07T12:46:50.759Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-07T12:47:00.474Z] [INFO] [deploy] deploy: uitest.local <- msixvuyd-88257550 (3 files, 90B, mode=replace)
+[2026-08-07T12:47:32.920Z] [INFO] [deploy] deploy engine ready
+[2026-08-07T12:47:32.925Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-07T12:47:35.747Z] [INFO] [deploy] deploy: hv.local <- msixwm6a-b0dc2279 (3 files, 90B, mode=replace)
+[2026-08-07T12:48:47.454Z] [INFO] [deploy] deploy engine ready
+[2026-08-07T12:48:47.454Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-07T12:48:50.221Z] [INFO] [deploy] deploy: hv.local <- msixy7mz-26eb406d (3 files, 90B, mode=replace)
+[2026-08-07T12:48:50.833Z] [INFO] [deploy] deploy: hv.local <- msixy7s2-f092d140 (3000 files, 6000000B, mode=merge)
+[2026-08-07T12:48:55.264Z] [INFO] [deploy] deploy: hv.local <- msixyb27-855d8002 (3000 files, 6000000B, mode=merge)
+[2026-08-07T12:48:56.177Z] [INFO] [deploy] deploy: hv.local <- msixybnx-009b3ad1 (3000 files, 6000000B, mode=merge)
+[2026-08-08T23:32:15.717Z] [INFO] [deploy] deploy engine ready
+[2026-08-08T23:32:15.721Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-08T23:32:23.801Z] [INFO] [deploy] deploy: hc.local <- msl0dope-f955845b (3 files, 90B, mode=replace, health=ok:200)
+[2026-08-08T23:32:28.719Z] [WARN] [deploy] deploy: hc.local <- msl0dsi5-4062d798 FAILED health check (403) — auto-rolled back to msl0dope-f955845b
+[2026-08-08T23:32:33.959Z] [WARN] [deploy] deploy: hc2.local <- msl0dwkf-c9321ab4 FAILED health check (403) — auto-rolled back to legacy-msl0dwkf-d0dff575
+[2026-08-08T23:41:40.733Z] [INFO] [deploy] deploy engine ready
+[2026-08-08T23:41:40.742Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-11T00:38:23.969Z] [INFO] [deploy] deploy engine ready
+[2026-08-11T00:38:23.978Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-12T01:58:13.210Z] [INFO] [deploy] deploy engine ready
+[2026-08-12T01:58:13.211Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-12T03:43:16.636Z] [INFO] [deploy] deploy engine ready
+[2026-08-12T03:43:16.636Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:16.917Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:17.230Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:17.541Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:17.853Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:18.166Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:18.478Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:18.793Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:19.106Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:19.419Z] [WARN] [deploy] (node:9600) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.420Z] [WARN] [deploy] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.421Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:19.730Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:20.042Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:20.346Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:20.652Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:20.964Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:21.276Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:21.588Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:21.901Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:22.214Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:22.533Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:22.840Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:23.151Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:23.464Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:23.776Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:24.089Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:24.402Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:24.713Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:25.027Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:25.327Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:25.635Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:25.947Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:26.254Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:26.563Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:26.872Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:27.187Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:27.498Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:27.810Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:28.121Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:28.420Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:28.733Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:29.044Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:29.356Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:29.669Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:29.983Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:30.293Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:30.606Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:30.921Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:31.231Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:31.541Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:31.854Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:32.169Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:32.495Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:32.809Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:33.124Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:33.435Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:33.745Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:34.060Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:34.372Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:34.684Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:35.008Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:35.311Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:35.621Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:35.936Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:36.247Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:36.558Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:36.872Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:37.195Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:37.498Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:37.806Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:38.123Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:38.434Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:38.744Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:39.047Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:39.354Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:39.667Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:39.980Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:40.295Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:40.607Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:40.917Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:41.245Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:41.575Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:41.896Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:42.203Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:42.515Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:42.824Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:43.136Z] [WARN] [deploy] deploy: port 4010 in use — trying :4011
+[2026-08-12T03:43:43.880Z] [INFO] [deploy] deploy engine on :4010
+[2026-08-12T03:43:43.881Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.881Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.882Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.883Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.884Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.886Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.887Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.887Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.888Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.889Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.890Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.890Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.891Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.892Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.893Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.894Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.894Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.895Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.896Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.897Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.898Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.899Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.900Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.903Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.903Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.904Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.905Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.906Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.906Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.907Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.908Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.909Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.909Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.910Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.911Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.912Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.913Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.914Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.915Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.916Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.918Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.919Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.919Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.920Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.921Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.922Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.923Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.923Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.924Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.925Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.926Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.926Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.927Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.928Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.929Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.929Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.930Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.931Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.932Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.934Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.935Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.936Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.937Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.937Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.938Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.939Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.940Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.941Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.941Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.942Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.943Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.943Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.944Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.945Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.946Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.947Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.948Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.951Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.952Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.953Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.954Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.955Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.955Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.956Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.957Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:43.958Z] [INFO] [deploy] deploy: on :4011
+[2026-08-12T03:43:47.372Z] [INFO] [deploy] deploy engine ready
+[2026-08-12T03:43:47.375Z] [INFO] [deploy] deploy engine on :4010

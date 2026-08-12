@@ -1,0 +1,182 @@
+[2026-08-08T23:41:39.859Z] [INFO] [billing] billing engine ready
+[2026-08-08T23:41:39.904Z] [INFO] [billing] billing engine on :4003
+[2026-08-12T01:58:13.189Z] [INFO] [billing] billing engine ready
+[2026-08-12T01:58:13.189Z] [INFO] [billing] billing engine on :4003
+[2026-08-12T03:43:16.601Z] [INFO] [billing] billing engine ready
+[2026-08-12T03:43:16.602Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:16.822Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:17.134Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:17.447Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:17.760Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:18.085Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:18.400Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:18.714Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:19.042Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:19.372Z] [WARN] [billing] (node:18128) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.373Z] [WARN] [billing] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.374Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:19.681Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:19.998Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:20.310Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:20.623Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:20.934Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:21.246Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:21.554Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:21.858Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:22.167Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:22.483Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:22.792Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:23.104Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:23.418Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:23.732Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:24.043Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:24.355Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:24.666Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:24.981Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:25.292Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:25.604Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:25.934Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:26.253Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:26.563Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:26.871Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:27.183Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:27.494Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:27.806Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:28.119Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:28.423Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:28.729Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:29.045Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:29.357Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:29.670Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:29.982Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:30.294Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:30.605Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:30.918Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:31.229Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:31.541Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:31.857Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:32.167Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:32.492Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:32.807Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:33.126Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:33.436Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:33.746Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:34.058Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:34.372Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:34.683Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:35.007Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:35.307Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:35.621Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:35.932Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:36.250Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:36.557Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:36.872Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:37.194Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:37.499Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:37.809Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:38.123Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:38.434Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:38.746Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:39.050Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:39.355Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:39.670Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:39.978Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:40.293Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:40.605Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:40.919Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:41.248Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:41.574Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:41.894Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:42.202Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:42.513Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:42.827Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:43.139Z] [WARN] [billing] port 4003 in use — trying :4004
+[2026-08-12T03:43:43.722Z] [INFO] [billing] billing engine on :4003
+[2026-08-12T03:43:43.723Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.724Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.725Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.726Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.727Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.727Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.728Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.732Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.732Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.733Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.734Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.735Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.735Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.736Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.737Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.737Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.738Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.739Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.740Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.741Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.742Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.743Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.743Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.744Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.745Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.746Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.747Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.748Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.748Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.750Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.750Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.751Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.752Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.753Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.753Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.754Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.755Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.756Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.757Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.757Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.758Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.761Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.762Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.763Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.764Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.765Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.766Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.766Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.767Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.768Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.769Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.769Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.770Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.771Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.772Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.773Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.774Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.774Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.777Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.778Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.779Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.779Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.780Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.781Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.782Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.782Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.783Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.784Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.785Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.786Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.787Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.787Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.788Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.789Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.790Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.790Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.793Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.793Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.794Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.795Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.796Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.797Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.797Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.798Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.799Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:43.800Z] [INFO] [billing] on :4004
+[2026-08-12T03:43:47.350Z] [INFO] [billing] billing engine ready
+[2026-08-12T03:43:47.351Z] [INFO] [billing] billing engine on :4003

@@ -1,0 +1,186 @@
+[2026-08-08T23:41:40.327Z] [INFO] [monitor] monitor engine starting
+[2026-08-08T23:41:40.327Z] [INFO] [monitor] checking every 30s (first check in 15s)
+[2026-08-08T23:41:40.327Z] [INFO] [monitor] monitor engine on :4004
+[2026-08-12T01:58:13.190Z] [INFO] [monitor] monitor engine starting
+[2026-08-12T01:58:13.191Z] [INFO] [monitor] checking every 30s (first check in 15s)
+[2026-08-12T01:58:13.191Z] [INFO] [monitor] monitor engine on :4004
+[2026-08-12T03:43:16.603Z] [INFO] [monitor] monitor engine starting
+[2026-08-12T03:43:16.603Z] [INFO] [monitor] checking every 30s (first check in 15s)
+[2026-08-12T03:43:16.605Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:16.837Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:17.150Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:17.463Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:17.776Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:18.084Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:18.399Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:18.713Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:19.040Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:19.369Z] [WARN] [monitor] (node:8268) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.370Z] [WARN] [monitor] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.374Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:19.683Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:19.997Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:20.308Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:20.620Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:20.933Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:21.244Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:21.556Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:21.856Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:22.169Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:22.481Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:22.792Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:23.105Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:23.419Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:23.733Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:24.042Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:24.356Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:24.667Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:24.980Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:25.292Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:25.606Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:25.931Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:26.251Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:26.561Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:26.874Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:27.185Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:27.498Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:27.809Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:28.122Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:28.419Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:28.731Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:29.041Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:29.358Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:29.671Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:29.980Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:30.295Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:30.606Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:30.920Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:31.232Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:31.530Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:31.830Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:32.134Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:32.447Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:32.758Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:33.058Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:33.364Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:33.665Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:33.981Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:34.291Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:34.604Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:34.915Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:35.228Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:35.556Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:35.868Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:36.184Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:36.495Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:36.807Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:37.120Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:37.434Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:37.742Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:38.072Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:38.401Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:38.725Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:39.027Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:39.338Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:39.651Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:39.962Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:40.277Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:40.589Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:40.920Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:41.246Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:41.572Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:41.898Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:42.200Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:42.515Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:42.826Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:43.142Z] [WARN] [monitor] port 4004 in use — trying :4005
+[2026-08-12T03:43:44.115Z] [INFO] [monitor] monitor engine on :4004
+[2026-08-12T03:43:44.116Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.117Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.117Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.120Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.120Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.121Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.122Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.123Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.124Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.125Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.126Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.126Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.127Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.128Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.129Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.129Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.130Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.131Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.132Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.133Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.134Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.137Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.137Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.138Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.139Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.140Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.141Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.142Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.143Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.144Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.145Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.146Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.147Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.148Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.149Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.151Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.152Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.153Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.153Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.154Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.155Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.156Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.156Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.157Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.158Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.158Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.159Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.160Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.161Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.161Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.162Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.163Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.164Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.165Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.167Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.167Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.168Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.169Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.170Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.170Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.171Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.172Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.173Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.174Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.174Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.175Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.176Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.177Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.177Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.178Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.179Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.180Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.181Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.184Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.185Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.186Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.186Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.187Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.188Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.189Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.189Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.190Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.191Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.192Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.192Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:44.193Z] [INFO] [monitor] on :4005
+[2026-08-12T03:43:47.352Z] [INFO] [monitor] monitor engine starting
+[2026-08-12T03:43:47.353Z] [INFO] [monitor] checking every 30s (first check in 15s)
+[2026-08-12T03:43:47.354Z] [INFO] [monitor] monitor engine on :4004

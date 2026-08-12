@@ -1,0 +1,186 @@
+[2026-08-08T23:41:40.167Z] [INFO] [catalog] catalog engine ready — 19 apps available
+[2026-08-08T23:41:40.175Z] [INFO] [catalog] apps: wordpress, ghost, nextcloud, plausible, gitea, n8n, vaultwarden, wireguard, phantom_relay, git_deploy, crawler, botframework, apiproxy, uptimesaas, linkshortener, filedrop, pastebin, pricemonitor, screenshotapi
+[2026-08-08T23:41:40.175Z] [INFO] [catalog] catalog engine on :4005
+[2026-08-12T01:58:13.194Z] [INFO] [catalog] catalog engine ready — 19 apps available
+[2026-08-12T01:58:13.195Z] [INFO] [catalog] apps: wordpress, ghost, nextcloud, plausible, gitea, n8n, vaultwarden, wireguard, phantom_relay, git_deploy, crawler, botframework, apiproxy, uptimesaas, linkshortener, filedrop, pastebin, pricemonitor, screenshotapi
+[2026-08-12T01:58:13.196Z] [INFO] [catalog] catalog engine on :4005
+[2026-08-12T03:43:16.608Z] [INFO] [catalog] catalog engine ready — 19 apps available
+[2026-08-12T03:43:16.609Z] [INFO] [catalog] apps: wordpress, ghost, nextcloud, plausible, gitea, n8n, vaultwarden, wireguard, phantom_relay, git_deploy, crawler, botframework, apiproxy, uptimesaas, linkshortener, filedrop, pastebin, pricemonitor, screenshotapi
+[2026-08-12T03:43:16.610Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:16.855Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:17.166Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:17.479Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:17.792Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:18.104Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:18.415Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:18.729Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:19.041Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:19.373Z] [WARN] [catalog] (node:17936) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.373Z] [WARN] [catalog] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.376Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:19.683Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:19.996Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:20.310Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:20.622Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:20.934Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:21.244Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:21.556Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:21.856Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:22.169Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:22.479Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:22.793Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:23.104Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:23.419Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:23.733Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:24.044Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:24.355Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:24.656Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:24.964Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:25.276Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:25.604Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:25.933Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:26.254Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:26.559Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:26.873Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:27.184Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:27.498Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:27.808Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:28.123Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:28.422Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:28.732Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:29.042Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:29.357Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:29.667Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:29.982Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:30.293Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:30.605Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:30.916Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:31.231Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:31.544Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:31.857Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:32.166Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:32.495Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:32.810Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:33.122Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:33.434Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:33.744Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:34.059Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:34.371Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:34.683Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:35.009Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:35.310Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:35.623Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:35.934Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:36.246Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:36.556Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:36.870Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:37.194Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:37.500Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:37.808Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:38.121Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:38.434Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:38.748Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:39.047Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:39.355Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:39.668Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:39.980Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:40.296Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:40.604Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:40.920Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:41.247Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:41.574Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:41.894Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:42.198Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:42.511Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:42.825Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:43.141Z] [WARN] [catalog] port 4005 in use — trying :4006
+[2026-08-12T03:43:44.194Z] [INFO] [catalog] catalog engine on :4005
+[2026-08-12T03:43:44.195Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.196Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.197Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.200Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.200Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.201Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.202Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.203Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.203Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.204Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.205Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.206Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.207Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.208Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.208Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.209Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.210Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.211Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.212Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.214Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.215Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.215Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.216Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.216Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.217Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.218Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.219Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.219Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.220Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.221Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.222Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.222Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.223Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.224Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.225Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.226Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.226Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.227Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.228Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.231Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.232Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.233Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.234Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.234Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.235Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.236Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.237Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.238Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.239Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.240Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.241Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.242Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.243Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.244Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.247Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.247Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.248Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.248Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.249Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.250Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.250Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.251Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.252Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.253Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.254Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.254Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.255Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.256Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.257Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.257Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.258Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.259Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.260Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.262Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.263Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.263Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.264Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.265Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.266Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.267Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.268Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.268Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.269Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.270Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.271Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:44.272Z] [INFO] [catalog] on :4006
+[2026-08-12T03:43:47.359Z] [INFO] [catalog] catalog engine ready — 19 apps available
+[2026-08-12T03:43:47.359Z] [INFO] [catalog] apps: wordpress, ghost, nextcloud, plausible, gitea, n8n, vaultwarden, wireguard, phantom_relay, git_deploy, crawler, botframework, apiproxy, uptimesaas, linkshortener, filedrop, pastebin, pricemonitor, screenshotapi
+[2026-08-12T03:43:47.360Z] [INFO] [catalog] catalog engine on :4005

@@ -1,0 +1,17 @@
+{
+  "seq": 3,
+  "rows": [
+    {
+      "_id": 3,
+      "_ts": 1786500018989,
+      "domain": "anonymoussservers.info",
+      "tenantId": "default",
+      "addedAt": 1786500018989,
+      "nameservers": [
+        "ns1.anonymousservers.info",
+        "ns2.anonymousservers.info"
+      ],
+      "status": "active"
+    }
+  ]
+}

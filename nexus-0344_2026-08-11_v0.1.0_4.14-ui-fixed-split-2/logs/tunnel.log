@@ -1,0 +1,222 @@
+[2026-08-08T23:41:40.559Z] [INFO] [tunnel] tunnel engine ready
+[2026-08-08T23:41:40.591Z] [INFO] [tunnel] tunnel engine on :7801
+[2026-08-08T23:41:43.543Z] [INFO] [tunnel] tunnel: probing strategies…
+[2026-08-08T23:41:43.543Z] [INFO] [tunnel] tunnel: trying direct
+[2026-08-08T23:41:43.630Z] [INFO] [tunnel] tunnel: trying upnp
+[2026-08-08T23:41:48.635Z] [INFO] [tunnel] tunnel: trying cloudflare
+[2026-08-08T23:41:48.635Z] [INFO] [tunnel] tunnel: trying cloudflare-quick
+[2026-08-08T23:41:48.639Z] [INFO] [tunnel] tunnel: trying ngrok
+[2026-08-08T23:41:48.639Z] [INFO] [tunnel] tunnel: trying localhost.run
+[2026-08-08T23:41:48.643Z] [INFO] [tunnel] tunnel: trying serveo
+[2026-08-08T23:41:48.645Z] [WARN] [tunnel] tunnel: all strategies failed — will retry
+[2026-08-08T23:42:10.541Z] [INFO] [tunnel] tunnel: probing strategies…
+[2026-08-08T23:42:10.541Z] [INFO] [tunnel] tunnel: trying direct
+[2026-08-08T23:42:10.586Z] [INFO] [tunnel] tunnel: trying upnp
+[2026-08-12T01:58:13.205Z] [INFO] [tunnel] tunnel engine ready
+[2026-08-12T01:58:13.205Z] [INFO] [tunnel] tunnel engine on :7801
+[2026-08-12T01:58:16.167Z] [INFO] [tunnel] tunnel: probing strategies…
+[2026-08-12T01:58:16.167Z] [INFO] [tunnel] tunnel: trying direct
+[2026-08-12T01:58:20.432Z] [INFO] [tunnel] tunnel: trying upnp
+[2026-08-12T01:58:25.435Z] [INFO] [tunnel] tunnel: trying cloudflare
+[2026-08-12T01:58:25.435Z] [INFO] [tunnel] tunnel: trying cloudflare-quick
+[2026-08-12T01:58:33.006Z] [INFO] [tunnel] tunnel: cloudflare-quick → https://circles-width-lifetime-posters.trycloudflare.com
+[2026-08-12T01:58:33.007Z] [INFO] [tunnel] tunnel ready: https://circles-width-lifetime-posters.trycloudflare.com via cloudflare-quick
+[2026-08-12T01:58:33.267Z] [WARN] [tunnel] (node:20720) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [ChildProcess]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T01:58:33.268Z] [WARN] [tunnel] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:16.630Z] [INFO] [tunnel] tunnel engine ready
+[2026-08-12T03:43:16.631Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:16.885Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:17.198Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:17.509Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:17.838Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:18.166Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:18.479Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:18.794Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:19.105Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:19.420Z] [WARN] [tunnel] (node:7596) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.421Z] [WARN] [tunnel] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.422Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:19.603Z] [INFO] [tunnel] tunnel: probing strategies…
+[2026-08-12T03:43:19.603Z] [INFO] [tunnel] tunnel: trying direct
+[2026-08-12T03:43:19.731Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:20.029Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:20.346Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:20.654Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:20.962Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:21.277Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:21.587Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:21.902Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:22.213Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:22.532Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:22.838Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:23.152Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:23.465Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:23.776Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:24.088Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:24.402Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:24.448Z] [INFO] [tunnel] tunnel: trying upnp
+[2026-08-12T03:43:24.701Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:25.012Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:25.324Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:25.635Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:25.946Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:26.254Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:26.560Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:26.872Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:27.186Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:27.497Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:27.811Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:28.121Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:28.419Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:28.734Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:29.043Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:29.355Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:29.462Z] [INFO] [tunnel] tunnel: trying cloudflare
+[2026-08-12T03:43:29.463Z] [INFO] [tunnel] tunnel: trying cloudflare-quick
+[2026-08-12T03:43:29.672Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:29.983Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:30.290Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:30.608Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:30.920Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:31.232Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:31.542Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:31.855Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:32.168Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:32.496Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:32.809Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:33.125Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:33.436Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:33.554Z] [INFO] [tunnel] tunnel: cloudflare-quick → https://random-achievement-indicates-praise.trycloudflare.com
+[2026-08-12T03:43:33.554Z] [INFO] [tunnel] tunnel ready: https://random-achievement-indicates-praise.trycloudflare.com via cloudflare-quick
+[2026-08-12T03:43:33.711Z] [WARN] [tunnel] (node:7596) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [ChildProcess]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:33.744Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:34.058Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:34.373Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:34.684Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:35.010Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:35.308Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:35.622Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:35.936Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:36.250Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:36.557Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:36.870Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:37.195Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:37.499Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:37.810Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:38.122Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:38.433Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:38.747Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:39.049Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:39.353Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:39.667Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:39.981Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:40.293Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:40.605Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:40.915Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:41.244Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:41.573Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:41.895Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:42.201Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:42.512Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:42.824Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:43.142Z] [WARN] [tunnel] tunnel: connection lost — reconnecting…
+[2026-08-12T03:43:43.140Z] [WARN] [tunnel] port 7801 in use — trying :7802
+[2026-08-12T03:43:43.567Z] [INFO] [tunnel] tunnel engine on :7801
+[2026-08-12T03:43:43.568Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.569Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.570Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.571Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.574Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.575Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.575Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.576Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.577Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.578Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.578Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.579Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.580Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.581Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.581Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.582Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.583Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.584Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.585Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.585Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.586Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.587Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.589Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.590Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.591Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.592Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.592Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.593Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.594Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.595Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.596Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.596Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.597Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.599Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.599Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.600Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.601Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.602Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.602Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.604Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.605Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.606Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.606Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.607Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.608Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.609Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.609Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.610Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.611Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.612Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.612Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.613Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.614Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.614Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.616Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.616Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.617Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.618Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.620Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.621Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.622Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.622Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.623Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.624Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.624Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.625Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.626Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.627Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.627Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.628Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.629Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.630Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.630Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.631Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.632Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.633Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.633Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.634Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.636Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.637Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.638Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.638Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.639Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.640Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.641Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:43.641Z] [INFO] [tunnel] on :7802
+[2026-08-12T03:43:44.985Z] [WARN] [tunnel] tunnel: connection lost — reconnecting…
+[2026-08-12T03:43:47.368Z] [INFO] [tunnel] tunnel engine ready
+[2026-08-12T03:43:47.369Z] [INFO] [tunnel] tunnel engine on :7801
+[2026-08-12T03:43:50.340Z] [INFO] [tunnel] tunnel: probing strategies…
+[2026-08-12T03:43:50.341Z] [INFO] [tunnel] tunnel: trying direct
+[2026-08-12T03:43:54.529Z] [INFO] [tunnel] tunnel: trying upnp
+[2026-08-12T03:43:59.544Z] [INFO] [tunnel] tunnel: trying cloudflare
+[2026-08-12T03:43:59.544Z] [INFO] [tunnel] tunnel: trying cloudflare-quick
+[2026-08-12T03:44:07.140Z] [INFO] [tunnel] tunnel: cloudflare-quick → https://virgin-youth-poll-interpretation.trycloudflare.com
+[2026-08-12T03:44:07.141Z] [INFO] [tunnel] tunnel ready: https://virgin-youth-poll-interpretation.trycloudflare.com via cloudflare-quick
+[2026-08-12T03:44:07.181Z] [WARN] [tunnel] (node:18744) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [ChildProcess]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:44:07.182Z] [WARN] [tunnel] (Use `node --trace-warnings ...` to show where the warning was created)

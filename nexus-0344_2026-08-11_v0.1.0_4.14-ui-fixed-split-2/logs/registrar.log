@@ -1,0 +1,187 @@
+[2026-08-08T23:41:40.259Z] [INFO] [registrar] registrar engine ready
+[2026-08-08T23:41:40.327Z] [INFO] [registrar] registrar engine on :4007
+[2026-08-09T00:08:27.763Z] [INFO] [registrar] registrar engine ready
+[2026-08-09T00:08:27.819Z] [INFO] [registrar] registrar engine on :4007
+[2026-08-09T00:08:30.098Z] [INFO] [registrar] domain added: realcustomer.com → tenant tenant1 (zone provisioned)
+[2026-08-09T00:08:37.524Z] [INFO] [registrar] domain added: realcustomer.com → tenant tenant1 (zone provisioned)
+[2026-08-12T01:58:13.198Z] [INFO] [registrar] registrar engine ready
+[2026-08-12T01:58:13.199Z] [INFO] [registrar] registrar engine on :4007
+[2026-08-12T02:00:18.990Z] [INFO] [registrar] domain added: anonymoussservers.info → tenant default (zone provisioned)
+[2026-08-12T03:43:16.610Z] [INFO] [registrar] registrar engine ready
+[2026-08-12T03:43:16.611Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:16.869Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:17.182Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:17.495Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:17.807Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:18.120Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:18.431Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:18.745Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:19.057Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:19.370Z] [WARN] [registrar] (node:17276) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 listening listeners added to [Server]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+[2026-08-12T03:43:19.371Z] [WARN] [registrar] (Use `node --trace-warnings ...` to show where the warning was created)
+[2026-08-12T03:43:19.375Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:19.683Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:19.997Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:20.309Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:20.621Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:20.931Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:21.246Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:21.557Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:21.857Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:22.168Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:22.482Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:22.791Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:23.105Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:23.417Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:23.732Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:24.044Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:24.357Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:24.665Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:24.982Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:25.282Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:25.605Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:25.932Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:26.255Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:26.561Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:26.873Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:27.184Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:27.496Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:27.807Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:28.120Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:28.421Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:28.733Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:29.043Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:29.354Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:29.670Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:29.981Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:30.291Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:30.604Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:30.919Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:31.230Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:31.543Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:31.856Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:32.168Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:32.494Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:32.807Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:33.124Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:33.432Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:33.743Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:34.057Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:34.369Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:34.685Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:35.007Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:35.310Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:35.620Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:35.934Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:36.247Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:36.559Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:36.871Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:37.196Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:37.500Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:37.807Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:38.124Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:38.433Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:38.745Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:39.049Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:39.352Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:39.668Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:39.981Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:40.295Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:40.604Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:40.918Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:41.245Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:41.576Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:41.894Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:42.202Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:42.515Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:42.826Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:43.135Z] [WARN] [registrar] port 4007 in use — trying :4008
+[2026-08-12T03:43:43.801Z] [INFO] [registrar] registrar engine on :4007
+[2026-08-12T03:43:43.802Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.802Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.803Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.804Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.805Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.805Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.808Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.809Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.810Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.811Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.812Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.812Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.813Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.814Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.815Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.816Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.816Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.817Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.818Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.819Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.819Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.820Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.821Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.822Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.824Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.824Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.825Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.826Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.827Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.827Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.828Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.829Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.830Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.831Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.832Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.833Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.834Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.834Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.835Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.836Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.837Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.837Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.840Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.840Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.841Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.842Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.843Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.843Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.844Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.845Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.846Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.847Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.848Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.849Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.850Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.851Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.851Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.852Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.855Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.856Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.857Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.858Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.858Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.859Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.860Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.861Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.861Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.862Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.863Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.864Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.865Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.865Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.866Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.867Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.870Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.871Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.871Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.872Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.873Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.874Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.875Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.876Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.876Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.877Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.878Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:43.879Z] [INFO] [registrar] on :4008
+[2026-08-12T03:43:47.362Z] [INFO] [registrar] registrar engine ready
+[2026-08-12T03:43:47.363Z] [INFO] [registrar] registrar engine on :4007

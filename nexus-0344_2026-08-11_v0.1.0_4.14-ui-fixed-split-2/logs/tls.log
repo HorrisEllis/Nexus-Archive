@@ -1,0 +1,113 @@
+[2026-08-08T22:27:29.680Z] [INFO] [tls] tls engine starting
+[2026-08-08T22:27:29.690Z] [INFO] [tls] issuing ACME cert for anonymousservers.info
+[2026-08-08T22:27:29.797Z] [INFO] [tls] renewal loop: daily
+[2026-08-08T22:27:29.802Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-08T22:27:30.034Z] [ERROR] [tls] ACME failed for anonymousservers.info: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-08T22:27:30.208Z] [INFO] [tls] self-signed cert generated: anonymousservers.info
+[2026-08-08T22:27:30.208Z] [INFO] [tls] issuing ACME cert for *.anonymousservers.info
+[2026-08-08T22:27:30.212Z] [ERROR] [tls] ACME failed for *.anonymousservers.info: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-08T22:27:30.301Z] [INFO] [tls] self-signed cert generated: *.anonymousservers.info
+[2026-08-08T22:27:43.189Z] [INFO] [tls] issuing ACME cert for phase5test.local
+[2026-08-08T22:27:43.225Z] [ERROR] [tls] ACME failed for phase5test.local: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-08T22:27:43.569Z] [INFO] [tls] self-signed cert generated: phase5test.local
+[2026-08-08T23:33:31.180Z] [INFO] [tls] tls engine starting
+[2026-08-08T23:33:31.434Z] [INFO] [tls] anonymousservers.info: cert valid, 364 days left
+[2026-08-08T23:33:31.491Z] [INFO] [tls] *.anonymousservers.info: cert valid, 364 days left
+[2026-08-08T23:33:31.555Z] [INFO] [tls] phase5test.local: cert valid, 364 days left
+[2026-08-08T23:33:31.555Z] [INFO] [tls] renewal loop: daily
+[2026-08-08T23:33:31.556Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-08T23:33:49.399Z] [INFO] [tls] issuing ACME cert for tlstest.local
+[2026-08-08T23:33:49.614Z] [ERROR] [tls] ACME failed for tlstest.local: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-08T23:33:49.783Z] [INFO] [tls] self-signed cert generated: tlstest.local
+[2026-08-08T23:34:19.023Z] [INFO] [tls] tls engine starting
+[2026-08-08T23:34:19.170Z] [INFO] [tls] anonymousservers.info: cert valid, 364 days left
+[2026-08-08T23:34:19.227Z] [INFO] [tls] *.anonymousservers.info: cert valid, 364 days left
+[2026-08-08T23:34:19.289Z] [INFO] [tls] phase5test.local: cert valid, 364 days left
+[2026-08-08T23:34:19.347Z] [INFO] [tls] tlstest.local: cert valid, 364 days left
+[2026-08-08T23:34:19.348Z] [INFO] [tls] renewal loop: daily
+[2026-08-08T23:34:19.349Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-08T23:41:38.879Z] [INFO] [tls] tls engine starting
+[2026-08-08T23:41:40.827Z] [INFO] [tls] anonymousservers.info: cert valid, 364 days left
+[2026-08-08T23:41:40.895Z] [INFO] [tls] *.anonymousservers.info: cert valid, 364 days left
+[2026-08-08T23:41:40.896Z] [INFO] [tls] issuing ACME cert for phase5test.local
+[2026-08-08T23:41:40.914Z] [INFO] [tls] renewal loop: daily
+[2026-08-08T23:41:40.918Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-08T23:41:41.164Z] [ERROR] [tls] ACME failed for phase5test.local: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-08T23:41:41.494Z] [INFO] [tls] self-signed cert generated: phase5test.local
+[2026-08-08T23:41:41.494Z] [INFO] [tls] issuing ACME cert for tlstest.local
+[2026-08-08T23:41:41.500Z] [ERROR] [tls] ACME failed for tlstest.local: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-08T23:41:41.675Z] [INFO] [tls] self-signed cert generated: tlstest.local
+[2026-08-09T00:08:27.720Z] [INFO] [tls] tls engine starting
+[2026-08-09T00:08:27.965Z] [INFO] [tls] anonymousservers.info: cert valid, 364 days left
+[2026-08-09T00:08:28.032Z] [INFO] [tls] *.anonymousservers.info: cert valid, 364 days left
+[2026-08-09T00:08:28.096Z] [INFO] [tls] phase5test.local: cert valid, 364 days left
+[2026-08-09T00:08:28.153Z] [INFO] [tls] tlstest.local: cert valid, 364 days left
+[2026-08-09T00:08:28.154Z] [INFO] [tls] renewal loop: daily
+[2026-08-09T00:08:28.154Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-09T00:08:30.095Z] [INFO] [tls] issuing ACME cert for realcustomer.com
+[2026-08-09T00:08:30.146Z] [INFO] [tls] issuing ACME cert for *.realcustomer.com
+[2026-08-09T00:08:30.343Z] [ERROR] [tls] ACME failed for *.realcustomer.com: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-09T00:08:30.494Z] [INFO] [tls] self-signed cert generated: *.realcustomer.com
+[2026-08-09T00:08:30.495Z] [ERROR] [tls] ACME failed for realcustomer.com: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-09T00:08:30.765Z] [INFO] [tls] self-signed cert generated: realcustomer.com
+[2026-08-09T00:08:37.521Z] [INFO] [tls] issuing ACME cert for realcustomer.com
+[2026-08-09T00:08:37.541Z] [INFO] [tls] issuing ACME cert for *.realcustomer.com
+[2026-08-09T00:08:37.556Z] [ERROR] [tls] ACME failed for realcustomer.com: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-09T00:08:37.594Z] [ERROR] [tls] ACME failed for *.realcustomer.com: Unexpected token 'H', "Host not i"... is not valid JSON — using self-signed fallback
+[2026-08-11T00:38:23.822Z] [INFO] [tls] tls engine starting
+[2026-08-11T00:38:24.055Z] [INFO] [tls] anonymousservers.info: cert valid, 362 days left
+[2026-08-11T00:38:24.108Z] [INFO] [tls] *.anonymousservers.info: cert valid, 362 days left
+[2026-08-11T00:38:24.166Z] [INFO] [tls] phase5test.local: cert valid, 362 days left
+[2026-08-11T00:38:24.218Z] [INFO] [tls] tlstest.local: cert valid, 362 days left
+[2026-08-11T00:38:24.281Z] [INFO] [tls] realcustomer.com: cert valid, 362 days left
+[2026-08-11T00:38:24.341Z] [INFO] [tls] *.realcustomer.com: cert valid, 362 days left
+[2026-08-11T00:38:24.343Z] [INFO] [tls] renewal loop: daily
+[2026-08-11T00:38:24.343Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-12T01:58:13.161Z] [INFO] [tls] tls engine starting
+[2026-08-12T01:58:13.162Z] [INFO] [tls] issuing ACME cert for anonymousservers.info
+[2026-08-12T01:58:13.163Z] [INFO] [tls] renewal loop: daily
+[2026-08-12T01:58:13.163Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-12T01:58:17.134Z] [INFO] [tls] ACME polling: pending (attempt 1)
+[2026-08-12T01:58:20.309Z] [INFO] [tls] ACME polling: pending (attempt 2)
+[2026-08-12T01:58:23.483Z] [INFO] [tls] ACME polling: pending (attempt 3)
+[2026-08-12T01:58:26.658Z] [ERROR] [tls] ACME failed for anonymousservers.info: ACME challenge invalid: {"identifier":{"type":"dns","value":"anonymousservers.info"},"status":"invalid","expires":"2026-08-19T01:58:13Z","challenges":[{"type":"http-01","url":"https://acme-v02.api.letsencrypt.org/acme/chall/3622673921/757858398241/ZwiA6g","status":"invalid","validated":"2026-08-12T01:58:14Z","error":{"type":"urn:ietf:params:acme:error:connection","detail":"24.21.239.115: Fetching http://anonymousservers.info/.well-known/acme-challenge/ETdeDevYsSu_1sSRqrJK5UO25UPHQtJpfpcEsy4dBJ4: Timeout during connect (likely firewall problem)","status":400},"token":"ETdeDevYsSu_1sSRqrJK5UO25UPHQtJpfpcEsy4dBJ4","validationRecord":[{"url":"http://anonymousservers.info/.well-known/acme-challenge/ETdeDevYsSu_1sSRqrJK5UO25UPHQtJpfpcEsy4dBJ4","hostname":"anonymousservers.info","port":"80","addressesResolved":["24.21.239.115"],"addressUsed":"24.21.239.115"}]}]} — using self-signed fallback
+[2026-08-12T01:58:26.679Z] [INFO] [tls] issuing ACME cert for *.anonymousservers.info
+[2026-08-12T01:58:27.217Z] [ERROR] [tls] ACME failed for *.anonymousservers.info: no http-01 challenge available — using self-signed fallback
+[2026-08-12T02:00:18.990Z] [INFO] [tls] issuing ACME cert for anonymoussservers.info
+[2026-08-12T02:00:18.992Z] [INFO] [tls] issuing ACME cert for *.anonymoussservers.info
+[2026-08-12T02:00:19.706Z] [ERROR] [tls] ACME failed for *.anonymoussservers.info: no http-01 challenge available — using self-signed fallback
+[2026-08-12T02:00:19.728Z] [WARN] [tls] openssl failed: Command failed: openssl req -x509 -newkey rsa:2048 -keyout "D:\Backups\Downloads\nexus-4.14-ui-fixed-split\nexus\conf\tls\certs\wildcard.anonymoussservers.info.key" -out "D:\Backups\Downloads\nexus-4.14-ui-fixed-split\nexus\conf\tls\certs\wildcard.anonymoussservers.info.crt" -days 365 -nodes -subj "/CN=*.anonymoussservers.info" -addext "subjectAltName=DNS:*.anonymoussservers.info,DNS:anonymoussservers.info" — generating JS fallback
+[2026-08-12T02:00:19.750Z] [WARN] [tls] JS key generated for *.anonymoussservers.info — ACME cert will replace this
+[2026-08-12T02:00:22.880Z] [ERROR] [tls] ACME failed for anonymoussservers.info: ACME challenge invalid: {"identifier":{"type":"dns","value":"anonymoussservers.info"},"status":"invalid","expires":"2026-08-19T02:00:19Z","challenges":[{"type":"http-01","url":"https://acme-v02.api.letsencrypt.org/acme/chall/3622673921/757859394511/Lm7dVg","status":"invalid","validated":"2026-08-12T02:00:19Z","error":{"type":"urn:ietf:params:acme:error:dns","detail":"DNS problem: NXDOMAIN looking up A for anonymoussservers.info - check that a DNS record exists for this domain; DNS problem: NXDOMAIN looking up AAAA for anonymoussservers.info - check that a DNS record exists for this domain","status":400},"token":"UgYoBa44heGAHrvQMIOWAwlpJa_i1UcrMOfA1gph0dE"}]} — using self-signed fallback
+[2026-08-12T02:00:22.902Z] [WARN] [tls] openssl failed: Command failed: openssl req -x509 -newkey rsa:2048 -keyout "D:\Backups\Downloads\nexus-4.14-ui-fixed-split\nexus\conf\tls\certs\anonymoussservers.info.key" -out "D:\Backups\Downloads\nexus-4.14-ui-fixed-split\nexus\conf\tls\certs\anonymoussservers.info.crt" -days 365 -nodes -subj "/CN=anonymoussservers.info" -addext "subjectAltName=DNS:anonymoussservers.info" — generating JS fallback
+[2026-08-12T02:00:22.926Z] [WARN] [tls] JS key generated for anonymoussservers.info — ACME cert will replace this
+[2026-08-12T03:43:16.578Z] [INFO] [tls] tls engine starting
+[2026-08-12T03:43:16.579Z] [INFO] [tls] issuing ACME cert for anonymousservers.info
+[2026-08-12T03:43:16.580Z] [INFO] [tls] renewal loop: daily
+[2026-08-12T03:43:16.580Z] [WARN] [tls] challenge port 80 unavailable (EADDRINUSE) — falling back to :8880
+[2026-08-12T03:43:16.581Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-12T03:43:16.582Z] [INFO] [tls] ACME challenge server on :8880
+[2026-08-12T03:43:20.436Z] [INFO] [tls] ACME polling: pending (attempt 1)
+[2026-08-12T03:43:23.531Z] [INFO] [tls] ACME polling: pending (attempt 2)
+[2026-08-12T03:43:26.684Z] [INFO] [tls] ACME polling: pending (attempt 3)
+[2026-08-12T03:43:29.860Z] [ERROR] [tls] ACME failed for anonymousservers.info: ACME challenge invalid: {"identifier":{"type":"dns","value":"anonymousservers.info"},"status":"invalid","expires":"2026-08-19T03:43:17Z","challenges":[{"type":"http-01","url":"https://acme-v02.api.letsencrypt.org/acme/chall/3622673921/757906086691/MVQr_A","status":"invalid","validated":"2026-08-12T03:43:17Z","error":{"type":"urn:ietf:params:acme:error:connection","detail":"24.21.239.115: Fetching http://anonymousservers.info/.well-known/acme-challenge/JOv88hYeTZGLPaR5SfekGJcMm86HP4-hMqQLZZkoVcg: Timeout during connect (likely firewall problem)","status":400},"token":"JOv88hYeTZGLPaR5SfekGJcMm86HP4-hMqQLZZkoVcg","validationRecord":[{"url":"http://anonymousservers.info/.well-known/acme-challenge/JOv88hYeTZGLPaR5SfekGJcMm86HP4-hMqQLZZkoVcg","hostname":"anonymousservers.info","port":"80","addressesResolved":["24.21.239.115"],"addressUsed":"24.21.239.115"}]}]} — using self-signed fallback
+[2026-08-12T03:43:29.879Z] [INFO] [tls] issuing ACME cert for *.anonymousservers.info
+[2026-08-12T03:43:30.600Z] [ERROR] [tls] ACME failed for *.anonymousservers.info: no http-01 challenge available — using self-signed fallback
+[2026-08-12T03:43:30.620Z] [INFO] [tls] issuing ACME cert for anonymoussservers.info
+[2026-08-12T03:43:34.568Z] [ERROR] [tls] ACME failed for anonymoussservers.info: ACME challenge invalid: {"identifier":{"type":"dns","value":"anonymoussservers.info"},"status":"invalid","expires":"2026-08-19T03:43:31Z","challenges":[{"type":"http-01","url":"https://acme-v02.api.letsencrypt.org/acme/chall/3622673921/757906180261/4VF2tg","status":"invalid","validated":"2026-08-12T03:43:31Z","error":{"type":"urn:ietf:params:acme:error:dns","detail":"DNS problem: NXDOMAIN looking up A for anonymoussservers.info - check that a DNS record exists for this domain; DNS problem: NXDOMAIN looking up AAAA for anonymoussservers.info - check that a DNS record exists for this domain","status":400},"token":"5bfPBHahPhgGLjGVs9aHl14MStHl5j28HCPsv5tZm6E"}]} — using self-signed fallback
+[2026-08-12T03:43:34.586Z] [INFO] [tls] issuing ACME cert for *.anonymoussservers.info
+[2026-08-12T03:43:35.063Z] [ERROR] [tls] ACME failed for *.anonymoussservers.info: no http-01 challenge available — using self-signed fallback
+[2026-08-12T03:43:47.319Z] [INFO] [tls] tls engine starting
+[2026-08-12T03:43:47.320Z] [INFO] [tls] issuing ACME cert for anonymousservers.info
+[2026-08-12T03:43:47.321Z] [INFO] [tls] renewal loop: daily
+[2026-08-12T03:43:47.322Z] [INFO] [tls] ACME challenge server on :80
+[2026-08-12T03:43:51.049Z] [INFO] [tls] ACME polling: pending (attempt 1)
+[2026-08-12T03:43:54.132Z] [INFO] [tls] ACME polling: pending (attempt 2)
+[2026-08-12T03:43:58.121Z] [INFO] [tls] ACME polling: pending (attempt 3)
+[2026-08-12T03:44:01.208Z] [ERROR] [tls] ACME failed for anonymousservers.info: ACME challenge invalid: {"identifier":{"type":"dns","value":"anonymousservers.info"},"status":"invalid","expires":"2026-08-19T03:43:48Z","challenges":[{"type":"http-01","url":"https://acme-v02.api.letsencrypt.org/acme/chall/3622673921/757906296641/ekS3Xg","status":"invalid","validated":"2026-08-12T03:43:48Z","error":{"type":"urn:ietf:params:acme:error:connection","detail":"24.21.239.115: Fetching http://anonymousservers.info/.well-known/acme-challenge/Ddta_CNs5HWfkEn7PppvMR7Pi3fGZGUB-zg3wScO3U0: Timeout during connect (likely firewall problem)","status":400},"token":"Ddta_CNs5HWfkEn7PppvMR7Pi3fGZGUB-zg3wScO3U0","validationRecord":[{"url":"http://anonymousservers.info/.well-known/acme-challenge/Ddta_CNs5HWfkEn7PppvMR7Pi3fGZGUB-zg3wScO3U0","hostname":"anonymousservers.info","port":"80","addressesResolved":["24.21.239.115"],"addressUsed":"24.21.239.115"}]}]} — using self-signed fallback
+[2026-08-12T03:44:01.226Z] [INFO] [tls] issuing ACME cert for *.anonymousservers.info
+[2026-08-12T03:44:01.575Z] [ERROR] [tls] ACME failed for *.anonymousservers.info: no http-01 challenge available — using self-signed fallback
+[2026-08-12T03:44:01.593Z] [INFO] [tls] issuing ACME cert for anonymoussservers.info
+[2026-08-12T03:44:05.186Z] [ERROR] [tls] ACME failed for anonymoussservers.info: ACME challenge invalid: {"identifier":{"type":"dns","value":"anonymoussservers.info"},"status":"invalid","expires":"2026-08-19T03:44:02Z","challenges":[{"type":"http-01","url":"https://acme-v02.api.letsencrypt.org/acme/chall/3622673921/757906396901/Y06bFg","status":"invalid","validated":"2026-08-12T03:44:02Z","error":{"type":"urn:ietf:params:acme:error:dns","detail":"DNS problem: NXDOMAIN looking up A for anonymoussservers.info - check that a DNS record exists for this domain; DNS problem: NXDOMAIN looking up AAAA for anonymoussservers.info - check that a DNS record exists for this domain","status":400},"token":"KUATHlWk9h-qtXAalWNg8r1o3i661x47f_qb4TUOawc"}]} — using self-signed fallback
+[2026-08-12T03:44:05.205Z] [INFO] [tls] issuing ACME cert for *.anonymoussservers.info
+[2026-08-12T03:44:06.121Z] [ERROR] [tls] ACME failed for *.anonymoussservers.info: no http-01 challenge available — using self-signed fallback
