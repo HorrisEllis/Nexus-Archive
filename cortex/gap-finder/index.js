@@ -98,4 +98,4 @@ function stop() {
   _bus = null;
 }
 
-module.exports = { MODULE_ID, VERSION, init, stop, health, _createGap, _dedupKey };
+module.exports = { MODULE_ID, VERSION, init, stop, health, _createGap };

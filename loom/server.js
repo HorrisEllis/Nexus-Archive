@@ -354,7 +354,28 @@ const server = http.createServer(async (req, res) => {
     // below, so the UI's fetch pattern doesn't need anything new either.
     if (method === 'GET' && p === '/api/phasemap') {
       const all = phasemapMap.loadAll();
+      // §R0 2026-08-12 — every real query now also persists the history diff,
+      // best-effort, never blocking the response. This is what makes
+      // "updates over time" actually true instead of a live-only snapshot —
+      // James: "loom should already have a phasemap system... log the phase
+      // maps." Fire-and-forget on purpose: a slow/failed history write must
+      // never make the phasemap view itself unavailable (§1.2).
+      try { phasemapMap.persistHistory(); } catch (_) {}
       return json(res, 200, { ok: true, ...all, summary: phasemapMap.summary() });
+    }
+    // §R0 2026-08-12 — real transition history for one phase: /api/phasemap/
+    // history/:map/:phaseId — "what did this phase's status say last
+    // Tuesday," now an actual answerable query, not a live-only snapshot.
+    // MUST be checked before the general /api/phasemap/:system route below,
+    // or "history" gets swallowed as a bogus system name (caught before
+    // shipping, not after — checked route order deliberately, not assumed).
+    if (method === 'GET' && p.startsWith('/api/phasemap/history/')) {
+      const rest = p.slice('/api/phasemap/history/'.length).split('/');
+      const map = decodeURIComponent(rest[0] || '');
+      const phaseId = decodeURIComponent(rest[1] || '');
+      if (!map || !phaseId) return json(res, 400, { ok: false, error: 'map and phaseId required — /api/phasemap/history/:map/:phaseId' });
+      const history = phasemapMap.historyFor(map, phaseId);
+      return json(res, 200, { ok: true, map, phaseId, history, count: history.length });
     }
     if (method === 'GET' && p.startsWith('/api/phasemap/')) {
       const system = decodeURIComponent(p.slice('/api/phasemap/'.length));

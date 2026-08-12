@@ -177,6 +177,26 @@ const SUITES = [
   'lifeline-fluid-routing.test.js',
   'run-command-tool.test.js',
   'tutorial-engine.test.js',
+  // §2026-08-11 — found via James's "should be way more tests": these were
+  // written across this whole session (91 tests) and never registered here,
+  // the exact same gap this file's own history already caught once
+  // (idea-provenance.test.js's own comment above). Every "full sweep" this
+  // session was manually invoking these files one by one, never the real
+  // suite. Registered now so `node tests/modules/run-all.js` actually means
+  // what it says.
+  'test-gap-field.js',
+  'test-triggers.js',
+  'test-chains.js',
+  'test-connections.js',
+  'test-system-control.js',
+  'test-command-builder.js',
+  'test-constant-autonomy.js',
+  'test-autonomy-router.js',
+  'test-intent-learning.js',
+  'test-chunk-build-orchestrator.js',
+  'test-agent-build-learning.js',
+  'test-lifeline-contracts.js',
+  'test-lifeline-fault-logging.js',
 ];
 
 let totalPassed = 0;
@@ -203,11 +223,24 @@ async function runSuite(file) {
       // The old regex only matched the first, so every test-*.js suite
       // silently reported 0/0 here even though it ran and passed for real.
       const match = out.match(/(\d+)\s*passed,?\s+(\d+)\s*failed/);
+      // §FIX 2026-08-11 (James: "the autopilot is still registering
+      // architect as the component registry" led here) — a suite that
+      // CRASHES at require-time (MODULE_NOT_FOUND, a broken import) prints
+      // no parseable summary and exits nonzero, but the old code fell
+      // through to passed:0, failed:0 — then the report below did
+      // `r.failed === 0 ? '✓' : '✗'`, which is TRUE for a crash, so a dead
+      // suite rendered a green checkmark. Found two real instances tonight:
+      // flush-redundancy.test.js and admin-server-routes.test.js, both
+      // requiring modules that don't exist — exactly the "seven test
+      // suites, registered, crashing, rendered with a ✓" pattern a parallel
+      // session's diagnostic named. A crash with no summary is now a real
+      // failure, not a silent pass.
+      const crashed = !match && code !== 0;
       const p = match ? parseInt(match[1]) : 0;
-      const f = match ? parseInt(match[2]) : 0;
+      const f = match ? parseInt(match[2]) : (crashed ? 1 : 0);
       totalPassed += p;
       totalFailed += f;
-      results.push({ file, passed: p, failed: f, code });
+      results.push({ file, passed: p, failed: f, code, crashed });
       resolve();
     });
   });
@@ -236,11 +269,14 @@ async function main() {
 
   console.log('\n══ MODULE TEST RESULTS ══════════════════════════════');
   for (const r of results) {
-    const status = r.failed === 0 ? '✓' : '✗';
-    console.log(`  ${status} ${r.file.padEnd(40)} ${r.passed} passed  ${r.failed} failed`);
+    const status = r.crashed ? '✗' : (r.failed === 0 ? '✓' : '✗');
+    const note = r.crashed ? ` CRASHED (exit ${r.code}, no summary — see output above)` : '';
+    console.log(`  ${status} ${r.file.padEnd(40)} ${r.passed} passed  ${r.failed} failed${note}`);
   }
   console.log('─'.repeat(55));
   console.log(`  TOTAL: ${totalPassed} passed  ${totalFailed} failed`);
+  const crashedSuites = results.filter(r => r.crashed);
+  if (crashedSuites.length) console.log(`  CRASHED (not counted in totals as passing): ${crashedSuites.map(r => r.file).join(', ')}`);
 
   if (totalFailed > 0) process.exitCode = 1;
 }

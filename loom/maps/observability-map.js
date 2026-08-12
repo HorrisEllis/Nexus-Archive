@@ -88,8 +88,14 @@ const FILES = [
     ['nexus.loom.scanners.capability-map']],  // P4 slice — co-pilot's real toolbox from loom
   ['lib/diagnostic-causal.js',    'nexus.lib.diagnostic-causal',
     ['nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.lib.snapshot-trigger', 'nexus.lib.gap-field']],  // P3 — conditions behind findings; now defaults findings from gap-field (§2026-08-09 unification)
+  ['lib/component-ledger.js',     'nexus.lib.component-ledger',
+    ['nexus.cortex.memory.jaa-db']],  // §2026-08-12 — James: "i want everything you do logged to nexus... all history and decisions tracked in cortex." REAL, already written (15,472+ rows, 12+ real systems, a month of history) but never itself registered in loom's own map — found while making it locatable for a 13th real writer (this session's own commits, system:'claude', logged live tonight). Was flagging its own writes as "recorded but not locatable in the architecture" until this entry.
   ['lib/gap-field.js',            'nexus.lib.gap-field',
-    ['nexus.cortex.memory.jaa-db']],  // §2026-08-09 — the single agnostic gap-report entry point: system anomalies + user-model contradictions, one dedup rule, one causal-wire convention
+    ['nexus.cortex.memory.jaa-db', 'nexus.lib.resource-monitor', 'nexus.lib.diagnostic-causal']],  // §2026-08-09 — the single agnostic gap-report entry point: system anomalies + user-model contradictions, one dedup rule, one causal-wire convention. §R1 2026-08-12 — report() carries the full repair_contract_schema (requested/received/systemsInvolved/location/error/resourceState), resourceState auto-populated from lib/resource-monitor (cheap, real), why populated on-demand via explainWhy() -> diagnostic-causal.explainFinding() (real causal tracing, not run on every report — §0.5).
+  ['copilot/lib/lifeline-contracts.js', 'nexus.copilot.lifeline-contracts',
+    ['nexus.lib.gap-field']],  // §2026-08-12 — James: "each time it uses lifeline it needs to know what it's asking and how to receive it... a contract or schema, a way to interact with each agent." Per-intent (ask/build/yes_no/json/etc) validation of what a real provider response actually needs to look like — a mismatch is a real, logged gap, not a silently-accepted guess.
+  ['copilot/lifeline.js',         'nexus.copilot.lifeline',
+    ['nexus.copilot.lifeline-contracts', 'nexus.lib.gap-field']],  // §2026-08-12 — three real silent-failure paths fixed: _tryOllama's job-failed/timeout/thrown-error branches all `return null`ed with zero record; _tryGuardian's empty-response/thrown-error paths did the same. Every one now reports a real gap via gap-field before falling through, same cascade behavior, real record instead of silence.
   ['cortex/gap-finder/index.js',  'nexus.cortex.gap-finder',
     ['nexus.lib.gap-field']],  // system anomaly.detected + sigma.event.* → gap-field.report(); was writing directly to 'gaps' with its own inline dedup before the unification — that logic is now shared, not duplicated
   ['lib/intent-classifier.js',    'nexus.lib.intent-classifier',

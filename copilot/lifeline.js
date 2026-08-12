@@ -147,10 +147,32 @@ async function _tryOllama(prompt, opts = {}) {
         const confidence = _estimateConfidence(text, prompt);
         return { ok: true, text, confidence, jobId: job.jobId, provider: 'ollama' };
       }
-      if (status?.job?.status === 'failed') return null;
+      if (status?.job?.status === 'failed') {
+        // §2026-08-12 — was a silent `return null`, indistinguishable from
+        // "ollama just isn't confident," and route() falls through to
+        // Guardian either way — so a REAL provider failure never produced
+        // any record at all. James: "make sure each failure mode is logged
+        // to cortex." Now it is.
+        try {
+          const gapField = require('../lib/gap-field');
+          gapField.report({ type: 'lifeline.provider-failure', body: `ollama job ${job.jobId} failed`, source: 'ollama', domain: 'system', severity: 'medium', meta: { requestId: opts.requestId, jobStatus: status?.job } });
+        } catch (_) {}
+        return null;
+      }
     }
+    // §2026-08-12 — a timeout is also a real failure, was also silent.
+    try {
+      const gapField = require('../lib/gap-field');
+      gapField.report({ type: 'lifeline.provider-timeout', body: `ollama job ${job.jobId} timed out after ${OLLAMA_POLL_MAX}s`, source: 'ollama', domain: 'system', severity: 'medium', meta: { requestId: opts.requestId } });
+    } catch (_) {}
     return null; // timeout
-  } catch(_) { return null; }
+  } catch(e) {
+    try {
+      const gapField = require('../lib/gap-field');
+      gapField.report({ type: 'lifeline.provider-error', body: `ollama call threw: ${e.message}`, source: 'ollama', domain: 'system', severity: 'medium', meta: { requestId: opts.requestId, error: e.message } });
+    } catch (_) {}
+    return null;
+  }
 }
 
 // ── Route to Guardian NCP ─────────────────────────────────────────────────────
@@ -221,7 +243,13 @@ async function _tryGuardian(prompt, opts = {}) {
       channelName: 'Lifeline',
     }, GUARDIAN_TIMEOUT_MS);
 
-    if (!result?.text) return null;
+    if (!result?.text) {
+      try {
+        const gapField = require('../lib/gap-field');
+        gapField.report({ type: 'lifeline.provider-empty-response', body: `guardian/${ragProvider} returned no text`, source: ragProvider || 'guardian', domain: 'system', severity: 'medium', meta: { requestId: opts.requestId } });
+      } catch (_) {}
+      return null;
+    }
     const confidence = _estimateConfidence(result.text, prompt);
     // §BUG FIXED 2026-07-09 — this fell back to the literal string
     // 'guardian' when the response didn't name a model, which HIDES which
@@ -230,11 +258,31 @@ async function _tryGuardian(prompt, opts = {}) {
     // ragProvider is always known here, so there is never a reason to
     // report a placeholder.
     return { ok: true, text: result.text, confidence, provider: result.modelUsed || result.provider || ragProvider, fromGuardian: true };
-  } catch(_) { return null; }
+  } catch(e) {
+    try {
+      const gapField = require('../lib/gap-field');
+      gapField.report({ type: 'lifeline.provider-error', body: `guardian call threw: ${e.message}`, source: 'guardian', domain: 'system', severity: 'medium', meta: { requestId: opts.requestId, error: e.message } });
+    } catch (_) {}
+    return null;
+  }
 }
 
 // ── Persist result to Cortex ──────────────────────────────────────────────────
 function _persist(opts, result) {
+  // §2026-08-12 — the contract check. Mutates `result` in place (every call
+  // site calls _persist() immediately before its own `return result`, so
+  // this is visible to the caller without touching 6 separate return
+  // points). Doesn't change what's returned or block on a bad answer —
+  // §0.4 the user/caller still gets what the provider said — but now the
+  // caller can SEE whether it matched what was actually asked for, and a
+  // mismatch is a real, findable gap, not silent.
+  try {
+    const lc = require('./lib/lifeline-contracts');
+    const check = lc.validateResponse(opts.intent || 'ask', result.text, { provider: result.provider, requestId: opts.requestId });
+    result.contract_valid = check.valid;
+    if (!check.valid) result.contract_violation_reason = check.reason;
+  } catch (_) { /* contract check is enrichment, never blocks a real answer */ }
+
   const cw = _getCW();
   if (!cw) return;
   cw.insert('chat_log', {
@@ -250,6 +298,7 @@ function _persist(opts, result) {
     componentId:  'copilot.lifeline',
     hookId:       'copilot.lifeline.complete',
     intent:       opts.intent || 'ask',
+    contractValid: result.contract_valid,
     ts:           Date.now(),
     source:       'lifeline',
   });

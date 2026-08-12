@@ -97,5 +97,68 @@ const RUN_TAG = `unit-test-${Date.now()}`;
     assert.strictEqual(after.length, before, 'two identical low-confidence classifications must not create two rows');
   });
 
+  // ── R1: repair contract schema — additive, backward-compatible ──────────
+  await test('R1-001', 'report() accepts the full repair_contract_schema fields and round-trips every one intact', async () => {
+    const r = gapField.report({
+      type: `r1-schema-${RUN_TAG}`, body: 'x', source: `r1-src-${RUN_TAG}`, domain: 'system', severity: 'high',
+      requested: 'the user asked for X', received: 'the system returned Y instead',
+      location: 'lib/foo.js:42', error: 'TypeError: cannot read property of undefined',
+    });
+    assert.strictEqual(r.created, true);
+    assert.strictEqual(r.gap.requested, 'the user asked for X');
+    assert.strictEqual(r.gap.received, 'the system returned Y instead');
+    assert.strictEqual(r.gap.location, 'lib/foo.js:42');
+    assert.strictEqual(r.gap.error, 'TypeError: cannot read property of undefined');
+    const found = gapField.openGaps({ domain: 'system' }).find(g => g.uuid === r.gap.uuid);
+    assert.strictEqual(found.requested, 'the user asked for X', 'every new field must round-trip through openGaps(), not just the in-memory return value');
+  });
+
+  await test('R1-002', 'systemsInvolved defaults to [source] when not explicitly given, not an empty array', async () => {
+    const r = gapField.report({ type: `r1-sys-${RUN_TAG}`, body: 'x', source: `r1-src2-${RUN_TAG}`, domain: 'system' });
+    assert.deepStrictEqual(r.gap.systemsInvolved, [`r1-src2-${RUN_TAG}`]);
+  });
+
+  await test('R1-003', 'resourceState is auto-populated when not explicitly given — cheap, real, not left null by default', async () => {
+    const r = gapField.report({ type: `r1-res-${RUN_TAG}`, body: 'x', source: `r1-src3-${RUN_TAG}`, domain: 'system' });
+    assert.ok(r.gap.resourceState, 'a report with no explicit resourceState must still get a real auto-sampled one');
+    assert.ok(r.gap.resourceState.pressure && r.gap.resourceState.pressure.level, 'must carry a real classify() result, not just raw numbers');
+  });
+
+  await test('R1-004', 'why is null at report time — not auto-run on every report (§0.5, causal tracing is real work, only on demand)', async () => {
+    const r = gapField.report({ type: `r1-why-${RUN_TAG}`, body: 'x', source: `r1-src4-${RUN_TAG}`, domain: 'system' });
+    assert.strictEqual(r.gap.why, null);
+  });
+
+  await test('R1-005', 'explainWhy() populates a real causal trace and persists it back onto the gap', async () => {
+    const r = gapField.report({ type: `r1-why2-${RUN_TAG}`, body: 'x', source: `r1-src5-${RUN_TAG}`, domain: 'system' });
+    const result = await gapField.explainWhy(r.gap.uuid);
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(typeof result.why.available, 'boolean', 'explainFinding\'s real shape must come through, not a stub');
+    const updated = gapField.openGaps({ domain: 'system' }).find(g => g.uuid === r.gap.uuid);
+    assert.ok(updated.why, 'the why must be PERSISTED, not just returned in memory');
+  });
+
+  await test('R1-006', 'explainWhy() on an unknown uuid fails honestly, not silently', async () => {
+    const result = await gapField.explainWhy('nonexistent-uuid-does-not-exist');
+    assert.strictEqual(result.ok, false);
+  });
+
+  await test('R1-007', 'a caller using the OLD report() signature (no new fields at all) still works — full backward compatibility', async () => {
+    const r = gapField.report({ type: `r1-old-${RUN_TAG}`, body: 'x', source: `r1-src6-${RUN_TAG}`, domain: 'system', severity: 'medium' });
+    assert.strictEqual(r.created, true);
+    assert.strictEqual(r.gap.requested, null);
+    assert.strictEqual(r.gap.received, null);
+    assert.strictEqual(r.gap.location, null);
+    assert.strictEqual(r.gap.error, null);
+  });
+
+  await test('R1-008', 'asFindings() output is unaffected by the new fields — diagnostic-causal still gets exactly the shape it expects', async () => {
+    gapField.report({ type: `r1-findings-${RUN_TAG}`, body: 'x', source: `r1-src7-${RUN_TAG}`, domain: 'system', requested: 'extra data' });
+    const findings = gapField.asFindings({ domain: 'system' });
+    const f = findings.find(x => x.system === `r1-src7-${RUN_TAG}`);
+    assert.ok(f);
+    assert.deepStrictEqual(Object.keys(f).sort(), ['domain', 'entry', 'severity', 'system', 'type', 'uuid'].sort());
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);
 })();

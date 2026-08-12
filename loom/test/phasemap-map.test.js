@@ -85,6 +85,48 @@ async function main() {
     assert.ok(pm.VERSION);
   });
 
+  await check('persistHistory() is idempotent — a second call with nothing changed writes zero rows', async () => {
+    const r1 = pm.persistHistory();
+    assert.strictEqual(r1.ok, true);
+    const r2 = pm.persistHistory();
+    assert.strictEqual(r2.changed, 0, 'a second call with no real status change must write nothing');
+  });
+
+  await check('persistHistory() correctly diffs against a seeded prior state, not just re-writing everything', async () => {
+    const target = pm.loadAll().phases[0];
+    const { jaaDB } = require('../../cortex/memory/jaa-db');
+    const fakeStatus = target.status === 'done' ? 'pending' : 'done';
+    jaaDB.insert(pm.TABLE, { map: target.map, phaseId: target.id, title: target.title, status: fakeStatus, priorStatus: null, systems: target.systems, dependsOn: null, commitHash: null, recordedAt: Date.now() - 5000 });
+    const r = pm.persistHistory();
+    assert.ok(r.changed >= 1, 'a seeded prior state that disagrees with the real current status must be detected as a real change');
+  });
+
+  await check('historyFor() returns real transitions in chronological order, including priorStatus', async () => {
+    const target = pm.loadAll().phases[0];
+    const hist = pm.historyFor(target.map, target.id);
+    assert.ok(hist.length >= 1);
+    for (let i = 1; i < hist.length; i++) assert.ok(hist[i].recordedAt >= hist[i - 1].recordedAt, 'history must be chronological, oldest first');
+  });
+
+  await check('a phase-id shared across two DIFFERENT phasemap files does not collide (the real bug found and fixed this session)', async () => {
+    // §BUGFIX 2026-08-12 — persistHistory() originally stored the phase's
+    // own id under a field literally named `id`, colliding with jaaDB's
+    // own reserved `id` semantics. Two real phases (both named P5/P6,
+    // one in raid-warp-verification-phasemap, one in raid-verification-
+    // spine-phasemap) silently overwrote each other's rows every call.
+    // Renamed to `phaseId`. This test locks the fix in.
+    const all = pm.loadAll();
+    const byBareId = {};
+    all.phases.forEach(p => { (byBareId[p.id] = byBareId[p.id] || []).push(p.map); });
+    const collisions = Object.entries(byBareId).filter(([id, maps]) => maps.length > 1);
+    if (collisions.length === 0) return; // nothing to test against right now — not a failure
+    const [dupId, maps] = collisions[0];
+    pm.persistHistory();
+    const h0 = pm.historyFor(maps[0], dupId);
+    const h1 = pm.historyFor(maps[1], dupId);
+    assert.ok(h0.length >= 1 && h1.length >= 1, 'both same-named phases across different maps must have their OWN independent history, not one overwriting the other');
+  });
+
   console.log(`\n${pass} passed, ${fail} failed\n`);
   process.exit(fail ? 1 : 0);
 }
