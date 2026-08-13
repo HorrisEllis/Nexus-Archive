@@ -110,6 +110,17 @@ const FILES = [
   ['lib/hat-forge.js',                                'nexus.lib.hat-forge',
     ['nexus.lib.agent-tools']],   // §2026-08-13 (P8) — named, reusable hats: base agent + scoped tools + persona, verified-composition philosophy mirrored from lib/tool-forge.js
 
+  // §2026-08-13 — hat-forge shipped with an empty store: list() returned [].
+  // hat-seed forges the four real hats at copilot boot, validating every
+  // tool name in each scope against the live agent-tools registry first.
+  ['lib/hat-seed.js',                                 'nexus.lib.hat-seed',
+    ['nexus.lib.hat-forge', 'nexus.lib.agent-tools']],
+
+  // §2026-08-13 — generates copilot's user guide from the real tool registry
+  // and tool-guide notes rather than a hand-written list that would drift.
+  ['lib/agent-tools/user-guide-generator.js',         'nexus.lib.agent-tools.user-guide-generator',
+    ['nexus.lib.agent-tools']],
+
   ['lib/agent-tools/tools/hat-forge.js',              'nexus.lib.agent-tools.tools.hat-forge',
     ['nexus.lib.hat-forge', 'nexus.copilot.self-model']],
 

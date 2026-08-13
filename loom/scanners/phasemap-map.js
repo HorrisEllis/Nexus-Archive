@@ -83,12 +83,32 @@ function loadAll() {
       const rest = m[2] || '';
       // status: a "DONE" marker on the phase line or the next few lines.
       const near = [rest, lines[i + 1] || '', lines[i + 2] || ''].join(' ');
-      const status = /←\s*DONE|COMPLETE|✓\s*DONE/i.test(near) ? 'done'
-                   : /IN PROGRESS|STARTED|partial/i.test(near) ? 'in-progress'
+      // §FIXED 2026-08-13 — this test was /←\s*DONE|COMPLETE|✓\s*DONE/i:
+      // case-INSENSITIVE and unanchored, so the ordinary word "complete" or
+      // "completely" appearing anywhere in a phase's first three lines marked
+      // that phase DONE. Found the moment three genuinely-pending phases were
+      // added whose `why:` quoted the instruction "completely break down and
+      // rebuild" — all three reported as shipped. A status parser that reads
+      // prose as a completion marker will mark pending work done and nobody
+      // will see it (§1.2). Real markers in these files are uppercase and
+      // carry a glyph or a comment prefix, so match them case-SENSITIVELY as
+      // markers rather than as words.
+      const status = /←\s*DONE\b|✓\s*DONE\b|#\s*DONE\b|\bCOMPLETE\b/.test(near) ? 'done'
+                   : /IN PROGRESS|STARTED|\bpartial\b/i.test(near) ? 'in-progress'
                    : 'pending';
+
       // gather a few lines of the phase body for system tagging.
       const body = lines.slice(i, i + 8).join(' ');
-      const dep = (body.match(/depends_on:\s*\[?([^\]\n]+)/) || [])[1] || '';
+      // §FIXED 2026-08-13 — the regex below stops at a newline ([^\]\n]+),
+      // which was correct, but `body` above joins with a SPACE, so there were
+      // no newlines left to stop at and the match ran on greedily through the
+      // rest of the phase body. Measured on the real tree: the longest
+      // dependsOn was 566 characters of swallowed `does:`/`reuse:` YAML. The
+      // dependency graph this feeds was reading whole paragraphs as dependency
+      // names. Match against a newline-preserving join; `body` keeps its
+      // space-join because _tagSystem() genuinely wants one flat string.
+      const bodyLines = lines.slice(i, i + 8).join('\n');
+      const dep = (bodyLines.match(/depends_on:\s*\[?([^\]\n]+)/) || [])[1] || '';
       phases.push({
         id, map: name,
         title: id.replace(/_/g, ' '),

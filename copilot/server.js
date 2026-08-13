@@ -513,15 +513,21 @@ async function _dispatchToOllama(prompt, context, opts = {}) {
 // ── Sessions ──────────────────────────────────────────────────────────────────
 const _sessions = new Map();
 
-function _getSession(sessionId, channel) {
+function _getSession(sessionId, channel, prompt) {
   if (!sessionId) sessionId = crypto.randomUUID();
   if (!_sessions.has(sessionId)) {
     _sessions.set(sessionId, { sessionId, channel, exchanges: 0,
-      startedAt: Date.now(), lastActive: Date.now() });
+      startedAt: Date.now(), lastActive: Date.now(), lastPrompt: null });
   }
   const s = _sessions.get(sessionId);
   s.lastActive = Date.now();
   s.channel = channel || s.channel;
+  // §2026-08-13 — recorded so GET /api/context/:sessionId can assemble a
+  // snapshot for THIS session's actual intent rather than an empty one. Added
+  // because the new route referenced a lastPrompt field that did not exist:
+  // rather than read a field off a record that never had it (§1.1), the field
+  // is made real at the one place every prompt path already passes through.
+  if (typeof prompt === 'string' && prompt) s.lastPrompt = prompt;
   return s;
 }
 
@@ -708,6 +714,73 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §BUILT 2026-08-13 — both of these were declared in copilot.spec and had no
+  // handler: only the exact '/api/sessions' above was ever matched, so every
+  // consumer of the contract believed in two routes that did not exist. The
+  // work underneath them was already real — _sessions is live, and
+  // copilot/lib/copilot-context.js assembles all 7 layers and is already
+  // called on the prompt path (see §P73 below) — there was simply no way to
+  // LOOK at either. These expose what already runs; they compute nothing new.
+  if (method === 'GET' && p.startsWith('/api/sessions/')) {
+    const sessionId = decodeURIComponent(p.slice('/api/sessions/'.length));
+    const session = _sessions.get(sessionId);
+    // §1.2 — an unknown session is a real 404, not an empty object that would
+    // read as "a session with no activity".
+    if (!session) {
+      json(res, 404, { ok:false, error:`no session "${sessionId}"`, known: [..._sessions.keys()] });
+      return;
+    }
+    // Recent exchanges come from cortex chat_log, as the spec described.
+    // §CORRECTED 2026-08-13 — first written against the LOCAL jaaDB, which
+    // returned [] every time: copilot does not write chat_log locally, it
+    // persists over HTTP to cortex via _persist(). Read it the same way
+    // _injectSessionHistory() already does, so this route and copilot's own
+    // session continuity agree about where history lives (§16.5).
+    //
+    // Note chat_log has TWO writers with different shapes: copilot's rows
+    // carry { sessionId, prompt, response }, while lib/chat-logger.js writes
+    // { sessionId: <its own logger session>, role, content }. Only copilot's
+    // rows can match a copilot sessionId, which is why no shape translation
+    // is attempted here — rows that don't match simply aren't this session's.
+    let exchanges = [];
+    try {
+      const mem = await _fetch(
+        `${CX_URL}/api/memory?table=chat_log&n=200&sessionId=${encodeURIComponent(sessionId)}`,
+        { timeout: 2000 }
+      );
+      exchanges = (mem?.rows || []).slice(-25);
+    } catch (e) {
+      // §1.2 — report the failure. An empty array here would be
+      // indistinguishable from a session that genuinely said nothing.
+      json(res, 200, { ok:true, session, exchanges: null, exchangesError: `cortex unreachable: ${e.message}` });
+      return;
+    }
+    json(res, 200, { ok:true, session, exchanges, exchangeCount: exchanges.length });
+    return;
+  }
+
+
+  if (method === 'GET' && p.startsWith('/api/context/')) {
+    const sessionId = decodeURIComponent(p.slice('/api/context/'.length));
+    const cc = _getCopilotContext();
+    if (!cc) { json(res, 503, { ok:false, error:'copilot-context module not loadable' }); return; }
+    try {
+      const session = _sessions.get(sessionId) || null;
+      const snap = await cc.assemble({ eventBuffer: _stream, intent: (session && session.lastPrompt) || '' });
+      json(res, 200, {
+        ok: true, sessionId,
+        sessionKnown: !!session,   // honest: a snapshot for an unknown session
+                                   // is still a real system snapshot, but the
+                                   // caller must know it isn't session-specific
+        layerCount: Object.keys(snap.layers).length,
+        tokensUsed: snap.tokensUsed,
+        layers: snap.layers,
+        text: snap.text,
+      });
+    } catch (e) { json(res, 500, { ok:false, error:e.message }); }
+    return;
+  }
+
   if (method === 'POST' && p === '/api/diagnose') {
     const body = await readBody(req);
     const result = await _rDiagnose.start(body.topic || 'system health', { requestId: body.requestId });
@@ -792,7 +865,7 @@ const server = http.createServer(async (req, res) => {
     const sessionId = body.sessionId || req.headers['x-session-id'] || crypto.randomUUID();
     const requestId = crypto.randomUUID();
     let requestGrammar = null;   // §P5 — what the grammar engine resolved this prompt to (if anything)
-    const session   = _getSession(sessionId, channel);
+    const session   = _getSession(sessionId, channel, prompt);
     session.exchanges++;
 
     if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
@@ -1011,7 +1084,7 @@ const server = http.createServer(async (req, res) => {
     const channel   = payload.channel || 'bridge';
     const sessionId = payload.sessionId || req.headers['x-bridge-source'] || _newId();
     const requestId = body.request?.uuid || crypto.randomUUID();
-    const session   = _getSession(sessionId, channel);
+    const session   = _getSession(sessionId, channel, prompt);
     session.exchanges++;
 
     if (!prompt) {
@@ -1095,14 +1168,106 @@ const server = http.createServer(async (req, res) => {
       // already claims "switch to/use/route to X agent" for a ONE-OFF
       // route) — "always use", "default to", "wear the X hat" mean the
       // PERSISTENT hat, every future message, until changed again.
-      const hatM = prompt.match(/\b(always use|default to|wear the)\s+(claude|chatgpt|gemini|ollama|mistral|perplexity)\b/i)
-        || prompt.match(/\bwear\s+(?:the\s+)?(claude|chatgpt|gemini|ollama|mistral|perplexity)\s+hat\b/i);
+      // ── §2026-08-13 — MAKE A HAT FROM CHAT ────────────────────────────
+      // hat_forge exists as a tool, but reaching it depends on the model
+      // choosing to call it, which is not guaranteed from plain chat the way
+      // "switch to X" is. These are real regex handlers on the same
+      // guaranteed path as the wear/take-off ones below.
+      //
+      // Grammar (every clause after the name is optional):
+      //   make a hat called the_auditor
+      //   make a hat called the_auditor using claude
+      //   create a hat named x using claude with tools loom_scan, read_file
+      //   forge a hat called x using claude that audits every claim it is given
+      const mkHat = prompt.match(/\b(?:make|create|forge|build)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:new\s+)?hat\s+(?:called|named)\s+([A-Za-z][A-Za-z0-9_]{2,48})\b([\s\S]*)$/i);
+      if (mkHat) {
+        const hatForge = require('../lib/hat-forge');
+        const agentTools = require('../lib/agent-tools');
+        const name = mkHat[1].toLowerCase();
+        const rest = mkHat[2] || '';
+
+        // Each clause is pulled independently rather than with one big
+        // ordered regex, so clause ORDER doesn't silently change the result.
+        const baseM  = rest.match(/\b(?:using|based on|from|on|with)\s+(claude|chatgpt|gemini|ollama|mistral|perplexity)\b/i);
+        const toolsM = rest.match(/\bwith\s+tools?\s+([A-Za-z0-9_,\s]+?)(?=\s+that\b|\s*$)/i);
+        const persM  = rest.match(/\bthat\s+([\s\S]+)$/i);
+
+        const def = { name, baseAgent: baseM ? baseM[1].toLowerCase() : 'claude' };
+        if (toolsM) {
+          def.toolScope = toolsM[1].split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+        }
+        if (persM) def.personaPrompt = persM[1].trim();
+
+        // §1.1 — a scope naming a tool that isn't registered is refused with
+        // the real list, not accepted into a hat that would silently do less
+        // than it claims.
+        if (def.toolScope) {
+          const unknown = def.toolScope.filter(t => !agentTools.TOOLS.has(t));
+          if (unknown.length) {
+            return json(res, 200, {
+              text: `Can't forge "${name}" — these aren't real tools: ${unknown.join(', ')}.\n\n` +
+                    `Registered tools (${agentTools.TOOLS.size}): ${[...agentTools.TOOLS.keys()].sort().join(', ')}`,
+              model_used: 'nexus-hat-forge', confidence: 1, escalated: false, requestId,
+            });
+          }
+        }
+
+        const r = hatForge.forge(def);
+        if (!r || !r.ok) {
+          return json(res, 200, {
+            text: `Couldn't forge "${name}":\n  ${((r && r.errors) || ['unknown error']).join('\n  ')}`,
+            model_used: 'nexus-hat-forge', confidence: 1, escalated: false, detail: r, requestId,
+          });
+        }
+        const scopeTxt = def.toolScope ? `${def.toolScope.length} scoped tools (${def.toolScope.join(', ')})` : `all ${agentTools.TOOLS.size} tools`;
+        return json(res, 200, {
+          text: `Forged "${name}" — base agent ${def.baseAgent}, ${scopeTxt}` +
+                `${def.personaPrompt ? `, persona set` : ''}.\n` +
+                `Wear it with: "wear the ${name} hat".`,
+          model_used: 'nexus-hat-forge', confidence: 1, escalated: false, detail: r.hat, requestId,
+        });
+      }
+
+      if (/\b(list (the )?hats|what hats( do you have| are there| exist)?|show (me )?(the )?hats|which hats)\b/i.test(prompt)) {
+        const hats = require('../lib/hat-forge').list() || [];
+        const txt = hats.length
+          ? hats.map(h => `  ${h.name} — ${h.baseAgent}, ${h.toolScope ? h.toolScope.length + ' tools' : 'all tools'}${h.personaPrompt ? ', persona' : ''}`).join('\n')
+          : '  (none forged yet — "make a hat called x using claude")';
+        return json(res, 200, { text: `Forged hats:\n${txt}`, model_used: 'nexus-hat-forge', confidence: 1, escalated: false, detail: hats, requestId });
+      }
+
+      const rmHat = prompt.match(/\b(?:revoke|delete|remove|destroy)\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_]{2,48})\s+hat\b/i)
+        || prompt.match(/\b(?:revoke|delete|remove|destroy)\s+(?:the\s+)?hat\s+(?:called|named)\s+([A-Za-z][A-Za-z0-9_]{2,48})\b/i);
+      if (rmHat) {
+        const nm = rmHat[1].toLowerCase();
+        const r = require('../lib/hat-forge').revoke(nm);
+        return json(res, 200, { text: r && r.ok ? `Revoked the ${nm} hat.` : `Couldn't revoke "${nm}": ${(r && r.reason) || 'unknown'}`, model_used: 'nexus-hat-forge', confidence: 1, escalated: false, detail: r, requestId });
+      }
+
+      // §2026-08-13 — this used to match ONLY the six base agent names, so a
+      // forged hat could never be worn from chat even though setCurrentAgent
+      // has accepted forged names since P8 (self-model.js:183). The mechanism
+      // was there; the only guaranteed path to it wasn't. The candidate name
+      // is checked against the real forged-hat store before being accepted,
+      // so this stays a closed set and can't swallow arbitrary text.
+      const BASE_AGENTS = /claude|chatgpt|gemini|ollama|mistral|perplexity/i;
+      let hatM = prompt.match(/\b(always use|default to|wear the)\s+([A-Za-z][A-Za-z0-9_]{2,48})\b/i)
+        || prompt.match(/\bwear\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_]{2,48})\s+hat\b/i);
+      if (hatM) {
+        const candidate = (hatM[2] || hatM[1]).toLowerCase();
+        let known = BASE_AGENTS.test(candidate);
+        if (!known) {
+          try { known = !!require('../lib/hat-forge').get(candidate); } catch (_) {}
+        }
+        if (!known) hatM = null;   // not a real agent or hat — fall through
+      }
       if (hatM) {
         const sm = require('./lib/self-model');
         const agent = (hatM[2] || hatM[1]).toLowerCase();
         const r = sm.setCurrentAgent(agent);
-        return json(res, 200, { text: r.ok ? `Wearing the ${r.agent} hat now — every message uses it until you change it again.` : `Couldn't put on that hat: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
+        return json(res, 200, { text: r.ok ? `Wearing the ${r.hatName || r.agent} hat now — every message uses it until you change it again.` : `Couldn't put on that hat: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
       }
+
       if (/\b(take off (the|your) hat|stop using (that|the current) agent|go back to auto|clear (your |the )?(current )?agent|reset (your |the )?agent)\b/i.test(prompt)) {
         const sm = require('./lib/self-model');
         const r = sm.setCurrentAgent('auto');
@@ -1333,7 +1498,7 @@ const server = http.createServer(async (req, res) => {
     const channel   = body.channel || 'unknown';
     const sessionId = body.sessionId || req.headers['x-session-id'] || crypto.randomUUID();
     const requestId = crypto.randomUUID();
-    const session   = _getSession(sessionId, channel);
+    const session   = _getSession(sessionId, channel, prompt);
     session.exchanges++;
 
     if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
@@ -1618,6 +1783,19 @@ server.listen(PORT, () => {
     require('../lib/triggers.js').start();
     console.log('[copilot] triggers started — persisted triggers hydrated and armed');
   } catch (e) { console.warn('[copilot] triggers not started:', e.message); }
+
+  // §WIRED 2026-08-13 — hat-forge has been live since P8 with working
+  // forge/get/list/revoke, but list() returned []: the mechanism shipped with
+  // nothing in it, which is indistinguishable from a mechanism that doesn't
+  // work. lib/hat-seed.js forges four real, scoped hats (auditor,
+  // diagnostician, builder, librarian). Idempotent — it skips any hat already
+  // present and never overwrites one you edited by hand. Seeds carry NO
+  // responsibilities: those create real recurring NCP dispatches, and starting
+  // browser jobs against claude/chatgpt unasked at boot is not a default
+  // anyone consented to. Same never-crash-the-server guard as above.
+  try {
+    require('../lib/hat-seed.js').seedHats();
+  } catch (e) { console.warn('[copilot] hats not seeded:', e.message); }
 
   // §WIRED 2026-08-12 — buildNexusModel() (copilot/lib/self-model.js) existed
   // complete but self_model had 0 rows: nothing ever called it, AND its own

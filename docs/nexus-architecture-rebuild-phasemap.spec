@@ -324,6 +324,133 @@ spec:
         value alone, the actual text sent to the agent at each step was
         checked.
 
+    # ── UI CONSOLIDATION — added 2026-08-13 on James's direct instruction ──
+    # Framing, in his words: the P4 approach was "completely backwards."
+    # forge-shell was treated as the thing being fixed and loom's phasemap
+    # system as a data source it fetched from. It is the other way round:
+    # loom OWNS the architecture model (components/hooks/wires/seams AND the
+    # phasemap parser), and the UIs are views onto it. Every phase below moves
+    # a surface INTO loom rather than teaching another surface to call it.
+    #
+    # §PRESERVE, DO NOT DELETE. P4 deleted forge-shell's hand-written 45-phase
+    # array outright. That array held real historical description prose
+    # (dependencies, unlock chains, per-phase intent) that exists NOWHERE in
+    # docs/*.spec — deleting it destroyed history to make a count correct.
+    # Every phase below MERGES old content into the new model. §16.5's "delete
+    # before add" governs dead code, not the only surviving copy of something.
+
+    P15_forge_shell_into_loom:
+      why: "James: 'completely break down and rebuild forge-shell in loom and use the existing phasemap system in loom to populate what's missing, merge forge shell and loom's phasemap system into loom, with the forge UI.' Today forge-shell lives at ui/forge-shell/ and reaches across to loom :3752 for phase data while ALSO carrying its own frozen array. Two sources, one of which drifted by 86 phases. loom already owns the parser; it should own the surface."
+      does: >
+        Move the forge UI into loom as loom's own surface, served by
+        loom/server.js, reading loom/scanners/phasemap-map.js directly
+        rather than over HTTP from another origin. MERGE the historical
+        45-phase array into the phasemap model rather than deleting it:
+        its descriptions, dependency chains and unlock edges are real
+        history and must survive the move, carried as archived phase
+        records clearly marked with their 2026-07-19 origin so they are
+        never confused with live status.
+      axioms: "§16.5 (loom's parser already exists — move the view to it, don't duplicate the data), §5.4 (one phasemap, one truth, no second array), §1.1 (nothing that exists only in the old array may be lost in the move)"
+      gate: >
+        The forge UI is served BY loom, shows every live phase from every
+        real phasemap file, AND every one of the 45 historical phases is
+        still retrievable with its original description text — proven by
+        diffing the pre-move array against the post-move store, count and
+        content, not by asserting the migration ran.
+
+    P16_architect_node_canvas_in_loom:
+      why: "James: 'architect ← loom's node based architecture canvas.' loom already holds every component, hook, wire and seam — the complete node graph — and architect currently renders its own separate view of a model it does not own."
+      does: >
+        Build the node-based architecture canvas as loom's own surface,
+        rendering loom's real component/hook/wire/seam registry. Architect
+        becomes a consumer of that canvas rather than a parallel renderer.
+        Blocked-by-honesty gate: the registry must first be clean enough
+        to render truthfully — see P3.
+      axioms: "§16.5, §1.1 (a canvas over a registry with 238 dangling hooks draws a graph that is not the real one)"
+      gate: "deferred — the canvas renders loom's real registry, and every node/edge drawn resolves to a real registry row. Explicitly gated on P3's remaining route/import classes being resolved or visibly marked, not silently drawn as healthy."
+
+    P17_blueprint_builder_onto_canvas:
+      why: "James: 'blueprint builder ← loom's node based architecture canvas.' Same data, same canvas — a blueprint is a proposed subgraph, not a different kind of thing."
+      does: >
+        Migrate ui/blueprint-builder onto P16's canvas, so building a
+        blueprint is composing real registry nodes rather than drawing
+        shapes that later have to be reconciled with reality.
+      axioms: "§16.5 (one canvas, two modes — not two canvases)"
+      gate: "deferred — depends_on: P16"
+      depends_on: [P16]
+
+    P18_tv_ui_triage:
+      why: "James's own read, verbatim: 'Useless in the current state. Either scrap or rebuild completely: guardian ui, cortex, bridge, diagnostic, orchestrator, emerge.' Six surfaces named. The decision per-surface is scrap-or-rebuild, and that decision needs evidence, not a vibe."
+      does: >
+        Per surface, in this order — inventory what it actually renders
+        today and where that data comes from; decide scrap vs rebuild on
+        that evidence; record the decision and its reason in this phasemap
+        so the choice is auditable later. Rebuilds land on loom's real
+        model (P16's canvas or the phasemap surface), not on new
+        per-surface data paths. Scrapped surfaces are ARCHIVED, not
+        deleted — same rule as P15's array.
+      axioms: "§8.4 (scan each surface before judging it), §16.5 (rebuild onto the shared model), §1.1 (record the real reason per surface)"
+      gate: "deferred — each of the six has a written scrap-or-rebuild decision with the evidence behind it. No surface is deleted without its content archived first."
+
+    P19_tablet_continue:
+      why: "James: 'continue tablet.' T1–T4 (disk-backed ledger explorer, container shell, config governance, brain view) are already built; the arc was paused, not finished."
+      does: >
+        Resume the tablet arc from its real current state — inventory what
+        T1–T4 actually left working first (§8.4), then continue rather
+        than restart.
+      axioms: "§8.4, §3.1 (bottom-up from what's really there)"
+      gate: "deferred — starts with a real inventory of T1–T4's shipped state, not from memory of what was planned."
+
+    P20_intelligence_reads_present_not_oldest:
+      why: >
+        Not previously in this phasemap and it should have been. cortex/intelligence's
+        _scanPatterns reads jaaDB.query('event_log', ...), and query() iterates from
+        index 0 and breaks at the limit — it returns the OLDEST 500 events, forever.
+        tail() (the correct function) is defined 19 lines below in the same file and
+        is called zero times by the engine. Combined with _patternScanCursor being set
+        to now after the first pass, nothing new is ever counted again in that process.
+        Live evidence: "dangling-hook fires in bursts (116403x observed)" and
+        "gaps keep recurring (100x open)" printed byte-identical across three
+        consecutive boots spanning a change that removed ~450 GAPs per boot. The
+        system has been reciting a fixed old window while reporting it as observation.
+      does: >
+        Replace the event_log reads with tail(), including a
+        predicate-aware tail for the two filtered reads. Stratify the
+        sample per event type so one loud type cannot crowd out every
+        other signal. Reconcile the 508 stale open `gaps` rows feeding the
+        "100x open" claim — closed by evidence, not deleted wholesale.
+      axioms: "§0.1 (evidence over confidence — an engine reporting confidence from a stale window is the exact failure this axiom names), §1.2 (a stale reading must not present as a live one)"
+      gate: >
+        The crystallised counts CHANGE between two boots with genuinely
+        different activity. Today they are byte-identical across three —
+        that identity is the bug, and its disappearance is the proof.
+
+    P21_loom_boundary_import_hooks:
+      why: "Third instance of the same missing-guard bug P1 fixed. The hand maps declare wires into .import hooks they never create — observability.wire.1 targets nexus.copilot.diagnostics.import; the component exists, the hook never does. ~11 wires, measured on a real from-scratch regen."
+      does: >
+        Mirror mapSource's requiredBy guard in the hand maps' import pass,
+        so a wire is only declared when both endpoints will really exist.
+      axioms: "§1.1, §16.5 (the guard already exists in mapSource — apply it, don't invent a second one)"
+      gate: "measured drop in dangling `import` hooks from the current 13, on a real from-scratch regeneration."
+
+    P22_scanner_hand_map_id_drift:
+      why: >
+        Three files are excluded from the source scan as "hand-mapped" but no map
+        declares them under the scanner's id, so they exist nowhere the wires can
+        reach. lib/agent-tools/index.js and copilot/server.js are in
+        copilot-capability-map's FILES yet neither component is in the registry —
+        only their .tools.* children — which is why all 6 remaining dangling exports
+        are agent-tools/tools/* wiring to a component that isn't there.
+        clear-glass/src/diagnostic/error-capture.js is excluded under
+        nexus.clear-glass.src.diagnostic.error-capture and declared as
+        nexus.clear-glass.error-capture.
+      does: >
+        Reconcile the ids, and add a real assertion to loom/bootstrap.js:
+        every path listed as hand-mapped must resolve to a component that
+        actually exists after bootstrap, loudly, not silently.
+      axioms: "§5.4 (id drift is a bug), §1.2 (assert loudly rather than let a file vanish between two maps)"
+      gate: "bootstrap fails loudly if any hand-mapped path has no component; the 6 agent-tools dangling exports resolve."
+
 
   ordering_rationale: >
     P1→P2 are the actual bottom: the loom registry (what everything else reads) and
