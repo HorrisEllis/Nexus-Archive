@@ -11,6 +11,7 @@ const { LoomDriver } = require('./schema/index');
 const { mapWarp } = require('./maps/warp-map');
 const { mapObservability } = require('./maps/observability-map');
 const { mapCopilotCapability } = require('./maps/copilot-capability-map');
+const { mapUi } = require('./maps/ui-map');
 
 const driver = new LoomDriver(); // default dataDir = loom/data/
 
@@ -71,6 +72,7 @@ const handMapped = [
   ...require('./maps/warp-map').FILES.map(f => f[0]),
   ...require('./maps/observability-map').FILES.map(f => f[0]),
   ...require('./maps/copilot-capability-map').FILES.map(f => f[0]),
+  ...require('./maps/ui-map').FILES.map(f => f[0]),
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -134,6 +136,13 @@ const mappedCC = mapCopilotCapability(driver);
 console.log(`  components: ${mappedCC.components.length} ok`);
 console.log(`  hooks:      ${mappedCC.hooks.length} ok`);
 console.log(`  wires:      ${mappedCC.wires.length} ok`);
+
+// ── UI files (2026-08-13) — plain UI, real HTTP-shaped edges only ──────────
+console.log('\nmapping ui files...\n');
+const mappedUi = mapUi(driver);
+console.log(`  components: ${mappedUi.components.length} ok`);
+console.log(`  hooks:      ${mappedUi.hooks.length} ok`);
+console.log(`  wires:      ${mappedUi.wires.length} ok`);
 if (mappedCC.failures.length) {
   console.log(`  FAILURES:`);
   for (const f of mappedCC.failures) console.log(`    ${JSON.stringify(f)}`);

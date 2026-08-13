@@ -501,11 +501,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--void);color:va
     </div>
   </header>
 
-  <!-- LEFT: PHASE MAP -->
+  <!-- LEFT: PHASE MAP (legacy — static, see LOOM tab for live data) -->
   <aside id="left">
     <div class="panel-header">
-      <span class="panel-title">Phase Map</span>
+      <span class="panel-title">Phase Map (legacy, frozen 2026-07-19)</span>
       <span class="panel-badge" id="phase-count">—</span>
+    </div>
+    <div style="padding:6px 10px;font:10px var(--mono,monospace);color:var(--dim);border-bottom:1px solid var(--edge)">
+      Static data — see the LOOM tab above for live phasemap progress.
     </div>
     <div id="phase-list"><!-- populated by JS --></div>
   </aside>
@@ -514,19 +517,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--void);color:va
   <main id="main">
     <nav id="view-tabs">
       <div class="vtab active" data-view="xray">X-RAY</div>
-      <div class="vtab" data-view="phase">PHASE</div>
+      <div class="vtab" data-view="phase">PHASE (legacy)</div>
       <div class="vtab" data-view="loom">LOOM</div>
       <div class="vtab" data-view="terminal">TERMINAL</div>
     </nav>
 
     <!-- LOOM: real, live phasemap data — every phase from every system,
-         not the static array the PHASE tab reads (see loom-note below) -->
+         not the static array the legacy PHASE tab reads (see loom-note below) -->
     <div class="view" id="view-loom">
       <div style="padding:20px;max-width:900px;margin:0 auto">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
-          <span style="font:600 15px/1 var(--mono,monospace);color:var(--purple)">LOOM — LIVE PHASEMAP</span>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px">
+          <span style="font:600 15px/1 var(--mono,monospace);color:var(--purple);letter-spacing:.04em">LOOM — LIVE PHASEMAP</span>
           <span id="loom-summary" style="font:12px var(--mono,monospace);color:var(--dim)">—</span>
         </div>
+        <div style="height:1px;background:var(--purple);opacity:.35;margin-bottom:1px"></div>
+        <div style="height:1px;background:var(--purple);opacity:.15;margin-bottom:14px"></div>
         <div style="font:11px var(--mono,monospace);color:var(--dim);margin-bottom:18px">
           Every phase from every docs/*.spec file, read live from loom/scanners/phasemap-map.js — not the
           hand-maintained array the PHASE tab shows, which has not moved since 2026-07-19.
@@ -1118,14 +1123,20 @@ async function renderLoomPhasemap() {
   wrap.innerHTML = systems.map(sys => {
     const pct = sys.total ? Math.round((sys.done / sys.total) * 100) : 0;
     const pending = sys.phases.filter(p => p.status !== 'done');
+    // §SIGNATURE — a loom weaves threads into fabric. The fill isn't a
+    // flat gradient; it's two interlaced diagonal thread sets (warp/weft),
+    // done color for the woven portion, a bare warp (no weft) for what's
+    // still pending — the bar itself says what a loom does, not just what
+    // color "done" happens to be.
+    const wovenColor = pct === 100 ? 'var(--green)' : 'var(--purple)';
     return `
       <div style="margin-bottom:16px;padding:12px 14px;background:var(--panel);border:1px solid var(--edge);border-radius:6px">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-          <span style="font:600 12px var(--mono,monospace);color:var(--text)">${sys.map}</span>
+          <span style="font:600 12px var(--mono,monospace);color:var(--text);letter-spacing:.02em">${sys.map}</span>
           <span style="font:11px var(--mono,monospace);color:var(--dim)">${sys.done}/${sys.total}</span>
         </div>
-        <div style="height:6px;background:var(--ink);border-radius:3px;overflow:hidden;margin-bottom:${pending.length ? '8px' : '0'}">
-          <div style="height:100%;width:${pct}%;background:${pct === 100 ? 'var(--green)' : 'var(--purple)'};transition:width .3s"></div>
+        <div style="height:7px;background:repeating-linear-gradient(90deg,var(--ink) 0px,var(--ink) 2px,var(--edge) 2px,var(--edge) 3px);border-radius:3px;overflow:hidden;margin-bottom:${pending.length ? '8px' : '0'};position:relative">
+          <div style="height:100%;width:${pct}%;background:repeating-linear-gradient(45deg,${wovenColor} 0px,${wovenColor} 3px,color-mix(in srgb, ${wovenColor} 55%, transparent) 3px,color-mix(in srgb, ${wovenColor} 55%, transparent) 6px);transition:width .3s"></div>
         </div>
         ${pending.length ? `<div style="font:10px var(--mono,monospace);color:var(--dim)">pending: ${pending.map(p => p.id).join(', ')}</div>` : ''}
       </div>`;

@@ -13806,6 +13806,14 @@
       "version": "1.0.0",
       "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.emergence-v1-0000-2026-0812-001",
       "registeredAt": 1786595241810
+    },
+    "nexus.ui.forge-shell": {
+      "id": "nexus.ui.forge-shell",
+      "namespace": "nexus.ui",
+      "name": "ui/forge-shell/index.html",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-ui-nexus.ui.forge-shell-v1-0000-2026-0813-001",
+      "registeredAt": 1786596426276
     }
   },
   "seam": {},
@@ -31749,6 +31757,16 @@
       "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.emergence-import-v1-0000-2026-0812-001",
       "novelType": false,
       "registeredAt": 1786595244119
+    },
+    "nexus.ui.forge-shell.import": {
+      "id": "nexus.ui.forge-shell.import",
+      "component_id": "nexus.ui.forge-shell",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-ui-nexus.ui.forge-shell-import-v1-0000-2026-0813-001",
+      "novelType": false,
+      "registeredAt": 1786596426515
     }
   },
   "wire": {
@@ -49033,6 +49051,13 @@
       "to_hook_id": "nexus.lib.agent-tools.tools.emergence.import",
       "uuid": "nexus-loom-map-cc-wire-70-v1-0000-2026-0812-001",
       "registeredAt": 1786595249836
+    },
+    "ui-map.wire.1.nexus.loom.server--nexus.ui.forge-shell": {
+      "id": "ui-map.wire.1.nexus.loom.server--nexus.ui.forge-shell",
+      "from_hook_id": "nexus.loom.server.export",
+      "to_hook_id": "nexus.ui.forge-shell.import",
+      "uuid": "nexus-loom-map-ui-wire-1-v1-0000-2026-0813-001",
+      "registeredAt": 1786596426665
     }
   },
   "concern": {}
