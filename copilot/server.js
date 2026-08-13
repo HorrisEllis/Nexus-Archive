@@ -1612,6 +1612,30 @@ server.listen(PORT, () => {
       console.log('[copilot] self-model-refresh scheduled — buildNexusModel() every hour, persists to cortex self_model');
     }
   } catch (e) { console.warn('[copilot] self-model-refresh not scheduled:', e.message); }
+
+  // §WIRED 2026-08-12 (P7c, docs/copilot-full-capability-phasemap.spec) —
+  // lib/nerve-ollama-bridge.js exists and is correct (live-verified this
+  // session, including a route-order bug found and fixed by that same
+  // testing) but on its own is only a function someone has to remember to
+  // call. This is the "continuous" half: a recurring schedule_task, same
+  // mechanism as self-model-refresh above, so Nerve's per-window attention
+  // actually flows into ollama's standing context channel on its own.
+  // Channel id fixed at 'nexus-live' — the one standing channel this
+  // bridge feeds; a caller wanting the live context uses that channel id
+  // with ollama's /api/stream routes.
+  try {
+    const scheduler = require('../lib/scheduler.js');
+    const BRIDGE_TASK_ID = 'nerve-ollama-bridge-push';
+    if (!scheduler.get(BRIDGE_TASK_ID)) {
+      scheduler.schedule({
+        id: BRIDGE_TASK_ID, name: 'nerve-ollama-bridge-push', everyMs: 5000, maxRuns: Infinity,
+        target: { kind: 'fn' },
+        fn: async () => require('../lib/nerve-ollama-bridge.js').pushContext('nexus-live'),
+        intent: 'scheduled.nerve-ollama-bridge-push',
+      });
+      console.log('[copilot] nerve-ollama-bridge-push scheduled — Nerve window activity -> ollama channel "nexus-live" every 5s');
+    }
+  } catch (e) { console.warn('[copilot] nerve-ollama-bridge-push not scheduled:', e.message); }
 });
 }
 

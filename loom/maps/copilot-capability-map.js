@@ -85,6 +85,18 @@ const FILES = [
 
   ['lib/agent-tools/tools/nexus-help.js',            'nexus.lib.agent-tools.tools.nexus-help',
     ['nexus.copilot.nexus-awareness']],   // rundown/diagnose/ask wrap nexus-awareness; search_docs is new, no internal edge (fs only)
+
+  ['lib/agent-tools/tools/cos-compartment.js',       'nexus.lib.agent-tools.tools.cos-compartment',
+    []],   // reuses cos/cli/commands/{create,start,stop,destroy,list,status}.js's real programmatic functions in-process, cos/ has no registered component yet
+
+  ['lib/agent-tools/tools/cos-simulate.js',          'nexus.lib.agent-tools.tools.cos-simulate',
+    ['nexus.cortex.jaa-db']],   // in-process require of cos/playground/llm-lab.js (unregistered) + guardian :7820/command over HTTP (real network wire, not a code edge)
+
+  ['lib/agent-tools/tools/meta-query.js',            'nexus.lib.agent-tools.tools.meta-query',
+    []],   // in-process requires of 7 meta/ subsystems (alk, alk-perception, bda, cfr, gap, lattice, liminal), none registered as loom components yet — rfr2 deliberately excluded, see file header
+
+  ['lib/nerve-ollama-bridge.js',                     'nexus.lib.nerve-ollama-bridge',
+    ['nexus.lib.nerve', 'nexus.ollama.server']],   // P7c — reads Nerve's snapshot, PUTs to ollama's new context route
 ];
 
 // nexus.copilot.self-model already exists (observability-map.js) — no

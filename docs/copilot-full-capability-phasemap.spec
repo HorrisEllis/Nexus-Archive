@@ -2,7 +2,7 @@ spec:
   meta:
     name:        copilot-full-capability
     version:     0.1.0-phasemap
-    status:      DRAFT 2026-08-12 → P1/P2/P4/P5/P6/P8/P10/P11 DONE 2026-08-12 (same session, sixth pass).
+    status:      ALL 11 PHASES DONE 2026-08-12 (same session, ninth and final pass).
                  written per §8.5 (map before build), §3.1 (build order:
                  substrate before logic before surface), §16.5 (wrap what's built, don't
                  duplicate). Continues docs/copilot-omniscience-phasemap.spec (P1-P7, ALL
@@ -63,7 +63,7 @@ spec:
       axioms: "§0.4 ('I can't' becomes 'not yet — here's the work'), §1.2 (no silent dead end)"
       gate: "a request with no matching tool AND no agent that can fulfill it does NOT get a bare refusal — it gets 'not yet, tracked as gap #N', proven against a request built to have no real handler."
 
-    P3_cos_toolkit_tools:
+    P3_cos_toolkit_tools:   # ← DONE 2026-08-12
       why: "Standalone wrap, no dependency on P1/P2. Two tool files matching the two clusters James named."
       does: >
         cos_simulate (wraps cos/playground/llm-lab.js's LabManager/LabSession +
@@ -110,7 +110,7 @@ spec:
       axioms: "§1.1 (a set name is real data, not inferred — never fabricated the other way), §10.1"
       gate: "co-pilot is renamed via the tool, a fresh session still answers with the set name (persisted to cortex), and reverts honestly to inferred identity if the name is ever cleared."
 
-    P7_continuous_nerve_dom_to_ollama:
+    P7_continuous_nerve_dom_to_ollama:   # ← DONE 2026-08-12 — final phase, full chain live-verified
       why_last: "Largest structural lift — a genuinely new standing channel, not a wrap. Depends on nothing above but benefits from P4-P6 existing first as smaller proofs of the same wrap-vs-build discipline before the harder build."
       does: >
         Three real pieces, in order: (a) extend lib/nerve/index.js's read layer
@@ -135,7 +135,7 @@ spec:
       axioms: "§16.5 (wrap RewindEngine, don't reimplement), backend-first"
       gate: "copilot snapshots a real session, restores it, and the restored state matches the snapshot — proven against the live engine."
 
-    P9_meta_systems_toolkit:
+    P9_meta_systems_toolkit:   # ← DONE 2026-08-12 — 7 of 11 wrapped, 4 scoped out on purpose (see file header)
       why: "Real gap (11 subsystems, zero coverage) but the largest unknown here — none of the 11 has ever been inventoried for real callable exports the way COS was in P3. This phase IS that inventory, then the wrap — not assumed done in one pass."
       does: >
         For each of meta/{alk, alk-perception, bda, cfr, gap, lattice, liminal,

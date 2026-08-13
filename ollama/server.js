@@ -68,6 +68,15 @@ const _population    = new PopulationStore({ maxPerClass: 8 });
 const _queue    = [];    // waiting
 const _running  = new Map(); // jobId → job
 const _complete = [];   // last 100
+const _channels = new Map(); // channelId → { history: [{role,content,ts}], lastActivity } — P7 standing streams
+
+// Prune channels idle past 1 hour — a standing channel is not meant to
+// outlive its actual use forever; unref'd so it never blocks process exit.
+const _channelSweep = setInterval(() => {
+  const now = Date.now();
+  for (const [id, ch] of _channels) if (now - ch.lastActivity > 3600000) _channels.delete(id);
+}, 300000);
+if (_channelSweep.unref) _channelSweep.unref();
 const _uploads  = new Map(); // uploadId → {text, filename, uploadedAt} — bounded to 200 in the handler
 const _sseClients = new Set();
 
@@ -389,6 +398,117 @@ const server = http.createServer(async (req, res) => {
       model: DEFAULT_MODEL, queue_depth: _queue.length, running: _running.size,
       completed_today: _statsToday.completed, failed_today: _statsToday.failed,
       ollama_host: OLLAMA_HOST, ts: Date.now() });
+    return;
+  }
+
+  // ── Standing streaming context channel (P7, docs/copilot-full-capability-
+  // phasemap.spec) — deliberately SEPARATE from the job queue/_dispatch above.
+  // §WHY NOT unifiedDispatch — that pipeline (WARP crystallizer, population,
+  // axiom scoring, SEAM Detector) is built for discrete completed outputs: it
+  // scores/crystallizes ONE finished string per job. A standing channel is
+  // the opposite shape on purpose — an open conversation accumulating
+  // incremental context over many turns, not one job to grade. Threading
+  // streaming through machinery designed to score a finished answer would
+  // mean scoring partial chunks as if they were complete, which is simply
+  // wrong, not a missing feature. This is real stream:true against ollama's
+  // own /api/generate (the actually-unused path this phasemap named),
+  // forwarded live, chunk by chunk, as they arrive.
+  //
+  // §ROUTE ORDER — the context-PUT route below MUST be checked before this
+  // generic '/api/stream/' prefix match, or it never gets reached (it also
+  // starts with '/api/stream/'). Found by live-testing the bridge end to
+  // end, not assumed: the first version had this reversed and every PUT
+  // context call fell into this block's 405 instead.
+  if (method === 'PUT' && p.startsWith('/api/stream/') && p.endsWith('/context')) {
+    const channelId = decodeURIComponent(p.slice('/api/stream/'.length, -'/context'.length));
+    if (!channelId) { json(res, 400, { ok: false, error: 'channel id required' }); return; }
+    readBody(req).then(body => {
+      if (!body.context) { json(res, 400, { ok: false, error: 'context required' }); return; }
+      let ch = _channels.get(channelId);
+      if (!ch) { ch = { history: [], lastActivity: Date.now() }; _channels.set(channelId, ch); }
+      ch.history.push({ role: 'context', content: String(body.context), ts: Date.now() });
+      ch.lastActivity = Date.now();
+      json(res, 200, { ok: true, channelId, turns: ch.history.length });
+    }).catch(e => { json(res, 500, { ok: false, error: e.message }); });
+    return;
+  }
+
+  if (p.startsWith('/api/stream/')) {
+    const channelId = decodeURIComponent(p.slice('/api/stream/'.length));
+    if (!channelId) { json(res, 400, { ok: false, error: 'channel id required — POST/GET /api/stream/:channelId' }); return; }
+
+    if (method === 'GET') {
+      const ch = _channels.get(channelId);
+      json(res, 200, { ok: true, channelId, exists: !!ch, history: ch ? ch.history : [], lastActivity: ch ? ch.lastActivity : null });
+      return;
+    }
+
+    if (method === 'POST') {
+      readBody(req).then(body => {
+        const prompt = body.prompt;
+        if (!prompt) { json(res, 400, { ok: false, error: 'prompt required' }); return; }
+        const model = body.model || DEFAULT_MODEL;
+
+        let ch = _channels.get(channelId);
+        if (!ch) { ch = { history: [], lastActivity: Date.now() }; _channels.set(channelId, ch); }
+        ch.history.push({ role: 'user', content: prompt, ts: Date.now() });
+        ch.lastActivity = Date.now();
+
+        // Build ollama's own context param from prior turns, same shape
+        // /api/generate itself uses for multi-turn continuity — the channel
+        // IS the context, not a new context format invented here.
+        const fullPrompt = ch.history.map(h => {
+          if (h.role === 'context') return `[CONTEXT] ${h.content}`;
+          return `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`;
+        }).join('\n') + '\nAssistant:';
+
+        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
+
+        const reqBody = JSON.stringify({ model, prompt: fullPrompt, stream: true });
+        const u = new URL(`${OLLAMA_HOST}/api/generate`);
+        let assembled = '';
+        const upstream = http.request({
+          hostname: u.hostname, port: u.port || 11434, path: u.pathname, method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(reqBody) },
+        }, upstreamRes => {
+          let buf = '';
+          upstreamRes.on('data', chunk => {
+            buf += chunk.toString();
+            const lines = buf.split('\n');
+            buf = lines.pop(); // last (possibly incomplete) line stays in buf
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              let parsed;
+              try { parsed = JSON.parse(line); } catch (_) { continue; }
+              if (parsed.response) assembled += parsed.response;
+              res.write(`data: ${JSON.stringify({ channelId, chunk: parsed.response || '', done: !!parsed.done, ts: Date.now() })}\n\n`);
+              if (parsed.done) {
+                ch.history.push({ role: 'assistant', content: assembled, ts: Date.now() });
+                ch.lastActivity = Date.now();
+                res.end();
+              }
+            }
+          });
+          upstreamRes.on('end', () => { try { res.end(); } catch (_) {} });
+        });
+        upstream.on('error', e => {
+          res.write(`data: ${JSON.stringify({ channelId, error: `ollama unreachable: ${e.message}`, done: true, ts: Date.now() })}\n\n`);
+          res.end();
+        });
+        upstream.write(reqBody);
+        upstream.end();
+        req.on('close', () => { try { upstream.destroy(); } catch (_) {} });
+      }).catch(e => { json(res, 500, { ok: false, error: e.message }); });
+      return;
+    }
+
+    json(res, 405, { ok: false, error: 'method not allowed — GET or POST' });
+    return;
+  }
+
+  if (p === '/api/streams') {
+    json(res, 200, { ok: true, channels: [..._channels.entries()].map(([id, ch]) => ({ channelId: id, turns: ch.history.length, lastActivity: ch.lastActivity })) });
     return;
   }
 

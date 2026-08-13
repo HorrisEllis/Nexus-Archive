@@ -13638,6 +13638,38 @@
       "version": "1.0.0",
       "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.nexus-help-v1-0000-2026-0812-001",
       "registeredAt": 1786581302729
+    },
+    "nexus.lib.agent-tools.tools.cos-compartment": {
+      "id": "nexus.lib.agent-tools.tools.cos-compartment",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/cos-compartment.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.cos-compartment-v1-0000-2026-0812-001",
+      "registeredAt": 1786581784651
+    },
+    "nexus.lib.agent-tools.tools.cos-simulate": {
+      "id": "nexus.lib.agent-tools.tools.cos-simulate",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/cos-simulate.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.cos-simulate-v1-0000-2026-0812-001",
+      "registeredAt": 1786581784815
+    },
+    "nexus.lib.agent-tools.tools.meta-query": {
+      "id": "nexus.lib.agent-tools.tools.meta-query",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/meta-query.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.meta-query-v1-0000-2026-0812-001",
+      "registeredAt": 1786582003171
+    },
+    "nexus.lib.nerve-ollama-bridge": {
+      "id": "nexus.lib.nerve-ollama-bridge",
+      "namespace": "nexus.lib",
+      "name": "lib/nerve-ollama-bridge.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.nerve-ollama-bridge-v1-0000-2026-0812-001",
+      "registeredAt": 1786582459147
     }
   },
   "seam": {},
@@ -31321,6 +31353,26 @@
       "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.nexus-help-import-v1-0000-2026-0812-001",
       "novelType": false,
       "registeredAt": 1786581303586
+    },
+    "nexus.lib.agent-tools.tools.cos-simulate.import": {
+      "id": "nexus.lib.agent-tools.tools.cos-simulate.import",
+      "component_id": "nexus.lib.agent-tools.tools.cos-simulate",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.cos-simulate-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786581785809
+    },
+    "nexus.lib.nerve-ollama-bridge.import": {
+      "id": "nexus.lib.nerve-ollama-bridge.import",
+      "component_id": "nexus.lib.nerve-ollama-bridge",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.nerve-ollama-bridge-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786582460198
     }
   },
   "wire": {
@@ -48367,6 +48419,27 @@
       "to_hook_id": "nexus.lib.agent-tools.tools.nexus-help.import",
       "uuid": "nexus-loom-map-cc-wire-36-v1-0000-2026-0812-001",
       "registeredAt": 1786581306791
+    },
+    "copilot-capability.wire.37.nexus.cortex.jaa-db--nexus.lib.agent-tools.tools.cos-simulate": {
+      "id": "copilot-capability.wire.37.nexus.cortex.jaa-db--nexus.lib.agent-tools.tools.cos-simulate",
+      "from_hook_id": "nexus.cortex.jaa-db.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.cos-simulate.import",
+      "uuid": "nexus-loom-map-cc-wire-37-v1-0000-2026-0812-001",
+      "registeredAt": 1786581789351
+    },
+    "copilot-capability.wire.38.nexus.lib.nerve--nexus.lib.nerve-ollama-bridge": {
+      "id": "copilot-capability.wire.38.nexus.lib.nerve--nexus.lib.nerve-ollama-bridge",
+      "from_hook_id": "nexus.lib.nerve.export",
+      "to_hook_id": "nexus.lib.nerve-ollama-bridge.import",
+      "uuid": "nexus-loom-map-cc-wire-38-v1-0000-2026-0812-001",
+      "registeredAt": 1786582463619
+    },
+    "copilot-capability.wire.39.nexus.ollama.server--nexus.lib.nerve-ollama-bridge": {
+      "id": "copilot-capability.wire.39.nexus.ollama.server--nexus.lib.nerve-ollama-bridge",
+      "from_hook_id": "nexus.ollama.server.export",
+      "to_hook_id": "nexus.lib.nerve-ollama-bridge.import",
+      "uuid": "nexus-loom-map-cc-wire-39-v1-0000-2026-0812-001",
+      "registeredAt": 1786582463748
     }
   },
   "concern": {}
