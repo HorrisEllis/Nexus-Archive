@@ -10,6 +10,7 @@
 const { LoomDriver } = require('./schema/index');
 const { mapWarp } = require('./maps/warp-map');
 const { mapObservability } = require('./maps/observability-map');
+const { mapCopilotCapability } = require('./maps/copilot-capability-map');
 
 const driver = new LoomDriver(); // default dataDir = loom/data/
 
@@ -69,6 +70,7 @@ const { mapSpecs } = require('./scanners/spec-map');
 const handMapped = [
   ...require('./maps/warp-map').FILES.map(f => f[0]),
   ...require('./maps/observability-map').FILES.map(f => f[0]),
+  ...require('./maps/copilot-capability-map').FILES.map(f => f[0]),
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -124,6 +126,18 @@ if (mappedObs.failures.length) {
   console.log(`  FAILURES:`);
   for (const f of mappedObs.failures) console.log(`    ${JSON.stringify(f)}`);
   failures += mappedObs.failures.length;
+}
+
+// ── Copilot-capability tool session (2026-08-12) — real require/HTTP edges ──
+console.log('\nmapping copilot-capability tools (real require()/HTTP edges only)...\n');
+const mappedCC = mapCopilotCapability(driver);
+console.log(`  components: ${mappedCC.components.length} ok`);
+console.log(`  hooks:      ${mappedCC.hooks.length} ok`);
+console.log(`  wires:      ${mappedCC.wires.length} ok`);
+if (mappedCC.failures.length) {
+  console.log(`  FAILURES:`);
+  for (const f of mappedCC.failures) console.log(`    ${JSON.stringify(f)}`);
+  failures += mappedCC.failures.length;
 }
 
 // ── CAPABILITY / CONSUMER registry — the semantic graph ────────────────────

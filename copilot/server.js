@@ -981,6 +981,22 @@ const server = http.createServer(async (req, res) => {
       },
     });
 
+    // §WIRED 2026-08-12 (P2 of docs/copilot-full-capability-phasemap.spec) —
+    // capability-extend.js is the TRUE last resort, only after fulfill()'s
+    // own iteration budget is genuinely exhausted (outcome.ok === false),
+    // never on a single attempt failing. shouldExtend() is not used here —
+    // outcome.ok already IS that same "nothing worked" signal, one level up
+    // (adaptive-fulfillment tried every agent RAID would route to; this is
+    // the point past that, not a duplicate check). Never blocks or throws
+    // over the response — best-effort, same as every other optional wire.
+    if (!outcome.ok) {
+      try {
+        const { extendCapability } = require('./capability-extend');
+        const ext = await extendCapability(prompt, { source: 'copilot.adaptive-fulfillment', reason: outcome.reason, requestId });
+        outcome.capabilityGap = ext;
+      } catch (e) { console.warn('[copilot] capability-extend not filed:', e.message); }
+    }
+
     json(res, outcome.ok ? 200 : 502, { ...outcome, requestId, events });
     return;
   }
@@ -1556,6 +1572,46 @@ server.listen(PORT, () => {
     _digest.start();
     console.log('[copilot] stream-digest started — activity persists to Cortex every 60s');
   } catch (e) { console.warn('[copilot] stream-digest not started:', e.message); }
+
+  // §WIRED 2026-08-12 — schedule_task/register_trigger (lib/agent-tools) write
+  // to lib/scheduler.js and lib/triggers.js, which persist to cortex but only
+  // ARM a live timer `if (_running)`. Grepped the whole tree before adding this:
+  // nothing outside tests/ ever called .start() on either module, so every
+  // task/trigger created through the new tools — and the 6 tasks + 1 trigger
+  // already sitting in cortex from before this fix — persisted and then never
+  // fired. copilot is the natural owner: both modules' own docblocks are
+  // written for it ("co-pilot can schedule tasks, jobs, alarms..."). Each
+  // .start() hydrates existing rows from cortex and arms them; same
+  // never-crash-the-server guard as stream-digest above.
+  try {
+    require('../lib/scheduler.js').start();
+    console.log('[copilot] scheduler started — persisted tasks hydrated and armed');
+  } catch (e) { console.warn('[copilot] scheduler not started:', e.message); }
+  try {
+    require('../lib/triggers.js').start();
+    console.log('[copilot] triggers started — persisted triggers hydrated and armed');
+  } catch (e) { console.warn('[copilot] triggers not started:', e.message); }
+
+  // §WIRED 2026-08-12 — buildNexusModel() (copilot/lib/self-model.js) existed
+  // complete but self_model had 0 rows: nothing ever called it, AND its own
+  // persist call was miswired against lib/cortex-write.js's real factory
+  // contract (fixed same session). Fixed both halves — this is the "never
+  // goes stale again" half: a recurring schedule_task, same mechanism P2's
+  // never-say-no and every schedule_task-authored task use, so the model in
+  // cortex tracks reality instead of being a one-time manual snapshot.
+  try {
+    const scheduler = require('../lib/scheduler.js');
+    const EXISTING_ID = 'self-model-refresh';
+    if (!scheduler.get(EXISTING_ID)) {
+      scheduler.schedule({
+        id: EXISTING_ID, name: 'self-model-refresh', everyMs: 3600000, maxRuns: Infinity,
+        target: { kind: 'fn' },
+        fn: async () => require('./lib/self-model.js').buildNexusModel({}),
+        intent: 'scheduled.self-model-refresh',
+      });
+      console.log('[copilot] self-model-refresh scheduled — buildNexusModel() every hour, persists to cortex self_model');
+    }
+  } catch (e) { console.warn('[copilot] self-model-refresh not scheduled:', e.message); }
 });
 }
 

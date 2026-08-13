@@ -79,25 +79,7 @@ const DOM_OBSERVER_SCRIPT = `
           if (n.nodeType === 1) changes.push({ type: 'added', node: serialize(n, 0, 2) });
         });
         m.removedNodes.forEach(n => {
-          if (n.nodeType === 1) {
-            changes.push({ type: 'removed', nodeId: n.__cgId, tag: n.tagName?.toLowerCase() });
-            // PERF 2026-08-12 - was leaked: removal was reported but the
-            // node's entry in mesh was never deleted. On a virtualized
-            // streaming chat UI (constant node churn) this grew without
-            // bound for the life of the page, since these tabs are kept
-            // alive indefinitely rather than navigated away from.
-            if (n.__cgId) mesh.delete(n.__cgId);
-            // Descendants of a removed subtree also never fire their own
-            // removed mutation record (they are gone with their parent),
-            // so sweep any of their ids out of mesh too. __cgId is a JS
-            // property, not an HTML attribute, so this has to walk
-            // elements and check the property directly.
-            if (n.querySelectorAll) {
-              n.querySelectorAll('*').forEach(child => {
-                if (child.__cgId) mesh.delete(child.__cgId);
-              });
-            }
-          }
+          if (n.nodeType === 1) changes.push({ type: 'removed', nodeId: n.__cgId, tag: n.tagName?.toLowerCase() });
         });
       } else if (m.type === 'attributes') {
         changes.push({

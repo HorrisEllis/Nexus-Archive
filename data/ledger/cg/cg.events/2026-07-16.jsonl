@@ -1,3 +1,0 @@
-{"uuid":"ac502836-459e-4d48-8fbb-2b707667bbcd","system":"cg","component":"cg.events","action":"updated","status":"ok","tags":["cg","stream"],"detail":"SSE — all SISO bus events","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1784169444630}
-{"uuid":"549d9b81-0276-4419-bea5-85918347d31a","system":"cg","component":"cg.events","action":"updated","status":"ok","tags":["cg","stream"],"detail":"SSE — all SISO bus events","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1784171612525}
-{"uuid":"fb5b0545-12ca-43e2-be75-324807615565","system":"cg","component":"cg.events","action":"updated","status":"ok","tags":["cg","stream"],"detail":"SSE — all SISO bus events","causedBy":"clear-glass","contractUuid":null,"session":null,"ts":1784178399279}

@@ -66,6 +66,55 @@ function recordIdentityEvidence(key, item) {
   return { ok: false, reason: 'reflection.trackIdentityEvidence unavailable' };
 }
 
+// ── P6 (docs/copilot-full-capability-phasemap.spec) — co-pilot's OWN name ─────
+// §CORRECTION 2026-08-12 — that phasemap's own P6 entry said "whoAmI() prefers
+// customName when set." Wrong: whoAmI() above answers "what does NEXUS know
+// about the USER" (hypotheses about the person talking to it), not "what is
+// co-pilot's own name." Those are different axes and conflating them would
+// have made whoAmI silently start answering a different question than every
+// existing caller (server.js:1080) expects. Kept separate: getIdentityName/
+// setIdentityName are co-pilot's own display name, a user DECISION (§1.1 —
+// set data, not inferred — never fabricated the other way, same principle
+// whoAmI already follows for the user axis). One row, cortex-persisted,
+// survives a restart.
+const IDENTITY_TABLE = 'copilot_identity';
+const IDENTITY_ROW_ID = 'name';
+
+/**
+ * getIdentityName() — co-pilot's own current display name. Returns the
+ * default ('co-pilot') if never set — never fabricates a name that wasn't
+ * actually chosen.
+ */
+function getIdentityName() {
+  try {
+    const { jaaDB } = require('../../cortex/memory/jaa-db');
+    const row = jaaDB.query(IDENTITY_TABLE, r => r.id === IDENTITY_ROW_ID)[0];
+    return { name: (row && row.name) || 'co-pilot', isCustom: !!(row && row.name), setAt: row ? row.ts : null };
+  } catch (e) {
+    return { name: 'co-pilot', isCustom: false, error: e.message };
+  }
+}
+
+/**
+ * setIdentityName(name) — set co-pilot's own display name. Persisted, not
+ * in-memory — a rename survives a restart. Empty/null clears back to default.
+ */
+function setIdentityName(name) {
+  const trimmed = (name || '').trim();
+  try {
+    const { jaaDB } = require('../../cortex/memory/jaa-db');
+    if (!trimmed) {
+      jaaDB.insert(IDENTITY_TABLE, { id: IDENTITY_ROW_ID, name: null, ts: Date.now(), cleared: true });
+      return { ok: true, name: 'co-pilot', isCustom: false, cleared: true };
+    }
+    if (trimmed.length > 60) return { ok: false, reason: 'name too long (max 60 chars)' };
+    jaaDB.insert(IDENTITY_TABLE, { id: IDENTITY_ROW_ID, name: trimmed, ts: Date.now() });
+    return { ok: true, name: trimmed, isCustom: true };
+  } catch (e) {
+    return { ok: false, reason: e.message };
+  }
+}
+
 // ── P6 foundation: governance + agent switching ──────────────────────────────
 /**
  * governAction(req, ctx) — the governance gate (RAID-adjacent): classify intent +
@@ -150,14 +199,28 @@ async function buildNexusModel(opts = {}) {
   } catch (e) { model.intentConfidence = { error: e.message }; }
 
   // Persist to cortex self_model table (the brain). Best-effort, non-blocking.
+  // §FIXED 2026-08-12 — root cause of self_model having 0 rows, found by
+  // actually running this function live (not assumed from "never called"):
+  // lib/cortex-write.js exports a FACTORY — cortexWrite('systemName') →
+  // {insert, ...} — not a bare .write(table, row). The old code's `_try(
+  // '../../lib/cortex-write')` got the raw factory function back, its own
+  // `writer.write` check correctly failed, then its `typeof writer ===
+  // 'function'` check was ALSO true (a factory IS a function) and called
+  // `writer('self_model', {...model})` — which invokes the factory with
+  // 'self_model' as a systemName and the model object as an unused second
+  // arg. No error, no row, nothing — silently wrong, caught only by
+  // actually running it and checking the table afterward. Fixed to write
+  // in-process via jaaDB directly, same proven pattern this session's other
+  // tools already use (schedule-task.js, raid-snr.js, etc.) rather than
+  // trust cortex-write's HTTP path, which needs a live cortex server this
+  // environment doesn't have to verify against.
   if (opts.persist !== false) {
     try {
-      const writer = opts.cortexWrite || _try('../../lib/cortex-write');
-      if (writer && writer.write) await writer.write('self_model', { id: 'nexus', ...model });
-      else if (writer && typeof writer === 'function') await writer('self_model', { id: 'nexus', ...model });
+      const { jaaDB } = opts.jaaDB ? { jaaDB: opts.jaaDB } : require('../../cortex/memory/jaa-db');
+      jaaDB.insert('self_model', { id: 'nexus', ...model });
     } catch (_) { /* persistence best-effort — the model is still returned */ }
   }
   return model;
 }
 
-module.exports = { whoAmI, recordIdentityEvidence, governAction, switchAgent, buildNexusModel, MODULE_ID: 'copilot-self-model', VERSION: '1.0.0' };
+module.exports = { whoAmI, recordIdentityEvidence, governAction, switchAgent, buildNexusModel, getIdentityName, setIdentityName, MODULE_ID: 'copilot-self-model', VERSION: '1.1.0' };

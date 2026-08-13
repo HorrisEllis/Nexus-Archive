@@ -17,16 +17,6 @@ class ContextManager {
     this.vault   = vault; // CookieVault
     this.sse     = sse;
     this.contexts = new Map(); // agentId → Context
-    // §PERF 2026-08-12 — see the ses.cookies.on('changed', ...) guard
-    // below. session.fromPartition() returns the SAME underlying session
-    // object for a given partition name across calls, but destroy() only
-    // ever removed the agentId from `this.contexts` — it never removed
-    // the listener attached to that session. Every destroy()-then-
-    // create() cycle for the same agentId was adding a second 'changed'
-    // listener on top of the first (which kept firing with its stale
-    // closure), tripling on the next cycle, etc. This set tracks which
-    // session objects already have the listener wired, once, ever.
-    this._cookieListenerWired = new WeakSet();
   }
 
   async init() {
@@ -89,32 +79,21 @@ class ContextManager {
       }
     });
 
-    // Cookie change events → SSE + vault. Wired once per underlying
-    // session object (see constructor note) — a destroy()+create() cycle
-    // for the same agentId reuses the same session and must NOT attach a
-    // second listener.
-    if (!this._cookieListenerWired.has(ses)) {
-      this._cookieListenerWired.add(ses);
-      ses.cookies.on('changed', (event, cookie, cause, removed) => {
-        // Context may have been destroy()'d since this listener was
-        // wired (same underlying session, no longer a live context) —
-        // drop instead of emitting/snapshotting for a dead agentId.
-        if (!this.contexts.has(id)) return;
-
-        this.sse.emit('cookie.event', {
-          agentId: id,
-          cookie:  { name: cookie.name, domain: cookie.domain, path: cookie.path },
-          cause,
-          removed,
-          ts:      Date.now(),
-        });
-
-        // Auto-snapshot on significant cookie changes
-        if (cause === 'explicit' && !removed) {
-          this.vault.snapshot(id, ses).catch(() => {});
-        }
+    // Cookie change events → SSE + vault
+    ses.cookies.on('changed', (event, cookie, cause, removed) => {
+      this.sse.emit('cookie.event', {
+        agentId: id,
+        cookie:  { name: cookie.name, domain: cookie.domain, path: cookie.path },
+        cause,
+        removed,
+        ts:      Date.now(),
       });
-    }
+
+      // Auto-snapshot on significant cookie changes
+      if (cause === 'explicit' && !removed) {
+        this.vault.snapshot(id, ses).catch(() => {});
+      }
+    });
 
     const ctx = {
       id,

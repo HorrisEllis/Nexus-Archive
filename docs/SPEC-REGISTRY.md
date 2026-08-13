@@ -43,6 +43,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `contract-queue.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `contracts.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `copilot-expansion.spec` | 1.0.0 | — | not yet checked against live code this pass |
+| `copilot-full-capability-phasemap.spec` | 0.1.0-phasemap | 2026-08-12 | ✓ written and self-checked this session — every substrate claim verified live (greps, real exports, live cortex/loom queries) before writing. Re-checked against code same session: P1/P2/P4/P5/P6/P8/P10/P11 done and live-verified, P3/P7/P9 still pending. |
 | `copilot-migration-and-new-capabilities.spec` | 1.1.0 | 2026-06-29 | ✓ filed session 6 — MIG-01 resolved, MIG-02 resolved differently than proposed, MIG-03 unverifiable (file not in tree), capability_cli_authoring built session 6. |
 | `copilot.spec` | 2.0.0 | — | not yet checked against live code this pass |
 | `cortex-dual-cognition.spec` | 1.0.0 | — | not yet checked against live code this pass |
