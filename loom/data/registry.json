@@ -13678,6 +13678,134 @@
       "version": "1.0.0",
       "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.run-chain-v1-0000-2026-0812-001",
       "registeredAt": 1786583482636
+    },
+    "nexus.lib.hat-forge": {
+      "id": "nexus.lib.hat-forge",
+      "namespace": "nexus.lib",
+      "name": "lib/hat-forge.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.hat-forge-v1-0000-2026-0812-001",
+      "registeredAt": 1786588519795
+    },
+    "nexus.lib.agent-tools.tools.hat-forge": {
+      "id": "nexus.lib.agent-tools.tools.hat-forge",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/hat-forge.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.hat-forge-v1-0000-2026-0812-001",
+      "registeredAt": 1786588519929
+    },
+    "nexus.lib.agent-capability-profile": {
+      "id": "nexus.lib.agent-capability-profile",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-capability-profile.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-capability-profile-v1-0000-2026-0812-001",
+      "registeredAt": 1786589156810
+    },
+    "nexus.lib.agent-tools.tools.agent-capability": {
+      "id": "nexus.lib.agent-tools.tools.agent-capability",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/agent-capability.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.agent-capability-v1-0000-2026-0812-001",
+      "registeredAt": 1786589156916
+    },
+    "nexus.lib.safe-apply": {
+      "id": "nexus.lib.safe-apply",
+      "namespace": "nexus.lib",
+      "name": "lib/safe-apply.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.safe-apply-v1-0000-2026-0812-001",
+      "registeredAt": 1786589730542
+    },
+    "nexus.lib.agent-tools.tools.safe-apply": {
+      "id": "nexus.lib.agent-tools.tools.safe-apply",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/safe-apply.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.safe-apply-v1-0000-2026-0812-001",
+      "registeredAt": 1786589730633
+    },
+    "nexus.lib.agent-council": {
+      "id": "nexus.lib.agent-council",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-council.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-council-v1-0000-2026-0812-001",
+      "registeredAt": 1786589730741
+    },
+    "nexus.lib.agent-tools.tools.agent-council": {
+      "id": "nexus.lib.agent-tools.tools.agent-council",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/agent-council.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.agent-council-v1-0000-2026-0812-001",
+      "registeredAt": 1786589730815
+    },
+    "nexus.lib.fault-log": {
+      "id": "nexus.lib.fault-log",
+      "namespace": "nexus.lib",
+      "name": "lib/fault-log.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.fault-log-v1-0000-2026-0812-001",
+      "registeredAt": 1786590177294
+    },
+    "nexus.lib.agent-tools.tools.fault-log": {
+      "id": "nexus.lib.agent-tools.tools.fault-log",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/fault-log.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.fault-log-v1-0000-2026-0812-001",
+      "registeredAt": 1786590177506
+    },
+    "nexus.lib.roundtable": {
+      "id": "nexus.lib.roundtable",
+      "namespace": "nexus.lib",
+      "name": "lib/roundtable.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.roundtable-v1-0000-2026-0812-001",
+      "registeredAt": 1786590177575
+    },
+    "nexus.lib.agent-tools.tools.roundtable": {
+      "id": "nexus.lib.agent-tools.tools.roundtable",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/roundtable.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.roundtable-v1-0000-2026-0812-001",
+      "registeredAt": 1786590177652
+    },
+    "nexus.lib.parallel-dispatch": {
+      "id": "nexus.lib.parallel-dispatch",
+      "namespace": "nexus.lib",
+      "name": "lib/parallel-dispatch.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.parallel-dispatch-v1-0000-2026-0812-001",
+      "registeredAt": 1786595241582
+    },
+    "nexus.lib.agent-tools.tools.parallel-dispatch": {
+      "id": "nexus.lib.agent-tools.tools.parallel-dispatch",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/parallel-dispatch.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.parallel-dispatch-v1-0000-2026-0812-001",
+      "registeredAt": 1786595241670
+    },
+    "nexus.lib.emergence": {
+      "id": "nexus.lib.emergence",
+      "namespace": "nexus.lib",
+      "name": "lib/emergence.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.emergence-v1-0000-2026-0812-001",
+      "registeredAt": 1786595241752
+    },
+    "nexus.lib.agent-tools.tools.emergence": {
+      "id": "nexus.lib.agent-tools.tools.emergence",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/emergence.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.emergence-v1-0000-2026-0812-001",
+      "registeredAt": 1786595241810
     }
   },
   "seam": {},
@@ -31381,6 +31509,246 @@
       "uuid": "nexus-loom-map-nexus.lib.nerve-ollama-bridge-import-v1-0000-2026-0812-001",
       "novelType": false,
       "registeredAt": 1786582460198
+    },
+    "nexus.lib.hat-forge.export": {
+      "id": "nexus.lib.hat-forge.export",
+      "component_id": "nexus.lib.hat-forge",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.hat-forge-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786588521143
+    },
+    "nexus.lib.hat-forge.import": {
+      "id": "nexus.lib.hat-forge.import",
+      "component_id": "nexus.lib.hat-forge",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.hat-forge-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786588521238
+    },
+    "nexus.lib.agent-tools.tools.hat-forge.import": {
+      "id": "nexus.lib.agent-tools.tools.hat-forge.import",
+      "component_id": "nexus.lib.agent-tools.tools.hat-forge",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.hat-forge-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786588521335
+    },
+    "nexus.lib.agent-capability-profile.export": {
+      "id": "nexus.lib.agent-capability-profile.export",
+      "component_id": "nexus.lib.agent-capability-profile",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.agent-capability-profile-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589158311
+    },
+    "nexus.lib.agent-capability-profile.import": {
+      "id": "nexus.lib.agent-capability-profile.import",
+      "component_id": "nexus.lib.agent-capability-profile",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-capability-profile-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589158405
+    },
+    "nexus.lib.agent-tools.tools.agent-capability.import": {
+      "id": "nexus.lib.agent-tools.tools.agent-capability.import",
+      "component_id": "nexus.lib.agent-tools.tools.agent-capability",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.agent-capability-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589158501
+    },
+    "nexus.lib.safe-apply.export": {
+      "id": "nexus.lib.safe-apply.export",
+      "component_id": "nexus.lib.safe-apply",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.safe-apply-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589732487
+    },
+    "nexus.lib.safe-apply.import": {
+      "id": "nexus.lib.safe-apply.import",
+      "component_id": "nexus.lib.safe-apply",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.safe-apply-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589732584
+    },
+    "nexus.lib.agent-tools.tools.safe-apply.import": {
+      "id": "nexus.lib.agent-tools.tools.safe-apply.import",
+      "component_id": "nexus.lib.agent-tools.tools.safe-apply",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.safe-apply-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589732683
+    },
+    "nexus.lib.agent-council.export": {
+      "id": "nexus.lib.agent-council.export",
+      "component_id": "nexus.lib.agent-council",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.agent-council-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589732789
+    },
+    "nexus.lib.agent-council.import": {
+      "id": "nexus.lib.agent-council.import",
+      "component_id": "nexus.lib.agent-council",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-council-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589732888
+    },
+    "nexus.lib.agent-tools.tools.agent-council.import": {
+      "id": "nexus.lib.agent-tools.tools.agent-council.import",
+      "component_id": "nexus.lib.agent-tools.tools.agent-council",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.agent-council-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786589732985
+    },
+    "nexus.lib.fault-log.export": {
+      "id": "nexus.lib.fault-log.export",
+      "component_id": "nexus.lib.fault-log",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.fault-log-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786590179837
+    },
+    "nexus.lib.fault-log.import": {
+      "id": "nexus.lib.fault-log.import",
+      "component_id": "nexus.lib.fault-log",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.fault-log-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786590179943
+    },
+    "nexus.lib.agent-tools.tools.fault-log.import": {
+      "id": "nexus.lib.agent-tools.tools.fault-log.import",
+      "component_id": "nexus.lib.agent-tools.tools.fault-log",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.fault-log-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786590180052
+    },
+    "nexus.lib.roundtable.export": {
+      "id": "nexus.lib.roundtable.export",
+      "component_id": "nexus.lib.roundtable",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.roundtable-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786590180158
+    },
+    "nexus.lib.roundtable.import": {
+      "id": "nexus.lib.roundtable.import",
+      "component_id": "nexus.lib.roundtable",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.roundtable-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786590180261
+    },
+    "nexus.lib.agent-tools.tools.roundtable.import": {
+      "id": "nexus.lib.agent-tools.tools.roundtable.import",
+      "component_id": "nexus.lib.agent-tools.tools.roundtable",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.roundtable-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786590180367
+    },
+    "nexus.lib.parallel-dispatch.export": {
+      "id": "nexus.lib.parallel-dispatch.export",
+      "component_id": "nexus.lib.parallel-dispatch",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.parallel-dispatch-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786595243728
+    },
+    "nexus.lib.parallel-dispatch.import": {
+      "id": "nexus.lib.parallel-dispatch.import",
+      "component_id": "nexus.lib.parallel-dispatch",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.parallel-dispatch-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786595243814
+    },
+    "nexus.lib.agent-tools.tools.parallel-dispatch.import": {
+      "id": "nexus.lib.agent-tools.tools.parallel-dispatch.import",
+      "component_id": "nexus.lib.agent-tools.tools.parallel-dispatch",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.parallel-dispatch-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786595243894
+    },
+    "nexus.lib.emergence.export": {
+      "id": "nexus.lib.emergence.export",
+      "component_id": "nexus.lib.emergence",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.emergence-export-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786595243972
+    },
+    "nexus.lib.emergence.import": {
+      "id": "nexus.lib.emergence.import",
+      "component_id": "nexus.lib.emergence",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.emergence-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786595244045
+    },
+    "nexus.lib.agent-tools.tools.emergence.import": {
+      "id": "nexus.lib.agent-tools.tools.emergence.import",
+      "component_id": "nexus.lib.agent-tools.tools.emergence",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.emergence-import-v1-0000-2026-0812-001",
+      "novelType": false,
+      "registeredAt": 1786595244119
     }
   },
   "wire": {
@@ -48448,6 +48816,223 @@
       "to_hook_id": "nexus.lib.nerve-ollama-bridge.import",
       "uuid": "nexus-loom-map-cc-wire-39-v1-0000-2026-0812-001",
       "registeredAt": 1786582463748
+    },
+    "copilot-capability.wire.40.nexus.lib.agent-tools--nexus.copilot.tool-runtime": {
+      "id": "copilot-capability.wire.40.nexus.lib.agent-tools--nexus.copilot.tool-runtime",
+      "from_hook_id": "nexus.lib.agent-tools.export",
+      "to_hook_id": "nexus.copilot.tool-runtime.import",
+      "uuid": "nexus-loom-map-cc-wire-40-v1-0000-2026-0812-001",
+      "registeredAt": 1786588525054
+    },
+    "copilot-capability.wire.41.nexus.copilot.lifeline--nexus.copilot.tool-runtime": {
+      "id": "copilot-capability.wire.41.nexus.copilot.lifeline--nexus.copilot.tool-runtime",
+      "from_hook_id": "nexus.copilot.lifeline.export",
+      "to_hook_id": "nexus.copilot.tool-runtime.import",
+      "uuid": "nexus-loom-map-cc-wire-41-v1-0000-2026-0812-001",
+      "registeredAt": 1786588525178
+    },
+    "copilot-capability.wire.42.nexus.lib.agent-tools--nexus.lib.hat-forge": {
+      "id": "copilot-capability.wire.42.nexus.lib.agent-tools--nexus.lib.hat-forge",
+      "from_hook_id": "nexus.lib.agent-tools.export",
+      "to_hook_id": "nexus.lib.hat-forge.import",
+      "uuid": "nexus-loom-map-cc-wire-42-v1-0000-2026-0812-001",
+      "registeredAt": 1786588525305
+    },
+    "copilot-capability.wire.43.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.hat-forge": {
+      "id": "copilot-capability.wire.43.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.hat-forge",
+      "from_hook_id": "nexus.lib.hat-forge.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.hat-forge.import",
+      "uuid": "nexus-loom-map-cc-wire-43-v1-0000-2026-0812-001",
+      "registeredAt": 1786588525433
+    },
+    "copilot-capability.wire.44.nexus.copilot.self-model--nexus.lib.agent-tools.tools.hat-forge": {
+      "id": "copilot-capability.wire.44.nexus.copilot.self-model--nexus.lib.agent-tools.tools.hat-forge",
+      "from_hook_id": "nexus.copilot.self-model.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.hat-forge.import",
+      "uuid": "nexus-loom-map-cc-wire-44-v1-0000-2026-0812-001",
+      "registeredAt": 1786588525563
+    },
+    "copilot-capability.wire.45.nexus.cortex.jaa-db--nexus.lib.agent-capability-profile": {
+      "id": "copilot-capability.wire.45.nexus.cortex.jaa-db--nexus.lib.agent-capability-profile",
+      "from_hook_id": "nexus.cortex.jaa-db.export",
+      "to_hook_id": "nexus.lib.agent-capability-profile.import",
+      "uuid": "nexus-loom-map-cc-wire-45-v1-0000-2026-0812-001",
+      "registeredAt": 1786589162736
+    },
+    "copilot-capability.wire.46.nexus.cortex.core.raid--nexus.lib.agent-capability-profile": {
+      "id": "copilot-capability.wire.46.nexus.cortex.core.raid--nexus.lib.agent-capability-profile",
+      "from_hook_id": "nexus.cortex.core.raid.export",
+      "to_hook_id": "nexus.lib.agent-capability-profile.import",
+      "uuid": "nexus-loom-map-cc-wire-46-v1-0000-2026-0812-001",
+      "registeredAt": 1786589162875
+    },
+    "copilot-capability.wire.47.nexus.lib.agent-capability-profile--nexus.lib.agent-tools.tools.agent-capability": {
+      "id": "copilot-capability.wire.47.nexus.lib.agent-capability-profile--nexus.lib.agent-tools.tools.agent-capability",
+      "from_hook_id": "nexus.lib.agent-capability-profile.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.agent-capability.import",
+      "uuid": "nexus-loom-map-cc-wire-47-v1-0000-2026-0812-001",
+      "registeredAt": 1786589163005
+    },
+    "copilot-capability.wire.48.nexus.cortex.jaa-db--nexus.lib.safe-apply": {
+      "id": "copilot-capability.wire.48.nexus.cortex.jaa-db--nexus.lib.safe-apply",
+      "from_hook_id": "nexus.cortex.jaa-db.export",
+      "to_hook_id": "nexus.lib.safe-apply.import",
+      "uuid": "nexus-loom-map-cc-wire-48-v1-0000-2026-0812-001",
+      "registeredAt": 1786589737624
+    },
+    "copilot-capability.wire.49.nexus.copilot.self-model--nexus.lib.safe-apply": {
+      "id": "copilot-capability.wire.49.nexus.copilot.self-model--nexus.lib.safe-apply",
+      "from_hook_id": "nexus.copilot.self-model.export",
+      "to_hook_id": "nexus.lib.safe-apply.import",
+      "uuid": "nexus-loom-map-cc-wire-49-v1-0000-2026-0812-001",
+      "registeredAt": 1786589737760
+    },
+    "copilot-capability.wire.50.nexus.lib.safe-apply--nexus.lib.agent-tools.tools.safe-apply": {
+      "id": "copilot-capability.wire.50.nexus.lib.safe-apply--nexus.lib.agent-tools.tools.safe-apply",
+      "from_hook_id": "nexus.lib.safe-apply.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.safe-apply.import",
+      "uuid": "nexus-loom-map-cc-wire-50-v1-0000-2026-0812-001",
+      "registeredAt": 1786589737889
+    },
+    "copilot-capability.wire.51.nexus.copilot.tool-runtime--nexus.lib.agent-council": {
+      "id": "copilot-capability.wire.51.nexus.copilot.tool-runtime--nexus.lib.agent-council",
+      "from_hook_id": "nexus.copilot.tool-runtime.export",
+      "to_hook_id": "nexus.lib.agent-council.import",
+      "uuid": "nexus-loom-map-cc-wire-51-v1-0000-2026-0812-001",
+      "registeredAt": 1786589738015
+    },
+    "copilot-capability.wire.52.nexus.copilot.lifeline--nexus.lib.agent-council": {
+      "id": "copilot-capability.wire.52.nexus.copilot.lifeline--nexus.lib.agent-council",
+      "from_hook_id": "nexus.copilot.lifeline.export",
+      "to_hook_id": "nexus.lib.agent-council.import",
+      "uuid": "nexus-loom-map-cc-wire-52-v1-0000-2026-0812-001",
+      "registeredAt": 1786589738144
+    },
+    "copilot-capability.wire.53.nexus.lib.agent-council--nexus.lib.agent-tools.tools.agent-council": {
+      "id": "copilot-capability.wire.53.nexus.lib.agent-council--nexus.lib.agent-tools.tools.agent-council",
+      "from_hook_id": "nexus.lib.agent-council.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.agent-council.import",
+      "uuid": "nexus-loom-map-cc-wire-53-v1-0000-2026-0812-001",
+      "registeredAt": 1786589738273
+    },
+    "copilot-capability.wire.54.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.agent-council": {
+      "id": "copilot-capability.wire.54.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.agent-council",
+      "from_hook_id": "nexus.lib.hat-forge.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.agent-council.import",
+      "uuid": "nexus-loom-map-cc-wire-54-v1-0000-2026-0812-001",
+      "registeredAt": 1786589738398
+    },
+    "copilot-capability.wire.55.nexus.cortex.self-heal.fault-taxonomy--nexus.lib.fault-log": {
+      "id": "copilot-capability.wire.55.nexus.cortex.self-heal.fault-taxonomy--nexus.lib.fault-log",
+      "from_hook_id": "nexus.cortex.self-heal.fault-taxonomy.export",
+      "to_hook_id": "nexus.lib.fault-log.import",
+      "uuid": "nexus-loom-map-cc-wire-55-v1-0000-2026-0812-001",
+      "registeredAt": 1786590186082
+    },
+    "copilot-capability.wire.56.nexus.nexus-cfr-influence--nexus.lib.fault-log": {
+      "id": "copilot-capability.wire.56.nexus.nexus-cfr-influence--nexus.lib.fault-log",
+      "from_hook_id": "nexus.nexus-cfr-influence.export",
+      "to_hook_id": "nexus.lib.fault-log.import",
+      "uuid": "nexus-loom-map-cc-wire-56-v1-0000-2026-0812-001",
+      "registeredAt": 1786590186228
+    },
+    "copilot-capability.wire.57.nexus.lib.fault-log--nexus.lib.agent-tools.tools.fault-log": {
+      "id": "copilot-capability.wire.57.nexus.lib.fault-log--nexus.lib.agent-tools.tools.fault-log",
+      "from_hook_id": "nexus.lib.fault-log.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.fault-log.import",
+      "uuid": "nexus-loom-map-cc-wire-57-v1-0000-2026-0812-001",
+      "registeredAt": 1786590186367
+    },
+    "copilot-capability.wire.58.nexus.cortex.jaa-db--nexus.lib.roundtable": {
+      "id": "copilot-capability.wire.58.nexus.cortex.jaa-db--nexus.lib.roundtable",
+      "from_hook_id": "nexus.cortex.jaa-db.export",
+      "to_hook_id": "nexus.lib.roundtable.import",
+      "uuid": "nexus-loom-map-cc-wire-58-v1-0000-2026-0812-001",
+      "registeredAt": 1786590186513
+    },
+    "copilot-capability.wire.59.nexus.copilot.tool-runtime--nexus.lib.roundtable": {
+      "id": "copilot-capability.wire.59.nexus.copilot.tool-runtime--nexus.lib.roundtable",
+      "from_hook_id": "nexus.copilot.tool-runtime.export",
+      "to_hook_id": "nexus.lib.roundtable.import",
+      "uuid": "nexus-loom-map-cc-wire-59-v1-0000-2026-0812-001",
+      "registeredAt": 1786590186651
+    },
+    "copilot-capability.wire.60.nexus.lib.roundtable--nexus.lib.agent-tools.tools.roundtable": {
+      "id": "copilot-capability.wire.60.nexus.lib.roundtable--nexus.lib.agent-tools.tools.roundtable",
+      "from_hook_id": "nexus.lib.roundtable.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.roundtable.import",
+      "uuid": "nexus-loom-map-cc-wire-60-v1-0000-2026-0812-001",
+      "registeredAt": 1786590186784
+    },
+    "copilot-capability.wire.61.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.roundtable": {
+      "id": "copilot-capability.wire.61.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.roundtable",
+      "from_hook_id": "nexus.lib.hat-forge.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.roundtable.import",
+      "uuid": "nexus-loom-map-cc-wire-61-v1-0000-2026-0812-001",
+      "registeredAt": 1786590186920
+    },
+    "copilot-capability.wire.62.nexus.copilot.self-model--nexus.lib.parallel-dispatch": {
+      "id": "copilot-capability.wire.62.nexus.copilot.self-model--nexus.lib.parallel-dispatch",
+      "from_hook_id": "nexus.copilot.self-model.export",
+      "to_hook_id": "nexus.lib.parallel-dispatch.import",
+      "uuid": "nexus-loom-map-cc-wire-62-v1-0000-2026-0812-001",
+      "registeredAt": 1786595248991
+    },
+    "copilot-capability.wire.63.nexus.cortex.jaa-db--nexus.lib.parallel-dispatch": {
+      "id": "copilot-capability.wire.63.nexus.cortex.jaa-db--nexus.lib.parallel-dispatch",
+      "from_hook_id": "nexus.cortex.jaa-db.export",
+      "to_hook_id": "nexus.lib.parallel-dispatch.import",
+      "uuid": "nexus-loom-map-cc-wire-63-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249091
+    },
+    "copilot-capability.wire.64.nexus.lib.parallel-dispatch--nexus.lib.agent-tools.tools.parallel-dispatch": {
+      "id": "copilot-capability.wire.64.nexus.lib.parallel-dispatch--nexus.lib.agent-tools.tools.parallel-dispatch",
+      "from_hook_id": "nexus.lib.parallel-dispatch.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.parallel-dispatch.import",
+      "uuid": "nexus-loom-map-cc-wire-64-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249195
+    },
+    "copilot-capability.wire.65.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.parallel-dispatch": {
+      "id": "copilot-capability.wire.65.nexus.lib.hat-forge--nexus.lib.agent-tools.tools.parallel-dispatch",
+      "from_hook_id": "nexus.lib.hat-forge.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.parallel-dispatch.import",
+      "uuid": "nexus-loom-map-cc-wire-65-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249295
+    },
+    "copilot-capability.wire.66.nexus.lib.safe-apply--nexus.lib.emergence": {
+      "id": "copilot-capability.wire.66.nexus.lib.safe-apply--nexus.lib.emergence",
+      "from_hook_id": "nexus.lib.safe-apply.export",
+      "to_hook_id": "nexus.lib.emergence.import",
+      "uuid": "nexus-loom-map-cc-wire-66-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249401
+    },
+    "copilot-capability.wire.67.nexus.lib.fault-log--nexus.lib.emergence": {
+      "id": "copilot-capability.wire.67.nexus.lib.fault-log--nexus.lib.emergence",
+      "from_hook_id": "nexus.lib.fault-log.export",
+      "to_hook_id": "nexus.lib.emergence.import",
+      "uuid": "nexus-loom-map-cc-wire-67-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249510
+    },
+    "copilot-capability.wire.68.nexus.lib.emergence--nexus.lib.agent-tools.tools.emergence": {
+      "id": "copilot-capability.wire.68.nexus.lib.emergence--nexus.lib.agent-tools.tools.emergence",
+      "from_hook_id": "nexus.lib.emergence.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.emergence.import",
+      "uuid": "nexus-loom-map-cc-wire-68-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249622
+    },
+    "copilot-capability.wire.69.nexus.lib.safe-apply--nexus.lib.agent-tools.tools.emergence": {
+      "id": "copilot-capability.wire.69.nexus.lib.safe-apply--nexus.lib.agent-tools.tools.emergence",
+      "from_hook_id": "nexus.lib.safe-apply.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.emergence.import",
+      "uuid": "nexus-loom-map-cc-wire-69-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249726
+    },
+    "copilot-capability.wire.70.nexus.copilot.tool-runtime--nexus.lib.agent-tools.tools.emergence": {
+      "id": "copilot-capability.wire.70.nexus.copilot.tool-runtime--nexus.lib.agent-tools.tools.emergence",
+      "from_hook_id": "nexus.copilot.tool-runtime.export",
+      "to_hook_id": "nexus.lib.agent-tools.tools.emergence.import",
+      "uuid": "nexus-loom-map-cc-wire-70-v1-0000-2026-0812-001",
+      "registeredAt": 1786595249836
     }
   },
   "concern": {}

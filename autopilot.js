@@ -403,13 +403,59 @@ function _spawnKernel(kernel, color) {
   const spawnCmd  = isShell && _needsQuoting(resolvedCmd) ? `"${resolvedCmd}"` : resolvedCmd;
   const spawnArgs = isShell ? kernelArgs.map(a => _needsQuoting(String(a)) ? `"${a}"` : a) : kernelArgs;
 
-  const proc = spawn(spawnCmd, spawnArgs, {
-    cwd: resolvedCwd,
-    env: { ...process.env, ...(kernel.env || {}) },
-    stdio: ['ignore', 'pipe', 'pipe'],
-    // .cmd files on Windows must run through the shell
-    shell: isShell,
-  });
+  let proc;
+  try {
+    proc = spawn(spawnCmd, spawnArgs, {
+      cwd: resolvedCwd,
+      env: { ...process.env, ...(kernel.env || {}) },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      // .cmd files on Windows must run through the shell
+      shell: isShell,
+    });
+  } catch (spawnErr) {
+    // §CRASH ROOT CAUSE 2026-08-13 — from a real Windows console: orchestrator
+    // and copilot both crashed (STATUS_STACK_BUFFER_OVERRUN, likely a shared
+    // corrupted resource right after a stale JAA flush-lock was broken), then
+    // autopilot's own attempt to RESPAWN orchestrator threw synchronously —
+    // "Error: spawn UNKNOWN", errno -4094 — from inside spawn() itself, before
+    // `proc` was ever assigned. The 2026-07-10 memory gate above (spawnSafe())
+    // already prevents the common OOM-driven case, but any other synchronous
+    // spawn() throw was still completely unguarded: it propagated straight out
+    // of this function, out of the setTimeout callback that called it, and
+    // crashed the ENTIRE autopilot process — killing supervision of every
+    // other kernel at once, not just this one. The pasted log ends exactly
+    // there: a raw stack trace, then a bare shell prompt. Nothing was
+    // supervising anything after that line.
+    //
+    // Fixed by treating a synchronous spawn failure exactly like the crash
+    // this kernel's own proc.on('exit', ...) handler already knows how to
+    // recover from below — same crash-accounting, same circuit breaker, same
+    // backoff — so one bad spawn degrades to "this kernel is down, retrying"
+    // instead of "the supervisor is dead, nothing is running."
+    _warpEmit('autopilot.kernel.spawn_failed', { kernel: kernel.name, error: spawnErr.message, code: spawnErr.code });
+    s.crashes.push(Date.now());
+    s.crashes = _prune(s.crashes);
+    s.status = 'down';
+    s.downSince = Date.now();
+    _log(`${color}[${kernel.name}]${RESET} \x1b[31mspawn() threw synchronously:\x1b[0m ${spawnErr.message} (code=${spawnErr.code || 'unknown'}) — crashes in window: ${s.crashes.length}/${CIRCUIT_MAX_CRASHES}`);
+
+    if (s.crashes.length >= CIRCUIT_MAX_CRASHES) {
+      s.status = 'circuit_open';
+      _warpEmit('autopilot.circuit.open', { kernel: kernel.name, crashes: s.crashes.length });
+      _log(`${color}[${kernel.name}]${RESET} \x1b[31m§CIRCUIT BREAKER TRIPPED\x1b[0m — ${s.crashes.length} spawn failures in ${Math.round(CIRCUIT_WINDOW_MS/60000)}min. ` +
+           `Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.`);
+      _writeCircuitGap(kernel.name, s);
+      return null;
+    }
+
+    s.restarts++;
+    const delay = kernel.minRestartDelay ? Math.max(kernel.minRestartDelay, s.backoffMs) : s.backoffMs;
+    s.backoffMs = Math.min(s.backoffMs * 2, BACKOFF_MAX_MS);
+    _log(`${color}[${kernel.name}]${RESET} retrying spawn in ${Math.round(delay/1000)}s (attempt ${s.restarts})`);
+    const t = setTimeout(() => _spawnKernel(kernel, color), delay);
+    if (t.unref) t.unref();
+    return null;
+  }
 
   s.proc = proc;
   s.status = 'online';

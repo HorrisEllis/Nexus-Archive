@@ -124,6 +124,86 @@ function setIdentityName(name) {
   }
 }
 
+// ── P6.5 (2026-08-13) — "co-pilot should be like a hat, not a static
+// identity." getCurrentAgent/setCurrentAgent — WHICH provider copilot
+// dispatches to by default, persisted, swappable on demand. Distinct from
+// switchAgent (a one-off routing decision for a single request) and from
+// identity naming (WHAT copilot is called, not WHICH model answers).
+// §CORRECTED SCOPE — this is the missing piece lifeline.js's route() never
+// had: it accepts a per-call opts.provider override but nothing persists
+// one, so every message restarts the ollama-first cascade from scratch
+// unless the caller re-specifies an override every single time. Same
+// cortex row shape as identity (copilot_identity table), new row id
+// 'agent'. Governed exactly like switchAgent — changing the hat is a real
+// action, RAID sees it.
+const AGENT_ROW_ID = 'agent';
+const VALID_AGENTS = new Set(['ollama', 'claude', 'chatgpt', 'gemini', 'mistral', 'perplexity', 'auto']);
+
+/**
+ * getCurrentAgent() — the provider copilot currently defaults to. 'auto'
+ * (the default when never set) means the normal ollama-first cascade with
+ * confidence-based escalation — unchanged behavior for anyone who never
+ * touches this.
+ */
+function getCurrentAgent() {
+  try {
+    const { jaaDB } = require('../../cortex/memory/jaa-db');
+    const row = jaaDB.query(IDENTITY_TABLE, r => r.id === AGENT_ROW_ID)[0];
+    return {
+      agent: (row && row.agent) || 'auto',
+      hatName: (row && row.hatName) || null,
+      toolScope: (row && row.toolScope) || null,
+      personaPrompt: (row && row.personaPrompt) || null,
+      isCustom: !!(row && row.agent && row.agent !== 'auto'),
+      setAt: row ? row.ts : null,
+    };
+  } catch (e) {
+    return { agent: 'auto', isCustom: false, error: e.message };
+  }
+}
+
+/**
+ * setCurrentAgent(agent) — put on a new hat. RAID-governed (same as
+ * switchAgent) — a persistent routing change for every future message is
+ * exactly the kind of live-control action RAID exists to gate. 'auto'
+ * (or empty) takes the hat off — back to the normal ollama-first cascade.
+ * §EXTENDED 2026-08-13 (P8) — `agent` can now also be a forged hat's NAME
+ * (lib/hat-forge.js), not just a raw base agent. Wearing a named hat sets
+ * the underlying base agent AND remembers the hat's toolScope/personaPrompt
+ * so route()/runViaAgent can apply them — same governance either way.
+ */
+function setCurrentAgent(agent) {
+  const raw = (agent || 'auto').trim().toLowerCase();
+
+  // A forged hat's name takes priority if one exists with that exact name —
+  // validate() already refused any forged hat from colliding with a real
+  // base agent name, so there's no ambiguity between the two namespaces.
+  let forgedHat = null;
+  if (!VALID_AGENTS.has(raw)) {
+    try { forgedHat = require('../../lib/hat-forge').get(raw); } catch (_) {}
+    if (!forgedHat) return { ok: false, reason: `unknown agent "${agent}" — one of: ${[...VALID_AGENTS].join(', ')}, or a forged hat name` };
+  }
+  const normalized = forgedHat ? forgedHat.baseAgent : raw;
+
+  const gov = governAction({ action: 'switch_agent', target: normalized }, {});
+  if (gov.allowed === false) {
+    return { ok: false, reason: `denied by governance: ${gov.reason || 'no reason given'}`, governance: gov };
+  }
+  try {
+    const { jaaDB } = require('../../cortex/memory/jaa-db');
+    jaaDB.insert(IDENTITY_TABLE, {
+      id: AGENT_ROW_ID, agent: normalized,
+      hatName: forgedHat ? forgedHat.name : null,
+      toolScope: forgedHat ? forgedHat.toolScope : null,
+      personaPrompt: forgedHat ? forgedHat.personaPrompt : null,
+      ts: Date.now(),
+    });
+    return { ok: true, agent: normalized, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
+  } catch (e) {
+    return { ok: false, reason: e.message };
+  }
+}
+
 // ── P6 foundation: governance + agent switching ──────────────────────────────
 /**
  * governAction(req, ctx) — the governance gate (RAID-adjacent): classify intent +
@@ -132,13 +212,56 @@ function setIdentityName(name) {
  */
 function governAction(req = {}, ctx = {}) {
   const out = { allowed: true, risk: null, reason: null, checks: {} };
+
+  // §ADDED 2026-08-13 — same real precedent check as executeTool's, now
+  // covering the OTHER universal chokepoint: every switchAgent, hat wear,
+  // scheduled task, trigger, and chain step already goes through
+  // governAction. Advisory, not blocking — real precedent attached for
+  // whoever reads the governance result to weigh.
+  try { out.faultHistory = require('../../lib/fault-log.js').checkFaultHistory(req.action || 'unknown', { intent: req.target || null, limit: 3 }); } catch (_) {}
+
+  let classifiedIntent = ctx.intent || null;
   try {
     const ic = _try('../../lib/intent-classifier');
-    if (ic && ic.classify) { const c = ic.classify(req); out.risk = c.risk || c.riskLevel || (c.RISK_LEVEL); out.checks.intent = c; }
+    if (ic && ic.classify) {
+      const c = ic.classify(req);
+      out.risk = c.risk || c.riskLevel || (c.RISK_LEVEL);
+      out.checks.intent = c;
+      // §FIXED 2026-08-13 — found alongside the v.allowed field-name bug:
+      // this classification was computed and stored for the caller to see,
+      // but never actually passed to the constitutional check below, which
+      // requires ctx.intent to do anything but return its own "you called
+      // me wrong" BLOCK. classify()'s real return shape nests the actual
+      // intent object at c.intent (confirmed live) — that's what
+      // constitutional-ai.check() expects as ctx.intent. Caller-supplied
+      // ctx.intent (if any) still wins; this only fills the gap when
+      // nothing was supplied, which was every real caller until now.
+      if (!classifiedIntent && c && c.intent) classifiedIntent = c.intent;
+    }
   } catch (_) {}
   try {
     const cai = _try('../../lib/constitutional-ai');
-    if (cai && cai.check) { const v = cai.check(req, ctx); out.checks.constitutional = v; if (v && v.allowed === false) { out.allowed = false; out.reason = v.reason || 'constitutional check failed'; } }
+    // §FIXED 2026-08-13 — found live, verifying setCurrentAgent's own
+    // governance result: constitutional-ai.check() returns {pass, reason,
+    // axiom, severity, ...} — it NEVER returns a field called `allowed`.
+    // The old check (`v.allowed === false`) tested a field that is always
+    // undefined on the real return value, so this denial branch has never
+    // fired once since this function was written — a real BLOCK-severity
+    // constitutional violation was never actually enforced here, ever.
+    // Every prior caller of governAction (switchAgent, this session's own
+    // setCurrentAgent) believed it was gated when it was not. Corrected to
+    // the same check cortex/core/raid/index.js's _approveTool already gets
+    // right: pass === false AND severity === 'block' is a real denial;
+    // pass === false with a lower severity (WARN/held) is NOT — that's
+    // "held" territory by constitutional-ai's own design, not a hard stop.
+    if (cai && cai.check) {
+      const v = cai.check(req, { ...ctx, intent: classifiedIntent });
+      out.checks.constitutional = v;
+      if (v && v.pass === false && v.severity === 'block') {
+        out.allowed = false;
+        out.reason = `constitution denied — ${v.axiom}: ${v.reason || 'no reason given'}`;
+      }
+    }
   } catch (_) {}
   return out;
 }
@@ -244,4 +367,4 @@ async function buildNexusModel(opts = {}) {
   return model;
 }
 
-module.exports = { whoAmI, recordIdentityEvidence, governAction, switchAgent, buildNexusModel, getIdentityName, setIdentityName, MODULE_ID: 'copilot-self-model', VERSION: '1.1.0' };
+module.exports = { whoAmI, recordIdentityEvidence, governAction, switchAgent, buildNexusModel, getIdentityName, setIdentityName, getCurrentAgent, setCurrentAgent, MODULE_ID: 'copilot-self-model', VERSION: '1.2.0' };

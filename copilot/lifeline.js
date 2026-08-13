@@ -85,9 +85,28 @@ async function _get(url, timeoutMs = 5000) {
 // and only thin/hedged/error responses fall through to escalation. The penalties
 // still do real work; they just start from a centre that isn't pre-failed.
 function _estimateConfidence(text = '', prompt = '') {
-  if (!text || text.length < 10) return 0.1;
+  // §FIXED 2026-08-13 — found live: "hello" -> a short, correct ollama reply
+  // -> scored 10% confidence -> auto-escalated to Guardian, every time. The
+  // old check (`text.length < 10 -> 0.1`) conflated "short reply" with
+  // "uncertain reply" — but a brief, complete answer to a trivial prompt
+  // (a greeting, a yes/no, a one-word fact) is not evidence of low
+  // confidence, it's evidence the question was simple. Only a genuinely
+  // EMPTY response (ollama returned nothing at all) is real evidence of
+  // failure; that alone floors to low confidence. A short but real answer
+  // now gets the normal scoring path instead of an automatic floor —
+  // §user_wellbeing/§1.1 concern either way was never "make ollama look
+  // falsely confident," it's "don't manufacture false uncertainty and
+  // burn an escalation on every trivial exchange."
+  if (!text || text.trim().length === 0) return 0.1;
 
-  let score = 0.72; // base — a plain answer should NOT auto-escalate
+  // §FIXED 2026-08-13 — found alongside the length-floor fix above: 0.72
+  // was BELOW CONFIDENCE_THRESHOLD (0.75), directly contradicting this
+  // comment's own stated intent. A plain reply with no hedging, no error
+  // language, and no length bonus (most short, correct replies) would
+  // still fall 0.03 short and escalate anyway — the same wasted-escalation
+  // problem the length-floor fix targeted, just smaller. Bumped to clear
+  // the real threshold, not just read as if it did.
+  let score = 0.76; // base — a plain answer should NOT auto-escalate
 
   // Longer, more detailed responses tend to be more confident
   if (text.length > 120) score += 0.06;
@@ -330,12 +349,59 @@ function extractExplicitAgent(prompt) {
 async function route(prompt, opts = {}) {
   const requestId = opts.requestId || crypto.randomUUID();
 
+  // §WIRED 2026-08-13 — "co-pilot should be like a hat, not a static
+  // identity." A per-call opts.provider already short-circuits the cascade
+  // below; this is what was missing — a PERSISTENT hat, checked here so
+  // every message honors it without the caller re-specifying an override
+  // each time. 'auto' (never worn, or explicitly taken off) falls through
+  // to the unchanged ollama-first cascade — zero behavior change for
+  // anyone who never touches this.
+  if (!opts.provider) {
+    try {
+      const { getCurrentAgent } = require('./lib/self-model');
+      const hat = getCurrentAgent();
+      if (hat.agent && hat.agent !== 'auto') {
+        // §EXTENDED 2026-08-13 (P8) — a named forged hat carries more than
+        // just which base agent: its toolScope/personaPrompt travel with
+        // it now, so wearing "the_debugger" hat actually narrows the tool
+        // set and adjusts persona, not just which model answers.
+        opts = { ...opts, provider: hat.agent, hatName: hat.hatName, toolScope: hat.toolScope, personaPrompt: hat.personaPrompt };
+      }
+    } catch (_) { /* self-model unavailable — fall through to normal cascade, never block on this */ }
+  }
+
   // Explicit agent request short-circuits the cascade. Note this composes
   // with my RAID wiring rather than bypassing it: _tryGuardian only asks
   // RoutingIR to pick a provider when none was supplied, so an explicit
   // agent is honored exactly as named.
   const explicitAgent = (opts.provider && opts.provider !== 'auto') ? opts.provider : extractExplicitAgent(prompt);
   if (explicitAgent && explicitAgent !== 'ollama') {
+    // §WIRED 2026-08-13 — "co-pilot is the hat, the agents are who wear
+    // them." Was a single raw _tryGuardian call — plain conversation, zero
+    // tool access, confirmed and explained directly before building this.
+    // Now runs through the SAME tool loop ollama gets (copilot/tool-runtime
+    // .js's runViaAgent + makeNcpCallModel), via prompt-engineered ```tool
+    // fenced blocks since NCP has no native function-calling. Whichever
+    // agent is dispatched to now genuinely wears copilot's full capability
+    // set — schedule_task, run_chain, agent_chat_search, all 36 tools —
+    // not just that model's raw conversational ability.
+    try {
+      const { runViaAgent } = require('./tool-runtime');
+      const dispatchToAgent = (fullPrompt, dispatchOpts) => _tryGuardian(fullPrompt, { ...opts, ...dispatchOpts, provider: explicitAgent, requestId });
+      const loopResult = await runViaAgent(explicitAgent, dispatchToAgent, prompt, opts);
+      const result = {
+        ok: true, text: loopResult.text, confidence: 1,
+        provider_used: explicitAgent, escalated: true,
+        explicit_agent_request: true, toolCallLog: loopResult.toolCallLog, requestId,
+      };
+      _persist({ ...opts, prompt, requestId }, result, 'explicit_agent_request');
+      return result;
+    } catch (e) {
+      // §1.2 — the tool loop failing is not silent; falls through to the
+      // plain single-call path below so a broken loop doesn't mean a
+      // broken agent, then to the normal cascade if that also fails.
+      console.warn(`[lifeline] tool loop via ${explicitAgent} failed, falling back to plain dispatch: ${e.message}`);
+    }
     const guardianResult = await _tryGuardian(prompt, { ...opts, provider: explicitAgent, requestId });
     if (guardianResult?.ok) {
       const result = {
@@ -459,4 +525,4 @@ async function health() {
   };
 }
 
-module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD, extractExplicitAgent };
+module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD, extractExplicitAgent, dispatchToNcpAgent: _tryGuardian };

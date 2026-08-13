@@ -515,8 +515,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--void);color:va
     <nav id="view-tabs">
       <div class="vtab active" data-view="xray">X-RAY</div>
       <div class="vtab" data-view="phase">PHASE</div>
+      <div class="vtab" data-view="loom">LOOM</div>
       <div class="vtab" data-view="terminal">TERMINAL</div>
     </nav>
+
+    <!-- LOOM: real, live phasemap data — every phase from every system,
+         not the static array the PHASE tab reads (see loom-note below) -->
+    <div class="view" id="view-loom">
+      <div style="padding:20px;max-width:900px;margin:0 auto">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+          <span style="font:600 15px/1 var(--mono,monospace);color:var(--purple)">LOOM — LIVE PHASEMAP</span>
+          <span id="loom-summary" style="font:12px var(--mono,monospace);color:var(--dim)">—</span>
+        </div>
+        <div style="font:11px var(--mono,monospace);color:var(--dim);margin-bottom:18px">
+          Every phase from every docs/*.spec file, read live from loom/scanners/phasemap-map.js — not the
+          hand-maintained array the PHASE tab shows, which has not moved since 2026-07-19.
+        </div>
+        <div id="loom-systems"><!-- populated by JS --></div>
+      </div>
+    </div>
 
     <!-- X-RAY: component topology -->
     <div class="view active" id="view-xray">
@@ -645,6 +662,7 @@ const ORCH = 'http://127.0.0.1:9000';
 const GUARDIAN = 'http://127.0.0.1:7820';
 const CORTEX = 'http://127.0.0.1:3748';
 const DIAG = 'http://127.0.0.1:7825';
+const LOOM = 'http://127.0.0.1:3752';
 
 // ── Phase map (v0.7.5 — from nexus-phase-map.md, 2026-06-17) ────────────────
 const PHASES = [
@@ -1069,6 +1087,49 @@ function setView(v) {
   document.querySelectorAll('.vtab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
   document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.id === `view-${v}`));
   if (v === 'phase') renderPhaseDetail();
+  if (v === 'loom') renderLoomPhasemap();
+}
+
+// §ADDED 2026-08-13 — real, live data, not the static PHASES array above.
+// loom/server.js's own /api/phasemap endpoint (added this session) reads
+// docs/*.spec files fresh on every request via the same real parser
+// (loom/scanners/phasemap-map.js) used all session to track this exact
+// build. 131 real phases across 17 systems as of this write, versus the
+// hardcoded array's 45 phases frozen since 2026-07-19.
+async function renderLoomPhasemap() {
+  const wrap = document.getElementById('loom-systems');
+  const summary = document.getElementById('loom-summary');
+  wrap.innerHTML = '<div style="color:var(--dim);font:12px var(--mono,monospace)">loading live data from loom :3752…</div>';
+  let data;
+  try {
+    const r = await fetch(`${LOOM}/api/phasemap`, { signal: AbortSignal.timeout(4000) });
+    data = await r.json();
+  } catch (e) {
+    wrap.innerHTML = `<div style="color:var(--red);font:12px var(--mono,monospace)">could not reach loom :3752 — ${e.message}. Is it running?</div>`;
+    summary.textContent = 'offline';
+    return;
+  }
+  if (!data || !data.ok) {
+    wrap.innerHTML = `<div style="color:var(--red);font:12px var(--mono,monospace)">loom returned an error: ${(data && data.error) || 'unknown'}</div>`;
+    return;
+  }
+  summary.textContent = `${data.totalDone}/${data.totalPhases} phases done · ${data.systems.length} systems`;
+  const systems = [...data.systems].sort((a, b) => b.total - a.total);
+  wrap.innerHTML = systems.map(sys => {
+    const pct = sys.total ? Math.round((sys.done / sys.total) * 100) : 0;
+    const pending = sys.phases.filter(p => p.status !== 'done');
+    return `
+      <div style="margin-bottom:16px;padding:12px 14px;background:var(--panel);border:1px solid var(--edge);border-radius:6px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <span style="font:600 12px var(--mono,monospace);color:var(--text)">${sys.map}</span>
+          <span style="font:11px var(--mono,monospace);color:var(--dim)">${sys.done}/${sys.total}</span>
+        </div>
+        <div style="height:6px;background:var(--ink);border-radius:3px;overflow:hidden;margin-bottom:${pending.length ? '8px' : '0'}">
+          <div style="height:100%;width:${pct}%;background:${pct === 100 ? 'var(--green)' : 'var(--purple)'};transition:width .3s"></div>
+        </div>
+        ${pending.length ? `<div style="font:10px var(--mono,monospace);color:var(--dim)">pending: ${pending.map(p => p.id).join(', ')}</div>` : ''}
+      </div>`;
+  }).join('');
 }
 
 document.querySelectorAll('.vtab').forEach(t => t.onclick = () => setView(t.dataset.view));

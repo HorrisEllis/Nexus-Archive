@@ -310,6 +310,37 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
+    // §ADDED 2026-08-13 — forge-shell's UI has shown a hand-maintained,
+    // static 45-phase array (dated 2026-07-19) this whole time, completely
+    // disconnected from the REAL, actively-maintained phasemap system this
+    // session built on all night — 131 real phases across 17 live .spec
+    // files as of this write. loom already owns phasemap-map.js (it's
+    // loom/scanners/phasemap-map.js); this is that same real parser,
+    // served live, grouped by map file so a UI can render one progress
+    // bar per system instead of one flat undifferentiated list.
+    if (method === 'GET' && p === '/api/phasemap') {
+      try {
+        const pm = require('./scanners/phasemap-map.js');
+        const all = pm.loadAll();
+        const bySystem = {};
+        for (const phase of all.phases) {
+          if (!bySystem[phase.map]) bySystem[phase.map] = { map: phase.map, phases: [] };
+          bySystem[phase.map].phases.push({ id: phase.id, status: phase.status });
+        }
+        const systems = Object.values(bySystem).map(s => ({
+          map: s.map, total: s.phases.length,
+          done: s.phases.filter(p => p.status === 'done').length,
+          phases: s.phases,
+        }));
+        return json(res, 200, {
+          ok: true, generatedAt: Date.now(),
+          totalPhases: all.phases.length,
+          totalDone: all.phases.filter(p => p.status === 'done').length,
+          systems,
+        });
+      } catch (e) { return json(res, 500, { ok: false, error: e.message }); }
+    }
+
     // Same shape as every other sovereign system's /contract (phase 137
     // audit — cortex/bridge/architect all needed this added this session).
     if (method === 'GET' && p === '/contract') {

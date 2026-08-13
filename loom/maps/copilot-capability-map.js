@@ -103,6 +103,57 @@ const FILES = [
 
   ['cortex/contract/index.js',                       'nexus.cortex.contract',
     []],   // §2026-08-12 — added 5 console contracts (claude/chatgpt/gemini/mistral/perplexity), closing the RAID-denial root cause behind "dispatch failed: unknown"
+
+  ['copilot/tool-runtime.js',                        'nexus.copilot.tool-runtime',
+    ['nexus.lib.agent-tools', 'nexus.copilot.lifeline']],   // §2026-08-13 — new makeNcpCallModel/runViaAgent give NCP-driven agents (claude/chatgpt/gemini/mistral/perplexity) the same tool loop ollama already had
+
+  ['lib/hat-forge.js',                                'nexus.lib.hat-forge',
+    ['nexus.lib.agent-tools']],   // §2026-08-13 (P8) — named, reusable hats: base agent + scoped tools + persona, verified-composition philosophy mirrored from lib/tool-forge.js
+
+  ['lib/agent-tools/tools/hat-forge.js',              'nexus.lib.agent-tools.tools.hat-forge',
+    ['nexus.lib.hat-forge', 'nexus.copilot.self-model']],
+
+  ['lib/agent-capability-profile.js',                 'nexus.lib.agent-capability-profile',
+    ['nexus.cortex.jaa-db', 'nexus.cortex.core.raid']],   // §2026-08-13 — real measured per-agent stats from chat_log (live) + guardian_chat_log (historical, no writer) + RAID health, not hardcoded constraints
+
+  ['lib/agent-tools/tools/agent-capability.js',       'nexus.lib.agent-tools.tools.agent-capability',
+    ['nexus.lib.agent-capability-profile']],
+
+  ['lib/safe-apply.js',                               'nexus.lib.safe-apply',
+    ['nexus.cortex.jaa-db', 'nexus.copilot.self-model']],   // §2026-08-13 — real verify-before-merge on COS's branch/sandbox primitives, closes the nexus-healer merge stub gap the honest way
+
+  ['lib/agent-tools/tools/safe-apply.js',             'nexus.lib.agent-tools.tools.safe-apply',
+    ['nexus.lib.safe-apply']],
+
+  ['lib/agent-council.js',                            'nexus.lib.agent-council',
+    ['nexus.copilot.tool-runtime', 'nexus.copilot.lifeline']],   // §2026-08-13 — independent multi-agent deliberation; only collects verdicts, RAID governs the actual decision
+
+  ['lib/agent-tools/tools/agent-council.js',          'nexus.lib.agent-tools.tools.agent-council',
+    ['nexus.lib.agent-council', 'nexus.lib.hat-forge']],
+
+  ['lib/fault-log.js',                                'nexus.lib.fault-log',
+    ['nexus.cortex.self-heal.fault-taxonomy', 'nexus.nexus-cfr-influence']],   // §2026-08-13 — universal richly-tagged fault logging, extends fault-taxonomy's single-writer discipline, attaches CFR's real conditions snapshot
+
+  ['lib/agent-tools/tools/fault-log.js',               'nexus.lib.agent-tools.tools.fault-log',
+    ['nexus.lib.fault-log']],
+
+  ['lib/roundtable.js',                                'nexus.lib.roundtable',
+    ['nexus.cortex.jaa-db', 'nexus.copilot.tool-runtime']],   // §2026-08-13 — shared multi-party thread, deliberate opposite of agent-council's independence
+
+  ['lib/agent-tools/tools/roundtable.js',              'nexus.lib.agent-tools.tools.roundtable',
+    ['nexus.lib.roundtable', 'nexus.lib.hat-forge']],
+
+  ['lib/parallel-dispatch.js',                          'nexus.lib.parallel-dispatch',
+    ['nexus.copilot.self-model', 'nexus.cortex.jaa-db']],   // §2026-08-13 P9 — real concurrent multi-agent dispatch, each independently governed, real concurrency cap
+
+  ['lib/agent-tools/tools/parallel-dispatch.js',        'nexus.lib.agent-tools.tools.parallel-dispatch',
+    ['nexus.lib.parallel-dispatch', 'nexus.lib.hat-forge']],
+
+  ['lib/emergence.js',                                  'nexus.lib.emergence',
+    ['nexus.lib.safe-apply', 'nexus.lib.fault-log']],   // §2026-08-13 — axioms+end-state iterative propose/verify/refine, pivots METHOD after repeated same-method failure
+
+  ['lib/agent-tools/tools/emergence.js',                'nexus.lib.agent-tools.tools.emergence',
+    ['nexus.lib.emergence', 'nexus.lib.safe-apply', 'nexus.copilot.tool-runtime']],
 ];
 
 // nexus.copilot.self-model already exists (observability-map.js) — no

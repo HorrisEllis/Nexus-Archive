@@ -1086,6 +1086,33 @@ const server = http.createServer(async (req, res) => {
         const r = sm.switchAgent({ intent: 'directed', directed: switchM[2].toLowerCase(), prompt });
         return json(res, 200, { text: r.ok ? `Routing to ${JSON.stringify(r.agent)}.` : `Could not switch: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
       }
+      // §ADDED 2026-08-13 — James: "co-pilot should be like a hat, not a
+      // static identity" + "how do I change the agent for co-pilot?" — the
+      // feature existed (copilot_identity's setAgent/getAgent, wired into
+      // lifeline.js's route()) but had no guaranteed plain-chat trigger,
+      // only tool-loop invocation, which depends on the model choosing to
+      // call it. Distinct phrasing from switchM above on purpose (that one
+      // already claims "switch to/use/route to X agent" for a ONE-OFF
+      // route) — "always use", "default to", "wear the X hat" mean the
+      // PERSISTENT hat, every future message, until changed again.
+      const hatM = prompt.match(/\b(always use|default to|wear the)\s+(claude|chatgpt|gemini|ollama|mistral|perplexity)\b/i)
+        || prompt.match(/\bwear\s+(?:the\s+)?(claude|chatgpt|gemini|ollama|mistral|perplexity)\s+hat\b/i);
+      if (hatM) {
+        const sm = require('./lib/self-model');
+        const agent = (hatM[2] || hatM[1]).toLowerCase();
+        const r = sm.setCurrentAgent(agent);
+        return json(res, 200, { text: r.ok ? `Wearing the ${r.agent} hat now — every message uses it until you change it again.` : `Couldn't put on that hat: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
+      }
+      if (/\b(take off (the|your) hat|stop using (that|the current) agent|go back to auto|clear (your |the )?(current )?agent|reset (your |the )?agent)\b/i.test(prompt)) {
+        const sm = require('./lib/self-model');
+        const r = sm.setCurrentAgent('auto');
+        return json(res, 200, { text: r.ok ? `Hat off — back to the normal ollama-first cascade.` : `Couldn't clear it: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
+      }
+      if (/\b(what agent are you (using|on)|what('?s| is) your (current )?agent|what hat are you wearing|which (agent|model) (are you|is copilot) (using|on))\b/i.test(prompt)) {
+        const sm = require('./lib/self-model');
+        const r = sm.getCurrentAgent();
+        return json(res, 200, { text: r.isCustom ? `Wearing the ${r.agent} hat.` : `No hat on — normal ollama-first cascade with confidence-based escalation.`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
+      }
       if (/\b(what can you do|what can i do|list (your )?(tools|capabilities)|full (list of )?(tools|capabilities)|what (are your|tools do you have))\b/i.test(prompt)) {
         const cap = require('./lib/capabilities');
         const r = cap.whatCanIDo();
