@@ -62,17 +62,52 @@ spec:
       axioms: "§1.1 (nothing assumed fixed until measured against a real boot)"
       gate: "a real post-fix boot log, dangling-hook count compared directly against the pre-fix log already on record in this conversation."
 
-    P4_forge_shell_rebuild:
+    P4_forge_shell_rebuild:   # ← DONE 2026-08-13
       why: "Highest leverage per direct instruction — the data for this already exists (loom_scan's phasemap action, every phasemap file, phasemap-map.js's own done/pending/in-progress parsing, already proven working all session). Rendering problem, not a data problem."
       does: >
         Rebuild forge-shell themed like loom (not Eravos this time — this is
         loom's own surface, distinct from the copilot conversations channel
-        already built). Per-system phasemap progress bars: every phase from
-        every phasemap file in docs/, grouped by system, live status
+        already built). Per-map phasemap progress bars: every phase from
+        every phasemap file in docs/, grouped by map, live status
         (done/pending/in-progress) pulled from the same loom_scan mechanism
         used throughout this session, not a new data path.
       axioms: "§16.5 (reuse loom_scan/phasemap-map.js, don't build a second phasemap reader)"
       gate: "the rebuilt shell shows every phase from every real phasemap file, live, matching loom_scan's own output exactly — no phase invented, none silently dropped."
+      shipped_as: >
+        Two commits (9b9d3ed, 1b58e98) built the LOOM tab and its rendering,
+        but 1b58e98 itself introduced a second `GET /api/phasemap` handler
+        in loom/server.js that matched the exact same route as the real
+        §LP3 handler ~90 lines below it — being first in the if/return
+        chain, it silently shadowed the richer one on every single request
+        from the moment it shipped. Two real consequences, both live-caught
+        rather than assumed: (1) the wire only ever carried {id,status} —
+        title/dependsOn/systems were computed by loadAll() but never
+        reached forge-shell, which is what actually blocked the phase-
+        detail hydration attempted this session; (2) §LP3's own
+        persistHistory() call (R0, phasemap_history) lived inside the
+        shadowed block too, so real transition history silently stopped
+        recording the moment P4 shipped — an honest regression P4 itself
+        caused, not a pre-existing gap.
+      fix: >
+        Deleted the duplicate handler (kept the real §LP3 one, which
+        already returned the full loadAll() shape). Rewrote forge-shell's
+        renderLoomPhasemap() to group the flat, real phases[] array by map
+        client-side instead of depending on a server-side pre-shaped
+        (and now-thinner) systems[] — one real data path end to end,
+        nothing server-side re-summarizing loadAll() a second time.
+      gate_proven_live: >
+        Booted loom for real (:3752). GET /api/phasemap now resolves to
+        the §LP3 handler: 131/131 phases, 19/19 maps — direct
+        phasemap-map.loadAll() vs the live endpoint compared by
+        (map,id) key, 0 invented, 0 dropped. title/dependsOn confirmed
+        present on the wire (both were absent before the fix). Hit
+        GET /api/phasemap/history/agent-intelligence-loop-phasemap/
+        AP1_pull_toolbox and got back a real recorded transition
+        (commitHash, recordedAt) — persistHistory() confirmed reachable
+        again, not just code-read as fixed. loom/test/phasemap-map.test.js:
+        12/12 passing, including the two persistHistory tests. forge-shell's
+        edited inline script re-extracted and node --check'd clean.
+      honest_limit: "Verified against real repo state and a real local boot of loom, not the actual production supervisor — same class of limit as P2's Windows-only reproduction: confirm the LOOM tab renders correctly in forge-shell itself on the next real session, since this environment can't load forge-shell's own HTML/JS in a browser."
 
     P5_cockpit_to_copilot_control_surface:
       why: "James's own read: 'cockpit isn't needed, or should be rebuilt into a control surface for co-pilot.' Scope first — needs a real inventory of what cockpit currently does that ISN'T already covered by the 36 tools + nexus_help before deciding what carries over."

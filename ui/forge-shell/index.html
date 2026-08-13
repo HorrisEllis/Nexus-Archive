@@ -1095,12 +1095,15 @@ function setView(v) {
   if (v === 'loom') renderLoomPhasemap();
 }
 
-// §ADDED 2026-08-13 — real, live data, not the static PHASES array above.
-// loom/server.js's own /api/phasemap endpoint (added this session) reads
-// docs/*.spec files fresh on every request via the same real parser
-// (loom/scanners/phasemap-map.js) used all session to track this exact
-// build. 131 real phases across 17 systems as of this write, versus the
-// hardcoded array's 45 phases frozen since 2026-07-19.
+// §ADDED 2026-08-13 (P4), §BUGFIX same day — real, live data, not the
+// static PHASES array above. loom/server.js's /api/phasemap now correctly
+// resolves to the §LP3 handler (the P4-era duplicate that used to shadow
+// it, serving only {id,status}, is gone — see loom/server.js). The real
+// endpoint's shape is {ok, phases:[{id,title,map,status,systems,
+// dependsOn}], maps, bySystem, total, summary} straight off loadAll(); the
+// per-map grouping for these progress bars is now built client-side from
+// that one real array, so nothing server-side needs to pre-shape a
+// second, thinner view again.
 async function renderLoomPhasemap() {
   const wrap = document.getElementById('loom-systems');
   const summary = document.getElementById('loom-summary');
@@ -1114,13 +1117,22 @@ async function renderLoomPhasemap() {
     summary.textContent = 'offline';
     return;
   }
-  if (!data || !data.ok) {
-    wrap.innerHTML = `<div style="color:var(--red);font:12px var(--mono,monospace)">loom returned an error: ${(data && data.error) || 'unknown'}</div>`;
+  if (!data || !data.ok || !Array.isArray(data.phases)) {
+    wrap.innerHTML = `<div style="color:var(--red);font:12px var(--mono,monospace)">loom returned an error: ${(data && data.error) || 'unexpected shape'}</div>`;
     return;
   }
-  summary.textContent = `${data.totalDone}/${data.totalPhases} phases done · ${data.systems.length} systems`;
-  const systems = [...data.systems].sort((a, b) => b.total - a.total);
-  wrap.innerHTML = systems.map(sys => {
+  // Group the real, flat phase list by map (one bar per phasemap file) —
+  // done client-side now so every field loadAll() produces (title,
+  // dependsOn, systems) survives on the wire instead of being stripped
+  // before it gets here.
+  const byMap = {};
+  for (const ph of data.phases) (byMap[ph.map] = byMap[ph.map] || []).push(ph);
+  const done = data.phases.filter(p => p.status === 'done').length;
+  summary.textContent = `${done}/${data.total} phases done · ${Object.keys(byMap).length} maps · ${data.summary?.systems ?? '—'} systems`;
+  const maps = Object.entries(byMap)
+    .map(([map, phases]) => ({ map, phases, total: phases.length, done: phases.filter(p => p.status === 'done').length }))
+    .sort((a, b) => b.total - a.total);
+  wrap.innerHTML = maps.map(sys => {
     const pct = sys.total ? Math.round((sys.done / sys.total) * 100) : 0;
     const pending = sys.phases.filter(p => p.status !== 'done');
     // §SIGNATURE — a loom weaves threads into fabric. The fill isn't a
@@ -1138,7 +1150,7 @@ async function renderLoomPhasemap() {
         <div style="height:7px;background:repeating-linear-gradient(90deg,var(--ink) 0px,var(--ink) 2px,var(--edge) 2px,var(--edge) 3px);border-radius:3px;overflow:hidden;margin-bottom:${pending.length ? '8px' : '0'};position:relative">
           <div style="height:100%;width:${pct}%;background:repeating-linear-gradient(45deg,${wovenColor} 0px,${wovenColor} 3px,color-mix(in srgb, ${wovenColor} 55%, transparent) 3px,color-mix(in srgb, ${wovenColor} 55%, transparent) 6px);transition:width .3s"></div>
         </div>
-        ${pending.length ? `<div style="font:10px var(--mono,monospace);color:var(--dim)">pending: ${pending.map(p => p.id).join(', ')}</div>` : ''}
+        ${pending.length ? `<div style="font:10px var(--mono,monospace);color:var(--dim)" title="${pending.map(p => p.title).join(' · ')}">pending: ${pending.map(p => p.id).join(', ')}</div>` : ''}
       </div>`;
   }).join('');
 }
