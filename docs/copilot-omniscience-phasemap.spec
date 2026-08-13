@@ -27,7 +27,7 @@ spec:
   # ── PHASES — bottom-up, each shippable, each gated ──
   phases:
 
-    P1_copilot_tool_loop:
+    P1_copilot_tool_loop:   # ← DONE 2026-07-30 (marker was missing — file's own header already said "ALL 7 PHASES DONE"; confirmed live 2026-08-12: copilot/server.js:1222 requires tool-runtime.js, which calls agentTools.runToolLoop — the gate condition was always actually met)
       why_first: "The spine. Until copilot runs runToolLoop, nothing else has a working thing to plug into (§1.1 — nothing real until it runs)."
       does: >
         Wire lib/agent-tools into copilot/server.js: inject copilot's existing

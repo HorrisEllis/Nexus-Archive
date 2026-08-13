@@ -13670,6 +13670,14 @@
       "version": "1.0.0",
       "uuid": "nexus-loom-map-nexus.lib.nerve-ollama-bridge-v1-0000-2026-0812-001",
       "registeredAt": 1786582459147
+    },
+    "nexus.lib.agent-tools.tools.run-chain": {
+      "id": "nexus.lib.agent-tools.tools.run-chain",
+      "namespace": "nexus.lib",
+      "name": "lib/agent-tools/tools/run-chain.js",
+      "version": "1.0.0",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.tools.run-chain-v1-0000-2026-0812-001",
+      "registeredAt": 1786583482636
     }
   },
   "seam": {},

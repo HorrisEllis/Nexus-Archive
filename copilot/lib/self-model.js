@@ -32,9 +32,18 @@ function whoAmI(opts = {}) {
   const out = { hypotheses: [], identityKernel: null, known: false, text: null };
 
   // user-model hypotheses (what NEXUS has learned about the user).
+  // §FIXED 2026-08-12 — found live-verifying P5 of nexus-live-mind-phasemap.spec:
+  // getHypotheses(optsOrMinConf=0.3, limit=20) treats a bare number as
+  // minConfidence, not limit. The old call here — getHypotheses(10) — set
+  // minConfidence to 10 against a 0-1 confidence scale, so it ALWAYS
+  // returned []  regardless of real data (confirmed: 3 real hypotheses
+  // exist and are retrievable with the correct call; the old call returned
+  // 0 every time). whoAmI() has been silently answering "I don't have
+  // enough evidence" even when real evidence existed. Fixed to pass the
+  // real default minConf (0.3) and 10 as the actual limit.
   try {
     const um = opts.userModel || require('./user-model');
-    out.hypotheses = (um.getHypotheses ? um.getHypotheses(10) : []) || [];
+    out.hypotheses = (um.getHypotheses ? um.getHypotheses(0.3, 10) : []) || [];
   } catch (_) {}
 
   // constitutional-ai identity kernel (the mind's own identity anchor).
@@ -137,13 +146,25 @@ function governAction(req = {}, ctx = {}) {
 /**
  * switchAgent(intent, prompt, directed) — "switch to a different model/agent" via
  * the existing agent-router. Returns the chosen agent + its constraints.
+ * §FIXED 2026-08-12 — closes P6 of nexus-live-mind-phasemap.spec's gate
+ * ("'switch to <agent>' routes through the agent-mesh; all governed by
+ * RAID"). governAction and switchAgent were both real, both exported, but
+ * NOTHING called governAction before a switch — confirmed by grep across
+ * self-model.js and copilot/server.js's real handler. A directed agent
+ * switch is exactly the kind of live-control action RAID exists to gate;
+ * wired here so every caller (not just server.js's one regex handler) gets
+ * governed, not just the one call site this session happened to check.
  */
 function switchAgent(opts = {}) {
+  const gov = governAction({ action: 'switch_agent', target: opts.directed || opts.intent }, {});
+  if (gov.allowed === false) {
+    return { ok: false, reason: `denied by governance: ${gov.reason || 'no reason given'}`, governance: gov };
+  }
   try {
     const ar = require('../../lib/agent-router');
     if (ar.routeAgent) {
       const r = ar.routeAgent({ intent: opts.intent, prompt: opts.prompt, directed: opts.directed, config: opts.config, available: opts.available });
-      return { ok: true, agent: r.agent || r.route || r, constraints: (ar.AGENT_CONSTRAINTS && r.agent) ? ar.AGENT_CONSTRAINTS[r.agent] : null, detail: r };
+      return { ok: true, agent: r.agent || r.route || r, constraints: (ar.AGENT_CONSTRAINTS && r.agent) ? ar.AGENT_CONSTRAINTS[r.agent] : null, detail: r, governance: gov };
     }
   } catch (e) { return { ok: false, reason: e.message }; }
   return { ok: false, reason: 'agent-router unavailable' };

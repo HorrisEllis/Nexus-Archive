@@ -44,6 +44,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `contracts.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `copilot-expansion.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `copilot-full-capability-phasemap.spec` | 0.1.0-phasemap | 2026-08-12 | ✓ ALL 11 PHASES DONE — written and self-checked this session, every substrate claim verified live before writing, then every phase live-verified as built. P7 (the last, hardest phase) had a real route-ordering bug found and fixed by live end-to-end testing before being marked done. |
+| `copilot-omniscience-phasemap.spec` | 0.1.0-phasemap | 2026-07-30 → 2026-08-12 | ✓ ALL 7 PHASES DONE — pre-existing file from 2026-07-30, was missing from this registry until now. P1's inline DONE marker was also missing (P2-P7 had one, P1 didn't) despite the file's own header already claiming all 7 done — fixed same commit, confirmed live first (copilot/server.js:1222 -> tool-runtime.js -> runToolLoop). |
 | `copilot-migration-and-new-capabilities.spec` | 1.1.0 | 2026-06-29 | ✓ filed session 6 — MIG-01 resolved, MIG-02 resolved differently than proposed, MIG-03 unverifiable (file not in tree), capability_cli_authoring built session 6. |
 | `copilot.spec` | 2.0.0 | — | not yet checked against live code this pass |
 | `cortex-dual-cognition.spec` | 1.0.0 | — | not yet checked against live code this pass |

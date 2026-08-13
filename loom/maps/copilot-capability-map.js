@@ -97,6 +97,9 @@ const FILES = [
 
   ['lib/nerve-ollama-bridge.js',                     'nexus.lib.nerve-ollama-bridge',
     ['nexus.lib.nerve', 'nexus.ollama.server']],   // P7c — reads Nerve's snapshot, PUTs to ollama's new context route
+
+  ['lib/agent-tools/tools/run-chain.js',             'nexus.lib.agent-tools.tools.run-chain',
+    []],   // in-process require of lib/chains.js (unregistered) — closes P6 of nexus-live-mind-phasemap.spec ("a workflow executes")
 ];
 
 // nexus.copilot.self-model already exists (observability-map.js) — no

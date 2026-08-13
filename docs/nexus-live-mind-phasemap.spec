@@ -2,7 +2,12 @@ spec:
   meta:
     name:        nexus-live-mind
     version:     0.1.0-phasemap
-    status:      PHASEMAP 2026-08-07. The full vision, mapped before build.
+    status:      ALL 6 PHASES DONE 2026-08-12 (P1-P4 done 2026-08-07; P5/P6 completed same
+                 session as the marker fix — P5 had a real silent bug (whoAmI's
+                 getHypotheses call always returned empty), P6 had two real gaps
+                 (switchAgent ungoverned, lib/chains.js unwired) — both found and
+                 fixed by live verification, not assumed from the old "foundation
+                 wired" note. The full vision, mapped before build, now built.
     uuid:        nexus-live-mind-v0-0000-2026-0807-001
     author:      James Brooks
     intent: >
@@ -120,7 +125,7 @@ spec:
       drift: "co-pilot's current server has intercepts (status/diagnostics/accounts/user-model); extend that pattern, don't replace."
       axioms: [§1.1, §16.2]
 
-    P5_copilot_dynamic_and_user_aware:   # ← IN PROGRESS 2026-08-07: dynamic GRAMMAR ENGINE wired into co-pilots conversational path (the existing lib/grammar-engine trie, registry-owned, grows automatically). user-model "who am I" part still to come.
+    P5_copilot_dynamic_and_user_aware:   # ← DONE 2026-08-12 — real bug found and fixed, not just re-verified
       depends_on: P4
       does: >
         Co-pilot becomes DYNAMIC and user-aware. "Who am I?"/"what's my name?" →
@@ -132,7 +137,7 @@ spec:
       drift: "don't over-claim knowledge of the user — answer from hypotheses with their confidence, per §1.1."
       axioms: [§1.1, user_wellbeing]
 
-    P6_copilot_programmable:   # ← FOUNDATION WIRED 2026-08-07: governAction (intent-classifier + constitutional-ai check) + switchAgent (agent-router) wired from existing lib. Schedule/workflow automation still to come.
+    P6_copilot_programmable:   # ← DONE 2026-08-12 — switchAgent now RAID-governed, lib/chains.js wired as run_chain tool
       depends_on: [P4, P5]
       does: >
         Co-pilot becomes programmable: schedule tasks, automate the system, create
