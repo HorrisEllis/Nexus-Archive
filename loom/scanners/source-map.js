@@ -213,12 +213,31 @@ function mapSource(driver, FILES) {
   }
 
   const declaredHere = new Set(FILES.map(f => f[1]));
+
+  // §FIXED 2026-08-13 — found tracing a real boot log: hundreds of
+  // "dangling-hook" GAPs fired every single boot (test files, CLI scripts,
+  // standalone entry points — every leaf file mapSource ever scanned),
+  // and cortex's own intelligence system had crystallized it as "likely a
+  // systemic bottleneck." Root cause: this function declared an .export
+  // hook for EVERY scanned file unconditionally, whether or not anything
+  // else in the tree ever requires it. A file nothing imports gets an
+  // .export hook with zero wires ever pointing from it — exactly
+  // service/nexus-diagnostic.js's isOrphanOut condition. mapObservability/
+  // mapWarp/mapCopilotCapability (loom/maps/*.js) already avoid this
+  // exact bug with a requiredBy guard; mapSource — the one function that
+  // scans the WHOLE tree, hence the whole-tree flood — never had it.
+  // Mirrored here verbatim, same pattern, not reinvented.
+  const requiredBy = new Set();
+  for (const [, , requires] of FILES) for (const dep of requires) requiredBy.add(dep);
+
   for (const [, id, requires] of FILES) {
-    const e = driver.declare('hook', {
-      id: `${id}.export`, component_id: id, name: 'export', type: 'direct', direction: 'out',
-      uuid: `nexus-loom-scan-${id}-export-v1-0000-2026-0804-001`,
-    });
-    (e.ok ? results.hooks : results.failures).push({ id: `${id}.export`, r: e });
+    if (requiredBy.has(id)) {
+      const e = driver.declare('hook', {
+        id: `${id}.export`, component_id: id, name: 'export', type: 'direct', direction: 'out',
+        uuid: `nexus-loom-scan-${id}-export-v1-0000-2026-0804-001`,
+      });
+      (e.ok ? results.hooks : results.failures).push({ id: `${id}.export`, r: e });
+    }
     if (requires.length > 0) {
       const i = driver.declare('hook', {
         id: `${id}.import`, component_id: id, name: 'import', type: 'direct', direction: 'in',
