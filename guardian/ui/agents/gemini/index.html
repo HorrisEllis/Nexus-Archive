@@ -277,7 +277,7 @@ function renderLadder(){
 
 async function toolGaps(){const o=document.getElementById('gaps-tool-out');o.style.display='';o.textContent='⟳';const r=await api(`${GD}/gaps?status=open&limit=10`);o.textContent=(r?.gaps||[]).map(g=>`[${g.severity}] ${g.type}: ${(g.body||'').slice(0,70)}`).join('\n')||'No gaps';}
 async function toolJobs(){const o=document.getElementById('jobs-tool-out');o.style.display='';o.textContent='⟳';const r=await api(`${GD}/jobs?limit=20`);const j=(r?.jobs||[]).filter(j=>j.provider===PROVIDER);o.textContent=j.map(x=>`[${x.status}] ${(x.prompt||'').slice(0,60)}`).join('\n')||'No Gemini jobs';}
-async function toolRepairDispatch(){const p=document.getElementById('repair-in').value.trim();const o=document.getElementById('repair-out');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,meta:{source:'gemini-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12):'✗ '+(r?.error||'failed');}
+async function toolRepairDispatch(){const p=document.getElementById('repair-in').value.trim();const o=document.getElementById('repair-out');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,source:'gemini-console',meta:{source:'gemini-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12):'✗ '+(r?.error||'failed');}
 
 refreshSys();refreshQueues();setInterval(refreshSys,5000);setInterval(refreshQueues,3000);
 </script>

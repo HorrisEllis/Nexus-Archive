@@ -61,6 +61,58 @@ const CONTRACTS = {
     rate_limits:     { tool: { max: 100, windowMs: 60000 } },
   },
 
+  // §ADDED 2026-08-12 — found via two real screenshots showing "dispatch
+  // failed: unknown" from the claude/chatgpt consoles on a plain "hello".
+  // Root cause was two compounding bugs, both fixed same session: (1) the
+  // consoles sent source nested in body.meta.source, never at the top
+  // level guardian's /command actually reads (body.source) — fixed in
+  // ui/agents/*/index.html + guardian/ui/agents/*/index.html, all 10
+  // files, all 18 call sites — so every request fell through as
+  // source:'unknown'; (2) _default's proof_required:true then correctly
+  // denied every one of them, but the console's api() helper (also fixed
+  // same session) discarded the real 403 body, showing "unknown" instead
+  // of the actual reason. Registering these five sources here is the
+  // real, permanent fix for the denial itself — 'unknown' should never
+  // have been the console's live identity. trust_level 'operator': same
+  // posture as 'cli' (a human is directly driving these), not 'system' —
+  // narrower than cli's action set on purpose, these consoles only ever
+  // legitimately dispatch chat/diagnose_and_repair, never forge/browser.
+  'claude-console': {
+    trust_level:     'operator',
+    allowed_actions: ['tool', 'chat', 'diagnose'],
+    denied_actions:  ['forge', 'browser'],
+    proof_required:  false,
+    rate_limits:     { tool: { max: 30, windowMs: 60000 } },
+  },
+  'chatgpt-console': {
+    trust_level:     'operator',
+    allowed_actions: ['tool', 'chat', 'diagnose'],
+    denied_actions:  ['forge', 'browser'],
+    proof_required:  false,
+    rate_limits:     { tool: { max: 30, windowMs: 60000 } },
+  },
+  'gemini-console': {
+    trust_level:     'operator',
+    allowed_actions: ['tool', 'chat', 'diagnose'],
+    denied_actions:  ['forge', 'browser'],
+    proof_required:  false,
+    rate_limits:     { tool: { max: 30, windowMs: 60000 } },
+  },
+  'mistral-console': {
+    trust_level:     'operator',
+    allowed_actions: ['tool', 'chat', 'diagnose'],
+    denied_actions:  ['forge', 'browser'],
+    proof_required:  false,
+    rate_limits:     { tool: { max: 30, windowMs: 60000 } },
+  },
+  'perplexity-console': {
+    trust_level:     'operator',
+    allowed_actions: ['tool', 'chat', 'diagnose'],
+    denied_actions:  ['forge', 'browser'],
+    proof_required:  false,
+    rate_limits:     { tool: { max: 30, windowMs: 60000 } },
+  },
+
   // Fallback for any source not listed above. Minimal trust by
   // construction — 'tool' is explicitly denied (not just absent from
   // allowed_actions, so the reason can say so plainly), everything else

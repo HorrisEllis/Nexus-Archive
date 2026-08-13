@@ -277,7 +277,7 @@ async function ctxMemory(){const r=await api(`${CX}/api/jaa/decision_log?limit=1
 
 async function cli(cmd){if(!cmd?.trim())return;const o=document.getElementById('cli-out');o.style.display='';o.textContent='⟳ '+cmd+'…';const r=await post(`${GD}/cli/exec`,{command:cmd.trim(),source:'mistral-console'});const d=r?.result??r??{};o.textContent=typeof d==='string'?d:JSON.stringify(d,null,2).slice(0,400);}
 
-async function doRepair(){const p=document.getElementById('repair-in').value.trim();const o=document.getElementById('repair-out');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ dispatching…';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,meta:{source:'mistral-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12):'✗ '+(r?.error||'failed');}
+async function doRepair(){const p=document.getElementById('repair-in').value.trim();const o=document.getElementById('repair-out');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ dispatching…';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,source:'mistral-console',meta:{source:'mistral-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12):'✗ '+(r?.error||'failed');}
 
 document.getElementById('prompt-in').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
 document.querySelectorAll('.ctx-chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));

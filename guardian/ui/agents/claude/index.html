@@ -195,7 +195,7 @@ const GD='http://localhost:7820',ORCH='http://localhost:9000',CX='http://localho
 const PROVIDER='claude';
 let selQ=null,allQ=[],_streaming=false;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(6000),...opts});return r.ok?r.json():null;}catch{return null;}}
+async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(6000),...opts});const j=await r.json().catch(()=>null);if(!r.ok&&j&&!j.error)j.error='HTTP '+r.status;return j;}catch(e){return{ok:false,error:'network: '+e.message};}}
 async function post(url,body){return api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
 
 async function refresh(){
@@ -249,7 +249,7 @@ async function tool(id){
   else if(id==='jobs'){const r=await api(`${GD}/jobs?limit=15`);o.textContent=(r?.jobs||[]).map(j=>`[${j.status}] ${j.provider}: ${(j.prompt||'').slice(0,55)}`).join('\n')||'None';}
   else if(id==='artifacts'){const r=await api(`${GD}/artifacts?limit=10`);o.textContent=(r?.artifacts||[]).map(a=>`${a.specName||a.lang||'?'} #${(a.hash||'').slice(0,8)}`).join('\n')||'None';}
 }
-async function doRepair(){const p=document.getElementById('ri').value.trim();const o=document.getElementById('to-repair');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ dispatching…';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,meta:{source:'claude-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12)+' → '+r.provider:'✗ '+(r?.error||'failed');}
+async function doRepair(){const p=document.getElementById('ri').value.trim();const o=document.getElementById('to-repair');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ dispatching…';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,source:'claude-console',meta:{source:'claude-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12)+' → '+r.provider:'✗ '+(r?.error||'failed');}
 async function createContract(){const n=document.getElementById('ci').value.trim();const o=document.getElementById('to-contract');if(!n)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ creating…';const r=await post(`${CX}/api/jaa/reflection_contracts`,{uuid:crypto.randomUUID(),decisionClass:n,loopType:'CAPABILITY',status:'queued',agent:'mistral',priority:'normal',createdAt:Date.now(),updatedAt:Date.now()});o.style.color=r?'var(--green)':'var(--red)';o.textContent=r?'✓ contract created':'✗ failed (check cortex)';}
 async function cli(cmd){if(!cmd?.trim())return;const o=document.getElementById('to-cli');o.style.display='';o.textContent='⟳ '+cmd+'…';const r=await post(`${GD}/cli/exec`,{command:cmd.trim(),source:'claude-console'});const d=r?.result??r??{};o.textContent=typeof d==='string'?d:JSON.stringify(d,null,2).slice(0,400);}
 
@@ -278,7 +278,7 @@ async function send(){
     const tabLive=!!prov?.channels?.[PROVIDER];
     if(tabLive){
       const fullPrompt=ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt;
-      const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:fullPrompt,meta:{source:'claude-console',chatMode:true}});
+      const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:fullPrompt,source:'claude-console',meta:{source:'claude-console',chatMode:true}});
       if(r?.jobId){
         document.getElementById('ss-tok').textContent='→ Claude tab';
         const job=await pollJob(r.jobId);

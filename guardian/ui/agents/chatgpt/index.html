@@ -164,7 +164,7 @@ textarea#pi::placeholder{color:var(--text3)}
 const GD='http://localhost:7820',ORCH='http://localhost:9000',CX='http://localhost:3748';
 const PROVIDER='chatgpt';let selQ=null,allQ=[],_streaming=false;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(6000),...opts});return r.ok?r.json():null;}catch{return null;}}
+async function api(url,opts){try{const r=await fetch(url,{signal:AbortSignal.timeout(6000),...opts});const j=await r.json().catch(()=>null);if(!r.ok&&j&&!j.error)j.error='HTTP '+r.status;return j;}catch(e){return{ok:false,error:'network: '+e.message};}}
 async function post(url,body){return api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
 function sv(i,val,ok){const e=document.getElementById('sv'+i);if(e){e.textContent=val;e.className='sv '+(ok===true?'ok':ok===false?'off':'');}}
 
@@ -196,8 +196,8 @@ async function tool(id){const o=document.getElementById('to-'+id);o.style.displa
   else if(id==='artifacts'){const r=await api(`${GD}/artifacts?limit=10`);o.textContent=(r?.artifacts||[]).map(a=>`${a.specName||a.lang||'?'} #${(a.hash||'').slice(0,8)}`).join('\n')||'None';}
   else if(id==='providers'){const r=await api(`${GD}/providers`);o.textContent=JSON.stringify(Object.entries(r?.channels||{}).map(([k,v])=>({provider:k,tab:(v.tabId||'').slice(0,10),hb:Math.round((Date.now()-(v.lastHeartbeat||0))/1000)+'s'})),null,2);}
 }
-async function batch(){const lines=document.getElementById('batch-in').value.trim().split('\n').map(t=>t.trim()).filter(Boolean);const o=document.getElementById('to-batch');if(!lines.length)return;o.style.display='';o.style.color='var(--amber)';o.textContent=`Dispatching ${lines.length} tasks…`;let ok=0,fail=0;for(const t of lines){const r=await post(`${GD}/command`,{command:'code',provider:PROVIDER,prompt:t,meta:{source:'chatgpt-console',task:'batch'}});r?.jobId?ok++:fail++;}o.style.color=fail?'var(--amber)':'var(--green)';o.textContent=`✓ ${ok} dispatched · ${fail} failed`;}
-async function doRepair(){const p=document.getElementById('ri').value.trim();const o=document.getElementById('to-repair');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ …';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,meta:{source:'chatgpt-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12):'✗ '+(r?.error||'failed');}
+async function batch(){const lines=document.getElementById('batch-in').value.trim().split('\n').map(t=>t.trim()).filter(Boolean);const o=document.getElementById('to-batch');if(!lines.length)return;o.style.display='';o.style.color='var(--amber)';o.textContent=`Dispatching ${lines.length} tasks…`;let ok=0,fail=0;for(const t of lines){const r=await post(`${GD}/command`,{command:'code',provider:PROVIDER,prompt:t,source:'chatgpt-console',meta:{source:'chatgpt-console',task:'batch'}});r?.jobId?ok++:fail++;}o.style.color=fail?'var(--amber)':'var(--green)';o.textContent=`✓ ${ok} dispatched · ${fail} failed`;}
+async function doRepair(){const p=document.getElementById('ri').value.trim();const o=document.getElementById('to-repair');if(!p)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ …';const r=await post(`${GD}/command`,{command:'diagnose_and_repair',provider:'ollama',prompt:p,source:'chatgpt-console',meta:{source:'chatgpt-console'}});o.style.color=r?.jobId?'var(--green)':'var(--red)';o.textContent=r?.jobId?'✓ '+r.jobId.slice(0,12):'✗ '+(r?.error||'failed');}
 async function createContract(){const n=document.getElementById('ci').value.trim();const o=document.getElementById('to-contract');if(!n)return;o.style.display='';o.style.color='var(--amber)';o.textContent='⟳ …';const r=await post(`${CX}/api/jaa/reflection_contracts`,{uuid:crypto.randomUUID(),decisionClass:n,loopType:'CAPABILITY',status:'queued',agent:'mistral',priority:'normal',createdAt:Date.now(),updatedAt:Date.now()});o.style.color=r?'var(--green)':'var(--red)';o.textContent=r?'✓ contract created':'✗ failed';}
 async function cli(cmd){if(!cmd?.trim())return;const o=document.getElementById('to-cli');o.style.display='';o.textContent='⟳ '+cmd+'…';const r=await post(`${GD}/cli/exec`,{command:cmd.trim(),source:'chatgpt-console'});const d=r?.result??r??{};o.textContent=typeof d==='string'?d:JSON.stringify(d,null,2).slice(0,400);}
 
@@ -218,7 +218,7 @@ async function send(){const prompt=document.getElementById('pi').value.trim();if
   try{
     const prov=await api(`${GD}/providers`);const tabLive=!!prov?.channels?.[PROVIDER];
     if(tabLive){
-      const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,meta:{source:'chatgpt-console',chatMode:true}});
+      const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,source:'chatgpt-console',meta:{source:'chatgpt-console',chatMode:true}});
       if(r?.jobId){document.getElementById('ss-tok').textContent='→ ChatGPT tab';const job=await pollJob(r.jobId);finalStream(msgEl,job?.response||job?.responseText||'(no response — check ChatGPT tab)');document.getElementById('ss-tok').textContent='ChatGPT NCP';}
       else{finalStream(msgEl,'✗ dispatch failed: '+(r?.error||'unknown'));}
     } else {

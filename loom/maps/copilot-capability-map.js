@@ -100,6 +100,9 @@ const FILES = [
 
   ['lib/agent-tools/tools/run-chain.js',             'nexus.lib.agent-tools.tools.run-chain',
     []],   // in-process require of lib/chains.js (unregistered) — closes P6 of nexus-live-mind-phasemap.spec ("a workflow executes")
+
+  ['cortex/contract/index.js',                       'nexus.cortex.contract',
+    []],   // §2026-08-12 — added 5 console contracts (claude/chatgpt/gemini/mistral/perplexity), closing the RAID-denial root cause behind "dispatch failed: unknown"
 ];
 
 // nexus.copilot.self-model already exists (observability-map.js) — no
