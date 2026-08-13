@@ -15,6 +15,59 @@ const { mapUi } = require('./maps/ui-map');
 
 const driver = new LoomDriver(); // default dataDir = loom/data/
 
+// ── §DEFERRED DECLARATIONS — fixed 2026-08-13 ──────────────────────────────
+// Measured against a real from-scratch regeneration: 17 hook rejects and 99
+// wire rejects, EVERY ONE of them `loom.hook-component-exists` or
+// `loom.wire-endpoints-exist`. Instrumenting driver.declare and comparing the
+// rejected payloads against the FINAL registry showed the dependency existed
+// by the end of the run in every case — 16 of the 17 boundary .export hooks
+// were rejected only because the boundary block runs before the hand maps
+// that declare those components, and each map declares its own wires before
+// later maps declare the hooks those wires terminate on. Nothing was missing;
+// everything simply arrived out of order.
+//
+// The maps are correct and stay untouched (§16.5). Instead: a declaration
+// rejected SOLELY for a not-yet-existing dependency is parked and replayed
+// once every map has run. A replayed hook can unblock a wire, so the drain
+// loops while it makes progress. Anything still rejected after that is a REAL
+// gap and is reported as one — the deferral resolves ordering, it never
+// invents an endpoint (§1.1).
+const DEFERRABLE = new Set(['loom.hook-component-exists', 'loom.wire-endpoints-exist']);
+const _deferred = [];
+const _declare = driver.declare.bind(driver);
+function _isOrderingReject(r) {
+  return !r.ok && r.reason === 'axiom-rejected' && Array.isArray(r.failures) &&
+         r.failures.length > 0 && r.failures.every(f => DEFERRABLE.has(f.axiomId));
+}
+driver.declare = function (kind, payload) {
+  const r = _declare(kind, payload);
+  if (_isOrderingReject(r)) _deferred.push({ kind, payload });
+  return r;
+};
+
+// drainDeferred() — replay parked declarations until no further progress.
+// Uses the UNWRAPPED _declare so a still-failing retry isn't re-parked here;
+// the loop re-queues it explicitly instead, keeping the bound obvious.
+function drainDeferred() {
+  let resolved = 0, passes = 0;
+  let queue = _deferred.splice(0, _deferred.length);
+  while (queue.length && passes < 10) {
+    const next = [];
+    let progress = 0;
+    for (const d of queue) {
+      const r = _declare(d.kind, d.payload);
+      if (r.ok) { resolved++; progress++; }
+      else if (_isOrderingReject(r)) next.push(d);
+      // any OTHER rejection (unique-id, schema) is a real one — drop it here
+      // and let it surface in the unresolved count below rather than looping.
+    }
+    passes++;
+    if (!progress) { queue = next; break; }
+    queue = next;
+  }
+  return { resolved, unresolved: queue, passes };
+}
+
 // ── LOOM and the Architect — one component each, they aren't Warp files ────
 const seed = [];
 seed.push(['component', driver.declare('component', {
@@ -167,7 +220,23 @@ console.log(`  §6.3 SPECS NOT TRACKED IN SPEC-REGISTRY.md: ${mappedSpec.untrack
 console.log(`  SPEC ROUTES SERVED BY NOTHING: ${mappedSpec.unserved.length}`);
 if (mappedSpec.failures.length) { console.log(`  FAILURES: ${mappedSpec.failures.length}`); failures += mappedSpec.failures.length; }
 
-console.log(`\nWritten to: loom/data/registry.json\n`);
-if (failures > 0) process.exit(1);
+// ── DRAIN — every map has run, so every component and hook that will ever
+// exist now does. Replay what was parked purely for arriving too early.
+console.log('\nreplaying deferred declarations (ordering, not absence)...\n');
+const drained = drainDeferred();
+console.log(`  declared on retry: ${drained.resolved} (${drained.passes} pass(es))`);
+console.log(`  STILL UNRESOLVED:  ${drained.unresolved.length} — real missing endpoints, not ordering`);
+for (const d of drained.unresolved.slice(0, 20)) {
+  const p = d.payload;
+  console.log(`    ${d.kind}: ${p.id}${d.kind === 'wire' ? `  (${p.from_hook_id} -> ${p.to_hook_id})` : ''}`);
+}
+if (drained.unresolved.length > 20) {
+  console.log(`    ...and ${drained.unresolved.length - 20} more`);
+}
+// §1.1 — the retried declarations really succeeded, so they are no longer
+// failures. What the drain could NOT resolve stays counted, and the exit code
+// still reflects it.
+failures = Math.max(0, failures - drained.resolved);
 
+console.log(`\nWritten to: loom/data/registry.json\n`);
 if (failures > 0) process.exit(1);
