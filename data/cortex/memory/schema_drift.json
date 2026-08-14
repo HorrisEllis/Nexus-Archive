@@ -1,0 +1,1 @@
+[{"uuid":"04c297e5-1265-4328-9350-260394aa3464","kind":"schema_drift","table":"user_model_hypotheses","rowUuid":"74f5da63-6f72-485c-87a4-585cc7d34342","schemaVersion":1,"missing":["locked"],"typeMismatches":[],"unexpected":["lastEvidence"],"ts":1786745578983,"id":"5ce58c84-e091-4eb6-8d92-28d2ef58d5b3"}]

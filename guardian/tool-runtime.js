@@ -86,8 +86,23 @@ async function run(o = {}) {
   // Guardian gets tools + the shared stream (P7: lib/stream-digest, the same
   // normalizer copilot reads — one stream, many readers), but no user-model.
   // Different caller, different purpose — the point of B.
+  // §WIRED 2026-08-14 — a browser tab (claude.ai DOM session) has no
+  // native tool-calling schema; toolSchemas is passed to callModel but a
+  // human-facing web page can't act on a JSON schema it never sees. This
+  // is the in-band substitute: a plain-text convention the model follows
+  // in its reply, parsed back out by guardian/server.js's
+  // _extractToolCallsFromDOM(). Both this prompt and that parser must
+  // agree on the exact fence — 'tool_call', one JSON object per block.
+  const toolNames = [...agentTools.TOOLS.keys()].sort();
   const systemPrompt = [
     'You are NEXUS Guardian with tools. Use them to read files, run diagnostics, query the system, and act. Prefer a tool over guessing.',
+    '',
+    `Available tools: ${toolNames.join(', ')}.`,
+    'To call a tool, reply with ONLY a fenced block in exactly this form, one JSON object per block:',
+    '```tool_call',
+    '{"name": "file_tree", "arguments": {"path": "."}}',
+    '```',
+    'You may include more than one such block in a reply to call multiple tools. After a tool result comes back, use it to continue or give your final answer as plain text with no tool_call block.',
     o.streamDigest ? `\nLIVE SYSTEM STREAM:\n${o.streamDigest}` : '',
   ].filter(Boolean).join('\n');
 

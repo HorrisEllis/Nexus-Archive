@@ -100,3 +100,47 @@ spec:
     - "P4: guardian's provider dispatch is async/job-based (poll), not a direct return like ollama — the callModel adapter must resolve the job before returning to the loop."
     - "P6: call_system must not become a second dispatch path competing with RAID (§10.3). It routes THROUGH the registry, same as RAID resolves."
     - "sandbox cannot run the live loop (no model, no SSE) — every gate is James-verified on the real boot, per this whole engagement."
+
+  corrections_2026_08_14:
+    P4_gate_never_actually_verified:
+      what: >
+        P4 was marked DONE 2026-07-30 on its stated gate ("a guardian
+        /command that needs a tool uses it — via guardian's providers,
+        with zero call into copilot"). That gate was never actually met.
+        guardian/tool-runtime.js's resolveJob has always read
+        job.tool_calls; nothing anywhere in guardian/ ever wrote it
+        (confirmed by grep, zero assignments). Every browser-tab tool
+        call silently returned toolCalls: null — the loop always saw a
+        "final answer," never a tool request. A second, separate bug in
+        the same path: resolveJob read job.response, but the
+        GUARDIAN_COMPLETE handler only ever set job.responseText — so
+        even the plain-text answer came back empty on every resolved job.
+        Root cause: the DOM-reply path has no native tool-calling schema
+        to produce structured tool_calls from at all — the missing piece
+        wasn't a bug in existing logic, it was a producer that was never
+        built.
+      fixed: >
+        guardian/server.js: added _extractToolCallsFromDOM(text), a
+        parser for a fenced ```tool_call convention, called at
+        GUARDIAN_COMPLETE/NCP_COMPLETE to set job.tool_calls; fixed
+        resolveJob to read job.responseText (the field actually
+        written) instead of job.response (never written).
+        guardian/tool-runtime.js: run()'s systemPrompt now names the
+        available tools and states the exact fenced-block convention —
+        the in-band substitute for a schema a browser tab can't see.
+      new_capability: >
+        lib/agent-tools/tools/query/file-tree.js (file_tree) — read_file
+        only ever handled one named file; there was no way for the model
+        to discover what exists before requesting it. Same safe-path
+        containment as read_file, registered in lib/agent-tools/index.js.
+      verified: >
+        Syntax-checked all four touched files; unit-tested
+        _extractToolCallsFromDOM against single- and multi-tool-call DOM
+        text and a plain-text final answer; ran file_tree.execute()
+        against a real directory and a path-traversal string
+        ('../../../etc') — correctly listed one, correctly refused the
+        other. NOT verified: the live round trip through an actual
+        claude.ai tab, guardian's NCP channel, and a live job poll —
+        sandbox has no reachable NCP/browser process. That's the one
+        remaining gate, same honest_risks caveat as every other phase:
+        James-verified on the real boot.

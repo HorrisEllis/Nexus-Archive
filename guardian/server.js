@@ -185,6 +185,34 @@ const _activeQueues = new Map();
 // even a fully successful response was silently dropped. This is what
 // actually closes that loop; the watchdog stays as the safety net for when
 // no response ever arrives at all.
+// §WIRED 2026-08-14 — the missing half of P4 (guardian/tool-runtime.js).
+// That module's resolveJob already READS job.tool_calls; nothing anywhere
+// WROTE it (checked: grepped guardian/ for any assignment, zero — the
+// loop's plumbing was real, this one piece wasn't). A browser-tab reply
+// is plain DOM text, not a native tool-calling response, so the model is
+// told (see tool-runtime.js's run() systemPrompt) to emit a fenced
+// ```tool_call block. This parses that convention back into the same
+// {name, arguments} shape _extractToolCalls() already expects from a
+// native provider, so both paths converge on one contract, not two.
+function _extractToolCallsFromDOM(text) {
+  if (!text) return null;
+  const calls = [];
+  const re = /```tool_call\s*\n([\s\S]*?)\n```/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    try {
+      const parsed = JSON.parse(m[1].trim());
+      if (parsed && parsed.name) {
+        calls.push({ name: parsed.name, arguments: parsed.arguments || {} });
+      }
+    } catch (_) {
+      // malformed block — skip it rather than fail the whole response;
+      // the loop just sees no tool call and treats the text as final.
+    }
+  }
+  return calls.length ? calls : null;
+}
+
 function _findActiveSeamCompartment(jobId) {
   if (!jobId) return null;
   for (const queue of _activeQueues.values()) {
@@ -752,7 +780,16 @@ function _handleNCPMessage(msg) {
         // Fall through — gap/artifact extraction below is generically useful
         // for SEAM-generated content too, so it still runs either way.
         // Store response text on job so /response/:jobId can serve it
-        if (job) { job.responseText = finalText.slice(0, 100000); job.status = 'complete'; }
+        if (job) {
+          job.responseText = finalText.slice(0, 100000);
+          job.status = 'complete';
+          // §WIRED 2026-08-14 — the tool-call half of P4. See
+          // _extractToolCallsFromDOM's header note: this is the one real
+          // producer for job.tool_calls, which /command/tools's
+          // resolveJob has been reading since P4 shipped with nothing
+          // ever writing it.
+          job.tool_calls = _extractToolCallsFromDOM(finalText);
+        }
 
         // Feed event to baseline monitor
         const latencyMs = job?.startedAt ? Date.now() - job.startedAt : 0;
@@ -3001,7 +3038,13 @@ function handleExtendedRoutes(req, res, url, method) {
             await new Promise(r => setTimeout(r, 1000));
             const job = jobs.get(jobId);
             if (!job) return { text: '', toolCalls: null };
-            if (job.status === 'complete') return { text: job.response || '', toolCalls: job.tool_calls || job.toolCalls || null, provider };
+            // §FIX 2026-08-14 — this read job.response, but nothing anywhere
+            // in guardian ever assigned that field (checked: grepped for
+            // '.response =' across guardian/, zero hits). The GUARDIAN_COMPLETE
+            // handler only ever set job.responseText. As written, every
+            // resolved job returned text:'' regardless of what the tab
+            // actually replied — the tool loop was silently getting nothing.
+            if (job.status === 'complete') return { text: job.responseText || '', toolCalls: job.tool_calls || job.toolCalls || null, provider };
             if (job.status === 'error') return { text: job.error || '', toolCalls: null };
           }
           return { text: '', toolCalls: null, timedOut: true };
