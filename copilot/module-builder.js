@@ -89,10 +89,35 @@ const SPEC_TEMPLATE = (name, purpose, port, targetSystem) => `spec:
 async function map(description, opts = {}) {
   const requestId = opts.requestId || crypto.randomUUID();
 
+  // §SELF-BUILD-EXT 2026-08-14 — the real gap found and confirmed by
+  // reading this function's OLD prompt directly: it only ever asked the
+  // LLM to invent a brand-new module. Zero concept of "this request is
+  // about something that already exists" — confirmed, not assumed, by
+  // checking generateSpec() too (it never read a real file either).
+  // Fixed at the SOURCE, before the LLM is ever asked anything: try to
+  // resolve a real, already-registered component from the description's
+  // own words FIRST, deterministically, via lib/loom-map.js's real
+  // resolveComponent() (built this session) — no LLM call needed for
+  // this part, same "deterministic first, LLM only where it adds value"
+  // discipline generateSpec()'s own architecture-selection step already
+  // uses (_tryIdeariumArchitecture, real, unmodified, right below).
+  const existingTarget = _resolveExistingTarget(description, opts);
+
   const mapPrompt = `You are the NEXUS architecture system. A user wants to add a capability.
 
 User request: "${description}"
-
+${existingTarget ? `
+A REAL, ALREADY-REGISTERED component was resolved from this request before you were asked anything — do not invent a competing one:
+  id: ${existingTarget.componentId}
+  system: ${existingTarget.system}
+  file: ${existingTarget.dir || '(no dir on record)'}
+  comp_status: ${existingTarget.compStatus || '(not set)'}
+  real current content (the actual file, not a guess) follows between the markers:
+--- EXISTING FILE START ---
+${existingTarget.content ? existingTarget.content.slice(0, 4000) : '(file content unavailable — component is registered but its real file could not be read; treat as edit-blind and say so in gaps)'}
+--- EXISTING FILE END ---
+This request is almost certainly an EDIT, EXPANSION, or REPAIR of this real component, not a new one. Set scope accordingly (see #6 below) and reference the existing content in your plan rather than proposing a parallel reinvention.
+` : ''}
 Map this to:
 1. A module name (snake_case, short)
 2. A one-sentence purpose
@@ -101,12 +126,18 @@ Map this to:
 5. Any gaps or questions before building
 6. Scope: "cli" if this is just asking for a new CLI command / shortcut /
    alias for something co-pilot can already do (no new logic, no new route,
-   no new system) — vs "module" if it needs actual new code built.
-   When in doubt between the two, prefer "module" — "cli" should be the
-   narrow case, not the default.
+   no new system) — "module" if it needs genuinely new code with no real
+   existing target — "edit" if a real existing component (above, if
+   present) needs a specific, scoped change — "expand" if it needs new
+   capability ADDED to a real existing component without replacing what's
+   there — "repair" if something existing is broken and needs fixing back
+   to its own intended behavior. When in doubt between "module" and one of
+   edit/expand/repair, and a real existingTarget was resolved above, prefer
+   the existing-target scope — inventing a parallel module next to a real
+   one that already does the job is worse than asking one more question.
 
 Respond as JSON only:
-{ "name": string, "purpose": string, "targetSystem": string, "usesCapabilities": string[], "gaps": string[], "ready": boolean, "scope": "cli" | "module", "grammarAliases": string[] }`;
+{ "name": string, "purpose": string, "targetSystem": string, "usesCapabilities": string[], "gaps": string[], "ready": boolean, "scope": "cli" | "module" | "edit" | "expand" | "repair", "grammarAliases": string[], "contractType": "build" | "module" | "expand" | "repair" }`;
 
   const result = await lifeline.route(mapPrompt, { requestId, intent: 'map', ...opts });
 
@@ -122,7 +153,147 @@ Respond as JSON only:
     plan = { name: 'new-module', purpose: description, targetSystem: 'copilot', gaps: ['Could not parse plan'], ready: false };
   }
 
+  // §SELF-BUILD-EXT — the real existing content/id travels WITH the plan
+  // regardless of what the LLM's JSON did or didn't echo back, so
+  // generateSpec() downstream never has to re-resolve or re-guess it.
+  if (existingTarget) {
+    plan.existingComponentId = existingTarget.componentId;
+    plan.existingContent = existingTarget.content;
+    plan.existingDir = existingTarget.dir;
+    if (!['edit', 'expand', 'repair'].includes(plan.scope)) {
+      // The LLM didn't pick an existing-target scope despite one being
+      // handed to it — surfaced as a real gap, not silently overridden
+      // (the LLM may have a real reason; a human/caller should see this).
+      plan.gaps = [...(plan.gaps || []), `A real existing component (${existingTarget.componentId}) was resolved but scope came back "${plan.scope}", not edit/expand/repair — confirm this is intentional before building.`];
+    }
+  }
+
   return { ok: true, plan, confidence: result.confidence, requestId };
+}
+
+/**
+ * §SELF-BUILD-EXT 2026-08-14 — deterministic, no-LLM resolution of an
+ * existing target from the description's own words. Real, not fuzzy:
+ * tries each individual word/hyphenated-token in the description against
+ * lib/loom-map.js's real resolveComponent() (checks loom's actual live
+ * registry, honest found:false for anything not really registered —
+ * never fabricates a match). Returns null, not a guess, when nothing
+ * resolves — a request for something genuinely new must still be able
+ * to reach scope:"module" cleanly.
+ */
+function _resolveExistingTarget(description, opts = {}) {
+  let loomMap;
+  try { loomMap = require('../lib/loom-map'); } catch (_) { return null; }
+  const tokens = description
+    .toLowerCase()
+    .split(/[\s,.:;!?]+/)
+    .filter(t => t.length > 2)
+    .map(t => t.replace(/[^a-z0-9._-]/g, ''));
+
+  // §SELF-BUILD-EXT — try an exact id/hook match first (resolveComponent's
+  // own real, honest exact lookup), THEN fall back to a real segment
+  // match against loom's actual registered ids. Confirmed by testing
+  // directly that natural language never contains a fully-qualified
+  // dotted id ("contracts" resolves to nothing via resolveComponent
+  // alone, even though "nexus.lib.agent-system.contracts" is a real,
+  // registered component) — exact-only would make this feature useless
+  // for how people actually describe things. Segment match is still
+  // deterministic and honest: a token must equal a whole dotted segment
+  // of a real id, not a fuzzy substring, so "contract" doesn't
+  // accidentally match "contracts" or "contract-queue" by coincidence.
+  let map = null;
+  try { map = loomMap.getMap(opts); } catch (_) { map = null; }
+  const allIds = map?.available ? Object.keys(map.components) : [];
+
+  // §SELF-BUILD-EXT — collect ALL matches across every token first, THEN
+  // decide — found the greedy "return on first token that happens to
+  // match" version is wrong in practice: a common word early in a
+  // sentence (e.g. "system") can uniquely match some unrelated real
+  // component before a later, more semantically specific word ("contracts")
+  // ever gets a chance. Confirmed by testing directly: "I want to expand
+  // the contracts system for agents" resolved to loom.phasemap.system
+  // (matched on the word "system") instead of the actually-intended
+  // agent-system.contracts component. Collecting every token's match and
+  // only auto-resolving when the WHOLE description points at exactly one
+  // real component (not just one token) is the honest fix — ambiguous
+  // stays unresolved rather than confidently wrong.
+  // §SELF-BUILD-EXT — a single token is often ambiguous alone (agent-system
+  // -> {contracts, submit}; contracts -> 10 real components) but the
+  // INTERSECTION of multiple co-occurring tokens' candidate sets is often
+  // exactly one. Confirmed by testing directly: "agent-system contracts"
+  // individually resolve to 2 and 10 candidates respectively; their
+  // intersection is exactly nexus.lib.agent-system.contracts. Computing
+  // per-token candidate sets first, then intersecting, catches this
+  // without ever being told which tokens "belong together" — still fully
+  // deterministic, still refuses (empty or >1 intersection) rather than
+  // guessing.
+  const candidateSets = [];
+  for (const token of tokens) {
+    const exact = loomMap.resolveComponent(token, opts);
+    if (exact.found) { candidateSets.push(new Set([exact.componentId])); continue; }
+    const segmentMatches = allIds.filter(id => id.split('.').includes(token));
+    if (segmentMatches.length > 0) candidateSets.push(new Set(segmentMatches));
+  }
+
+  if (candidateSets.length >= 2) {
+    // Intersect every pair of candidate sets that share at least one real
+    // id — a real, present token narrowing the search, not a coincidence.
+    const counts = new Map();
+    for (const set of candidateSets) for (const id of set) counts.set(id, (counts.get(id) || 0) + 1);
+    const inMultipleSets = [...counts.entries()].filter(([, n]) => n >= 2).map(([id]) => id);
+    if (inMultipleSets.length === 1) {
+      const componentId = inMultipleSets[0];
+      return _hydrateTarget({ found: true, componentId, system: loomMap.resolveSystem(componentId) }, loomMap, opts);
+    }
+  }
+
+  const uniqueMatches = new Map(); // componentId -> which token(s) matched it
+  for (const token of tokens) {
+    const exact = loomMap.resolveComponent(token, opts);
+    if (exact.found) {
+      if (!uniqueMatches.has(exact.componentId)) uniqueMatches.set(exact.componentId, []);
+      uniqueMatches.get(exact.componentId).push(token);
+      continue;
+    }
+    const segmentMatches = allIds.filter(id => id.split('.').includes(token));
+    if (segmentMatches.length === 1) {
+      const id = segmentMatches[0];
+      if (!uniqueMatches.has(id)) uniqueMatches.set(id, []);
+      uniqueMatches.get(id).push(token);
+    }
+    // segmentMatches.length > 1 (token itself is ambiguous, e.g. "system")
+    // contributes nothing — correctly excluded, not guessed.
+  }
+
+  if (uniqueMatches.size === 1) {
+    const [componentId] = uniqueMatches.keys();
+    return _hydrateTarget({ found: true, componentId, system: loomMap.resolveSystem(componentId) }, loomMap, opts);
+  }
+  // 0 matches: nothing real referenced, correctly null (genuinely new work).
+  // 2+ matches: the description points at multiple distinct real
+  // components — genuinely ambiguous, correctly left unresolved rather
+  // than picking one arbitrarily.
+  return null;
+}
+
+function _hydrateTarget(resolved, loomMap, opts) {
+  let content = null;
+  let dir = null;
+  try {
+    const map = loomMap.getMap(opts);
+    const comp = map.components[resolved.componentId];
+    dir = comp?.dir || null;
+    if (dir) {
+      const candidate = path.join(ROOT, dir);
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        content = fs.readFileSync(candidate, 'utf8');
+      }
+    }
+  } catch (_) { /* content/dir stay null — honest, not fatal */ }
+  return {
+    componentId: resolved.componentId, system: resolved.system, dir, content,
+    compStatus: (() => { try { return loomMap.getMap(opts).components[resolved.componentId]?.comp_status; } catch (_) { return null; } })(),
+  };
 }
 
 /**
@@ -263,14 +434,29 @@ async function generateSpec(plan, opts = {}) {
   // of whether the LLM call below succeeds.
   const arch = await _tryIdeariumArchitecture(plan, opts);
 
-  const specPrompt = `Generate a NEXUS spec for this module using the nexus-system-foundation template.
+  // §SELF-BUILD-EXT 2026-08-14 — the actual fix: when map() resolved a
+  // real existing target, its real content travels through plan
+  // (existingComponentId/existingContent, set in map() above) and gets
+  // INCLUDED in the prompt here — previously this function never checked
+  // for it at all, confirmed by reading the old code directly, so even
+  // if map() had somehow known about an existing file, generateSpec()
+  // would still have invented a spec with zero awareness of it.
+  const specPrompt = `Generate a NEXUS spec for this ${plan.existingComponentId ? 'CHANGE to an existing component' : 'module'} using the nexus-system-foundation template.
 
 Module: ${plan.name}
 Purpose: ${plan.purpose}
 Target system: ${plan.targetSystem}
 Uses: ${(plan.usesCapabilities || []).join(', ')}
 ${arch ? `\nA deterministic architecture was already selected for this module (idearium spec ${arch.ideariumSpecUuid}, templates: ${arch.templateIds.join(', ')}). Ground the spec below in this real, chosen structure — don't invent a different architecture:\n\n${arch.grounding}\n` : ''}
-
+${plan.existingComponentId ? `
+This is a real EDIT/EXPAND/REPAIR against an existing, already-registered component — NOT a fresh module. The spec must describe the DIFFERENCE from what's already there, not a parallel reinvention:
+  existing component id: ${plan.existingComponentId}
+  existing comp_status:  (see plan)
+  real current content follows (empty means it couldn't be read — say so in the spec's own gaps, don't invent replacement content for what you can't see):
+--- EXISTING CONTENT START ---
+${plan.existingContent ? plan.existingContent.slice(0, 4000) : '(unavailable)'}
+--- EXISTING CONTENT END ---
+` : ''}
 The spec must:
 - Follow L0→L1→L2→L3→L4→L5 build order
 - Declare all components with comp_id and uuid
@@ -278,6 +464,7 @@ The spec must:
 - Include a phase map
 - Follow SISO architecture
 - Reference relevant axioms (§AX-001 through §AX-007)
+${plan.existingComponentId ? '- Set comp_dependencies to include ' + plan.existingComponentId + ' if this is additive (expand), or note it directly replaces/patches that component if this is edit/repair' : ''}
 
 Respond with the full spec in YAML format starting with "spec:"`;
 
@@ -519,4 +706,4 @@ Return the fixed spec only, starting with "spec:"`;
   };
 }
 
-module.exports = { build, map, generateSpec, runQC, registerCliCommand, MODULE_ID, VERSION };
+module.exports = { build, map, generateSpec, runQC, registerCliCommand, _resolveExistingTarget, MODULE_ID, VERSION };
