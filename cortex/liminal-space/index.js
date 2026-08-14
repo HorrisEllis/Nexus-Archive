@@ -455,11 +455,27 @@ function _onPatternCrystallised(event) {
 
   // Co-occurrence patterns → L1/L2 (coherence surface)
   if (pattern.patternType === 'co_occurrence') {
+    // §NOISE-GUARD 2026-08-13 — intelligence's meta-pattern layer tags
+    // pairings involving a known structural noise source (e.g. a
+    // gap-detector that re-fires hundreds of times every boot) as
+    // `noiseTainted` before it ever reaches the bus. Previously this
+    // handler took pattern.confidence at face value regardless — a noisy
+    // detector reaching "100% confidence, co-occurs with everything" would
+    // crystallise here at L1/L2 just as readily as a real relationship.
+    // Tainted pairings are held at sharply reduced confidence instead of
+    // being dropped outright: the co-occurrence still happened and may be
+    // worth a human glance, it just shouldn't be trusted enough to
+    // independently cross this membrane's own crystallisation threshold.
+    const confidence = pattern.noiseTainted
+      ? Math.min(0.2, (pattern.confidence || 0.6) * 0.25)
+      : (pattern.confidence || 0.6);
     hold('L1/L2', {
-      text:       `Co-occurrence: "${pattern.typeA}" and "${pattern.typeB}"`,
+      text:       `Co-occurrence: "${pattern.typeA}" and "${pattern.typeB}"`
+        + (pattern.noiseTainted ? ' (noise-tainted — one side is a known-loud event type, discounted)' : ''),
       type:       'co_occurrence',
-      confidence: pattern.confidence || 0.6,
+      confidence,
       causedBy:   pattern.uuid,
+      meta:       pattern.noiseTainted ? { pattern, noiseTainted: true } : { pattern },
     }, 'intelligence');
   }
 }

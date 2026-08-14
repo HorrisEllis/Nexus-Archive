@@ -50,6 +50,14 @@ const PATTERN_SCAN_MS   = 60_000;   // scan for patterns every 60s
 const FAILURE_SCAN_MS   = 30_000;   // scan failure taxonomy every 30s
 const REUSE_INDEX_MS    = 120_000;  // rebuild reuse index every 2 min
 const CROSS_LEDGER_MS   = 90_000;   // cross-ledger analysis every 90s
+const META_SCAN_MS      = 180_000;  // meta-pattern pass every 3 min — needs a
+                                     // populated bep_patterns table to have
+                                     // anything to reflect on, so it trails
+                                     // _scanPatterns rather than racing it
+const LOOM_MAP_SYNC_MS  = 120_000;  // refresh the cached loom system/component
+                                     // map every 2 min — loom's registry
+                                     // changes on declare(), not continuously,
+                                     // so this doesn't need pattern-scan speed
 
 let _intervals  = [];
 let _cfg        = {};
@@ -64,11 +72,21 @@ let _patternScanCursor = 0;
 let _lastFailureScan  = 0;
 let _lastReuseBuild   = 0;
 let _lastCrossLedger  = 0;
+let _lastMetaScan     = 0;
 
 // In-memory indexes for fast query
 let _reuseIndex  = [];   // { hash, type, lang, intent, artifactId, successRate, usedCount }
 let _failureIndex= {};   // faultClass → { count, precursors[], lastSeen, examples[] }
 let _patternIndex= [];   // crystallised BEP patterns
+let _metaSummary = null; // last _scanMetaPatterns() result — self-assessment of _patternIndex
+let _knownNoiseTypes = new Set(); // event types _scanMetaPatterns has flagged as structural
+                                   // noise sources — checked synchronously by _scanPatterns so
+                                   // a type doesn't have to wait a full meta cycle to stop
+                                   // contaminating new emissions once it's already known
+let _loomMap = null;              // last lib/loom-map.js getMap() result — the live system/
+                                   // component map, cached here so _scanFailures doesn't hit
+                                   // loom's registry on every single failure it indexes
+let _componentFailureMap = null;  // last _buildComponentFailureMap() result
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -142,11 +160,14 @@ function init(cfg = {}) {
   _intervals.push(setInterval(_scanFailures,   FAILURE_SCAN_MS));
   _intervals.push(setInterval(_buildReuseIndex,REUSE_INDEX_MS));
   _intervals.push(setInterval(_crossLedger,    CROSS_LEDGER_MS));
+  _intervals.push(setInterval(_scanMetaPatterns,META_SCAN_MS));
+  _intervals.push(setInterval(_syncLoomMap,    LOOM_MAP_SYNC_MS));
   _intervals.forEach(i => i.unref());
 
   // Initial build after 10s (let JAA settle from boot)
   setTimeout(() => {
     _scanPatterns();
+    _syncLoomMap();
     // §PERSIST-03: hydrate in-memory indexes from persisted JAA tables on boot
     // Healer and reuse engine work immediately — no cold-start amnesia
     const _storedFaults = jaaDB.query('fault_taxonomy', () => true, 500);
@@ -192,6 +213,12 @@ function init(cfg = {}) {
         route: { method: 'GET', path: '/api/intelligence/relational-field' } },
       { name: 'adversarial', description: 'adversarial critique — attack a proposal to find its weaknesses',
         route: { method: 'GET', path: '/api/intelligence/adversarial' } },
+      { name: 'meta', description: 'meta-pattern self-assessment — lift-adjusted signal vs. structural noise sources within the crystallised pattern table itself',
+        route: { method: 'GET', path: '/api/intelligence/meta' } },
+      { name: 'map', description: 'live loom system/component/hook map, cached from lib/loom-map.js',
+        route: { method: 'GET', path: '/api/intelligence/map' } },
+      { name: 'component-failures', description: 'error/failure data grouped by loom component (not just system), flagging components loom has never registered',
+        route: { method: 'GET', path: '/api/intelligence/component-failures' } },
     ], { version: VERSION, registeredBy: MODULE_ID });
     _log('registered intelligence capabilities — RAID can now route to the mind');
   } catch (e) {
@@ -359,6 +386,17 @@ async function _scanPatterns() {
     for (const [pair, count] of Object.entries(coOccur)) {
       if (count < 3 && !_patternIndex.find(p => p.signature === pair)) continue;
       const [typeA, typeB] = pair.split('::');
+      // §NOISE-GUARD 2026-08-13 — a type already flagged by _scanMetaPatterns
+      // as a structural noise source (present in a huge share of ALL pairs)
+      // is tagged rather than trusted. The row still gets written — the data
+      // itself is real and worth keeping — but downstream consumers like
+      // liminal-space, which crystallise their own beliefs off the
+      // `pattern_crystallised` bus event, need to know not to treat this
+      // pairing's confidence at face value. Without this, a type only gets
+      // distrusted a full META_SCAN_MS cycle after it starts flooding —
+      // this makes the discount apply the moment it's known, to every new
+      // pattern involving that type from then on.
+      const noiseTainted = _knownNoiseTypes.has(typeA) || _knownNoiseTypes.has(typeB);
       const existing = _patternIndex.find(p => p.signature === pair);
       if (!existing) {
         newPatterns.push({
@@ -371,6 +409,7 @@ async function _scanPatterns() {
           description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
           actionable:  count >= 5,
           crystallised:count >= 10,
+          noiseTainted,
           source:      MODULE_ID,
           ts:          now,
         });
@@ -383,6 +422,7 @@ async function _scanPatterns() {
           confidence:  Math.min(1, newCount / 20),
           actionable:  newCount >= 5,
           crystallised: nowCrystallised,
+          noiseTainted,
           description: `"${typeA}" and "${typeB}" co-occur within 5s — ${newCount} observations`,
           ts:          now,
         };
@@ -472,9 +512,16 @@ async function _scanPatterns() {
     }
 
     // Announce updates that just crossed into crystallised (exactly once,
-    // on the crossing scan — the latch above guarantees no re-announce)
+    // on the crossing scan — the latch above guarantees no re-announce).
+    // Noise-tainted patterns are still logged and still written to JAA
+    // (below) — they're real data — but they don't go out on the bus as
+    // an unqualified "crystallised" announcement, because liminal-space
+    // and any other listener would hold/crystallise a belief straight off
+    // pattern.confidence with no way to know the pairing is dominated by a
+    // known-loud type rather than a specific relationship.
     for (const p of announcements) {
-      _log('pattern crystallised: ' + _humanPattern(p));
+      _log('pattern crystallised: ' + _humanPattern(p) + (p.noiseTainted ? ' [noise-tainted — emit suppressed]' : ''));
+      if (p.noiseTainted) continue;
       try { bus.emit('cortex.intelligence.pattern_crystallised', { pattern: p }, { source: MODULE_ID }); }
       catch (e) { console.warn(`[${MODULE_ID}] bus.emit failed: ${e.message}`); }
     }
@@ -484,7 +531,8 @@ async function _scanPatterns() {
       jaaDB.insert('bep_patterns', p);
       _patternIndex.push(p);
       if (p.crystallised) {
-        _log('pattern crystallised: ' + _humanPattern(p));
+        _log('pattern crystallised: ' + _humanPattern(p) + (p.noiseTainted ? ' [noise-tainted — emit suppressed]' : ''));
+        if (p.noiseTainted) continue;
         try { bus.emit('cortex.intelligence.pattern_crystallised', { pattern: p }, { source: MODULE_ID }); }
         catch (e) { console.warn(`[${MODULE_ID}] bus.emit failed: ${e.message}`); }
       }
@@ -518,6 +566,208 @@ async function _scanPatterns() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// §1.5 — META-PATTERN LAYER
+// _scanPatterns is first-order: it counts what co-occurs with what. That is
+// necessary but not sufficient — a count-based confidence conflates "this
+// pair is meaningfully linked" with "one of these two event types is simply
+// everywhere". A gap-detector that re-announces the same ~470 dangling-hooks
+// on every boot will out-count every real behavioural pattern in the table
+// and reach 100% co-occurrence "confidence" with almost everything, while
+// carrying close to zero information about any one of those things
+// specifically. First-order counting cannot tell the difference; it has no
+// notion of what's typical.
+//
+// This pass reflects on _patternIndex itself, the way MASTERMIND reflects on
+// raw events: it asks "given how often each side of this pair shows up on
+// its own, is the pairing surprising — or is it just base-rate noise?" and
+// separately, "does the pattern table currently have a structural noise
+// source distorting everything downstream of it?" That second question is
+// the meta move: the answer isn't a pattern about the system, it's a
+// judgment about the reliability of the system's own patterns, and it is
+// written back as first-class data (`meta_signal` / `meta_noise_source`)
+// so Intuition and Mastermind can both discount the same detector loudness
+// as intelligence discovers it, rather than each independently learning to
+// distrust "dangling-hook" by trial and error.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function _scanMetaPatterns() {
+  try {
+    const now = Date.now();
+    const coPatterns = _patternIndex.filter(p => p.patternType === 'co_occurrence');
+    if (coPatterns.length < 5) { _lastMetaScan = now; return; } // not enough to reflect on yet
+
+    // ── Marginal frequency per event type ─────────────────────────────────────
+    // How many crystallised pairs does each type participate in? A type that
+    // shows up in most of the table isn't "correlated with" its partners in
+    // any specific sense — it's just loud. This is the base rate co_occurrence
+    // never computed.
+    const participation = {};
+    for (const p of coPatterns) {
+      participation[p.typeA] = (participation[p.typeA] || 0) + 1;
+      participation[p.typeB] = (participation[p.typeB] || 0) + 1;
+    }
+    const totalPairs = coPatterns.length;
+
+    // ── Lift-adjusted signal score ─────────────────────────────────────────────
+    // lift(A,B) ≈ how much MORE often A and B share a pattern than you'd
+    // expect if each type's pairings were spread evenly across the table.
+    // Raw participation share stands in for P(type) here — bep_patterns
+    // doesn't retain per-scan occurrence counts per type, only which pairs
+    // crystallised, so this is a pattern-level lift, not an event-level one.
+    // That's a coarser signal than true event-frequency lift, but it is the
+    // honest one available from what's actually persisted, and it is still
+    // strictly more informative than raw pair count: a pair where both sides
+    // are rare elsewhere in the table is genuinely more informative than a
+    // pair where one side is in nearly every row.
+    const rescored = coPatterns.map(p => {
+      const shareA = participation[p.typeA] / totalPairs;
+      const shareB = participation[p.typeB] / totalPairs;
+      const expected = shareA * shareB * totalPairs;
+      const lift = expected > 0 ? (1 / totalPairs) / (shareA * shareB) : 0;
+      return { pattern: p, lift, shareA, shareB };
+    });
+
+    // ── Noise-source detection ──────────────────────────────────────────────
+    // A type present in an outsized fraction of ALL crystallised pairs is a
+    // structural noise source: it will report as "100% confidence, fires
+    // alongside everything" against nearly anything scanned next to it,
+    // regardless of any real relationship. NOISE_SHARE_THRESHOLD is the
+    // fraction of the pair table one type is allowed to dominate before it's
+    // flagged rather than trusted.
+    const NOISE_SHARE_THRESHOLD = 0.35;
+    const noiseSources = Object.entries(participation)
+      .filter(([, count]) => (count / totalPairs) >= NOISE_SHARE_THRESHOLD)
+      .map(([type, count]) => ({ type, share: count / totalPairs, pairCount: count }));
+
+    // Patterns whose signal survives lift-adjustment: neither side is a
+    // flagged noise source, and lift is meaningfully above 1 (co-occurring
+    // more than base rate predicts, not just present a lot).
+    const noiseTypes = new Set(noiseSources.map(n => n.type));
+    const LIFT_THRESHOLD = 1.5;
+    const highSignal = rescored
+      .filter(r => r.lift >= LIFT_THRESHOLD && !noiseTypes.has(r.pattern.typeA) && !noiseTypes.has(r.pattern.typeB))
+      .sort((a, b) => b.lift - a.lift)
+      .slice(0, 10)
+      .map(r => ({ signature: r.pattern.signature, typeA: r.pattern.typeA, typeB: r.pattern.typeB,
+                    rawCount: r.pattern.count, lift: Math.round(r.lift * 100) / 100 }));
+
+    // ── Pattern-table stability ─────────────────────────────────────────────
+    // If the set of crystallised signatures churns heavily between scans
+    // (new ones crystallising, old ones never seen again) that's itself
+    // worth surfacing — a table that never stabilises means the system
+    // hasn't run long enough, or often enough, to trust its own patterns yet.
+    const crystallisedNow = new Set(coPatterns.filter(p => p.crystallised).map(p => p.signature));
+    const prevCrystallised = _metaSummary?.crystallisedSignatures || new Set();
+    const stillCrystallised = [...crystallisedNow].filter(s => prevCrystallised.has(s)).length;
+    const stability = prevCrystallised.size > 0 ? stillCrystallised / prevCrystallised.size : 1;
+
+    const summary = {
+      ts: now,
+      totalCoPatterns: totalPairs,
+      noiseSources,                 // event types drowning out real signal
+      highSignal,                   // lift-adjusted, noise-excluded top patterns
+      stability: Math.round(stability * 100) / 100,
+      crystallisedSignatures: crystallisedNow, // kept in-memory only, for next scan's diff
+    };
+
+    // Persist the noise-source finding as data other faculties can read —
+    // this is the meta move made concrete: a judgment about detector
+    // reliability, written with the same shape as a regular pattern so
+    // Intuition/Mastermind don't need special-case code to consume it.
+    for (const n of noiseSources) {
+      const sig = `meta_noise::${n.type}`;
+      const existing = _patternIndex.find(p => p.signature === sig);
+      const patch = {
+        signature: sig, patternType: 'meta_noise_source', subjectType: n.type,
+        share: Math.round(n.share * 100) / 100, pairCount: n.pairCount,
+        description: `"${n.type}" appears in ${Math.round(n.share*100)}% of all co-occurrence patterns — `
+          + `treat its "always co-occurs" pairings as detector loudness, not a discovered relationship`,
+        actionable: true, crystallised: true, source: MODULE_ID, ts: now,
+      };
+      if (existing) { jaaDB.update('bep_patterns', existing.uuid, patch); Object.assign(existing, patch); }
+      else { const row = { uuid: uid(), ...patch }; jaaDB.insert('bep_patterns', row); _patternIndex.push(row); }
+    }
+
+    if (!_metaSummary || _metaSummary.noiseSources?.length !== noiseSources.length) {
+      _log(`meta-scan: ${totalPairs} co-patterns, ${noiseSources.length} noise source(s)`
+        + (noiseSources.length ? ` [${noiseSources.map(n => n.type).join(', ')}]` : '')
+        + `, ${highSignal.length} lift-confirmed signal pattern(s), table stability ${summary.stability}`);
+    }
+
+    _metaSummary = summary;
+    _knownNoiseTypes = new Set(noiseSources.map(n => n.type));
+    _lastMetaScan = now;
+  } catch (e) {
+    _err('_scanMetaPatterns', e);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §1.7 — LOOM MAP SYNC + COMPONENT FAILURE MAP
+// "Using loom, with the intelligence system, to keep an updated map and log
+// errors per component/system." loom/schema/registry.js is the actual
+// source of truth for what components and hooks exist (1372 / 1712 of them,
+// live) — this pass keeps a cached copy of that map here (via the decoupled
+// bridge in lib/loom-map.js, which intelligence reads and loom knows
+// nothing about), and builds the component-grouped view of the failure data
+// _scanFailures already collects, cross-referenced against that map so a
+// component producing errors under an identity loom has never registered
+// is a visible finding, not silent noise.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function _syncLoomMap() {
+  try {
+    const loomMap = require('../../lib/loom-map');
+    _loomMap = loomMap.getMap({ maxAgeMs: 0 }); // force a real read on this cadence; loomMap's own cache covers callers between syncs
+    _log(`loom map synced: ${_loomMap.counts?.systems ?? 0} systems, ${_loomMap.counts?.components ?? 0} components, ${_loomMap.counts?.hooks ?? 0} hooks`);
+  } catch (e) {
+    _err('_syncLoomMap', e);
+  }
+}
+
+function _buildComponentFailureMap(componentErrors) {
+  try {
+    const loomMap = (() => { try { return require('../../lib/loom-map'); } catch (_) { return null; } })();
+    const byComponent = {};
+
+    // From component_ledger's explicit system+component error rows (the
+    // precise source — no resolution needed, it's already there).
+    for (const c of (componentErrors?.components || [])) {
+      byComponent[c.component] = {
+        component: c.component, system: c.system, errorCount: c.count,
+        actions: c.actions, registeredInLoom: c.registeredInLoom,
+        source: 'component_ledger',
+      };
+    }
+
+    // From the fault taxonomy's resolved components (gaps/failures that
+    // carry a component identity, directly or resolved via loom-map) — adds
+    // components component_ledger's own error rows didn't already cover.
+    for (const fi of Object.values(_failureIndex)) {
+      for (const comp of (fi.components || [])) {
+        if (byComponent[comp]) { byComponent[comp].faultClasses = [...(byComponent[comp].faultClasses || []), fi.faultClass]; continue; }
+        const resolved = loomMap ? loomMap.resolveComponent(comp) : { found: false, system: null };
+        byComponent[comp] = {
+          component: comp, system: resolved.system, errorCount: 0,
+          faultClasses: [fi.faultClass], registeredInLoom: resolved.found,
+          source: 'fault_taxonomy',
+        };
+      }
+    }
+
+    const components = Object.values(byComponent).sort((a, b) => (b.errorCount || 0) - (a.errorCount || 0));
+    _componentFailureMap = {
+      ts: Date.now(),
+      totalComponents: components.length,
+      unregisteredComponents: components.filter(c => !c.registeredInLoom).map(c => c.component),
+      components,
+    };
+  } catch (e) {
+    _err('_buildComponentFailureMap', e);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // §2 — FAILURE MODE TAXONOMY
 // Reads failures + gaps + law_violations + unhandled_message events.
 // Builds a named taxonomy of every recurring failure mode.
@@ -542,7 +792,7 @@ async function _scanFailures() {
     // ── Build failure mode taxonomy ───────────────────────────────────────────
     _failureIndex = {};
 
-    function _addToIndex(faultClass, example, context = {}) {
+    function _addToIndex(faultClass, example, context = {}, weight = 1) {
       if (!_failureIndex[faultClass]) {
         _failureIndex[faultClass] = {
           faultClass,
@@ -552,14 +802,28 @@ async function _scanFailures() {
           lastSeen:   0,
           systems:    new Set(),
           gapTypes:   new Set(),
+          components: new Set(), // §GRANULARITY 2026-08-13 — which specific loom
+                                  // components (not just systems) this fault class
+                                  // has actually shown up in
         };
       }
       const idx = _failureIndex[faultClass];
-      idx.count++;
+      idx.count += weight;
       idx.lastSeen = Math.max(idx.lastSeen, context.ts || now);
       if (idx.examples.length < 5) idx.examples.push(example);
       if (context.system) idx.systems.add(context.system);
       if (context.gapType) idx.gapTypes.add(context.gapType);
+      // component is explicit when the caller already has it (component_ledger
+      // rows, gap-field's new component field); otherwise resolved from
+      // whatever id-like string is available, honest about not finding one.
+      if (context.component) {
+        idx.components.add(context.component);
+      } else if (context.system) {
+        try {
+          const resolved = require('../../lib/loom-map').resolveComponent(context.system);
+          if (resolved.found) idx.components.add(resolved.componentId);
+        } catch (_) { /* loom-map unavailable — component tracking degrades to system-only, same as before this existed */ }
+      }
     }
 
     for (const f of failures) {
@@ -574,7 +838,7 @@ async function _scanFailures() {
       _addToIndex(
         g.type || 'unknown_gap',
         { id: g.uuid, msg: (g.body || g.description || '').slice(0, 100), ts: g.ts },
-        { ts: g.ts, system: g.source, gapType: g.type }
+        { ts: g.ts, system: g.source, gapType: g.type, component: g.component || null }
       );
     }
 
@@ -584,6 +848,33 @@ async function _scanFailures() {
         { id: v.uuid, msg: (v.description || v.law || '').slice(0, 100), ts: v.ts },
         { ts: v.ts, system: v.source || v.agent }
       );
+    }
+
+    // §GRANULARITY 2026-08-13 — component_ledger already carries explicit
+    // system+component on every row (unlike failures/gaps, which only ever
+    // had `source`, often ambiguous between the two). Its error-status rows
+    // were never read here at all until now: component-ledger.js and
+    // _scanFailures were two unconnected things, one writing per-component
+    // errors, the other building "the failure taxonomy" without ever
+    // looking at them. weight = c.count because this scan fully rebuilds
+    // _failureIndex from a fresh JAA read every cycle (not incremental like
+    // _scanPatterns) — a single _addToIndex call per component/action pair
+    // has to carry its real occurrence count, not just increment by one.
+    let componentErrors = { available: false, components: [] };
+    try { componentErrors = require('../../lib/component-ledger').errorsByComponent({ since: now - 24 * 60 * 60 * 1000 }); }
+    catch (e) { console.warn(`[${MODULE_ID}] component_ledger error scan unavailable: ${e.message}`); }
+    for (const c of componentErrors.components) {
+      for (const action of c.actions) {
+        const example = c.examples.find(ex => ex.action === action);
+        _addToIndex(
+          `component_error:${action}`,
+          { id: `${c.system}.${c.component}.${action}`,
+            msg: example?.detail ? JSON.stringify(example.detail).slice(0, 100) : `${c.count} error(s)`,
+            ts: example?.ts || now },
+          { ts: example?.ts || now, system: c.system, component: c.component },
+          c.count
+        );
+      }
     }
 
     // Unhandled message events → wiring_missing fault class
@@ -600,7 +891,13 @@ async function _scanFailures() {
     for (const fi of Object.values(_failureIndex)) {
       fi.systems   = [...fi.systems];
       fi.gapTypes  = [...fi.gapTypes];
+      fi.components= [...fi.components];
     }
+
+    // Refresh the component-level failure map alongside the fault-class one —
+    // same underlying data, grouped the other way (by component, not by
+    // fault class), plus loom-registration status per component.
+    _buildComponentFailureMap(componentErrors);
 
     // Write summary to event_log
     const topFaults = Object.entries(_failureIndex)
@@ -921,6 +1218,31 @@ function handleRequest(method, pathname, searchParams, body, json) {
     return true;
   }
 
+  // GET /api/intelligence/map — the cached loom system/component/hook map.
+  if (method === 'GET' && pathname === '/api/intelligence/map') {
+    if (!_loomMap) { json(200, { ok: true, ready: false, reason: 'not synced yet' }); return true; }
+    json(200, { ok: true, ready: true, ...(_loomMap.available ? _loomMap : { available: false }) });
+    return true;
+  }
+
+  // GET /api/intelligence/component-failures — errors grouped by loom
+  // component (not just system), flagging components loom doesn't know about.
+  if (method === 'GET' && pathname === '/api/intelligence/component-failures') {
+    if (!_componentFailureMap) { json(200, { ok: true, ready: false, reason: 'not built yet' }); return true; }
+    json(200, { ok: true, ready: true, ...(_componentFailureMap) });
+    return true;
+  }
+
+  // GET /api/intelligence/meta — the meta-pattern layer's self-assessment of
+  // _patternIndex: which crystallised patterns are lift-confirmed signal vs.
+  // which event types are structural noise sources drowning them out.
+  if (method === 'GET' && pathname === '/api/intelligence/meta') {
+    if (!_metaSummary) { json(200, { ok: true, ready: false, reason: 'not enough crystallised patterns yet' }); return true; }
+    const { crystallisedSignatures, ...pub } = _metaSummary; // Set isn't JSON-serialisable, and it's internal bookkeeping anyway
+    json(200, { ok: true, ready: true, ...pub });
+    return true;
+  }
+
   // GET /api/intelligence/status
   if (method === 'GET' && pathname === '/api/intelligence/status') {
     json(200, {
@@ -1018,5 +1340,11 @@ module.exports = {
   getPatterns:  () => _patternIndex,
   getFailures:  () => _failureIndex,
   getReuseIndex:() => _reuseIndex,
-  _scanPatterns, // exported for direct testing (intelligence.test.js pins this)
+  getMetaSummary: () => _metaSummary,
+  getLoomMap: () => _loomMap,
+  getComponentFailureMap: () => _componentFailureMap,
+  _scanPatterns,     // exported for direct testing (intelligence.test.js pins this)
+  _scanMetaPatterns, // exported for direct testing
+  _scanFailures,     // exported for direct testing
+  _syncLoomMap,      // exported for direct testing
 };

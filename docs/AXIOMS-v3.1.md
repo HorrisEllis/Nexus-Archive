@@ -241,6 +241,10 @@ Always scan the file and the dependancies and consumers before changing and edit
 **§8.5 Always use the Component achitecture.**
 Always use a component based architecture. The core components that are immutable are what make up the code/foundation. The kernal, engine and/or runtime that the entire project relies on. Do not build anything, without creating a spec file first. The rest is additive to the foundation. Modules/components are isolated and connected via an event bus. The backend code first, foundation first, config files, components with component id/parent/child id for each module and how it connects to the foundation, using the hook and wire registry with consumers and context to map the system completely, then the event bus, then each module one at a time, js first, config, manifest, registry and readme, then the js, then the next module/component. then once each component is complete, then the event driven interaction contract with handshake verification. ui last using the interaction contract and toasts for errors. event ledgers with each type, time of event, relation, and context. each interaction uses a gated event listener with a toast for errors, and event logging to the ledger.
 
+**§8.6 Reuse Before Build. Check the Codebase First.** *(new, 2026-07-30)*
+Before building anything new, read the codebase recursively and make effective use of what NEXUS already has — then build outward from it. The default is not a new file; the default is to extend, wire, or compose an existing system. Building new is justified only after a recursive read proves the capability does not already exist. This is the standing lesson of every session in this project: the engine almost always already exists, and the real work is the missing edge. A new artifact created without first proving the absence of an existing one is redundancy — and redundancy is debt (§16.5).
+*↳ Sharpens §8.4 (don't go in blind — scan before editing) and §16.5 (delete before you add) into a build-time default: §8.4 says read before you change existing code; §8.6 says read before you write NEW code, and prefer building outward from what the read found. The recursive read is a written finding (§3.3 map before build), not a memory of having looked.*
+
 ---
 
 ### § Group 9 — Bridge & Identity
@@ -542,6 +546,7 @@ A "faster," "cheaper," or "better" claim is only as good as the measurement behi
 §8.1   Begin every session with context.
 §8.2   Nothing passes the idea gate without surviving hostile review.
 §8.3   SISO and Jaa are load-order prerequisites.
+§8.6   Reuse before build. Read the codebase recursively; build outward from what exists.
 §9.1   Bridge is the only write authority for requests.
 §9.2   Ledger write before dispatch. Always.
 §9.3   Held requests never leave the queue.

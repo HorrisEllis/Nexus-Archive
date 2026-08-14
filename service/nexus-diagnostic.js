@@ -229,12 +229,28 @@ function startService() {
   function _reportToGapField(gap) {
     try {
       const gapField = require('../lib/gap-field');
+      // §GRANULARITY 2026-08-13 — resolve the specific component loom knows
+      // about, not just the system string. For wire-integrity gaps this is
+      // free: gap.hookId already carries loom's own id, and loom-map's
+      // resolveComponent() walks hook -> component_id through the live
+      // registry rather than guessing from the id's shape. found:false
+      // (component stays null) is the honest answer for gap sources that
+      // don't carry a loom-resolvable id at all — never fabricated.
+      let component = null;
+      if (gap.hookId) {
+        try {
+          const loomMap = require('../lib/loom-map');
+          const resolved = loomMap.resolveComponent(gap.hookId);
+          if (resolved.found) component = resolved.componentId;
+        } catch (_) { /* loom-map unavailable — report proceeds without component, same as before this existed */ }
+      }
       gapField.report({
         type: gap.type,
         body: gap.body || gap.detail || gap.message || gap.type,
         source: gap.system || gap.source || 'diagnostic-kernel',
         domain: 'system',
         severity: gap.severity || 'medium',
+        component,
         meta: { kernelGapUuid: gap.uuid, hookId: gap.hookId, direction: gap.direction },
       });
     } catch (e) { console.warn(`[diag] gap-field dual-write failed (non-fatal, ledger write still happened): ${e.message}`); }
@@ -264,6 +280,42 @@ function startService() {
 
   // In-memory gap store (backed by ledger)
   const openGaps = new Map();
+
+  // §PERSIST-HYDRATE 2026-08-13 — the actual root cause of the ~470
+  // dangling-hook gaps re-announcing on EVERY boot (loud in the log this
+  // was found from: identical console spam, identical broadcasts, growing
+  // JAA gaps row count — 1 row -> 495 rows across one restart cycle).
+  // openGaps' dedup gate (`if (openGaps.has(gapKey)) continue` in
+  // _wireIntegrityScan below) only prevents re-announcing a hook WITHIN one
+  // process's lifetime — it was never hydrated from anything on boot, so a
+  // fresh process always starts believing zero hooks are dangling and
+  // rediscovers every single one from scratch, each one going through
+  // console.log + broadcast + ico.ledger.append (which write-throughs to
+  // component-ledger -> event_log — the exact table cortex/intelligence's
+  // pattern scanner reads) + gapField.report(). gap-field.js's own
+  // dedup_key check stops the persisted `gaps` TABLE from growing without
+  // bound, but it runs downstream of all of that — it caps row count, it
+  // doesn't prevent the restart noise. Seeding openGaps from gap-field's
+  // own store closes the actual gap: a hook already known-dangling from a
+  // prior boot is skipped here the same way it would be mid-run, instead
+  // of being rediscovered the expensive, noisy way every single restart.
+  try {
+    const gapField = require('../lib/gap-field');
+    const persistedOpen = gapField.openGaps({ domain: 'system', limit: 10000 })
+      .filter(g => g.type === 'dangling-hook' && g.meta?.hookId);
+    for (const g of persistedOpen) {
+      const gapKey = `wire-integrity:${g.meta.hookId}`;
+      openGaps.set(gapKey, {
+        uuid: gapKey, type: 'dangling-hook', system: g.source,
+        hookId: g.meta.hookId, direction: g.meta.direction,
+        detail: g.body, hydratedFrom: g.uuid,
+      });
+    }
+    if (persistedOpen.length)
+      console.log(`[diag] hydrated ${persistedOpen.length} open dangling-hook gap(s) from prior boot — wire-integrity scan will only announce genuinely NEW ones`);
+  } catch (e) {
+    console.warn(`[diag] openGaps hydration failed (non-fatal — falls back to full rediscovery on first scan): ${e.message}`);
+  }
 
   // §NEW 2026-07-11 — the actual gap this session found: "the diagnostic
   // tool doesn't do much." It had real wire-validation logic
@@ -1175,15 +1227,32 @@ function startService() {
 
     // 1. Syntax check all JS files
     const { spawnSync } = require('child_process');
-    function walkJs(dir) {
+    // §CRASH-FIX 2026-08-13 — was `results.push(...walkJs(fp))`: each
+    // directory level spread its ENTIRE subtree back through the parent
+    // call's arguments. On a repo this size (1000+ .js files once
+    // node_modules/.git/data are excluded, everything else walked) the
+    // near-root calls were spreading thousands of array elements as
+    // individual function arguments. That's not a RangeError V8 catches
+    // cleanly — a single oversized push(...) can write past the guard page
+    // in one shot, which is exactly what a native STATUS_STACK_BUFFER_OVERRUN
+    // (0xC0000409) crash looks like, not a normal recursion-depth overflow.
+    // An explicit iterative stack with array concatenation never puts more
+    // than one path on the JS call stack at a time and never spreads a
+    // large array into a call, so it can't reproduce this failure mode
+    // regardless of tree size.
+    function walkJs(root) {
       const results = [];
-      if (!fs.existsSync(dir)) return results;
-      for (const f of fs.readdirSync(dir)) {
-        const fp = path.join(dir, f);
-        if (['node_modules','.git','data'].includes(f)) continue;
-        const st = fs.statSync(fp);
-        if (st.isDirectory()) results.push(...walkJs(fp));
-        else if (f.endsWith('.js')) results.push(fp);
+      const stack = [root];
+      while (stack.length) {
+        const dir = stack.pop();
+        if (!fs.existsSync(dir)) continue;
+        for (const f of fs.readdirSync(dir)) {
+          if (['node_modules', '.git', 'data'].includes(f)) continue;
+          const fp = path.join(dir, f);
+          const st = fs.statSync(fp);
+          if (st.isDirectory()) stack.push(fp);
+          else if (f.endsWith('.js')) results.push(fp);
+        }
       }
       return results;
     }
@@ -2158,14 +2227,20 @@ async function runAudit() {
   // Stub for CLI usage without running service
   const issues = [];
   const { spawnSync } = require('child_process');
-  function walkJs(dir) {
+  // §CRASH-FIX 2026-08-13 — see matching fix + full explanation in
+  // runAuditInternal() above; same push(...recursiveCall) bug, same fix.
+  function walkJs(root) {
     const results = [];
-    if (!fs.existsSync(dir)) return results;
-    for (const f of fs.readdirSync(dir)) {
-      const fp = path.join(dir, f);
-      if (['node_modules','.git','data'].includes(f)) continue;
-      if (fs.statSync(fp).isDirectory()) results.push(...walkJs(fp));
-      else if (f.endsWith('.js')) results.push(fp);
+    const stack = [root];
+    while (stack.length) {
+      const dir = stack.pop();
+      if (!fs.existsSync(dir)) continue;
+      for (const f of fs.readdirSync(dir)) {
+        if (['node_modules', '.git', 'data'].includes(f)) continue;
+        const fp = path.join(dir, f);
+        if (fs.statSync(fp).isDirectory()) stack.push(fp);
+        else if (f.endsWith('.js')) results.push(fp);
+      }
     }
     return results;
   }

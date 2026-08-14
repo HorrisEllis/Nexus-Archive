@@ -1,10 +1,22 @@
 # NEXUS Spec Registry
 **Author:** James Brooks (Erosmancer)
 **Created:** 2026-06-29 (session 8)
-**Status:** Living document — §6.3 (`docs/AXIOMS-v3.0.md`). Every `.spec` file
+**Status:** Living document — §6.3 (`docs/AXIOMS-v3.1.md`). Every `.spec` file
 is entered here on creation. This registry is updated every time a spec is
 checked for drift, not just when it's written — a spec not in this table
 is unaccounted for.
+
+**§AXIOMS CONSOLIDATION 2026-08-13** — two live copies of `AXIOMS-v3.1.md`
+existed (repo root, 44906 bytes, 2026-08-01; `docs/`, 43764 bytes,
+2026-07-24) and disagreed: the root copy had §8.6 ("Reuse Before Build")
+entirely, the `docs/` copy didn't. A real §10.3 violation ("competing truth
+layers are a system failure") at the most foundational level possible — the
+law disagreeing with itself. Fixed: the newer, complete copy is now the
+single file at `docs/AXIOMS-v3.1.md`; the stale one is archived (never
+deleted, §0.3) at `_archive/superseded-docs-2026-08-13/`. This registry's
+own header line above was also citing the superseded v3.0 as authority —
+corrected to v3.1, the version its own preamble says supersedes v1.0-v3.0.
+No live code referenced the old root path (checked directly, zero hits).
 
 **88 spec files exist in `docs/` as of this session.** Most have not been
 checked against live code in this conversation — that's stated honestly
@@ -416,6 +428,9 @@ after. Both shapes now supported and pinned (T-B1-015).
 | `docs/nexus-system-standardization-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-08 | THE TARGET ARCHITECTURE: every system standardized — own folder, config, event-driven handshake-gated interaction contracts, full logging (error.log + event ledger + SSE to cortex), diagnostics-reads-and-fixes, dynamic commands, persistent cortex data, hashed integrity, fully decoupled via contracts/APIs. Census shows the pattern exists in fragments (guardian has config+contract, others don't) — this STANDARDIZES it. SS0 clear clutter → SS1 manifest → SS2 config → SS3 handshake contracts → SS4 logging → SS5 diagnostics-fix → SS6 dynamic/fluid → SS7 decoupling audit. The spine all other maps hang on. SS6 converges with raid-routing RR6 + agent-loop AP4. |
 | `docs/copilot-autonomous-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-08 | ALL SEVEN PHASES DONE 2026-08-08 — spec closed. CA1 scheduler, CA2 triggers/conditions, CA3 pipeline chains, CA4 http/sse connections, CA5 system control + governed clear-glass/DOM, CA6 self-building commands, CA7 constant autonomy. lib/scheduler.js, lib/triggers.js, lib/chains.js, lib/connections.js, lib/system-control.js, lib/command-builder.js, lib/constant-autonomy.js — all registered in loom/maps/observability-map.js. 67 tests total (7+10+8+8+10+14+10), all passing against real substrate (real HTTP/SSE servers, the real live capability registry, real autonomous-loop execution). Four spec assumptions checked against real code and corrected where wrong; two real bugs caught by tests before shipping; one pre-existing unrelated bug in compartment-engine surfaced and noted, not scope-crept into fixing. |
 | `docs/repair-contract-and-loom-hub-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-12 | MAPPED, NOT BUILT — §3.3, map before build. Six phases, bottom-up: R1 repair contract schema (extends gap-field), R2 real cortex/snapshot rollback (the one genuine gap — everything else here is disconnection, not absence), R3 wires repair-on-prompt.js (real, correct, zero callers) to fire autonomously from a detected gap instead of only a typed prompt, R4 loom reads the real 15,472-row component-ledger it has never once queried, R5 the zoomable node map over loom's already-real registry data, R6 generated (not hand-written) documentation over R4+R5. Found along the way: repair-on-prompt.js's own header already assumes real snapshots exist for rewind-on-fail (R2 blocks R3), and a data-quality issue in component_ledger (session ids leaking into the systemId field). Three open questions logged in the spec itself, not silently assumed. |
+| `docs/agent-model-and-user-continuity-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-13 | MAPPED, NOT BUILT (AM4 DONE). 10 phases now (AM1-AM10). AM10 new: (a) thinking-partner mode — "keep mental note"/contract feedback/"continue from last time"/brainstorm, each composing a real existing mechanism (push-recall, reflection.js's satisfaction slot, AM7's session continuity, AM3's classifier) rather than one new feature; (b) rename command — backend ALREADY REAL (self-model.js:97,111 getIdentityName/setIdentityName) but confirmed UNWIRED to any conversational trigger (zero hits in copilot/server.js), unlike switchAgent which is wired; (c) UI builder from a shared spec/design philosophy, reusing SB2/SB3 from the sibling phasemap. langgraph_comparison note removed per direct correction — it was a passing statement, not a spec ask. |
+
+| `docs/nexus-self-build-pipeline-phasemap.spec` | 0.1.0 PHASEMAP | 2026-08-13 | MAPPED, NOT BUILT — §3.3. 9 phases now (SB1-SB9). SB7 compartments-as-sessions: elevates COS's real create/start/stop/destroy compartment lifecycle into a conversational primitive (axioms+endState prompt reusing lib/emergence.js's real shape), 24h decay via lib/scheduler.js, ledger+cortex-index on creation, both sides removed together on delete. SB8: tool-agnosticism logging (extends tool-index.js's real row shape) + "make me a tool" — ALREADY REAL, copilot/module-builder.js's own header is literally map->spec->QC->contract->build->verify->merge, reused not rebuilt + honest Tasker-vs-CA1-7 comparison deferred, not assumed + calendar tool confirmed a real gap (schedule-task.js is task-scheduling, not a calendar). SB9: the element picker is not a gap, it's an ORPHAN — verified across 4 real files (clear-glass/src/dom/archaeology.js emits real dom.picked/dom.pick.registered SSE, real gate, real IPC handler, real browser-action tool action) that copilot/server.js never subscribes to (zero hits grepped directly) — this phase is one missing SSE listener between two fully-real systems, not new picker infrastructure. |
 
 ---
 ## Doc cleanup 2026-08-09

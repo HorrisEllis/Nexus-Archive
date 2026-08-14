@@ -60,7 +60,7 @@ let causalLookup = null;
 try { causalLookup = require('./memory/causal-lookup.js'); }
 catch (e) { console.warn(`[push-recall] causal-lookup unavailable, causal lane will degrade honestly: ${e.message}`); }
 
-const VALID_TIERS = ['crystal', 'spec', 'session', 'recent', 'failure', 'index'];
+const VALID_TIERS = ['crystal', 'spec', 'session', 'recent', 'failure', 'index', 'user'];
 // §BUG FIXED 2026-07-06 — found by adversarial testing: push() accepted a
 // 10MB string with no ceiling at all. This is well above any real
 // conversation turn or code artifact (recall()'s own TOKEN_BUDGET_CHARS
@@ -68,11 +68,34 @@ const VALID_TIERS = ['crystal', 'spec', 'session', 'recent', 'failure', 'index']
 // results) — 256KB per single push leaves generous room for a large
 // artifact while making unbounded growth from one bad caller impossible.
 const MAX_CONTENT_CHARS = 256 * 1024;
-const TIER_PRIORITY = { crystal: 1, spec: 2, session: 3, recent: 4, failure: 5, index: 6 };
-// Failure tier gets the highest PULL weight despite being priority 5, not 1 —
+// §AM4 2026-08-13 (docs/agent-model-and-user-continuity-phasemap.spec) —
+// 'user' is the one new tier added to this file. Checked before adding it
+// (not assumed): every one of the original six tiers is CONTENT-shaped
+// (a crystal, a spec, a session, recent history, a failure, an index
+// entry) — none is PERSON-shaped. A durable fact about the specific human
+// co-pilot is talking to (a preference, standing context, a prior
+// decision) doesn't fit any of them without being force-shoehorned into
+// 'session' (which the rest of this file treats as expiring, per
+// read-time-expiry's own test coverage) or 'recent' (which decays by
+// design — see the recency lane below). This is the smallest change that
+// makes room for it: one tier name, everything else (push/recall/
+// validation/budget/soft-delete) already generic over tier.
+// TIER_PRIORITY is placed right after 'spec' (2) rather than appended at
+// the end — priority 3, same durability class as a spec, ahead of session/
+// recent/index which are all explicitly time-decaying or generic-bucket
+// concepts. NOTE: TIER_PRIORITY has no live consumers anywhere in this
+// codebase (grepped before adding to it) — kept for whatever eventually
+// reads it, not exercised by recall()'s real scoring path today, which
+// uses TIER_PULL_WEIGHT only.
+const TIER_PRIORITY = { crystal: 1, spec: 2, user: 3, session: 4, recent: 5, failure: 6, index: 7 };
+// Failure tier gets the highest PULL weight despite being priority 6, not 1 —
 // the spec says so explicitly ("failures teach most") and this preserves
 // that inversion rather than flattening priority-number into pull-weight.
-const TIER_PULL_WEIGHT = { crystal: 1.30, spec: 1.10, session: 0.90, recent: 0.80, failure: 1.50, index: 0.60 };
+// 'user' at 1.00 — deliberately not inflated above crystal (a validated,
+// re-confirmed fact) or failure (safety-critical): a real, durable, but
+// not (yet) independently-verified fact about a person. Empirically
+// tunable later; not fabricated now to look more confident than it is.
+const TIER_PULL_WEIGHT = { crystal: 1.30, spec: 1.10, user: 1.00, session: 0.90, recent: 0.80, failure: 1.50, index: 0.60 };
 
 const LANE_WEIGHTS = { lexical: 0.70, causal: 1.00, failure: 0.95, bep: 0.90, recency: 0.85 };
 
@@ -84,6 +107,17 @@ const INTENT_LANES = {
   causal_trace:   ['causal', 'failure'],
   pattern_lookup: ['bep', 'lexical'],
   crystal_query:  ['lexical', 'causal'],
+  // §AM4 2026-08-13 — the one new intent. lexical (match what's actually
+  // being asked against a stored fact's wording) + recency (a fact
+  // confirmed/pushed more recently is weighted slightly higher — a real,
+  // if imperfect, proxy for "still current" per this phase's own honest
+  // staleness caveat; not a substitute for real drift/contradiction
+  // handling, which stays a separate, harder problem, not solved here).
+  // No causal/bep/failure lanes — a durable personal fact isn't causally
+  // chained to a code event or a recorded failure signature the way
+  // debug/gap-fill content is; forcing those lanes on would score 0 for
+  // every real row and add nothing.
+  user_context:   ['lexical', 'recency'],
   general:        ['lexical', 'causal', 'bep', 'recency'],
 };
 

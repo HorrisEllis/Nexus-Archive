@@ -254,6 +254,16 @@ function mapSource(driver, FILES) {
       const r = driver.declare('wire', {
         id: `source.wire.${wireN}.${dep}--${id}`,
         from_hook_id: `${dep}.export`, to_hook_id: `${id}.import`,
+        // §SB1 2026-08-14 — this scanner was found to be the real source of
+        // the "intent is null on every sample wire" finding: it never set
+        // one, unlike capability-map.js's scanner (which passes intent:
+        // e.via) a few files over. The honest intent for a require()-derived
+        // edge is exactly what was scanned — "requires this module" — not a
+        // richer narrative this scanner has no way to know. type:'direct-call'
+        // matches what a require() edge actually is among the real wire
+        // types this session catalogued (http/event/ipc/sse/direct-call).
+        intent: `${id} requires ${dep}`,
+        type: 'direct-call',
         uuid: `nexus-loom-scan-wire-${wireN}-v1-0000-2026-0804-001`,
       });
       (r.ok ? results.wires : results.failures).push({ from: dep, to: id, r, declaredHere: declaredHere.has(dep) });

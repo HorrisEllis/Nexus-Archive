@@ -11,6 +11,7 @@ const { LoomDriver } = require('./schema/index');
 const { mapWarp } = require('./maps/warp-map');
 const { mapObservability } = require('./maps/observability-map');
 const { mapCopilotCapability } = require('./maps/copilot-capability-map');
+const { mapSession20260814 } = require('./maps/session-2026-08-14-map');
 const { mapUi } = require('./maps/ui-map');
 
 const driver = new LoomDriver(); // default dataDir = loom/data/
@@ -101,6 +102,11 @@ seed.push(['hook', driver.declare('hook', {
 seed.push(['wire', driver.declare('wire', {
   id: 'wire.agent-suite-uses-loom-declare', from_hook_id: 'loom.hook.declare',
   to_hook_id: 'loom.agent-suite.hook.declare-via-agent',
+  // §SB1 2026-08-14 — this seed example previously omitted intent,
+  // matching (and probably the original template for) source-map.js's
+  // same omission. Fixed here too since this is the founding example.
+  intent: 'agent-suite declares components/hooks/wires via loom.hook.declare',
+  type: 'direct-call',
   uuid: 'nexus-loom-wire-agent-suite-v1-0000-2026-0701-jamesbrooks-001',
 })]);
 
@@ -125,6 +131,7 @@ const handMapped = [
   ...require('./maps/warp-map').FILES.map(f => f[0]),
   ...require('./maps/observability-map').FILES.map(f => f[0]),
   ...require('./maps/copilot-capability-map').FILES.map(f => f[0]),
+  ...require('./maps/session-2026-08-14-map').FILES.map(f => f[0]),
   ...require('./maps/ui-map').FILES.map(f => f[0]),
   'loom/agent-suite/index.js',
 ];
@@ -181,6 +188,18 @@ if (mappedObs.failures.length) {
   console.log(`  FAILURES:`);
   for (const f of mappedObs.failures) console.log(`    ${JSON.stringify(f)}`);
   failures += mappedObs.failures.length;
+}
+
+// ── Session 2026-08-14 — the 3 genuinely-new components from that session ──
+console.log('\nmapping session-2026-08-14 components (real require() edges only)...\n');
+const mappedS0814 = mapSession20260814(driver);
+console.log(`  components: ${mappedS0814.components.length} ok`);
+console.log(`  hooks:      ${mappedS0814.hooks.length} ok`);
+console.log(`  wires:      ${mappedS0814.wires.length} ok`);
+if (mappedS0814.failures.length) {
+  console.log(`  FAILURES:`);
+  for (const f of mappedS0814.failures) console.log(`    ${JSON.stringify(f)}`);
+  failures += mappedS0814.failures.length;
 }
 
 // ── Copilot-capability tool session (2026-08-12) — real require/HTTP edges ──

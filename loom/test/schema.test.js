@@ -245,5 +245,122 @@ check('kind is open-ended (not a closed enum) — an unseen concern kind still r
   assert.strictEqual(r.ok, true, JSON.stringify(r));
 });
 
+// ── §SB1 2026-08-14 (docs/nexus-self-build-pipeline-phasemap.spec) ─────────
+// dir (component), type+intent (wire), schemaVersion — additive, optional
+// fields, added to loom's own gates (not warp/core/Gate.js, which does not
+// check optional fields at all — confirmed by reading Gate.validateOutput
+// directly before writing these). §12.1: hostile inputs, not happy path only.
+
+check('a component WITH a real dir field registers and the field round-trips', () => {
+  const r = driver.declare('component', {
+    id: 'sb1-comp-with-dir', namespace: 'test', name: 'Has Dir', version: '1.0.0',
+    dir: 'lib/agent-system', uuid: 'test-sb1-comp-dir-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(r.stored.dir, 'lib/agent-system');
+});
+
+check('a component WITHOUT dir still registers fine — optional means optional, not silently required', () => {
+  const r = driver.declare('component', {
+    id: 'sb1-comp-no-dir', namespace: 'test', name: 'No Dir', version: '1.0.0',
+    uuid: 'test-sb1-comp-nodir-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(r.stored.dir, undefined);
+});
+
+check('a component with dir as the WRONG TYPE (number) is rejected, not silently coerced', () => {
+  const r = driver.declare('component', {
+    id: 'sb1-comp-bad-dir-type', namespace: 'test', name: 'Bad Dir', version: '1.0.0',
+    dir: 12345, uuid: 'test-sb1-comp-baddir-001',
+  });
+  assert.strictEqual(r.ok, false, JSON.stringify(r));
+  assert.ok(r.detail?.wrongType?.some(w => w.key === 'dir'), JSON.stringify(r));
+});
+
+check('a component with dir as an empty string is accepted — empty is a valid (if unusual) string, not the same as absent', () => {
+  const r = driver.declare('component', {
+    id: 'sb1-comp-empty-dir', namespace: 'test', name: 'Empty Dir', version: '1.0.0',
+    dir: '', uuid: 'test-sb1-comp-emptydir-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+});
+
+check('a component with dir=null is treated as absent, not as a type error — null is the honest "no value" case', () => {
+  const r = driver.declare('component', {
+    id: 'sb1-comp-null-dir', namespace: 'test', name: 'Null Dir', version: '1.0.0',
+    dir: null, uuid: 'test-sb1-comp-nulldir-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+});
+
+check('a component with an extremely long dir path (10,000 chars) still registers — no arbitrary length ceiling assumed', () => {
+  const longDir = 'a/'.repeat(5000);
+  const r = driver.declare('component', {
+    id: 'sb1-comp-long-dir', namespace: 'test', name: 'Long Dir', version: '1.0.0',
+    dir: longDir, uuid: 'test-sb1-comp-longdir-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(r.stored.dir.length, longDir.length);
+});
+
+check('a component with unicode in dir (emoji, RTL text) round-trips exactly, not mangled', () => {
+  const weirdDir = 'lib/日本語/🎉/مرحبا';
+  const r = driver.declare('component', {
+    id: 'sb1-comp-unicode-dir', namespace: 'test', name: 'Unicode Dir', version: '1.0.0',
+    dir: weirdDir, uuid: 'test-sb1-comp-unicodedir-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(r.stored.dir, weirdDir);
+});
+
+check('a fresh component registration gets a real schemaVersion, not undefined', () => {
+  const r = driver.declare('component', {
+    id: 'sb1-comp-schemaver', namespace: 'test', name: 'Schema Ver', version: '1.0.0',
+    uuid: 'test-sb1-comp-schemaver-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(typeof r.stored.schemaVersion, 'string');
+  assert.ok(r.stored.schemaVersion.length > 0);
+});
+
+check('a caller-supplied schemaVersion is preserved, not silently overwritten by the default', () => {
+  const r = driver.declare('component', {
+    id: 'sb1-comp-explicit-schemaver', namespace: 'test', name: 'Explicit Ver', version: '1.0.0',
+    schemaVersion: '9.9.9-custom', uuid: 'test-sb1-comp-explicitver-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(r.stored.schemaVersion, '9.9.9-custom');
+});
+
+check('a wire WITH real type + intent registers and both round-trip', () => {
+  driver.declare('hook', { id: 'sb1.hook.a', component_id: 'sb1-comp-with-dir', name: 'a', type: 'event', direction: 'out', uuid: 'test-sb1-hook-a-001' });
+  driver.declare('hook', { id: 'sb1.hook.b', component_id: 'sb1-comp-no-dir', name: 'b', type: 'event', direction: 'in', uuid: 'test-sb1-hook-b-001' });
+  const r = driver.declare('wire', {
+    id: 'sb1-wire-with-type-intent', from_hook_id: 'sb1.hook.a', to_hook_id: 'sb1.hook.b',
+    type: 'event', intent: 'test wire carries a real reason', uuid: 'test-sb1-wire-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(r.stored.type, 'event');
+  assert.strictEqual(r.stored.intent, 'test wire carries a real reason');
+});
+
+check('a wire with type as the WRONG TYPE (array) is rejected', () => {
+  const r = driver.declare('wire', {
+    id: 'sb1-wire-bad-type', from_hook_id: 'sb1.hook.a', to_hook_id: 'sb1.hook.b',
+    type: ['not', 'a', 'string'], uuid: 'test-sb1-wire-badtype-001',
+  });
+  assert.strictEqual(r.ok, false, JSON.stringify(r));
+  assert.ok(r.detail?.wrongType?.some(w => w.key === 'type'), JSON.stringify(r));
+});
+
+check('a wire without type/intent still registers — the historical majority of real wires (source-map.js pre-fix) had neither', () => {
+  const r = driver.declare('wire', {
+    id: 'sb1-wire-no-type-intent', from_hook_id: 'sb1.hook.a', to_hook_id: 'sb1.hook.b',
+    uuid: 'test-sb1-wire-notype-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+});
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);

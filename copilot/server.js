@@ -1784,6 +1784,25 @@ server.listen(PORT, () => {
     console.log('[copilot] triggers started — persisted triggers hydrated and armed');
   } catch (e) { console.warn('[copilot] triggers not started:', e.message); }
 
+  // §WIRED 2026-08-13 — R3 (docs/repair-contract-and-loom-hub-phasemap.spec)
+  // built lib/autonomous-repair.js, the exact "loom notices and fixes itself"
+  // wire James asked for: detected gap -> diagnose -> raid.verify (isolate ->
+  // sigma/drift -> compare -> rewind-on-fail) -> apply only on pass. Marked
+  // DONE 2026-08-12, 7 tests passing — but wireAutonomousRepair() itself was
+  // NEVER CALLED anywhere outside its own test file, confirmed by grepping
+  // every real caller of registerTrigger() in the whole tree: only this
+  // module's own internals and the manual register_trigger agent-tool. The
+  // exact same "declared \u2260 real" gap this phasemap's own R3 entry
+  // documents finding and fixing for repair-on-prompt.js one layer down —
+  // recurred one layer up, in the thing that was supposed to fix it. Found
+  // while wiring loom/intelligence self-healing per James's direct request.
+  // triggers.js must be .start()-ed first (immediately above) since this
+  // registers a live trigger against it; same never-crash-the-server guard.
+  try {
+    require('../lib/autonomous-repair.js').wireAutonomousRepair();
+    console.log('[copilot] autonomous-repair wired — gap-field.found events for chunk-build exhaustion now trigger real diagnose->raid.verify->apply, not just detection');
+  } catch (e) { console.warn('[copilot] autonomous-repair not wired:', e.message); }
+
   // §WIRED 2026-08-13 — hat-forge has been live since P8 with working
   // forge/get/list/revoke, but list() returned []: the mechanism shipped with
   // nothing in it, which is indistinguishable from a mechanism that doesn't

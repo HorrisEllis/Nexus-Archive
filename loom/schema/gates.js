@@ -26,13 +26,53 @@ function _rejectEvent(kind, event, validation, extraReason) {
   });
 }
 
+// §SB1 2026-08-14 (docs/nexus-self-build-pipeline-phasemap.spec) — additive,
+// optional-field type-checking, scoped to loom's own gates rather than
+// warp/core/Gate.js. Checked Gate.validateOutput directly (warp/core/Gate.js)
+// before writing this: it only checks `schema.types` for keys already in
+// `schema.requiredKeys` — an optional field listed in `types` but not
+// `requiredKeys` is silently never validated at all, by design (required
+// vs. optional are the same loop there). Modifying that shared class would
+// change behavior for every gate in the system (§16.6 — a local need
+// doesn't get to change a global invariant's shared implementation).
+// This is the local, sovereign equivalent: check an optional field's TYPE
+// only when the field is actually present. Absent stays fully valid
+// (old rows, and any caller that never sends the field, both still work
+// exactly as before this existed).
+function _checkOptionalTypes(data, optionalTypes) {
+  const wrongType = [];
+  for (const [key, expected] of Object.entries(optionalTypes)) {
+    if (data != null && key in data && data[key] != null && typeof data[key] !== expected) {
+      wrongType.push({ key, expected, actual: typeof data[key] });
+    }
+  }
+  return { ok: wrongType.length === 0, wrongType };
+}
+
+// §SB1 2026-08-14 — schemaVersion default. AXIOMS §5.4 ("versions persist
+// across the entire project") applied to loom's own declared schema shape:
+// a component/wire registered from today forward carries the schema
+// version it was validated against, so a future schema change can tell
+// "this row predates the change" from "this row was validated under it"
+// without guessing from registeredAt alone (registeredAt says WHEN, not
+// WHICH schema shape was in force). Old rows simply don't have this field
+// — read code must treat its absence as "pre-versioning," never as an
+// error (same additive discipline as dir/type/intent below).
+const SCHEMA_VERSION = '1.1.0'; // 1.0.0 was the original 4-primitive shape (component/seam/hook/wire); 1.1.0 adds dir (component) + type (wire) as optional fields, this session
+
 // ── component.declare ───────────────────────────────────────────────────────
 const componentDeclareGate = new Gate('loom.component.declare', {
   schema: COMPONENT_SCHEMA,
   transform(event) {
     const v = componentDeclareGate.validateOutput(event.data);
     if (!v.ok) return [_rejectEvent('component', event, v)];
-    return [new Event('loom.component.registered', { ...event.data })];
+    // §SB1 — dir is optional (old callers, and any future caller that
+    // genuinely doesn't have a filesystem path, both stay valid); when
+    // present it must be a real string, checked here since the shared
+    // Gate class doesn't check optional fields at all (see note above).
+    const optV = _checkOptionalTypes(event.data, { dir: 'string' });
+    if (!optV.ok) return [_rejectEvent('component', event, { missing: [], wrongType: optV.wrongType }, 'optional field type check failed')];
+    return [new Event('loom.component.registered', { ...event.data, schemaVersion: event.data.schemaVersion || SCHEMA_VERSION })];
   },
 });
 
@@ -81,7 +121,12 @@ const wireDeclareGate = new Gate('loom.wire.declare', {
       return [_rejectEvent('wire', event, { missing: [], wrongType: [] },
         'from_hook_id and to_hook_id must differ (no self-wire)')];
     }
-    return [new Event('loom.wire.registered', { ...event.data })];
+    // §SB1 — type is optional (same reasoning as component.dir above);
+    // intent already was (see definitions.js's own comment on it) — both
+    // checked the same way, when present, never required.
+    const optV = _checkOptionalTypes(event.data, { type: 'string', intent: 'string' });
+    if (!optV.ok) return [_rejectEvent('wire', event, { missing: [], wrongType: optV.wrongType }, 'optional field type check failed')];
+    return [new Event('loom.wire.registered', { ...event.data, schemaVersion: event.data.schemaVersion || SCHEMA_VERSION })];
   },
 });
 
