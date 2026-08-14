@@ -122,6 +122,18 @@ class LoomRegistry {
       id: c.id, name: c.name || c.id,
       consumes: c.consumes || [], // what this component depends on
       produces: c.produces || [], // what it offers others
+      // §SB1-EXT 2026-08-14 — dir/comp_status/comp_dependencies were being
+      // WRITTEN correctly (declare() echoes {...event.data} back, and the
+      // stored row genuinely has them — checked loom/data/registry.json
+      // directly, they're really there) but this projection never
+      // included them, so nothing that reads via graph() — including
+      // lib/loom-map.js's own getMap(), used by this same session's
+      // checkDependencyDrift() — could ever see them. Found by tracing
+      // the read path all the way through instead of assuming a passing
+      // write-side test meant the field was actually usable end to end.
+      dir: c.dir || null,
+      comp_status: c.comp_status || null,
+      comp_dependencies: c.comp_dependencies || [],
     }));
     return { nodes, edges, components };
   }

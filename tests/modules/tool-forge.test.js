@@ -39,7 +39,7 @@ const good = (over = {}) => ({
   });
 
   await test('TF-4', 'a DECLARED-BUT-UNSERVED capability is refused, with the reason', async () => {
-    const CAP = require(path.join(__dirname, '../../lib/agent-tools/tools/capability-tools.js'));
+    const CAP = require(path.join(__dirname, '../../lib/agent-tools/tools/coordination/capability-tools.js'));
     const u = await CAP.execute({ action: 'unserved' });
     if (!u.count) return;
     const r = F.validate(good({ steps: [{ call: `capability:${u.capabilities[0].id}` }] }));

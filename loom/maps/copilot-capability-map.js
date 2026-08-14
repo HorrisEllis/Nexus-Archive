@@ -43,26 +43,26 @@ const FILES = [
   ['lib/agent-tools/tool-guide.js',                  'nexus.lib.agent-tools.tool-guide',
     ['nexus.lib.agent-tools']],   // requires ./index.js's TOOLS map for _forgedNote's coverage check
 
-  ['lib/agent-tools/tools/schedule-task.js',         'nexus.lib.agent-tools.tools.schedule-task',
+  ['lib/agent-tools/tools/governance/schedule-task.js',         'nexus.lib.agent-tools.tools.schedule-task',
     ['nexus.lib.scheduler']],   // thin wrapper — all scheduling/governance/persistence logic stays in lib/scheduler.js
 
-  ['lib/agent-tools/tools/register-trigger.js',      'nexus.lib.agent-tools.tools.register-trigger',
+  ['lib/agent-tools/tools/governance/register-trigger.js',      'nexus.lib.agent-tools.tools.register-trigger',
     ['nexus.lib.triggers']],    // thin wrapper — same shape as schedule-task, reactive twin
 
-  ['lib/agent-tools/tools/nexus-heal.js',            'nexus.lib.agent-tools.tools.nexus-heal',
+  ['lib/agent-tools/tools/diagnostic/nexus-heal.js',            'nexus.lib.agent-tools.tools.nexus-heal',
     []],   // HTTP-only to nexus-healer :3753 (propose/list/evaluate) — no internal require edge, real network wire not a code wire
 
-  ['lib/agent-tools/tools/loom-scan.js',             'nexus.lib.agent-tools.tools.loom-scan',
+  ['lib/agent-tools/tools/diagnostic/loom-scan.js',             'nexus.lib.agent-tools.tools.loom-scan',
     ['nexus.loom.scanners.phasemap-map']],   // in-process requires of capability-map/dangling-report/spec-map/source-map/closed-door
      // (those four scanners are not yet individually loom-mapped themselves — phasemap-map is, reused here as the one real edge)
 
-  ['lib/agent-tools/tools/raid-snr.js',              'nexus.lib.agent-tools.tools.raid-snr',
+  ['lib/agent-tools/tools/governance/raid-snr.js',              'nexus.lib.agent-tools.tools.raid-snr',
     ['nexus.cortex.core.raid.snr-filter', 'nexus.cortex.core.raid.tunables', 'nexus.cortex.jaa-db']],
 
-  ['lib/agent-tools/tools/rewind-replay.js',         'nexus.lib.agent-tools.tools.rewind-replay',
+  ['lib/agent-tools/tools/sandbox/rewind-replay.js',         'nexus.lib.agent-tools.tools.rewind-replay',
     ['nexus.clear-glass.src.rewind.engine']],   // via clear-glass's direct HTTP /rewind routes, not the gate path
 
-  ['lib/agent-tools/tools/browser-action.js',        'nexus.lib.agent-tools.tools.browser-action',
+  ['lib/agent-tools/tools/browser/browser-action.js',        'nexus.lib.agent-tools.tools.browser-action',
     ['nexus.guardian.clear-glass-bridge', 'nexus.clear-glass.src.driver.url-listener']],
      // §2026-08-12 — REAL_ACTIONS event-type strings fixed this session (5 of 6 didn't match any real
      // clear-glass gate signature — see the file's own header); url_listen/url_unlisten added (P5),
@@ -74,31 +74,31 @@ const FILES = [
      // §2026-08-12 — two edges added to the ALREADY-registered nexus.copilot.server this session:
      // capability-extend (P2, wired as adaptive-fulfillment's true last resort) and scheduler/triggers
      // (boot-time .start() call, commit e4fbebd — the fix for tasks/triggers persisting but never firing).
-  ['lib/agent-tools/tools/copilot-identity.js',      'nexus.lib.agent-tools.tools.copilot-identity',
+  ['lib/agent-tools/tools/identity/copilot-identity.js',      'nexus.lib.agent-tools.tools.copilot-identity',
     ['nexus.copilot.self-model']],   // getIdentityName/setIdentityName — new this session, same commit
 
-  ['lib/agent-tools/tools/resource-monitor.js',      'nexus.lib.agent-tools.tools.resource-monitor',
+  ['lib/agent-tools/tools/diagnostic/resource-monitor.js',      'nexus.lib.agent-tools.tools.resource-monitor',
     []],   // os builtin (no internal edge) + cos/watchdog/{proc-stats,monitor}.js in-process + ollama :3749/health over HTTP — no code edge into RAID's _fitness on purpose, see file header
 
-  ['lib/agent-tools/tools/agent-chat-search.js',     'nexus.lib.agent-tools.tools.agent-chat-search',
+  ['lib/agent-tools/tools/query/agent-chat-search.js',     'nexus.lib.agent-tools.tools.agent-chat-search',
     ['nexus.cortex.jaa-db']],   // reads chat_log + guardian_chat_log directly — deliberately NOT wired to push-recall (see file header)
 
-  ['lib/agent-tools/tools/nexus-help.js',            'nexus.lib.agent-tools.tools.nexus-help',
+  ['lib/agent-tools/tools/query/nexus-help.js',            'nexus.lib.agent-tools.tools.nexus-help',
     ['nexus.copilot.nexus-awareness']],   // rundown/diagnose/ask wrap nexus-awareness; search_docs is new, no internal edge (fs only)
 
-  ['lib/agent-tools/tools/cos-compartment.js',       'nexus.lib.agent-tools.tools.cos-compartment',
+  ['lib/agent-tools/tools/sandbox/cos-compartment.js',       'nexus.lib.agent-tools.tools.cos-compartment',
     []],   // reuses cos/cli/commands/{create,start,stop,destroy,list,status}.js's real programmatic functions in-process, cos/ has no registered component yet
 
-  ['lib/agent-tools/tools/cos-simulate.js',          'nexus.lib.agent-tools.tools.cos-simulate',
+  ['lib/agent-tools/tools/sandbox/cos-simulate.js',          'nexus.lib.agent-tools.tools.cos-simulate',
     ['nexus.cortex.jaa-db']],   // in-process require of cos/playground/llm-lab.js (unregistered) + guardian :7820/command over HTTP (real network wire, not a code edge)
 
-  ['lib/agent-tools/tools/meta-query.js',            'nexus.lib.agent-tools.tools.meta-query',
+  ['lib/agent-tools/tools/query/meta-query.js',            'nexus.lib.agent-tools.tools.meta-query',
     []],   // in-process requires of 7 meta/ subsystems (alk, alk-perception, bda, cfr, gap, lattice, liminal), none registered as loom components yet — rfr2 deliberately excluded, see file header
 
   ['lib/nerve-ollama-bridge.js',                     'nexus.lib.nerve-ollama-bridge',
     ['nexus.lib.nerve', 'nexus.ollama.server']],   // P7c — reads Nerve's snapshot, PUTs to ollama's new context route
 
-  ['lib/agent-tools/tools/run-chain.js',             'nexus.lib.agent-tools.tools.run-chain',
+  ['lib/agent-tools/tools/execution/run-chain.js',             'nexus.lib.agent-tools.tools.run-chain',
     []],   // in-process require of lib/chains.js (unregistered) — closes P6 of nexus-live-mind-phasemap.spec ("a workflow executes")
 
   ['cortex/contract/index.js',                       'nexus.cortex.contract',
@@ -121,49 +121,49 @@ const FILES = [
   ['lib/agent-tools/user-guide-generator.js',         'nexus.lib.agent-tools.user-guide-generator',
     ['nexus.lib.agent-tools']],
 
-  ['lib/agent-tools/tools/hat-forge.js',              'nexus.lib.agent-tools.tools.hat-forge',
+  ['lib/agent-tools/tools/identity/hat-forge.js',              'nexus.lib.agent-tools.tools.hat-forge',
     ['nexus.lib.hat-forge', 'nexus.copilot.self-model']],
 
   ['lib/agent-capability-profile.js',                 'nexus.lib.agent-capability-profile',
     ['nexus.cortex.jaa-db', 'nexus.cortex.core.raid']],   // §2026-08-13 — real measured per-agent stats from chat_log (live) + guardian_chat_log (historical, no writer) + RAID health, not hardcoded constraints
 
-  ['lib/agent-tools/tools/agent-capability.js',       'nexus.lib.agent-tools.tools.agent-capability',
+  ['lib/agent-tools/tools/coordination/agent-capability.js',       'nexus.lib.agent-tools.tools.agent-capability',
     ['nexus.lib.agent-capability-profile']],
 
   ['lib/safe-apply.js',                               'nexus.lib.safe-apply',
     ['nexus.cortex.jaa-db', 'nexus.copilot.self-model']],   // §2026-08-13 — real verify-before-merge on COS's branch/sandbox primitives, closes the nexus-healer merge stub gap the honest way
 
-  ['lib/agent-tools/tools/safe-apply.js',             'nexus.lib.agent-tools.tools.safe-apply',
+  ['lib/agent-tools/tools/execution/safe-apply.js',             'nexus.lib.agent-tools.tools.safe-apply',
     ['nexus.lib.safe-apply']],
 
   ['lib/agent-council.js',                            'nexus.lib.agent-council',
     ['nexus.copilot.tool-runtime', 'nexus.copilot.lifeline']],   // §2026-08-13 — independent multi-agent deliberation; only collects verdicts, RAID governs the actual decision
 
-  ['lib/agent-tools/tools/agent-council.js',          'nexus.lib.agent-tools.tools.agent-council',
+  ['lib/agent-tools/tools/coordination/agent-council.js',          'nexus.lib.agent-tools.tools.agent-council',
     ['nexus.lib.agent-council', 'nexus.lib.hat-forge']],
 
   ['lib/fault-log.js',                                'nexus.lib.fault-log',
     ['nexus.cortex.self-heal.fault-taxonomy', 'nexus.nexus-cfr-influence']],   // §2026-08-13 — universal richly-tagged fault logging, extends fault-taxonomy's single-writer discipline, attaches CFR's real conditions snapshot
 
-  ['lib/agent-tools/tools/fault-log.js',               'nexus.lib.agent-tools.tools.fault-log',
+  ['lib/agent-tools/tools/query/fault-log.js',               'nexus.lib.agent-tools.tools.fault-log',
     ['nexus.lib.fault-log']],
 
   ['lib/roundtable.js',                                'nexus.lib.roundtable',
     ['nexus.cortex.jaa-db', 'nexus.copilot.tool-runtime']],   // §2026-08-13 — shared multi-party thread, deliberate opposite of agent-council's independence
 
-  ['lib/agent-tools/tools/roundtable.js',              'nexus.lib.agent-tools.tools.roundtable',
+  ['lib/agent-tools/tools/coordination/roundtable.js',              'nexus.lib.agent-tools.tools.roundtable',
     ['nexus.lib.roundtable', 'nexus.lib.hat-forge']],
 
   ['lib/parallel-dispatch.js',                          'nexus.lib.parallel-dispatch',
     ['nexus.copilot.self-model', 'nexus.cortex.jaa-db']],   // §2026-08-13 P9 — real concurrent multi-agent dispatch, each independently governed, real concurrency cap
 
-  ['lib/agent-tools/tools/parallel-dispatch.js',        'nexus.lib.agent-tools.tools.parallel-dispatch',
+  ['lib/agent-tools/tools/coordination/parallel-dispatch.js',        'nexus.lib.agent-tools.tools.parallel-dispatch',
     ['nexus.lib.parallel-dispatch', 'nexus.lib.hat-forge']],
 
   ['lib/emergence.js',                                  'nexus.lib.emergence',
     ['nexus.lib.safe-apply', 'nexus.lib.fault-log']],   // §2026-08-13 — axioms+end-state iterative propose/verify/refine, pivots METHOD after repeated same-method failure
 
-  ['lib/agent-tools/tools/emergence.js',                'nexus.lib.agent-tools.tools.emergence',
+  ['lib/agent-tools/tools/execution/emergence.js',                'nexus.lib.agent-tools.tools.emergence',
     ['nexus.lib.emergence', 'nexus.lib.safe-apply', 'nexus.copilot.tool-runtime']],
 ];
 

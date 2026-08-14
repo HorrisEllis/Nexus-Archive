@@ -362,5 +362,88 @@ check('a wire without type/intent still registers — the historical majority of
   assert.strictEqual(r.ok, true, JSON.stringify(r));
 });
 
+// ── §SB1-EXT 2026-08-14 — comp_status + comp_dependencies ──────────────────
+// Naming: person's own correction of an earlier collision (two tiers were
+// both drafted "Acceptable") — final: stub / acceptable / release.
+
+check('a component with a valid comp_status registers and round-trips', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-comp-status', namespace: 'test', name: 'Status', version: '1.0.0',
+    comp_status: 'release', uuid: 'test-sb1ext-status-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.strictEqual(r.stored.comp_status, 'release');
+});
+
+check('all three real comp_status values (stub/acceptable/release) are each individually accepted', () => {
+  for (const status of ['stub', 'acceptable', 'release']) {
+    const r = driver.declare('component', {
+      id: `sb1ext-status-${status}`, namespace: 'test', name: status, version: '1.0.0',
+      comp_status: status, uuid: `test-sb1ext-status-${status}-001`,
+    });
+    assert.strictEqual(r.ok, true, `${status}: ${JSON.stringify(r)}`);
+  }
+});
+
+check('an invalid comp_status ("done", not a real tier) is rejected, not silently accepted as a typo', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-bad-status', namespace: 'test', name: 'Bad Status', version: '1.0.0',
+    comp_status: 'done', uuid: 'test-sb1ext-badstatus-001',
+  });
+  assert.strictEqual(r.ok, false, JSON.stringify(r));
+  assert.ok(r.detail?.wrongType?.some(w => w.key === 'comp_status'), JSON.stringify(r));
+});
+
+check('comp_status as the wrong TYPE (number) is rejected the same way', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-numeric-status', namespace: 'test', name: 'Numeric Status', version: '1.0.0',
+    comp_status: 2, uuid: 'test-sb1ext-numstatus-001',
+  });
+  assert.strictEqual(r.ok, false, JSON.stringify(r));
+});
+
+check('a component without comp_status still registers fine — optional, not required', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-no-status', namespace: 'test', name: 'No Status', version: '1.0.0',
+    uuid: 'test-sb1ext-nostatus-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+});
+
+check('a component with a real comp_dependencies array registers and round-trips', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-comp-deps', namespace: 'test', name: 'Deps', version: '1.0.0',
+    comp_dependencies: ['sb1ext-comp-status', 'sb1ext-status-stub'],
+    uuid: 'test-sb1ext-deps-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+  assert.deepStrictEqual(r.stored.comp_dependencies, ['sb1ext-comp-status', 'sb1ext-status-stub']);
+});
+
+check('an EMPTY comp_dependencies array is valid — a component can genuinely depend on nothing', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-empty-deps', namespace: 'test', name: 'Empty Deps', version: '1.0.0',
+    comp_dependencies: [], uuid: 'test-sb1ext-emptydeps-001',
+  });
+  assert.strictEqual(r.ok, true, JSON.stringify(r));
+});
+
+check('comp_dependencies as a non-array (a bare string) is rejected', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-string-deps', namespace: 'test', name: 'String Deps', version: '1.0.0',
+    comp_dependencies: 'sb1ext-comp-status', uuid: 'test-sb1ext-strdeps-001',
+  });
+  assert.strictEqual(r.ok, false, JSON.stringify(r));
+});
+
+check('comp_dependencies with a NON-STRING element (a number mixed into the array) is rejected, with the offending index named', () => {
+  const r = driver.declare('component', {
+    id: 'sb1ext-mixed-deps', namespace: 'test', name: 'Mixed Deps', version: '1.0.0',
+    comp_dependencies: ['real.id', 42, 'other.id'], uuid: 'test-sb1ext-mixeddeps-001',
+  });
+  assert.strictEqual(r.ok, false, JSON.stringify(r));
+  assert.ok(r.detail?.wrongType?.some(w => w.key === 'comp_dependencies[1]'), JSON.stringify(r));
+});
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);

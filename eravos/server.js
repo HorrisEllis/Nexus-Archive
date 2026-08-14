@@ -26,7 +26,11 @@ try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
 
 const _cw = require('../lib/cortex-write')('eravos');
 const SYSTEM_ID = 'eravos';
-const VERSION   = '3.0.0';
+// §5.4 2026-08-14 — was hardcoded, coincidentally matching lib/version.js's
+// services.eravos ('3.0.0') right now, but not reading from it — the next
+// time that canonical value bumps, this would silently drift again exactly
+// the way cortex/boot.js's VERSION already had. Fixed the same way.
+const VERSION   = (() => { try { return require('../lib/version').services.eravos; } catch (_) { return '3.0.0'; } })();
 
 // ── In-memory organism state ──────────────────────────────────────────────────
 const _mounted    = new Map();   // id → organism descriptor

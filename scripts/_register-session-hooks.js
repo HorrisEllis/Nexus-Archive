@@ -11,7 +11,7 @@ const NEW = [
       id: 'ollama-hook-jobs-tools-0009', name: 'ollama-jobs-tools',
       intent: 'Run a job through the sovereign agent tool-calling loop (lib/agent-tools)',
       surface: 'ollama', port: 3749, path: '/api/jobs/tools', method: 'POST',
-      files: ['lib/agent-tools/index.js', 'lib/agent-tools/tools/read-file.js'] } },
+      files: ['lib/agent-tools/index.js', 'lib/agent-tools/tools/query/read-file.js'] } },
   { file: 'cortex.hooks.js', arr: 'const CORTEX_HOOKS = [', hook: {
       id: 'cortex-hook-push-0011', name: 'cortex-push',
       intent: 'Push content into unified memory (tiered, tagged)',

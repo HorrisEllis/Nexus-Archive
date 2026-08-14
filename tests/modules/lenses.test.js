@@ -3,7 +3,7 @@
 const assert = require('assert');
 const path = require('path');
 const L = require(path.join(__dirname, '../../lib/lenses.js'));
-const CAP = require(path.join(__dirname, '../../lib/agent-tools/tools/capability-tools.js'));
+const CAP = require(path.join(__dirname, '../../lib/agent-tools/tools/coordination/capability-tools.js'));
 
 let passed = 0, failed = 0;
 function test(id, name, fn) {

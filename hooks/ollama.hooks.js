@@ -41,7 +41,7 @@ const HOOKS = [
     to: { surface: "ollama", layer: 1, port: 3749 },
     config: { path: "/api/jobs/tools", method: "POST" },
     contract: { axioms: [], sideEffects: [], idempotent: false },
-    references: { files: ["lib/agent-tools/index.js","lib/agent-tools/tools/read-file.js"] },
+    references: { files: ["lib/agent-tools/index.js","lib/agent-tools/tools/query/read-file.js"] },
     status: "active",
     updatedAt: "2026-07-09T00:00:00Z"
   },

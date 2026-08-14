@@ -39,9 +39,9 @@ const at = require(path.join(ROOT, 'lib/agent-tools'));
   await test('T-004', 'intent resolution goes THROUGH the capability registry (not a hardcoded map)', () => {
     // the tool requires capability-registry — proving it resolves from the live
     // registry the self-register work populates, per §8.4/§10.3.
-    const src = require('fs').readFileSync(path.join(ROOT, 'lib/agent-tools/tools/call-system.js'), 'utf8');
-    assert.ok(/require\('\.\.\/\.\.\/capability-registry'\)/.test(src), 'must resolve via the capability registry');
-    assert.ok(/require\('\.\.\/\.\.\/nexus-client'\)/.test(src), 'must dispatch via nexus-client');
+    const src = require('fs').readFileSync(path.join(ROOT, 'lib/agent-tools/tools/execution/call-system.js'), 'utf8');
+    assert.ok(/require\('\.\.\/\.\.\/\.\.\/capability-registry'\)/.test(src), 'must resolve via the capability registry');
+    assert.ok(/require\('\.\.\/\.\.\/\.\.\/nexus-client'\)/.test(src), 'must dispatch via nexus-client');
     // no actual hardcoded system→address map (a structure, not the word in comments)
     assert.ok(!/(SYSTEMS|SYSTEM_MAP|ADDRESSES)\s*=\s*\{[^}]*:\s*\d{4}/.test(src), 'must not carry a hardcoded system→port map');
   });

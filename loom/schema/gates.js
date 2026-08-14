@@ -49,6 +49,52 @@ function _checkOptionalTypes(data, optionalTypes) {
   return { ok: wrongType.length === 0, wrongType };
 }
 
+// §SB1-EXT 2026-08-14 — comp_status. Three tiers, per the person's own
+// correction of an earlier naming collision draft (two tiers were both
+// called "Acceptable" — would have made the field unable to distinguish
+// them, defeating its purpose):
+//   stub      — mapped, or doesn't execute yet.
+//   acceptable — minimum working code for the intention; tested, ran,
+//                verified. Maps naturally to a pre-1.0.0 component version
+//                (lib/version.js's own real semver bump rules already treat
+//                1.0.0 as "stable public contract" — this reuses that
+//                convention rather than inventing a second one).
+//   release   — fully functional to the spec's intention. 1.0.0+.
+// Enum, not a free string — an invalid value is rejected the same way a
+// wrong-type value is, not silently accepted as a typo.
+const COMP_STATUS_VALUES = Object.freeze(['stub', 'acceptable', 'release']);
+function _checkCompStatus(data) {
+  if (data == null || !('comp_status' in data) || data.comp_status == null) return { ok: true };
+  if (typeof data.comp_status !== 'string' || !COMP_STATUS_VALUES.includes(data.comp_status)) {
+    return { ok: false, wrongType: [{ key: 'comp_status', expected: COMP_STATUS_VALUES.join('|'), actual: JSON.stringify(data.comp_status) }] };
+  }
+  return { ok: true };
+}
+
+// §SB1-EXT 2026-08-14 — comp_dependencies. A DECLARED array of component
+// ids, deliberately NOT a replacement for loom's real, wire-derived
+// dependency graph (registry.js's impactOf()/dependents, computed from
+// actual require() edges — checked directly before writing this, §10.3).
+// This is the other half of the same "declared vs real" pattern this
+// session already found bugs in twice (R3's dormant wire, wire intent
+// nulls): a component can DECLARE an intended dependency that has no real
+// wire behind it yet, and that mismatch is itself useful, surfaceable
+// data — lib/loom-map.js's checkDependencyDrift() (added alongside this)
+// is where that comparison happens, not here — this gate only validates
+// shape (an array of strings), never cross-references registry state
+// (Gate.transform is pure per this file's own header, no disk I/O).
+function _checkCompDependencies(data) {
+  if (data == null || !('comp_dependencies' in data) || data.comp_dependencies == null) return { ok: true };
+  if (!Array.isArray(data.comp_dependencies)) {
+    return { ok: false, wrongType: [{ key: 'comp_dependencies', expected: 'array', actual: typeof data.comp_dependencies }] };
+  }
+  const nonString = data.comp_dependencies.findIndex(d => typeof d !== 'string');
+  if (nonString !== -1) {
+    return { ok: false, wrongType: [{ key: `comp_dependencies[${nonString}]`, expected: 'string', actual: typeof data.comp_dependencies[nonString] }] };
+  }
+  return { ok: true };
+}
+
 // §SB1 2026-08-14 — schemaVersion default. AXIOMS §5.4 ("versions persist
 // across the entire project") applied to loom's own declared schema shape:
 // a component/wire registered from today forward carries the schema
@@ -58,7 +104,7 @@ function _checkOptionalTypes(data, optionalTypes) {
 // WHICH schema shape was in force). Old rows simply don't have this field
 // — read code must treat its absence as "pre-versioning," never as an
 // error (same additive discipline as dir/type/intent below).
-const SCHEMA_VERSION = '1.1.0'; // 1.0.0 was the original 4-primitive shape (component/seam/hook/wire); 1.1.0 adds dir (component) + type (wire) as optional fields, this session
+const SCHEMA_VERSION = '1.2.0'; // 1.0.0 original 4-primitive shape. 1.1.0 (SB1, 2026-08-14) added dir/type/intent. 1.2.0 (same day) added comp_status (stub|acceptable|release) + comp_dependencies (declared, cross-checked against the real wire graph, not a replacement for it).
 
 // ── component.declare ───────────────────────────────────────────────────────
 const componentDeclareGate = new Gate('loom.component.declare', {
@@ -72,6 +118,10 @@ const componentDeclareGate = new Gate('loom.component.declare', {
     // Gate class doesn't check optional fields at all (see note above).
     const optV = _checkOptionalTypes(event.data, { dir: 'string' });
     if (!optV.ok) return [_rejectEvent('component', event, { missing: [], wrongType: optV.wrongType }, 'optional field type check failed')];
+    const statusV = _checkCompStatus(event.data);
+    if (!statusV.ok) return [_rejectEvent('component', event, { missing: [], wrongType: statusV.wrongType }, 'comp_status must be one of: ' + COMP_STATUS_VALUES.join(', '))];
+    const depsV = _checkCompDependencies(event.data);
+    if (!depsV.ok) return [_rejectEvent('component', event, { missing: [], wrongType: depsV.wrongType }, 'comp_dependencies must be an array of component id strings')];
     return [new Event('loom.component.registered', { ...event.data, schemaVersion: event.data.schemaVersion || SCHEMA_VERSION })];
   },
 });

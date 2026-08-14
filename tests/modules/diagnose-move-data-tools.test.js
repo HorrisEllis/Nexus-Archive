@@ -60,7 +60,7 @@ async function test(id, desc, fn) {
   });
   await test('T-007', 'unreachable diagnostic → error result, never fabricated health', async () => {
     process.env.DIAGNOSTIC_URL = 'http://127.0.0.1:1';
-    delete require.cache[require.resolve('../../lib/agent-tools/tools/diagnose.js')];
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/diagnostic/diagnose.js')];
     const r = await executeTool('diagnose', { action: 'status' });
     assert.ok(r.error);
   });

@@ -94,7 +94,7 @@ AXIOMS:
 // option). forgeModule/forgePatch/forgeGate/forgeHook never decided a
 // provider themselves before, and still don't — they call this function,
 // which now routes through Guardian's real job dispatch (the same,
-// already-tested mechanism lib/agent-tools/tools/browser-action.js uses)
+// already-tested mechanism lib/agent-tools/tools/browser/browser-action.js uses)
 // and lets RAID make the actual routing decision, same as every other
 // real LLM call in this system. Return shape kept identical
 // ({text, inputTokens, outputTokens, durationMs}) so nothing downstream

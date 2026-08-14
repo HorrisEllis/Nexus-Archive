@@ -44,7 +44,7 @@ const at = require(path.join(ROOT, 'lib/agent-tools'));
       assert.ok(fs.existsSync(path.join(ROOT, 'copilot', `${f}.js`)), `copilot/${f}.js must still exist (§16.5)`);
     }
     // and the adapter file is separate, in agent-tools
-    assert.ok(fs.existsSync(path.join(ROOT, 'lib/agent-tools/tools/faculty-tools.js')), 'adapters live in agent-tools');
+    assert.ok(fs.existsSync(path.join(ROOT, 'lib/agent-tools/tools/faculty/faculty-tools.js')), 'adapters live in agent-tools');
   });
 
   _log(`\n${passed} passed, ${failed} failed`);

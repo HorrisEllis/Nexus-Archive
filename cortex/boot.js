@@ -70,7 +70,13 @@ const GD_URL  = process.env.GUARDIAN_URL || 'http://127.0.0.1:7820';
 const OL_URL  = process.env.OLLAMA_URL   || 'http://127.0.0.1:3749';
 
 const ROOT    = path.join(__dirname, '..');
-const VERSION = '3.0.0';
+// §5.4 2026-08-14 — was a hardcoded '3.0.0', drifted from lib/version.js's
+// real services.cortex ('3.5.0') — the exact "version drift is a bug, not
+// an oversight" case that file's own header warns about, live in the one
+// service most central to the whole system. Reading from the canonical
+// source now; falls back to the last-known value only if the registry
+// itself is ever unreachable at boot, never silently to a stale guess.
+const VERSION = (() => { try { return require('../lib/version').services.cortex; } catch (_) { return '3.5.0'; } })();
 const SYSTEM  = 'cortex';
 
 // ── JAA memory store ──────────────────────────────────────────────────────────
@@ -466,7 +472,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // §BUILT 2026-07-13 — chunk_4 of docs/nexus-copilot-recall.spec. Checked
-  // before building: lib/agent-tools/tools/query-intelligence.js's
+  // before building: lib/agent-tools/tools/query/query-intelligence.js's
   // `lattice` action has called this exact URL since 2026-07-10 —
   // GET /api/cortex/lattice?about=<system>. It never existed; every call
   // has been a 404. meta/spatial/system-lattice.js itself is real, tested,
@@ -848,7 +854,7 @@ const server = http.createServer(async (req, res) => {
     // docs/nexus-copilot-recall.spec, not assumed: only `intent` was ever
     // read from a POST body here. `query` and `tier` were declared as
     // `const` from the URL search params and never revisited, so every
-    // real POST caller (lib/agent-tools/tools/query-recall.js included,
+    // real POST caller (lib/agent-tools/tools/query/query-recall.js included,
     // since 2026-07-10) has been silently recalling with query:null —
     // lexical scoring always contributed 0, only recency ever mattered.
     // Verified directly: a real POST with {intent,query,tier} in the body
