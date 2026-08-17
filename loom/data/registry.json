@@ -193,6 +193,16 @@
       "uuid": "nexus-loom-map-nexus.cos.kernel-v1-0000-2026-0814-001",
       "schemaVersion": "1.2.0",
       "registeredAt": 1787003980008
+    },
+    "nexus.guardian.server": {
+      "id": "nexus.guardian.server",
+      "namespace": "lib",
+      "name": "guardian/server.js",
+      "version": "1.0.0",
+      "dir": "guardian",
+      "uuid": "nexus-loom-map-nexus.guardian.server-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787005341804
     }
   },
   "seam": {},

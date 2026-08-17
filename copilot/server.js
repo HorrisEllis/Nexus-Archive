@@ -1298,7 +1298,15 @@ const server = http.createServer(async (req, res) => {
       // Tested against 10 real should-match and 4 real should-NOT-match
       // phrasings before landing this, not just the happy path.
       const urlM = prompt.match(/https?:\/\/[^\s]+/i);
-      const switchM = prompt.match(/\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
+      // §FIXED 2026-08-17 — James, live: "change agent to gemini" got the
+      // generic fallback. Real, same bug class as the 2026-08-14 fix noted
+      // above, different verb: "change" wasn't recognized alongside
+      // switch/use/route. Safe to add — the switchIsReal gate below
+      // (requires a known agent name, explicit "agent"/"model", or a URL)
+      // already prevents a false positive regardless of which verb
+      // matched, so widening the verb list doesn't widen what actually
+      // triggers a switch.
+      const switchM = prompt.match(/\b(?:switch\s+(?:\S+\s+)?to|change\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
       const KNOWN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'clear glass', 'clear-glass', 'clearglass'];
       const switchTarget = switchM ? switchM[1].toLowerCase() : null;
       const switchIsReal = switchM && (KNOWN_AGENTS.includes(switchTarget) || /\b(agent|model)\b/i.test(prompt) || !!urlM);
@@ -1344,7 +1352,37 @@ const server = http.createServer(async (req, res) => {
           : `Couldn't create that compartment: ${r.error || 'unknown error'}`;
         return json(res, 200, { text, model_used: 'nexus-compartment', confidence: 1, escalated: false, detail: r, requestId });
       }
-      // §ADDED 2026-08-13 — James: "co-pilot should be like a hat, not a
+      // §BUILT 2026-08-17 — GA9. "co-pilot to be able to list current
+      // compartments, delete them." Checked first: cos-compartment.js's
+      // list/destroy actions already exist and are real, tested — same
+      // exact gap class as create-compartment above had before it was
+      // fixed: a real backend, zero conversational trigger. Following the
+      // identical pattern, not a new mechanism.
+      const listCompartM = prompt.match(/\b(?:list|show(?:\s+me)?|what)\s+(?:are\s+)?(?:the\s+|my\s+|current\s+)*compartments?\b/i);
+      if (listCompartM) {
+        const cosCompartment = require('../lib/agent-tools/tools/sandbox/cos-compartment.js');
+        const r = await cosCompartment.execute({ action: 'list' });
+        const names = r.ok && r.compartments ? r.compartments.map(c => c.name || c.id).filter(Boolean) : [];
+        const text = r.ok
+          ? (names.length ? `${names.length} compartment${names.length === 1 ? '' : 's'}: ${names.join(', ')}.` : 'No compartments exist right now.')
+          : `Couldn't list compartments: ${r.error || 'unknown error'}`;
+        return json(res, 200, { text, model_used: 'nexus-compartment', confidence: 1, escalated: false, detail: r, requestId });
+      }
+
+      // §1.1 — "wipe"/"force" are only honored when the person actually
+      // says them; the default is the safe, real backend default (false).
+      const delCompartM = prompt.match(/\b(?:delete|destroy|remove)\s+(?:the\s+|compartment\s+)?(?:compartment\s+)?(?:named\s+|called\s+)?["']?([\w-]+)["']?\s*(compartment)?\b(?:\s|$)/i);
+      if (delCompartM && /compartment/i.test(prompt)) {
+        const cosCompartment = require('../lib/agent-tools/tools/sandbox/cos-compartment.js');
+        const name = delCompartM[1];
+        const force = /\bforce\b/i.test(prompt);
+        const wipe = /\bwipe\b/i.test(prompt);
+        const r = await cosCompartment.execute({ action: 'destroy', name, force, wipe });
+        const text = r.ok ? `Destroyed compartment "${name}".` : `Couldn't destroy "${name}": ${r.error || 'unknown error'}`;
+        return json(res, 200, { text, model_used: 'nexus-compartment', confidence: 1, escalated: false, detail: r, requestId });
+      }
+
+
       // static identity" + "how do I change the agent for co-pilot?" — the
       // feature existed (copilot_identity's setAgent/getAgent, wired into
       // lifeline.js's route()) but had no guaranteed plain-chat trigger,

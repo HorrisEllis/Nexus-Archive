@@ -69,6 +69,12 @@ const FILES = [
   ['copilot/server.js',          'nexus.copilot.server',          'copilot', []],
   ['service/nexus-diagnostic.js','nexus.service.nexus-diagnostic','service', []],
   ['cos/kernel.js',              'nexus.cos.kernel',              'cos',     []],
+
+  // §ADDED 2026-08-17e — GA3. guardian/server.js itself was found
+  // genuinely unregistered under any id while adding its real tool-index
+  // bridge routes (checked directly, not assumed). A real, significant,
+  // pre-existing gap, not something this session's own work caused.
+  ['guardian/server.js', 'nexus.guardian.server', 'guardian', []],
 ];
 
 function mapSession20260814(driver) {
