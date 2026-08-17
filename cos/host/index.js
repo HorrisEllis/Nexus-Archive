@@ -111,6 +111,21 @@ function createHost(opts = {}) {
     });
   });
 
+  // §ADDED 2026-08-17 — James: "cos compartments being created to be
+  // announced." Forwards the 4 real compartment lifecycle events to
+  // orchestrator's real SSE via the new generic relay (POST /api/
+  // broadcast). Deliberately non-blocking and silent on failure — COS's
+  // own real compartment work must never depend on orchestrator being
+  // reachable; a missed announcement is a real, honest degrade, not a
+  // reason to fail the actual operation.
+  for (const evType of [HOST.COMPARTMENT_CREATED, HOST.COMPARTMENT_STARTED, HOST.COMPARTMENT_STOPPED, HOST.COMPARTMENT_DESTROYED]) {
+    bus.on(evType, (ev) => {
+      try {
+        require('../../lib/nexus-client.js').post('orchestrator', '/api/broadcast', { type: evType, payload: ev.payload }).catch(() => {});
+      } catch (_) { /* nexus-client unreachable — COS's own real work is unaffected, §1.2 */ }
+    });
+  }
+
   const host = {
     store,
     bus,

@@ -28,6 +28,13 @@ const FILES = [
   ['lib/agent-system/contracts.js', 'nexus.lib.agent-system.contracts', 'lib/agent-system', []],
   ['lib/agent-system/submit.js',    'nexus.lib.agent-system.submit',    'lib/agent-system', ['nexus.lib.agent-system.contracts']],
   ['lib/loom-map.js',               'nexus.lib.loom-map',               'lib',              []],
+
+  // §ADDED 2026-08-17 — James: "make sure you are updating... loom
+  // registry... to log all the history." Three real components had no
+  // loom entry at all, under any id (checked directly, not assumed).
+  ['lib/diagnostic-report.js',      'nexus.lib.diagnostic-report',      'lib', []],
+  ['guardian/lib/ncp.js',           'nexus.guardian.lib.ncp',           'guardian/lib', []],
+  ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
 ];
 
 function mapSession20260814(driver) {
