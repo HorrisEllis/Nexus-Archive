@@ -1,0 +1,1 @@
+{"uuid":"4f185f87-b145-4c04-9dd2-7e2f7f268553","system":"cg","component":"cg.context.switch","action":"registered","status":"ok","tags":["cg","context"],"detail":"Switch active agent context","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817876}

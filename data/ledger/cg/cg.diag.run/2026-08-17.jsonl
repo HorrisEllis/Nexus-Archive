@@ -1,0 +1,1 @@
+{"uuid":"3591a3ab-4bc0-435e-9386-3ab395fe1c7b","system":"cg","component":"cg.diag.run","action":"registered","status":"ok","tags":["cg","diagnostic"],"detail":"Run custom diagnostic suite","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817903}

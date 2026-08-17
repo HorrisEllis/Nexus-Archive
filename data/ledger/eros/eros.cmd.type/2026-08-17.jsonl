@@ -1,0 +1,1 @@
+{"uuid":"8aab2cee-c72b-40e8-9e23-6ba4d9c2a071","system":"eros","component":"eros.cmd.type","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP type into node","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817948}
