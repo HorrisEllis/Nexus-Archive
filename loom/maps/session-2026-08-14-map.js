@@ -28,6 +28,15 @@ const FILES = [
   ['lib/agent-system/contracts.js', 'nexus.lib.agent-system.contracts', 'lib/agent-system', []],
   ['lib/agent-system/submit.js',    'nexus.lib.agent-system.submit',    'lib/agent-system', ['nexus.lib.agent-system.contracts']],
   ['lib/loom-map.js',               'nexus.lib.loom-map',               'lib',              []],
+
+  // §ADDED 2026-08-17 — James: "did you update the git, specs, loom, and
+  // cortex... nothing wasted, nothing lost." Real, confirmed gap: none of
+  // these three had a loom entry at all (checked directly, not assumed —
+  // found gap-priority.js missing too while verifying the dependency
+  // below, not assumed present).
+  ['lib/gap-priority.js',          'nexus.lib.gap-priority',          'lib', []],
+  ['lib/system-check.js',          'nexus.lib.system-check',          'lib', ['nexus.lib.gap-priority', 'nexus.lib.gap-field']],
+  ['lib/intent-hat-router.js',     'nexus.lib.intent-hat-router',     'lib', []],
 ];
 
 function mapSession20260814(driver) {

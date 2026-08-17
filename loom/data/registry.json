@@ -13288,6 +13288,66 @@
       "route_count": 11,
       "tracked_in_spec_registry": true,
       "registeredAt": 1786463105248
+    },
+    "nexus.lib.agent-system.contracts": {
+      "id": "nexus.lib.agent-system.contracts",
+      "namespace": "lib",
+      "name": "lib/agent-system/contracts.js",
+      "version": "1.0.0",
+      "dir": "lib/agent-system",
+      "uuid": "nexus-loom-map-nexus.lib.agent-system.contracts-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968839349
+    },
+    "nexus.lib.agent-system.submit": {
+      "id": "nexus.lib.agent-system.submit",
+      "namespace": "lib",
+      "name": "lib/agent-system/submit.js",
+      "version": "1.0.0",
+      "dir": "lib/agent-system",
+      "uuid": "nexus-loom-map-nexus.lib.agent-system.submit-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968839476
+    },
+    "nexus.lib.loom-map": {
+      "id": "nexus.lib.loom-map",
+      "namespace": "lib",
+      "name": "lib/loom-map.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.loom-map-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968839570
+    },
+    "nexus.lib.gap-priority": {
+      "id": "nexus.lib.gap-priority",
+      "namespace": "lib",
+      "name": "lib/gap-priority.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.gap-priority-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968839624
+    },
+    "nexus.lib.system-check": {
+      "id": "nexus.lib.system-check",
+      "namespace": "lib",
+      "name": "lib/system-check.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.system-check-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968839736
+    },
+    "nexus.lib.intent-hat-router": {
+      "id": "nexus.lib.intent-hat-router",
+      "namespace": "lib",
+      "name": "lib/intent-hat-router.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.intent-hat-router-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968839809
     }
   },
   "seam": {},
@@ -30411,6 +30471,46 @@
       "uuid": "nexus-loom-spec-spec.bridge.spec.bridge-specifies-v1-0000-2026-0804-001",
       "novelType": false,
       "registeredAt": 1786463105868
+    },
+    "nexus.lib.agent-system.contracts.export": {
+      "id": "nexus.lib.agent-system.contracts.export",
+      "component_id": "nexus.lib.agent-system.contracts",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.agent-system.contracts-export-v1-0000-2026-0814-001",
+      "novelType": false,
+      "registeredAt": 1786968839879
+    },
+    "nexus.lib.agent-system.submit.import": {
+      "id": "nexus.lib.agent-system.submit.import",
+      "component_id": "nexus.lib.agent-system.submit",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.agent-system.submit-import-v1-0000-2026-0814-001",
+      "novelType": false,
+      "registeredAt": 1786968839961
+    },
+    "nexus.lib.gap-priority.export": {
+      "id": "nexus.lib.gap-priority.export",
+      "component_id": "nexus.lib.gap-priority",
+      "name": "export",
+      "type": "direct",
+      "direction": "out",
+      "uuid": "nexus-loom-map-nexus.lib.gap-priority-export-v1-0000-2026-0814-001",
+      "novelType": false,
+      "registeredAt": 1786968840038
+    },
+    "nexus.lib.system-check.import": {
+      "id": "nexus.lib.system-check.import",
+      "component_id": "nexus.lib.system-check",
+      "name": "import",
+      "type": "direct",
+      "direction": "in",
+      "uuid": "nexus-loom-map-nexus.lib.system-check-import-v1-0000-2026-0814-001",
+      "novelType": false,
+      "registeredAt": 1786968840149
     }
   },
   "wire": {
@@ -39862,6 +39962,36 @@
       "intent": "specifies",
       "uuid": "nexus-loom-spec-wire-53-v1-0000-2026-0804-001",
       "registeredAt": 1786463110047
+    },
+    "session-2026-08-14.wire.1.nexus.lib.agent-system.contracts--nexus.lib.agent-system.submit": {
+      "id": "session-2026-08-14.wire.1.nexus.lib.agent-system.contracts--nexus.lib.agent-system.submit",
+      "from_hook_id": "nexus.lib.agent-system.contracts.export",
+      "to_hook_id": "nexus.lib.agent-system.submit.import",
+      "type": "direct-call",
+      "intent": "nexus.lib.agent-system.submit requires nexus.lib.agent-system.contracts",
+      "uuid": "nexus-loom-map-wire-1-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968840256
+    },
+    "session-2026-08-14.wire.2.nexus.lib.gap-priority--nexus.lib.system-check": {
+      "id": "session-2026-08-14.wire.2.nexus.lib.gap-priority--nexus.lib.system-check",
+      "from_hook_id": "nexus.lib.gap-priority.export",
+      "to_hook_id": "nexus.lib.system-check.import",
+      "type": "direct-call",
+      "intent": "nexus.lib.system-check requires nexus.lib.gap-priority",
+      "uuid": "nexus-loom-map-wire-2-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968840363
+    },
+    "session-2026-08-14.wire.3.nexus.lib.gap-field--nexus.lib.system-check": {
+      "id": "session-2026-08-14.wire.3.nexus.lib.gap-field--nexus.lib.system-check",
+      "from_hook_id": "nexus.lib.gap-field.export",
+      "to_hook_id": "nexus.lib.system-check.import",
+      "type": "direct-call",
+      "intent": "nexus.lib.system-check requires nexus.lib.gap-field",
+      "uuid": "nexus-loom-map-wire-3-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1786968840450
     }
   },
   "concern": {}
