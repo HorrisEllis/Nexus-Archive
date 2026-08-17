@@ -156,8 +156,33 @@ class Compartment {
     return 'axiom-unverifiable-malformed-reply';
   }
 
+  // §LEDGER-WIRE 2026-08-17 — cos writes to the canonical ledger.
+  //
+  // WHY NOT AN SSE HERE: cos/spec/cos.spec declares cos core CLI-driven with
+  // "no http.createServer/express in cos/ core (only vaultd, a separate
+  // optional daemon)". Giving cos its own SSE server would break its own
+  // contract. It does not need one — it needs to WRITE. Every compartment
+  // transition below becomes a component-ledger row, and whichever process
+  // hosts cos serves those rows on /ledger/stream via lib/ledger-sse. One
+  // wire, mounted once per process, rather than a server per library.
+  //
+  // This is also the answer to the compartments question that came back as an
+  // invented hierarchy: compartment state IS recorded now, so "what are the
+  // compartments" has a real ledger to read instead of an absent endpoint.
+  // §1.2 — telemetry never breaks a compartment.
+  _ledger(action, status, detail) {
+    try {
+      require('../lib/component-ledger').write({
+        system: 'cos', component: `cos.compartment.${this.id}`, action, status,
+        detail, tags: ['cos', 'compartment'],
+        hook: null, wire: null,   // unknown stays null — never derived
+      });
+    } catch (_) {}
+  }
+
   emitAxiomFault(axiomId, context) {
     this._state = STATE.AXIOM_FAULT;
+    this._ledger('axiom.violated', 'error', { axiomId, context, name: this.name });
     this._kernel.emit({ type: 'compartment.axiom.violated', data: {
       compartmentId: this.id,
       axiomId,
@@ -358,6 +383,7 @@ Respond with structured JSON only. Never violate your axioms.`;
       // Check if fully integrated
       if (BIRTH_GATES.every(g => this._gatesPassed.includes(g))) {
         this._state = STATE.INTEGRATED;
+        this._ledger('integrated', 'info', { name: this.name, gatesPassed: [...this._gatesPassed] });
         this._kernel.emit({ type: 'compartment.integrated', data: {
           compartmentId: this.id,
           gatesPassed:   [...this._gatesPassed],
@@ -400,6 +426,7 @@ Respond with structured JSON only. Never violate your axioms.`;
     this._context    = [];
     this._synthHistory = [];
     this._state      = STATE.RECYCLED;
+    this._ledger('recycled', 'error', { name: this.name, failedGate, reason });
 
     this._kernel.emit({ type: 'compartment.recycled', data: {
       compartmentId: this.id,

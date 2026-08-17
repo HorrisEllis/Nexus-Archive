@@ -120,6 +120,12 @@ require.cache[require.resolve('../../cortex/snapshot')] = {
   },
 };
 
+// ── Mock request-handler — real COST_TIERS values ───────────────────────────
+require.cache[require.resolve('../../lib/request-handler')] = {
+  id: '../../lib/request-handler', filename: '../../lib/request-handler', loaded: true,
+  exports: { COST_TIERS: { READ: 0.1, COMPUTE: 0.3, LLM_LOCAL: 0.5, LLM_REMOTE: 0.8, FORGE: 0.9, IRREVERSIBLE: 1.0 } },
+};
+
 // ── Mock nexus-bus ────────────────────────────────────────────────────────────
 require.cache[require.resolve('../../nexus-bus')] = {
   id: '../../nexus-bus', filename: '../../nexus-bus', loaded: true,

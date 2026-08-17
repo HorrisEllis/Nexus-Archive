@@ -417,21 +417,8 @@ function ledgerAll(n = 100) {
   return all.sort((a, b) => (b._ts || 0) - (a._ts || 0)).slice(0, n);
 }
 
-// §FIXED 2026-08-17 — found while adding a new call, not assumed correct
-// from the existing pattern: this function only ever accepted ONE
-// argument (a pre-stringified JSON string, the majority real pattern in
-// this file). But 6 REAL, PRE-EXISTING call sites already called it as
-// broadcast(type, payload) — system.contract.verified (x2),
-// spec.compile.complete, orchestrator.auth.hotswapped/hotswap_failed, and
-// the broadcastSSE wrappers used by peer-relay pruning. Every one of
-// those has been silently broadcasting the bare event-name STRING with
-// zero payload, this whole time — any real UI listening for a payload on
-// those events has never received one. Real, severe, found by accident
-// while wiring co-pilot's own new announcement, not a bug I introduced.
-// Fixed generically: accepts EITHER calling convention correctly, rather
-// than rewrite 6+ scattered call sites and risk missing one.
-function broadcast(data, payload) {
-  const msg = payload !== undefined ? `data: ${JSON.stringify({ type: data, ...payload })}\n\n` : `data: ${data}\n\n`;
+function broadcast(data) {
+  const msg = `data: ${data}\n\n`;
   for (const res of sseClients) {
     try { res.write(msg); } catch(_) { sseClients.delete(res); }
   }
@@ -1034,16 +1021,6 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (!systemId) return json(res, 400, { ok:false, error:'systemId required' });
     registryUpdate(systemId, { port, meta, registeredAt: Date.now() });
 
-    // §ADDED 2026-08-17 — James: "i need co-pilot to be announced in the
-    // sse for autopilot." Checked first: this handler already broadcasts
-    // system.contract.verified, but only 2s later (contract verification
-    // is deliberately delayed to let the system finish binding), and only
-    // reports trust state, not "a real system just registered." Generic —
-    // every system that hits this real route gets this, not co-pilot
-    // specifically hardcoded, since the same real gap applies to any
-    // system registering, not just this one.
-    broadcast('system.registered', { systemId, port, meta, ts: Date.now() });
-
     // Component registry — auto-register system components (CR-007)
     // §FIX: this previously referenced an undefined '_bus' variable, which
     // threw on every single call (caught + warned, never actually
@@ -1524,23 +1501,6 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
       pulseId,
       systems: snapshot,
     });
-  }
-
-  // ── Generic external event relay ────────────────────────────────────────
-  // §ADDED 2026-08-17 — James: "cos compartments being created to be
-  // announced." COS runs in-process wherever it's invoked from (an
-  // agent-tool, a CLI command) — not as its own standalone server the way
-  // guardian/idearium are — so it can't call broadcast() directly the way
-  // orchestrator's own code does. This is the real, generic bridge: any
-  // external process POSTs {type, payload}, this calls the real, now-
-  // fixed broadcast(type, payload) — useful beyond COS specifically,
-  // which is why it's a real, named route rather than a COS-only hack.
-  if (M==='POST' && sub==='broadcast') {
-    const body = await readBody(req);
-    const { type, payload } = body || {};
-    if (!type) return json(res, 400, { ok:false, error:'type required' });
-    broadcast(type, payload || {});
-    return json(res, 200, { ok:true, type, ts: Date.now() });
   }
 
   // ── Unified SISO bus log — all systems' event buses merged ────────────────

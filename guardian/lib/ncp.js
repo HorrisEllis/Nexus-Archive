@@ -46,32 +46,6 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   // provider → { res, tabId, provider, connectedAt, lastHeartbeat }
   const _clients = new Map();
 
-  // §FIXED 2026-08-17 — James, direct: "the ncp tabs aren't connected...
-  // this is vital." Traced a real, separate contributing bug beyond the
-  // GM_setValue fix: isConnected() (below) only ever checked whether a
-  // registry ENTRY existed for a provider, never whether that entry's
-  // real lastHeartbeat was recent. A tab that silently freezes (JS stops
-  // running, but the underlying SSE socket hasn't technically closed —
-  // real, common failure mode, not theoretical) stays marked "connected"
-  // forever. That's the exact shape of the real error already seen:
-  // "chatgpt's tab didn't ack within the timeout... but that agent may
-  // not actually be reachable right now" — isConnected() said true, the
-  // real tab was dead.
-  //
-  // The fix pattern is real prior art, not invented fresh: the OLD
-  // Guardian extension (Guardian-clean-17.zip, a genuinely different
-  // product — a multi-device mesh network, not this system's tab-to-
-  // server NCP) had a real, working session/heartbeat/staleness pattern
-  // in its own handshake.js (SESSION_TTL_MS, a periodic prune, a
-  // healthy: (now - lastSeen) < 30_000 check). That specific number and
-  // shape is reused here — not the mesh/AppID system around it, which
-  // solves a different, unrelated problem — because a real heartbeat
-  // every 8000ms (guardian/userscript-claude.js's own HB_MS) means 30s
-  // is a real, sane multiple that tolerates network jitter without
-  // false-evicting a genuinely healthy connection.
-  const STALE_MS = 30_000;
-  function _isStale(client) { return (Date.now() - client.lastHeartbeat) > STALE_MS; }
-
   // §1.2 — SSE write helper. try/catch: never crash on broken pipe.
   function _write(res, data) {
     try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(_) {}
@@ -324,38 +298,11 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
    * Equivalent to PROVIDERS[provider] !== null in the old WSS system.
    */
   function isConnected(provider) {
-    for (const [key, client] of _clients) {
-      if (client.provider !== provider) continue;
-      if (_isStale(client)) {
-        // Found while checking, not just skipped — evict it here too, not
-        // only in the periodic sweep, so a check that happens to run
-        // between sweeps still gets the real, current answer immediately.
-        _clients.delete(key);
-        busEmit?.('ncp.client.stale', { provider, tabId: client.tabId, key, lastHeartbeat: client.lastHeartbeat }, 'WARN');
-        onDisconnect?.({ provider, tabId: client.tabId, key, reason: 'stale' });
-        continue;
-      }
-      return true;
+    for (const client of _clients.values()) {
+      if (client.provider === provider) return true;
     }
     return false;
   }
-
-  // §FIXED 2026-08-17 — periodic sweep, same real reasoning as the old
-  // Guardian's own session prune (handshake.js's setInterval, 120_000ms
-  // there for a 5-minute session TTL; here 15_000ms for a 30s staleness
-  // threshold, roughly the same "check at ~1/4 to 1/8 the TTL" ratio).
-  // Without this, a provider nobody ever calls isConnected() for again
-  // stays in _clients forever even after going stale — the inline check
-  // above only fires on an actual lookup.
-  const _staleSweep = setInterval(() => {
-    for (const [key, client] of _clients) {
-      if (!_isStale(client)) continue;
-      _clients.delete(key);
-      busEmit?.('ncp.client.stale', { provider: client.provider, tabId: client.tabId, key, lastHeartbeat: client.lastHeartbeat }, 'WARN');
-      onDisconnect?.({ provider: client.provider, tabId: client.tabId, key, reason: 'stale' });
-    }
-  }, 15_000);
-  if (_staleSweep.unref) _staleSweep.unref(); // never keeps the process alive on its own
 
   /**
    * Get all connected providers.

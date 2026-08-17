@@ -42,7 +42,7 @@ spec:
       does: "add it as a SECTION in loom: a loom/maps/phasemap-map.js + a loom UI/API surface so the roadmap-per-system is part of loom's self-model alongside components + specs."
       gate:  "loom exposes the per-system phasemap section; clicking/querying a system shows its roadmap."
       status: >
-        ✓ DONE 2026-08-08. /api/phasemap + /api/phasemap/:system wired in
+        DONE 2026-08-08. /api/phasemap + /api/phasemap/:system wired in
         loom/server.js (same route shape as /api/graph — no new pattern).
         Both registered in loom/registry-components.js v1.3.0 (the exact gap
         that file's own header warns against: a real route that never made it
