@@ -187,28 +187,11 @@ class UserscriptManager {
   }
 
   // ── Internals ───────────────────────────────────────────────────────────
-  // §FIXED 2026-08-17 — James, direct, urgent: "guardian isn't working...
-  // the ncp tabs aren't connected." Root cause, confirmed against the real
-  // screenshot showing "Uncaught ReferenceError: GM_setValue is not
-  // defined" for a script injected through THIS manager: _buildInjectable
-  // never included the GM shim that clear-glass/src/providers/host.js's
-  // own _inject() already correctly prepends for its own injection path.
-  // Every real Guardian userscript uses GM_getValue/GM_setValue/GM_
-  // xmlhttpRequest — without the shim, the injected script throws on its
-  // very first line, before any of its real logic (including NCP
-  // registration/heartbeat) ever executes. That's the whole story: a
-  // script that crashes immediately never gets the chance to connect.
-  // Reused the real, existing shim (same one host.js uses correctly),
-  // not a second implementation.
   _buildInjectable(script) {
-    let gmShim = '';
-    try { gmShim = require('../providers/gm-shim').buildGmShim(); }
-    catch (_) { /* shim module unreachable — script still injects, GM_* calls will throw as before, not silently worse */ }
     // Idempotency guard — never run twice in same page session
     return `(function(){
   if (window.__cgScript_${script.id.replace(/-/g,'_')}) return;
   window.__cgScript_${script.id.replace(/-/g,'_')} = Date.now();
-  ${gmShim}
   ${script.source}
 })();`;
   }
