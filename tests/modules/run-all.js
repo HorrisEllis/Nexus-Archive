@@ -201,10 +201,6 @@ const SUITES = [
   'test-autonomous-repair.js',
   'test-nerve-gap-bridge.js',
   'test-relational-context.js',
-
-  // §2026-08-17 — ledger wire + person model
-  'test-ledger-sse.js',
-  'test-person-model.js',
 ];
 
 let totalPassed = 0;

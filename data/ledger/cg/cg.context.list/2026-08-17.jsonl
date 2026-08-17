@@ -1,1 +1,0 @@
-{"uuid":"c2067eab-339a-4545-89f4-185d97fe1c98","system":"cg","component":"cg.context.list","action":"registered","status":"ok","tags":["cg","context"],"detail":"List agent contexts with health scores","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817877}

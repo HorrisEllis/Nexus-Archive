@@ -2210,34 +2210,6 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
-  // §BUILT 2026-08-17 — GA3. "The 63 real tools co-pilot has are invisible
-  // to the browser-tab side." Checked first: guardian and clear-glass have
-  // ZERO references to tool-index anywhere, confirmed by grep. This is the
-  // real bridge — reuses lib/agent-tools/index.js's exact same TOOLS map
-  // and executeTool(), the identical engine co-pilot already calls, not a
-  // second implementation a userscript would need to trust separately.
-  if (method==='GET' && url.pathname==='/api/tools') {
-    try {
-      const agentTools = require('../lib/agent-tools/index.js');
-      const list = [...agentTools.TOOLS.entries()].map(([name, t]) => ({ name, description: t.description || null }));
-      pRes(res, 200, { ok: true, tools: list, count: list.length });
-    } catch (e) { pRes(res, 500, { ok: false, error: e.message }); }
-    return true;
-  }
-
-  if (method==='POST' && /^\/api\/tools\/[\w-]+$/.test(url.pathname)) {
-    const toolName = url.pathname.split('/').pop();
-    bodyJ(req).then(async (body) => {
-      try {
-        const agentTools = require('../lib/agent-tools/index.js');
-        if (!agentTools.TOOLS.has(toolName)) { pRes(res, 404, { ok: false, error: `unknown tool "${toolName}"` }); return; }
-        const result = await agentTools.executeTool(toolName, body || {}, { source: 'guardian', agent: body?.agent || null });
-        pRes(res, 200, { ok: true, result });
-      } catch (e) { pRes(res, 500, { ok: false, error: e.message }); }
-    }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
-    return true;
-  }
-
   if (method==='GET' && url.pathname==='/health') {
     const connectedProviders = {};
     for (const [k,v] of ncp._clients || new Map()) {

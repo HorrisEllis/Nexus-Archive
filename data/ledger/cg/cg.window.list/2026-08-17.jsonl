@@ -1,1 +1,0 @@
-{"uuid":"292c3066-3e64-4739-96dd-2ace5da4809b","system":"cg","component":"cg.window.list","action":"registered","status":"ok","tags":["cg","window"],"detail":"List open agent windows","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817918}

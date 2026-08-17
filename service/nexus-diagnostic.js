@@ -1477,19 +1477,6 @@ function startService() {
 
     if (req.method === 'OPTIONS') { res.writeHead(204, CORS); res.end(); return; }
 
-    // §LEDGER-WIRE 2026-08-17 — canonical ledger stream, component-ledger
-    // schema, for machine consumers. /events below is unchanged: it is the
-    // UI's stream and carries a looser shape that its readers already parse
-    // (§5.14 zero behaviour change for anything working today).
-    if (url.pathname === '/ledger/stream') {
-      try { return require('../lib/ledger-sse').mount(res, { system: 'diagnostic' }); }
-      catch (e) {
-        res.writeHead(503, { 'Content-Type': 'application/json', ...CORS });
-        res.end(JSON.stringify({ ok: false, error: `ledger stream unavailable: ${e.message}` }));
-        return;
-      }
-    }
-
     // SSE stream
     if (url.pathname === '/events') {
       res.writeHead(200, {

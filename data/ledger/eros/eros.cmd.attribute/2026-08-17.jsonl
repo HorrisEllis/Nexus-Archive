@@ -1,1 +1,0 @@
-{"uuid":"f7a35561-7f0a-4f9d-8d2f-70f147696b44","system":"eros","component":"eros.cmd.attribute","action":"registered","status":"ok","tags":["eros","driver"],"detail":"Get node attribute","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817955}

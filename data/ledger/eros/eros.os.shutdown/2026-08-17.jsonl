@@ -1,1 +1,0 @@
-{"uuid":"8f650753-06d7-49d1-ae5b-ab10944f430c","system":"eros","component":"eros.os.shutdown","action":"registered","status":"ok","tags":["eros"],"detail":"Shutdown OS cleanly","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817923}

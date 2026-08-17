@@ -49,32 +49,6 @@ const FILES = [
   // left as [] rather than guessed, matching this file's own established
   // convention for unregistered dependencies.
   ['lib/agent-tools/tools/governance/spec-wizard.js', 'nexus.lib.agent-tools.governance.spec-wizard', 'lib/agent-tools/tools/governance', []],
-
-  // §ADDED 2026-08-17c — found while merging the real "ledger wire + person
-  // model" commit (e6dae51, cherry-picked from a parallel checkout). Its
-  // own loom/maps/ledger-wire-person-model-map.js declares real wires
-  // into nexus.lib.ledger-fanin, nexus.cortex.jaa-db, and nexus.lib.
-  // component-ledger — three real, foundational, heavily-depended-on
-  // files that had never been registered in THIS checkout's registry
-  // under any id, confirmed by checking directly (not an id mismatch,
-  // genuinely absent). Registered here so those real wires can resolve.
-  ['lib/ledger-fanin.js',        'nexus.lib.ledger-fanin',        'lib',           []],
-  ['cortex/memory/jaa-db.js',    'nexus.cortex.jaa-db',           'cortex/memory', []],
-  ['lib/component-ledger.js',    'nexus.lib.component-ledger',    'lib',           []],
-
-  // §ADDED 2026-08-17d — the real consumer-side entry points the person-
-  // model map's own CONSUMER_EDGES reference, also found genuinely
-  // missing by checking directly, not assumed.
-  ['autopilot.js',               'nexus.autopilot',               '.',      []],
-  ['copilot/server.js',          'nexus.copilot.server',          'copilot', []],
-  ['service/nexus-diagnostic.js','nexus.service.nexus-diagnostic','service', []],
-  ['cos/kernel.js',              'nexus.cos.kernel',              'cos',     []],
-
-  // §ADDED 2026-08-17e — GA3. guardian/server.js itself was found
-  // genuinely unregistered under any id while adding its real tool-index
-  // bridge routes (checked directly, not assumed). A real, significant,
-  // pre-existing gap, not something this session's own work caused.
-  ['guardian/server.js', 'nexus.guardian.server', 'guardian', []],
 ];
 
 function mapSession20260814(driver) {

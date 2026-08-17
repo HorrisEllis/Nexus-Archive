@@ -1,3 +1,0 @@
-{"action":"gap_escalated","type":"system_offline","system":"emerge","port":4242,"severity":"high","offlineMs":30333,"fix":"Start emerge: node emerge/boot.js or node service/emerge-service.js","body":"emerge offline for 30s — :4242 not responding","gapUuid":"41350b81-52d9-4e6d-a31f-386d0f40a88f","ts":1786989848343}
-{"action":"forge_shell_unavailable","reason":"orchestrator offline","fix":"Start orchestrator","ts":1786990509491}
-{"action":"gap_escalated","type":"system_offline","system":"emerge","port":4242,"severity":"high","offlineMs":30185,"fix":"Start emerge: node emerge/boot.js or node service/emerge-service.js","body":"emerge offline for 30s — :4242 not responding","gapUuid":"d8cd3959-038e-4d6a-b3c8-631c4273dd73","ts":1786993306488}

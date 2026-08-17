@@ -57,69 +57,12 @@ const _resourceMonitor = new ResourceMonitor({ name: 'autopilot', intervalMs: 15
 // autopilot itself — so the stream "all points towards autopilot" for real.
 // §1.2 — wrapped; a fan-in wiring failure must never stop the boot.
 let _faninEvents = [];   // autopilot's live view of the whole-system stream
-let _ledgerWire = null;  // §ledger-wire — remote systems' ledger streams (cross-process)
 try {
   const { wireFanin } = require('./lib/ledger-fanin/boot');
   const _fw = wireFanin({
     onAutopilot: (row) => { _faninEvents.push(row); if (_faninEvents.length > 1000) _faninEvents.shift(); },
   });
   console.error(`[autopilot] §P1 fan-in wired: ${_fw.wired.join(', ')}${_fw.skipped.length ? ' (deferred: ' + _fw.skipped.map(s => s[0]).join(',') + ')' : ''}`);
-
-  // §LEDGER-WIRE 2026-08-17 — the deferred consumers, actually connected.
-  //
-  // 'deferred: copilot' above was never going to resolve on its own. The
-  // fan-in's subscriber list is module state, so it is per-PROCESS, and
-  // copilot/cortex/diagnostic are all separate spawned processes. The note
-  // "co-pilot subscribes at its own boot" was true and useless: it subscribed
-  // to its own array, in its own process, which autopilot cannot see. Nothing
-  // was broken — the wire simply did not exist.
-  //
-  // These subscriptions ARE that wire. Each emitter serves /ledger/stream
-  // (lib/ledger-sse.mount) in canonical component-ledger schema; each row
-  // arriving here is replayed into autopilot's LOCAL fan-in, so activity-log,
-  // intelligence and the snapshot trigger all receive it exactly as if it had
-  // been emitted in-process. §14.4 — relayed rows are tagged and never
-  // re-broadcast, so two systems watching each other cannot loop.
-  //
-  // §1.2 — an emitter that is down is a REPORTED state ('never-reached'), not
-  // a quiet zero. That distinction is the whole point: a silent stream and an
-  // idle stream look identical until you insist they don't.
-  try {
-    const ledgerSSE = require('./lib/ledger-sse');
-    // NOTE the key is `system:`, not `name:` — deliberately, and this comment
-    // deliberately does not spell the colliding literal out either.
-    //
-    // test-boot-log-fixes BL-001 locates the diagnostic KERNEL by slicing this
-    // file from the first occurrence of that kernel's name-key pair. Writing the
-    // same pair here put a second occurrence ~120 lines above the kernel table
-    // and silently hijacked the search, so a passing test began failing while
-    // the code it checks was untouched. Spelling it out in a comment reproduced
-    // the identical break — string-scanning tests do not distinguish code from
-    // prose. The fix belongs here, not in loosening the assertion.
-    _ledgerWire = ledgerSSE.attachAll([
-      { system: 'copilot',    url: 'http://127.0.0.1:3750/ledger/stream' },
-      { system: 'cortex',     url: 'http://127.0.0.1:3748/ledger/stream' },
-      { system: 'diagnostic', url: 'http://127.0.0.1:7825/ledger/stream' },
-      { system: 'guardian',   url: 'http://127.0.0.1:7820/ledger/stream' },
-      { system: 'loom',       url: 'http://127.0.0.1:3752/ledger/stream' },
-    ]);
-    console.error(`[autopilot] §ledger-wire consuming: ${_ledgerWire.attached.join(', ')}`
-      + (_ledgerWire.failed.length ? ` (failed: ${_ledgerWire.failed.map(f => f[0]).join(',')})` : ''));
-  } catch (e) {
-    console.error(`[autopilot] §ledger-wire unavailable: ${e.message} — remote system activity will NOT be visible here`);
-  }
-
-  // error.log — the plain file that outlives the systems it reports on. The
-  // cortex error_log TABLE already exists and stays; but it is only readable
-  // when cortex is up and the store loads, which is exactly not true during
-  // the failures worth reading. §2.1 disk first.
-  try {
-    const elog = require('./lib/error-log');
-    elog.attach(require('./lib/ledger-fanin'));
-    console.error(`[autopilot] §error-log active — ${elog.LOG_PATH}`);
-  } catch (e) {
-    console.error(`[autopilot] §error-log unavailable: ${e.message}`);
-  }
 
   // §2026-08-08 — wire + VERIFY the whole intelligence substrate at boot:
   // intelligence (learner) + RFR2 (relational-field) + CFR (field/regime) +
@@ -703,16 +646,7 @@ function _startStatusServer() {
     if (req.url === '/status') {
       // §1.2 — a halted boot must be visible to any observer (the tablet
       // reads this), not only to whoever was watching the terminal.
-      // §ledger-wire — the observability James asked for: co-pilot activity,
-      // visible here. `blind` names every emitter never reached, so a quiet
-      // system and an unobserved one are never confused for each other.
-      let ledger = null;
-      try {
-        const lsse = require('./lib/ledger-sse');
-        ledger = { ...lsse.health(), errorLog: require('./lib/error-log').health(),
-                   recentEvents: _faninEvents.slice(-25) };
-      } catch (e) { ledger = { ok: false, error: e.message }; }
-      const body = JSON.stringify({ ok: true, kernels: _statusSnapshot(), boot: _bootResult, ledger, ts: Date.now() }, null, 2);
+      const body = JSON.stringify({ ok: true, kernels: _statusSnapshot(), boot: _bootResult, ts: Date.now() }, null, 2);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(body);
       return;
