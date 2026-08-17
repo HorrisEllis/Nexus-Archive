@@ -1,1 +1,0 @@
-{"uuid":"5fbb8f26-1747-47e4-9a4d-daef36666e22","system":"bridge","component":"b.y","action":"route","status":"ok","tags":[],"detail":null,"causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"modules/test-p1-fanin-live.js:45","ts":1786967482715}

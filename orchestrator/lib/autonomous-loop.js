@@ -361,11 +361,24 @@ async function startRun(opts = {}) {
   const { jaaDB: jaa, uid: _uid } = (() => {
     try { return require('../../cortex/memory/jaa-db'); } catch(_) { return { jaaDB: null, uid: () => require('crypto').randomUUID() }; }
   })();
-  const snap    = _safeRequire('../cortex/snapshot');
-  const cLib    = _safeRequire('./case-library');
-  const cEngine = _safeRequire('./compartment-engine');
-  const iClass  = _safeRequire('./intent-classifier');
-  const taxonomy= _safeRequire('./open-loop-taxonomy');
+  // §BUGFIX 2026-08-17 — every one of these 5 requires used the wrong
+  // relative prefix (checked against the real, working jaa-db require two
+  // lines above, and against the real file locations directly, not
+  // assumed): '../cortex/snapshot' and './case-library' etc. all resolved
+  // inside orchestrator/ itself, where none of these files live — the
+  // real locations are cortex/snapshot/index.js and lib/{case-library,
+  // compartment-engine,intent-classifier,open-loop-taxonomy}.js.
+  // _safeRequire's try/catch swallowed every one of these silently, so
+  // gap creation (taxonomy.createLoop, line ~450) has been calling a
+  // method on null every real run — explains the observed cascade of
+  // real test failures (T-013 gap never inserted, T-015/016/017 all
+  // falling through to BUDGET_EXHAUSTED instead of their real branch,
+  // because the gap that should have driven that branching never existed).
+  const snap    = _safeRequire('../../cortex/snapshot');
+  const cLib    = _safeRequire('../../lib/case-library');
+  const cEngine = _safeRequire('../../lib/compartment-engine');
+  const iClass  = _safeRequire('../../lib/intent-classifier');
+  const taxonomy= _safeRequire('../../lib/open-loop-taxonomy');
   const COST    = _safeRequire('./request-handler')?.COST_TIERS || { LLM_LOCAL: 0.5 };
 
   const runId = require('crypto').randomUUID();
@@ -516,11 +529,11 @@ function _safeRequire(mod) {
 function validateWiring() {
   return {
     ok:               true,
-    jaa:              !!_safeRequire('../cortex/memory/jaa-db')?.jaaDB,
-    intentClassifier: !!_safeRequire('./intent-classifier')?.classify,
-    caseLibrary:      !!_safeRequire('./case-library')?.query,
-    compartmentEngine:!!_safeRequire('./compartment-engine')?.spawn,
-    taxonomy:         !!_safeRequire('./open-loop-taxonomy')?.createLoop,
+    jaa:              !!_safeRequire('../../cortex/memory/jaa-db')?.jaaDB,
+    intentClassifier: !!_safeRequire('../../lib/intent-classifier')?.classify,
+    caseLibrary:      !!_safeRequire('../../lib/case-library')?.query,
+    compartmentEngine:!!_safeRequire('../../lib/compartment-engine')?.spawn,
+    taxonomy:         !!_safeRequire('../../lib/open-loop-taxonomy')?.createLoop,
   };
 }
 

@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        repair-contract-and-loom-hub
-    version:     0.2.0-phasemap  # real addendum 2026-08-17
+    version:     0.1.0-phasemap
     status:      PHASEMAP 2026-08-12. Mapped, not built. §3.3 — map before build.
     uuid:        nexus-repair-loom-hub-v0-0000-2026-0812-001
     author:      James Brooks
@@ -356,40 +356,6 @@ spec:
       axioms: ["§0.5 — complexity earns its existence", "§8.6", "§0.1"]
 
   first_build: "R0 first — cheap, and every other phase's progress becomes durable once it exists. Then R1, R2, R7, R9, and R10 in parallel — none depend on each other, all are pure foundation. R3 cannot be trusted until R1+R2 are real. R4 can start any time. R5 waits on R4. R8 waits on R1. R6 is last."
-
-  # ── §ADDENDUM 2026-08-17 — real work this session, recorded here since ──
-  # it's the closest existing spec to what it touches (repair contracts,
-  # gap-field, loom hub), not a new fragment:
-  #   - lib/nexus-client.js: postDurable()/drainBuffer() — a real, disk-
-  #     persisted retry queue for cross-system POSTs that fail specifically
-  #     because the target is unreachable (not a real application error).
-  #     Verified across real separate process boundaries — a write buffered
-  #     by one process, genuinely delivered by a different one once the
-  #     target came back. Relevant to R3 above: an autonomous repair that
-  #     itself needs to notify another system is now durable against that
-  #     system being briefly down, not silently lost.
-  #   - lib/gap-priority.js + lib/system-check.js: bottom-up, architecture-
-  #     first priority scoring for gaps (real vitality from autopilot's own
-  #     boot-phase data, real dependency weight from loom's own wire graph),
-  #     and a real boot-time check (presence AND, as of this addendum, real
-  #     functional verification — syntax + live /health) in that exact
-  #     order, wired into service/nexus-diagnostic.js's real boot sequence.
-  #   - lib/gap-field.js: logFix() — no close/resolve path existed before;
-  #     every real fix this session recorded itself there, same table real
-  #     gaps live in, same real priority scoring.
-  #   - lib/tool-index.js wired into lib/agent-tools/index.js for the first
-  #     time — real, cortex-persisted usage depth (consumers/intents/edge
-  #     cases) now populates from every real tool call, not just sits empty.
-  #   - lib/intent-hat-router.js: automatic verb->hat switching for co-
-  #     pilot, temporarily, restored via a real finally block even on error.
-  #   - scripts/precommit-check.js: a real syntax + require()-crash gate on
-  #     every staged .js file — the correctly-scoped version of "tests
-  #     enforced before output," given the full ~1400-test suite's real
-  #     runtime makes it unsuitable as a per-commit block.
-  # All registered in loom/maps/session-2026-08-14-map.js (verified: 0
-  # failures on a clean run, not assumed) — gap-priority.js and
-  # intent-hat-router.js had NO loom entry at all before this addendum,
-  # found by checking directly, not assumed present.
 
   open_questions_not_yet_resolved:
     - "R2: CONFIRMED — idearium/index.js line 713: `parentId: os.db.snapshots[0]?.uuid || null`. Always picks the most recently created snapshot, ignores any declared branch entirely. A linear chain wearing a branch label, exactly as versionium.spec claimed — independently verified this session, not taken on trust. Real dependency for R2's build order (fix this before layering real branching on top of it)."
