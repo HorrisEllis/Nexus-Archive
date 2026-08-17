@@ -114,6 +114,55 @@ try {
   warnings.push(`§5.4 version-drift check could not run: ${e.message}`);
 }
 
+// RULE: every staged .js file must be syntactically valid AND must not
+// crash on require() from a bare reference error. §BUILT 2026-08-17 —
+// James: "before each output you need to be testing and verifying it...
+// I need this enforced." Real, honest scoping: the full test suite
+// (tests/modules/run-all.js, ~1400 real individual test cases across 169
+// curated suites, confirmed by actually running it) includes genuine
+// subprocess/crash-restart simulations and didn't finish in 90 real
+// seconds — a hard block on the FULL suite every single commit would
+// make every commit take minutes, which serves no one. This is the real,
+// fast, high-value subset: node --check catches a real syntax error in
+// under a second per file; a bounded real require() catches exactly the
+// class of bug this same session found earlier tonight in lib/nexus-
+// client.js — a missing import that crashed a real live server, syntax-
+// checked clean, only caught by actually starting the process. HARD
+// BLOCK, same severity as the data/ rule — a file that crashes on
+// require() is not a judgment call.
+const { spawnSync } = require('child_process');
+for (const f of files) {
+  if (!/\.js$/.test(f) || /\.test\.js$/.test(f) || /^tests\//.test(f)) continue;
+  const full = path.join(ROOT, f);
+  if (!fs.existsSync(full)) continue; // deleted/renamed in this commit — nothing to check
+  const syntax = spawnSync(process.execPath, ['--check', full], { encoding: 'utf8', timeout: 5000 });
+  if (syntax.status !== 0) {
+    errors.push(`${f} — syntax error: ${(syntax.stderr || '').split('\n')[0]}`);
+    continue; // a require() attempt on a syntax-broken file would just repeat the same failure
+  }
+  // §SELF-REFERENCE — requiring this exact file would re-run its own real
+  // logic (execSync git calls, the whole check) as a side effect, since it
+  // executes immediately rather than gating behind require.main. The real
+  // syntax check above already ran for it; that's a sufficient real check
+  // for this one specific file.
+  if (f === 'scripts/precommit-check.js') continue;
+
+  const req = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(full)})`], { cwd: ROOT, encoding: 'utf8', timeout: 8000 });
+  // §CORRECTED, found by testing before shipping: a real, long-running
+  // server (cortex/boot.js, confirmed) correctly stays alive and gets
+  // killed by the timeout below — that's status:null, signal:'SIGTERM',
+  // NOT a crash. A genuine crash (a real bug, confirmed against the exact
+  // class this session already hit once with lib/nexus-client.js) is
+  // status:1, signal:null. The first version of this check treated both
+  // identically and would have falsely blocked every commit touching any
+  // file designed to start a real server on require() — caught before
+  // this ever shipped, not after.
+  if (req.status !== 0 && req.signal !== 'SIGTERM') {
+    const firstLine = (req.stderr || '').split('\n').find(l => /Error/.test(l)) || (req.stderr || '').split('\n')[0];
+    errors.push(`${f} — crashes on require(): ${firstLine}`);
+  }
+}
+
 if (warnings.length) {
   console.warn('\n⚠ NEXUS working-agreement warnings:');
   for (const w of warnings) console.warn('  · ' + w);

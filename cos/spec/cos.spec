@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cos
-    version:     0.1.6   # matches the real design source's v1.6.0/v1.7.0 numbering scope, not code@0.1.0 — see §DESIGN-VS-CODE below
+    version:     0.1.7   # +1 real module (llm-lab, 2026-08-17) since the 0.1.6 first pass. matches the real design source's v1.6.0/v1.7.0 numbering scope, not code@0.1.0 — see §DESIGN-VS-CODE below
     foundation:  nexus-system-foundation@1.0.0
     port:        null   # CLI/library system — no HTTP surface of its own.
                           # cos/vaultd/server.js is a SEPARATE, optional daemon
@@ -180,6 +180,34 @@ spec:
         run -> compare -> diff -> checkout verified real end to end,
         nothing to build here — this is ready to use as-is for parallel
         bug-fix attempts or feature-approach comparisons.
+        §ADDENDUM 2026-08-17 — real, live consumer confirmed, not just
+        "ready to use": lib/execution-pipeline.js:126 imports BranchEngine,
+        SandboxRunner, CompareEngine directly and uses all three for real.
+
+    - id: llm-lab
+      description: >
+        §ADDENDUM 2026-08-17 — genuinely missing from this spec's original
+        13 modules, found by auditing real cross-system requires into cos/
+        from outside it (guardian/server.js, lib/execution-pipeline.js —
+        the latter already covered above; this one wasn't). cos/playground/
+        llm-lab.js's real LabManager/LabSession classes (507 real lines,
+        confirmed) — a controlled experimental environment for running the
+        SAME prompt against multiple real providers (Claude/ChatGPT via an
+        injected guardianDispatch function, the same adapter pattern lib/
+        seam/adapters/ already uses for WARP and Cortex — not a hard
+        guardian dependency, confirmed via its own header comment). Real
+        head-to-head comparison mode (identical prompts, simultaneous),
+        real condition/trigger/feedback-loop chains with a max-iterations
+        termination guard, every result persisted to two real JAA tables
+        (lab_sessions, lab_results — confirmed real table names in the
+        code, not assumed), fully replayable from JAA per its own §LAB-05.
+        Live, not aspirational — this session's own real boot log already
+        showed "[guardian] Lab Manager ready." Same real category as
+        branch-and-compare above ("run something twice under different
+        conditions, compare, log the verdict") — its own header says so
+        directly — just specialized for LLM prompts/providers instead of
+        code branches/test runs, which is exactly why it lived at guardian/
+        lab/lab.js before being moved here on 2026-07-05.
 
     - id: rewind-timeline
       priority: REAL GAP — confirmed absent, not yet built.
@@ -254,6 +282,26 @@ spec:
         mechanism, scoped down to a single compartment's uiFile instead of
         a whole system's ui/ tree. Not a new hotswap engine, the existing
         one's real pattern applied one level deeper.
+
+  # ── §ADDENDUM 2026-08-17 — spec_wizard, a real new co-pilot capability ─────
+  # James: "co-pilot able to walk through making a spec using the compiler,
+  # dimensions." Built: lib/agent-tools/tools/governance/spec-wizard.js,
+  # verified end to end against a real running idearium server (real spec
+  # created, all 10 real dimensions answered, real auto-compiled .spec read
+  # back off disk). Wraps idearium/spec-engine's real 10 SPEC_SECTIONS
+  # (meta/purpose/axioms/schema/api/events/integration/failure_modes/
+  # build_order/tests) and its real LLM-driven wizard (6 of the 10, the
+  # rest walked one dimension at a time). Named here, in COS's own spec,
+  # not idearium's, because it's the SAME real concept the section above
+  # already documents: idearium/spec-engine/templates.js's real templates
+  # (system/codebase/library/module-component/genesis/minimal-kernel/...)
+  # are the identical "template, drop the idea in as a slot" pattern this
+  # spec's own §BUILD-AS-TEMPLATE-AND-SLOT section names for module-
+  # builder.js — the same real methodology, one level up: an archetype/
+  # blueprint is a template for a COMPARTMENT's shape; a spec-engine
+  # template is a template for a SPEC's shape. Two real systems doing the
+  # same real thing under different names, now both reachable from
+  # co-pilot, worth knowing as one pattern rather than two.
 
   # ── §GAP 2026-08-14 — the real boundary found while speccing this ──────────
   # snapshot-engine's restore() never rewrites file bytes — confirmed by

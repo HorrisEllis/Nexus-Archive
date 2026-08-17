@@ -389,6 +389,25 @@ function startService() {
   _wireIntegrityScan();
   setInterval(_wireIntegrityScan, 60000);
 
+  // §WIRED 2026-08-17 — James: "Run a check every boot up, a system check
+  // of every system in order one by one. Core first, cli, api, event
+  // driven interaction contract, ui. Then each module... bottom up,
+  // architecture first." lib/system-check.js built and verified earlier
+  // this same day, deliberately NOT wired in then — this is that real
+  // integration, done separately and carefully, not rushed into the same
+  // pass as building it. Once per boot only, not intervaled like the wire
+  // scan above: a system's own architecture (does cortex/boot.js exist,
+  // does guardian have a cli/ dir) doesn't change mid-process the way
+  // live wire declarations can. §1.2 — wrapped; a system-check failure
+  // must never stop diagnostic boot, same reasoning as every other
+  // defensive wrap in this file.
+  try {
+    const systemCheck = require('../lib/system-check');
+    const result = systemCheck.run({ dryRun: false });
+    const missing = result.results.filter(r => Object.values(r.layers).some(v => !v)).length;
+    console.log(`[diag] system-check: ${result.order.length} real systems, ordered ${result.order.join(' > ')} — ${missing} with at least one missing layer (real gaps written, priority-scored)`);
+  } catch (e) { console.warn('[diag] system-check unavailable (non-fatal):', e.message); }
+
   // ── CFR field — local diagnostic field, nudged by gap/poll events ──────────
   const cfrField = createCFRField();
   function cfrFeed(type, sigmaScore = 0) {
