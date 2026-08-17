@@ -29,7 +29,7 @@ let _pulseEmitter = null;
  */
 function startPulse(systemId, port) {
   try {
-    const { createPulseEmitter } = require('./heartbeat');
+    const { createPulseEmitter } = require('./lib/heartbeat');
     const SYSTEM_UUIDS = {
       cortex:       'nexus-cortex-0000-4000-0000-000000000001',
       guardian:     'nexus-guardian-0000-4000-0000-000000000001',

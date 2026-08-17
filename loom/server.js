@@ -637,7 +637,7 @@ function register() {
     timeout: 4000 }, () => {
     console.log('[loom] registered');
     try {
-      const { startHeartbeat } = require('../lib/connect');
+      const { startHeartbeat } = require('../nexus-connect');
       startHeartbeat(SYSTEM_ID, PORT);
     } catch (_) { /* nexus-connect optional — never crash the server over a heartbeat */ }
   });

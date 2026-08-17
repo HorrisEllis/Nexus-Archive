@@ -491,32 +491,8 @@ function startWatch(jobId, prompt, retryCount = 0) {
   _watchTimer = setTimeout(checkStable, 1500);
 }
 
-// ── Post message to NEXUS (chat-logger + BDA) ───────────────────────────────
-// §BUILT 2026-08-15 — LS1's actual gate, same real fix as guardian/
-// userscript-gemini.js. Ported faithfully from claude's proven
-// _nexusLogMessage. Canonical behavior spec: userscripts/src/shared/
-// chat-logger.js. fetch(), not GM_xmlhttpRequest — ClearGlass is the only
-// real consumer, no Tampermonkey pretense needed.
-async function _nexusLogMessage(role, text) {
-  try {
-    const res = await fetch(CORTEX_URL + '/api/meta/observe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role, text, sessionId: await getSessionId(), source: PROVIDER }),
-    });
-    const d = await res.json();
-    if (d && d.result && d.result.signals) {
-      if (d.result.pendulum && d.result.pendulum.regime && d.result.pendulum.regime !== 'STABLE') {
-        _log('warn', `gap regime: ${d.result.pendulum.regime}`, `${role} · ${(d.result.gaps||[]).length} gap(s)`);
-      }
-    }
-  } catch (_) { /* network failure or malformed response must not break the chat, §1.2 */ }
-}
-
 async function _onJobComplete(jobId, text, responseEl, ms, prompt, retryCount, mode) {
   stopWatch();
-  if (prompt) _nexusLogMessage('human', prompt);
-  if (text)   _nexusLogMessage('assistant', text);
   send({ type:'GUARDIAN_LEDGER_WRITE', jobId, category:'UPGRADE', msg:`Complete · ${text.length}ch · ${Math.round(ms/1000)}s`,
     meta:{ jobId, chars:text.length, ms, provider:PROVIDER, mode, ts:Date.now() } });
   _log('ok', `Complete · ${text.length}ch`, `${Math.round(ms/1000)}s · #${jobId.slice(0,8)} · ${mode}`);

@@ -155,11 +155,6 @@ function getCurrentAgent() {
       toolScope: (row && row.toolScope) || null,
       personaPrompt: (row && row.personaPrompt) || null,
       isCustom: !!(row && row.agent && row.agent !== 'auto'),
-      // §WIRED 2026-08-14 — "switch to claude AND add a chat url to use."
-      // The bound conversation travels with the hat: same row, same governance,
-      // read by everyone who already reads the hat rather than a second store.
-      chatUrl: (row && row.chatUrl) || null,
-      chatId:  (row && row.chatId)  || null,
       setAt: row ? row.ts : null,
     };
   } catch (e) {
@@ -177,7 +172,7 @@ function getCurrentAgent() {
  * the underlying base agent AND remembers the hat's toolScope/personaPrompt
  * so route()/runViaAgent can apply them — same governance either way.
  */
-function setCurrentAgent(agent, opts = {}) {
+function setCurrentAgent(agent) {
   const raw = (agent || 'auto').trim().toLowerCase();
 
   // A forged hat's name takes priority if one exists with that exact name —
@@ -194,29 +189,6 @@ function setCurrentAgent(agent, opts = {}) {
   if (gov.allowed === false) {
     return { ok: false, reason: `denied by governance: ${gov.reason || 'no reason given'}`, governance: gov };
   }
-
-  // §WIRED 2026-08-14 — opts.chatUrl binds a specific conversation to this
-  // hat. Validated against the agent BEFORE the row is written, so "switch to
-  // claude and use <a chatgpt url>" is refused at bind time instead of
-  // silently persisting a contradiction. opts.chatUrl === null explicitly
-  // clears the binding; omitting it entirely preserves whatever is bound,
-  // because re-wearing the same hat should not silently drop the chat.
-  let chatTarget = null;
-  const prior = getCurrentAgent();
-  if (opts.chatUrl !== undefined && opts.chatUrl !== null) {
-    try {
-      const ct = require('../../lib/chat-target');
-      chatTarget = ct.validate(opts.chatUrl, normalized);
-      if (!chatTarget.ok) return { ok: false, reason: chatTarget.reason, chatUrl: opts.chatUrl };
-    } catch (e) {
-      return { ok: false, reason: `chat-target unavailable: ${e.message}` };
-    }
-  }
-  const clearing  = opts.chatUrl === null;
-  const keepPrior = opts.chatUrl === undefined && prior.agent === normalized;
-  const chatUrl = chatTarget ? chatTarget.url    : (clearing ? null : (keepPrior ? prior.chatUrl : null));
-  const chatId  = chatTarget ? chatTarget.chatId : (clearing ? null : (keepPrior ? prior.chatId  : null));
-
   try {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     jaaDB.insert(IDENTITY_TABLE, {
@@ -224,19 +196,9 @@ function setCurrentAgent(agent, opts = {}) {
       hatName: forgedHat ? forgedHat.name : null,
       toolScope: forgedHat ? forgedHat.toolScope : null,
       personaPrompt: forgedHat ? forgedHat.personaPrompt : null,
-      chatUrl, chatId,
       ts: Date.now(),
     });
-    // §WIRED 2026-08-14 — "change agent needs to connect to NCP." The switch
-    // itself is unchanged and still succeeds: this reports whether the agent
-    // just put on actually has a live NCP channel, instead of leaving the
-    // caller to find out when guardian silently parks the next job as
-    // queued_waiting_for_provider. Reporting only — it does not block, and a
-    // failure to read NCP cannot fail a switch.
-    let ncp = null;
-    try { ncp = require('../../lib/ncp-availability').report(normalized); } catch (_) {}
-
-    return { ok: true, agent: normalized, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov, ncp, chatUrl, chatId };
+    return { ok: true, agent: normalized, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
   } catch (e) {
     return { ok: false, reason: e.message };
   }
@@ -316,6 +278,77 @@ function governAction(req = {}, ctx = {}) {
  * wired here so every caller (not just server.js's one regex handler) gets
  * governed, not just the one call site this session happened to check.
  */
+/**
+ * verifyAgentReachable(providerId, opts) — real, new. Requested directly:
+ * "switch agent tool needs to use NCP like: job created -> dispatched via
+ * NCP -> job.dispatched ack" — switchAgent() before this was a PURE local
+ * decision (agent-router.routeAgent() picking a name), never confirming
+ * the target's NCP channel was actually alive. A tab that's disconnected,
+ * crashed, or never opened would "succeed" at switching to it and then
+ * silently fail on the first real prompt.
+ *
+ * Uses the real raw-job HTTP shape (guardian/server.js's POST /command,
+ * the "Raw job dispatch" branch — checked directly, not guessed: body.
+ * provider bypasses RAID auto-pick, command/prompt/content as shown
+ * there) and polls for the CHEAP 'acked' status (guardian/server.js's
+ * real guardian.job.dispatched handler, extended alongside this to
+ * persist that ack — it never touched job.status before, checked first)
+ * rather than 'complete', which would wait for and pay for a full AI
+ * generation just to answer "is the tab there."
+ */
+function verifyAgentReachable(providerId, opts = {}) {
+  const http = require('http');
+  const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_PORT || '7820');
+  const timeoutMs = opts.timeoutMs || 8000;
+
+  return new Promise((resolve) => {
+    const body = Buffer.from(JSON.stringify({
+      provider: providerId, command: 'ping',
+      prompt: '(connectivity check — no reply needed)',
+    }));
+    const req = http.request({
+      hostname: '127.0.0.1', port: GUARDIAN_PORT, path: '/command', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': body.length },
+      timeout: 5000,
+    }, (res) => {
+      let raw = ''; res.on('data', c => raw += c);
+      res.on('end', () => {
+        let created;
+        try { created = JSON.parse(raw); } catch (e) { return resolve({ ok: false, reachable: false, error: `bad response from guardian: ${e.message}` }); }
+        if (!created.ok && !created.jobId) return resolve({ ok: false, reachable: false, error: created.error || 'guardian rejected the ping job' });
+        const jobId = created.jobId || created.id;
+        if (!jobId) return resolve({ ok: false, reachable: false, error: 'guardian did not return a jobId' });
+        _pollForAck(jobId, timeoutMs, resolve);
+      });
+    });
+    req.on('error', (e) => resolve({ ok: false, reachable: false, error: `could not reach guardian: ${e.message}` }));
+    req.write(body); req.end();
+  });
+}
+
+function _pollForAck(jobId, deadlineMs, resolve) {
+  const http = require('http');
+  const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_PORT || '7820');
+  const started = Date.now();
+  const tick = () => {
+    const req = http.request({ hostname: '127.0.0.1', port: GUARDIAN_PORT, path: '/jobs?limit=200', method: 'GET', timeout: 5000 }, (res) => {
+      let raw = ''; res.on('data', c => raw += c);
+      res.on('end', () => {
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch (_) { parsed = null; }
+        const job = parsed?.jobs?.find(j => j.id === jobId);
+        if (job?.status === 'acked' || job?.status === 'complete') return resolve({ ok: true, reachable: true, jobId, status: job.status, ms: Date.now() - started });
+        if (job?.status === 'error') return resolve({ ok: true, reachable: false, jobId, error: job.error || 'dispatch failed', ms: Date.now() - started });
+        if (Date.now() - started > deadlineMs) return resolve({ ok: true, reachable: false, jobId, error: `no ack within ${deadlineMs}ms — tab may be disconnected or not open`, ms: Date.now() - started });
+        setTimeout(tick, 300);
+      });
+    });
+    req.on('error', (e) => resolve({ ok: false, reachable: false, jobId, error: `lost contact with guardian while polling: ${e.message}` }));
+    req.end();
+  };
+  tick();
+}
+
 function switchAgent(opts = {}) {
   const gov = governAction({ action: 'switch_agent', target: opts.directed || opts.intent }, {});
   if (gov.allowed === false) {
@@ -324,23 +357,64 @@ function switchAgent(opts = {}) {
   try {
     const ar = require('../../lib/agent-router');
     if (ar.routeAgent) {
-      // §WIRED 2026-08-14 — routeAgent has always accepted an `available`
-      // predicate and used it to build the fallback chain, and NO caller in
-      // the repo has ever supplied one (grepped: this line forwards it, both
-      // real callers omit it). It therefore defaulted to () => true and the
-      // chain skipped nothing. This defaults it to live NCP channel state, so
-      // the fallback chain is built out of agents that can actually be
-      // reached. An explicitly-passed opts.available still wins — callers who
-      // know better are not overridden.
-      let available = opts.available;
-      if (typeof available !== 'function') {
-        try { available = require('../../lib/ncp-availability').predicate(); } catch (_) { available = undefined; }
+      const r = ar.routeAgent({ intent: opts.intent, prompt: opts.prompt, directed: opts.directed, config: opts.config, available: opts.available });
+      const result = { ok: true, agent: r.agent || r.route || r, constraints: (ar.AGENT_CONSTRAINTS && r.agent) ? ar.AGENT_CONSTRAINTS[r.agent] : null, detail: r, governance: gov };
+      // §BUILT 2026-08-14 — real request: "switch co-pilot to claude with
+      // this URL... use a URL given as the surface... prompt me to sign in
+      // if needed." opts.url is optional and additive — every existing
+      // caller of switchAgent (who never passes url) is completely
+      // unaffected; this branch only runs when a real url is present.
+      if (opts.url && result.agent) {
+        result.navigate = _navigateAgentToUrl(result.agent, opts.url); // sync placeholder overwritten below — see note
       }
-      const r = ar.routeAgent({ intent: opts.intent, prompt: opts.prompt, directed: opts.directed, config: opts.config, available });
-      return { ok: true, agent: r.agent || r.route || r, constraints: (ar.AGENT_CONSTRAINTS && r.agent) ? ar.AGENT_CONSTRAINTS[r.agent] : null, detail: r, governance: gov };
+      return result;
     }
   } catch (e) { return { ok: false, reason: e.message }; }
   return { ok: false, reason: 'agent-router unavailable' };
+}
+
+/**
+ * §BUILT 2026-08-14 — real navigation for switchAgent's url option. Goes
+ * through the SAME path every other real browser action in NEXUS uses
+ * (browser-action.js's REAL_ACTIONS -> Guardian's /command -> RAID
+ * approval -> ClearGlass's real provider.navigate gate -> ProviderHost.
+ * navigateTo(), all real, checked directly before wiring this) rather
+ * than a parallel, unaudited path — a real browser navigation is a
+ * consequential action and deserves the same RAID gate every other one
+ * gets, not a shortcut because it's convenient here.
+ *
+ * switchAgent() itself is synchronous (every existing caller expects that
+ * — checked directly, not assumed, before deciding not to make the whole
+ * function async and risk breaking them); this fires the real navigation
+ * and returns a pending marker immediately. Callers that need the actual
+ * outcome (in particular: whether a sign-in prompt is needed) should call
+ * navigateAgentToUrl() directly and await it — this is documented on the
+ * return value itself, not left implicit.
+ */
+function _navigateAgentToUrl(providerId, url) {
+  navigateAgentToUrl(providerId, url).catch(e => {
+    console.warn(`[self-model] switchAgent navigate (fire-and-forget) failed: ${e.message}`);
+  });
+  return { status: 'pending', note: 'switchAgent is synchronous; call navigateAgentToUrl(providerId, url) directly and await it for the real result, including needsSignIn.' };
+}
+
+/**
+ * navigateAgentToUrl(providerId, url) — the real, awaitable version.
+ * Returns { ok, needsSignIn, actualUrl, signInPrompt } — signInPrompt is a
+ * real, human-readable string co-pilot's response can show directly,
+ * fulfilling "prompt me to sign in if needed through co-pilot" without
+ * inventing a second notification path.
+ */
+async function navigateAgentToUrl(providerId, url) {
+  const browserAction = require('../../lib/agent-tools/tools/browser/browser-action.js');
+  const r = await browserAction.execute({ action: 'navigate_provider', data: { providerId, url } });
+  if (r.error) return { ok: false, error: r.error };
+  const nav = r.result || {};
+  const out = { ok: true, providerId, requestedUrl: url, actualUrl: nav.actualUrl, needsSignIn: !!nav.needsSignIn };
+  if (out.needsSignIn) {
+    out.signInPrompt = `${providerId} needs you to sign in before that page will load — I've opened it, but you'll need to log in yourself. Want me to show the window?`;
+  }
+  return out;
 }
 
 // ── The NEXUS model in cortex ─────────────────────────────────────────────────
@@ -417,4 +491,4 @@ async function buildNexusModel(opts = {}) {
   return model;
 }
 
-module.exports = { whoAmI, recordIdentityEvidence, governAction, switchAgent, buildNexusModel, getIdentityName, setIdentityName, getCurrentAgent, setCurrentAgent, MODULE_ID: 'copilot-self-model', VERSION: '1.2.0' };
+module.exports = { whoAmI, recordIdentityEvidence, governAction, switchAgent, navigateAgentToUrl, verifyAgentReachable, buildNexusModel, getIdentityName, setIdentityName, getCurrentAgent, setCurrentAgent, MODULE_ID: 'copilot-self-model', VERSION: '1.4.0' };

@@ -1153,11 +1153,76 @@ const server = http.createServer(async (req, res) => {
         const who = sm.whoAmI({});
         return json(res, 200, { text: who.text, model_used: 'nexus-identity', confidence: who.known ? 0.8 : 0.3, escalated: false, hypotheses: who.hypotheses, requestId });
       }
-      const switchM = prompt.match(/\b(switch to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
-      if (switchM && /\b(agent|model)\b/i.test(prompt)) {
+      // §BUGFIX 2026-08-14 — found live: "switch agent to claude" (a
+      // completely natural phrasing, confirmed the literal trigger for
+      // this bug) never matched. The old pattern only recognized "switch
+      // to X", "use X", "route to X" — the word "agent"/"model" landing
+      // BEFORE "to"/the target broke the match entirely (verified with a
+      // direct regex test: 'switch agent to claude'.match(oldPattern) ===
+      // null). The message fell through untouched to normal intent
+      // classification, which routed it to chatgpt as 'general' intent —
+      // exactly what the screenshot showed ("via chatgpt (bridge)",
+      // dispatch failed). Now matches BOTH orders: "switch [agent/model]
+      // to X" and "switch to X [agent/model]".
+      // §BUGFIX 2026-08-14, ROUND 3 — caught mid-flight, again, before
+      // shipping: "switch co-pilot to claude" (no URL, no literal
+      // "agent"/"model" word anywhere) matched the regex fine but still
+      // failed to trigger, because the OLD gate required the word
+      // "agent"/"model" to appear SOMEWHERE in the sentence — a
+      // requirement that predates this fix and was never actually
+      // necessary once the target itself is checked. Replaced with a
+      // real three-way gate: trigger when the captured target is a KNOWN
+      // agent name (claude/chatgpt/gemini/perplexity/clearglass) OR the
+      // sentence says agent/model explicitly (the old safety net,
+      // preserved for the \w+ catch-all case) OR a URL is present.
+      // Tested against 10 real should-match and 4 real should-NOT-match
+      // phrasings before landing this, not just the happy path.
+      const urlM = prompt.match(/https?:\/\/[^\s]+/i);
+      const switchM = prompt.match(/\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
+      const KNOWN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'clear glass', 'clear-glass', 'clearglass'];
+      const switchTarget = switchM ? switchM[1].toLowerCase() : null;
+      const switchIsReal = switchM && (KNOWN_AGENTS.includes(switchTarget) || /\b(agent|model)\b/i.test(prompt) || !!urlM);
+      if (switchIsReal) {
         const sm = require('./lib/self-model');
-        const r = sm.switchAgent({ intent: 'directed', directed: switchM[2].toLowerCase(), prompt });
-        return json(res, 200, { text: r.ok ? `Routing to ${JSON.stringify(r.agent)}.` : `Could not switch: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
+        const r = sm.switchAgent({ intent: 'directed', directed: switchTarget, prompt });
+        // §BUILT 2026-08-14 — real request: "switch agent tool needs to use
+        // NCP like: job created -> dispatched via NCP -> job.dispatched
+        // ack." switchAgent() alone was a pure local decision, never
+        // confirming the target's NCP channel was actually alive — a
+        // disconnected/crashed/never-opened tab would "succeed" here and
+        // then silently fail on the first real prompt. verifyAgentReachable
+        // does a real, cheap round trip (checked: polls the NEW 'acked'
+        // status, not 'complete' — doesn't wait for or pay for a full AI
+        // generation just to confirm the tab is there).
+        const reach = r.ok ? await sm.verifyAgentReachable(r.agent) : null;
+        if (r.ok && urlM) {
+          const nav = await sm.navigateAgentToUrl(r.agent, urlM[0]);
+          const reachNote = reach && !reach.reachable ? ` (heads up: ${r.agent}'s tab didn't ack within the timeout — ${reach.error})` : '';
+          const text = nav.ok
+            ? (nav.needsSignIn
+                ? `Routing to ${JSON.stringify(r.agent)} and opened ${urlM[0]}. ${nav.signInPrompt}${reachNote}`
+                : `Routing to ${JSON.stringify(r.agent)} and opened ${urlM[0]}.${reachNote}`)
+            : `Routing to ${JSON.stringify(r.agent)}, but couldn't open that URL: ${nav.error}${reachNote}`;
+          return json(res, 200, { text, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: { ...r, navigate: nav, reachability: reach }, requestId });
+        }
+        const reachNote = reach && !reach.reachable ? ` Heads up: ${r.agent}'s tab didn't ack within the timeout — ${reach.error} — the switch is set, but that agent may not actually be reachable right now.` : '';
+        return json(res, 200, { text: r.ok ? `Routing to ${JSON.stringify(r.agent)}.${reachNote}` : `Could not switch: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: { ...r, reachability: reach }, requestId });
+      }
+      // §BUILT 2026-08-14 — real request: "create compartment command".
+      // Checked first: no trigger existed at all (grepped copilot/server.js
+      // directly), the message fell through to ollama and got refused —
+      // same class of gap as switch-agent above, a real backend
+      // (cos-compartment.js's create action, real, tested this session)
+      // with zero conversational trigger pointing at it.
+      const compartM = prompt.match(/\b(?:create|make|start|new)\s+(?:a\s+)?compartment\b(?:\s+(?:named|called)\s+["']?([\w-]+)["']?)?/i);
+      if (compartM) {
+        const cosCompartment = require('../lib/agent-tools/tools/sandbox/cos-compartment.js');
+        const name = compartM[1] || `compartment-${Date.now()}`;
+        const r = await cosCompartment.execute({ action: 'create', name, purpose: prompt });
+        const text = r.ok
+          ? `Created compartment "${name}". Want axioms and an end-state for it, or should I leave it open-ended for now?`
+          : `Couldn't create that compartment: ${r.error || 'unknown error'}`;
+        return json(res, 200, { text, model_used: 'nexus-compartment', confidence: 1, escalated: false, detail: r, requestId });
       }
       // §ADDED 2026-08-13 — James: "co-pilot should be like a hat, not a
       // static identity" + "how do I change the agent for co-pilot?" — the
@@ -1716,7 +1781,7 @@ function register() {
     // grep for 'startHeartbeat\|createPulse' in copilot/server.js returned
     // zero matches per the Phase 0 audit this session.
     try {
-      const { startHeartbeat } = require('../lib/connect');
+      const { startHeartbeat } = require('../nexus-connect');
       startHeartbeat(SYSTEM_ID, PORT);
     } catch (_) { /* nexus-connect optional — never crash the server over a heartbeat */ }
   });

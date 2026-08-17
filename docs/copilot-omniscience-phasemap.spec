@@ -27,7 +27,7 @@ spec:
   # ── PHASES — bottom-up, each shippable, each gated ──
   phases:
 
-    OM1_copilot_tool_loop:   # ← DONE 2026-07-30 (marker was missing — file's own header already said "ALL 7 PHASES DONE"; confirmed live 2026-08-12: copilot/server.js:1222 requires tool-runtime.js, which calls agentTools.runToolLoop — the gate condition was always actually met)
+    P1_copilot_tool_loop:   # ← DONE 2026-07-30 (marker was missing — file's own header already said "ALL 7 PHASES DONE"; confirmed live 2026-08-12: copilot/server.js:1222 requires tool-runtime.js, which calls agentTools.runToolLoop — the gate condition was always actually met)
       why_first: "The spine. Until copilot runs runToolLoop, nothing else has a working thing to plug into (§1.1 — nothing real until it runs)."
       does: >
         Wire lib/agent-tools into copilot/server.js: inject copilot's existing
@@ -36,7 +36,7 @@ spec:
       axioms: "§16.5 (use the sovereign module, don't duplicate), §10.1 (copilot owns its callModel, not the loop)"
       gate: "a copilot request that needs a file reads it via the read_file tool mid-turn, no pre-upload — proven with a real prompt."
 
-    OM2_persistence_threaded:   # ← DONE 2026-07-30 (commit follows)
+    P2_persistence_threaded:   # ← DONE 2026-07-30 (commit follows)
       why: "'Remember me — vital.' The loop must carry user-model + cortex memory as context, and write back what it learns."
       does: >
         user-model.init(jaaDB) at copilot boot; inject its hypotheses into the
@@ -45,7 +45,7 @@ spec:
       axioms: "§0.3 (nothing lost — memory persists), §10.1 (cortex owns the store, copilot reads/writes through it)"
       gate: "restart copilot; a fact it learned last session is present in the next session's context, read from cortex."
 
-    OM3_continuous_stream_to_copilot:   # ← DONE 2026-07-30
+    P3_continuous_stream_to_copilot:   # ← DONE 2026-07-30
       why: "Omniscience, half 1. stream-digest already consumes Cortex+Guardian SSE; wire its digest into EVERY tool-loop turn as living context."
       does: >
         StreamDigest feeds the tool-loop's context on each turn (via opts, not a
@@ -53,7 +53,7 @@ spec:
       axioms: "§1.2 (the stream is observable, never silent), §2.3 (state always visible)"
       gate: "co-pilot answers a 'what just happened?' question from the live stream with no explicit fetch."
 
-    OM4_guardian_tool_loop:   # ← DONE 2026-07-30
+    P4_guardian_tool_loop:   # ← DONE 2026-07-30
       why: "B / non-linear proof. agent-tools' own header names Guardian. Wire the SAME loop into guardian with guardian's provider dispatch as callModel."
       does: >
         guardian/server.js injects its /command provider dispatch as callModel
@@ -62,7 +62,7 @@ spec:
       axioms: "§5.14 (same contract, different backend), §10.3 (one loop, no competing tool systems)"
       gate: "a guardian /command that needs a tool uses it — via guardian's providers, with zero call into copilot."
 
-    OM5_faculties_as_tools:   # ← DONE 2026-07-30
+    P5_faculties_as_tools:   # ← DONE 2026-07-30
       why: "Omnipotence. The copilot faculties become callable tools so the loop can invoke them."
       does: >
         Thin adapters in lib/agent-tools/tools/: module_builder (→ module-builder.build),
@@ -71,7 +71,7 @@ spec:
       axioms: "§16.5 (wrap, don't move), §10.1 (each faculty still owns its logic)"
       gate: "the tool-loop builds a module by calling the module_builder tool, end to end."
 
-    OM6_every_system_reachable:   # ← DONE 2026-07-30
+    P6_every_system_reachable:   # ← DONE 2026-07-30
       why: "Omnipotence, completed. A call_system tool over the registry (self-register work) makes every registered system callable by name."
       does: >
         A call_system tool resolves a target via the capability registry
@@ -80,7 +80,7 @@ spec:
       axioms: "§10.3 (route through the registry, one source of truth), §8.4 (uses the real registry, not a hardcoded list)"
       gate: "co-pilot invokes a named system's capability it has never been explicitly coded to reach, resolved live from the registry."
 
-    OM7_stream_to_all_systems:   # ← DONE 2026-07-30
+    P7_stream_to_all_systems:   # ← DONE 2026-07-30
       why: "Omniscience, expanded. The continuous stream is not copilot-only — every consumer (guardian's loop, the tablet, idearium) can subscribe to the same normalized digest."
       does: >
         Promote StreamDigest to a shared subscribable (lib/), so any system's
@@ -89,22 +89,22 @@ spec:
       gate: "guardian's tool-loop AND the tablet both read the same live digest copilot does, from one source."
 
   ordering_rationale: >
-    OM1→OM2→OM3 build the copilot spine (loop, memory, stream) — 'B first, then
-    continuous stream' as directed. OM4 proves non-linearity (guardian) on the
-    working spine. OM5→OM6 complete omnipotence (faculties + every system). OM7
+    P1→P2→P3 build the copilot spine (loop, memory, stream) — 'B first, then
+    continuous stream' as directed. P4 proves non-linearity (guardian) on the
+    working spine. P5→P6 complete omnipotence (faculties + every system). P7
     expands the stream to all, so omniscience is system-wide, not copilot-only.
     No phase depends on a later one. Each is a real, testable increment.
 
   honest_risks:
-    - "OM1: runToolLoop with a real model can loop — maxIterations caps it, but a bad callModel could burn iterations. Gate proves a real termination."
-    - "OM4: guardian's provider dispatch is async/job-based (poll), not a direct return like ollama — the callModel adapter must resolve the job before returning to the loop."
-    - "OM6: call_system must not become a second dispatch path competing with RAID (§10.3). It routes THROUGH the registry, same as RAID resolves."
+    - "P1: runToolLoop with a real model can loop — maxIterations caps it, but a bad callModel could burn iterations. Gate proves a real termination."
+    - "P4: guardian's provider dispatch is async/job-based (poll), not a direct return like ollama — the callModel adapter must resolve the job before returning to the loop."
+    - "P6: call_system must not become a second dispatch path competing with RAID (§10.3). It routes THROUGH the registry, same as RAID resolves."
     - "sandbox cannot run the live loop (no model, no SSE) — every gate is James-verified on the real boot, per this whole engagement."
 
   corrections_2026_08_14:
-    OM4_gate_never_actually_verified:
+    P4_gate_never_actually_verified:
       what: >
-        OM4 was marked DONE 2026-07-30 on its stated gate ("a guardian
+        P4 was marked DONE 2026-07-30 on its stated gate ("a guardian
         /command that needs a tool uses it — via guardian's providers,
         with zero call into copilot"). That gate was never actually met.
         guardian/tool-runtime.js's resolveJob has always read

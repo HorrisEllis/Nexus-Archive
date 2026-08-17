@@ -635,7 +635,7 @@ function register() {
     // §Phase-0 nerve-pulse 2026-07-01 — same gap as copilot: registered once,
     // then invisible to nexus-bus._sources. Nerve needs recurring presence data.
     try {
-      const { startHeartbeat } = require('../lib/connect');
+      const { startHeartbeat } = require('../nexus-connect');
       startHeartbeat(SYSTEM_ID, PORT);
     } catch (_) {}
   });

@@ -299,7 +299,7 @@ const HTTP_PORT     = process.env.GUARDIAN_HTTP_PORT  || 7820;
 const ORCH_PORT     = process.env.ORCHESTRATOR_PORT   || 9000;
 
 // nexus-connect: unified cross-system I/O with §1.2 gating
-const nc = (() => { try { return require('../lib/connect'); } catch(_) { return null; } })();
+const nc = (() => { try { return require('../nexus-connect'); } catch(_) { return null; } })();
 function _postLedger(system, type, payload) {
   if (nc) nc.postLedger(system, type, payload).catch(() => {});
 }
@@ -1187,6 +1187,19 @@ function _handleNCPMessage(msg) {
 
     case 'guardian.job.dispatched': {
       // Userscript echoing back that it dispatched the job. Acknowledgment only.
+      // §BUILT 2026-08-14 — was log-only, never touched job.status, checked
+      // directly before this: no queryable signal existed for this specific
+      // ack (distinct from 'delivered', which guardian sets OPTIMISTICALLY
+      // right after pushing to NCP, before any real round trip to the
+      // browser — 'delivered' means "I tried," this means "the browser
+      // actually got it back to me"). Needed for switchAgent's real
+      // reachability check (self-model.js's verifyAgentReachable) to have
+      // something fast and reliable to poll instead of waiting for a full,
+      // costly AI generation just to confirm NCP connectivity.
+      const _ackJob = jobs.get(jobId);
+      if (_ackJob && _ackJob.status !== 'complete' && _ackJob.status !== 'error') {
+        updateJob(jobId, { status: 'acked', ackedAt: Date.now() });
+      }
       console.log(`[guardian] job.dispatched ack from ${provider}: ${jobId}`);
       break;
     }
@@ -1374,7 +1387,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(HTTP_PORT, '127.0.0.1', async () => {
   const { BootSequence } = require('../lib/boot-sequence');
-  const nc2 = require('../lib/connect');
+  const nc2 = require('../nexus-connect');
 
   // §BUGFIX 2026-07-04: was a hardcoded '3.6.1' here, independent of
   // lib/version.js's registry — sourcing from it directly now.
@@ -3156,7 +3169,7 @@ function handleExtendedRoutes(req, res, url, method) {
           // §P97: read CFR field state for sigma-aware routing
           let _cfrCtx = {};
           try {
-            const _cfrInfl = require('../lib/cfr-influence');
+            const _cfrInfl = require('../nexus-cfr-influence');
             _cfrCtx = { sigmaFloor: _cfrInfl.getSigmaFloor?.() || 0,
                         regime: _cfrInfl.getState?.()?.regime || 'stable' };
           } catch(_) {}

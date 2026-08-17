@@ -32,7 +32,7 @@ function mapUi(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };
 
   for (const [file, id] of FILES) {
-    const r = driver.declareIfNew('component', {
+    const r = driver.declare('component', {
       id, namespace: id.split('.').slice(0, 2).join('.'), name: file, version: '1.0.0',
       uuid: `nexus-loom-map-ui-${id}-v1-0000-2026-0813-001`,
     });
@@ -44,14 +44,14 @@ function mapUi(driver) {
 
   for (const [, id, requires] of FILES) {
     if (requiredBy.has(id)) {
-      const e = driver.declareIfNew('hook', {
+      const e = driver.declare('hook', {
         id: `${id}.export`, component_id: id, name: 'export', type: 'direct', direction: 'out',
         uuid: `nexus-loom-map-ui-${id}-export-v1-0000-2026-0813-001`,
       });
       (e.ok ? results.hooks : results.failures).push({ id: `${id}.export`, r: e });
     }
     if (requires.length > 0) {
-      const i = driver.declareIfNew('hook', {
+      const i = driver.declare('hook', {
         id: `${id}.import`, component_id: id, name: 'import', type: 'direct', direction: 'in',
         uuid: `nexus-loom-map-ui-${id}-import-v1-0000-2026-0813-001`,
       });
@@ -63,7 +63,7 @@ function mapUi(driver) {
   for (const [, id, requires] of FILES) {
     for (const dep of requires) {
       wireN++;
-      const r = driver.declareIfNew('wire', {
+      const r = driver.declare('wire', {
         id: `ui-map.wire.${wireN}.${dep}--${id}`,
         from_hook_id: `${dep}.export`, to_hook_id: `${id}.import`,
         uuid: `nexus-loom-map-ui-wire-${wireN}-v1-0000-2026-0813-001`,

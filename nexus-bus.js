@@ -21,7 +21,7 @@
  * §SEAM Growth happens at the seam — the bus IS the seam
  *
  * Usage:
- *   const bus = require('./lib/bus');
+ *   const bus = require('./nexus-bus');
  *   bus.emit('cortex.gap.found', { gapId, severity, path });
  *   bus.on('guardian.job.complete', handler);
  *   bus.on('*', handler); // all events

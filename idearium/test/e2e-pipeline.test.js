@@ -53,7 +53,7 @@ check('idea.linkedSpec set', linkedIdea.linkedSpec === createdSpec.uuid);
 
 console.log('\n── Stage 3: real .spec import (chunk-engine) ──');
 const specText = fs.readFileSync(specPath, 'utf8');
-const result = await se.importSpec({ name: `e2e-${path.basename(specPath, '.spec')}`, specText });
+const result = se.importSpec({ name: `e2e-${path.basename(specPath, '.spec')}`, specText });
 check('import completed', result.manifest.status === 'complete', `${result.sectionsFilled.length} chunks`);
 check('byte-fidelity verified', result.byteFidelity.verified, `${result.byteFidelity.sourceBytes}b`);
 

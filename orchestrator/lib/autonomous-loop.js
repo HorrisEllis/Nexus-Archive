@@ -100,7 +100,7 @@ async function _queryCaseLibrary(intent) {
 
 async function _llmStep(run, stepNum, systemPrompt, userPrompt) {
   const runtime = (() => {
-    try { return require('../../ollama/runtime'); } catch(_) { return null; }
+    try { return require('../../ollama-runtime'); } catch(_) { return null; }
   })();
 
   if (!runtime) throw new Error('ollama-runtime not available');

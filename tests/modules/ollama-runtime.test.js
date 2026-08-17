@@ -53,7 +53,7 @@ const _ready = new Promise(resolve => {
   fakeServer.listen(0, '127.0.0.1', () => {
     const port = fakeServer.address().port;
     process.env.OLLAMA_HOST = `http://127.0.0.1:${port}`;
-    runtime = require('../../ollama/runtime.js');
+    runtime = require('../../ollama-runtime.js');
     resolve();
   });
 });
@@ -164,8 +164,8 @@ test('E1', 'connection refused still calls onError with a clear message (this pa
   // Point at a port nothing is listening on.
   const _origHost = process.env.OLLAMA_HOST;
   process.env.OLLAMA_HOST = 'http://127.0.0.1:1'; // privileged/unused port, ECONNREFUSED
-  delete require.cache[require.resolve('../../ollama/runtime.js')];
-  const freshRuntime = require('../../ollama/runtime.js');
+  delete require.cache[require.resolve('../../ollama-runtime.js')];
+  const freshRuntime = require('../../ollama-runtime.js');
 
   let errorFired = null;
   await withTimeout(new Promise(resolve => {
@@ -182,8 +182,8 @@ test('E1', 'connection refused still calls onError with a clear message (this pa
 
   // Restore real endpoint + module for any tests after this one.
   process.env.OLLAMA_HOST = _origHost;
-  delete require.cache[require.resolve('../../ollama/runtime.js')];
-  runtime = require('../../ollama/runtime.js');
+  delete require.cache[require.resolve('../../ollama-runtime.js')];
+  runtime = require('../../ollama-runtime.js');
 });
 
 // ── §F: timeout — server accepts but never responds ──────────────────────────

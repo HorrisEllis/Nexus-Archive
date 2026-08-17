@@ -146,7 +146,7 @@ export async function getIdeas(phase = null) {
 // This is what builds each chunk locally without needing a browser tab.
 export async function generateWithOllama(system, prompt, { model = 'mistral:7b-instruct-q4_K_M', timeoutMs = 120000 } = {}) {
   const runtime = (() => {
-    try { return _require('../../ollama/runtime'); }
+    try { return _require('../../ollama-runtime'); }
     catch { return null; }
   })();
 

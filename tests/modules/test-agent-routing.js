@@ -84,5 +84,48 @@ test('T-011', 'CA6: token limits are editable', () => {
   assert.strictEqual(cfg.getRoutingConfig().constraints.chatgpt.maxTokens, 1500);
 });
 
+
+test('T-012', 'CA5: "switch agent to claude" (agent BEFORE to) matches', () => {
+  const pattern = /\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i;
+  const m = 'switch agent to claude'.match(pattern);
+  assert.ok(m);
+  assert.strictEqual(m[1].toLowerCase(), 'claude');
+});
+test('T-013', 'CA5: "switch co-pilot to claude" (an arbitrary filler word, not just agent/model) matches -- caught failing mid-build, this is the real fix', () => {
+  const pattern = /\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i;
+  const m = 'switch co-pilot to claude'.match(pattern);
+  assert.ok(m);
+  assert.strictEqual(m[1].toLowerCase(), 'claude');
+});
+test('T-014', 'CA5: the real end-to-end gate (KNOWN agent name OR agent/model word OR url) actually triggers for "switch co-pilot to claude" with NO url and NO agent/model word -- this is the exact case that failed under the round-1/round-2 fixes', () => {
+  const pattern = /\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i;
+  const KNOWN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'clear glass', 'clear-glass', 'clearglass'];
+  const prompt = 'switch co-pilot to claude';
+  const m = prompt.match(pattern);
+  const target = m ? m[1].toLowerCase() : null;
+  const triggers = !!(m && (KNOWN_AGENTS.includes(target) || /\b(agent|model)\b/i.test(prompt) || /https?:\/\//i.test(prompt)));
+  assert.strictEqual(triggers, true);
+});
+test('T-015', 'CA5: a plain, unrelated sentence does not trigger a switch, even with the broadened filler-word pattern', () => {
+  const pattern = /\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i;
+  const KNOWN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'clear glass', 'clear-glass', 'clearglass'];
+  for (const prompt of ['hello how are you', 'switch the weather to sunny', 'i used to route to work every day', 'lets use logic to solve this']) {
+    const m = prompt.match(pattern);
+    const target = m ? m[1].toLowerCase() : null;
+    const triggers = !!(m && (KNOWN_AGENTS.includes(target) || /\b(agent|model)\b/i.test(prompt) || /https?:\/\//i.test(prompt)));
+    assert.strictEqual(triggers, false, `false positive on: "${prompt}"`);
+  }
+});
+test('T-016', 'CA5: a URL-bearing switch request (the real feature this was built for) extracts both the agent and the URL correctly', () => {
+  const pattern = /\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i;
+  const prompt = 'switch co-pilot to claude with this URL: https://claude.ai/chat/b9f72123-5a6f-4ef9-8772-4953f19b5413';
+  const switchM = prompt.match(pattern);
+  const urlM = prompt.match(/https?:\/\/[^\s]+/i);
+  assert.strictEqual(switchM[1].toLowerCase(), 'claude');
+  assert.strictEqual(urlM[0], 'https://claude.ai/chat/b9f72123-5a6f-4ef9-8772-4953f19b5413');
+});
+
+
+
 _log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

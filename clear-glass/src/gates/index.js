@@ -281,6 +281,15 @@ const providerShowGate   = (ph) => gate('provider.show', (event, stream) => {
   stream.emit(new Event('provider.shown', { providerId: event.data.providerId }));
 });
 
+// §BUILT 2026-08-14 — real request: "switch co-pilot to claude with this
+// URL... use a URL given as the surface... prompt me to sign in if needed."
+const providerNavigateGate = (ph) => gate('provider.navigate', (event, stream) => {
+  const { providerId, url } = event.data;
+  ph.navigateTo(providerId, url)
+    .then(r => stream.emit(new Event('provider.navigated', r)))
+    .catch(err => stream.emit(new Event('provider.error', { providerId, url, error: err.message })));
+});
+
 // ── Options gates ──────────────────────────────────────────────────────────
 const optionsGetGate = (options) => gate('options.get', (event, stream) => {
   stream.emit(new Event('options.result', options.get()));
@@ -409,6 +418,7 @@ function registerAll(bus, deps) {
     providerHost && providerStopGate(providerHost),
     providerHost && providerListGate(providerHost),
     providerHost && providerShowGate(providerHost),
+    providerHost && providerNavigateGate(providerHost),
     // Userscripts
     userscripts  && userscriptListGate(userscripts),
     userscripts  && userscriptInjectGate(userscripts),
@@ -445,5 +455,6 @@ module.exports = {
   bookmarkAddGate, bookmarkRemoveGate, bookmarkListGate, bookmarkOpenGate,
   rewindSnapshotGate, rewindListGate, rewindRestoreGate,
   providerStartGate, providerStopGate, providerListGate,
+  providerShowGate, providerNavigateGate,
   userscriptListGate, userscriptInjectGate, userscriptToggleGate,
 };

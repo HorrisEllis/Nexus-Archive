@@ -195,7 +195,7 @@ function mapCopilotCapability(driver) {
   // Pass 1 — components (one per file), skipping pre-existing ids.
   for (const [file, id] of FILES) {
     if (PRE_EXISTING.has(id)) continue;
-    const r = driver.declareIfNew('component', {
+    const r = driver.declare('component', {
       id, namespace: id.split('.').slice(0, 2).join('.'), name: file, version: '1.0.0',
       uuid: `nexus-loom-map-${id}-v1-0000-2026-0812-001`,
     });
@@ -205,27 +205,18 @@ function mapCopilotCapability(driver) {
   const requiredBy = new Set();
   for (const [, , requires] of FILES) for (const dep of requires) requiredBy.add(dep);
 
-  // Pass 2 — hooks. §FIX 2026-08-15 (LS10-adjacent, found chasing LS7's
-  // honest byproduct): PRE_EXISTING used to skip BOTH hooks unconditionally
-  // for a component the scanner already knew about. But the scanner (2026-
-  // 08-04) only ever gave PRE_EXISTING components an .export hook — it
-  // never analyzed that browser-action.js itself REQUIRES clear-glass-
-  // bridge and url-listener (this map's own real finding, in its own
-  // requires array below). Skipping .import unconditionally discarded that
-  // real analysis. Now: PRE_EXISTING skips re-declaring .export (the
-  // scanner already has it — declareIfNew would just skip it anyway, this
-  // avoids the redundant attempt), but .import is evaluated for every
-  // component based on its real requires, regardless of PRE_EXISTING.
+  // Pass 2 — hooks, skipping pre-existing ids (they already have export/import hooks).
   for (const [, id, requires] of FILES) {
-    if (!PRE_EXISTING.has(id) && requiredBy.has(id)) {
-      const r = driver.declareIfNew('hook', {
+    if (PRE_EXISTING.has(id)) continue;
+    if (requiredBy.has(id)) {
+      const r = driver.declare('hook', {
         id: `${id}.export`, component_id: id, name: 'export', type: 'direct', direction: 'out',
         uuid: `nexus-loom-map-${id}-export-v1-0000-2026-0812-001`,
       });
       (r.ok ? results.hooks : results.failures).push({ id: `${id}.export`, r });
     }
     if (requires.length > 0) {
-      const r = driver.declareIfNew('hook', {
+      const r = driver.declare('hook', {
         id: `${id}.import`, component_id: id, name: 'import', type: 'direct', direction: 'in',
         uuid: `nexus-loom-map-${id}-import-v1-0000-2026-0812-001`,
       });
@@ -238,7 +229,7 @@ function mapCopilotCapability(driver) {
   for (const [, id, requires] of FILES) {
     for (const dep of requires) {
       wireN++;
-      const r = driver.declareIfNew('wire', {
+      const r = driver.declare('wire', {
         id: `copilot-capability.wire.${wireN}.${dep}--${id}`,
         from_hook_id: `${dep}.export`, to_hook_id: `${id}.import`,
         uuid: `nexus-loom-map-cc-wire-${wireN}-v1-0000-2026-0812-001`,

@@ -52,7 +52,7 @@ function mapWarp(driver) {
 
   // Pass 1 — components (every file is one, regardless of hook count)
   for (const [file, id] of FILES) {
-    const r = driver.declareIfNew('component', {
+    const r = driver.declare('component', {
       id, namespace: 'warp', name: file, version: '1.4.0',
       uuid: `nexus-loom-map-${id}-v1-0000-2026-0701-jamesbrooks-001`,
     });
@@ -66,14 +66,14 @@ function mapWarp(driver) {
   // Pass 2 — hooks (export hook if required elsewhere, import hook if this file requires others)
   for (const [, id, requires] of FILES) {
     if (requiredBy.has(id)) {
-      const r = driver.declareIfNew('hook', {
+      const r = driver.declare('hook', {
         id: `${id}.export`, component_id: id, name: 'export', type: 'direct', direction: 'out',
         uuid: `nexus-loom-map-${id}-export-v1-0000-2026-0701-jamesbrooks-001`,
       });
       (r.ok ? results.hooks : results.failures).push({ id: `${id}.export`, r });
     }
     if (requires.length > 0) {
-      const r = driver.declareIfNew('hook', {
+      const r = driver.declare('hook', {
         id: `${id}.import`, component_id: id, name: 'import', type: 'direct', direction: 'in',
         uuid: `nexus-loom-map-${id}-import-v1-0000-2026-0701-jamesbrooks-001`,
       });
@@ -86,7 +86,7 @@ function mapWarp(driver) {
   for (const [, id, requires] of FILES) {
     for (const dep of requires) {
       wireN++;
-      const r = driver.declareIfNew('wire', {
+      const r = driver.declare('wire', {
         id: `warp.wire.${wireN}.${dep}--${id}`,
         from_hook_id: `${dep}.export`, to_hook_id: `${id}.import`,
         uuid: `nexus-loom-map-wire-${wireN}-v1-0000-2026-0701-jamesbrooks-001`,

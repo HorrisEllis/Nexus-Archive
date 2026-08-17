@@ -268,7 +268,7 @@ async function diagBridge() {
   // ── nexus-connect postBridge ───────────────────────────────────────────────
   console.log('');
   try {
-    const nc = require(path.join(ROOT, 'lib', 'connect'));
+    const nc = require(path.join(ROOT, 'nexus-connect'));
     if (typeof nc.postBridge === 'function') {
       console.log(ok('  nexus-connect: postBridge() exported'));
       await ledger('nc.postBridge', 'PASS');
@@ -840,7 +840,7 @@ async function diagEmerge() {
     }],
     ['kernel: loads spec without crash',       () => {
       const r = spawnSync('node',['-e',`
-        const k=require('./emerge/kernel.js');
+        const k=require('./emerge-kernel.js');
         const spec=['emerge.spec'].find(p=>require('fs').existsSync(p));
         if(spec){k.loadSpec(spec);console.log('kw:'+k.SCHEMA.keywords.size);}
       `], {cwd:ROOT, encoding:'utf8', timeout:8000});

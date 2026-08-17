@@ -812,8 +812,8 @@ module.exports = { generateFile, generateCompartment };
 
 if (require.main === module) {
   const fs = require('fs'), path = require('path');
-  const kp = [path.join(__dirname,'kernel.js'), path.join(__dirname,'emerge-kernel.js'), path.join(__dirname,'..','emerge-kernel.js')].find(p=>fs.existsSync(p));
-  if (!kp) { console.error('[codegen] kernel.js not found'); process.exit(1); }
+  const kp = [path.join(__dirname,'emerge-kernel.js'), path.join(__dirname,'..','emerge-kernel.js')].find(p=>fs.existsSync(p));
+  if (!kp) { console.error('[codegen] emerge-kernel.js not found'); process.exit(1); }
   const kernel = require(kp);
   const sp = [path.join(__dirname,'emerge.spec'), path.join(path.dirname(kp),'emerge.spec')].find(p=>fs.existsSync(p));
   if (sp) kernel.loadSpec(sp);

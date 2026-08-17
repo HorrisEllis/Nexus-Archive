@@ -1264,7 +1264,7 @@ if (section('§27 SYSTEM-CONTRACTS.js')) {
 
 // ─── §28 nexus-connect.js ────────────────────────────────────────────────────
 if (section('§28 nexus-connect.js')) {
-  const nc=require(path.join(ROOT,'lib','connect'));
+  const nc=require(path.join(ROOT,'nexus-connect'));
 
   test('exports required functions',()=>{
     for(const fn of ['postBridge','postEvent','postLedger','healthCheck','registerWithOrchestrator','_req'])

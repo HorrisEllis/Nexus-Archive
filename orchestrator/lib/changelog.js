@@ -20,16 +20,9 @@ const path = require('path');
 const MODULE_ID = 'changelog';
 const VERSION   = '1.0.0';
 
-// §FIX 2026-08-15 — DOCS_DIR resolved to orchestrator/docs (one level too
-// shallow from this file's real location), which does not exist and never
-// has. _readAllSpecs()'s existsSync() check returned false, so this
-// "living changelog" has returned an empty spec set on every single call
-// since it was built — diff() always reported zero changes, update()
-// always silently no-op'd, regardless of real spec activity. Caught while
-// trying to use it for real, not by reading it.
-const DOCS_DIR         = path.join(__dirname, '..', '..', 'docs');
-const SNAPSHOT_PATH    = path.join(__dirname, '..', '..', 'data', 'changelog-snapshot.json');
-const CHANGELOG_PATH   = path.join(__dirname, '..', '..', 'CHANGELOG.md');
+const DOCS_DIR        = path.join(__dirname, '..', 'docs');
+const SNAPSHOT_PATH   = path.join(__dirname, '..', 'data', 'changelog-snapshot.json');
+const CHANGELOG_PATH  = path.join(__dirname, '..', 'CHANGELOG.md');
 
 function _specVersion(content) {
   const m = content.match(/^\s+version:\s+['"]?([0-9]+\.[0-9]+\.[0-9][^\s'"#\n]*)['"]?/m);

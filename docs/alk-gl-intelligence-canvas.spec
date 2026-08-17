@@ -13,21 +13,6 @@ spec:
       - lib/nerve/index.js                  # Nerve snapshot (nodes + presence)
       - cortex/core/raid/simulation.js      # simulation results (Phase 5)
       - unintegrated/rfr2-nexus/delta       # delta S/C fields
-
-    # §ADDENDUM 2026-08-15 — James: "architect rebuilt into a canvas... a
-    # living node-based component map... a visual layer for the loom map."
-    # Checked before writing anything new (the diagnostic-engines lesson
-    # from earlier the same day): this spec already exists, already proposes
-    # almost exactly this, and architect/src/ui/alk-lattice.html (563 lines)
-    # is already real and LIVE — polls a real GRAPH_URL every 4s (deliberate
-    # interval, per its own comment), fetches from a real endpoint, is not a
-    # static demo. Two real things this addendum adds to the dependency list:
-    depends_on_addendum:
-      - "nexus_map (lib/agent-tools/tools/query/nexus-map.js) — the real, tested, chunked reader over loom's live graph (confirmed this session: 1372 components, 12 systems). alk-lattice.html's GRAPH_URL should point here, not a second loom-graph reader."
-      - "loom/schema/cortex-sync.js's loom_events table — every real component/hook/wire add is already written here (checked: record() fires on every driver.declare() call). It has NO reader anywhere except registry.js's own internal check — confirmed by grep. This is the real substrate for 'loom as a living changelog': the writes already happen; nothing surfaces them. A read-side view over this table, not a new event log, is what 'living changelog' actually needs."
-    still_unaddressed_from_jamess_ask:
-      - "increments of zoom, the pipeline/workflow-view checkbox, drag-to-edit-when-enabled (read-only default), animated friction/tension/data-flow, co-pilot's-attention-via-spotlight (ui/tv-shell/spotlight/spotlight.js's real --cp-focus/--ac-h properties are the real precedent to reuse, not invent) — none of this is in v0.1 or v0.2 of this spec. Real scope for a v0.3, not answered by this addendum."
-      - "two copies of alk-gl.js exist (ui/eravos/runtime/alk-gl.js and eravos/ui/runtime/alk-gl.js) — same 'which half is live' risk RC1 already paid for once. Check before extending either."
     purpose: >
       ALK-GL is a WebGL2 particle field engine where each particle responds
       to attractor gravity and a global field (entropy/structure/curl/damping).

@@ -5,7 +5,7 @@ spec:
     status:      ALL 11 PHASES DONE 2026-08-12 (same session, ninth and final pass).
                  written per §8.5 (map before build), §3.1 (build order:
                  substrate before logic before surface), §16.5 (wrap what's built, don't
-                 duplicate). Continues docs/copilot-omniscience-phasemap.spec (OM1-OM7, ALL
+                 duplicate). Continues docs/copilot-omniscience-phasemap.spec (P1-P7, ALL
                  DONE) and the schedule_task/register_trigger/nexus_heal/loom_scan session
                  (2026-08-12, also done). This phasemap covers what those did NOT reach.
     uuid:        nexus-copilot-full-capability-v0-0000-2026-0812-001
@@ -32,16 +32,16 @@ spec:
     stream_today:      "lib/nerve/index.js — Phase 1, GLOBAL field only (coherence/friction/entropy), read-only by design invariant (§attention-non-truth). ollama/server.js — jobs are stream:false, discrete request/response. clear-glass DOM archaeology emits to its own SSE, not into ollama's context. No standing channel exists (confirmed session 2026-08-12 earlier)."
     git_loom_cortex:   "loom/scanners/phasemap-map.js ALREADY resolves the real git commit per phase transition (_gitHashFor, execFileSync git log). lib/manifest.js ALREADY does per-system sha256 drift tracking, deliberately NOT per-system git (single-repo decision, documented 2026-08-08). No gap here — 'always update loom's maps / cortex models / git' is a WORKING RULE for this and future sessions (re-run loom_scan + let cortex's own write-before-respond axiom (AX-003) hold + commit), not a missing subsystem. Carried as a rule below, not a phase."
     stray_tools_audit_2026_08_12: "Grepped ollama/, copilot/, guardian/ for any {name, description, parameters, execute} tool-shaped file living outside lib/agent-tools/tools/ — ZERO found. Every real tool already lives in the one canonical location. 'Move if needed' resolved: nothing to move. This finding stands until the next audit; not re-checked per phase below."
-    tv_ui_spotlight_nerve_audit: "ui/tv-shell/ has no server routes of its own beyond what ui-tools.js's ui_spotlight/ui_nerve already wrap (spotlight/on|off|step, nerve/on|off|sigma) — it's a static shell served by the UI host. Both tools were built in the omniscience phasemap (FC8, DONE). No gap here."
+    tv_ui_spotlight_nerve_audit: "ui/tv-shell/ has no server routes of its own beyond what ui-tools.js's ui_spotlight/ui_nerve already wrap (spotlight/on|off|step, nerve/on|off|sigma) — it's a static shell served by the UI host. Both tools were built in the omniscience phasemap (P8, DONE). No gap here."
     rewind_replay_today: "clear-glass/src/rewind/engine.js — a complete RewindEngine class (session snapshot/restore), zero agent-tool coverage. Same shape as url-listener.js: real backend module, no tool path."
     meta_systems_today: "meta/{alk,alk-perception,bda,cfr,gap,lattice,liminal,rfr2,spatial,telemetry-codec,topo-kernel} — 11 subsystems, NONE run their own HTTP server (grepped for createServer/listen across all 11 — zero). All are pure lib modules consumed INTERNALLY by other systems (e.g. query_intelligence's 'mastermind' action already reaches RFR2 through mastermind.js's own lib/rfr2-bridge.js — 'no separate RFR2 action exists because RFR2 has no HTTP surface of its own', per that tool's own header). Confirmed zero requires from lib/agent-tools/ into meta/ anywhere. A real, total gap, but each of the 11 needs its own real-export inventory before wrapping — same discipline as the COS toolkit phase, not assumed from directory names."
     load_balancer_today: "NO load balancer exists anywhere in the tree (grepped 'load.?balanc' system-wide — zero matches). What DOES exist: cos/watchdog/monitor.js (WatchdogMonitor — startMonitoring/stopMonitoring/getMonitor, per-compartment) and cos/watchdog/proc-stats.js (readProcStats(pid) — real linux/win32 process stats). 'Load balancer using resource monitor' is genuinely NEW logic on top of real substrate, not a wrap — flagged as a decision point below, not assumed."
-    nexus_help_today: "copilot/lib/nexus-awareness.js — systemRundown/whatsWrong/answerAbout(prompt, opts) — already IS 'ask co-pilot anything about NEXUS', built complete. But it is wired ONLY as an HTTP-path intent-classifier shortcut inside copilot/server.js:1091-1093 — outside the agentic tool loop entirely. The loop itself (mid multi-step reasoning) cannot call it; nexus_status (the loom-concerns/impact tool) does NOT include it either — checked its real ACTIONS keys directly. Separately: no docs/spec full-text search tool exists anywhere — 17+ files in docs/*.spec are readable only by a human or by loom's own narrow phasemap/spec-map scanners, never as free-text 'explain X' lookups. 'Expand, build, or create what's needed' is ALREADY covered — capability-extend.js (FC2), module_builder, and forge_tool are complete and, once FC2 lands, compose exactly as asked: try everything (adaptive-fulfillment) → explain what's known (this gap) → build what's missing (module_builder/forge_tool) → if still short, file it (capability-extend). No new phase needed for that half."
+    nexus_help_today: "copilot/lib/nexus-awareness.js — systemRundown/whatsWrong/answerAbout(prompt, opts) — already IS 'ask co-pilot anything about NEXUS', built complete. But it is wired ONLY as an HTTP-path intent-classifier shortcut inside copilot/server.js:1091-1093 — outside the agentic tool loop entirely. The loop itself (mid multi-step reasoning) cannot call it; nexus_status (the loom-concerns/impact tool) does NOT include it either — checked its real ACTIONS keys directly. Separately: no docs/spec full-text search tool exists anywhere — 17+ files in docs/*.spec are readable only by a human or by loom's own narrow phasemap/spec-map scanners, never as free-text 'explain X' lookups. 'Expand, build, or create what's needed' is ALREADY covered — capability-extend.js (P2), module_builder, and forge_tool are complete and, once P2 lands, compose exactly as asked: try everything (adaptive-fulfillment) → explain what's known (this gap) → build what's missing (module_builder/forge_tool) → if still short, file it (capability-extend). No new phase needed for that half."
 
   # ── PHASES — dependency-ordered. Each independently shippable and gated. ──
   phases:
 
-    FC1_cross_agent_recall:   # ← DONE 2026-08-12 — as a standalone tool, not a push-recall edit
+    P1_cross_agent_recall:   # ← DONE 2026-08-12 — as a standalone tool, not a push-recall edit
       why_first: "Smallest true gap, no dependency on anything else here — extends a working module (push-recall) rather than building new plumbing."
       does: >
         Add an 'agent' scope to recall: a new intent-independent filter param on
@@ -52,8 +52,8 @@ spec:
       axioms: "§16.5 (extend push-recall, don't build a parallel recall), §10.3 (one recall path, two stores it can address)"
       gate: "'do you remember when we talked about X' resolves from chat_log; 'do you remember when I talked to Y about X' resolves from guardian_chat_log filtered by provider=Y — both through the same query_recall tool, proven with two real prior conversations already in the store."
 
-    FC2_never_say_no_completion:   # ← DONE 2026-08-12
-      why: "Wires an already-built module (§16.5 — no new code for the refusal path itself); the missing piece is a two-line require + call, same shape as the FC1 wire for stream-digest."
+    P2_never_say_no_completion:   # ← DONE 2026-08-12
+      why: "Wires an already-built module (§16.5 — no new code for the refusal path itself); the missing piece is a two-line require + call, same shape as the P1 wire for stream-digest."
       does: >
         Wire capability-extend.js into copilot/server.js's response path as the
         fallback AFTER adaptive-fulfillment.js's iterate/reflect/re-route exhausts
@@ -63,8 +63,8 @@ spec:
       axioms: "§0.4 ('I can't' becomes 'not yet — here's the work'), §1.2 (no silent dead end)"
       gate: "a request with no matching tool AND no agent that can fulfill it does NOT get a bare refusal — it gets 'not yet, tracked as gap #N', proven against a request built to have no real handler."
 
-    FC3_cos_toolkit_tools:   # ← DONE 2026-08-12
-      why: "Standalone wrap, no dependency on FC1/FC2. Two tool files matching the two clusters James named."
+    P3_cos_toolkit_tools:   # ← DONE 2026-08-12
+      why: "Standalone wrap, no dependency on P1/P2. Two tool files matching the two clusters James named."
       does: >
         cos_simulate (wraps cos/playground/llm-lab.js's LabManager/LabSession +
         compare.js's CompareEngine — run a scenario, run a variant, diff/verdict
@@ -75,7 +75,7 @@ spec:
       axioms: "§16.5, §10.1 (COS keeps owning its own execution semantics)"
       gate: "copilot runs a mental simulation via cos_simulate and gets a real verdict object back, then spins up and tears down a real compartment via cos_compartment — both against the live COS host, not a mock."
 
-    FC4_raid_snr_query_tool:   # ← DONE 2026-08-12
+    P4_raid_snr_query_tool:   # ← DONE 2026-08-12
       why: "Standalone. Makes RAID introspectable — 'why did you pick that agent' becomes answerable — without touching RAID's own routing logic (too consequential to wrap loosely; read-only surface only)."
       does: >
         raid_query tool: actions 'decisions' (recent recordDecision rows),
@@ -86,7 +86,7 @@ spec:
       axioms: "§10.3 (introspect, don't compete with RAID's real routing path), §2.3 (state observable)"
       gate: "copilot answers 'why did you route that request to ollama and not guardian' by reading a real raid_decisions row, not a guess."
 
-    FC5_clear_glass_url_tools:   # ← DONE 2026-08-12 — folded into browser_action.js's REAL_ACTIONS fix
+    P5_clear_glass_url_tools:   # ← DONE 2026-08-12 — folded into browser_action.js's REAL_ACTIONS fix
       why: "Standalone; explicit instruction to go backend-first. url-listener.js already exists — this is a wrap, not a build."
       does: >
         Extend browser-action.js (or a sibling url-tools.js) with actions backed
@@ -99,7 +99,7 @@ spec:
       axioms: "§16.5 (wrap url-listener.js, don't reimplement), backend-first per direct instruction"
       gate: "copilot registers a real URL listener through the tool and it fires on a real navigation event, proven against clear-glass's live driver, no UI involved."
 
-    FC6_identity_naming:   # ← DONE 2026-08-12
+    P6_identity_naming:   # ← DONE 2026-08-12
       why: "Standalone. Smallest structural addition — one settable field plus read/write tool actions."
       does: >
         Add a settable `customName`/`persona` field to copilot/lib/self-model.js,
@@ -110,8 +110,8 @@ spec:
       axioms: "§1.1 (a set name is real data, not inferred — never fabricated the other way), §10.1"
       gate: "co-pilot is renamed via the tool, a fresh session still answers with the set name (persisted to cortex), and reverts honestly to inferred identity if the name is ever cleared."
 
-    FC7_continuous_nerve_dom_to_ollama:   # ← DONE 2026-08-12 — final phase, full chain live-verified
-      why_last: "Largest structural lift — a genuinely new standing channel, not a wrap. Depends on nothing above but benefits from FC4-FC6 existing first as smaller proofs of the same wrap-vs-build discipline before the harder build."
+    P7_continuous_nerve_dom_to_ollama:   # ← DONE 2026-08-12 — final phase, full chain live-verified
+      why_last: "Largest structural lift — a genuinely new standing channel, not a wrap. Depends on nothing above but benefits from P4-P6 existing first as smaller proofs of the same wrap-vs-build discipline before the harder build."
       does: >
         Three real pieces, in order: (a) extend lib/nerve/index.js's read layer
         with a PER-WINDOW/PER-TAB attention signal (still read-only, still obeys
@@ -122,21 +122,21 @@ spec:
         jobs; (c) a bridge that pushes Nerve's new per-window signal + DOM
         archaeology diffs into that streaming channel as continuous context,
         not a new job per event.
-      axioms: "§attention-non-truth (Nerve still never decides), §2.3 (state observable), §10.3 (one stream, not N competing channels — same rule OM7 of the omniscience phasemap already established for StreamDigest)"
+      axioms: "§attention-non-truth (Nerve still never decides), §2.3 (state observable), §10.3 (one stream, not N competing channels — same rule P7 of the omniscience phasemap already established for StreamDigest)"
       gate: "ollama's context visibly updates as the user moves between windows/tabs, with no explicit job submitted by anything — the DOM+Nerve signal alone drives it, proven live."
 
-    FC8_rewind_replay_tool:   # ← DONE 2026-08-12 — via direct HTTP, not the gate path
-      why: "Standalone wrap, same shape as FC5's url-listener — real backend module, zero tool coverage."
+    P8_rewind_replay_tool:   # ← DONE 2026-08-12 — via direct HTTP, not the gate path
+      why: "Standalone wrap, same shape as P5's url-listener — real backend module, zero tool coverage."
       does: >
         rewind_replay tool wrapping clear-glass/src/rewind/engine.js's RewindEngine:
         actions 'snapshot' (capture current session state), 'restore' (replay to a
-        prior snapshot), 'list' (available snapshots). Backend-first, same as FC5 —
+        prior snapshot), 'list' (available snapshots). Backend-first, same as P5 —
         no renderer/UI work here.
       axioms: "§16.5 (wrap RewindEngine, don't reimplement), backend-first"
       gate: "copilot snapshots a real session, restores it, and the restored state matches the snapshot — proven against the live engine."
 
-    FC9_meta_systems_toolkit:   # ← DONE 2026-08-12 — 7 of 11 wrapped, 4 scoped out on purpose (see file header)
-      why: "Real gap (11 subsystems, zero coverage) but the largest unknown here — none of the 11 has ever been inventoried for real callable exports the way COS was in FC3. This phase IS that inventory, then the wrap — not assumed done in one pass."
+    P9_meta_systems_toolkit:   # ← DONE 2026-08-12 — 7 of 11 wrapped, 4 scoped out on purpose (see file header)
+      why: "Real gap (11 subsystems, zero coverage) but the largest unknown here — none of the 11 has ever been inventoried for real callable exports the way COS was in P3. This phase IS that inventory, then the wrap — not assumed done in one pass."
       does: >
         For each of meta/{alk, alk-perception, bda, cfr, gap, lattice, liminal,
         rfr2, spatial, telemetry-codec, topo-kernel}: first grep its real exports
@@ -150,7 +150,7 @@ spec:
       axioms: "§1.1 (nothing wrapped until its exports are actually verified), §10.3 (no second path to a system already reachable through an existing bridge)"
       gate: "each wrapped meta subsystem answers a real query through its tool with live data, not a stub; RFR2 specifically is proven to still route through the existing mastermind bridge, not a new parallel one."
 
-    FC10_load_balancer:   # ← DONE 2026-08-12 — resolved, not the original (a)/(b) framing
+    P10_load_balancer:   # ← DONE 2026-08-12 — resolved, not the original (a)/(b) framing
       resolution: >
         James: "give it to me" — decided directly rather than asking again. Re-checked the substrate
         before deciding: there is NO fleet of interchangeable instances anywhere in this codebase to
@@ -167,7 +167,7 @@ spec:
       axioms: "§10.3 (no second decision point — resolved by not building one), §1.1 (built only what's real, not a fictional fleet)"
       gate: "resource_monitor's four actions live-verified against real data: real os.loadavg()/freemem, real pid rssMB/cpuTimeMs, and a graceful, honest ECONNREFUSED against ollama's :3749/health (not running in this environment) rather than a silent hang."
 
-    FC11_nexus_help_tool:   # ← DONE 2026-08-12
+    P11_nexus_help_tool:   # ← DONE 2026-08-12
       why: "Standalone wrap of a finished module (nexus-awareness), plus one genuinely new piece (docs/spec search) needed so co-pilot is educated on all of NEXUS at the tool level, not just the HTTP-shortcut level."
       does: >
         nexus_help tool: actions 'rundown' (→ systemRundown), 'diagnose'
@@ -183,14 +183,14 @@ spec:
       gate: "co-pilot answers a 'how does X work' question about a specific tool AND a 'what is NEXUS's Y system' question about a specific subsystem, both mid-tool-loop (not the old HTTP-shortcut path), both grounded in real docs/specs it actually found."
 
   ordering_rationale: >
-    FC1→FC2 are pure extensions of already-wired modules (recall, adaptive-fulfillment) —
-    fastest, lowest-risk, no new subsystem. FC3→FC6, FC8, and FC11 are wrap-only tool
+    P1→P2 are pure extensions of already-wired modules (recall, adaptive-fulfillment) —
+    fastest, lowest-risk, no new subsystem. P3→P6, P8, and P11 are wrap-only tool
     additions over complete, untouched code (COS, RAID/SNR, url-listener, identity,
     rewind, nexus-awareness) — same shape as the schedule_task/register_trigger/
-    nexus_heal/loom_scan session, proven pattern, independent of each other. FC9 is a
+    nexus_heal/loom_scan session, proven pattern, independent of each other. P9 is a
     larger wrap phase that starts with its own inventory step, same discipline, more
-    unknowns. FC7 (continuous stream) and FC10 (load balancer) are the two genuinely
-    new-mechanism phases — FC7 because no standing channel exists yet, FC10 because it's
+    unknowns. P7 (continuous stream) and P10 (load balancer) are the two genuinely
+    new-mechanism phases — P7 because no standing channel exists yet, P10 because it's
     not even scoped yet. Both go last on purpose.
 
   working_rule_not_a_phase:
@@ -202,7 +202,7 @@ spec:
       respond) carry the model update, and commit. A rule to follow, not code to write.
 
   honest_risks:
-    - "FC1: guardian_chat_log's provider field needs to actually be queryable by name — confirm the real column/tag shape before wiring the filter, not assumed from the row count alone."
-    - "FC2: ordering risk — if capability-extend fires before adaptive-fulfillment truly exhausts its options, gaps get filed for requests that a retry would have solved. The gate must prove exhaustion happened first, not just that both modules got called."
-    - "FC4: raid_query must stay strictly read-only. A write action here would be a second RAID entry point — exactly what §10.3 already forbids for call_system's relationship to the real registry."
-    - "FC7: the only phase with real scope for drift — 'continuous' can silently become 'a poll disguised as a stream' if not built against ollama's actual stream:true path. Gate explicitly requires no explicit job submission, to catch that."
+    - "P1: guardian_chat_log's provider field needs to actually be queryable by name — confirm the real column/tag shape before wiring the filter, not assumed from the row count alone."
+    - "P2: ordering risk — if capability-extend fires before adaptive-fulfillment truly exhausts its options, gaps get filed for requests that a retry would have solved. The gate must prove exhaustion happened first, not just that both modules got called."
+    - "P4: raid_query must stay strictly read-only. A write action here would be a second RAID entry point — exactly what §10.3 already forbids for call_system's relationship to the real registry."
+    - "P7: the only phase with real scope for drift — 'continuous' can silently become 'a poll disguised as a stream' if not built against ollama's actual stream:true path. Gate explicitly requires no explicit job submission, to catch that."

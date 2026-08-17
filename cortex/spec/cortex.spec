@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cortex
-    version:     3.3.1
+    version:     3.3.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3748
     uuid:        nexus-cortex-v3-0000-2026-0615-jamesbrooks-001
@@ -16,10 +16,6 @@ spec:
       - Artifact:      "{ uuid, jobId, provider, content, gapScore, usage, ts }"
       - CortexMemory:  "{ uuid, key, value, tags, source, tier, ts }"
       - FaultTaxonomy: "{ uuid, faultClass, friction, count, lastSeen, failureMode }"
-        # §ADDENDUM 2026-08-15 — real write authority exists (lib/fault-log.js)
-        # but this table is still zero rows. docs/diagnostic-engine-system.spec
-        # (PROPOSED, not built) is designed to become its first real writer —
-        # not a second table, this one's first real use.
       - FailureMode:   "{ uuid, faultClass, friction, humanAction, escalationHistory, ts }"
       - ChatLog:       "{ uuid, sessionId, role, provider, content, intent, outcome, gapScore, bdaSignals, ts }"
       - Component:     "imported from component-registry"

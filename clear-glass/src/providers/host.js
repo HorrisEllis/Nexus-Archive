@@ -300,6 +300,70 @@ class ProviderHost {
     return { ok: true, providerId, status: 'reloading' };
   }
 
+  /**
+   * navigateTo(providerId, url) — real, new. Requested directly ("switch
+   * co-pilot to claude with this URL... use a URL given as the surface").
+   * Checked start()/reload() first: neither does this — start() only ever
+   * loads a provider's fixed default URL (getProvider(providerId).url) and,
+   * critically, if the window is ALREADY running (true for every provider
+   * after autoBootAll — every provider pre-warms), start()'s early return
+   * just SHOWS the existing window without navigating it anywhere. reload()
+   * only re-loads whatever's already loaded. Neither can point an existing,
+   * running provider window at an arbitrary URL — this is genuinely new.
+   *
+   * Two real things a fresh loadURL() breaks that this method accounts for:
+   * (a) the userscript injected via _inject() is a one-time executeJavaScript
+   *     call, not persistent — navigating away and the NCP bridge goes dark
+   *     until re-injected. Re-injects after the new page settles.
+   * (b) a URL that requires auth may redirect (e.g. to a /login path) —
+   *     detected here by comparing the REQUESTED url against the ACTUAL
+   *     url after navigation settles, not guessed from the requested url
+   *     alone (the requested url could look fine and still redirect).
+   */
+  async navigateTo(providerId, url) {
+    if (!url || typeof url !== 'string') return { ok: false, error: 'navigateTo needs a real url string' };
+    let win = this.windows.get(providerId);
+    if (!win || win.isDestroyed()) {
+      // No running window for this provider yet — start one fresh, THEN
+      // navigate it, rather than fail outright (a person switching to an
+      // agent they haven't used yet should still work).
+      const started = await this.start(providerId, { show: false });
+      if (!started.ok) return { ok: false, error: `could not start ${providerId} to navigate it: ${started.error || 'unknown'}` };
+      win = this.windows.get(providerId);
+      if (!win || win.isDestroyed()) return { ok: false, error: `${providerId} window unavailable after start` };
+    }
+
+    const loadResult = await new Promise((resolve) => {
+      const onFinish = () => { cleanup(); resolve({ ok: true }); };
+      const onFail = (_e, code, desc) => { cleanup(); resolve({ ok: false, error: `${desc} (${code})` }); };
+      const cleanup = () => {
+        win.webContents.removeListener('did-finish-load', onFinish);
+        win.webContents.removeListener('did-fail-load', onFail);
+      };
+      win.webContents.once('did-finish-load', onFinish);
+      win.webContents.once('did-fail-load', onFail);
+      win.loadURL(url).catch(e => { cleanup(); resolve({ ok: false, error: e.message }); });
+    });
+    if (!loadResult.ok) {
+      this.sse.emit('provider.host.navigate-failed', { providerId, url, error: loadResult.error, ts: Date.now() });
+      return { ok: false, providerId, url, error: loadResult.error };
+    }
+
+    // Real re-injection — the userscript is gone after a fresh page load.
+    await this._inject(providerId, win);
+
+    const actualUrl = win.webContents.getURL();
+    // Honest login detection: compare what we asked for against where we
+    // actually ended up, not a keyword guess against the requested url —
+    // the requested url can look completely unrelated to login and still
+    // redirect there for real (session expiry, IP change, etc).
+    const loginPatterns = /\/(login|signin|sign-in|auth|authenticate)(\/|$|\?)/i;
+    const needsSignIn = loginPatterns.test(actualUrl) && !loginPatterns.test(url);
+
+    this.sse.emit('provider.host.navigated', { providerId, requestedUrl: url, actualUrl, needsSignIn, ts: Date.now() });
+    return { ok: true, providerId, requestedUrl: url, actualUrl, needsSignIn };
+  }
+
   list() {
     return listProviders().map(def => ({
       ...def,
