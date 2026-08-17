@@ -35,6 +35,20 @@ const FILES = [
   ['lib/diagnostic-report.js',      'nexus.lib.diagnostic-report',      'lib', []],
   ['guardian/lib/ncp.js',           'nexus.guardian.lib.ncp',           'guardian/lib', []],
   ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
+
+  // §ADDED 2026-08-17b — TX10 (docs/clearglass-agent-suite-and-cfr-loom-
+  // phasemap.spec), same standing instruction. Checked directly, not
+  // assumed: copilot/lib/self-model.js (verifyAgentReachable/
+  // navigateAgentToUrl live here) and lib/agent-tools/tools/sandbox/
+  // cos-compartment.js are BOTH already registered (observability-map.js,
+  // copilot-capability-map.js respectively) — those two functions are
+  // additions to an already-registered file, not new components, correctly
+  // left out. lib/agent-tools/tools/governance/spec-wizard.js genuinely
+  // had no entry anywhere — confirmed by grep, not assumed. Its one real
+  // require (nexus-client.js) has no findable registered id of its own,
+  // left as [] rather than guessed, matching this file's own established
+  // convention for unregistered dependencies.
+  ['lib/agent-tools/tools/governance/spec-wizard.js', 'nexus.lib.agent-tools.governance.spec-wizard', 'lib/agent-tools/tools/governance', []],
 ];
 
 function mapSession20260814(driver) {

@@ -1,7 +1,0 @@
-{"_system":"orchestrator","_ts":1786984021912,"type":"orchestrator.boot.started","payload":{"systemId":"orchestrator","port":9000,"version":"2.2.0","phases":7,"seqId":"9150b4f2","ts":1786984021893}}
-{"_system":"orchestrator","_ts":1786984021942,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"server.bound","type":"HARD","ms":1,"seqId":"9150b4f2"}}
-{"_system":"orchestrator","_ts":1786984021946,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ledger.writable","type":"HARD","ms":1,"seqId":"9150b4f2"}}
-{"_system":"orchestrator","_ts":1786984021976,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"health.verify","type":"HARD","ms":75,"seqId":"9150b4f2"}}
-{"_system":"orchestrator","_ts":1786984022113,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"recall.verify","type":"HARD","ms":7,"seqId":"9150b4f2"}}
-{"_system":"orchestrator","_ts":1786984022114,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"ui.hotswap","type":"SOFT","ms":123,"seqId":"9150b4f2"}}
-{"_system":"orchestrator","_ts":1786984022116,"type":"orchestrator.phase.ok","payload":{"systemId":"orchestrator","phase":"cli.terminal","type":"SOFT","ms":1,"seqId":"9150b4f2"}}
