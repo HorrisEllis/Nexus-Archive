@@ -990,6 +990,13 @@ export function findPriorSection(sectionId, sectionDesc = '', excludeSpecUuid = 
 // independently later. See that file's header for the full history (the
 // three-dialect detector, the byte-fidelity trim bugs and their fixes).
 const { chunkDocument, structuralProfile, slug: _slug, SPLIT_THRESHOLD_CHARS } = _require('../../lib/chunker/index.js');
+// §WIRED 2026-08-15 (LS3) — James: route idearium's chunking through
+// chunk-service.js "instead of around it." Same proven ESM->CJS bridge
+// already used one line above for lib/chunker — this boundary was never
+// as blocked as first scoped; chunkGoverned() being async is the real,
+// smaller change (propagated below, both real call sites already inside
+// async contexts, checked directly before touching anything).
+const { chunkGoverned } = _require('../../lib/chunk-service.js');
 
 // §IMPORT 2026-07-10 — "need a way to import zip or .spec to build a repo."
 // §REWRITTEN 2026-07-10 — the original version mapped every block through a
@@ -1010,7 +1017,7 @@ const { chunkDocument, structuralProfile, slug: _slug, SPLIT_THRESHOLD_CHARS } =
 // zero-token, since the content is already authored, but not a shortcut
 // around the contract: every chunk is still written to disk and verified
 // like any agent-built one, just instantly instead of after a dispatch.
-export function importSpec({ name, specText, author = 'import' }) {
+export async function importSpec({ name, specText, author = 'import' }) {
   if (!specText || !specText.trim()) throw new Error('importSpec: specText required');
   const specName = name || (specText.match(/name:\s*(\S+)/)?.[1]) || `imported-${Date.now()}`;
 
@@ -1018,7 +1025,7 @@ export function importSpec({ name, specText, author = 'import' }) {
   // the byte-fidelity self-check all now live in lib/chunker/index.js
   // (chunkDocument). This is the same logic that used to be inline here —
   // moved, not reimplemented, so idearium isn't the only caller of it.
-  const { queue, byteFidelity, blocksFound } = chunkDocument(specText);
+  const { queue, byteFidelity, blocksFound } = (await chunkGoverned(specText)).chunks;
   const roundtrip = byteFidelity.verified;
   if (!roundtrip) {
     console.warn(`[idearium.spec-engine] importSpec: byte-fidelity check FAILED for "${specName}" — ` +

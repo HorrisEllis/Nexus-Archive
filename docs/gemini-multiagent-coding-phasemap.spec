@@ -17,7 +17,7 @@ spec:
   gemini_facts:   # James, 2026-08-07 — correct the stale constraints
     context_window_input: "1,000,000–2,000,000 tokens (whole codebases fit)."
     max_output_tokens:    "~65,536 per response (large-file gen / big refactors)."
-    note: "lib/agent-router AGENT_CONSTRAINTS has gemini:30000 — STALE. Fix in P1."
+    note: "lib/agent-router AGENT_CONSTRAINTS has gemini:30000 — STALE. Fix in GM1."
     context_caching: "cache static files/system-instructions/framework rules to cut latency + input overhead across multi-turn agent calls."
     structured_outputs: "enforce strict JSON / tool-use schemas for agent-to-agent comms → predictable downstream parsing."
 
@@ -31,7 +31,7 @@ spec:
     - "lib/agent-tools/tools/ — scoped tools already: read-file, query-recall (cortex recall), call-system, diagnose, query-intelligence. The per-agent toolbox draws from these."
 
   clarifications:   # answers to James's direct questions, recorded
-    chunk_vs_seam: "CHUNK = a piece of a file (lib/chunker), for token/context fitting + line addressing. SEAM = a behavioral contract between components (lib/seam, seam_id + axioms + gates). For Gemini code edits use CHUNK-level line addressing, not seam ids. A future P3 can let an edit target a SEAM (a named contract region) as well as a line range."
+    chunk_vs_seam: "CHUNK = a piece of a file (lib/chunker), for token/context fitting + line addressing. SEAM = a behavioral contract between components (lib/seam, seam_id + axioms + gates). For Gemini code edits use CHUNK-level line addressing, not seam ids. A future GM3 can let an edit target a SEAM (a named contract region) as well as a line range."
     emerge_or_cockpit: "Neither owns chunking — lib/chunker is canonical and shared; emerge (SEAM compiler/codegen) and cockpit (command surface) both consume it. Gemini toolbox already uses lib/chunker."
 
   governing_axioms:
@@ -42,7 +42,7 @@ spec:
   # ── DEPENDENCY ORDER ────────────────────────────────────────────────────────
   phases:
 
-    P1_per_agent_contracts:   # ← DONE 2026-08-07. lib/gemini-toolbox/agent-contracts.js — 4 scoped agents, enforcement verified. + chunking consolidated through RAID (lib/chunk-service.js). Suite green.
+    GM1_per_agent_contracts:   # ← DONE 2026-08-07. lib/gemini-toolbox/agent-contracts.js — 4 scoped agents, enforcement verified. + chunking consolidated through RAID (lib/chunk-service.js). Suite green.
       priority: FOUNDATION.
       does: >
         Extend gemini-toolbox's single CONTRACT into a REGISTRY of per-agent
@@ -58,8 +58,8 @@ spec:
       drift: "scoping granularity — per-agent tool allow-lists are the tuning surface."
       axioms: [§8.6, §1.1]
 
-    P2_tree_parse_recall_injection:   # ← DONE 2026-08-07. lib/gemini-toolbox/injection.js — tree/parseAny/recall + buildInjectionPayload. 9 tests.
-      depends_on: P1
+    GM2_tree_parse_recall_injection:   # ← DONE 2026-08-07. lib/gemini-toolbox/injection.js — tree/parseAny/recall + buildInjectionPayload. 9 tests.
+      depends_on: GM1
       does: >
         The parsing/injection tool James needs: (a) tree(path) — file-structure
         as a text tree (like `tree`), scoped + data/**-safe; (b) parseAny(path) —
@@ -74,8 +74,8 @@ spec:
       drift: "token budgeting per agent (Gemini 1-2M in / 65k out) — what to cache vs re-send."
       axioms: [§8.6, §16.4]
 
-    P3_line_block_seam_sync:
-      depends_on: P1
+    GM3_line_block_seam_sync:
+      depends_on: GM1
       does: >
         Extend the line-sync (already in gemini-toolbox) so an edit can target not
         just a line range but a named BLOCK or SEAM region — so agents and NEXUS
@@ -88,47 +88,47 @@ spec:
       drift: "block identity — how a block/seam is named and re-found if the file shifted."
       axioms: [§1.1, §2.1, §RAID]
 
-    P4_structured_agent_to_agent:
-      depends_on: [P1, P2]
+    GM4_structured_agent_to_agent:
+      depends_on: [GM1, GM2]
       does: >
         Strict JSON schemas for agent-to-agent messages + cross-agent event
         triggers (James's axiom 1: no edits outside module boundary without an
         explicit cross-agent trigger). An agent emits a structured result; the
-        next agent consumes it predictably. Rides the P1 fan-in / event stream.
+        next agent consumes it predictably. Rides the GM1 fan-in / event stream.
       reuse: "lib/ledger-fanin (events) + gemini-toolbox structured outputs + intent-classifier."
       gate:  "agent A's JSON output parses deterministically as agent B's input; a boundary-crossing edit requires an explicit trigger event."
       drift: "schema evolution — versioned message schemas."
       axioms: [§1.1, §17.6]
 
-    P5_autonomous_multiagent_loop:
-      depends_on: [P1, P2, P3, P4]
+    GM5_autonomous_multiagent_loop:
+      depends_on: [GM1, GM2, GM3, GM4]
       does: >
         The autonomous driver: given a task, assign agents by contract, inject
-        payloads (P2), let them propose block/seam edits (P3), exchange structured
-        results (P4), and apply through RAID — looping until done or halted. Uses
+        payloads (GM2), let them propose block/seam edits (GM3), exchange structured
+        results (GM4), and apply through RAID — looping until done or halted. Uses
         the EXISTING lib/autonomous-loop as the spine.
-      reuse: "lib/autonomous-loop + governAction (P6 gate from nexus-live-mind) + RAID."
+      reuse: "lib/autonomous-loop + governAction (GM6 gate from nexus-live-mind) + RAID."
       gate:  "a real task runs end-to-end across ≥2 agents, edits applied through RAID, halts on ambiguity (James's axiom 3: halt + request clarification)."
       drift: "autonomy scope — RAID gates every apply; halt-on-ambiguity is mandatory."
       axioms: [§RAID, §1.2, user_wellbeing]
 
   ordering_rationale: >
-    P1 first — contracts are the frame everything injects into. P2 (tree/parse/
-    recall) and P3 (block/seam sync) both need the per-agent contract to scope
-    into, and are independent of each other. P4 (agent-to-agent) needs contracts
-    + payloads. P5 (autonomous loop) composes all of it + the existing autonomous
-    -loop + the governAction gate already wired in nexus-live-mind P6.
+    GM1 first — contracts are the frame everything injects into. GM2 (tree/parse/
+    recall) and GM3 (block/seam sync) both need the per-agent contract to scope
+    into, and are independent of each other. GM4 (agent-to-agent) needs contracts
+    + payloads. GM5 (autonomous loop) composes all of it + the existing autonomous
+    -loop + the governAction gate already wired in nexus-live-mind GM6.
 
   honest_risks:
     - "5 phases — an ARC, not a turn. Each ships whole + tested + committed."
-    - "P5 autonomy applies real code changes — RAID gates every write; halt-on-ambiguity mandatory; scope conservatively."
+    - "GM5 autonomy applies real code changes — RAID gates every write; halt-on-ambiguity mandatory; scope conservatively."
     - "Gemini's real limits (65k output) cap single-response refactor size — chunk large refactors (lib/chunker already does)."
     - "Live Gemini calls prove on James's boot; sandbox verifies contracts/tree/sync/schemas."
 
-  first_build: "P1 — per-agent contracts (extend gemini-toolbox CONTRACT → registry). Recommended start next session."
+  first_build: "GM1 — per-agent contracts (extend gemini-toolbox CONTRACT → registry). Recommended start next session."
 
 ---
-## P1 COMPLETE + chunking consolidation 2026-08-07
+## GM1 COMPLETE + chunking consolidation 2026-08-07
 lib/gemini-toolbox/agent-contracts.js — extends the single CONTRACT into a registry
 of 4 distinct per-agent contracts (code-architect, refactorer, test-writer,
 diagnostician), each = identity + axioms + SCOPED toolbox + injected context.
@@ -143,20 +143,20 @@ decision (§10.3 one source of truth). The distinct concerns stay (emerge/chunk 
 format, idearium/chunk-dispatch = dispatch, seam/chunk-lifecycle = state) but
 delegate boundary detection here. §8.6 wraps lib/chunker — no new chunking logic.
 Loom graph updated with real wires; consumer-registry derives the RAID edge live.
-7 tests. REMAINING: P2 tree/parse/recall, P3 block/seam sync, P4 agent-to-agent, P5 loop.
+7 tests. REMAINING: GM2 tree/parse/recall, GM3 block/seam sync, GM4 agent-to-agent, GM5 loop.
 
 ---
-## P2 COMPLETE 2026-08-07 — tree/parse/recall injection tool
+## GM2 COMPLETE 2026-08-07 — tree/parse/recall injection tool
 lib/gemini-toolbox/injection.js — the parsing tool for autonomy: tree(path)
 (file-structure text tree, the missing piece — data/**-safe, depth/entry capped),
 parseAny(path) (parse any file/data → plain text: code → line-numbered via
 parseForGemini, JSON → pretty, binary → honest refusal, large → chunk-first),
 recall(query) (cortex /api/recall injection). buildInjectionPayload(agentId, target)
-assembles ONE payload per agent = its P1 contract (static → cacheable) + tree +
+assembles ONE payload per agent = its GM1 contract (static → cacheable) + tree +
 parsed target + recall, within the agent's token budget (Gemini 1-2M in / 65k out).
 §8.6 composes parseForGemini + query-recall + the read-file safe-resolve pattern.
 §0.1 caught a real data/ guard hole (bare 'data' slipped the regex) — fixed. 9
-tests. In loom's graph. REMAINING: P3 block/seam sync, P4 agent-to-agent, P5 loop.
+tests. In loom's graph. REMAINING: GM3 block/seam sync, GM4 agent-to-agent, GM5 loop.
 
 ---
 ## AGNOSTIC TOOL PROMOTION 2026-08-07 (James: "make any of those lib tools if they can be used across systems")

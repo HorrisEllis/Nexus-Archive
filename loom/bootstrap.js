@@ -8,11 +8,31 @@
  * Run: node loom/bootstrap.js
  */
 const { LoomDriver } = require('./schema/index');
-const { mapWarp } = require('./maps/warp-map');
-const { mapObservability } = require('./maps/observability-map');
-const { mapCopilotCapability } = require('./maps/copilot-capability-map');
-const { mapSession20260814 } = require('./maps/session-2026-08-14-map');
-const { mapUi } = require('./maps/ui-map');
+
+// §CONSOLIDATED 2026-08-15 — James: "look at the nodes/component map in
+// loom, need to consolidate, not scattered." This was previously THREE
+// separate places to edit per map (a require() here, a FILES.map() spread
+// in handMapped below, and a full copy-pasted ~12-line invoke+report block
+// further down) — real risk, not hypothetical: the copy-paste produced a
+// real bug, found while doing this consolidation. mapUi's `failures` were
+// checked by NOTHING — the failure-reporting block right after its call
+// belonged to mapCopilotCapability, left over from a copy-paste. If mapUi
+// ever failed, it failed silently. Fixed by construction below: one shared
+// reporting path, impossible to skip per-map now.
+//
+// Order matters (deferred-declaration replay tolerates it, per §DEFERRED
+// DECLARATIONS below, but the boundary-export scan still needs to run
+// after these are known) — kept as an explicit ordered array, not a bare
+// directory scan, so a new map's position is a deliberate choice, not
+// filesystem sort order.
+const HAND_MAPS = [
+  { req: () => require('./maps/warp-map'),               fn: 'mapWarp',               label: 'warp/ (17 files, real require() edges only)' },
+  { req: () => require('./maps/observability-map'),      fn: 'mapObservability',      label: 'observability/tablet arc (real require() edges only)' },
+  { req: () => require('./maps/agent-tools-map'), fn: 'mapAgentTools',    label: 'agent-tools components this session added to loom (real require() edges only)' },
+  { req: () => require('./maps/lib-consolidation-map'), fn: 'mapLibConsolidation', label: 'LS9 lib/ consolidation — the six moved nexus-*.js files, real require() edges only' },
+  { req: () => require('./maps/copilot-capability-map'), fn: 'mapCopilotCapability',  label: 'copilot-capability tools (real require()/HTTP edges only)' },
+  { req: () => require('./maps/ui-map'),                  fn: 'mapUi',                 label: 'ui files' },
+];
 
 const driver = new LoomDriver(); // default dataDir = loom/data/
 
@@ -128,11 +148,7 @@ const { scanTree, mapSource } = require('./scanners/source-map');
 const { mapCapabilities } = require('./scanners/capability-map');
 const { mapSpecs } = require('./scanners/spec-map');
 const handMapped = [
-  ...require('./maps/warp-map').FILES.map(f => f[0]),
-  ...require('./maps/observability-map').FILES.map(f => f[0]),
-  ...require('./maps/copilot-capability-map').FILES.map(f => f[0]),
-  ...require('./maps/session-2026-08-14-map').FILES.map(f => f[0]),
-  ...require('./maps/ui-map').FILES.map(f => f[0]),
+  ...HAND_MAPS.flatMap(m => m.req().FILES.map(f => f[0])),
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -166,59 +182,22 @@ if (mappedSrc.failures.length) {
   failures += mappedSrc.failures.length;
 }
 
-// ── Warp — 17 real components (one per file), per-file hooks, real-require wires ──
-console.log('\nmapping warp/ (17 files, real require() edges only)...\n');
-const mapped = mapWarp(driver);
-console.log(`  components: ${mapped.components.length} ok`);
-console.log(`  hooks:      ${mapped.hooks.length} ok`);
-console.log(`  wires:      ${mapped.wires.length} ok`);
-if (mapped.failures.length) {
-  console.log(`  FAILURES:`);
-  for (const f of mapped.failures) console.log(`    ${JSON.stringify(f)}`);
-  failures += mapped.failures.length;
-}
-
-// ── Observability/tablet arc — components mapped WITH real require() wires ──
-console.log('\nmapping observability/tablet arc (real require() edges only)...\n');
-const mappedObs = mapObservability(driver);
-console.log(`  components: ${mappedObs.components.length} ok`);
-console.log(`  hooks:      ${mappedObs.hooks.length} ok`);
-console.log(`  wires:      ${mappedObs.wires.length} ok`);
-if (mappedObs.failures.length) {
-  console.log(`  FAILURES:`);
-  for (const f of mappedObs.failures) console.log(`    ${JSON.stringify(f)}`);
-  failures += mappedObs.failures.length;
-}
-
-// ── Session 2026-08-14 — the 3 genuinely-new components from that session ──
-console.log('\nmapping session-2026-08-14 components (real require() edges only)...\n');
-const mappedS0814 = mapSession20260814(driver);
-console.log(`  components: ${mappedS0814.components.length} ok`);
-console.log(`  hooks:      ${mappedS0814.hooks.length} ok`);
-console.log(`  wires:      ${mappedS0814.wires.length} ok`);
-if (mappedS0814.failures.length) {
-  console.log(`  FAILURES:`);
-  for (const f of mappedS0814.failures) console.log(`    ${JSON.stringify(f)}`);
-  failures += mappedS0814.failures.length;
-}
-
-// ── Copilot-capability tool session (2026-08-12) — real require/HTTP edges ──
-console.log('\nmapping copilot-capability tools (real require()/HTTP edges only)...\n');
-const mappedCC = mapCopilotCapability(driver);
-console.log(`  components: ${mappedCC.components.length} ok`);
-console.log(`  hooks:      ${mappedCC.hooks.length} ok`);
-console.log(`  wires:      ${mappedCC.wires.length} ok`);
-
-// ── UI files (2026-08-13) — plain UI, real HTTP-shaped edges only ──────────
-console.log('\nmapping ui files...\n');
-const mappedUi = mapUi(driver);
-console.log(`  components: ${mappedUi.components.length} ok`);
-console.log(`  hooks:      ${mappedUi.hooks.length} ok`);
-console.log(`  wires:      ${mappedUi.wires.length} ok`);
-if (mappedCC.failures.length) {
-  console.log(`  FAILURES:`);
-  for (const f of mappedCC.failures) console.log(`    ${JSON.stringify(f)}`);
-  failures += mappedCC.failures.length;
+// ── Hand maps — one shared invoke+report path, not five copy-pasted ones ───
+// The old version of this block is exactly why this consolidation happened:
+// mapUi's failures were checked by code left over from mapCopilotCapability's
+// copy-paste. That bug class is now structurally impossible — every map in
+// HAND_MAPS runs through this one path.
+for (const { req, fn, label } of HAND_MAPS) {
+  console.log(`\nmapping ${label}...\n`);
+  const result = req()[fn](driver);
+  console.log(`  components: ${result.components.length} ok`);
+  console.log(`  hooks:      ${result.hooks.length} ok`);
+  console.log(`  wires:      ${result.wires.length} ok`);
+  if (result.failures.length) {
+    console.log(`  FAILURES:`);
+    for (const f of result.failures) console.log(`    ${JSON.stringify(f)}`);
+    failures += result.failures.length;
+  }
 }
 
 // ── CAPABILITY / CONSUMER registry — the semantic graph ────────────────────

@@ -86,7 +86,7 @@ const { jaaDB, uid } = require('./memory/jaa-db');
 // orchestrator) were already POSTing to cortex's /api/event with it in mind
 // — but this file never required it, so nothing arriving at /api/event ever
 // reached an in-process listener. Fixed at the two points below.
-const bus = require('../nexus-bus');
+const bus = require('../lib/bus');
 let _openLoopTaxonomy = null;
 function _getTaxonomy() {
   if (_openLoopTaxonomy !== null) return _openLoopTaxonomy;

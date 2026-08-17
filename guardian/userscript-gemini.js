@@ -457,8 +457,38 @@ function startWatch(jobId, prompt, retryCount = 0) {
   _watchTimer = setTimeout(checkStable, 1500);
 }
 
+// ── Post message to NEXUS (chat-logger + BDA) ───────────────────────────────
+// §BUILT 2026-08-15 — LS1's actual gate. Ported faithfully from claude's
+// real, proven _nexusLogMessage (guardian/userscript-claude.js:1418) — same
+// endpoint, same payload shape, same signal-handling intent — adapted to
+// gemini's own real names (getSessionId() is async here, unlike claude's
+// synchronous _nexus.sessionId; no activeTab/renderNexus/_nexusAnnotate UI
+// machinery exists in this file, so gap-regime signals log via the real
+// _log()/toast() this file already has instead). fetch(), not
+// GM_xmlhttpRequest — ClearGlass is the only real consumer (James,
+// confirmed: "it's clear glass for a fact... a browser made specifically
+// for AI"), no Tampermonkey pretense needed. Canonical behavior spec:
+// userscripts/src/shared/chat-logger.js.
+async function _nexusLogMessage(role, text) {
+  try {
+    const res = await fetch(CORTEX_URL + '/api/meta/observe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, text, sessionId: await getSessionId(), source: PROVIDER }),
+    });
+    const d = await res.json();
+    if (d && d.result && d.result.signals) {
+      if (d.result.pendulum && d.result.pendulum.regime && d.result.pendulum.regime !== 'STABLE') {
+        _log('warn', `gap regime: ${d.result.pendulum.regime}`, `${role} · ${(d.result.gaps||[]).length} gap(s)`);
+      }
+    }
+  } catch (_) { /* network failure or malformed response must not break the chat, §1.2 */ }
+}
+
 async function _onJobComplete(jobId, text, responseEl, ms, prompt, retryCount) {
   stopWatch();
+  if (prompt) _nexusLogMessage('human', prompt);
+  if (text)   _nexusLogMessage('assistant', text);
   send({ type:'GUARDIAN_LEDGER_WRITE', jobId, category:'UPGRADE', msg:`Complete · ${text.length}ch · ${Math.round(ms/1000)}s`,
     meta:{ jobId, chars:text.length, ms, provider:PROVIDER, ts:Date.now() } });
   _log('ok', `Complete · ${text.length}ch`, `${Math.round(ms/1000)}s · #${jobId.slice(0,8)}`);

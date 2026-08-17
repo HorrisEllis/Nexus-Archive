@@ -25,7 +25,7 @@
 'use strict';
 
 const path = require('path');
-const nc   = require('../nexus-connect');
+const nc   = require('../lib/connect');
 
 const { BootSequence }     = require('../lib/boot-sequence');
 const { createBridgeLedger }   = require('./ledger');

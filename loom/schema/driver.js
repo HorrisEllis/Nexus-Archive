@@ -84,6 +84,33 @@ class LoomDriver {
     return { ok: true, stored };
   }
 
+  /**
+   * declareIfNew(kind, payload) -> { ok, stored?, skipped?, reason? }
+   *
+   * §BUILT 2026-08-15 — LS7 of docs/session-2026-08-14-and-15-living-
+   * schema-phasemap.spec. §3.1 Bottom-Up Only: foundation before anything
+   * built on top of it, so this lives on the driver itself, not
+   * duplicated across five map files' own declare loops (§8.6 reuse
+   * before build — the same has()-check pattern loom_register.js already
+   * proved safe, not a new mechanism).
+   *
+   * declare() is real and correct — the axiom system already refuses a
+   * duplicate id (loom.unique-id, hard) rather than silently overwriting.
+   * The problem was never correctness, it was noise: every hand-map run
+   * against an already-populated registry produced thousands of
+   * expected-duplicate FAILURES (measured, 2026-08-15: 2821/543/207,
+   * identical before and after the bootstrap.js consolidation), because
+   * nothing checked existence BEFORE attempting to declare. This does —
+   * skips cleanly, no axiom check attempted, no failure logged, when the
+   * id is already real.
+   */
+  declareIfNew(kind, payload) {
+    if (payload && payload.id && this.registry.has(kind, payload.id)) {
+      return { ok: true, skipped: true, reason: 'already exists' };
+    }
+    return this.declare(kind, payload);
+  }
+
   graph() {
     return this.registry.graph();
   }

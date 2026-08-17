@@ -1,7 +1,7 @@
 {
   "name": "nexus",
-  "version": "0.39.0",
-  "description": "NEXUS \u2014 sovereign AI orchestration platform",
+  "version": "0.39.5",
+  "description": "NEXUS — sovereign AI orchestration platform",
   "author": "James Brooks (Erosmancer)",
   "license": "MIT",
   "private": true,
@@ -20,6 +20,7 @@
     "test:int": "node tests/integration.test.js",
     "start": "node orchestrator.js",
     "start:all": "node autopilot.js",
+    "build:userscripts": "node scripts/build-userscripts.js",
     "start:core": "node autopilot.js --only=orchestrator,bridge,cortex,guardian",
     "autopilot": "node autopilot.js",
     "autopilot:status": "node autopilot.js --status-port=7799",
@@ -30,12 +31,13 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "playwright": "^1.61.1"
   },
   "dependencies": {
     "express": "^5.2.1",
+    "js-yaml": "^5.2.1",
     "multer": "^2.2.0",
-    "vectra": "^0.15.0",
-    "js-yaml": "^5.2.1"
+    "vectra": "^0.15.0"
   }
 }

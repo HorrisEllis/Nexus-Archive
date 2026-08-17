@@ -1,0 +1,164 @@
+{
+  "uuid": "0cfd7481-9b5e-44b6-82bf-3496a0ec97a5",
+  "dedupKey": "5e245072ec73f3d9",
+  "name": "ls3-direct-test",
+  "type": "system",
+  "description": "imported from .spec",
+  "author": "import",
+  "version": "0.1.0",
+  "phase": "40",
+  "status": "complete",
+  "agent": "ollama",
+  "agentPriority": [
+    "ollama",
+    "chatgpt",
+    "claude"
+  ],
+  "buildEngine": "auto",
+  "ideaUuid": null,
+  "totalChunks": 3,
+  "doneChunks": 3,
+  "failedChunks": 0,
+  "progress": 100,
+  "createdAt": 1786938763831,
+  "updatedAt": 1786938763852,
+  "completedAt": 1786938763851,
+  "archivePath": null,
+  "templateId": null,
+  "templateIds": [],
+  "templateSeeded": [],
+  "duplicateOf": null,
+  "rootHash": "fd641077738e040d523561129312fa83197ee2694d99caea9511b0e86366f415",
+  "chunks": [
+    {
+      "uuid": "fa2352c7-4511-4442-a98e-abeccd769174",
+      "specUuid": "0cfd7481-9b5e-44b6-82bf-3496a0ec97a5",
+      "chunkIdx": 0,
+      "sectionId": "document-meta",
+      "sectionTitle": "document — meta",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: meta)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:0cfd7481:document-meta",
+      "contract_id": "spec-contract:0cfd7481:document-meta:fa2352c7",
+      "filePath": "/home/claude/check3/nexus/idearium/data/specs/0cfd7481-9b5e-44b6-82bf-3496a0ec97a5/00-document-meta-fa2352c7.md",
+      "fileName": "00-document-meta.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → meta -->\n\nspec:\n  meta:\n    name:        diagnostic-engine\n    version:     0.1.0\n    status:      PROPOSED — not built. See docs/session-2026-08-14-and-15-living-schema-phasemap.spec, LS2.\n    foundation:  nexus-system-foundation@1.0.0\n    port:        null  # undecided — see LS4's own open question: does this run\n                        # as its own boot-phase system, or stay a cortex substrate?\n    uuid:        nexus-diagnostic-engine-v0-1-0-0000-2026-0815-jamesbrooks-001\n    purpose: >\n      A living, per-system schema of what each real system is supposed to\n      do end-to-end — {produces, consumes, healthSignal, expectedLatency}\n      per expectation — with a confidence value on each expectation that\n      intelligence's already-real lift-adjusted scoring adjusts from real\n      outcomes, not a hand-tuned or second statistics engine. Exists so a\n      diagnosis can name a SPECIFIC expectation violation instead of a\n      generic error string, and so fault_taxonomy — real, schema'd, and\n      still zero rows as of this spec's writing — finally has a real writer.\n",
+      "byteSize": 1519,
+      "createdAt": 1786938763831,
+      "updatedAt": 1786938763845,
+      "completedAt": 1786938763845,
+      "tags": [
+        "document-meta",
+        "system",
+        "ls3-direct-test"
+      ],
+      "structuralProfile": {
+        "chars": 1074,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "07c77984-a016-41fa-bb89-6b8c3e569531",
+      "specUuid": "0cfd7481-9b5e-44b6-82bf-3496a0ec97a5",
+      "chunkIdx": 1,
+      "sectionId": "document-core",
+      "sectionTitle": "document — core",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: core)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:0cfd7481:document-core",
+      "contract_id": "spec-contract:0cfd7481:document-core:07c77984",
+      "filePath": "/home/claude/check3/nexus/idearium/data/specs/0cfd7481-9b5e-44b6-82bf-3496a0ec97a5/01-document-core-07c77984.md",
+      "fileName": "01-document-core.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → core -->\n\n\n  core:\n    schemas:\n      - SystemExpectation: \"{ uuid, system, kind: produces|consumes|healthSignal|latency, statement, confidence, lastCheckedAt, lastOutcome }\"\n      - ExpectationViolation: \"{ uuid, expectationUuid, system, observed, expected, severity, ts }\"\n        # Written to the REAL fault_taxonomy table — not a new table. §8.6\n        # reuse before build: fault_taxonomy's schema and write authority\n        # (lib/fault-log.js) already exist; this spec's only job is to\n        # become fault_taxonomy's first real writer, not to build a second\n        # one next to it.\n    axioms:\n      - \"§1.1 Nothing Exists Until Proven — an expectation with confidence 0 is honestly unproven, not silently assumed true.\"\n      - \"§1.2 Nothing Pretends to Work, Nothing Silently Fails — an expectation violation is a first-class written row, never a swallowed exception.\"\n      - \"§2.3 All State Must Be Observable — every expectation's current confidence must be queryable, not buried in a running process's memory.\"\n    depends_on_real:\n      - \"cortex/intelligence/index.js's _scanMetaPatterns (lift-adjusted scoring, meta_noise_source detection) — the confidence-update mechanism this spec reuses, does not reinvent.\"\n      - \"lib/fault-log.js — real write authority for fault_taxonomy, currently zero real writers into it.\"\n      - \"lib/tool-index.js — same shape precedent: a real schema+writer pair (register/record) that sat with zero callers for the tool-usage signal until this session's own AB1 fix. This spec is explicitly the SAME failure mode not being allowed to happen twice.\"\n      - >\n        §CORRECTION 2026-08-15 — lib/diagnostic-engines.js (docs/diagnostic-\n        engines.spec, v1.0.0, real, 631 lines, built 2026-06-15 — WEEKS\n        before this spec's first draft) was not checked before this spec\n        was originally written. Not a duplicate on inspection: its 12\n        methods (causalChainTrace, scanInvariants, circuitBreakerAnalysis,\n        cascadePrediction, homeostasisScore, crossSystemCorrelation, etc.)\n        take generic {events, systemStates} and analyze them — they are the\n        ANALYSIS layer. This spec's SystemExpectation schema is the missing\n        layer ABOVE that: what should be true per system, so those 12 real\n        methods have a structured expectation to check events against\n        instead of only raw pattern-mining. LS2 should call INTO\n        diagnostic-engines.js, not build a second analysis layer beside it.\n        Separately, real and worth its own small fix regardless of LS2's\n        fate: lib/diagnostic-engines.js has ZERO agent-tool coverage right\n        now (checked lib/agent-tools/, zero hits) — 631 lines of real,\n        already-built diagnostic methods no agent can currently call.\n    open_questions:\n      - \"Does this run inside cortex (like intelligence/RAID do today) or as its own boot-phase system? Same undecided question as LS4 — this spec deliberately does not answer it, per §3.3 map before build.\"\n      - \"How does an expectation's confidence DECAY when unchecked for a long time, versus when actively disconfirmed? Named as an honest_risk in the parent phasemap (LS2), not yet designed here.\"\n      - \"Who writes the INITIAL expectation set per system — hand-authored per system (like this spec is hand-authored), or generated from loom's already-real component/wire graph (nexus_map's real data)? Generating from loom is the more §8.6-aligned answer but is not decided here.\"\n",
+      "byteSize": 3950,
+      "createdAt": 1786938763831,
+      "updatedAt": 1786938763849,
+      "completedAt": 1786938763849,
+      "tags": [
+        "document-core",
+        "system",
+        "ls3-direct-test"
+      ],
+      "structuralProfile": {
+        "chars": 3484,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "1342c7c1-ad6c-43dd-ae5c-06adbbdeddb1",
+      "specUuid": "0cfd7481-9b5e-44b6-82bf-3496a0ec97a5",
+      "chunkIdx": 2,
+      "sectionId": "document-honest-risks",
+      "sectionTitle": "document — honest_risks",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: honest_risks)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:0cfd7481:document-honest-risks",
+      "contract_id": "spec-contract:0cfd7481:document-honest-risks:1342c7c1",
+      "filePath": "/home/claude/check3/nexus/idearium/data/specs/0cfd7481-9b5e-44b6-82bf-3496a0ec97a5/02-document-honest-risks-1342c7c1.md",
+      "fileName": "02-document-honest-risks.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → honest_risks -->\n\n\n  honest_risks:\n    - \"A schema that goes stale silently is worse than no schema at all — this is the LS2 risk this system exists to manage FOR OTHER systems; it must not be exempt from the same discipline about itself.\"\n    - \"This spec's own confidence/decay design is explicitly unfinished — see open_questions. Do not build LS2 from this spec alone; it needs its own dedicated design pass first, same as the parent phasemap already says.\"\n",
+      "byteSize": 921,
+      "createdAt": 1786938763831,
+      "updatedAt": 1786938763851,
+      "completedAt": 1786938763851,
+      "tags": [
+        "document-honest-risks",
+        "system",
+        "ls3-direct-test"
+      ],
+      "structuralProfile": {
+        "chars": 444,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    }
+  ],
+  "specPath": "/home/claude/check3/nexus/idearium/data/specs/0cfd7481-9b5e-44b6-82bf-3496a0ec97a5/0cfd7481-9b5e-44b6-82bf-3496a0ec97a5.spec",
+  "importedBlocks": [
+    "document"
+  ],
+  "importedUnmatched": [],
+  "byteFidelity": {
+    "verified": true,
+    "sourceBytes": 5002,
+    "reconstructedBytes": 5002
+  }
+}

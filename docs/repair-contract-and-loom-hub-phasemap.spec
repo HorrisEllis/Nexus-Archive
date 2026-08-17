@@ -2,7 +2,15 @@ spec:
   meta:
     name:        repair-contract-and-loom-hub
     version:     0.1.0-phasemap
-    status:      PHASEMAP 2026-08-12. Mapped, not built. §3.3 — map before build.
+    status:      ALL ELEVEN PHASES DONE 2026-08-12 (R0-R10). §CORRECTED 2026-08-14 —
+                 this line still read "Mapped, not built" two days after the last
+                 phase closed. Every phase below has carried its own inline
+                 "# ← DONE 2026-08-12" marker since the day it landed, and git
+                 walks the closure commit by commit (4ab8c68 R0 ... 6a0dfcb "all
+                 eleven phases complete"), so the per-phase record was right and
+                 only the header lied. §1.1 cuts both ways: a spec claiming LESS
+                 than was built sends the next reader to rebuild finished work.
+                 Found by mining git for phase status rather than trusting headers.
     uuid:        nexus-repair-loom-hub-v0-0000-2026-0812-001
     author:      James Brooks
     intent: >

@@ -73,15 +73,15 @@ const FILES = [
   ['lib/activity-log/index.js',   'nexus.lib.activity-log',
     ['nexus.lib.ledger-fanin']],
   ['copilot/lib/self-model.js',   'nexus.copilot.self-model',
-    ['nexus.copilot.user-model', 'nexus.copilot.nexus-awareness', 'nexus.lib.gap-field', 'nexus.copilot.intent-learning']],  // P5/P6 — identity + governance + agent-switch + nexus model, wired from lib/reflection, lib/constitutional-ai, lib/agent-router, lib/intent-classifier. §2026-08-09 — buildNexusModel() now includes gap-field's system+user-model gap summary AND intent-learning's per-pattern confidence — a model of NEXUS that only lists what it can do without also carrying how sure it is isn't actually self-aware.
+    ['nexus.copilot.lib.user-model', 'nexus.copilot.nexus-awareness', 'nexus.lib.gap-field', 'nexus.copilot.intent-learning']],  // P5/P6 — identity + governance + agent-switch + nexus model, wired from lib/reflection, lib/constitutional-ai, lib/agent-router, lib/intent-classifier. §2026-08-09 — buildNexusModel() now includes gap-field's system+user-model gap summary AND intent-learning's per-pattern confidence — a model of NEXUS that only lists what it can do without also carrying how sure it is isn't actually self-aware.
   ['copilot/lib/grammar-router.js','nexus.copilot.grammar-router',
     ['nexus.lib.grammar-engine', 'nexus.copilot.capabilities']],  // P5 — dynamic grammar engine in the conversational path
   ['copilot/lib/autonomy-router.js','nexus.copilot.autonomy-router',
-    ['nexus.lib.scheduler', 'nexus.lib.triggers', 'nexus.lib.system-control', 'nexus.lib.command-builder', 'nexus.lib.constant-autonomy', 'nexus.copilot.capabilities', 'nexus.copilot.intent-learning', 'nexus.copilot.user-model', 'nexus.lib.idea-provenance']],  // §2026-08-09 — the wire from co-pilot's actual conversation to CA1-CA7. Landed in the wrong route on the first attempt (/bridge/deliver, not /api/prompt — the primary entry); moved after a real HTTP call against the live server proved it wasn't reached. v2: propose-then-confirm for every state-changing action, confidence-gated via intent-learning, both models updated on outcome. §2026-08-11 — "log this idea" wired to idea-provenance.js, tagged origin:user (never origin:agent — that distinction is idea-provenance's whole reason for existing).
+    ['nexus.lib.scheduler', 'nexus.lib.triggers', 'nexus.lib.system-control', 'nexus.lib.command-builder', 'nexus.lib.constant-autonomy', 'nexus.copilot.capabilities', 'nexus.copilot.intent-learning', 'nexus.copilot.lib.user-model', 'nexus.lib.idea-provenance']],  // §2026-08-09 — the wire from co-pilot's actual conversation to CA1-CA7. Landed in the wrong route on the first attempt (/bridge/deliver, not /api/prompt — the primary entry); moved after a real HTTP call against the live server proved it wasn't reached. v2: propose-then-confirm for every state-changing action, confidence-gated via intent-learning, both models updated on outcome. §2026-08-11 — "log this idea" wired to idea-provenance.js, tagged origin:user (never origin:agent — that distinction is idea-provenance's whole reason for existing).
   ['copilot/lib/intent-learning.js','nexus.copilot.intent-learning',
-    ['nexus.cortex.memory.jaa-db']],  // §2026-08-09 — Bayesian-ish confidence per intent-resolution PATTERN, not per claim about James (that's user-model.js's job) — co-pilot's model of its OWN understanding. +0.10 confirm, -0.15 reject, mirrors user-model.js's exact confirm/decay math rather than a new formula.
+    ['nexus.cortex.jaa-db']],  // §2026-08-09 — Bayesian-ish confidence per intent-resolution PATTERN, not per claim about James (that's user-model.js's job) — co-pilot's model of its OWN understanding. +0.10 confirm, -0.15 reject, mirrors user-model.js's exact confirm/decay math rather than a new formula.
   ['lib/agent-build-learning.js', 'nexus.lib.agent-build-learning',
-    ['nexus.cortex.memory.jaa-db', 'nexus.lib.agent-router']],  // §2026-08-11 — a THIRD Bayesian model, same math again: which agent tends to actually produce a working build. Seeded from agent-router's DEFAULT_FALLBACK as a real prior, not a blank 0.5 — James's own encoded judgment shouldn't be thrown away just because nothing's been recorded yet.
+    ['nexus.cortex.jaa-db', 'nexus.lib.agent-router']],  // §2026-08-11 — a THIRD Bayesian model, same math again: which agent tends to actually produce a working build. Seeded from agent-router's DEFAULT_FALLBACK as a real prior, not a blank 0.5 — James's own encoded judgment shouldn't be thrown away just because nothing's been recorded yet.
   ['lib/chunk-build-orchestrator.js', 'nexus.lib.chunk-build-orchestrator',
     ['nexus.lib.execution-pipeline', 'nexus.lib.agent-router', 'nexus.lib.agent-build-learning', 'nexus.lib.gap-field']],  // §2026-08-11 — James: "if a chunk fails to build, switch agents... try them all, unless it's a system failure." Exhausts the full roster before giving up (stronger evidence for "needs human review" than any partial attempt); a rate-limit/timeout is a skipped turn, not a failed one, and doesn't count. Full exhaustion reports through gap-field, same "what's open right now" view as everything else. §R3 addendum 2026-08-12 — now also includes specPath/outputDir/testCommand in the exhaustion gap's meta, so autonomous-repair.js has something real to verify against.
   ['lib/autonomous-repair.js',    'nexus.lib.autonomous-repair',
@@ -93,9 +93,9 @@ const FILES = [
   ['lib/diagnostic-causal.js',    'nexus.lib.diagnostic-causal',
     ['nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.lib.snapshot-trigger', 'nexus.lib.gap-field']],  // P3 — conditions behind findings; now defaults findings from gap-field (§2026-08-09 unification)
   ['lib/component-ledger.js',     'nexus.lib.component-ledger',
-    ['nexus.cortex.memory.jaa-db']],  // §2026-08-12 — James: "i want everything you do logged to nexus... all history and decisions tracked in cortex." REAL, already written (15,472+ rows, 12+ real systems, a month of history) but never itself registered in loom's own map — found while making it locatable for a 13th real writer (this session's own commits, system:'claude', logged live tonight). Was flagging its own writes as "recorded but not locatable in the architecture" until this entry.
+    ['nexus.cortex.jaa-db']],  // §2026-08-12 — James: "i want everything you do logged to nexus... all history and decisions tracked in cortex." REAL, already written (15,472+ rows, 12+ real systems, a month of history) but never itself registered in loom's own map — found while making it locatable for a 13th real writer (this session's own commits, system:'claude', logged live tonight). Was flagging its own writes as "recorded but not locatable in the architecture" until this entry.
   ['cortex/self-heal/fault-taxonomy.js', 'nexus.cortex.self-heal.fault-taxonomy',
-    ['nexus.cortex.memory.jaa-db']],  // §R7 2026-08-12 — real, real fault_taxonomy table (0 rows — the escalation organ that would populate it via raiseFriction() was never built, checked not assumed). Added scoreTension(gap), the function service/nexus-diagnostic.js's /tension route has always tried to call and never found — it required cortex/healer, a directory that never existed. Maps a gap's type to a real fault class (GAP_TYPE_TO_FAULT_CLASS); returns real accumulated friction where history exists, otherwise a fresh estimate from the SAME real FRICTION_DELTA_BY_LEVEL table, not the old crude severity==='high'?2:1 guess. Verified live: 0.35 vs the old fallback's 2 for the same fresh gap; 0.70 with two real raiseFriction() calls behind it.
+    ['nexus.cortex.jaa-db']],  // §R7 2026-08-12 — real, real fault_taxonomy table (0 rows — the escalation organ that would populate it via raiseFriction() was never built, checked not assumed). Added scoreTension(gap), the function service/nexus-diagnostic.js's /tension route has always tried to call and never found — it required cortex/healer, a directory that never existed. Maps a gap's type to a real fault class (GAP_TYPE_TO_FAULT_CLASS); returns real accumulated friction where history exists, otherwise a fresh estimate from the SAME real FRICTION_DELTA_BY_LEVEL table, not the old crude severity==='high'?2:1 guess. Verified live: 0.35 vs the old fallback's 2 for the same fresh gap; 0.70 with two real raiseFriction() calls behind it.
   ['lib/stub-scanner.js',         'nexus.lib.stub-scanner',
     []],
   ['cortex/core/raid/index.js',   'nexus.cortex.core.raid',
@@ -107,7 +107,7 @@ const FILES = [
   ['lib/relational-context.js',   'nexus.lib.relational-context',
     []],  // §R10 2026-08-12 — the real token-reduction mechanism. Reuses loom's real contextGraph() rather than re-deriving the graph. Found and fixed a REAL, significant bug while building this: the traversal direction was backwards from the actual ingested wire semantic — verified against a known-true relationship (gap-field really calls diagnostic-causal) instead of trusting impactOf()'s own comment, which describes the opposite direction from what's actually ingested. GATE PROVEN LIVE: gap-field's real relevant context is 4 files / 6,702 tokens vs a 237,508-token naive directory baseline — 97% real, measured reduction, not estimated. Also found: loom's live registry does not yet reflect every observability-map.js entry added this session (agent-build-learning, stub-scanner both absent) — a real, separate sync-mechanism gap, noted not chased given time.
   ['lib/gap-field.js',            'nexus.lib.gap-field',
-    ['nexus.cortex.memory.jaa-db', 'nexus.lib.resource-monitor', 'nexus.lib.diagnostic-causal']],  // §2026-08-09 — the single agnostic gap-report entry point: system anomalies + user-model contradictions, one dedup rule, one causal-wire convention. §R1 2026-08-12 — report() carries the full repair_contract_schema (requested/received/systemsInvolved/location/error/resourceState), resourceState auto-populated from lib/resource-monitor (cheap, real), why populated on-demand via explainWhy() -> diagnostic-causal.explainFinding() (real causal tracing, not run on every report — §0.5).
+    ['nexus.cortex.jaa-db', 'nexus.lib.resource-monitor', 'nexus.lib.diagnostic-causal']],  // §2026-08-09 — the single agnostic gap-report entry point: system anomalies + user-model contradictions, one dedup rule, one causal-wire convention. §R1 2026-08-12 — report() carries the full repair_contract_schema (requested/received/systemsInvolved/location/error/resourceState), resourceState auto-populated from lib/resource-monitor (cheap, real), why populated on-demand via explainWhy() -> diagnostic-causal.explainFinding() (real causal tracing, not run on every report — §0.5).
   ['copilot/lib/lifeline-contracts.js', 'nexus.copilot.lifeline-contracts',
     ['nexus.lib.gap-field']],  // §2026-08-12 — James: "each time it uses lifeline it needs to know what it's asking and how to receive it... a contract or schema, a way to interact with each agent." Per-intent (ask/build/yes_no/json/etc) validation of what a real provider response actually needs to look like — a mismatch is a real, logged gap, not a silently-accepted guess.
   ['copilot/lifeline.js',         'nexus.copilot.lifeline',
@@ -119,7 +119,7 @@ const FILES = [
   ['lib/integrity-revert.js',     'nexus.lib.integrity-revert',
     ['nexus.lib.file-integrity', 'nexus.lib.snapshot-trigger', 'nexus.lib.replay-engine']],  // integrity sigma → guarded revert (only when broken)
   ['cortex/snapshot/index.js',    'nexus.cortex.snapshot',
-    ['nexus.cortex.memory.jaa-db']],  // §R2 2026-08-12 — the one genuine gap in docs/repair-contract-and-loom-hub-phasemap.spec. Real hash-chained, disk-first (.nex files), tamper-evident snapshot/rollback — create/load/verifySnapshotIntegrity/checkChainIntegrity/rollback. Built to the exact contract 3 real pre-existing tests already specced (11/11 snapshot-integrity, 23/23 compartment-engine, both real rewind-on-fail tests passing for the first time). lib/replay-engine.js checked first — adjacent but genuinely different API (request-decision replay, not hash-chain integrity) — not reused because it doesn't fit, not because it wasn't checked.
+    ['nexus.cortex.jaa-db']],  // §R2 2026-08-12 — the one genuine gap in docs/repair-contract-and-loom-hub-phasemap.spec. Real hash-chained, disk-first (.nex files), tamper-evident snapshot/rollback — create/load/verifySnapshotIntegrity/checkChainIntegrity/rollback. Built to the exact contract 3 real pre-existing tests already specced (11/11 snapshot-integrity, 23/23 compartment-engine, both real rewind-on-fail tests passing for the first time). lib/replay-engine.js checked first — adjacent but genuinely different API (request-decision replay, not hash-chain integrity) — not reused because it doesn't fit, not because it wasn't checked.
   ['lib/snapshot-trigger.js',     'nexus.lib.snapshot-trigger',
     ['nexus.lib.replay-engine', 'nexus.cortex.intelligence.relational-field', 'nexus.lib.ledger-fanin']],  // P2 — snapshot on every sigma, tracing conditions via RFR2
   ['lib/scheduler.js',            'nexus.lib.scheduler',
@@ -151,7 +151,7 @@ function mapObservability(driver) {
 
   // Pass 1 — components (one per file)
   for (const [file, id] of FILES) {
-    const r = driver.declare('component', {
+    const r = driver.declareIfNew('component', {
       id, namespace: id.split('.').slice(0, 2).join('.'), name: file, version: '1.0.0',
       uuid: `nexus-loom-map-${id}-v1-0000-2026-0730-001`,
     });
@@ -165,14 +165,14 @@ function mapObservability(driver) {
   // Pass 2 — hooks (export if required elsewhere, import if this file requires others)
   for (const [, id, requires] of FILES) {
     if (requiredBy.has(id)) {
-      const r = driver.declare('hook', {
+      const r = driver.declareIfNew('hook', {
         id: `${id}.export`, component_id: id, name: 'export', type: 'direct', direction: 'out',
         uuid: `nexus-loom-map-${id}-export-v1-0000-2026-0730-001`,
       });
       (r.ok ? results.hooks : results.failures).push({ id: `${id}.export`, r });
     }
     if (requires.length > 0) {
-      const r = driver.declare('hook', {
+      const r = driver.declareIfNew('hook', {
         id: `${id}.import`, component_id: id, name: 'import', type: 'direct', direction: 'in',
         uuid: `nexus-loom-map-${id}-import-v1-0000-2026-0730-001`,
       });
@@ -185,7 +185,7 @@ function mapObservability(driver) {
   for (const [, id, requires] of FILES) {
     for (const dep of requires) {
       wireN++;
-      const r = driver.declare('wire', {
+      const r = driver.declareIfNew('wire', {
         id: `observability.wire.${wireN}.${dep}--${id}`,
         from_hook_id: `${dep}.export`, to_hook_id: `${id}.import`,
         uuid: `nexus-loom-map-obs-wire-${wireN}-v1-0000-2026-0730-001`,

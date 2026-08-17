@@ -155,6 +155,11 @@ function getCurrentAgent() {
       toolScope: (row && row.toolScope) || null,
       personaPrompt: (row && row.personaPrompt) || null,
       isCustom: !!(row && row.agent && row.agent !== 'auto'),
+      // §WIRED 2026-08-14 — "switch to claude AND add a chat url to use."
+      // The bound conversation travels with the hat: same row, same governance,
+      // read by everyone who already reads the hat rather than a second store.
+      chatUrl: (row && row.chatUrl) || null,
+      chatId:  (row && row.chatId)  || null,
       setAt: row ? row.ts : null,
     };
   } catch (e) {
@@ -172,7 +177,7 @@ function getCurrentAgent() {
  * the underlying base agent AND remembers the hat's toolScope/personaPrompt
  * so route()/runViaAgent can apply them — same governance either way.
  */
-function setCurrentAgent(agent) {
+function setCurrentAgent(agent, opts = {}) {
   const raw = (agent || 'auto').trim().toLowerCase();
 
   // A forged hat's name takes priority if one exists with that exact name —
@@ -189,6 +194,29 @@ function setCurrentAgent(agent) {
   if (gov.allowed === false) {
     return { ok: false, reason: `denied by governance: ${gov.reason || 'no reason given'}`, governance: gov };
   }
+
+  // §WIRED 2026-08-14 — opts.chatUrl binds a specific conversation to this
+  // hat. Validated against the agent BEFORE the row is written, so "switch to
+  // claude and use <a chatgpt url>" is refused at bind time instead of
+  // silently persisting a contradiction. opts.chatUrl === null explicitly
+  // clears the binding; omitting it entirely preserves whatever is bound,
+  // because re-wearing the same hat should not silently drop the chat.
+  let chatTarget = null;
+  const prior = getCurrentAgent();
+  if (opts.chatUrl !== undefined && opts.chatUrl !== null) {
+    try {
+      const ct = require('../../lib/chat-target');
+      chatTarget = ct.validate(opts.chatUrl, normalized);
+      if (!chatTarget.ok) return { ok: false, reason: chatTarget.reason, chatUrl: opts.chatUrl };
+    } catch (e) {
+      return { ok: false, reason: `chat-target unavailable: ${e.message}` };
+    }
+  }
+  const clearing  = opts.chatUrl === null;
+  const keepPrior = opts.chatUrl === undefined && prior.agent === normalized;
+  const chatUrl = chatTarget ? chatTarget.url    : (clearing ? null : (keepPrior ? prior.chatUrl : null));
+  const chatId  = chatTarget ? chatTarget.chatId : (clearing ? null : (keepPrior ? prior.chatId  : null));
+
   try {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     jaaDB.insert(IDENTITY_TABLE, {
@@ -196,9 +224,19 @@ function setCurrentAgent(agent) {
       hatName: forgedHat ? forgedHat.name : null,
       toolScope: forgedHat ? forgedHat.toolScope : null,
       personaPrompt: forgedHat ? forgedHat.personaPrompt : null,
+      chatUrl, chatId,
       ts: Date.now(),
     });
-    return { ok: true, agent: normalized, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
+    // §WIRED 2026-08-14 — "change agent needs to connect to NCP." The switch
+    // itself is unchanged and still succeeds: this reports whether the agent
+    // just put on actually has a live NCP channel, instead of leaving the
+    // caller to find out when guardian silently parks the next job as
+    // queued_waiting_for_provider. Reporting only — it does not block, and a
+    // failure to read NCP cannot fail a switch.
+    let ncp = null;
+    try { ncp = require('../../lib/ncp-availability').report(normalized); } catch (_) {}
+
+    return { ok: true, agent: normalized, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov, ncp, chatUrl, chatId };
   } catch (e) {
     return { ok: false, reason: e.message };
   }
@@ -286,7 +324,19 @@ function switchAgent(opts = {}) {
   try {
     const ar = require('../../lib/agent-router');
     if (ar.routeAgent) {
-      const r = ar.routeAgent({ intent: opts.intent, prompt: opts.prompt, directed: opts.directed, config: opts.config, available: opts.available });
+      // §WIRED 2026-08-14 — routeAgent has always accepted an `available`
+      // predicate and used it to build the fallback chain, and NO caller in
+      // the repo has ever supplied one (grepped: this line forwards it, both
+      // real callers omit it). It therefore defaulted to () => true and the
+      // chain skipped nothing. This defaults it to live NCP channel state, so
+      // the fallback chain is built out of agents that can actually be
+      // reached. An explicitly-passed opts.available still wins — callers who
+      // know better are not overridden.
+      let available = opts.available;
+      if (typeof available !== 'function') {
+        try { available = require('../../lib/ncp-availability').predicate(); } catch (_) { available = undefined; }
+      }
+      const r = ar.routeAgent({ intent: opts.intent, prompt: opts.prompt, directed: opts.directed, config: opts.config, available });
       return { ok: true, agent: r.agent || r.route || r, constraints: (ar.AGENT_CONSTRAINTS && r.agent) ? ar.AGENT_CONSTRAINTS[r.agent] : null, detail: r, governance: gov };
     }
   } catch (e) { return { ok: false, reason: e.message }; }

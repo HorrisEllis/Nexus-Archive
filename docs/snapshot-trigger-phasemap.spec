@@ -30,7 +30,7 @@ spec:
 
   phases:
 
-    SS1_drift_triggered_snapshot:
+    SN1_drift_triggered_snapshot:
       does: "Add an event-driven trigger: when sigma/regime crosses a threshold
               (meaningful drift), take a snapshot automatically. Debounced so a
               storm of events doesn't create a snapshot storm (§16.4)."
@@ -41,7 +41,7 @@ spec:
       drift:  "trigger sensitivity — too eager = snapshot storm, too lazy = the
                current bug. The threshold + min-interval are the tuning surface."
 
-    SS2_snapshot_in_diagnostics:
+    SN2_snapshot_in_diagnostics:
       does: "Surface snapshot health in the diagnostic system (James's ask): when
               was the last snapshot, how long since, is the cadence healthy or has
               it gone quiet (the exact symptom). A stale snapshot age is a finding."
@@ -52,11 +52,11 @@ spec:
       drift:  "staleness threshold — what counts as 'gone quiet' is the tuning surface."
 
   ordering_rationale: >
-    SS1 fixes the trigger (the actual bug); SS2 makes the diagnostic system watch
+    SN1 fixes the trigger (the actual bug); SN2 makes the diagnostic system watch
     the trigger so if it ever goes quiet again, NEXUS notices instead of James.
     That's the durable fix — not just 'snapshot more', but 'the system knows when
     it stopped'.
 
   honest_risks:
-    - "Auto-snapshot cadence is a live-tuning question — the threshold/interval prove out on James's booted system, not in sandbox. SS1 exposes them as editable, not hardcoded."
+    - "Auto-snapshot cadence is a live-tuning question — the threshold/interval prove out on James's booted system, not in sandbox. SN1 exposes them as editable, not hardcoded."
     - "§2.2 — snapshots write to data/** which is NEVER committed; only the trigger CODE is committed."

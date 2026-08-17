@@ -299,7 +299,7 @@ const HTTP_PORT     = process.env.GUARDIAN_HTTP_PORT  || 7820;
 const ORCH_PORT     = process.env.ORCHESTRATOR_PORT   || 9000;
 
 // nexus-connect: unified cross-system I/O with §1.2 gating
-const nc = (() => { try { return require('../nexus-connect'); } catch(_) { return null; } })();
+const nc = (() => { try { return require('../lib/connect'); } catch(_) { return null; } })();
 function _postLedger(system, type, payload) {
   if (nc) nc.postLedger(system, type, payload).catch(() => {});
 }
@@ -1374,7 +1374,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(HTTP_PORT, '127.0.0.1', async () => {
   const { BootSequence } = require('../lib/boot-sequence');
-  const nc2 = require('../nexus-connect');
+  const nc2 = require('../lib/connect');
 
   // §BUGFIX 2026-07-04: was a hardcoded '3.6.1' here, independent of
   // lib/version.js's registry — sourcing from it directly now.
@@ -3156,7 +3156,7 @@ function handleExtendedRoutes(req, res, url, method) {
           // §P97: read CFR field state for sigma-aware routing
           let _cfrCtx = {};
           try {
-            const _cfrInfl = require('../nexus-cfr-influence');
+            const _cfrInfl = require('../lib/cfr-influence');
             _cfrCtx = { sigmaFloor: _cfrInfl.getSigmaFloor?.() || 0,
                         regime: _cfrInfl.getState?.()?.regime || 'stable' };
           } catch(_) {}

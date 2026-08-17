@@ -9,22 +9,24 @@
 const path   = require('path');
 const fs     = require('fs');
 const http   = require('http');
-const { Bus, Event, Gate } = require('./emerge/siso');
-const ollama = require('./ollama-runtime');
+const { Bus, Event, Gate } = require('./siso');
+const ollama = require('../ollama/runtime');
 
 // ── Locate kernel & Load Spec ──────────────────────────────────────────────
 const kernelPath = [
-  path.join(__dirname, 'emerge-kernel.js'),
-  path.join(__dirname, '..', 'emerge-kernel.js'),
+  path.join(__dirname, 'kernel.js'),
+  path.join(__dirname, 'emerge-kernel.js'),        // pre-2026-08-15 name, kept as a fallback
+  path.join(__dirname, '..', 'emerge-kernel.js'),  // pre-2026-08-15 location, kept as a fallback
 ].find(p => fs.existsSync(p));
 
-if (!kernelPath) { console.error('[ide] emerge-kernel.js not found'); process.exit(1); }
+if (!kernelPath) { console.error('[ide] kernel.js not found'); process.exit(1); }
 const kernel = require(kernelPath);
 
 // ── Locate codegen ────────────────────────────────────────────────────────
 const codegenPath = [
-  path.join(__dirname, 'emerge-codegen-v2.js'),
-  path.join(__dirname, '..', 'emerge-codegen-v2.js'),
+  path.join(__dirname, 'codegen-v2.js'),
+  path.join(__dirname, 'emerge-codegen-v2.js'),        // pre-2026-08-15 name, kept as a fallback
+  path.join(__dirname, '..', 'emerge-codegen-v2.js'),  // pre-2026-08-15 location, kept as a fallback
 ].find(p => fs.existsSync(p));
 const codegen = codegenPath ? (() => {
   try { return require(codegenPath); }

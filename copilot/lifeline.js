@@ -23,6 +23,7 @@
 
 const http   = require('http');
 const crypto = require('crypto');
+const ncpAvailability = require('../lib/ncp-availability.js');
 
 const OL_URL  = process.env.OLLAMA_URL    || 'http://127.0.0.1:3749';
 const GD_URL  = process.env.GUARDIAN_URL  || 'http://127.0.0.1:7820';
@@ -232,22 +233,32 @@ async function _tryGuardian(prompt, opts = {}) {
     //   - /providers itself is unreachable -> FAIL OPEN. We have no
     //     evidence at all; proceed and let the server decide, rather than
     //     blocking on a check that may itself be the broken thing.
+    // §FIXED 2026-08-14 (NC1, docs/ncp-agent-connection-phasemap.spec) — both
+    // guards below used to hand-parse GD_URL/providers as
+    // `providers[x]?.connected === true`. Guardian's real payload
+    // (server.js:2375) returns providers as a map of STRINGS
+    // ('connected'|'null'), with per-provider detail under a separate
+    // `channels` key — so `.connected` was always undefined and both guards
+    // returned null unconditionally. Guardian dispatch from copilot worked
+    // ONLY when /providers was unreachable, the fail-open branch — the
+    // system worked when the check broke. §8.6 reuse before build: this is
+    // a deletion, not an addition — lib/ncp-availability's state() already
+    // encodes exactly the fail-closed-on-evidence / fail-open-on-no-evidence
+    // rule this comment describes ('offline' is evidence, 'unknown' is not),
+    // it just wasn't being called from here.
     if (ragProvider && ragProvider !== 'auto') {
-      const provCheck = await _get(`${GD_URL}/providers`, 3000).catch(() => null);
-      if (provCheck?.providers && provCheck.providers[ragProvider]?.connected !== true) {
+      await ncpAvailability.refresh().catch(() => {});
+      if (ncpAvailability.state(ragProvider) === 'offline') {
         return null; // real evidence of not-connected — fall through to the cascade
       }
     } else if (ragProvider === 'auto') {
-      // §REGRESSION FIXED 2026-07-09 — introduced by the sovereignty refactor
-      // in this same pass. When cortex's /api/raid/decide is unreachable we
-      // fall back to 'auto', and the branch above skipped the connectivity
-      // check entirely, dispatching blindly to a guardian that has nobody to
-      // ask. Unresolved does not mean unchecked: if /providers answers and
-      // NOT ONE provider is connected, nothing can possibly answer — return
-      // null and let the cascade handle it. Same fail-closed-on-evidence,
-      // fail-open-on-no-evidence rule as above.
-      const provCheck = await _get(`${GD_URL}/providers`, 3000).catch(() => null);
-      if (provCheck?.providers && !Object.values(provCheck.providers).some(p => p?.connected === true)) {
+      // Unresolved does not mean unchecked: if guardian answered and NOT ONE
+      // provider is connected, nothing can possibly answer. snap.degraded
+      // distinguishes "really nobody's connected" (evidence, fail closed)
+      // from "we couldn't read /providers at all" (no evidence, fail open) —
+      // connected() alone can't tell those apart, so both are checked.
+      const snap = await ncpAvailability.refresh().catch(() => null);
+      if (snap && !snap.degraded && ncpAvailability.connected().length === 0) {
         return null;
       }
     }

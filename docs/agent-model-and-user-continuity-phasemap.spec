@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        agent-model-and-user-continuity
-    version:     0.1.0-phasemap
+    version:     0.2.0-phasemap  # AM1, AM6 DONE 2026-08-15
     status:      PHASEMAP 2026-08-13. Mapped, not built. §3.3 — map before build.
     uuid:        nexus-agent-model-continuity-v0-0000-2026-0813-001
     author:      (mapped this session, per the human's direction)
@@ -80,6 +80,20 @@ spec:
       gate: "after N real submitOutput() calls for an agent with mixed pass/fail verdicts, agent_model has a real, queryable row whose fitness score reflects the actual pass rate — not a static number — and getContract() surfaces it."
       drift: "cold-start — a brand-new agent has no history yet; needs an honest default (unbounded-untrusted, not unbounded-safe, same phrasing contracts.js already uses for missing constraints) rather than a fabricated confidence."
       axioms: ["§10.3", "§RAID", "§8.6"]
+      status_2026_08_15: >
+        DONE, real v1. lib/agent-model.js composes lib/agent-system/
+        submit.js's real listOutputs() (RAID pass/fail history per
+        submission) and lib/tool-index.js's real per-agent usage (AB1,
+        already fixed). Real bug caught by testing, not shipped: assumed
+        listOutputs() returned a bare array; it returns {agentId,outputs}
+        -- fixed before commit. Wired into getContract() (a second real
+        path bug caught the same way: wrong relative path, ./agent-model.js
+        instead of ../agent-model.js). Verified both paths for real:
+        honest cold-start (zero submissions -> the same unbounded-untrusted
+        phrasing contracts.js already uses, not a fabricated number), and
+        real aggregation (3 synthetic RAID-shaped submissions -> passRate
+        0.6667, exactly 2/3, test files removed after, agent_model
+        re-synced clean).
 
     AM2_incident_debrief:
       depends_on: [AM1]
@@ -207,6 +221,26 @@ spec:
       gate: "a real low-confidence claim goes perplexity-research -> adversarial.compare() -> emergence.attempt() (COS-backed, with a real method-pivot path, not just retries) -> crystal-tier push, in that order; a claim failing at ANY stage is visibly NOT crystallized, with the specific stage AND (if empirical) whether it failed before or after a method pivot, queryable, not silently promoted or silently dropped."
       drift: "epistemic/empirical mismatch — perplexity+adversarial agree but emergence.attempt() can't verify it even after a method pivot (or vice versa) is itself a real, informative disagreement worth surfacing as a gap, not resolved by arbitrarily picking one side."
       axioms: ["§0.1", "§RAID", "§8.6", "§0.3"]
+      status_2026_08_15: >
+        DONE, real v1, all 4 stages composed with correct real signatures.
+        Two real bugs caught by testing, not shipped: (1) lifeline.route()'s
+        real fail-open shape is {ok:true, text:'[NCP dispatch failed --
+        no response]', confidence:1} -- a failure disguised as success,
+        the EXACT same bug class already found and fixed once this
+        session in ambiguity_pull.js's _found(), missed here on first
+        write, caught by running it. (2) adversarial.compare()'s real
+        return has no 'score' field -- guessed one; the real field is
+        contradiction_score, and compare() already computes verdict/
+        open_gap itself, reused instead of reimplementing that judgment
+        wrong. Verified for real: stage 1 correctly stops honestly with
+        no live NCP in this sandbox; with a simulated real perplexity
+        response, a genuine contradiction correctly short-circuits AND
+        writes a real gap (gaps table: 1 -> 2 rows, confirmed); agreement
+        correctly proceeds to stage 3 and correctly stops there without a
+        real COS compartment, rather than fabricating an empirical pass.
+        Stage 3/4 (real COS + crystal push) need James's own live system
+        to fully exercise -- same honest boundary as everything else this
+        session touching live external infrastructure.
 
     AM7_agent_switch_continuity_and_chat_recall:
       priority: NEW — checked live before mapping, not assumed. Answers a direct "did you map it all" — no, this wasn't, here's precisely what was missing.

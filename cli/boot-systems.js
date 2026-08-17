@@ -173,7 +173,7 @@ async function _bootSystems(ledgerWrite, orchPort, connectBridgeSSE, _eventLedge
     },
     {
       systemId: 'emerge',    port: 4242, healthPath: '/status',
-      label: 'Emerge IDE',   cmd: path.join(ROOT, 'emerge-ide.js'),                  args: [],
+      label: 'Emerge IDE',   cmd: path.join(ROOT, 'emerge', 'ide.js'),               args: [],
     },
     {
       systemId: 'diagnostic', port: 7825, healthPath: '/status',
@@ -237,7 +237,7 @@ async function _bootSystems(ledgerWrite, orchPort, connectBridgeSSE, _eventLedge
   // Bridge registration
   setTimeout(async () => {
     try {
-      const nc = require('../nexus-connect');
+      const nc = require('../lib/connect');
       const r = await nc._req('orchestrator', 'POST', '/api/register', {
         systemId: 'orchestrator', appId: 'orchestrator',
         secret: 'nexus-orchestrator-internal-v1',

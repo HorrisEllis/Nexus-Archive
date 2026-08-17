@@ -123,11 +123,11 @@ try { ({ _bootSystems } = require('./cli/boot-systems')); } catch(e) { console.w
 try { ({ createCFRLedger } = require('./meta/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
-const nexusBus       = (() => { try { return require('./nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
-const nexusQuery     = (() => { try { return require('./nexus-query');         } catch(e) { return null; } })();
-const nexusKnowledge = (() => { try { return require('./nexus-knowledge');     } catch(e) { return null; } })();
-const nexusCFR       = (() => { try { return require('./nexus-cfr-influence'); } catch(e) { return null; } })();
-const nexusHealLoop  = (() => { try { return require('./nexus-heal-loop');     } catch(e) { return null; } })();
+const nexusBus       = (() => { try { return require('./lib/bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
+const nexusQuery     = (() => { try { return require('./lib/query');         } catch(e) { return null; } })();
+const nexusKnowledge = (() => { try { return require('./lib/knowledge');     } catch(e) { return null; } })();
+const nexusCFR       = (() => { try { return require('./lib/cfr-influence'); } catch(e) { return null; } })();
+const nexusHealLoop  = (() => { try { return require('./lib/heal-loop');     } catch(e) { return null; } })();
 try { ({ spawn: spawnChild } = require('child_process')); } catch(e) { spawnChild = null; }
 
 const PORT    = parseInt(process.env.ORCHESTRATOR_PORT || '9000');

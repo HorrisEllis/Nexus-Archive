@@ -1020,7 +1020,7 @@ async function handle(req, res, route, query, body) {
       const { specText, name } = body;
       if (!specText) return err(res, 400, 'specText required (raw .spec file contents)');
       try {
-        const result = se.importSpec({ name, specText });
+        const result = await se.importSpec({ name, specText });
         os.emit('idearium.spec.imported', {
           specUuid: result.manifest.uuid, name: result.manifest.name,
           blocksFound: result.blocksFound, sectionsFilled: result.sectionsFilled.length,
