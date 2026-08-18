@@ -87,6 +87,9 @@ const FILES = [
   // §ADDED 2026-08-18h — found unregistered while wiring the real,
   // opt-in escalation tool-access feature into it.
   ['guardian/ask.js', 'nexus.guardian.ask', 'guardian', []],
+
+  // §ADDED 2026-08-18i — search_files, built this turn for the self-repair query capability.
+  ['lib/agent-tools/tools/query/search-files.js', 'nexus.lib.agent-tools.query.search-files', 'lib/agent-tools/tools/query', []],
 ];
 
 function mapSession20260814(driver) {
