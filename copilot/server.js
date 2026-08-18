@@ -513,6 +513,34 @@ async function _dispatchToOllama(prompt, context, opts = {}) {
 // ── Sessions ──────────────────────────────────────────────────────────────────
 const _sessions = new Map();
 
+// §FIXED 2026-08-17 — James, direct, several turns ago: "starts to
+// plummet in ram after asking a question." Confirmed real, severe cause:
+// sessionId falls back to crypto.randomUUID() (twice — once at the
+// /api/prompt/stream call site, again inside _getSession itself) whenever
+// a caller doesn't pass one, and nothing anywhere in this file ever
+// deleted a _sessions entry (grepped, confirmed zero .delete()/.clear()
+// calls existed). If a client doesn't consistently thread a real session
+// id through, every single question creates a brand-new, permanently-
+// retained Map entry — the exact real shape of "RAM grows with every
+// question," not a guess.
+//
+// Same real pattern already built and verified this session for
+// guardian/lib/ncp.js's isConnected() staleness fix: a real staleness
+// check plus a periodic sweep. 30 minutes of inactivity is the real
+// threshold — long enough that a genuinely ongoing conversation is never
+// evicted mid-use, short enough that an abandoned/orphaned session
+// doesn't sit in memory indefinitely.
+const SESSION_STALE_MS = 30 * 60 * 1000;
+const _sessionSweep = setInterval(() => {
+  const now = Date.now();
+  let evicted = 0;
+  for (const [id, s] of _sessions) {
+    if (now - s.lastActive > SESSION_STALE_MS) { _sessions.delete(id); evicted++; }
+  }
+  if (evicted) console.log(`[copilot] session sweep: evicted ${evicted} stale session(s), ${_sessions.size} remain`);
+}, 5 * 60 * 1000);
+if (_sessionSweep.unref) _sessionSweep.unref(); // never keeps the process alive on its own
+
 function _getSession(sessionId, channel, prompt) {
   if (!sessionId) sessionId = crypto.randomUUID();
   if (!_sessions.has(sessionId)) {
@@ -539,8 +567,40 @@ async function _persist(table, row) {
 // ── SSE broadcast ─────────────────────────────────────────────────────────────
 const _sseClients = new Set();
 function broadcast(type, payload) {
-  const msg = `data: ${JSON.stringify({ type, payload, ts: Date.now() })}\n\n`;
+  const ts = Date.now();
+  const msg = `data: ${JSON.stringify({ type, payload, ts })}\n\n`;
   for (const c of _sseClients) { try { c.write(msg); } catch(_) { _sseClients.delete(c); } }
+
+  // §LEDGER-WIRE 2026-08-17 — THE FINDING: copilot was not among the 22 files
+  // that call lib/component-ledger.write(). It broadcast 20+ real event types
+  // here — prompt.received, lifeline.escalated, context.assembled,
+  // fulfillment.attempt, build.complete — and every one of them died at the
+  // edge of this Set. None reached the ledger tree, event_log, error_log, or
+  // the pattern engine. That is the literal, mechanical reason co-pilot
+  // activity is invisible in autopilot, and the reason intelligence's meta-scan
+  // reports so few sources: it can only learn from systems that write.
+  //
+  // Now every broadcast is ALSO a ledger row. The SSE above is untouched, so
+  // the UI sees exactly what it saw before (§5.14 zero behaviour change).
+  // §1.2 — telemetry is never in the critical path: a ledger failure here can
+  // never break a co-pilot response.
+  try {
+    const parts     = String(type).split('.');
+    const action    = parts.length > 1 ? parts[parts.length - 1] : type;
+    const component = parts.length > 1 ? parts.slice(0, -1).join('.') : 'copilot';
+    require('../lib/component-ledger').write({
+      system: 'copilot', component, action,
+      status: /error|fail|denied|escalat|reject/.test(action) ? 'error' : 'info',
+      detail: payload || null,
+      causedBy: (payload && payload.causedBy) || null,
+      session:  (payload && payload.sessionId) || null,
+      // hook/wire stay null — never derived. A fabricated hook would read as
+      // evidence, which is worse than an absent one (component-ledger §schema).
+      hook: null, wire: null,
+      intent: (payload && payload.intent) || null,
+      tags: ['copilot', 'sse'],
+    });
+  } catch (_) { /* §1.2 — never breaks the response path */ }
 }
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -637,6 +697,23 @@ const server = http.createServer(async (req, res) => {
 
   if (method === 'OPTIONS') { json(res, 200, {}); return; }
 
+  // §LEDGER-WIRE 2026-08-17 — the CANONICAL ledger stream, in component-ledger
+  // schema, for machine consumers (autopilot, intelligence, diagnostic).
+  // /events below stays exactly as it is: it is the UI's stream, a different
+  // shape for a different reader, and nothing that works today changes (§5.14).
+  //
+  // THE DEFECT THIS CLOSES — lib/ledger-fanin holds subscribers in module-level
+  // state, so it is per-PROCESS. Copilot runs as its own `node copilot/server.js`
+  // under autopilot's supervisor, which is why autopilot's boot line has always
+  // read `(deferred: intelligence,copilot)` and always would have: "co-pilot
+  // subscribes at its own boot" meant subscribing to a DIFFERENT array in a
+  // DIFFERENT process. No copilot event could ever reach autopilot. This is the
+  // wire that lets it.
+  if (p === '/ledger/stream') {
+    try { return require('../lib/ledger-sse').mount(res, { system: 'copilot' }); }
+    catch (e) { json(res, 503, { ok: false, error: `ledger stream unavailable: ${e.message}` }); return; }
+  }
+
   // SSE — event stream for UI
   if (p === '/events') {
     res.writeHead(200, { 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache',
@@ -645,6 +722,77 @@ const server = http.createServer(async (req, res) => {
     _sseClients.add(res);
     req.on('close', () => _sseClients.delete(res));
     return;
+  }
+
+  // ── PERSON MODEL ────────────────────────────────────────────────────────
+  // §2026-08-17 — the co-pilot's model of the USER (distinct from
+  // copilot/lib/self-model.js, which is the co-pilot's model of ITSELF).
+  //
+  // The read surface is the point: a model of a person is only trustworthy if
+  // the person can see all of it and change any of it. Every payload here
+  // carries provenance (stated/observed/inferred) and lens COVERAGE, so a
+  // partial reading can never be mistaken for a complete one (§LN-7).
+  if (p.startsWith('/api/person-model')) {
+    let pm;
+    try { pm = require('./lib/person-model'); }
+    catch (e) { json(res, 503, { ok: false, error: `person-model unavailable: ${e.message}` }); return; }
+
+    try {
+      if (p === '/api/person-model/portrait' && method === 'GET') {
+        const port = pm.portrait();
+        const ex   = pm.exportAll();
+        json(res, 200, { ...port, nodes: ex.nodes, edges: ex.edges, sessions: ex.sessions });
+        return;
+      }
+      if (p === '/api/person-model/review' && method === 'GET') { json(res, 200, pm.reviewQueue()); return; }
+      if (p === '/api/person-model/export' && method === 'GET') { json(res, 200, pm.exportAll()); return; }
+      if (p === '/api/person-model/health' && method === 'GET') { json(res, 200, pm.health()); return; }
+      if (p === '/api/person-model/chain'  && method === 'GET') { json(res, 200, pm.verifyChain()); return; }
+      if (p === '/api/person-model/meaning' && method === 'GET') {
+        json(res, 200, pm.meaningOf(url.searchParams.get('of'), +(url.searchParams.get('depth') || 2))); return;
+      }
+
+      if (method === 'POST') {
+        const body = await readBody(req);
+
+        // §IP-5 — accept() is USER-ONLY. The HTTP surface hard-codes by:'user'
+        // rather than trusting the body, so an agent posting by:'user' cannot
+        // launder itself into acceptance through this route.
+        if (p === '/api/person-model/accept') {
+          json(res, 200, { ok: true, node: pm.accept(body.uuid, { type: body.type, label: body.label, by: 'user' }) });
+          return;
+        }
+        if (p === '/api/person-model/reject') {
+          json(res, 200, pm.reject(body.uuid, body.reason)); return;
+        }
+        if (p === '/api/person-model/state') {
+          json(res, 200, { ok: true, node: pm.state(body) }); return;
+        }
+        if (p === '/api/person-model/connect') {
+          json(res, 200, { ok: true, edge: pm.connect(body.from, body.to, body.type, body.opts || {}) }); return;
+        }
+        if (p === '/api/person-model/forget') {
+          json(res, 200, { ok: true, node: pm.forget(body.id, body.reason) }); return;
+        }
+        if (p === '/api/person-model/correct') {
+          json(res, 200, { ok: true, node: pm.correct(body.id, body) }); return;
+        }
+        // Deliberately awkward, and deliberately not reachable by accident:
+        // the confirmation string is checked inside purge() itself.
+        if (p === '/api/person-model/purge') { json(res, 200, pm.purge(body)); return; }
+
+        // NOTE: there is no HTTP route for infer(). Inference is an internal
+        // operation; exposing it would give any caller a way to write guesses
+        // into a person's model from outside.
+      }
+      json(res, 404, { ok: false, error: `no person-model route ${method} ${p}` });
+      return;
+    } catch (e) {
+      // A refusal (§stated-only, §IP-5, missing evidence) is a 400 with its
+      // reason intact — the caller must be able to see WHICH rule refused it.
+      json(res, 400, { ok: false, error: e.message });
+      return;
+    }
   }
 
   if (p === '/contract') { json(res, 200, require('./registry-components')); return; }
@@ -1178,7 +1326,15 @@ const server = http.createServer(async (req, res) => {
       // Tested against 10 real should-match and 4 real should-NOT-match
       // phrasings before landing this, not just the happy path.
       const urlM = prompt.match(/https?:\/\/[^\s]+/i);
-      const switchM = prompt.match(/\b(?:switch\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
+      // §FIXED 2026-08-17 — James, live: "change agent to gemini" got the
+      // generic fallback. Real, same bug class as the 2026-08-14 fix noted
+      // above, different verb: "change" wasn't recognized alongside
+      // switch/use/route. Safe to add — the switchIsReal gate below
+      // (requires a known agent name, explicit "agent"/"model", or a URL)
+      // already prevents a false positive regardless of which verb
+      // matched, so widening the verb list doesn't widen what actually
+      // triggers a switch.
+      const switchM = prompt.match(/\b(?:switch\s+(?:\S+\s+)?to|change\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
       const KNOWN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'clear glass', 'clear-glass', 'clearglass'];
       const switchTarget = switchM ? switchM[1].toLowerCase() : null;
       const switchIsReal = switchM && (KNOWN_AGENTS.includes(switchTarget) || /\b(agent|model)\b/i.test(prompt) || !!urlM);
@@ -1224,7 +1380,37 @@ const server = http.createServer(async (req, res) => {
           : `Couldn't create that compartment: ${r.error || 'unknown error'}`;
         return json(res, 200, { text, model_used: 'nexus-compartment', confidence: 1, escalated: false, detail: r, requestId });
       }
-      // §ADDED 2026-08-13 — James: "co-pilot should be like a hat, not a
+      // §BUILT 2026-08-17 — GA9. "co-pilot to be able to list current
+      // compartments, delete them." Checked first: cos-compartment.js's
+      // list/destroy actions already exist and are real, tested — same
+      // exact gap class as create-compartment above had before it was
+      // fixed: a real backend, zero conversational trigger. Following the
+      // identical pattern, not a new mechanism.
+      const listCompartM = prompt.match(/\b(?:list|show(?:\s+me)?|what)\s+(?:are\s+)?(?:the\s+|my\s+|current\s+)*compartments?\b/i);
+      if (listCompartM) {
+        const cosCompartment = require('../lib/agent-tools/tools/sandbox/cos-compartment.js');
+        const r = await cosCompartment.execute({ action: 'list' });
+        const names = r.ok && r.compartments ? r.compartments.map(c => c.name || c.id).filter(Boolean) : [];
+        const text = r.ok
+          ? (names.length ? `${names.length} compartment${names.length === 1 ? '' : 's'}: ${names.join(', ')}.` : 'No compartments exist right now.')
+          : `Couldn't list compartments: ${r.error || 'unknown error'}`;
+        return json(res, 200, { text, model_used: 'nexus-compartment', confidence: 1, escalated: false, detail: r, requestId });
+      }
+
+      // §1.1 — "wipe"/"force" are only honored when the person actually
+      // says them; the default is the safe, real backend default (false).
+      const delCompartM = prompt.match(/\b(?:delete|destroy|remove)\s+(?:the\s+|compartment\s+)?(?:compartment\s+)?(?:named\s+|called\s+)?["']?([\w-]+)["']?\s*(compartment)?\b(?:\s|$)/i);
+      if (delCompartM && /compartment/i.test(prompt)) {
+        const cosCompartment = require('../lib/agent-tools/tools/sandbox/cos-compartment.js');
+        const name = delCompartM[1];
+        const force = /\bforce\b/i.test(prompt);
+        const wipe = /\bwipe\b/i.test(prompt);
+        const r = await cosCompartment.execute({ action: 'destroy', name, force, wipe });
+        const text = r.ok ? `Destroyed compartment "${name}".` : `Couldn't destroy "${name}": ${r.error || 'unknown error'}`;
+        return json(res, 200, { text, model_used: 'nexus-compartment', confidence: 1, escalated: false, detail: r, requestId });
+      }
+
+
       // static identity" + "how do I change the agent for co-pilot?" — the
       // feature existed (copilot_identity's setAgent/getAgent, wired into
       // lifeline.js's route()) but had no guaranteed plain-chat trigger,

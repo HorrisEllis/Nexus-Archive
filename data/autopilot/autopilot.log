@@ -1,0 +1,208 @@
+[2026-08-17T18:03:21.144Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-08-17T18:03:21.145Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-08-17T18:03:21.146Z] ── boot phase 1 — cortex
+[2026-08-17T18:03:21.146Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-17T18:03:21.188Z] autopilot status: http://127.0.0.1:7799/status
+[2026-08-17T18:03:21.880Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-08-17T18:03:21.881Z] ── boot phase 2 — orchestrator, bridge, guardian, diagnostic
+[2026-08-17T18:03:21.881Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-08-17T18:03:21.900Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-08-17T18:03:21.910Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-08-17T18:03:21.920Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-08-17T18:03:22.949Z] [bridge] phase 2 gate passed — http://127.0.0.1:9999/health
+[2026-08-17T18:03:22.974Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-08-17T18:03:23.019Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T18:03:23.036Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-08-17T18:03:28.681Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-08-17T18:03:28.682Z] ── boot phase 3 — idearium, architect, eravos, ollama-bridge, copilot, loom
+[2026-08-17T18:03:28.682Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-08-17T18:03:28.693Z] [31m[architect][0m starting — node architect/service.js
+[2026-08-17T18:03:28.728Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-08-17T18:03:28.738Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-08-17T18:03:28.749Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-08-17T18:03:28.760Z] [34m[loom][0m starting — node loom/server.js
+[2026-08-17T18:03:29.282Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-08-17T18:03:29.287Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-08-17T18:03:29.363Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-08-17T18:03:29.786Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-08-17T18:03:30.294Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-08-17T18:03:33.605Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-08-17T18:03:33.606Z] ── boot phase 4 — emerge
+[2026-08-17T18:03:33.606Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-08-17T18:03:33.616Z] [emerge] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-17T18:03:33.616Z] ── boot sequence complete — 4 phase(s)
+[2026-08-17T18:04:21.205Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-17T18:04:21.910Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-08-17T18:04:21.924Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-08-17T18:04:21.929Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-08-17T18:04:21.939Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-08-17T18:04:23.057Z] [31m[clear-glass][0m stable for 60s — backoff reset
+[2026-08-17T18:04:28.710Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-08-17T18:04:28.743Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-08-17T18:04:28.758Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-08-17T18:04:28.759Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-08-17T18:04:28.775Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-08-17T18:04:28.791Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-08-17T18:04:33.639Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-08-17T18:04:38.776Z] [32m[cortex][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-08-17T18:04:38.776Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-08-17T18:04:39.779Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-17T18:05:03.592Z] [32m[copilot][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-08-17T18:05:03.593Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-08-17T18:05:04.605Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-08-17T18:05:39.812Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-17T18:06:04.636Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-08-17T18:11:47.541Z] [36m[orchestrator][0m [31mexited[0m code=134 signal=null — crashes in window: 1/6
+[2026-08-17T18:11:47.842Z] [36m[orchestrator][0m restarting in 1s (attempt 1)
+[2026-08-17T18:11:48.852Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-08-17T18:12:48.914Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-08-17T18:58:32.901Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-08-17T18:58:32.905Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-08-17T18:58:32.906Z] ── boot phase 1 — cortex
+[2026-08-17T18:58:32.907Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-17T18:58:32.932Z] autopilot status: http://127.0.0.1:7799/status
+[2026-08-17T18:58:33.519Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-08-17T18:58:33.520Z] ── boot phase 2 — orchestrator, bridge, guardian, diagnostic
+[2026-08-17T18:58:33.520Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-08-17T18:58:33.528Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-08-17T18:58:33.538Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-08-17T18:58:33.548Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-08-17T18:58:34.094Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-08-17T18:58:34.274Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T18:58:34.301Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:34.302Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-08-17T18:58:34.582Z] [bridge] phase 2 gate passed — http://127.0.0.1:9999/health
+[2026-08-17T18:58:34.583Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-08-17T18:58:34.593Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-08-17T18:58:34.593Z] ── boot phase 3 — idearium, architect, eravos, ollama-bridge, copilot, loom
+[2026-08-17T18:58:34.594Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-08-17T18:58:34.604Z] [31m[architect][0m starting — node architect/service.js
+[2026-08-17T18:58:34.613Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-08-17T18:58:34.624Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-08-17T18:58:34.634Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-08-17T18:58:34.649Z] [34m[loom][0m starting — node loom/server.js
+[2026-08-17T18:58:35.167Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-08-17T18:58:35.168Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-08-17T18:58:35.169Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-08-17T18:58:35.171Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-08-17T18:58:35.673Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-08-17T18:58:35.979Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-08-17T18:58:35.979Z] ── boot phase 4 — emerge
+[2026-08-17T18:58:35.980Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-08-17T18:58:35.989Z] [emerge] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-17T18:58:35.991Z] ── boot sequence complete — 4 phase(s)
+[2026-08-17T18:58:37.309Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T18:58:37.330Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-08-17T18:58:37.330Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-08-17T18:58:40.344Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T18:58:40.363Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-08-17T18:58:40.364Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-08-17T18:58:44.369Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T18:58:44.393Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-08-17T18:58:44.393Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-08-17T18:58:52.054Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.054Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.061Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.061Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.068Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.068Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.074Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.074Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.080Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.080Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.088Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.088Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.095Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.095Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.102Z] [37m[diagnostic][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.103Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.110Z] [33m[guardian][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.110Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.118Z] [35m[bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.119Z] [35m[bridge][0m restarting in 1s (attempt 1)
+[2026-08-17T18:58:52.128Z] [36m[orchestrator][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T18:58:52.128Z] [36m[orchestrator][0m restarting in 1s (attempt 1)
+[2026-08-17T19:01:00.516Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-08-17T19:01:00.517Z] [31m[clear-glass][0m on-demand — staying dormant until requested
+[2026-08-17T19:01:00.518Z] ── boot phase 1 — cortex
+[2026-08-17T19:01:00.518Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-17T19:01:00.533Z] autopilot status: http://127.0.0.1:7799/status
+[2026-08-17T19:01:01.045Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-08-17T19:01:01.045Z] ── boot phase 2 — orchestrator, bridge, guardian, diagnostic
+[2026-08-17T19:01:01.045Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-08-17T19:01:01.052Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-08-17T19:01:01.058Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-08-17T19:01:01.065Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-08-17T19:01:01.333Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T19:01:01.355Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-08-17T19:01:01.355Z] [31m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-08-17T19:01:01.579Z] [bridge] phase 2 gate passed — http://127.0.0.1:9999/health
+[2026-08-17T19:01:01.580Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-08-17T19:01:01.581Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-08-17T19:01:01.583Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-08-17T19:01:01.583Z] ── boot phase 3 — idearium, architect, eravos, ollama-bridge, copilot, loom
+[2026-08-17T19:01:01.583Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-08-17T19:01:01.590Z] [31m[architect][0m starting — node architect/service.js
+[2026-08-17T19:01:01.596Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-08-17T19:01:01.603Z] [35m[ollama-bridge][0m starting — node ollama/server.js
+[2026-08-17T19:01:01.610Z] [32m[copilot][0m starting — node copilot/server.js
+[2026-08-17T19:01:01.617Z] [34m[loom][0m starting — node loom/server.js
+[2026-08-17T19:01:02.133Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-08-17T19:01:02.133Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-08-17T19:01:02.134Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-08-17T19:01:02.134Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-08-17T19:01:02.135Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-08-17T19:01:02.135Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-08-17T19:01:02.136Z] ── boot phase 4 — emerge
+[2026-08-17T19:01:02.136Z] [33m[emerge][0m starting — node emerge/consumer.js
+[2026-08-17T19:01:02.142Z] [emerge] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-17T19:01:02.142Z] ── boot sequence complete — 4 phase(s)
+[2026-08-17T19:01:04.362Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T19:01:04.374Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-08-17T19:01:04.375Z] [31m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-08-17T19:01:07.379Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T19:01:07.392Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-08-17T19:01:07.393Z] [31m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-08-17T19:01:11.395Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T19:01:11.408Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-08-17T19:01:11.408Z] [31m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-08-17T19:01:19.418Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T19:01:19.439Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-08-17T19:01:19.439Z] [31m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-08-17T19:01:35.442Z] [31m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-17-phase-history - intelligence system\nexus\node_modules\.bin\electron.cmd .
+[2026-08-17T19:01:35.456Z] [31m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-08-17T19:01:35.456Z] [31m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-08-17T19:02:00.556Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.077Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.077Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.080Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.093Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.617Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.618Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.619Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.633Z] [35m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.635Z] [32m[copilot][0m stable for 60s — backoff reset
+[2026-08-17T19:02:01.649Z] [34m[loom][0m stable for 60s — backoff reset
+[2026-08-17T19:02:02.163Z] [33m[emerge][0m stable for 60s — backoff reset
+[2026-08-17T19:03:05.470Z] [33m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.470Z] [33m[emerge][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.478Z] [34m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.478Z] [34m[loom][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.485Z] [32m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.485Z] [32m[copilot][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.492Z] [35m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.493Z] [35m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.498Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.498Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.505Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.505Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.513Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.513Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.522Z] [37m[diagnostic][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.522Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.531Z] [33m[guardian][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.531Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.539Z] [35m[bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.540Z] [35m[bridge][0m restarting in 1s (attempt 1)
+[2026-08-17T19:03:05.553Z] [36m[orchestrator][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-17T19:03:05.553Z] [36m[orchestrator][0m restarting in 1s (attempt 1)

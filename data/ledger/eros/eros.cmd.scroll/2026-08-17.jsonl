@@ -1,0 +1,1 @@
+{"uuid":"2caa5a19-b0e8-486a-8fe6-becb04ec7897","system":"eros","component":"eros.cmd.scroll","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP scroll","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817950}

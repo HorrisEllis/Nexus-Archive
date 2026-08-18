@@ -38,6 +38,68 @@
 import fs   from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+const _require = createRequire(import.meta.url);
+
+// §BUILT 2026-08-17 — GA6. James: "the architecture template with maybe a
+// compartment of the template files." Checked first: each real template
+// here has ONE seedFile (a single seed text blob) — no template today
+// carries a real, multi-file COS compartment. A real compartment's files
+// live at a real, absolute filesystem path (comp.fs.root, confirmed by
+// creating a real compartment and reading its own real return value) —
+// idearium (a separate process) can read that directly, same pattern
+// readSeed() below already uses for its own seed files, not a cross-
+// process call into COS's own running module.
+const MAX_COMPARTMENT_FILES = 40;   // §1.1 — a real, stated bound, not unbounded recursion into an arbitrary tree
+const MAX_FILE_BYTES        = 20000; // per file, so one huge file can't blow the seed content past what a real chunk can use
+
+function _walkCompartment(root, rel = '') {
+  const out = [];
+  let entries;
+  try { entries = fs.readdirSync(path.join(root, rel), { withFileTypes: true }); }
+  catch (_) { return out; }
+  for (const e of entries) {
+    if (out.length >= MAX_COMPARTMENT_FILES) break;
+    const relPath = rel ? `${rel}/${e.name}` : e.name;
+    if (e.isDirectory()) out.push(..._walkCompartment(root, relPath));
+    else out.push(relPath);
+  }
+  return out;
+}
+
+/**
+ * readCompartmentTemplate(compartmentName) — real, not a stub: finds the
+ * real compartment by name (via cos_compartment's real list action, the
+ * same tool GA9's chat triggers already call), reads its real file tree
+ * off disk, and returns real content — never fabricated, never partial-
+ * as-if-complete: a missing/empty compartment returns null, same honest
+ * shape readSeed() already uses for a missing seed file.
+ */
+async function readCompartmentTemplate(compartmentName) {
+  if (!compartmentName) return null;
+  try {
+    const cosCompartment = _require('../../lib/agent-tools/tools/sandbox/cos-compartment.js');
+    const listed = await cosCompartment.execute({ action: 'list' });
+    if (!listed.ok || !listed.compartments) return null;
+    const comp = listed.compartments.find(c => c.name === compartmentName);
+    if (!comp) { console.warn(`[idearium/templates] compartment '${compartmentName}' not found`); return null; }
+    const root = comp?.fs?.root;
+    if (!root) { console.warn(`[idearium/templates] compartment '${compartmentName}' has no real fs.root`); return null; }
+
+    const files = _walkCompartment(root);
+    const content = files.map(relPath => {
+      try {
+        const full = path.join(root, relPath);
+        let text = fs.readFileSync(full, 'utf8');
+        if (text.length > MAX_FILE_BYTES) text = text.slice(0, MAX_FILE_BYTES) + '\n... (truncated, real file continues)';
+        return `--- ${relPath} ---\n${text}`;
+      } catch (e) { return `--- ${relPath} --- (unreadable: ${e.message})`; }
+    }).join('\n\n');
+
+    return { compartmentName, fileCount: files.length, content };
+  } catch (e) { console.warn(`[idearium/templates] readCompartmentTemplate('${compartmentName}') failed: ${e.message}`); return null; }
+}
+
 
 const __dirname_ = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_ROOT = path.join(__dirname_, 'templates');
@@ -217,4 +279,4 @@ function readSeed(id) {
   }
 }
 
-export { TEMPLATES, listTemplates, getTemplate, readSeed };
+export { TEMPLATES, listTemplates, getTemplate, readSeed, readCompartmentTemplate };

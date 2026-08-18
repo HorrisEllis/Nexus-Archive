@@ -37,6 +37,23 @@ class ErrorCapture {
     // log + SSE, which had zero connection to anything else in NEXUS until
     // now.
     this.gapField = gapField || null;
+
+    // §FIXED 2026-08-17 — James, direct evidence: a real ~228-383MB single-
+    // day error log file. Root cause, confirmed by reading this file's own
+    // real code: capture() had zero dedup, zero rate-limiting, and wrote a
+    // FULL STACK TRACE on every single call. autopilot's own real gaps
+    // table already shows clear-glass crash-looped 6 times in 5 minutes —
+    // if that loop re-triggers the same uncaught exception repeatedly (a
+    // real, common failure shape, not theoretical), every single
+    // occurrence got a brand-new full row on disk. Real, scoped fix:
+    // identical errors (same source+type+message) within a real window
+    // get coalesced into a repeat counter instead of a new full row+stack.
+    // The in-memory ring buffer, the real-time SSE push, and gapField's
+    // own separate dedup (it already has one, confirmed by reading it)
+    // are untouched — this only throttles the actual unbounded disk write.
+    this._lastSig = null;
+    this._lastSigCount = 0;
+    this.DEDUP_WINDOW_MS = 5000;
   }
 
   init() {
@@ -85,9 +102,28 @@ class ErrorCapture {
     this.recent.push(row);
     if (this.recent.length > this.MAX_RECENT) this.recent.shift();
 
+    // §FIXED 2026-08-17 — real dedup on the actual disk-write path. A
+    // signature is source+type+message — NOT the stack (two errors from
+    // slightly different call depths but the same real cause still
+    // coalesce, which is the point). First occurrence of a signature
+    // (or one outside the real time window) writes a full row, same as
+    // before. A repeat within the window writes a short, compact line
+    // instead of a duplicate full row+stack — real information (it's
+    // still on disk, still timestamped) without the unbounded growth.
+    const sig = `${source}::${type}::${message}`;
+    const now = row.ts;
+    const isRepeat = this._lastSig === sig && (now - (this._lastSigTs || 0)) < this.DEDUP_WINDOW_MS;
     try {
       const file = path.join(this.logDir, `${new Date().toISOString().slice(0, 10)}.jsonl`);
-      fs.appendFileSync(file, JSON.stringify(row) + '\n');
+      if (isRepeat) {
+        this._lastSigCount++;
+        fs.appendFileSync(file, JSON.stringify({ id: row.id, ts: row.ts, isoTime: row.isoTime, repeatOf: sig, repeatCount: this._lastSigCount }) + '\n');
+      } else {
+        this._lastSig = sig;
+        this._lastSigCount = 1;
+        fs.appendFileSync(file, JSON.stringify(row) + '\n');
+      }
+      this._lastSigTs = now;
     } catch (_) { /* §1.2 — logging failure shouldn't crash the app; the
                       in-memory ring buffer + SSE push below still work */ }
 

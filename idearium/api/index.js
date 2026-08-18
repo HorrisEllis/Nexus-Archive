@@ -1307,14 +1307,47 @@ async function handle(req, res, route, query, body) {
     case 'speceng.create': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      const { name, type, description, agent, templateId, templateIds, buildEngine, ideaUuid } = body;
+      const { name, type, description, agent, templateId, templateIds, buildEngine, ideaUuid, compartmentTemplateName } = body;
       if (!name) return err(res, 400, 'name required');
       if (ideaUuid && !os.idea(ideaUuid)) return err(res, 404, `idea not found: ${ideaUuid}`);
       try {
+        // §BUILT 2026-08-17 — GA6. James: "architecture template with
+        // maybe a compartment of the template files." Resolved HERE,
+        // not inside _buildManifest — this route is already async, and
+        // keeping _buildManifest itself synchronous avoids widening an
+        // established code path with multiple real callers to async for
+        // one new feature. Real compartment content merged additively
+        // into the schema section below, not silently discarded if a
+        // compartment name is given but not found (honest null, logged).
+        let compartmentSeed = null;
+        if (compartmentTemplateName) {
+          const { readCompartmentTemplate } = await import('../spec-engine/templates.js');
+          compartmentSeed = await readCompartmentTemplate(compartmentTemplateName);
+        }
         // An unknown templateId/templateIds (or buildEngine) throws inside
         // createSpec (§1.2) and surfaces as a 400 here rather than silently
         // creating an unseeded / mis-configured spec.
         const manifest = se.createSpec({ name, type, description, agent, templateId, templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
+        if (compartmentSeed) {
+          const schemaChunk = (manifest.chunks || []).find(c => c.sectionId === 'schema');
+          if (schemaChunk && schemaChunk.status === 'pending') {
+            schemaChunk.content = `## Real architecture template: ${compartmentSeed.compartmentName} (${compartmentSeed.fileCount} real files)\n\n${compartmentSeed.content}`;
+            schemaChunk.status = 'complete';
+            manifest.doneChunks = (manifest.doneChunks || 0) + 1;
+            // §FIXED, found by testing before shipping: _buildManifest
+            // already wrote manifest.json to disk before this mutation
+            // ever runs (fs.writeFileSync happens inside it, confirmed by
+            // reading the code directly) — without this real re-save, the
+            // schema content only ever existed in the HTTP response, never
+            // actually persisted. Same real path convention this whole
+            // file already uses elsewhere.
+            const { default: fsMod } = await import('fs');
+            const { default: pathMod } = await import('path');
+            const specDir = pathMod.join(IDEARIUM_DATA_DIR, 'specs', manifest.uuid);
+            try { fsMod.writeFileSync(pathMod.join(specDir, 'manifest.json'), JSON.stringify(manifest, null, 2)); }
+            catch (e) { console.warn(`[speceng.create] compartment-seed re-save failed: ${e.message}`); }
+          }
+        }
         os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateIds: manifest.templateIds, buildEngine: manifest.buildEngine, ideaUuid: manifest.ideaUuid });
 
         // §MERGED 2026-07-11 — same phase-linkage fix as the legacy

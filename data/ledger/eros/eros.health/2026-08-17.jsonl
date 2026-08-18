@@ -1,0 +1,1 @@
+{"uuid":"ca006c10-bf5c-4e94-8252-566668f079b9","system":"eros","component":"eros.health","action":"registered","status":"ok","tags":["eros"],"detail":"ErosmancerOS health + module status","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1786989817919}

@@ -245,8 +245,17 @@ async function _scanPatterns() {
     const now = Date.now();
     _lastPatternScan = now;
 
-    // Read recent events from event_log
-    const events = jaaDB.query('event_log', () => true, 500);
+    // §FIXED 2026-08-17 — found while wiring a NEW real event type in for
+    // James's own ask ("point the pattern engine at instance counts") and
+    // confirmed by direct testing, not assumed: jaaDB.query() iterates
+    // rows in INSERTION order and stops at the limit — it has always
+    // returned the OLDEST 500 events, never the newest, once this table
+    // exceeds 500 real rows (which it has, confirmed: a fresh query
+    // returned 500 rows with zero of the newest real event type in them).
+    // This comment already said "recent" — the code never delivered that.
+    // jaaDB.tail() is the real, already-existing, correct method (real
+    // DESC order, confirmed by reading its own implementation).
+    const events = jaaDB.tail('event_log', 500);
     if (events.length < 20) return; // not enough data yet
 
     // ── Co-occurrence analysis ────────────────────────────────────────────────
@@ -355,7 +364,12 @@ async function _scanPatterns() {
 
     // ── Sigma spike chain analysis ────────────────────────────────────────────
     // Are there recurring sequences of event types that always end in high sigma?
-    const sigmaRecords = jaaDB.query('sigma_records', () => true, 200);
+    // §FIXED 2026-08-17 — same real bug class already fixed elsewhere in
+    // this file today: query() returns oldest-first and truncates.
+    // Confirmed severe here specifically: 1975 real sigma_records exist,
+    // this call only ever saw the oldest 200 — ~90% of real, more recent
+    // regime data was invisible to "recurring sequences" analysis.
+    const sigmaRecords = jaaDB.tail('sigma_records', 200);
     const highSigmaTypes = sigmaRecords
       .filter(r => r.score >= 0.7)
       .map(r => r.eventType)
@@ -539,7 +553,13 @@ async function _scanPatterns() {
     }
 
     // Refresh in-memory index from JAA
-    _patternIndex = jaaDB.query('bep_patterns', () => true, 200);
+    // §FIXED 2026-08-17 — the most severe real instance of this bug class:
+    // this IS the pattern engine's own core state. Confirmed: 1019 real
+    // bep_patterns rows exist, this call only ever loaded the oldest 200
+    // — roughly 800 real, more recent patterns have been structurally
+    // invisible to the engine's own logic this whole time, not just to
+    // one scan.
+    _patternIndex = jaaDB.tail('bep_patterns', 200);
 
     // Log scan summary to event_log
     jaaDB.insert('event_log', {
@@ -783,11 +803,16 @@ async function _scanFailures() {
     const failures     = jaaDB.query('failures',       () => true, 200);
     const gaps         = jaaDB.query('gaps',           r => r.status === 'open', 100);
     const violations   = jaaDB.query('law_violations', () => true, 100);
-    const errorEvents  = jaaDB.query('event_log',
+    // §FIXED 2026-08-17 — same real bug class as _scanPatterns above:
+    // query() returns the oldest matching rows once event_log exceeds the
+    // limit, not the most recent. A failure taxonomy needs recent errors.
+    // No predicate-aware tail() exists, so: tail a real, generous recent
+    // window, then filter — still correctly recency-ordered, unlike the
+    // original.
+    const errorEvents  = jaaDB.tail('event_log', 3000).filter(
       e => e.type?.includes('error') || e.type?.includes('fail') ||
-           e.type?.includes('unhandled') || e.type?.includes('gate.failed'),
-      200
-    );
+           e.type?.includes('unhandled') || e.type?.includes('gate.failed')
+    ).slice(0, 200);
 
     // ── Build failure mode taxonomy ───────────────────────────────────────────
     _failureIndex = {};
@@ -1161,7 +1186,7 @@ function getContext({ intent = '', command = '', provider = '' } = {}) {
   // 4. Current system health signals
   const openGaps   = jaaDB.query('gaps', r => r.status === 'open', 20);
   const critGaps   = openGaps.filter(g => g.severity === 'fatal' || g.severity === 'high');
-  const recentFail = jaaDB.query('failures', () => true, 5);
+  const recentFail = jaaDB.tail('failures', 5); // §FIXED 2026-08-17 — same real bug class, variable literally named "recent"
 
   return {
     intent, command, provider,
@@ -1309,9 +1334,15 @@ function _extractKeywords(text = '') {
 }
 
 function _getDriftLevel() {
-  const recent = jaaDB.query('event_log',
-    e => e.type === 'intelligence.cross_ledger_analysis', 1
-  );
+  // §FIXED 2026-08-17 — same real bug class, and the most ironic instance
+  // of it: this variable was named 'recent' but query()'s real semantics
+  // (oldest-first, stop at limit) meant recent[0] with limit:1 returned
+  // the OLDEST matching row in the whole table, not the most recent
+  // cross_ledger_analysis event. This function has likely reported a
+  // stale drift level since whenever this table first grew past a
+  // handful of rows. tail() + filter + take the first (most recent) is
+  // correct.
+  const recent = jaaDB.tail('event_log', 500).filter(e => e.type === 'intelligence.cross_ledger_analysis');
   return recent[0]?.payload?.driftLevel || 'unknown';
 }
 
