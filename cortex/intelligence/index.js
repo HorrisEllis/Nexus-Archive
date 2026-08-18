@@ -266,6 +266,32 @@ function _isMatureNoOpUpdate(existing, newCount, newConfidence) {
   return countDeltaPct < 0.05 && confidenceDelta < 0.02;
 }
 
+// §BUILT 2026-08-18 — James: "patterns across systems... causal patterns,
+// behavior patterns, what pattern types?" Checked first: co_occurrence's
+// real key is [a.type, b.type] — event TYPE only, never checks whether
+// the two events come from the SAME system or DIFFERENT ones. 157 real,
+// distinct event sources exist in this checkout's own real event_log
+// (confirmed by direct query), almost all following a real, consistent
+// prefix convention — the raw signal for cross-system classification
+// already exists, just never read for this. Same real vocabulary already
+// established this session (gap-priority.js's vitality table), extended
+// with clear-glass (Electron-side, not in that table since it's not
+// autopilot-supervised the same way).
+const SYSTEM_PREFIXES = [
+  ['cg.', 'clear-glass'], ['clear-glass', 'clear-glass'],
+  ['eros.', 'eravos'], ['eravos.', 'eravos'],
+  ['cortex.', 'cortex'], ['cortex/', 'cortex'],
+  ['guardian.', 'guardian'], ['ollama.', 'ollama-bridge'],
+  ['copilot.', 'copilot'], ['diagnostic.', 'diagnostic'],
+  ['loom.', 'loom'], ['idearium.', 'idearium'], ['architect.', 'architect'],
+  ['orchestrator', 'orchestrator'], ['bridge.', 'bridge'], ['emerge.', 'emerge'],
+];
+function _classifySystem(source) {
+  if (!source) return null; // honest unknown — real, seen in the data (some events have no source), never guessed
+  for (const [prefix, system] of SYSTEM_PREFIXES) if (source.startsWith(prefix)) return system;
+  return null; // a real source that doesn't match a known system — honest, not forced into a wrong bucket
+}
+
 async function _scanPatterns() {
   try {
     const now = Date.now();
@@ -290,6 +316,7 @@ async function _scanPatterns() {
     // pair of events is counted exactly once across overlapping windows.
     const WINDOW_MS = 5000;
     const coOccur = {};
+    const coOccurSystems = {}; // §BUILT 2026-08-18 — parallel map, key -> {systemA, systemB, crossSystem}
     for (let i = 0; i < events.length; i++) {
       const a = events[i];
       for (let j = i + 1; j < events.length; j++) {
@@ -299,6 +326,15 @@ async function _scanPatterns() {
         if (b.ts <= _patternScanCursor) continue; // already counted by a prior scan
         const key = [a.type, b.type].sort().join('::');
         coOccur[key] = (coOccur[key] || 0) + 1;
+        // §BUILT 2026-08-18 — real, minimal addition: track whether this
+        // pair's two real events came from different systems. Doesn't
+        // touch the existing coOccur counting at all — a parallel map,
+        // set once per key (first real observation), read later when
+        // deciding what to persist.
+        if (!coOccurSystems[key]) {
+          const sysA = _classifySystem(a.source), sysB = _classifySystem(b.source);
+          coOccurSystems[key] = { systemA: sysA, systemB: sysB, crossSystem: !!(sysA && sysB && sysA !== sysB) };
+        }
       }
     }
 
@@ -438,15 +474,21 @@ async function _scanPatterns() {
       // pattern involving that type from then on.
       const noiseTainted = _knownNoiseTypes.has(typeA) || _knownNoiseTypes.has(typeB);
       const existing = _patternIndex.find(p => p.signature === pair);
+      // §BUILT 2026-08-18 — real system classification for this real pair,
+      // from the parallel map built during the co-occurrence scan above.
+      const sysInfo = coOccurSystems[pair] || { systemA: null, systemB: null, crossSystem: false };
       if (!existing) {
         newPatterns.push({
           uuid:        uid(),
           signature:   pair,
-          patternType: 'co_occurrence',
+          patternType: sysInfo.crossSystem ? 'cross_system_causal' : 'co_occurrence',
           typeA, typeB,
+          systemA:     sysInfo.systemA, systemB: sysInfo.systemB, crossSystem: sysInfo.crossSystem,
           count,
           confidence:  Math.min(1, count / 20),
-          description: `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
+          description: sysInfo.crossSystem
+            ? `"${typeA}" (${sysInfo.systemA}) and "${typeB}" (${sysInfo.systemB}) co-occur within 5s across two real systems — ${count} observations`
+            : `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
           actionable:  count >= 5,
           crystallised:count >= 10,
           noiseTainted,
