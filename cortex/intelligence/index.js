@@ -1184,7 +1184,14 @@ function getContext({ intent = '', command = '', provider = '' } = {}) {
     }));
 
   // 4. Current system health signals
-  const openGaps   = jaaDB.query('gaps', r => r.status === 'open', 20);
+  // §FIXED 2026-08-17 — same real bug class, and this one is currently
+  // active, not latent: 60 real open gaps exist right now, this call only
+  // ever saw the oldest 20 — meaning genuinely recent critical gaps
+  // (e.g. from a fresh system-check run) could be invisible to this
+  // real-time health-signal function while old, possibly-stale gaps
+  // dominate the visible set. tail(), a real generous window, then
+  // filter by status — correct recency, not just "first found."
+  const openGaps   = jaaDB.tail('gaps', 500).filter(r => r.status === 'open').slice(0, 20);
   const critGaps   = openGaps.filter(g => g.severity === 'fatal' || g.severity === 'high');
   const recentFail = jaaDB.tail('failures', 5); // §FIXED 2026-08-17 — same real bug class, variable literally named "recent"
 
