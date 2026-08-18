@@ -93,6 +93,21 @@ const FILES = [
 
   // §ADDED 2026-08-18j — self_repair, the real propose/test/promote pipeline.
   ['lib/agent-tools/tools/sandbox/self-repair.js', 'nexus.lib.agent-tools.sandbox.self-repair', 'lib/agent-tools/tools/sandbox', []],
+
+  // §ADDED 2026-08-18k — 6 real, foundational files found genuinely
+  // unregistered under any id while doing this session's own real work
+  // on them, confirmed by direct search, not assumed.
+  ['lib/intent-classifier.js',       'nexus.lib.intent-classifier',       'lib',           []],
+  ['cortex/core/raid/index.js',      'nexus.cortex.core.raid',            'cortex/core/raid', []],
+  ['copilot/lib/self-model.js',      'nexus.copilot.lib.self-model',      'copilot/lib',   []],
+  ['copilot/lib/grammar-router.js',  'nexus.copilot.lib.grammar-router',  'copilot/lib',   []],
+  ['copilot/lifeline.js',            'nexus.copilot.lifeline',            'copilot',       []],
+  ['ollama/server.js',               'nexus.ollama.server',               'ollama',        []],
+
+  // §ADDED 2026-08-18l — a real, significant, pre-existing gap: this file
+  // was genuinely unregistered under any id despite being central to the
+  // whole hat/agent-switching system this session built on.
+  ['lib/hat-forge.js', 'nexus.lib.hat-forge', 'lib', []],
 ];
 
 function mapSession20260814(driver) {

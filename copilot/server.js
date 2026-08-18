@@ -492,6 +492,44 @@ async function _injectRecallContext(prompt, contextText) {
 }
 
 // ── Dispatch to Ollama sovereign system ───────────────────────────────────────
+// §BUILT 2026-08-18 — real, tool-aware follow-up generation. Deliberately
+// deterministic, not a second LLM round-trip — highest leverage, lowest
+// friction: no added latency or cost for something that can be reasoned
+// from the tool's own real, structured result.
+function _generateToolFollowUp(toolName, args, result) {
+  try {
+    switch (toolName) {
+      case 'read_file':
+        return result?.ok
+          ? `Want me to search this file for something specific, or edit it?`
+          : null;
+      case 'search_files': {
+        const n = result?.matchCount || 0;
+        if (n === 0) return `No matches for that. Want to try a different keyword, or search a specific directory?`;
+        return `Found ${n} real match${n === 1 ? '' : 'es'}${result?.truncated ? ' (scan hit its limit — want me to narrow the search?)' : ''}. Want me to open one, or search further?`;
+      }
+      case 'diagnose':
+        return `Want me to act on any of these findings, or look deeper at a specific one?`;
+      case 'system_priority':
+        return args?.action === 'boot_check'
+          ? `Want me to write these as real gaps (dryRun:false), or just review them first?`
+          : null;
+      case 'intent_hat':
+        return result?.suggested
+          ? `Want me to actually switch to "${result.hatName}" for this, or keep going as-is?`
+          : null;
+      case 'self_repair':
+        if (args?.action === 'propose') return `Proposed in compartment "${args.name}". Want me to test it now?`;
+        if (args?.action === 'test') return result?.passed
+          ? `Test passed. Want me to promote it to the live file?`
+          : `Test didn't pass. Want me to see the real output, or try a different approach?`;
+        return null;
+      default:
+        return null; // an unlisted/future tool gets no generic filler — real, honest silence over boilerplate
+    }
+  } catch (_) { return null; } // §1.2 — a follow-up failure never affects the real tool result already sent
+}
+
 async function _dispatchToOllama(prompt, context, opts = {}) {
   return _post(`${OL_URL}/api/jobs`, {
     prompt:      `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
@@ -507,6 +545,7 @@ async function _dispatchToOllama(prompt, context, opts = {}) {
     sessionId:   opts.sessionId,
     contractId:  'nexus-interaction-contract-v1::copilot',
     stream:      opts.stream || false,
+    ...(opts.priority ? { priority: opts.priority } : {}),
   });
 }
 
@@ -1018,6 +1057,114 @@ const server = http.createServer(async (req, res) => {
 
     if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
 
+    // §BUILT 2026-08-18c — James: "when 'hey nexus' is used, it
+    // establishes a handshake connection... highest priority... handshake
+    // decays after 30 seconds of inactivity." Real, honest scope: a real
+    // elevated-priority session state, checked and refreshed on every
+    // real message, decaying via the same real staleness pattern already
+    // proven this session (a timestamp check, not a background sweep —
+    // handshake state only matters at the moment someone is actually
+    // talking, so checking on arrival is the real, correct trigger, not
+    // an interval that would fire even with nobody there).
+    const HANDSHAKE_DECAY_MS = 30_000;
+    const isWakePhrase = /\bhey\s+nexus\b/i.test(prompt);
+    if (isWakePhrase) {
+      session.handshake = { establishedAt: Date.now(), lastActive: Date.now(), priority: 'highest' };
+    } else if (session.handshake) {
+      if (Date.now() - session.handshake.lastActive > HANDSHAKE_DECAY_MS) {
+        session.handshake = null; // real, honest decay — not silently kept alive past its real window
+      } else {
+        session.handshake.lastActive = Date.now(); // real activity within the window — refresh, don't reset the clock to a new handshake
+      }
+    }
+
+    // §BUILT 2026-08-18d — James, clarifying the SSE-injection trigger
+    // directly: "when hey nexus is used. Or I give a task to co-pilot.
+    // Like if I tell it to create a feedback loop." Real, reused signal,
+    // not invented: lib/intent-classifier.js's own real verb-match
+    // confidence (0.85 for a genuine matched verb like build/diagnose/
+    // create, vs 0.3 for 'unknown') is exactly "is this a real task,"
+    // already computed by an existing, tested system — §16.5, delete
+    // before you add, applies to not building a second classifier too.
+    let isRealTask = false;
+    let _detectedVerb = 'unknown';
+    try {
+      const ic = require('../lib/intent-classifier.js');
+      const { intent } = ic.classify(prompt);
+      _detectedVerb = intent.verb;
+      // §FIXED, found by testing before shipping: intent.confidence is a
+      // harmonic mean of domain-confidence AND verb-confidence — not a
+      // flat "was a real verb matched" signal. Comparing it to 0.85
+      // incorrectly rejected a genuinely, correctly-matched verb
+      // ('diagnose' composite-scored 0.824 despite a real pattern match).
+      // The real, precise signal was already right there: verb !==
+      // 'unknown' IS what a genuine pattern match looks like, confirmed
+      // by reading _classifyVerb's own real fallback (verb:'unknown' only
+      // when nothing matched) — no confidence math needed on top of it.
+      isRealTask = intent.verb !== 'unknown';
+    } catch (_) { /* classifier unreachable — real, honest fail-open: no injection rather than a guess, §1.2 */ }
+
+    // §FIXED — James's own literal example ("create a feedback loop")
+    // wasn't caught by the shared classifier at all (verb:unknown; "create"
+    // alone isn't a matched pattern there). Tried widening the SHARED
+    // classifier's own "build" pattern to bare "create" first — reverted
+    // immediately after testing found a real, serious over-match ("i will
+    // create some time for this" incorrectly tagged FORGE-risk on a
+    // system-wide, other-callers-depend-on-it classifier). This is the
+    // safer fix per §16.6 (the architecture decides, a local convenience
+    // never outranks a shared invariant): a real, LOCAL, narrow check
+    // scoped only to this one feature, bounded to known real, buildable
+    // nouns — "create a feedback loop" matches, "create some time" was
+    // never at risk since "time" was never in this list.
+    if (!isRealTask) {
+      isRealTask = /\b(create|build|make)\s+(a|an|the|some)?\s*\w*\s*(feedback\s*loop|pipeline|compartment|tool|agent|system|component|contract|hat)\b/i.test(prompt);
+      if (isRealTask) _detectedVerb = 'create';
+    }
+
+    // §BUILT 2026-08-18d — real live NEXUS context, reusing the existing,
+    // already-bounded _stream ring buffer (the actual, real "NEXUS live
+    // event stream" — not a new one). Injected as real, ongoing context
+    // into whichever agent is currently wearing the co-pilot hat,
+    // whether that's ollama (below) or a guardian-dispatched agent
+    // (copilot/lifeline.js's escalation path) — co-pilot is a real,
+    // swappable hat now, so this must reach both real dispatch paths,
+    // not just one.
+    const injectLiveContext = !!(session.handshake || isRealTask);
+    let liveNexusContext = '';
+    if (injectLiveContext) {
+      const recent = _stream.slice(-15).map(e => `[${new Date(e.ingestedAt || Date.now()).toISOString()}] ${e.type || 'event'}: ${JSON.stringify(e.payload || e).slice(0, 150)}`).join('\n');
+      liveNexusContext = recent
+        ? `\n\n=== LIVE NEXUS CONTEXT (${session.handshake ? 'hey-nexus handshake active' : 'real task detected'}) ===\n${recent}\n=== END LIVE CONTEXT ===`
+        : '';
+      // §13.1 — every real injection decision is logged with its own
+      // real trigger reason, not silent.
+      console.log(`[copilot] live NEXUS context injected — reason: ${session.handshake ? 'handshake' : 'task:' + _detectedVerb}, events: ${_stream.slice(-15).length}`);
+    }
+
+    // confirmation reply ("yes", "do it") shouldn't be treated as a fresh
+    // question and routed through the normal model dispatch.
+    if (session.pendingConfirmation) {
+      const pending = session.pendingConfirmation;
+      session.pendingConfirmation = null; // real, one-shot — cleared regardless of the answer, never re-asked stale
+      sseHeaders(res);
+      sseSend(res, 'start', { requestId, sessionId });
+      if (/^\s*(yes|confirm|do it|go ahead|approved?)\b/i.test(prompt)) {
+        try {
+          const agentToolsForExec = require('../lib/agent-tools/index.js');
+          const toolResult = await agentToolsForExec.executeTool(pending.name, pending.args, { source: 'copilot-chat-confirmed', agent: pending.modelUsed });
+          sseSend(res, 'tool_call', { name: pending.name, args: pending.args, result: toolResult, wasConfirmed: true });
+          sseSend(res, 'chunk', { delta: 'Confirmed — promoted.', total: 20 });
+        } catch (e) {
+          sseSend(res, 'chunk', { delta: `Confirmed, but the real promote failed: ${e.message}`, total: 40 });
+        }
+      } else {
+        sseSend(res, 'chunk', { delta: 'Not confirmed — the proposed change was not promoted.', total: 50 });
+      }
+      sseSend(res, 'done', { requestId, sessionId, modelUsed: 'confirmation-gate' });
+      res.end();
+      return;
+    }
+
     sseHeaders(res);
     sseSend(res, 'start', { requestId, sessionId });
 
@@ -1095,7 +1242,15 @@ const server = http.createServer(async (req, res) => {
     // it writes one) streams exactly as before; detection happens AFTER
     // _streamOllamaJob resolves with the full real text, as a real,
     // additional step, not a change to the streaming mechanism.
-    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat'];
+    // §BUILT 2026-08-18b — James: "i do [want self_repair available].
+    // maybe with a confirmation." Added to the default set, but with a
+    // real gate: only self_repair's "promote" action (the actual live
+    // file write) requires confirmation. "propose" and "test" are
+    // sandboxed/compartment-scoped already — real risk, but contained —
+    // so they execute freely, matching this session's own established
+    // reasoning for why compartment work doesn't need the same gate as
+    // a live write.
+    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair'];
     if (DEFAULT_CHAT_TOOLS.length) {
       const agentToolsForManifest = require('../lib/agent-tools/index.js');
       const manifest = DEFAULT_CHAT_TOOLS
@@ -1108,10 +1263,53 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // §BUILT 2026-08-18d — real injection into ollama's real dispatch path.
+    if (liveNexusContext) contextText += liveNexusContext;
+
+    // §BUILT 2026-08-18e — James: "I want guardian agents to be swappable
+    // as co-pilot." Real, critical, foundational gap found and fixed
+    // here, not assumed already working: this handler never once
+    // consulted the currently-worn agent — it always dispatched to
+    // ollama regardless of what hat was worn. "Co-pilot is a hat" had
+    // zero real effect on the actual dispatch before this fix. §3.1 —
+    // the SSE-injection work above needs a real guardian dispatch path
+    // to inject into; building that on a handler that never reaches
+    // guardian would be building on something that doesn't exist yet.
+    let currentAgentName = 'ollama';
+    try { const sm = require('./lib/self-model.js'); currentAgentName = sm.getCurrentAgent().agent || 'ollama'; } catch (_) { /* self-model unreachable — real, honest fallback to ollama, never a guess at a different agent */ }
+
+    if (currentAgentName !== 'ollama') {
+      try {
+        const lifeline = require('./lifeline.js');
+        const guardianPrompt = liveNexusContext ? `${prompt}${liveNexusContext}` : prompt;
+        const gResult = await lifeline.dispatchToNcpAgent(guardianPrompt, { provider: currentAgentName, requestId, sessionId });
+        if (gResult?.text) {
+          // §0.1 — guardian's response is not natively token-streamed; sent
+          // as one real, honest chunk rather than faking a stream that
+          // doesn't exist for this real dispatch path.
+          sseSend(res, 'chunk', { delta: gResult.text, total: gResult.text.length });
+          sseSend(res, 'done', { requestId, sessionId, modelUsed: gResult.provider || currentAgentName, contextLayers: 7, viaGuardian: true });
+          res.end();
+          await _persist('chat_log', { uuid: crypto.randomUUID(), requestId, sessionId,
+            prompt: prompt.slice(0,500), response: gResult.text.slice(0,2000),
+            modelUsed: gResult.provider || currentAgentName, intent: 'ask', channel,
+            componentId:'copilot.prompt', hookId:'copilot.prompt.reply.guardian',
+            contextLayers: 7, fromStream: true, ts: Date.now() });
+          return;
+        }
+        // §1.2 — a real, failed guardian dispatch falls through to ollama
+        // rather than dead-ending the request; logged, not silent.
+        console.warn(`[copilot] guardian dispatch for hat-selected agent "${currentAgentName}" failed or returned no text — falling through to ollama`);
+      } catch (e) {
+        console.warn(`[copilot] guardian dispatch threw for agent "${currentAgentName}": ${e.message} — falling through to ollama`);
+      }
+    }
+
     // Dispatch to Ollama with stream flag
     try {
       const ollamaResult = await _dispatchToOllama(prompt, contextText, {
-        intent: 'ask', requestId, sessionId, stream: true });
+        intent: 'ask', requestId, sessionId, stream: true,
+        priority: session.handshake ? session.handshake.priority : undefined });
 
       if (ollamaResult?.jobId) {
         const result = await _streamOllamaJob(ollamaResult.jobId, res, sessionId);
@@ -1122,21 +1320,42 @@ const server = http.createServer(async (req, res) => {
         // malformed JSON or an unoffered tool name just falls through
         // silently to the normal done event below — never half-broken.
         let toolCall = null;
+        let confirmationRequested = null;
         const toolMatch = (result.text || '').match(/TOOL_CALL:\s*(\{.*\})\s*$/s);
         if (toolMatch) {
           try {
             const req = JSON.parse(toolMatch[1]);
             if (req.name && DEFAULT_CHAT_TOOLS.includes(req.name)) {
-              const agentToolsForExec = require('../lib/agent-tools/index.js');
-              const toolResult = await agentToolsForExec.executeTool(req.name, req.args || {}, { source: 'copilot-chat', agent: result.modelUsed });
-              toolCall = { name: req.name, args: req.args || {}, result: toolResult };
-              sseSend(res, 'tool_call', toolCall);
+              // §BUILT 2026-08-18b — the real confirmation gate: only
+              // self_repair's promote action (a genuine live file write)
+              // gets held. Every other tool, and self_repair's own
+              // propose/test actions (sandboxed, compartment-scoped),
+              // execute exactly as before — this is a narrow, specific
+              // gate, not a blanket one.
+              if (req.name === 'self_repair' && req.args?.action === 'promote') {
+                session.pendingConfirmation = { name: req.name, args: req.args, modelUsed: result.modelUsed, ts: Date.now() };
+                confirmationRequested = { name: req.name, targetFile: req.args?.targetFile, compartment: req.args?.name };
+                sseSend(res, 'confirmation_required', confirmationRequested);
+              } else {
+                const agentToolsForExec = require('../lib/agent-tools/index.js');
+                const toolResult = await agentToolsForExec.executeTool(req.name, req.args || {}, { source: 'copilot-chat', agent: result.modelUsed });
+                toolCall = { name: req.name, args: req.args || {}, result: toolResult };
+                sseSend(res, 'tool_call', toolCall);
+
+                // §BUILT 2026-08-18 — James: "have co-pilot ask a follow up
+                // when using tools." Real, tool-aware, not a flat generic
+                // string — genuinely different per tool and what it
+                // actually found, so the question is worth answering, not
+                // boilerplate.
+                const followUp = _generateToolFollowUp(req.name, req.args, toolResult);
+                if (followUp) sseSend(res, 'follow_up', { text: followUp, forTool: req.name });
+              }
             }
           } catch (_) { /* malformed TOOL_CALL — real, honest no-op, not a crash */ }
         }
 
         sseSend(res, 'done', { requestId, sessionId, modelUsed: result.modelUsed,
-          contextLayers: 7, timedOut: result.timedOut || false, toolCall });
+          contextLayers: 7, timedOut: result.timedOut || false, toolCall, confirmationRequested });
         res.end();
         await _persist('chat_log', { uuid: crypto.randomUUID(), requestId, sessionId,
           prompt: prompt.slice(0,500), response: result.text.slice(0,2000),

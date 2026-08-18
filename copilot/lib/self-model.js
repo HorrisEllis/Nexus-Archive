@@ -172,7 +172,7 @@ function getCurrentAgent() {
  * the underlying base agent AND remembers the hat's toolScope/personaPrompt
  * so route()/runViaAgent can apply them — same governance either way.
  */
-function setCurrentAgent(agent) {
+function setCurrentAgent(agent, opts = {}) {
   const raw = (agent || 'auto').trim().toLowerCase();
 
   // A forged hat's name takes priority if one exists with that exact name —
@@ -183,7 +183,26 @@ function setCurrentAgent(agent) {
     try { forgedHat = require('../../lib/hat-forge').get(raw); } catch (_) {}
     if (!forgedHat) return { ok: false, reason: `unknown agent "${agent}" — one of: ${[...VALID_AGENTS].join(', ')}, or a forged hat name` };
   }
-  const normalized = forgedHat ? forgedHat.baseAgent : raw;
+
+  // §BUILT 2026-08-18 — James: "I want guardian agents to be swappable as
+  // co-pilot. co-pilot is a hat." Checked first, real and precise:
+  // allowedAgents was already a real, validated field on every forged hat
+  // (lib/hat-forge.js's own HAT_SCHEMA) but this function never actually
+  // consulted it — always forced the hat's fixed baseAgent, no matter
+  // what. That's the real, exact reason a guardian agent couldn't wear
+  // the co-pilot hat before this: there was no path for it. opts.agent,
+  // when given, must be in the hat's own real allowedAgents (or IS the
+  // hat's own baseAgent) — never an unlisted agent, even if it's
+  // otherwise a real, valid one.
+  let normalized;
+  if (forgedHat && opts.agent) {
+    const requested = opts.agent.trim().toLowerCase();
+    const permitted = requested === forgedHat.baseAgent || (forgedHat.allowedAgents || []).includes(requested);
+    if (!permitted) return { ok: false, reason: `hat "${forgedHat.name}" does not permit agent "${requested}" — allowed: ${[...new Set([forgedHat.baseAgent, ...(forgedHat.allowedAgents || [])])].join(', ')}` };
+    normalized = requested;
+  } else {
+    normalized = forgedHat ? forgedHat.baseAgent : raw;
+  }
 
   const gov = governAction({ action: 'switch_agent', target: normalized }, {});
   if (gov.allowed === false) {

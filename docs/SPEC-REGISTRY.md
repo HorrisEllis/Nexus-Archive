@@ -116,6 +116,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `reflection-engine.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `replay-engine.spec` | 1.1.0 | 2026-06-29 | ⚠ PARTIAL — lib/replay-engine.js is real but has zero test coverage in this tree; a prior audit's "16/16 tests" claim actually described a different project (erosmancer-os). Comparison baseline needs re-establishing. |
 | `request-handler.spec` | 1.0.0 | — | not yet checked against live code this pass |
+| `session-2026-08-18-axioms-governed-phasemap.spec` | 1.0.0 | 2026-08-18 (created same day) | ACTIVE — the real, living session record for this checkout lineage (no prior one existed here). Every item checked against real commits, not recalled from memory. Extend in place, no new fragments. |
 | `seam-component-registry.spec` | 1.1.0 | — | not yet checked against live code this pass |
 | `seam-queue.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `seam.spec` | 1.0.0 | — | not yet checked against live code this pass |

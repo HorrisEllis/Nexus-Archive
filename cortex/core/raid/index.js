@@ -73,6 +73,7 @@ function setCausalGraph(graph) { _cfrGraph = graph; }
 const HEALTH_KEY = {
   claude:  'guardian-claude',
   chatgpt: 'guardian-chatgpt',
+  gemini:  'guardian-gemini',
   ollama:  'ollama',
 };
 
@@ -200,7 +201,16 @@ function _decide(call, health, weights) {
   // docs/raid.spec v6.1 note) — today this is one fixed order because
   // role_confidence data doesn't exist yet to differentiate by cluster.
   // Becomes per-cluster once that lands; flagged, not silently faked.
-  const chain = ['ollama', 'claude', 'chatgpt'];
+  // §UPDATED 2026-08-18 — James, direct, explicit preference: "I want to
+  // use ChatGPT and Gemini since they are free. Use you [claude] as a
+  // last resort." The real, existing LAW_III below (further down this
+  // function) already named claude "the unconditional last resort" — but
+  // this chain contradicted it, putting claude BEFORE chatgpt, and never
+  // included gemini at all. Reordered to genuinely match both the
+  // person's stated preference and this function's own already-declared
+  // law, not just the label. gemini added — was completely absent before,
+  // confirmed by reading this array directly, not assumed present.
+  const chain = ['ollama', 'chatgpt', 'gemini', 'claude'];
   const survivors = chain.filter(name => _agentAvailable(name, health, { tightened }));
 
   if (survivors.length === 1) {
@@ -227,6 +237,7 @@ const _health = {
   ollama:            { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
   'guardian-claude':  { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
   'guardian-chatgpt': { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
+  'guardian-gemini':  { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
 };
 
 function _httpGetJson(url, timeoutMs = 2000) {

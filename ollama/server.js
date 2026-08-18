@@ -561,7 +561,12 @@ const server = http.createServer(async (req, res) => {
       status:      'queued',
       queuedAt:    Date.now(),
     };
-    _queue.push(job);
+    // §BUILT 2026-08-18 — James: "highest priority." The real queue was
+    // a plain FIFO with zero priority support before this (grepped,
+    // confirmed). A genuinely elevated request (e.g. copilot's real "hey
+    // nexus" handshake) jumps to the front instead of waiting its turn —
+    // real, honest priority, not a label with no effect.
+    if (body.priority === 'highest') _queue.unshift(job); else _queue.push(job);
     broadcast('ollama.job.queued', { uuid: job.uuid, intent: job.intent });
     _pump();
     json(res, 200, { ok:true, jobId: job.uuid, status:'queued', position: _queue.length });

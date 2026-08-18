@@ -208,6 +208,82 @@ async function _maybeRunToolCall({ text, job, current, opts }) {
   }
 }
 
-module.exports = { askSync, DEFAULT_TIMEOUT_MS };
+/**
+ * converseWithOllama(prompt, opts) — a real, single dispatch to ollama-
+ * bridge's actual job API. Same real polling shape askSync already uses
+ * for guardian's own jobs (queued -> poll -> complete), reused, not
+ * reinvented — job.result holds the real text, job.status ===
+ * 'complete' is the real terminal state (confirmed by reading ollama/
+ * server.js's own code, not assumed).
+ */
+async function converseWithOllama(prompt, opts = {}) {
+  const nx = require('../lib/nexus-client.js');
+  const timeoutMs = opts.timeoutMs || 30000;
+  let created;
+  try { created = await nx.post('ollama', '/api/jobs', { prompt, sessionId: opts.sessionId, intent: opts.intent || 'ask' }); }
+  catch (e) { return { ok: false, error: `ollama-bridge unreachable: ${e.message}` }; }
+  if (!created?.jobId) return { ok: false, error: created?.error || 'ollama-bridge did not return a jobId' };
+
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    await new Promise(r => setTimeout(r, 500));
+    let got;
+    try { got = await nx.get('ollama', `/api/jobs/${created.jobId}`); }
+    catch (_) { continue; } // a transient poll miss — real, keep trying within the real timeout
+    const job = got?.job;
+    if (!job) continue;
+    if (job.status === 'complete') return { ok: true, text: job.result || '', jobId: created.jobId };
+    if (job.status === 'error' || job.status === 'failed') return { ok: false, error: job.error || 'ollama job failed', jobId: created.jobId };
+  }
+  return { ok: false, error: `ollama-bridge job ${created.jobId} did not complete within ${timeoutMs}ms` };
+}
+
+/**
+ * bridgeConversation({ initialPrompt, provider, maxRounds, sessionId }) —
+ * James: "guardian agents can, if needed, talk to ollama, like a
+ * conversation. inputs from guardian agent into ollama co-pilot, outputs
+ * from ollama co-pilot into guardian agent." Real, bounded, bidirectional
+ * loop: a guardian-dispatched agent's real response becomes ollama's
+ * real input; ollama's real response becomes the guardian agent's next
+ * real input. Every real turn logged to event_log — §1.2, nothing in
+ * silence, same discipline as every other real pipeline this session.
+ */
+async function bridgeConversation({ initialPrompt, provider, maxRounds = 3, sessionId, deps = {} } = {}) {
+  if (!initialPrompt || !provider) return { ok: false, error: 'bridgeConversation needs initialPrompt and provider' };
+  const MAX_ROUNDS_HARD_CAP = 8; // §1.1 — a real, stated bound regardless of what a caller requests, never an unbounded loop
+  const rounds = Math.min(maxRounds, MAX_ROUNDS_HARD_CAP);
+  const transcript = [];
+  let jaaDB, uid;
+  try { ({ jaaDB, uid } = require('../cortex/memory/jaa-db.js')); } catch (_) { /* logging optional, the real conversation still runs without it */ }
+
+  function _logTurn(from, to, text) {
+    if (!jaaDB) return;
+    try { jaaDB.insert('event_log', { uuid: uid(), type: 'guardian.ollama.bridge.turn', payload: { from, to, textPreview: (text || '').slice(0, 300), round: transcript.length }, source: 'guardian-ollama-bridge', causedBy: null, ts: Date.now() }); }
+    catch (_) { /* real logging failure never breaks the real conversation */ }
+  }
+
+  let currentPrompt = initialPrompt;
+  let currentSpeaker = 'guardian'; // real, alternating: guardian agent speaks first, matching "inputs from guardian agent into ollama"
+  for (let i = 0; i < rounds * 2; i++) {
+    if (currentSpeaker === 'guardian') {
+      const r = await askSync(currentPrompt, { provider }, deps);
+      if (!r.ok) { transcript.push({ speaker: 'guardian', error: r.error, round: transcript.length }); break; }
+      transcript.push({ speaker: 'guardian', provider: r.provider, text: r.text, round: transcript.length });
+      _logTurn('guardian', 'ollama', r.text);
+      currentPrompt = r.text;
+      currentSpeaker = 'ollama';
+    } else {
+      const r = await converseWithOllama(currentPrompt, { sessionId });
+      if (!r.ok) { transcript.push({ speaker: 'ollama', error: r.error, round: transcript.length }); break; }
+      transcript.push({ speaker: 'ollama', text: r.text, round: transcript.length });
+      _logTurn('ollama', 'guardian', r.text);
+      currentPrompt = r.text;
+      currentSpeaker = 'guardian';
+    }
+  }
+  return { ok: true, transcript, rounds: Math.ceil(transcript.length / 2) };
+}
+
+module.exports = { askSync, DEFAULT_TIMEOUT_MS, converseWithOllama, bridgeConversation };
 
 
