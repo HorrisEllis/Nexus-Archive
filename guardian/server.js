@@ -176,6 +176,29 @@ _physQueue.watchInput(async (data, filename) => {
 // §LAW II — queue state persisted to JAA, this is a performance index only
 const _activeQueues = new Map();
 
+// §FIXED 2026-08-17 — James: "debug the bottom of each system." Checked:
+// _activeQueues.delete() only ever fires from a queue's own real
+// onComplete callback — confirmed reachable, but if a queue's real
+// processing stalls or the pipeline crashes before reaching completion,
+// nothing else ever removes it. Same real class as the _sessions fix
+// (copilot/server.js) and the NCP isConnected() fix (guardian/lib/ncp.js)
+// already built and verified this session — real staleness check plus a
+// periodic sweep, using the queue's own real updatedAt (kept fresh by
+// SEAMQueue itself, lib/seam/queue.js:141). Lower real-world frequency
+// than the sessions bug (queues are per-build, not per-message), but the
+// same real risk shape and the fix is cheap given the pattern's already
+// proven — worth closing while already auditing this file.
+const QUEUE_STALE_MS = 60 * 60 * 1000; // builds can legitimately run long; 1 hour of no update is a real, generous bar before calling it stalled
+const _queueSweep = setInterval(() => {
+  const now = Date.now();
+  let evicted = 0;
+  for (const [id, q] of _activeQueues) {
+    if (now - (q.updatedAt || q.createdAt || 0) > QUEUE_STALE_MS) { _activeQueues.delete(id); evicted++; }
+  }
+  if (evicted) console.log(`[guardian] queue sweep: evicted ${evicted} stalled queue(s), ${_activeQueues.size} remain`);
+}, 10 * 60 * 1000);
+if (_queueSweep.unref) _queueSweep.unref();
+
 // Find the queue whose currently-dispatched compartment owns this jobId.
 // Used by NCP_COMPLETE/NCP_ERROR below to close the loop SEAM dispatch opens
 // in seam-queue.js's _dispatch() — a SEAM chunk's jobId is never registered
