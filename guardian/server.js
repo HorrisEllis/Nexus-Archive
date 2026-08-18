@@ -3032,6 +3032,7 @@ function handleExtendedRoutes(req, res, url, method) {
         content:   body.content,
         timeoutMs: body.timeoutMs,
         command:   'ask',
+        tools:     Array.isArray(body.tools) ? body.tools : undefined,
       }, {
         createJob,
         dispatchJob,

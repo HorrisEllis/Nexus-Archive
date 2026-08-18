@@ -119,7 +119,31 @@ async function askSync(prompt, opts = {}, deps = {}) {
 
   let job;
   try {
-    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt, content: opts.content || '' });
+    // §BUILT 2026-08-18 — James: "upgrade them with what you can, accounting
+    // for cors and user policy... try not to change any of [the chatgpt
+    // WSS path] if you don't need to." Entirely server-side, entirely
+    // additive: only activates when a caller explicitly passes opts.tools
+    // (a curated array of real tool names) -- every existing caller's
+    // prompt is byte-identical to before if this isn't set. Zero userscript
+    // changes anywhere -- this is the actual reason it's safe for the
+    // chatgpt/WSS path: nothing about how a tab receives or sends text
+    // changes, only what guardian does with the text AFTER it comes back
+    // through the exact same real NCP round trip that already exists.
+    // No CORS surface either -- tool execution below runs in guardian's
+    // own process, in-process, never as a browser-originated request.
+    let finalPrompt = prompt;
+    if (Array.isArray(opts.tools) && opts.tools.length) {
+      const agentTools = require('../lib/agent-tools/index.js');
+      const manifest = opts.tools
+        .map(name => agentTools.TOOLS.get(name))
+        .filter(Boolean)
+        .map(t => `- ${t.name}: ${(t.description || '').split('\n')[0].slice(0, 140)}`)
+        .join('\n');
+      if (manifest) {
+        finalPrompt = `${prompt}\n\n---\nReal tools available for this request. To use one, respond with a single line, exactly: TOOL_CALL: {"name": "<tool_name>", "args": {...}}\n${manifest}\n---`;
+      }
+    }
+    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt: finalPrompt, content: opts.content || '' });
     dispatchJob(job);
   } catch (e) {
     return { ok: false, error: `failed to enqueue job: ${e.message}` };
@@ -138,7 +162,7 @@ async function askSync(prompt, opts = {}, deps = {}) {
         // empty success. Report it as the failure it is.
         return { ok: false, jobId: job.id, provider: current.provider, error: 'job completed but carried no response text' };
       }
-      return { ok: true, jobId: job.id, provider: current.provider, text, modelUsed: current.provider };
+      return await _maybeRunToolCall({ text, job, current, opts });
     }
     if (current.status === 'error') {
       return { ok: false, jobId: job.id, provider: current.provider, error: current.error || 'job failed' };
@@ -151,4 +175,39 @@ async function askSync(prompt, opts = {}, deps = {}) {
   return { ok: false, jobId: job.id, provider: resolved, error: `timed out after ${timeoutMs}ms — job ${job.id} may still complete; poll GET /jobs` };
 }
 
+/**
+ * _maybeRunToolCall({text, job, current, opts}) — real, in-process tool
+ * execution when the agent's own response contains the TOOL_CALL marker.
+ * Only ever reachable when opts.tools was set on this same call (the
+ * marker instruction was only ever given to the agent in that case) —
+ * but checked defensively regardless, since text is real, untrusted
+ * model output, not a guaranteed-well-formed protocol.
+ */
+async function _maybeRunToolCall({ text, job, current, opts }) {
+  const m = text.match(/TOOL_CALL:\s*(\{.*\})\s*$/s);
+  if (!m || !Array.isArray(opts.tools) || !opts.tools.length) {
+    return { ok: true, jobId: job.id, provider: current.provider, text, modelUsed: current.provider };
+  }
+  let req;
+  try { req = JSON.parse(m[1]); } catch (_) {
+    // Malformed JSON after a real marker — the agent tried, honest partial
+    // failure: return the real text as-is rather than silently drop it.
+    return { ok: true, jobId: job.id, provider: current.provider, text, modelUsed: current.provider };
+  }
+  if (!req.name || !opts.tools.includes(req.name)) {
+    // Real, but either missing a name or asking for a tool that wasn't
+    // actually offered — never execute something never advertised.
+    return { ok: true, jobId: job.id, provider: current.provider, text, modelUsed: current.provider, toolCallRejected: req.name ? `"${req.name}" was not in the offered tool set` : 'no tool name given' };
+  }
+  try {
+    const agentTools = require('../lib/agent-tools/index.js');
+    const result = await agentTools.executeTool(req.name, req.args || {}, { source: 'guardian-escalation', agent: current.provider });
+    return { ok: true, jobId: job.id, provider: current.provider, text, modelUsed: current.provider, toolCall: { name: req.name, args: req.args || {}, result } };
+  } catch (e) {
+    return { ok: true, jobId: job.id, provider: current.provider, text, modelUsed: current.provider, toolCallError: e.message };
+  }
+}
+
 module.exports = { askSync, DEFAULT_TIMEOUT_MS };
+
+

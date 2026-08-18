@@ -83,6 +83,10 @@ const FILES = [
   // §ADDED 2026-08-17g — found unregistered while fixing its real,
   // significant disk/RAM-relevant bug (unbounded error log growth).
   ['clear-glass/src/diagnostic/error-capture.js', 'nexus.clear-glass.diagnostic.error-capture', 'clear-glass/src/diagnostic', []],
+
+  // §ADDED 2026-08-18h — found unregistered while wiring the real,
+  // opt-in escalation tool-access feature into it.
+  ['guardian/ask.js', 'nexus.guardian.ask', 'guardian', []],
 ];
 
 function mapSession20260814(driver) {

@@ -252,6 +252,13 @@ async function _tryGuardian(prompt, opts = {}) {
       }
     }
 
+    // §BUILT 2026-08-18 — James: "have the same access to nexus, within
+    // reason." A real, conservative starter set, not all 63 -- mostly
+    // read/diagnostic tools, nothing destructive. Confirmed real names
+    // against lib/agent-tools/index.js's own TOOLS map before using them
+    // here, not assumed.
+    const ESCALATION_TOOLS = ['read_file', 'diagnose', 'system_priority', 'intent_hat'];
+
     // Use the NEXUS co-pilot proxy on Guardian
     const result = await _post(`${GD_URL}/api/copilot/prompt`, {
       prompt,
@@ -260,6 +267,7 @@ async function _tryGuardian(prompt, opts = {}) {
       sessionId:  opts.sessionId,
       channel:    'lifeline',
       channelName: 'Lifeline',
+      tools:      opts.tools || ESCALATION_TOOLS,
     }, GUARDIAN_TIMEOUT_MS);
 
     if (!result?.text) {
