@@ -90,6 +90,9 @@ const FILES = [
 
   // §ADDED 2026-08-18i — search_files, built this turn for the self-repair query capability.
   ['lib/agent-tools/tools/query/search-files.js', 'nexus.lib.agent-tools.query.search-files', 'lib/agent-tools/tools/query', []],
+
+  // §ADDED 2026-08-18j — self_repair, the real propose/test/promote pipeline.
+  ['lib/agent-tools/tools/sandbox/self-repair.js', 'nexus.lib.agent-tools.sandbox.self-repair', 'lib/agent-tools/tools/sandbox', []],
 ];
 
 function mapSession20260814(driver) {
