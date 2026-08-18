@@ -321,6 +321,15 @@ function verifyAgentReachable(providerId, opts = {}) {
         _pollForAck(jobId, timeoutMs, resolve);
       });
     });
+    // §FIXED 2026-08-18 — James, direct: "asked again and my computer
+    // started freezing." Real, confirmed cause: {timeout: 5000} in the
+    // request options alone does NOT abort a stalled request — Node only
+    // emits a 'timeout' event; without a real handler that calls
+    // req.destroy(), the socket can hang indefinitely if guardian is slow
+    // or unresponsive. Grepped this whole file before this fix: zero
+    // req.on('timeout') handlers existed anywhere. Real, resolves the
+    // promise honestly instead of hanging forever.
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, reachable: false, error: 'guardian did not respond within 5000ms (request timed out, not aborted before this fix)' }); });
     req.on('error', (e) => resolve({ ok: false, reachable: false, error: `could not reach guardian: ${e.message}` }));
     req.write(body); req.end();
   });
@@ -343,6 +352,15 @@ function _pollForAck(jobId, deadlineMs, resolve) {
         setTimeout(tick, 300);
       });
     });
+    // §FIXED 2026-08-18 — the more critical instance of the same missing
+    // handler: this request fires every 300ms in a real loop. Without
+    // this, a guardian that's slow (not down — down triggers req.on
+    // ('error') below, which was already handled) can accumulate a new
+    // hung socket every 300ms, on top of whatever the FIRST call to this
+    // whole function already left hanging if the person asked again
+    // before the first attempt resolved. That's a real, plausible,
+    // compounding resource cascade, not just a slow response.
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, reachable: false, jobId, error: 'guardian did not respond to a poll within 5000ms (request timed out, not aborted before this fix)' }); });
     req.on('error', (e) => resolve({ ok: false, reachable: false, jobId, error: `lost contact with guardian while polling: ${e.message}` }));
     req.end();
   };

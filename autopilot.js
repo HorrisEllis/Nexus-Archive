@@ -645,6 +645,49 @@ function _writeCircuitGap(name, s) {
 }
 
 // ── Status surface ────────────────────────────────────────────────────────────
+// §BUILT 2026-08-18 — James, direct: "can you have the system log what
+// system is causing memory pressure." Checked first: lib/resource-
+// monitor.js's real classify() only ever sees system-WIDE free memory —
+// confirmed by reading it, zero per-process attribution exists anywhere.
+// Each system's own resource-monitor instance only monitors itself; only
+// the supervisor (autopilot, here) has real visibility into every real
+// child PID at once. This is the real fix: one batched OS query for
+// every tracked PID, not N separate queries (which would mean N real
+// process spawns every snapshot cycle — expensive and unnecessary).
+// Cross-platform: Windows uses wmic (tasklist doesn't report RSS in a
+// script-parseable way without extra flags), Unix uses ps.
+function _getPerPidMemoryMB(pids) {
+  if (!pids.length) return {};
+  const { spawnSync } = require('child_process');
+  const out = {};
+  try {
+    if (process.platform === 'win32') {
+      const filter = pids.map(p => `ProcessId=${p}`).join(' or ');
+      const r = spawnSync('wmic', ['process', 'where', `(${filter})`, 'get', 'ProcessId,WorkingSetSize', '/format:csv'], { encoding: 'utf8', timeout: 5000 });
+      if (r.status === 0 && r.stdout) {
+        for (const line of r.stdout.split('\n')) {
+          const parts = line.trim().split(',');
+          if (parts.length < 3) continue;
+          const pid = parseInt(parts[1], 10);
+          const ws = parseInt(parts[2], 10);
+          if (pid && !isNaN(ws)) out[pid] = Math.round(ws / 1048576);
+        }
+      }
+    } else {
+      const r = spawnSync('ps', ['-o', 'pid=,rss=', '-p', pids.join(',')], { encoding: 'utf8', timeout: 5000 });
+      if (r.status === 0 && r.stdout) {
+        for (const line of r.stdout.trim().split('\n')) {
+          const [pid, rss] = line.trim().split(/\s+/).map(Number);
+          if (pid && !isNaN(rss)) out[pid] = Math.round(rss / 1024);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(`[autopilot] per-pid memory query failed: ${e.message}`);
+  }
+  return out;
+}
+
 function _statusSnapshot() {
   const out = {};
   for (const [name, s] of Object.entries(_state)) {
@@ -681,7 +724,20 @@ function _logInstanceSnapshot() {
     const snapshot = _statusSnapshot();
     const running = Object.values(snapshot).filter(s => s.pid).length;
     const totalRestarts = Object.values(snapshot).reduce((sum, s) => sum + (s.restarts || 0), 0);
-    jaaDB.insert('event_log', {
+
+    // Real per-system memory attribution — the actual answer to "what
+    // system is causing memory pressure," not just "memory is low."
+    const pids = Object.values(snapshot).filter(s => s.pid).map(s => s.pid);
+    const perPidMB = _getPerPidMemoryMB(pids);
+    const perSystemMemMB = {};
+    for (const [name, s] of Object.entries(snapshot)) {
+      if (s.pid && perPidMB[s.pid] != null) perSystemMemMB[name] = perPidMB[s.pid];
+    }
+    const sortedByMem = Object.entries(perSystemMemMB).sort((a, b) => b[1] - a[1]);
+    const topConsumer = sortedByMem[0] ? { system: sortedByMem[0][0], mb: sortedByMem[0][1] } : null;
+
+    const freeMemPct = os.freemem() / os.totalmem();
+    const row = jaaDB.insert('event_log', {
       uuid: uid(),
       type: 'autopilot.instance_snapshot',
       payload: {
@@ -690,11 +746,22 @@ function _logInstanceSnapshot() {
         totalRestarts,
         freeMemMB: Math.round(os.freemem() / 1048576),
         totalMemMB: Math.round(os.totalmem() / 1048576),
-        freeMemPct: Math.round((os.freemem() / os.totalmem()) * 100),
+        freeMemPct: Math.round(freeMemPct * 100),
+        perSystemMemMB,
+        topConsumer,
         perSystem: snapshot,
       },
       source: 'autopilot', causedBy: null, ts: Date.now(),
     });
+
+    // §1.2 — when pressure is real, say WHICH system, loud, not just that
+    // memory is low. freeMemHaltPct/WarnPct match resource-monitor.js's
+    // own real DEFAULT_THRESHOLDS (0.10 / 0.20) — same real bar, not a
+    // separate, drifting one.
+    if (freeMemPct < 0.20 && topConsumer) {
+      console.warn(`[autopilot] memory pressure — free ${(freeMemPct * 100).toFixed(1)}% — top real consumer: ${topConsumer.system} (${topConsumer.mb}MB)`);
+    }
+    return row;
   } catch (e) {
     // §1.2 — a snapshot-logging failure never affects real supervision;
     // this is observability, not a load-bearing path.

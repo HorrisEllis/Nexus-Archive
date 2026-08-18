@@ -1367,7 +1367,11 @@ server.listen(PORT, '127.0.0.1', () => {
     console.warn(`[cortex] raid/router failed to start: ${e.message}`);
   }
   try {
-    require('./intelligence').init({});
+    // §WIRED 2026-08-18 — real getField injection for cortex/intelligence's
+    // new crystallization enrichment (James: "make them more detailed,
+    // using rfr2 and cfr"). Same real _field this file already exports at
+    // module level (getField: () => _field) — reused, not duplicated.
+    require('./intelligence').init({ getField: () => _field });
     console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active');
   } catch (e) {
     console.warn(`[cortex] intelligence/index failed to start: ${e.message}`);

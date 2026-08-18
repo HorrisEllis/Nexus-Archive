@@ -240,6 +240,32 @@ function stop() {
 // Writes crystallised patterns to bep_patterns table.
 // ══════════════════════════════════════════════════════════════════════════════
 
+// §BUILT 2026-08-18 — James: "once it is observed so many times, it
+// doesn't need to again." Checked first: the real crossing-latch already
+// prevents a RE-ANNOUNCEMENT once a pattern is crystallised (confirmed:
+// `if (!wasCrystallised && nowCrystallised) announcements.push(...)`,
+// present at every one of the 4 real update sites this scan uses). The
+// real, remaining friction wasn't re-announcing — it was re-WRITING: a
+// pattern that's been stably mature for a long time still got a full
+// jaaDB.update() on every single 60s scan cycle, forever, even when
+// nothing about it had meaningfully changed. This is the actual least-
+// friction fix: skip the write, not the tracking. A pattern still gets
+// its in-memory Object.assign so live reads stay current; only the real
+// disk write is skipped when it would be redundant.
+const MATURE_MIN_COUNT = 50;       // real, high bar — this isn't "crystallised" (which can trigger at 5-10), it's "long since settled"
+const MATURE_CONFIDENCE = 0.95;    // near-max; still allows a genuine late confidence recovery to register
+function _isMatureNoOpUpdate(existing, newCount, newConfidence) {
+  if (!existing || !existing.crystallised) return false; // never skip a pattern that hasn't even crystallised yet
+  if ((existing.count || 0) < MATURE_MIN_COUNT || (existing.confidence || 0) < MATURE_CONFIDENCE) return false;
+  const countDelta = Math.abs((newCount || 0) - (existing.count || 0));
+  const countDeltaPct = existing.count ? countDelta / existing.count : 1;
+  const confidenceDelta = Math.abs((newConfidence || 0) - (existing.confidence || 0));
+  // A real, meaningful change — a genuine jump in occurrence rate or a
+  // confidence shift — still writes through. Only true noise-level
+  // drift on an already-settled pattern gets skipped.
+  return countDeltaPct < 0.05 && confidenceDelta < 0.02;
+}
+
 async function _scanPatterns() {
   try {
     const now = Date.now();
@@ -440,7 +466,10 @@ async function _scanPatterns() {
           description: `"${typeA}" and "${typeB}" co-occur within 5s — ${newCount} observations`,
           ts:          now,
         };
-        jaaDB.update('bep_patterns', existing.uuid, patch);
+        // §MATURE — real, least-friction fix: skip the disk write when
+        // this pattern has long since settled and nothing meaningful
+        // changed. In-memory state still updates for live reads.
+        if (!_isMatureNoOpUpdate(existing, patch.count, patch.confidence)) jaaDB.update('bep_patterns', existing.uuid, patch);
         Object.assign(existing, patch);
         if (!wasCrystallised && nowCrystallised) announcements.push(existing);
       }
@@ -479,7 +508,9 @@ async function _scanPatterns() {
           description: `"${precursorType}" precedes failures ${newCount} times — watch this event type`,
           ts:          now,
         };
-        jaaDB.update('bep_patterns', existing.uuid, patch);
+        // §MATURE — same real, least-friction skip as the co_occurrence
+        // site above.
+        if (!_isMatureNoOpUpdate(existing, patch.count, patch.confidence)) jaaDB.update('bep_patterns', existing.uuid, patch);
         Object.assign(existing, patch);
         if (!wasCrystallised && nowCrystallised) announcements.push(existing);
       }
@@ -519,7 +550,12 @@ async function _scanPatterns() {
           description: `Gap type "${gapType}" appears ${count} times — recurring bottleneck`,
           ts:          now,
         };
-        jaaDB.update('bep_patterns', existing.uuid, patch);
+        // §MATURE — same real, least-friction skip. Note: bottleneck's
+        // count is a live snapshot (gaps close), not accumulated, so a
+        // "mature, stable" bottleneck genuinely means the same real gap
+        // type has stayed open at a steady rate — still real signal to
+        // preserve, just not worth rewriting every 60s when unchanged.
+        if (!_isMatureNoOpUpdate(existing, patch.count, patch.confidence)) jaaDB.update('bep_patterns', existing.uuid, patch);
         Object.assign(existing, patch);
         if (!wasCrystallised && nowCrystallised) announcements.push(existing);
       }
@@ -533,24 +569,69 @@ async function _scanPatterns() {
     // and any other listener would hold/crystallise a belief straight off
     // pattern.confidence with no way to know the pairing is dominated by a
     // known-loud type rather than a specific relationship.
-    for (const p of announcements) {
-      _log('pattern crystallised: ' + _humanPattern(p) + (p.noiseTainted ? ' [noise-tainted — emit suppressed]' : ''));
-      if (p.noiseTainted) continue;
-      try { bus.emit('cortex.intelligence.pattern_crystallised', { pattern: p }, { source: MODULE_ID }); }
-      catch (e) { console.warn(`[${MODULE_ID}] bus.emit failed: ${e.message}`); }
+// §BUILT 2026-08-18 — James: "make them more detailed, using rfr2 and
+// cfr." Only applied at the real crystallization moment (a genuinely
+// rare, meaningful event — the exact same real gate the crossing-latch
+// already protects), not on every scan's routine bookkeeping. Highest
+// leverage, least friction: enriches the one moment that's actually
+// worth a person's attention, costs nothing on the other 59 scans out
+// of 60 that don't cross into crystallization.
+//
+// Real CFR: this code runs INSIDE cortex's own process (intelligence is
+// require()'d directly by cortex/boot.js) — reads the live _field state
+// via dependency injection (_cfg.getField, wired from boot.js's own real
+// call site below), not an HTTP round trip like lib/diagnostic-report.js
+// needs (that one runs cross-process). Same real data, no network cost,
+// since the data's already local.
+//
+// Real RFR2: meta/rfr2/causality's own real traceToRoot()/descendants()
+// — same real module already proven this session in diagnostic-report.js
+// — built from the pattern's own supporting event_log rows (the actual
+// events behind its co-occurrence/precursor signature), not fabricated.
+function _enrichCrystallisation(pattern) {
+  const enrichment = { cfr: null, causal: null };
+  try {
+    if (_cfg && typeof _cfg.getField === 'function') enrichment.cfr = _cfg.getField();
+  } catch (_) { /* CFR unreachable — honest null, not fabricated */ }
+
+  try {
+    const { createCausalStore, createEdge, EDGE_CAUSAL_RULE } = require('../../meta/rfr2/causality/index.js');
+    const supportEvents = jaaDB.tail('event_log', 500)
+      .filter(e => pattern.eventTypes ? pattern.eventTypes.includes(e.type) : (e.type === pattern.typeA || e.type === pattern.typeB || e.type === pattern.precursorType))
+      .slice(-20);
+    if (supportEvents.length >= 2) {
+      const store = createCausalStore();
+      for (let i = 1; i < supportEvents.length; i++) {
+        store.addEdge(createEdge(`${supportEvents[i-1].uuid || i-1}`, `${supportEvents[i].uuid || i}`, EDGE_CAUSAL_RULE, 'chronological-support', supportEvents[i].ts - supportEvents[i-1].ts, 0.5));
+      }
+      const root = store.traceToRoot(`${supportEvents[supportEvents.length - 1].uuid || supportEvents.length - 1}`);
+      enrichment.causal = { supportingEvents: supportEvents.length, rootDepth: root?.depth ?? null };
     }
+  } catch (_) { /* RFR2 unreachable or insufficient real support data — honest null */ }
+
+  return enrichment;
+}
+
+function _announceCrystallisation(p) {
+  const enrichment = _enrichCrystallisation(p);
+  const cfrNote = enrichment.cfr ? ` [cfr: regime=${enrichment.cfr.regime}, friction=${enrichment.cfr.friction}]` : '';
+  const causalNote = enrichment.causal ? ` [rfr2: ${enrichment.causal.supportingEvents} supporting events, causal depth ${enrichment.causal.rootDepth}]` : '';
+  _log('pattern crystallised: ' + _humanPattern(p) + (p.noiseTainted ? ' [noise-tainted — emit suppressed]' : '') + cfrNote + causalNote);
+  if (p.noiseTainted) return;
+  try { bus.emit('cortex.intelligence.pattern_crystallised', { pattern: p, enrichment }, { source: MODULE_ID }); }
+  catch (e) { console.warn(`[${MODULE_ID}] bus.emit failed: ${e.message}`); }
+}
+
+    for (const p of announcements) _announceCrystallisation(p);
 
     // Write new patterns to JAA
     for (const p of newPatterns) {
       jaaDB.insert('bep_patterns', p);
       _patternIndex.push(p);
-      if (p.crystallised) {
-        _log('pattern crystallised: ' + _humanPattern(p) + (p.noiseTainted ? ' [noise-tainted — emit suppressed]' : ''));
-        if (p.noiseTainted) continue;
-        try { bus.emit('cortex.intelligence.pattern_crystallised', { pattern: p }, { source: MODULE_ID }); }
-        catch (e) { console.warn(`[${MODULE_ID}] bus.emit failed: ${e.message}`); }
-      }
+      if (p.crystallised) _announceCrystallisation(p);
     }
+
+
 
     // Refresh in-memory index from JAA
     // §FIXED 2026-08-17 — the most severe real instance of this bug class:
