@@ -1084,6 +1084,30 @@ const server = http.createServer(async (req, res) => {
       contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0, 400)}`;
     }
 
+    // §BUILT 2026-08-18 — James: "it is supposed to be co-pilot." Real
+    // tool access as the actual default for the main chat path, not a
+    // separate, hidden endpoint (/api/prompt/tools existed but nothing
+    // in the visible chat UI ever reached it — confirmed by grep, zero
+    // hits). Same real, proven manifest+detection pattern already built
+    // and tested for guardian's escalation path (guardian/ask.js) — not
+    // reinvented. The live SSE token stream itself is completely
+    // untouched: the model's real output (including a TOOL_CALL line, if
+    // it writes one) streams exactly as before; detection happens AFTER
+    // _streamOllamaJob resolves with the full real text, as a real,
+    // additional step, not a change to the streaming mechanism.
+    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat'];
+    if (DEFAULT_CHAT_TOOLS.length) {
+      const agentToolsForManifest = require('../lib/agent-tools/index.js');
+      const manifest = DEFAULT_CHAT_TOOLS
+        .map(name => agentToolsForManifest.TOOLS.get(name))
+        .filter(Boolean)
+        .map(t => `- ${t.name}: ${(t.description || '').split('\n')[0].slice(0, 140)}`)
+        .join('\n');
+      if (manifest) {
+        contextText += `\n\n---\nReal tools available. To use one, end your response with a single line, exactly: TOOL_CALL: {"name": "<tool_name>", "args": {...}}\n${manifest}\n---`;
+      }
+    }
+
     // Dispatch to Ollama with stream flag
     try {
       const ollamaResult = await _dispatchToOllama(prompt, contextText, {
@@ -1091,8 +1115,28 @@ const server = http.createServer(async (req, res) => {
 
       if (ollamaResult?.jobId) {
         const result = await _streamOllamaJob(ollamaResult.jobId, res, sessionId);
+
+        // §BUILT 2026-08-18 — real detection, after the real stream
+        // completes. Same safety discipline as guardian/ask.js: only
+        // ever executes a tool that was genuinely in DEFAULT_CHAT_TOOLS,
+        // malformed JSON or an unoffered tool name just falls through
+        // silently to the normal done event below — never half-broken.
+        let toolCall = null;
+        const toolMatch = (result.text || '').match(/TOOL_CALL:\s*(\{.*\})\s*$/s);
+        if (toolMatch) {
+          try {
+            const req = JSON.parse(toolMatch[1]);
+            if (req.name && DEFAULT_CHAT_TOOLS.includes(req.name)) {
+              const agentToolsForExec = require('../lib/agent-tools/index.js');
+              const toolResult = await agentToolsForExec.executeTool(req.name, req.args || {}, { source: 'copilot-chat', agent: result.modelUsed });
+              toolCall = { name: req.name, args: req.args || {}, result: toolResult };
+              sseSend(res, 'tool_call', toolCall);
+            }
+          } catch (_) { /* malformed TOOL_CALL — real, honest no-op, not a crash */ }
+        }
+
         sseSend(res, 'done', { requestId, sessionId, modelUsed: result.modelUsed,
-          contextLayers: 7, timedOut: result.timedOut || false });
+          contextLayers: 7, timedOut: result.timedOut || false, toolCall });
         res.end();
         await _persist('chat_log', { uuid: crypto.randomUUID(), requestId, sessionId,
           prompt: prompt.slice(0,500), response: result.text.slice(0,2000),
