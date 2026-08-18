@@ -92,6 +92,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `liminal.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `mcp.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `meta-layer.spec` | 1.2.0 | — | not yet checked against live code this pass |
+| `ncp.spec` | 1.1.0 | 2026-08-18 (created same day) | ✓ written this session, real — closes a real spec.missing gap the gap system itself flagged. Documents the real isConnected() staleness fix (735062f) verified by direct integration test. |
 | `nexus-analysis-module-foundation.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `nexus-architecture-rebuild-phasemap.spec` | 0.1.0-phasemap | 2026-08-13 | ✓ written and self-checked this session — P1/P2 live-traced from real Windows boot/crash logs (not assumed from reading code), fixed, syntax-verified. P2 cannot be fully live-verified in this environment (no Windows) — needs a real boot to confirm. P3-P7 pending. |
 | `nexus-cli.spec` | 1.0.0 | — | not yet checked against live code this pass |
