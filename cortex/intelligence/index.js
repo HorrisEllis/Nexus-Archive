@@ -310,6 +310,26 @@ async function _scanPatterns() {
     const events = jaaDB.tail('event_log', 500);
     if (events.length < 20) return; // not enough data yet
 
+    // §BUILT 2026-08-18 — James: "once twice three times it is a pattern."
+    // Real, honest tradeoff, not a flat rule: a flat count of 3 is
+    // statistically sound for a RARE event type (3 co-occurrences of
+    // something that only happens a handful of times total is genuinely
+    // unlikely by chance) but would flood the system with noise for a
+    // COMMON type (two things that each fire hundreds of times will land
+    // within 5s of each other by pure chance far more than 3 times —
+    // exactly the class of false pattern the existing noise-guard system
+    // exists to fight). Real per-type frequency, counted once from the
+    // same real events already in memory — no extra query.
+    const _typeFrequency = {};
+    for (const e of events) { if (e.type) _typeFrequency[e.type] = (_typeFrequency[e.type] || 0) + 1; }
+    const RARE_TYPE_MAX_FREQ = 10; // a type appearing this rarely or less in a real 500-event window is genuinely uncommon
+    const RARE_CRYSTALLIZE_AT = 3;  // James's real number, applied only where it's statistically honest
+    const COMMON_CRYSTALLIZE_AT = 10; // the existing, already-proven bar, kept for everything else
+    function _crystallizeThreshold(typeA, typeB) {
+      const freqA = _typeFrequency[typeA] || 0, freqB = _typeFrequency[typeB] || 0;
+      return (freqA <= RARE_TYPE_MAX_FREQ && freqB <= RARE_TYPE_MAX_FREQ) ? RARE_CRYSTALLIZE_AT : COMMON_CRYSTALLIZE_AT;
+    }
+
     // ── Co-occurrence analysis ────────────────────────────────────────────────
     // Which event types always appear together within 5 seconds?
     // Only pairs whose LATER event is past the scan cursor count — the same
@@ -490,7 +510,7 @@ async function _scanPatterns() {
             ? `"${typeA}" (${sysInfo.systemA}) and "${typeB}" (${sysInfo.systemB}) co-occur within 5s across two real systems — ${count} observations`
             : `"${typeA}" and "${typeB}" co-occur within 5s — ${count} observations`,
           actionable:  count >= 5,
-          crystallised:count >= 10,
+          crystallised:count >= _crystallizeThreshold(typeA, typeB),
           noiseTainted,
           source:      MODULE_ID,
           ts:          now,
@@ -498,7 +518,7 @@ async function _scanPatterns() {
       } else {
         const newCount = (existing.count || 0) + count;
         const wasCrystallised = !!existing.crystallised;
-        const nowCrystallised = wasCrystallised || newCount >= 10; // monotonic latch
+        const nowCrystallised = wasCrystallised || newCount >= _crystallizeThreshold(typeA, typeB); // monotonic latch, real adaptive bar
         const patch = {
           count:       newCount,
           confidence:  Math.min(1, newCount / 20),
