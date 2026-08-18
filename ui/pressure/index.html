@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NEXUS — Pressure</title>
+<!--
+  ui/pressure/index.html — what led to this?
+  UUID: nexus-ui-pressure-v1-0000-2026-0818-001
+  spec: docs/pressure-causality.spec § P4
+
+  §5.12 — THE UI IS DISPOSABLE. Every answer on this page comes from
+  lib/pressure-window.js by way of cortex's existing /api/memory contract.
+  Delete this file and nothing stops working: the library still answers, the
+  CLI still prints. This is a projection of system state, never the system.
+
+  §16.5 / §5.10 — no new API was added for this. cortex already serves
+  /api/memory?table=… (copilot/server.js:389 uses it live). Reaching for the
+  existing contract instead of adding a route is the difference between a
+  projection and a second truth layer (§10.3).
+
+  §0.1 — the "What this answer does not know" panel is not a footer. It is the
+  reason the rest can be trusted. A dashboard that renders partial data as a
+  confident picture is believed hardest exactly where it is weakest.
+-->
+<style>
+  :root{
+    --bg:#04080c; --panel:#080f16; --line:#12212e; --line2:#1a3040;
+    --ink:#cfe6f5; --dim:#5c7b90; --mute:#3d5668;
+    --cy:#4fd6e8; --grn:#34d399; --amb:#fbbf24; --red:#f87171; --vio:#a78bfa;
+    --mono:'JetBrains Mono','Cascadia Code',Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.55}
+  header{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  h1{margin:0;font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--cy)}
+  .spacer{flex:1}
+  select,button{background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:4px;padding:5px 9px;font-family:inherit;font-size:12px;cursor:pointer}
+  button:hover,select:hover{border-color:var(--cy)}
+  .wrap{display:grid;grid-template-columns:300px 1fr;gap:0;height:calc(100vh - 49px)}
+  .rail{border-right:1px solid var(--line);overflow-y:auto;padding:10px}
+  .anchor{padding:8px 10px;border:1px solid transparent;border-left:2px solid var(--mute);margin-bottom:6px;cursor:pointer;border-radius:0 4px 4px 0}
+  .anchor:hover{background:var(--panel);border-color:var(--line2);border-left-color:var(--cy)}
+  .anchor.on{background:var(--panel);border-left-color:var(--cy)}
+  .anchor .t{font-size:11px;color:var(--dim)}
+  .anchor .s{font-size:12px;margin-top:2px}
+  .anchor.critical{border-left-color:var(--red)}
+  .anchor.pressure{border-left-color:var(--amb)}
+  main{overflow-y:auto;padding:18px 22px 60px}
+  section{margin-bottom:26px}
+  h2{font-size:10px;letter-spacing:.2em;color:var(--dim);font-weight:700;margin:0 0 10px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .head{font-size:16px;color:var(--ink)}
+  .head .lvl{font-size:11px;padding:2px 7px;border-radius:3px;margin-left:10px;vertical-align:middle}
+  .lvl.critical{background:#3a1216;color:var(--red)} .lvl.pressure{background:#3a2e10;color:var(--amb)}
+  .reason{color:var(--dim);margin-top:6px}
+  .row{display:grid;grid-template-columns:74px 1fr;gap:12px;padding:3px 0;border-left:1px solid var(--line);padding-left:12px}
+  .row .ts{color:var(--mute);font-size:11px}
+  .row .ty{color:var(--cy)}
+  .row.anchorish .ty{color:var(--amb)}
+  .row .de{color:var(--dim)}
+  .bar{height:9px;background:var(--line);border-radius:2px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--vio)}
+  .hold{display:grid;grid-template-columns:150px 1fr 90px;gap:12px;align-items:center;padding:4px 0}
+  .hold .mb{text-align:right;color:var(--dim)}
+  .hold.top .mb{color:var(--vio)}
+  .fld{display:flex;gap:26px;flex-wrap:wrap}
+  .fld div span{color:var(--dim);display:block;font-size:10px;letter-spacing:.12em}
+  .knew li{color:var(--grn);margin-bottom:4px;list-style:none}
+  .knew li:before{content:'· ';color:var(--mute)}
+  .gaps{border:1px solid #3a2e10;background:#140f04;border-radius:4px;padding:12px 14px}
+  .gaps h2{border-color:#3a2e10;color:var(--amb)}
+  .gaps li{color:#d9b872;margin-bottom:7px;list-style:none}
+  .gaps li:before{content:'· ';color:var(--amb)}
+  .empty{color:var(--mute);font-style:italic}
+  .err{color:var(--red);padding:14px;border:1px solid #3a1216;border-radius:4px;background:#140507}
+</style>
+</head>
+<body>
+<header>
+  <h1>PRESSURE</h1>
+  <select id="win">
+    <option value="60">60s window</option>
+    <option value="120" selected>120s window</option>
+    <option value="300">5min window</option>
+    <option value="900">15min window</option>
+  </select>
+  <div class="spacer"></div>
+  <button id="reload">reload</button>
+</header>
+
+<div class="wrap">
+  <div class="rail" id="rail"><div class="empty">loading…</div></div>
+  <main id="main"><div class="empty">select a moment</div></main>
+</div>
+
+<script>
+// §5.12 — this file holds no truth. It fetches rows from cortex's existing
+// /api/memory contract and applies the SAME reduction lib/pressure-window.js
+// applies, so that the page and the CLI cannot disagree (§10.3). If they ever
+// do, the library is right and this file is wrong.
+const CORTEX = location.port === '3748' ? '' : 'http://127.0.0.1:3748';
+const ANCHOR_TYPES = ['nexus.resource.pressure','nexus.process.exited','autopilot.spawn_gate_failed'];
+const NOISE = ['component.registered','component.updated','ledger.cortex.updated','ledger.idearium.updated'];
+
+let EVENTS = [], PATTERNS = [], current = null;
+
+const ts = r => typeof (r.eventTs ?? r.ts) === 'number' ? (r.eventTs ?? r.ts) : Date.parse(r.eventTs ?? r.ts ?? 0);
+const hhmmss = t => new Date(t).toTimeString().slice(0,8);
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function summary(r){
+  const p = r.payload || {};
+  if (r.type === 'nexus.process.exited') return `${p.service||'a service'} exited ${p.code ?? '?'}`;
+  if (Array.isArray(p.reasons) && p.reasons.length) return p.reasons[0];
+  if (p.freeMemPct != null) return `free memory ${p.freeMemPct}%`;
+  return r.type;
+}
+
+async function fetchTable(table, n){
+  const r = await fetch(`${CORTEX}/api/memory?table=${table}&n=${n}`);
+  if (!r.ok) throw new Error(`cortex /api/memory?table=${table} returned ${r.status}`);
+  const j = await r.json();
+  return j.rows || j.entries || j.data || (Array.isArray(j) ? j : []);
+}
+
+async function load(){
+  const rail = document.getElementById('rail');
+  try {
+    [EVENTS, PATTERNS] = await Promise.all([fetchTable('event_log', 4000), fetchTable('bep_patterns', 2000).catch(()=>[])]);
+  } catch (e) {
+    // §1.2 — a page that cannot reach cortex says so, naming the endpoint. It
+    // must never render an empty dashboard that looks like a healthy system.
+    rail.innerHTML = `<div class="err">Cannot reach cortex.<br><br>${esc(e.message)}<br><br>This page is showing nothing because it knows nothing — not because nothing happened.</div>`;
+    return;
+  }
+  const anchors = EVENTS.filter(r => ANCHOR_TYPES.includes(r.type) || (r.payload && r.payload.level === 'critical'))
+                        .sort((a,b) => ts(b) - ts(a)).slice(0, 60);
+  if (!anchors.length){
+    rail.innerHTML = `<div class="empty">No pressure or exit events recorded.<br><br>Nothing has gone wrong that the causal record knows about.</div>`;
+    document.getElementById('main').innerHTML = '';
+    return;
+  }
+  rail.innerHTML = anchors.map((a,i) =>
+    `<div class="anchor ${esc((a.payload&&a.payload.level)||'')}" data-i="${i}">
+       <div class="t">${hhmmss(ts(a))} &nbsp; ${esc(a.type)}</div>
+       <div class="s">${esc(summary(a))}</div>
+     </div>`).join('');
+  [...rail.querySelectorAll('.anchor')].forEach(el => el.onclick = () => {
+    rail.querySelectorAll('.anchor').forEach(x => x.classList.remove('on'));
+    el.classList.add('on');
+    show(anchors[+el.dataset.i]);
+  });
+  rail.querySelector('.anchor').click();
+}
+
+function show(anchor){
+  current = anchor;
+  const windowMs = Number(document.getElementById('win').value) * 1000;
+  const at = ts(anchor), from = at - windowMs;
+  const id = anchor.uuid || anchor.id;
+  const gaps = [];
+
+  const inWindow = EVENTS.filter(r => { const t = ts(r); return t >= from && t <= at; })
+                         .filter(r => (r.uuid||r.id) !== id)
+                         .sort((a,b) => ts(a) - ts(b));
+  const timeline = inWindow.filter(r => !NOISE.includes(r.type));
+  const suppressed = inWindow.length - timeline.length;
+
+  // Holders come from the nearest instance_snapshot — the pressure event does
+  // not carry them (PC-GAP-3). This join is the whole point.
+  const snap = EVENTS.filter(r => r.type === 'autopilot.instance_snapshot' && ts(r) <= at && ts(r) >= from - windowMs)
+                     .sort((a,b) => ts(b) - ts(a))[0];
+  let holders = null;
+  if (snap) {
+    const per = snap.payload && snap.payload.perSystemMemMB;
+    if (per && Object.keys(per).length) holders = Object.entries(per).sort((a,b)=>b[1]-a[1]).map(([system,mb])=>({system,mb}));
+    else gaps.push('holders: the nearest snapshot carries no per-system memory. autopilot.js:659 ran and produced nothing — on Windows 11 <code>wmic</code> may no longer be present. UNVERIFIED.');
+  } else gaps.push('holders: no autopilot.instance_snapshot within reach of this window.');
+  if (!(anchor.payload && anchor.payload.holders)) gaps.push('holders: the pressure event itself carries no attribution (PC-GAP-3). Attribution exists at autopilot.js:659 and is written to a different event.');
+
+  let field = { regime:null, friction:null, rfr2:null };
+  for (const r of [anchor, ...inWindow.slice().reverse()]) {
+    const p = r.payload || {};
+    if (field.regime == null && (p.regime || p.cfr)) { field.regime = p.regime || (p.cfr&&p.cfr.regime); field.friction = p.friction ?? (p.cfr&&p.cfr.friction); }
+    if (field.rfr2 == null && p.rfr2) field.rfr2 = p.rfr2;
+  }
+  if (field.regime == null) gaps.push('field: no CFR regime recorded on any event in the window (§11.1).');
+
+  const words = String(anchor.type).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3 && w !== 'nexus');
+  const known = PATTERNS.filter(p => words.length && words.every(w => JSON.stringify(p).toLowerCase().includes(w))).slice(0,8);
+  if (!known.length) gaps.push('prior knowledge: no crystallised pattern mentions this anchor.');
+
+  const maxMb = holders ? Math.max(...holders.map(h=>h.mb)) : 1;
+  document.getElementById('main').innerHTML = `
+    <section>
+      <div class="head">${hhmmss(at)} &nbsp; ${esc(anchor.type)}
+        ${anchor.payload&&anchor.payload.level ? `<span class="lvl ${esc(anchor.payload.level)}">${esc(anchor.payload.level)}</span>`:''}</div>
+      <div class="reason">${esc(summary(anchor))}</div>
+    </section>
+
+    <section>
+      <h2>THE ${Math.round(windowMs/1000)} SECONDS BEFORE IT</h2>
+      ${timeline.length ? timeline.slice(-40).map(e =>
+        `<div class="row ${ANCHOR_TYPES.includes(e.type)?'anchorish':''}">
+           <div class="ts">${hhmmss(ts(e))}</div>
+           <div><span class="ty">${esc(e.type)}</span> ${summary(e)!==e.type?`<span class="de">— ${esc(summary(e))}</span>`:''}</div>
+         </div>`).join('')
+        : '<div class="empty">nothing else is recorded in this window — which is itself worth knowing</div>'}
+      ${suppressed ? `<div class="empty" style="margin-top:8px">… ${suppressed} routine bookkeeping events hidden</div>`:''}
+    </section>
+
+    <section>
+      <h2>WHO HELD THE MEMORY</h2>
+      ${holders ? `<div class="empty" style="margin-bottom:8px">as of ${hhmmss(ts(snap))}</div>` + holders.slice(0,10).map((h,i)=>
+        `<div class="hold ${i===0?'top':''}">
+           <div>${esc(h.system)}</div>
+           <div class="bar"><i style="width:${Math.round(h.mb/maxMb*100)}%"></i></div>
+           <div class="mb">${h.mb} MB</div>
+         </div>`).join('') : '<div class="empty">not recorded — see below</div>'}
+    </section>
+
+    <section>
+      <h2>THE FIELD IT HAPPENED IN</h2>
+      <div class="fld">
+        <div><span>CFR REGIME</span>${esc(field.regime||'—')}</div>
+        <div><span>FRICTION</span>${field.friction!=null?Number(field.friction).toFixed(4):'—'}</div>
+        <div><span>RFR2</span>${field.rfr2?esc(JSON.stringify(field.rfr2)):'—'}</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>WHAT THE SYSTEM ALREADY KNEW</h2>
+      ${known.length ? `<ul class="knew" style="margin:0;padding:0">${known.map(k=>{
+        const d = k.description||k.pattern||k.summary||k.type||'(unnamed)';
+        const c = k.confidence!=null?` (${Math.round(k.confidence*100)}%${k.count?`, ${k.count}×`:''})`:'';
+        return `<li>${esc(d)}${esc(c)}</li>`;}).join('')}</ul>`
+        : '<div class="empty">nothing crystallised that mentions this event</div>'}
+    </section>
+
+    <section class="gaps">
+      <h2>WHAT THIS ANSWER DOES NOT KNOW</h2>
+      ${gaps.length ? `<ul style="margin:0;padding:0">${gaps.map(g=>`<li>${g}</li>`).join('')}</ul>`
+        : '<div class="empty">nothing — every section was filled from real data</div>'}
+    </section>`;
+}
+
+document.getElementById('win').onchange = () => current && show(current);
+document.getElementById('reload').onclick = load;
+load();
+</script>
+</body>
+</html>

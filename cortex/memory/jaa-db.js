@@ -32,7 +32,7 @@
 const path = require('path');
 const { JaaStore } = require('../../guardian/jaa-store');
 
-const DATA_DIR = path.join(__dirname, '../../data/cortex/memory');
+const DATA_DIR = process.env.JAA_DATA_DIR || path.join(__dirname, '../../data/cortex/memory');
 
 // Singleton — one store for the whole process
 //

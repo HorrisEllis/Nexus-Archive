@@ -452,3 +452,13 @@ dangling. Full rationale per file: `_archive/superseded-docs-2026-08-09/README.m
 by three other docs, too large to archive on a quick read. `loom/maps/`
 checked too: both files there (`observability-map.js`, `warp-map.js`) are
 actively current, nothing to clean.
+
+## §REGISTERED 2026-08-18 — session specs (§6.3)
+
+| spec | version | status | governs | last checked vs code |
+|---|---|---|---|---|
+| `docs/pressure-causality.spec` | 0.1.0 | Specified | resource-monitor, autopilot exit path, CFR/RFR2/sigma query surface | 2026-08-18 (written) |
+| `docs/clear-glass-toolkit.spec` | 0.1.0 | Specified | clear-glass driver + copilot tool surface, screenshot/picker destination | 2026-08-18 (written) |
+
+Both are Specified, not Implemented (§17.2) — no code was written for either in
+this drop, per §8.5. Their §3.3 map is `docs/MAP-2026-08-18-pressure-and-toolkit.md`.

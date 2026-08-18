@@ -149,14 +149,49 @@ function getCurrentAgent() {
   try {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     const row = jaaDB.query(IDENTITY_TABLE, r => r.id === AGENT_ROW_ID)[0];
-    return {
+    const base = {
       agent: (row && row.agent) || 'auto',
+      hatUuid: (row && row.hatUuid) || null,
       hatName: (row && row.hatName) || null,
       toolScope: (row && row.toolScope) || null,
       personaPrompt: (row && row.personaPrompt) || null,
       isCustom: !!(row && row.agent && row.agent !== 'auto'),
       setAt: row ? row.ts : null,
     };
+    if (!base.hatName && !base.hatUuid) return base;
+
+    // §FIXED 2026-08-18 — the worn hat used to be stored as its NAME plus a
+    // COPY of its toolScope and personaPrompt, and read straight back out.
+    // Reproduced live: wear a hat, rename it, and this returned a name that
+    // resolved to nothing. Worse — forge anything into the freed name and it
+    // returned that OTHER hat, different base agent and all, with no signal
+    // that a substitution had happened. A reference that silently changes
+    // referent is more dangerous than one that breaks.
+    //
+    // The hat record is the source of truth; what is stored here is a
+    // pointer (uuid) and a fallback (the snapshot). Name, scope and persona
+    // are resolved FRESH at read time, so editing a hat changes the hat you
+    // are wearing, which is what wearing one means.
+    let hat = null;
+    try {
+      const hf = require('../../lib/hat-forge');
+      if (base.hatUuid) hat = hf.get(base.hatUuid);
+      // Pre-patch rows carry a name and no uuid. Resolve once by name; the
+      // next setCurrentAgent() pins the uuid permanently. Flagged, because a
+      // name-only pointer is exactly the ambiguity being retired.
+      else if (base.hatName) { hat = hf.get(base.hatName); if (hat) base.resolvedByNameOnly = true; }
+    } catch (_) { /* hat-forge unavailable — fall through to the snapshot */ }
+
+    if (hat) {
+      return { ...base,
+        hatUuid: hat.uuid || hat.id, hatName: hat.name,
+        hatSeedKey: hat.seedKey || null,
+        toolScope: hat.toolScope || null, personaPrompt: hat.personaPrompt || null };
+    }
+    // §1.2 — the hat is gone (revoked, or a store that cannot be read). Say
+    // so loudly in the shape rather than handing back a stale snapshot that
+    // looks live. The snapshot is still returned so nothing hard-fails.
+    return { ...base, hatMissing: true, stale: true };
   } catch (e) {
     return { agent: 'auto', isCustom: false, error: e.message };
   }
@@ -212,12 +247,17 @@ function setCurrentAgent(agent, opts = {}) {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     jaaDB.insert(IDENTITY_TABLE, {
       id: AGENT_ROW_ID, agent: normalized,
+      // §FIXED 2026-08-18 — the permanent uuid is what is stored. hatName,
+      // toolScope and personaPrompt are still written as a readable
+      // snapshot (and as the fallback if the hat is later revoked), but
+      // getCurrentAgent resolves through the uuid, not through them.
+      hatUuid: forgedHat ? (forgedHat.uuid || forgedHat.id) : null,
       hatName: forgedHat ? forgedHat.name : null,
       toolScope: forgedHat ? forgedHat.toolScope : null,
       personaPrompt: forgedHat ? forgedHat.personaPrompt : null,
       ts: Date.now(),
     });
-    return { ok: true, agent: normalized, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
+    return { ok: true, agent: normalized, hatUuid: forgedHat ? (forgedHat.uuid || forgedHat.id) : null, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
   } catch (e) {
     return { ok: false, reason: e.message };
   }
