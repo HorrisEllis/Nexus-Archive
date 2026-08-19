@@ -3024,66 +3024,6 @@ function handleExtendedRoutes(req, res, url, method) {
   // via guardian/ask.js. Honest facade: it cannot make an async job
   // synchronous, only wait for it — and it fails fast when no provider is
   // connected rather than polling into a vague timeout.
-  // ── §BUILT 2026-08-18 — intake: guardian listens for downloads ───────────
-  // James: "guardian to listen for the downloads from your chat and move them
-  // to the compartment with the contract or repo/spec."
-  //
-  // That "or" is a pipeline here, not a choice. Staging is never optional;
-  // promotion into the tree is a separate, gated step. Guardian STAGES and
-  // never applies — arrival is not acceptance (§IP-5). All the real work is
-  // lib/intake.js; these routes are the surface, not a second copy (§10.3).
-  if (method === 'POST' && url.pathname === '/api/intake') {
-    bodyJ(req).then(body => {
-      const intake = require('../lib/intake.js');
-      const r = intake.stage({
-        source: body.source,
-        provenance: {
-          provider:     body.provider || null,
-          chatUrl:      body.chatUrl  || null,
-          filename:     body.filename || null,
-          downloadedAt: body.downloadedAt || Date.now(),
-        },
-      });
-      if (!r.ok) return json(res, 400, r);
-      try { bus.emit('guardian.intake.staged', { dropId: r.dropId, provider: body.provider, summary: r.contract.summary, ts: Date.now() }); } catch (_) {}
-      json(res, 200, { ok: true, dropId: r.dropId, state: r.contract.state, summary: r.contract.summary, contract: r.contract });
-    }).catch(e => json(res, 500, { ok: false, error: e.message }));
-    return;
-  }
-
-  if (method === 'GET' && url.pathname === '/api/intake') {
-    const intake = require('../lib/intake.js');
-    const id = url.searchParams.get('dropId');
-    if (id) { const c = intake.read(id); return json(res, c ? 200 : 404, c || { ok: false, error: `no staged drop "${id}"` }); }
-    return json(res, 200, { ok: true, drops: intake.list().map(c => ({ dropId: c.dropId, state: c.state, provider: c.provenance.provider, filename: c.provenance.filename, summary: c.summary, stagedAt: c.stagedAt })) });
-  }
-
-  if (method === 'POST' && url.pathname === '/api/intake/verdict') {
-    bodyJ(req).then(body => {
-      const intake = require('../lib/intake.js');
-      json(res, 200, intake.recordVerdict(body.dropId, { by: body.by, approved: body.approved, reason: body.reason }));
-    }).catch(e => json(res, 500, { ok: false, error: e.message }));
-    return;
-  }
-
-  if (method === 'POST' && url.pathname === '/api/intake/promote') {
-    bodyJ(req).then(body => {
-      const intake = require('../lib/intake.js');
-      // `by` is taken from the body deliberately and checked in intake.js —
-      // guardian does not get to vouch for who asked.
-      json(res, 200, intake.promote(body.dropId, { by: body.by }));
-    }).catch(e => json(res, 500, { ok: false, error: e.message }));
-    return;
-  }
-
-  if (method === 'POST' && url.pathname === '/api/intake/rollback') {
-    bodyJ(req).then(body => {
-      const intake = require('../lib/intake.js');
-      json(res, 200, intake.rollback(body.dropId));
-    }).catch(e => json(res, 500, { ok: false, error: e.message }));
-    return;
-  }
-
   if (method === 'POST' && url.pathname === '/api/copilot/prompt') {
     bodyJ(req).then(async body => {
       const { askSync } = require('./ask.js');

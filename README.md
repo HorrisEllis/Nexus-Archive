@@ -1,89 +1,97 @@
-# NEXUS — session 2026-08-18 — full drop
+# NEXUS SYSTEM — v5.1.0
 
-Everything from this session in one archive, per the Output Contract. Drop over
-the tree at `6e9051c`. **47 passing tests** across two suites, both registered
-in `tests/modules/run-all.js`.
+> **⚠ SUPERSEDED — DO NOT TREAT AS CURRENT**
+> This README describes an earlier intended architecture (Emergence/.eg-exclusive, `nexus-eg/` tree: crystalball, cockpit, siphon, seam, guardian-ext). That architecture is not what exists in this codebase — zero `.eg` files are present; the actual system is plain Node/JS (cortex/, guardian/, idearium/, lib/, etc.). This file has not been kept in sync and should not be read as a description of current state.
+>
+> **Canonical, actively-maintained source of truth: `lib/version.js`** — current system version, per-phase build status, and per-module versions all live there. As of this note: system v0.7.8, Phase 12 (User Model) complete.
+>
+> The content below is preserved as historical record, not deleted, since it may describe a real prior design direction worth understanding — but treat every claim in it (file counts, ports, structure) as potentially describing a different system than the one on disk.
+
+## Complete Architecture in Emergence
+
+**Author:** James Brooks (Erosmancer)  
+**Language:** Emergence (.eg) — exclusively  
+**Files:** 115  
+**SNR:** 98.4%–100% across all files  
+**Axiom violations:** 0  
+
+---
+
+> The spec is the container. The .eg file runs the system. No coding syntax exists in this session.
+
+---
+
+## Structure
 
 ```
-node tests/modules/test-hat-forge.js   →  29 passed, 0 failed
-node tests/modules/test-intake.js      →  18 passed, 0 failed
+nexus-eg/
+├── foundation/          14 files — SISO primitives, Cobalt bus, FileStore, poll registry, admin server
+├── memory/               6 files — JAA-DB (28 tables), agent-memory, continuous-stream, feedback-weighter, fix-map, lattice-index
+├── core/                 7 files — RAID (4 files), translation, manifest-generator, usage
+├── crystalball/          5 files — CrystalBall wiring, BEP engine, lattice-bridge, MCL, MQL (5-lane)
+├── gate/                 3 files — gap-finder, gate-runner, healer
+├── agents/               6 files — dispatcher, ollama, claude, base, chatgpt, gemini
+├── orion/                4 files — sensor, record, policy, verify
+├── versionium/           2 files — core, causality
+├── automation/           2 files — engine, queue-manager
+├── canvas/               9 files — renderer, cfr-physics, cfr-render, cfr-rewind, image-analyzer, node-inspector, rewind-scrubber, nas-router, tauri-ws
+├── guardian-ext/        12 files — app, background, cfr, ir-layer, handshake, content, popup, module-base, claude, chatgpt, instagram, threads
+├── guardian-server/      9 files — server, api-7820, wss-7821, jaa, memory-7823, dropzone-7822, cli, agents, cobalt-bridge
+├── userscript/          16 files — toast, gates, tab-claim, siso-bus, dom-scanner, artifact-store, download-intercept, seam-tab, queue, snr-detector, pa, gap-hunter, greeting, gtci-inject, realtime-sync, tab-discovery
+├── cockpit/              5 files — core (SISOKernel+JAA+Bayesian), pipeline (14 nodes+evaluator), forge (self-mod), cli, ui (v10)
+├── idearium/             5 files — core (IdeaOS+tension+SNR), cli, api, event, gate
+├── siphon/               3 files — siphon, pulse, watchman
+├── seam/                 3 files — spec-parser, verdict-detector, seam-delivery
+└── system/               4 files — boot, topology, data-flows, seam-contracts
 ```
 
-## Contents
+---
 
-### 1 — Agent identity (code, Verified)
-Six defects in the 2026-08-18 permanent-agent-ID work, found by running it.
-`f8d2a53` changed one file and added no test; nothing under `tests/` had ever
-referenced hat-forge.
+## Ports
 
-- `lib/hat-forge.js` 0.3.0 — seedKey, `bySeedKey`, `adoptSeedKey`, `byName`,
-  `migrateLegacyIds`, real-uuid minting with `legacyId` folded by `_byIdentity()`
-- `lib/hat-seed.js` 1.1.0 — idempotent by ROLE, not by name
-- `copilot/lib/self-model.js` — worn hat pinned and resolved by uuid
-- `lib/intent-hat-router.js` 0.2.0 — verb table maps to roles
-- `lib/scheduler.js` 1.1.0 — `Infinity` survives the JSON round trip; a lost `fn` fails loudly
-- `lib/agent-tools/tools/identity/hat-forge.js` — `rename` reachable at last
-- `cortex/memory/jaa-db.js` — the `JAA_DATA_DIR` line the suite needs for isolation
-- `tests/modules/test-hat-forge.js` — 29 tests
+| Port | Layer | Purpose |
+|------|-------|---------|
+| 3748 | Cortex | Source of truth — JAA + Cobalt + RAID + ORION |
+| 4800 | Forge/Idearium | IDE + pipeline + spec parser |
+| 7800 | Rheon IDE | Seam language IDE |
+| 7771 | Tauri WS | Desktop Rust bridge |
+| 7820 | Guardian HTTP | Agent API + Cockpit |
+| 7821 | Guardian WSS | Browser userscript bridge |
+| 7822 | Dropzone | File server (LAN) |
+| 7823 | Memory server | JAA query surface (LAN) |
+| 11434 | Ollama | Local LLM |
 
-Verified against a copy of your real `forged_hats.json`: five hats migrated off
-name-as-id, four roles adopted, **zero forged**; then rename → reboot → still
-zero forged.
+---
 
-### 2 — Guardian intake (code, Verified)
-Downloads from a provider tab are captured at the Electron session, staged with
-a contract, and never applied by arriving.
+## Laws
 
-- `lib/intake.js` — stage / recordVerdict / promote / rollback
-- `clear-glass/src/providers/download-capture.js` — `will-download` → guardian
-- `clear-glass/src/providers/host.js` — arms capture on the session at :141
-- `guardian/server.js` — five routes under `/api/intake`
-- `tests/modules/test-intake.js` — 18 tests
+```
+LAW_I    Local first — Ollama before cloud
+LAW_II   JAA write before behavior
+LAW_III  No module imports another — JAA only
+LAW_IV   Schema over code
+LAW_V    CLI first — UI is a skin
+LAW_VI   Toast on every failure
 
-### 3 — Pressure causality: P0 answered, P3 built (code, Verified)
-**16 passing tests.** `node tests/modules/test-pressure-window.js`
+§1.1  Nothing exists until proven
+§1.2  Nothing silently fails
+§2.1  Persistence is the golden rule
+§M1   Every module: init(cfg) + stop() only
+§M2   Modules only read/write declared tables
+§M3   Poll interval is module configuration
+§A3   Every row carries causedBy or source
+```
 
-- `lib/pressure-window.js` — the retrospective window. Joins `event_log`,
-  the holders `autopilot.instance_snapshot` already carries, the CFR/RFR2
-  field, and what the pattern engine already crystallised. Orders by
-  `eventTs` (§3.2). Writes nothing (§10.2). **States its own blind spots.**
-- `cli/pressure.js` — `node cli/pressure.js`, `list`, `explain <id>`,
-  `--window 300`, `--json`
-- `ui/pressure/index.html` — a projection over cortex's existing
-  `/api/memory` contract. No new API route (§16.5, §10.3). Delete it and
-  nothing stops working (§5.12).
-- `tests/modules/test-pressure-window.js` — 16 tests
+---
 
-**P0's answer changed the map.** `autopilot.js:659` `_getPerPidMemoryMB()` is
-real, batched, cross-platform — and writes attribution to
-`autopilot.instance_snapshot`, never to the pressure event. Attribution
-existed; nothing joined it. Two limits found: it only sees autopilot-tracked
-pids (so Electron's 4,951 MB renderer is invisible), and an empty OS result
-becomes `{}` — indistinguishable from a machine holding no memory. Suspicion,
-unverified: `wmic` may be gone on your Windows 11 build.
+## Using the Emerge compiler
 
-### 4 — Clear Glass toolkit (spec only, Specified)
-§8.5 — nothing is built without a spec first. No code in this drop for either.
+```bash
+node emerge-cli.js check foundation/siso-event.eg
+node emerge-cli.js compile foundation/siso-event.eg
+node emerge-cli.js watch          # watch all .eg files
+```
 
-- `docs/MAP-2026-08-18-pressure-and-toolkit.md` — the §3.3 map, and a §0.1
-  correction: the 16:30:57 crash was **not** the JAA store. Electron 6,897 MB
-  across 14 processes vs Node 509 MB across 13.
-- `docs/pressure-causality.spec` — P0 verify, P1 attribute, P2 exits as events,
-  P3 the retrospective window, P4 API→CLI→UI
-- `docs/clear-glass-toolkit.spec` — audit 71 declared vs 26 served before adding
-  anything; the real gap is that `driver.screenshot` has zero consumers
-- `docs/SPEC-REGISTRY.md` — both registered (§6.3)
+---
 
-## Three open questions (§0.1 — named, not guessed)
-
-1. Should the four provider tabs still pre-warm at boot? Largest available
-   memory win; a behaviour change to something you use, so not mine to decide.
-2. Is `0xC0000409` reproducible on demand, or only under pressure?
-3. Screenshot destination — provider composer, intake pipeline, or both? This
-   one blocks P1 of the toolkit spec.
-
-## Still yours to decide from earlier
-
-- Whether hat responsibilities re-arm at boot. The restart failure is now loud
-  and the restore lossless, but re-arming starts real dispatches at
-  claude/chatgpt/perplexity on boot — cost and consent are yours to spend.
+*NEXUS SYSTEM v5.1.0 · All Emergence · James Brooks · Portland, Oregon · 2026*

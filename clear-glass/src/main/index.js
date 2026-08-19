@@ -1228,6 +1228,73 @@ function closeAgentWindow({ agentId }) {
   windows.delete(agentId);
 }
 
+// §BUILT 2026-08-18 — James: "huge idea, what about freezing the state of
+// the tab using the state VM like system/rewind system?" Checked first:
+// rewind/engine.js already captures real, substantial state per tab —
+// cookies (via the vault), full localStorage/sessionStorage, scroll
+// position, URL/title — for undo/rewind. This is the same real state a
+// genuine freeze needs; the only new piece is USING it to justify
+// actually destroying the real window, not just recording a checkpoint
+// while the window (and its real memory) stays alive regardless.
+//
+// Real leverage, not speculative: this session's own earlier real
+// investigation (Task Manager evidence) found Electron's real per-window
+// process cost is genuine and non-trivial. A tab that's idle — a
+// background provider nobody's looked at in a while — can have its real
+// BrowserWindow destroyed, freeing that real memory, while this exact
+// mechanism preserves enough to recreate it indistinguishably later.
+//
+// §0.1 — frozen is a real, honest state, not a euphemism for "gone."
+// _frozenState tracks exactly what's needed to thaw correctly; nothing
+// about freezing pretends the tab is still "open."
+const _frozenState = new Map(); // agentId -> { snapshotId, url, frozenAt }
+
+async function freezeAgentWindow({ agentId }) {
+  const win = windows.get(agentId) || bgTabs.get(agentId);
+  if (!win) return { ok: false, error: `no real, open window for agent "${agentId}" to freeze` };
+  if (_frozenState.has(agentId)) return { ok: false, error: `agent "${agentId}" is already frozen` };
+
+  let snapshot = null;
+  try {
+    if (rewind) snapshot = await rewind.snapshot(agentId, { label: 'auto-freeze' });
+  } catch (e) {
+    // §1.2 — a snapshot failure means freezing is genuinely unsafe (the
+    // whole point is being able to thaw correctly), not something to
+    // proceed past silently.
+    return { ok: false, error: `real snapshot failed, refusing to freeze without one: ${e.message}` };
+  }
+  if (!snapshot) return { ok: false, error: 'rewind engine returned no real snapshot — refusing to freeze without a genuine restore point' };
+
+  _frozenState.set(agentId, { snapshotId: snapshot.id, url: snapshot.url, frozenAt: Date.now() });
+  closeAgentWindow({ agentId }); // the actual real memory reclamation — same, already-verified-safe destroy path
+  return { ok: true, agentId, snapshotId: snapshot.id, url: snapshot.url };
+}
+
+async function thawAgentWindow({ agentId }) {
+  const frozen = _frozenState.get(agentId);
+  if (!frozen) return { ok: false, error: `agent "${agentId}" is not frozen` };
+
+  // §FIXED, found by reading rewind.restore()'s real implementation before
+  // shipping, not after: restore() calls driver.exec({action:'navigate'}),
+  // which requires the window to ALREADY exist — it cannot work on a
+  // genuinely frozen (destroyed) tab. The real, correct order is open
+  // first, then restore layers cookies/storage/scroll on top of it.
+  await openAgentWindow({ agentId, url: frozen.url });
+
+  let restoreResult = null;
+  try {
+    if (rewind) restoreResult = await rewind.restore({ agentId, snapshotId: frozen.snapshotId });
+  } catch (e) {
+    // §1.2 — the window is real and open even if the deeper state
+    // restore fails; report the partial result honestly rather than
+    // pretend the whole thaw failed when the tab is genuinely usable.
+    _frozenState.delete(agentId);
+    return { ok: true, agentId, url: frozen.url, warning: `window reopened but state restore failed: ${e.message}` };
+  }
+  _frozenState.delete(agentId);
+  return { ok: true, agentId, url: frozen.url, stateRestored: !!restoreResult };
+}
+
 function minimizeAgentWindow({ agentId }) {
   // Minimize to tray — hide from taskbar completely, not just minimize
   // This is what "minimize to tray" means — app still runs, no taskbar button
@@ -1357,4 +1424,5 @@ module.exports = {
   focusAgentWindow, listOpenAgents,
   openBackgroundTab, closeBackgroundTab, listBackgroundTabs,
   closeSettingsWindow, windows, bgTabs,
+  freezeAgentWindow, thawAgentWindow,
 };

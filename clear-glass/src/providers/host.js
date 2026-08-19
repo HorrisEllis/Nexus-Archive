@@ -147,16 +147,6 @@ class ProviderHost {
       callback({ responseHeaders: headers });
     });
 
-    // §WIRED 2026-08-18 — a file downloaded from this tab is announced to
-    // Guardian, with the chat URL attached. The session already existed; only
-    // the listener was missing. Non-fatal: a failure to arm capture must never
-    // stop a provider tab from opening (§1.2).
-    try {
-      require('./download-capture.js').attach({ session: ses, providerId, log: (m) => console.log(m) });
-    } catch (e) {
-      console.log(`[ProviderHost] download capture NOT armed for ${providerId} — ${e.message}`);
-    }
-
     const win = new BrowserWindow({
       width:  1280,
       height: 800,
