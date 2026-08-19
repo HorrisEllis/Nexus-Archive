@@ -22,7 +22,18 @@ const OLLAMA_HOST = _rawOllamaHost.startsWith('http') ? _rawOllamaHost : `http:/
 const ORCH_URL     = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000';
 const CX_URL       = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
 const DATA_DIR     = path.join(__dirname, '..', 'data', 'ollama');
-const MAX_CONCURRENT = parseInt(process.env.OLLAMA_MAX_CONCURRENT || '3');
+// §SERIALISED 2026-08-19 — default was 3.
+//
+// Each concurrent generation holds its own model context resident. Three at
+// once is three copies of a multi-GB working set on a machine that reached
+// 2.8% free memory in the 2026-08-19 run, taking all four provider renderers
+// and copilot with it (STATUS_STACK_BUFFER_OVERRUN) in the same minute.
+//
+// 1 is the honest default for a single-GPU/single-box install: it serialises
+// rather than thrashing, and the queue below already absorbs the wait. Raise it
+// deliberately via OLLAMA_MAX_CONCURRENT once there is headroom to raise it
+// INTO — the number was never measured, it was assumed.
+const MAX_CONCURRENT = parseInt(process.env.OLLAMA_MAX_CONCURRENT || '1');
 // §BUGFIX 2026-07-04: was 'qwen2.5-coder:7b' / 'mistral:7b' — neither tag
 // is what's actually installed (confirmed via a screenshot of the real
 // Ollama app's model list: mistral:7b-instruct-q4_K_M and

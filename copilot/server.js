@@ -448,10 +448,60 @@ function _captureUserSignals(prompt, channel) {
       um.observe(`writes ${style}`, 'communication_style', { via: 'signal-capture', words }, 0.15);
     }
     // explicit correction — the user pushing back is a high-value signal.
-    if (/\b(no,|not what|that'?s wrong|incorrect|actually,|i said|try again)\b/i.test(prompt)) {
+    if (CORRECTION_RE.test(prompt)) {
       um.observe('corrects co-pilot when it misunderstands', 'communication_style', { via: 'signal-capture' }, 0.2);
     }
   } catch (_) { /* capture is best-effort — never affects the response (§1.2) */ }
+}
+
+// §INTROSPECT-RETRY 2026-08-19 — the correction signal now DOES something.
+//
+// This pattern was already here, at the top of _captureUserSignals, and its
+// only effect was to record a user-model observation that the user corrects
+// the co-pilot. The strongest ground truth the system ever receives — a human
+// stating the answer was wrong — used solely to note that it had happened.
+//
+// Promoted to a module constant so the detector and the retry path cannot
+// drift apart: two copies of this regex would mean a phrase that logs a
+// correction without triggering a retry, or the reverse, and either is worse
+// than not having the feature.
+const CORRECTION_RE = /\b(no,|not what|that'?s wrong|incorrect|actually,|i said|try again|retry|redo that)\b/i;
+
+/**
+ * _introspectRetry — run lib/introspect over the last exchange and re-ask with
+ * the SPECIFIC finding, not "try again".
+ *
+ * Returns null when introspection cannot say anything useful, and null means
+ * fall through to the normal path. Re-asking with no new information returns a
+ * reworded version of the same answer, which is how a retry loop burns
+ * attempts while looking like it works.
+ */
+async function _introspectRetry({ prompt, sessionId, requestId, intent, dispatchFn }) {
+  try {
+    const introspect = require('../lib/introspect');
+    const session = _getSession(sessionId);
+    const last = session && session.lastResponse ? session.lastResponse : null;
+    if (!last) return null;   // nothing to introspect — not a failure, just no prior turn
+
+    const r = await introspect.retry({
+      prompt: session.lastPrompt || prompt, response: last,
+      dispatchFn, requestId, sessionId, intent,
+    });
+    if (!r.ok || !r.answer) return null;
+
+    broadcast('copilot.retry.introspected', {
+      requestId, sessionId, verdict: r.examined.verdict,
+      diagnosis: r.diagnosis, blind: r.examined.missedBy || [],
+    });
+
+    // The diagnosis rides along with the answer. A retry that does not say
+    // what it changed is indistinguishable from a re-roll, and the user has no
+    // way to tell whether the system understood the correction.
+    return { text: r.answer, diagnosis: r.diagnosis, actionable: r.actionable,
+             verdict: r.examined.verdict };
+  } catch (_) {
+    return null;   // §1.2 — introspection must never break the response path
+  }
 }
 
 function _injectUserModel(contextText) {
@@ -530,7 +580,30 @@ function _generateToolFollowUp(toolName, args, result) {
   } catch (_) { return null; } // §1.2 — a follow-up failure never affects the real tool result already sent
 }
 
+// §WORK-QUEUE 2026-08-19 — every LLM dispatch is serialised here.
+//
+// This is the right chokepoint, deliberately narrower than the prompt handler:
+// fast paths ("what agent are you on", "list your tools", the grammar router)
+// answer from local state and must NOT wait behind a generation. Queuing the
+// whole handler would make the cheap answers as slow as the expensive ones.
+//
+// The queue is memory-AWARE, not merely serial. In the 2026-08-19 run the
+// machine hit 2.8% free and took all four provider renderers plus this process
+// with it. A queue that keeps draining under that pressure does not prevent the
+// OOM, it schedules one — so admission is gated on real free memory using
+// autopilot's own thresholds.
+const _llmQueue = require('../lib/work-queue').get('copilot.llm', {
+  concurrency: 1,      // matches ollama's MAX_CONCURRENT, now also 1
+  maxDepth: 25,
+  timeoutMs: 180000,   // a hung generation must not hold the only slot forever
+});
+
 async function _dispatchToOllama(prompt, context, opts = {}) {
+  return _llmQueue.push(() => _dispatchToOllamaNow(prompt, context, opts),
+    `ollama:${opts.intent || 'ask'}:${(opts.requestId || '').slice(0, 8)}`);
+}
+
+async function _dispatchToOllamaNow(prompt, context, opts = {}) {
   return _post(`${OL_URL}/api/jobs`, {
     prompt:      `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
     // §BUGFIX 2026-07-04: was hardcoded to 'mistral:7b' (ollama-bridge's
@@ -584,7 +657,12 @@ function _getSession(sessionId, channel, prompt) {
   if (!sessionId) sessionId = crypto.randomUUID();
   if (!_sessions.has(sessionId)) {
     _sessions.set(sessionId, { sessionId, channel, exchanges: 0,
-      startedAt: Date.now(), lastActive: Date.now(), lastPrompt: null });
+      startedAt: Date.now(), lastActive: Date.now(), lastPrompt: null,
+      // §INTROSPECT-RETRY 2026-08-19 — added for the same reason lastPrompt was:
+      // _introspectRetry needs the previous ANSWER to examine, and the session
+      // only ever kept the previous prompt. Declared here rather than read off a
+      // record that never had it (§1.1) — the mistake the note below describes.
+      lastResponse: null, lastRequestId: null, lastIntent: null });
   }
   const s = _sessions.get(sessionId);
   s.lastActive = Date.now();
@@ -595,6 +673,27 @@ function _getSession(sessionId, channel, prompt) {
   // rather than read a field off a record that never had it (§1.1), the field
   // is made real at the one place every prompt path already passes through.
   if (typeof prompt === 'string' && prompt) s.lastPrompt = prompt;
+  return s;
+}
+
+/**
+ * _recordResponse(sessionId, text, meta) — close the loop on an exchange.
+ *
+ * §INTROSPECT-RETRY 2026-08-19 — without this the session remembered what was
+ * ASKED but never what was ANSWERED, so "try again" had nothing to examine.
+ * Called wherever a response is finalised; missing one call site degrades to
+ * "no prior turn" rather than to a wrong diagnosis, which is the right
+ * failure direction.
+ */
+function _recordResponse(sessionId, text, meta = {}) {
+  try {
+    const s = _sessions.get(sessionId);
+    if (!s) return;
+    s.lastResponse  = typeof text === 'string' ? text : null;
+    s.lastRequestId = meta.requestId || s.lastRequestId;
+    s.lastIntent    = meta.intent || s.lastIntent;
+    s.lastAnsweredAt = Date.now();
+  } catch (_) { /* §1.2 never breaks the response */ }
   return s;
 }
 
@@ -832,6 +931,12 @@ const server = http.createServer(async (req, res) => {
       json(res, 400, { ok: false, error: e.message });
       return;
     }
+  }
+
+  if (p === '/api/queue/health') {
+    try { json(res, 200, require('../lib/work-queue').healthAll()); }
+    catch (e) { json(res, 503, { ok: false, error: e.message }); }
+    return;
   }
 
   if (p === '/contract') { json(res, 200, require('./registry-components')); return; }

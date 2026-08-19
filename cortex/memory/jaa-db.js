@@ -32,6 +32,21 @@
 const path = require('path');
 const { JaaStore } = require('../../guardian/jaa-store');
 
+// §SANDBOX 2026-08-18 — the store is now relocatable, which it was not.
+//
+// This was a hardcoded path with no override. Two consequences, both live:
+//
+//   1. tests/modules/test-user-continuity.js sets process.env.JAA_DATA_DIR
+//      expecting an isolated temp store. Nothing read it, so that test has been
+//      writing to the PRODUCTION store and passing — a test that believes it is
+//      isolated and is not is worse than no isolation, because it is trusted.
+//   2. lib/loom-map.js:74 documents "every OTHER JAA-backed module already
+//      supports this via JAA_DATA_DIR". Nothing did. The comment described an
+//      intention as a fact, which is how it went unnoticed.
+//
+// It is also the exact blocker for running NEXUS in a sandbox: the code can be
+// shared read-only, but the STATE must be isolated or a learning agent is
+// experimenting on production memory. One line, and the sandbox becomes possible.
 const DATA_DIR = process.env.JAA_DATA_DIR || path.join(__dirname, '../../data/cortex/memory');
 
 // Singleton — one store for the whole process

@@ -92,8 +92,25 @@ class ProviderHost {
   }
 
   // ── Inject GM shim + userscript into a window ───────────────────────────
+  // §NEXUS-WAKE 2026-08-18 — guardian/userscript-nexus-wake.js attaches
+  // window.NexusWake and does nothing until a provider script calls
+  // .install(). It has to run BEFORE the provider script (which calls
+  // install() near its own boot line), so it's loaded the same way gmShim
+  // is: a shared prelude, not baked into any one provider file. This keeps
+  // the "exact unmodified provider file" invariant above true — the wake
+  // module is its own file on disk, just like the GM shim is its own file.
+  // Missing/unreadable is non-fatal: providers boot without "hey nexus"
+  // rather than not booting at all.
+  _loadSharedPrelude() {
+    if (!this.guardianDir) return '';
+    const p = path.join(this.guardianDir, 'userscript-nexus-wake.js');
+    try { return fs.readFileSync(p, 'utf8'); }
+    catch (e) { _logWarn(`[ProviderHost] nexus-wake prelude not loaded: ${e.message}`); return ''; }
+  }
+
   async _inject(providerId, win) {
     const gmShim  = buildGmShim();
+    const wake    = this._loadSharedPrelude();
     const script  = this.loadUserscript(providerId);
     if (!script) return false;
 
@@ -103,6 +120,9 @@ class ProviderHost {
   'use strict';
   try {
     ${gmShim}
+    // Shared prelude — window.NexusWake, inert until a provider script
+    // calls .install(). Loaded once here rather than four times.
+    ${wake}
     // Userscript begins
     ${script}
     // Userscript ends

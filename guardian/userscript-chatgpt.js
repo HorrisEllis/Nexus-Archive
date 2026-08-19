@@ -484,6 +484,10 @@ function _isGenerating() {
   return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
 }
 function injectText(text) {
+  // §NEXUS-WAKE 2026-08-18 — one-line hook (HOOKUP.md §3): if the outgoing
+  // turn earned the agent hint (per-provider hintMode), append it here, right
+  // before injection, same as every other provider script.
+  text = NEXUS ? NEXUS.decorate(text) : text;
   // Try contenteditable first (ChatGPT's main input)
   const ce = document.querySelector('[contenteditable="true"]');
   if (ce) {
@@ -756,6 +760,13 @@ function connect() {
     connState = 'ready'; setConnState('ready');
     _log('ok', `NCP connected · ${PROVIDER}`, NCP_CHANNEL);
     ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
+    // §NEXUS-WAKE 2026-08-18 — arm "hey nexus" once per boot (HOOKUP.md §2).
+    // window.NexusWake is the shared prelude ProviderHost injects before this
+    // script; absent under node/tests or if the prelude failed to load, so
+    // NEXUS stays null and decorate() below is a no-op rather than a crash.
+    const NEXUS = (typeof window !== 'undefined' && window.NexusWake)
+      ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
+      : null;
     if (_hb) clearInterval(_hb);
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();

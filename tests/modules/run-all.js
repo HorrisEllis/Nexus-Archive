@@ -205,6 +205,13 @@ const SUITES = [
   // §2026-08-17 — ledger wire + person model
   'test-ledger-sse.js',
   'test-person-model.js',
+
+  // §2026-08-19 — queue/ollama-lock/introspect/agent-capability/end-state/nexus-wake merge
+  'test-work-queue.js',
+  'test-introspect.js',
+  'test-agent-capability.js',
+  'test-end-state.js',
+  'test-nexus-wake.js',
 ];
 
 let totalPassed = 0;
