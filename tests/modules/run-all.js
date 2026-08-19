@@ -212,6 +212,10 @@ const SUITES = [
   'test-agent-capability.js',
   'test-end-state.js',
   'test-nexus-wake.js',
+  'copilot-handshake-dispatch.test.js',
+
+  // §2026-08-19 — real, permanent agent-ID system (hat-forge)
+  'test-hat-forge.js',
 ];
 
 let totalPassed = 0;

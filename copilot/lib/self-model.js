@@ -149,13 +149,52 @@ function getCurrentAgent() {
   try {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     const row = jaaDB.query(IDENTITY_TABLE, r => r.id === AGENT_ROW_ID)[0];
+    if (!row) return { agent: 'auto', isCustom: false };
+
+    // §FIXED 2026-08-19 — the worn hat used to be identified by its NAME,
+    // stored once at wear-time. Two real, live bugs followed: renaming the
+    // worn hat left this pointing at a name that no longer resolved to
+    // anything (or worse, resolved to nothing until someone else claimed
+    // the freed name — at which point it silently became THEM). Re-
+    // resolving by the hat's permanent uuid on every real call closes
+    // both: a rename is followed transparently (fresh name every time),
+    // and a freed name later claimed by a different hat can never be
+    // mistaken for the one actually being worn.
+    if (row.hatUuid) {
+      let hat = null;
+      try { hat = require('../../lib/hat-forge').get(row.hatUuid); } catch (_) {}
+      if (!hat) {
+        return { agent: row.agent || 'auto', hatUuid: row.hatUuid, hatName: row.hatName || null,
+                 hatMissing: true, stale: true, isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts };
+      }
+      return {
+        agent: row.agent || 'auto', hatUuid: hat.uuid, hatName: hat.name,
+        toolScope: hat.toolScope || null, personaPrompt: hat.personaPrompt || null,
+        isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts, hatMissing: false,
+      };
+    }
+
+    // §FIXED 2026-08-19 (HAT-021) — a pre-patch row has a name but no uuid.
+    // Resolved by name as an honest, one-time fallback (the ambiguity a
+    // uuid exists to retire), and flagged so a caller can tell the
+    // difference between a genuinely-pinned identity and a legacy guess.
+    if (row.hatName) {
+      let hat = null;
+      try { hat = require('../../lib/hat-forge').get(row.hatName); } catch (_) {}
+      if (hat) {
+        return {
+          agent: row.agent || 'auto', hatUuid: hat.uuid, hatName: hat.name,
+          toolScope: hat.toolScope || null, personaPrompt: hat.personaPrompt || null,
+          isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts,
+          hatMissing: false, resolvedByNameOnly: true,
+        };
+      }
+    }
+
     return {
-      agent: (row && row.agent) || 'auto',
-      hatName: (row && row.hatName) || null,
-      toolScope: (row && row.toolScope) || null,
-      personaPrompt: (row && row.personaPrompt) || null,
-      isCustom: !!(row && row.agent && row.agent !== 'auto'),
-      setAt: row ? row.ts : null,
+      agent: row.agent || 'auto', hatName: row.hatName || null,
+      toolScope: row.toolScope || null, personaPrompt: row.personaPrompt || null,
+      isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts,
     };
   } catch (e) {
     return { agent: 'auto', isCustom: false, error: e.message };
@@ -212,12 +251,13 @@ function setCurrentAgent(agent, opts = {}) {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     jaaDB.insert(IDENTITY_TABLE, {
       id: AGENT_ROW_ID, agent: normalized,
+      hatUuid: forgedHat ? forgedHat.uuid : null,
       hatName: forgedHat ? forgedHat.name : null,
       toolScope: forgedHat ? forgedHat.toolScope : null,
       personaPrompt: forgedHat ? forgedHat.personaPrompt : null,
       ts: Date.now(),
     });
-    return { ok: true, agent: normalized, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
+    return { ok: true, agent: normalized, hatUuid: forgedHat ? forgedHat.uuid : null, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
   } catch (e) {
     return { ok: false, reason: e.message };
   }

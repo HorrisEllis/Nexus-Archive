@@ -108,6 +108,10 @@ const FILES = [
   // was genuinely unregistered under any id despite being central to the
   // whole hat/agent-switching system this session built on.
   ['lib/hat-forge.js', 'nexus.lib.hat-forge', 'lib', []],
+
+  // §ADDED 2026-08-19 — the merged/extended "hey nexus" agent-chat system.
+  ['lib/agent-chat.js', 'nexus.lib.agent-chat', 'lib', []],
+  ['lib/agent-tools/tools/coordination/agent-chat.js', 'nexus.lib.agent-tools.coordination.agent-chat', 'lib/agent-tools/tools/coordination', []],
 ];
 
 function mapSession20260814(driver) {
