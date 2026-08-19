@@ -642,7 +642,14 @@ const _sessions = new Map();
 // threshold — long enough that a genuinely ongoing conversation is never
 // evicted mid-use, short enough that an abandoned/orphaned session
 // doesn't sit in memory indefinitely.
-const SESSION_STALE_MS = 30 * 60 * 1000;
+// §BUILT 2026-08-19 — reads copilot.config.js's session.decayMinutes so the
+// "conversate until it's done, or it decays from inactivity" threshold is a
+// config edit, not a code edit. Falls back to 30 if config is unreadable at
+// boot (never let a config-load hiccup crash startup over a tunable).
+const SESSION_STALE_MS = (() => {
+  try { return (require('./copilot.config').load().session.decayMinutes || 30) * 60 * 1000; }
+  catch (_) { return 30 * 60 * 1000; }
+})();
 const _sessionSweep = setInterval(() => {
   const now = Date.now();
   let evicted = 0;
@@ -2017,6 +2024,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── GET /api/config — programmable/customizable co-pilot behavior ─────────
+  // §BUILT 2026-08-19 — James: "want co-pilot to be completely programmable
+  // and customizable." Single source of truth is copilot.config.js; this
+  // just exposes it so userscripts (e.g. nexus-wake) can pick up persona,
+  // toolkit, priority and hint-mode edits without a redeploy — they fetch
+  // this once on install and merge it over their own built-in defaults.
+  if (method === 'GET' && p === '/api/config') {
+    try {
+      const cfg = require('./copilot.config').load();
+      json(res, 200, { ok: true, config: cfg });
+    } catch (e) {
+      json(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   // ── §PHASEMAP P1: POST /api/prompt/tools — agentic tool-loop ───────────────
   // Co-pilot runs the sovereign agent-tools loop (lib/agent-tools) with its OWN
   // ollama dispatch injected as callModel. The model can request tools mid-turn
@@ -2028,11 +2051,30 @@ const server = http.createServer(async (req, res) => {
     let body = ''; req.on('data', c => body += c);
     req.on('end', async () => {
       try {
-        const { prompt, sessionId, maxIterations } = JSON.parse(body || '{}');
+        const { prompt, sessionId: rawSessionId, maxIterations, priority, channel } = JSON.parse(body || '{}');
         if (!prompt) { json(res, 400, { ok: false, error: 'prompt required' }); return; }
         const toolRuntime = require('./tool-runtime');
         const userModel = require('./lib/user-model');
+        const copilotConfig = require('./copilot.config').load();
         const requestId = crypto.randomUUID();
+
+        // §BUILT 2026-08-19 — this handler is the real wake-handshake path
+        // (guardian/userscript-nexus-wake.js's askNexus() posts here), but
+        // it never called _getSession()/_recordResponse() — the ONLY session
+        // bookkeeping (lastActive, exchanges, 30-min decay sweep) lived on
+        // the /api/prompt path. That meant "hey nexus" turns never decayed,
+        // and there was no way to tell "first contact this session" from
+        // "the fifth follow-up" — so no honest place to hang an intro.
+        // Wiring the same _getSession/_recordResponse this path's sibling
+        // already uses gets both for free: decay is the existing 30-minute
+        // sweep (SESSION_STALE_MS), and a session the sweep evicted comes
+        // back through _getSession as brand new — exchanges===0 again —
+        // which is exactly "conversate until it's done, or it decays from
+        // inactivity, then greets again."
+        const session = _getSession(rawSessionId, channel || 'wake', prompt);
+        const isFirstContact = session.exchanges === 0;
+        session.exchanges++;
+        const sessionId = session.sessionId;
 
         // §PHASEMAP P2 — persistent memory. buildUserContext() reads the
         // confidence-weighted hypotheses from cortex's JAA store (survives
@@ -2041,8 +2083,24 @@ const server = http.createServer(async (req, res) => {
         let memory = '';
         try { memory = userModel.buildUserContext() || ''; } catch (_) {}
 
+        // §BUILT 2026-08-19 — James: "injects into ollama's continuous data
+        // stream as priority." ollama/server.js's queue already honors
+        // body.priority === 'highest' (unshifts instead of pushing — see its
+        // own 2026-08-18 comment, which literally names "copilot's real 'hey
+        // nexus' handshake" as the intended caller). Nothing upstream of
+        // this closure ever set it, so a live wake request queued FIFO
+        // behind whatever background jobs were already running. request-
+        // level `priority` (from the wake caller, falling back to
+        // copilot.config.js's wake.priority) is threaded into every model
+        // call this tool-loop makes, not just the first — a multi-step
+        // "hey nexus" answer that calls three tools stays priority the
+        // whole way through, not just on turn one.
+        const effectivePriority = priority || copilotConfig.wake.priority || null;
         const dispatch = (convo, sysContext, opts) =>
-          _dispatchToOllama(convo, sysContext, { ...opts, intent: 'tool-loop', requestId, sessionId });
+          _dispatchToOllama(convo, sysContext, {
+            ...opts, intent: 'tool-loop', requestId, sessionId,
+            ...(effectivePriority ? { priority: effectivePriority } : {}),
+          });
 
         // §PHASEMAP P3 — continuous stream. _stream is copilot's live ring
         // buffer, already fed by Cortex + Guardian + Idearium SSE (streamIngest).
@@ -2079,10 +2137,24 @@ const server = http.createServer(async (req, res) => {
           userPrompt: prompt,
           dispatch,
           pollJob: _pollOllamaJobHeadless,
-          maxIterations: maxIterations || 6,
+          maxIterations: maxIterations || copilotConfig.session.maxIterations || 6,
           memory,
           streamDigest,
         });
+
+        // §BUILT 2026-08-19 — James: "should respond with an introduction
+        // and toolkit for nexus, and that it will help any way it can while
+        // it works." First contact in a session (real, from _getSession
+        // above — not "first request ever," so a decayed-then-revived
+        // session greets again too) gets the persona/toolkit intro from
+        // copilot.config.js prepended ahead of the actual answer, so the
+        // very first thing a wake tab sees is NEXUS introducing itself
+        // before it starts helping, not a bare answer with no handshake.
+        const replyText = isFirstContact
+          ? `${require('./copilot.config').introText(copilotConfig)}\n\n---\n\n${result.text}`
+          : result.text;
+
+        _recordResponse(sessionId, result.text, { requestId, intent: 'tool-loop' });
 
         // §P2 write-back — record this interaction so the model learns across
         // sessions. recordIntent persists to cortex; the next session's
@@ -2099,10 +2171,11 @@ const server = http.createServer(async (req, res) => {
           prompt: String(prompt).slice(0, 500), response: (result.text || '').slice(0, 2000),
           modelUsed: 'ollama', intent: 'tool-loop', toolsUsed: result.toolCallLog.map(t => t.name),
           iterations: result.iterations, componentId: 'copilot.prompt.tools',
-          hookId: 'copilot.prompt.tools.reply', ts: Date.now() });
+          hookId: 'copilot.prompt.tools.reply', ts: Date.now(),
+          firstContact: isFirstContact, priority: effectivePriority || null });
 
-        json(res, 200, { ok: true, text: result.text, iterations: result.iterations,
-          toolCallLog: result.toolCallLog, requestId });
+        json(res, 200, { ok: true, text: replyText, iterations: result.iterations,
+          toolCallLog: result.toolCallLog, requestId, sessionId, firstContact: isFirstContact });
       } catch (e) {
         json(res, 500, { ok: false, error: e.message });
       }
