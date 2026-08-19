@@ -216,6 +216,15 @@ const SUITES = [
 
   // §2026-08-19 — real, permanent agent-ID system (hat-forge)
   'test-hat-forge.js',
+
+  // §2026-08-19 — pressure/intake subsystem (real, previously identified but not merged until now)
+  'test-intake.js',
+  'test-pressure-window.js',
+
+  // §2026-08-19 — tool-config governance ratchet + agent-reach + copilot probe
+  'test-copilot-probe.js',
+  'test-agent-reach.js',
+  'test-tool-config.js',
 ];
 
 let totalPassed = 0;
@@ -231,10 +240,33 @@ async function runSuite(file) {
     });
 
     let out = '';
+    let settled = false;
     proc.stdout.on('data', d => { out += d; process.stdout.write(d); });
     proc.stderr.on('data', d => { process.stderr.write(d); });
 
+    // §BUILT 2026-08-19 — found by running the full suite for real: no
+    // per-test bound existed here at all, so a single hung suite (a real
+    // one found live this session — a lingering flush timer outliving the
+    // test's own explicit cleanup) froze the ENTIRE run indefinitely, with
+    // no way to tell which of 70+ files was responsible without bisecting
+    // by hand. §1.2 — an unbounded wait is never acceptable; a suite that
+    // cannot finish in a real, generous window is reported as hung, not
+    // silently waited on forever.
+    const SUITE_TIMEOUT_MS = 60000;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      proc.kill('SIGKILL');
+      console.log(`\n  ⧖ ${file} TIMED OUT after ${SUITE_TIMEOUT_MS}ms — force-killed, not counted as passing\n`);
+      totalFailed += 1;
+      results.push({ file, passed: 0, failed: 1, code: null, crashed: false, timedOut: true });
+      resolve();
+    }, SUITE_TIMEOUT_MS);
+
     proc.on('close', (code) => {
+      if (settled) return; // the timeout already force-killed and reported this one
+      settled = true;
+      clearTimeout(timer);
       // FIX (James, 2026-06-19): two test-file naming conventions in this
       // codebase use two different summary formats —
       //   *.test.js    : "16 passed  0 failed"   (whitespace-separated)
@@ -288,8 +320,8 @@ async function main() {
 
   console.log('\n══ MODULE TEST RESULTS ══════════════════════════════');
   for (const r of results) {
-    const status = r.crashed ? '✗' : (r.failed === 0 ? '✓' : '✗');
-    const note = r.crashed ? ` CRASHED (exit ${r.code}, no summary — see output above)` : '';
+    const status = r.timedOut ? '⧖' : r.crashed ? '✗' : (r.failed === 0 ? '✓' : '✗');
+    const note = r.timedOut ? ' TIMED OUT — force-killed' : r.crashed ? ` CRASHED (exit ${r.code}, no summary — see output above)` : '';
     console.log(`  ${status} ${r.file.padEnd(40)} ${r.passed} passed  ${r.failed} failed${note}`);
   }
   console.log('─'.repeat(55));

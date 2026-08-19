@@ -112,6 +112,16 @@ const FILES = [
   // §ADDED 2026-08-19 — the merged/extended "hey nexus" agent-chat system.
   ['lib/agent-chat.js', 'nexus.lib.agent-chat', 'lib', []],
   ['lib/agent-tools/tools/coordination/agent-chat.js', 'nexus.lib.agent-tools.coordination.agent-chat', 'lib/agent-tools/tools/coordination', []],
+
+  // §ADDED 2026-08-19b — pressure/intake subsystem, tool-config governance
+  // ratchet, agent-reach, download-capture. Real, merged, tested this turn.
+  ['lib/pressure-window.js', 'nexus.lib.pressure-window', 'lib', []],
+  ['lib/intake.js', 'nexus.lib.intake', 'lib', []],
+  ['cli/pressure.js', 'nexus.cli.pressure', 'cli', []],
+  ['lib/tool-config.js', 'nexus.lib.tool-config', 'lib', []],
+  ['lib/agent-reach.js', 'nexus.lib.agent-reach', 'lib', []],
+  ['lib/agent-tools/tools/governance/tool-config.js', 'nexus.lib.agent-tools.governance.tool-config', 'lib/agent-tools/tools/governance', []],
+  ['clear-glass/src/providers/download-capture.js', 'nexus.clear-glass.providers.download-capture', 'clear-glass/src/providers', []],
 ];
 
 function mapSession20260814(driver) {

@@ -159,6 +159,17 @@ class ProviderHost {
 
     // Intercept WebSocket upgrades — allow NCP SSE but strip CSP on provider pages
     const ses = session.fromPartition(partition);
+
+    // §WIRED 2026-08-19 — found built but never called: will-download was
+    // hooked nowhere in the tree. James: "guardian to listen for the
+    // downloads from your chat and move them to the compartment with the
+    // contract or repo/spec." This announces; it applies nothing itself —
+    // see lib/intake.js for why arrival must not equal acceptance.
+    try {
+      const downloadCapture = require('./download-capture.js');
+      downloadCapture.attach({ session: ses, providerId, log: _log });
+    } catch (e) { _logWarn(`[ProviderHost] download-capture not attached for ${providerId}: ${e.message}`); }
+
     ses.webRequest.onHeadersReceived((details, callback) => {
       const headers = { ...details.responseHeaders };
       // Remove CSP that would block our script injection

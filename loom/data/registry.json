@@ -323,6 +323,96 @@
       "uuid": "nexus-loom-map-nexus.lib.hat-forge-v1-0000-2026-0814-001",
       "schemaVersion": "1.2.0",
       "registeredAt": 1787068341702
+    },
+    "nexus.lib.agent-chat": {
+      "id": "nexus.lib.agent-chat",
+      "namespace": "lib",
+      "name": "lib/agent-chat.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.agent-chat-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359648
+    },
+    "nexus.lib.agent-tools.coordination.agent-chat": {
+      "id": "nexus.lib.agent-tools.coordination.agent-chat",
+      "namespace": "lib",
+      "name": "lib/agent-tools/tools/coordination/agent-chat.js",
+      "version": "1.0.0",
+      "dir": "lib/agent-tools/tools/coordination",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.coordination.agent-chat-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359667
+    },
+    "nexus.lib.pressure-window": {
+      "id": "nexus.lib.pressure-window",
+      "namespace": "lib",
+      "name": "lib/pressure-window.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.pressure-window-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359668
+    },
+    "nexus.lib.intake": {
+      "id": "nexus.lib.intake",
+      "namespace": "lib",
+      "name": "lib/intake.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.intake-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359669
+    },
+    "nexus.cli.pressure": {
+      "id": "nexus.cli.pressure",
+      "namespace": "lib",
+      "name": "cli/pressure.js",
+      "version": "1.0.0",
+      "dir": "cli",
+      "uuid": "nexus-loom-map-nexus.cli.pressure-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359670
+    },
+    "nexus.lib.tool-config": {
+      "id": "nexus.lib.tool-config",
+      "namespace": "lib",
+      "name": "lib/tool-config.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.tool-config-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359672
+    },
+    "nexus.lib.agent-reach": {
+      "id": "nexus.lib.agent-reach",
+      "namespace": "lib",
+      "name": "lib/agent-reach.js",
+      "version": "1.0.0",
+      "dir": "lib",
+      "uuid": "nexus-loom-map-nexus.lib.agent-reach-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359673
+    },
+    "nexus.lib.agent-tools.governance.tool-config": {
+      "id": "nexus.lib.agent-tools.governance.tool-config",
+      "namespace": "lib",
+      "name": "lib/agent-tools/tools/governance/tool-config.js",
+      "version": "1.0.0",
+      "dir": "lib/agent-tools/tools/governance",
+      "uuid": "nexus-loom-map-nexus.lib.agent-tools.governance.tool-config-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359674
+    },
+    "nexus.clear-glass.providers.download-capture": {
+      "id": "nexus.clear-glass.providers.download-capture",
+      "namespace": "lib",
+      "name": "clear-glass/src/providers/download-capture.js",
+      "version": "1.0.0",
+      "dir": "clear-glass/src/providers",
+      "uuid": "nexus-loom-map-nexus.clear-glass.providers.download-capture-v1-0000-2026-0814-001",
+      "schemaVersion": "1.2.0",
+      "registeredAt": 1787145359675
     }
   },
   "seam": {},

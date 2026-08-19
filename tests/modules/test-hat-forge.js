@@ -370,6 +370,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
   });
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
+  // §FIXED 2026-08-19 — real root cause of the flush-lock ENOENT storm
+  // found and closed, not deferred again: jaaDB's own real close() clears
+  // every pending per-table flush timer (guardian/jaa-store.js:443-446)
+  // before this ever ran, those timers kept firing after TMP was deleted
+  // below, each one retrying against a directory that no longer existed —
+  // which is also why the process never exited on its own and needed
+  // `timeout` to force-kill it.
+  try { jaaDB.close(); } catch (_) {}
   process.env.JAA_DATA_DIR = PRIOR_DIR;              // §ES-018 — never leak the redirect
   if (PRIOR_DIR === undefined) delete process.env.JAA_DATA_DIR;
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (_) {}
