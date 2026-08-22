@@ -1,10 +1,12 @@
 {
   "stats": {
     "guardian.seam.watchdog.started": {
-      "count": 1,
-      "lastTs": 1787426585582,
-      "intervals": [],
-      "totalMs": 0
+      "count": 2,
+      "lastTs": 1787430880182,
+      "intervals": [
+        4294600
+      ],
+      "totalMs": 4294600
     }
   },
   "baseline": {}

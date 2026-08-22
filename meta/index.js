@@ -1,45 +1,24 @@
 'use strict';
-/**
- * meta/index.js — NEXUS Meta Layer v2.0.0
- * UUID: nexus-meta-layer-v2-0000-2026-0702-jamesbrooks-001
- *
- * Sovereign intelligence modules. Every module here is domain-agnostic —
- * it does not know what NEXUS is. It measures, detects, classifies, scores.
- * Any system consumes it over its public API, never as a direct import of
- * another sovereign system.
- *
- * Modules:
- *   cfr          — truth substrate (coherence/friction/resonance/entropy)
- *   rfr2         — causal interaction-space toolkit (measurement, replay, enforcement)
- *   gap          — gap detection (hunter 8-type, predicate/closure, ledger)
- *   topo-kernel  — 8-gate SNR pipeline
- *   telemetry    — slope/stability/oscillation/confidence engines
- *   liminal      — 12 domain-agnostic gap detectors
- *   alk-perception — behavioral state classifier
- *   alk          — decision lattice + causedBy chains + rewind
- *   spatial      — sigma (entropy/regime) + resonance-weighted lattice
- *   bda          — behavioral drift analyzer
- *   causal       — anomaly engine + compounding effects
- *   crystal-lattice — crystallization patterns + lattice edge weights
- *   adversary-suite — attack classification (syntax/logic/edge/state/cross/stress)
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// meta/index — RE-EXPORT SHIM. The implementation moved.
+//
+// §MIGRATION 2026-08-22 — meta/* now lives at intelligence/meta/*.
+//
+// WHY A SHIM, NOT A HARD MOVE — 71 require() sites across 13 systems point at
+// meta/*, and they name 40 DISTINCT paths, not 15 module roots: consumers reach
+// straight into meta/gap/hunter.js and meta/rfr2/kernel/index.js. A flat shim
+// per module looked sufficient and was not — guardian/lib/gap-hunter.js and
+// bridge/causal/projections.js both broke on the first attempt (§8.4: the
+// consumer scan has to enumerate real paths, not module names).
+//
+// §5.14 — an implementation may move provided the contract holds. Here the
+// require path IS the contract, so the path stays and only the code moved.
+// §0.4 — consumers migrate on their own schedule; nothing is forced today.
+//
+// DEPRECATED. Migration target:
+//     require('meta/index')  →  require('intelligence/meta/index')
+// When the last consumer moves, delete meta/ (§16.5). The reason is recorded
+// here so that deletion is a decision, not a discovery (§0.3).
+// ─────────────────────────────────────────────────────────────────────────────
 
-let _cfr, _rfr2, _gap, _topo, _tel, _lim, _alk, _alkPerc, _spatial, _bda, _causal, _crystal, _adversary;
-
-module.exports = {
-  get cfr()           { return _cfr       || (_cfr       = require('../intelligence/cfr/index.js')); },
-  get rfr2()          { return _rfr2      || (_rfr2      = require('./rfr2/index.js')); },
-  get gap()           { return _gap       || (_gap       = require('./gap/index.js')); },
-  get topo()          { return _topo      || (_topo      = require('./topo-kernel/index.js')); },
-  get telemetry()     { return _tel       || (_tel       = require('./telemetry-codec/index.js')); },
-  get liminal()       { return _lim       || (_lim       = require('./liminal/index.js')); },
-  get alk()           { return _alk       || (_alk       = require('./alk/index.js')); },
-  get alkPerception() { return _alkPerc   || (_alkPerc   = require('./alk-perception/index.js')); },
-  get spatial()       { return _spatial   || (_spatial   = require('./spatial/index.js')); },
-  get bda()           { return _bda       || (_bda       = require('./bda/index.js')); },
-  get causal()        { return _causal    || (_causal    = require('./causal/index.js')); },
-  get crystalLattice(){ return _crystal   || (_crystal   = require('./crystal-lattice.js')); },
-  get adversary()     { return _adversary || (_adversary = require('./adversary-suite.js')); },
-  VERSION:   '2.0.0',
-  MODULE_ID: 'nexus-meta',
-};
+module.exports = require('../intelligence/meta/index');

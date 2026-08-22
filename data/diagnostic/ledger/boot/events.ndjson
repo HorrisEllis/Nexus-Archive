@@ -10,3 +10,4 @@
 {"type":"service.stop","reason":"SIGTERM","ts":1787427593272,"_ts":1787427593273}
 {"type":"service.start","port":7825,"pid":3616,"ts":1787427653362,"_ts":1787427653362}
 {"type":"service.stop","reason":"SIGTERM","ts":1787427661265,"_ts":1787427661265}
+{"type":"service.start","port":7825,"pid":598,"ts":1787430880337,"_ts":1787430880338}

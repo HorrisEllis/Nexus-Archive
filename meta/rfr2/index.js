@@ -1,33 +1,24 @@
 'use strict';
-/**
- * meta/rfr2/index.js — RFR2 Causal Toolkit entry point
- * UUID: nexus-rfr2-index-v1-0000-2026-0702-jamesbrooks-001
- */
-module.exports = {
-  get observer()       { return require('./observer/index.js'); },
-  get delta()          { return require('./delta/index.js'); },
-  get clip()           { return require('./clip/index.js'); },
-  get enforcement()    { return require('./enforcement/index.js'); },
-  get context()        { return require('./context/index.js'); },
-  get compress()       { return require('./compress/index.js'); },
-  get query()          { return require('./query/index.js'); },
-  get time()           { return require('./time/index.js'); },
-  get identity()       { return require('./identity/index.js'); },
-  get adapterSandbox() { return require('./adapter-sandbox/index.js'); },
-  get versionGate()    { return require('./version-gate/index.js'); },
-  // §JOB 2 2026-07-24 — harvested from meta/causal-nexus/modules/ (the
-  // decided-canonical rfr2 tree per the 2026-07-21 audit) to unblock
-  // clip/compress/context, which needed all four and didn't exist in rfr2
-  // before this. All four converted to CJS alongside the harvest, not left
-  // as a second ESM island.
-  get kernel()         { return require('./kernel/index.js'); },
-  get sigma()          { return require('./sigma/index.js'); },
-  get adapter()        { return require('./adapter/index.js'); },
-  get causality()      { return require('./causality/index.js'); },
-  // §JOB 2b 2026-07-24 — forge harvested separately from the other 4: it's
-  // the ONE real, live, external consumer meta/causal-nexus actually has
-  // (nexus-healer/api/index.js) that the 2026-07-21 audit's '2 consumers'
-  // count included — the OTHER named consumer (a loom scanner) turned out
-  // on inspection to be a comment mentioning the path, not a real require().
-  get forge()          { return require('./forge/index.js'); },
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// meta/rfr2/index — RE-EXPORT SHIM. The implementation moved.
+//
+// §MIGRATION 2026-08-22 — meta/* now lives at intelligence/meta/*.
+//
+// WHY A SHIM, NOT A HARD MOVE — 71 require() sites across 13 systems point at
+// meta/*, and they name 40 DISTINCT paths, not 15 module roots: consumers reach
+// straight into meta/gap/hunter.js and meta/rfr2/kernel/index.js. A flat shim
+// per module looked sufficient and was not — guardian/lib/gap-hunter.js and
+// bridge/causal/projections.js both broke on the first attempt (§8.4: the
+// consumer scan has to enumerate real paths, not module names).
+//
+// §5.14 — an implementation may move provided the contract holds. Here the
+// require path IS the contract, so the path stays and only the code moved.
+// §0.4 — consumers migrate on their own schedule; nothing is forced today.
+//
+// DEPRECATED. Migration target:
+//     require('meta/rfr2/index')  →  require('intelligence/meta/rfr2/index')
+// When the last consumer moves, delete meta/ (§16.5). The reason is recorded
+// here so that deletion is a decision, not a discovery (§0.3).
+// ─────────────────────────────────────────────────────────────────────────────
+
+module.exports = require('../../intelligence/meta/rfr2/index');
