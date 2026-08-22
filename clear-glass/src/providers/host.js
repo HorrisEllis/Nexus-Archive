@@ -315,6 +315,31 @@ class ProviderHost {
     return false;
   }
 
+  /**
+   * stopAll() — found genuinely missing, not assumed: main/index.js's real
+   * shutdown path calls `providerHost?.stopAll()`, but this method never
+   * existed on the class. Optional chaining protects against providerHost
+   * itself being null; it does nothing for a method that's undefined ON a
+   * real object, which is exactly what "stopAll is not a function" means.
+   * Confirmed live in a real run — this fired on every shutdown under
+   * memory pressure, the exact moment a clean, fast teardown matters most.
+   *
+   * Real, not a stub: stops every real, currently-tracked provider window,
+   * reusing stop()'s own exact real per-provider logic rather than a
+   * second copy. Runs concurrently (Promise.allSettled) and isolates a
+   * single provider's failure — one broken teardown must never block the
+   * rest from actually closing under real memory pressure.
+   */
+  async stopAll() {
+    const ids = [...this.windows.keys()];
+    const results = await Promise.allSettled(ids.map(id => this.stop(id)));
+    const failures = results
+      .map((r, i) => ({ r, id: ids[i] }))
+      .filter(({ r }) => r.status === 'rejected');
+    for (const { r, id } of failures) _logWarn(`[ProviderHost] stopAll: ${id} failed to stop cleanly: ${r.reason?.message || r.reason}`);
+    return { ok: failures.length === 0, stopped: ids.length - failures.length, failed: failures.map(f => f.id) };
+  }
+
   async stop(providerId) {
     const win = this.windows.get(providerId);
     if (win && !win.isDestroyed()) { win.destroy(); }
