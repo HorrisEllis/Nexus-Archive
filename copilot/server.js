@@ -1350,7 +1350,19 @@ const server = http.createServer(async (req, res) => {
     // so they execute freely, matching this session's own established
     // reasoning for why compartment work doesn't need the same gate as
     // a live write.
-    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair'];
+    // §UPDATED 2026-08-22 — James: "did you update the tool index? and
+    // model of co-pilot so it is aware of its new capa[bilities]". Checked
+    // directly rather than assuming: tool_index was already fine (every
+    // registered tool is auto-recorded there via registerTool itself,
+    // confirmed live — 67 entries, agent_chat/tool_config/self_repair all
+    // present). This list was the real, genuine gap: agent_chat (the
+    // multi-round converse() capability) and tool_config (the governance
+    // ratchet) were both fully registered and working, but copilot itself
+    // had no way to reach for them in ordinary chat since they weren't in
+    // its own default toolset. tool_config's own internal design already
+    // gates its dangerous half (loosening always needs the user, regardless
+    // of who calls it), so offering it here doesn't bypass that protection.
+    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config'];
     if (DEFAULT_CHAT_TOOLS.length) {
       const agentToolsForManifest = require('../lib/agent-tools/index.js');
       const manifest = DEFAULT_CHAT_TOOLS
