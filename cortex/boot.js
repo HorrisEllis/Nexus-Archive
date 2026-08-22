@@ -983,6 +983,18 @@ const server = http.createServer(async (req, res) => {
         id: uid(), request: wakeMatch[1].trim(),
         agent: body.source || null, chatUrl: body.chatUrl || null,
         account: body.account || null, sessionId: body.sessionId || null,
+        // §RELAY 2026-08-22 — James, Option A: real server-side detection
+        // needs one more real fact than the ClearGlass-only consumer
+        // (wake-relay.js) ever did — WHICH live NCP connection to answer
+        // back on. providerHost.injectAnswer() finds the tab through
+        // Electron's own BrowserWindow map; a standalone Tampermonkey
+        // install (guardian's own NCP push) has no such map, only
+        // guardian/lib/ncp.js's real pushTab(provider, tabId, data) — which
+        // needs tabId specifically, not just agent/provider. Threaded
+        // through from userscript-claude.js's own _nexusLogMessage(), the
+        // one real gap: it posts here directly, not through guardian's
+        // ncpPost() wrapper that adds tabId automatically everywhere else.
+        tabId: body.tabId || null,
         role: body.role || null, ts: Date.now(), consumed: false, answer: null,
       };
       jaaDB.insert('nexus_wake_events', wakeRow);

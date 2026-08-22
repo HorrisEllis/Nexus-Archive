@@ -1807,6 +1807,22 @@ try {
   console.warn('[guardian] Lab Manager degraded:', e.message);
 }
 
+// §RELAY 2026-08-22 — James, Option A: "Drop the in-page detection, wire
+// the assistant-side trigger through guardian the way ClearGlass already
+// does it." guardian/lib/wake-relay.js is the real, standalone-install
+// half of that — see its own header for the full real chain and the honest
+// note about ClearGlass's own equivalent calling a route that does not
+// exist. Boot-time only, degrades to a logged warning rather than a crash:
+// a wake relay that never started is a real, visible gap, not a reason to
+// take guardian itself down.
+try {
+  const { startWakeRelay } = require('./lib/wake-relay');
+  startWakeRelay(ncp, { log: (m) => console.log(m) });
+  console.log('[guardian] wake-relay ready — server-side "hey nexus" detection, live');
+} catch (e) {
+  console.warn('[guardian] wake-relay degraded:', e.message);
+}
+
 
 // Shutdown hook — flush all dirty tables before exit
 process.on('exit', () => jaa.flushAll());

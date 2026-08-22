@@ -34,6 +34,11 @@ const FILES = [
   // loom entry at all, under any id (checked directly, not assumed).
   ['lib/diagnostic-report.js',      'nexus.lib.diagnostic-report',      'lib', []],
   ['guardian/lib/ncp.js',           'nexus.guardian.lib.ncp',           'guardian/lib', []],
+  // §RELAY 2026-08-22 — real dependency on ncp.js's pushTab, not a guess:
+  // wake-relay.js is handed the live ncp instance directly by guardian's
+  // own boot sequence (server.js), same construction-injection pattern as
+  // Lab Manager right above it in that same file.
+  ['guardian/lib/wake-relay.js',    'nexus.guardian.lib.wake-relay',    'guardian/lib', ['nexus.guardian.lib.ncp']],
   ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
 
   // §ADDED 2026-08-17b — TX10 (docs/clearglass-agent-suite-and-cfr-loom-
