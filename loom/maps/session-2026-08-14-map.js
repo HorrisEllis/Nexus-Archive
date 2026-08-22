@@ -94,9 +94,41 @@ const FILES = [
   // §ADDED 2026-08-18j — self_repair, the real propose/test/promote pipeline.
   ['lib/agent-tools/tools/sandbox/self-repair.js', 'nexus.lib.agent-tools.sandbox.self-repair', 'lib/agent-tools/tools/sandbox', []],
 
-  // §ADDED 2026-08-18k — 6 real, foundational files found genuinely
-  // unregistered under any id while doing this session's own real work
-  // on them, confirmed by direct search, not assumed.
+  // §ADDED 2026-08-18k — 3 real, tested modules integrated this pass
+  // (wake-word listener, agent-to-agent chat, end-state goals). Real
+  // requires checked directly per file, not guessed: agent-chat.js's
+  // only top-level require is Node's own 'http' (not a real internal
+  // NEXUS dependency, no edge); end-state.js's are 'crypto'/'fs'/'os'/
+  // 'path' (same, no real internal edges); userscript-nexus-wake.js has
+  // ZERO require() calls at all — confirmed by grep, expected for
+  // browser-userscript code (no CommonJS in that context).
+  ['lib/agent-chat.js', 'nexus.lib.agent-chat', 'lib', []],
+  ['lib/end-state.js', 'nexus.lib.end-state', 'lib', []],
+  ['guardian/userscript-nexus-wake.js', 'nexus.guardian.userscript.nexus-wake', 'guardian', []],
+
+  // §ADDED 2026-08-18l — James: "build a compartment... interact with the
+  // agents, and have that compartment be the output directory. then have
+  // the agent use introspect to check nexus and improve it's own outputs...
+  // co-pilot prompt the agent to introspect and iterate endlessly." Real
+  // requires checked directly: agent-chat.js and end-state.js are both
+  // ALREADY registered above (same file, reused not duplicated); self-
+  // repair.js is registered separately under lib.agent-tools.sandbox.self-
+  // repair (confirmed by grep before assuming it needed a second entry).
+  ['lib/agent-build-loop.js', 'nexus.lib.agent-build-loop', 'lib',
+    ['nexus.lib.agent-chat', 'nexus.lib.end-state', 'nexus.lib.agent-tools.sandbox.self-repair', 'nexus.lib.gap-field']],
+
+  // §ADDED 2026-08-18k (agent-ids branch) — 6 real, foundational files
+  // found genuinely unregistered under any id while doing this session's
+  // own real work on them, confirmed by direct search, not assumed.
+  //
+  // §MERGE NOTE — copilot/lib/self-model.js below is registered here as
+  // nexus.copilot.lib.self-model. A different checkout (this session,
+  // earlier, different lineage — observability-map.js) already registers
+  // the SAME real file as nexus.copilot.self-model (no '.lib.'). Both
+  // real entries kept as-is by this merge, not silently deduplicated —
+  // a genuine double-registration under two different ids for one real
+  // file, surfaced honestly rather than decided unilaterally during a
+  // merge. Worth a real look, not fixed here.
   ['lib/intent-classifier.js',       'nexus.lib.intent-classifier',       'lib',           []],
   ['cortex/core/raid/index.js',      'nexus.cortex.core.raid',            'cortex/core/raid', []],
   ['copilot/lib/self-model.js',      'nexus.copilot.lib.self-model',      'copilot/lib',   []],
@@ -104,17 +136,30 @@ const FILES = [
   ['copilot/lifeline.js',            'nexus.copilot.lifeline',            'copilot',       []],
   ['ollama/server.js',               'nexus.ollama.server',               'ollama',        []],
 
-  // §ADDED 2026-08-18l — a real, significant, pre-existing gap: this file
-  // was genuinely unregistered under any id despite being central to the
-  // whole hat/agent-switching system this session built on.
+  // §ADDED 2026-08-18l (agent-ids branch) — a real, significant,
+  // pre-existing gap: this file was genuinely unregistered under any id
+  // despite being central to the whole hat/agent-switching system this
+  // session built on.
   ['lib/hat-forge.js', 'nexus.lib.hat-forge', 'lib', []],
 
-  // §ADDED 2026-08-19 — the merged/extended "hey nexus" agent-chat system.
-  ['lib/agent-chat.js', 'nexus.lib.agent-chat', 'lib', []],
+  // §ADDED 2026-08-19 — found genuinely unregistered by the precommit
+  // hook while fixing suggestHat()'s real seedKey resolution bug. Real
+  // requires checked directly: both dependencies already registered
+  // above in this same file (self-model.js, intent-classifier.js) —
+  // reused, not duplicated.
+  ['lib/intent-hat-router.js', 'nexus.lib.intent-hat-router', 'lib',
+    ['nexus.copilot.lib.self-model', 'nexus.lib.intent-classifier']],
+
+  // §ADDED 2026-08-19 (nexus0822 branch) — the merged/extended "hey nexus"
+  // agent-chat system's real tool wrapper. lib/agent-chat.js itself is
+  // already registered above (line 105) — not re-added here, that would
+  // be a genuine duplicate, checked and dropped during this merge rather
+  // than carried forward blindly.
   ['lib/agent-tools/tools/coordination/agent-chat.js', 'nexus.lib.agent-tools.coordination.agent-chat', 'lib/agent-tools/tools/coordination', []],
 
-  // §ADDED 2026-08-19b — pressure/intake subsystem, tool-config governance
-  // ratchet, agent-reach, download-capture. Real, merged, tested this turn.
+  // §ADDED 2026-08-19b (nexus0822 branch) — pressure/intake subsystem,
+  // tool-config governance ratchet, agent-reach, download-capture. Real,
+  // merged, tested that turn.
   ['lib/pressure-window.js', 'nexus.lib.pressure-window', 'lib', []],
   ['lib/intake.js', 'nexus.lib.intake', 'lib', []],
   ['cli/pressure.js', 'nexus.cli.pressure', 'cli', []],
@@ -122,6 +167,24 @@ const FILES = [
   ['lib/agent-reach.js', 'nexus.lib.agent-reach', 'lib', []],
   ['lib/agent-tools/tools/governance/tool-config.js', 'nexus.lib.agent-tools.governance.tool-config', 'lib/agent-tools/tools/governance', []],
   ['clear-glass/src/providers/download-capture.js', 'nexus.clear-glass.providers.download-capture', 'clear-glass/src/providers', []],
+
+  // §ADDED 2026-08-22 — 6 real files found genuinely unregistered by the
+  // precommit hook after merging nexus0822/master. Real requires checked
+  // directly per file, not guessed: copilot/registry-components.js and
+  // all 4 provider userscripts have zero require() calls (browser-
+  // context code, same as guardian/userscript-nexus-wake.js above);
+  // lib/work-queue.js's only top-level require is Node's own 'os' (no
+  // real internal edge); lib/introspect.js's real dependencies
+  // (component-ledger.js, among others) are all lazy/dynamic requires
+  // inside functions, not static top-level ones, so no edge is asserted
+  // rather than guessed at which of several dynamic paths is "the" one.
+  ['copilot/registry-components.js', 'nexus.copilot.registry-components', 'copilot', []],
+  ['guardian/userscript-chatgpt.js', 'nexus.guardian.userscript.chatgpt', 'guardian', []],
+  ['guardian/userscript-claude.js', 'nexus.guardian.userscript.claude', 'guardian', []],
+  ['guardian/userscript-gemini.js', 'nexus.guardian.userscript.gemini', 'guardian', []],
+  ['guardian/userscript-perplexity.js', 'nexus.guardian.userscript.perplexity', 'guardian', []],
+  ['lib/introspect.js', 'nexus.lib.introspect', 'lib', []],
+  ['lib/work-queue.js', 'nexus.lib.work-queue', 'lib', []],
 ];
 
 function mapSession20260814(driver) {

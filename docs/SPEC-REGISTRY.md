@@ -51,6 +51,7 @@ below, not glossed over. 17 have been, with real findings, across sessions
 | `cli-reasoning.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `cli.spec` | 1.4.0 | — | not yet checked against live code this pass |
 | `component-registry.spec` | 1.0.0 | — | not yet checked against live code this pass |
+| `copilot-tool-system.spec` | 0.1.0 | 2026-08-19 | Spec for the real, expanded co-pilot tool system — agent-tools, agent-reach.js, tool-forge, copilot/lib/autonomy-router.js, and the guardian NCP surface. Found genuinely missing from this registry by the precommit hook after merging in nexus0822/master; registered without re-auditing its full internal content this pass. |
 | `constitutional-ai.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `context-builder.spec` | 1.0.0 | — | not yet checked against live code this pass |
 | `contract-queue.spec` | 1.0.0 | — | not yet checked against live code this pass |

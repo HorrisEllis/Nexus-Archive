@@ -24,9 +24,9 @@ test('T-001', 'CA5: a data/research task routes to perplexity', () => {
   assert.strictEqual(routeAgent({ intent: 'research' }).agent, 'perplexity');
 });
 
-test('T-002', 'CA5: a large-codebase task routes to claude WITH WARP + context injected', () => {
+test('T-002', 'CA5: a large-codebase task routes to gemini WITH WARP + context injected (gemini primary per 2026-08-14 directive, was claude)', () => {
   const r = routeAgent({ intent: 'large_code' });
-  assert.strictEqual(r.agent, 'claude');
+  assert.strictEqual(r.agent, 'gemini');
   assert.ok(r.inject.includes('warp') && r.inject.includes('context'), 'must inject WARP + context');
 });
 

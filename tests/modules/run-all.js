@@ -206,16 +206,25 @@ const SUITES = [
   'test-ledger-sse.js',
   'test-person-model.js',
 
-  // §2026-08-19 — queue/ollama-lock/introspect/agent-capability/end-state/nexus-wake merge
+  // §2026-08-18 — wake word, agent-to-agent chat, end-state goals
+  'test-nexus-wake.js',
+  'test-agent-chat.js',
+  'test-end-state.js',
+
+  // §2026-08-19 — real, permanent agent-ID system (hat-forge). Found
+  // genuinely unregistered while running the full suite after merging in
+  // the freeze-thaw branch — 29 real tests, invisible to the project's
+  // own tally until this line was added.
+  'test-hat-forge.js',
+
+  // §2026-08-19 — queue/ollama-lock/introspect/agent-capability merge
+  // (nexus0822 branch). test-end-state.js, test-nexus-wake.js, and
+  // test-hat-forge.js were also independently registered on this side —
+  // not duplicated, already listed above.
   'test-work-queue.js',
   'test-introspect.js',
   'test-agent-capability.js',
-  'test-end-state.js',
-  'test-nexus-wake.js',
   'copilot-handshake-dispatch.test.js',
-
-  // §2026-08-19 — real, permanent agent-ID system (hat-forge)
-  'test-hat-forge.js',
 
   // §2026-08-19 — pressure/intake subsystem (real, previously identified but not merged until now)
   'test-intake.js',

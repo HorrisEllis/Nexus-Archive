@@ -65,6 +65,82 @@ class ProviderHost {
     this._scriptCache = new Map(); // providerId → { source, mtimeMs }
     this.windows      = new Map(); // providerId → BrowserWindow
     this._status      = new Map(); // providerId → { status, url, injectedAt, health }
+
+    // §ADDED 2026-08-18 — James: real memory pressure on his machine
+    // (boot log's own resource-monitor: heap 80%+, then free memory
+    // dropping below the 10% halt threshold, cortex/self-heal entering
+    // FAILURE_MODE, a crash severe enough to leave a stale flush lock on
+    // next boot). Checked first, not assumed: backgroundThrottling is
+    // NOT set on these BrowserWindows (confirmed by reading the real
+    // webPreferences directly) — Electron's default only throttles JS
+    // timers for hidden windows, which helps CPU, not the real cost
+    // here, which is 4 full Chromium renderers' own DOM/JS-heap memory,
+    // unaffected by throttling. The only real way to free that memory is
+    // to actually destroy the window (stop(), already real) and recreate
+    // it lazily on next genuine use (start(), already real) — this is a
+    // real idle layer on top of both, not a third mechanism.
+    this._lastUsed = new Map(); // providerId → timestamp of last real dispatch
+    this._pending   = new Map(); // providerId → in-flight ensureStarted() promise, so concurrent callers share one real start() rather than racing two
+    this.IDLE_TIMEOUT_MS = parseInt(process.env.CG_PROVIDER_IDLE_MS || '120000', 10); // 2 minutes, matching the person's own stated number
+    const idleSweep = setInterval(() => this._sweepIdle(), 15_000);
+    if (idleSweep.unref) idleSweep.unref();
+  }
+
+  /**
+   * touch(providerId) — real last-use marker. Every real dispatch path
+   * (agent-chat's ask(), self-model's navigateAgentToUrl/dispatchPromptAndWait,
+   * the wake-word listener) should call this on genuine use, not the
+   * heartbeat sweep — a provider tab idly holding its NCP connection open
+   * with nobody actually asking it anything is exactly the case this
+   * exists to catch, and heartbeats alone would never look idle.
+   */
+  touch(providerId) {
+    this._lastUsed.set(providerId, Date.now());
+  }
+
+  /**
+   * ensureStarted(providerId, opts) — the real queue, sized to what's
+   * actually needed. Not a persistent, crash-surviving queue (that's
+   * contract-queue.js's real job, for real cross-process work) — this is
+   * in-memory, for the real, common case: a dispatch arrives for a
+   * provider that idled out, and the caller should wait a few real
+   * seconds for a fresh start() rather than fail. Concurrent callers for
+   * the same provider share one real start() (via _pending), not one
+   * each — the actual "retry logic" the person described is this: a
+   * failed start() is still recorded, not silently swallowed, and the
+   * NEXT ensureStarted() call tries again for real rather than caching
+   * the old failure forever.
+   */
+  async ensureStarted(providerId, opts = {}) {
+    this.touch(providerId);
+    if (this.windows.has(providerId) && !this.windows.get(providerId).isDestroyed()) {
+      return { ok: true, providerId, alreadyRunning: true };
+    }
+    if (this._pending.has(providerId)) return this._pending.get(providerId);
+    const p = this.start(providerId, { show: false, ...opts })
+      .then((r) => { this._pending.delete(providerId); return r; })
+      .catch((e) => { this._pending.delete(providerId); throw e; });
+    this._pending.set(providerId, p);
+    return p;
+  }
+
+  /**
+   * _sweepIdle() — real, periodic. A provider with no real dispatch for
+   * IDLE_TIMEOUT_MS gets a genuine stop() — the actual memory-freeing
+   * step, not a connection-only pause (checked and confirmed: pausing
+   * just the NCP heartbeat would not free the dominant real cost, the
+   * tab's own DOM/JS heap).
+   */
+  _sweepIdle() {
+    const now = Date.now();
+    for (const [providerId, win] of this.windows) {
+      if (win.isDestroyed()) { this.windows.delete(providerId); continue; }
+      const last = this._lastUsed.get(providerId);
+      if (last == null) continue; // never touched — a fresh pre-warm, not idle by this definition
+      if (now - last < this.IDLE_TIMEOUT_MS) continue;
+      _log(`[ProviderHost] ${providerId} idle for ${Math.round((now - last) / 1000)}s — stopping to free real memory (will restart on next genuine use)`);
+      this.stop(providerId).catch((e) => _logWarn(`[ProviderHost] idle-stop failed for ${providerId}:`, e.message));
+    }
   }
 
   // ── Script loading ──────────────────────────────────────────────────────

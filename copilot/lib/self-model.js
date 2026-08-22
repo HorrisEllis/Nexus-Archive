@@ -149,52 +149,64 @@ function getCurrentAgent() {
   try {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     const row = jaaDB.query(IDENTITY_TABLE, r => r.id === AGENT_ROW_ID)[0];
-    if (!row) return { agent: 'auto', isCustom: false };
-
-    // §FIXED 2026-08-19 — the worn hat used to be identified by its NAME,
-    // stored once at wear-time. Two real, live bugs followed: renaming the
-    // worn hat left this pointing at a name that no longer resolved to
-    // anything (or worse, resolved to nothing until someone else claimed
-    // the freed name — at which point it silently became THEM). Re-
-    // resolving by the hat's permanent uuid on every real call closes
-    // both: a rename is followed transparently (fresh name every time),
-    // and a freed name later claimed by a different hat can never be
-    // mistaken for the one actually being worn.
-    if (row.hatUuid) {
-      let hat = null;
-      try { hat = require('../../lib/hat-forge').get(row.hatUuid); } catch (_) {}
-      if (!hat) {
-        return { agent: row.agent || 'auto', hatUuid: row.hatUuid, hatName: row.hatName || null,
-                 hatMissing: true, stale: true, isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts };
+    // §BUGFIX 2026-08-19 — was returning row.hatName/.toolScope/.personaPrompt
+    // directly: a stale SNAPSHOT from whenever the hat was worn, not the
+    // hat's current, real state. Two real failure modes this caused: a
+    // renamed worn hat kept reporting its old name forever (hat-forge.js
+    // itself resolves fresh by uuid; this function didn't), and a
+    // REVOKED worn hat kept reporting a live-looking name/scope/persona
+    // that no longer corresponds to anything real — indistinguishable
+    // from a genuinely active hat. Real fix: if hatUuid is pinned,
+    // re-resolve the CURRENT hat by that permanent uuid on every read.
+    //
+    // §MERGE NOTE 2026-08-22 — a second, independently-built version of
+    // this exact fix (same real bug, same real date) arrived via merge.
+    // Kept this side: it backfills the resolved uuid onto the row in the
+    // name-only fallback case, giving a genuine "resolved by name, ONCE"
+    // (the other version re-resolves by name on every single call,
+    // forever, despite its own comment implying otherwise) — verified
+    // against the real HAT-021 test, already passing.
+    let hatName = (row && row.hatName) || null;
+    let toolScope = (row && row.toolScope) || null;
+    let personaPrompt = (row && row.personaPrompt) || null;
+    let hatMissing = false;
+    let stale = false;
+    let resolvedByNameOnly = false;
+    let hatUuid = (row && row.hatUuid) || null;
+    if (hatUuid) {
+      let live = null;
+      try { live = require('../../lib/hat-forge').get(hatUuid); } catch (_) {}
+      if (live) {
+        hatName = live.name; toolScope = live.toolScope; personaPrompt = live.personaPrompt;
+      } else {
+        // Revoked or otherwise gone — say so plainly rather than serving
+        // the last snapshot as if it were still real (§1.2).
+        hatMissing = true; stale = true; toolScope = null; personaPrompt = null;
       }
-      return {
-        agent: row.agent || 'auto', hatUuid: hat.uuid, hatName: hat.name,
-        toolScope: hat.toolScope || null, personaPrompt: hat.personaPrompt || null,
-        isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts, hatMissing: false,
-      };
-    }
-
-    // §FIXED 2026-08-19 (HAT-021) — a pre-patch row has a name but no uuid.
-    // Resolved by name as an honest, one-time fallback (the ambiguity a
-    // uuid exists to retire), and flagged so a caller can tell the
-    // difference between a genuinely-pinned identity and a legacy guess.
-    if (row.hatName) {
-      let hat = null;
-      try { hat = require('../../lib/hat-forge').get(row.hatName); } catch (_) {}
-      if (hat) {
-        return {
-          agent: row.agent || 'auto', hatUuid: hat.uuid, hatName: hat.name,
-          toolScope: hat.toolScope || null, personaPrompt: hat.personaPrompt || null,
-          isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts,
-          hatMissing: false, resolvedByNameOnly: true,
-        };
+    } else if (row && row.hatName) {
+      // §BUGFIX 2026-08-19 — a pre-patch row (written before hatUuid
+      // existed at all) has only a name. Resolve it once, by name, and
+      // BACK-FILL the real uuid onto the row so every subsequent read
+      // takes the fast, unambiguous hatUuid path instead of repeating
+      // this fallback forever — "resolved by name, once", not "resolved
+      // by name, silently, every single time" (the exact ambiguity
+      // hatUuid exists to retire).
+      let live = null;
+      try { live = require('../../lib/hat-forge').get(row.hatName); } catch (_) {}
+      if (live) {
+        hatUuid = live.uuid; hatName = live.name; toolScope = live.toolScope; personaPrompt = live.personaPrompt;
+        resolvedByNameOnly = true;
+        try {
+          const { jaaDB } = require('../../cortex/memory/jaa-db');
+          jaaDB.insert(IDENTITY_TABLE, { ...row, hatUuid: live.uuid });
+        } catch (_) { /* §1.2 — a failed backfill degrades to "resolve by name every time", not a crash */ }
       }
     }
-
     return {
-      agent: row.agent || 'auto', hatName: row.hatName || null,
-      toolScope: row.toolScope || null, personaPrompt: row.personaPrompt || null,
-      isCustom: !!(row.agent && row.agent !== 'auto'), setAt: row.ts,
+      agent: (row && row.agent) || 'auto',
+      hatUuid, hatName, toolScope, personaPrompt, hatMissing, stale, resolvedByNameOnly,
+      isCustom: !!(row && row.agent && row.agent !== 'auto'),
+      setAt: row ? row.ts : null,
     };
   } catch (e) {
     return { agent: 'auto', isCustom: false, error: e.message };
@@ -251,6 +263,14 @@ function setCurrentAgent(agent, opts = {}) {
     const { jaaDB } = require('../../cortex/memory/jaa-db');
     jaaDB.insert(IDENTITY_TABLE, {
       id: AGENT_ROW_ID, agent: normalized,
+      // §BUGFIX 2026-08-19 — was storing only hatName. A hat is renameable
+      // (hat-forge.js's own real design — name is for humans, uuid is
+      // permanent) but this row had no way to survive a rename: hatName
+      // would go stale the moment the worn hat was renamed elsewhere,
+      // pointing at a name nothing answers to anymore. hatUuid is the
+      // real, permanent pin; getCurrentAgent() below now resolves the
+      // CURRENT name from it fresh on every read, rather than trusting
+      // this snapshot.
       hatUuid: forgedHat ? forgedHat.uuid : null,
       hatName: forgedHat ? forgedHat.name : null,
       toolScope: forgedHat ? forgedHat.toolScope : null,

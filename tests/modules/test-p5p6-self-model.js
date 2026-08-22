@@ -27,7 +27,7 @@ const sm = require(path.join(__dirname, '../..', 'copilot/lib/self-model'));
   });
   await test('T-005', 'buildNexusModel assembles the model + is persistable', async () => {
     let persisted = null;
-    const m = await sm.buildNexusModel({ persist: true, cortexWrite: { write: (t, r) => { persisted = { t, r }; } } });
+    const m = await sm.buildNexusModel({ persist: true, jaaDB: { insert: (t, r) => { persisted = { t, r }; } } });
     assert.ok(m.summary || m.error, 'built a model');
     if (m.summary) { assert.ok(persisted, 'wrote to cortex'); assert.strictEqual(persisted.t, 'self_model'); assert.strictEqual(persisted.r.id, 'nexus'); }
   });

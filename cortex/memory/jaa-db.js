@@ -123,7 +123,22 @@ const jaaDB = {
   get(table, where)              { return _getStore().get(table, where); },
   getById(table, id)             { return _getStore().get(table, { id }); },
   query(table, where, opts)      { return _getStore().all(table, where, typeof opts === 'number' ? { limit: opts } : opts); },
-  tail(table, n)                 { return _getStore().all(table, {}, { orderBy: 'id', order: 'DESC', limit: n || 10 }); },
+  // §BUGFIX 2026-08-17 — was { orderBy: 'id', order: 'DESC' }. Checked
+  // insert() directly: `id` is a real UUID (row.id || row.key || _uuid()),
+  // never a sequential value — sorting UUID strings alphabetically has
+  // ZERO correlation with insertion time or any 'ts' field a caller might
+  // set. tail() has claimed to return "the most recent N rows" (its own
+  // doc comment, line 24) for every one of its real callers across the
+  // codebase while actually returning an effectively random N rows,
+  // deterministic only in the sense that the same random slice repeats
+  // until the table's contents change.
+  //
+  // Real fix: `tbl` in the underlying store is a genuine JS Map
+  // (guardian/jaa-store.js's insert(): tbl.set(id, row)) — Map iteration
+  // order is GUARANTEED insertion order by the language spec, which is
+  // already correctly chronological, for free, with no sort needed at
+  // all. all() with no orderBy returns exactly that natural order.
+  tail(table, n) { const rows = _getStore().all(table, {}); const nn = n || 10; return rows.slice(-nn).reverse(); },
   update(table, where, values)   { return _getStore().update(table, where, values); },
   delete(table, where)           { return _getStore().delete(table, where); },
   count(table, where)            { return _getStore().count(table, where); },

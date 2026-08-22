@@ -58,6 +58,13 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
   exports: {
     jaaDB: {
       query: (table, fn = () => true, n = 999) => (_store[table] || []).filter(fn).slice(-n),
+      // §BUGFIX 2026-08-18 — real jaaDB.tail() was fixed this session
+      // (cortex/memory/jaa-db.js, commit 41da171) to sort by real
+      // chronological order instead of a UUID. The mock here never had a
+      // tail() at all until now — real intelligence.test.js failures
+      // ("jaaDB.tail is not a function") surfaced the gap directly, same
+      // fix already proven in a different checkout earlier this session.
+      tail: (table, n = 10) => (_store[table] || []).slice(-n).reverse(),
       insert: (table, row) => { (_store[table] = _store[table] || []).push(row); return row; },
       update: (table, uuid, patch) => {
         const row = (_store[table] || []).find(r => r.uuid === uuid);
