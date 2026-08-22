@@ -1105,6 +1105,16 @@ function connectSSE(){
   function connect(url,handler,onStatus){
     let es;
     function tryConnect(){
+      // §FIXED 2026-08-22 — James: "the moment 127.0.0.1:9000 opens, that's
+      // when memory sky rockets." Real, likely-larger cause than _uiLog
+      // alone: this manual reconnect never closed the old EventSource
+      // before creating a new one. Under real backend pressure (this
+      // exact machine's own boot log shows orchestrator oscillating
+      // critical<->pressure repeatedly), SSE connections drop often —
+      // every drop here created a fresh EventSource on top of the old,
+      // still-open one instead of replacing it, and competed with the
+      // browser's own native EventSource auto-reconnect at the same time.
+      if (es) { try { es.close(); } catch(_) {} }
       try{
         es=new EventSource(url);
         es.onopen=()=>{if(onStatus)onStatus('live')}
@@ -2563,6 +2573,16 @@ function _logToData(type, payload = {}) {
   try {
     const entry = { type, source: 'home-ui', payload, ts: Date.now() };
     _uiLog.push(entry);
+    // §FIXED 2026-08-22 — James: "the moment 127.0.0.1:9000 opens, that's
+    // when memory sky rockets." Found the real, precise cause: this array
+    // had NO cap at all, while its own fallback queue below (used only
+    // when cortex is offline) was correctly capped at 200 — someone capped
+    // the rare path and missed the common one. A dashboard tab left open
+    // for hours accumulates one entry here per logged UI event forever;
+    // that's a real, unbounded, per-tab memory leak, not a one-time cost.
+    // Same 200-entry bound as the sibling fallback queue, so both halves
+    // of this same mechanism now agree.
+    if (_uiLog.length > 200) _uiLog.splice(0, _uiLog.length - 200);
     // POST to cortex (fire-and-forget)
     fetch('http://127.0.0.1:3748/api/event', {
       method: 'POST',
