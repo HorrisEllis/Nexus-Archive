@@ -639,12 +639,18 @@ async function _scanPatterns() {
 // worth a person's attention, costs nothing on the other 59 scans out
 // of 60 that don't cross into crystallization.
 //
-// Real CFR: this code runs INSIDE cortex's own process (intelligence is
-// require()'d directly by cortex/boot.js) — reads the live _field state
-// via dependency injection (_cfg.getField, wired from boot.js's own real
-// call site below), not an HTTP round trip like lib/diagnostic-report.js
-// needs (that one runs cross-process). Same real data, no network cost,
-// since the data's already local.
+// Real CFR: §DEDUP 2026-08-22 — until now this ran INSIDE cortex's own
+// process too (cortex/boot.js required this module directly and called
+// its own init(), duplicating every scan interval below in a second
+// process — confirmed live from duplicated "pattern crystallised" log
+// lines, one process apart, in the console log the person attached).
+// cortex/boot.js no longer does that; this scan loop now runs exactly
+// once, in intelligence's own process. getField (_cfg.getField) is still
+// sync from this function's point of view, but intelligence/server.js
+// now backs it with a small HTTP poll of cortex's /cfr/field, refreshed
+// on its own interval — same shape the caller always expected, sourced
+// across the wire instead of same-process, same as lib/diagnostic-report.js
+// already does for other cross-system reads.
 //
 // Real RFR2: meta/rfr2/causality's own real traceToRoot()/descendants()
 // — same real module already proven this session in diagnostic-report.js

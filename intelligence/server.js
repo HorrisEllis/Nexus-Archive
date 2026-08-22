@@ -29,6 +29,8 @@
  *   GET  /api/meta/status               — relocated meta faculties (§MIGRATION 2026-08-22)
  *   GET  /api/gaps/tension              — measured strain per gap (rate/accel/recency)
  *   POST /api/gaps/friction             — compare two gap surveys
+ *   GET  /api/liminal-space/status      — liminal-space status (§MIGRATION 2026-08-22)
+ *   GET  /api/liminal-space/list        — liminal-space list (§MIGRATION 2026-08-22)
  */
 const http = require('http');
 const path = require('path');
@@ -38,10 +40,36 @@ const url = require('url');
 const config = require('./config.js');
 const PORT = config.PORT;
 const DATA_DIR = config.DATA_DIR;
+const CORTEX_PORT = parseInt(process.env.NEXUS_PORT || '3748', 10);
 
 const intelligence = require('./index.js');
 const { createCFRLedger } = require('./cfr');
 const frameworkBuilder = require('./framework-builder.js');
+const liminalSpace = require('./liminal-space');
+
+// §DEDUP 2026-08-22 — replaces the getField this used to receive only when
+// cortex/boot.js ran a second copy of this whole module in-process (see
+// cortex/boot.js's removed init() call for the full account). This process
+// is now the only one that scans, so field enrichment has to reach across
+// the wire to cortex, the real owner of _field. intelligence/index.js's
+// _enrichCrystallisation calls _cfg.getField() SYNCHRONOUSLY and reads
+// .regime/.friction straight off the result — confirmed by reading that
+// function before wiring this, not assumed — so getField itself must stay
+// sync. The real network fetch runs on its own interval below; getField
+// just returns whatever it last found. A stale-but-known field beats
+// blocking the scan loop on a network round trip, and an unreachable
+// cortex degrades to the last known value (or null, reported honestly by
+// _enrichCrystallisation's own existing catch) rather than a fabricated one.
+let _fieldCache = null;
+function _refreshCortexField() {
+  const req = http.get({ hostname: '127.0.0.1', port: CORTEX_PORT, path: '/cfr/field', timeout: 1500 }, (r) => {
+    let d = ''; r.on('data', c => d += c);
+    r.on('end', () => { try { _fieldCache = JSON.parse(d); } catch (_) { /* keep last known */ } });
+  });
+  req.on('error', () => { /* keep last known — cortex unreachable this tick */ });
+  req.on('timeout', () => req.destroy());
+}
+function _getCortexField() { return _fieldCache; }
 
 const { Stream, Event } = require('../warp/core');
 
@@ -142,6 +170,19 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §MIGRATION 2026-08-22 — the module (intelligence/liminal-space) has
+  // been real since MIGRATION-CHUNKS-1-3.md chunk 3; this is just its
+  // first HTTP door, matching cortex's now-retired copy exactly.
+  if (pathname === '/api/liminal-space/status' && req.method === 'GET') {
+    json(res, 200, liminalSpace.status());
+    return;
+  }
+  if (pathname === '/api/liminal-space/list' && req.method === 'GET') {
+    const fp = u.query.focalPoint || undefined;
+    json(res, 200, { ok: true, items: liminalSpace.list(fp) });
+    return;
+  }
+
   // The rest of the real routes already exist as intelligence/index.js's
   // own handleRequest() — reused directly, not reimplemented.
   const body = (req.method === 'POST') ? await readBody(req) : null;
@@ -154,9 +195,12 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { ok: false, error: `no route for ${req.method} ${pathname}` });
 });
 
+let _fieldRefreshInterval = null;
 function start() {
   ledger.open();
-  intelligence.init({});
+  _refreshCortexField(); // don't wait a full interval for the first real value
+  _fieldRefreshInterval = setInterval(_refreshCortexField, 4000);
+  intelligence.init({ getField: _getCortexField });
   server.listen(PORT, () => {
     console.log(`[intelligence] :${PORT} — v1.0.0 — cognition + system-health layer online`);
   });
@@ -166,6 +210,7 @@ function start() {
 function stop() {
   try { ledger.close && ledger.close(); } catch (_) {}
   try { intelligence.stop && intelligence.stop(); } catch (_) {}
+  if (_fieldRefreshInterval) clearInterval(_fieldRefreshInterval);
   server.close();
 }
 
