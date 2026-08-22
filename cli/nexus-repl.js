@@ -32,6 +32,7 @@ const PORTS = {
   bridge:       parseInt(process.env.BRIDGE_PORT       || '9999'),
   cortex: 3748, guardian: 7820,
   idearium:     4800, emerge: 4242, ollama: 11434,
+  intelligence: 3753,
 };
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -583,6 +584,56 @@ async function dispatch(line) {
         console.log(`  ${icon} ${String(p.n).padEnd(8)} ${p.name}`);
       }
       console.log('');
+      return;
+    }
+
+    case 'intel': case 'intelligence': {
+      // §WIRED 2026-08-22 — James: "fully extensive commands for all of
+      // it, dynamic list." Real, specific subcommands, each mapped to a
+      // real, already-tested endpoint on intelligence/server.js — not a
+      // generic exec route (cortex's own /api/cli/exec is an intentional,
+      // honest 501 for that exact reason, confirmed by reading it).
+      const sub = args[0];
+      const base = `http://127.0.0.1:${PORTS.intelligence}`;
+      try {
+        if (!sub || sub === 'commands') {
+          const r = await fetch(`${base}/api/commands`); const d = await r.json();
+          console.log($(C.bold, 'real, dynamic command list:'));
+          (d.commands || []).forEach(c => console.log(`  ${$(C.cyan, c.route.method.padEnd(4))} ${c.route.path.padEnd(30)} ${$(C.dim, c.description)}`));
+          return;
+        }
+        if (sub === 'patterns') {
+          const r = await fetch(`${base}/api/intelligence/patterns`); const d = await r.json();
+          console.log(`${d.total} real crystallised pattern(s)`);
+          (d.patterns || []).slice(0, 20).forEach(p => console.log(`  ${$(C.dim, p.patternType)} ${p.description}`));
+          return;
+        }
+        if (sub === 'cfr') {
+          const r = await fetch(`${base}/cfr/field`); const d = await r.json();
+          console.log($(C.bold, 'real CFR field state:'));
+          console.log(`  coherence=${d.coherence}  friction=${d.friction}  resonance=${d.resonance}  entropy=${d.entropy}`);
+          return;
+        }
+        if (sub === 'status') {
+          const r = await fetch(`${base}/api/intelligence/status`); const d = await r.json();
+          console.log(JSON.stringify(d, null, 2));
+          return;
+        }
+        if (sub === 'framework') {
+          const name = args.slice(1).join(' ');
+          if (!name) { console.log('Usage: intel framework <name>'); return; }
+          const r = await fetch(`${base}/api/framework/create`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ name, agent: 'cli' }),
+          });
+          const d = await r.json();
+          console.log(d.ok ? ok(`real framework written → ${d.outPath}`) : err(d.error));
+          return;
+        }
+        console.log('Usage: intel [commands|patterns|cfr|status|framework <name>]');
+      } catch (e) {
+        console.log(err(`intelligence system unreachable: ${e.message}`));
+      }
       return;
     }
 

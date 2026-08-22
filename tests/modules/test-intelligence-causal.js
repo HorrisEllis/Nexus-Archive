@@ -1,7 +1,7 @@
 'use strict';
 /**
  * tests/modules/test-intelligence-causal.js — pins the 2026-07-24 wiring of
- * meta/cfr/graph.js's CausalGraph into cortex/intelligence/index.js's
+ * intelligence/cfr/graph.js's CausalGraph into cortex/intelligence/index.js's
  * precursor analysis.
  *
  * THE BUG: precursor detection was pure TEMPORAL ADJACENCY — "what event
@@ -13,7 +13,7 @@
  * switched on this same session, so it would have begun writing those
  * conclusions into bep_patterns as if they were findings.
  *
- * THE GRAPH ALREADY EXISTED. meta/cfr/graph.js's CausalGraph offers
+ * THE GRAPH ALREADY EXISTED. intelligence/cfr/graph.js's CausalGraph offers
  * ancestors() — a real walk over causedBy edges — and mastermind.js has used
  * it since 2026-07-06. cortex/intelligence/index.js simply never wired to it,
  * so "why" was being answered by a clock.
@@ -48,8 +48,8 @@ test('IC-002', 'precursors are walked with ancestors() — a real causedBy walk,
   assert.ok(/ancestorIds\.has\(pid\)/.test(SRC), 'and test membership against it');
 });
 
-test('IC-003', 'ancestors() returns NODE ENTRIES — the handler matches the real shape, verified in meta/cfr/graph.js', () => {
-  const g = fs.readFileSync(path.join(ROOT, 'meta/cfr/graph.js'), 'utf8');
+test('IC-003', 'ancestors() returns NODE ENTRIES — the handler matches the real shape, verified in intelligence/cfr/graph.js', () => {
+  const g = fs.readFileSync(path.join(ROOT, 'intelligence/cfr/graph.js'), 'utf8');
   const fn = g.slice(g.indexOf('  ancestors(id'), g.indexOf('descendants(id'));
   assert.ok(/result\.unshift\(entry\)/.test(fn), 'the graph returns full entries, not bare ids');
   assert.ok(/a\.uuid \|\| a\.id/.test(SRC), 'so the consumer must read .uuid/.id off each entry');
@@ -68,7 +68,7 @@ test('IC-005', 'every precursor now CARRIES ITS EVIDENCE — coincidence and cau
 });
 
 test('IC-006', 'REAL: the graph separates a genuine causal chain from a coincidence in the same window', () => {
-  const { CausalGraph } = require('../../meta/cfr/graph');
+  const { CausalGraph } = require('../../intelligence/cfr/graph');
   const g = new CausalGraph();
   const now = Date.now();
   g.ingest({ uuid: 'root',  type: 'db.slow',       ts: now - 20000 });

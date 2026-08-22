@@ -386,6 +386,12 @@
     return {
       parseWake, decorate, resetHint,
       health: () => ({ installed, provider, hintMode: mode, hintSent, wakeWord: 'hey nexus, <request>' }),
+      // §WIRED 2026-08-22 — the ClearGlass-side half of closing the loop:
+      // renders a real, externally-supplied answer (from
+      // ProviderHost.injectAnswer()) the exact same way a locally-triggered
+      // wake answer renders — never re-submitted to the underlying model as
+      // a new prompt, matching this file's own stated design.
+      showAnswer: (text) => { _render('answer', text); return { ok: true }; },
       // §WIRED 2026-08-22 — James: "guardian already listens for the agents
       // chat." Confirmed real: userscript-claude.js's MutationObserver
       // (_nexusStartObserver) already watches every new message in the
@@ -1147,6 +1153,18 @@ function connect() {
       ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
       : null;
     if (typeof window !== 'undefined') window.__nexusWakeInstance__ = NEXUS;
+    // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
+    // injects it into the corresponding agent chat using clearglass."
+    // The page-side half of clear-glass/src/providers/host.js's
+    // injectAnswer() — called via executeJavaScript from the main process,
+    // so it must be a real, checkable global, not an assumption that
+    // something is listening.
+    if (typeof window !== 'undefined') {
+      window.__nexusInjectAnswer = (text) => {
+        if (!window.__nexusWakeInstance__) return { ok: false, reason: 'wake module not installed on this tab' };
+        return window.__nexusWakeInstance__.showAnswer(text);
+      };
+    }
     if (_hb) clearInterval(_hb);
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
@@ -1810,6 +1828,7 @@ const _nexus = {
   context:     '',
   ollamaOk:    null,
   pending:      false,
+  wakeHandledIndex: -1,   // §2026-08-22 — dedup guard for streaming-message wake detection
 };
 
 // ── Extract all visible messages from the DOM ─────────────────────────────────
@@ -1953,23 +1972,35 @@ function _nexusStartObserver() {
   const target = document.querySelector('main') || document.body;
   _nexus.observer = new MutationObserver(() => {
     const msgs = _nexusGetMessages();
-    if (msgs.length === _nexus.lastMsgCount) return;
-    _nexus.lastMsgCount = msgs.length;
-    // Process the newest message
-    const newest = msgs[msgs.length - 1];
-    if (!newest) return;
-    _nexusLogMessage(newest);
-    // §WIRED 2026-08-22 — James: "guardian already listens for the agents
-    // chat... say hey nexus, then when the listener detects it, enables
-    // co-pilot to respond." This observer already sees every new message,
-    // both roles — it just never checked for the wake phrase. Now it does,
-    // via the real, shared checkMessage() on the wake module (same
-    // parseWake/askNexus/_render the composer interceptor itself uses).
+    const newestIdx = msgs.length - 1;
+    const newest = msgs[newestIdx];
+
+    // §FIXED 2026-08-22 — James, live test: "it doesn't detect when you
+    // say it but it does when i say it. the moment i click enter." Real
+    // cause: this whole callback used to short-circuit on msgs.length
+    // unchanged, so a STREAMING assistant message — which appears near-
+    // empty, then grows over many mutations at the same message count —
+    // only ever got checked once, at the moment it was still empty. A
+    // typed human message has its full text instantly, so it never hit
+    // this. Wake-checking now runs on every mutation, using the freshest
+    // text, independent of the count-gated block below.
     try {
-      if (typeof window !== 'undefined' && window.__nexusWakeInstance__ && newest.text) {
-        window.__nexusWakeInstance__.checkMessage(newest.role, newest.text);
+      if (newest && newest.text && typeof window !== 'undefined' && window.__nexusWakeInstance__
+          && _nexus.wakeHandledIndex !== newestIdx) {
+        const handled = window.__nexusWakeInstance__.checkMessage(newest.role, newest.text);
+        // Only mark handled on a real match — an unmatched check must stay
+        // re-checkable as more text streams in and the phrase may still
+        // appear. Once handled, stop re-firing for this same message
+        // (dedup: without this, a wake phrase present for the rest of a
+        // streaming response would re-trigger askNexus() on every mutation).
+        if (handled) _nexus.wakeHandledIndex = newestIdx;
       }
     } catch (_) { /* §1.2 — a wake-check failure never blocks real message logging */ }
+
+    if (msgs.length === _nexus.lastMsgCount) return;
+    _nexus.lastMsgCount = msgs.length;
+    if (!newest) return;
+    _nexusLogMessage(newest);
     // On user message: pull semantic context for what they're asking
     if (newest.role === 'user') {
       _nexusPullContext(newest.text);

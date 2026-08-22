@@ -2,7 +2,7 @@
 const assert = require('assert');
 const {
   compare, compareCortexFaculties, normalizeIntuitionResult, normalizeMastermindResult,
-} = require('../../cortex/intelligence/adversarial');
+} = require('../../intelligence/adversarial');
 
 let passed = 0, failed = 0;
 function test(id, desc, fn) {

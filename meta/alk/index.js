@@ -27,7 +27,7 @@
 const { randomUUID } = require('crypto');
 const fs             = require('fs');
 const path           = require('path');
-const { CausalGraph } = require('../cfr/graph.js');
+const { CausalGraph } = require('../../intelligence/cfr/graph.js');
 
 const ROOT      = path.join(__dirname, '../..');
 const DATA_DIR  = process.env.NEXUS_DATA_ROOT

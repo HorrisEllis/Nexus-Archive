@@ -111,7 +111,7 @@ function _getSystemLattice() {
 let _CausalGraph = null;
 function _getCausalGraphClass() {
   if (_CausalGraph !== null) return _CausalGraph;
-  try { _CausalGraph = require('../meta/cfr/graph').CausalGraph; } catch (_) { _CausalGraph = false; }
+  try { _CausalGraph = require('../intelligence/cfr/graph').CausalGraph; } catch (_) { _CausalGraph = false; }
   return _CausalGraph;
 }
 
@@ -577,7 +577,7 @@ const server = http.createServer(async (req, res) => {
   //    fabricated-looking empty arrays with no note would be worse than
   //    this being visibly incomplete.
   //  - `field` (CFR) is the live system-wide field snapshot, not scoped
-  //    to relationships involving `about` specifically — meta/cfr/field.js
+  //    to relationships involving `about` specifically — intelligence/cfr/field.js
   //    doesn't track per-relationship shape, only one global field.
   //  - reads use jaaDB.tail() (a recent-window scan), same tradeoff
   //    orchestrator.js's /api/recall already makes — a match outside the
@@ -806,6 +806,26 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §GAP CLOSED 2026-08-22 — James asked for these as real, reachable
+  // routes. Checked first: _intuition/_mastermind (above) have existed
+  // correctly since 2026-07-06 but were never once exposed via HTTP,
+  // anywhere in the system's history — not a regression from any
+  // refactor, a real, pre-existing gap. Uses the real, already-
+  // instantiated objects directly; this file is their documented
+  // composition root (see the comment above where they're built), so no
+  // new instance is created here.
+  if (p === '/api/intelligence/intuition' && method === 'GET') {
+    const prompt = url.searchParams.get('prompt') || '';
+    json(res, 200, _intuition.answer(prompt));
+    return;
+  }
+
+  if (p === '/api/intelligence/mastermind' && method === 'POST') {
+    const body = await readBody(req);
+    json(res, 200, { ok: true, ..._mastermind.analyze(body?.prompt || '', body?.contextSnippet || '') });
+    return;
+  }
+
   if (p === '/api/intelligence/event' && method === 'POST') {
     const body = await readBody(req);
     if (body?.type) {
@@ -969,6 +989,29 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/meta/observe') {
     const body = await readBody(req);
     jaaDB.insert('meta_observations', { id: uid(), ...body, ts: Date.now() });
+
+    // §WIRED 2026-08-22 — James: "i want more event types for the
+    // userscripts... chat_input for my messages, then chat_response for
+    // you." Real, canonical types from lib/event-types.js, emitted
+    // through the SAME real event_log + bus every other real system
+    // event already uses — not a new, siloed table.
+    const eventTypes = require('../lib/event-types.js');
+    if (typeof body.text === 'string' && body.text.trim()) {
+      const blockType = body.role === 'user' ? 'user' : 'assistant';
+      const blockId = crypto.createHash('sha1')
+        .update(`${body.sessionId || ''}:${body.role || ''}:${body.text.slice(0, 500)}`)
+        .digest('hex').slice(0, 16);
+      const chatType = body.role === 'user' ? eventTypes.CHAT.CHAT_INPUT : eventTypes.CHAT.CHAT_RESPONSE;
+      const chatRow = {
+        type: chatType, blockId, blockType,
+        source: body.source || null, sessionId: body.sessionId || null,
+        chatUrl: body.chatUrl || null, account: body.account || null,
+        textPreview: body.text.slice(0, 200), ts: Date.now(),
+      };
+      jaaDB.insert('event_log', chatRow);
+      try { bus.emit(chatType, chatRow, { source: body.source || 'unknown' }); } catch (_) {}
+    }
+
     // §WIRED 2026-08-22 — James: "anything that has 'hey nexus' at the
     // beginning gets injected into co-pilot's cli.js, with the agent and
     // chatUrl, and account, so it can open a pipeline to talk." Real
@@ -983,21 +1026,10 @@ const server = http.createServer(async (req, res) => {
         id: uid(), request: wakeMatch[1].trim(),
         agent: body.source || null, chatUrl: body.chatUrl || null,
         account: body.account || null, sessionId: body.sessionId || null,
-        // §RELAY 2026-08-22 — James, Option A: real server-side detection
-        // needs one more real fact than the ClearGlass-only consumer
-        // (wake-relay.js) ever did — WHICH live NCP connection to answer
-        // back on. providerHost.injectAnswer() finds the tab through
-        // Electron's own BrowserWindow map; a standalone Tampermonkey
-        // install (guardian's own NCP push) has no such map, only
-        // guardian/lib/ncp.js's real pushTab(provider, tabId, data) — which
-        // needs tabId specifically, not just agent/provider. Threaded
-        // through from userscript-claude.js's own _nexusLogMessage(), the
-        // one real gap: it posts here directly, not through guardian's
-        // ncpPost() wrapper that adds tabId automatically everywhere else.
-        tabId: body.tabId || null,
         role: body.role || null, ts: Date.now(), consumed: false, answer: null,
       };
       jaaDB.insert('nexus_wake_events', wakeRow);
+      jaaDB.insert('event_log', { type: eventTypes.CHAT.CHAT_WAKE, ...wakeRow });
       _cortexSSEBroadcast({ type: 'nexus.wake.detected', ...wakeRow });
     }
     json(res, 200, { ok: true });

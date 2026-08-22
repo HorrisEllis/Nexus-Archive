@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Guardian — Claude v10.4 (nexus-wake 1.3.0)
+// @name         Guardian — Claude v10.0
 // @namespace    nexus.guardian.claude
-// @version      10.4.0
+// @version      10.2.0
 // @description  Guardian v10: IndexedDB kernel, SHA-256 dedup, pre-prompt intelligence
 //               injection, full system widget, connection info, log/ledger, options,
 //               SEAM, queue, tags — fully system aware, no localStorage for state.
@@ -13,544 +13,6 @@
 // @connect      *
 // @run-at       document-idle
 // ==/UserScript==
-
-// ── Shared 'hey nexus' wake module (guardian/userscript-nexus-wake.js), bundled inline ──
-// ─────────────────────────────────────────────────────────────────────────────
-// guardian/userscript-nexus-wake.js — "Hey nexus" in any agent tab
-// UUID: nexus-wake-v1-0000-2026-0818-001
-// Version: 1.3.0
-// Component: guardian.userscript.nexus-wake
-// Hook: guardian.userscript.nexus-wake:v1:p0001
-//
-// James: "I want to inject into agents every input: Say 'hey nexus' to interact
-// with nexus' co-pilot. Then obviously need to add that to the listener and
-// have co-pilot respond."
-//
-// Loaded by each provider userscript (chatgpt / claude / gemini / perplexity),
-// so the behaviour is defined once rather than four times (§10.3). It uses the
-// injectText()/submit() the host script already exports, instead of a second
-// composer driver that would drift from it.
-//
-// ── TWO FEATURES, DELIBERATELY SEPARATE ─────────────────────────────────────
-//
-//   1. THE LISTENER — you type "hey nexus, ..." in the composer. It is
-//      intercepted BEFORE it reaches the host model: nothing is sent to
-//      ChatGPT, the request goes to NEXUS co-pilot, and the answer renders
-//      inline. Zero cost anywhere, because the model never sees the turn.
-//
-//   2. THE AGENT HINT — a line telling the MODEL that NEXUS is reachable, so it
-//      can ask for real system state mid-reasoning instead of guessing. This
-//      one the model does read.
-//
-// They are separate because they serve different readers, and conflating them
-// is what makes the naive version misbehave. The wake word is for the human;
-// the model does not need to know it exists, and telling it every turn invites
-// the model to echo the line back, explain the feature, or treat it as an
-// instruction it should act on. That risk is behavioural, not economic — it
-// does not go away on a flat-rate plan.
-//
-// So HINT_MODE is per-provider and defaults per plan:
-//   'once'    — one capability line at conversation start (default: chatgpt,
-//               gemini, perplexity — flat-rate, and once is enough for the
-//               model to know the tool exists)
-//   'off'     — never injected (default: claude — metered, and the operator is
-//               usually the one driving there anyway)
-//   'every'   — appended to every input. Available because it was asked for,
-//               and NOT the default: repeated identical trailing text is what
-//               makes a model start commenting on it.
-//
-// ── §RELAY 2026-08-22 — Option A, James's own words: "Drop the in-page
-// detection, wire the assistant-side trigger through guardian the way
-// ClearGlass already does it. Real work, but it removes the guessing."
-//
-// The IN-PAGE, DOM-discovery detection of an assistant-emitted "hey nexus" is
-// gone from this module. Not hardened further — removed. Detection now
-// happens server-side, in cortex's real /api/meta/observe handler (which
-// already runs the identical WAKE_RE against every message this page already
-// reports there via _nexusLogMessage, for both roles) — that endpoint cannot
-// miss a message the way a page-side MutationObserver can, because the page
-// isn't asked to notice anything; it only has to report text once it is
-// complete, the one thing this file's OWN startWatch() already proves is
-// reliably achievable.
-//
-// What stays HERE, in-page, and unchanged: the composer interceptor (§1) —
-// zero DOM discovery, the browser hands the text to the code directly, and it
-// has never been the unreliable half of this feature.
-//
-// What's NEW here: deliverAnswer() — the receiving end of the server-side
-// relay. Guardian pushes a GUARDIAN_WAKE_ANSWER message down the SAME NCP
-// channel already used for job dispatch once cortex's detection fires and
-// co-pilot has answered; this function is what turns that push into a real,
-// delivered turn in the conversation, reusing this module's own _deliver()
-// exactly as the composer-triggered path already does — one delivery
-// mechanism, two triggers, not two mechanisms that can drift.
-// ─────────────────────────────────────────────────────────────────────────────
-
-(function (global) {
-  'use strict';
-
-  const NEXUS_WAKE = {
-    MODULE_ID: 'nexus-wake',
-    VERSION:   '1.4.0',
-    COMP_ID:   'guardian.userscript.nexus-wake',
-    HOOK_ID:   'guardian.userscript.nexus-wake:v1:p0001',
-  };
-
-  // ── §DELIVERY 2026-08-22 — the fourth step ──────────────────────────────────
-  // James, with a screenshot of it half-working: "I typed 'hey nexus tell me the
-  // status of guardian.' and hit enter... now I want you to be able to say the
-  // same and have the response be injected as an input from me."
-  //
-  // Until now both wake paths ended at _render() — an overlay div. The answer
-  // was on screen but NOT in the conversation, so the assistant never received
-  // it. _deliver() below closes that by injecting the answer into the composer
-  // and submitting it as a real user turn, using the HOST script's own
-  // injectText()/submit() (§16.5 — one composer driver, not a second that
-  // drifts after the next UI change).
-  //
-  // SENTINEL is the loop guard. SISO §2.3: a re-emitted event must carry a
-  // processed-marker or the gate re-fires on its own output forever. Here the
-  // delivered turn is itself a new message the MutationObserver will see; if
-  // it could ever match the wake grammar again this becomes an infinite
-  // question loop that burns real metered tokens. parseWake() refuses any text
-  // carrying SENTINEL, unconditionally.
-  const SENTINEL = '\u2b21 NEXUS CO-PILOT';   // ⬡ — the same mark the overlay uses
-  const DELIVERY_FOOTER = '(injected by nexus-wake from co-pilot :3750 — not typed by the operator)';
-
-  // A delivered answer must not be submitted while the model is mid-turn: the
-  // send button is disabled during streaming, so an immediate submit() is a
-  // silent no-op that looks exactly like the feature being broken. This is the
-  // ordinary case, not the edge one — the assistant-triggered path fires WHILE
-  // the assistant is still writing.
-  const DELIVER_WAIT_MS   = 700;    // poll interval while generation is active
-  const DELIVER_WAIT_MAX  = 180000; // 3 min cap, then state the miss (§1.2)
-  const SETTLE_MS         = 900;    // observed text must stop changing before it is parsed
-
-  // Same matcher as lib/agent-chat.parseWake — one grammar, two runtimes. If
-  // these drift, a phrase works in the browser and not in the backend (or the
-  // reverse), which is the worst kind of bug to chase.
-  const WAKE_RE = /^\s*(?:hey|hi|ok|okay)[,\s]+nexus[,:\s]+([\s\S]+)$/i;
-
-  const COPILOT_URL    = 'http://127.0.0.1:3750';
-  const COPILOT_PROMPT = `${COPILOT_URL}/api/prompt/tools`;
-
-  const HINT = 'NEXUS is running alongside this chat and can be queried for real system ' +
-               'state — open gaps, component registry, test results, ledger history. ' +
-               'To ask it, emit a line starting with "hey nexus," and the operator\'s ' +
-               'bridge will answer with live data. Prefer asking over guessing at ' +
-               'system state you cannot see.';
-
-  const HINT_MODE_DEFAULTS = {
-    chatgpt:    'once',
-    gemini:     'once',
-    perplexity: 'once',
-    claude:     'off',    // metered; and the operator is usually driving here
-  };
-
-  /**
-   * parseWake(text) — identical semantics to the backend.
-   * Ordinary prose mentioning nexus is NOT hijacked: a greedy matcher here
-   * would silently swallow normal conversation, which is far worse than
-   * occasionally having to type the prefix twice.
-   */
-  function parseWake(text) {
-    if (typeof text !== 'string' || !text.trim()) return { addressed: false, ask: null };
-    // §DELIVERY loop guard — a co-pilot answer that was injected back into the
-    // conversation can never itself be read as a new wake request.
-    if (text.includes(SENTINEL)) {
-      return { addressed: false, ask: null, note: 'carries the delivery sentinel — this is co-pilot output, not a request' };
-    }
-    const m = text.match(WAKE_RE);
-    if (!m) return { addressed: false, ask: null };
-    const ask = (m[1] || '').trim();
-    if (!ask) return { addressed: false, ask: null, note: 'wake word with no request — ignored rather than sent as an empty prompt' };
-    return { addressed: true, ask };
-  }
-
-  function _detectAccount(provider) {
-    try {
-      const selectors = {
-        claude:     ['[data-testid="user-menu-button"]', 'button[aria-label*="account" i]'],
-        chatgpt:    ['[data-testid="profile-button"]', 'nav button img[alt]'],
-        gemini:     ['[aria-label*="Google Account" i]'],
-        perplexity: ['[data-testid="user-account-menu"]'],
-      }[provider] || [];
-      for (const sel of selectors) {
-        const el = document.querySelector(sel);
-        const name = el?.getAttribute('aria-label') || el?.textContent?.trim() || el?.title;
-        if (name && name.length < 200) return name;
-      }
-    } catch (_) { /* §1.2 — a failed read is null, never a guess */ }
-    return null;
-  }
-
-  /**
-   * install(ctx) — wire the listener into a provider userscript.
-   *
-   * ctx: { provider, tabId, ncpUrl, injectText, submit, log }
-   * injectText/submit are the HOST script's own functions. Passing them in
-   * rather than re-implementing selectors means one composer driver per
-   * provider, not two that disagree after the next UI change.
-   */
-  function install(ctx) {
-    const {
-      provider, tabId, ncpUrl = 'http://127.0.0.1:7820', log = () => {},
-      injectText   = null,
-      submit       = null,
-      isGenerating = null,
-      deliver      = true,   // inject the answer as a real turn, not overlay-only
-    } = ctx || {};
-    if (!provider) { console.warn('[nexus-wake] §1.1 install requires a provider name'); return null; }
-    const canDeliver = typeof injectText === 'function' && typeof submit === 'function';
-    if (deliver && !canDeliver) {
-      log('[nexus-wake] delivery requested but host passed no injectText/submit — answers will render in the overlay only');
-    }
-    let _delivering = false;   // suppresses decorate() on injected answers
-
-    const mode = (ctx.hintMode || HINT_MODE_DEFAULTS[provider] || 'once');
-    let hintSent = false;
-    let installed = false;
-
-    // ── The listener ────────────────────────────────────────────────────────
-    // Capture-phase keydown on the document. Capture matters: the host app's
-    // own Enter handler must not run first, or the turn is already gone.
-    function onKeyDown(e) {
-      if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
-      const el = e.target;
-      if (!el) return;
-      const isComposer = el.isContentEditable ||
-                         el.tagName === 'TEXTAREA' ||
-                         el.closest?.('[contenteditable="true"]');
-      if (!isComposer) return;
-
-      const text = (el.isContentEditable ? el.textContent : el.value) || '';
-      const { addressed, ask } = parseWake(text);
-      if (!addressed) return;   // ordinary turn — hands off entirely
-
-      // Intercept. The host model never receives this turn.
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-
-      _clearComposer(el);
-      _handle(ask, { intercepted: true });
-    }
-
-  const _sentIdentity = new Set();   // sessionId → already sent this account+url
-
-  async function askNexus(ask) {
-      return new Promise((resolve) => {
-        try {
-          if (typeof GM_xmlhttpRequest !== 'function') {
-            resolve({ ok: false, error: 'GM_xmlhttpRequest unavailable — @grant GM_xmlhttpRequest missing from this userscript\'s header' });
-            return;
-          }
-          GM_xmlhttpRequest({
-            method: 'POST',
-            url: COPILOT_PROMPT,
-            headers: { 'Content-Type': 'application/json' },
-            data: JSON.stringify({
-              prompt: ask,
-              channel: `wake:${provider}`,
-              sessionId: _sessionId(),
-              meta: { source: 'nexus-wake', provider, tabId, chatUrl: location.href },
-            }),
-            timeout: 30000,
-            onload: (res) => {
-              if (res.status < 200 || res.status >= 300) { resolve({ ok: false, error: `co-pilot HTTP ${res.status}` }); return; }
-              let j = {};
-              try { j = JSON.parse(res.responseText); } catch (_) {}
-              const text = j.text || j.response || j.answer || j.result || null;
-              if (!text) {
-                resolve({ ok: false, error: 'co-pilot answered 200 with no text field' });
-                return;
-              }
-              resolve({ ok: true, text });
-            },
-            onerror: (e) => resolve({ ok: false, error: `GM_xmlhttpRequest failed: ${e.error || e.statusText || 'unknown network error'}` }),
-            ontimeout: () => resolve({ ok: false, error: 'co-pilot request timed out after 30s' }),
-          });
-        } catch (e) {
-          resolve({ ok: false, error: e.message });
-        }
-      });
-    }
-
-    function _sessionId() {
-      const m = location.pathname.match(/([0-9a-f-]{8,})/i);
-      return `wake:${provider}:${m ? m[1] : (tabId || 'tab')}`;
-    }
-
-    function captureAccountIdentity() {
-      const key = `${_sessionId()}:${location.href}`;
-      if (_sentIdentity.has(key)) return;
-      const account = _detectAccount(provider);
-      if (!account) return;
-      _sentIdentity.add(key);
-      fetch(`${ncpUrl}/api/account-identity`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, tabId, sessionId: _sessionId(), account, chatUrl: location.href, ts: Date.now() }),
-      }).catch(() => { _sentIdentity.delete(key); });
-    }
-    captureAccountIdentity();
-
-    // ── The agent hint ──────────────────────────────────────────────────────
-    function decorate(outgoing) {
-      if (_delivering) return outgoing;
-      if (mode === 'off') return outgoing;
-      if (mode === 'once' && hintSent) return outgoing;
-      hintSent = true;
-      return `${outgoing}\n\n---\n[NEXUS] ${HINT}`;
-    }
-
-    function _composerHasDraft() {
-      try {
-        const el = document.querySelector('[contenteditable="true"][data-placeholder]') ||
-                   document.querySelector('.ProseMirror[contenteditable="true"]') ||
-                   document.querySelector('textarea[placeholder]') ||
-                   document.querySelector('[contenteditable="true"]');
-        if (!el) return false;
-        const t = (el.isContentEditable ? el.textContent : el.value) || '';
-        return t.trim().length > 0;
-      } catch (_) { return false; }
-    }
-
-    // ── §DELIVERY — step 4 of the loop ──────────────────────────────────────
-    function _deliver(ask, answer) {
-      if (!deliver || !canDeliver) return Promise.resolve({ ok: false, reason: 'no composer driver' });
-
-      const payload =
-        `${SENTINEL} \u00b7 answer to "${ask}"\n\n` +
-        `${answer}\n\n` +
-        DELIVERY_FOOTER;
-
-      return new Promise((resolve) => {
-        const started = Date.now();
-        const attempt = () => {
-          let busy = false;
-          try {
-            busy = (typeof isGenerating === 'function' && !!isGenerating()) ||
-                   _composerHasDraft();
-          }
-          catch (_) { busy = false; }
-
-          if (busy) {
-            if (Date.now() - started > DELIVER_WAIT_MAX) {
-              _render('error', 'co-pilot answered, but this tab has been generating for 3 minutes — not injected. The answer is above in this box.');
-              resolve({ ok: false, reason: 'generation never settled' });
-              return;
-            }
-            setTimeout(attempt, DELIVER_WAIT_MS);
-            return;
-          }
-
-          _delivering = true;
-          let injected = false;
-          try { injected = injectText(payload) !== false; }
-          catch (e) {
-            _delivering = false;
-            _render('error', `co-pilot answered but injection threw — ${e.message}. The answer is above in this box.`);
-            resolve({ ok: false, reason: e.message });
-            return;
-          }
-
-          if (!injected) {
-            _delivering = false;
-            _render('error', 'co-pilot answered but the composer could not be found — not injected. The answer is above in this box.');
-            resolve({ ok: false, reason: 'composer not found' });
-            return;
-          }
-
-          setTimeout(() => {
-            try { submit(); resolve({ ok: true }); }
-            catch (e) {
-              _render('error', `co-pilot answer was injected but submit threw — ${e.message}. It is sitting unsent in the composer.`);
-              resolve({ ok: false, reason: e.message });
-            }
-            finally { _delivering = false; }
-          }, 250);
-        };
-        attempt();
-      });
-    }
-
-    // Dedupe. Keyed on the ask itself, with a TTL so a deliberately repeated
-    // question still works a minute later. §RELAY — also now the single real
-    // guard against a wake event arriving at this tab twice (guardian retries
-    // a dead SSE connection, cortex could in principle rebroadcast), since the
-    // in-page observer that used to double-detect is gone.
-    const _asked = new Map();   // normalised ask → timestamp
-    const ASK_TTL_MS = 60000;
-    function _alreadyAsked(ask) {
-      const key = ask.trim().toLowerCase().replace(/\s+/g, ' ');
-      const now = Date.now();
-      for (const [k, t] of _asked) if (now - t > ASK_TTL_MS) _asked.delete(k);
-      if (_asked.has(key)) return true;
-      _asked.set(key, now);
-      return false;
-    }
-
-    /**
-     * _handle(ask, opts) — the composer-triggered path only, now. Real,
-     * client-side ask+deliver, used exclusively by onKeyDown above — the
-     * request text came straight from the DOM the browser handed the code,
-     * never discovered.
-     */
-    function _handle(ask, opts) {
-      const intercepted = !!(opts && opts.intercepted);
-      if (_alreadyAsked(ask)) return false;
-      _render('question', ask);
-      _render('pending', 'asking nexus co-pilot…');
-      askNexus(ask)
-        .then(r => {
-          if (!r.ok) {
-            _render('error', intercepted
-              ? `co-pilot unreachable — ${r.error}. Your message was NOT sent to ${provider}; nothing was lost, but nothing was asked either.`
-              : `co-pilot unreachable — ${r.error}.`);
-            return;
-          }
-          const text = r.text || '(co-pilot returned an empty answer)';
-          _render('answer', text);
-          return _deliver(ask, text);
-        })
-        .catch(err => _render('error', `wake handler failed: ${err.message}`));
-      return true;
-    }
-
-    /** resetHint() — call on a new conversation so 'once' means once per chat. */
-    function resetHint() { hintSent = false; }
-
-    // ── Affordance ──────────────────────────────────────────────────────────
-    function _affordance() {
-      try {
-        const el = document.querySelector('[contenteditable="true"][data-placeholder], textarea[placeholder]');
-        if (!el) return;
-        const cur = el.getAttribute('data-placeholder') || el.getAttribute('placeholder') || '';
-        if (cur.includes('hey nexus')) return;
-        const next = cur ? `${cur}   ·   say "hey nexus" for NEXUS co-pilot` : 'say "hey nexus" for NEXUS co-pilot';
-        if (el.hasAttribute('data-placeholder')) el.setAttribute('data-placeholder', next);
-        else el.setAttribute('placeholder', next);
-      } catch (_) { /* cosmetic only — never break the composer over a hint */ }
-    }
-
-    function _clearComposer(el) {
-      try {
-        if (el.isContentEditable) {
-          el.focus();
-          document.execCommand('selectAll', false, null);
-          document.execCommand('delete', false, null);
-          if (el.textContent) el.textContent = '';
-        } else { el.value = ''; }
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      } catch (_) {}
-    }
-
-    function _render(kind, text) {
-      let box = document.getElementById('nexus-wake-box');
-      if (!box) {
-        box = document.createElement('div');
-        box.id = 'nexus-wake-box';
-        box.style.cssText = 'position:fixed;right:18px;bottom:96px;width:390px;max-height:52vh;overflow:auto;' +
-          'background:#0e0e12;color:#e8e8ef;border:1px solid #2c2c38;border-left:3px solid #5DCAA5;' +
-          'font:12px/1.5 ui-monospace,Menlo,monospace;padding:12px 14px;z-index:2147483647;border-radius:2px;';
-        const head = document.createElement('div');
-        head.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;color:#8a8a9a;font-size:10px;letter-spacing:1px;';
-        head.innerHTML = '<span style="color:#5DCAA5">\u2b21</span> NEXUS CO-PILOT';
-        const x = document.createElement('button');
-        x.textContent = '\u2715';
-        x.style.cssText = 'margin-left:auto;background:none;border:none;color:#5a5a68;cursor:pointer;font-size:12px;';
-        x.onclick = () => box.remove();
-        head.appendChild(x);
-        box.appendChild(head);
-        document.body.appendChild(box);
-      }
-      const line = document.createElement('div');
-      line.style.cssText = 'margin-bottom:8px;white-space:pre-wrap;word-break:break-word;' +
-        (kind === 'question' ? 'color:#8a8a9a;font-style:italic;'
-         : kind === 'pending' ? 'color:#F9CB42;'
-         : kind === 'error'   ? 'color:#E24B4A;' : 'color:#e8e8ef;');
-      line.textContent = kind === 'question' ? `\u203a ${text}` : text;
-      if (kind !== 'pending') {
-        const p = box.querySelector('[data-pending]');
-        if (p) p.remove();
-      } else { line.setAttribute('data-pending', '1'); }
-      box.appendChild(line);
-      box.scrollTop = box.scrollHeight;
-    }
-
-    // Capture phase, on document — must beat the host app's own handler.
-    document.addEventListener('keydown', onKeyDown, true);
-    installed = true;
-
-    _affordance();
-    const affordanceTimer = setInterval(_affordance, 4000);  // SPAs re-render the composer
-    if (affordanceTimer.unref) affordanceTimer.unref();
-
-    log(`[nexus-wake] v${NEXUS_WAKE.VERSION} armed on ${provider} — wake word live (composer path only; assistant-said detection is server-side now), agent hint: ${mode}`);
-    console.log(
-      `%c⬡ NEXUS WAKE v${NEXUS_WAKE.VERSION}%c  delivery=${deliver && canDeliver}  relay=server-side  debug=window.__nexusWakeDebug()`,
-      'background:#5DCAA5;color:#0e0e12;font-weight:700;padding:2px 6px;border-radius:2px',
-      'color:#5DCAA5'
-    );
-
-    if (typeof window !== 'undefined') {
-      window.__nexusWakeDebug = () => ({
-        installed, provider,
-        composerListener: true,
-        delivery: deliver && canDeliver,
-        injectTextWired: typeof injectText === 'function',
-        submitWired: typeof submit === 'function',
-        composerHasDraft: _composerHasDraft(),
-        copilotEndpoint: COPILOT_PROMPT,
-        asked: [..._asked.keys()],
-      });
-    }
-
-    return {
-      parseWake, decorate, resetHint,
-      health: () => ({
-        installed, provider, hintMode: mode, hintSent,
-        wakeWord: 'hey nexus, <request>',
-        delivery: deliver && canDeliver,
-        deliveryReason: !deliver ? 'disabled by ctx.deliver'
-                        : canDeliver ? 'host injectText/submit wired'
-                        : 'host passed no injectText/submit',
-      }),
-      showAnswer: (text) => { _render('answer', text); return { ok: true }; },
-      // §RELAY 2026-08-22 — the receiving end of the server-side wake relay.
-      // Guardian calls this (via a new GUARDIAN_WAKE_ANSWER NCP push, handled
-      // in this file's own _handleServerMessage) once cortex's real,
-      // server-side /api/meta/observe detection has fired and co-pilot has
-      // already answered. This is the SAME real delivery _handle() already
-      // does for the composer-typed path — rendered question, rendered
-      // answer, then _deliver() injects it as a real turn — just triggered
-      // from outside instead of from askNexus() run in-page. One delivery
-      // mechanism, two triggers, matching §16.5.
-      deliverAnswer(ask, answer) {
-        if (_alreadyAsked(ask)) {
-          log(`[nexus-wake] server-relayed answer for an ask already handled this session — skipped (dedupe)`);
-          return Promise.resolve({ ok: false, reason: 'duplicate' });
-        }
-        _render('question', ask);
-        _render('answer', answer);
-        return _deliver(ask, answer);
-      },
-      uninstall() {
-        document.removeEventListener('keydown', onKeyDown, true);
-        clearInterval(affordanceTimer);
-        document.getElementById('nexus-wake-box')?.remove();
-        installed = false;
-      },
-    };
-  }
-
-  const api = { install, parseWake, WAKE_RE, SENTINEL, DELIVERY_FOOTER, HINT, HINT_MODE_DEFAULTS, detectAccount: _detectAccount, ...NEXUS_WAKE };
-  if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  if (global) global.NexusWake = api;
-})(typeof window !== 'undefined' ? window : globalThis);
-
-// ── Guardian's real Claude userscript body ──
 
 (function () {
 'use strict';
@@ -564,7 +26,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const BRIDGE_URL  = 'http://127.0.0.1:9999';
 const PROVIDER    = 'claude';
-const VERSION    = '10.4.0';
+const VERSION    = '10.1.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -584,16 +46,18 @@ let connState = 'disconnected';
 let currentJobId = null, jobActive = false;
 let _watchTimer = null, _watchObs = null, _watchStart = 0;
 let panelOpen = false, activeTab = 'log';
-let isClaimed = true;
+let isClaimed = true; // §FIX 2026-06-20: passive mode removed — every connected tab executes jobs, no single-tab claim gate
 let sessionStart = Date.now(), sessionTokens = 0, sessionJobs = 0;
 let logEntries = [], unreadCount = 0;
 let currentGaps = [], artifactStore = [], _usageHistory = [];
 let accountState = null;
-let _settings = {};
-let _systemStatus = {};
-let _intelligenceCtx = null;
+let _settings = {}; // loaded from GM_getValue on init
+let _systemStatus = {}; // polled from orchestrator
+let _intelligenceCtx = null; // last pulled context
 
 // ── IndexedDB Kernel — §US-02 ─────────────────────────────────────────────────
+// Three stores: requests (queue), sessions (UUID chain), artifacts (hash→UUID).
+// Replay authority lives here. Nothing else owns replay. §US-03.
 const IDB_NAME    = 'nexus_guardian_claude';
 const IDB_VERSION = 1;
 let _db = null;
@@ -669,6 +133,7 @@ async function sha256(text) {
     const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').slice(0,16);
   } catch(_) {
+    // fallback if subtle not available (http context)
     let h = 0;
     for (let i = 0; i < text.length; i++) { h = Math.imul(31, h) + text.charCodeAt(i) | 0; }
     return Math.abs(h).toString(16).padStart(8,'0');
@@ -687,11 +152,15 @@ async function getSessionId() {
   return _sessionId;
 }
 
+// ── Replay — §US-03 ───────────────────────────────────────────────────────────
+// On connect: replay any pending requests from IDB to guardian.
+// Bridge does NOT replay for the userscript. We do.
 async function replayPending() {
   const pending = await dbGetAll('requests', 'status', 'pending');
   if (!pending.length) return;
   _log('sys', `Replaying ${pending.length} pending request(s) from IDB`);
   for (const r of pending) {
+    // Re-send to guardian — if it already processed it, it will deduplicate by jobId
     ncpPost(NCP_RESULT, { type: 'GUARDIAN_REPLAY', ...r }).catch(() => {});
     await dbPut('requests', { ...r, status: 'replayed', replayedAt: Date.now() });
   }
@@ -721,6 +190,12 @@ function getAccount() {
   return location.hostname;
 }
 
+// ── Usage/quota-limit detection — §US-GAP-01 ─────────────────────────────────
+// §HONEST-NOTE: same caveat as the chatgpt.js mirror of this — claude.ai's
+// limit-banner copy/markup isn't pinned to a verified-current string, this is
+// a layered, drift-tolerant scan (alert/live-region markup first, composer
+// container text second, disabled-composer corroboration third). Extend
+// USAGE_PATTERNS as real copy is observed.
 let usageState = { limited: false, message: null, resetHint: null, detectedAt: null };
 const USAGE_PATTERNS = [
   /usage limit/i, /message limit/i, /hit (the|your) .*(limit|cap)/i,
@@ -738,12 +213,13 @@ function detectUsageLimit() {
     const regions = [
       ...document.querySelectorAll('[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]'),
     ];
+    // Fallback: composer's grandparent container — limit banners render right above/below input
     const composer = document.querySelector('div[contenteditable="true"], .ProseMirror');
     if (composer) { const c = composer.closest('form')?.parentElement || composer.parentElement?.parentElement; if (c) regions.push(c); }
 
     for (const el of regions) {
       const t = (el.textContent || '').trim();
-      if (!t || t.length > 400) continue;
+      if (!t || t.length > 400) continue; // skip huge unrelated containers
       if (USAGE_PATTERNS.some(re => re.test(t))) {
         const resetMatch = t.match(RESET_HINT_RE);
         usageState = { limited: true, message: t.slice(0,200), resetHint: resetMatch?.[0]||null, detectedAt: Date.now() };
@@ -754,7 +230,7 @@ function detectUsageLimit() {
       usageState = { limited: 'suspected', message: 'composer disabled, no matching banner text', resetHint: null, detectedAt: Date.now() };
       return usageState;
     }
-    if (usageState.limited) usageState = { limited: false, message: null, resetHint: null, detectedAt: Date.now() };
+    if (usageState.limited) usageState = { limited: false, message: null, resetHint: null, detectedAt: Date.now() }; // cleared
     return usageState;
   } catch(e) { return usageState; }
 }
@@ -786,6 +262,12 @@ function _toCortex(type, payload = {}) {
     body: JSON.stringify({ type, payload: { ...payload, _account:getAccount(), _chatUrl:location.href },
       source:'userscript-claude', causedBy:currentJobId||null, ts:Date.now() }) }).catch(()=>{});
 }
+// §GAP CLOSED 2026-07-06 — same fix as userscript-chatgpt.js: _toCortex
+// only ever sent metadata shells, never real content. See that file's
+// comment for the full explanation.
+// §BUG FIXED 2026-07-06 — same fix as userscript-chatgpt.js: cortex now
+// rejects pushes over 256KB, so this truncates client-side instead of
+// letting an oversized push silently vanish via the fire-and-forget catch.
 const CORTEX_PUSH_LIMIT = 250 * 1024;
 function _toCortexPush(content, tags = [], tier = 'session') {
   let body = content;
@@ -819,6 +301,8 @@ async function gate(name, fn, opts = {}) {
 }
 
 // ── §US-04 Pre-prompt intelligence injection ───────────────────────────────────
+// Before each prompt: query cortex intelligence for reusable artifacts,
+// failure modes, and active patterns. Sends UUID refs, not full content.
 async function pullIntelligenceContext(intent, command) {
   try {
     const url = `${CORTEX_URL}/api/intelligence/context` +
@@ -864,6 +348,7 @@ function buildContextHeader(ctx) {
   return parts.length ? `[NEXUS CONTEXT]\n${parts.join('\n')}\n\n` : '';
 }
 
+// Legacy cortex context pull (memory/context endpoint)
 async function pullCortexContext(prompt) {
   try {
     const q = encodeURIComponent((prompt||'').slice(0,120));
@@ -945,7 +430,7 @@ function recordUsage(jobId, text, ms) {
 }
 
 // ── Artifact detection + IDB dedup (SHA-256) — §US-05 ────────────────────────
-let _seenHashes = new Set();
+let _seenHashes = new Set(); // session-level dedup, IDB is persistent
 
 async function scanArtifacts(jobId) {
   const codeEls = document.querySelectorAll('pre code, .code-block__code, [class*="CodeBlock"] code');
@@ -954,15 +439,18 @@ async function scanArtifacts(jobId) {
     if (content.length < 50) continue;
     const hash = await sha256(content);
     if (_seenHashes.has(hash)) continue;
+    // Check IDB — if already stored, skip
     const existing = await dbGet('artifacts', hash);
     if (existing) { _seenHashes.add(hash); continue; }
     _seenHashes.add(hash);
     const lang = detectLang(el) || 'text';
     const art  = { hash, lang, content: content.slice(0,4000), jobId, provider:PROVIDER,
       sessionId: await getSessionId(), ts: Date.now() };
+    // §US-05 — store in IDB first
     await dbPut('artifacts', art);
     artifactStore.push(art);
     if (artifactStore.length > 200) artifactStore.shift();
+    // Then send to guardian/cortex
     send({ type:'GUARDIAN_ARTIFACT', jobId, content:art.content, lang, hash, chatUrl:location.href, account:getAccount() });
     _toCortex('guardian.artifact', { jobId, hash, lang, chars:content.length });
     _toCortexPush(content, ['artifact', lang, `job:${jobId}`], 'session');
@@ -982,9 +470,10 @@ function findResponseEl() {
 function _isGenerating() {
   return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
 }
-let NEXUS = null;
-
 function injectText(text) {
+  // §NEXUS-WAKE 2026-08-18 — one-line hook (HOOKUP.md §3): if the outgoing
+  // turn earned the agent hint (per-provider hintMode), append it here, right
+  // before injection, same as every other provider script.
   text = NEXUS ? NEXUS.decorate(text) : text;
   const el = document.querySelector('[contenteditable="true"][data-placeholder]') ||
              document.querySelector('.ProseMirror[contenteditable="true"]') ||
@@ -1117,6 +606,7 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
   const usage = recordUsage(jobId, text, ms);
   await scanArtifacts(jobId);
 
+  // Update IDB request status
   await dbPut('requests', { uuid:jobId, status:'fulfilled', completedAt:Date.now(), sessionId:await getSessionId() });
 
   const issues = detectResponseErrors(text);
@@ -1124,6 +614,9 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
     currentGaps = [...issues, ...currentGaps].slice(0,100);
     if (retryCount === 0) autoRetry(jobId, text, retryCount);
     send({ type:'GUARDIAN_GAPS', jobId, gaps:issues, chatUrl:location.href, account:getAccount() });
+    // §BUG FIXED 2026-07-06 — same fix as userscript-chatgpt.js: batched
+    // event hid every real gap from nexus-heal-loop.js. See that file's
+    // comment for the full traced root cause.
     for (const issue of issues) {
       _toCortex('cortex.gap.found', { jobId, type: issue.type, description: issue.reason,
         score: issue.score, source: 'userscript-detector' });
@@ -1136,6 +629,7 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
   _toBridge('guardian.job.complete', { jobId, chars:text.length, ms, provider:PROVIDER });
   sendLedger('UPGRADE', `Job complete · #${jobId.slice(0,8)}`, { jobId, chars:text.length, ms });
 
+  // Post-response cortex command parser
   await parseCortexCommands(text, jobId);
   if (panelOpen) renderActiveTab();
 }
@@ -1150,6 +644,7 @@ async function handleJob(msg) {
     toast(`SEAM ${seam_chunk_idx+1}/${seam_total}: ${seam_title}`, 'job', 3500);
   }
 
+  // §LAW II — write to IDB before any action
   const sessionId = await getSessionId();
   await dbPut('requests', { uuid:jobId, status:'pending', command, promptLen:text.length,
     sessionId, provider:PROVIDER, createdAt:Date.now() });
@@ -1165,8 +660,10 @@ async function handleJob(msg) {
   _toBridge('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
 
   await gate('handleJob', async () => {
+    // §US-04 — pre-prompt intelligence injection
     const intel   = await pullIntelligenceContext(text, command);
     const intelHdr= buildContextHeader(intel);
+    // Legacy cortex context
     const legacyCtx = _settings.enableContextInjection !== false
       ? await pullCortexContext(text) : '';
 
@@ -1210,7 +707,7 @@ setInterval(pollSystemStatus, 15000);
 // ── NCP connection ────────────────────────────────────────────────────────────
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
-  _reconnectAttempts = 0;
+  _reconnectAttempts = 0; // §P113: reset backoff on successful connect
   if (_es) { try { _es.close(); } catch(_) {} }
   const params = `tabId=${MY_TAB}&provider=${PROVIDER}`;
   _log('info', 'NCP connecting…', `${NCP_CHANNEL}?${params}`);
@@ -1219,6 +716,7 @@ function connect() {
   _es.onmessage = e => {
     try {
       _handleServerMessage(JSON.parse(e.data));
+      // ♥ pulse on every NCP emit
       const h = document.getElementById('__g10heart__');
       if (h) {
         h.style.color = '#ef4444';
@@ -1232,7 +730,26 @@ function connect() {
     connState = 'ready'; setConnState('ready');
     _log('ok', `NCP connected · ${PROVIDER}`, NCP_CHANNEL);
     ncpPost(NCP_RESULT, { type:'GUARDIAN_REGISTER', provider:PROVIDER, host:location.hostname, tabId:MY_TAB, claimed:amIClaimed() });
-    armNexusWake();
+    // §NEXUS-WAKE 2026-08-18 — arm "hey nexus" once per boot (HOOKUP.md §2).
+    // window.NexusWake is the shared prelude ProviderHost injects before this
+    // script; absent under node/tests or if the prelude failed to load, so
+    // NEXUS stays null and decorate() below is a no-op rather than a crash.
+    const NEXUS = (typeof window !== 'undefined' && window.NexusWake)
+      ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
+      : null;
+    if (typeof window !== 'undefined') window.__nexusWakeInstance__ = NEXUS;
+    // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
+    // injects it into the corresponding agent chat using clearglass."
+    // The page-side half of clear-glass/src/providers/host.js's
+    // injectAnswer() — called via executeJavaScript from the main process,
+    // so it must be a real, checkable global, not an assumption that
+    // something is listening.
+    if (typeof window !== 'undefined') {
+      window.__nexusInjectAnswer = (text) => {
+        if (!window.__nexusWakeInstance__) return { ok: false, reason: 'wake module not installed on this tab' };
+        return window.__nexusWakeInstance__.showAnswer(text);
+      };
+    }
     if (_hb) clearInterval(_hb);
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
@@ -1272,20 +789,6 @@ function _handleServerMessage(msg) {
       break;
     case 'GUARDIAN_SESSION_NAMED': _log('info','Session named', msg.name); break;
     case 'GUARDIAN_ARTIFACT_SAVED': _log('ok','Artifact saved', msg.artifactId); break;
-    // §RELAY 2026-08-22 — the receiving end of Option A. Guardian's real
-    // wake-relay.js (guardian/lib/wake-relay.js) pushes this once cortex's
-    // server-side /api/meta/observe detection has fired for THIS tab's own
-    // tabId and co-pilot has already answered. No detection happens here —
-    // only delivery, via nexus-wake's own deliverAnswer(), the exact same
-    // _deliver() the composer-typed path already uses.
-    case 'GUARDIAN_WAKE_ANSWER':
-      if (typeof window !== 'undefined' && window.__nexusWakeInstance__ && msg.request && msg.answer) {
-        window.__nexusWakeInstance__.deliverAnswer(msg.request, msg.answer);
-        _log('ok', 'Wake answer relayed by guardian', msg.request.slice(0,60));
-      } else {
-        _log('err', 'GUARDIAN_WAKE_ANSWER received but nexus-wake not installed or payload incomplete');
-      }
-      break;
     default: _log('debug', `NCP: ${msg.type}`);
   }
 }
@@ -1295,7 +798,7 @@ let _lastPath = location.pathname;
 setInterval(() => {
   if (location.pathname !== _lastPath) {
     _lastPath = location.pathname;
-    _sessionId = null;
+    _sessionId = null; // reset session chain on navigation
     if (currentJobId) stopWatch();
     _log('sys', `Nav → ${chatId()}`);
     setTimeout(() => sendDOMMap(), 1000);
@@ -1400,11 +903,13 @@ function buildUI() {
   const root = document.createElement('div'); root.id='__g10root__';
   document.body.appendChild(root);
 
+  // Pill
   const pill  = document.createElement('div'); pill.id='__g10pill__';
   const dot   = document.createElement('div'); dot.id='__g10dot__';
   Object.assign(dot.style,{width:'7px',height:'7px',borderRadius:'50%',background:'#888',transition:'background .4s',flexShrink:'0'});
   const lbl   = document.createElement('span'); lbl.id='__g10label__'; lbl.style.cssText='color:#cbd5e1;font-size:11px;font-weight:600'; lbl.textContent='Guardian';
   const prov  = document.createElement('span'); prov.style.cssText='color:#475569;font-size:9px;border-left:1px solid rgba(255,255,255,.08);padding-left:6px;margin-left:1px'; prov.textContent=`claude v${VERSION}`;
+  // ♥ heartbeat — flashes on every NCP SSE message
   const heart = document.createElement('span'); heart.id='__g10heart__';
   heart.textContent='♥';
   heart.style.cssText='font-size:10px;color:rgba(239,68,68,.3);transition:none;flex-shrink:0;margin-left:2px';
@@ -1412,8 +917,10 @@ function buildUI() {
   const badge = document.createElement('span'); badge.id='__g10badge__';
   pill.append(dot, lbl, prov, heart, claim, badge);
 
+  // Panel
   const panel  = document.createElement('div'); panel.id='__g10panel__';
 
+  // Header
   const hdr    = document.createElement('div'); hdr.id='__g10hdr__';
   const hdrL   = document.createElement('div'); hdrL.className='g10hdr-l';
   const hdrDot = document.createElement('div'); hdrDot.id='__g10hdrdot__'; hdrDot.className='g10hdr-dot';
@@ -1424,12 +931,14 @@ function buildUI() {
   clearBtn.onclick = () => { logEntries=[]; unreadCount=0; renderLog(); _setBadge(0); };
   hdr.append(hdrL, clearBtn);
 
+  // Job bar
   const jobBar = document.createElement('div'); jobBar.id='__g10jobbar__';
   const jDot   = document.createElement('div'); jDot.className='g10jdot';
   const jText  = document.createElement('span'); jText.id='__g10jtext__'; jText.className='g10jtext'; jText.textContent='Job running…';
   const jId    = document.createElement('span'); jId.id='__g10jid__'; jId.className='g10jid';
   jobBar.append(jDot, jText, jId);
 
+  // Tabs: Log | Ledger | Gaps | Arts | SEAM | Intel | Sys | Opts
   const tabs = document.createElement('div'); tabs.id='__g10tabs__';
   const TAB_LIST = [
     ['log','Log'], ['ledger','Ledger'], ['gaps','Gaps'], ['arts','Arts'],
@@ -1443,6 +952,7 @@ function buildUI() {
     tabs.appendChild(t);
   }
 
+  // Content areas
   const logArea    = document.createElement('div'); logArea.id='__g10log__';
   const ledgerArea = document.createElement('div'); ledgerArea.id='__g10ledger__'; ledgerArea.style.cssText='display:none;overflow-y:auto;max-height:460px';
   const gapsArea   = document.createElement('div'); gapsArea.id='__g10gaps__';   gapsArea.style.cssText='display:none;overflow-y:auto;max-height:460px';
@@ -1468,6 +978,7 @@ function buildUI() {
   root.append(panel, pill);
 }
 
+// Tab management
 const AREAS = {
   log:'__g10log__', ledger:'__g10ledger__', gaps:'__g10gaps__',
   arts:'__g10arts__', seam:'__g10seam__', intel:'__g10intel__',
@@ -1606,6 +1117,11 @@ function renderArts() {
 }
 
 // ── SEAM tab — real view into guardian's actual SEAM pipeline ────────────────
+// §SEAM-GLUE-FIX: same fix as chatgpt.js — see that file for the full
+// rationale. Submits to the real POST /command spec pipeline instead of
+// parsing pasted text locally; dispatch back to this tab needs no new
+// wiring, SEAMQueue already pushes type:'GUARDIAN_JOB' and handleJob()
+// already processes it.
 let _seamQueues = [];
 let _seamPollTimer = null;
 function renderSeam() {
@@ -1677,6 +1193,10 @@ async function _refreshSeamQueues(a) {
     sessions   = (sessData.sessions || []).filter(s => s.provider === PROVIDER);
   } catch (_) { return; }
 
+  // Live (in-memory, still-active) queues carry full compartment detail and
+  // are retry-capable. Once a queue completes it's dropped from the server's
+  // active-queue map — nothing left to retry — so those fall back to the
+  // session summary instead.
   const liveUuids = new Set(liveQueues.map(q => q.uuid));
   _seamQueues = [...liveQueues, ...sessions.filter(s => !liveUuids.has(s.uuid))].slice(0, 8);
 
@@ -1855,6 +1375,7 @@ function renderOpts() {
     });
     row.append(lbl, toggle); a.appendChild(row);
   }
+  // Connection test button
   const testDiv = document.createElement('div'); testDiv.style.cssText='padding:10px 12px';
   const testBtn = document.createElement('button');
   testBtn.style.cssText = 'background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:3px;padding:4px 12px;font:inherit;font-size:9px;cursor:pointer;width:100%';
@@ -1867,6 +1388,7 @@ function renderOpts() {
   };
   testDiv.appendChild(testBtn);
   a.appendChild(testDiv);
+  // IDB stats
   dbGetAll('artifacts').then(arts => {
     const statsDiv = document.createElement('div'); statsDiv.style.cssText='padding:4px 14px;color:#1e293b;font-size:9px';
     statsDiv.textContent = `IDB: ${arts.length} artifacts stored`;
@@ -1875,6 +1397,14 @@ function renderOpts() {
 }
 
 // ══ NEXUS MODULE ════════════════════════════════════════════════════════════
+// Wires the chat tab into NEXUS:
+//   1. MutationObserver watches conversation DOM — every new message is captured
+//   2. BDA signal extraction on each message (via Cortex /api/meta/observe)
+//   3. Gap scoring on AI responses (via Cortex /api/meta/gaps)
+//   4. Semantic context pull (via /api/search) — surfaces relevant past work
+//   5. Ollama fallback (GM_xmlhttpRequest to 127.0.0.1:11434) for offline use
+//   6. Inline annotations added to AI messages in the chat DOM
+
 const _nexus = {
   observer:    null,
   lastMsgCount:0,
@@ -1883,14 +1413,23 @@ const _nexus = {
   context:     '',
   ollamaOk:    null,
   pending:      false,
+  wakeHandledIndex: -1,   // §2026-08-22 — dedup guard for streaming-message wake detection
 };
 
 // ── Extract all visible messages from the DOM ─────────────────────────────────
 function _nexusGetMessages() {
+  const msgs = [];
+  // Claude message selectors
+  const humanEls = document.querySelectorAll(
+    '[data-testid="human-turn-content"], .human-turn, [class*="HumanMessage"]'
+  );
+  const aiEls = document.querySelectorAll(
+    '[data-testid="assistant-turn-content"], .font-claude-message, [class*="AssistantMessage"]'
+  );
+  // Interleave by DOM order
   const all = [...document.querySelectorAll(
     '[data-testid="human-turn-content"], [data-testid="assistant-turn-content"], .font-claude-message, .human-turn'
   )];
-  const msgs = [];
   for (const el of all) {
     const text = (el.innerText || el.textContent || '').trim();
     if (!text || text.length < 5) continue;
@@ -1901,14 +1440,8 @@ function _nexusGetMessages() {
 }
 
 // ── Post message to NEXUS (chat-logger + BDA) ─────────────────────────────────
-// §RELAY 2026-08-22 — tabId added to the payload. This is the one real,
-// concrete requirement server-side routing has that client-side detection
-// never needed: cortex's wake row (and guardian's new relay) must know WHICH
-// live NCP connection to push GUARDIAN_WAKE_ANSWER back down. Every other
-// call in this file that reaches guardian already sends tabId; this was the
-// one real gap, since /api/meta/observe goes straight to cortex, not through
-// guardian's own ncpPost() wrapper which adds it automatically.
 function _nexusLogMessage(msg) {
+  // POST to Cortex /api/meta/observe for BDA signal extraction
   GM_xmlhttpRequest({
     method: 'POST',
     url: CORTEX_URL + '/api/meta/observe',
@@ -1918,7 +1451,6 @@ function _nexusLogMessage(msg) {
       text:      msg.text,
       sessionId: _nexus.sessionId,
       source:    PROVIDER,
-      tabId:     MY_TAB,
       chatUrl:   location.href,
       account:   window.NexusWake?.detectAccount?.(PROVIDER) || null,
     }),
@@ -1927,7 +1459,9 @@ function _nexusLogMessage(msg) {
         const d = JSON.parse(r.responseText);
         if (d?.result?.signals) {
           _nexus.signals.push({ ...d.result.signals, role: msg.role, ts: Date.now() });
+          // Update NEXUS tab if open
           if (activeTab === 'nexus') renderNexus();
+          // Annotate the message in DOM if gap score is high
           if (d.result.pendulum?.regime && d.result.pendulum.regime !== 'STABLE') {
             _nexusAnnotate(msg.role, d.result.pendulum.regime, d.result.gaps?.length || 0);
           }
@@ -1960,6 +1494,8 @@ function _nexusPullContext(query) {
 }
 
 // ── Ollama fallback via GM_xmlhttpRequest ─────────────────────────────────────
+// When Ollama is running locally and Guardian's Node process can't reach it,
+// the userscript can call it directly — browser has no CORS restrictions via GM.
 function _nexusOllamaQuery(prompt, cb) {
   GM_xmlhttpRequest({
     method: 'POST',
@@ -1989,6 +1525,7 @@ function _nexusOllamaQuery(prompt, cb) {
   });
 }
 
+// Check Ollama availability on boot
 function _nexusCheckOllama() {
   GM_xmlhttpRequest({
     method: 'GET', url: 'http://127.0.0.1:11434/api/tags',
@@ -2002,10 +1539,11 @@ function _nexusCheckOllama() {
 // ── Annotate AI messages with gap/regime badges ────────────────────────────────
 function _nexusAnnotate(role, regime, gapCount) {
   if (role !== 'assistant' || !regime || regime === 'STABLE') return;
+  // Find the last assistant message element
   const aiEls = document.querySelectorAll('[data-testid="assistant-turn-content"], .font-claude-message');
   if (!aiEls.length) return;
   const last = aiEls[aiEls.length - 1];
-  if (last.querySelector('.__nx_badge__')) return;
+  if (last.querySelector('.__nx_badge__')) return; // already annotated
   const badge = document.createElement('div');
   badge.className = '__nx_badge__';
   const col = regime === 'OSCILLATING' || regime === 'DYSREGULATED' ? '#ff6b35' : '#818cf8';
@@ -2015,74 +1553,46 @@ function _nexusAnnotate(role, regime, gapCount) {
 }
 
 // ── MutationObserver — watch for new messages ─────────────────────────────────
-// §RELAY 2026-08-22 — James, Option A: "Drop the in-page detection, wire the
-// assistant-side trigger through guardian." This is the exact rewrite.
-//
-// REMOVED: the old direct call into window.__nexusWakeInstance__.checkMessage()
-// on every mutation batch — that was in-page wake DETECTION, and it's gone,
-// not hardened further, per the decision.
-//
-// FIXED, not removed: the trigger timing for _nexusLogMessage() itself. The
-// old code fired it the INSTANT the message count changed (childList), with
-// whatever partial text existed at that exact frame — for an assistant turn,
-// that is frequently the first few streamed characters, since a new message
-// container appears (one childList mutation) before any of its text has
-// streamed in. That's the same real bug this session's own nexus-wake fix
-// already diagnosed for the OTHER, now-removed observer — it was never
-// specific to that code path, it's inherent to reading a streaming message on
-// the count-changed event instead of once the text is complete.
-//
-// Server-side detection makes this worse, not better, if left as-is: cortex's
-// /api/meta/observe would now be asked to regex-match "hey n" instead of
-// "hey nexus, tell me the status of guardian." — trading one fragile check
-// for another that merely LOOKS more robust because it moved off the page.
-//
-// Real fix: reuse the exact stabilization technique startWatch() already
-// proves reliable for job-tracked generations (characterData:true + 3
-// consecutive stable reads) — but for EVERY new message, not only
-// guardian-dispatched jobs, since an organic "hey nexus" in an ordinary
-// assistant turn has no jobId and never reaches startWatch() at all.
 function _nexusStartObserver() {
   const target = document.querySelector('main') || document.body;
-  let _stableTimer = null;
-  let _lastSeenText = '';
-  let _stableCount = 0;
-
-  function _checkLatestStable() {
-    const msgs = _nexusGetMessages();
-    if (msgs.length !== _nexus.lastMsgCount) {
-      // A genuinely new message appeared — this is a DIFFERENT message than
-      // whatever was being stabilized before, so tracking resets for it.
-      _nexus.lastMsgCount = msgs.length;
-      _lastSeenText = ''; _stableCount = 0;
-    }
-    const newest = msgs[msgs.length - 1];
-    if (!newest) { _stableTimer = setTimeout(_checkLatestStable, 300); return; }
-
-    if (newest.text === _lastSeenText) {
-      _stableCount++;
-      if (_stableCount >= 3) {
-        // Complete, stable text — the ONLY point _nexusLogMessage now fires
-        // for this message, matching startWatch()'s own proven technique
-        // instead of the old count-changed trigger.
-        _nexusLogMessage(newest);
-        if (newest.role === 'user') _nexusPullContext(newest.text);
-        if (activeTab === 'nexus') renderNexus();
-        _stableCount = 0; // don't refire on further identical checks
-        return; // nothing left to watch until the NEXT new message arrives
-      }
-    } else {
-      _lastSeenText = newest.text; _stableCount = 0;
-    }
-    _stableTimer = setTimeout(_checkLatestStable, 300);
-  }
-
   _nexus.observer = new MutationObserver(() => {
-    if (_stableTimer) clearTimeout(_stableTimer);
-    _stableTimer = setTimeout(_checkLatestStable, 300);
+    const msgs = _nexusGetMessages();
+    const newestIdx = msgs.length - 1;
+    const newest = msgs[newestIdx];
+
+    // §FIXED 2026-08-22 — James, live test: "it doesn't detect when you
+    // say it but it does when i say it. the moment i click enter." Real
+    // cause: this whole callback used to short-circuit on msgs.length
+    // unchanged, so a STREAMING assistant message — which appears near-
+    // empty, then grows over many mutations at the same message count —
+    // only ever got checked once, at the moment it was still empty. A
+    // typed human message has its full text instantly, so it never hit
+    // this. Wake-checking now runs on every mutation, using the freshest
+    // text, independent of the count-gated block below.
+    try {
+      if (newest && newest.text && typeof window !== 'undefined' && window.__nexusWakeInstance__
+          && _nexus.wakeHandledIndex !== newestIdx) {
+        const handled = window.__nexusWakeInstance__.checkMessage(newest.role, newest.text);
+        // Only mark handled on a real match — an unmatched check must stay
+        // re-checkable as more text streams in and the phrase may still
+        // appear. Once handled, stop re-firing for this same message
+        // (dedup: without this, a wake phrase present for the rest of a
+        // streaming response would re-trigger askNexus() on every mutation).
+        if (handled) _nexus.wakeHandledIndex = newestIdx;
+      }
+    } catch (_) { /* §1.2 — a wake-check failure never blocks real message logging */ }
+
+    if (msgs.length === _nexus.lastMsgCount) return;
+    _nexus.lastMsgCount = msgs.length;
+    if (!newest) return;
+    _nexusLogMessage(newest);
+    // On user message: pull semantic context for what they're asking
+    if (newest.role === 'user') {
+      _nexusPullContext(newest.text);
+    }
+    if (activeTab === 'nexus') renderNexus();
   });
-  _nexus.observer.observe(target, { childList: true, subtree: true, characterData: true });
-  _checkLatestStable();
+  _nexus.observer.observe(target, { childList: true, subtree: true, characterData: false });
 }
 
 // ── Render NEXUS tab ──────────────────────────────────────────────────────────
@@ -2100,7 +1610,9 @@ function renderNexus() {
 
   const pad = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06)';
   const dim = 'color:#334466;font-size:9px';
+  const bright = 'color:#b8cfe0;font-size:10px';
 
+  // ── Status bar ───────────────────────────────────────────────────────────────
   const status = document.createElement('div');
   status.style.cssText = pad + ';display:flex;gap:12px;align-items:center;flex-wrap:wrap';
   status.innerHTML =
@@ -2112,6 +1624,111 @@ function renderNexus() {
     '<button style="margin-left:auto;background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:3px;padding:2px 8px;font:9px monospace;cursor:pointer" ' +
     'onclick="_nexusCheckOllama()">↺ ping ollama</button>';
   el.appendChild(status);
+
+  // ── BDA Signals ───────────────────────────────────────────────────────────────
+  if (signals.length) {
+    const sdiv = document.createElement('div');
+    sdiv.style.cssText = pad;
+    sdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">BDA SIGNALS</div>';
+    const latest = signals[signals.length - 1];
+    const axes = ['valence','certainty','openness','tension','selfref'];
+    const sigRow = document.createElement('div');
+    sigRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+    for (const ax of axes) {
+      const v = latest[ax] ?? 0;
+      const pct = Math.round(v * 100);
+      const col = ax === 'tension' ? (pct > 60 ? '#ff2d55' : '#818cf8') :
+                  ax === 'valence' ? (pct > 50 ? '#00ff88' : '#ff6b35') : '#818cf8';
+      const chip = document.createElement('div');
+      chip.style.cssText = 'font:9px monospace;color:' + col + ';border:1px solid ' + col + ';border-radius:3px;padding:2px 6px;opacity:.8';
+      chip.textContent = ax + ':' + pct + '%';
+      sigRow.appendChild(chip);
+    }
+    // Regime
+    if (latest.regime) {
+      const reg = document.createElement('div');
+      reg.style.cssText = 'margin-top:5px;font:9px monospace;color:#ff6b35';
+      reg.textContent = 'regime: ' + latest.regime;
+      sdiv.appendChild(sigRow);
+      sdiv.appendChild(reg);
+    } else {
+      sdiv.appendChild(sigRow);
+    }
+    el.appendChild(sdiv);
+  }
+
+  // ── Semantic context from NEXUS memory ───────────────────────────────────────
+  if (context.length) {
+    const cdiv = document.createElement('div');
+    cdiv.style.cssText = pad;
+    cdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">RELEVANT MEMORY</div>';
+    for (const hit of context.slice(0, 4)) {
+      const pct = Math.round((hit.snr || hit.similarity || 0) * 100);
+      const col = pct >= 85 ? '#00ff88' : pct >= 72 ? '#00d4ff' : '#818cf8';
+      const row = document.createElement('div');
+      row.style.cssText = 'margin-bottom:4px;padding:5px 8px;background:rgba(0,0,0,.3);border-radius:3px;border-left:2px solid ' + col;
+      row.innerHTML =
+        '<div style="font:9px monospace;color:' + col + '">' + pct + '% · ' + (hit.type || hit.table || '?') + '</div>' +
+        '<div style="font:10px monospace;color:#5a7a96;margin-top:2px;line-height:1.4">' +
+        (hit.text || '').slice(0, 100) + '</div>';
+      cdiv.appendChild(row);
+    }
+    // Inject context button
+    const injectBtn = document.createElement('button');
+    injectBtn.style.cssText = 'margin-top:6px;background:none;border:1px solid rgba(0,212,255,.3);color:#00d4ff;border-radius:3px;padding:3px 10px;font:9px monospace;cursor:pointer;width:100%';
+    injectBtn.textContent = '⬡ inject context into next prompt';
+    injectBtn.onclick = () => _nexusInjectContext();
+    cdiv.appendChild(injectBtn);
+    el.appendChild(cdiv);
+  }
+
+  // ── Ollama quick-query ────────────────────────────────────────────────────────
+  const qdiv = document.createElement('div');
+  qdiv.style.cssText = pad;
+  qdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">OLLAMA DIRECT</div>';
+  const qInput = document.createElement('textarea');
+  qInput.id = '__nx_query__';
+  qInput.placeholder = 'Ask Ollama directly (qwen2.5-coder:1.5b)…';
+  qInput.style.cssText = 'width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.07);color:#b8cfe0;font:10px monospace;padding:6px 8px;border-radius:3px;resize:none;height:52px;outline:none;box-sizing:border-box';
+  const qBtn = document.createElement('button');
+  qBtn.textContent = '↗ ask ollama';
+  qBtn.style.cssText = 'margin-top:4px;background:none;border:1px solid rgba(0,255,136,.3);color:#00ff88;border-radius:3px;padding:3px 10px;font:9px monospace;cursor:pointer';
+  const qOut = document.createElement('div');
+  qOut.id = '__nx_qout__';
+  qOut.style.cssText = 'margin-top:6px;font:10px monospace;color:#5a7a96;line-height:1.5;min-height:20px';
+  qBtn.onclick = () => {
+    const q = document.getElementById('__nx_query__')?.value?.trim();
+    if (!q) return;
+    qOut.style.color = '#818cf8'; qOut.textContent = '⟳ querying ollama…';
+    _nexusOllamaQuery(q, (err, text) => {
+      const out = document.getElementById('__nx_qout__');
+      if (!out) return;
+      if (err) { out.style.color='#ff2d55'; out.textContent='✗ ' + err; }
+      else      { out.style.color='#b8cfe0'; out.textContent = text.slice(0, 400); }
+    });
+  };
+  qdiv.append(qInput, qBtn, qOut);
+  el.appendChild(qdiv);
+
+  // ── Recent conversation summary ────────────────────────────────────────────
+  if (msgs.length) {
+    const mdiv = document.createElement('div');
+    mdiv.style.cssText = 'padding:8px 12px';
+    mdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">CONVERSATION (' + msgs.length + ')</div>';
+    for (const m of msgs.slice(-4)) {
+      const row = document.createElement('div');
+      row.style.cssText = 'margin-bottom:3px;display:flex;gap:6px';
+      const role = document.createElement('span');
+      role.style.cssText = 'font:8px monospace;color:' + (m.role==='user'?'#00d4ff':'#00ff88') + ';width:52px;flex-shrink:0;padding-top:1px';
+      role.textContent = m.role.toUpperCase();
+      const text = document.createElement('span');
+      text.style.cssText = 'font:10px monospace;color:#334466;line-height:1.4';
+      text.textContent = m.text.slice(0, 80) + (m.text.length > 80 ? '…' : '');
+      row.append(role, text);
+      mdiv.appendChild(row);
+    }
+    el.appendChild(mdiv);
+  }
 }
 
 // ── Inject NEXUS context into the Claude input field ─────────────────────────
@@ -2124,6 +1741,7 @@ function _nexusInjectContext() {
   }
   lines.push('[END NEXUS CONTEXT]');
   const ctx = lines.join('\n');
+  // Find Claude's input
   const inp = document.querySelector('[contenteditable="true"][data-placeholder]') ||
               document.querySelector('div[contenteditable="true"]');
   if (!inp) return;
@@ -2137,11 +1755,22 @@ function _nexusInjectContext() {
 function _nexusInit() {
   _nexus.sessionId = MY_TAB + '-' + Date.now().toString(36);
   _nexusCheckOllama();
-  setTimeout(_nexusStartObserver, 2000);
+  setTimeout(_nexusStartObserver, 2000); // wait for DOM to settle
 }
 
 // ══ NEXUS HOOKS — Memory · RAID · Self-Heal ═════════════════════════════════
-const _mem = { working: [], lastFetch: 0 };
+// The userscript is now a full NEXUS agent.
+// Three hooks into the sovereign system, callable from the NEXUS tab
+// or triggered automatically by conversation events.
+
+// ── MEMORY HOOK ───────────────────────────────────────────────────────────────
+// Read working memory, write observations, search semantic memory.
+// The conversation IS the input. Every exchange enriches the memory store.
+
+const _mem = {
+  working:   [],  // live working memory from cortex
+  lastFetch: 0,
+};
 
 function _memFetch(cb) {
   GM_xmlhttpRequest({
@@ -2160,6 +1789,7 @@ function _memFetch(cb) {
 }
 
 function _memWrite(key, value, tags = []) {
+  // Write an observation to cortex working memory from the conversation
   GM_xmlhttpRequest({
     method: 'POST',
     url: CORTEX_URL + '/api/table/insert',
@@ -2200,7 +1830,16 @@ function _memForget(id) {
   });
 }
 
-const _raid = { lastDecision: null, history: [] };
+// ── RAID HOOK ─────────────────────────────────────────────────────────────────
+// Ask RAID which provider it would choose for a given intent.
+// Surface the decision in the NEXUS tab — you can see why NEXUS would route
+// a particular query to Claude vs ChatGPT vs Gemini vs Perplexity vs Ollama.
+// Lets you override before dispatching.
+
+const _raid = {
+  lastDecision: null,
+  history:      [],
+};
 
 function _raidDecide(intent, preferred, cb) {
   const url = CORTEX_URL + '/api/raid/decide?intent=' +
@@ -2234,7 +1873,18 @@ function _raidStatus(cb) {
   });
 }
 
-const _heal = { gaps: [], failureModes: [], friction: [], status: null, lastFetch: 0 };
+// ── SELF-HEAL HOOK ─────────────────────────────────────────────────────────────
+// Read open gaps, active failure modes, friction scores.
+// Trigger a heal request from the userscript for a specific gap.
+// Surface the escalation state — you can see what the system tried and where it is.
+
+const _heal = {
+  gaps:         [],
+  failureModes: [],
+  friction:     [],
+  status:       null,
+  lastFetch:    0,
+};
 
 function _healFetch(cb) {
   let done = 0;
@@ -2269,6 +1919,7 @@ function _healFetch(cb) {
 }
 
 function _healTrigger(gapUuid, cb) {
+  // Inject a HEAL_REQUESTED event into the bus — escalation engine picks it up
   GM_xmlhttpRequest({
     method: 'POST',
     url: CORTEX_URL + '/api/event',
@@ -2298,6 +1949,7 @@ function _healStatus(cb) {
   });
 }
 
+// ── NEXUS tab sub-renderers ────────────────────────────────────────────────────
 function _renderNexusMemory(container) {
   const sec = document.createElement('div');
   sec.style.cssText = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06)';
@@ -2342,6 +1994,7 @@ function _renderNexusMemory(container) {
     }
   }
 
+  // Write to memory from conversation
   const writeRow = document.createElement('div');
   writeRow.style.cssText = 'display:flex;gap:4px;margin-top:6px';
   const keyIn = document.createElement('input');
@@ -2374,6 +2027,7 @@ function _renderNexusRaid(container) {
   hdr.innerHTML = '<span style="color:#334466;font-size:9px;text-transform:uppercase;letter-spacing:.08em">RAID ROUTING</span>';
   sec.appendChild(hdr);
 
+  // Last decision
   if (_raid.lastDecision) {
     const d = _raid.lastDecision;
     const agentCol = { ollama:'#00ff88', claude:'#818cf8', chatgpt:'#34d399', gemini:'#ff6b35', perplexity:'#00d4ff' };
@@ -2389,6 +2043,7 @@ function _renderNexusRaid(container) {
     sec.appendChild(decision);
   }
 
+  // Ask RAID row
   const askRow = document.createElement('div');
   askRow.style.cssText = 'display:flex;gap:4px;align-items:center';
   const intentIn = document.createElement('input');
@@ -2401,6 +2056,7 @@ function _renderNexusRaid(container) {
     const q = intentIn.value.trim(); if (!q) return;
     _raidDecide(q, '', (err, d) => { if (!err && activeTab==='nexus') renderNexus(); });
   };
+  // Auto-route the current input field content
   const autoBtn = document.createElement('button');
   autoBtn.textContent = '⟳ auto';
   autoBtn.style.cssText = 'background:none;border:1px solid rgba(0,255,136,.2);color:#00ff88;border-radius:3px;padding:2px 8px;font:9px monospace;cursor:pointer;flex-shrink:0';
@@ -2412,6 +2068,7 @@ function _renderNexusRaid(container) {
   askRow.append(intentIn, askBtn, autoBtn);
   sec.appendChild(askRow);
 
+  // History
   if (_raid.history.length) {
     const hist = document.createElement('div');
     hist.style.cssText = 'margin-top:5px;display:flex;flex-direction:column;gap:2px';
@@ -2429,6 +2086,10 @@ function _renderNexusRaid(container) {
   }
 
   if (container) container.appendChild(sec);
+  else {
+    const el = document.getElementById('__g10nexus__');
+    if (el) { /* will be called from renderNexus */ }
+  }
   return sec;
 }
 
@@ -2445,6 +2106,7 @@ function _renderNexusHeal(container) {
     'id="__nx_heal_refresh__">↺</button>';
   sec.appendChild(hdr);
 
+  // Failure modes (highest priority)
   for (const fm of _heal.failureModes.slice(0, 2)) {
     const card = document.createElement('div');
     card.style.cssText = 'padding:5px 8px;background:rgba(255,45,85,.06);border:1px solid rgba(255,45,85,.2);border-radius:3px;margin-bottom:4px';
@@ -2458,6 +2120,7 @@ function _renderNexusHeal(container) {
     sec.appendChild(card);
   }
 
+  // Open gaps
   for (const gap of _heal.gaps.slice(0, 4)) {
     const sev  = gap.severity || 'medium';
     const col  = sev==='high'?'#ff6b35':sev==='critical'?'#ff2d55':'#818cf8';
@@ -2492,6 +2155,7 @@ function _renderNexusHeal(container) {
     sec.appendChild(ok);
   }
 
+  // Friction table
   if (_heal.friction.some(f=>f.friction>0)) {
     const ftbl = document.createElement('div');
     ftbl.style.cssText = 'margin-top:6px';
@@ -2515,11 +2179,14 @@ function _renderNexusHeal(container) {
   container.appendChild(sec);
 }
 
+// ── Rewrite renderNexus to include all three hooks ────────────────────────────
+const _renderNexusOrig = renderNexus;
 function renderNexus() {
   const el = document.getElementById('__g10nexus__');
   if (!el) return;
   el.innerHTML = '';
 
+  // Status bar
   const msgs = _nexusGetMessages();
   const os   = _nexus.ollamaOk===null?'...':_nexus.ollamaOk?'✓':'✗';
   const oc   = _nexus.ollamaOk?'#00ff88':_nexus.ollamaOk===false?'#ff2d55':'#818cf8';
@@ -2535,6 +2202,7 @@ function renderNexus() {
     'onclick="_nexusRefreshAll()">↺ all</button>';
   el.appendChild(sb);
 
+  // BDA signals (compact)
   if (_nexus.signals.length) {
     const latest = _nexus.signals[_nexus.signals.length-1];
     const sdiv   = document.createElement('div');
@@ -2551,6 +2219,7 @@ function renderNexus() {
     el.appendChild(sdiv);
   }
 
+  // Semantic context (compact)
   if (_nexus.context?.length) {
     const cdiv = document.createElement('div');
     cdiv.style.cssText = 'padding:6px 12px;border-bottom:1px solid rgba(255,255,255,.06)';
@@ -2571,10 +2240,16 @@ function renderNexus() {
     el.appendChild(cdiv);
   }
 
+  // RAID
   el.appendChild(_renderNexusRaid());
+
+  // Memory
   _renderNexusMemory(el);
+
+  // Self-Heal
   _renderNexusHeal(el);
 
+  // Ollama direct (compact)
   const qdiv=document.createElement('div');
   qdiv.style.cssText='padding:8px 12px';
   qdiv.innerHTML='<div style="color:#334466;font:8px monospace;margin-bottom:4px;text-transform:uppercase">OLLAMA DIRECT</div>';
@@ -2598,6 +2273,8 @@ function _nexusRefreshAll() {
   if (last) _raidDecide(last.text, '', () => { if(activeTab==='nexus') renderNexus(); });
 }
 
+// Override _nexusInit to also boot hooks
+const _nexusInitBase = _nexusInit;
 function _nexusInit() {
   _nexus.sessionId = MY_TAB + '-' + Date.now().toString(36);
   _nexusCheckOllama();
@@ -2606,33 +2283,16 @@ function _nexusInit() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-function armNexusWake() {
-  if (typeof window === 'undefined' || !window.NexusWake) return null;
-  if (window.__nexusWakeInstance__) return window.__nexusWakeInstance__;
-  // §RELAY 2026-08-22 — getMessages is deliberately NOT passed anymore.
-  // nexus-wake's own in-page assistant-detection (_watchConversation +
-  // checkMessage) only arms when getMessages is a function; omitting it
-  // disables that path cleanly, at the one real definition point, rather
-  // than leaving it wired and just hoping nothing calls it. The composer
-  // path (onKeyDown, install()'s own real, reliable half) is completely
-  // unaffected — it never depended on getMessages at all.
-  NEXUS = window.NexusWake.install({
-    provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m),
-    injectText, submit, isGenerating: _isGenerating,
-  });
-  window.__nexusWakeInstance__ = NEXUS;
-  return NEXUS;
-}
-
 async function init() {
   loadSettings();
   await dbOpen().catch(() => { _log('err','IDB failed — degraded mode'); });
   buildUI();
-  armNexusWake();
   connect();
-  _nexusInit();
+  _nexusInit();  // start conversation observer + Ollama fallback
   _log('sys', `Guardian v${VERSION}`, `${PROVIDER} · ${location.hostname}`);
+  // DOM map on load if enabled
   if (_settings.enableDOMMap) setTimeout(() => sendDOMMap(), 3000);
+  // Periodic footer update
   setInterval(() => {
     const el = document.getElementById('__g10fl__');
     if (el) {

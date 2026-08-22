@@ -53,7 +53,7 @@ function buildSpecFromSession(session) {
 
 const { HookRegistry }          = require('../lib/hook-registry'); // moved 2026-07-20, docs/hooks-migration.spec
 const { Blueprint, SNRGate, Translate, scanTopology } = require('./src/spec/Blueprint');
-const { createCFRLedger }       = require('../meta/cfr');
+const { createCFRLedger }       = require('../intelligence/cfr');
 // Living hook registry — the canonical wire map for all NEXUS systems
 const systemHooks = (() => { try { return require('../hooks'); } catch(_) { return null; } })();
 const { createCompileRoutes }   = (() => { try { return require('./compile-route'); } catch(_) { return { createCompileRoutes: null }; } })();

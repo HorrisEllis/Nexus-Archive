@@ -1362,13 +1362,25 @@ const server = http.createServer(async (req, res) => {
     // its own default toolset. tool_config's own internal design already
     // gates its dangerous half (loosening always needs the user, regardless
     // of who calls it), so offering it here doesn't bypass that protection.
-    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events'];
+    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events', 'framework_builder', 'intelligence_query'];
     if (DEFAULT_CHAT_TOOLS.length) {
       const agentToolsForManifest = require('../lib/agent-tools/index.js');
       const manifest = DEFAULT_CHAT_TOOLS
         .map(name => agentToolsForManifest.TOOLS.get(name))
         .filter(Boolean)
-        .map(t => `- ${t.name}: ${(t.description || '').split('\n')[0].slice(0, 140)}`)
+        .map(t => {
+          // §FIXED 2026-08-22 — James, live test: co-pilot fabricated
+          // {"action":"list","lens":"agent_notes","query":"claude-copilot"}
+          // for a tool whose real schema is {action, agent, kind, source,
+          // relatesTo, supersedes} — because only a truncated description
+          // was ever sent, never the real parameter names. This is that
+          // fix, general to every tool here, not special-cased to one.
+          const props = t.parameters?.properties || {};
+          const fields = Object.entries(props)
+            .map(([k, v]) => `${k}${v.enum ? `: ${v.enum.map(e => `"${e}"`).join('|')}` : v.type ? `: ${v.type}` : ''}`)
+            .join(', ');
+          return `- ${t.name}(${fields}): ${(t.description || '').split('\n')[0].slice(0, 140)}`;
+        })
         .join('\n');
       if (manifest) {
         contextText += `\n\n---\nReal tools available. To use one, end your response with a single line, exactly: TOOL_CALL: {"name": "<tool_name>", "args": {...}}\n${manifest}\n---`;

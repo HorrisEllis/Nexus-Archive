@@ -34,11 +34,6 @@ const FILES = [
   // loom entry at all, under any id (checked directly, not assumed).
   ['lib/diagnostic-report.js',      'nexus.lib.diagnostic-report',      'lib', []],
   ['guardian/lib/ncp.js',           'nexus.guardian.lib.ncp',           'guardian/lib', []],
-  // §RELAY 2026-08-22 — real dependency on ncp.js's pushTab, not a guess:
-  // wake-relay.js is handed the live ncp instance directly by guardian's
-  // own boot sequence (server.js), same construction-injection pattern as
-  // Lab Manager right above it in that same file.
-  ['guardian/lib/wake-relay.js',    'nexus.guardian.lib.wake-relay',    'guardian/lib', ['nexus.guardian.lib.ncp']],
   ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
 
   // §ADDED 2026-08-17b — TX10 (docs/clearglass-agent-suite-and-cfr-loom-
@@ -65,6 +60,11 @@ const FILES = [
   // genuinely absent). Registered here so those real wires can resolve.
   ['lib/ledger-fanin.js',        'nexus.lib.ledger-fanin',        'lib',           []],
   ['cortex/memory/jaa-db.js',    'nexus.cortex.jaa-db',           'cortex/memory', []],
+  ['bridge/causal/graph.js', 'nexus.bridge.causal.graph', 'bridge/causal', ['nexus.intelligence.cfr.graph']],
+  ['bridge/index.js', 'nexus.bridge.index', 'bridge', ['nexus.intelligence.cfr']],
+  ['cortex/memory/causal-lookup.js', 'nexus.cortex.memory.causal-lookup', 'cortex/memory', ['nexus.intelligence.cfr.graph']],
+  ['cortex/versionium/causality.js', 'nexus.cortex.versionium.causality', 'cortex/versionium', ['nexus.intelligence.cfr.graph']],
+  ['lib/lenses.js', 'nexus.lib.lenses', 'lib', ['nexus.intelligence.cfr.sigma']],
   ['lib/component-ledger.js',    'nexus.lib.component-ledger',    'lib',           []],
 
   // §ADDED 2026-08-17d — the real consumer-side entry points the person-
@@ -86,6 +86,7 @@ const FILES = [
   // recency bugs in it (query() vs tail()).
   ['intelligence/index.js', 'nexus.intelligence', 'intelligence', []],
   ['lib/uid/component-map.js', 'nexus.lib.uid.component-map', 'lib/uid', []],
+  ['lib/event-types.js', 'nexus.lib.event-types', 'lib', []],
 
   // §ADDED 2026-08-17g — found unregistered while fixing its real,
   // significant disk/RAM-relevant bug (unbounded error log growth).

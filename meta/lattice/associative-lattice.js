@@ -28,7 +28,7 @@
  * per the roadmap doc, not a gap) — this module does not call them.
  */
 
-const { createCFRField } = require('../cfr/field.js');
+const { createCFRField } = require('../../intelligence/cfr/field.js');
 const cortexWrite = require('../../lib/cortex-write.js')('lattice');
 
 const TABLE = 'relationship_lattice';

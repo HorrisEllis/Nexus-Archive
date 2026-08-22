@@ -29,7 +29,7 @@ const nc   = require('../nexus-connect');
 
 const { BootSequence }     = require('../lib/boot-sequence');
 const { createBridgeLedger }   = require('./ledger');
-const { createCFRLedger }      = require('../meta/cfr');
+const { createCFRLedger }      = require('../intelligence/cfr');
 const { createBridgeIdentity } = require('./identity');
 const { createBridgeRegistry } = require('./registry');
 const { createBridgeRouter }   = require('./router');

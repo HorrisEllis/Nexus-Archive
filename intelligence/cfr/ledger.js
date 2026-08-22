@@ -45,7 +45,7 @@ let _compoundModule = null;
 function _getCompoundModule() {
   if (_compoundModule) return _compoundModule;
   try {
-    _compoundModule = require('../causal/compound');
+    _compoundModule = require('../../meta/causal/compound');
   } catch(_) {}
   return _compoundModule;
 }

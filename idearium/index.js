@@ -227,7 +227,7 @@ export class IdeaOS {
       // so _evLedger was permanently null. Fixed path AND upgraded straight
       // to the CFR-Ω ledger (sigma/delta/field annotation + /cfr/* routes),
       // same drop-in surface as cortex/guardian/bridge/orchestrator.
-      const { createCFRLedger } = _require('../meta/cfr/ledger');
+      const { createCFRLedger } = _require('../intelligence/cfr/ledger');
       this._evLedger = createCFRLedger({
         ledgerDir: _require('path').join(_require('path').dirname(
           _require('url').fileURLToPath(import.meta.url)), '../data/idearium'),

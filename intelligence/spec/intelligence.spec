@@ -191,11 +191,33 @@ spec:
     phase_1: "Move cortex/intelligence/'s 5 files + their 8 real consumers. Smallest, most contained. Proves the pattern."
     phase_2: "Move lib/baseline.js + lib/snapshot-trigger.js + their 8 combined real consumers."
     phase_3: >
-      meta/cfr/ — NOT a straight move. Build the new system's real
-      field-regime module first, keep meta/cfr/ itself in place as a
-      thin, synchronous, in-process compatibility shim that forwards to
-      the new system's local state (kept warm, not a network call on
-      every read) so the 24 real, mostly-synchronous callers need zero
+      §CORRECTED 2026-08-22, before any phase 3 work began — read
+      meta/cfr's actual code (field.js, ledger.js) per §8.7, not just its
+      caller count, before touching anything. The original plan below
+      (compatibility shim, kept in-process/synchronous) assumed meta/cfr
+      was architecturally like cortex/intelligence — a shared service
+      worth centralizing. It is not: createCFRField() closes over purely
+      local, in-memory state; createCFRLedger() requires a caller-
+      provided ledgerDir and persists to real, per-directory disk files.
+      Every one of the 24 real callers correctly instantiates its OWN
+      independent field + ledger — this is a reusable LIBRARY pattern,
+      not a shared service. Centralizing it into one standalone HTTP
+      system would collapse 24 legitimately independent, correct,
+      per-system health-tracking instances into one shared, network-
+      dependent one — a real regression, not a consolidation.
+      Real, corrected phase 3: a pure file relocation, same category of
+      work as phases 1 and 2 — git mv meta/cfr/ into intelligence/,
+      fix the 24 real require paths, keep it exactly as a locally-
+      instantiated library. No shim. No service. No behavior change,
+      only location — genuinely lower risk than the plan below, not
+      higher.
+      [ORIGINAL PLAN, superseded, kept for the record per §17.3 —
+      alternatives and rejections stay visible, not deleted]: meta/cfr/
+      — NOT a straight move. Build the new system's real field-regime
+      module first, keep meta/cfr/ itself in place as a thin,
+      synchronous, in-process compatibility shim that forwards to the
+      new system's local state (kept warm, not a network call on every
+      read) so the 24 real, mostly-synchronous callers need zero
       changes at this phase. Only after phase 3 is proven stable does a
       later, separate decision get made about whether those 24 callers
       ever actually convert to real API calls, or whether the shim is

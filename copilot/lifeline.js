@@ -354,7 +354,7 @@ function extractExplicitAgent(prompt) {
   return m ? m[1].toLowerCase() : null;
 }
 
-async function route(prompt, opts = {}) {
+async function _routeInner(prompt, opts = {}) {
   const requestId = opts.requestId || crypto.randomUUID();
 
   // §WIRED 2026-08-13 — "co-pilot should be like a hat, not a static
@@ -514,6 +514,35 @@ async function route(prompt, opts = {}) {
     escalated: false,
     requestId,
   };
+}
+
+// §WIRED 2026-08-22 — James: "wire it all." Thin wrapper, not touching
+// _routeInner's 4 real internal exit paths individually — emits
+// lifeline_input/lifeline_output around whichever path actually runs.
+async function route(prompt, opts = {}) {
+  const requestId = opts.requestId || crypto.randomUUID();
+  let et = null;
+  try {
+    et = require('../lib/event-types.js');
+    require('../cortex/memory/jaa-db.js').jaaDB.insert('event_log', {
+      type: et.INTENT.LIFELINE_INPUT, blockId: requestId,
+      agent: opts.provider || null, intent: opts.intent || null, ts: Date.now(),
+    });
+  } catch (_) { /* event pipeline unreachable — the real route proceeds regardless, §1.2 non-blocking */ }
+
+  const result = await _routeInner(prompt, { ...opts, requestId });
+
+  try {
+    if (et) {
+      require('../cortex/memory/jaa-db.js').jaaDB.insert('event_log', {
+        type: et.INTENT.LIFELINE_OUTPUT, blockId: requestId,
+        agent: result?.provider_used || opts.provider || null,
+        ok: !!result?.ok, escalated: !!result?.escalated, ts: Date.now(),
+      });
+    }
+  } catch (_) { /* §1.2 — the real result is unaffected either way */ }
+
+  return result;
 }
 
 /**

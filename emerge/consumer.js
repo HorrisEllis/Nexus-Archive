@@ -74,6 +74,18 @@ async function _reportEvent(type, payload) {
   }
 }
 
+// §WIRED 2026-08-22 — James: "wire it all." One real place for
+// build_output, used by all 3 real exit paths in processOne() below.
+function _reportBuildOutput(uuid, name, ok, error) {
+  try {
+    const et = require('../lib/event-types.js');
+    require('../cortex/memory/jaa-db.js').jaaDB.insert('event_log', {
+      type: et.INTENT.BUILD_OUTPUT, blockId: uuid,
+      agent: 'emerge', moduleName: name, ok: !!ok, error: error || null, ts: Date.now(),
+    });
+  } catch (_) { /* event pipeline unreachable — the real build result is unaffected */ }
+}
+
 async function processOne(contract) {
   const { uuid } = contract;
   const name = contract.payload?.name || 'unnamed-module';
@@ -81,6 +93,15 @@ async function processOne(contract) {
 
   cq.accept('emerge', uuid);
   await _reportEvent('emerge.contract.accepted', { contractUuid: uuid, moduleName: name });
+  // §WIRED 2026-08-22 — James: "wire it all." Real build_input, same
+  // canonical registry every other real system event uses now.
+  try {
+    require('../lib/event-types.js');
+    require('../cortex/memory/jaa-db.js').jaaDB.insert('event_log', {
+      type: require('../lib/event-types.js').INTENT.BUILD_INPUT, blockId: uuid,
+      agent: 'emerge', moduleName: name, ts: Date.now(),
+    });
+  } catch (_) { /* event pipeline unreachable — the real build proceeds regardless */ }
 
   try {
     if (contract.payload?.type !== 'module_build') {
@@ -113,16 +134,19 @@ async function processOne(contract) {
     if (result.ok) {
       cq.complete('emerge', uuid, { outputDir: buildDir, ok: true, skipped: !!result.skipped });
       await _reportEvent('emerge.contract.complete', { contractUuid: uuid, moduleName: name, outputDir: buildDir });
+      _reportBuildOutput(uuid, name, true);
       console.log(`[${MODULE_ID}] ✓ ${uuid} compiled → ${buildDir}`);
     } else {
       const errMsg = result.error || 'compile pipeline produced no result';
       cq.fail('emerge', uuid, errMsg);
       await _reportEvent('emerge.contract.failed', { contractUuid: uuid, moduleName: name, error: errMsg });
+      _reportBuildOutput(uuid, name, false, errMsg);
       console.warn(`[${MODULE_ID}] ✗ ${uuid} failed: ${errMsg}`);
     }
   } catch (e) {
     cq.fail('emerge', uuid, e.message);
     await _reportEvent('emerge.contract.failed', { contractUuid: uuid, moduleName: name, error: e.message });
+    _reportBuildOutput(uuid, name, false, e.message);
     console.warn(`[${MODULE_ID}] ✗ ${uuid} threw: ${e.message}`);
   }
 }

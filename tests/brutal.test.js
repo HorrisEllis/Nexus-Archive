@@ -438,7 +438,7 @@ if (section('§6 bridge/server.js')) {
 // ─── §7 lib/causal/compound.js ───────────────────────────────────────────────
 if (section('§7 lib/causal/compound.js')) {
   const {createCompoundEngine,computeCausalImpulse,COMPOUND_CLASS}=require(path.join(ROOT,'meta/causal/compound'));
-  const {CausalGraph}=require(path.join(ROOT,'meta/cfr/graph'));
+  const {CausalGraph}=require(path.join(ROOT,'intelligence/cfr/graph'));
 
   function ev(id,type,source,sigma,causedBy=null,regime='stable'){
     return{uuid:id,type,source,ts:1000+parseInt(id.replace(/\D/g,''))*100,
@@ -528,7 +528,7 @@ if (section('§7 lib/causal/compound.js')) {
 
 // ─── §8 lib/cfr/sigma.js ─────────────────────────────────────────────────────
 if (section('§8 lib/cfr/sigma.js')) {
-  const {computeSigma}=require(path.join(ROOT,'meta/cfr/sigma'));
+  const {computeSigma}=require(path.join(ROOT,'intelligence/cfr/sigma'));
 
   test('nominal event score 0..0.4',()=>{
     const s=computeSigma({type:'guardian.job.complete',payload:{}},{},{});
@@ -573,7 +573,7 @@ if (section('§8 lib/cfr/sigma.js')) {
 
 // ─── §9 lib/cfr/delta.js ─────────────────────────────────────────────────────
 if (section('§9 lib/cfr/delta.js')) {
-  const {computeDelta}=require(path.join(ROOT,'meta/cfr/delta'));
+  const {computeDelta}=require(path.join(ROOT,'intelligence/cfr/delta'));
 
   test('null prev → {0,0,0}',()=>{
     const d=computeDelta(null,{type:'t',ts:1000});
@@ -610,7 +610,7 @@ if (section('§9 lib/cfr/delta.js')) {
 
 // ─── §10 lib/cfr/graph.js ────────────────────────────────────────────────────
 if (section('§10 lib/cfr/graph.js')) {
-  const {CausalGraph}=require(path.join(ROOT,'meta/cfr/graph'));
+  const {CausalGraph}=require(path.join(ROOT,'intelligence/cfr/graph'));
 
   test('ingest adds node',()=>{
     const g=new CausalGraph();
@@ -673,7 +673,7 @@ if (section('§10 lib/cfr/graph.js')) {
 
 // ─── §11 lib/cfr/field.js ────────────────────────────────────────────────────
 if (section('§11 lib/cfr/field.js')) {
-  const {createCFRField}=require(path.join(ROOT,'meta/cfr/field'));
+  const {createCFRField}=require(path.join(ROOT,'intelligence/cfr/field'));
 
   test('createCFRField returns update/snapshot/restore',()=>{
     const f=createCFRField();
@@ -745,7 +745,7 @@ if (section('§11 lib/cfr/field.js')) {
 
 // ─── §12 lib/cfr/ledger.js ───────────────────────────────────────────────────
 if (section('§12 lib/cfr/ledger.js')) {
-  const {createCFRLedger}=require(path.join(ROOT,'meta/cfr/ledger'));
+  const {createCFRLedger}=require(path.join(ROOT,'intelligence/cfr/ledger'));
 
   test('open creates files',()=>{
     const dir=tmp('cfrl');const l=createCFRLedger({ledgerDir:dir,systemId:'test'});

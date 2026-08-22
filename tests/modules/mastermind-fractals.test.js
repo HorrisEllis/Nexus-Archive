@@ -4,8 +4,8 @@ process.env.NEXUS_PORT='0';
 let passed=0,failed=0;
 async function test(id,d,fn){try{await fn();console.log(`  ✓ ${id} ${d}`);passed++;}catch(e){console.error(`  ✗ ${id} ${d}\n    ${e.message}`);failed++;}}
 
-const { createMastermind } = require('../../cortex/intelligence/mastermind.js');
-const CausalGraph = require('../../meta/cfr/graph.js').CausalGraph;
+const { createMastermind } = require('../../intelligence/mastermind.js');
+const CausalGraph = require('../../intelligence/cfr/graph.js').CausalGraph;
 
 function mk(chain){ return createMastermind({ jaaDB:{tail:()=>chain,query:()=>[],insert:()=>{},update:()=>{}}, getField:()=>({regime:'stable',coherence:.8,entropy:.2}), getCausalGraphClass:()=>CausalGraph }); }
 

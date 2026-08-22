@@ -140,9 +140,9 @@ function scanTree({ excludePaths = [] } = {}) {
     }
   } catch (_) { /* no hand maps present — then no aliases are needed at all */ }
   const CANDIDATES = {
-    'meta/cfr/index.js': 'nexus.meta.cfr.index',
+    'intelligence/cfr/index.js': 'nexus.intelligence.cfr.index',
     'meta/rfr2/index.js': 'nexus.meta.rfr2.index',
-    'cortex/intelligence/index.js': 'nexus.cortex.intelligence.index',
+    'intelligence/index.js': 'nexus.intelligence.index',
     'cortex/memory/jaa-db.js': 'nexus.cortex.jaa-db',
     'nexus-bus.js': 'nexus.nexus-bus',
   };

@@ -47,7 +47,7 @@ test('GCC-003', 'originals are ARCHIVED, not deleted (§7.4) — memory_store co
 });
 
 test('GCC-004', 'FUNCTIONAL: the CFR ledger opens against the migrated dir and RESUMES real state, not a fresh start', () => {
-  const { createCFRLedger } = require('../../meta/cfr/ledger.js');
+  const { createCFRLedger } = require('../../intelligence/cfr/ledger.js');
   const l = createCFRLedger({ ledgerDir: NEW_DIR, systemId: 'guardian' });
   l.open();
   try {

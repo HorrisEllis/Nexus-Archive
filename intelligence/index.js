@@ -375,7 +375,7 @@ async function _scanPatterns() {
     // scored as reliably preceding trouble, and the noisiest system in the
     // codebase wins every time regardless of whether it caused anything.
     //
-    // meta/cfr/graph.js's CausalGraph already exists, is already used by
+    // intelligence/cfr/graph.js's CausalGraph already exists, is already used by
     // mastermind (cortex/intelligence/mastermind.js:24), and offers
     // ancestors() — a real causal walk over causedBy edges. It was simply
     // never wired here. So "why" was being answered by a clock.
@@ -388,7 +388,7 @@ async function _scanPatterns() {
     // and one known by coincidence must not look the same (§0.1).
     let _graph = null;
     try {
-      const { CausalGraph } = require('../meta/cfr/graph');
+      const { CausalGraph } = require('../intelligence/cfr/graph');
       if (CausalGraph) {
         _graph = new CausalGraph();
         for (const e of events) _graph.ingest(e);

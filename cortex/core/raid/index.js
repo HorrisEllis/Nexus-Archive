@@ -30,7 +30,7 @@
  *     write-only — recordOutcome() populated it every dispatch, nothing
  *     ever read it back). Floored at 0.5 (neutral) for <3 observed calls.
  *   topologicalProximity() — real when a CFR CausalGraph is injected via
- *     setCausalGraph() (meta/cfr/graph.js gained componentDistance() this
+ *     setCausalGraph() (intelligence/cfr/graph.js gained componentDistance() this
  *     same pass); honestly neutral (0.5) if no graph is wired or either
  *     component has never been observed, never fabricated.
  *   SNR pre-gate (docs/raid-snr-filter.spec) — built as cortex/core/raid/
@@ -508,7 +508,7 @@ function _scoreRun({ source, action, result, verified, opts = {} }) {
   let sigma = null, regime = null, drifted = false, reasons = [];
   // Sigma — divergence of this run's shape from baseline (§8.6 real API).
   try {
-    const { computeSigma } = require('../../../meta/cfr/sigma');
+    const { computeSigma } = require('../../../intelligence/cfr/sigma');
     const event = { type: `raid.verify.${action}`, source, ok: verified, stage: result?.stage };
     const baseline = opts.sigmaBaseline || {};
     const s = computeSigma(event, baseline, opts.cfrState || {}, opts.intervalMs || 0);

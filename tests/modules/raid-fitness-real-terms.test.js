@@ -28,7 +28,7 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
 };
 
 const raid = require('../../cortex/core/raid/index');
-const { CausalGraph } = require('../../meta/cfr/graph');
+const { CausalGraph } = require('../../intelligence/cfr/graph');
 
 // ── roleConfidence ────────────────────────────────────────────────────────────
 test('T-001', 'roleConfidence: <3 calls → neutral 0.5, not fabricated', () => {

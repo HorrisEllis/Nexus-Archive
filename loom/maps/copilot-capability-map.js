@@ -138,6 +138,15 @@ const FILES = [
   ['lib/agent-tools/tools/coordination/nexus-wake-events.js',       'nexus.lib.agent-tools.tools.nexus-wake-events',
     ['nexus.lib.nexus-wake-events']],
 
+  ['intelligence/framework-builder.js', 'nexus.intelligence.framework-builder', ['nexus.lib.agent-tools', 'nexus.lib.chunk-service']],
+  ['lib/agent-tools/tools/coordination/framework-builder.js', 'nexus.lib.agent-tools.tools.framework-builder', ['nexus.intelligence.framework-builder']],
+  ['lib/agent-tools/tools/coordination/intelligence-query.js', 'nexus.lib.agent-tools.tools.intelligence-query', ['nexus.intelligence.index', 'nexus.intelligence.server']],
+  ['intelligence/server.js', 'nexus.intelligence.server', ['nexus.intelligence.index', 'nexus.intelligence.cfr', 'nexus.intelligence.framework-builder']],
+  ['intelligence/registry-components.js', 'nexus.intelligence.registry', []],
+  ['intelligence/consumer.js', 'nexus.intelligence.consumer', ['nexus.lib.contract-queue', 'nexus.intelligence.framework-builder']],
+  ['intelligence/schemas.js', 'nexus.intelligence.schemas', []],
+  ['intelligence/config.js', 'nexus.intelligence.config', []],
+
   ['lib/account-identity-index.js', 'nexus.lib.account-identity-index', ['nexus.cortex.jaa-db']],   // §2026-08-22 — stable UUID per (agent, account)
 
   ['lib/safe-apply.js',                               'nexus.lib.safe-apply',

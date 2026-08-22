@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('assert');
-const { CausalGraph } = require('../../meta/cfr/graph');
+const { CausalGraph } = require('../../intelligence/cfr/graph');
 
 let passed = 0, failed = 0;
 function test(id, desc, fn) {

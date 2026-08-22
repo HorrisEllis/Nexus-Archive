@@ -34,7 +34,7 @@ async function test(id, desc, fn) {
 
 const ROOT = path.join(__dirname, '../..');
 const { recordConfigChange, ANOMALY_SIGMA } = require('../../lib/config-governance.js');
-const { createCFRLedger } = require('../../meta/cfr/ledger.js');
+const { createCFRLedger } = require('../../intelligence/cfr/ledger.js');
 
 // Collision-proof system name so the canonical tree write can never touch
 // a real system's ledger, and is removable at the end.

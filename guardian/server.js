@@ -5,13 +5,13 @@ const http       = require('http');
 // Zero external dependencies. SSE server→browser, fetch() browser→server.
 // See lib/ncp.js for protocol spec.
 const { createNCPServer }    = require('../guardian/lib/ncp');
-const { createCFRLedger } = require('../meta/cfr/ledger');
+const { createCFRLedger } = require('../intelligence/cfr/ledger');
 const { Detector }          = require('../lib/seam/detector.js');
 const GapHunter             = require('../meta/gap/hunter');
 const { SEAMQueue, STATE }  = require('../lib/seam/queue.js');
 const { parseSpec, parseSpecFile, extractPrerequisite } = require('../lib/seam/spec-parser.js');
 const { createQueue }       = require('../lib/queue');
-const { createBaseline }    = require('../lib/baseline');
+const { createBaseline }    = require('../intelligence/baseline');
 // §PHASE-15-CLOSE: /cli/exec previously only matched its own static switch
 // table — any command for a component registered after this file was last
 // edited had no path in. This wires guardian's dispatch into the same
@@ -1805,22 +1805,6 @@ try {
   console.log('[guardian] Lab Manager ready');
 } catch(e) {
   console.warn('[guardian] Lab Manager degraded:', e.message);
-}
-
-// §RELAY 2026-08-22 — James, Option A: "Drop the in-page detection, wire
-// the assistant-side trigger through guardian the way ClearGlass already
-// does it." guardian/lib/wake-relay.js is the real, standalone-install
-// half of that — see its own header for the full real chain and the honest
-// note about ClearGlass's own equivalent calling a route that does not
-// exist. Boot-time only, degrades to a logged warning rather than a crash:
-// a wake relay that never started is a real, visible gap, not a reason to
-// take guardian itself down.
-try {
-  const { startWakeRelay } = require('./lib/wake-relay');
-  startWakeRelay(ncp, { log: (m) => console.log(m) });
-  console.log('[guardian] wake-relay ready — server-side "hey nexus" detection, live');
-} catch (e) {
-  console.warn('[guardian] wake-relay degraded:', e.message);
 }
 
 

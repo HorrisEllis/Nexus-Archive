@@ -10,8 +10,8 @@
  * friction/slope) + sigma, so a stalled node is identified WHERE and WHY.
  *
  * §8.6 — composes the EXISTING registry (capability-registry.capabilities()),
- * CFR friction (meta/cfr/field EVENT_NUDGES), and the delta engine
- * (meta/cfr/delta.computeDelta → {tension, friction, slope}). Builds no new
+ * CFR friction (intelligence/cfr/field EVENT_NUDGES), and the delta engine
+ * (intelligence/cfr/delta.computeDelta → {tension, friction, slope}). Builds no new
  * graph or physics. §1.1 — nodes/edges come from real registry + real CFR
  * values, never invented (this is the "no mocks" law the 3D map OB9 will inherit).
  * §13.4 — the delta IS the bottleneck/drift signal. Non-fatal.
@@ -33,7 +33,7 @@ function _registryNodes() {
 // The CFR friction each event-type carries — the edge-weight source (§8.6).
 function _frictionFor(eventType) {
   try {
-    const field = require('../meta/cfr/field');
+    const field = require('../intelligence/cfr/field');
     const nudges = field.EVENT_NUDGES || {};
     const n = nudges[eventType];
     if (n) return Math.max(0, n.friction || 0);
@@ -93,7 +93,7 @@ function buildMovementGraph(events = []) {
  */
 function detectBottlenecks(graph, eventsBySystem = {}) {
   let computeDelta;
-  try { computeDelta = require('../meta/cfr/delta').computeDelta; } catch { computeDelta = null; }
+  try { computeDelta = require('../intelligence/cfr/delta').computeDelta; } catch { computeDelta = null; }
   const bottlenecks = [];
 
   for (const node of graph.nodes) {

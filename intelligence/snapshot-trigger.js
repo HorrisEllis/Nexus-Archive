@@ -66,7 +66,7 @@ async function onSigma(sigmaEvent = {}, opts = {}) {
   // 3. Trace the CONDITIONS that created it (RFR2 via intelligence).
   const eventId = sigmaEvent.id || sigmaEvent.entry?.uuid || sigmaEvent.entry?.type || sigmaEvent.type;
   try {
-    const rf = cfg.relationalField || require('../intelligence/relational-field');
+    const rf = cfg.relationalField || require('./relational-field');
     const field = await rf.readFieldForFriction({ id: eventId, causalStore: cfg.causalStore, kinematicWindow: sigmaEvent.kinematicWindow }, cfg);
     out.causalRoot = field.root;
     out.conditions = field.conditions || [];
@@ -75,7 +75,7 @@ async function onSigma(sigmaEvent = {}, opts = {}) {
 
   // 4. Snapshot, tagged with the sigma + its causal conditions (§17.5 provenance).
   try {
-    const replay = cfg.replay || require('./replay-engine');
+    const replay = cfg.replay || require('../lib/replay-engine');
     const res = replay.snapshot({
       trigger: 'sigma', actor: 'snapshot-trigger',
       sigmaType: sigmaEvent.type, severity, source: sigmaEvent.source,
@@ -113,7 +113,7 @@ function sinceLastSnapshot() { return _lastSnapshot ? (Date.now() - _lastSnapsho
  * shifted the system, tagged with its cause, and revertible via replay-engine.
  */
 function timeline(opts = {}) {
-  const replay = opts.replay || require('./replay-engine');
+  const replay = opts.replay || require('../lib/replay-engine');
   const all = replay.listSnapshots ? replay.listSnapshots(opts.limit || 50) : [];
   // sigma-triggered snapshots are the debug points; keep the causal tag.
   return all

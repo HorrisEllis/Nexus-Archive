@@ -33,10 +33,10 @@ const http   = require('http');
 const crypto = require('crypto');
 
 const { createICO }      = require('../lib/ico');
-const { createContractVerifier, loadContracts } = require('../meta/cfr/contract-verifier');
-const { createCFRField, computeRegime }         = require('../meta/cfr/field');
-const { createBaseline } = require('../lib/baseline');
-const { sigma, mean }    = require('../lib/baseline');
+const { createContractVerifier, loadContracts } = require('../intelligence/cfr/contract-verifier');
+const { createCFRField, computeRegime }         = require('../intelligence/cfr/field');
+const { createBaseline } = require('../intelligence/baseline');
+const { sigma, mean }    = require('../intelligence/baseline');
 // §NEW 2026-07-11 — loom/schema/axioms.js's loom.wire-endpoints-exist
 // axiom already HARD-rejects a dangling wire at declare time — real,
 // working, verified live. But nothing checks for the OTHER shape of the

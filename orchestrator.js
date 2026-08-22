@@ -120,7 +120,7 @@ try { ({ _bootSystems } = require('./cli/boot-systems')); } catch(e) { console.w
 // already the single funnel point, so this is a drop-in swap — same .record()/
 // .open()/.startAutoSave()/.getAllBaselines()/.getAllStats()/.scanInvariants()
 // surface, plus .handleCFRRoute() for the /cfr/* debugger routes mounted below.
-try { ({ createCFRLedger } = require('./meta/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
+try { ({ createCFRLedger } = require('./intelligence/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
 const nexusBus       = (() => { try { return require('./nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();

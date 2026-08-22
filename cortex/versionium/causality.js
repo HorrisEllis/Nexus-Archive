@@ -5,7 +5,7 @@
 // §REFACTORED 2026-07-13 — this used to reimplement its own causedBy-chain
 // walk (ancestors/descendants) directly against JAA tables. Per direction:
 // causal tracing is supposed to use the real causal graph
-// (meta/cfr/graph.js's CausalGraph), not a second, standalone
+// (intelligence/cfr/graph.js's CausalGraph), not a second, standalone
 // implementation of the same walk. Checked before refactoring: CausalGraph
 // is generic over any table (ingest(entry) only needs entry.uuid/causedBy,
 // doesn't care which JAA table a row came from), so it works unchanged for
@@ -25,7 +25,7 @@
 // §M2: reads: event_log, versionium_commits. writes: poll_log.
 
 const { jaaDB, uid } = require('../memory/jaa-db');
-const { CausalGraph } = require('../../meta/cfr/graph.js');
+const { CausalGraph } = require('../../intelligence/cfr/graph.js');
 
 const MODULE_ID  = 'versionium/causality';
 const MAX_DEPTH  = 20; // prevent runaway cycles

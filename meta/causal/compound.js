@@ -44,7 +44,7 @@
 'use strict';
 
 const { randomUUID } = require('crypto');
-const { CausalGraph } = require('../cfr/graph');
+const { CausalGraph } = require('../../intelligence/cfr/graph');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CAUSAL IMPULSE — the physics underneath regime detection

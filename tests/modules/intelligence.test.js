@@ -80,7 +80,7 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
   },
 };
 
-const intel = require('../../cortex/intelligence/index.js');
+const intel = require('../../intelligence/index.js');
 
 function ev(type, ts) {
   return { uuid: fakeUid(), type, ts: ts ?? Date.now(), payload: {} };

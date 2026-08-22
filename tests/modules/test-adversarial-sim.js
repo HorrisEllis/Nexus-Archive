@@ -250,7 +250,7 @@ test('AS-016', '§5.1 EVERY interaction contract carries a uuid and version — 
 });
 
 test('AS-017', 'REGRESSION GUARD: a causal CYCLE terminates instead of looping forever', () => {
-  const { CausalGraph } = require('../../meta/cfr/graph');
+  const { CausalGraph } = require('../../intelligence/cfr/graph');
   const g = new CausalGraph();
   g.ingest({ uuid: 'a', type: 'x', ts: 1, causedBy: 'b' });
   g.ingest({ uuid: 'b', type: 'y', ts: 2, causedBy: 'a' });
@@ -261,7 +261,7 @@ test('AS-017', 'REGRESSION GUARD: a causal CYCLE terminates instead of looping f
 });
 
 test('AS-018', 'REGRESSION GUARD: out-of-order ingest still resolves ancestry — cross-process events arrive out of order routinely', () => {
-  const { CausalGraph } = require('../../meta/cfr/graph');
+  const { CausalGraph } = require('../../intelligence/cfr/graph');
   const g = new CausalGraph();
   g.ingest({ uuid: 'child', type: 'fail', ts: 200, causedBy: 'parent' });   // parent not yet seen
   g.ingest({ uuid: 'parent', type: 'cause', ts: 100 });

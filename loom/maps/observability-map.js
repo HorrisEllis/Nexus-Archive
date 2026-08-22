@@ -26,11 +26,11 @@
 // mastermind, capability-registry) are included so the graph connects to NEXUS.
 const FILES = [
   ['copilot/diagnostics.js',       'nexus.copilot.diagnostics',
-    ['nexus.copilot.system-status', 'nexus.meta.cfr.field', 'nexus.copilot.movement-map', 'nexus.cortex.jaa-db']],
+    ['nexus.copilot.system-status', 'nexus.intelligence.cfr.field', 'nexus.copilot.movement-map', 'nexus.cortex.jaa-db']],
   ['copilot/diagnostic-sweep.js',  'nexus.copilot.diagnostic-sweep',
     ['nexus.copilot.diagnostics', 'nexus.meta.gap.hunter']],
   ['copilot/movement-map.js',      'nexus.copilot.movement-map',
-    ['nexus.lib.capability-registry', 'nexus.meta.cfr.field', 'nexus.meta.cfr.delta']],
+    ['nexus.lib.capability-registry', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.delta']],
   ['copilot/optimizer.js',         'nexus.copilot.optimizer',
     ['nexus.copilot.diagnostics', 'nexus.copilot.movement-map', 'nexus.lib.pattern-leverage', 'nexus.lib.sigma-roles', 'nexus.intelligence.mastermind']],
   ['copilot/adversarial.js',       'nexus.copilot.adversarial', ['nexus.intelligence.adversarial']],
@@ -51,6 +51,7 @@ const FILES = [
     ['nexus.lib.gemini-toolbox', 'nexus.lib.agent-router']],  // P1 — per-agent contracts (identity/axioms/scoped toolbox)
   ['lib/chunk-service.js',        'nexus.lib.chunk-service',
     ['nexus.lib.chunker']],  // chunking consolidated through RAID — canonical chunker as one capability
+  ['lib/seam/spec-parser.js',     'nexus.lib.seam.spec-parser', []],
   ['lib/agent-pull.js',           'nexus.lib.agent-pull',
     ['nexus.lib.gemini-agent-contracts', 'nexus.lib.chunk-service', 'nexus.lib.schema-registry', 'nexus.lib.tool-index']],  // AP1 — agents pull schemas/contracts/chunks/capabilities, scoped
   ['lib/tool-index.js',           'nexus.lib.tool-index',
@@ -92,7 +93,7 @@ const FILES = [
   ['copilot/lib/capabilities.js', 'nexus.copilot.capabilities',
     ['nexus.loom.scanners.capability-map']],  // P4 slice — co-pilot's real toolbox from loom
   ['lib/diagnostic-causal.js',    'nexus.lib.diagnostic-causal',
-    ['nexus.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.lib.snapshot-trigger', 'nexus.lib.gap-field']],  // P3 — conditions behind findings; now defaults findings from gap-field (§2026-08-09 unification)
+    ['nexus.intelligence.relational-field', 'nexus.lib.ledger-fanin', 'nexus.intelligence.snapshot-trigger', 'nexus.lib.gap-field']],  // P3 — conditions behind findings; now defaults findings from gap-field (§2026-08-09 unification)
   ['lib/component-ledger.js',     'nexus.lib.component-ledger',
     ['nexus.cortex.memory.jaa-db']],  // §2026-08-12 — James: "i want everything you do logged to nexus... all history and decisions tracked in cortex." REAL, already written (15,472+ rows, 12+ real systems, a month of history) but never itself registered in loom's own map — found while making it locatable for a 13th real writer (this session's own commits, system:'claude', logged live tonight). Was flagging its own writes as "recorded but not locatable in the architecture" until this entry.
   ['cortex/self-heal/fault-taxonomy.js', 'nexus.cortex.self-heal.fault-taxonomy',
@@ -118,11 +119,19 @@ const FILES = [
   ['lib/intent-classifier.js',    'nexus.lib.intent-classifier',
     ['nexus.lib.gap-field']],  // §2026-08-09 — the SIXTH independent gap-writer found (James asked to verify "intention" was really wired in): _emitLowConfidenceGap() had a raw jaaDB.insert with no dedup, same bug class as user-model's checkContradictions. Now shares gap-field's dedup/occurrence treatment. Verified live: two identical low-confidence classifications bump occurrences 1->2, not two rows.
   ['lib/integrity-revert.js',     'nexus.lib.integrity-revert',
-    ['nexus.lib.file-integrity', 'nexus.lib.snapshot-trigger', 'nexus.lib.replay-engine']],  // integrity sigma → guarded revert (only when broken)
+    ['nexus.lib.file-integrity', 'nexus.intelligence.snapshot-trigger', 'nexus.lib.replay-engine']],  // integrity sigma → guarded revert (only when broken)
   ['cortex/snapshot/index.js',    'nexus.cortex.snapshot',
     ['nexus.cortex.memory.jaa-db']],  // §R2 2026-08-12 — the one genuine gap in docs/repair-contract-and-loom-hub-phasemap.spec. Real hash-chained, disk-first (.nex files), tamper-evident snapshot/rollback — create/load/verifySnapshotIntegrity/checkChainIntegrity/rollback. Built to the exact contract 3 real pre-existing tests already specced (11/11 snapshot-integrity, 23/23 compartment-engine, both real rewind-on-fail tests passing for the first time). lib/replay-engine.js checked first — adjacent but genuinely different API (request-decision replay, not hash-chain integrity) — not reused because it doesn't fit, not because it wasn't checked.
-  ['lib/snapshot-trigger.js',     'nexus.lib.snapshot-trigger',
-    ['nexus.lib.replay-engine', 'nexus.intelligence.relational-field', 'nexus.lib.ledger-fanin']],  // P2 — snapshot on every sigma, tracing conditions via RFR2
+  ['intelligence/snapshot-trigger.js',     'nexus.intelligence.snapshot-trigger',
+    ['nexus.lib.replay-engine', 'nexus.intelligence.relational-field', 'nexus.lib.ledger-fanin']],  // P2 — snapshot on every sigma, tracing conditions via RFR2. §2026-08-22 moved from lib/ per intelligence.spec phase 2
+  ['intelligence/baseline.js', 'nexus.intelligence.baseline', []],  // §2026-08-22 — real, new registration; had none before the move
+  ['intelligence/cfr/index.js', 'nexus.intelligence.cfr', ['nexus.intelligence.cfr.ledger', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.sigma', 'nexus.intelligence.cfr.delta', 'nexus.intelligence.cfr.graph', 'nexus.intelligence.cfr.contract-verifier']],
+  ['intelligence/cfr/field.js', 'nexus.intelligence.cfr.field', []],
+  ['intelligence/cfr/sigma.js', 'nexus.intelligence.cfr.sigma', ['nexus.lib.component-ledger']],
+  ['intelligence/cfr/delta.js', 'nexus.intelligence.cfr.delta', []],
+  ['intelligence/cfr/graph.js', 'nexus.intelligence.cfr.graph', []],
+  ['intelligence/cfr/ledger.js', 'nexus.intelligence.cfr.ledger', ['nexus.intelligence.cfr.sigma', 'nexus.intelligence.cfr.delta', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.graph', 'nexus.meta.causal.compound']],
+  ['intelligence/cfr/contract-verifier.js', 'nexus.intelligence.cfr.contract-verifier', []],
   ['lib/scheduler.js',            'nexus.lib.scheduler',
     ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.lib.agent-pull']],  // CA1 — schedule tasks/jobs/alarms/timed payloads, RAID-gated
   ['lib/triggers.js',             'nexus.lib.triggers',
@@ -140,7 +149,7 @@ const FILES = [
   ['lib/nexus-cli-interface.js',  'nexus.lib.nexus-cli-interface',
     ['nexus.copilot.capabilities', 'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.grammar-router', 'nexus.loom.scanners.phasemap-map']],  // --cli interface routing to the co-pilot additions
   ['lib/autopilot-intelligence.js','nexus.lib.autopilot-intelligence',
-    ['nexus.intelligence', 'nexus.intelligence.relational-field', 'nexus.lib.baseline', 'nexus.lib.snapshot-trigger', 'nexus.lib.ledger-fanin']],  // autopilot boot — wire+verify the whole intelligence substrate
+    ['nexus.intelligence', 'nexus.intelligence.relational-field', 'nexus.intelligence.baseline', 'nexus.intelligence.snapshot-trigger', 'nexus.lib.ledger-fanin']],  // autopilot boot — wire+verify the whole intelligence substrate
   ['lib/ledger-fanin/boot.js',    'nexus.lib.ledger-fanin.boot',
     ['nexus.lib.ledger-fanin', 'nexus.lib.activity-log']],  // P1 — subscribes intelligence/autopilot/copilot/logging to the fan-in at boot  // subscribes the fan-in → persists all activity + errors to cortex  // the unified event fan-in — every system emits, every consumer subscribes once
   ['ui/agents/gemini/code-suite.html', 'nexus.ui.gemini.code-suite',

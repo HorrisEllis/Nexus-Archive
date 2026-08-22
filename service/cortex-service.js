@@ -12,7 +12,7 @@ const path    = require('path');
 const fs      = require('fs');
 const http    = require('http');
 const { createICO }      = require('../lib/ico');
-const { createBaseline } = require('../lib/baseline');
+const { createBaseline } = require('../intelligence/baseline');
 const { createQueue }    = require('../lib/queue');
 
 const ROOT     = path.join(__dirname, '..');

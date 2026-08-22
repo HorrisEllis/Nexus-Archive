@@ -222,6 +222,19 @@ const ALL_KERNELS = [
     critical: true, phase: 2, healthUrl: 'http://127.0.0.1:7825/health' },
   { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:3751/health' },
+  // §NEW 2026-08-22 — intelligence/server.js. Built and live-tested this
+  // session (4 real phases: cortex/intelligence + baseline/snapshot-
+  // trigger + meta/cfr moved here, plus the new framework-builder). Needs
+  // cortex's jaaDB up first (same real dependency idearium/architect/
+  // eravos already have) — phase 3, not phase 1.
+  { name: 'intelligence', cmd: 'node', args: ['intelligence/server.js'],
+    phase: 3, healthUrl: 'http://127.0.0.1:3753/health' },
+  // The consumer half — matches emerge/consumer.js's exact real pattern:
+  // a pure file-watcher, no http.createServer, process-alive is the only
+  // honest readiness signal. optional: true, same reasoning as emerge —
+  // a queued framework request that can't be picked up yet shouldn't trip
+  // the whole system's circuit breaker.
+  { name: 'intelligence-consumer', cmd: 'node', args: ['intelligence/consumer.js'], optional: true, phase: 4 },
   { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true,
     phase: 3, healthUrl: 'http://127.0.0.1:3749/health' },
   { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true,
@@ -1101,7 +1114,7 @@ function _handleGraphRead(req, res) {
         // function the rest of NEXUS uses rather than reimplementing the
         // thresholds here, which would be a second truth (§10.3).
         if (cfr && cfr.regime === undefined) {
-          try { cfr.regime = require('./meta/cfr/field').computeRegime(cfr); }
+          try { cfr.regime = require('./intelligence/cfr/field').computeRegime(cfr); }
           catch (_) { cfr.regime = null; }
         }
       }
@@ -1343,7 +1356,7 @@ function _getJaaDB() {
 // §THE EVENT-TRACKING PIECE — "all the events are supposed to be tracked,
 // using the meta system." Every real spawn/gate/despawn transition below
 // writes a real event_log row with a causedBy chain (request -> spawn ->
-// gate result), the same shape meta/cfr/graph.js's CausalGraph already
+// gate result), the same shape intelligence/cfr/graph.js's CausalGraph already
 // ingests everywhere else in this codebase — not a new, parallel logging
 // path, the same one.
 function _logOnDemandEvent(type, payload, causedBy) {

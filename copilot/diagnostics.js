@@ -53,7 +53,7 @@ async function diagnose(opts = {}) {
 
   // 5. CFR regime — the "where and why": friction/stress field state.
   try {
-    const { computeRegime } = require('../meta/cfr/field');
+    const { computeRegime } = require('../intelligence/cfr/field');
     // Derive an aggregate field from the most recent decisions' stress signals.
     const field = opts.field || { coherence: 0.5, friction: 0.2, resonance: 0.2, entropy: 0.2 };
     report.regime = { state: computeRegime(field), field };

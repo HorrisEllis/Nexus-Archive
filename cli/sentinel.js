@@ -149,7 +149,7 @@ function cmdFaultsShow(args) {
   // "Why" answered by causedBy edges rather than by a clock.
   let ancestry = [];
   try {
-    const { CausalGraph } = require(path.join(ROOT, 'meta/cfr/graph'));
+    const { CausalGraph } = require(path.join(ROOT, 'intelligence/cfr/graph'));
     const jaa = store();
     const g = new CausalGraph();
     for (const e of (jaa.tail('event_log', 2000) || [])) g.ingest(e);

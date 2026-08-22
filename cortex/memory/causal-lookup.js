@@ -6,7 +6,7 @@
  *
  * §BUILT 2026-07-12 — push-recall.js's own header names the causal lane as
  * needing "the kernel causal graph... none of which exist as queryable
- * structures yet." meta/cfr/graph.js's CausalGraph is real and has been
+ * structures yet." intelligence/cfr/graph.js's CausalGraph is real and has been
  * wired elsewhere in this codebase since before this session (cortex/boot.js,
  * RAID, mastermind.js, meta/spatial/system-lattice.js) — checked, not
  * assumed, three turns ago. This is push-recall's own read path onto it.
@@ -28,7 +28,7 @@ const { jaaDB } = require('./jaa-db.js');
 let _CausalGraph = null;
 function _getCausalGraphClass() {
   if (_CausalGraph) return _CausalGraph;
-  ({ CausalGraph: _CausalGraph } = require('../../meta/cfr/graph.js'));
+  ({ CausalGraph: _CausalGraph } = require('../../intelligence/cfr/graph.js'));
   return _CausalGraph;
 }
 

@@ -84,12 +84,12 @@ function _getLedger() {
 }
 function _getCFR() {
   if (_cfr) return _cfr;
-  try { _cfr = require('../../meta/cfr/field'); } catch (_) {}
+  try { _cfr = require('../../intelligence/cfr/field'); } catch (_) {}
   return _cfr;
 }
 function _getSigmaLib() {
   if (_sigmaLib) return _sigmaLib;
-  try { _sigmaLib = require('../../meta/cfr/sigma'); } catch (_) {}
+  try { _sigmaLib = require('../../intelligence/cfr/sigma'); } catch (_) {}
   return _sigmaLib;
 }
 
