@@ -40,7 +40,7 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
 };
 
 const boot = require('../../cortex/boot.js');
-const sysLattice = require('../../meta/spatial/system-lattice');
+const sysLattice = require('../../intelligence/meta/spatial/system-lattice');
 
 // ── Gap answer: real open-loop-taxonomy classification, not a blind count ───
 

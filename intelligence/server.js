@@ -26,6 +26,9 @@
  *   GET  /cfr/sse                       — CFR real-time stream (ledger's own, built-in)
  *   POST /api/framework/create          — generate a real WARP framework skeleton
  *   GET  /sse                           — general intelligence event stream
+ *   GET  /api/meta/status               — relocated meta faculties (§MIGRATION 2026-08-22)
+ *   GET  /api/gaps/tension              — measured strain per gap (rate/accel/recency)
+ *   POST /api/gaps/friction             — compare two gap surveys
  */
 const http = require('http');
 const path = require('path');

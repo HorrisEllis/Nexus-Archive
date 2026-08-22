@@ -451,7 +451,7 @@ async function boot() {
       if (path_ === '/api/alk/record' && method === 'POST') {
         try {
           const body = await readBody(req);
-          const alk  = require('../meta/alk');
+          const alk  = require('../intelligence/meta/alk');
           const node = alk.record({ actor: body.actor || 'user', intent: body.intent || 'interact', payload: body.payload || {}, causedBy: body.causedBy || null });
           busEmit('alk.decision.recorded', { uuid: node.uuid, intent: node.intent });
           return json(res, 201, { ok: true, uuid: node.uuid });

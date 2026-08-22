@@ -27,7 +27,7 @@
 let _cfr, _rfr2, _gap, _topo, _tel, _lim, _alk, _alkPerc, _spatial, _bda, _causal, _crystal, _adversary;
 
 module.exports = {
-  get cfr()           { return _cfr       || (_cfr       = require('../intelligence/cfr/index.js')); },
+  get cfr()           { return _cfr       || (_cfr       = require('../cfr/index.js')); },
   get rfr2()          { return _rfr2      || (_rfr2      = require('./rfr2/index.js')); },
   get gap()           { return _gap       || (_gap       = require('./gap/index.js')); },
   get topo()          { return _topo      || (_topo      = require('./topo-kernel/index.js')); },

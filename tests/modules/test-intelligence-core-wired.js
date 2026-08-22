@@ -90,7 +90,7 @@ test('ICW-006', 'what was worth keeping was HARVESTED first, not deleted with it
 });
 
 test('ICW-007', 'the meta barrel still resolves with the tree gone', () => {
-  assert.doesNotThrow(() => require('../../meta/index.js'));
+  assert.doesNotThrow(() => require('../../intelligence/meta/index.js'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -1,0 +1,1 @@
+{"uuid":"1880d32b-173c-4542-adc0-d6833a571ab7","system":"eravos","component":"eravos.wire.list","action":"registered","status":"ok","eventTs":6,"seq":6,"tags":["eravos"],"detail":"List all wires","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128691}

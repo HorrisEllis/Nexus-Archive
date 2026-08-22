@@ -20,7 +20,7 @@
 
 'use strict';
 
-const { createCompoundEngine } = require('../../meta/causal/compound');
+const { createCompoundEngine } = require('../../intelligence/meta/causal/compound');
 
 // ── Token economy windows ─────────────────────────────────────────────────────
 const TOKEN_WINDOW_MS = 5 * 60 * 60 * 1000; // 5-hour rolling window

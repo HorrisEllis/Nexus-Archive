@@ -657,7 +657,7 @@ function _enrichCrystallisation(pattern) {
   } catch (_) { /* CFR unreachable — honest null, not fabricated */ }
 
   try {
-    const { createCausalStore, createEdge, EDGE_CAUSAL_RULE } = require('../meta/rfr2/causality/index.js');
+    const { createCausalStore, createEdge, EDGE_CAUSAL_RULE } = require('./meta/rfr2/causality/index.js');
     const supportEvents = jaaDB.tail('event_log', 500)
       .filter(e => pattern.eventTypes ? pattern.eventTypes.includes(e.type) : (e.type === pattern.typeA || e.type === pattern.typeB || e.type === pattern.precursorType))
       .slice(-20);
@@ -1433,6 +1433,52 @@ function handleRequest(method, pathname, searchParams, body, json) {
       reuseItems:    _reuseIndex.length,
       driftLevel:    _getDriftLevel(),
     });
+    return true;
+  }
+
+  // GET /api/meta/status — the relocated meta faculties (rfr2, alk, bda, gap,
+  // spatial, causal, liminal, lattice), reported the same way §1.2 requires
+  // elsewhere: "unavailable" is distinct from "loaded but empty".
+  if (method === 'GET' && pathname === '/api/meta/status') {
+    let meta;
+    try { meta = require('./meta'); } catch (e) {
+      json(503, { ok: false, error: `meta layer not loaded: ${e.message}` });
+      return true;
+    }
+    const modules = {};
+    for (const k of ['cfr', 'rfr2', 'gap', 'topo', 'telemetry', 'liminal',
+      'alk', 'alkPerception', 'spatial', 'bda', 'causal', 'crystalLattice', 'adversary']) {
+      try {
+        const m = meta[k];
+        modules[k] = { version: m?.VERSION || null, id: m?.MODULE_ID || null,
+          available: !!m };
+      } catch (e) { modules[k] = { available: false, error: e.message }; }
+    }
+    json(200, { ok: true, modules });
+    return true;
+  }
+
+  // GET /api/gaps/tension — measured strain per gap: rate, acceleration,
+  // recency, reported separately, never bundled into one number (§17.11).
+  if (method === 'GET' && pathname === '/api/gaps/tension') {
+    const { fromStore } = require('./gap-tension.js');
+    const result = fromStore();
+    json(result.ok === false ? 503 : 200, result);
+    return true;
+  }
+
+  // POST /api/gaps/friction — compare two gap surveys, name what a change
+  // relieved / worsened / introduced (cos compartment testing).
+  if (method === 'POST' && pathname === '/api/gaps/friction') {
+    const { frictionDelta } = require('./gap-tension.js');
+    const before = body?.before, after = body?.after;
+    if (!before || !after) {
+      json(400, { ok: false, error: 'body requires { before, after } — two gap surveys' });
+      return true;
+    }
+    try {
+      json(200, { ok: true, ...frictionDelta(before, after) });
+    } catch (e) { json(500, { ok: false, error: e.message }); }
     return true;
   }
 

@@ -26,7 +26,7 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
   exports: { jaaDB: jaaDBFake, uid: () => require('crypto').randomUUID() },
 };
 
-const sysLattice = require('../../meta/spatial/system-lattice');
+const sysLattice = require('../../intelligence/meta/spatial/system-lattice');
 const { CausalGraph } = require('../../intelligence/cfr/graph');
 
 test('T-001', 'addNode persists a real row to Cortex', () => {

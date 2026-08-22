@@ -105,7 +105,7 @@ function _getTaxonomy() {
 let _sysLattice = null;
 function _getSystemLattice() {
   if (_sysLattice !== null) return _sysLattice;
-  try { _sysLattice = require('../meta/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
+  try { _sysLattice = require('../intelligence/meta/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
   return _sysLattice;
 }
 let _CausalGraph = null;
@@ -500,7 +500,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/cortex/lattice') {
     const about = url.searchParams.get('about');
     try {
-      const sysLattice = require('../meta/spatial/system-lattice');
+      const sysLattice = require('../intelligence/meta/spatial/system-lattice');
       if (about) {
         const neighbors = sysLattice.neighbors(about);
         json(res, 200, { ok: true, about, neighbors, size: sysLattice.size() });
@@ -1477,7 +1477,7 @@ server.listen(PORT, '127.0.0.1', () => {
   // orchestrator poll on purpose — this aggregates cross-system structure,
   // not live health, doesn't need sub-minute freshness.
   try {
-    const sysLattice = require('../meta/spatial/system-lattice');
+    const sysLattice = require('../intelligence/meta/spatial/system-lattice');
     sysLattice.load(); // rehydrate from Cortex before the first feed tick
     const _feedLattice = () => {
       try {

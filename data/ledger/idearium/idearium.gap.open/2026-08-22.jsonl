@@ -1,0 +1,1 @@
+{"uuid":"362f8f05-bb5e-4d29-9d92-567af6039a90","system":"idearium","component":"idearium.gap.open","action":"registered","status":"ok","eventTs":26,"seq":26,"tags":["idearium"],"detail":"Open a new gap","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128641}

@@ -295,3 +295,182 @@
 [2026-08-22T14:45:40.254Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
 [2026-08-22T14:45:40.256Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
 [2026-08-22T14:45:53.641Z] autopilot status: http://127.0.0.1:7921/status
+[2026-08-22T21:28:42.607Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-08-22T21:28:42.608Z] [36m[clear-glass][0m on-demand — staying dormant until requested
+[2026-08-22T21:28:42.609Z] ── boot phase 1 — cortex
+[2026-08-22T21:28:42.610Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-22T21:28:42.655Z] autopilot status: http://127.0.0.1:7799/status
+[2026-08-22T21:28:43.169Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-08-22T21:28:43.169Z] ── boot phase 2 — orchestrator, bridge, guardian, diagnostic
+[2026-08-22T21:28:43.170Z] [36m[orchestrator][0m starting — node orchestrator.js
+[2026-08-22T21:28:43.180Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-08-22T21:28:43.190Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-08-22T21:28:43.201Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-08-22T21:28:43.363Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-2026-08-22-step0-logical-clock\nexus\node_modules\.bin\electron.cmd .
+[2026-08-22T21:28:43.726Z] [bridge] phase 2 gate passed — http://127.0.0.1:9999/health
+[2026-08-22T21:28:43.727Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-08-22T21:28:43.731Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-08-22T21:28:46.249Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-08-22T21:28:46.249Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, copilot, loom
+[2026-08-22T21:28:46.250Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-08-22T21:28:46.260Z] [31m[architect][0m starting — node architect/service.js
+[2026-08-22T21:28:46.271Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-08-22T21:28:46.281Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-22T21:28:46.292Z] [33m[ollama-bridge][0m starting — node ollama/server.js
+[2026-08-22T21:28:46.304Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-22T21:28:46.315Z] [37m[loom][0m starting — node loom/server.js
+[2026-08-22T21:28:46.845Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-08-22T21:28:46.846Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-08-22T21:28:46.848Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-08-22T21:28:46.849Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-08-22T21:28:46.849Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-08-22T21:28:46.850Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-08-22T21:28:46.872Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-08-22T21:28:46.872Z] ── boot phase 4 — intelligence-consumer, emerge
+[2026-08-22T21:28:46.877Z] [32m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-08-22T21:28:46.888Z] [31m[emerge][0m starting — node emerge/consumer.js
+[2026-08-22T21:28:46.902Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-22T21:28:46.902Z] [emerge] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-22T21:28:46.903Z] ── boot sequence complete — 4 phase(s)
+[2026-08-22T21:29:42.636Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-22T21:29:43.187Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-08-22T21:29:43.203Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-08-22T21:29:43.203Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-08-22T21:29:43.219Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-08-22T21:29:43.390Z] [36m[clear-glass][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.268Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.284Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.284Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.299Z] [35m[intelligence][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.314Z] [33m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.316Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.330Z] [37m[loom][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.902Z] [32m[intelligence-consumer][0m stable for 60s — backoff reset
+[2026-08-22T21:29:46.902Z] [31m[emerge][0m stable for 60s — backoff reset
+[2026-08-22T21:32:21.450Z] [31m[emerge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.451Z] [31m[emerge][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.457Z] [32m[intelligence-consumer][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.457Z] [32m[intelligence-consumer][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.463Z] [37m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.464Z] [37m[loom][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.475Z] [34m[copilot][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.475Z] [34m[copilot][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.482Z] [33m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.482Z] [33m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.492Z] [35m[intelligence][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.492Z] [35m[intelligence][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.498Z] [36m[eravos][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.498Z] [36m[eravos][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.506Z] [31m[architect][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.507Z] [31m[architect][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.516Z] [34m[idearium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.516Z] [34m[idearium][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.525Z] [36m[clear-glass][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.526Z] [36m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-08-22T21:32:21.539Z] [37m[diagnostic][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.540Z] [37m[diagnostic][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.551Z] [33m[guardian][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.552Z] [33m[guardian][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.562Z] [35m[bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.563Z] [35m[bridge][0m restarting in 1s (attempt 1)
+[2026-08-22T21:32:21.577Z] [36m[orchestrator][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-08-22T21:32:21.578Z] [36m[orchestrator][0m restarting in 1s (attempt 1)
+[2026-08-22T21:44:58.595Z] ── boot phase 1 — bgRequired
+[2026-08-22T21:44:58.595Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:00.615Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-08-22T21:45:00.616Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-08-22T21:45:08.639Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-22T21:45:08.639Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-08-22T21:45:08.641Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:18.697Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-22T21:45:18.697Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-08-22T21:45:18.699Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:25.624Z]    ↳ diagnostic for 'bgRequired' exceeded 25s — killed. Partial output below.
+[2026-08-22T21:45:25.629Z]    ↳ diagnostic for 'bgRequired' (exit null) —
+[2026-08-22T21:45:25.629Z]       [1m  Integration health across all running systems:[0m
+[2026-08-22T21:45:25.629Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-22T21:45:25.629Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-22T21:45:25.629Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-22T21:45:25.629Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-22T21:45:25.629Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-22T21:45:25.629Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-22T21:45:25.629Z]       [36m↻[0m FIX: Start cortex
+[2026-08-22T21:45:25.629Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-22T21:45:25.629Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-22T21:45:25.629Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-22T21:45:25.629Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-22T21:45:25.629Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-22T21:45:25.629Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-22T21:45:25.629Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-22T21:45:25.629Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-22T21:45:25.629Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-22T21:45:25.629Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-22T21:45:25.629Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-22T21:45:25.629Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-22T21:45:25.629Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-22T21:45:25.629Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-22T21:45:25.629Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-22T21:45:25.629Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-22T21:45:25.629Z]       [1m  JS syntax integrity:[0m
+[2026-08-22T21:45:25.630Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-08-22T21:45:25.630Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-08-22T21:45:25.630Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-08-22T21:45:25.630Z] ── boot phase 1 — bgOptional
+[2026-08-22T21:45:25.630Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:27.643Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-08-22T21:45:27.643Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-08-22T21:45:28.769Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-22T21:45:28.769Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-08-22T21:45:28.770Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:35.678Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-22T21:45:35.678Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-08-22T21:45:35.679Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:38.826Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-08-22T21:45:38.826Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-08-22T21:45:38.827Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:45.737Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-22T21:45:45.737Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-08-22T21:45:45.739Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:48.885Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-08-22T21:45:48.885Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-08-22T21:45:48.887Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:52.652Z]    ↳ diagnostic for 'bgOptional' exceeded 25s — killed. Partial output below.
+[2026-08-22T21:45:52.657Z]    ↳ diagnostic for 'bgOptional' (exit null) —
+[2026-08-22T21:45:52.657Z]       [1m  Integration health across all running systems:[0m
+[2026-08-22T21:45:52.657Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-22T21:45:52.657Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-22T21:45:52.657Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-22T21:45:52.657Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-22T21:45:52.657Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-22T21:45:52.657Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-22T21:45:52.657Z]       [36m↻[0m FIX: Start cortex
+[2026-08-22T21:45:52.657Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-22T21:45:52.657Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-22T21:45:52.657Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-22T21:45:52.657Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-22T21:45:52.657Z]       [90m    Command : [36mnode orchestrator.js[0m[0m
+[2026-08-22T21:45:52.657Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-22T21:45:52.657Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-22T21:45:52.657Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-22T21:45:52.657Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-22T21:45:52.657Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-22T21:45:52.657Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-22T21:45:52.657Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-22T21:45:52.657Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-22T21:45:52.657Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-22T21:45:52.657Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-22T21:45:52.657Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-22T21:45:52.657Z]       [1m  JS syntax integrity:[0m
+[2026-08-22T21:45:52.657Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-08-22T21:45:52.657Z] ── boot phase 2 — bgAfter
+[2026-08-22T21:45:52.658Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:52.664Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-22T21:45:52.665Z] ── boot sequence complete — 2 phase(s)
+[2026-08-22T21:45:52.665Z] ── boot phase 1 — bgDiag
+[2026-08-22T21:45:52.665Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:45:54.679Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-08-22T21:45:54.680Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-08-22T21:45:55.791Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-22T21:45:55.791Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-08-22T21:45:55.793Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-22T21:46:10.472Z] autopilot status: http://127.0.0.1:7921/status

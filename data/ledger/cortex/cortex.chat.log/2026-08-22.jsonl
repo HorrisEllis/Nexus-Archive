@@ -1,0 +1,1 @@
+{"uuid":"37f53037-6478-491c-8cde-3b121c91b728","system":"cortex","component":"cortex.chat.log","action":"registered","status":"ok","eventTs":35,"seq":35,"tags":["cortex"],"detail":"Co-pilot conversation log","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128534}

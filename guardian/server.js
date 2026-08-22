@@ -7,7 +7,7 @@ const http       = require('http');
 const { createNCPServer }    = require('../guardian/lib/ncp');
 const { createCFRLedger } = require('../intelligence/cfr/ledger');
 const { Detector }          = require('../lib/seam/detector.js');
-const GapHunter             = require('../meta/gap/hunter');
+const GapHunter             = require('../intelligence/meta/gap/hunter');
 const { SEAMQueue, STATE }  = require('../lib/seam/queue.js');
 const { parseSpec, parseSpecFile, extractPrerequisite } = require('../lib/seam/spec-parser.js');
 const { createQueue }       = require('../lib/queue');
@@ -698,7 +698,7 @@ function _doDispatch(job) {
   console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP`);
   // §ALK-09: record dispatch decision
   try {
-    const alk = require('../meta/alk');
+    const alk = require('../intelligence/meta/alk');
     alk.record({
       actor:   'llm',
       intent:  'generate',
@@ -2343,7 +2343,7 @@ function handleExtendedRoutes(req, res, url, method) {
   if (method==='GET' && url.pathname==='/alk/last') {
     // Resume — returns last user-initiated ALK decision
     try {
-      const alk = require('../meta/alk');
+      const alk = require('../intelligence/meta/alk');
       const decisions = alk.query({ actor: 'user', limit: 1 });
       const last = decisions[0] || null;
       pRes(res, 200, { ok:true, decision: last });

@@ -1,0 +1,1 @@
+{"uuid":"bd3225bc-9be9-4f95-9510-fe2ed86dd718","system":"cg","component":"cg.events","action":"registered","status":"ok","eventTs":3,"seq":3,"tags":["cg","stream"],"detail":"SSE — all SISO bus events","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128798}
