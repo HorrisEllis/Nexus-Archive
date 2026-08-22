@@ -1832,7 +1832,14 @@ async function convLoad() {
   list.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(255,255,255,.2);padding:16px">Loading…</div>';
 
   try {
-    const url = `http://127.0.0.1:${P.orch}/api/memory?table=chat_log&limit=40`;
+    // §FIXED 2026-08-22 — James: "i need to be able to access the chat
+    // history." Found the real cause, not a missing feature: this panel
+    // already existed, fully built, but fetched the wrong URL. Orchestrator
+    // only proxies memory requests under /api/cortex/memory (checked
+    // directly: the proxy block is gated on sub==='cortex', and there is no
+    // handler at all for a bare /api/memory on this port) — so every call
+    // here has been hitting a 404 since the panel was written.
+    const url = `http://127.0.0.1:${P.orch}/api/cortex/memory?table=chat_log&limit=40`;
     const d = await fetch(url).then(r=>r.json()).catch(()=>null);
     const rows = (d?.rows || d?.result || []).filter(r => !filter || r.provider===filter || r.source===filter)
       .sort((a,b)=>(b.ts||0)-(a.ts||0));
