@@ -1,1 +1,0 @@
-{"uuid":"c437632e-7de7-4c7d-9b1f-5e84d1218626","system":"loom","component":"loom.ingest.upload","action":"registered","status":"ok","eventTs":12,"seq":12,"tags":["loom","write"],"detail":"Ingest via file upload","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128764}

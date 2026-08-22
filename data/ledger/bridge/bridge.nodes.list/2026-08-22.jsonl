@@ -1,1 +1,0 @@
-{"uuid":"2053e8b0-50f8-4a4c-8e49-a43d282d6f3d","system":"bridge","component":"bridge.nodes.list","action":"registered","status":"ok","eventTs":5,"seq":5,"tags":["bridge"],"detail":"Connected relay nodes","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128545}

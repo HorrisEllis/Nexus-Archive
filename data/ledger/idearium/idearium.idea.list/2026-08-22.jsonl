@@ -1,1 +1,0 @@
-{"uuid":"02b44e98-1482-45b5-8e44-13f98dc0030c","system":"idearium","component":"idearium.idea.list","action":"registered","status":"ok","eventTs":8,"seq":8,"tags":["idearium"],"detail":"List all ideas","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128607}

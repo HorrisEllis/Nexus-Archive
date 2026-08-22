@@ -1,1 +1,0 @@
-{"uuid":"9350b5e6-76c0-4af6-8c53-cbfe1c257702","system":"cortex","component":"cortex.contract","action":"registered","status":"ok","eventTs":2,"seq":2,"tags":["cortex"],"detail":"Cortex interaction contract","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128490}

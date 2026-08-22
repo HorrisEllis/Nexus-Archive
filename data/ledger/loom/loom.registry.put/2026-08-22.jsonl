@@ -1,1 +1,0 @@
-{"uuid":"4924d49e-43b0-4a5f-b415-b7f1677a7819","system":"loom","component":"loom.registry.put","action":"registered","status":"ok","eventTs":7,"seq":7,"tags":["loom","write"],"detail":"Write a registry entry","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128757}

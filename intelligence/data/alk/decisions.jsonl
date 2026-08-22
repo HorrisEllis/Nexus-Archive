@@ -1,1 +1,0 @@
-{"uuid":"1c7efe42-c6fc-4215-9afb-eba1bdcd2be8","type":"decision","actor":"llm","intent":"generate","payload":{"jobId":"26fafc74-ea07-424b-9c7f-4463106f97d4","provider":"chatgpt","command":"general","promptHash":"[CONTEXT]\n[NEXUS] Guardian:online\n\nhello"},"outcome":null,"causedBy":null,"reversedBy":null,"sigma":0,"ts":1787434165969}

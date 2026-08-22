@@ -1,1 +1,0 @@
-{"uuid":"5ed32125-d753-4d6d-9e48-87af1d5a8e4a","system":"eros","component":"eros.tab.close","action":"registered","status":"ok","eventTs":7,"seq":7,"tags":["eros","tab"],"detail":"Close tab by targetId","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128865}

@@ -1,1 +1,0 @@
-{"uuid":"74633454-eea3-4750-a2c4-08dd9ab3f9b0","system":"bridge","component":"bridge.health","action":"registered","status":"ok","eventTs":1,"seq":1,"tags":["bridge"],"detail":"Bridge health + relay stats","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128540}

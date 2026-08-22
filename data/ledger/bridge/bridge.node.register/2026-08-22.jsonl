@@ -1,1 +1,0 @@
-{"uuid":"b4c4d474-9cfb-49ed-873e-2bf31e492d5f","system":"bridge","component":"bridge.node.register","action":"registered","status":"ok","eventTs":6,"seq":6,"tags":["bridge"],"detail":"Register a relay node","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128547}

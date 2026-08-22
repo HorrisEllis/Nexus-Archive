@@ -1,1 +1,0 @@
-{"uuid":"d5a23426-08c6-4411-89aa-ea18f61e6cc3","system":"ollama","component":"ollama.models.list","action":"registered","status":"ok","eventTs":6,"seq":6,"tags":["ollama"],"detail":"Available local models","causedBy":"ollama","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787434128708}

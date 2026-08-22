@@ -512,9 +512,20 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Intelligence ─────────────────────────────────────────────────────────
+  // §MIGRATION 2026-08-22 — real bug fix, not just a relocation. Checked
+  // both real handlers side by side before touching this: cortex's local
+  // version never had crystallised/faultClasses/reuseItems/driftLevel —
+  // fields guardian/userscript-claude.js's OWN Intelligence Core panel has
+  // been reading from this exact response since it was built
+  // (status.crystallised, status.faultClasses, status.reuseItems,
+  // status.driftLevel — confirmed by reading that file directly). Every
+  // one of those has silently rendered as "0" or "unknown" the whole
+  // time. intelligence/index.js's real handler has all four. Proxying
+  // fixes a real, live, pre-existing bug — it doesn't just avoid
+  // introducing one. cli/nexus-repl.js's own caller just dumps the raw
+  // JSON, so it's unaffected either way.
   if (p === '/api/intelligence/status') {
-    json(res, 200, { ok: true, regime: _field.regime, field: _field,
-      patterns: _buildPatterns(3), openGaps: jaaDB.count('gaps', { status: 'open' }) });
+    _proxyToIntelligence(req, res, url);
     return;
   }
 
@@ -864,15 +875,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §MIGRATION 2026-08-22 — target confirmed real: intelligence/index.js's
+  // handler does the identical jaaDB.insert('event_log', ...) PLUS
+  // triggers an immediate failure scan when body.type indicates an error.
+  // A strict superset, confirmed by reading both handlers side by side —
+  // proxying can only add behavior a caller would want, never remove any.
   if (p === '/api/intelligence/event' && method === 'POST') {
-    const body = await readBody(req);
-    if (body?.type) {
-      jaaDB.insert('event_log', {
-        uuid: uid(), type: body.type, payload: body.payload || {},
-        source: body.source || 'external', causedBy: body.causedBy || null, ts: Date.now(),
-      });
-    }
-    json(res, 200, { ok: true });
+    _proxyToIntelligence(req, res, url);
     return;
   }
 
