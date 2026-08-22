@@ -1714,6 +1714,40 @@ const server = http.createServer(async (req, res) => {
       const switchM = prompt.match(/\b(?:switch\s+(?:\S+\s+)?to|change\s+(?:\S+\s+)?to|use|route to)\s+(claude|chatgpt|gemini|perplexity|clear[- ]?glass|\w+)\s*(agent|model)?\b/i);
       const KNOWN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'clear glass', 'clear-glass', 'clearglass'];
       const switchTarget = switchM ? switchM[1].toLowerCase() : null;
+
+      // §FIXED 2026-08-22 — James, live: "change to guardian" got the
+      // generic 66%-confidence ollama fallback, not a real switch. Traced
+      // directly: the regex DID match and capture "guardian" — the gate
+      // right below refused it, correctly, because Guardian isn't an
+      // agent (it's not in KNOWN_AGENTS, and the phrase has no "agent"/
+      // "model" word) — it's the NCP ROUTING LAYER that reaches the real
+      // agents (claude/chatgpt/gemini/perplexity). "switch to guardian"
+      // is a real, distinct, valid request that was never built: stop
+      // defaulting to ollama, use whichever real agent guardian can
+      // currently reach. Resolved here rather than treating "guardian" as
+      // a fake pseudo-agent name switchAgent() would just reject.
+      if (switchTarget === 'guardian' || switchTarget === 'ncp') {
+        try {
+          const ac = require('../lib/agent-chat');
+          const { DEFAULT_FALLBACK } = require('../lib/agent-router');
+          const listed = await ac.listAgents();
+          if (!listed.ok) {
+            return json(res, 200, { text: `Wanted to switch you to guardian, but guardian itself is unreachable: ${listed.error}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, requestId });
+          }
+          const live = new Set(listed.agents.filter(a => a.state === 'live').map(a => a.provider));
+          const pick = DEFAULT_FALLBACK.find(a => live.has(a));
+          if (!pick) {
+            return json(res, 200, { text: `Guardian is reachable, but no real agent tab is currently live to route through (checked: ${DEFAULT_FALLBACK.join(', ')}). Open one, or say "switch to <agent>" directly.`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, requestId });
+          }
+          const sm = require('./lib/self-model');
+          const r = sm.switchAgent({ intent: 'directed', directed: pick, prompt });
+          if (r.ok) sm.setCurrentAgent(r.agent);
+          return json(res, 200, { text: r.ok ? `Routing to ${JSON.stringify(r.agent)} via guardian. Every message uses it until you change it again.` : `Could not switch: ${r.reason}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, detail: r, requestId });
+        } catch (e) {
+          return json(res, 200, { text: `Wanted to switch you to guardian, but hit a real error resolving a live agent: ${e.message}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, requestId });
+        }
+      }
+
       const switchIsReal = switchM && (KNOWN_AGENTS.includes(switchTarget) || /\b(agent|model)\b/i.test(prompt) || !!urlM);
       if (switchIsReal) {
         const sm = require('./lib/self-model');
