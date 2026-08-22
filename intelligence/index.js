@@ -39,8 +39,8 @@
 
 'use strict';
 
-const { jaaDB, uid } = require('../memory/jaa-db');
-const bus = require('../../nexus-bus');
+const { jaaDB, uid } = require('../cortex/memory/jaa-db');
+const bus = require('../nexus-bus');
 
 const MODULE_ID = 'cortex/intelligence';
 const VERSION   = '1.0.0';
@@ -198,7 +198,7 @@ function init(cfg = {}) {
   // they flow through the projection chain (component → capability → RAID
   // resolver), and RAID can route to the mind. Every system copies this (§16.5).
   try {
-    require('../../lib/self-register').registerSelf('intelligence', [
+    require('../lib/self-register').registerSelf('intelligence', [
       { name: 'context',  description: 'pre-request context for a given intent — what the system knows before acting',
         route: { method: 'GET', path: '/api/intelligence/context' } },
       { name: 'patterns', description: 'crystallised BEP patterns — recurring structures the system has learned',
@@ -388,7 +388,7 @@ async function _scanPatterns() {
     // and one known by coincidence must not look the same (§0.1).
     let _graph = null;
     try {
-      const { CausalGraph } = require('../../meta/cfr/graph');
+      const { CausalGraph } = require('../meta/cfr/graph');
       if (CausalGraph) {
         _graph = new CausalGraph();
         for (const e of events) _graph.ingest(e);
@@ -657,7 +657,7 @@ function _enrichCrystallisation(pattern) {
   } catch (_) { /* CFR unreachable — honest null, not fabricated */ }
 
   try {
-    const { createCausalStore, createEdge, EDGE_CAUSAL_RULE } = require('../../meta/rfr2/causality/index.js');
+    const { createCausalStore, createEdge, EDGE_CAUSAL_RULE } = require('../meta/rfr2/causality/index.js');
     const supportEvents = jaaDB.tail('event_log', 500)
       .filter(e => pattern.eventTypes ? pattern.eventTypes.includes(e.type) : (e.type === pattern.typeA || e.type === pattern.typeB || e.type === pattern.precursorType))
       .slice(-20);
@@ -880,7 +880,7 @@ function _scanMetaPatterns() {
 
 function _syncLoomMap() {
   try {
-    const loomMap = require('../../lib/loom-map');
+    const loomMap = require('../lib/loom-map');
     _loomMap = loomMap.getMap({ maxAgeMs: 0 }); // force a real read on this cadence; loomMap's own cache covers callers between syncs
     _log(`loom map synced: ${_loomMap.counts?.systems ?? 0} systems, ${_loomMap.counts?.components ?? 0} components, ${_loomMap.counts?.hooks ?? 0} hooks`);
   } catch (e) {
@@ -890,7 +890,7 @@ function _syncLoomMap() {
 
 function _buildComponentFailureMap(componentErrors) {
   try {
-    const loomMap = (() => { try { return require('../../lib/loom-map'); } catch (_) { return null; } })();
+    const loomMap = (() => { try { return require('../lib/loom-map'); } catch (_) { return null; } })();
     const byComponent = {};
 
     // From component_ledger's explicit system+component error rows (the
@@ -988,7 +988,7 @@ async function _scanFailures() {
         idx.components.add(context.component);
       } else if (context.system) {
         try {
-          const resolved = require('../../lib/loom-map').resolveComponent(context.system);
+          const resolved = require('../lib/loom-map').resolveComponent(context.system);
           if (resolved.found) idx.components.add(resolved.componentId);
         } catch (_) { /* loom-map unavailable — component tracking degrades to system-only, same as before this existed */ }
       }
@@ -1029,7 +1029,7 @@ async function _scanFailures() {
     // _scanPatterns) — a single _addToIndex call per component/action pair
     // has to carry its real occurrence count, not just increment by one.
     let componentErrors = { available: false, components: [] };
-    try { componentErrors = require('../../lib/component-ledger').errorsByComponent({ since: now - 24 * 60 * 60 * 1000 }); }
+    try { componentErrors = require('../lib/component-ledger').errorsByComponent({ since: now - 24 * 60 * 60 * 1000 }); }
     catch (e) { console.warn(`[${MODULE_ID}] component_ledger error scan unavailable: ${e.message}`); }
     for (const c of componentErrors.components) {
       for (const action of c.actions) {

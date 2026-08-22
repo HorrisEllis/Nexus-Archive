@@ -75,10 +75,12 @@ const FILES = [
   // bridge routes (checked directly, not assumed). A real, significant,
   // pre-existing gap, not something this session's own work caused.
   ['guardian/server.js', 'nexus.guardian.server', 'guardian', []],
+  ['cortex/boot.js', 'nexus.cortex.boot', 'cortex', []],
 
   // §ADDED 2026-08-17f — found genuinely unregistered while fixing 3 real
   // recency bugs in it (query() vs tail()).
-  ['cortex/intelligence/index.js', 'nexus.cortex.intelligence', 'cortex/intelligence', []],
+  ['intelligence/index.js', 'nexus.intelligence', 'intelligence', []],
+  ['lib/uid/component-map.js', 'nexus.lib.uid.component-map', 'lib/uid', []],
 
   // §ADDED 2026-08-17g — found unregistered while fixing its real,
   // significant disk/RAM-relevant bug (unbounded error log growth).
@@ -167,6 +169,7 @@ const FILES = [
   ['lib/agent-reach.js', 'nexus.lib.agent-reach', 'lib', []],
   ['lib/agent-tools/tools/governance/tool-config.js', 'nexus.lib.agent-tools.governance.tool-config', 'lib/agent-tools/tools/governance', []],
   ['clear-glass/src/providers/download-capture.js', 'nexus.clear-glass.providers.download-capture', 'clear-glass/src/providers', []],
+  ['clear-glass/src/copilot/wake-relay.js', 'nexus.clear-glass.copilot.wake-relay', 'clear-glass/src/copilot', ['nexus.clear-glass.providers.host']],
 
   // §ADDED 2026-08-22 — 6 real files found genuinely unregistered by the
   // precommit hook after merging nexus0822/master. Real requires checked
@@ -181,6 +184,7 @@ const FILES = [
   ['copilot/registry-components.js', 'nexus.copilot.registry-components', 'copilot', []],
   ['guardian/userscript-chatgpt.js', 'nexus.guardian.userscript.chatgpt', 'guardian', []],
   ['guardian/userscript-claude.js', 'nexus.guardian.userscript.claude', 'guardian', []],
+  ['guardian/nexus-hey-claude.user.js', 'nexus.guardian.nexus-hey-claude', 'guardian', ['nexus.guardian.userscript.claude']],
   ['guardian/userscript-gemini.js', 'nexus.guardian.userscript.gemini', 'guardian', []],
   ['guardian/userscript-perplexity.js', 'nexus.guardian.userscript.perplexity', 'guardian', []],
   ['lib/introspect.js', 'nexus.lib.introspect', 'lib', []],

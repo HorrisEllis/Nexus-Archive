@@ -98,7 +98,7 @@ function _getGrammar() {
 }
 function _getSNR() {
   if (_snr) return _snr;
-  try { _snr = require('../cortex/core/raid/snr-filter'); } catch(_) {}
+  try { _snr = require('../../cortex/core/raid/snr-filter'); } catch(_) {}
   return _snr;
 }
 function _getRAID() {
@@ -128,7 +128,7 @@ function _getReplay() {
 }
 function _getLiminal() {
   if (_liminal) return _liminal;
-  try { _liminal = require('../cortex/liminal-space/index'); } catch(_) {}
+  try { _liminal = require('../../cortex/liminal-space/index'); } catch(_) {}
   return _liminal;
 }
 function _getConstitutionalAI() {
@@ -731,7 +731,7 @@ async function handle(req = {}, opts = {}) {
     // §2.1 — snapshot before any forge/irreversible action
     if (intent.action === 'forge' || intent.action === 'delete') {
       try {
-        const snap = require('../cortex/snapshot/index');
+        const snap = require('../../cortex/snapshot/index');
         const s = snap.create({ type: 'pre_forge', message: `request-handler: ${intent.action} ${intent.target || ''}`, causedBy: requestId });
         ctx.snapshotId = s?.snapId;
       } catch(e) {

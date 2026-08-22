@@ -378,6 +378,29 @@ class ProviderHost {
     return results;
   }
 
+  /**
+   * injectAnswer(providerId, text) — James: "listens for the co-pilot
+   * response and injects it into the corresponding agent chat using
+   * clearglass." Real close of the loop: calls a page-side function the
+   * userscript itself already exposes (window.__nexusInjectAnswer),
+   * which wraps that provider's OWN real injectText()/submit() — this
+   * method never assumes DOM structure itself, that lives exactly once,
+   * in the userscript, matching §16.5 (one composer driver, not two that
+   * can drift).
+   */
+  async injectAnswer(providerId, text) {
+    const win = this.windows.get(providerId);
+    if (!win || win.isDestroyed()) return { ok: false, reason: `no live window for ${providerId}` };
+    try {
+      const result = await win.webContents.executeJavaScript(
+        `(typeof window.__nexusInjectAnswer === 'function') ? window.__nexusInjectAnswer(${JSON.stringify(text)}) : { ok: false, reason: 'page has not loaded __nexusInjectAnswer yet' }`
+      );
+      return result || { ok: false, reason: 'page returned nothing' };
+    } catch (e) {
+      return { ok: false, reason: e.message };
+    }
+  }
+
   // ── Control ──────────────────────────────────────────────────────────────
   show(providerId) {
     const win = this.windows.get(providerId);

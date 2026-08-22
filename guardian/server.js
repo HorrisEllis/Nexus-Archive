@@ -3592,6 +3592,35 @@ function handleExtendedRoutes(req, res, url, method) {
   }
 
   // ── Sessions ──────────────────────────────────────────────────────────────────
+  // §WIRED 2026-08-22 — James: "clear-glass to have the account name for
+  // cookies... so we can address it from nexus." The receiving half of a
+  // real, previously-closed gap: guardian/lib/ncp.js's chat_log/artifacts
+  // inserts already destructure account/chatUrl and always got undefined,
+  // because no client ever sent them. guardian/userscript-nexus-wake.js now
+  // does, once per real session (not per message). This is where it lands.
+  if (method === 'POST' && url.pathname === '/api/account-identity') {
+    bodyJ(req).then(body => {
+      const { provider, tabId, sessionId, account, chatUrl, ts } = body || {};
+      if (!provider || !account) { pRes(res, 400, { ok: false, error: 'provider and account required' }); return; }
+      // §WIRED 2026-08-22 — James: "having a uuid for accounts... an index
+      // of each agent and accounts." Real, stable UUID per (provider,
+      // account) — distinct from sessions.uuid below, which is correctly
+      // per-session. Same real account now resolves to the same UUID
+      // across every chat, which is what retry/fallback routing needs.
+      const accountIdx = require('../lib/account-identity-index.js').resolve(provider, account);
+      const existing = jaa.get('sessions', { chat_id: sessionId });
+      if (existing) jaa.update('sessions', { chat_id: sessionId }, { account, chatUrl, account_uuid: accountIdx.uuid, updated_ts: ts || Date.now() });
+      else jaa.insert('sessions', {
+        uuid: require('crypto').randomUUID(), chat_id: sessionId || null,
+        provider, tabId: tabId || null, account, chatUrl: chatUrl || null,
+        account_uuid: accountIdx.uuid,
+        created_ts: ts || Date.now(), updated_ts: ts || Date.now(),
+      });
+      pRes(res, 200, { ok: true, accountUuid: accountIdx.uuid });
+    }).catch(e => pRes(res, 500, { ok: false, error: e.message }));
+    return true;
+  }
+
   if (parts[0]==='sessions') {
     if (method==='GET' && !parts[1]) {
       const limit  = Math.min(parseInt(url.searchParams.get('limit')||'50'),200);

@@ -120,6 +120,48 @@ async function cmdStatus() {
   });
 }
 
+async function cmdWake() {
+  // §BUILT 2026-08-22 — James: "anything that has 'hey nexus' at the
+  // beginning gets injected into co-pilot's cli.js, with the agent and
+  // chatUrl, and account, so it can open a pipeline to talk." Real,
+  // complete pipeline: subscribes to cortex's real /sse (built this same
+  // session — confirmed dead before this, both this file and
+  // cortex/cortex-v2.js were connecting to an endpoint that never
+  // existed), filters specifically for nexus.wake.detected (cortex's
+  // /api/meta/observe now checks every real message for the wake phrase —
+  // every message already reaches that endpoint via the userscript's
+  // already-working GM_xmlhttpRequest call), and on a real hit, relays the
+  // request to co-pilot automatically and prints the real answer.
+  console.log(`${$(C.bold+C.cyan, 'HEY NEXUS')}  ${$(C.dim, 'listening for the wake phrase from any connected agent tab — Ctrl+C to stop')}\n`);
+  const r = http.request({ hostname: '127.0.0.1', port: 3748, path: '/sse', method: 'GET', headers: { Accept: 'text/event-stream' } }, res => {
+    let buf = '';
+    res.on('data', c => {
+      buf += c.toString();
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const l of lines) {
+        if (!l.startsWith('data:')) continue;
+        let d; try { d = JSON.parse(l.slice(5).trim()); } catch (_) { continue; }
+        if (d.type !== 'nexus.wake.detected') continue;
+        console.log(`${$(C.dim, new Date(d.ts).toTimeString().slice(0,8))}  ${$(C.green,'●')} wake from ${$(C.cyan, d.agent || 'unknown agent')}${d.account ? ' ('+d.account+')' : ''}`);
+        console.log(`  ${$(C.dim, d.chatUrl || '')}`);
+        console.log(`  ${$(C.bold, '›')} ${d.request}\n`);
+        fetch(`http://127.0.0.1:${PORTS.guardian}/copilot/prompt`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ prompt: d.request, contextOpts: { intent: d.request } }),
+          signal: AbortSignal.timeout(20000),
+        }).then(r => r.json()).then(resp => {
+          const text = resp.text || resp.response || (resp.toolResult ? JSON.stringify(resp.toolResult.result || resp.toolResult, null, 2) : null);
+          console.log(`  ${$(C.cyan,'co-pilot:')} ${text || $(C.dim,'(no answer field in response)')}\n`);
+        }).catch(e => console.log(`  ${err('co-pilot relay failed: ' + e.message)}\n`));
+      }
+    });
+    res.on('end', () => { console.log('stream ended'); process.exit(0); });
+  });
+  r.on('error', e => { console.log(err(`cortex offline: ${e.message}`)); process.exit(1); });
+  r.end();
+  process.on('SIGINT', () => { r.destroy(); console.log('\n'); process.exit(0); });
+}
+
 async function cmdStream() {
   // Watch cortex SSE
   const r = http.request({ hostname:'127.0.0.1', port:3748, path:'/sse', method:'GET', headers:{Accept:'text/event-stream'} }, res => {
@@ -315,6 +357,7 @@ async function dispatch(line) {
     }
     case 'watch': await cmdWatch(); return;
     case 'watchdog': case 'wd': await cmdWatchdog(); return;
+    case 'wake': await cmdWake(); return;
     case 'ui': await cmdUI(); return;
     case 'help': case '?': cmdHelp(); return;
     case 'status': await cmdStatus(); return;  // multi-system, local
@@ -546,15 +589,24 @@ async function dispatch(line) {
     case 'copilot': case 'cp': {
       // copilot <prompt> — talk to the co-pilot. Use --cmd "<command>" to
       // make it a RAID-gated tool call instead of a plain chat exchange.
+      // §WIRED 2026-08-22 — James: "a userscript that routes into the cli
+      // for co-pilot to bridge my browser and nexus." The real, honest
+      // constraint that doesn't change no matter what's built here: this
+      // conversation has no live connection to this machine. What DOES
+      // help: --relay prints one clean, paste-ready JSON block of the real
+      // exchange instead of formatted terminal output, so a real answer can
+      // be handed back in one copy-paste instead of manual retyping.
+      const relayFlagIdx = args.indexOf('--relay');
       const cmdFlagIdx = args.indexOf('--cmd');
-      let prompt, command = null;
+      let prompt, command = null, relay = false;
+      if (relayFlagIdx !== -1) { relay = true; args.splice(relayFlagIdx, 1); }
       if (cmdFlagIdx !== -1) {
         prompt = args.slice(0, cmdFlagIdx).join(' ').trim();
         command = args.slice(cmdFlagIdx + 1).join(' ').trim();
       } else {
         prompt = args.join(' ').trim();
       }
-      if (!prompt) { log('Usage: copilot <prompt>\n       copilot <prompt> --cmd "<command to run, RAID-gated>"'); return; }
+      if (!prompt) { log('Usage: copilot <prompt>\n       copilot <prompt> --cmd "<command to run, RAID-gated>"\n       copilot <prompt> --relay   (clean JSON, ready to paste to Claude)'); return; }
       try {
         const r = await fetch(`http://127.0.0.1:${PORTS.guardian}/copilot/prompt`, {
           method: 'POST', headers: {'Content-Type':'application/json'},
@@ -562,6 +614,17 @@ async function dispatch(line) {
           signal: AbortSignal.timeout(20000),
         });
         const d = await r.json();
+        if (relay) {
+          console.log(JSON.stringify({
+            prompt, ts: Date.now(),
+            ok: !!d.ok, denied: !!d.denied, reason: d.reason || null,
+            toolResult: d.toolResult ? (d.toolResult.result || d.toolResult) : null,
+            context: d.context || null,
+            text: d.text || d.response || null,
+            error: d.error || null,
+          }, null, 2));
+          return;
+        }
         if (d.denied) {
           log(err(`RAID denied this tool call: ${d.reason}`));
         } else if (d.ok) {

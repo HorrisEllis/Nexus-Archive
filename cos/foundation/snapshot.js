@@ -169,7 +169,7 @@ class SnapshotEngine {
     // Process state (from process-runner registry)
     let processState = null;
     try {
-      const { getProcess } = require('./process-runner.js');
+      const { getProcess } = require('../compartment/process-runner.js');
       const proc = getProcess(this._id);
       if (proc) {
         processState = {

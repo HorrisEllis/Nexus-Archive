@@ -118,7 +118,7 @@ function rewind(uuid, { reason = 'user-initiated rewind' } = {}) {
 
   // Snapshot before rewind (§VERSIONIUM)
   try {
-    const versionium = require('../cortex/versionium/index');
+    const versionium = require('../../cortex/versionium/index');
     versionium.commit({ message: `pre-rewind: ${original.intent} (${uuid.slice(0,8)})`, causedBy: uuid });
   } catch(_) { /* versionium may not be loaded */ }
 

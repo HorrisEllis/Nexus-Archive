@@ -147,6 +147,19 @@ for (const f of files) {
   // for this one specific file.
   if (f === 'scripts/precommit-check.js') continue;
 
+  // §FIXED 2026-08-22 — found live: guardian/userscript-claude.js (a real,
+  // pre-existing file, not new) was crashing this exact check on
+  // 'sessionStorage is not defined' — genuinely a false positive, not a
+  // real bug. A userscript is designed to run only in a browser; testing
+  // it via plain Node require() will always throw on a real browser
+  // global at module-load time, by design, regardless of how correct the
+  // file is. Detected by the file's own self-declaring '==UserScript=='
+  // header rather than a path/naming convention, so this stays correct
+  // for any current or future userscript wherever it lives.
+  let src = '';
+  try { src = fs.readFileSync(full, 'utf8'); } catch (_) {}
+  if (/^\s*\/\/ ==UserScript==/m.test(src)) continue;
+
   const req = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(full)})`], { cwd: ROOT, encoding: 'utf8', timeout: 8000 });
   // §CORRECTED, found by testing before shipping: a real, long-running
   // server (cortex/boot.js, confirmed) correctly stays alive and gets
@@ -159,7 +172,17 @@ for (const f of files) {
   // this ever shipped, not after.
   if (req.status !== 0 && req.signal !== 'SIGTERM') {
     const firstLine = (req.stderr || '').split('\n').find(l => /Error/.test(l)) || (req.stderr || '').split('\n')[0];
-    errors.push(`${f} — crashes on require(): ${firstLine}`);
+    // §FIXED 2026-08-22 — found live: clear-glass/src/providers/host.js and
+    // main/index.js fail this exact check with "Cannot find module
+    // 'electron'" — confirmed by testing the ORIGINAL, unmodified file via
+    // git stash: it fails identically, pre-dating any change here. Real
+    // environment limitation (electron isn't installed in this sandbox and
+    // these files can only run inside an actual Electron process by
+    // design), not a code bug — same reasoning as the userscript skip
+    // above, different cause.
+    if (!/Cannot find module 'electron'/.test(firstLine)) {
+      errors.push(`${f} — crashes on require(): ${firstLine}`);
+    }
   }
 }
 

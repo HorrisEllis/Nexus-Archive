@@ -721,6 +721,11 @@ async function bootstrap() {
     sse:         { emit: (t, d) => emit(t, d) },
     postEvent:   (type, data) => _postEvent(type, data),
   });
+  // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
+  // injects it into the corresponding agent chat using clearglass."
+  // Real close of the loop — see src/copilot/wake-relay.js for the full
+  // real chain this completes.
+  require('../copilot/wake-relay.js').startWakeRelay(providerHost, { log: (m) => console.log(m) });
   // §P-CG-01 — NCP provider tabs (claude, chatgpt, gemini, perplexity),
   // each its own persistent session partition + Guardian userscript
   // injected via executeJavaScript, replacing Tampermonkey + manual tab

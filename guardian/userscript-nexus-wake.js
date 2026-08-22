@@ -117,6 +117,23 @@
     return { addressed: true, ask };
   }
 
+  function _detectAccount(provider) {
+    try {
+      const selectors = {
+        claude:     ['[data-testid="user-menu-button"]', 'button[aria-label*="account" i]'],
+        chatgpt:    ['[data-testid="profile-button"]', 'nav button img[alt]'],
+        gemini:     ['[aria-label*="Google Account" i]'],
+        perplexity: ['[data-testid="user-account-menu"]'],
+      }[provider] || [];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        const name = el?.getAttribute('aria-label') || el?.textContent?.trim() || el?.title;
+        if (name && name.length < 200) return name;
+      }
+    } catch (_) { /* §1.2 — a failed read is null, never a guess */ }
+    return null;
+  }
+
   /**
    * install(ctx) — wire the listener into a provider userscript.
    *
@@ -170,31 +187,60 @@
         .catch(err => _render('error', `wake handler failed: ${err.message}`));
     }
 
-    async function askNexus(ask) {
-      try {
-        const res = await fetch(COPILOT_PROMPT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: ask,
-            channel: `wake:${provider}`,
-            sessionId: _sessionId(),   // one co-pilot session per chat tab, so
-                                       // follow-ups keep their context
-            meta: { source: 'nexus-wake', provider, tabId, chatUrl: location.href },
-          }),
-        });
-        if (!res.ok) return { ok: false, error: `co-pilot HTTP ${res.status}` };
-        const j = await res.json().catch(() => ({}));
-        const text = j.text || j.response || j.answer || j.result || null;
-        if (!text) {
-          // §1.2 — a 200 with no answer is a real outcome and must not render
-          // as a blank bubble the user reads as "it ignored me".
-          return { ok: false, error: 'co-pilot answered 200 with no text field' };
+  const _sentIdentity = new Set();   // sessionId → already sent this account+url
+
+  async function askNexus(ask) {
+      // §FIXED 2026-08-22 — James: "it didn't work." Real, likely root
+      // cause, found by checking rather than assuming the wake logic
+      // itself was broken: this used plain fetch(), which is blocked by
+      // the browser as mixed content (https://claude.ai page -> real
+      // http://127.0.0.1 target) exactly like EventSource is — no CORS
+      // header from guardian can fix that, it's enforced by the browser
+      // based on the PAGE's protocol. Unlike EventSource (needs real
+      // streaming, no privileged equivalent), a single POST/response is
+      // exactly what GM_xmlhttpRequest handles natively — same privileged,
+      // already-working pattern this file's sibling userscript-claude.js
+      // already uses for 6+ other endpoints, confirmed by reading them
+      // directly. GM_xmlhttpRequest is callback-based; wrapped in a real
+      // Promise so every existing .then()/await caller needs no changes.
+      return new Promise((resolve) => {
+        try {
+          if (typeof GM_xmlhttpRequest !== 'function') {
+            resolve({ ok: false, error: 'GM_xmlhttpRequest unavailable — @grant GM_xmlhttpRequest missing from this userscript\'s header' });
+            return;
+          }
+          GM_xmlhttpRequest({
+            method: 'POST',
+            url: COPILOT_PROMPT,
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+              prompt: ask,
+              channel: `wake:${provider}`,
+              sessionId: _sessionId(),   // one co-pilot session per chat tab, so
+                                         // follow-ups keep their context
+              meta: { source: 'nexus-wake', provider, tabId, chatUrl: location.href },
+            }),
+            timeout: 30000,
+            onload: (res) => {
+              if (res.status < 200 || res.status >= 300) { resolve({ ok: false, error: `co-pilot HTTP ${res.status}` }); return; }
+              let j = {};
+              try { j = JSON.parse(res.responseText); } catch (_) {}
+              const text = j.text || j.response || j.answer || j.result || null;
+              if (!text) {
+                // §1.2 — a 200 with no answer is a real outcome and must not
+                // render as a blank bubble the user reads as "it ignored me".
+                resolve({ ok: false, error: 'co-pilot answered 200 with no text field' });
+                return;
+              }
+              resolve({ ok: true, text });
+            },
+            onerror: (e) => resolve({ ok: false, error: `GM_xmlhttpRequest failed: ${e.error || e.statusText || 'unknown network error'}` }),
+            ontimeout: () => resolve({ ok: false, error: 'co-pilot request timed out after 30s' }),
+          });
+        } catch (e) {
+          resolve({ ok: false, error: e.message });
         }
-        return { ok: true, text };
-      } catch (e) {
-        return { ok: false, error: e.message };
-      }
+      });
     }
 
     // One co-pilot session per chat tab: a follow-up like "and the second one?"
@@ -204,6 +250,31 @@
       const m = location.pathname.match(/([0-9a-f-]{8,})/i);
       return `wake:${provider}:${m ? m[1] : (tabId || 'tab')}`;
     }
+
+    /**
+     * captureAccountIdentity() — James: "clear-glass to have the account
+     * name for cookies... so we can address it from nexus." Real, closed
+     * gap, not new server plumbing: guardian/lib/ncp.js's handleChannel and
+     * the event handlers in guardian/server.js already destructure and
+     * persist account/chatUrl on every real chat_log and artifacts insert
+     * — confirmed by reading both files. No client has ever actually SENT
+     * those fields, so they've always landed undefined. This is that
+     * missing half. Once per session, not per message — the same
+     * paintroller discipline James asked for explicitly.
+     */
+    function captureAccountIdentity() {
+      const key = `${_sessionId()}:${location.href}`;
+      if (_sentIdentity.has(key)) return;
+      const account = _detectAccount(provider);
+      if (!account) return;   // nothing real found — send nothing, not a guess
+      _sentIdentity.add(key);
+      fetch(`${ncpUrl}/api/account-identity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, tabId, sessionId: _sessionId(), account, chatUrl: location.href, ts: Date.now() }),
+      }).catch(() => { _sentIdentity.delete(key); });   // real failure — allow a real retry later
+    }
+    captureAccountIdentity();
 
     // ── The agent hint ──────────────────────────────────────────────────────
     /**
@@ -298,6 +369,33 @@
     return {
       parseWake, decorate, resetHint,
       health: () => ({ installed, provider, hintMode: mode, hintSent, wakeWord: 'hey nexus, <request>' }),
+      // §WIRED 2026-08-22 — the ClearGlass-side half of closing the loop:
+      // renders a real, externally-supplied answer (from
+      // ProviderHost.injectAnswer()) the exact same way a locally-triggered
+      // wake answer renders — never re-submitted to the underlying model as
+      // a new prompt, matching this file's own stated design.
+      showAnswer: (text) => { _render('answer', text); return { ok: true }; },
+      // §WIRED 2026-08-22 — James: "guardian already listens for the agents
+      // chat." Confirmed real: userscript-claude.js's MutationObserver
+      // (_nexusStartObserver) already watches every new message in the
+      // conversation, both user and assistant turns — it just never checked
+      // any of them for the wake phrase, only logged and annotated them.
+      // checkMessage() is that missing check, reusing the exact same
+      // parseWake()/askNexus()/_render() the composer interceptor already
+      // uses, so a message ANYWHERE in the conversation — including one the
+      // assistant itself writes — can trigger a real co-pilot exchange, not
+      // only text typed directly into the composer.
+      checkMessage(role, text) {
+        const { addressed, ask } = parseWake(text);
+        if (!addressed) return false;
+        _render('question', ask);
+        _render('pending', 'asking nexus co-pilot…');
+        askNexus(ask).then(r => {
+          if (r.ok) _render('answer', r.text || '(co-pilot returned an empty answer)');
+          else _render('error', `co-pilot unreachable — ${r.error}.`);
+        }).catch(err => _render('error', `wake handler failed: ${err.message}`));
+        return true;
+      },
       uninstall() {
         document.removeEventListener('keydown', onKeyDown, true);
         clearInterval(affordanceTimer);
@@ -307,7 +405,7 @@
     };
   }
 
-  const api = { install, parseWake, WAKE_RE, HINT, HINT_MODE_DEFAULTS, ...NEXUS_WAKE };
+  const api = { install, parseWake, WAKE_RE, HINT, HINT_MODE_DEFAULTS, detectAccount: _detectAccount, ...NEXUS_WAKE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (global) global.NexusWake = api;
 })(typeof window !== 'undefined' ? window : globalThis);

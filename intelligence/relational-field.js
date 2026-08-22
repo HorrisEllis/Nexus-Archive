@@ -41,7 +41,7 @@ async function readFieldForFriction(frictionEvent = {}, opts = {}) {
 
   let causality, sigma;
   try {
-    const { loadRFR2Module } = require('../../lib/rfr2-bridge.js');
+    const { loadRFR2Module } = require('../lib/rfr2-bridge.js');
     causality = await loadRFR2Module('causality');
     sigma = await loadRFR2Module('sigma');
   } catch (e) { out.reason = `RFR2 bridge unavailable: ${e.message}`; return out; }

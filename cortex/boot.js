@@ -87,6 +87,15 @@ const { jaaDB, uid } = require('./memory/jaa-db');
 // — but this file never required it, so nothing arriving at /api/event ever
 // reached an in-process listener. Fixed at the two points below.
 const bus = require('../nexus-bus');
+
+// ── Cortex SSE — real broadcast channel, matches guardian's own
+// cockpitClients/cockpitBroadcast pattern (guardian/server.js) exactly.
+const _cortexSSEClients = new Set();
+function _cortexSSEBroadcast(data) {
+  if (!_cortexSSEClients.size) return;
+  const msg = `data: ${JSON.stringify(data)}\n\n`;
+  for (const r of _cortexSSEClients) { try { r.write(msg); } catch (_) { _cortexSSEClients.delete(r); } }
+}
 let _openLoopTaxonomy = null;
 function _getTaxonomy() {
   if (_openLoopTaxonomy !== null) return _openLoopTaxonomy;
@@ -114,9 +123,9 @@ function _getCausalGraphClass() {
 // gap" with scoring + reconciliation). boot.js is the composition root:
 // it owns jaaDB/_field/the causal-graph class and wires them in, each
 // faculty file stays independently requirable and testable.
-const { createIntuition }  = require('./intelligence/intuition');
-const { createMastermind } = require('./intelligence/mastermind');
-const adversarial          = require('./intelligence/adversarial');
+const { createIntuition }  = require('../intelligence/intuition');
+const { createMastermind } = require('../intelligence/mastermind');
+const adversarial          = require('../intelligence/adversarial');
 
 const _intuition  = createIntuition({
   jaaDB, getField: () => _field, getTaxonomy: _getTaxonomy,
@@ -784,7 +793,7 @@ const server = http.createServer(async (req, res) => {
   // safer to call the three underlying exports directly.
   if (p === '/api/intelligence/reuse' && method === 'GET') {
     const q = url.searchParams.get('q') || '';
-    const intel = require('./intelligence');
+    const intel = require('../intelligence');
     const all = intel.getReuseIndex();
     const results = q ? all.filter(r => r.intent?.includes(q) || r.keywords?.some(k => k.includes(q))) : all.slice(0, 50);
     json(res, 200, { ok: true, results, total: results.length });
@@ -792,7 +801,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (p === '/api/intelligence/failures' && method === 'GET') {
-    const failures = require('./intelligence').getFailures();
+    const failures = require('../intelligence').getFailures();
     json(res, 200, { ok: true, failures: Object.values(failures), total: Object.keys(failures).length });
     return;
   }
@@ -940,12 +949,49 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Meta observe ──────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  //  CORTEX SSE — James, 2026-08-22: "how about that?" Real, previously-
+  // missing broadcast channel. Confirmed by reading this whole file: no
+  // '/sse' handler existed here at all, despite cli/nexus-repl.js and
+  // cortex/cortex-v2.js both connecting to it — they've been reaching
+  // nothing this whole time. Matches guardian's own already-working
+  // cockpitClients/cockpitBroadcast pattern exactly (guardian/server.js),
+  // not invented fresh.
+  // ══════════════════════════════════════════════════════════════════════
+  if (p === '/sse') {
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
+    res.write(`data: ${JSON.stringify({ type: 'connected', ts: Date.now() })}\n\n`);
+    _cortexSSEClients.add(res);
+    req.on('close', () => _cortexSSEClients.delete(res));
+    return;
+  }
+
   if (p === '/api/meta/observe') {
     const body = await readBody(req);
     jaaDB.insert('meta_observations', { id: uid(), ...body, ts: Date.now() });
+    // §WIRED 2026-08-22 — James: "anything that has 'hey nexus' at the
+    // beginning gets injected into co-pilot's cli.js, with the agent and
+    // chatUrl, and account, so it can open a pipeline to talk." Real
+    // architecture correction from an assumption I'd made: EVERY message,
+    // both roles, already reaches this exact endpoint via the userscript's
+    // already-working GM_xmlhttpRequest call (confirmed by reading
+    // _nexusLogMessage directly) — no separate browser-to-copilot HTTP
+    // call was ever needed. This is the real detection point.
+    const wakeMatch = typeof body.text === 'string' && /^\s*(?:hey|hi|ok|okay)[,\s]+nexus[,:\s]+([\s\S]+)$/i.exec(body.text);
+    if (wakeMatch) {
+      const wakeRow = {
+        id: uid(), request: wakeMatch[1].trim(),
+        agent: body.source || null, chatUrl: body.chatUrl || null,
+        account: body.account || null, sessionId: body.sessionId || null,
+        role: body.role || null, ts: Date.now(), consumed: false, answer: null,
+      };
+      jaaDB.insert('nexus_wake_events', wakeRow);
+      _cortexSSEBroadcast({ type: 'nexus.wake.detected', ...wakeRow });
+    }
     json(res, 200, { ok: true });
     return;
   }
+
 
   // ── RAID ──────────────────────────────────────────────────────────────────
   if (p === '/api/raid/decide') {
@@ -1333,7 +1379,7 @@ server.listen(PORT, '127.0.0.1', () => {
     // scans plus a 10s-delayed initial build that hydrates _failureIndex from
     // the persisted fault_taxonomy table, so there is no cold-start amnesia.
     // Failure is isolated by the loop's own try/catch, same as every organ.
-    { name: 'intelligence',         path: './intelligence',         note: 'pattern recognition + failure taxonomy → bep_patterns/failures (was never running)' },
+    { name: 'intelligence',         path: '../intelligence',         note: 'pattern recognition + failure taxonomy → bep_patterns/failures (was never running)' },
   ];
   for (const organ of organs) {
     try {
@@ -1371,7 +1417,7 @@ server.listen(PORT, '127.0.0.1', () => {
     // new crystallization enrichment (James: "make them more detailed,
     // using rfr2 and cfr"). Same real _field this file already exports at
     // module level (getField: () => _field) — reused, not duplicated.
-    require('./intelligence').init({ getField: () => _field });
+    require('../intelligence').init({ getField: () => _field });
     console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active');
   } catch (e) {
     console.warn(`[cortex] intelligence/index failed to start: ${e.message}`);

@@ -245,6 +245,10 @@ Always use a component based architecture. The core components that are immutabl
 Before building anything new, read the codebase recursively and make effective use of what NEXUS already has — then build outward from it. The default is not a new file; the default is to extend, wire, or compose an existing system. Building new is justified only after a recursive read proves the capability does not already exist. This is the standing lesson of every session in this project: the engine almost always already exists, and the real work is the missing edge. A new artifact created without first proving the absence of an existing one is redundancy — and redundancy is debt (§16.5).
 *↳ Sharpens §8.4 (don't go in blind — scan before editing) and §16.5 (delete before you add) into a build-time default: §8.4 says read before you change existing code; §8.6 says read before you write NEW code, and prefer building outward from what the read found. The recursive read is a written finding (§3.3 map before build), not a memory of having looked.*
 
+**§8.7 Full Context Before Any Change — Named, Not Vague** *(new, 2026-08-22)*
+§8.4 says "don't go in blind"; this names exactly what "not blind" means in this codebase, using the tools NEXUS already has rather than an unstructured look-around. Before changing any component: read loom's real component/hook/wire map for it (what it connects to, what depends on it), its spec (what it's supposed to be — spec-map), its phasemap history (`phasemap-map.js`'s `historyFor` — every real, git-hash-stamped transition it's been through), and its tool_index entry if it's a registered tool (real usage, real edge cases already hit). Then build bottom-up: foundation first, one component at a time, verified before the next — enterprise-grade, using WARP (§17.10, §17.11) as the build framework, not a shortcut around it. The point of reading all of this first is not ceremony — it's so that if a change causes real harm, there is a full, real record of what the prior state was and why it was that way, and the system can be reverted to it, not just diagnosed after the fact.
+*↳ Sharpens §8.4 and §8.6 into the concrete checklist this project's own tools make possible; extends §17.3 (every decision recorded, alternatives and rejections) backward to cover the PRE-change state too, so reverting is a real option, not a reconstruction.*
+
 ---
 
 ### § Group 9 — Bridge & Identity
@@ -547,6 +551,7 @@ A "faster," "cheaper," or "better" claim is only as good as the measurement behi
 §8.2   Nothing passes the idea gate without surviving hostile review.
 §8.3   SISO and Jaa are load-order prerequisites.
 §8.6   Reuse before build. Read the codebase recursively; build outward from what exists.
+§8.7   Full context before any change: loom map, spec, phasemap history, tool index — named, not vague. Enables real revert, not just diagnosis.
 §9.1   Bridge is the only write authority for requests.
 §9.2   Ledger write before dispatch. Always.
 §9.3   Held requests never leave the queue.

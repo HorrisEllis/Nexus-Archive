@@ -4,7 +4,7 @@
  * decisions from James: "Yes to the core; and retiring causal, I don't want
  * junk."
  *
- * 1. THE INTELLIGENCE CORE IS SWITCHED ON. cortex/intelligence/index.js is
+ * 1. THE INTELLIGENCE CORE IS SWITCHED ON. intelligence/index.js is
  *    933 lines that had NEVER RUN — nothing outside its own directory
  *    required it, init() was never called, and neither bep_patterns.json nor
  *    failures.json had ever been created. Its three siblings (intuition,
@@ -34,11 +34,11 @@ const BOOT = fs.readFileSync(path.join(ROOT, 'cortex/boot.js'), 'utf8');
 test('ICW-001', 'the intelligence core is registered in cortex\'s organs array — the one line that had never existed', () => {
   const organs = BOOT.slice(BOOT.indexOf('const organs = ['), BOOT.indexOf('for (const organ of organs)'));
   assert.ok(/name: 'intelligence'/.test(organs), 'intelligence must be a registered organ');
-  assert.ok(/path: '\.\/intelligence'/.test(organs), 'and point at the real module');
+  assert.ok(/path: '\.\.\/intelligence'/.test(organs), 'and point at the real module (../intelligence, after the 2026-08-22 extraction to its own system)');
 });
 
 test('ICW-002', 'it initialises through the SAME contract every other organ uses — init({bus}), isolated failure', () => {
-  const core = require('../../cortex/intelligence');
+  const core = require('../../intelligence');
   assert.strictEqual(typeof core.init, 'function');
   assert.strictEqual(typeof core.stop, 'function');
   const { EventEmitter } = require('events');

@@ -62,7 +62,12 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 
 const SKIP_DIRS = new Set([
-  'node_modules', '.git', 'data', 'unintegrated', 'docs', '.claude',
+  'node_modules', '.git', 'data', 'unintegrated', 'docs', '.claude', '_archive',
+  // §FIXED 2026-08-22 — real gap found live: _archive holds the exact same
+  // kind of stray, non-live reference copies 'docs' is excluded for (this
+  // very file's own comment above names _archive/duplicate-docs/
+  // guardian-server(1).js as the canonical example of a non-live copy —
+  // it was still being scanned as if live because only 'docs' was listed.
 ]);
 const CODE_EXT = new Set(['.js', '.cjs', '.mjs']);
 

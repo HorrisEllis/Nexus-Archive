@@ -61,7 +61,7 @@ async function propose(opts = {}) {
   let strategic = null;
   if (opts.useIntelligence !== false) {
     try {
-      const mm = require('../cortex/intelligence/mastermind');
+      const mm = require('../intelligence/mastermind');
       if (mm && typeof mm.analyze === 'function') strategic = await mm.analyze({ proposals });
     } catch { /* intelligence optional */ }
   }

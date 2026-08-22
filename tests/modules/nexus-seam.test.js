@@ -15,8 +15,8 @@ function test(desc, fn) {
   catch(e) { console.error(`  ✗ ${desc}\n    ${e.message}`); failed++; }
 }
 
-const seam = require('/home/claude/nexus_fixed/lib/seam/index.js');
-const { Detector } = require('/home/claude/nexus_fixed/lib/seam/detector.js');
+const seam = require('../../lib/seam/index.js');
+const { Detector } = require('../../lib/seam/detector.js');
 
 // ── lib/seam exports ─────────────────────────────────────────────────────────
 

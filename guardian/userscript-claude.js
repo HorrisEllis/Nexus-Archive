@@ -737,6 +737,19 @@ function connect() {
     const NEXUS = (typeof window !== 'undefined' && window.NexusWake)
       ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
       : null;
+    if (typeof window !== 'undefined') window.__nexusWakeInstance__ = NEXUS;
+    // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
+    // injects it into the corresponding agent chat using clearglass."
+    // The page-side half of clear-glass/src/providers/host.js's
+    // injectAnswer() — called via executeJavaScript from the main process,
+    // so it must be a real, checkable global, not an assumption that
+    // something is listening.
+    if (typeof window !== 'undefined') {
+      window.__nexusInjectAnswer = (text) => {
+        if (!window.__nexusWakeInstance__) return { ok: false, reason: 'wake module not installed on this tab' };
+        return window.__nexusWakeInstance__.showAnswer(text);
+      };
+    }
     if (_hb) clearInterval(_hb);
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
@@ -1437,6 +1450,8 @@ function _nexusLogMessage(msg) {
       text:      msg.text,
       sessionId: _nexus.sessionId,
       source:    PROVIDER,
+      chatUrl:   location.href,
+      account:   window.NexusWake?.detectAccount?.(PROVIDER) || null,
     }),
     onload: (r) => {
       try {
@@ -1547,6 +1562,17 @@ function _nexusStartObserver() {
     const newest = msgs[msgs.length - 1];
     if (!newest) return;
     _nexusLogMessage(newest);
+    // §WIRED 2026-08-22 — James: "guardian already listens for the agents
+    // chat... say hey nexus, then when the listener detects it, enables
+    // co-pilot to respond." This observer already sees every new message,
+    // both roles — it just never checked for the wake phrase. Now it does,
+    // via the real, shared checkMessage() on the wake module (same
+    // parseWake/askNexus/_render the composer interceptor itself uses).
+    try {
+      if (typeof window !== 'undefined' && window.__nexusWakeInstance__ && newest.text) {
+        window.__nexusWakeInstance__.checkMessage(newest.role, newest.text);
+      }
+    } catch (_) { /* §1.2 — a wake-check failure never blocks real message logging */ }
     // On user message: pull semantic context for what they're asking
     if (newest.role === 'user') {
       _nexusPullContext(newest.text);

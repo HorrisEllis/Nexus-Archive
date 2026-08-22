@@ -36,7 +36,7 @@ test('T-003', 'the optimizer is wired to the intelligence layer it composes (§t
   // optimizer requires movement-map + pattern-leverage + sigma-roles + mastermind
   const opt = FILES.find(f => f[1] === 'nexus.copilot.optimizer');
   assert.ok(opt, 'optimizer must be in the map');
-  for (const dep of ['nexus.copilot.movement-map', 'nexus.lib.pattern-leverage', 'nexus.lib.sigma-roles', 'nexus.cortex.intelligence.mastermind']) {
+  for (const dep of ['nexus.copilot.movement-map', 'nexus.lib.pattern-leverage', 'nexus.lib.sigma-roles', 'nexus.intelligence.mastermind']) {
     assert.ok(opt[2].includes(dep), `optimizer must wire to ${dep}`);
   }
 });
@@ -44,7 +44,7 @@ test('T-003', 'the optimizer is wired to the intelligence layer it composes (§t
 test('T-004', 'the graph joins the rest of NEXUS (edges to cfr, jaa-db, mastermind)', () => {
   const allDeps = new Set();
   for (const [, , reqs] of FILES) for (const d of reqs) allDeps.add(d);
-  for (const ext of ['nexus.meta.cfr.field', 'nexus.cortex.jaa-db', 'nexus.cortex.intelligence.mastermind']) {
+  for (const ext of ['nexus.meta.cfr.field', 'nexus.cortex.jaa-db', 'nexus.intelligence.mastermind']) {
     assert.ok(allDeps.has(ext), `the arc must connect to ${ext} (everything connects)`);
   }
 });
@@ -59,7 +59,7 @@ test('T-006', 'no fabricated edges — every wire traces to a real require in FI
   const { wires } = run();
   // each wire id encodes dep--id; both must be real FILES ids or declared external deps
   const knownIds = new Set(FILES.map(f => f[1]));
-  const externalOk = new Set(['nexus.copilot.system-status', 'nexus.meta.cfr.field', 'nexus.meta.cfr.delta', 'nexus.meta.gap.hunter', 'nexus.lib.capability-registry', 'nexus.cortex.jaa-db', 'nexus.cortex.intelligence.mastermind']);
+  const externalOk = new Set(['nexus.copilot.system-status', 'nexus.meta.cfr.field', 'nexus.meta.cfr.delta', 'nexus.meta.gap.hunter', 'nexus.lib.capability-registry', 'nexus.cortex.jaa-db', 'nexus.intelligence.mastermind']);
   for (const w of wires) {
     assert.ok(w.from_hook_id && w.to_hook_id, 'wire has both endpoints');
   }

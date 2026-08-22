@@ -105,7 +105,7 @@ function createMastermind({ jaaDB, getField, getCausalGraphClass }) {
       const graph = buildRecentCausalGraph(limit);
       if (!graph || graph.nodes.size < 3) return null;
 
-      const { loadRFR2Module } = require('../../lib/rfr2-bridge.js');
+      const { loadRFR2Module } = require('../lib/rfr2-bridge.js');
       const delta = await loadRFR2Module('delta');
       if (!delta?.detectFractals) return null;
 

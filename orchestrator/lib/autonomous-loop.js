@@ -155,7 +155,7 @@ async function run(opts = {}) {
 
   // §2.1 Snapshot at run start
   try {
-    const snap = require('../cortex/snapshot/index');
+    const snap = require('../../cortex/snapshot/index');
     snap.create({ type: 'pre_forge', message: `autonomous-loop start: ${opts.goal.slice(0,60)}`, causedBy: runId });
   } catch(_) {}
 

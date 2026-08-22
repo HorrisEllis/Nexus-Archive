@@ -30,7 +30,7 @@ const http      = require('http');
 const crypto    = require('crypto');
 const intuition = require('./intuition');
 const analysis  = require('./analysis');
-const { compare } = require('../cortex/intelligence/adversarial');
+const { compare } = require('../intelligence/adversarial');
 
 const CX_URL = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
 

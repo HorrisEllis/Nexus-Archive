@@ -130,6 +130,16 @@ const FILES = [
   ['lib/agent-tools/tools/coordination/agent-capability.js',       'nexus.lib.agent-tools.tools.agent-capability',
     ['nexus.lib.agent-capability-profile']],
 
+  ['lib/agent-notes.js', 'nexus.lib.agent-notes', ['nexus.cortex.jaa-db']],   // §2026-08-22 — real, editable per-agent constraint log
+  ['lib/agent-tools/tools/coordination/agent-notes.js',       'nexus.lib.agent-tools.tools.agent-notes',
+    ['nexus.lib.agent-notes']],
+
+  ['lib/nexus-wake-events.js', 'nexus.lib.nexus-wake-events', ['nexus.cortex.jaa-db']],   // §2026-08-22 — real, persistent "hey nexus" event record
+  ['lib/agent-tools/tools/coordination/nexus-wake-events.js',       'nexus.lib.agent-tools.tools.nexus-wake-events',
+    ['nexus.lib.nexus-wake-events']],
+
+  ['lib/account-identity-index.js', 'nexus.lib.account-identity-index', ['nexus.cortex.jaa-db']],   // §2026-08-22 — stable UUID per (agent, account)
+
   ['lib/safe-apply.js',                               'nexus.lib.safe-apply',
     ['nexus.cortex.jaa-db', 'nexus.copilot.self-model']],   // §2026-08-13 — real verify-before-merge on COS's branch/sandbox primitives, closes the nexus-healer merge stub gap the honest way
 

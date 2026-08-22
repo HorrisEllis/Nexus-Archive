@@ -11,7 +11,7 @@ async function test(id, desc, fn) {
   catch (e) { console.error(`  ✗ ${id} ${desc}\n    ${e.message}`); failed++; }
 }
 const ROOT = path.join(__dirname, '../..');
-const rf = require(path.join(ROOT, 'cortex/intelligence/relational-field'));
+const rf = require(path.join(ROOT, 'intelligence/relational-field'));
 
 (async () => {
   await test('T-001', 'traces friction back to its causal ROOT condition (RFR2 causality)', async () => {
@@ -52,17 +52,17 @@ const rf = require(path.join(ROOT, 'cortex/intelligence/relational-field'));
   });
 
   await test('T-005', 'registered as a first-class intelligence capability', () => {
-    const idx = require('fs').readFileSync(path.join(ROOT, 'cortex/intelligence/index.js'), 'utf8');
+    const idx = require('fs').readFileSync(path.join(ROOT, 'intelligence/index.js'), 'utf8');
     assert.ok(/relational-field/.test(idx), 'intelligence must expose the relational-field capability');
     assert.ok(/RFR2 wired into the intelligence/.test(idx), 'the wire is described');
   });
 
   await test('T-006', 'RFR2↔intelligence is in loom\'s connection graph (visible to the system)', () => {
     const { FILES } = require(path.join(ROOT, 'loom/maps/observability-map'));
-    const relField = FILES.find(f => f[1] === 'nexus.cortex.intelligence.relational-field');
+    const relField = FILES.find(f => f[1] === 'nexus.intelligence.relational-field');
     assert.ok(relField, 'relational-field must be a mapped component');
     assert.ok(relField[2].includes('nexus.lib.rfr2-bridge'), 'wired to the RFR2 bridge');
-    assert.ok(relField[2].includes('nexus.cortex.intelligence.mastermind'), 'wired to the intelligence mastermind');
+    assert.ok(relField[2].includes('nexus.intelligence.mastermind'), 'wired to the intelligence mastermind');
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);
