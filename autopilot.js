@@ -548,7 +548,19 @@ function _spawnKernel(kernel, color) {
         // exact entrypoint per Phase 116's component→file mapping intent.
         const ts = new Date().toISOString();
         const srcFile = kernel.args?.[0] || kernel.name;
-        console.log(`[${ts}] ${color}[${kernel.name}:${srcFile}]${RESET} ${isErr ? '\x1b[31m' : ''}${line}${isErr ? RESET : ''}`);
+        // §prefix-fix 2026-08-22 — when srcFile is already namespaced under
+        // the system's own directory (e.g. kernel.name='cortex', srcFile=
+        // 'cortex/boot.js'), showing both repeats the system name twice
+        // in every line ("[cortex:cortex/boot.js]") for no added information.
+        // Collapse to the entrypoint alone in that case; keep both when they
+        // genuinely differ (e.g. 'diagnostic' running 'service/nexus-diagnostic.js'),
+        // since that's the real traceability case the original fix wanted.
+        const label = (srcFile === kernel.name
+            || srcFile.startsWith(kernel.name + '/')
+            || srcFile === kernel.name + '.js')
+          ? srcFile
+          : `${kernel.name}:${srcFile}`;
+        console.log(`[${ts}] ${color}[${label}]${RESET} ${isErr ? '\x1b[31m' : ''}${line}${isErr ? RESET : ''}`);
       }
     });
   };
