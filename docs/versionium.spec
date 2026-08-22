@@ -85,6 +85,80 @@ spec:
       - { module: runtime,    reason: "kernel runtime — rfr2/kernel covers it" }
       - { module: spine,      reason: "60 L of wiring specific to Causal-Nexus's own module graph" }
 
+  # ── §BLOCKER-E1 — per-event rewind is not possible yet ─────────────────────
+  event_rewind_prerequisite:
+    status: "PARTIALLY CLEARED 2026-08-22 — eventTs done (0a), causedBy still open (0b)"
+    measured_2026_08_22:
+      event_log:        { rows: 464, uuid: "93.5%", causedBy: "9.3%", eventTs: "0.0%", ts: "100%" }
+      component_ledger: { rows: 380, uuid: "100%",  causedBy: "5.3%", eventTs: "0.0%", ts: "100%" }
+    finding: >
+      "Use the event ledgers to rewind the system per event per system" requires two
+      fields. Both are effectively absent. causedBy is on 5-9% of rows; eventTs is on
+      ZERO. Every ordering in the system today runs on wall-clock ts — the field §3.2
+      designates display metadata only.
+    why_it_is_fatal_not_merely_hard: >
+      Causal-Nexus v5.0.0 Axis T: "Replay determinism depends on eventTs vs ts
+      separation. If ts is ever used in a gate window, the session diverges between
+      live and replayed runs." A rewind built on wall clock replays in a DIFFERENT
+      ORDER than the original run and produces different output — silently, because
+      both runs look ordered. §1.2: this is the failure mode that leaves no evidence.
+    consequence_for_this_spec: >
+      Snapshot-based rewind (storage_tiers) works TODAY and does not depend on this.
+      Per-EVENT rewind does. They are different capabilities and this spec must not
+      let the second inherit the first's readiness (§1.1 — nothing exists until proven).
+    step_zero:
+      - "add eventTs at every emit site; monotonic per system, never derived from Date.now()"
+      - "populate causedBy at emit, not by inference afterward — §1.1, an inferred edge is a fabricated one"
+      - "backfill is NOT possible: the causal order of existing rows is unrecoverable.
+         Historical rows stay ts-ordered and MUST be marked as such, so a replay over
+         them reports UNORDERED rather than pretending (§1.2)."
+      - "only then does per-event rewind become buildable"
+
+  # ── causal graph ownership — cortex or versionium? Neither. ────────────────
+  causal_graph_ownership:
+    answer: "intelligence/cfr/graph.js — where it already is. Do not move it, do not copy it."
+    measured: >
+      ONE CausalGraph implementation, consumed by 17 files across cortex, intelligence,
+      bridge, autopilot, cli and contracts. bridge/causal/graph.js exports a DIFFERENT
+      class (CausalSpineGraph), not a duplicate — checked by hash, not by name.
+    why: >
+      The graph is a LENS, not a store. Its ingest(entry) needs only uuid and causedBy
+      and does not care which table a row came from — so it reads event_log,
+      versionium_commits and component_ledger unchanged. Copying it into versionium
+      would create a second truth about the same edges (§10.3), and moving it would
+      break 17 consumers to relocate something already correctly placed.
+    the_three_way_split:                # §10.1 one write authority per data type
+      cortex:       "WHAT happened — event_log rows. The data."
+      intelligence: "WHY — CausalGraph edges. The relation. A lens over any table."
+      versionium:   "WHEN, and how to get back — timeline, snapshots, commits. The axis."
+    versionium_uses_it_by_reference: >
+      causality.js already delegates ancestors/descendants to CausalGraph rather than
+      reimplementing the walk. That pattern is the rule, not the exception: versionium
+      never owns a causal walk of its own.
+
+  # ── event ledger + SSE inventory ───────────────────────────────────────────
+  event_sources:
+    measured_2026_08_22:
+      distinct_types_emitted: 34
+      note: >
+        20 of the 34 are ledger.*. The declared surface is far wider than the emitted
+        one — most systems declare event types they never emit. That gap is real and
+        belongs in the gap field, not papered over here.
+    ledger_tables: [event_log, component_ledger, fault_log, poll_log, phasemap_history, nexus_wake_events]
+    sse_endpoints_by_system: { clear-glass: 4, guardian: 3, lib: 3, cli: 3, orchestrator: 2, intelligence: 2, hooks: 2, copilot: 2, bridge: 2, ui: 1, service: 1 }
+    interaction_contracts: [cortex, idearium, guardian, sentinel, architect, bridge, nexus-healer]
+    versionium_consumes: >
+      Versionium SUBSCRIBES to these; it does not own them and never writes them
+      (§10.2). Its timeline is a projection over event_log + component_ledger + its own
+      versionium_* tables, joined on uuid and walked via CausalGraph.
+    chat_logs:
+      source: lib/chat-logger.js
+      decision: >
+        INDEXED, NOT ABSORBED. Chat logs are conversation, not system state — replaying
+        them cannot restore a system. Versionium stores refs so a timeline can show
+        "this conversation happened here", and reads no further. §4.3: a rewind engine
+        that can read every chat is a privacy surface with no operational need.
+
   core:
     port:        3753
     transport:   http + sse
@@ -342,6 +416,17 @@ spec:
     errors: "toasts (§8.5); every interaction gated and ledgered"
 
   build_order:                        # §3.1 bottom-up, §3.4 raw first
+    - "0a. DONE 2026-08-22 — lib/logical-clock.js (durable, per-system, wraps
+       rfr2/time rather than reimplementing it). Wired into lib/component-ledger.js
+       so every row is stamped at the one chokepoint. lib/pressure-window.js's
+       silent ts fallback removed — ordering and display are now separate named
+       functions. 14 tests. Every NEW ledger row is orderable."
+    - "0b. OPEN — causedBy at emit sites. Measured 5-9%. Cannot be stamped centrally
+       like eventTs: the ledger knows WHEN a row was written, not WHAT CAUSED it.
+       Each emit site must pass it. Per-event rewind stays blocked until this lands."
+    - "0c. OPEN — historical rows (844 measured) have no eventTs and their causal
+       order is unrecoverable. isOrdered() returns false for them, which is correct.
+       They must be surfaced as UNORDERED wherever a replay would touch them."
     - "1. lib/contract.js — the primitive. Nothing else can be built before it."
     - "2. lib/ring.js — HOT ring buffer, semantically BLIND. Port persist's tier model."
     - "3. lib/wal.js — WARM append-only per-system file + replay-on-restart."
@@ -360,6 +445,9 @@ spec:
     - "hooks/cortex.hooks.js:573 declares sideEffects jaa.insert('versionium_commits')
        — a SECOND write path into a table versionium claims sole authority over.
        §10.1 conflict. MUST be resolved before versionium claims that table."
+    - "§BLOCKER-E1 backfill — historical rows have unrecoverable causal order. Confirmed
+       they must be marked UNORDERED rather than ts-inferred. Is a partial replay over
+       marked rows useful at all, or should it be refused outright? UNDECIDED."
     - "Does clear-glass's session engine become an adapter, or stay sovereign with
        versionium only indexing its refs? Leaning index-only: its snapshots hold
        cookies, which versionium should not be able to read (§4.3)."
