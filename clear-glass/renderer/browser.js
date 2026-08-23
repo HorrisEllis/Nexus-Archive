@@ -1078,8 +1078,42 @@
     loadBookmarks();
   });
 
-  document.getElementById('bookmark-mgr-btn').addEventListener('click', () => {
-    addMsg('assistant', 'Bookmarks can be managed via Co-pilot: "list my bookmarks", "delete bookmark [title]", "open bookmark [title]"');
+  document.getElementById('bookmark-mgr-btn').addEventListener('click', async (e) => {
+    const panel = document.getElementById('bookmark-mgr-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const rect = e.target.getBoundingClientRect();
+    panel.style.top = `${rect.bottom + 4}px`;
+    panel.style.right = `${window.innerWidth - rect.right}px`;
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    panel.style.display = 'block';
+    try {
+      const list = await cg.bookmarks.list({ agentId });
+      if (!list || !list.length) {
+        panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No bookmarks yet — click the ★ on any page to add one.</div>';
+        return;
+      }
+      panel.innerHTML = list.map(b => `
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
+          <span data-visit="${b.id}" style="flex:1;cursor:pointer;font-size:11px;color:var(--text,#ccc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${b.url.replace(/"/g,'&quot;')}">${(b.title || b.url).replace(/</g,'&lt;')}</span>
+          <span data-remove="${b.id}" style="cursor:pointer;opacity:.5;font-size:12px" title="Remove">✕</span>
+        </div>`).join('');
+      panel.querySelectorAll('[data-visit]').forEach(el => el.addEventListener('click', async () => {
+        const bk = list.find(b => b.id === el.dataset.visit);
+        if (bk) { wv.loadURL(bk.url); await cg.bookmarks.visit({ id: bk.id, agentId }); panel.style.display = 'none'; }
+      }));
+      panel.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        await cg.bookmarks.remove({ id: el.dataset.remove, agentId });
+        el.closest('div').remove();
+        loadBookmarks?.();
+      }));
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+    }
+  });
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('bookmark-mgr-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'bookmark-mgr-btn') panel.style.display = 'none';
   });
 
   // Update bookmark star on navigation

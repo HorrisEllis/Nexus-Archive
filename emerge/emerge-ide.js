@@ -53,7 +53,12 @@ function getArg(flag, fallback) {
   return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
 }
 
-const PORT = Number(getArg('--port', process.env.EMERGE_PORT || 4242));
+// §WIRED — real, distinct config for the static defaults. See
+// emerge/config.js's own header for why PORT/DEF_MODEL's CLI-flag
+// logic stays here rather than moving — genuinely different from the
+// established pattern, not a mismatch.
+const config = require('./config.js');
+const PORT = Number(getArg('--port', config.DEFAULT_PORT));
 // §CONFIG 2026-08-23 — real, shared default instead of this file's own
 // separate hardcode. ollama is already required above for other real
 // calls; DEFAULT_MODEL is the same re-export ollama/server.js itself
@@ -66,7 +71,7 @@ const IO_DIR = path.join(__dirname, 'io');
 const bus            = new Bus();
 // ── Event ring buffer (replaces bus.log() which Bus doesn't implement) ────────
 const _busLog = [];
-const BUS_LOG_MAX = 200;
+const BUS_LOG_MAX = config.BUS_LOG_MAX;
 bus.onAny(ev => { _busLog.push(ev); if (_busLog.length > BUS_LOG_MAX) _busLog.shift(); });
 function busLogTail(n) { return _busLog.slice(-n); }
 const compilerStream = bus.stream('compiler');

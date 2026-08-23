@@ -18,6 +18,9 @@ import os           from 'os';
 import crypto       from 'crypto';
 import { createRequire } from 'module';
 import { spawnSync, spawn as spawnProc } from 'child_process';
+// §WIRED — real, distinct config, not inline constants. See
+// idearium/config.js's own header. Matches the established pattern.
+import config from '../config.js';
 const _require = createRequire(import.meta.url);
 
 // §AX-010 2026-07-10 — idearium hardcoded 127.0.0.1:9000 in four places
@@ -191,7 +194,7 @@ try { fs.mkdirSync(PROJECTS_DIR, { recursive: true }); } catch (e) { console.war
 // a jaa-db read failure on one must not blank the manifest the rest of the
 // response depends on (§1.2): a broken history comes back empty with a
 // loud console warning, never a 500 on the whole endpoint.
-const CHUNK_EVENTS_LIMIT = 200; // most-recent-first cap — a 58-chunk spec with retries can generate hundreds of rows; the UI needs a trail, not the full audit log on every request
+const CHUNK_EVENTS_LIMIT = config.CHUNK_EVENTS_LIMIT; // most-recent-first cap — a 58-chunk spec with retries can generate hundreds of rows; the UI needs a trail, not the full audit log on every request
 function _specHistory(specUuid) {
   let chunkEvents = [];
   try {
@@ -342,8 +345,8 @@ async function _promoteSpecToRepo(ideaOS, se, specUuid, mode = 'emerge') {
   };
 }
 
-const PORT    = parseInt(process.env.IDEARIUM_PORT   || '4800');
-const BINDING = process.env.IDEARIUM_BIND || '127.0.0.1';
+const PORT    = config.PORT;
+const BINDING = config.BINDING;
 
 // §CRASH FIX 2026-07-15 — last-resort net. The /sse and static-file branches
 // above had their own uncaught-throw paths fixed directly (see their own
@@ -394,11 +397,7 @@ function err(res, code, message, detail = null) {
   res.end(JSON.stringify({ ok: false, error: message, detail }));
 }
 
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-};
+const CORS = config.CORS;
 
 // ── Capability model ──────────────────────────────────────────────────────────
 // Every route maps to exactly one capability.

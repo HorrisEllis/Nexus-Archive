@@ -401,6 +401,29 @@ class ProviderHost {
     }
   }
 
+  /**
+   * queryDom(providerId, query) — James: "dom archeology tool for the
+   * clear-glass toolkit." Same real, proven pattern as injectAnswer():
+   * reaches the already-real window.__cgDomMesh object the DOM
+   * Archaeology panel itself already calls (confirmed directly in
+   * clear-glass/renderer/browser.js before building this — getTree()/
+   * query() are real, existing page-side methods, not invented here).
+   * A blank query returns the real tree; a real query string searches it.
+   */
+  async queryDom(providerId, query) {
+    const win = this.windows.get(providerId);
+    if (!win || win.isDestroyed()) return { ok: false, reason: `no live window for ${providerId}` };
+    try {
+      const script = query
+        ? `window.__cgDomMesh?.query(${JSON.stringify(query)}) ?? { ok: false, reason: 'DOM Archaeology mesh not loaded on this page' }`
+        : `window.__cgDomMesh?.getTree(3) ?? { ok: false, reason: 'DOM Archaeology mesh not loaded on this page' }`;
+      const result = await win.webContents.executeJavaScript(script);
+      return result || { ok: false, reason: 'page returned nothing' };
+    } catch (e) {
+      return { ok: false, reason: e.message };
+    }
+  }
+
   // ── Control ──────────────────────────────────────────────────────────────
   show(providerId) {
     const win = this.windows.get(providerId);

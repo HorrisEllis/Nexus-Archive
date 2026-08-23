@@ -72,9 +72,10 @@ const FILES = [
      // clear-glass gate signature — see the file's own header); url_listen/url_unlisten added (P5),
      // reaching url-listener.js's real, already-registered gates for the first time.
 
+  ['copilot/config.js', 'nexus.copilot.config', ['nexus.lib.version']],
   ['copilot/server.js',                              'nexus.copilot.server',
     ['nexus.copilot.adaptive-fulfillment', 'nexus.copilot.capability-extend', 'nexus.lib.scheduler', 'nexus.lib.triggers',
-     'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.tool-runtime', 'nexus.cortex.jaa-db']],
+     'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.tool-runtime', 'nexus.cortex.jaa-db', 'nexus.copilot.config']],
      // §2026-08-12 — two edges added to the ALREADY-registered nexus.copilot.server this session:
      // capability-extend (P2, wired as adaptive-fulfillment's true last resort) and scheduler/triggers
      // (boot-time .start() call, commit e4fbebd — the fix for tasks/triggers persisting but never firing).
@@ -166,6 +167,7 @@ const FILES = [
   ['intelligence/framework-builder.js', 'nexus.intelligence.framework-builder', ['nexus.lib.agent-tools', 'nexus.lib.chunk-service']],
   ['lib/agent-tools/tools/coordination/framework-builder.js', 'nexus.lib.agent-tools.tools.framework-builder', ['nexus.intelligence.framework-builder']],
   ['lib/agent-tools/tools/coordination/intelligence-query.js', 'nexus.lib.agent-tools.tools.intelligence-query', ['nexus.intelligence.index', 'nexus.intelligence.server']],
+  ['lib/agent-tools/tools/clear-glass/dom-archaeology.js', 'nexus.lib.agent-tools.tools.dom-archaeology', []],
   ['intelligence/server.js', 'nexus.intelligence.server', ['nexus.intelligence.index', 'nexus.intelligence.cfr', 'nexus.intelligence.framework-builder']],
   ['intelligence/registry-components.js', 'nexus.intelligence.registry', []],
   ['intelligence/consumer.js', 'nexus.intelligence.consumer', ['nexus.lib.contract-queue', 'nexus.intelligence.framework-builder']],

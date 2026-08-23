@@ -64,11 +64,14 @@ const connections = require('../lib/connections');
 // not a raw fetch. Default-deny elsewhere in NEXUS; here the one thing in
 // scope is the diagnostic kernel itself, on localhost, nothing else.
 connections.registerScope('diagnostic-kernel', { allowedDomains: ['127.0.0.1', 'localhost'], allowedMethods: ['GET'] });
-const DIAG_URL = process.env.DIAGNOSTIC_URL || 'http://127.0.0.1:7825';
+// §WIRED — real, distinct config, not inline constants. See
+// loom/config.js's own header. Matches the established pattern.
+const config = require('./config.js');
+const DIAG_URL = config.DIAG_URL;
 
 const SYSTEM_ID = 'loom';
-const PORT      = parseInt(process.env.LOOM_PORT || '3752');
-const OR_URL    = process.env.ORCH_URL || 'http://127.0.0.1:9000';
+const PORT      = config.PORT;
+const OR_URL    = config.OR_URL;
 // §2026-07-04: sourced from the central registry from day one, unlike the
 // other systems this session found drifted — loom is new enough to just
 // do it right rather than fix it twice.

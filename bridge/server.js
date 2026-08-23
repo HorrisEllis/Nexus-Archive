@@ -28,8 +28,12 @@ const { randomUUID } = require('crypto');
 const { validateRequest, createRequest, STATUS } = require('./types');
 const { routeCausal } = require('./causal/server');
 
-const BRIDGE_PORT = parseInt(process.env.BRIDGE_PORT || '9999');
-const BRIDGE_HOST = process.env.BRIDGE_HOST || '127.0.0.1';
+// §WIRED — real, distinct config, not inline constants. See
+// bridge/config.js's own header. Matches guardian/config.js,
+// copilot/config.js, and intelligence/config.js's established pattern.
+const config = require('./config.js');
+const BRIDGE_PORT = config.BRIDGE_PORT;
+const BRIDGE_HOST = config.BRIDGE_HOST;
 
 // ── SSE client registry ───────────────────────────────────────────────────────
 const _sseClients = new Set();
@@ -342,7 +346,7 @@ function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
           // screenshot): raw res.writeHead bypassing this file's own
           // real, CORS-enabled json() helper used correctly at line 69.
           res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(c);
-        } catch(e) { res.writeHead(500); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
+        } catch(e) { res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
         return;
       }
 

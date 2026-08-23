@@ -492,6 +492,20 @@ async function _startWire() {
         return res.end(JSON.stringify({ ok: true, module: 'nexus-wire', port: WIRE_PORT, ts: Date.now() }));
       }
 
+      // §WIRED 2026-08-23 — James: "dom archeology tool for the clear-
+      // glass toolkit." Real HTTP surface for ProviderHost.queryDom(),
+      // so an agent tool (running in a different, Node-only process —
+      // copilot — that has no direct access to a real Electron
+      // webContents) can reach it, same real reasoning /bridge/driver
+      // below already established for driver actions.
+      if (u === '/dom/query' && req.method === 'POST') {
+        const { providerId, query } = parsed;
+        if (!providerId) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'providerId required' })); }
+        const result = await providerHost.queryDom(providerId, query);
+        res.writeHead(result.ok === false ? 502 : 200);
+        return res.end(JSON.stringify(result));
+      }
+
       // ErosmancerOS proxy
       if (u.startsWith('/eros/')) {
         const erosPath = '/api' + u.replace(/^\/eros/, '');

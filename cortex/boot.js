@@ -64,11 +64,14 @@ const path   = require('path');
 const fs     = require('fs');
 const crypto = require('crypto');
 
-const PORT    = parseInt(process.env.NEXUS_PORT || '3748');
-const OR_URL  = process.env.ORCH_URL || 'http://127.0.0.1:9000';
-const GD_URL  = process.env.GUARDIAN_URL || 'http://127.0.0.1:7820';
-const OL_URL  = process.env.OLLAMA_URL   || 'http://127.0.0.1:3749';
-const IN_PORT = parseInt(process.env.INTELLIGENCE_PORT || '3753');
+// §WIRED — real, distinct config, not inline constants. See
+// cortex/config.js's own header. Matches the established pattern.
+const config = require('./config.js');
+const PORT    = config.PORT;
+const OR_URL  = config.OR_URL;
+const GD_URL  = config.GD_URL;
+const OL_URL  = config.OL_URL;
+const IN_PORT = config.IN_PORT;
 
 const ROOT    = path.join(__dirname, '..');
 // §5.4 2026-08-14 — was a hardcoded '3.0.0', drifted from lib/version.js's

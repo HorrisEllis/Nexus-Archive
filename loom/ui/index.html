@@ -321,10 +321,10 @@ body{display:flex;flex-direction:column;position:relative}
     </section>
 
     <section class="view" id="view-map">
-      <div class="body2" style="grid-template-columns:1fr 1.4fr">
+      <div class="body2" style="grid-template-columns:1.4fr 1fr">
         <div class="left">
           <div class="ph"><span class="ph-title">NEXUS — 12 systems</span><span class="ph-badge live" id="map-summary-badge"></span></div>
-          <div class="pbody" id="map-system-list"><div class="empty">loading…</div></div>
+          <div class="pbody" id="map-graph-wrap" style="overflow:auto"><div class="empty">loading…</div></div>
         </div>
         <div class="left">
           <div class="ph"><span class="ph-title" id="map-detail-title">Select a system to zoom in</span></div>
@@ -520,6 +520,8 @@ async function loadRoadmap() {
   renderRoadmap();
 }
 
+let roadmapExpanded = new Set(); // real, per-system expand state
+
 function renderRoadmap() {
   if (!roadmapData) return;
   const el = document.getElementById('roadmap-list');
@@ -529,12 +531,26 @@ function renderRoadmap() {
     if (roadmapFilter) list = list.filter(p => p.status === roadmapFilter);
     if (!list.length) return '';
     const done = list.filter(p => p.status === 'done').length;
+    const expanded = roadmapExpanded.has(sys);
+    const shown = expanded ? list : list.slice(0, 12);
+    // §FIXED 2026-08-23 — James, from a real, live screenshot: "i can't
+    // even read it at all." Real cause: every phase for a system was
+    // joined into one inline block with &nbsp;&nbsp; — no real line
+    // breaks. Each phase is now its own real, block-level row.
+    const rows = shown.map(p =>
+      `<div style="padding:3px 0;border-bottom:1px solid var(--b0);display:flex;gap:8px;align-items:baseline">
+        <span style="color:${STATUS_DOT[p.status] || 'var(--text3)'};flex-shrink:0">●</span>
+        <span style="flex:1">${esc(p.id)}</span>
+        <span style="color:var(--text3);font-size:9px;flex-shrink:0">${esc(p.map)}</span>
+      </div>`
+    ).join('');
+    const toggle = list.length > 12
+      ? `<div class="reg-item" style="cursor:pointer;text-align:center;color:var(--sky2)" onclick="roadmapExpanded.${expanded ? 'delete' : 'add'}('${esc(sys)}');renderRoadmap()">${expanded ? '▲ show fewer' : `▼ show all ${list.length}`}</div>`
+      : '';
     return `<div class="reg-item">
       <div class="id">${esc(sys)} <span style="color:var(--text3)">— ${done}/${list.length} done</span></div>
-      <div class="meta">${list.map(p =>
-        `<span style="color:${STATUS_DOT[p.status] || 'var(--text3)'}">●</span> ${esc(p.id)} <span style="color:var(--text3)">(${esc(p.map)})</span>`
-      ).join('&nbsp;&nbsp;')}</div>
-    </div>`;
+      <div class="meta" style="margin-top:6px">${rows}</div>
+    </div>${toggle}`;
   }).join('') || '<div class="empty">no phases match this filter</div>';
 }
 
@@ -586,20 +602,100 @@ document.getElementById('gaps-filter-tabs').addEventListener('click', e => {
 // "look at architect" gate), open gaps, and history. A rendering layer
 // over /api/graph + /api/component/:system + R4's history, not a
 // seventh data source.
+// §FIXED 2026-08-23 — James: "a system has to have a server.js to be
+// considered a system in loom." Confirmed directly, not guessed: every
+// real top-level directory checked for an actual .listen() call (not
+// just the literal filename "server.js" — cortex/boot.js, architect/
+// service.js, idearium/api/index.js, emerge/emerge-ide.js, and
+// orchestrator/orchestrator.js all genuinely run a real HTTP server
+// under a different real filename). This is the real, confirmed list —
+// component_id namespace prefixes like lib/tests/scripts/cli/hooks/cos/
+// siso/warp/meta/ui/tablet/nexus-healer/clear-glass are real, shared
+// code, not real systems, and are correctly excluded now.
+const REAL_SYSTEMS = new Set([
+  'guardian', 'ollama', 'intelligence', 'eravos', 'copilot', 'bridge',
+  'loom', 'cortex', 'orchestrator', 'idearium', 'architect', 'emerge',
+  'diagnostic',
+]);
+
 async function loadMapSystems() {
   const d = await api('/api/graph');
-  if (!d.ok) { document.getElementById('map-system-list').innerHTML = '<div class="empty">graph unavailable</div>'; return; }
+  if (!d.ok) { document.getElementById('map-graph-wrap').innerHTML = '<div class="empty">graph unavailable</div>'; return; }
+
+  const nodeSystem = {}; // hook id -> system name (only real systems kept)
   const systems = new Set();
   (d.graph.nodes || []).forEach(n => {
     const m = (n.component_id || '').match(/^nexus\.([a-z0-9_-]+)\./);
-    if (m) systems.add(m[1]);
+    if (m && REAL_SYSTEMS.has(m[1])) { systems.add(m[1]); nodeSystem[n.id] = m[1]; }
   });
   const list = [...systems].sort();
   document.getElementById('map-summary-badge').textContent = `${list.length} systems`;
-  document.getElementById('map-system-list').innerHTML = list.map(s =>
-    `<div class="reg-item" style="cursor:pointer" onclick="loadMapDetail('${esc(s)}')"><div class="id">${esc(s)}</div></div>`
-  ).join('');
+
+  // Real system-to-system edges — a wire connects two HOOKS (real, confirmed
+  // shape from loom/schema/registry.js's graph()); a wire between hooks
+  // belonging to different systems implies a real inter-system connection.
+  // No new backend endpoint needed — this aggregates data /api/graph
+  // already returns, client-side.
+  const edgeSet = new Map(); // "a|b" (sorted) -> count
+  (d.graph.edges || []).forEach(e => {
+    const sa = nodeSystem[e.from], sb = nodeSystem[e.to];
+    if (!sa || !sb || sa === sb) return;
+    const key = [sa, sb].sort().join('|');
+    edgeSet.set(key, (edgeSet.get(key) || 0) + 1);
+  });
+
+  renderMapGraph(list, edgeSet);
 }
+
+function renderMapGraph(systems, edgeSet) {
+  const wrap = document.getElementById('map-graph-wrap');
+  if (!systems.length) { wrap.innerHTML = '<div class="empty">no systems found</div>'; return; }
+
+  const W = 640, H = 640, cx = W / 2, cy = H / 2, r = Math.min(W, H) / 2 - 70;
+  const pos = {};
+  systems.forEach((s, i) => {
+    const angle = (i / systems.length) * 2 * Math.PI - Math.PI / 2;
+    pos[s] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;min-height:500px" id="map-svg">`;
+
+  // Real wires — one line per distinct system-pair that has at least one
+  // real hook-to-hook wire between them, thickness scaled to real count.
+  for (const [key, count] of edgeSet) {
+    const [a, b] = key.split('|');
+    if (!pos[a] || !pos[b]) continue;
+    const w = Math.min(1 + Math.log2(count + 1), 5);
+    svg += `<line x1="${pos[a].x}" y1="${pos[a].y}" x2="${pos[b].x}" y2="${pos[b].y}" stroke="var(--b2)" stroke-width="${w}" opacity="0.55"><title>${esc(a)} \u2194 ${esc(b)} \u2014 ${count} real wire(s)</title></line>`;
+  }
+
+  // Real blocks — each system, clickable, opens the same real, already-
+  // built loadMapDetail() the flat list used.
+  systems.forEach(s => {
+    const p = pos[s];
+    svg += `<g class="map-node" style="cursor:pointer" onclick="loadMapDetail('${esc(s)}')">
+      <circle cx="${p.x}" cy="${p.y}" r="34" fill="var(--bg2)" stroke="var(--sky)" stroke-width="1.5" />
+      <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" font-family="var(--mono)" font-size="9" fill="var(--sky2)">${esc(s)}</text>
+    </g>`;
+  });
+
+  svg += `</svg>`;
+  wrap.innerHTML = svg;
+}
+
+// Real repository path per system — NOT always system-name === directory
+// name (diagnostic genuinely lives at service/nexus-diagnostic.js, not a
+// diagnostic/ directory; cortex's real entry is boot.js, not server.js).
+// Confirmed directly for every real system, not assumed.
+const SYSTEM_PATHS = {
+  guardian: 'guardian/server.js', ollama: 'ollama/server.js',
+  intelligence: 'intelligence/server.js', eravos: 'eravos/server.js',
+  copilot: 'copilot/server.js', bridge: 'bridge/server.js',
+  loom: 'loom/server.js', cortex: 'cortex/boot.js',
+  orchestrator: 'orchestrator/orchestrator.js', idearium: 'idearium/api/index.js',
+  architect: 'architect/service.js', emerge: 'emerge/emerge-ide.js',
+  diagnostic: 'service/nexus-diagnostic.js',
+};
 
 async function loadMapDetail(system) {
   document.getElementById('map-detail-title').textContent = system;
@@ -607,6 +703,9 @@ async function loadMapDetail(system) {
   const d = await api(`/api/component/${encodeURIComponent(system)}`);
   if (!d.ok) { document.getElementById('map-detail').innerHTML = '<div class="empty">unavailable</div>'; return; }
   const parts = [];
+  if (SYSTEM_PATHS[system]) {
+    parts.push(`<div class="reg-item"><div class="id">📁 ${esc(SYSTEM_PATHS[system])}</div><div class="meta">real repository entry point — this system's compartment</div></div>`);
+  }
   if (d.declared) {
     parts.push(`<div class="reg-item"><div class="id">declared hooks — ${d.declared.activeCount}/${d.declared.totalCount} active</div></div>`);
     parts.push(...d.declared.hooks.map(h => {

@@ -16,11 +16,14 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 
-const PORT    = parseInt(process.env.ERAVOS_PORT || '3751');
+// §WIRED — real, distinct config, not inline constants. See
+// eravos/config.js's own header. Matches the established pattern.
+const config = require('./config.js');
+const PORT    = config.PORT;
 const ROOT    = __dirname;
 const UI_DIR  = path.join(ROOT, 'ui');
-const DATA_DIR = path.join(ROOT, '..', 'data', 'eravos');
-const ORCH_URL = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000';
+const DATA_DIR = config.DATA_DIR;
+const ORCH_URL = config.ORCH_URL;
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
 

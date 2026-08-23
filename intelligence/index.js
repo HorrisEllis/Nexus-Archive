@@ -43,21 +43,18 @@ const { jaaDB, uid } = require('../cortex/memory/jaa-db');
 const bus = require('../nexus-bus');
 
 const MODULE_ID = 'cortex/intelligence';
+// §WIRED — real, distinct config, not inline constants. See
+// intelligence/config.js's own header. Matches the established pattern.
+const config = require('./config.js');
 const VERSION   = '1.0.0';
 
 // ── Timing ─────────────────────────────────────────────────────────────────────
-const PATTERN_SCAN_MS   = 60_000;   // scan for patterns every 60s
-const FAILURE_SCAN_MS   = 30_000;   // scan failure taxonomy every 30s
-const REUSE_INDEX_MS    = 120_000;  // rebuild reuse index every 2 min
-const CROSS_LEDGER_MS   = 90_000;   // cross-ledger analysis every 90s
-const META_SCAN_MS      = 180_000;  // meta-pattern pass every 3 min — needs a
-                                     // populated bep_patterns table to have
-                                     // anything to reflect on, so it trails
-                                     // _scanPatterns rather than racing it
-const LOOM_MAP_SYNC_MS  = 120_000;  // refresh the cached loom system/component
-                                     // map every 2 min — loom's registry
-                                     // changes on declare(), not continuously,
-                                     // so this doesn't need pattern-scan speed
+const PATTERN_SCAN_MS   = config.PATTERN_SCAN_MS;
+const FAILURE_SCAN_MS   = config.FAILURE_SCAN_MS;
+const REUSE_INDEX_MS    = config.REUSE_INDEX_MS;
+const CROSS_LEDGER_MS   = config.CROSS_LEDGER_MS;
+const META_SCAN_MS      = config.META_SCAN_MS;
+const LOOM_MAP_SYNC_MS  = config.LOOM_MAP_SYNC_MS;
 
 let _intervals  = [];
 let _cfg        = {};
@@ -252,8 +249,8 @@ function stop() {
 // friction fix: skip the write, not the tracking. A pattern still gets
 // its in-memory Object.assign so live reads stay current; only the real
 // disk write is skipped when it would be redundant.
-const MATURE_MIN_COUNT = 50;       // real, high bar — this isn't "crystallised" (which can trigger at 5-10), it's "long since settled"
-const MATURE_CONFIDENCE = 0.95;    // near-max; still allows a genuine late confidence recovery to register
+const MATURE_MIN_COUNT = config.MATURE_MIN_COUNT;   // real, high bar — this isn't "crystallised" (which can trigger at 5-10), it's "long since settled"
+const MATURE_CONFIDENCE = config.MATURE_CONFIDENCE; // near-max; still allows a genuine late confidence recovery to register
 function _isMatureNoOpUpdate(existing, newCount, newConfidence) {
   if (!existing || !existing.crystallised) return false; // never skip a pattern that hasn't even crystallised yet
   if ((existing.count || 0) < MATURE_MIN_COUNT || (existing.confidence || 0) < MATURE_CONFIDENCE) return false;

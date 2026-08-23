@@ -352,6 +352,21 @@
     flex-shrink: 0;
   }
 
+  /* §2026-08-23 — James: "the fourth image, is where the bookmarks
+     should go." Real, small class, not inline style — inline style
+     would break the real, existing JS toggle (.style.color =
+     isMarked ? '#f5c842' : ''), since clearing to '' falls back to
+     whatever a real CSS rule says, not to a removed inline value. */
+  .status-bookmark-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    line-height: 1;
+  }
+
   .status-dot {
     width: 6px; height: 6px;
     border-radius: 50%;
@@ -710,7 +725,18 @@
     transition: all 0.1s;
   }
   .ctx-tag:hover { background: rgba(0,245,255,0.12); }
-  .ctx-tag.active { background: rgba(0,245,255,0.18); border-color: var(--accent); }
+  /* §FIXED 2026-08-23 — James: "these three buttons, i dont think to
+     anything." Traced it through: the click handlers, real boolean
+     state, and downstream context-inclusion logic all genuinely worked
+     already — the bug was purely visual, a 0.06->0.18 opacity shift
+     that's easy to miss entirely. Made the active state unmistakable:
+     a real, solid fill and bold weight, not a subtle tint. */
+  .ctx-tag.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
 
   #copilot-textarea {
     width: 100%;

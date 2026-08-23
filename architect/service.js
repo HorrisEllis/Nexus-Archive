@@ -58,9 +58,12 @@ const { createCFRLedger }       = require('../intelligence/cfr');
 const systemHooks = (() => { try { return require('../hooks'); } catch(_) { return null; } })();
 const { createCompileRoutes }   = (() => { try { return require('./compile-route'); } catch(_) { return { createCompileRoutes: null }; } })();
 
-const PORT = process.env.ARCHITECT_PORT || 3747;
-const CORTEX_PORT = process.env.CORTEX_PORT || 3748;
-const ORCH_PORT   = process.env.ORCH_PORT   || 9000;
+// §WIRED — real, distinct config, not inline constants. See
+// architect/config.js's own header. Matches the established pattern.
+const config = require('./config.js');
+const PORT = config.PORT;
+const CORTEX_PORT = config.CORTEX_PORT;
+const ORCH_PORT   = config.ORCH_PORT;
 const ROOT        = path.join(__dirname, '..');
 const DATA_DIR    = path.join(__dirname, 'data');
 const LEDGER_DIR  = path.join(ROOT, 'data', 'architect');
@@ -283,7 +286,7 @@ async function boot() {
         // res.writeHead bypassing this file's own CORS-enabled pattern
         // used on every other route here.
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(c);
-      } catch(e) { res.writeHead(500); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
+      } catch(e) { res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
       return;
     }
 

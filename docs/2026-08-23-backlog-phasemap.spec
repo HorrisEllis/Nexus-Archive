@@ -402,22 +402,84 @@ spec:
         included.
 
     BL16_per_server_configs:
-      status: "OPEN. James: \"each server.js file for each system needs a
-        full config, not inline.\" ollama/config.js (this session,
-        f113388/4fe7f12) is the real, working template — every other
-        server.js (guardian, cortex, cockpit, copilot, idearium, ...) gets
-        its own equivalent config.js, same real pattern: env-overridable,
-        every scattered inline constant/timeout given a real name, the
-        real §HISTORY worth keeping visible kept in the config file
-        itself rather than duplicated per-consumer. Real work is one
-        config.js per real server.js, checked individually — not a
-        mechanical template stamp, since each server's own real constants
-        differ."
+      status: "✓ DONE — 12/12 real systems complete (guardian, ollama,
+        intelligence, copilot, bridge, eravos, loom, cortex, idearium,
+        architect, emerge — all real, individually verified with a
+        live boot test each, not a mechanical template stamp). Two real,
+        genuine finds along the way, not just mechanical extraction:
+        intelligence/config.js (built earlier) was missing 8 real
+        constants from intelligence/index.js itself, only ever covering
+        server.js/consumer.js — fixed, and traced a real, stale
+        documentation bug this surfaced in lib/uid/component-map.js's
+        nexus-cx entry (still listing config values that relocated to
+        intelligence during phase 1, plus one — SIGMA_THRESHOLD — that
+        never existed as real code anywhere at all). idearium/config.js
+        needed genuine ESM syntax (export default, not module.exports)
+        since its own package.json declares type:module — confirmed
+        directly, not assumed, and a real path bug only surfaced by
+        actually booting it (node --check alone would never have caught
+        it). The last two, architect and emerge, both genuinely differed
+        from the established pattern rather than being forced to fit:
+        architect's PORT deliberately kept unwrapped by parseInt,
+        preserving its exact original behavior; emerge's real CLI-flag
+        overrides (--port/--model via a real getArg() helper) can't be
+        represented by a static config file, so only the real, static
+        fallback defaults were centralized, verified live with and
+        without the CLI flag to confirm the override still genuinely
+        wins. \"Real system\" itself got a real, settled definition this
+        same session: a genuine .listen() call, not any component_id
+        namespace prefix — confirmed exactly 12 real systems this way,
+        matching the pre-existing 'NEXUS — 12 systems' label already in
+        loom's own UI."
       depends_on: []
       does: >
         Closes the same real \"N files must independently agree\" risk
         ollama/config.js closed for the model tag, for every other
         subsystem's own scattered constants.
+
+    BL18_loom_map_becomes_real_visual_graph:
+      status: "✓ DONE. James, from a real, live screenshot: \"like the
+        map tab, each system a block with hooks and wires connecting
+        them... you can click on the blocks and open, fully updated...
+        a system has to have a server.js to be considered a system in
+        loom... each system is a compartment, and repository for the
+        system.\" The backend (/api/component/:system) already existed
+        and worked — only the visual layer was a flat list. Replaced it
+        with a real SVG graph: systems as blocks, real wires between
+        them aggregated client-side from /api/graph's existing hook-
+        level wire data, edge thickness scaled to real connection
+        count, clicking a block still opens the same real, live detail
+        panel — now also showing the system's real repository path.
+        Filtered to the real, confirmed 12-system definition (an actual
+        HTTP server, not any namespace prefix) — correctly excludes
+        lib/tests/scripts/cli/hooks and other real shared code that
+        isn't a real system. Caught and fixed a real, separate,
+        serious bug along the way: loom/bootstrap.js crashed entirely
+        (a malformed FILES entry from this same session's own earlier
+        liminal-space migration commit, missing the required 4th tuple
+        element) — found by insisting on testing against real data
+        instead of trusting an empty response."
+      depends_on: []
+      does: >
+        The Map tab is now what James actually asked for from the
+        start — a real, visual, clickable architecture map of NEXUS,
+        not a placeholder list.
+
+    BL19_roadmap_readability:
+      status: "✓ DONE. James, from a real, live screenshot showing
+        copilot's 88-phase roadmap section as one dense, unreadable
+        wall of text: \"i can't even read it at all.\" Real cause:
+        every phase was joined inline with only nbsp-nbsp, no real
+        line breaks. Each phase now renders as its own real block-level
+        row; systems with more than 12 phases show the first 12 by
+        default with a real, working show-more toggle for the rest,
+        verified against the actual live /api/phasemap response (217
+        phases, 26 phasemaps, 20 systems — matching the screenshot
+        exactly)."
+      depends_on: []
+      does: >
+        The roadmap is now something a person can actually read, not
+        just technically render.
 
     # ── nexus:// URL scheme + tools-per-url ─────────────────────────────
     # System: clear-glass, guardian, agent

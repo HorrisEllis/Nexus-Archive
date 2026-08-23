@@ -50,7 +50,11 @@ function extractDispatchText(r) {
   return null; // caller decides the fallback — different callers want different diagnostic messages
 }
 
-const PORT     = parseInt(process.env.COPILOT_PORT || '3750');
+// §WIRED — real, distinct config, not inline constants. See
+// copilot/config.js's own header for the full real scope and
+// reasoning, matching guardian/config.js and intelligence/config.js.
+const config = require('./config.js');
+const PORT     = config.PORT;
 const GD_URL   = process.env.GUARDIAN_URL   || 'http://127.0.0.1:7820';
 const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
 
@@ -146,7 +150,7 @@ const VERSION   = require('../lib/version').services.copilot;
 
 // ── CONTINUOUS STREAM — the co-pilot's consciousness ─────────────────────────
 const _stream = [];
-const MAX_STREAM = 500;
+const MAX_STREAM = config.MAX_STREAM;
 
 // §WIRED 2026-07-09 — copilot/lib/expectation-watcher.js arrived with
 // nexus-autonomous-v8 and was orphaned: nothing in copilot/*.js required it.
@@ -416,8 +420,8 @@ async function _injectSessionHistory(session, contextText) {
 // Score threshold, not a fixed top-K alone — an irrelevant result with a
 // low score is worse than no result; injecting it would poison the prompt
 // exactly like this spec's own failure_modes_to_avoid warns against.
-const RECALL_CONTEXT_SCORE_THRESHOLD = 0.3;
-const RECALL_CONTEXT_TOP_K = 3;
+const RECALL_CONTEXT_SCORE_THRESHOLD = config.RECALL_CONTEXT_SCORE_THRESHOLD;
+const RECALL_CONTEXT_TOP_K = config.RECALL_CONTEXT_TOP_K;
 
 // §PHASEMAP UM2 (docs/cortex-schema-registry-phasemap.spec) — query the
 // user-model on EVERY prompt path, not just the tool-loop. buildUserContext()
@@ -465,7 +469,7 @@ function _captureUserSignals(prompt, channel) {
 // drift apart: two copies of this regex would mean a phrase that logs a
 // correction without triggering a retry, or the reverse, and either is worse
 // than not having the feature.
-const CORRECTION_RE = /\b(no,|not what|that'?s wrong|incorrect|actually,|i said|try again|retry|redo that)\b/i;
+const CORRECTION_RE = config.CORRECTION_RE;
 
 /**
  * _introspectRetry — run lib/introspect over the last exchange and re-ask with
@@ -643,7 +647,7 @@ const _sessions = new Map();
 // threshold — long enough that a genuinely ongoing conversation is never
 // evicted mid-use, short enough that an abandoned/orphaned session
 // doesn't sit in memory indefinitely.
-const SESSION_STALE_MS = 30 * 60 * 1000;
+const SESSION_STALE_MS = config.SESSION_STALE_MS;
 const _sessionSweep = setInterval(() => {
   const now = Date.now();
   let evicted = 0;
@@ -1362,7 +1366,7 @@ const server = http.createServer(async (req, res) => {
     // its own default toolset. tool_config's own internal design already
     // gates its dangerous half (loosening always needs the user, regardless
     // of who calls it), so offering it here doesn't bypass that protection.
-    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events', 'framework_builder', 'intelligence_query'];
+    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events', 'framework_builder', 'intelligence_query', 'clear_glass_dom_archaeology'];
     if (DEFAULT_CHAT_TOOLS.length) {
       const agentToolsForManifest = require('../lib/agent-tools/index.js');
       const manifest = DEFAULT_CHAT_TOOLS

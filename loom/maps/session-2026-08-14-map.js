@@ -35,7 +35,7 @@ const FILES = [
   ['lib/diagnostic-report.js',      'nexus.lib.diagnostic-report',      'lib', []],
   ['guardian/lib/ncp.js',           'nexus.guardian.lib.ncp',           'guardian/lib', []],
   ['guardian/lib/gap-hunter.js', 'nexus.guardian.lib.gap-hunter', 'guardian/lib', ['nexus.intelligence.gap.hunter']],
-  ['intelligence/liminal-space/index.js', 'nexus.intelligence.liminal-space', ['nexus.cortex.jaa-db']],
+  ['intelligence/liminal-space/index.js', 'nexus.intelligence.liminal-space', 'intelligence/liminal-space', ['nexus.cortex.jaa-db']],
   ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
   // §2026-08-23 — real, standalone HTTP bridge (:7704) proxying to
   // erosmancer-os's own real API (:7432) and clear-glass's IPC (:7702) —
@@ -71,7 +71,10 @@ const FILES = [
   // §2026-08-23 — the real HTTP server bridge/index.js wires in at boot
   // (createBridgeServer, Phase 5) — found genuinely unregistered while
   // fixing a real CORS bug in it.
-  ['bridge/server.js', 'nexus.bridge.server', 'bridge', ['nexus.bridge.index']],
+  ['bridge/config.js', 'nexus.bridge.config', 'bridge', []],
+  ['eravos/config.js', 'nexus.eravos.config', 'eravos', []],
+  ['eravos/server.js', 'nexus.eravos.server', 'eravos', ['nexus.eravos.config']],
+  ['bridge/server.js', 'nexus.bridge.server', 'bridge', ['nexus.bridge.index', 'nexus.bridge.config']],
   ['bridge/causal/expectation.js', 'nexus.bridge.causal.expectation', 'bridge/causal', ['nexus.intelligence.causal']],
   ['bridge/causal/projections.js', 'nexus.bridge.causal.projections', 'bridge/causal', ['nexus.intelligence.causal']],
   ['cortex/memory/causal-lookup.js', 'nexus.cortex.memory.causal-lookup', 'cortex/memory', ['nexus.intelligence.cfr.graph']],
@@ -97,9 +100,16 @@ const FILES = [
   // consolidation only, not the many inline timeout literals scattered
   // through this file's route handlers — separate, larger work).
   ['guardian/config.js', 'nexus.guardian.config', 'guardian', []],
+  ['idearium/config.js', 'nexus.idearium.config', 'idearium', []],
+  ['architect/config.js', 'nexus.architect.config', 'architect', []],
+  ['architect/service.js', 'nexus.architect.service', 'architect', ['nexus.architect.config']],
+  ['emerge/config.js', 'nexus.emerge.config', 'emerge', []],
+  ['emerge/emerge-ide.js', 'nexus.emerge.emerge-ide', 'emerge', ['nexus.emerge.config']],
+  ['idearium/api/index.js', 'nexus.idearium.api', 'idearium/api', ['nexus.idearium.config']],
   ['guardian/server.js', 'nexus.guardian.server', 'guardian', ['nexus.guardian.config']],
   ['guardian/api-dispatch.js', 'nexus.guardian.api-dispatch', 'guardian', ['nexus.intelligence.liminal']],
-  ['cortex/boot.js', 'nexus.cortex.boot', 'cortex', []],
+  ['cortex/config.js', 'nexus.cortex.config', 'cortex', []],
+  ['cortex/boot.js', 'nexus.cortex.boot', 'cortex', ['nexus.cortex.config']],
 
   // §ADDED 2026-08-17f — found genuinely unregistered while fixing 3 real
   // recency bugs in it (query() vs tail()).
