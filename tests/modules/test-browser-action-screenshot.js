@@ -71,6 +71,20 @@ async function main() {
       assert.deepStrictEqual(content.rect, { x: 0, y: 0, w: 800, h: 600 });
     });
 
+    test('toast is a real, listed action', () => {
+      assert.ok(tool.parameters.properties.action.enum.includes('toast'), 'toast missing from the real enum');
+    });
+
+    test('toast dispatch reaches guardian with the real, correct payload shape', async () => {
+      lastJobBody = null;
+      const r = await tool.execute({ action: 'toast', data: { msg: 'job application submitted', type: 'success' } });
+      assert.strictEqual(r.ok, true, `expected ok:true, got ${JSON.stringify(r)}`);
+      const content = JSON.parse(lastJobBody.content);
+      assert.strictEqual(content.action, 'toast', 'driverExecGate needs data.action === "toast"');
+      assert.strictEqual(content.msg, 'job application submitted');
+      assert.strictEqual(content.type, 'success');
+    });
+
     test('navigate ALSO now correctly injects action (the real, pre-existing gap this fix also closed)', async () => {
       lastJobBody = null;
       await tool.execute({ action: 'navigate', data: { url: 'https://example.com' } });

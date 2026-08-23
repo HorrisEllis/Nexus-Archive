@@ -78,3 +78,96 @@ same discipline as every other commit this session.
 ## Built and verified in this same pass: screenshot as a real co-pilot tool
 
 See the commit for the real, live-verified implementation.
+
+---
+
+## 2026-08-23, second pass — Guardian-clean extension picked apart
+
+James: "the guardian.zips completely pick them apart and build them for
+clear-glass." Investigated a genuinely separate, real codebase — a
+Firefox extension (`manifest.json`, `background.js`, `content.js`,
+per-site `modules/`) called Guardian, part of an earlier "Bridge OS ·
+Causal-Nexus" project, uploaded as three snapshots (Guardian-clean-9/
+13/17). Diffed all three directly rather than assuming: 9→13 changed
+background/content/popup; 13→17 changed background/content further;
+17 is the real, most current version.
+
+**Real, working capability found in this extension, evaluated against
+what ClearGlass already has:**
+- Per-site listener modules (`modules/instagram.js`, `modules/threads.js`,
+  `modules/chatgpt.js`, `modules/claude.js`) — real MutationObserver-based
+  DM/post/response capture, each extending a shared `GuardianModule` base
+  class. Genuinely useful pattern for "listeners for social media" —
+  not yet ported; a real, scoped follow-up.
+- A "macro" system in `modules/urck/urck.js` — checked directly, this is
+  recurring EVENT-PATTERN detection (the same kind of thing CFR/pattern-
+  crystallization already does elsewhere in NEXUS), not user-action
+  record/replay for automating a workflow like a job application. Does
+  NOT cover what "macros for webpages... automating job applications"
+  actually needs — that gap is still fully open.
+- A real toast notification system in `content.js`/`popup.js` — checked
+  against ClearGlass's own `renderer/browser.js` before porting anything:
+  ClearGlass ALREADY has its own real, working `toast()`. Porting the
+  extension's version would have been a redundant duplicate. The real
+  gap was different and narrower: ClearGlass's toast() had no external
+  trigger — built and verified in this pass, see below.
+- `bridge-sync.js` (found under the odd filename `NEED HANDSHAKE FOR
+  .js` — a real, working module the original developer's own comment
+  marks as not yet wired into the manifest) — real callto registration/
+  execution against a bridge server. Conceptually close to ClearGlass's
+  own dom_pick "named hook" system; not a direct port candidate as-is
+  since it targets a different (now-superseded) bridge protocol.
+
+**Confirmed still genuinely missing, checked directly, not assumed —
+neither in this extension nor in ClearGlass:** print, browser
+downloads API usage, a real devtools/console-access feature (only
+plain `console.log` calls exist, not a real console capability), email/
+Gmail-specific listening, and — the real, current gap despite the
+"macro" name existing elsewhere — actual user-action record/replay
+automation for filling out forms and submitting them unattended.
+
+**Built and verified in this pass:** `toast` as a real, callable
+co-pilot tool. `browser_action`'s `toast` action reuses the exact same
+`driver.exec` dispatch `screenshot` already uses. `window.__cgToast`
+now exposes ClearGlass's own real, existing `toast()` externally — one
+narrow, named global, not a general eval backdoor — reachable via
+`driver/index.js`'s real `_toast(agentId, {msg, type, durationMs})`,
+using the identical `_getWebContents()` + `_evalJs()` pattern already
+proven for screenshot. Verified the window-matching is correct by
+reading `main/index.js` directly: `_getWebContents` matches by window
+title (`Clear Glass — ${agentId}`), and that's the exact title set when
+each per-agent `browser.html` window is created — confirmed, not
+assumed, that toast() and the driver's target are the same real
+context. String-escaping for the message verified directly against a
+real injection-risk input (quotes, backticks, newlines) — generates
+valid, safe JS every time. Full test suite: 8/8, including the new
+toast-specific coverage.
+
+**Same honest limit as the screenshot tool:** verified everything
+reachable without a live Electron instance — this sandbox has no
+display/GPU to run one. Worth a real, live check on the actual running
+app before fully trusting it.
+
+**Real, updated CLI-first sequence**, folding in what this pass found:
+
+1. ~~Screenshot~~ — done (previous pass).
+2. ~~Toast~~ — done (this pass).
+3. **Social-media listener modules, ported** — real, working pattern
+   already exists in the Guardian extension; needs adapting from
+   extension-message-passing to ClearGlass's own gate/event system, not
+   built from scratch.
+4. **Real user-action macro/record-replay** — still the biggest, most
+   valuable, and most-not-started piece. Nothing in either codebase
+   does this today. This is what "automating job applications, or
+   emailing therapists on Psychology Today" actually needs, and it
+   needs real design before real code: record a sequence of dom_pick +
+   dom_mutate + navigate actions against named, stable selectors, store
+   it as a real, replayable definition, handle the case where a
+   selector doesn't match on replay (the page changed).
+5. CAPTCHA-aware pause/resume gate (unchanged from the first pass).
+6. Bookmarks tied to the cookie vault (unchanged).
+7. Print, downloads API, a real console feature, email listening — each
+   genuinely small and independent; not yet sequenced relative to each
+   other, pick based on what's actually wanted next.
+8. Web extension support, then ad blocking atop it (unchanged).
+

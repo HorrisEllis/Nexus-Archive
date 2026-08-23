@@ -50,6 +50,7 @@ class ClearDriver {
       case 'wait':           return this._wait(agentId, args);
       case 'waitFor':        return this._waitFor(agentId, args);
       case 'screenshot':     return this._screenshot(agentId, args);
+      case 'toast':          return this._toast(agentId, args);
       case 'eval':           return this._eval(agentId, args);
       case 'getUrl':         return this._getUrl(agentId);
       case 'getTitle':       return this._getTitle(agentId);
@@ -210,6 +211,24 @@ class ClearDriver {
 
     this.sse.emit('driver.screenshot', { agentId, data: b64, ts: Date.now() });
     return { screenshot: b64, format: 'png' };
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────
+  // §BUILT 2026-08-23 — real, visible notification, triggered externally.
+  // Reuses window.__cgToast, just exposed in renderer/browser.js — same
+  // real _getWebContents()+executeJavaScript pattern _screenshot/_eval
+  // already use above, not a new mechanism.
+  async _toast(agentId, { msg, type = 'info', durationMs = 3500 } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    if (!msg || typeof msg !== 'string') throw new Error('toast requires a real, non-empty msg string');
+    // JSON.stringify each value rather than template-interpolating raw
+    // strings into the executeJavaScript code — the real, safe way to
+    // cross this boundary without a message containing a quote or
+    // backtick breaking out of the generated script.
+    const code = `window.__cgToast && window.__cgToast(${JSON.stringify(msg)}, ${JSON.stringify(type)}, ${JSON.stringify(durationMs)})`;
+    await this._evalJs(wc, code);
+    return { ok: true, agentId, msg, type };
   }
 
   // ── Eval ──────────────────────────────────────────────────────────────

@@ -161,6 +161,19 @@
     return el;
   }
 
+  // §EXTERNAL-TRIGGER 2026-08-23 — James: "create toasts" as a real
+  // co-pilot capability. toast() itself was already real and working,
+  // but purely internal — no external caller (main process, driver, an
+  // automation workflow) had any way to reach it; this script's own
+  // error handlers were the only real callers. Exposed narrowly, not as
+  // a generic eval backdoor: one specific, named global, matching the
+  // same pattern clear-glass/src/driver/index.js's real _getWebContents()
+  // + executeJavaScript already uses to reach this exact window (matched
+  // by its own real title, "Clear Glass — ${agentId}", set at window
+  // creation — confirmed by reading src/main/index.js directly before
+  // wiring this, not assumed).
+  window.__cgToast = toast;
+
   // Flush any cg.* errors that happened before toast() existed (the Proxy
   // wrapper is set up earlier in this script than toast() is defined).
   while (toastQueue.length) toast(...toastQueue.shift());
