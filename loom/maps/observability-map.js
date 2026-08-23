@@ -110,6 +110,12 @@ const FILES = [
     []],  // §R10 2026-08-12 — the real token-reduction mechanism. Reuses loom's real contextGraph() rather than re-deriving the graph. Found and fixed a REAL, significant bug while building this: the traversal direction was backwards from the actual ingested wire semantic — verified against a known-true relationship (gap-field really calls diagnostic-causal) instead of trusting impactOf()'s own comment, which describes the opposite direction from what's actually ingested. GATE PROVEN LIVE: gap-field's real relevant context is 4 files / 6,702 tokens vs a 237,508-token naive directory baseline — 97% real, measured reduction, not estimated. Also found: loom's live registry does not yet reflect every observability-map.js entry added this session (agent-build-learning, stub-scanner both absent) — a real, separate sync-mechanism gap, noted not chased given time.
   ['lib/gap-field.js',            'nexus.lib.gap-field',
     ['nexus.cortex.memory.jaa-db', 'nexus.lib.resource-monitor', 'nexus.lib.diagnostic-causal']],  // §2026-08-09 — the single agnostic gap-report entry point: system anomalies + user-model contradictions, one dedup rule, one causal-wire convention. §R1 2026-08-12 — report() carries the full repair_contract_schema (requested/received/systemsInvolved/location/error/resourceState), resourceState auto-populated from lib/resource-monitor (cheap, real), why populated on-demand via explainWhy() -> diagnostic-causal.explainFinding() (real causal tracing, not run on every report — §0.5).
+  // §2026-08-23 — found genuinely unregistered while wiring the new,
+  // real, dynamic delta-based tension signal into both. gap-priority
+  // now depends on jaaDB directly (tensionFromDelta's own real, windowed
+  // read); predicate depends on gap-priority as its new fallback path.
+  ['lib/gap-priority.js', 'nexus.lib.gap-priority', ['nexus.cortex.memory.jaa-db']],
+  ['intelligence/gap/predicate.js', 'nexus.intelligence.gap.predicate', ['nexus.lib.gap-priority']],
   ['lib/rfr2-bridge.js', 'nexus.lib.rfr2-bridge', ['nexus.intelligence.rfr2']],
   ['lib/nexus-expansion-boot.js', 'nexus.lib.nexus-expansion-boot', ['nexus.intelligence.gap.ledger']],
   ['lib/open-loop-taxonomy.js', 'nexus.lib.open-loop-taxonomy', ['nexus.intelligence.gap.predicate']],
@@ -133,7 +139,9 @@ const FILES = [
   ['intelligence/cfr/sigma.js', 'nexus.intelligence.cfr.sigma', ['nexus.lib.component-ledger']],
   ['intelligence/cfr/delta.js', 'nexus.intelligence.cfr.delta', []],
   ['intelligence/cfr/graph.js', 'nexus.intelligence.cfr.graph', []],
-  ['intelligence/cfr/ledger.js', 'nexus.intelligence.cfr.ledger', ['nexus.intelligence.cfr.sigma', 'nexus.intelligence.cfr.delta', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.graph', 'nexus.intelligence.causal.compound']],
+  // §2026-08-23 — added a real, new dependency: jaaDB, for the new
+  // continuous cfr_tension_history writes (dynamic delta-based tension).
+  ['intelligence/cfr/ledger.js', 'nexus.intelligence.cfr.ledger', ['nexus.intelligence.cfr.sigma', 'nexus.intelligence.cfr.delta', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.graph', 'nexus.intelligence.causal.compound', 'nexus.cortex.jaa-db']],
   ['intelligence/causal/index.js', 'nexus.intelligence.causal', ['nexus.intelligence.causal.anomaly', 'nexus.intelligence.causal.compound']],
   ['intelligence/causal/anomaly.js', 'nexus.intelligence.causal.anomaly', []],
   ['intelligence/causal/compound.js', 'nexus.intelligence.causal.compound', ['nexus.intelligence.cfr.graph']],

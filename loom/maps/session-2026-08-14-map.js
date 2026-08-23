@@ -91,7 +91,13 @@ const FILES = [
   // genuinely unregistered under any id while adding its real tool-index
   // bridge routes (checked directly, not assumed). A real, significant,
   // pre-existing gap, not something this session's own work caused.
-  ['guardian/server.js', 'nexus.guardian.server', 'guardian', []],
+  // §2026-08-23 — real, centralized config, consolidating 9 real,
+  // previously-scattered top-level constants. See guardian/config.js's
+  // own header for the deliberate real scope limit (named-constant
+  // consolidation only, not the many inline timeout literals scattered
+  // through this file's route handlers — separate, larger work).
+  ['guardian/config.js', 'nexus.guardian.config', 'guardian', []],
+  ['guardian/server.js', 'nexus.guardian.server', 'guardian', ['nexus.guardian.config']],
   ['guardian/api-dispatch.js', 'nexus.guardian.api-dispatch', 'guardian', ['nexus.intelligence.liminal']],
   ['cortex/boot.js', 'nexus.cortex.boot', 'cortex', []],
 

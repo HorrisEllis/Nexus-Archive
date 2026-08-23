@@ -40,6 +40,19 @@ const { computeDelta  } = require('./delta');
 const { createCFRField } = require('./field');
 const { CausalGraph   } = require('./graph');
 
+// §DYNAMIC-TENSION 2026-08-23 — James: "I want to use delta to measure the
+// tension gaps... no hardcoded. dynamic updating over time." Lazy,
+// try/catch-safe — matches lib/gap-field.js's own real require pattern for
+// this same module, but CFR's core recording function must never be
+// blocked by a persistence failure (§1.2 non-blocking), so this is
+// resolved once and reused, never a hard dependency at module load.
+let _jaaDB = null;
+function _getJaaDB() {
+  if (_jaaDB) return _jaaDB;
+  try { ({ jaaDB: _jaaDB } = require('../../cortex/memory/jaa-db')); } catch (_) { /* real, honest absence — no fabricated fallback */ }
+  return _jaaDB;
+}
+
 // ── Compound effects engine (lazy — loaded after graph is ready) ──────────────
 let _compoundModule = null;
 function _getCompoundModule() {
@@ -216,6 +229,27 @@ function createCFRLedger({
     // Update ring buffer
     _history.push(entry);
     if (_history.length > maxHistory) _history.shift();
+
+    // §DYNAMIC-TENSION 2026-08-23 — real, continuous time-series write, not
+    // gated behind a threshold: every real ledger entry's delta gets a real
+    // row, so a later reader (gap-priority's own tension() function) can
+    // pull "the most recent real tension for this source" and get a
+    // genuinely dynamic, always-current answer — not a value frozen at
+    // whatever moment a gap happened to be created. Deliberately NOT
+    // written as a gap-field.js gap (§CFR-WIRE-02's own real, documented
+    // reason still holds: "field observations, not actionable gaps... a
+    // queue that nothing will drain") — this is metric history, a
+    // different real thing a gap can later READ, not a gap itself.
+    try {
+      const jaa = _getJaaDB();
+      if (jaa) {
+        jaa.insert('cfr_tension_history', {
+          uuid: randomUUID(), source: entry.source, systemId,
+          tension: entry.delta.tension, friction: entry.delta.friction,
+          slope: entry.delta.slope, sigma: sigmaResult.score, ts,
+        });
+      }
+    } catch (_) { /* §1.2 non-blocking — a persistence failure never blocks the real, critical write above */ }
 
     // Track previous for next delta
     _prev = entry;

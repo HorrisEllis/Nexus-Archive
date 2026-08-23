@@ -225,6 +225,9 @@ const SUITES = [
   'test-native-toast.js',
   // §2026-08-23 — the real macro tool, built on browser_action + rewind_replay.
   'test-macro.js',
+  // §2026-08-23 — dynamic, delta-based tension: CFR ledger's continuous
+  // cfr_tension_history writes + gap-priority's real windowed read.
+  'test-dynamic-tension.js',
 
   // §2026-08-19 — queue/ollama-lock/introspect/agent-capability merge
   // (nexus0822 branch). test-end-state.js, test-nexus-wake.js, and

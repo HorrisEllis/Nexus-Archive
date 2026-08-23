@@ -435,8 +435,21 @@ function escalateTension(gap) {
   try {
     rawTension = require('../../cortex/self-heal/fault-taxonomy').scoreTension(gap);
   } catch (_) {
-    // healer unavailable — neutral fallback, not a silent zero
-    rawTension = (gap.tension ?? 0.5) * TENSION_CEILING;
+    // §DYNAMIC-TENSION 2026-08-23 — James: "no hardcoded. dynamic updating
+    // over time." This was a flat 0.5 — the one genuinely hardcoded
+    // tension value left in this file, real only as a last-resort when
+    // fault-taxonomy itself is unreachable (a rare failure, not the
+    // normal path — that module's own scoreTension() is real and already
+    // uses accumulated friction history). Now falls back to the real,
+    // continuously-updating CFR delta signal instead of a fabricated
+    // constant — genuinely different data (system-wide, real-time
+    // tension rather than this gap-type's own friction history) but real
+    // and dynamic rather than a guess. Only if THAT also has no real data
+    // yet (a genuinely new system with no CFR history) does this fall to
+    // a stated, honest neutral midpoint — not silently.
+    const gp = require('../../lib/gap-priority.js');
+    const delta = gp.tensionFromDelta(gap.system || gap.source);
+    rawTension = (delta ?? 0.5) * TENSION_CEILING;
   }
   const tension = Math.min(1, rawTension / TENSION_CEILING);
 

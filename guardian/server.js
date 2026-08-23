@@ -1,5 +1,11 @@
 'use strict';
 
+// §CONFIG 2026-08-23 — real, centralized config, not scattered inline
+// constants. See guardian/config.js's own header for the full real
+// scope and reasoning, matching the established ollama/config.js and
+// intelligence/config.js pattern from earlier this session.
+const config = require('./config.js');
+
 const http       = require('http');
 // NCP — NEXUS Channel Protocol (replaces WebSocket entirely)
 // Zero external dependencies. SSE server→browser, fetch() browser→server.
@@ -75,7 +81,7 @@ if (_replayed.length) {
 // content already past one real chunk's worth is exactly the case this
 // exists to catch, not just multi-chunk-sized content.
 const CHUNK_ENFORCED_PROVIDERS = Object.freeze(['ollama', 'chatgpt']);
-const CHUNK_ENFORCE_THRESHOLD  = 3000;
+const CHUNK_ENFORCE_THRESHOLD  = config.CHUNK_ENFORCE_THRESHOLD;
 
 function _shouldEnforceChunking(provider, combinedSize) {
   return CHUNK_ENFORCED_PROVIDERS.includes(provider) && combinedSize > CHUNK_ENFORCE_THRESHOLD;
@@ -188,7 +194,7 @@ const _activeQueues = new Map();
 // than the sessions bug (queues are per-build, not per-message), but the
 // same real risk shape and the fix is cheap given the pattern's already
 // proven — worth closing while already auditing this file.
-const QUEUE_STALE_MS = 60 * 60 * 1000; // builds can legitimately run long; 1 hour of no update is a real, generous bar before calling it stalled
+const QUEUE_STALE_MS = config.QUEUE_STALE_MS; // builds can legitimately run long; 1 hour of no update is a real, generous bar before calling it stalled — see guardian/config.js
 const _queueSweep = setInterval(() => {
   const now = Date.now();
   let evicted = 0;
@@ -260,7 +266,7 @@ try { express = require('express'); multer = require('multer'); } catch (_) {}
 // §2.3 StreamLog: all state observable
 const _sisoLog = [];
 let _streamSeq = 0;
-const _LOG_MAX  = 2000;
+const _LOG_MAX  = config.SISO_LOG_MAX;
 
 class SISOStream {
   constructor() {
@@ -318,8 +324,8 @@ const { JaaStore } = require('./jaa-store.js');
 
 // ── config ────────────────────────────────────────────────────────────────────
 
-const HTTP_PORT     = process.env.GUARDIAN_HTTP_PORT  || 7820;
-const ORCH_PORT     = process.env.ORCHESTRATOR_PORT   || 9000;
+const HTTP_PORT     = config.HTTP_PORT;
+const ORCH_PORT     = config.ORCH_PORT;
 
 // nexus-connect: unified cross-system I/O with §1.2 gating
 const nc = (() => { try { return require('../nexus-connect'); } catch(_) { return null; } })();
@@ -329,8 +335,8 @@ function _postLedger(system, type, payload) {
 function _postEvent(type, payload, opts) {
   if (nc) nc.postEvent(type, payload, opts).catch(() => {});
 }
-const DROPZONE_PORT = process.env.GUARDIAN_DROPZONE_PORT || 7822;
-const NEXUS_URL     = process.env.NEXUS_URL || 'http://127.0.0.1:3748';
+const DROPZONE_PORT = config.DROPZONE_PORT;
+const NEXUS_URL     = config.NEXUS_URL;
 
 // ── RAID routing seam ─────────────────────────────────────────────────────────
 // Guardian asks cortex's RAID which provider for this intent before dispatch.
@@ -472,7 +478,7 @@ async function _dispatchToMistral(job) {
 
 const jobs = new Map();
 const responseLog = [];
-const LOG_MAX = 200;
+const LOG_MAX = config.RESPONSE_LOG_MAX;
 
 function logResponse(entry) {
   responseLog.push({ ...entry, ts: Date.now() });
@@ -1760,7 +1766,7 @@ bus.emit = function(type, data) {
 //  found in this file to migrate safely. Flagged, not silently skipped.
 // ══════════════════════════════════════════════════════════════════════════════
 
-const CORTEX_STORE_DIR = process.env.MEMORY_STORE_DIR || path.join(__dirname, '..', 'data', 'cortex', 'memory');
+const CORTEX_STORE_DIR = config.CORTEX_STORE_DIR;
 const STORE_DIR = CORTEX_STORE_DIR; // kept as STORE_DIR — referenced elsewhere in this file
 const jaa = new JaaStore(STORE_DIR, { tablePrefix: 'guardian_' });
 // Ensure guardian-specific tables exist on first run
