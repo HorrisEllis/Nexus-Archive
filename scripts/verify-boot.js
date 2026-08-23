@@ -45,7 +45,7 @@ const PROBE_MS = 2000;
 // Real services and their real ports. Only services that own an HTTP
 // port belong here — a library has no boot to verify.
 const SERVICES = [
-  { name: 'orchestrator', entry: 'orchestrator.js',      port: 9000 },
+  { name: 'orchestrator', entry: 'orchestrator/orchestrator.js',      port: 9000 },
   { name: 'cortex',       entry: 'cortex/boot.js',       port: 3748 },
   { name: 'copilot',      entry: 'copilot/server.js',    port: 3750 },
   { name: 'guardian',     entry: 'guardian/server.js',   port: 7820 },

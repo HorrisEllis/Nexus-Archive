@@ -202,7 +202,7 @@ const ALL_KERNELS = [
   //   Phase 3: the app layer — everything that registers and serves
   //   Phase 4: emerge — reports to copilot:3750, so copilot must be up
   //   clear-glass: onDemand, unchanged — no phase, dormant until requested
-  { name: 'orchestrator', cmd: 'node', args: ['orchestrator.js'], env: { NEXUS_SUPERVISED: '1' },
+  { name: 'orchestrator', cmd: 'node', args: ['orchestrator/orchestrator.js'], env: { NEXUS_SUPERVISED: '1' },
     critical: true, phase: 2, healthUrl: 'http://127.0.0.1:9000/health' },
   // §FIX 2026-06-20: bridge/server.js only exports createBridgeServer() — it
   // has no bootstrap code and never calls .start(), so running it directly

@@ -213,6 +213,52 @@ async function main() {
     assert.strictEqual(capturedExecuteBody.payload, 'https://real-url.example.com/jobs/123', 'must be a real, raw substituted string, not a nested object');
   });
 
+  // ── §BOOKMARK-RESTORE 2026-08-23 — James: "map bookmarks/clear-glass
+  // snapshots to a command/tool. like open any url in the last state it
+  // was in." Real tests against the actual openBookmark logic, with a
+  // dedicated real mock matching engine.js's own confirmed real shape
+  // (GET /rewind/:agentId -> {snapshots:[...]}, each snapshot's own id
+  // field is literally "id", restore looks up by s.id === snapshotId) —
+  // not the simplified shared mockRewind above, which doesn't have
+  // enough shape for this. ───────────────────────────────────────────
+  await test('openBookmark finds the real, most recent matching snapshot and restores it', async () => {
+    let restoreBody = null;
+    const snapshots = [
+      { id: 'old-1', label: 'bookmark:job-app', url: 'https://jobs.example.com/apply/1', ts: 1000 },
+      { id: 'new-1', label: 'bookmark:job-app', url: 'https://jobs.example.com/apply/1?step=2', ts: 5000 },
+      { id: 'other-1', label: 'bookmark:different', url: 'https://x', ts: 9000 },
+    ];
+    const dedicatedMockRewind = {
+      execute: async ({ action, agentId, snapshotId }) => {
+        if (action === 'list') return { snapshots };
+        if (action === 'restore') { restoreBody = { agentId, snapshotId }; return { ok: true, result: { restored: true } }; }
+        return { error: `unexpected action ${action}` };
+      },
+    };
+    const rewindPath2 = require('path').resolve(__dirname, '../../lib/agent-tools/tools/sandbox/rewind-replay.js');
+    require.cache[rewindPath2] = { id: rewindPath2, filename: rewindPath2, loaded: true, exports: dedicatedMockRewind };
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+
+    const r = await macroFresh.execute({ action: 'openBookmark', agentId: 'tab-9', label: 'job-app' });
+    assert.strictEqual(r.ok, true, `expected success, got ${JSON.stringify(r)}`);
+    assert.strictEqual(r.snapshotId, 'new-1', 'must pick the MOST RECENT match (ts:5000), not the oldest (ts:1000)');
+    assert.strictEqual(r.url, 'https://jobs.example.com/apply/1?step=2');
+    assert.strictEqual(restoreBody.snapshotId, 'new-1', 'restore() must actually be called with the real, chosen snapshot id');
+    assert.strictEqual(restoreBody.agentId, 'tab-9');
+  });
+
+  await test('openBookmark fails loud, real error, when no snapshot matches the label', async () => {
+    const dedicatedMockRewind = { execute: async ({ action }) => (action === 'list' ? { snapshots: [] } : { error: 'should not reach restore' }) };
+    const rewindPath2 = require('path').resolve(__dirname, '../../lib/agent-tools/tools/sandbox/rewind-replay.js');
+    require.cache[rewindPath2] = { id: rewindPath2, filename: rewindPath2, loaded: true, exports: dedicatedMockRewind };
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+
+    const r = await macroFresh.execute({ action: 'openBookmark', agentId: 'tab-9', label: 'never-bookmarked' });
+    assert.ok(r.error && r.error.includes('no bookmark named'));
+  });
+
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed ? 1 : 0);
 }

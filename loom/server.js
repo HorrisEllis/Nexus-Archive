@@ -122,7 +122,16 @@ function _broadcast(type, payload) {
 
 function json(res, code, body) {
   const s = JSON.stringify(body);
-  res.writeHead(code, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(s) });
+  // §BUGFIX 2026-08-23 — James, live, from a real screenshot: CORS
+  // blocks on both /contract AND /health for loom specifically — this
+  // file's shared json() helper had zero CORS handling anywhere,
+  // confirmed by grep before touching it (unlike cortex/architect/
+  // bridge, which each had CORS elsewhere but missed it on one raw-
+  // writeHead route, loom was missing it everywhere at once, since
+  // every route here funnels through this one function). Fixed once,
+  // here, rather than patched per-route — every real caller of json()
+  // in this file gets it for free now.
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(s), 'Access-Control-Allow-Origin': '*' });
   res.end(s);
 }
 

@@ -276,7 +276,7 @@ function loadContracts(rootDir) {
     guardian:     path.join(rootDir, 'guardian/interaction-contract.json'),
     cortex:       path.join(rootDir, 'cortex/interaction-contract.json'),
     idearium:     path.join(rootDir, 'idearium/interaction-contract.json'),
-    orchestrator: path.join(rootDir, 'orchestrator-contract.json'),
+    orchestrator: path.join(rootDir, 'orchestrator', 'orchestrator-contract.json'),
   };
   const contracts = {};
   for (const [sys, p] of Object.entries(PATHS)) {

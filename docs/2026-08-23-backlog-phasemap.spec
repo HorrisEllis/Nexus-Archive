@@ -141,14 +141,32 @@ spec:
     #         copilot, ollama, agent, clear-glass
 
     BL7_emerge_files_to_emerge_folder:
-      status: "OPEN. James: \"these moved to /emerge: emerge.spec,
-        emerge-codegen-v2.js, emerge-ide.js, emerge-kernel.js.\" Real,
-        scoped file-move — needs every real consumer of each file's
-        CURRENT path traced and updated (require() paths, loom map
-        entries, any CLI/config references) before moving, not moved
-        blind. emerge-ide.js in particular was directly edited this
-        session (ollama.DEFAULT_MODEL wiring, commit 4fe7f12) — its real,
-        current consumers need checking first."
+      status: "✓ DONE — commit (this session, 2026-08-23). All 4 real
+        files moved with git mv, preserving history. Real consumer
+        trace found the surface was larger than initially scoped: 3
+        real, broken relative requires inside emerge-ide.js itself
+        (./emerge/siso, ./ollama-runtime, ./emerge/registry-components
+        — all relative to the OLD root location), fixed. Two real,
+        executable external consumers updated: cli/boot-systems.js's
+        real spawn cmd, contracts/SYSTEM-CONTRACTS.js's bootFile
+        metadata (confirmed zero real programmatic readers of this
+        field anywhere — dead metadata, updated for accuracy anyway).
+        tests/kernel.test.js's 3 real path.resolve calls and
+        cli/diagnose.js's whole diagEmerge() block (9 real path
+        strings across file-existence/syntax/live checks) both updated.
+        emerge-kernel.js itself needed no changes (only Node builtins).
+        emerge-codegen-v2.js's two require()-shaped strings turned out
+        to be code-GENERATION templates for its own output files, not
+        its own imports — correctly left untouched.
+        Verified live, not just via node --check: actually booted
+        emerge-ide.js from its new location — real output confirmed
+        codegen loaded, emerge.spec parsed (569 keywords, 7 axioms,
+        matching the pre-move real content exactly), and even
+        confirmed the earlier ollama.DEFAULT_MODEL wiring (commit
+        4fe7f12) still resolves correctly through the fixed
+        ../ollama-runtime require. Full regression: tests/kernel.test.js
+        101/102 (the one failure, real .eg files in emerge/io,
+        confirmed identical via git stash — pre-existing, unrelated)."
       depends_on: []
       does: >
         Consolidates the emerge system's real files into its own real
@@ -201,15 +219,67 @@ spec:
         Resolves two named files with no confirmed real location yet.
 
     BL11_orchestrator_folder_consolidation:
-      status: "OPEN. James: \"I want orchestrator in the orchestrator
-        folder: orchestrator.config.json, orchestrator.js,
-        orchestrator-contract.json.\" orchestrator.js is one of this
-        codebase's most heavily-depended-on files (confirmed this session
-        alone: cli/nexus.js's SYSTEMS table, multiple real tool files) —
-        real work here is the same discipline as the cortex/boot.js route
-        migration earlier this session: trace every real require/import of
-        the root-level path before moving anything, move with the
-        consumers updated in the same commit, not after."
+      status: "✓ DONE — commit (this session, 2026-08-23). The largest,
+        highest-risk real move in this whole backlog — genuinely bigger
+        than any other move phase, confirmed by evidence not assumed:
+        76 real relative requires inside orchestrator.js itself, plus
+        real consumers across 12 other files. Two real, systemic bugs
+        found and fixed, not just individual broken paths:
+        (1) ~20 of those 76 requires were already './orchestrator/lib/...'
+        — correctly pointing at orchestrator's own existing lib subfolder
+        from the OLD root location. A naive blanket '../' prefix would
+        have double-broken those. Used a precise two-step transform
+        (blanket '../', then fix the orchestrator/lib over-corrections
+        back to './lib/') — every one of the 76 verified by direct
+        inspection, both categories correctly distinguished.
+        (2) ROOT was `__dirname`, used in 19 real places throughout the
+        file AS IF it meant repo root (path.join(ROOT,'ui'),
+        path.join(ROOT,'cli','nexus-repl.js'), etc.) — true only because
+        the file used to sit at repo root. Fixed once at the real source
+        (ROOT = path.join(__dirname, '..')) rather than touching 19
+        call sites individually.
+        A real miss caught by actually booting the file, not by
+        node --check alone: require.resolve('./auth/index') — a
+        DIFFERENT call signature (require.resolve, not require) that the
+        regex-based transform's own pattern didn't match, since
+        'require.resolve(' doesn't contain 'require(' as an immediate
+        prefix. Found from the real boot log's own
+        '[orch] auth module unavailable' error, fixed, reverified live.
+        12 real external consumer files updated: autopilot.js's real
+        boot spawn, cli/diagnose.js (6 references), scripts/verify-boot.js,
+        scripts/verify-wires.js, service/nexus-diagnostic.js's real
+        syntax-check list, lib/system-check.js, lib/file-integrity.js
+        (both the file path and the sibling orchestrator-contract.json
+        path), lib/uid/component-map.js, contracts/SYSTEM-CONTRACTS.js,
+        lib/nexus-config.js (the real, canonical single-read-path for
+        orchestrator.config.json), intelligence/cfr/contract-verifier.js.
+        Deliberately left untouched, with reasons: clear-glass/
+        fix-orchestrator.js (explicitly historical, documents a real
+        past incident — not retroactively rewritten per §0.3), loom/
+        data/registry.json and MANIFEST.json (confirmed zero real
+        programmatic consumers — static artifacts, not live code paths).
+        4 real test files also fixed (test-health-authority.js,
+        healer.test.js, tests/nexus-full-audit.js,
+        tests/diagnostic-fixes.test.js) — one reference in
+        diagnostic-fixes.test.js checked and correctly left alone: a
+        substring match (.includes('orchestrator.js')) that still holds
+        true against the new 'orchestrator/orchestrator.js' path,
+        verified directly rather than assumed.
+        Verified live, not just via node --check (§17.10): booted
+        orchestrator.js from its new location as a real process,
+        confirmed the real HTTP server bound on :9000, the real ledger
+        directory resolved correctly (proving the ROOT fix works),
+        every real UI-hotswap watcher resolved to its correct real
+        folder (cortex/ui, idearium/ui, orchestrator/ui, etc. — all via
+        the same ROOT fix), and the real /health endpoint correctly
+        reported all 12 real systems. Ran cli/diagnose.js orchestrator
+        directly: 8/8 real checks passing at the new location. Full
+        regression: tests/nexus-full-audit.js 99 pass/39 fail — confirmed
+        IDENTICAL before and after via git stash, pre-existing and
+        unrelated; healer.test.js's real crash (missing cortex/healer/
+        index.js) and diagnostic-fixes.test.js's 3 failures (self-heal
+        apply_disabled) both confirmed pre-existing and unrelated the
+        same way."
       depends_on: []
       does: >
         orchestrator's own real files stop being the one system living at
@@ -266,11 +336,27 @@ spec:
         wherever it currently sits.
 
     BL14_seam_to_lib_seam:
-      status: "OPEN. James: \"consolidate or move \\seam into: lib\\seam.\"
-        Real, scoped move — same real discipline as every move phase
-        above: trace every real require('../seam/...')-style path across
-        the codebase before relocating, update every one in the same
-        change."
+      status: "✓ DONE — checked directly, 2026-08-23, no real move to make.
+        No top-level seam/ folder exists anywhere in this checkout — grepped and
+        confirmed directly, not assumed absent. lib/seam/ already exists
+        with substantial, real content (10+ files: axioms.js, gates.js,
+        detector.js, build-contract.js, chunk-lifecycle.js, and more).
+        The only other real seam-named location is clear-glass/seam/ —
+        checked its real content before assuming it was the intended
+        target: 2 files, zero filename overlap with lib/seam/.
+        registry-components.js there matches the SAME established
+        per-system pattern every other system already follows (BL13's
+        own finding) — moving it would BREAK that convention, not fix
+        anything. watchdog-gates.js is genuinely clear-glass-specific,
+        real, and already correctly tested at its current path
+        (clear-glass/test/watchdog.test.js's own real require).
+        Moving either into lib/seam/ would be architecturally wrong,
+        not a real consolidation — mixing clear-glass-specific test-
+        support code into shared library code, and duplicating the
+        per-system registry pattern elsewhere. No real work done here
+        because none was correctly scoped to do — likely already
+        resolved before this checkout, or referring to a path real on
+        James's own live machine but not present in this snapshot."
       depends_on: []
       does: >
         SEAM's real code lives under lib/ alongside the rest of this

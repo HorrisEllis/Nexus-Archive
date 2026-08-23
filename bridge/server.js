@@ -337,7 +337,11 @@ function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
         const fs = require('fs'), path = require('path');
         try {
           const c = fs.readFileSync(path.join(__dirname, '..', 'interaction-contract.json'), 'utf8');
-          res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(c);
+          // §BUGFIX 2026-08-23 — same real gap as cortex's and architect's
+          // own /contract routes (same session, live, from a real
+          // screenshot): raw res.writeHead bypassing this file's own
+          // real, CORS-enabled json() helper used correctly at line 69.
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(c);
         } catch(e) { res.writeHead(500); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
         return;
       }

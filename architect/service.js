@@ -278,7 +278,11 @@ async function boot() {
       const fs = require('fs'), path = require('path');
       try {
         const c = fs.readFileSync(path.join(__dirname, 'interaction-contract.json'), 'utf8');
-        res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(c);
+        // §BUGFIX 2026-08-23 — same real gap as cortex/boot.js's /contract
+        // (found the same session, live, from a real screenshot): raw
+        // res.writeHead bypassing this file's own CORS-enabled pattern
+        // used on every other route here.
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(c);
       } catch(e) { res.writeHead(500); res.end(JSON.stringify({ ok:false, error:'contract missing' })); }
       return;
     }

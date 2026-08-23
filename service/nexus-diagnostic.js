@@ -784,7 +784,7 @@ function startService() {
       remediationScan._lastSyntax = Date.now();
       const { spawnSync } = require('child_process');
       const criticalFiles = [
-        'orchestrator.js', 'lib/ncp.js', 'lib/request-handler.js',
+        'orchestrator/orchestrator.js', 'lib/ncp.js', 'lib/request-handler.js',
         'cortex/boot.js', 'guardian/server.js', 'lib/intent-classifier.js',
       ];
       for (const file of criticalFiles) {

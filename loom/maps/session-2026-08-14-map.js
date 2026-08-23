@@ -68,6 +68,10 @@ const FILES = [
   ['cortex/memory/jaa-db.js',    'nexus.cortex.jaa-db',           'cortex/memory', []],
   ['bridge/causal/graph.js', 'nexus.bridge.causal.graph', 'bridge/causal', ['nexus.intelligence.cfr.graph']],
   ['bridge/index.js', 'nexus.bridge.index', 'bridge', ['nexus.intelligence.cfr']],
+  // §2026-08-23 — the real HTTP server bridge/index.js wires in at boot
+  // (createBridgeServer, Phase 5) — found genuinely unregistered while
+  // fixing a real CORS bug in it.
+  ['bridge/server.js', 'nexus.bridge.server', 'bridge', ['nexus.bridge.index']],
   ['bridge/causal/expectation.js', 'nexus.bridge.causal.expectation', 'bridge/causal', ['nexus.intelligence.causal']],
   ['bridge/causal/projections.js', 'nexus.bridge.causal.projections', 'bridge/causal', ['nexus.intelligence.causal']],
   ['cortex/memory/causal-lookup.js', 'nexus.cortex.memory.causal-lookup', 'cortex/memory', ['nexus.intelligence.cfr.graph']],

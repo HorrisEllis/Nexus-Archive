@@ -128,6 +128,13 @@ const FILES = [
   ['lib/hat-seed-ollama-personalities.js',             'nexus.lib.hat-seed-ollama-personalities',
     ['nexus.lib.hat-forge', 'nexus.ollama.abliterated-catalog']],
 
+  // §2026-08-23 — found genuinely unregistered by precommit while fixing
+  // real orchestrator.js/orchestrator-contract.json path references
+  // inside these files during BL11's move.
+  ['lib/nexus-config.js', 'nexus.lib.nexus-config', []],
+  ['lib/file-integrity.js', 'nexus.lib.file-integrity', []],
+  ['lib/system-check.js', 'nexus.lib.system-check', ['nexus.lib.gap-field']],
+
   // §2026-08-23 — found genuinely unregistered by precommit while
   // amending BL12's move of service/nexus-heal-loop.js (which this file
   // documents as a real, correct consumer of). No real internal

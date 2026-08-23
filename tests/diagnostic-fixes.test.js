@@ -19,8 +19,8 @@ console.log('\n⬡  DIAGNOSTIC FIXES — Tests\n');
 
 // Fix 1: spec-drift
 test('F1: orchestrator uses nexusBus not _bus for spec-drift', () =>
-  read('orchestrator.js').includes('bus: nexusBus') &&
-  !read('orchestrator.js').includes('bus: _bus'));
+  read('orchestrator/orchestrator.js').includes('bus: nexusBus') &&
+  !read('orchestrator/orchestrator.js').includes('bus: _bus'));
 
 // Fix 2: idearium contract path
 test('F2: idearium contract path is ./schemas not ../schemas', () =>
@@ -69,7 +69,7 @@ test('F6: syntax check on critical files', () =>
 
 // Syntax checks
 const { spawnSync } = require('child_process');
-const files = ['orchestrator.js','idearium/index.js','cortex/self-heal/index.js',
+const files = ['orchestrator/orchestrator.js','idearium/index.js','cortex/self-heal/index.js',
   'architect/service.js','cli/boot-systems.js','service/nexus-diagnostic.js'];
 for (const f of files) {
   test(`SYNTAX: ${f}`, () =>

@@ -366,7 +366,13 @@ const server = http.createServer(async (req, res) => {
   if (p === '/contract' && method === 'GET') {
     try {
       const c = require('fs').readFileSync(require('path').join(__dirname, 'interaction-contract.json'), 'utf8');
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      // §BUGFIX 2026-08-23 — James, live, from a real screenshot: CORS
+      // blocks in co-pilot's own devtools console. Root cause found by
+      // reading the actual handler, not guessed: this raw res.writeHead
+      // bypassed the file's own real, CORS-enabled json() helper (used
+      // correctly everywhere else in this file) — a real, silent gap in
+      // this one route only.
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
       res.end(c);
     } catch(e) {
       json(res, 500, { ok: false, error: 'interaction-contract.json missing' });

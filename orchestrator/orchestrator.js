@@ -107,27 +107,27 @@ const http   = require('http');
 const fs     = require('fs');
 const path   = require('path');
 const { URL } = require('url');
-const { buildIntentMap } = require('./orchestrator/lib/intent-map');  // Gap 2: intent-map endpoint
+const { buildIntentMap } = require('./lib/intent-map');  // Gap 2: intent-map endpoint
 
 // ── Hoist all dynamic requires — fixes ReferenceError in ESM-adjacent contexts ──
 // These were previously inside server.listen callback and cli functions.
 // §3.1 load order is law — all imports declared before any logic runs.
 let BootSequence, _bootSystems, createCFRLedger, spawnChild;
-try { ({ BootSequence } = require('./lib/boot-sequence')); } catch(e) { console.warn('[orchestrator] boot-sequence not found:', e.message); BootSequence = null; }
-try { ({ _bootSystems } = require('./cli/boot-systems')); } catch(e) { console.warn('[orchestrator] boot-systems not found:', e.message); _bootSystems = null; }
+try { ({ BootSequence } = require('../lib/boot-sequence')); } catch(e) { console.warn('[orchestrator] boot-sequence not found:', e.message); BootSequence = null; }
+try { ({ _bootSystems } = require('../cli/boot-systems')); } catch(e) { console.warn('[orchestrator] boot-systems not found:', e.message); _bootSystems = null; }
 // §CFR-WIRE-01: orchestrator now runs the CFR-Ω ledger (sigma/delta/field on
 // every ledgerWrite) instead of the plain event-ledger. ledgerWrite() below is
 // already the single funnel point, so this is a drop-in swap — same .record()/
 // .open()/.startAutoSave()/.getAllBaselines()/.getAllStats()/.scanInvariants()
 // surface, plus .handleCFRRoute() for the /cfr/* debugger routes mounted below.
-try { ({ createCFRLedger } = require('./intelligence/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
+try { ({ createCFRLedger } = require('../intelligence/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
-const nexusBus       = (() => { try { return require('./nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
-const nexusQuery     = (() => { try { return require('./nexus-query');         } catch(e) { return null; } })();
-const nexusKnowledge = (() => { try { return require('./nexus-knowledge');     } catch(e) { return null; } })();
-const nexusCFR       = (() => { try { return require('./nexus-cfr-influence'); } catch(e) { return null; } })();
-const nexusHealLoop  = (() => { try { return require('./service/nexus-heal-loop');     } catch(e) { return null; } })();
+const nexusBus       = (() => { try { return require('../nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
+const nexusQuery     = (() => { try { return require('../nexus-query');         } catch(e) { return null; } })();
+const nexusKnowledge = (() => { try { return require('../nexus-knowledge');     } catch(e) { return null; } })();
+const nexusCFR       = (() => { try { return require('../nexus-cfr-influence'); } catch(e) { return null; } })();
+const nexusHealLoop  = (() => { try { return require('../service/nexus-heal-loop');     } catch(e) { return null; } })();
 try { ({ spawn: spawnChild } = require('child_process')); } catch(e) { spawnChild = null; }
 
 const PORT    = parseInt(process.env.ORCHESTRATOR_PORT || '9000');
@@ -136,13 +136,22 @@ const PORT    = parseInt(process.env.ORCHESTRATOR_PORT || '9000');
 // lib/pulse.js is optional — if it doesn't exist yet, pulse is a no-op.
 let _orchPulse = null;
 try {
-  const { createPulse } = require('./orchestrator/lib/pulse');
+  const { createPulse } = require('./lib/pulse');
   // Pulse is started after server binds (in server.listen callback)
   module._createPulse = createPulse;
 } catch(_) {
   console.warn('[orchestrator] lib/pulse.js not found — heartbeat self-registration disabled');
 }
-const ROOT    = __dirname;
+// §BUGFIX 2026-08-23 — ROOT was __dirname, correct only because
+// orchestrator.js sat at repo root. Used in 19 real places throughout
+// this file (path.join(ROOT, 'ui'), path.join(ROOT, 'cli', ...), etc.)
+// as if it meant "the repo root," not "wherever this file lives" — the
+// two were the same thing before this file moved into orchestrator/,
+// and would have silently diverged for every one of those 19 real call
+// sites otherwise. Single-point fix rather than patching each call site
+// individually: ROOT now explicitly means repo root, correct regardless
+// of which folder this file itself lives in.
+const ROOT    = path.join(__dirname, '..');
 const UI_ROOT = path.join(ROOT, 'ui');
 
 // ── System registry ───────────────────────────────────────────────────────────
@@ -527,8 +536,8 @@ function startWatchdog() {
 function _startSubscriptionPublisher() {
   try {
     if (!nexusBus) { console.warn('[orc] §B1 subscription publisher skipped — no nexus-bus in this process'); return; }
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    require('./lib/bus-subscriptions').publishPeriodically({
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    require('../lib/bus-subscriptions').publishPeriodically({
       systemId: 'orchestrator', bus: nexusBus, jaa: jaaDB, intervalMs: 10000,
     });
     console.log('[orc] bus subscriptions publishing to the shared store (§B1)');
@@ -545,7 +554,7 @@ function _startSubscriptionPublisher() {
 // ── Contract poller — meta-system watches all system input/output folders ────────
 // comp_id: nexus.lib.contract-poller / lib/contract-poller.js
 try {
-  const contractPoller = require('./orchestrator/lib/contract-poller');
+  const contractPoller = require('./lib/contract-poller');
   contractPoller.start();
   console.log('[orchestrator] contract-poller started');
 } catch(e) { console.warn('[orchestrator] contract-poller not available:', e.message); }
@@ -809,7 +818,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     const cseg = u.pathname.split('/').filter(Boolean); // ['api','components', id, 'properties']
     const compId = cseg[2];
     let mutationContract;
-    try { mutationContract = require('./orchestrator/lib/mutation-contract'); }
+    try { mutationContract = require('./lib/mutation-contract'); }
     catch(e) { return json(res,503,{ok:false,error:'mutation-contract not loaded: '+e.message}); }
     const body = await readBody(req);
     if (!body || !body.field) return json(res,400,{ok:false,error:'body.field is required, e.g. "comp_properties.style.color"'});
@@ -818,7 +827,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   }
   if (u.pathname.startsWith('/api/notes')) {
     let quickNotes;
-    try { quickNotes = require('./orchestrator/lib/quick-notes'); }
+    try { quickNotes = require('./lib/quick-notes'); }
     catch(e) { return json(res,503,{ok:false,error:'quick-notes not loaded: '+e.message}); }
     const nseg = u.pathname.split('/').filter(Boolean); // ['api','notes', uuid?]
     const nuuid = nseg[2];
@@ -843,7 +852,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // create a second instance.
   if (u.pathname.startsWith('/api/components')) {
     let compReg;
-    try { compReg = require('./lib/component-registry'); }
+    try { compReg = require('../lib/component-registry'); }
     catch(e) { return json(res,503,{ok:false,error:'component-registry not loaded: '+e.message}); }
     const cseg = u.pathname.split('/').filter(Boolean); // ['api','components', sub?, rest?]
     const csub = cseg[2], crest = cseg[3];
@@ -859,12 +868,12 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   if (u.pathname === '/api/capabilities' || u.pathname === '/api/capabilities/prompt' || u.pathname === '/api/capabilities/resolve') {
     let compReg, capReg;
     try {
-      compReg = require('./lib/component-registry');
-      capReg  = require('./lib/capability-registry');
+      compReg = require('../lib/component-registry');
+      capReg  = require('../lib/capability-registry');
       capReg.init(compReg);
     } catch(e) { return json(res,503,{ok:false,error:'capability-registry not loaded: '+e.message}); }
     if (u.pathname === '/api/capabilities/prompt') {
-      const fixed = (() => { try { return require('./clear-glass/src/copilot/tools').TOOLS; } catch { return []; } })();
+      const fixed = (() => { try { return require('../clear-glass/src/copilot/tools').TOOLS; } catch { return []; } })();
       res.writeHead(200, { 'Content-Type':'text/plain' });
       return res.end(capReg.buildToolsPrompt(fixed));
     }
@@ -903,7 +912,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // ── /api/contract — Unified Interaction Contract ──────────────────────────
   if (u.pathname === '/api/contract' && M === 'GET') {
     try {
-      const { getVersionedContract } = require('./contracts/nexus-interaction-contract');
+      const { getVersionedContract } = require('../contracts/nexus-interaction-contract');
       const version = u.searchParams?.get('version') || null;
       const contract = getVersionedContract(version);
       if (!contract) return json(res, 404, { ok:false, error:`contract version not found: ${version}` });
@@ -912,11 +921,11 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   }
   if (u.pathname.startsWith('/api/contract/') && M === 'GET') {
     try {
-      const { getVersionedContract } = require('./contracts/nexus-interaction-contract');
+      const { getVersionedContract } = require('../contracts/nexus-interaction-contract');
       const seg = u.pathname.split('/');
       const system = seg[3];
       if (system === 'snapshots') {
-        const { listSnapshots } = require('./contracts/nexus-interaction-contract');
+        const { listSnapshots } = require('../contracts/nexus-interaction-contract');
         return json(res, 200, { ok:true, snapshots: listSnapshots() });
       }
       const contract = getVersionedContract();
@@ -927,7 +936,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   }
   if (u.pathname === '/api/contract/validate' && M === 'POST') {
     try {
-      const { validateRequestAt, getVersionedContract } = require('./contracts/nexus-interaction-contract');
+      const { validateRequestAt, getVersionedContract } = require('../contracts/nexus-interaction-contract');
       const body = await readBody(req);
       // Use snapshot-bound validation — deterministic
       const current = getVersionedContract();
@@ -1007,7 +1016,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
 
   if (M==='GET' && sub==='manifest') {
     try {
-      const { buildManifest, buildAllManifests } = require('./lib/system-manifest');
+      const { buildManifest, buildAllManifests } = require('../lib/system-manifest');
       const which = seg[2];
       if (which) return json(res, 200, { ok:true, manifest: buildManifest(which) });
       return json(res, 200, { ok:true, manifests: buildAllManifests() });
@@ -1054,7 +1063,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // there's nothing to pass here.
     if (Array.isArray(body.components) && body.components.length) {
       try {
-        const reg = require('./lib/component-registry');
+        const reg = require('../lib/component-registry');
         reg.onSystemRegister(systemId, body.components);
       } catch(e) {
         console.warn('[component-registry] auto-register failed:', e.message);
@@ -1066,8 +1075,8 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // Skip self-verification: orchestrator knows its own contract without HTTP round-trip
     if (systemId === 'orchestrator') {
       try {
-        const hs = require('./orchestrator/lib/contract-handshake');
-        const { getVersionedContract } = require('./contracts/nexus-interaction-contract');
+        const hs = require('./lib/contract-handshake');
+        const { getVersionedContract } = require('../contracts/nexus-interaction-contract');
         const full = getVersionedContract();
         const orchContract = full?.systems?.orchestrator || full;
         const crypto = require('crypto');
@@ -1082,7 +1091,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // have finished binding its HTTP server yet (especially on Windows)
     setTimeout(async () => {
       try {
-        const hs = require('./orchestrator/lib/contract-handshake');
+        const hs = require('./lib/contract-handshake');
         const entry = await hs.verifySystem(systemId, '127.0.0.1', port, {
           jaaInsert: null, // cortex not guaranteed up during early boot
           onResult: (e) => {
@@ -1111,7 +1120,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // GET  /api/peer/list      — all known peers
   // GET  /api/remote/:peerId/* — proxy a request to a remote peer's system
   if (top === 'api' && sub === 'peer') {
-    const relay = require('./orchestrator/lib/peer-relay');
+    const relay = require('./lib/peer-relay');
     if (M === 'POST' && rest === 'announce') {
       const body = await readBody(req);
       const result = await relay.handleAnnounce(body, {
@@ -1135,7 +1144,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
 
   // ── Remote proxy — /api/remote/:peerId/* → remote orchestrator ────────────
   if (top === 'api' && sub === 'remote' && rest) {
-    const relay  = require('./orchestrator/lib/peer-relay');
+    const relay  = require('./lib/peer-relay');
     const parts  = u.pathname.split('/').filter(Boolean);
     // parts: ['api', 'remote', ':peerId', ...rest]
     const peerId     = parts[2];
@@ -1149,7 +1158,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // POST /api/push/peer/:peerId — push file to a connected remote peer
   // GET  /api/push/routes       — list all file type routes
   if (top === 'api' && sub === 'push') {
-    const filePush = require('./orchestrator/lib/file-push');
+    const filePush = require('./lib/file-push');
 
     if (M === 'GET' && rest === 'routes') {
       return json(res, 200, { ok: true, routes: filePush.ROUTES });
@@ -1189,7 +1198,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // All watched by fs.watch — changes take effect within 500ms
   if (top === 'auth') {
     let _auth;
-    try { _auth = require('./auth/index'); } catch(e) {
+    try { _auth = require('../auth/index'); } catch(e) {
       return json(res, 503, { ok: false, error: 'auth module unavailable: ' + e.message });
     }
 
@@ -1292,7 +1301,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // GET /api/meta/classify  — ALK perception of current system state
   // GET /api/meta/gaps?text= — run Liminal gap detection on text
   if (top === 'api' && sub === 'meta') {
-    const meta = (() => { try { return require('./meta'); } catch(_) { return null; } })();
+    const meta = (() => { try { return require('../meta'); } catch(_) { return null; } })();
     if (!meta) return json(res, 503, { ok:false, error:'meta layer not loaded' });
 
     if (M === 'GET' && !rest) {
@@ -1357,7 +1366,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // Lists all available AI providers and their strengths
   if (top === 'api' && sub === 'guardian' && rest === 'capabilities') {
     try {
-      const ad = require('./guardian/api-dispatch');
+      const ad = require('../guardian/api-dispatch');
       const caps = ad.capabilities();
       return json(res, 200, { ok:true, providers: caps });
     } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
@@ -1402,14 +1411,14 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // ── Version registry — /api/version ─────────────────────────────────────
   if (top === 'api' && sub === 'version') {
     try {
-      const V = require('./lib/version');
+      const V = require('../lib/version');
       return json(res, 200, { ok:true, ...V, toString: undefined, get: undefined });
     } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
   }
 
   // ── Contract trust map ────────────────────────────────────────────────────
   if (top === 'api' && sub === 'trust') {
-    const hs = require('./orchestrator/lib/contract-handshake');
+    const hs = require('./lib/contract-handshake');
     return json(res, 200, { ok: true, trust: hs.getTrustMap(), all: hs.getAllEntries().map(e => ({
       systemId: e.systemId, trust: e.trust, hash: e.hash, routeCount: e.routeCount,
       checkedAt: e.checkedAt, latencyMs: e.latencyMs, driftReason: e.driftReason,
@@ -1582,7 +1591,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   if (M==='POST' && sub==='request') {
     const body = await readBody(req);
     try {
-      const handler = require('./orchestrator/lib/request-handler');
+      const handler = require('./lib/request-handler');
       const result  = await handler.handle(body, { costCeiling: body.costCeiling });
       return json(res, 200, result);
     } catch(e) {
@@ -1797,7 +1806,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // Blueprint index — live system component/CLI/SEAM map (§BP-01)
     if (M==='POST' && action==='blueprint' && sub2==='index') {
       try {
-        const bi  = require('./lib/blueprint-index');
+        const bi  = require('../lib/blueprint-index');
         const res2 = bi.build({ bus: { emit: (type, data) => broadcast(JSON.stringify({ type, ...data, ts: Date.now() })) } });
         return json(res, 200, { ok: res2.ok, built: res2.ok,
           totalComponents: res2.index?.totalComponents,
@@ -1809,7 +1818,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     }
     if (M==='GET' && action==='blueprint' && sub2==='index') {
       try {
-        const bi = require('./lib/blueprint-index');
+        const bi = require('../lib/blueprint-index');
         const idx = bi.load();
         if (!idx) return json(res, 404, { ok: false, error: 'blueprint-index not built — POST /api/blueprint/index first' });
         return json(res, 200, { ok: true, index: idx });
@@ -1818,7 +1827,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // Blueprint index — per-system component query
     if (M==='GET' && action==='blueprint' && sub2==='systems') {
       try {
-        const bi = require('./lib/blueprint-index');
+        const bi = require('../lib/blueprint-index');
         const idx = bi.load();
         if (!idx) return json(res, 404, { ok:false, error:'not built' });
         return json(res, 200, { ok:true, systems: idx.systems, totalComponents: idx.totalComponents });
@@ -1827,7 +1836,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     // CLI map — grammar lookup endpoint
     if (M==='GET' && action==='blueprint' && sub2==='cli') {
       try {
-        const bi = require('./lib/blueprint-index');
+        const bi = require('../lib/blueprint-index');
         const idx = bi.load();
         if (!idx) return json(res, 404, { ok:false, error:'not built' });
         const q = url.searchParams.get('q') || '';
@@ -2071,13 +2080,13 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
       const { modulePath, src, monitorMs = 60000 } = body || {};
       if (!modulePath) return json(res, 400, { ok:false, error:'modulePath required' });
       try {
-        const hl = require('./orchestrator/lib/hot-loader');
+        const hl = require('./lib/hot-loader');
         if (!hl._inited) {
           // §BUG FIXED 2026-07-06 — was jaaDB: null, same pattern found in
           // autonomous-loop's init just below. This file already imports a
           // real jaaDB correctly elsewhere (see the compReg.init calls) —
           // using that instead of a hardcoded null.
-          const { jaaDB: realJaaDB } = require('./cortex/memory/jaa-db');
+          const { jaaDB: realJaaDB } = require('../cortex/memory/jaa-db');
           hl.init({ bus: nexusBus, jaaDB: realJaaDB }); hl._inited = true;
         }
         const result = await hl.load({ modulePath, src, monitorMs });
@@ -2085,7 +2094,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
       } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
     }
     if (M==='GET' && action==='hot-load' && sub==='status') {
-      try { const hl = require('./orchestrator/lib/hot-loader'); return json(res, 200, { ok:true, ...hl.status() }); }
+      try { const hl = require('./lib/hot-loader'); return json(res, 200, { ok:true, ...hl.status() }); }
       catch(e) { return json(res, 500, { ok:false, error:e.message }); }
     }
 
@@ -2096,7 +2105,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
       if (!goal || !budget || !boundary || !exitCond)
         return json(res, 400, { ok:false, error:'goal, budget, boundary, exit required' });
       try {
-        const al = require('./orchestrator/lib/autonomous-loop');
+        const al = require('./lib/autonomous-loop');
         // §BUG FIXED 2026-07-06 — was jaaDB: null, meaning
         // meta/crystal-lattice.js's _maybeCrystallize() (called via
         // lib/compartment-engine.js's execute() path) always hit its own
@@ -2104,25 +2113,25 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
         // guard, guaranteed, every time this ran. This is the one real
         // trigger for that whole chain — traced directly from the user's
         // "pattern engine migrated to intuition" report two turns back.
-        const { jaaDB: realJaaDB2 } = require('./cortex/memory/jaa-db');
+        const { jaaDB: realJaaDB2 } = require('../cortex/memory/jaa-db');
         al.init({ bus: nexusBus, jaaDB: realJaaDB2, raid: null });
         const result = await al.run({ goal, budget, boundary, exit:exitCond, source:source||'api' });
         return json(res, result.ok ? 200 : 400, result);
       } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
     }
     if (M==='GET' && action==='autonomous' && sub==='status') {
-      try { const al = require('./orchestrator/lib/autonomous-loop'); return json(res, 200, { ok:true, ...al.status() }); }
+      try { const al = require('./lib/autonomous-loop'); return json(res, 200, { ok:true, ...al.status() }); }
       catch(e) { return json(res, 500, { ok:false, error:e.message }); }
     }
 
     // mcp
     if (M==='GET' && action==='mcp' && (!sub || sub==='status')) {
-      try { const mcp = require('./orchestrator/lib/mcp-server'); return json(res, 200, { ok:true, ...mcp.status() }); }
+      try { const mcp = require('./lib/mcp-server'); return json(res, 200, { ok:true, ...mcp.status() }); }
       catch(e) { return json(res, 500, { ok:false, error:e.message }); }
     }
     if (M==='GET' && action==='mcp' && sub==='tools') {
       try {
-        const mcp = require('./orchestrator/lib/mcp-server');
+        const mcp = require('./lib/mcp-server');
         return json(res, 200, { ok:true, tools: mcp.TOOLS.map(t=>({ name:t.name, description:t.description })), total:mcp.TOOLS.length });
       } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
     }
@@ -2469,7 +2478,7 @@ if (nexusBus) {
   // enforcement on over a live bus on day one converts a reporting tool into
   // an outage. Observe first, enforce second.
   try {
-    const { WarpSpine, defaultAxioms } = require('./lib/warp-bus');
+    const { WarpSpine, defaultAxioms } = require('../lib/warp-bus');
     global._warpSpine = new WarpSpine({ bus: nexusBus, name: 'orchestrator', strict: false });
     defaultAxioms(global._warpSpine).attach();
     console.log('[warp-spine] attached to orchestrator bus — 4 axioms, StreamLog mapping active');
@@ -2481,7 +2490,7 @@ if (nexusBus) {
   // it in StreamLog and anything listening (heal-loop, copilot) can react before
   // the machine fast-fails. Sampling is cheap (os counters, no child probing).
   try {
-    const { ResourceMonitor } = require('./lib/resource-monitor');
+    const { ResourceMonitor } = require('../lib/resource-monitor');
     global._resourceMonitor = new ResourceMonitor({ bus: nexusBus, name: 'orchestrator', intervalMs: 10000 }).start();
     console.log('[resource-monitor] sampling every 10s — GET /api/perf');
   } catch (e) {
@@ -2498,7 +2507,7 @@ if (nexusBus) {
   // gap-shaped events only, loop-guarded, deduped.
   if (nexusHealLoop) {
     try {
-      const { GapRelay } = require('./lib/gap-relay');
+      const { GapRelay } = require('../lib/gap-relay');
       const _gapRelay = new GapRelay({
         bus: nexusBus,
         sources: [
@@ -2518,7 +2527,7 @@ if (nexusBus) {
   // autonomous-loop.js sigma halt checks this table — without data it always
   // returns null and logs a degraded-monitoring warning, never halts a run.
   try {
-    const sigmaWriter = require('./orchestrator/lib/sigma-writer');
+    const sigmaWriter = require('./lib/sigma-writer');
     sigmaWriter.init({ compositeIntervalMs: 30000 });
     console.log('[orchestrator] §P106: sigma-writer wired — sigma_records now populates');
   } catch(e) { console.warn('[orchestrator] sigma-writer init failed:', e.message); }
@@ -2528,8 +2537,8 @@ if (nexusBus) {
   // and growing, parsed whole by six processes at every boot, was the
   // measured driver of the OOM/0xC0000409 crashes.
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    require('./orchestrator/lib/sigma-compaction').start(jaaDB);
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    require('./lib/sigma-compaction').start(jaaDB);
   } catch(e) { console.warn('[orchestrator] sigma-compaction init failed:', e.message); }
   console.log('[orchestrator] nexus interconnect: bus+cfr+heal+knowledge+sigma active');
 }
@@ -2545,7 +2554,7 @@ server.listen(PORT, BIND_HOST, async () => {
   // lib/version.js's VERSION.services.orchestrator — the two happened to
   // agree by coincidence, not by construction. Sourcing from the registry
   // means this can't silently drift from it again.
-  const NEXUS_VERSION = require('./lib/version');
+  const NEXUS_VERSION = require('../lib/version');
   const ownSeq = new BootSequence({
     systemId: 'orchestrator', port: PORT, version: NEXUS_VERSION.services.orchestrator,
     label: 'Nexus Orchestrator', maxRetries: 1,
@@ -2615,15 +2624,15 @@ server.listen(PORT, BIND_HOST, async () => {
 // ── Auth module init + hotswap ────────────────────────────────────────────────
 // auth/index.js, auth/policy.json, auth/clients/*.pub all watched live
 try {
-  const _authMod = require('./auth/index');
+  const _authMod = require('../auth/index');
   _authMod.init();
   // Watch auth/index.js itself for hotswap
-  const _authFile = require.resolve('./auth/index');
+  const _authFile = require.resolve('../auth/index');
   fs.watch(_authFile, () => {
     setTimeout(() => {
       try {
         delete require.cache[_authFile];
-        const fresh = require('./auth/index');
+        const fresh = require('../auth/index');
         fresh.init();
         broadcast('orchestrator.auth.hotswapped', { ts: Date.now() });
         console.log('[auth] module hotswapped');
@@ -2649,7 +2658,7 @@ try {
     label:'Open CLI terminal (nexus-repl.js)',
     fn: async () => {
       if (_cliOpened) return; // guard — never open twice
-      const cfgPath = path.join(ROOT, 'orchestrator.config.json');
+      const cfgPath = path.join(ROOT, 'orchestrator', 'orchestrator.config.json');
       let cfg = {};
       try { cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')); } catch (_) {}
       if (cfg.openTerminalOnBoot !== true) return;  // explicit opt-in only
@@ -2660,7 +2669,7 @@ try {
       // import already warned about for a different spot in this same
       // file. require() is cached/idempotent — no cost to sourcing fresh
       // here instead of trusting closure scope across a 2600-line file.
-      const VERSION = require('./lib/version').services.orchestrator;
+      const VERSION = require('../lib/version').services.orchestrator;
       const spawn = spawnChild;
       const cliScript = path.join(ROOT, 'cli', 'nexus-repl.js');
       const args = [cliScript, '--repl', `--port=${PORT}`];
@@ -2690,7 +2699,7 @@ try {
   ownSeq.phase({ name:'nexus.ui.open', type:'SOFT',
     label:'Open NEXUS UI in Clear Glass',
     fn: async () => {
-      const cfgPath = path.join(ROOT, 'orchestrator.config.json');
+      const cfgPath = path.join(ROOT, 'orchestrator', 'orchestrator.config.json');
       let cfg = {};
       try { cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')); } catch (_) {}
       if (cfg.openUIOnBoot === false) return;
@@ -2794,13 +2803,13 @@ try {
   // ── Component Registry + UI Registry init ────────────────────────────────
   // Both are SOFT — failure never blocks orchestrator
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    const compReg = require('./lib/component-registry');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const compReg = require('../lib/component-registry');
     compReg.init(jaaDB, nexusBus);
     console.log('  [component-registry] ' + compReg.list().length + ' components loaded');
     // Auto-build blueprint-index right after registry is ready (§BP-01)
     try {
-      const bi = require('./lib/blueprint-index');
+      const bi = require('../lib/blueprint-index');
       const biR = bi.build({ bus: nexusBus });
       console.log(`  [blueprint-index] ${biR.index?.totalComponents} components indexed across ${biR.index?.systemCount} systems`);
     } catch(be) { console.warn('  [blueprint-index] init skipped:', be.message); }
@@ -2811,8 +2820,8 @@ try {
   // before any CLI/API mutateProperty() call, or it fails loudly by design
   // (see lib/mutation-contract.js's audit-first ordering rationale).
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    const mutationContract = require('./orchestrator/lib/mutation-contract');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const mutationContract = require('./lib/mutation-contract');
     mutationContract.init(jaaDB, nexusBus);
     console.log('  [mutation-contract] ready');
   } catch(e) {
@@ -2821,8 +2830,8 @@ try {
   // Phase 31 remaining gap — misfire streak tracker, escalates to idearium
   // at 3 consecutive low-confidence grammar resolutions of the same pattern.
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    const misfireTracker = require('./orchestrator/lib/grammar-misfire-tracker');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const misfireTracker = require('./lib/grammar-misfire-tracker');
     misfireTracker.init(jaaDB);
     console.log('  [grammar-misfire-tracker] ready');
   } catch(e) {
@@ -2832,8 +2841,8 @@ try {
   // and the already-verified /api/idearium/ideas route (Phase 23.5 lockdown
   // respected — quick-notes never talks to idearium directly).
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    const quickNotes = require('./orchestrator/lib/quick-notes');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const quickNotes = require('./lib/quick-notes');
     quickNotes.init(jaaDB, {
       broadcast: (payload) => broadcast(JSON.stringify(payload)),
       postIdea: (body) => POST('idearium', '/api/ideas', body),
@@ -2850,8 +2859,8 @@ try {
   // plus the two real bus events that do exist for errors/gaps. The lattice's
   // own updates were silent no-ops until today's jaa-store string-where fix.
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    const userModel = require('./copilot/lib/user-model');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const userModel = require('../copilot/lib/user-model');
     userModel.init(jaaDB);
     try { userModel.deriveFromChatLog(100); } catch(e) { console.warn('  [user-model] chat-log derive skipped:', e.message); }
     try {
@@ -2895,8 +2904,8 @@ try {
     console.warn('  [pressure-relay] skipped:', e.message);
   }
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    const uiReg = require('./orchestrator/lib/ui-registry');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const uiReg = require('./lib/ui-registry');
     uiReg.init((type, payload) => {
       broadcast(JSON.stringify({ type, ...payload }));
     }, jaaDB);
@@ -2907,8 +2916,8 @@ try {
   // Spec drift check — opens gaps for any spec/code version mismatch
   // SOFT: drift is a gap, not a crash. Boot continues regardless.
   try {
-    const drift = require('./orchestrator/lib/spec-drift');
-    const { jaaDB } = require('./cortex/memory/jaa-db');
+    const drift = require('./lib/spec-drift');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
     const result = drift.check({ jaaDB, bus: nexusBus });
     const issues = (result.drifted||[]).length + (result.missing||[]).length;
     if (issues > 0) {
@@ -2924,7 +2933,7 @@ try {
   // hand-written prose per change. Idempotent: only writes when something
   // actually changed since last boot's snapshot.
   try {
-    const changelog = require('./orchestrator/lib/changelog');
+    const changelog = require('./lib/changelog');
     const result = changelog.update();
     if (result.written) {
       console.log('  [changelog] ✓  ' + result.entries + ' new entr' + (result.entries===1?'y':'ies') + ' written to CHANGELOG.md');
@@ -2939,7 +2948,7 @@ try {
   // Record own boot to ledger
   // §5.4 fix 2026-08-08 — same drift as the CLI-open spot above: hardcoded
   // '3.0.0' independent of lib/version.js's services.orchestrator.
-  const VERSION = require('./lib/version').services.orchestrator;
+  const VERSION = require('../lib/version').services.orchestrator;
   ledgerWrite('orchestrator','orchestrator.booted',{ version:VERSION, port:PORT });
   startWatchdog();
 

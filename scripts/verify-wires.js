@@ -30,7 +30,7 @@ const ROOT = path.join(__dirname, '..');
 const SURFACE_FILES = {
   guardian:     ['guardian/server.js'],
   cortex:       ['cortex/boot.js'],
-  orchestrator: ['orchestrator.js'],
+  orchestrator: ['orchestrator/orchestrator.js'],
   idearium:     ['idearium/api/index.js'],
   copilot:      ['copilot/server.js'],
   architect:    ['architect/service.js'],

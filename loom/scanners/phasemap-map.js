@@ -97,8 +97,23 @@ function loadAll() {
                    : /IN PROGRESS|STARTED|\bpartial\b/i.test(near) ? 'in-progress'
                    : 'pending';
 
-      // gather a few lines of the phase body for system tagging.
-      const body = lines.slice(i, i + 8).join(' ');
+      // gather the phase's REAL full body for system tagging + depends_on —
+      // §BUGFIX 2026-08-23, found while asking "what's next" against a
+      // real phasemap whose status: blocks run well past 8 lines (this
+      // session's own evidence-heavy documentation style, not unusual
+      // prose): a fixed lines.slice(i, i+8) window silently truncated
+      // BEFORE reaching a real depends_on: line that existed at line 13,
+      // reporting a real, written dependency as if it were absent —
+      // "what's next" would have recommended a phase whose own real
+      // prerequisite hadn't actually finished. Real fix: scan forward to
+      // the ACTUAL next phase header (or end of file), not an arbitrary
+      // line count — matches how a person reading the file would find
+      // the real boundary. Capped at 60 lines as an honest safety limit
+      // (a single phase entry this long is itself worth a real look, not
+      // silently unbounded scanning) rather than removed entirely.
+      let bodyEnd = i + 1;
+      while (bodyEnd < lines.length && bodyEnd < i + 60 && !PHASE_RE.test(lines[bodyEnd])) bodyEnd++;
+      const body = lines.slice(i, bodyEnd).join(' ');
       // §FIXED 2026-08-13 — the regex below stops at a newline ([^\]\n]+),
       // which was correct, but `body` above joins with a SPACE, so there were
       // no newlines left to stop at and the match ran on greedily through the
@@ -107,7 +122,7 @@ function loadAll() {
       // dependency graph this feeds was reading whole paragraphs as dependency
       // names. Match against a newline-preserving join; `body` keeps its
       // space-join because _tagSystem() genuinely wants one flat string.
-      const bodyLines = lines.slice(i, i + 8).join('\n');
+      const bodyLines = lines.slice(i, bodyEnd).join('\n');
       const dep = (bodyLines.match(/depends_on:\s*\[?([^\]\n]+)/) || [])[1] || '';
       phases.push({
         id, map: name,

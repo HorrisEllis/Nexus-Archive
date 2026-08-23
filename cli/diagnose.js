@@ -155,7 +155,7 @@ async function diagOrchestrator() {
   console.log(info('Port :9000 | §AXIOM: must start before all other systems\n'));
 
   const checks = [
-    ['file: orchestrator.js',    () => fileExists('orchestrator.js')],
+    ['file: orchestrator/orchestrator.js', () => fileExists('orchestrator/orchestrator.js')],
     ['file: nexus-connect.js',   () => fileExists('nexus-connect.js')],
     ['file: cli/nexus-repl.js',  () => fileExists('cli/nexus-repl.js')],
     ['file: cli/diagnose.js',    () => fileExists('cli/diagnose.js')],
@@ -165,8 +165,8 @@ async function diagOrchestrator() {
       try { fs.mkdirSync(dir,{recursive:true}); fs.accessSync(dir, fs.constants.W_OK); return true; }
       catch { return false; }
     }],
-    ['syntax: orchestrator.js',  () => {
-      const r = spawnSync('node',['--check','orchestrator.js'],{cwd:ROOT,encoding:'utf8',timeout:5000});
+    ['syntax: orchestrator/orchestrator.js',  () => {
+      const r = spawnSync('node',['--check','orchestrator/orchestrator.js'],{cwd:ROOT,encoding:'utf8',timeout:5000});
       return r.status === 0;
     }],
     ['port :9000 check',         () => {
@@ -197,7 +197,7 @@ async function diagOrchestrator() {
       record('orchestrator','live /api/registry','PASS');
     }
   } else {
-    console.log(warn(`NOT RUNNING — start with: node orchestrator.js`));
+    console.log(warn(`NOT RUNNING — start with: node orchestrator/orchestrator.js`));
     record('orchestrator','live /health','WARN','not running');
   }
 }
@@ -340,7 +340,7 @@ async function diagBridge() {
   } else {
     console.log(fail('NOT RUNNING on :9999'));
     console.log(info('  → Start: node bridge/index.js'));
-    console.log(info('  → Or:    node orchestrator.js  (boots all systems)'));
+    console.log(info('  → Or:    node orchestrator/orchestrator.js  (boots all systems)'));
     await ledger('live.health', 'FAIL', 'not running');
     record('bridge', 'live /health', 'FAIL', 'not running');
     // Named gap — §1.2
@@ -810,28 +810,28 @@ async function diagIdearium() {
 async function diagEmerge() {
   console.log(hdr('emerge', C.green));
   console.log(info('Emerge — spec-compiler (T0+T1 pipeline), Ollama LSP, SNR analysis'));
-  console.log(info('Port :4242  depends on emerge-ide.js + emerge-kernel.js\n'));
+  console.log(info('Port :4242  depends on emerge/emerge-ide.js + emerge/emerge-kernel.js\n'));
 
   const checks = [
-    ['file: emerge-ide.js',                    () => fileExists('emerge-ide.js')],
-    ['file: emerge-kernel.js',                 () => fileExists('emerge-kernel.js')],
-    ['file: emerge.spec',                      () => fileExists('emerge.spec')],
+    ['file: emerge/emerge-ide.js',              () => fileExists('emerge/emerge-ide.js')],
+    ['file: emerge/emerge-kernel.js',           () => fileExists('emerge/emerge-kernel.js')],
+    ['file: emerge/emerge.spec',                () => fileExists('emerge/emerge.spec')],
     ['file: emerge/compiler/index.js',         () => fileExists('emerge/compiler/index.js')],
     ['file: emerge/compiler/pipeline.js',      () => fileExists('emerge/compiler/pipeline.js')],
     ['file: emerge/siso/index.js',             () => fileExists('emerge/siso/index.js')],
     ['file: emerge/version.js',                () => fileExists('emerge/version.js')],
     ['emerge.spec: valid (parseable)',         () => {
-      const specPath = path.join(ROOT,'emerge.spec');
+      const specPath = path.join(ROOT,'emerge','emerge.spec');
       if (!fs.existsSync(specPath)) return false;
       const src = fs.readFileSync(specPath,'utf8');
       return src.length > 100 && src.includes('emerge');
     }],
-    ['syntax: emerge-ide.js',                 () => {
-      const r = spawnSync('node',['--check','emerge-ide.js'],{cwd:ROOT,encoding:'utf8',timeout:5000});
+    ['syntax: emerge/emerge-ide.js',          () => {
+      const r = spawnSync('node',['--check','emerge/emerge-ide.js'],{cwd:ROOT,encoding:'utf8',timeout:5000});
       return r.status === 0;
     }],
-    ['syntax: emerge-kernel.js',              () => {
-      const r = spawnSync('node',['--check','emerge-kernel.js'],{cwd:ROOT,encoding:'utf8',timeout:5000});
+    ['syntax: emerge/emerge-kernel.js',       () => {
+      const r = spawnSync('node',['--check','emerge/emerge-kernel.js'],{cwd:ROOT,encoding:'utf8',timeout:5000});
       return r.status === 0;
     }],
     ['syntax: emerge/compiler/index.js',      () => {
@@ -840,8 +840,8 @@ async function diagEmerge() {
     }],
     ['kernel: loads spec without crash',       () => {
       const r = spawnSync('node',['-e',`
-        const k=require('./emerge-kernel.js');
-        const spec=['emerge.spec'].find(p=>require('fs').existsSync(p));
+        const k=require('./emerge/emerge-kernel.js');
+        const spec=['emerge/emerge.spec'].find(p=>require('fs').existsSync(p));
         if(spec){k.loadSpec(spec);console.log('kw:'+k.SCHEMA.keywords.size);}
       `], {cwd:ROOT, encoding:'utf8', timeout:8000});
       if (r.stdout.includes('kw:')) { console.log(info(`    → ${r.stdout.trim()}`)); return true; }
@@ -865,7 +865,7 @@ async function diagEmerge() {
     record('emerge','live /status','PASS');
     if (d.schema) console.log(info(`    schema: ${d.schema.keywords?.length||0} keywords  ${d.schema.axioms?.length||0} axioms`));
   } else {
-    console.log(warn(`NOT RUNNING — start with: node emerge-ide.js`));
+    console.log(warn(`NOT RUNNING — start with: node emerge/emerge-ide.js`));
     record('emerge','live /status','WARN','not running');
   }
 }
@@ -900,7 +900,7 @@ async function diagCrossSystem() {
   orchUp.ok
     ? (console.log(ok('  Orchestrator :9000 reachable')), await ledger('cross.orch', 'PASS'))
     : (console.log(warn('  Orchestrator :9000 unreachable')),
-       fix_cmd('Start orchestrator', 'node orchestrator.js', 'Orchestrator is the boot authority'),
+       fix_cmd('Start orchestrator', 'node orchestrator/orchestrator.js', 'Orchestrator is the boot authority'),
        await ledger('cross.orch', 'WARN'));
   record('cross', 'orchestrator', orchUp.ok ? 'PASS' : 'WARN');
 
@@ -1240,7 +1240,7 @@ async function deepProbe(port, system) {
 // ── L3: File integrity ────────────────────────────────────────────────────────
 const INTEGRITY_MANIFEST = [
   // Core
-  { file:'orchestrator.js',          system:'orchestrator', critical:true,  check: src => !src.includes('require is not defined') },
+  { file:'orchestrator/orchestrator.js', system:'orchestrator', critical:true,  check: src => !src.includes('require is not defined') },
   { file:'package.json',             system:'orchestrator', critical:true,  check: src => src.includes('"type": "commonjs"') || !src.includes('"type"') },
   { file:'nexus-connect.js',         system:'orchestrator', critical:true,  check: src => src.includes('postBridge') },
   // Bridge

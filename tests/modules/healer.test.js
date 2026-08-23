@@ -146,7 +146,7 @@ if (selfHealModule) {
   }, { invariant: true });
 
   t('trust tiers: kernel files are tier 3 (never auto-apply)', () => {
-    const kernelFiles = ['cortex/memory/jaa-db.js', 'cortex/boot.js', 'orchestrator.js'];
+    const kernelFiles = ['cortex/memory/jaa-db.js', 'cortex/boot.js', 'orchestrator/orchestrator.js'];
     for (const f of kernelFiles) {
       assert(selfHealModule[3].modules.has(f), `${f} should be tier 3`);
     }
