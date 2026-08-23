@@ -283,10 +283,6 @@ class IpcBridge {
     ipcMain.handle('providers:start', async (e, d) => this.providerHost?.start(d.providerId, d));
     ipcMain.handle('providers:stop',  async (e, d) => this.providerHost?.stop(d.providerId));
     ipcMain.handle('providers:show',  async (e, d) => this.providerHost?.show(d.providerId));
-    // §PHASE-2 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md item 3:
-    // real, on-demand hot-push into an already-running provider tab, not
-    // just the 60s auto-reload timer or a full start().
-    ipcMain.handle('providers:deploy', async (e, d) => this.providerHost?.deploy(d.providerId));
 
     // Copilot extended
     // §BUG FIXED 2026-07-11 — same disease as context:switch above (see
@@ -336,17 +332,6 @@ class IpcBridge {
     // Nexus options
     ipcMain.handle('options:get',    async ()    => this.options?.get());
     ipcMain.handle('options:set',    async (e, d) => this.options?.set(d));
-
-    // Accounts — §PHASE-3 2026-08-23, real CRUD surface, backend only
-    // (per James's own "all backend first, ui after backend is done" —
-    // no renderer panel wired to these yet, that's item 6's UI half).
-    ipcMain.handle('accounts:list',       async ()    => this.options?.listAccounts());
-    ipcMain.handle('accounts:get',        async (e, d) => this.options?.getAccount(d.id));
-    ipcMain.handle('accounts:create',     async (e, d) => this.options?.createAccount(d));
-    ipcMain.handle('accounts:update',     async (e, d) => this.options?.updateAccount(d.id, d.updates));
-    ipcMain.handle('accounts:delete',     async (e, d) => this.options?.deleteAccount(d.id));
-    ipcMain.handle('accounts:linkAgent',  async (e, d) => this.options?.linkAgent(d.id, d.agentKey));
-    ipcMain.handle('accounts:unlinkAgent',async (e, d) => this.options?.unlinkAgent(d.id, d.agentKey));
 
     // DOM events from page scripts
     ipcMain.on('dom:event',       (e, d) => emit('dom.mutations', d));

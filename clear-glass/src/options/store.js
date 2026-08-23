@@ -49,6 +49,19 @@ const DEFAULTS = {
     perplexity: true,
   },
 
+  // §BL24 2026-08-23 — James: "also have the ability to disable opening
+  // in the background on startup" (for userscripts specifically —
+  // distinct from backgroundTabDefaults below, which is about tabs, not
+  // script injection). Real, confirmed gap before this: autoInject() in
+  // src/userscripts/manager.js fires unconditionally on every matching
+  // nav.loaded event, with zero distinction between a real, person-
+  // initiated navigation and a navigation that only happened because
+  // autoBootAll() pre-warmed a hidden provider tab at startup. Default
+  // false — matches the real, existing behavior exactly (auto-inject
+  // everywhere, always) so this key changes nothing until someone
+  // explicitly opts into the new, narrower behavior.
+  disableUserscriptAutoInjectOnStartup: false,
+
   // Background tabs — real defaults for src/main/index.js's already-real
   // openBackgroundTab/closeBackgroundTab/listBackgroundTabs. No UI or
   // boot-time consumer reads this yet (that's Phase 2/5's job); the key

@@ -437,7 +437,7 @@ spec:
         ollama/config.js closed for the model tag, for every other
         subsystem's own scattered constants.
 
-    BL18_loom_map_becomes_real_visual_graph:
+    BL20_loom_map_becomes_real_visual_graph:
       status: "✓ DONE. James, from a real, live screenshot: \"like the
         map tab, each system a block with hooks and wires connecting
         them... you can click on the blocks and open, fully updated...
@@ -516,3 +516,211 @@ spec:
       does: >
         Scopes tool availability/relevance to the current real page/URL,
         exact mechanism pending the same open design question as BL17.
+
+    BL21_agent_mesh_real_connection:
+      status: "✓ DONE (core connection) — commit 1ebf845. Confirmed the
+        real bug directly: btn-mesh's old handler called driver.exec
+        ({action:'eval', code:'null'}) and unconditionally printed the
+        same static hint every click — the exact, confirmed source of
+        the repeated 'Agent Mesh — use Co-pilot to spawn agents...'
+        spam visible in several of James's own real screenshots.
+        Corrected the file location from the original guess (it's
+        copilot/lib/self-model.js, not lib/self-model.js) before
+        building anything. getCurrentAgent()/switchAgent() were both
+        already real, already used internally, but genuinely
+        unreachable by any external process — built the missing HTTP
+        surface (GET /api/agent/current, POST /api/agent/switch on
+        copilot/server.js) and a real client panel. Caught and fixed a
+        real, own mistake mid-build: the first edit landed both new
+        routes inside an unrelated existing wrapper by mistake, found
+        by testing live (both returned 'Not found'), not assumed
+        correct from the diff. Verified end to end against the actual
+        running server — real current-agent state, a real switch
+        firing the full real governance chain (constitutional check,
+        intent classification, fault history). Still genuinely
+        separate, not folded in: the 'New Agent Window' UUID-per-window
+        picker — that consolidation is BL27's real scope, not this
+        phase's."
+      depends_on: []
+      does: >
+        Agent Mesh stops being cosmetic and becomes the real, single
+        place to see and switch which agent co-pilot and a given
+        window are using.
+
+    BL22_rewind_timeline_ui:
+      status: "OPEN. James: \"rewind engine needs an upgrade, have a
+        timeline not a list.\" The real, working backend
+        (cg.rewind.list/snapshot/restore/clear, confirmed real and
+        already SSE-wired — es.addEventListener('rewind.snapshotted',
+        ...) already triggers a live refresh) is not in question here;
+        this is a real, scoped UI-only phase — the current rendering is
+        a flat list, needs a real, chronological, visual timeline
+        (positioned by real snapshot timestamp, not just row order)."
+      depends_on: []
+      does: >
+        Makes real, existing rewind data easier to navigate and
+        understand at a glance, no backend change needed.
+
+    BL23_ncp_providers_start_verification:
+      status: "OPEN. James: \"ncp providers does nothing, maybe a
+        deploy tool for guardian or co-pilot?\" Checked the real,
+        client-side code directly before assuming broken: the Start
+        button in clear-glass/renderer/browser.js's loadProviders() is
+        genuinely wired to a real IPC call (cg.providers.start(p.id,
+        {show:true})), not a stub — this is NOT the same class of bug
+        as Agent Mesh (BL21), which was genuinely fake. What's honestly
+        unverified from here: whether the real backend
+        (providerHost.start(), presumably) actually succeeds when
+        called — that needs a live test on James's own machine, not
+        assumed either way. If it turns out the backend genuinely
+        fails or behaves unexpectedly, James's own idea (a real deploy
+        tool specifically for guardian/co-pilot, rather than the
+        generic multi-provider Start) is worth real design
+        consideration at that point, not before."
+      depends_on: []
+      does: >
+        Either confirms this already works and needs no code change, or
+        finds and fixes a real, specific backend bug — not guessed
+        blind.
+
+    BL24_userscript_suite_enterprise_grade:
+      status: "✓ DONE — commit fab951e. Real, existing foundation
+        confirmed first: the Userscripts panel and UserscriptManager
+        (list/create/edit/toggle/delete, real, not fake) already
+        existed. Real, new work, checked against the original 3-item
+        scope: (1) config — real, deliberate design choice worth
+        stating plainly rather than silently claiming the originally-
+        envisioned separate config.js: the new key
+        (disableUserscriptAutoInjectOnStartup) went into the already-
+        real, shared NexusOptions store (clear-glass/src/options/
+        store.js) instead, since userscript startup behavior is
+        inherently tied to that same store's other real startup
+        config (autoStartOnBoot, backgroundTabDefaults) — one real
+        config surface for this whole area, not a second, parallel
+        one. (2) DONE — lib/agent-tools/tools/clear-glass/
+        userscripts.js, a real agent tool (list/enable/disable),
+        closing the same real cross-process gap dom-archaeology.js
+        already established a pattern for. (3) DONE — ProviderHost.
+        isStartupBoot, a real, explicit flag set only during
+        autoBootAll()'s own real boot window (cleared in a finally
+        block, confirmed not to get stuck true on a mid-loop
+        failure), checked in the real nav.loaded handler alongside
+        the new config key. Verified what's testable from this
+        sandbox: the exact new conditional logic against all 4 real
+        cases including confirming the real default preserves the
+        exact original, unconditional behavior; the constructor's
+        real flag initialization; and all 3 real error paths for the
+        new agent tool, through the full, real tool registry.
+        autoBootAll()'s actual real window-creation flow needs a live
+        Electron environment this sandbox doesn't have — honestly
+        named as untested, not claimed."
+      depends_on: []
+      does: >
+        Turns a real but basic userscript panel into a real, complete,
+        configurable, agent-controllable subsystem.
+
+    BL25_nexus_options_config:
+      status: "IN PROGRESS — real backend done, adopted from a parallel
+        session's export (commit d089b3a). clear-glass/src/options/
+        store.js now has a real, working config surface: autoStartOnBoot
+        (per-provider), backgroundTabDefaults, and the real accounts
+        system (see BL26). A real, genuine bug was found and fixed in
+        the same pass — the old shallow merge in set() silently wiped
+        sibling keys on any partial nested update (set({autoStartOnBoot:
+        {claude:false}}) used to delete chatgpt/gemini/perplexity
+        entirely, not just leave them alone). Verified: 10/10 real tests
+        passing (tests/modules/nexus-options-autoboot.test.js). Still
+        genuinely open: the actual ☰ Nexus Options UI (btn-options) —
+        not yet checked or built to surface any of this real backend to
+        a person, matching James's own explicit 'backend first, ui
+        after' ordering."
+      depends_on: []
+      does: >
+        A real, working config store now exists; what's left is
+        building the real UI on top of it, not more backend design.
+
+    BL26_account_agent_window_uuid_linking:
+      status: "✓ DONE (backend) — adopted from a parallel session's
+        export (commit d089b3a), verified deeply before trusting it.
+        clear-glass/src/options/store.js: real account CRUD
+        (createAccount/updateAccount/deleteAccount/linkAgent/
+        unlinkAgent/resolveDefaultAccountForAgent), keyed by a real,
+        stable uuid, each account linkable to one or more agentKeys.
+        clear-glass/src/mesh/agent-mesh.js: every real call site that
+        used to hardcode accountId:'default' (the exact, real gap
+        already named as open earlier this session) now resolves
+        through the real account system when one is wired in, with
+        genuine backward compatibility confirmed via a full diff (falls
+        back to the old literal if no accounts store is passed, not a
+        breaking change for any other real caller). Found and fixed the
+        one real piece missing to make this actually run: clear-glass/
+        src/main/index.js was still constructing AgentMesh without the
+        real accounts store wired in at all — one-line fix, confirmed
+        nexusOptions is genuinely already in scope well before that
+        line. Verified: 12/12 real tests passing (tests/modules/clear-
+        glass-accounts.test.js) — caught a real 4-test failure on the
+        first run, before the agent-mesh.js fix was adopted, traced it
+        rather than papered over it."
+      depends_on: []
+      does: >
+        'This window, on this account, is talking to this agent' is now
+        a real, queryable, persisted fact — not an inference, and not a
+        hardcoded literal.
+
+    BL27_agent_suite_consolidation:
+      status: "OPEN, the largest single item in this batch. James:
+        \"maybe consolidate the agent features to the agent mesh, and
+        fully expand into a agent suite. with intent, hats, model, full
+        on config, accounts, mesh queue does nothing when i click on
+        it, move to agent suite.\" Real, explicit dependency on BL21
+        (the real agent-mesh connection) and BL26 (the real UUID
+        linking) — this phase is the real consolidation point for both,
+        plus intent (lib/intent-classifier.js, confirmed to already
+        exist), hats (lib/agent-tools/tools/hats/, confirmed to already
+        exist as real files this session's own earlier work touched),
+        and model config (ollama/config.js, the real, established
+        pattern). Genuinely too large to scope precisely before BL21/
+        BL26 land — this status is honest about being a real
+        aggregation phase, not yet a build-ready one."
+      depends_on: [BL21_agent_mesh_real_connection, BL26_account_agent_window_uuid_linking]
+      does: >
+        One real, comprehensive Agent Suite surface instead of several
+        separate, partially-overlapping panels (mesh, providers, new
+        window) each doing part of the same real job.
+
+    BL28_background_tabs_setting:
+      status: "IN PROGRESS — real backend primitive done (commit
+        b93c0b3): ProviderHost already had real show(providerId)/
+        hide(providerId); exposed via 2 new HTTP routes on clear-
+        glass's wire server plus a real agent tool
+        (clear_glass_tab_visibility) — confirmed working through the
+        full tool registry (3/3 real error paths correct). Genuinely
+        still open: the real backgroundTabDefaults.openInBackground
+        config value (adopted in BL25/26's work) still has zero real
+        consumers anywhere in the codebase, confirmed via a direct
+        grep — nothing reads it yet, since its intended real consumer
+        (BL29's context-menu default) doesn't exist. And the actual
+        real Settings UI surface James asked for ('in the settings')
+        is still entirely unbuilt — this phase has real backend
+        capability now, not a real settings panel yet."
+      depends_on: [BL24_userscript_suite_enterprise_grade]
+      does: >
+        The real capability (move a tab to/from background) now
+        exists and is agent-callable; a real settings UI to expose it
+        to a person is the remaining, genuinely open work.
+
+    BL29_tab_context_menu_move_to_background:
+      status: "IN PROGRESS — real backend primitive done (commit
+        b93c0b3, shared with BL28 — same real action, same real
+        routes/tool). Genuinely still open, exactly as originally
+        scoped: clear-glass/renderer/browser.js's real tab-rendering
+        code still has no oncontextmenu handling at all — the actual
+        right-click menu itself is real, new UI work, not yet built.
+        When it is, it should call the already-real, already-tested
+        /provider/move-to-background route directly (same process,
+        no need to go through the agent-tool's HTTP round-trip) rather
+        than duplicate the show/hide logic."
+      depends_on: []
+      does: >
+        A real, working right-click action on tabs that doesn't exist
+        at all right now — the backend it would call is now ready.

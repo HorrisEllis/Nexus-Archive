@@ -66,7 +66,7 @@ const FILES = [
     ['nexus.guardian.clear-glass-bridge', 'nexus.clear-glass.src.driver.url-listener']],
 
   // §2026-08-23 — real, on top of both the tools above, not parallel to them.
-  ['lib/agent-tools/tools/clear-glass/macro.js',               'nexus.lib.agent-tools.tools.macro',
+  ['lib/agent-tools/tools/automation/macro.js',               'nexus.lib.agent-tools.tools.macro',
     ['nexus.lib.agent-tools.tools.browser-action', 'nexus.lib.agent-tools.tools.rewind-replay', 'nexus.cortex.jaa-db', 'nexus.clear-glass.wire.nexus-wire']],
      // §2026-08-12 — REAL_ACTIONS event-type strings fixed this session (5 of 6 didn't match any real
      // clear-glass gate signature — see the file's own header); url_listen/url_unlisten added (P5),
@@ -168,6 +168,8 @@ const FILES = [
   ['lib/agent-tools/tools/coordination/framework-builder.js', 'nexus.lib.agent-tools.tools.framework-builder', ['nexus.intelligence.framework-builder']],
   ['lib/agent-tools/tools/coordination/intelligence-query.js', 'nexus.lib.agent-tools.tools.intelligence-query', ['nexus.intelligence.index', 'nexus.intelligence.server']],
   ['lib/agent-tools/tools/clear-glass/dom-archaeology.js', 'nexus.lib.agent-tools.tools.dom-archaeology', []],
+  ['lib/agent-tools/tools/clear-glass/userscripts.js', 'nexus.lib.agent-tools.tools.clear-glass-userscripts', []],
+  ['lib/agent-tools/tools/clear-glass/tab-visibility.js', 'nexus.lib.agent-tools.tools.clear-glass-tab-visibility', []],
   ['intelligence/server.js', 'nexus.intelligence.server', ['nexus.intelligence.index', 'nexus.intelligence.cfr', 'nexus.intelligence.framework-builder']],
   ['intelligence/registry-components.js', 'nexus.intelligence.registry', []],
   ['intelligence/consumer.js', 'nexus.intelligence.consumer', ['nexus.lib.contract-queue', 'nexus.intelligence.framework-builder']],

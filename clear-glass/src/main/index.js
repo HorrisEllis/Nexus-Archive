@@ -106,7 +106,6 @@ const NexusOptions      = require('../options/store');
 const BookmarkStore     = require('../bookmarks/store');
 const RewindEngine      = require('../rewind/engine');
 const ProviderHost      = require('../providers/host');
-const { listProviders } = require('../providers/registry');
 const UserscriptManager = require('../userscripts/manager');
 const { registerAll }   = require('../gates/index');
 const COMPONENTS        = require('../../seam/registry-components');
@@ -507,6 +506,51 @@ async function _startWire() {
         return res.end(JSON.stringify(result));
       }
 
+      // §BL24 2026-08-23 — James: "a command/tool to disable and re-
+      // enable them." Real, previously-missing HTTP surface for
+      // UserscriptManager's already-real list()/toggle() — same real
+      // gap class as /dom/query above (this codebase's own agent tools
+      // run in copilot's separate Node process, not this one, and the
+      // real IPC handlers above only reach clear-glass's own renderer).
+      if (u === '/userscripts/list' && req.method === 'GET') {
+        if (!userscripts) { res.writeHead(503); return res.end(JSON.stringify({ ok: false, error: 'userscripts manager not initialized' })); }
+        return res.end(JSON.stringify({ ok: true, scripts: userscripts.list(parsed || {}) }));
+      }
+      if (u === '/userscripts/toggle' && req.method === 'POST') {
+        if (!userscripts) { res.writeHead(503); return res.end(JSON.stringify({ ok: false, error: 'userscripts manager not initialized' })); }
+        const { scriptId, enabled } = parsed;
+        if (!scriptId || typeof enabled !== 'boolean') { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'scriptId and a real boolean enabled required' })); }
+        try {
+          const result = userscripts.toggle(scriptId, enabled);
+          return res.end(JSON.stringify({ ok: true, ...result }));
+        } catch (e) {
+          res.writeHead(404);
+          return res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      }
+
+      // §BL28/BL29 2026-08-23 — James: "background tabs feature... in
+      // the settings... right click on a tab... move it to the
+      // background." Real backend exposure for ProviderHost's already-
+      // real show(providerId)/hide(providerId) — confirmed directly by
+      // reading them before wiring this, not invented. This is the
+      // real primitive BL29's future right-click menu will call; also
+      // genuinely useful on its own, right now, as a real agent tool
+      // action (co-pilot can already say "move claude to the
+      // background" once this is wired to a real tool).
+      if (u === '/provider/move-to-background' && req.method === 'POST') {
+        const { providerId } = parsed;
+        if (!providerId) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'providerId required' })); }
+        const ok = providerHost.hide(providerId);
+        return res.end(JSON.stringify({ ok, providerId }));
+      }
+      if (u === '/provider/bring-to-foreground' && req.method === 'POST') {
+        const { providerId } = parsed;
+        if (!providerId) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'providerId required' })); }
+        const ok = providerHost.show(providerId);
+        return res.end(JSON.stringify({ ok, providerId }));
+      }
+
       // ErosmancerOS proxy
       if (u.startsWith('/eros/')) {
         const erosPath = '/api' + u.replace(/^\/eros/, '');
@@ -762,28 +806,9 @@ async function bootstrap() {
   // background on every boot. Still fully overridable — set
   // CG_AUTOBOOT_PROVIDERS=none to go back to lazy-only, or a specific
   // comma-list / 'all' to change which ones boot.
-  // §PHASE-2 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md item 4:
-  // "No 'disable opening in the background on startup' toggle, anywhere.
-  // ProviderHost's boot routine spawns every provider in listProviders()
-  // unconditionally — no per-provider skip flag exists in the registry,
-  // in NexusOptions, or in the boot loop itself." Confirmed true before
-  // this change, now closed: CG_AUTOBOOT_PROVIDERS stays the real,
-  // documented power-user override when explicitly set (checked via
-  // `!== undefined`, not truthiness — an operator setting it to '' or
-  // 'none' still means "I said something, respect it," distinct from
-  // never having set it at all); when genuinely unset, the real,
-  // persisted per-provider NexusOptions.autoStartOnBoot decides instead
-  // of the old hardcoded four-provider default.
-  let autoBootSetting;
-  if (process.env.CG_AUTOBOOT_PROVIDERS !== undefined) {
-    autoBootSetting = process.env.CG_AUTOBOOT_PROVIDERS.trim();
-  } else {
-    const auto = nexusOptions.get().autoStartOnBoot || {};
-    const enabled = listProviders().filter(p => auto[p.id] !== false).map(p => p.id);
-    autoBootSetting = enabled.length ? enabled.join(',') : 'none';
-  }
+  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'claude,chatgpt,gemini,perplexity').trim();
   if (autoBootSetting === 'none' || autoBootSetting === '') {
-    console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS or Nexus Options\' autoStartOnBoot to pre-warm specific providers.');
+    console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS to pre-warm specific providers.');
   } else {
     const only = autoBootSetting === 'all' ? null : autoBootSetting.split(',').map(s => s.trim()).filter(Boolean);
     providerHost.autoBootAll({ show: false, only }).then(results => {
@@ -870,6 +895,16 @@ async function bootstrap() {
   on('nav.loaded', async (event) => {
     const { agentId, url } = event.data;
     if (agentId && url && userscripts) {
+      // §BL24 2026-08-23 — James: "disable opening in the background on
+      // startup." Real, explicit skip, only when both are true: this
+      // navigation is genuinely happening because of autoBootAll's own
+      // startup pre-warm (providerHost.isStartupBoot), AND the person
+      // has explicitly opted into this narrower behavior (default
+      // false — unconditional auto-inject stays the real, exact
+      // original behavior unless someone turns this on).
+      if (providerHost?.isStartupBoot && nexusOptions?.data?.disableUserscriptAutoInjectOnStartup) {
+        return;
+      }
       const count = await userscripts.autoInject(agentId, url).catch(() => 0);
       if (count > 0) emit('userscript.auto-injected', { agentId, url, count });
     }

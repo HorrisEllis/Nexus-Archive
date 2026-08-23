@@ -1018,11 +1018,45 @@
   }
 
   // ── Mesh button ────────────────────────────────────────────────────
-  document.getElementById('btn-mesh')?.addEventListener('click', async () => {
-    const agents = await cg.driver.exec({ action: 'eval', agentId, code: 'null' })
-      .catch(() => ({ result: null }));
-    // Surface mesh info in co-pilot
-    addMsg('assistant', `Agent Mesh — use Co-pilot to spawn agents:\n"spawn claude agent"\n"route this prompt to perplexity"\n"enqueue task to all agents"`);
+  document.getElementById('btn-mesh')?.addEventListener('click', async (e) => {
+    const panel = document.getElementById('agent-mesh-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const rect = e.target.getBoundingClientRect();
+    panel.style.top = `${rect.bottom + 4}px`;
+    panel.style.right = `${window.innerWidth - rect.right}px`;
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    panel.style.display = 'block';
+    try {
+      const res = await fetch('http://127.0.0.1:3750/api/agent/current');
+      const cur = await res.json();
+      const agents = ['auto', 'claude', 'chatgpt', 'gemini', 'perplexity'];
+      panel.innerHTML = `
+        <div style="padding:6px 4px;font-size:11px;color:var(--text-dim,#999);border-bottom:1px solid var(--border,#333);margin-bottom:6px">
+          Current: <b style="color:var(--text,#ccc)">${(cur.agent || 'auto').replace(/</g,'&lt;')}</b>${cur.hatName ? ` (${cur.hatName.replace(/</g,'&lt;')})` : ''}
+        </div>
+        ${agents.map(a => `<div data-agent="${a}" style="padding:6px 8px;cursor:pointer;font-size:11px;border-radius:4px;${a === cur.agent ? 'background:var(--accent,#00f5ff);color:#000' : 'color:var(--text,#ccc)'}">${a}</div>`).join('')}`;
+      panel.querySelectorAll('[data-agent]').forEach(el => el.addEventListener('click', async () => {
+        const target = el.dataset.agent;
+        panel.innerHTML = `<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">switching to ${target}…</div>`;
+        try {
+          const r = await fetch('http://127.0.0.1:3750/api/agent/switch', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: target === 'auto' ? '' : target }),
+          });
+          const d = await r.json();
+          addMsg('assistant', d.ok ? `✓ Switched to ${target}.` : `Switch failed: ${d.reason || d.error || 'unknown'}`);
+        } catch (err) {
+          addMsg('assistant', `Switch failed: ${err.message}`);
+        }
+        panel.style.display = 'none';
+      }));
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Co-pilot unreachable: ${err.message}</div>`;
+    }
+  });
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('agent-mesh-panel');
+    if (panel && panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'btn-mesh') panel.style.display = 'none';
   });
 
   // ── Diag button ────────────────────────────────────────────────────

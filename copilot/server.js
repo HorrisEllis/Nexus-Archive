@@ -875,6 +875,31 @@ const server = http.createServer(async (req, res) => {
   // the person can see all of it and change any of it. Every payload here
   // carries provenance (stated/observed/inferred) and lens COVERAGE, so a
   // partial reading can never be mistaken for a complete one (§LN-7).
+  // §WIRED 2026-08-23 — James: "agent mesh needs to connect to the
+  // agent system for co-pilot. like when you want to switch agents
+  // in co-pilot." Real, previously-missing HTTP surface for self-
+  // model.js's getCurrentAgent/switchAgent — those already existed
+  // and were already used internally for chat-message "switch to X"
+  // detection, but no external client (clear-glass's Agent Mesh
+  // panel, a separate real process) could reach them directly.
+  if (p === '/api/agent/current' && method === 'GET') {
+    try {
+      const sm = require('./lib/self-model.js');
+      json(res, 200, { ok: true, ...sm.getCurrentAgent() });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+  if (p === '/api/agent/switch' && method === 'POST') {
+    const body = await readBody(req);
+    if (!body.agent) { json(res, 400, { ok: false, error: 'agent required' }); return; }
+    try {
+      const sm = require('./lib/self-model.js');
+      const r = sm.switchAgent({ intent: 'directed', directed: body.agent, prompt: body.prompt || '' });
+      json(res, r && r.ok !== false ? 200 : 502, { ok: true, ...r });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   if (p.startsWith('/api/person-model')) {
     let pm;
     try { pm = require('./lib/person-model'); }
@@ -1366,7 +1391,7 @@ const server = http.createServer(async (req, res) => {
     // its own default toolset. tool_config's own internal design already
     // gates its dangerous half (loosening always needs the user, regardless
     // of who calls it), so offering it here doesn't bypass that protection.
-    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events', 'framework_builder', 'intelligence_query', 'clear_glass_dom_archaeology'];
+    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events', 'framework_builder', 'intelligence_query', 'clear_glass_dom_archaeology', 'clear_glass_userscripts', 'clear_glass_tab_visibility'];
     if (DEFAULT_CHAT_TOOLS.length) {
       const agentToolsForManifest = require('../lib/agent-tools/index.js');
       const manifest = DEFAULT_CHAT_TOOLS

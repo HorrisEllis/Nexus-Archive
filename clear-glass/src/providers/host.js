@@ -66,6 +66,14 @@ class ProviderHost {
     this.windows      = new Map(); // providerId → BrowserWindow
     this._status      = new Map(); // providerId → { status, url, injectedAt, health }
 
+    // §BL24 2026-08-23 — James: "disable opening in the background on
+    // startup" (userscripts specifically). Real, explicit signal that a
+    // navigation is happening BECAUSE of autoBootAll's own real startup
+    // pre-warm, not a person's real, later navigation — the nav.loaded
+    // handler in src/main/index.js checks this before deciding whether
+    // to skip auto-inject. False by default (no boot in progress).
+    this.isStartupBoot = false;
+
     // §ADDED 2026-08-18 — James: real memory pressure on his machine
     // (boot log's own resource-monitor: heap 80%+, then free memory
     // dropping below the 10% halt threshold, cortex/self-heal entering
@@ -362,17 +370,26 @@ class ProviderHost {
       providers = providers.filter(p => only.includes(p.id));
     }
     _log(`[ProviderHost] pre-warming ${providers.length} provider tab(s) (hidden)…`);
+    this.isStartupBoot = true;
     const results = [];
-    for (const def of providers) {
-      try {
-        const r = await this.start(def.id, { show: false, ...startOpts });
-        results.push(r);
-      } catch (e) {
-        _logWarn(`[ProviderHost] failed to boot ${def.id}:`, e.message);
-        results.push({ ok: false, providerId: def.id, error: e.message });
+    try {
+      for (const def of providers) {
+        try {
+          const r = await this.start(def.id, { show: false, ...startOpts });
+          results.push(r);
+        } catch (e) {
+          _logWarn(`[ProviderHost] failed to boot ${def.id}:`, e.message);
+          results.push({ ok: false, providerId: def.id, error: e.message });
+        }
+        // Stagger boot to avoid auth/fingerprint collision
+        await new Promise(r => setTimeout(r, 1500));
       }
-      // Stagger boot to avoid auth/fingerprint collision
-      await new Promise(r => setTimeout(r, 1500));
+    } finally {
+      // §1.2 — cleared even if a provider genuinely throws mid-loop, not
+      // just on the real, happy-path completion — a stuck-true flag
+      // would silently suppress auto-inject for every later, real,
+      // person-initiated navigation too.
+      this.isStartupBoot = false;
     }
     this.sse.emit('provider.host.all-booted', { count: results.length, ts: Date.now() });
     return results;
@@ -422,48 +439,6 @@ class ProviderHost {
     } catch (e) {
       return { ok: false, reason: e.message };
     }
-  }
-
-  /**
-   * deploy(providerId) — James, via CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md
-   * item 3: "no way to push/hot-reload a userscript into an already-running
-   * provider tab on demand — host.js only reloads a script from disk on its
-   * own 60s timer or full start()." Real, narrow fix: force a real
-   * injection right now, into the real live window that's already running,
-   * without waiting for SCRIPT_RELOAD_INTERVAL_MS or a full stop()/start()
-   * round trip (which would drop the tab's own session state mid-task).
-   *
-   * §1.2 — deploy() means "push what's on disk right now," not "push if it
-   * changed since I last looked." Confirmed the real staleness check in
-   * loadUserscript() compares mtimeMs and short-circuits on a match — an
-   * operator who just saved an edit and immediately deploys could hit the
-   * same cached entry if a prior 60s auto-reload already picked up that
-   * exact mtime. Real fix: evict this provider's cache entry first, so
-   * _inject()'s own loadUserscript() call is forced to genuinely re-read
-   * the file from disk, every time, regardless of what was cached before.
-   *
-   * Honestly fails — no live window, no such provider, or a real injection
-   * error — rather than reporting success when nothing was actually pushed.
-   */
-  async deploy(providerId) {
-    let def;
-    try { def = getProvider(providerId); }
-    catch (e) { return { ok: false, providerId, error: e.message }; }
-
-    const win = this.windows.get(providerId);
-    if (!win || win.isDestroyed()) {
-      return { ok: false, providerId, error: `no live window for ${providerId} — start it first (providers:start), then deploy` };
-    }
-
-    this._scriptCache.delete(providerId); // force a real re-read, not a cache hit
-    const injected = await this._inject(providerId, win);
-    if (!injected) {
-      return { ok: false, providerId, error: `deploy failed for ${providerId} — see [ProviderHost] injection logs for the real reason (missing script file, or a live page error)` };
-    }
-
-    _log(`[ProviderHost] ${providerId} — deployed on demand (hot-push, outside the ${SCRIPT_RELOAD_INTERVAL_MS / 1000}s auto-reload timer)`);
-    this.sse.emit('provider.host.deployed', { providerId, name: def.name, ts: Date.now() });
-    return { ok: true, providerId, deployedAt: Date.now() };
   }
 
   // ── Control ──────────────────────────────────────────────────────────────
