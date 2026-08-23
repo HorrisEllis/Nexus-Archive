@@ -21,7 +21,7 @@ async function testAsync(id, desc, fn) {
 const BUFFER_FILE = path.join(__dirname, '../../data/lattice/relationship_lattice.buffer.jsonl');
 try { fs.unlinkSync(BUFFER_FILE); } catch (_) {}
 
-const lattice = require('../../intelligence/meta/lattice/associative-lattice.js');
+const lattice = require('../../intelligence/lattice/associative-lattice.js');
 
 (async () => {
   await testAsync('L-001', 'updateEdge returns a row matching the spec storage shape exactly', async () => {

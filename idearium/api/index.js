@@ -36,7 +36,7 @@ let _latticeEng = null;
 function _getLattice() {
   if (_latticeEng) return _latticeEng;
   try {
-    const { LatticeEngine } = _require('../../intelligence/meta/spatial/lattice.js');
+    const { LatticeEngine } = _require('../../meta/spatial/lattice.js');
     _latticeEng = new LatticeEngine({ threshold: 0.3 });
   } catch(_) {}
   return _latticeEng;

@@ -548,19 +548,7 @@ function _spawnKernel(kernel, color) {
         // exact entrypoint per Phase 116's component→file mapping intent.
         const ts = new Date().toISOString();
         const srcFile = kernel.args?.[0] || kernel.name;
-        // §prefix-fix 2026-08-22 — when srcFile is already namespaced under
-        // the system's own directory (e.g. kernel.name='cortex', srcFile=
-        // 'cortex/boot.js'), showing both repeats the system name twice
-        // in every line ("[cortex:cortex/boot.js]") for no added information.
-        // Collapse to the entrypoint alone in that case; keep both when they
-        // genuinely differ (e.g. 'diagnostic' running 'service/nexus-diagnostic.js'),
-        // since that's the real traceability case the original fix wanted.
-        const label = (srcFile === kernel.name
-            || srcFile.startsWith(kernel.name + '/')
-            || srcFile === kernel.name + '.js')
-          ? srcFile
-          : `${kernel.name}:${srcFile}`;
-        console.log(`[${ts}] ${color}[${label}]${RESET} ${isErr ? '\x1b[31m' : ''}${line}${isErr ? RESET : ''}`);
+        console.log(`[${ts}] ${color}[${kernel.name}:${srcFile}]${RESET} ${isErr ? '\x1b[31m' : ''}${line}${isErr ? RESET : ''}`);
       }
     });
   };
@@ -1635,7 +1623,44 @@ function _runDiagnosticOnStall(kernel, phase) {
   });
 }
 
+// §WIRED 2026-08-22 — James: "a lot of the intelligence system is
+// missing from the autopilot... also wired in." Real root cause, found
+// by reading loom/bootstrap.js directly: it's the one real process that
+// reads all the hand-authored loom/maps/*.js files (including every
+// component registered across this whole session) and writes them into
+// loom/data/registry.json — the actual, disk-backed store intelligence's
+// own _syncLoomMap() reads via lib/loom-map.js. Nothing in the real,
+// automatic boot sequence ever ran it; confirmed directly by grepping
+// loom/server.js for any reference to bootstrap.js and finding none.
+// Running it live confirmed the real fix: 1538 components, 1305 hooks,
+// 1264 wires, 63 of them intelligence-specific — all real, all
+// previously invisible to a live boot.
+//
+// §CORRECTED before shipping, based on real measurement, not a guess:
+// first draft ran this synchronously (spawnSync) before boot even
+// started. Directly timed the real process: 221s (3.7 min). Making
+// EVERY boot wait 4 minutes for this is a real regression, not an
+// acceptable fix — so this runs in the BACKGROUND instead (spawn, not
+// spawnSync), non-blocking. Boot proceeds immediately; the registry
+// catches up on its own within a sync cycle or two, since
+// intelligence's own _syncLoomMap already re-reads it every ~2 minutes
+// (confirmed in James's real boot logs) — the same real mechanism that
+// currently reports "0 systems" will correctly report the real counts
+// once this background run finishes, with zero added boot latency.
+function _refreshLoomRegistry() {
+  const { spawn } = require('child_process');
+  _log('refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...');
+  try {
+    const child = spawn('node', ['loom/bootstrap.js'], { cwd: __dirname, stdio: 'ignore', detached: true });
+    child.unref();
+    child.on('error', (e) => _log(`  ⚠ loom registry background refresh failed to start: ${e.message} — run "node loom/bootstrap.js" manually if intelligence's loom-map sync keeps reporting 0`));
+  } catch (e) {
+    _log(`  ⚠ loom registry background refresh failed to start: ${e.message}`);
+  }
+}
+
 function start() {
+  _refreshLoomRegistry();
   _log(`autopilot starting — supervising: ${KERNELS.map(k => k.name).join(', ')}`);
   KERNELS.forEach((kernel, i) => {
     _initState(kernel.name);

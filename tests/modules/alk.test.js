@@ -19,8 +19,8 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alk-test-'));
 process.env.NEXUS_DATA_ROOT = tmpDir;
 
 // Re-require with temp dir
-Object.keys(require.cache).forEach(k => { if (k.includes('/meta/alk')) delete require.cache[k]; });
-const alk = require(path.join(__dirname, '../../meta/alk'));
+Object.keys(require.cache).forEach(k => { if (k.includes('/intelligence/alk')) delete require.cache[k]; });
+const alk = require(path.join(__dirname, '../../intelligence/alk'));
 const { DispatchPool } = require(path.join(__dirname, '../../guardian/lib/dispatch-pool'));
 
 let passed = 0, failed = 0;

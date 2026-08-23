@@ -16,28 +16,14 @@ const mockJaa = {
 };
 
 // Patch jaa-db require
-//
-// §FIXED 2026-08-22 — this used to return the raw request string from
-// _resolveFilename and seed require.cache under the LITERAL '../memory/jaa-db'.
-// That coupled the test to the exact string the module under test happened to
-// write, so relocating liminal-space (cortex/ → intelligence/) changed the
-// literal to '../../cortex/memory/jaa-db', the cache key missed, and the
-// patched resolver handed the unresolvable string to readFileSync:
-//     ENOENT: no such file or directory, open '../../cortex/memory/jaa-db'
-//
-// The module was correct; the mock was pinned to an implementation detail.
-// §5.3 — fix the root, not the call site: resolve ANY jaa-db request to one
-// stable synthetic id, so the mock holds no matter what path the module uses
-// or where it lives. §12.2 — this tests the behaviour, not the spelling.
 const Module = require('module');
 const orig   = Module._resolveFilename;
-const MOCK_JAA_ID = '\0mock:jaa-db';   // \0 prefix: cannot collide with a real path
 Module._resolveFilename = function(req, ...args) {
-  if (req.includes('jaa-db')) return MOCK_JAA_ID;
+  if (req.includes('jaa-db')) return req;
   return orig.call(this, req, ...args);
 };
-require.cache[MOCK_JAA_ID] = {
-  id: MOCK_JAA_ID, filename: MOCK_JAA_ID,
+require.cache[require.resolve('../memory/jaa-db')] = {
+  id: '../memory/jaa-db', filename: '../memory/jaa-db',
   loaded: true, exports: { jaaDB: mockJaa, uid: () => require('crypto').randomUUID() },
 };
 

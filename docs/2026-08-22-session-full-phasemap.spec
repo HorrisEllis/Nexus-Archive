@@ -219,3 +219,134 @@ spec:
       does: >
         Would be the real, concrete answer to "it has all the tools, let's
         make it happen" — an orchestrator, not a new capability.
+
+    SF14_wake_pipeline_real_architecture:
+      status: "✓ DONE — commits 476b190, a8a80f7. Real correction of an
+        assumption: the wake pipeline doesn't need a separate browser-
+        to-copilot HTTP call at all — every message already reaches
+        cortex's real /api/meta/observe via the userscript's existing,
+        working GM_xmlhttpRequest call. Found a real, second, previously-
+        hidden gap while fixing this: cortex never had an actual /sse
+        server — cli/nexus-repl.js and cortex-v2.js were both connecting
+        to nothing. Built the real thing, matching guardian's own proven
+        cockpitClients pattern. Added server-side wake-phrase detection
+        on /api/meta/observe, persisted every detection to a real table
+        (nexus_wake_events) so a live SSE listener isn't required to
+        catch one, and built the real agent tool + CLI command + a
+        ClearGlass-side relay (wake-relay.js) that injects the real
+        co-pilot answer back into the exact right tab via a new
+        ProviderHost.injectAnswer() — deliberately NOT resubmitted to the
+        underlying model as a new prompt, since that would burn real
+        tokens and contradict the file's own stated design."
+      depends_on: []
+      does: >
+        The actual, complete "hey nexus" loop — detect, relay, answer,
+        inject back — not just detection.
+
+    SF15_wake_pipeline_real_bugs_fixed:
+      status: "✓ DONE — commits 4d34c93, d5e5eee. Two real, separate bugs
+        found by testing against the actual live system, not assumed
+        fixed after building: (1) askNexus() used plain fetch(), blocked
+        as mixed content exactly like the earlier-diagnosed EventSource
+        problem — fixed by switching to GM_xmlhttpRequest, the same
+        privileged pattern already proven elsewhere in the same file;
+        verified by deliberately leaving global fetch undefined and
+        confirming the flow still completed. (2) A streaming assistant
+        message only ever got checked for the wake phrase once, at the
+        moment its bubble first appeared — usually empty. Fixed by
+        moving the check outside the message-count gate so it runs on
+        every mutation with the freshest text, with a real dedup guard
+        so a match doesn't re-fire on every subsequent mutation."
+      depends_on: [SF14_wake_pipeline_real_architecture]
+      does: >
+        The wake phrase now actually gets detected and answered reliably,
+        for both a human typing it and an assistant's streamed reply.
+
+    SF16_event_types_real_registry:
+      status: "✓ DONE — commits d353d3c, 268a967, 40965d6. Built
+        lib/event-types.js as the real, canonical, system-wide event-type
+        registry — none existed before. James proposed a per-agent x
+        per-intent naming scheme (chatgpt_research_input, etc.); pushed
+        back with concrete reasoning (combinatorial growth, duplicates
+        already present in the first draft, an unworkable per-chunk-id
+        type name) and restructured to a small, closed intent taxonomy
+        with agent/chunkId as real fields instead — same real filtering
+        power, zero per-agent growth. Wired 8 real event types
+        (chat_input/response/wake live-tested against a real booted
+        server; tool/chunk/spec live-tested; lifeline/build verified but
+        not fully live; research deliberately left unwired, no real
+        distinct execution path exists for it)."
+      depends_on: []
+      does: >
+        A real, extensible way to see what's actually happening across
+        every real system, not just intelligence's own.
+
+    SF17_intelligence_system_all_4_phases:
+      status: "✓ DONE — commits 67cd8b4, 3703787, 3c43d96, e5443e1, 5627c22.
+        Full extraction of cortex/intelligence + lib/baseline.js +
+        lib/snapshot-trigger.js + meta/cfr into intelligence/, across 4
+        real, sequenced phases. A real, mid-work plan correction (phase 3)
+        when reading meta/cfr's actual code showed the original
+        compatibility-shim plan was wrong — see
+        intelligence/spec/intelligence.spec's own phase_3_reasoning for
+        the full record. Every phase's own final automated scan caught
+        something the manual consumer index missed; between them, 7
+        hidden references inside cortex/boot.js and 4 more leftover
+        breaks from phase 1 were found and fixed, none of them by the
+        original manual pass alone."
+      depends_on: []
+      does: >
+        NEXUS's cognition + system-health layer now lives in one real
+        place instead of scattered across cortex/lib/meta.
+
+    SF18_intelligence_becomes_a_real_system:
+      status: "✓ DONE — commits bec349d, 1690bc6, 4cc9b3e. Beyond the file
+        moves: a real, standalone intelligence/server.js (http on :3753,
+        reusing index.js's handleRequest and cfr/ledger.js's real ledger
+        rather than rebuilding either), intelligence/consumer.js (real
+        queue polling, matching emerge/consumer.js's pattern), a real
+        ring buffer (WARP's own Stream, not hand-rolled), real schemas,
+        real CLI subcommands, wired into autopilot.js's actual boot
+        sequence, real event relaying from the two genuine internal
+        extension points that existed (pattern-crystallisation's
+        bus.emit, CFR's onGap), and real copilot access via
+        intelligence_query — deliberately split between safe in-process
+        calls and honest, non-fabricating HTTP calls for the state that
+        only exists in a live server. Also closed a real, honest
+        correction: intuition/mastermind were never reachable via HTTP
+        anywhere in the system's history, not just missing a shorter
+        alias as first claimed — built on cortex/boot.js, their real,
+        documented composition root."
+      depends_on: [SF17_intelligence_system_all_4_phases]
+      does: >
+        The intelligence extraction is no longer just a file
+        reorganisation — it is a real, running, addressable system.
+
+    SF19_loom_registry_never_auto_synced:
+      status: "✓ DONE — commit 8d797cc. James uploaded real, live boot
+        logs from his own machine showing intelligence booting
+        successfully but 'loom map synced: 0 systems, 0 components, 0
+        hooks' recurring every ~2 minutes across two separate real runs.
+        Traced directly: lib/loom-map.js's real source of truth is
+        loom/data/registry.json, a completely separate, disk-backed
+        store from loom/maps/*.js — the files this whole session
+        registered components into. loom/bootstrap.js is the one real
+        process that syncs one into the other, and nothing in the
+        automatic boot path ever called it (confirmed by grepping
+        loom/server.js directly). Ran it live: 1538 real components,
+        1305 hooks, 1264 wires, 63 intelligence-specific — confirming
+        the fix. Wired into autopilot.js's start(), but corrected the
+        design after actually measuring the real runtime (221s) — a
+        synchronous call would have added nearly 4 minutes to every
+        boot, a real regression caught by measuring rather than
+        assuming a guessed timeout was safe. Runs in the background
+        instead, non-blocking, since intelligence's own sync already
+        re-reads the registry every ~2 minutes on its own. Also fixed
+        the real spec.version.drift gap the system's own pattern-
+        crystallisation had already correctly flagged as recurring."
+      depends_on: [SF18_intelligence_becomes_a_real_system]
+      does: >
+        Every real component registered in loom/maps/*.js all session
+        — including everything for the intelligence system itself — is
+        now genuinely visible to a live boot, not silently invisible to
+        the one process that was supposed to reflect it.

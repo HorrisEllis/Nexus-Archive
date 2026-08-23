@@ -83,7 +83,7 @@ async function dispatch(opId, args) {
       // Functionally identical (harvested verbatim, only the module
       // system changed), so this is a path update, not a behavior change.
       let forge;
-      try { forge = require('../../intelligence/meta/rfr2/forge/index.js'); }
+      try { forge = require('../../meta/rfr2/forge/index.js'); }
       catch (e) { return { ok: false, error: `forge module unavailable: ${e.message}` }; }
 
       let rec;

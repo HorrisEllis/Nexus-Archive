@@ -1,0 +1,6 @@
+{"type":"service.start","pid":1083,"ts":1787426902186,"_ts":1787426902186}
+{"type":"service.stop","reason":"SIGTERM","ts":1787426906148,"_ts":1787426906148}
+{"type":"service.start","pid":1368,"ts":1787426996918,"_ts":1787426996918}
+{"type":"service.stop","reason":"SIGTERM","ts":1787427004886,"_ts":1787427004886}
+{"type":"service.start","pid":1549,"ts":1787427049990,"_ts":1787427049990}
+{"type":"service.stop","reason":"SIGTERM","ts":1787427057953,"_ts":1787427057953}

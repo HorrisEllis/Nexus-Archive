@@ -1292,7 +1292,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // GET /api/meta/classify  — ALK perception of current system state
   // GET /api/meta/gaps?text= — run Liminal gap detection on text
   if (top === 'api' && sub === 'meta') {
-    const meta = (() => { try { return require('./intelligence/meta'); } catch(_) { return null; } })();
+    const meta = (() => { try { return require('./meta'); } catch(_) { return null; } })();
     if (!meta) return json(res, 503, { ok:false, error:'meta layer not loaded' });
 
     if (M === 'GET' && !rest) {

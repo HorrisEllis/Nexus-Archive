@@ -308,3 +308,28 @@ read: almost none of it requires new architecture — the vast majority of it is
 
 Not proposing to build all of this in one pass — flagging it so the order isn't
 arbitrary.
+
+---
+
+## Addendum, end of session, 2026-08-22
+
+Real progress against this doc, not a rewrite — see docs/2026-08-22-session-full-
+phasemap.spec (SF14-SF18) and intelligence/spec/intelligence.spec for the full,
+detailed record:
+
+- **Thread 12 (living contracts, gated handoffs)** — partially real now:
+  `lib/event-types.js` gives every real event a canonical type; `intelligence/
+  server.js`'s `/api/commands/history` is a genuine, queryable log of what
+  actually happened, not just what's possible.
+- **The intelligence/cognition consolidation (meta-adjacent to Thread 9)** —
+  fully done. `cortex/intelligence`, `lib/baseline.js`, `lib/snapshot-trigger.js`,
+  and `meta/cfr` all live in `intelligence/` now, as a real, running, addressable
+  system, not four scattered locations.
+- **Thread 3 (wake pipeline, "talk to nexus")** — real and working end to end:
+  detection, relay, answer, and injection back into the originating tab.
+- **Thread 13 / SF13 — still the real, single largest open item.** Nothing yet
+  sequences a task into a build contract and routes it through the right agent
+  automatically. Every piece it needs now exists (agent_notes, event-types,
+  the intelligence system itself, contract-queue) — it still needs the actual
+  sequencing built, and the P0 safety gate named in the earlier session's
+  idearium-agent-pipeline.spec still needs to come first.

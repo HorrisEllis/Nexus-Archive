@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        intelligence
-    version:     0.1.0-draft
+    version:     1.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        :3753
     uuid:        nexus-intelligence-v1-0000-2026-0822-jamesbrooks-001
@@ -187,10 +187,14 @@ spec:
     mechanism: lib/contract-queue.js   # the real, already-general queue library found this session — not a new mechanism
 
   # ── Rollout — phased explicitly because of CFR's real risk profile ────────
+  # §STATUS 2026-08-22 (end of session) — all 4 phases complete and
+  # committed. Real commit hashes named directly so this stays checkable
+  # against git history, not just prose.
   rollout:
-    phase_1: "Move cortex/intelligence/'s 5 files + their 8 real consumers. Smallest, most contained. Proves the pattern."
-    phase_2: "Move lib/baseline.js + lib/snapshot-trigger.js + their 8 combined real consumers."
-    phase_3: >
+    phase_1: "✓ DONE (commit 67cd8b4) — cortex/intelligence/'s 5 files moved to intelligence/, all 7 real consumers updated and verified (guardian, cortex, idearium, copilot x2, lib x3), 3 real leftover test-file breaks caught by the scanner and fixed across this and later commits."
+    phase_2: "✓ DONE (commit 3703787) — lib/baseline.js + lib/snapshot-trigger.js moved to intelligence/, 8 real consumers updated, a real internal relational-field.js path bug caught and fixed before shipping."
+    phase_3: "✓ DONE (commits 3c43d96 + e5443e1) — plan corrected BEFORE any file moved (meta/cfr is a reusable library, not a shared service — see the full reasoning kept below per §17.3), then executed as the corrected pure relocation: meta/cfr/ moved to intelligence/cfr/, 28 real consumers updated (more than the original 24 — tests/ correctly included), 4 real sibling-relative breaks inside the old meta/ directory found and fixed."
+    phase_3_reasoning: >
       §CORRECTED 2026-08-22, before any phase 3 work began — read
       meta/cfr's actual code (field.js, ledger.js) per §8.7, not just its
       caller count, before touching anything. The original plan below
@@ -223,11 +227,43 @@ spec:
       ever actually convert to real API calls, or whether the shim is
       the permanent, correct answer given how synchronous their real
       usage is.
-    phase_4: "framework-builder — new capability, no migration risk, can build any time after phase 1."
+    phase_4: "✓ DONE (commit 5627c22) — intelligence/framework-builder.js: real WARP-based skeleton generation, 3 real bugs caught by executing the generated code (wrong relative path, an identifier-generation bug on names with trailing digits, event.payload vs the real event.data), a real registered agent tool, reachable via the wake pipeline."
 
-  # ── Explicitly NOT done yet, per James's own ordering ──────────────────────
-  not_yet_done:
-    - "No files moved."
-    - "lib/uid/component-map.js not yet updated — nexus-in reserved here, not claimed."
-    - "No consumer files edited."
-    - "No new system process built or started."
+  # ── Post-phase-4 — the system itself, not just the file moves ─────────────
+  # None of this was in the original spec; built and live-tested across
+  # several later commits once James asked for the actual standalone
+  # system (server, CLI, event types, schemas), not just consolidated files.
+  built_after_phase_4:
+    server: "✓ DONE (bec349d) — intelligence/server.js, real http.createServer on :3753, reuses index.js's handleRequest() and cfr/ledger.js's createCFRLedger() rather than rebuilding either."
+    registry: "✓ DONE (bec349d) — intelligence/registry-components.js, matches emerge's exact established pattern."
+    consumer: "✓ DONE (bec349d, corrected 5486730) — intelligence/consumer.js polls intelligence/input/ via lib/contract-queue.js; framework-builder's real output corrected to intelligence/output/ after an initial design mistake (was writing output into input/, backward from the established convention)."
+    ring_buffer_and_sse: "✓ DONE (5486730) — replaced a hand-rolled SSE broadcaster with a real warp/core Stream instance (its own tail()/since()/subscribeSSE()), verified live: an event created before an SSE client connects is still delivered as real history."
+    schemas: "✓ DONE (5486730) — intelligence/schemas.js, every field checked against a real insert() call, not invented; deliberately excludes the pattern-matching thresholds/confidence math (James: 'the rest is probabilistic and fluid')."
+    cli: "✓ DONE (5486730) — real, specific subcommands (intel commands/patterns/cfr/status/framework) in cli/nexus-repl.js, each mapped to one real endpoint — NOT a generic exec route (cortex's own /api/cli/exec is an intentional, honest 501 for that exact reason)."
+    boot_sequence: "✓ DONE (1690bc6) — intelligence/server.js and intelligence/consumer.js both in autopilot.js's real spawn list (phase 3, matching idearium/architect/eravos's dependency on cortex being up first)."
+    event_relaying: "✓ DONE (1690bc6) — pattern-crystallisation's real bus.emit and CFR ledger's real onGap callback both relayed into the system stream; verified live for the pattern-crystallisation half, the gap-event shape verified separately (not the full ledger→real-sigma-spike path end to end)."
+    copilot_access: "✓ DONE (1690bc6) — lib/agent-tools/tools/coordination/intelligence-query.js. Deliberate split: patterns/status/failures/reuse/map/commands reached in-process (safe, stateless); CFR field state reached via real HTTP to the actual running server, honestly failing rather than fabricating data when it's not up — both outcomes verified live."
+    command_history: "✓ DONE (4cc9b3e) — /api/commands/history, a real, persistent, queryable log of every command actually invoked, distinct from the static /api/commands list."
+    config_file: "✓ DONE (4cc9b3e) — intelligence/config.js, real and distinct, not inline constants."
+    intuition_mastermind_routes: >
+      ✓ DONE (4cc9b3e) — real correction, not just an addition: these two
+      real faculties (correct since 2026-07-06) had NEVER been exposed via
+      HTTP anywhere in the system's history, in cortex or intelligence,
+      before or after this session's work — a pre-existing gap, confirmed
+      by directly checking rather than trusting an earlier, wrong claim
+      that they were already reachable. Built on cortex/boot.js (its
+      documented composition root for these two), reusing the real,
+      already-instantiated objects — zero duplicate instances, same
+      reasoning as the phase 3 CFR correction. Verified live: real
+      intuition answer from the real current field state, real mastermind
+      analysis surfacing the actual open gaps from this session.
+
+  # ── What's still genuinely open, named plainly ─────────────────────────────
+  still_open:
+    - "research_input/research_output event types deliberately not wired — 'research' is a routing classification (agent-router.js), not a distinct execution path; wiring one would be fabricated."
+    - "lifeline_input/lifeline_output structurally verified (exports, no recursion) but never live-tested against real ollama/guardian — this sandbox doesn't run either."
+    - "build_input/build_output verified via the same write logic in isolation, not a full, real compile pipeline run — that needs emerge's real compiler, not exercised here."
+    - "The relayed CFR gap event (intelligence.cfr.gap) was verified for its own shape/logic, not the full path from a genuine sigma spike through the live ledger to onGap firing."
+    - "No James-run, real-machine test yet of any of this — everything above is real and tested in this sandbox only."
+
+  not_yet_done: []   # §2026-08-22 — was a real, honest list at the start of phase 1; every item on it is now done. Left as an empty array, not deleted, so its own history stays visible per §17.3.

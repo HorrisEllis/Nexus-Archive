@@ -168,7 +168,7 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     if (hist.length >= FLAP_THRESHOLD) {
       _flapHistory.set(key, []); // reset so this doesn't re-fire every single disconnect once over threshold
       try {
-        const gp = require('../../intelligence/meta/gap/predicate');
+        const gp = require('../../meta/gap/predicate');
         const { jaaDB, uid } = require('../../cortex/memory/jaa-db');
         const { enriched_gap, existing_uuid } = gp.enrichGap({
           type: 'ncp_connection_flapping', path: key, severity: 'high',

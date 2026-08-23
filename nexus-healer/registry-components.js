@@ -4,14 +4,7 @@
  * comp_id: nexus.nexus-healer.registry
  * Same shape as architect/registry-components.js and idearium/registry-components.js.
  */
-// §CR-004 FIXED 2026-08-22 — NS was 'nexus-healer'. component-registry.js's
-// ID_PATTERN is /^[a-z][a-z0-9]*(\.[a-z][a-z0-9_]*)+$/ — the FIRST segment
-// permits no hyphen at all, so every one of this system's 5 components failed
-// validation silently. clear-glass already hit this and solved it the same way
-// (NS = 'cg'); the convention existed and this file predates or missed it.
-// The directory and port keep their hyphenated names — only the namespace is
-// constrained.
-const V = '0.1.0'; const NS = 'healer';
+const V = '0.1.0'; const NS = 'nexus-healer';
 function _c(id, method, path, desc, opts = {}) {
   return {
     id: `${NS}.${id}`, namespace: NS, name: id, version: V,

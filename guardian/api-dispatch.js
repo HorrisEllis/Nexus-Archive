@@ -238,7 +238,7 @@ async function dispatch(provider, prompt, opts = {}) {
   // Run Liminal gap check on response
   let gapScore = null;
   try {
-    const L   = require('../intelligence/meta/liminal');
+    const L   = require('../meta/liminal');
     const gaps = command === 'code' ? L.analyzeCode(text) : L.analyzeText(text);
     gapScore   = gaps.length ? gaps[0].criticality : 0;
   } catch(_) {}

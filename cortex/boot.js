@@ -68,7 +68,6 @@ const PORT    = parseInt(process.env.NEXUS_PORT || '3748');
 const OR_URL  = process.env.ORCH_URL || 'http://127.0.0.1:9000';
 const GD_URL  = process.env.GUARDIAN_URL || 'http://127.0.0.1:7820';
 const OL_URL  = process.env.OLLAMA_URL   || 'http://127.0.0.1:3749';
-const IN_PORT = parseInt(process.env.INTELLIGENCE_PORT || '3753');
 
 const ROOT    = path.join(__dirname, '..');
 // §5.4 2026-08-14 — was a hardcoded '3.0.0', drifted from lib/version.js's
@@ -106,7 +105,7 @@ function _getTaxonomy() {
 let _sysLattice = null;
 function _getSystemLattice() {
   if (_sysLattice !== null) return _sysLattice;
-  try { _sysLattice = require('../intelligence/meta/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
+  try { _sysLattice = require('../meta/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
   return _sysLattice;
 }
 let _CausalGraph = null;
@@ -317,43 +316,6 @@ async function readBody(req) {
   });
 }
 
-// §MIGRATION 2026-08-22 — front-door cutover (docs/MIGRATION-2026-08-22.md
-// "Not done" §1, MIGRATION-CHUNKS-1-3.md "Next chunk" item 1). These four
-// routes' real logic already lives on intelligence:3753 (intelligence/
-// index.js's own scanner — reuse/failures — and intelligence/liminal-space,
-// reached here before only via a same-process require of the migrated
-// module). Genuinely can't answer from this process anymore: cortex no
-// longer runs its own copy of the intelligence scanner (see the removed
-// `require('../intelligence').init()` call below, §DEDUP 2026-08-22) so
-// getReuseIndex()/getFailures() would just return empty arrays here, not a
-// real read. Path stays on :3748 — zero consumer changes (query-
-// intelligence.js, copilot/server.js etc. all hardcode CORTEX_PORT=3748
-// for these exact paths; checked before writing this, per §8.4). A single
-// forward, not a network dependency chain: if intelligence:3753 is down,
-// that's reported as 503, never a silently empty success (§1.2).
-function _proxyToIntelligence(req, res, u, targetPath) {
-  const opts = {
-    hostname: '127.0.0.1', port: IN_PORT, path: targetPath || (u.pathname + u.search),
-    method: req.method, headers: { 'Content-Type': 'application/json' },
-  };
-  const upstream = http.request(opts, (ur) => {
-    let d = '';
-    ur.on('data', c => d += c);
-    ur.on('end', () => {
-      res.writeHead(ur.statusCode || 502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-      res.end(d || JSON.stringify({ ok: false, error: 'empty upstream response' }));
-    });
-  });
-  upstream.on('error', (e) => json(res, 503, { ok: false, error: `intelligence:${IN_PORT} unreachable: ${e.message}` }));
-  upstream.on('timeout', () => { upstream.destroy(); json(res, 503, { ok: false, error: `intelligence:${IN_PORT} timeout` }); });
-  upstream.setTimeout(5000);
-  if (req.method === 'POST' || req.method === 'PUT') {
-    req.pipe(upstream);
-  } else {
-    upstream.end();
-  }
-}
-
 // ── HTTP server ───────────────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
   const url    = new URL(req.url, `http://127.0.0.1:${PORT}`);
@@ -512,20 +474,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Intelligence ─────────────────────────────────────────────────────────
-  // §MIGRATION 2026-08-22 — real bug fix, not just a relocation. Checked
-  // both real handlers side by side before touching this: cortex's local
-  // version never had crystallised/faultClasses/reuseItems/driftLevel —
-  // fields guardian/userscript-claude.js's OWN Intelligence Core panel has
-  // been reading from this exact response since it was built
-  // (status.crystallised, status.faultClasses, status.reuseItems,
-  // status.driftLevel — confirmed by reading that file directly). Every
-  // one of those has silently rendered as "0" or "unknown" the whole
-  // time. intelligence/index.js's real handler has all four. Proxying
-  // fixes a real, live, pre-existing bug — it doesn't just avoid
-  // introducing one. cli/nexus-repl.js's own caller just dumps the raw
-  // JSON, so it's unaffected either way.
   if (p === '/api/intelligence/status') {
-    _proxyToIntelligence(req, res, url);
+    json(res, 200, { ok: true, regime: _field.regime, field: _field,
+      patterns: _buildPatterns(3), openGaps: jaaDB.count('gaps', { status: 'open' }) });
     return;
   }
 
@@ -549,7 +500,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/cortex/lattice') {
     const about = url.searchParams.get('about');
     try {
-      const sysLattice = require('../intelligence/meta/spatial/system-lattice');
+      const sysLattice = require('../meta/spatial/system-lattice');
       if (about) {
         const neighbors = sysLattice.neighbors(about);
         json(res, 200, { ok: true, about, neighbors, size: sysLattice.size() });
@@ -816,18 +767,13 @@ const server = http.createServer(async (req, res) => {
   // §GAP CLOSED 2026-07-19 — liminal-space was init'd with a real bus above
   // but had no HTTP surface at all; no way to see its state without
   // reading JAA directly. Read-only, mirrors its own status()/list().
-  // §MIGRATION 2026-08-22 — now native on intelligence:3753 too (the real
-  // module has lived at intelligence/liminal-space since chunk 3 of
-  // MIGRATION-CHUNKS-1-3.md; only the HTTP surface was still cortex-only).
-  // Proxied rather than duplicated so there's one live instance answering,
-  // not two processes each requiring the same singleton and potentially
-  // reading it mid-write from different event loops.
   if (p === '/api/liminal-space/status' && method === 'GET') {
-    _proxyToIntelligence(req, res, url);
+    json(res, 200, require('./liminal-space').status());
     return;
   }
   if (p === '/api/liminal-space/list' && method === 'GET') {
-    _proxyToIntelligence(req, res, url);
+    const fp = url.searchParams.get('focalPoint') || undefined;
+    json(res, 200, { ok: true, items: require('./liminal-space').list(fp) });
     return;
   }
 
@@ -846,12 +792,17 @@ const server = http.createServer(async (req, res) => {
   // it here would mean writing an adapter for one call site. Simpler and
   // safer to call the three underlying exports directly.
   if (p === '/api/intelligence/reuse' && method === 'GET') {
-    _proxyToIntelligence(req, res, url); // §MIGRATION 2026-08-22 — see helper comment
+    const q = url.searchParams.get('q') || '';
+    const intel = require('../intelligence');
+    const all = intel.getReuseIndex();
+    const results = q ? all.filter(r => r.intent?.includes(q) || r.keywords?.some(k => k.includes(q))) : all.slice(0, 50);
+    json(res, 200, { ok: true, results, total: results.length });
     return;
   }
 
   if (p === '/api/intelligence/failures' && method === 'GET') {
-    _proxyToIntelligence(req, res, url); // §MIGRATION 2026-08-22 — see helper comment
+    const failures = require('../intelligence').getFailures();
+    json(res, 200, { ok: true, failures: Object.values(failures), total: Object.keys(failures).length });
     return;
   }
 
@@ -875,13 +826,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // §MIGRATION 2026-08-22 — target confirmed real: intelligence/index.js's
-  // handler does the identical jaaDB.insert('event_log', ...) PLUS
-  // triggers an immediate failure scan when body.type indicates an error.
-  // A strict superset, confirmed by reading both handlers side by side —
-  // proxying can only add behavior a caller would want, never remove any.
   if (p === '/api/intelligence/event' && method === 'POST') {
-    _proxyToIntelligence(req, res, url);
+    const body = await readBody(req);
+    if (body?.type) {
+      jaaDB.insert('event_log', {
+        uuid: uid(), type: body.type, payload: body.payload || {},
+        source: body.source || 'external', causedBy: body.causedBy || null, ts: Date.now(),
+      });
+    }
+    json(res, 200, { ok: true });
     return;
   }
 
@@ -1447,33 +1400,6 @@ server.listen(PORT, '127.0.0.1', () => {
     { name: 'gap-finder',           path: './gap-finder',           note: 'anomaly.detected + sigma.event.* → cortex.gap.found' },
     { name: 'orion',                path: './orion',                note: 'anomaly/sigma → cortex.orion.classified' },
     { name: 'raid',                 path: './core/raid',            note: 'cortex.orion.classified → cortex.raid.decided (direct-call route unaffected)' },
-    // §DEDUP 2026-08-22 — 'intelligence' removed from this array. It was
-    // switched on here 2026-07-24 (comment preserved below for the
-    // history) because intelligence/index.js had genuinely never run
-    // anywhere at the time. It has run somewhere since: intelligence/
-    // server.js (port 3753) now calls this exact same init() in its own
-    // process, every boot. Node's require cache is per-process, so this
-    // organ and that server were each holding an independent copy of
-    // _patternIndex/_failureIndex/_reuseIndex and an independent set of
-    // six setInterval scans (_scanPatterns, _scanFailures, etc.) against
-    // the same shared jaaDB tables — confirmed live from the console log
-    // attached to this session: identical "pattern crystallised" and
-    // "loom map synced" lines, once tagged [cortex/boot.js], once tagged
-    // [intelligence/server.js], seconds apart. Not two systems agreeing;
-    // one system's output logged twice.
-    //
-    // bep_patterns/failures are jaaDB tables, not process-local state —
-    // whichever process scans, every process reads the same real result
-    // (cortex/boot.js's /api/intelligence/reuse and /failures routes now
-    // proxy to intelligence:3753 rather than reading a local, now-
-    // permanently-empty copy; see _proxyToIntelligence above). So running
-    // this organ a second time here bought nothing that intelligence's own
-    // process wasn't already providing, and cost a second full scan cycle
-    // plus a second self-registration of the same capabilities every boot.
-    //
-    // Preserved, not deleted, per §0.3 (a decision, not a discovery) —
-    // original 2026-07-24 comment follows unedited:
-    //
     // §SWITCHED ON 2026-07-24 (James: "Yes to the core"). intelligence/index.js
     // is 933 lines that had NEVER RUN: nothing outside its own directory
     // required it, init() was never called, and neither bep_patterns.json nor
@@ -1497,6 +1423,7 @@ server.listen(PORT, '127.0.0.1', () => {
     // scans plus a 10s-delayed initial build that hydrates _failureIndex from
     // the persisted fault_taxonomy table, so there is no cold-start amnesia.
     // Failure is isolated by the loop's own try/catch, same as every organ.
+    { name: 'intelligence',         path: '../intelligence',         note: 'pattern recognition + failure taxonomy → bep_patterns/failures (was never running)' },
   ];
   for (const organ of organs) {
     try {
@@ -1529,31 +1456,16 @@ server.listen(PORT, '127.0.0.1', () => {
   } catch (e) {
     console.warn(`[cortex] raid/router failed to start: ${e.message}`);
   }
-  // §DEDUP 2026-08-22 — this used to call require('../intelligence').init()
-  // a second time, here, in the cortex process. intelligence/server.js
-  // already calls the exact same init() on the exact same module in its
-  // own process (intelligence/server.js:159). Node's require cache is
-  // per-process, so that was never "reused" as the old comment claimed —
-  // it was a second, independent instance of all six of init()'s
-  // setInterval scan loops (_scanPatterns, _scanFailures, _buildReuseIndex,
-  // _crossLedger, _scanMetaPatterns, _syncLoomMap), running against the
-  // same shared jaaDB tables from two processes at once. Confirmed live in
-  // the console log the person attached: identical "pattern crystallised"
-  // and "loom map synced" lines appearing twice, once tagged
-  // [cortex/boot.js] and once tagged [intelligence/server.js], seconds
-  // apart — not a coincidence, the same scan running twice.
-  //
-  // The original intent (per the removed comment) was real: get cortex's
-  // live _field into the scanner for crystallization enrichment, since
-  // intelligence/server.js's own init({}) call passes no getField at all.
-  // That's now solved on the intelligence side instead (intelligence/
-  // server.js fetches cortex's /cfr/field over HTTP for enrichment) so
-  // there's exactly one scanner, with real field data, in exactly one
-  // process. See intelligence/server.js for the replacement.
-  //
-  // cortex/boot.js's own reuse/failures HTTP routes above now proxy to
-  // intelligence:3753 rather than reading this process's (now permanently
-  // empty) local copy of the module.
+  try {
+    // §WIRED 2026-08-18 — real getField injection for cortex/intelligence's
+    // new crystallization enrichment (James: "make them more detailed,
+    // using rfr2 and cfr"). Same real _field this file already exports at
+    // module level (getField: () => _field) — reused, not duplicated.
+    require('../intelligence').init({ getField: () => _field });
+    console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active');
+  } catch (e) {
+    console.warn(`[cortex] intelligence/index failed to start: ${e.message}`);
+  }
 
   // §GAP CLOSED 2026-07-06 — meta/spatial/system-lattice.js was real,
   // tested, and persisted, but nothing fed it in production — the
@@ -1565,7 +1477,7 @@ server.listen(PORT, '127.0.0.1', () => {
   // orchestrator poll on purpose — this aggregates cross-system structure,
   // not live health, doesn't need sub-minute freshness.
   try {
-    const sysLattice = require('../intelligence/meta/spatial/system-lattice');
+    const sysLattice = require('../meta/spatial/system-lattice');
     sysLattice.load(); // rehydrate from Cortex before the first feed tick
     const _feedLattice = () => {
       try {

@@ -55,14 +55,14 @@ const EXPECTED_EXPORTS = {
   }
 
   await test('T-barrel', 'meta/rfr2/index.js barrel resolves converted modules synchronously', () => {
-    const rfr2 = require('../../intelligence/meta/rfr2/index.js');
+    const rfr2 = require('../../meta/rfr2/index.js');
     assert.ok(typeof rfr2.query.parseQuery === 'function');
     assert.ok(typeof rfr2.delta.computeDeltaStream === 'function');
     assert.ok(typeof rfr2.identity.newEventId === 'function');
   });
 
   await test('T-cql-functional', 'CQL actually parses a real query through the converted module', () => {
-    const { query } = require('../../intelligence/meta/rfr2/index.js');
+    const { query } = require('../../meta/rfr2/index.js');
     const ast = query.parseQuery("FIND events WHERE type = 'gap.found'");
     assert.strictEqual(ast.scope, 'events');
     assert.strictEqual(ast.conditions.field, 'type');
@@ -70,7 +70,7 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-delta-cross-import', "delta's converted require() of identity/lazy resolves (not left as broken ESM import)", () => {
-    const { computeDeltaStream } = require('../../intelligence/meta/rfr2/delta/index.js');
+    const { computeDeltaStream } = require('../../meta/rfr2/delta/index.js');
     const events = [{ id: '1', ts: 1000, type: 'a' }, { id: '2', ts: 1010, type: 'b', parent: '1' }];
     const findById = (id) => events.find(e => e.id === id);
     const stream = computeDeltaStream(events, findById, () => ({}), (id) => events.filter(e => e.parent === id));
@@ -84,7 +84,7 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-job2-barrel', 'the 4 newly-harvested modules resolve through the barrel too', () => {
-    const rfr2 = require('../../intelligence/meta/rfr2/index.js');
+    const rfr2 = require('../../meta/rfr2/index.js');
     assert.strictEqual(typeof rfr2.kernel.createKernel, 'function');
     assert.strictEqual(typeof rfr2.sigma.classify, 'function');
     assert.strictEqual(typeof rfr2.adapter.createAdapter, 'function');
@@ -92,7 +92,7 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-kernel-functional', 'kernel.createKernel() actually ingests events and builds a real causal graph', () => {
-    const { createKernel } = require('../../intelligence/meta/rfr2/kernel/index.js');
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
     const k = createKernel();
     const e1 = k.ingest('test:start', { x: 1 }, { source: 'test' });
     const e2 = k.ingest('test:child', { x: 2 }, { source: 'test', causedBy: e1.id });
@@ -103,7 +103,7 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-sigma-functional', 'sigma.classify() actually classifies a real kinematic window into a real regime', () => {
-    const { classify, REGIMES } = require('../../intelligence/meta/rfr2/sigma/index.js');
+    const { classify, REGIMES } = require('../../meta/rfr2/sigma/index.js');
     const window = [
       { latencyImpact: 0.1, throughputChange: 0.1, structuralDeviation: 0.1 },
       { latencyImpact: 0.9, throughputChange: 0.9, structuralDeviation: 0.1 },
@@ -114,8 +114,8 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-adapter-functional', 'adapter.createAdapter() actually translates a real bus event through a real kernel', () => {
-    const { createKernel } = require('../../intelligence/meta/rfr2/kernel/index.js');
-    const { createAdapter } = require('../../intelligence/meta/rfr2/adapter/index.js');
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { createAdapter } = require('../../meta/rfr2/adapter/index.js');
     const k = createKernel();
     const adapter = createAdapter(k);
     const ev = adapter.handle('page:navigated', { sessionId: 's1' });
@@ -123,8 +123,8 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-compress-round-trip', 'compress.snapshot()/restore() actually round-trips a real kernel — the whole point of Job 2', () => {
-    const { createKernel } = require('../../intelligence/meta/rfr2/kernel/index.js');
-    const { snapshot, restore } = require('../../intelligence/meta/rfr2/compress/index.js');
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { snapshot, restore } = require('../../meta/rfr2/compress/index.js');
     const k = createKernel();
     k.ingest('test:a', { v: 1 }, { source: 'test' });
     const e2 = k.ingest('test:b', { v: 2 }, { source: 'test', causedBy: k.getAll()[0].id });
@@ -137,8 +137,8 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-clip-functional', 'clip.snapshotRange() actually extracts a bounded causal subgraph with a real stability profile', () => {
-    const { createKernel } = require('../../intelligence/meta/rfr2/kernel/index.js');
-    const { snapshotRange } = require('../../intelligence/meta/rfr2/clip/index.js');
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { snapshotRange } = require('../../meta/rfr2/clip/index.js');
     const k = createKernel();
     k.ingest('test:a', {}, { source: 'test' });
     k.ingest('test:b', {}, { source: 'test' });
@@ -149,8 +149,8 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-context-functional', 'context.createLiveContext() actually wraps a real kernel', () => {
-    const { createKernel } = require('../../intelligence/meta/rfr2/kernel/index.js');
-    const { createLiveContext, CONTEXT_LIVE } = require('../../intelligence/meta/rfr2/context/index.js');
+    const { createKernel } = require('../../meta/rfr2/kernel/index.js');
+    const { createLiveContext, CONTEXT_LIVE } = require('../../meta/rfr2/context/index.js');
     const k = createKernel();
     const ctx = createLiveContext(k);
     assert.strictEqual(typeof ctx, 'object');
@@ -158,7 +158,7 @@ const EXPECTED_EXPORTS = {
   });
 
   await test('T-job2b-forge-functional', 'forge module has the real 4-entry-point shape (async functions), harvested as the actual live nexus-healer consumer', () => {
-    const { forgeModule, forgePatch, forgeGate, forgeHook, ForgePatchRecord } = require('../../intelligence/meta/rfr2/forge/index.js');
+    const { forgeModule, forgePatch, forgeGate, forgeHook, ForgePatchRecord } = require('../../meta/rfr2/forge/index.js');
     for (const fn of [forgeModule, forgePatch, forgeGate, forgeHook]) {
       assert.strictEqual(fn.constructor.name, 'AsyncFunction', 'forge entry points must remain async functions after conversion');
     }
