@@ -219,6 +219,12 @@ const SUITES = [
   // §2026-08-23 — real screenshot tool + the driver.exec payload-injection
   // bugfix it surfaced (navigate was also affected).
   'test-browser-action-screenshot.js',
+  // §2026-08-23 — native OS-level toast notification + the server-trigger
+  // path (GUARDIAN_NATIVE_TOAST), built to close a real, confirmed gap
+  // found mining four old Guardian extension zips.
+  'test-native-toast.js',
+  // §2026-08-23 — the real macro tool, built on browser_action + rewind_replay.
+  'test-macro.js',
 
   // §2026-08-19 — queue/ollama-lock/introspect/agent-capability merge
   // (nexus0822 branch). test-end-state.js, test-nexus-wake.js, and

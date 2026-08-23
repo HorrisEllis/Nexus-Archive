@@ -93,6 +93,20 @@ async function main() {
       assert.strictEqual(content.url, 'https://example.com');
     });
 
+    test('get_url correctly maps to the real driver sub-action "getUrl" (camelCase), not the tool\'s own snake_case name', async () => {
+      lastJobBody = null;
+      await tool.execute({ action: 'get_url', data: {} });
+      const content = JSON.parse(lastJobBody.content);
+      assert.strictEqual(content.action, 'getUrl', 'must be the real driver sub-action name, not "get_url"');
+    });
+
+    test('get_title correctly maps to "getTitle"', async () => {
+      lastJobBody = null;
+      await tool.execute({ action: 'get_title', data: {} });
+      const content = JSON.parse(lastJobBody.content);
+      assert.strictEqual(content.action, 'getTitle');
+    });
+
     test('dom_query (NOT driver.exec-routed) is correctly unaffected — no injected action field', async () => {
       lastJobBody = null;
       await tool.execute({ action: 'dom_query', data: { selector: '#foo' } });

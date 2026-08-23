@@ -64,6 +64,10 @@ const FILES = [
 
   ['lib/agent-tools/tools/browser/browser-action.js',        'nexus.lib.agent-tools.tools.browser-action',
     ['nexus.guardian.clear-glass-bridge', 'nexus.clear-glass.src.driver.url-listener']],
+
+  // §2026-08-23 — real, on top of both the tools above, not parallel to them.
+  ['lib/agent-tools/tools/automation/macro.js',               'nexus.lib.agent-tools.tools.macro',
+    ['nexus.lib.agent-tools.tools.browser-action', 'nexus.lib.agent-tools.tools.rewind-replay', 'nexus.cortex.jaa-db']],
      // §2026-08-12 — REAL_ACTIONS event-type strings fixed this session (5 of 6 didn't match any real
      // clear-glass gate signature — see the file's own header); url_listen/url_unlisten added (P5),
      // reaching url-listener.js's real, already-registered gates for the first time.

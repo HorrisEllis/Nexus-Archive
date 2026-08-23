@@ -190,6 +190,7 @@ ${C.bold}Module pass-through (slash prefix):${C.reset}
   nexus ${C.cyan}/cortex${C.reset}   [args]       cortex/cortex.js — ask status gaps tail
   nexus ${C.blue}/idearium${C.reset} [args]       idearium/cli    — idea spec gap push snr
   nexus ${C.green}/ollama${C.reset}   [args]       ollama direct   — status models pull run
+  nexus ${C.green}/macro${C.reset}    [args]       macro           — list get create delete run bookmark
   nexus ${C.purple}/cos${C.reset}     [args]       cos/cli/index.js — Compartment OS: create list map start stop destroy
   nexus ${C.yellow}/healer${C.reset}  [args]       nexus-healer/cli — self-heal operations
   nexus ${C.cyan}/copilot${C.reset} [args]       copilot/cli.js  — talk to NEXUS directly
@@ -510,6 +511,123 @@ async function _handleOllamaCommand(subArgs) {
   fail(`Unknown /ollama command: ${sub} — try: nexus /ollama help`);
 }
 
+// ── /macro — real, built-in commands, CLI-first per James's own explicit
+// ordering ────────────────────────────────────────────────────────────────
+// §MACRO-CLI 2026-08-23 — calls lib/agent-tools/tools/automation/macro.js
+// directly, in-process. No HTTP round trip: the tool module IS the real
+// implementation, same pattern this file already uses for nothing else
+// (every other /module goes through a passthrough or HTTP to a live
+// server) because macro.js has no server of its own to reach — it's a
+// pure library function that itself reaches browser_action/rewind_replay.
+function _flagObj(prefix) {
+  // Real, generic --prefix.key=value parser, for macro run's params
+  // (--param.therapistName="Dr. Smith") — reuses this file's own flag()
+  // convention rather than inventing a second parsing style.
+  const out = {};
+  for (const a of args) {
+    if (!a.startsWith(`--${prefix}.`)) continue;
+    const eq = a.indexOf('=');
+    if (eq === -1) continue;
+    out[a.slice(prefix.length + 3, eq)] = a.slice(eq + 1);
+  }
+  return out;
+}
+
+async function _handleMacroCommand(subArgs) {
+  const sub = subArgs[0];
+  const macro = require('../lib/agent-tools/tools/automation/macro.js');
+
+  if (!sub || sub === 'help') {
+    console.log(`
+  ${C.bold}nexus /macro <command>${C.reset}
+
+  list                            real, stored macros — name, url pattern, step count
+  get <name>                      full real macro definition, including every step
+  create <name> --file=<path.json> [--url=<pattern>]
+                                   define from a real JSON file: {"steps":[...], "params":[...], "description":...}
+                                   ({{paramName}} placeholders in step data are substituted at run time)
+  delete <name>
+  run <name> --agent=<agentId> [--param.name=value ...] [--skip-snapshot]
+                                   checks the real current URL against the macro's pattern (if any), takes a
+                                   real rewind snapshot first (rollback point) unless --skip-snapshot, then runs
+                                   every step through the real browser_action tool — stops at the first failure
+  bookmark --agent=<agentId> --label=<label>
+                                   a real, named rewind-engine snapshot — capture this page's state to return to
+`);
+    return;
+  }
+
+  if (sub === 'list') {
+    const r = await macro.execute({ action: 'list' });
+    if (r.error) return fail(r.error);
+    hdr('Macros');
+    if (!r.macros.length) { info('none yet — nexus /macro create <name> --file=<path.json>'); return; }
+    for (const m of r.macros) {
+      console.log(`  ${C.bold}${m.name}${C.reset}  ${C.muted}${m.steps} step(s)${m.urlPattern ? ` · ${m.urlPattern}` : ''}${m.runCount ? ` · run ${m.runCount}x` : ''}${C.reset}`);
+    }
+    return;
+  }
+
+  if (sub === 'get') {
+    const name = subArgs[1];
+    if (!name) return fail('Usage: nexus /macro get <name>');
+    const r = await macro.execute({ action: 'get', name });
+    if (r.error) return fail(r.error);
+    out(r.macro);
+    return;
+  }
+
+  if (sub === 'create') {
+    const name = subArgs[1];
+    if (!name) return fail('Usage: nexus /macro create <name> --file=<path.json>');
+    const file = flag('file');
+    if (!file) return fail('create needs --file=<path.json> — a real {"steps":[...]} definition');
+    let def;
+    try { def = JSON.parse(fs.readFileSync(file, 'utf8')); }
+    catch (e) { return fail(`couldn't read/parse ${file}: ${e.message}`); }
+    const r = await macro.execute({ action: 'create', name, urlPattern: flag('url') || def.urlPattern, steps: def.steps, params: def.params, description: def.description });
+    if (r.error) return fail(r.error);
+    ok(`macro "${name}" created — ${r.macro.steps.length} step(s)`);
+    return;
+  }
+
+  if (sub === 'delete') {
+    const name = subArgs[1];
+    if (!name) return fail('Usage: nexus /macro delete <name>');
+    const r = await macro.execute({ action: 'delete', name });
+    if (r.error) return fail(r.error);
+    ok(`deleted "${name}"`);
+    return;
+  }
+
+  if (sub === 'run') {
+    const name = subArgs[1];
+    if (!name) return fail('Usage: nexus /macro run <name> --agent=<agentId>');
+    const agentId = flag('agent');
+    if (!agentId) return fail('run needs --agent=<agentId> — which real browser session to run against');
+    const params = _flagObj('param');
+    const r = await macro.execute({ action: 'run', name, agentId, params, skipSnapshot: args.includes('--skip-snapshot') });
+    if (!r.ok) {
+      fail(`macro "${name}" failed at step ${r.failedAtStep} (${r.stepsCompleted}/${r.stepsTotal} completed): ${r.error}`);
+      if (r.snapshotId) info(`rollback point saved: ${r.snapshotId} (via the rewind engine — restore it through co-pilot or the rewind_replay tool directly)`);
+      process.exit(1);
+    }
+    ok(`macro "${name}" completed — ${r.stepsCompleted} step(s)${r.snapshotId ? ` · snapshot ${r.snapshotId}` : ''}`);
+    return;
+  }
+
+  if (sub === 'bookmark') {
+    const agentId = flag('agent');
+    const label = flag('label');
+    if (!agentId || !label) return fail('Usage: nexus /macro bookmark --agent=<agentId> --label=<label>');
+    const r = await macro.execute({ action: 'bookmark', agentId, label });
+    if (r.error) return fail(r.error);
+    ok(`bookmarked "${label}"`);
+    return;
+  }
+
+  fail(`Unknown /macro command: ${sub} — try: nexus /macro help`);
+}
 
 const cmd = args[0];
 if (!cmd || cmd === 'help') {
@@ -530,6 +648,13 @@ if (!cmd || cmd === 'help') {
   // own header has promised "/ollama <args> — ollama direct commands"
   // since it was written; never actually implemented until now).
   _handleOllamaCommand(args.slice(1)).catch(e => { fail(e.message); process.exit(1); });
+} else if (cmd === '/macro') {
+  // §MACRO-CLI 2026-08-23 — James: "lets do macros." CLI-first, per his
+  // own explicit ordering ("all cli first, then ui last") — this calls
+  // the real, already-tested lib/agent-tools/tools/automation/macro.js
+  // directly (in-process require, not an HTTP round trip — there's no
+  // separate macro server, the tool IS the implementation).
+  _handleMacroCommand(args.slice(1)).catch(e => { fail(e.message); process.exit(1); });
 } else if (cmd.startsWith('/')) {
   // §BUGFIX 2026-08-23 — James: "why is there so many CLIs, can we
   // consolidate?" Found while wiring in /cos and /healer: this call

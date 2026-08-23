@@ -409,6 +409,59 @@ function toast(msg, type='info', ms=3000) {
   setTimeout(() => el.remove(), ms);
 }
 
+// §NATIVE-TOAST 2026-08-23 — James: "create toasts." Real gap, confirmed
+// across both the current codebase and four old Guardian extension zips
+// mined the same session: toast() above is a real, working in-page DOM
+// overlay — invisible the instant this tab isn't focused. None of the old
+// extensions ever used the native Notification API either, despite one of
+// them (files-1/Guardian-clean.zip) declaring the "notifications"
+// permission in its own manifest.json and never once calling it.
+//
+// This is the real prerequisite for "CAPTCHAs popup when needed" from
+// earlier the same session: a CLI-driven automation running unattended
+// needs a way to surface "I'm stuck, a human has to look" that reaches the
+// person even if they've alt-tabbed away — an in-page toast can't do that,
+// a native OS notification can.
+//
+// Uses the standard web Notification API directly — no special extension
+// permission needed; a Tampermonkey userscript runs in a normal page
+// context where this is just available, confirmed by MDN's own spec, not
+// assumed. Permission is requested once, lazily, on first real use — never
+// on page load, so it isn't one more thing asking for a permission the
+// person hasn't triggered yet.
+let _nativeToastPermissionAsked = false;
+function nativeToast(title, body, opts = {}) {
+  if (typeof Notification === 'undefined') {
+    _log('err', 'nativeToast unavailable — Notification API not present in this context');
+    return false;
+  }
+  const fire = () => {
+    try {
+      const n = new Notification(title, { body, icon: opts.icon, tag: opts.tag, requireInteraction: !!opts.requireInteraction });
+      if (opts.onClick) n.onclick = opts.onClick;
+      return true;
+    } catch (e) {
+      _log('err', `nativeToast failed: ${e.message}`);
+      return false;
+    }
+  };
+  if (Notification.permission === 'granted') return fire();
+  if (Notification.permission === 'denied') {
+    _log('warn', 'nativeToast: permission denied — falling back to in-page toast');
+    toast(`${title}: ${body}`, 'warn', 6000);
+    return false;
+  }
+  // 'default' — never asked yet. Ask now, lazily, on this first real call.
+  if (!_nativeToastPermissionAsked) {
+    _nativeToastPermissionAsked = true;
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') fire();
+      else toast(`${title}: ${body}`, 'warn', 6000); // real, honest fallback — the alert still reaches the person, just in-page
+    });
+  }
+  return null; // pending — caller shouldn't assume it fired synchronously
+}
+
 // ── Streaming to cortex ───────────────────────────────────────────────────────
 let _streamBuf = '', _streamCnt = 0;
 function _streamToCortex(jobId, delta, full) {
@@ -789,6 +842,19 @@ function _handleServerMessage(msg) {
       break;
     case 'GUARDIAN_SESSION_NAMED': _log('info','Session named', msg.name); break;
     case 'GUARDIAN_ARTIFACT_SAVED': _log('ok','Artifact saved', msg.artifactId); break;
+    // §NATIVE-TOAST 2026-08-23 — the server-side trigger path. Guardian
+    // (or anything reaching guardian's own /command, including a CLI-
+    // driven automation script) can push a real, native OS-level
+    // notification to whatever live tab(s) receive this — via ncp.push,
+    // ncp.pushTab, or ncp.broadcast depending on whether the alert is
+    // tab-specific or general. This is the real mechanism "CAPTCHAs popup
+    // when needed" needs: an unattended CLI flow that hits a CAPTCHA can
+    // surface a real, attention-grabbing notification the person will see
+    // even with this tab in the background.
+    case 'GUARDIAN_NATIVE_TOAST':
+      if (msg.title) nativeToast(msg.title, msg.body || '', { requireInteraction: !!msg.requireInteraction, tag: msg.tag });
+      else _log('err', 'GUARDIAN_NATIVE_TOAST received with no title');
+      break;
     default: _log('debug', `NCP: ${msg.type}`);
   }
 }
