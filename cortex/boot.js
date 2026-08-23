@@ -212,46 +212,18 @@ function _raidDecide(intent, cfrCtx = {}) {
 }
 
 // ── Patterns + RCA ───────────────────────────────────────────────────────────
-function _buildPatterns(limit = 5) {
-  // §GAP CLOSED 2026-07-06 — traced from the user's own description
-  // ("pattern engine migrated to intuition"): copilot/intuition.js has
-  // called this exact endpoint expecting {precursor, outcome, count,
-  // confidence} since it was written — but this function used to just
-  // tally event_log types, producing {type, count, lastSeen} instead.
-  // Every field intuition.js reads off a returned pattern (p.precursor,
-  // p.outcome, p.confidence) was undefined against the old shape,
-  // meaning "Crystallised patterns" output has always rendered as
-  // "undefined → undefined (NaN%)" whenever this path fired. The real
-  // pattern engine is meta/crystal-lattice.js — it writes real
-  // (domain, verb, outcome) crystals to the 'crystals' JAA table once a
-  // pattern repeats past PATTERN_FREQUENCY_THRESHOLD times, already
-  // wired into orchestrator.js via lib/compartment-engine.js. This reads
-  // that real table instead of re-deriving a shallower stand-in.
-  const crystals = jaaDB.tail('crystals', 50);
-  if (!crystals.length) return []; // honest empty, not a fabricated fallback
-  return crystals
-    .sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0))
-    .slice(0, limit)
-    .map(c => ({
-      precursor:  `${c.entry_conditions?.domain || '?'}:${c.entry_conditions?.verb || '?'}`,
-      outcome:    c.exit_conditions?.outcome || 'unknown',
-      count:      c.usage_count || c.pattern_frequency_at_creation || 0,
-      confidence: c.success_probability ?? 0,
-      kind:       c.kind,
-      ts:         c.ts,
-    }));
-}
+// §MIGRATED — _buildPatterns and _buildRCA now live in intelligence/patterns.js.
+// They were the only two intelligence routes in this file whose LOGIC lived
+// here; the rest already call into intelligence/ or proxy. Dependencies are
+// INJECTED in the same shape this file already uses for intuition/mastermind —
+// intelligence requiring cortex would invert the faculty direction.
+// Thin wrappers keep the old array contract exact (§5.14).
+const _patterns = require('../intelligence/patterns').createPatterns({
+  jaaDB, getField: () => _field,
+});
 
-function _buildRCA(limit = 5) {
-  const gaps = jaaDB.query('gaps', { status: 'open' }, { orderBy: 'ts', order: 'DESC', limit });
-  return gaps.map(g => ({
-    gapId:  g.id,
-    type:   g.type || 'unknown',
-    cause:  g.root_cause || 'unresolved',
-    since:  g.ts,
-    sigma:  _field.entropy,
-  }));
-}
+function _buildPatterns(limit = 5) { return _patterns.buildPatterns(limit).patterns; }
+function _buildRCA(limit = 5)      { return _patterns.buildRCA(limit).rca; }
 
 // ── Intelligence: intuition (fast pattern answer) ────────────────────────────
 // Real logic now lives in cortex/intelligence/intuition.js — kept as a

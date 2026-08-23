@@ -37,6 +37,10 @@ const FILES = [
   ['guardian/lib/gap-hunter.js', 'nexus.guardian.lib.gap-hunter', 'guardian/lib', ['nexus.intelligence.gap.hunter']],
   ['intelligence/liminal-space/index.js', 'nexus.intelligence.liminal-space', ['nexus.cortex.jaa-db']],
   ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
+  // §2026-08-23 — real, standalone HTTP bridge (:7704) proxying to
+  // erosmancer-os's own real API (:7432) and clear-glass's IPC (:7702) —
+  // confirmed by reading the file directly, not assumed from its name.
+  ['clear-glass/wire/nexus-wire.js', 'nexus.clear-glass.wire.nexus-wire', 'clear-glass/wire', []],
 
   // §ADDED 2026-08-17b — TX10 (docs/clearglass-agent-suite-and-cfr-loom-
   // phasemap.spec), same standing instruction. Checked directly, not

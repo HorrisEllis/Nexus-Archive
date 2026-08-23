@@ -121,6 +121,98 @@ async function main() {
     assert.strictEqual(r.result.snapshotId, 'snap-real-123');
   });
 
+  // ── §EROS-INTEGRATION 2026-08-23 — real tests against a real, fake wire
+  // bridge HTTP server standing in for clear-glass/wire/nexus-wire.js's
+  // real :7704, since there's no live erosmancer/Electron in this
+  // environment. Verifies macro.js's own real HTTP client and request
+  // shapes, not a reimplementation. ──────────────────────────────────────
+  await test('create rejects an unknown erosmancer action', async () => {
+    const r = await macro.execute({ action: 'create', name: 'eros_bad', steps: [{ engine: 'erosmancer', action: 'not_real', targetUuid: 'x' }] });
+    assert.ok(r.error && r.error.includes("erosmancer's real execute actions"));
+  });
+
+  await test('create rejects an erosmancer click/type step with no targetUuid', async () => {
+    const r = await macro.execute({ action: 'create', name: 'eros_no_uuid', steps: [{ engine: 'erosmancer', action: 'click' }] });
+    assert.ok(r.error && r.error.includes('needs a real targetUuid'));
+  });
+
+  await test('create rejects an unreal profile name', async () => {
+    const r = await macro.execute({ action: 'create', name: 'eros_bad_profile', profile: 'aggressive', steps: [{ action: 'navigate', data: { url: 'x' } }] });
+    assert.ok(r.error && r.error.includes('is not real'));
+  });
+
+  await test('run — an erosmancer-engine step reaches the real wire bridge with the right request shape', async () => {
+    let capturedExecuteBody = null, capturedProfileBody = null;
+    const http = require('http');
+    const server = http.createServer((req, res) => {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        if (req.url === '/eros/execute') { capturedExecuteBody = JSON.parse(body); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: true, result: { clicked: true }, planId: 'plan-1' })); }
+        else if (req.url === '/eros/behavior/profile') { capturedProfileBody = JSON.parse(body); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: true, profile: capturedProfileBody.profile })); }
+        else { res.writeHead(404); res.end(); }
+      });
+    });
+    await new Promise(resolve => server.listen(17704, resolve));
+    process.env.EROS_WIRE_PORT = '17704';
+    // macro.js reads EROS_WIRE_PORT once, at module load — force a real,
+    // fresh require so this test's own port actually takes effect,
+    // matching the same real constraint the module's own comment states.
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+
+    await macroFresh.execute({ action: 'create', name: 'eros_click', profile: 'cautious', steps: [
+      { engine: 'erosmancer', action: 'click', targetUuid: 'node-abc-123' },
+    ] });
+    const r = await macroFresh.execute({ action: 'run', name: 'eros_click', agentId: 'tab-eros', params: {} });
+
+    server.close();
+    assert.strictEqual(r.ok, true, `expected a real success, got ${JSON.stringify(r)}`);
+    assert.strictEqual(capturedProfileBody.sessionId, 'tab-eros');
+    assert.strictEqual(capturedProfileBody.profile, 'cautious');
+    assert.strictEqual(capturedExecuteBody.action, 'click');
+    assert.strictEqual(capturedExecuteBody.uuid, 'node-abc-123');
+    assert.strictEqual(capturedExecuteBody.tabId, 'tab-eros');
+  });
+
+  await test('run — erosmancer wire unreachable fails loud with a real, specific error', async () => {
+    process.env.EROS_WIRE_PORT = '17705'; // nothing real listening here
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+    await macroFresh.execute({ action: 'create', name: 'eros_unreachable', steps: [{ engine: 'erosmancer', action: 'navigate', data: 'https://x' }] });
+    const r = await macroFresh.execute({ action: 'run', name: 'eros_unreachable', agentId: 'tab-1', params: {} });
+    assert.strictEqual(r.ok, false);
+    assert.ok(r.error.includes('unreachable'), `expected a real, specific unreachable error, got: ${r.error}`);
+  });
+
+  await test('run — erosmancer navigate/type/evaluate steps pass data as a raw payload, NOT nested like browser_action', async () => {
+    // §CORRECTNESS 2026-08-23 — real, confirmed by reading erosmancer's
+    // own /api/execute directly: payload for navigate/type/evaluate is
+    // String(payload) — a raw value, not extracted from an object the way
+    // browser_action's {url:...}/{selector:...} shape works. A macro step
+    // author who copies browser_action's convention here would silently
+    // send "[object Object]" instead of the real URL/text/expression.
+    let capturedExecuteBody = null;
+    const http = require('http');
+    const server = http.createServer((req, res) => {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        if (req.url === '/eros/execute') { capturedExecuteBody = JSON.parse(body); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: true, result: {} })); }
+        else { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: true })); }
+      });
+    });
+    await new Promise(resolve => server.listen(17706, resolve));
+    process.env.EROS_WIRE_PORT = '17706';
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+    await macroFresh.execute({ action: 'create', name: 'eros_navigate', steps: [{ engine: 'erosmancer', action: 'navigate', data: 'https://real-url.example.com/{{path}}' }] });
+    const r = await macroFresh.execute({ action: 'run', name: 'eros_navigate', agentId: 'tab-1', params: { path: 'jobs/123' } });
+    server.close();
+    assert.strictEqual(r.ok, true);
+    assert.strictEqual(capturedExecuteBody.payload, 'https://real-url.example.com/jobs/123', 'must be a real, raw substituted string, not a nested object');
+  });
+
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed ? 1 : 0);
 }

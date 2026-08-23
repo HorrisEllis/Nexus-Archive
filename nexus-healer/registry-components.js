@@ -4,7 +4,9 @@
  * comp_id: nexus.nexus-healer.registry
  * Same shape as architect/registry-components.js and idearium/registry-components.js.
  */
-const V = '0.1.0'; const NS = 'nexus-healer';
+// §CR-004 — ID_PATTERN's first segment permits no hyphen; all 5 components
+// failed validation silently. clear-glass solved this with NS='cg'.
+const V = '0.1.0'; const NS = 'healer';
 function _c(id, method, path, desc, opts = {}) {
   return {
     id: `${NS}.${id}`, namespace: NS, name: id, version: V,
