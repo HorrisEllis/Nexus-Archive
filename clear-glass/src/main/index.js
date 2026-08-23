@@ -106,6 +106,7 @@ const NexusOptions      = require('../options/store');
 const BookmarkStore     = require('../bookmarks/store');
 const RewindEngine      = require('../rewind/engine');
 const ProviderHost      = require('../providers/host');
+const { listProviders } = require('../providers/registry');
 const UserscriptManager = require('../userscripts/manager');
 const { registerAll }   = require('../gates/index');
 const COMPONENTS        = require('../../seam/registry-components');
@@ -761,9 +762,28 @@ async function bootstrap() {
   // background on every boot. Still fully overridable — set
   // CG_AUTOBOOT_PROVIDERS=none to go back to lazy-only, or a specific
   // comma-list / 'all' to change which ones boot.
-  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'claude,chatgpt,gemini,perplexity').trim();
+  // §PHASE-2 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md item 4:
+  // "No 'disable opening in the background on startup' toggle, anywhere.
+  // ProviderHost's boot routine spawns every provider in listProviders()
+  // unconditionally — no per-provider skip flag exists in the registry,
+  // in NexusOptions, or in the boot loop itself." Confirmed true before
+  // this change, now closed: CG_AUTOBOOT_PROVIDERS stays the real,
+  // documented power-user override when explicitly set (checked via
+  // `!== undefined`, not truthiness — an operator setting it to '' or
+  // 'none' still means "I said something, respect it," distinct from
+  // never having set it at all); when genuinely unset, the real,
+  // persisted per-provider NexusOptions.autoStartOnBoot decides instead
+  // of the old hardcoded four-provider default.
+  let autoBootSetting;
+  if (process.env.CG_AUTOBOOT_PROVIDERS !== undefined) {
+    autoBootSetting = process.env.CG_AUTOBOOT_PROVIDERS.trim();
+  } else {
+    const auto = nexusOptions.get().autoStartOnBoot || {};
+    const enabled = listProviders().filter(p => auto[p.id] !== false).map(p => p.id);
+    autoBootSetting = enabled.length ? enabled.join(',') : 'none';
+  }
   if (autoBootSetting === 'none' || autoBootSetting === '') {
-    console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS to pre-warm specific providers.');
+    console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS or Nexus Options\' autoStartOnBoot to pre-warm specific providers.');
   } else {
     const only = autoBootSetting === 'all' ? null : autoBootSetting.split(',').map(s => s.trim()).filter(Boolean);
     providerHost.autoBootAll({ show: false, only }).then(results => {

@@ -34,6 +34,34 @@ const DEFAULTS = {
   // Toolbar customization — ids of feature buttons pinned to the main
   // chrome bar. Anything not listed here lives in the overflow menu only.
   pinnedToolbarButtons:  ['copilot-toggle', 'btn-bookmark'],
+
+  // §PHASE-1 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md,
+  // "NexusOptions: real config surface... per-provider autoStartOnBoot."
+  // Real provider ids, matching src/providers/registry.js's own
+  // NCP_PROVIDERS exactly (checked directly, not guessed) — a provider
+  // added there later needs a matching entry here, same one-source-of-
+  // truth discipline that file's own header already states for itself.
+  autoStartOnBoot: {
+    claude:     true,
+    chatgpt:    true,
+    gemini:     true,
+    perplexity: true,
+  },
+
+  // Background tabs — real defaults for src/main/index.js's already-real
+  // openBackgroundTab/closeBackgroundTab/listBackgroundTabs. No UI or
+  // boot-time consumer reads this yet (that's Phase 2/5's job); the key
+  // exists now so Phase 1 is a real, complete config surface rather than
+  // one item short of what the plan named.
+  backgroundTabDefaults: {
+    openInBackground: true,   // "Move to Background Tab" context-menu default state
+  },
+
+  // §PLACEHOLDER, real shape not real behavior yet — Phase 3/4's own
+  // job to make this mean something (account/uuid model, Agent Suite).
+  // Present now, empty now, so later phases extend an existing key
+  // rather than introduce a new one mid-plan.
+  accounts: {},
 };
 
 class NexusOptions {
@@ -57,7 +85,23 @@ class NexusOptions {
   }
 
   async set(updates) {
-    this.data = { ...this.data, ...updates };
+    // §BUGFIX 2026-08-23 — found while adding the first real nested
+    // option keys (autoStartOnBoot, backgroundTabDefaults, accounts):
+    // the old shallow merge silently WIPED OUT every sibling key on a
+    // partial nested update — set({autoStartOnBoot:{claude:false}})
+    // deleted chatgpt/gemini/perplexity's real settings entirely, not
+    // just left them unset. Confirmed directly before fixing, not
+    // assumed. Real fix: merge one level deep specifically for values
+    // that are plain objects (not arrays, not primitives) — arrays like
+    // pinnedToolbarButtons and simple keys like hideToTrayOnClose keep
+    // their original, correct "replace wholesale" behavior; only the
+    // new nested-object keys get real, safe partial-update semantics.
+    const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+    const merged = { ...this.data };
+    for (const [k, v] of Object.entries(updates)) {
+      merged[k] = isPlainObject(v) && isPlainObject(this.data[k]) ? { ...this.data[k], ...v } : v;
+    }
+    this.data = merged;
     fs.writeFileSync(OPTIONS_PATH, JSON.stringify(this.data, null, 2), 'utf8');
     return { ...this.data };
   }
