@@ -148,6 +148,12 @@ const FILES = [
   ['copilot/lib/grammar-router.js',  'nexus.copilot.lib.grammar-router',  'copilot/lib',   []],
   ['copilot/lifeline.js',            'nexus.copilot.lifeline',            'copilot',       []],
   ['ollama/server.js',               'nexus.ollama.server',               'ollama',        []],
+  // §2026-08-23 — real, centralized config (see ollama/config.js's own
+  // header for the full real reason) and the hardware-fitted abliterated
+  // model catalog it's paired with. No real dependencies of their own —
+  // pure value/data files.
+  ['ollama/config.js',               'nexus.ollama.config',               'ollama',        []],
+  ['ollama/abliterated-catalog.js',  'nexus.ollama.abliterated-catalog',  'ollama',        []],
 
   // §ADDED 2026-08-18l (agent-ids branch) — a real, significant,
   // pre-existing gap: this file was genuinely unregistered under any id

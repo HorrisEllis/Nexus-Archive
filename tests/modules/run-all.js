@@ -216,6 +216,9 @@ const SUITES = [
   // the freeze-thaw branch — 29 real tests, invisible to the project's
   // own tally until this line was added.
   'test-hat-forge.js',
+  // §2026-08-23 — real screenshot tool + the driver.exec payload-injection
+  // bugfix it surfaced (navigate was also affected).
+  'test-browser-action-screenshot.js',
 
   // §2026-08-19 — queue/ollama-lock/introspect/agent-capability merge
   // (nexus0822 branch). test-end-state.js, test-nexus-wake.js, and

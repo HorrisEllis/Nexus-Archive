@@ -35,7 +35,16 @@ const DATA_DIR      = config.DATA_DIR;
 // this comment used to be 25 lines of history that drifted out of sync
 // with itself every time one of these values changed again.
 const MAX_CONCURRENT  = config.MAX_CONCURRENT;
-const DEFAULT_MODEL   = config.DEFAULT_MODEL;
+// §RUNTIME-OVERRIDE 2026-08-23 — James: real request from the model-index
+// work this session: switch the active model without a process restart.
+// Was a const, read once from config.js at boot — this codebase's own
+// real history (§HISTORY in ollama/config.js) is that a stale model tag
+// is silently wrong, not loudly wrong, so a real, in-memory override with
+// its own explicit endpoint (PUT /api/model, below) beats requiring an
+// operator to know they need to restart a background process to change
+// it. config.js's own DEFAULT_MODEL remains the real value on a fresh
+// boot — this only overrides it for the life of THIS process.
+let DEFAULT_MODEL   = config.DEFAULT_MODEL;
 const FALLBACK_MODEL  = config.FALLBACK_MODEL;
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
@@ -616,6 +625,32 @@ const server = http.createServer(async (req, res) => {
         catch(_) { json(res,200,{ok:true,models:[DEFAULT_MODEL],active:DEFAULT_MODEL}); }
       }); }
     ).on('error', () => json(res, 200, { ok:false, models:[], active:DEFAULT_MODEL }));
+    return;
+  }
+
+  // PUT /api/model — set the real, in-memory active model override.
+  // §1.2 — validated against what's ACTUALLY pulled before accepting it,
+  // not just accepted blind: an override to a model that was never
+  // pulled would fail loud on the NEXT real generation request instead
+  // of right here, where the operator can see it immediately.
+  if (method === 'PUT' && p === '/api/model') {
+    const body = await readBody(req);
+    const wanted = (body.model || '').trim();
+    if (!wanted) { json(res, 400, { ok: false, error: 'PUT /api/model requires {"model": "<real, exact tag>"}' }); return; }
+    const u = new URL(`${OLLAMA_HOST}/api/tags`);
+    http.get({ hostname: u.hostname, port: u.port || 11434, path: u.pathname, timeout: config.HEALTH_CHECK_TIMEOUT_MS },
+      r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>{
+        let installed = [];
+        try { installed = (JSON.parse(d).models || []).map(m => m.name); } catch (_) {}
+        if (!installed.includes(wanted)) {
+          json(res, 409, { ok: false, error: `"${wanted}" is not in Ollama's real, installed model list — pull it first (ollama pull ${wanted})`, installed });
+          return;
+        }
+        const previous = DEFAULT_MODEL;
+        DEFAULT_MODEL = wanted;
+        json(res, 200, { ok: true, active: DEFAULT_MODEL, previous, note: 'in-memory for this process only — ollama/config.js\'s own default is unchanged on the next boot' });
+      }); }
+    ).on('error', (e) => json(res, 503, { ok: false, error: `couldn't verify against Ollama's real model list: ${e.message}` }));
     return;
   }
 

@@ -277,6 +277,30 @@ function setCurrentAgent(agent, opts = {}) {
       personaPrompt: forgedHat ? forgedHat.personaPrompt : null,
       ts: Date.now(),
     });
+    // §PERSONALITY-MODEL 2026-08-23 — James: "personalities are also hats
+    // using the hat forge, and a model per model." The real, live effect:
+    // wearing a hat with a configured model actually switches what
+    // generates the response, not just which persona prompt gets
+    // prepended. Fire-and-forget, matching this file's own established
+    // pattern for async side effects of a synchronous function
+    // (_navigateAgentToUrl, just above) — setCurrentAgent's own callers
+    // all expect a synchronous return; this doesn't block that.
+    // Deliberately silent on failure beyond a console.warn: a bridge
+    // that's down shouldn't prevent wearing a hat, it should just mean
+    // the NEXT generation uses whatever was already active — a real,
+    // honest degradation, not a hard failure over a best-effort switch.
+    if (forgedHat && forgedHat.model && normalized === 'ollama') {
+      const http = require('http');
+      const body = JSON.stringify({ model: forgedHat.model });
+      const req2 = http.request({ hostname: '127.0.0.1', port: 3749, path: '/api/model', method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+        (r2) => { let d = ''; r2.on('data', c => d += c); r2.on('end', () => {
+          try { const j = JSON.parse(d); if (!j.ok) console.warn(`[self-model] hat "${forgedHat.name}"'s model "${forgedHat.model}" rejected by the bridge: ${j.error}`); }
+          catch (_) {}
+        }); });
+      req2.on('error', (e) => console.warn(`[self-model] couldn't reach the ollama bridge to apply hat "${forgedHat.name}"'s model: ${e.message}`));
+      req2.write(body); req2.end();
+    }
     return { ok: true, agent: normalized, hatUuid: forgedHat ? forgedHat.uuid : null, hatName: forgedHat ? forgedHat.name : null, isCustom: normalized !== 'auto', governance: gov };
   } catch (e) {
     return { ok: false, reason: e.message };

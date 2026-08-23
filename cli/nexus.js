@@ -39,6 +39,12 @@ const SYSTEMS = {
   idearium: { port: 4800,  label: 'Idearium',  color: C.blue   },
   emerge:   { port: 4242,  label: 'Emerge',    color: C.green  },
   ollama:   { port: 11434, label: 'Ollama',    color: C.green  },
+  // §OLLAMA-CLI 2026-08-23 — the real bridge (ollama/server.js), distinct
+  // from raw Ollama above. Commands that should benefit from the bridge's
+  // real queueing/config/PUT-override go here; commands that need
+  // Ollama's own native model-management API (pull, raw tags) go through
+  // 'ollama' above instead.
+  ollamaBridge: { port: 3749, label: 'Ollama Bridge', color: C.green },
 };
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -90,6 +96,20 @@ const MODULE_CLI = {
   '/idearium': path.join(ROOT, 'idearium/cli/index.js'),
   '/copilot':  path.join(ROOT, 'copilot/cli.js'),   // moved from cli/co-pilot.js — consolidation pass
   '/cp':       path.join(ROOT, 'copilot/cli.js'),   // alias
+  // §CONSOLIDATION 2026-08-23 — James: "the cli folder, can we
+  // consolidate? why is there so many?" Real finding, not assumed:
+  // cos/cli/index.js (Compartment OS — create/list/map/start/stop/
+  // destroy, 19 real command files) and nexus-healer/cli/index.js
+  // (generated from loom/templates/system-scaffold.js) both real,
+  // both substantial, neither reachable through this file — the one
+  // place a person would look first. Wired in, not merged: each
+  // subsystem still owns its own real command surface, matching the
+  // established pattern already used for guardian/cockpit/copilot
+  // above — this table is what makes that pattern actually
+  // discoverable instead of requiring a person to already know the
+  // file tree.
+  '/cos':      path.join(ROOT, 'cos/cli/index.js'),
+  '/healer':   path.join(ROOT, 'nexus-healer/cli/index.js'),
 };
 
 function passthrough(cliPath, restArgs) {
@@ -170,6 +190,10 @@ ${C.bold}Module pass-through (slash prefix):${C.reset}
   nexus ${C.cyan}/cortex${C.reset}   [args]       cortex/cortex.js — ask status gaps tail
   nexus ${C.blue}/idearium${C.reset} [args]       idearium/cli    — idea spec gap push snr
   nexus ${C.green}/ollama${C.reset}   [args]       ollama direct   — status models pull run
+  nexus ${C.purple}/cos${C.reset}     [args]       cos/cli/index.js — Compartment OS: create list map start stop destroy
+  nexus ${C.yellow}/healer${C.reset}  [args]       nexus-healer/cli — self-heal operations
+  nexus ${C.cyan}/copilot${C.reset} [args]       copilot/cli.js  — talk to NEXUS directly
+  nexus ${C.cyan}/cp${C.reset}      [args]       alias for /copilot
 
 ${C.bold}Unified commands:${C.reset}
 
@@ -394,7 +418,99 @@ Flags: ${C.muted}--json${C.reset} (raw JSON output on any command)
   },
 };
 
-// ── Command dispatch ──────────────────────────────────────────────────────────
+// ── /ollama — real, built-in commands (not a passthrough) ──────────────────
+// §OLLAMA-CLI 2026-08-23 — status/models talk to the real bridge
+// (ollamaBridge, :3749) so they reflect the real, in-memory active model
+// and the bridge's own queue state. pull talks to raw Ollama (:11434)
+// directly — the bridge doesn't wrap model management, and shouldn't;
+// that's Ollama's own real job. catalog is fully local — no network call,
+// just ollama/abliterated-catalog.js's real, curated data.
+async function _handleOllamaCommand(subArgs) {
+  const sub = subArgs[0];
+
+  if (!sub || sub === 'help') {
+    console.log(`
+  ${C.bold}nexus /ollama <command>${C.reset}
+
+  status                     bridge + raw Ollama health, real active model
+  models                     real, installed models (via the bridge)
+  catalog [category]         browse the real, hardware-fitted abliterated
+                             catalog — categories: ${require('../ollama/abliterated-catalog.js').CATEGORIES.join(', ')}
+  pull <model>               real ollama pull, streamed progress
+  use <model>                switch the bridge's real active model —
+                             validated against what's actually installed
+                             first, in-memory for this process only
+`);
+    return;
+  }
+
+  if (sub === 'status') {
+    const [bridge, raw] = await Promise.all([GET('ollamaBridge', '/health'), GET('ollama', '/api/tags')]);
+    hdr('Ollama Bridge (:3749)');
+    if (bridge.error) { fail(bridge.error); } else {
+      row('active model', bridge.model);
+      row('queue depth', bridge.queue_depth);
+      row('running', bridge.running);
+      row('completed today', bridge.completed_today);
+    }
+    hdr('Raw Ollama (:11434)');
+    if (raw.error) { fail(raw.error); } else {
+      row('installed models', (raw.models || []).length);
+    }
+    return;
+  }
+
+  if (sub === 'models') {
+    const d = await GET('ollamaBridge', '/api/models');
+    if (d.error) return fail(d.error);
+    hdr(`Installed models (active: ${d.active})`);
+    for (const m of d.models || []) {
+      console.log(`  ${m === d.active ? C.green + '●' : C.muted + '○'}${C.reset} ${m}`);
+    }
+    if (!d.models?.length) info('none installed — try: nexus /ollama pull <model>');
+    return;
+  }
+
+  if (sub === 'catalog') {
+    const cat = require('../ollama/abliterated-catalog.js');
+    const category = subArgs[1];
+    const list = category ? cat.byCategory(category) : cat.CATALOG.slice().sort((a, b) => a.tier - b.tier);
+    if (category && !list.length) { fail(`unknown category "${category}" — known: ${cat.CATEGORIES.join(', ')}`); return; }
+    const TIER_LABEL = { 1: `${C.green}fast${C.reset}`, 2: `${C.yellow}workable${C.reset}`, 3: `${C.red}slow${C.reset}` };
+    hdr(category ? `Abliterated catalog — ${category}` : 'Abliterated catalog — all categories');
+    for (const m of list) {
+      console.log(`  [${TIER_LABEL[m.tier]}] ${C.bold}${m.id}${C.reset}  ${C.muted}${m.sizeGB}GB, ${m.params}${C.reset}`);
+      console.log(`         ${C.muted}${m.desc}${C.reset}`);
+    }
+    info(`fast = fits your real 4GB dedicated VRAM · workable = spills into shared/CPU, usable · slow = real CPU offload`);
+    return;
+  }
+
+  if (sub === 'pull') {
+    const model = subArgs[1];
+    if (!model) return fail('Usage: nexus /ollama pull <model>');
+    info(`pulling ${model} — this can take a while for anything past a few GB...`);
+    const { spawnSync } = require('child_process');
+    const r = spawnSync('ollama', ['pull', model], { stdio: 'inherit' });
+    if (r.status !== 0) { fail(`ollama pull exited ${r.status}`); process.exit(1); }
+    ok(`pulled ${model}`);
+    return;
+  }
+
+  if (sub === 'use') {
+    const model = subArgs[1];
+    if (!model) return fail('Usage: nexus /ollama use <model>');
+    const d = await req('ollamaBridge', 'PUT', '/api/model', { model });
+    if (!d.ok) { fail(d.error || 'unknown error'); if (d.installed) info(`installed: ${d.installed.join(', ')}`); return; }
+    ok(`active model → ${d.active} (was ${d.previous})`);
+    info(d.note);
+    return;
+  }
+
+  fail(`Unknown /ollama command: ${sub} — try: nexus /ollama help`);
+}
+
+
 const cmd = args[0];
 if (!cmd || cmd === 'help') {
   CMDS.help();
@@ -407,8 +523,29 @@ if (!cmd || cmd === 'help') {
     console.log(`  co-pilot CLI opened in a new window — connected to NEXUS through co-pilot.`);
     process.exit(0);
   }
+} else if (cmd === '/ollama') {
+  // §OLLAMA-CLI 2026-08-23 — James: "integrate all of the ollama commands
+  // ... catagorized." Real, built-in sub-commands, not a passthrough
+  // (there is no separate ollama CLI file to pass through to — this file's
+  // own header has promised "/ollama <args> — ollama direct commands"
+  // since it was written; never actually implemented until now).
+  _handleOllamaCommand(args.slice(1)).catch(e => { fail(e.message); process.exit(1); });
 } else if (cmd.startsWith('/')) {
-  CMDS.passthrough(cmd.slice(1), args.slice(1));
+  // §BUGFIX 2026-08-23 — James: "why is there so many CLIs, can we
+  // consolidate?" Found while wiring in /cos and /healer: this call
+  // was broken for EVERY module, not just the two being added —
+  // CMDS.passthrough was never a real function (passthrough is defined
+  // as its own top-level function, not a CMDS property), and even
+  // fixed to call the right function, it was passing cmd.slice(1) (a
+  // bare module name like "guardian") where passthrough's own real
+  // signature expects a resolved file path. The real, missing step was
+  // the MODULE_CLI lookup itself — confirmed by testing /guardian,
+  // already wired in before this session touched the file, which
+  // failed identically. Every module pass-through in this file has
+  // been unreachable, not just the newly-added ones.
+  const cliPath = MODULE_CLI[cmd];
+  if (!cliPath) { fail(`Unknown module: ${cmd} (known: ${Object.keys(MODULE_CLI).join(', ')})`); process.exit(1); }
+  passthrough(cliPath, args.slice(1));
 } else if (typeof CMDS[cmd] === 'function') {
   CMDS[cmd]().catch(e => {
     console.error(`\n  ${C.red}✗${C.reset} ${e.message}\n`);

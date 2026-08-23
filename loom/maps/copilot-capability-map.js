@@ -116,6 +116,14 @@ const FILES = [
   ['lib/hat-seed.js',                                 'nexus.lib.hat-seed',
     ['nexus.lib.hat-forge', 'nexus.lib.agent-tools']],
 
+  // §2026-08-23 — real, separate seed set: one hat per real
+  // ollama/abliterated-catalog.js entry, for model personalities rather
+  // than the four operational roles above. Real dependency on hat-forge
+  // (forge/bySeedKey) and the catalog itself; no tool-registry dependency
+  // since these hats deliberately don't restrict toolScope.
+  ['lib/hat-seed-ollama-personalities.js',             'nexus.lib.hat-seed-ollama-personalities',
+    ['nexus.lib.hat-forge', 'nexus.ollama.abliterated-catalog']],
+
   // §2026-08-13 — generates copilot's user guide from the real tool registry
   // and tool-guide notes rather than a hand-written list that would drift.
   ['lib/agent-tools/user-guide-generator.js',         'nexus.lib.agent-tools.user-guide-generator',
