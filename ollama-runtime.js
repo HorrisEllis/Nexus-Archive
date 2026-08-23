@@ -1,6 +1,13 @@
 'use strict';
 
 const http = require('http');
+// §CONFIG 2026-08-23 — real, shared model config, not this file's own
+// separate hardcode. idearium/agent-suite/index.js and
+// orchestrator/lib/autonomous-loop.js already require this module for its
+// MODEL_CATALOG/bestFor() — re-exporting the real default/fallback here
+// too means they can converge on the one real config without adding a
+// second new require path.
+const { DEFAULT_MODEL, FALLBACK_MODEL } = require('./ollama/config.js');
 function normalizeEndpoint(url) {
   if (!url) return 'http://localhost:11434';
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -129,4 +136,4 @@ function bestFor(task) {
   return MODEL_CATALOG.filter(m=>m.best.some(b=>b.includes(task))).sort((a,b)=>b.fitness-a.fitness)[0] || MODEL_CATALOG[0];
 }
 
-module.exports = { ping, listModels, streamGenerate, bestFor, MODEL_CATALOG };
+module.exports = { ping, listModels, streamGenerate, bestFor, MODEL_CATALOG, DEFAULT_MODEL, FALLBACK_MODEL };

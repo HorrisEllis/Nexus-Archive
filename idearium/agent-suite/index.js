@@ -28,6 +28,16 @@ import { createRequire } from 'module';
 
 const _require = createRequire(import.meta.url);
 
+// §CONFIG 2026-08-23 — real, shared model config instead of this file's
+// own separate hardcoded literals (was 'mistral:7b-instruct-q4_K_M' /
+// 'qwen2.5-coder:1.5b', matching neither ollama/server.js's real default
+// nor its own fallback after the model changed there). Required directly,
+// not through the lazy ollama-runtime require used elsewhere in this
+// file for actual generation calls — config.js has no external
+// dependencies and nothing to defensively guard against; it's a pure
+// value file, not a live service call.
+const { DEFAULT_MODEL: _OLLAMA_DEFAULT, FALLBACK_MODEL: _OLLAMA_FALLBACK } = _require('../../ollama/config.js');
+
 const MODULE_ID = 'idearium.agent-suite';
 const VERSION   = '1.0.0';
 
@@ -144,7 +154,7 @@ export async function getIdeas(phase = null) {
 
 // ── Ollama generation — Mistral for reasoning, Qwen for quick ────────────────
 // This is what builds each chunk locally without needing a browser tab.
-export async function generateWithOllama(system, prompt, { model = 'mistral:7b-instruct-q4_K_M', timeoutMs = 120000 } = {}) {
+export async function generateWithOllama(system, prompt, { model = _OLLAMA_FALLBACK, timeoutMs = 120000 } = {}) {
   const runtime = (() => {
     try { return _require('../../ollama-runtime'); }
     catch { return null; }
@@ -199,7 +209,7 @@ export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama' 
     const r = await generateWithOllama(
       'You are a precise technical spec writer for the NEXUS sovereign AI orchestration system. Write only the requested section content — no preamble.',
       chunkPrompt,
-      { model: 'mistral:7b-instruct-q4_K_M', timeoutMs: 120000 }
+      { model: _OLLAMA_FALLBACK, timeoutMs: 120000 }
     );
     if (r.ok && r.text) return { ok: true, text: r.text, agent: 'ollama', model: r.model };
     console.warn(`[${MODULE_ID}] Mistral failed: ${r.error} — falling back to ChatGPT`);
@@ -251,7 +261,7 @@ export async function getNextWizardQuestion(specMeta, answeredSections) {
       const r = await generateWithOllama(
         'You are a spec wizard for NEXUS. Ask one precise clarifying question based on what the user has already told you. Keep it short.',
         `Component so far: ${JSON.stringify(specMeta)}\nAnswered: ${JSON.stringify(answeredSections)}\nNext section to clarify: ${nextQ.id}\nDefault question: "${nextQ.q}"\nRefine this question or return it unchanged.`,
-        { model: 'qwen2.5-coder:1.5b', timeoutMs: 15000 }
+        { model: _OLLAMA_DEFAULT, timeoutMs: 15000 }
       );
       if (r.ok && r.text && r.text.length < 200) {
         return { id: nextQ.id, question: r.text.replace(/^"|"$/g, '') };

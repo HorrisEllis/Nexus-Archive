@@ -105,7 +105,12 @@ async function _llmStep(run, stepNum, systemPrompt, userPrompt) {
 
   if (!runtime) throw new Error('ollama-runtime not available');
 
-  const models = ['mistral:7b-instruct-q4_K_M', 'qwen2.5-coder:1.5b'];
+  // §CONFIG 2026-08-23 — real, shared config instead of a separate
+  // hardcoded list. runtime.FALLBACK_MODEL/DEFAULT_MODEL are the exact
+  // same real values ollama/server.js itself uses (both re-exported from
+  // ollama/config.js) — this file no longer has its own, third opinion
+  // about what "the model" is.
+  const models = [runtime.FALLBACK_MODEL, runtime.DEFAULT_MODEL];
   for (const model of models) {
     try {
       const t0 = Date.now();

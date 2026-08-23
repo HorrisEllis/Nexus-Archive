@@ -401,10 +401,25 @@ async function dispatch(line) {
           log('✗ Ollama running but no models. Run: ollama pull qwen2.5-coder:1.5b');
           return;
         }
-        // Prefer qwen2.5-coder, then any qwen, then mistral, then first available
-        const preferred = process.env.NEXUS_OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
+        // Prefer the shared, real default model (matches co-pilot's own
+        // real dispatch — huihui_ai/qwen2.5-coder-abliterate:3b as of
+        // 2026-08-23), then any qwen2.5-coder variant, then any qwen,
+        // then mistral, then first available. §CONFIG 2026-08-23 —
+        // NEXUS_OLLAMA_MODEL is kept as a real, MORE specific override:
+        // this REPL's "reasoning layer" is a genuinely separate dispatch
+        // path from co-pilot's, and an operator who wants a different
+        // model just for this REPL still can, without touching the
+        // shared default everything else uses.
+        const preferred = process.env.NEXUS_OLLAMA_MODEL || require('../ollama/config.js').DEFAULT_MODEL;
         const useModel  = models.find(m => m === preferred)
-          || models.find(m => m.startsWith('qwen2.5-coder'))
+          // §FIXED 2026-08-23 — was startsWith('qwen2.5-coder'), which
+          // never matches huihui_ai/qwen2.5-coder-abliterate:3b (it
+          // starts with 'huihui_ai/', not 'qwen2.5-coder'). A real,
+          // installed match for the exact model family would have
+          // silently fallen through to 'any qwen' or worse — checked by
+          // testing the real string, not assumed from the old tag's
+          // shape still applying.
+          || models.find(m => m.includes('qwen2.5-coder'))
           || models.find(m => m.startsWith('qwen'))
           || models.find(m => m.startsWith('mistral'))
           || models[0];

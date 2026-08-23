@@ -54,7 +54,11 @@ function getArg(flag, fallback) {
 }
 
 const PORT = Number(getArg('--port', process.env.EMERGE_PORT || 4242));
-const DEF_MODEL = getArg('--model', 'qwen2.5-coder:1.5b');
+// §CONFIG 2026-08-23 — real, shared default instead of this file's own
+// separate hardcode. ollama is already required above for other real
+// calls; DEFAULT_MODEL is the same re-export ollama/server.js itself
+// uses. --model still wins if the operator passes it explicitly.
+const DEF_MODEL = getArg('--model', ollama.DEFAULT_MODEL);
 const UI_DIR = path.join(__dirname, 'ui');
 const IO_DIR = path.join(__dirname, 'io');
 

@@ -1496,13 +1496,37 @@ function _nexusPullContext(query) {
 // ── Ollama fallback via GM_xmlhttpRequest ─────────────────────────────────────
 // When Ollama is running locally and Guardian's Node process can't reach it,
 // the userscript can call it directly — browser has no CORS restrictions via GM.
+// Deliberately talks to raw Ollama (:11434), not the bridge (:3749): this path
+// exists specifically for when Node-side infrastructure, bridge included,
+// might not be reachable — routing it through the bridge would defeat the one
+// real reason it exists.
+//
+// §CONFIG 2026-08-23 — was a hardcoded 'qwen2.5-coder:1.5b', with no way to
+// pick up ollama/config.js's real DEFAULT_MODEL (browser context, this file
+// can't require() a Node module). Real fix, not a copied literal that will
+// drift again the next time the model changes: _nexusCheckOllama already
+// queries /api/tags for real, installed models — now remembers that real
+// list, and this function picks from it using the same resilient preference
+// chain cli/nexus-repl.js's own real 'chat' command uses (§FIXED 2026-08-23
+// there too) — prefer any qwen2.5-coder-family model actually installed,
+// then any qwen, then mistral, then whatever's first — rather than trust a
+// hardcoded guess of what "the" model is.
+function _nexusPickOllamaModel() {
+  const models = _nexus.ollamaModels || [];
+  if (!models.length) return 'qwen2.5-coder:1.5b'; // §1.2 — honest last-resort guess, only when discovery itself has never succeeded
+  return models.find(m => m.includes('qwen2.5-coder'))
+      || models.find(m => m.startsWith('qwen'))
+      || models.find(m => m.startsWith('mistral'))
+      || models[0];
+}
+
 function _nexusOllamaQuery(prompt, cb) {
   GM_xmlhttpRequest({
     method: 'POST',
     url: 'http://127.0.0.1:11434/api/generate',
     headers: { 'Content-Type': 'application/json' },
     data: JSON.stringify({
-      model:  'qwen2.5-coder:1.5b',
+      model:  _nexusPickOllamaModel(),
       prompt,
       stream: false,
     }),
@@ -1530,7 +1554,14 @@ function _nexusCheckOllama() {
   GM_xmlhttpRequest({
     method: 'GET', url: 'http://127.0.0.1:11434/api/tags',
     timeout: 3000,
-    onload:  () => { _nexus.ollamaOk = true;  if (activeTab==='nexus') renderNexus(); },
+    onload:  (r) => {
+      _nexus.ollamaOk = true;
+      // §CONFIG 2026-08-23 — real, discovered models, feeding
+      // _nexusPickOllamaModel() above instead of a hardcoded guess.
+      try { _nexus.ollamaModels = (JSON.parse(r.responseText).models || []).map(m => m.name || m.model).filter(Boolean); }
+      catch (_) { /* §1.2 — a parse failure leaves the prior real list in place, never fabricates one */ }
+      if (activeTab==='nexus') renderNexus();
+    },
     onerror: () => { _nexus.ollamaOk = false; if (activeTab==='nexus') renderNexus(); },
     ontimeout:()=> { _nexus.ollamaOk = false; },
   });

@@ -68,6 +68,7 @@ const PORT    = parseInt(process.env.NEXUS_PORT || '3748');
 const OR_URL  = process.env.ORCH_URL || 'http://127.0.0.1:9000';
 const GD_URL  = process.env.GUARDIAN_URL || 'http://127.0.0.1:7820';
 const OL_URL  = process.env.OLLAMA_URL   || 'http://127.0.0.1:3749';
+const IN_PORT = parseInt(process.env.INTELLIGENCE_PORT || '3753');
 
 const ROOT    = path.join(__dirname, '..');
 // §5.4 2026-08-14 — was a hardcoded '3.0.0', drifted from lib/version.js's
@@ -316,6 +317,42 @@ async function readBody(req) {
   });
 }
 
+// §MIGRATION 2026-08-22 — real front-door cutover, continuing the meta→
+// intelligence consolidation this branch already did for the file layer
+// (9 chunks). Ported from a sibling branch where this exact helper and
+// two of its real callers (/api/intelligence/status, /event) were built
+// and verified live — booted both cortex/boot.js and intelligence/server.js
+// as real, communicating processes and drove real HTTP requests through
+// each proxy before trusting it, not assumed safe from the pattern alone.
+// Re-verified against THIS branch's own current code before porting:
+// intelligence/index.js's real /status and /event handlers here are
+// identical to what was checked there, and guardian/userscript-claude.js's
+// real field reads (status.crystallised, .faultClasses, .reuseItems,
+// .driftLevel) are unchanged too — not assumed to still hold just because
+// they held on a different branch.
+function _proxyToIntelligence(req, res, u, targetPath) {
+  const opts = {
+    hostname: '127.0.0.1', port: IN_PORT, path: targetPath || (u.pathname + u.search),
+    method: req.method, headers: { 'Content-Type': 'application/json' },
+  };
+  const upstream = http.request(opts, (ur) => {
+    let d = '';
+    ur.on('data', c => d += c);
+    ur.on('end', () => {
+      res.writeHead(ur.statusCode || 502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(d || JSON.stringify({ ok: false, error: 'empty upstream response' }));
+    });
+  });
+  upstream.on('error', (e) => json(res, 503, { ok: false, error: `intelligence:${IN_PORT} unreachable: ${e.message}` }));
+  upstream.on('timeout', () => { upstream.destroy(); json(res, 503, { ok: false, error: `intelligence:${IN_PORT} timeout` }); });
+  upstream.setTimeout(5000);
+  if (req.method === 'POST' || req.method === 'PUT') {
+    req.pipe(upstream);
+  } else {
+    upstream.end();
+  }
+}
+
 // ── HTTP server ───────────────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
   const url    = new URL(req.url, `http://127.0.0.1:${PORT}`);
@@ -474,9 +511,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Intelligence ─────────────────────────────────────────────────────────
+  // §MIGRATION 2026-08-22 — real bug fix, not just a relocation. Checked
+  // both real handlers side by side before touching this: cortex's local
+  // version never had crystallised/faultClasses/reuseItems/driftLevel —
+  // fields guardian/userscript-claude.js's OWN Intelligence Core panel has
+  // been reading from this exact response since it was built. Every one
+  // of those has silently rendered as "0" or "unknown" the whole time.
+  // intelligence/index.js's real handler has all four. Proxying fixes a
+  // real, live, pre-existing bug — it doesn't just avoid introducing one.
   if (p === '/api/intelligence/status') {
-    json(res, 200, { ok: true, regime: _field.regime, field: _field,
-      patterns: _buildPatterns(3), openGaps: jaaDB.count('gaps', { status: 'open' }) });
+    _proxyToIntelligence(req, res, url);
     return;
   }
 
@@ -826,15 +870,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §MIGRATION 2026-08-22 — target confirmed real: intelligence/index.js's
+  // handler does the identical jaaDB.insert('event_log', ...) PLUS
+  // triggers an immediate failure scan when body.type indicates an error.
+  // A strict superset, confirmed by reading both handlers side by side.
   if (p === '/api/intelligence/event' && method === 'POST') {
-    const body = await readBody(req);
-    if (body?.type) {
-      jaaDB.insert('event_log', {
-        uuid: uid(), type: body.type, payload: body.payload || {},
-        source: body.source || 'external', causedBy: body.causedBy || null, ts: Date.now(),
-      });
-    }
-    json(res, 200, { ok: true });
+    _proxyToIntelligence(req, res, url);
     return;
   }
 

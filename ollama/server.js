@@ -16,44 +16,33 @@ const crypto = require('crypto');
 const fs     = require('fs');
 const path   = require('path');
 
-const PORT         = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
-const _rawOllamaHost = process.env.OLLAMA_HOST || '127.0.0.1:11434';
-const OLLAMA_HOST = _rawOllamaHost.startsWith('http') ? _rawOllamaHost : `http://${_rawOllamaHost}`;
-const ORCH_URL     = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000';
-const CX_URL       = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
-const DATA_DIR     = path.join(__dirname, '..', 'data', 'ollama');
-// §SERIALISED 2026-08-19 — default was 3.
-//
-// Each concurrent generation holds its own model context resident. Three at
-// once is three copies of a multi-GB working set on a machine that reached
-// 2.8% free memory in the 2026-08-19 run, taking all four provider renderers
-// and copilot with it (STATUS_STACK_BUFFER_OVERRUN) in the same minute.
-//
-// 1 is the honest default for a single-GPU/single-box install: it serialises
-// rather than thrashing, and the queue below already absorbs the wait. Raise it
-// deliberately via OLLAMA_MAX_CONCURRENT once there is headroom to raise it
-// INTO — the number was never measured, it was assumed.
-const MAX_CONCURRENT = parseInt(process.env.OLLAMA_MAX_CONCURRENT || '1');
-// §BUGFIX 2026-07-04: was 'qwen2.5-coder:7b' / 'mistral:7b' — neither tag
-// is what's actually installed (confirmed via a screenshot of the real
-// Ollama app's model list: mistral:7b-instruct-q4_K_M and
-// qwen2.5-coder:1.5b are the two present, nothing else local). Every
-// Ollama call this codebase makes was requesting a model that was never
-// pulled, silently failing, and falling through to whatever came next —
-// this is very likely why co-pilot "never worked once." Aligned to the
-// same two tags five other files already independently agreed on:
-// guardian/server.js's MISTRAL_MODEL, idearium/agent-suite/index.js,
-// loom/agent-suite/index.js, lib/context-builder.js (its own mistral
-// default), and cli/nexus-repl.js (which already calls qwen2.5-coder:1.5b
-// "the NEXUS reasoning layer"). This file was the one outlier, not them.
-const DEFAULT_MODEL  = process.env.OLLAMA_DEFAULT_MODEL || 'qwen2.5-coder:1.5b';
-const FALLBACK_MODEL = process.env.OLLAMA_FALLBACK_MODEL || 'mistral:7b-instruct-q4_K_M';
+// §CONFIG 2026-08-23 — real, centralized config, not scattered inline
+// constants. See ollama/config.js's own header for the full real reason
+// this exists (§HISTORY: the 2026-07-04 model-mismatch outage that needed
+// five files to independently agree, then had to be re-discovered by hand
+// on 2026-08-23 for the next model change).
+const config = require('./config.js');
+
+const PORT         = config.PORT;
+const OLLAMA_HOST  = config.OLLAMA_HOST;
+const ORCH_URL      = config.ORCH_URL;
+const CX_URL        = config.CX_URL;
+const DATA_DIR      = config.DATA_DIR;
+// §SERIALISED 2026-08-19 / §BUGFIX 2026-07-04 / §CHANGED 2026-08-23 — the
+// real history behind MAX_CONCURRENT/DEFAULT_MODEL/FALLBACK_MODEL now
+// lives in ollama/config.js's own header, in one place instead of
+// duplicated across every file that reads these values. Read it there —
+// this comment used to be 25 lines of history that drifted out of sync
+// with itself every time one of these values changed again.
+const MAX_CONCURRENT  = config.MAX_CONCURRENT;
+const DEFAULT_MODEL   = config.DEFAULT_MODEL;
+const FALLBACK_MODEL  = config.FALLBACK_MODEL;
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
 
 const _cw = require('../lib/cortex-write')('ollama');
-const SYSTEM_ID = 'ollama';
-const VERSION   = '1.0.0';
+const SYSTEM_ID = config.SYSTEM_ID;
+const VERSION   = config.VERSION;
 
 // §GAP CLOSED 2026-07-05: WARP (warp/dispatch/) had zero production
 // callers anywhere in this codebase — built, 64/64 tests passing, never
@@ -103,7 +92,7 @@ function broadcast(type, payload) {
 async function checkOllama() {
   return new Promise(res => {
     const u = new URL(OLLAMA_HOST);
-    http.get({ hostname: u.hostname, port: u.port || 11434, path: '/api/tags', timeout: 3000 },
+    http.get({ hostname: u.hostname, port: u.port || 11434, path: '/api/tags', timeout: config.HEALTH_CHECK_TIMEOUT_MS },
       r => { _ollamaOnline = r.statusCode === 200; res(_ollamaOnline); }
     ).on('error', () => { _ollamaOnline = false; res(false); });
   });
@@ -128,7 +117,7 @@ function _callOllamaChatWithTools(model, messages, toolSchemas, timeoutMs) {
     const req = http.request({
       hostname: u.hostname, port: u.port || 11434, path: u.pathname, method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: timeoutMs || 60000,
+      timeout: timeoutMs || config.CHAT_TOOLS_TIMEOUT_MS,
     }, r => {
       let d = '';
       r.on('data', c => d += c);
@@ -175,7 +164,7 @@ function _callOllamaRaw(model, prompt, maxTokens, timeoutMs) {
       hostname: u.hostname, port: u.port || 11434,
       path: u.pathname, method: 'POST',
       headers: { 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: timeoutMs || 45000,
+      timeout: timeoutMs || config.RAW_GENERATE_TIMEOUT_MS,
     }, r => {
       let d = '';
       r.on('data', c => d += c);
@@ -560,8 +549,8 @@ const server = http.createServer(async (req, res) => {
       uuid:        crypto.randomUUID(),
       prompt,
       model:       body.model || DEFAULT_MODEL,
-      maxTokens:   body.maxTokens || 2048,
-      timeoutMs:   body.timeoutMs || 45000,
+      maxTokens:   body.maxTokens || config.DEFAULT_MAX_TOKENS,
+      timeoutMs:   body.timeoutMs || config.DEFAULT_JOB_TIMEOUT_MS,
       // Wire context — required for CFR tracking
       contractId:  body.contractId  || 'nexus-interaction-contract-v1::ollama',
       componentId: body.componentId || 'ollama.jobs.dispatch',
@@ -621,7 +610,7 @@ const server = http.createServer(async (req, res) => {
   // GET /api/models
   if (method === 'GET' && p === '/api/models') {
     const u = new URL(`${OLLAMA_HOST}/api/tags`);
-    http.get({ hostname: u.hostname, port: u.port || 11434, path: u.pathname, timeout: 3000 },
+    http.get({ hostname: u.hostname, port: u.port || 11434, path: u.pathname, timeout: config.HEALTH_CHECK_TIMEOUT_MS },
       r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>{
         try { const t=JSON.parse(d); json(res,200,{ok:true,models:(t.models||[]).map(m=>m.name),active:DEFAULT_MODEL}); }
         catch(_) { json(res,200,{ok:true,models:[DEFAULT_MODEL],active:DEFAULT_MODEL}); }
