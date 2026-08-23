@@ -84,6 +84,7 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     start: (providerId, opts) => ipcRenderer.invoke('providers:start', { providerId, ...opts }),
     stop:  (providerId)   => ipcRenderer.invoke('providers:stop', { providerId }),
     show:  (providerId)   => ipcRenderer.invoke('providers:show', { providerId }),
+    deploy:(providerId)   => ipcRenderer.invoke('providers:deploy', { providerId }),
   },
 
   // ── Bookmarks ─────────────────────────────────────────────────────────
@@ -107,6 +108,17 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   options: {
     get: ()        => ipcRenderer.invoke('options:get'),
     set: (payload) => ipcRenderer.invoke('options:set', payload),
+  },
+
+  // ── Accounts (real, per-agentKey identity — §PHASE-3 2026-08-23) ──────
+  accounts: {
+    list:        ()                    => ipcRenderer.invoke('accounts:list'),
+    get:         (id)                  => ipcRenderer.invoke('accounts:get', { id }),
+    create:      (payload)             => ipcRenderer.invoke('accounts:create', payload),
+    update:      (id, updates)         => ipcRenderer.invoke('accounts:update', { id, updates }),
+    delete:      (id)                  => ipcRenderer.invoke('accounts:delete', { id }),
+    linkAgent:   (id, agentKey)        => ipcRenderer.invoke('accounts:linkAgent',   { id, agentKey }),
+    unlinkAgent: (id, agentKey)        => ipcRenderer.invoke('accounts:unlinkAgent', { id, agentKey }),
   },
 
   // ── Diagnostics ──────────────────────────────────────────────────────────
@@ -153,6 +165,7 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     start: (providerId, opts)  => ipcRenderer.invoke('providers:start', { providerId, ...opts }),
     stop:  (providerId)        => ipcRenderer.invoke('providers:stop',  { providerId }),
     show:  (providerId)        => ipcRenderer.invoke('providers:show',  { providerId }),
+    deploy:(providerId)        => ipcRenderer.invoke('providers:deploy',{ providerId }),
   },
 
   // ── Userscripts ──────────────────────────────────────────────────────

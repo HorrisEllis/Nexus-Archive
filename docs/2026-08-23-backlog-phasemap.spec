@@ -689,38 +689,42 @@ spec:
         window) each doing part of the same real job.
 
     BL28_background_tabs_setting:
-      status: "IN PROGRESS — real backend primitive done (commit
-        b93c0b3): ProviderHost already had real show(providerId)/
-        hide(providerId); exposed via 2 new HTTP routes on clear-
-        glass's wire server plus a real agent tool
-        (clear_glass_tab_visibility) — confirmed working through the
-        full tool registry (3/3 real error paths correct). Genuinely
-        still open: the real backgroundTabDefaults.openInBackground
-        config value (adopted in BL25/26's work) still has zero real
-        consumers anywhere in the codebase, confirmed via a direct
-        grep — nothing reads it yet, since its intended real consumer
-        (BL29's context-menu default) doesn't exist. And the actual
-        real Settings UI surface James asked for ('in the settings')
-        is still entirely unbuilt — this phase has real backend
-        capability now, not a real settings panel yet."
-      depends_on: [BL24_userscript_suite_enterprise_grade]
-      does: >
-        The real capability (move a tab to/from background) now
-        exists and is agent-callable; a real settings UI to expose it
-        to a person is the remaining, genuinely open work.
+      status: "PARTIALLY DONE 2026-08-23 — verified against the tree, not
+        assumed. The BACKEND is real and was already there: clear-glass/src/
+        main/index.js:541 exposes POST /provider/move-to-background and
+        /provider/bring-to-foreground, both wired to ProviderHost's real
+        hide(providerId)/show(providerId). Its own comment named what was
+        still missing: co-pilot could use them 'once this is wired to a real
+        tool'. MEASURED: 2 real routes, 0 tools calling them.
+        NOW CLOSED — lib/agent-tools/tools/clear-glass/provider-visibility.js,
+        9 tests, registered (74 tools), mapped in loom. Reuses the SAME wire
+        transport dom-archaeology uses rather than a second one (§10.3).
+        A ProviderHost false is surfaced as a FAILURE, never as a successful
+        hide of a window that was not there (PV-005).
+        STILL OPEN: the settings-panel toggle half. store.js already carries 3
+        backgroundTab keys from the §BL24 pass; the UI that reads them is not
+        built."
+      remaining: "settings-panel toggle wired to store.js's existing keys"
 
     BL29_tab_context_menu_move_to_background:
-      status: "IN PROGRESS — real backend primitive done (commit
-        b93c0b3, shared with BL28 — same real action, same real
-        routes/tool). Genuinely still open, exactly as originally
-        scoped: clear-glass/renderer/browser.js's real tab-rendering
-        code still has no oncontextmenu handling at all — the actual
-        right-click menu itself is real, new UI work, not yet built.
-        When it is, it should call the already-real, already-tested
-        /provider/move-to-background route directly (same process,
-        no need to go through the agent-tool's HTTP round-trip) rather
-        than duplicate the show/hide logic."
+      note_2026_08_23: "UNBLOCKED. The primitive BL29 needs now exists and is
+        proven: the same two routes BL28 closed, plus a real agent tool that
+        exercises them. BL29 is now purely the right-click menu item calling
+        POST /provider/move-to-background — no backend work remains. It was
+        never a duplicate of BL28: BL28 is the setting and the agent surface,
+        BL29 is the per-tab menu."
+      status: "OPEN. James: \"then be able to right click on a tab in
+        the top, and in the context menu, move it to the background.\"
+        Genuinely new UI feature, not a fix — clear-glass/renderer/
+        browser.js's real tab-rendering code (confirmed directly this
+        session, no existing per-tab context menu found anywhere) has
+        no right-click handling at all currently. Real, new build:
+        oncontextmenu on each real tab element, a real menu with a real
+        'move to background' action wired to whatever the real,
+        underlying window-visibility API already is (needs checking —
+        likely the same real mechanism 'New Agent Window' / BL21 already
+        touches)."
       depends_on: []
       does: >
         A real, working right-click action on tabs that doesn't exist
-        at all right now — the backend it would call is now ready.
+        at all right now.

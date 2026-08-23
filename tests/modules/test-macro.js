@@ -1,6 +1,6 @@
 'use strict';
 /**
- * test-macro.js — real tests for lib/agent-tools/tools/automation/macro.js
+ * test-macro.js — real tests for lib/agent-tools/tools/clear-glass/macro.js
  * against the actual module, not a reimplementation. browser_action and
  * rewind_replay are mocked at their real require paths (no live Electron
  * ClearGlass instance in this environment) so the macro tool's own real
@@ -33,7 +33,7 @@ const rewindPath = path.resolve(__dirname, '../../lib/agent-tools/tools/sandbox/
 require.cache[baPath] = { id: baPath, filename: baPath, loaded: true, exports: mockBrowserAction };
 require.cache[rewindPath] = { id: rewindPath, filename: rewindPath, loaded: true, exports: mockRewind };
 
-const macro = require('../../lib/agent-tools/tools/automation/macro.js');
+const macro = require('../../lib/agent-tools/tools/clear-glass/macro.js');
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -158,8 +158,8 @@ async function main() {
     // macro.js reads EROS_WIRE_PORT once, at module load — force a real,
     // fresh require so this test's own port actually takes effect,
     // matching the same real constraint the module's own comment states.
-    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
-    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/clear-glass/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/clear-glass/macro.js');
 
     await macroFresh.execute({ action: 'create', name: 'eros_click', profile: 'cautious', steps: [
       { engine: 'erosmancer', action: 'click', targetUuid: 'node-abc-123' },
@@ -177,8 +177,8 @@ async function main() {
 
   await test('run — erosmancer wire unreachable fails loud with a real, specific error', async () => {
     process.env.EROS_WIRE_PORT = '17705'; // nothing real listening here
-    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
-    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/clear-glass/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/clear-glass/macro.js');
     await macroFresh.execute({ action: 'create', name: 'eros_unreachable', steps: [{ engine: 'erosmancer', action: 'navigate', data: 'https://x' }] });
     const r = await macroFresh.execute({ action: 'run', name: 'eros_unreachable', agentId: 'tab-1', params: {} });
     assert.strictEqual(r.ok, false);
@@ -204,8 +204,8 @@ async function main() {
     });
     await new Promise(resolve => server.listen(17706, resolve));
     process.env.EROS_WIRE_PORT = '17706';
-    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
-    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/clear-glass/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/clear-glass/macro.js');
     await macroFresh.execute({ action: 'create', name: 'eros_navigate', steps: [{ engine: 'erosmancer', action: 'navigate', data: 'https://real-url.example.com/{{path}}' }] });
     const r = await macroFresh.execute({ action: 'run', name: 'eros_navigate', agentId: 'tab-1', params: { path: 'jobs/123' } });
     server.close();
@@ -237,8 +237,8 @@ async function main() {
     };
     const rewindPath2 = require('path').resolve(__dirname, '../../lib/agent-tools/tools/sandbox/rewind-replay.js');
     require.cache[rewindPath2] = { id: rewindPath2, filename: rewindPath2, loaded: true, exports: dedicatedMockRewind };
-    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
-    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/clear-glass/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/clear-glass/macro.js');
 
     const r = await macroFresh.execute({ action: 'openBookmark', agentId: 'tab-9', label: 'job-app' });
     assert.strictEqual(r.ok, true, `expected success, got ${JSON.stringify(r)}`);
@@ -252,8 +252,8 @@ async function main() {
     const dedicatedMockRewind = { execute: async ({ action }) => (action === 'list' ? { snapshots: [] } : { error: 'should not reach restore' }) };
     const rewindPath2 = require('path').resolve(__dirname, '../../lib/agent-tools/tools/sandbox/rewind-replay.js');
     require.cache[rewindPath2] = { id: rewindPath2, filename: rewindPath2, loaded: true, exports: dedicatedMockRewind };
-    delete require.cache[require.resolve('../../lib/agent-tools/tools/automation/macro.js')];
-    const macroFresh = require('../../lib/agent-tools/tools/automation/macro.js');
+    delete require.cache[require.resolve('../../lib/agent-tools/tools/clear-glass/macro.js')];
+    const macroFresh = require('../../lib/agent-tools/tools/clear-glass/macro.js');
 
     const r = await macroFresh.execute({ action: 'openBookmark', agentId: 'tab-9', label: 'never-bookmarked' });
     assert.ok(r.error && r.error.includes('no bookmark named'));
