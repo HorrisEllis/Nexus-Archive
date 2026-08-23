@@ -16,3 +16,11 @@
 {"type":"service.stop","reason":"SIGTERM","ts":1787430236275,"_ts":1787430236276}
 {"type":"service.start","port":7825,"pid":1871,"ts":1787430248548,"_ts":1787430248548}
 {"type":"service.stop","reason":"SIGTERM","ts":1787430256444,"_ts":1787430256444}
+{"type":"service.start","port":7825,"pid":2801,"ts":1787446719318,"_ts":1787446719318}
+{"type":"service.stop","reason":"SIGTERM","ts":1787446723061,"_ts":1787446723061}
+{"type":"service.start","port":7825,"pid":3027,"ts":1787446740581,"_ts":1787446740581}
+{"type":"service.stop","reason":"SIGTERM","ts":1787446748460,"_ts":1787446748460}
+{"type":"service.start","port":7825,"pid":3298,"ts":1787446780075,"_ts":1787446780075}
+{"type":"service.stop","reason":"SIGTERM","ts":1787446787956,"_ts":1787446787956}
+{"type":"service.start","port":7825,"pid":3540,"ts":1787446815442,"_ts":1787446815443}
+{"type":"service.stop","reason":"SIGTERM","ts":1787446823307,"_ts":1787446823307}

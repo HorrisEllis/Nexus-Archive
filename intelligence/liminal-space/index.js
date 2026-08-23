@@ -59,7 +59,7 @@
  */
 
 const crypto = require('crypto');
-const { jaaDB, uid } = require('../memory/jaa-db');
+const { jaaDB, uid } = require('../../cortex/memory/jaa-db');
 
 const MODULE_ID = 'liminal-space';
 const VERSION   = '1.0.0';

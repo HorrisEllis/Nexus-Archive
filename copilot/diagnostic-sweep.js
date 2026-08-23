@@ -64,7 +64,7 @@ async function sweep(opts = {}) {
 
   // 2. gap-hunter's bottleneck/drift detectors over the same state (§8.6 reuse).
   try {
-    const hunter = require('../meta/gap/hunter.js');
+    const hunter = require('../intelligence/gap/hunter.js');
     if (typeof hunter.bottleneck === 'function' && report) {
       const b = hunter.bottleneck({ health: report.health, regime: report.regime });
       if (b && (b.bottleneck || b.stalled)) findings.push({ type: 'bottleneck', detail: b.reason || b.where || 'bottleneck detected', source: 'gap-hunter', severity: 'medium' });

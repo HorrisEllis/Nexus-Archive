@@ -657,7 +657,7 @@ function _enrichCrystallisation(pattern) {
   } catch (_) { /* CFR unreachable — honest null, not fabricated */ }
 
   try {
-    const { createCausalStore, createEdge, EDGE_CAUSAL_RULE } = require('../meta/rfr2/causality/index.js');
+    const { createCausalStore, createEdge, EDGE_CAUSAL_RULE } = require('../intelligence/rfr2/causality/index.js');
     const supportEvents = jaaDB.tail('event_log', 500)
       .filter(e => pattern.eventTypes ? pattern.eventTypes.includes(e.type) : (e.type === pattern.typeA || e.type === pattern.typeB || e.type === pattern.precursorType))
       .slice(-20);

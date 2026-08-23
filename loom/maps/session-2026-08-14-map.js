@@ -34,6 +34,8 @@ const FILES = [
   // loom entry at all, under any id (checked directly, not assumed).
   ['lib/diagnostic-report.js',      'nexus.lib.diagnostic-report',      'lib', []],
   ['guardian/lib/ncp.js',           'nexus.guardian.lib.ncp',           'guardian/lib', []],
+  ['guardian/lib/gap-hunter.js', 'nexus.guardian.lib.gap-hunter', 'guardian/lib', ['nexus.intelligence.gap.hunter']],
+  ['intelligence/liminal-space/index.js', 'nexus.intelligence.liminal-space', ['nexus.cortex.jaa-db']],
   ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
 
   // §ADDED 2026-08-17b — TX10 (docs/clearglass-agent-suite-and-cfr-loom-
@@ -62,6 +64,8 @@ const FILES = [
   ['cortex/memory/jaa-db.js',    'nexus.cortex.jaa-db',           'cortex/memory', []],
   ['bridge/causal/graph.js', 'nexus.bridge.causal.graph', 'bridge/causal', ['nexus.intelligence.cfr.graph']],
   ['bridge/index.js', 'nexus.bridge.index', 'bridge', ['nexus.intelligence.cfr']],
+  ['bridge/causal/expectation.js', 'nexus.bridge.causal.expectation', 'bridge/causal', ['nexus.intelligence.causal']],
+  ['bridge/causal/projections.js', 'nexus.bridge.causal.projections', 'bridge/causal', ['nexus.intelligence.causal']],
   ['cortex/memory/causal-lookup.js', 'nexus.cortex.memory.causal-lookup', 'cortex/memory', ['nexus.intelligence.cfr.graph']],
   ['cortex/versionium/causality.js', 'nexus.cortex.versionium.causality', 'cortex/versionium', ['nexus.intelligence.cfr.graph']],
   ['lib/lenses.js', 'nexus.lib.lenses', 'lib', ['nexus.intelligence.cfr.sigma']],
@@ -80,6 +84,7 @@ const FILES = [
   // bridge routes (checked directly, not assumed). A real, significant,
   // pre-existing gap, not something this session's own work caused.
   ['guardian/server.js', 'nexus.guardian.server', 'guardian', []],
+  ['guardian/api-dispatch.js', 'nexus.guardian.api-dispatch', 'guardian', ['nexus.intelligence.liminal']],
   ['cortex/boot.js', 'nexus.cortex.boot', 'cortex', []],
 
   // §ADDED 2026-08-17f — found genuinely unregistered while fixing 3 real

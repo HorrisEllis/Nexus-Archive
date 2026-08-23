@@ -22,12 +22,12 @@ Module._resolveFilename = function(req, ...args) {
   if (req.includes('jaa-db')) return req;
   return orig.call(this, req, ...args);
 };
-require.cache[require.resolve('../memory/jaa-db')] = {
-  id: '../memory/jaa-db', filename: '../memory/jaa-db',
+require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
+  id: '../../cortex/memory/jaa-db', filename: '../../cortex/memory/jaa-db',
   loaded: true, exports: { jaaDB: mockJaa, uid: () => require('crypto').randomUUID() },
 };
 
-const ls = require('../../cortex/liminal-space/index');
+const ls = require('../../intelligence/liminal-space/index');
 
 // Mock bus
 const busEvents = [];

@@ -537,7 +537,7 @@ let _bdaKernelInstance = null;
 function _bdaKernel() {
   if (_bdaKernelInstance) return _bdaKernelInstance;
   try {
-    const bda = require('../../../meta/bda');
+    const bda = require('../../../intelligence/bda');
     if (bda && bda.BDAKernel) _bdaKernelInstance = new bda.BDAKernel();
   } catch (_) { _bdaKernelInstance = null; }
   return _bdaKernelInstance;

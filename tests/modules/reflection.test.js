@@ -53,8 +53,8 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
 
 // Mock BDA kernel — capture observeSignal calls without touching real ledger files.
 let _bdaSignals = [];
-require.cache[require.resolve('../../meta/bda/kernel')] = {
-  id: '../meta/bda/kernel', filename: '../meta/bda/kernel', loaded: true,
+require.cache[require.resolve('../../intelligence/bda/kernel')] = {
+  id: '../intelligence/bda/kernel', filename: '../intelligence/bda/kernel', loaded: true,
   exports: {
     observeSignal: (args) => { _bdaSignals.push(args); return { signals: args.signals }; },
     observe: () => null,

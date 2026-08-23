@@ -51,9 +51,10 @@ const HOOK_ID   = 'gap-lifecycle.predicate-library:v1:p0001';
 // higher its tension score climbs, and crossing a threshold bumps severity
 // (and therefore reflection contract priority / dispatch ordering) for real,
 // not just for display.
-// §23.9 — consolidated onto cortex/healer/index.js's scoreTension(), which
-// already existed and already has a real caller (service/nexus-diagnostic.js's
-// /tension endpoint). That formula is open-ended: severity_weight(0.4-4.0) ×
+// §23.9 — consolidated onto cortex/self-heal/fault-taxonomy.js's
+// scoreTension(), which already existed and already has a real caller
+// (service/nexus-diagnostic.js's /tension endpoint). That formula is
+// open-ended: severity_weight(0.4-4.0) ×
 // age_factor(1.0-3.0, log-capped) × retry_penalty(1.0+). 12.0 is a critical
 // gap at max age_factor with zero retries — a reasonable "this is fully
 // tense before retries even start piling on" ceiling for normalizing into
@@ -432,7 +433,7 @@ function escalateTension(gap) {
   // just to normalize that into 0-1 and decide whether severity escalates.
   let rawTension;
   try {
-    rawTension = require('../cortex/healer/index').scoreTension(gap);
+    rawTension = require('../../cortex/self-heal/fault-taxonomy').scoreTension(gap);
   } catch (_) {
     // healer unavailable — neutral fallback, not a silent zero
     rawTension = (gap.tension ?? 0.5) * TENSION_CEILING;

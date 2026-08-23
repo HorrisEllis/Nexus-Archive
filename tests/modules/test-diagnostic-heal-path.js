@@ -106,10 +106,10 @@ test('DHP-008', 'the missing cortex/healer canonical scorer is now LOUD (§1.2),
   assert.strictEqual(exists, false, 'cortex/healer/index.js still does not exist — if it now does, delete the warning and use the real scorer');
 });
 
-test('DHP-009', 'the same phantom is still required by meta/gap/predicate.js — recorded so it is not forgotten, not silently fixed here', () => {
-  const pred = fs.readFileSync(path.join(ROOT, 'meta/gap/predicate.js'), 'utf8');
-  assert.ok(/cortex\/healer\/index/.test(pred),
-    'predicate.js still depends on the phantom for what its own comment calls "the canonical number" — out of scope for this fix, but real');
+test('DHP-009', 'intelligence/gap/predicate.js no longer depends on the phantom — the last of the two files this comment named as broken, now fixed to match what §R7 already did for nexus-diagnostic.js on 2026-08-12', () => {
+  const pred = fs.readFileSync(path.join(ROOT, 'intelligence/gap/predicate.js'), 'utf8');
+  assert.ok(!/cortex\/healer\/index/.test(pred), 'must not still reference the phantom');
+  assert.ok(/cortex\/self-heal\/fault-taxonomy/.test(pred), 'must use the real, already-built scorer instead');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

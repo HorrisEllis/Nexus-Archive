@@ -437,7 +437,7 @@ if (section('§6 bridge/server.js')) {
 
 // ─── §7 lib/causal/compound.js ───────────────────────────────────────────────
 if (section('§7 lib/causal/compound.js')) {
-  const {createCompoundEngine,computeCausalImpulse,COMPOUND_CLASS}=require(path.join(ROOT,'meta/causal/compound'));
+  const {createCompoundEngine,computeCausalImpulse,COMPOUND_CLASS}=require(path.join(ROOT,'intelligence/causal/compound'));
   const {CausalGraph}=require(path.join(ROOT,'intelligence/cfr/graph'));
 
   function ev(id,type,source,sigma,causedBy=null,regime='stable'){
@@ -1192,7 +1192,7 @@ if (section('§25 seam-queue.js')) {
 
 // ─── §26 gap-hunter.js ───────────────────────────────────────────────────────
 if (section('§26 gap-hunter.js')) {
-  const gh=require(path.join(ROOT,'meta/gap/hunter'));
+  const gh=require(path.join(ROOT,'intelligence/gap/hunter'));
 
   test('analyze returns array',()=>{
     assert(Array.isArray(gh.analyze('test response')));

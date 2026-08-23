@@ -18,4 +18,4 @@
  * layer. Update any require('./lib/gap-hunter') to require('../../meta/gap/hunter')
  * directly when touching a file that uses this.
  */
-module.exports = require('../../meta/gap/hunter.js');
+module.exports = require('../../intelligence/gap/hunter.js');

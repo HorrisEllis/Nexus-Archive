@@ -105,7 +105,7 @@ function _getTaxonomy() {
 let _sysLattice = null;
 function _getSystemLattice() {
   if (_sysLattice !== null) return _sysLattice;
-  try { _sysLattice = require('../meta/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
+  try { _sysLattice = require('../intelligence/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
   return _sysLattice;
 }
 let _CausalGraph = null;
@@ -500,7 +500,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/cortex/lattice') {
     const about = url.searchParams.get('about');
     try {
-      const sysLattice = require('../meta/spatial/system-lattice');
+      const sysLattice = require('../intelligence/spatial/system-lattice');
       if (about) {
         const neighbors = sysLattice.neighbors(about);
         json(res, 200, { ok: true, about, neighbors, size: sysLattice.size() });
@@ -768,12 +768,12 @@ const server = http.createServer(async (req, res) => {
   // but had no HTTP surface at all; no way to see its state without
   // reading JAA directly. Read-only, mirrors its own status()/list().
   if (p === '/api/liminal-space/status' && method === 'GET') {
-    json(res, 200, require('./liminal-space').status());
+    json(res, 200, require('../intelligence/liminal-space').status());
     return;
   }
   if (p === '/api/liminal-space/list' && method === 'GET') {
     const fp = url.searchParams.get('focalPoint') || undefined;
-    json(res, 200, { ok: true, items: require('./liminal-space').list(fp) });
+    json(res, 200, { ok: true, items: require('../intelligence/liminal-space').list(fp) });
     return;
   }
 
@@ -1394,7 +1394,7 @@ server.listen(PORT, '127.0.0.1', () => {
   // this shape since before any of these organs existed). Every organ shares
   // the same contract: init({ bus }), console log convention, isolated failure.
   const organs = [
-    { name: 'liminal-space',        path: './liminal-space',        note: 'live on nexus-bus' },
+    { name: 'liminal-space',        path: '../intelligence/liminal-space',        note: 'live on nexus-bus' },
     { name: 'self-heal/escalation', path: './self-heal/escalation', note: 'friction ledger — closes liminal-space\'s escalation.friction.increased listener' },
     { name: 'self-heal',            path: './self-heal',            note: '5-level escalation ladder' },
     { name: 'gap-finder',           path: './gap-finder',           note: 'anomaly.detected + sigma.event.* → cortex.gap.found' },
@@ -1477,7 +1477,7 @@ server.listen(PORT, '127.0.0.1', () => {
   // orchestrator poll on purpose — this aggregates cross-system structure,
   // not live health, doesn't need sub-minute freshness.
   try {
-    const sysLattice = require('../meta/spatial/system-lattice');
+    const sysLattice = require('../intelligence/spatial/system-lattice');
     sysLattice.load(); // rehydrate from Cortex before the first feed tick
     const _feedLattice = () => {
       try {

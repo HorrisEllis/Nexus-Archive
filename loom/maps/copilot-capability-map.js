@@ -163,6 +163,7 @@ const FILES = [
 
   ['lib/fault-log.js',                                'nexus.lib.fault-log',
     ['nexus.cortex.self-heal.fault-taxonomy', 'nexus.nexus-cfr-influence']],   // §2026-08-13 — universal richly-tagged fault logging, extends fault-taxonomy's single-writer discipline, attaches CFR's real conditions snapshot
+  ['lib/chat-logger.js', 'nexus.lib.chat-logger', ['nexus.intelligence.bda']],
 
   ['lib/agent-tools/tools/query/fault-log.js',               'nexus.lib.agent-tools.tools.fault-log',
     ['nexus.lib.fault-log']],

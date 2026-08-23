@@ -128,7 +128,7 @@ function _getReplay() {
 }
 function _getLiminal() {
   if (_liminal) return _liminal;
-  try { _liminal = require('../../cortex/liminal-space/index'); } catch(_) {}
+  try { _liminal = require('../../intelligence/liminal-space/index'); } catch(_) {}
   return _liminal;
 }
 function _getConstitutionalAI() {

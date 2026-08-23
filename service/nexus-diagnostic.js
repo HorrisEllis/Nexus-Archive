@@ -696,7 +696,7 @@ function startService() {
           // In that case: evidence appended, recurrence incremented, no new gap created
           let gapUuid;
           try {
-            const gp = require('../meta/gap/predicate');
+            const gp = require('../intelligence/gap/predicate');
             const { enriched_gap, existing_uuid } = gp.enrichGap(gap);
             if (existing_uuid) {
               gapUuid = existing_uuid;
@@ -982,7 +982,7 @@ function startService() {
       // If the predicate is now false, run closure verifier instead of re-dispatching
       if (gap.predicate) {
         try {
-          const gp = require('../meta/gap/predicate');
+          const gp = require('../intelligence/gap/predicate');
           const stillOpen = gp.checkPredicate(gap.predicate);
           if (!stillOpen) {
             // Predicate became false — try to close the gap

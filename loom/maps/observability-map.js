@@ -110,6 +110,9 @@ const FILES = [
     []],  // §R10 2026-08-12 — the real token-reduction mechanism. Reuses loom's real contextGraph() rather than re-deriving the graph. Found and fixed a REAL, significant bug while building this: the traversal direction was backwards from the actual ingested wire semantic — verified against a known-true relationship (gap-field really calls diagnostic-causal) instead of trusting impactOf()'s own comment, which describes the opposite direction from what's actually ingested. GATE PROVEN LIVE: gap-field's real relevant context is 4 files / 6,702 tokens vs a 237,508-token naive directory baseline — 97% real, measured reduction, not estimated. Also found: loom's live registry does not yet reflect every observability-map.js entry added this session (agent-build-learning, stub-scanner both absent) — a real, separate sync-mechanism gap, noted not chased given time.
   ['lib/gap-field.js',            'nexus.lib.gap-field',
     ['nexus.cortex.memory.jaa-db', 'nexus.lib.resource-monitor', 'nexus.lib.diagnostic-causal']],  // §2026-08-09 — the single agnostic gap-report entry point: system anomalies + user-model contradictions, one dedup rule, one causal-wire convention. §R1 2026-08-12 — report() carries the full repair_contract_schema (requested/received/systemsInvolved/location/error/resourceState), resourceState auto-populated from lib/resource-monitor (cheap, real), why populated on-demand via explainWhy() -> diagnostic-causal.explainFinding() (real causal tracing, not run on every report — §0.5).
+  ['lib/rfr2-bridge.js', 'nexus.lib.rfr2-bridge', ['nexus.intelligence.rfr2']],
+  ['lib/nexus-expansion-boot.js', 'nexus.lib.nexus-expansion-boot', ['nexus.intelligence.gap.ledger']],
+  ['lib/open-loop-taxonomy.js', 'nexus.lib.open-loop-taxonomy', ['nexus.intelligence.gap.predicate']],
   ['copilot/lib/lifeline-contracts.js', 'nexus.copilot.lifeline-contracts',
     ['nexus.lib.gap-field']],  // §2026-08-12 — James: "each time it uses lifeline it needs to know what it's asking and how to receive it... a contract or schema, a way to interact with each agent." Per-intent (ask/build/yes_no/json/etc) validation of what a real provider response actually needs to look like — a mismatch is a real, logged gap, not a silently-accepted guess.
   ['copilot/lifeline.js',         'nexus.copilot.lifeline',
@@ -130,7 +133,10 @@ const FILES = [
   ['intelligence/cfr/sigma.js', 'nexus.intelligence.cfr.sigma', ['nexus.lib.component-ledger']],
   ['intelligence/cfr/delta.js', 'nexus.intelligence.cfr.delta', []],
   ['intelligence/cfr/graph.js', 'nexus.intelligence.cfr.graph', []],
-  ['intelligence/cfr/ledger.js', 'nexus.intelligence.cfr.ledger', ['nexus.intelligence.cfr.sigma', 'nexus.intelligence.cfr.delta', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.graph', 'nexus.meta.causal.compound']],
+  ['intelligence/cfr/ledger.js', 'nexus.intelligence.cfr.ledger', ['nexus.intelligence.cfr.sigma', 'nexus.intelligence.cfr.delta', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.graph', 'nexus.intelligence.causal.compound']],
+  ['intelligence/causal/index.js', 'nexus.intelligence.causal', ['nexus.intelligence.causal.anomaly', 'nexus.intelligence.causal.compound']],
+  ['intelligence/causal/anomaly.js', 'nexus.intelligence.causal.anomaly', []],
+  ['intelligence/causal/compound.js', 'nexus.intelligence.causal.compound', ['nexus.intelligence.cfr.graph']],
   ['intelligence/cfr/contract-verifier.js', 'nexus.intelligence.cfr.contract-verifier', []],
   ['lib/scheduler.js',            'nexus.lib.scheduler',
     ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.lib.agent-pull']],  // CA1 — schedule tasks/jobs/alarms/timed payloads, RAID-gated
