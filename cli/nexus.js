@@ -513,7 +513,7 @@ async function _handleOllamaCommand(subArgs) {
 
 // ── /macro — real, built-in commands, CLI-first per James's own explicit
 // ordering ────────────────────────────────────────────────────────────────
-// §MACRO-CLI 2026-08-23 — calls lib/agent-tools/tools/automation/macro.js
+// §MACRO-CLI 2026-08-23 — calls lib/agent-tools/tools/clear-glass/macro.js
 // directly, in-process. No HTTP round trip: the tool module IS the real
 // implementation, same pattern this file already uses for nothing else
 // (every other /module goes through a passthrough or HTTP to a live
@@ -535,7 +535,7 @@ function _flagObj(prefix) {
 
 async function _handleMacroCommand(subArgs) {
   const sub = subArgs[0];
-  const macro = require('../lib/agent-tools/tools/automation/macro.js');
+  const macro = require('../lib/agent-tools/tools/clear-glass/macro.js');
 
   if (!sub || sub === 'help') {
     console.log(`
@@ -651,7 +651,7 @@ if (!cmd || cmd === 'help') {
 } else if (cmd === '/macro') {
   // §MACRO-CLI 2026-08-23 — James: "lets do macros." CLI-first, per his
   // own explicit ordering ("all cli first, then ui last") — this calls
-  // the real, already-tested lib/agent-tools/tools/automation/macro.js
+  // the real, already-tested lib/agent-tools/tools/clear-glass/macro.js
   // directly (in-process require, not an HTTP round trip — there's no
   // separate macro server, the tool IS the implementation).
   _handleMacroCommand(args.slice(1)).catch(e => { fail(e.message); process.exit(1); });

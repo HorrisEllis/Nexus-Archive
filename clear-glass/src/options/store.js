@@ -18,6 +18,7 @@
 
 const path = require('path');
 const fs   = require('fs');
+const { randomUUID } = require('crypto');
 
 const OPTIONS_PATH = path.join(
   process.env.APPDATA || process.env.HOME || '.', '.clear-glass', 'nexus-options.json'
@@ -57,10 +58,17 @@ const DEFAULTS = {
     openInBackground: true,   // "Move to Background Tab" context-menu default state
   },
 
-  // §PLACEHOLDER, real shape not real behavior yet — Phase 3/4's own
-  // job to make this mean something (account/uuid model, Agent Suite).
-  // Present now, empty now, so later phases extend an existing key
-  // rather than introduce a new one mid-plan.
+  // §PHASE-3 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md item 6:
+  // real account entities now live here — the placeholder shape from
+  // Phase 1 becomes real data as of this phase. Keyed by a stable, real
+  // UUID (not the agentKey string, not the literal "default" that every
+  // real call site in agent-mesh.js hardcoded before this phase), each
+  // account real-linked to one or more agentKeys via its own agentKeys
+  // array. See createAccount/resolveDefaultAccountForAgent below for the
+  // real, safe CRUD surface — accounts are NEVER mutated through the
+  // generic set() path (its one-level merge can't express a real delete
+  // or a wholesale agentKeys replace without genuinely corrupting sibling
+  // accounts), only through these dedicated methods.
   accounts: {},
 };
 
@@ -76,7 +84,7 @@ class NexusOptions {
         const raw = JSON.parse(fs.readFileSync(OPTIONS_PATH, 'utf8'));
         this.data = { ...DEFAULTS, ...raw };
       } else {
-        fs.writeFileSync(OPTIONS_PATH, JSON.stringify(this.data, null, 2), 'utf8');
+        this._persist();
       }
     } catch (err) {
       console.warn('[NexusOptions] Load error:', err.message);
@@ -96,17 +104,131 @@ class NexusOptions {
     // pinnedToolbarButtons and simple keys like hideToTrayOnClose keep
     // their original, correct "replace wholesale" behavior; only the
     // new nested-object keys get real, safe partial-update semantics.
+    //
+    // §NOTE — this one-level merge is exactly why accounts get their own
+    // dedicated methods below instead of going through set({accounts:...}):
+    // a real account delete needs a key to actually disappear, which this
+    // merge can never do (it only adds/overwrites, never removes).
     const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
     const merged = { ...this.data };
     for (const [k, v] of Object.entries(updates)) {
       merged[k] = isPlainObject(v) && isPlainObject(this.data[k]) ? { ...this.data[k], ...v } : v;
     }
     this.data = merged;
-    fs.writeFileSync(OPTIONS_PATH, JSON.stringify(this.data, null, 2), 'utf8');
+    this._persist();
     return { ...this.data };
   }
 
   get() { return { ...this.data }; }
+
+  // ── Accounts — §PHASE-3 2026-08-23, real CRUD, never through set() ──────
+  // Real account entity: { id (stable uuid), label, agentKeys: [string],
+  // createdAt, updatedAt }. One account can link more than one agentKey
+  // (e.g. the same real person's Claude and ChatGPT logins); an agentKey
+  // is not itself required to be linked to exactly one account, though
+  // resolveDefaultAccountForAgent below picks a single, deterministic one
+  // when a caller needs "the" account for a given agent and didn't say
+  // which.
+
+  /** _persist() — the one real place this store writes to disk. */
+  _persist() {
+    fs.writeFileSync(OPTIONS_PATH, JSON.stringify(this.data, null, 2), 'utf8');
+  }
+
+  listAccounts() {
+    return Object.values(this.data.accounts || {}).sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  getAccount(id) {
+    return this.data.accounts?.[id] || null;
+  }
+
+  /**
+   * createAccount({label, agentKeys}) — real, stable uuid, never reused.
+   * agentKeys defaults to [] — an account can exist unlinked (e.g. created
+   * from an Agent Suite "add account" flow before the person picks which
+   * agent it's for).
+   */
+  createAccount({ label, agentKeys = [] } = {}) {
+    const id  = randomUUID();
+    const now = Date.now();
+    const account = {
+      id,
+      label:      label || `Account ${Object.keys(this.data.accounts || {}).length + 1}`,
+      agentKeys:  [...new Set(agentKeys)],
+      createdAt:  now,
+      updatedAt:  now,
+    };
+    this.data = { ...this.data, accounts: { ...this.data.accounts, [id]: account } };
+    this._persist();
+    return { ...account };
+  }
+
+  /**
+   * updateAccount(id, updates) — real, in-place field update (label and/or
+   * a wholesale agentKeys replacement). Not a merge of agentKeys arrays —
+   * an array field is always "replace wholesale," matching the same
+   * convention set() already uses for arrays like pinnedToolbarButtons;
+   * use linkAgent/unlinkAgent below for a real, additive/subtractive
+   * single-key change instead of hand-building the whole array.
+   */
+  updateAccount(id, updates = {}) {
+    const existing = this.data.accounts?.[id];
+    if (!existing) return { error: `no account "${id}"` };
+    const updated = {
+      ...existing,
+      ...(updates.label !== undefined ? { label: updates.label } : {}),
+      ...(updates.agentKeys !== undefined ? { agentKeys: [...new Set(updates.agentKeys)] } : {}),
+      updatedAt: Date.now(),
+    };
+    this.data = { ...this.data, accounts: { ...this.data.accounts, [id]: updated } };
+    this._persist();
+    return { ...updated };
+  }
+
+  /**
+   * deleteAccount(id) — real removal, not a soft-delete flag. Rebuilds
+   * the accounts object without this key rather than going through set()
+   * (which, per the note above, cannot express a real delete).
+   */
+  deleteAccount(id) {
+    if (!this.data.accounts?.[id]) return { error: `no account "${id}"` };
+    const { [id]: _removed, ...rest } = this.data.accounts;
+    this.data = { ...this.data, accounts: rest };
+    this._persist();
+    return { ok: true, id };
+  }
+
+  linkAgent(id, agentKey) {
+    const existing = this.data.accounts?.[id];
+    if (!existing) return { error: `no account "${id}"` };
+    if (existing.agentKeys.includes(agentKey)) return { ...existing };
+    return this.updateAccount(id, { agentKeys: [...existing.agentKeys, agentKey] });
+  }
+
+  unlinkAgent(id, agentKey) {
+    const existing = this.data.accounts?.[id];
+    if (!existing) return { error: `no account "${id}"` };
+    return this.updateAccount(id, { agentKeys: existing.agentKeys.filter(k => k !== agentKey) });
+  }
+
+  /**
+   * resolveDefaultAccountForAgent(agentKey) — the real replacement for
+   * every hardcoded accountId:'default' call site in agent-mesh.js.
+   * Deterministic: if one or more real accounts are already linked to
+   * this agentKey, returns the earliest-created one's id (stable choice,
+   * not "whichever iterates first"). If none exist yet, auto-creates a
+   * real account — labeled "Default — <agentKey>" so it's identifiable
+   * later in an Agent Suite UI, not a mystery uuid — links it, and
+   * returns its id. Every future call for the same agentKey gets that
+   * same real uuid back, not a fresh one each time.
+   */
+  resolveDefaultAccountForAgent(agentKey) {
+    const linked = this.listAccounts().filter(a => a.agentKeys.includes(agentKey));
+    if (linked.length) return linked[0].id;
+    const created = this.createAccount({ label: `Default — ${agentKey}`, agentKeys: [agentKey] });
+    return created.id;
+  }
 }
 
 module.exports = NexusOptions;

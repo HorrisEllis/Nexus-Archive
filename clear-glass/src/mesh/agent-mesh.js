@@ -70,15 +70,40 @@ const AGENT_REGISTRY = {
 };
 
 class AgentMesh {
-  constructor({ ctxMgr, driver, sse, seam, vault }) {
-    this.ctxMgr  = ctxMgr;
-    this.driver  = driver;
-    this.sse     = sse;
-    this.seam    = seam;
-    this.vault   = vault;
+  // §PHASE-3 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md item 6:
+  // `accounts` is optional and backward-compatible on purpose — anything
+  // that constructs AgentMesh without it (tests, a headless CLI path)
+  // keeps the exact old behavior (the literal string 'default') rather
+  // than throwing. Only main/index.js's real boot path wires the real
+  // NexusOptions instance in, which is what turns that literal into a
+  // real, stable, per-agentKey account uuid.
+  constructor({ ctxMgr, driver, sse, seam, vault, accounts }) {
+    this.ctxMgr   = ctxMgr;
+    this.driver   = driver;
+    this.sse      = sse;
+    this.seam     = seam;
+    this.vault    = vault;
+    this.accounts = accounts || null;
     this.agents  = new Map(); // agentKey → AgentState
     this.queue   = [];        // pending tasks
     this.processing = false;
+  }
+
+  /**
+   * _resolveAccountId(agentKey, explicit) — real resolution order: an
+   * explicitly-passed accountId always wins (a caller who knows which
+   * real account they want, e.g. a future Agent Suite window, is never
+   * overridden); otherwise, if a real NexusOptions instance was wired in
+   * at construction, resolveDefaultAccountForAgent gives back a real,
+   * stable uuid (auto-creating the account on first use); otherwise
+   * (no accounts store wired in at all) falls back to the exact literal
+   * this file always used, so nothing that doesn't opt into accounts
+   * breaks.
+   */
+  _resolveAccountId(agentKey, explicit) {
+    if (explicit) return explicit;
+    if (this.accounts) return this.accounts.resolveDefaultAccountForAgent(agentKey);
+    return 'default';
   }
 
   async init() {
@@ -105,6 +130,7 @@ class AgentMesh {
     if (!def) throw new Error(`Unknown agent: ${agentKey}`);
 
     const contextId = `mesh-${agentKey}-${uuidv4().slice(0, 8)}`;
+    const accountId = this._resolveAccountId(agentKey, options.accountId);
 
     // Create isolated context
     const ctx = await this.ctxMgr.create({
@@ -115,7 +141,7 @@ class AgentMesh {
     let cookiesRestored = 0;
     if (this.vault && ctx?.session) {
       try {
-        const r = await this.vault.restore({ agentId: agentKey, accountId: 'default', ses: ctx.session });
+        const r = await this.vault.restore({ agentId: agentKey, accountId, ses: ctx.session });
         cookiesRestored = r?.restored || 0;
       } catch (err) {
         this.sse.emit('mesh.vault.restore.error', { agentKey, contextId, error: err.message, ts: Date.now() });
@@ -128,6 +154,7 @@ class AgentMesh {
 
       key:       agentKey,
       contextId,
+      accountId,
       def,
       status:    'spawned',
       health:    100,
@@ -194,14 +221,16 @@ class AgentMesh {
 
       // §EXPANSION 2026-07-09 — mirror of the restore in spawn(): a
       // successful round-trip means this context's cookies are known-good
-      // for this agentKey. Persist them under the stable account slot so
-      // the *next* fallback spawn (fresh partition, zero cookies) has
-      // something real to restore instead of hitting a login wall.
+      // for this agentKey. Persist them under the real, resolved account
+      // slot (§PHASE-3 — state.accountId, not the old hardcoded 'default'
+      // literal) so the *next* fallback spawn (fresh partition, zero
+      // cookies) has something real to restore instead of hitting a login
+      // wall.
       if (this.vault) {
         const ses = this.ctxMgr.getSession(state.contextId);
         if (ses) {
           ses.cookies.get({}).then(cookies =>
-            this.vault.save({ agentId: state.key, accountId: 'default', domain: new URL(def.url).hostname, cookies })
+            this.vault.save({ agentId: state.key, accountId: state.accountId, domain: new URL(def.url).hostname, cookies })
           ).catch(err => this.sse.emit('mesh.vault.save.error', { agentKey: state.key, error: err.message, ts: Date.now() }));
         }
       }
@@ -355,6 +384,7 @@ class AgentMesh {
     return [...this.agents.values()].map(s => ({
       key:       s.key,
       contextId: s.contextId,
+      accountId: s.accountId,
       status:    s.status,
       health:    s.health,
       taskCount: s.taskCount,

@@ -814,7 +814,13 @@ async function bootstrap() {
   });
 
   // 10. Agent mesh — Claude, ChatGPT, Gemini, Perplexity, Mistral, Grok
-  const mesh = new AgentMesh({ ctxMgr, driver, vault, sse: { emit: (t, d) => emit(t, d) } });
+  // §PHASE-3 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md item 6:
+  // `accounts: nexusOptions` is what turns every hardcoded accountId:
+  // 'default' inside agent-mesh.js into a real, stable, per-agentKey
+  // account uuid (auto-created on first use, persisted in
+  // nexus-options.json). nexusOptions is already loaded by 8.5, well
+  // before this line — real ordering, not assumed.
+  const mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, sse: { emit: (t, d) => emit(t, d) } });
   await mesh.init();
 
   // 11. Diagnostic engine — Playwright-equivalent on ClearDriver
