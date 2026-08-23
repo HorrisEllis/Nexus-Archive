@@ -128,6 +128,12 @@ const FILES = [
   ['lib/hat-seed-ollama-personalities.js',             'nexus.lib.hat-seed-ollama-personalities',
     ['nexus.lib.hat-forge', 'nexus.ollama.abliterated-catalog']],
 
+  // §2026-08-23 — found genuinely unregistered by precommit while
+  // amending BL12's move of service/nexus-heal-loop.js (which this file
+  // documents as a real, correct consumer of). No real internal
+  // dependency of its own — only Node's builtin http.
+  ['lib/gap-relay.js',                                 'nexus.lib.gap-relay', []],
+
   // §2026-08-13 — generates copilot's user guide from the real tool registry
   // and tool-guide notes rather than a hand-written list that would drift.
   ['lib/agent-tools/user-guide-generator.js',         'nexus.lib.agent-tools.user-guide-generator',

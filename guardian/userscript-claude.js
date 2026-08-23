@@ -668,7 +668,8 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
     if (retryCount === 0) autoRetry(jobId, text, retryCount);
     send({ type:'GUARDIAN_GAPS', jobId, gaps:issues, chatUrl:location.href, account:getAccount() });
     // §BUG FIXED 2026-07-06 — same fix as userscript-chatgpt.js: batched
-    // event hid every real gap from nexus-heal-loop.js. See that file's
+    // event hid every real gap from service/nexus-heal-loop.js (moved
+    // from repo root 2026-08-23). See that file's
     // comment for the full traced root cause.
     for (const issue of issues) {
       _toCortex('cortex.gap.found', { jobId, type: issue.type, description: issue.reason,

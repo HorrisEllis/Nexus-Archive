@@ -216,25 +216,50 @@ spec:
         repo root while everything else has its own folder.
 
     BL12_nexus_heal_loop_to_diagnostic:
-      status: "OPEN. James: \"moved to the diagnostic system:
-        nexus-heal-loop.js.\" Narrower, real, single-file move — same real
-        discipline: trace consumers first (this session already knows
-        lib/agent-tools' own query tools reference nexus-heal in at least
-        one place, confirmed by an earlier session's own comment trail in
-        rewind-replay.js referencing \"same discipline as query-movement.js/
-        nexus-heal.js\" — meaning a related file already moved once before;
-        checking whether that precedent's own consumer-list is still
-        accurate is the real first step, not re-deriving it from scratch)."
+      status: "✓ DONE — commit (this session, 2026-08-23). Real ambiguity
+        resolved before moving anything: 'the diagnostic system' has no
+        clean top-level folder the way cortex/guardian do — confirmed by
+        reading docs/diagnostic-phase-map.spec directly, which names
+        service/nexus-diagnostic.js (port 7825) as the real, live
+        diagnostic service. service/ already held several other systems'
+        service wrappers, confirming it as the real target before the
+        move. Traced every real consumer first: 6 files referenced the
+        filename, only ONE was a real, executable require()
+        (orchestrator.js:130) — the rest were comments/hook metadata,
+        updated for accuracy rather than left stale. Moved with git mv.
+        Two real breaks found and fixed by actually loading the module
+        from its new location, not trusted from node --check alone: the
+        file's own internal relative requires (./lib/nexus-config,
+        ./cortex/core/raid) were relative to the old root location and
+        would have silently resolved wrong under service/. Verified:
+        the module loads cleanly with its real exports intact, and
+        orchestrator.js's exact real require line resolves correctly."
       depends_on: []
       does: >
         nexus-heal-loop.js lives with the rest of the diagnostic system
         instead of at its current, separate location.
 
     BL13_cortex_component_registry_move:
-      status: "OPEN. James: \"the component registry for cortex moved to
-        cortex: registry-components.cortex.js.\" Real, single-file,
-        narrow move — real first step is confirming this file's CURRENT
-        location (not yet checked this session) before moving it."
+      status: "✓ DONE — commit (this session, 2026-08-23). Real checklist
+        followed per §8.6/§17.10 before touching anything: cortex/
+        registry-components.js already existed in-place (39 real
+        components, confirmed by loading it directly) — every other
+        system already had its own equivalent too. registry-
+        components.cortex.js at repo root turned out to be a STALE
+        duplicate, not unique content needing a move: diffed both files
+        directly, the only difference was a drifted version string
+        (3.2.0 vs the real, already-fixed 3.5.0) — the root file was
+        missing the §5.4 bugfix entirely. Traced every real consumer
+        before deleting (§0.3 — nothing simply disappears without a
+        stated reason): grepped for both the exact stale filename and
+        every real require('./registry-components') across the
+        codebase — cortex/boot.js, guardian/server.js, loom/server.js,
+        copilot/server.js, and 6 more all already resolve to each
+        system's own in-place file via a relative require, zero real
+        references to the root file anywhere. Deleted, not moved —
+        verified the real, remaining consumer path (component-registry's
+        normalizeDeclarations) still resolves 39 real components after
+        deletion."
       depends_on: []
       does: >
         cortex's own component registry lives inside cortex/ rather than
@@ -267,11 +292,11 @@ spec:
         real devtools console errors), listener-automation.js (not-yet-
         built — a real, involved UI: pick a DOM element from a dropdown,
         checkbox for \"listen for keywords\" vs \"listen for questions\"
-        (sentences ending in a question mark — James's own message says
-        comma, likely a real typo for question mark, worth confirming
-        rather than silently correcting), auto-download+reverse-image-
-        search a referenced image using the question as the search query,
-        co-pilot asks where to retrieve an answer from and saves that
+        (sentences ending in a question mark — confirmed with James
+        directly, 2026-08-23: a real typo in the original request, not a
+        design choice), auto-download+reverse-image-search a referenced
+        image using the question as the search query, co-pilot asks
+        where to retrieve an answer from and saves that
         choice for future reuse)}, nerve/, tool-forge/{tool-config.js,
         tool-forge.js, tool-index.js}. This session's real, currently-
         existing tools (browser-action.js, macro.js, rewind-replay.js, and

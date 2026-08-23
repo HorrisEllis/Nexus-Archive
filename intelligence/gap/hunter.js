@@ -8,10 +8,7 @@ function _getLiminal() {
   try { _liminal = require('../liminal/index.js'); } catch(_) { _liminal = false; }
   return _liminal;
 }
-// §MIGRATION — was require('../../meta/confidence.js'). A module INSIDE
-// intelligence reaching OUT to meta inverts the direction every other faculty
-// runs in, and was the clearest signal confidence.js belonged here.
-const { weakestLink, bottleneck } = require('../confidence.js');
+const { weakestLink, bottleneck } = require('../../meta/confidence.js');
 /**
  * guardian/lib/gap-hunter.js — GapHunter v3
  * UUID: guardian-gap-hunter-v1-0000-4000-0000-000000000001
