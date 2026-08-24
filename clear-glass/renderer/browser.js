@@ -1341,39 +1341,78 @@ It will write and install it for you.`);
   // Consolidates the feature-toggle buttons that used to live permanently
   // on the chrome bar. Default pin set lives in NexusOptions
   // (pinnedToolbarButtons) — anything not pinned shows here only.
-  const SPOTLIGHT_COMMANDS = [
-    { id: 'btn-dom',        icon: '⛏', label: 'DOM Archaeology',       group: 'Tools',   pinnable: true },
-    { id: 'picker-btn',     icon: '◎', label: 'Element Picker',        group: 'Tools',   pinnable: true },
-    { id: 'btn-mesh',       icon: '⬡', label: 'Agent Mesh',            group: 'Tools',   pinnable: true },
-    { id: 'btn-diag',       icon: '⚕', label: 'Diagnostics',           group: 'Tools',   pinnable: true },
-    { id: 'copilot-toggle', icon: '✦', label: 'Toggle Co-pilot',       group: 'Session', pinnable: true },
-    { id: 'btn-bookmark',   icon: '★', label: 'Bookmark this page',    group: 'Session', pinnable: true },
-    { id: 'btn-rewind',     icon: '⏮', label: 'Rewind session',        group: 'Session', pinnable: true },
-    { id: 'btn-providers',  icon: '⟳', label: 'NCP Providers',         group: 'Session', pinnable: true },
-    { id: 'btn-userscripts',icon: '✎', label: 'Userscripts',           group: 'Session', pinnable: true },
-    { id: 'btn-options',    icon: '☰', label: 'Nexus Options',         group: 'Session', pinnable: true },
-    { action: 'new-agent',  icon: '⊞', label: 'New Agent Window',      group: 'Window' },
-    { action: 'bg-tab',     icon: '▣', label: 'Move to Background Tab', group: 'Window' },
-    { action: 'maximize',   icon: '⛶', label: 'Maximize / Restore',    group: 'Window' },
-    { action: 'queue',      icon: '☰', label: 'Mesh Queue',            group: 'Window' },
-    { action: 'settings',   icon: '⚙', label: 'API Settings…',         group: 'Window' },
-  ];
-
+  //
+  // §STRUCTURAL 2026-08-24 — the command list itself used to be hardcoded
+  // right here (SPOTLIGHT_COMMANDS), which meant this one renderer file
+  // was the ONLY place that knew what toolbar commands exist. Nothing in
+  // the CLI or backend could see or use that list, and options/store.js's
+  // default pin array was a second, separately-maintained copy of "which
+  // ids start pinned" with no link back to this one. Fetched from the
+  // backend now (src/toolbar/commands.js, via cg.toolbar.commands()) —
+  // this file renders whatever it's given, it doesn't define it.
+  let TOOLBAR_COMMANDS = [];
   let currentPinned = [];
   let spotlightIndex = 0;
+
+  async function loadToolbarCommands() {
+    try { TOOLBAR_COMMANDS = await cg.toolbar.commands(); }
+    catch (err) { console.error('[toolbar] failed to load command registry:', err); TOOLBAR_COMMANDS = []; }
+  }
 
   function applyToolbarPins(pinned) {
     currentPinned = pinned || [];
     const pinnedSet = new Set(currentPinned);
-    SPOTLIGHT_COMMANDS.forEach(cmd => {
+    TOOLBAR_COMMANDS.forEach(cmd => {
       if (!cmd.pinnable) return;
+      const isPinned = pinnedSet.has(cmd.id);
       const el = document.getElementById(cmd.id);
-      if (el) el.style.display = pinnedSet.has(cmd.id) ? '' : 'none';
+      if (el) el.style.display = isPinned ? '' : 'none';
+      // §BUGFIX 2026-08-24 — elements listed in pairsWith (e.g. Element
+      // Picker's route-selector + API-url input) have no pin of their
+      // own; they track their owning command's pin state, so a route
+      // selector for a hidden feature can't be left dangling in the bar.
+      //
+      // §CORRECTED before shipping — a blanket `display:''` on pin would
+      // fight picker-api-url's own existing rule (line ~98: visible only
+      // when picker-route's value is 'api', hidden otherwise). Unpinning
+      // still force-hides every paired element unconditionally — that
+      // part has no competing logic to fight. Pinning does NOT force
+      // `display:''`; it only clears a previous forced 'none' and lets
+      // each element's own real logic (re-run via dispatchEvent below)
+      // decide its actual visibility. Generic on purpose: any future
+      // pairsWith entry with its own conditional-visibility rule gets the
+      // same correct treatment without needing a special case here.
+      (cmd.pairsWith || []).forEach(pairedId => {
+        const pairedEl = document.getElementById(pairedId);
+        if (!pairedEl) return;
+        if (!isPinned) { pairedEl.style.display = 'none'; return; }
+        pairedEl.style.display = ''; // clear a stale forced-hidden state
+      });
+      if (cmd.id === 'picker-btn' && isPinned) {
+        // Re-run picker-route's own change handler so picker-api-url ends
+        // up in its actually-correct state (shown only if route === 'api'),
+        // not just "visible because its pin cleared."
+        pickerRoute?.dispatchEvent(new Event('change'));
+      }
     });
   }
 
   function activateSpotlightCommand(cmd) {
     closeSpotlight();
+    // §BUGFIX 2026-08-24 — a plugin's toolbar-command contribution has an
+    // `id` (for display/pin purposes, same as every static command) but
+    // NO corresponding DOM element in browser.html — document.getElementById
+    // would return null and `?.click()` below would silently do nothing.
+    // Checked before shipping: that's exactly the "silently failing code"
+    // COS-1 forbids, not an acceptable gap. cmd.pluginId (set only by
+    // src/plugins/host.js's registerPluginCommand, never by a static
+    // TOOLBAR_COMMANDS entry) is the real signal — dispatch through the
+    // bus via IPC instead of trying to click something that isn't there.
+    if (cmd.id && cmd.pluginId) {
+      cg.plugins.invoke(cmd.id, {})
+        .catch(err => addMsg('assistant', `Plugin command failed: ${err.message}`));
+      return;
+    }
     if (cmd.id) { document.getElementById(cmd.id)?.click(); return; }
     switch (cmd.action) {
       case 'new-agent': cg.window.open({ agentId: undefined, url: wv.getURL() }); break;
@@ -1386,12 +1425,23 @@ It will write and install it for you.`);
       case 'maximize': cg.window.maximize(agentId); break;
       case 'queue': openQueuePanel(); break;
       case 'settings': cg.window.openSettings(); break;
+      // §NEW 2026-08-24 — the permanent fix for "toolbar accumulated too
+      // many pins over time": restore pinnedToolbarButtons to exactly the
+      // backend registry's defaultPinned set, in one action, instead of
+      // unpinning each stray item by hand.
+      case 'reset-toolbar': {
+        const defaults = TOOLBAR_COMMANDS.filter(c => c.pinnable && c.defaultPinned).map(c => c.id);
+        cg.options.set({ pinnedToolbarButtons: defaults })
+          .then(() => { applyToolbarPins(defaults); addMsg('assistant', 'Toolbar reset to defaults.'); })
+          .catch(err => addMsg('assistant', `Failed to reset toolbar: ${err.message}`));
+        break;
+      }
     }
   }
 
   function renderSpotlightResults(query) {
     const q = (query || '').toLowerCase();
-    const items = SPOTLIGHT_COMMANDS.filter(c =>
+    const items = TOOLBAR_COMMANDS.filter(c =>
       c.label.toLowerCase().includes(q) || c.group.toLowerCase().includes(q));
     const resultsEl = document.getElementById('spotlight-results');
 
@@ -1466,7 +1516,10 @@ It will write and install it for you.`);
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSpotlight(); }
   });
 
-  cg.options.get().then(opts => applyToolbarPins(opts.pinnedToolbarButtons)).catch(() => {});
+  loadToolbarCommands()
+    .then(() => cg.options.get())
+    .then(opts => applyToolbarPins(opts.pinnedToolbarButtons))
+    .catch(() => {});
 
   // ── Mesh queue panel ─────────────────────────────────────────────────
   const queuePanel = document.getElementById('queue-panel');

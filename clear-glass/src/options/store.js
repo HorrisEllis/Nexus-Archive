@@ -19,6 +19,7 @@
 const path = require('path');
 const fs   = require('fs');
 const { randomUUID } = require('crypto');
+const { defaultPinnedIds } = require('../toolbar/commands');
 
 const OPTIONS_PATH = path.join(
   process.env.APPDATA || process.env.HOME || '.', '.clear-glass', 'nexus-options.json'
@@ -33,8 +34,12 @@ const DEFAULTS = {
   autoOpenCopilotPane:   true,
 
   // Toolbar customization — ids of feature buttons pinned to the main
-  // chrome bar. Anything not listed here lives in the overflow menu only.
-  pinnedToolbarButtons:  ['copilot-toggle', 'btn-bookmark'],
+  // chrome bar. Anything not listed here lives in the command palette only.
+  // §STRUCTURAL 2026-08-24 — was a hand-written array here, duplicating
+  // src/toolbar/commands.js's defaultPinned flags with no link between the
+  // two. Derived now so there's exactly one place that decides what's
+  // pinned on a fresh install or a reset.
+  pinnedToolbarButtons:  defaultPinnedIds(),
 
   // §PHASE-1 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md,
   // "NexusOptions: real config surface... per-provider autoStartOnBoot."

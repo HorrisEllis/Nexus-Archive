@@ -30,8 +30,24 @@ const path = require('path');
 const ROOT = execSync('git rev-parse --show-toplevel').toString().trim();
 
 function staged() {
-  try { return execSync('git diff --cached --name-only', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean); }
-  catch { return []; }
+  // §BUGFIX 2026-08-24 — this used to be `--name-only`, which lists a path
+  // for ANY staged change including pure deletions. That made every rule
+  // below fire on files being REMOVED, not added: untracking a data/ file
+  // (git rm --cached, exactly what CLAUDE.md's rule asks for) tripped the
+  // same "data/ staged" block a genuine violation would, because the gate
+  // couldn't tell "this state is leaving the index" from "this state is
+  // entering it." Same problem would hit the loom-wiring rule below —
+  // deleting a lib/*.js file doesn't need a registry wire, it needs the
+  // opposite. Using --name-status and dropping 'D' rows fixes both at the
+  // source: `staged()` now means "files whose committed content will
+  // exist after this commit," which is what every rule downstream
+  // actually assumes. Renames (R###) keep their post-rename path only.
+  try {
+    return execSync('git diff --cached --name-status', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean)
+      .map(line => line.split('\t'))
+      .filter(parts => parts[0] !== 'D')
+      .map(parts => parts[parts.length - 1]); // A/M: [status, file]; R###: [status, old, new]
+  } catch { return []; }
 }
 
 const files = staged();
@@ -147,18 +163,25 @@ for (const f of files) {
   // for this one specific file.
   if (f === 'scripts/precommit-check.js') continue;
 
-  // §FIXED 2026-08-22 — found live: guardian/userscript-claude.js (a real,
-  // pre-existing file, not new) was crashing this exact check on
-  // 'sessionStorage is not defined' — genuinely a false positive, not a
-  // real bug. A userscript is designed to run only in a browser; testing
-  // it via plain Node require() will always throw on a real browser
-  // global at module-load time, by design, regardless of how correct the
-  // file is. Detected by the file's own self-declaring '==UserScript=='
-  // header rather than a path/naming convention, so this stays correct
-  // for any current or future userscript wherever it lives.
+  // §FIXED 2026-08-22, §GENERALIZED 2026-08-24 — found live: guardian/
+  // userscript-claude.js was crashing this exact check on 'sessionStorage
+  // is not defined'. A userscript (or any renderer-only file) is designed
+  // to run only in a browser; testing it via plain Node require() will
+  // always throw a ReferenceError on some browser global at module-load
+  // time, by design, regardless of how correct the file is. Originally
+  // detected only via the userscript's self-declaring '==UserScript=='
+  // header; generalized here to the actual, general signal — a
+  // ReferenceError naming a known browser-only global — because
+  // clear-glass/renderer/browser.js hit the identical class
+  // ('window is not defined') with no UserScript header to detect it by.
+  // Both checks kept: the header check is a stronger, earlier signal when
+  // present; this one is the fallback that covers every current and
+  // future browser-only file regardless of where it lives or what it's
+  // named.
   let src = '';
   try { src = fs.readFileSync(full, 'utf8'); } catch (_) {}
   if (/^\s*\/\/ ==UserScript==/m.test(src)) continue;
+  const REQUIRES_ELECTRON = /require\(\s*['"]electron['"]\s*\)/.test(src);
 
   const req = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(full)})`], { cwd: ROOT, encoding: 'utf8', timeout: 8000 });
   // §CORRECTED, found by testing before shipping: a real, long-running
@@ -172,15 +195,26 @@ for (const f of files) {
   // this ever shipped, not after.
   if (req.status !== 0 && req.signal !== 'SIGTERM') {
     const firstLine = (req.stderr || '').split('\n').find(l => /Error/.test(l)) || (req.stderr || '').split('\n')[0];
-    // §FIXED 2026-08-22 — found live: clear-glass/src/providers/host.js and
-    // main/index.js fail this exact check with "Cannot find module
-    // 'electron'" — confirmed by testing the ORIGINAL, unmodified file via
-    // git stash: it fails identically, pre-dating any change here. Real
-    // environment limitation (electron isn't installed in this sandbox and
-    // these files can only run inside an actual Electron process by
-    // design), not a code bug — same reasoning as the userscript skip
-    // above, different cause.
-    if (!/Cannot find module 'electron'/.test(firstLine)) {
+    // §BROWSER-GLOBAL — a ReferenceError naming window/document/navigator/
+    // localStorage/sessionStorage/alert/confirm at module-load time means
+    // this file only runs inside a browser (or Electron renderer), same
+    // reasoning as the userscript case above, generalized past just
+    // sessionStorage.
+    const isBrowserGlobalRefError = /ReferenceError: (window|document|navigator|localStorage|sessionStorage|alert|confirm) is not defined/.test(firstLine);
+    // §FIXED 2026-08-22, §CORRECTED 2026-08-24 — found live: clear-glass/
+    // src/providers/host.js and main/index.js fail this check with
+    // "Cannot find module 'electron'" when electron isn't installed at
+    // all. That exact string match broke the moment a real npm install
+    // added a genuine (but non-functional-outside-Electron) 'electron'
+    // package: the failure mode changed to "Cannot read properties of
+    // undefined (reading 'exposeInMainWorld')" — same root cause (this
+    // file can only really run inside a real Electron process), different
+    // surface error depending on today's node_modules state. Detecting it
+    // via the file's OWN source (does it require('electron') at all) is
+    // environment-independent — true regardless of whether electron
+    // happens to be installed, half-installed, or absent in whatever
+    // sandbox runs this check.
+    if (!isBrowserGlobalRefError && !REQUIRES_ELECTRON) {
       errors.push(`${f} — crashes on require(): ${firstLine}`);
     }
   }

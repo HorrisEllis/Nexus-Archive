@@ -110,6 +110,23 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     set: (payload) => ipcRenderer.invoke('options:set', payload),
   },
 
+  // ── Toolbar command registry — §STRUCTURAL 2026-08-24 ─────────────────
+  // Backend-owned (src/toolbar/commands.js). The renderer asks for this
+  // once at startup instead of hardcoding its own copy of the command
+  // list.
+  toolbar: {
+    commands: () => ipcRenderer.invoke('toolbar:commands'),
+  },
+
+  // ── Plugins — §NEW 2026-08-24, src/plugins/host.js ─────────────────────
+  // invoke() is fire-and-forget by design (see bridge.js's own handler
+  // comment) — a plugin's real response comes back as a separate event
+  // the renderer would subscribe to via SSE/onAny, same as every other
+  // async gate result in this app, not a synchronous return from here.
+  plugins: {
+    invoke: (signature, data) => ipcRenderer.invoke('plugins:invoke', { signature, data }),
+  },
+
   // ── Accounts (real, per-agentKey identity — §PHASE-3 2026-08-23) ──────
   accounts: {
     list:        ()                    => ipcRenderer.invoke('accounts:list'),

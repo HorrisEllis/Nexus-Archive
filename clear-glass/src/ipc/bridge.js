@@ -344,6 +344,36 @@ class IpcBridge {
     ipcMain.handle('options:get',    async ()    => this.options?.get());
     ipcMain.handle('options:set',    async (e, d) => this.options?.set(d));
 
+    // Toolbar command registry — §STRUCTURAL 2026-08-24. Backend-owned
+    // (src/toolbar/commands.js); the renderer has no command list of its
+    // own, it asks for this one. Read-only: the renderer can PIN/unpin via
+    // options:set (pinnedToolbarButtons), it can't redefine what commands
+    // exist.
+    ipcMain.handle('toolbar:commands', async () => {
+      const { TOOLBAR_COMMANDS } = require('../toolbar/commands');
+      return TOOLBAR_COMMANDS;
+    });
+
+    // §NEW 2026-08-24 — plugins/host.js. A plugin's toolbar-command
+    // contribution has no real DOM button (see browser.js's
+    // activateSpotlightCommand fix, same date) — clicking it in the
+    // command palette reaches here instead, which emits the plugin's own
+    // registered signature onto the real bus. Fire-and-forget, matching
+    // every other gate dispatch in this codebase (driver.exec, dom.query,
+    // etc. all respond via a LATER event, not a synchronous IPC return) —
+    // this handler's job is only to get the event onto the bus, not to
+    // wait for or shape the plugin's own response.
+    ipcMain.handle('plugins:invoke', async (e, { signature, data } = {}) => {
+      if (typeof signature !== 'string') return { ok: false, error: 'signature is required' };
+      try {
+        const { getBus, Event } = require('../core/bus.js');
+        getBus().emit(new Event(signature, data || {}));
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    });
+
     // Accounts — §PHASE-3 2026-08-23, real CRUD surface, backend only
     // (per James's own "all backend first, ui after backend is done" —
     // no renderer panel wired to these yet, that's item 6's UI half).
