@@ -21,6 +21,8 @@ const SUITES = [
   'jaa-db.test.js',
   'test-p1-fanin-live.js',
   'test-provider-visibility.js',
+  'test-provider-deploy.js',
+  'test-status-strip-removal.test.js',
   'test-p2-snapshot-sigma.js',
   'test-p3-diagnostic-causal.js',
   'test-p4-capabilities.js',

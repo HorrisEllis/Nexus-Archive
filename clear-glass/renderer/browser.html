@@ -96,6 +96,14 @@
 <!-- Bookmarks bar -->
 <div id="bookmarks-bar">
   <div id="bookmarks-list"></div>
+  <!-- §UI-CUSTOMIZE 2026-08-23 — James, from a real screenshot: relocated
+       here from #status-strip (which is being removed below). This is
+       the real "bookmark this page" toggle, now living next to the
+       real "manage bookmarks" (⋯) button — the same place, not two
+       separate homes for one real feature. All of its real JS
+       (click handler, gold-star active-state styling, the ★/☆ toggle)
+       is untouched — only its HTML position moved. -->
+  <button id="btn-bookmark" class="status-bookmark-btn" title="Bookmark this page">★</button>
   <button id="bookmark-mgr-btn" title="Manage bookmarks">⋯</button>
 </div>
 
@@ -103,18 +111,6 @@
      dropdown, using the already-real bookmarks.list()/remove()/visit()
      IPC methods — was previously just a static hint message. -->
 <div id="bookmark-mgr-panel" style="display:none;position:absolute;top:130px;right:12px;width:280px;max-height:360px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
-
-<!-- Status strip -->
-<div id="status-strip">
-  <span title="Connection to the real NEXUS orchestrator"><span class="status-dot" id="dot-nexus"></span>NEXUS</span>
-  <span title="Real-time event stream (SSE) from NEXUS"><span class="status-dot" id="dot-sse"></span>SSE</span>
-  <span title="JA4 — TLS client fingerprint tunnel status. Green: the real TLS proxy's handshake fingerprint is active and healthy. Amber: a real tls.error event fired — the fingerprint tunnel isn't currently masking this browser's TLS signature."><span class="status-dot" id="dot-tls"></span>JA4</span>
-  <span id="status-agent">Agent: default</span>
-  <span id="status-url" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-  <span id="status-health">Health: —</span>
-  <span id="status-cookies">Cookies: —</span>
-  <button id="btn-bookmark" class="status-bookmark-btn" title="Bookmark this page">★</button>
-</div>
 
 <!-- Main layout -->
 <div id="layout">

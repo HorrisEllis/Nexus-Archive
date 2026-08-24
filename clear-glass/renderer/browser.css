@@ -338,25 +338,24 @@
   #copilot-toggle:hover { background: var(--bg-3); color: var(--text-bright); }
 
   /* ── Status strip ───────────────────────────────────────────────────── */
-  #status-strip {
-    height: 24px;
-    background: var(--bg-2);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 0 12px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    flex-shrink: 0;
-  }
+  /* §UI-CUSTOMIZE 2026-08-23 — #status-strip itself removed from the real
+     HTML (James, from a real screenshot: "remove the nexus, health, ja4,
+     health, and cookies... remove the whole area"). This rule is now
+     genuinely dead — no element with this id exists anywhere in
+     browser.html — removed rather than left as unreachable CSS.
+     .status-dot / .status-bookmark-btn below are kept: both are small,
+     generic, reusable classes, not uniquely tied to the removed
+     container — .status-bookmark-btn is actively used at its new real
+     location in #bookmarks-bar. */
 
   /* §2026-08-23 — James: "the fourth image, is where the bookmarks
      should go." Real, small class, not inline style — inline style
      would break the real, existing JS toggle (.style.color =
      isMarked ? '#f5c842' : ''), since clearing to '' falls back to
-     whatever a real CSS rule says, not to a removed inline value. */
+     whatever a real CSS rule says, not to a removed inline value.
+     §UI-CUSTOMIZE 2026-08-23 — relocated from #status-strip into
+     #bookmarks-bar; this class has no position/layout assumptions
+     tied to its old container, so the move needed no CSS change. */
   .status-bookmark-btn {
     background: none;
     border: none;

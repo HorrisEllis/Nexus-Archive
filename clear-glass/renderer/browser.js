@@ -15,6 +15,43 @@
   // never touches ClearGlass's own (locked) property descriptors at all —
   // it just copies function references into a fresh object we own, then
   // proxies THAT (normal, unfrozen, no invariant violation possible).
+  // §UI-CUSTOMIZE 2026-08-23 — James, from real screenshots: "remove the
+  // nexus, health, ja4, health, and cookies. just remove the whole area
+  // from the second image." Real risk found before touching any HTML:
+  // statusHealth/statusUrl/statusCookies/statusAgent are cached via
+  // document.getElementById() at module load (line ~132 below) into
+  // plain consts, and 9 real call sites write to them directly
+  // (.textContent, .style.color, .title) with no null-check — several
+  // fire from live SSE events (nexus.status, cookie counts) that happen
+  // routinely during real operation. Removing the HTML without this
+  // would throw the moment one of those events fired next. Same for
+  // dot-nexus/dot-tls/dot-sse, referenced via raw getElementById() calls
+  // inline (not cached, but equally unguarded at most call sites).
+  //
+  // Real fix: an explicit, transparent inert stand-in — NOT a Proxy.
+  // This same file's own §fix 2026-06-29 comment above documents a real,
+  // separate past incident where wrapping a live object in a Proxy threw
+  // ("proxy did not return its actual value") because the wrapped
+  // object's property descriptors were locked. That specific failure
+  // mode doesn't apply here (this wraps nothing — it's a fresh, owned
+  // plain object used only when the real element is absent), but given
+  // this file's own documented caution about Proxies for exactly this
+  // kind of DOM-stand-in problem, an explicit object with the real,
+  // known properties (checked directly above: .textContent, .style,
+  // .title, .className, .parentElement) is the safer, more legible
+  // choice — a future reader can see everything it supports at a glance
+  // instead of trusting a catch-all.
+  function _safeEl(id) {
+    const el = document.getElementById(id);
+    if (el) return el;
+    return {
+      textContent: '', title: '', className: '',
+      style: { color: '' },
+      parentElement: { title: '' },
+      addEventListener() {}, // some call sites also attach listeners; a no-op keeps those safe too
+    };
+  }
+
   function _wrapNamespace(nsName, nsObj) {
     const wrapped = {};
     if (nsObj) {
@@ -129,10 +166,10 @@
   const domSearch      = document.getElementById('dom-search');
   const picksPanel     = document.getElementById('picks-panel');
   const picksList      = document.getElementById('picks-list');
-  const statusUrl      = document.getElementById('status-url');
-  const statusHealth   = document.getElementById('status-health');
-  const statusCookies  = document.getElementById('status-cookies');
-  const statusAgent    = document.getElementById('status-agent');
+  const statusUrl      = _safeEl('status-url');
+  const statusHealth   = _safeEl('status-health');
+  const statusCookies  = _safeEl('status-cookies');
+  const statusAgent    = _safeEl('status-agent');
 
   // Update agent display
   agentBadge.textContent = agentId;
@@ -897,7 +934,7 @@
       statusHealth.textContent = 'Health: offline';
       statusHealth.style.color = 'var(--red, #ff4466)';
       statusHealth.title = 'No nexus.status event received — orchestrator unreachable or NEXUS not running';
-      const dot = document.getElementById('dot-nexus');
+      const dot = _safeEl('dot-nexus');
       if (dot) {
         dot.className = 'status-dot error';
         dot.parentElement.title = 'orchestrator unreachable — no nexus.status event in 8s';
@@ -908,7 +945,7 @@
     es.addEventListener('nexus.status', (e) => {
       clearTimeout(_healthTimeout);
       const d = JSON.parse(e.data);
-      const dot = document.getElementById('dot-nexus');
+      const dot = _safeEl('dot-nexus');
       dot.className = 'status-dot ' + (d.all ? 'ok' : 'error');
       dot.parentElement.title =
         `orchestrator:${d.orchestrator ? 'up' : 'down'} `
@@ -929,7 +966,7 @@
     });
 
     es.addEventListener('tls.tunnel', (e) => {
-      document.getElementById('dot-tls').className = 'status-dot ok';
+      _safeEl('dot-tls').className = 'status-dot ok';
     });
 
     es.addEventListener('window.maximized', (e) => {
@@ -940,7 +977,7 @@
     });
 
     es.addEventListener('tls.error', (e) => {
-      document.getElementById('dot-tls').className = 'status-dot warn';
+      _safeEl('dot-tls').className = 'status-dot warn';
     });
 
     // ── Context events ────────────────────────────────────────────────
@@ -1008,12 +1045,12 @@
     });
 
     es.onerror = () => {
-      document.getElementById('dot-sse').className = 'status-dot error';
+      _safeEl('dot-sse').className = 'status-dot error';
       setTimeout(connectSSE, 3000);
     };
 
     es.onopen = () => {
-      document.getElementById('dot-sse').className = 'status-dot ok';
+      _safeEl('dot-sse').className = 'status-dot ok';
     };
   }
 

@@ -455,6 +455,29 @@ class ProviderHost {
   }
 
   /**
+   * deploy(providerId) — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md, item 3:
+   * "there's no way to push/hot-reload a userscript into an already-running
+   * provider tab on demand — host.js only reloads a script from disk on
+   * its own 60s timer or full start()." Real, narrow fix: this is the exact
+   * same real _inject(providerId, win) the 60s timer above already calls
+   * (line ~346) — same code path, on demand instead of on a timer, not a
+   * second injection mechanism.
+   *
+   * §1.2 — honestly fails when there's no live window to deploy into,
+   * rather than silently reporting success. Does NOT check mtime first
+   * (unlike the timer's own "only re-inject if changed" guard) — an
+   * explicit, on-demand deploy call is a real signal the caller wants it
+   * pushed now, not a background poll that should skip unchanged files.
+   */
+  async deploy(providerId) {
+    const win = this.windows.get(providerId);
+    if (!win || win.isDestroyed()) return { ok: false, error: `no live window for provider "${providerId}"` };
+    const ok = await this._inject(providerId, win);
+    if (!ok) return { ok: false, error: `injection failed for "${providerId}" — see server log for the real reason` };
+    return { ok: true, providerId, injectedAt: Date.now() };
+  }
+
+  /**
    * stopAll() — found genuinely missing, not assumed: main/index.js's real
    * shutdown path calls `providerHost?.stopAll()`, but this method never
    * existed on the class. Optional chaining protects against providerHost

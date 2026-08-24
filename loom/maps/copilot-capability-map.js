@@ -86,6 +86,25 @@ const FILES = [
   // index.js before this was declared, not assumed (PV-008 pins that).
   ['lib/agent-tools/tools/clear-glass/provider-visibility.js', 'nexus.lib.agent-tools.tools.provider-visibility',
     ['nexus.clear-glass.wire.nexus-wire']],
+  // §HONEST NOTE 2026-08-23 — found while registering this entry's own
+  // real sibling (provider-deploy.js, below): the dependency above
+  // points at clear-glass/wire/nexus-wire.js, but the real routes
+  // provider-visibility.js's own execute() calls (/provider/move-to-
+  // background, /provider/bring-to-foreground) are directly confirmed,
+  // by reading the file, to be served from clear-glass/src/main/
+  // index.js's own _wireServer — a genuinely different file, on the
+  // same real WIRE_PORT default (both read process.env.WIRE_PORT ||
+  // '7704'). Not silently corrected here (that entry isn't this
+  // change's own work, and correcting a sibling's dependency without
+  // being asked is scope creep) — named plainly so it isn't
+  // rediscovered from scratch later, matching PHASE-STATUS-2026-08-23's
+  // own real finding about a different stale map edge.
+  ['lib/agent-tools/tools/clear-glass/provider-deploy.js', 'nexus.lib.agent-tools.tools.provider-deploy',
+    ['nexus.clear-glass.main.index']],
+  ['clear-glass/src/main/index.js', 'nexus.clear-glass.main.index', ['nexus.clear-glass.providers.host']],
+  ['clear-glass/src/providers/host.js', 'nexus.clear-glass.providers.host', ['nexus.clear-glass.providers.registry', 'nexus.clear-glass.providers.gm-shim']],
+  ['clear-glass/src/providers/registry.js', 'nexus.clear-glass.providers.registry', []],
+  ['clear-glass/src/providers/gm-shim.js', 'nexus.clear-glass.providers.gm-shim', []],
 
   ['copilot/config.js', 'nexus.copilot.config', ['nexus.lib.version']],
   ['copilot/server.js',                              'nexus.copilot.server',

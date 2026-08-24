@@ -550,6 +550,19 @@ async function _startWire() {
         const ok = providerHost.show(providerId);
         return res.end(JSON.stringify({ ok, providerId }));
       }
+      // §PHASE-2 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md
+      // item 3: "there's no way to push/hot-reload a userscript into an
+      // already-running provider tab on demand." providerHost.deploy()
+      // is the real fix, reusing the exact _inject(providerId, win) the
+      // existing 60s reload timer already calls — this route is the
+      // on-demand trigger for it, same real mechanism, not a new one.
+      if (u === '/provider/deploy' && req.method === 'POST') {
+        const { providerId } = parsed;
+        if (!providerId) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'providerId required' })); }
+        const result = await providerHost.deploy(providerId);
+        if (!result.ok) res.writeHead(502);
+        return res.end(JSON.stringify(result));
+      }
 
       // ErosmancerOS proxy
       if (u.startsWith('/eros/')) {
