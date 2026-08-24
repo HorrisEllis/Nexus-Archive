@@ -11,7 +11,7 @@
 
 const path = require('path');
 const fs   = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 // Firefox UA pool — realistic, versioned
 const FF_UA_POOL = [

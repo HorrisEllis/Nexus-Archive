@@ -25,7 +25,13 @@
  */
 
 const http   = require('http');
-const fetch  = require('node-fetch');
+// §BUGFIX 2026-08-23 — require('node-fetch') was genuinely unguarded and
+// genuinely missing (no node_modules/node-fetch, not in package.json,
+// checked directly) — this crashed the whole module on load. Node 22's
+// own global fetch() (confirmed present: typeof fetch === 'function')
+// is the real, built-in WHATWG-compatible replacement — no require
+// needed at all.
+const fetch  = globalThis.fetch;
 const { randomUUID } = require('crypto');
 const { buildToolsPrompt } = require('./tools');
 

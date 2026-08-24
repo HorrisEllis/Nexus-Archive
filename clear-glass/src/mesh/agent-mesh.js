@@ -10,7 +10,17 @@
  * Agents: Claude, ChatGPT, Gemini, Perplexity, Mistral, Grok, Meta AI
  */
 
-const { v4: uuidv4 } = require('uuid');
+// §BUGFIX 2026-08-23 — found while verifying Phase 3's real account model:
+// require('uuid') is a genuine, unmet dependency — no node_modules/uuid,
+// not in package.json, confirmed by checking both directly, not assumed
+// from the error alone. This crashed the WHOLE module on load, not just
+// a test — agent-mesh.js is required by main/index.js, so the real, live
+// app would fail to boot on this exact line too. Real fix: Node's own
+// built-in crypto.randomUUID() produces the same RFC4122 v4 UUID format
+// uuidv4() did, with zero external dependency — matching the convention
+// already used everywhere else in this codebase (NexusOptions'
+// createAccount(), among many others), not a new pattern introduced here.
+const { randomUUID: uuidv4 } = require('crypto');
 
 const AGENT_REGISTRY = {
   claude: {
