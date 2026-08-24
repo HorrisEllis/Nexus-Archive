@@ -882,6 +882,19 @@ const server = http.createServer(async (req, res) => {
   // and were already used internally for chat-message "switch to X"
   // detection, but no external client (clear-glass's Agent Mesh
   // panel, a separate real process) could reach them directly.
+  //
+  // §BL27 2026-08-23 — real, first consolidation piece: current agent
+  // + hats together in one call. hat-forge.js already lives in the
+  // same real process as self-model.js — no cross-process bridge
+  // needed for this part (unlike accounts, which live in clear-glass).
+  if (p === '/api/agent/suite' && method === 'GET') {
+    try {
+      const sm = require('./lib/self-model.js');
+      const hf = require('../lib/hat-forge.js');
+      json(res, 200, { ok: true, current: sm.getCurrentAgent(), hats: hf.list() });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
   if (p === '/api/agent/current' && method === 'GET') {
     try {
       const sm = require('./lib/self-model.js');
@@ -1391,7 +1404,7 @@ const server = http.createServer(async (req, res) => {
     // its own default toolset. tool_config's own internal design already
     // gates its dangerous half (loosening always needs the user, regardless
     // of who calls it), so offering it here doesn't bypass that protection.
-    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events', 'framework_builder', 'intelligence_query', 'clear_glass_dom_archaeology', 'clear_glass_userscripts'];
+    const DEFAULT_CHAT_TOOLS = ['read_file', 'search_files', 'diagnose', 'system_priority', 'intent_hat', 'self_repair', 'agent_chat', 'tool_config', 'agent_notes', 'nexus_wake_events', 'framework_builder', 'intelligence_query', 'clear_glass_dom_archaeology', 'clear_glass_userscripts', 'clear_glass_tab_visibility'];
     if (DEFAULT_CHAT_TOOLS.length) {
       const agentToolsForManifest = require('../lib/agent-tools/index.js');
       const manifest = DEFAULT_CHAT_TOOLS

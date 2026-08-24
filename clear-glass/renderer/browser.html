@@ -48,6 +48,16 @@
 
   <input id="url-bar" type="text" placeholder="Navigate to..." spellcheck="false" autocomplete="off">
 
+  <button id="agent-badge" title="Agent context — click to switch">default ▾</button>
+
+  <!-- §NEW 2026-07-11 — the fingerprint identity switcher. ContextManager.
+       switchFingerprint() (Firefox/Chrome/Safari/Edge spoofed profiles)
+       already worked for automatic hostile-page rotation and for copilot's
+       own context.fp.switch tool — this is the first manual, user-facing
+       control for it. See ipc/bridge.js's context:switchFingerprint handler for
+       why it never worked from a UI before this. -->
+  <button id="identity-badge" title="Browser identity — click to switch fingerprint">🎭 <span id="identity-mode-label">chrome</span> ▾</button>
+
   <div class="chrome-divider"></div>
 
   <!-- Page / session tools -->
@@ -63,6 +73,11 @@
   <div class="chrome-group">
     <button class="nav-btn" id="btn-dom"    title="DOM Archaeology">⛏</button>
     <button id="picker-btn"                 title="Element Picker">◎</button>
+    <select id="picker-route" title="Route picks to" style="background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);font-size:10px;border-radius:4px;height:22px;">
+      <option value="sse">→ SSE</option>
+      <option value="api">→ API</option>
+    </select>
+    <input id="picker-api-url" type="text" placeholder="https://..." style="display:none;width:120px;font-size:10px;background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);border-radius:4px;height:22px;padding:0 4px;">
     <button class="nav-btn" id="btn-mesh" title="Agent Mesh">⬡</button>
     <button class="nav-btn" id="btn-diag" title="Diagnostics">⚕</button>
   </div>
@@ -81,14 +96,6 @@
 <!-- Bookmarks bar -->
 <div id="bookmarks-bar">
   <div id="bookmarks-list"></div>
-  <!-- §UI-CUSTOMIZE 2026-08-23 — James, from a real screenshot: relocated
-       here from #status-strip (which is being removed below). This is
-       the real "bookmark this page" toggle, now living next to the
-       real "manage bookmarks" (⋯) button — the same place, not two
-       separate homes for one real feature. All of its real JS
-       (click handler, gold-star active-state styling, the ★/☆ toggle)
-       is untouched — only its HTML position moved. -->
-  <button id="btn-bookmark" class="status-bookmark-btn" title="Bookmark this page">★</button>
   <button id="bookmark-mgr-btn" title="Manage bookmarks">⋯</button>
 </div>
 
@@ -96,6 +103,23 @@
      dropdown, using the already-real bookmarks.list()/remove()/visit()
      IPC methods — was previously just a static hint message. -->
 <div id="bookmark-mgr-panel" style="display:none;position:absolute;top:130px;right:12px;width:280px;max-height:360px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
+
+<!-- §WIRED 2026-08-23 — James: "agent mesh needs to connect to the
+     agent system for co-pilot." Real, working panel replacing the old
+     fake eval+static-hint handler. -->
+<div id="agent-mesh-panel" style="display:none;position:absolute;top:130px;right:12px;width:220px;max-height:320px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
+
+<!-- Status strip -->
+<div id="status-strip">
+  <span title="Connection to the real NEXUS orchestrator"><span class="status-dot" id="dot-nexus"></span>NEXUS</span>
+  <span title="Real-time event stream (SSE) from NEXUS"><span class="status-dot" id="dot-sse"></span>SSE</span>
+  <span title="JA4 — TLS client fingerprint tunnel status. Green: the real TLS proxy's handshake fingerprint is active and healthy. Amber: a real tls.error event fired — the fingerprint tunnel isn't currently masking this browser's TLS signature."><span class="status-dot" id="dot-tls"></span>JA4</span>
+  <span id="status-agent">Agent: default</span>
+  <span id="status-url" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+  <span id="status-health">Health: —</span>
+  <span id="status-cookies">Cookies: —</span>
+  <button id="btn-bookmark" class="status-bookmark-btn" title="Bookmark this page">★</button>
+</div>
 
 <!-- Main layout -->
 <div id="layout">
@@ -267,41 +291,6 @@
     <h4>System</h4>
     <button class="opt-link-btn" id="opt-link-api-settings">API Settings…</button>
     <button class="opt-link-btn" id="opt-link-nexus-audit">Run NEXUS UI Audit</button>
-  </div>
-
-  <!-- §UI-CUSTOMIZE 2026-08-23 — James, from a real screenshot: "the
-       orange to be moved to the menu." Relocated from the main #chrome
-       toolbar — real, working elements, only their HTML position moved.
-       All real JS (agentBadge/identityBadge's click handlers, their
-       dropdown positioning via getBoundingClientRect() — confirmed
-       position-independent before this move, not assumed) is untouched.
-       IDs are unchanged, so every existing document.getElementById()
-       call in browser.js still finds them correctly regardless of
-       where in the DOM they now live. -->
-  <div class="opt-section">
-    <h4>Agent &amp; Identity</h4>
-    <p style="font-size:10px;color:var(--text-dim);margin-bottom:8px;">Which agent context is active, and which browser fingerprint this window presents.</p>
-    <div class="opt-row">
-      <label>Agent context</label>
-      <button id="agent-badge" title="Agent context — click to switch">default ▾</button>
-    </div>
-    <div class="opt-row">
-      <label>Browser identity</label>
-      <button id="identity-badge" title="Browser identity — click to switch fingerprint">🎭 <span id="identity-mode-label">chrome</span> ▾</button>
-    </div>
-  </div>
-
-  <div class="opt-section">
-    <h4>Element Picker Routing</h4>
-    <p style="font-size:10px;color:var(--text-dim);margin-bottom:8px;">Where a real element pick (◎ in the toolbar) gets sent.</p>
-    <div class="opt-row">
-      <label for="picker-route">Route picks to</label>
-      <select id="picker-route" title="Route picks to" style="background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);font-size:10px;border-radius:4px;height:22px;">
-        <option value="sse">→ SSE</option>
-        <option value="api">→ API</option>
-      </select>
-    </div>
-    <input id="picker-api-url" type="text" placeholder="https://..." style="display:none;width:100%;font-size:10px;background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);border-radius:4px;height:22px;padding:0 4px;margin-top:6px;">
   </div>
 </div>
 

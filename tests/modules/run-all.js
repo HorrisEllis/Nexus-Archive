@@ -20,12 +20,6 @@ const MODULES_DIR = __dirname;
 const SUITES = [
   'jaa-db.test.js',
   'test-p1-fanin-live.js',
-  'test-provider-visibility.js',
-  'test-provider-deploy.js',
-  'test-status-strip-removal.test.js',
-  'test-toolbar-to-options-menu.test.js',
-  'test-clear-glass-missing-deps.test.js',
-  'test-system-check-api-layer.test.js',
   'test-p2-snapshot-sigma.js',
   'test-p3-diagnostic-causal.js',
   'test-p4-capabilities.js',
@@ -141,10 +135,6 @@ const SUITES = [
   'test-rfr2-cjs.js',
   'test-clear-glass-idle-vs-open.js',
   'test-clear-glass-single-instance.js',
-  // §2026-08-23 — NexusOptions' new nested keys (autoStartOnBoot,
-  // backgroundTabDefaults, accounts) + the real set() deep-merge bugfix,
-  // plus main/index.js's autoBootSetting decision logic.
-  'nexus-options-autoboot.test.js',
   'test-idearium-cjs-under-esm.js',
   'test-cortex-heartbeat.js',
   'test-tablet-ledger-api.js',

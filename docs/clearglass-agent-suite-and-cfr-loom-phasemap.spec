@@ -39,17 +39,22 @@ spec:
 
     TX1_clearglass_agent_suite_composition:
       priority: "HIGH — real, load-bearing gap: three real modules, zero wiring between them and clear-glass."
-      status: "OPEN, precisely scoped by the parallel session's own real
-        work, re-confirmed here. Three real, independently-working modules
-        (lib/account-registry.js — provider account slots, PROVIDERS =
-        [claude,chatgpt,gemini,perplexity]; lib/agent-router.js — the real
-        intent-to-agent map; lib/hat-forge.js — named tool/persona bundles,
-        VALID_BASE_AGENTS includes ollama and mistral too) — none wired into
-        clear-glass/ today, confirmed by that session's own grep across
-        clear-glass/src, seam, wire. Real precedent for HOW to wire them
-        found in the same pass: clear-glass/src/copilot/bridge.js already
-        does a direct cross-directory require('../../../lib/blueprint-
-        index') — no IPC, no bridge process. Same pattern applies here."
+      status: "PARTIAL — real progress this session (BL27, commit
+        9b6847e), not the full TX1 scope. What's done: a real,
+        consolidated GET /api/agent/suite on copilot/server.js,
+        combining self-model.js's getCurrentAgent() and hat-forge.js's
+        list() — verified live (real current-agent state + all 4 real
+        forged hats returned in one call). This is a DIFFERENT, same-
+        process pairing than TX1's own original scope (account-
+        registry + agent-router + hat-forge, all clear-glass-side) —
+        self-model.js/hat-forge.js live in copilot's process, not
+        clear-glass's, so no cross-directory require was needed for
+        this piece. account-registry.js and agent-router.js — TX1's
+        other two named modules — remain genuinely unwired into
+        clear-glass, not touched this session. Both of TX1's own real
+        open items (the ollama/mistral account-slot schema mismatch,
+        and the undecided entry point) remain exactly as unresolved as
+        when this phase was first scoped."
       depends_on: []
       does: >
         Compose account-registry + agent-router + hat-forge into a real
@@ -105,18 +110,25 @@ spec:
 
     TX4_provider_tab_tool_loop:
       priority: HIGH — this is the real substance behind "give you a tool to check loom/cortex/file tree/system."
-      status: "OPEN, and correctly identified by the parallel session as
-        the one part of this request with real architecture underneath it,
-        not just wiring. A claude.ai/chatgpt.com tab driven by a userscript
-        is a DOM session, not an API connection — there is no native
-        tool-calling available to an agent typing into that tab. The only
-        real path: userscript injects the prompt, DOM-reads the reply, a
-        server-side loop parses the reply for a tool-call intent, executes
-        it against the real system, injects the result back in. That loop
-        already exists in some real form (copilot's NCP tool loop) — the
-        real work is extending ITS tool set with loom/cortex/file-tree/
-        system-map reads and pointing it at whichever provider tab is
-        active, not building a second loop."
+      status: "SUBSTANTIALLY ANSWERED, not a new build — confirmed by
+        reading the real code end to end, not assumed. copilot/tool-
+        runtime.js's runViaAgent() (the real NCP loop TX4 describes)
+        calls agentTools.runToolLoop() with allowedTools only set when
+        a hat's toolScope narrows it — with no hat active, allowedTools
+        is undefined, and runToolLoop's real getToolSchemas() offers
+        every real, registered tool (only an explicit tool-config
+        disable would exclude one). Checked directly whether the 4
+        named categories already exist: loom_scan/loom_register
+        (loom), query_recall (cortex), read_file/file_tree/
+        search_files (file-tree), nexus_status (system-map) — all 4
+        real, already registered, already offered by default through
+        this exact path. What's genuinely still open is narrower than
+        originally scoped: not 'add tools to the loop', but whether
+        the real DOM round-trip (a provider tab's reply containing
+        embedded tool-call JSON, parsed back out by _parseToolBlocks())
+        actually works live — which is TX3's own already-flagged open
+        item (the IPC path from chat trigger to renderer, not yet
+        traced end to end), not a separate TX4 gap."
       depends_on: [TX3]
       does: >
         Extends the real, existing NCP tool loop (not a new one) with
@@ -278,3 +290,187 @@ spec:
   #     fresh-start before any migration code gets written.
   #   - TX8 needs canvas-cfr.js read in full to know how much of the
   #     reference images' 6-layer pipeline already exists.
+
+    TX11_plugin_architecture_decision:
+      priority: "HIGH — the document's own real fork in the road."
+      status: "✓ DONE — decided: option 3, a genuine first-class
+        plugin system. James: \"build a first-class plugin system.\" Real
+        design doc written before any code: docs/CLEAR-GLASS-PLUGIN-
+        SYSTEM-DESIGN-2026-08-23.md — every architectural choice traced
+        to a real, already-proven pattern in this codebase (manifest/
+        lifecycle modeled on UserscriptManager's real, working shape;
+        permission checks reuse lib/tool-config.js's exact, already-
+        proven {allow,reason,needsConfirm} check every real tool call
+        already goes through; the plugin API surface reuses the real,
+        proven cross-process HTTP-bridge pattern dom-archaeology.js/
+        userscripts.js/tab-visibility.js/provider-deploy.js already
+        established, not a new mechanism). One real, honest, stated
+        limit: plugins run in-process (matching TX1's own real
+        copilot/bridge.js precedent), so the permission check is a real,
+        enforced convention, not a hard process boundary — named
+        plainly, not glossed over."
+      depends_on: []
+      does: >
+        Determines whether TX13's whole backlog gets built once, as
+        real, updatable plugins, or piece by piece as permanent core
+        code — the single highest-leverage decision in this document.
+
+    TX14_plugin_system_v1_build:
+      priority: HIGH — the real, next step now that TX11 is decided.
+      status: "IN PROGRESS — commit 6827c0b. The real UI/UX half is
+        genuinely done: clear-glass/renderer/guardian-picker.js, a
+        complete, faithful port of the confirmed v3.4.0 archive's
+        pick-element + popup + zoom/nearby-chips + listener-config-
+        modal workflow, CSS/HTML extracted byte-for-byte (verified via
+        a zero-diff element-ID check against the source), wired into
+        both real entry points that can start a picker. Real, live
+        event routing works (guardian.* events get their own real SSE
+        names, not collapsed into generic dom.mutations). §HONEST LIMIT
+        — this is the workflow James asked to rebuild, not yet the
+        plugin system itself: the actual plugin loader (manifest
+        validation, install/enable/disable/uninstall/reload, the real
+        permission check wired to tool-config's pattern — TX14's
+        original v1 scope) hasn't been started. Also still open: on-
+        disk callto persistence (matching UserscriptManager's own real
+        convention) and the listener modal's external-routing options
+        (post to a bridge/URL, trigger another callto) — named
+        honestly as not-yet-built, not silently assumed working."
+      depends_on: [TX11_plugin_architecture_decision]
+      does: >
+        A real, working plugin loader plus the real, complete pick-
+        element-and-configure-a-listener workflow, ported faithfully
+        from the confirmed, converged v3.4.0 archive — not reinvented,
+        not stripped down.
+
+    TX12_bookmark_reconciliation:
+      priority: MEDIUM — real capability exists twice, disconnected.
+      status: "OPEN, a real design decision, not new build. Two
+        genuinely separate, real, both-working mechanisms confirmed:
+        cg.bookmarks (native — url/title/agentId only, zero state
+        capture) and macro.js's bookmark/openBookmark (this session,
+        commit cbfc057 — real cookie/storage/scroll capture via the
+        rewind engine, 10 real tests passing) — but the second one is a
+        macro-tool primitive, never surfaced in the browser's own
+        bookmarks UI. Needs a real decision: merge into one bookmark
+        concept (every bookmark captures state by default, or a real
+        'with state' checkbox), or keep them deliberately separate with
+        distinct UI. Not guessed at here — this is exactly the kind of
+        choice this phasemap defers to the person, not a default."
+      depends_on: []
+      does: >
+        Closes the gap between 'bookmarks' and 'bookmarks that actually
+        remember you were logged in' — the real capability already
+        exists, it just isn't one coherent feature yet.
+
+    TX13_browser_chrome_backlog:
+      priority: "LOW individually, but the real, complete list of
+        every genuinely-empty browser-chrome feature this document
+        found — kept as one entry rather than 8 near-duplicate phases,
+        since none has real infrastructure to reference yet and each
+        would restate the same 'zero real code, confirmed by direct
+        search' finding."
+      status: "OPEN. §CORRECTED 2026-08-23 — James, on the first draft
+        of this phase: 'per-site settings, the app menu, passwords,
+        zoom, webcam, are normal browser features.' Right, and a real
+        correction to how this phase was first scoped — these are
+        baseline capabilities every browser has natively, not optional,
+        swappable, disable-able features a person would want as a
+        plugin. Removed the TX11 dependency below — none of these need
+        the plugin system, they should be built as real, native Clear
+        Glass core, same as bookmarks or rewind already are. Real,
+        checked-empty items, each confirmed by a direct search of the
+        real tree, not assumed absent: (1) per-site/per-origin
+        settings — zero storage or UI. (2) full app menu — 8 of Image
+        3's 10 items (history, passwords, extensions, print, save-
+        page-as, find-in-page, zoom, report-broken-site/help) have no
+        real code; only Settings (#options-panel) and downloads
+        (backend only, no UI) exist. 'Extensions' here specifically
+        means real web-extension LOADING (a genuinely separate, much
+        bigger question from the plugin system — see TX11's own §10
+        option 2) — not itself a candidate for this phase's native
+        scope. (3) downloads manager UI + a real download-directory
+        setting — the real routing backend (download-capture.js,
+        hooks Electron's will-download, announces to Guardian's
+        /api/intake) already exists; the visual list and the directory
+        setting do not, confirmed against NexusOptions and main/
+        index.js directly. (4) passwords manager — zero, would need
+        real autofill/DOM form detection this codebase has never
+        built, distinct from the real but different-purpose cookie
+        vault (clear-glass/seam/). (5) zoom — zero, but genuinely
+        small: Electron's own webContents.setZoomFactor() is a real,
+        built-in API this could wire to directly, no design question
+        needed. (6) webcam/audio permission handling — zero;
+        session.setPermissionRequestHandler doesn't exist in this tree
+        at all (a getUserMedia request would hit Electron's
+        unconfigured default) — this is real, native browser
+        permission-prompt UX, not a plugin either."
+      depends_on: []
+      does: >
+        The real, complete native browser-chrome gap list — baseline
+        capability every browser needs, built as real Clear Glass core,
+        not deferred behind the plugin system.
+
+    TX15_whisper_as_a_real_optional_capability:
+      priority: LOW — genuinely different from TX13's other items, split out on purpose.
+      status: "OPEN. The one item from the original chrome-map document
+        that ISN'T a normal browser feature — no browser ships speech-
+        to-text as baseline chrome. Whisper has zero references
+        anywhere in the entire codebase, not just clear-glass, and
+        would need a real, new integration decision (local model vs
+        API-based) before any build. Unlike TX13's items, this is a
+        genuine candidate for TX14's real plugin system — an optional
+        capability someone could enable, not something every browser
+        needs."
+      depends_on: [TX14_plugin_system_v1_build]
+      does: >
+        Real, optional speech-to-text — the kind of capability the
+        plugin system exists for, correctly kept separate from TX13's
+        native-browser-feature backlog.
+
+    TX16_persistent_listener_registry_and_callable_elements:
+      priority: "HIGH — James's own real framing: 'think how high
+        leverage that would be.' The connecting piece across TX1, TX14,
+        and Agent Mesh (BL21/BL27), not a standalone feature."
+      status: "OPEN. James: 'could have a listener for any element on
+        any page, give a option to open url on startup. then we can
+        have event types. listener uuid, logs to cortex listeners
+        index? so then we can use elements as callable ids, listen for
+        any urls elements... this could be a tool for setting up a new
+        agent to the agent mesh.' Real, current state, checked before
+        scoping: TX14's real port (commit 21d4e05) gives a single,
+        in-page listener a real UUID and real routing, but it's
+        genuinely PAGE-SCOPED — the listener dies when the page
+        navigates away or Clear Glass restarts, confirmed directly
+        (activeListeners is an in-memory Map, no persistence layer
+        anywhere in guardian-picker.js). James's real ask is a
+        structurally different, bigger thing: (1) a real, PERSISTENT
+        listener registry — configured once, survives navigation and
+        restart, auto-reattaches whenever its real URL pattern loads
+        again (connects directly to BL28's own real, already-open
+        'open URL on startup' gap — the same real mechanism that
+        opens a background tab on boot could re-attach that tab's own
+        saved listeners). (2) A real, dedicated cortex 'listeners
+        index' — a genuinely separate real table/store from the raw
+        event log this session already wired (TX14's ledger routing),
+        since a registry of 'what listeners exist and their real
+        config' is a fundamentally different real query shape than 'a
+        stream of things that happened.' (3) Callable elements — a
+        fingerprinted element (already real, via the ported
+        fingerprint()/callto system) becomes a real, stable, reusable
+        ID a person or an agent can reference later without re-
+        picking, matching this session's own real callto concept
+        already ported, extended from 'one-shot capture' to 'a
+        durable handle.' (4) The real, named end goal: 'setting up a
+        new agent to the agent mesh' — concretely, 'attach a real,
+        persistent listener to claude.ai's chat output, with the
+        NEXUS wake-word/question criteria already built in TX14' IS a
+        real, literal definition of 'onboard claude as an agent',
+        connecting this phase directly to BL21/BL27's own real agent-
+        mesh work. Genuinely too large to build blind in one pass —
+        this status is honest about being a real scoping phase, same
+        as TX1's own earlier honest gap, not yet build-ready."
+      depends_on: [TX14_plugin_system_v1_build, BL21_agent_mesh_real_connection, BL28_background_tabs_setting]
+      does: >
+        The real, structural upgrade from 'a listener on this page,
+        right now' to 'a durable, callable capability the whole system
+        can reference' — the connecting piece James named directly.

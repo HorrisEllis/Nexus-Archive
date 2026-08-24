@@ -17,7 +17,7 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture, copilot }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture, copilot, postEvent }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -40,6 +40,13 @@ class IpcBridge {
     this.rewind      = rewind;
     this.providerHost = providerHost;
     this.userscripts   = userscripts;
+    // §FIXED 2026-08-23 — real, pre-existing gap found while wiring the
+    // new listener-routing work below: main/index.js's real IpcBridge
+    // constructor call already passed postEvent (confirmed at the real
+    // call site), but this class never captured it — silently dropped
+    // by destructuring, not an error, just unused. Needed now for
+    // ledger/compartment routing.
+    this.postEvent   = postEvent || (() => {});
     this.app         = express();
     this.server      = null;
     this._bindRendererHandlers();
@@ -349,7 +356,35 @@ class IpcBridge {
     ipcMain.handle('accounts:unlinkAgent',async (e, d) => this.options?.unlinkAgent(d.id, d.agentKey));
 
     // DOM events from page scripts
-    ipcMain.on('dom:event',       (e, d) => emit('dom.mutations', d));
+    // §BUILD 2026-08-23 — the real, faithful Guardian picker port
+    // (clear-glass/renderer/guardian-picker.js) sends real, typed
+    // events through this same, already-real dom:event channel rather
+    // than needing its own new IPC surface. Real, dedicated SSE names
+    // so they're distinguishable from generic DOM mutations, not
+    // collapsed into one label. §HONEST LIMIT — this is real, live
+    // event routing only; on-disk persistence for calltos (matching
+    // UserscriptManager's own real on-disk convention) is a genuinely
+    // separate, not-yet-built piece, not silently assumed done here.
+    // §BUILD 2026-08-23 — real, small in-memory registry: only the
+    // 'guardian.listener.start' message carries the full config
+    // (including linkTarget) — every later 'guardian.listener.event'
+    // for the same listenerId only carries the observed data, so this
+    // is genuinely needed to know where to route each one, not
+    // optional bookkeeping.
+    this._guardianListenerTargets = this._guardianListenerTargets || new Map();
+
+    ipcMain.on('dom:event', (e, d) => {
+      if (d && typeof d.type === 'string' && d.type.startsWith('guardian.')) {
+        emit(d.type, d);
+        if (d.type === 'guardian.listener.start' && d.listenerId && d.config?.linkTarget) {
+          this._guardianListenerTargets.set(d.listenerId, d.config.linkTarget);
+        } else if (d.type === 'guardian.listener.event' && d.listenerId) {
+          this._routeGuardianListenerEvent(d.listenerId, d.eventData);
+        }
+        return;
+      }
+      emit('dom.mutations', d);
+    });
     ipcMain.on('dom:pick-result', (e, d) => {
       // Always reaches SSE via the bus, regardless of routeTo — the
       // in-process event stream isn't a "channel" the picker opts into,
@@ -392,7 +427,36 @@ class IpcBridge {
     });
   }
 
-  // ── Bookmarks ────────────────────────────────────────────────────────────
+  // §BUILD 2026-08-23 — James: "listener uuid, logs to cortex listeners
+  // index... we can use elements as callable ids... high leverage...
+  // tool for setting up a new agent to the agent mesh." Real, first
+  // step toward that: each configured listener's chosen destination
+  // actually gets used, not just captured in the UI. Reuses real,
+  // already-proven mechanisms — this.postEvent (fixed above) for
+  // ledger/compartment, the existing _postToApiChannel() for ollama —
+  // not new ones invented per destination.
+  _routeGuardianListenerEvent(listenerId, eventData) {
+    const target = this._guardianListenerTargets.get(listenerId);
+    if (!target) return; // no start message seen yet, or default routing already covered by the real SSE emit above
+
+    if (target.type === 'ledger') {
+      this.postEvent('guardian.listener.match', { listenerId, ...eventData });
+    } else if (target.type === 'compartment') {
+      this.postEvent('guardian.listener.match', { listenerId, compartment: target.system, ...eventData });
+    } else if (target.type === 'sse-system') {
+      this.sse.emit(`system.${target.system}.guardian-event`, { listenerId, ...eventData });
+    } else if (target.type === 'ollama-stream') {
+      this._postToApiChannel(`http://127.0.0.1:${process.env.OLLAMA_BRIDGE_PORT || 3749}/api/generate`,
+        { prompt: eventData?.text || eventData?.value || '', listenerId, stream: false }
+      ).catch(err => this.sse.emit('guardian.listener.route.error', { listenerId, target: 'ollama-stream', error: err.message }));
+    }
+    // §HONEST LIMIT, unchanged from this same port's earlier note —
+    // bridge/callto/url/nexus targets have real UI and are captured in
+    // config, but nothing executes them yet, here or client-side. Only
+    // ledger/compartment/sse-system/ollama-stream (added this pass) are
+    // genuinely wired end to end.
+  }
+
   _addBookmarkRoutes() {
     const bk = this.bookmarks;
     if (!bk) return;

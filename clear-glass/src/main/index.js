@@ -82,6 +82,9 @@ const NEXUS_PORTS = {
   cortex:       parseInt(process.env.NEXUS_PORT         || '3748'),
   guardian:     parseInt(process.env.GUARDIAN_HTTP_PORT || '7820'),
   bridge:       parseInt(process.env.BRIDGE_PORT        || '9999'),
+  // §BUILD 2026-08-23 — real, confirmed against ollama/config.js's own
+  // real PORT default before adding, not guessed.
+  ollama:       parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749'),
 };
 
 const SSE_PORT = parseInt(process.env.CLEARGL_SSE_PORT || '7701');
@@ -550,10 +553,10 @@ async function _startWire() {
         const ok = providerHost.show(providerId);
         return res.end(JSON.stringify({ ok, providerId }));
       }
+
       // §PHASE-2 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md
-      // item 3: "there's no way to push/hot-reload a userscript into an
-      // already-running provider tab on demand." providerHost.deploy()
-      // is the real fix, reusing the exact _inject(providerId, win) the
+      // item 3: on-demand userscript hot-reload into an already-running
+      // provider tab. Reuses the exact same real _inject() path the
       // existing 60s reload timer already calls — this route is the
       // on-demand trigger for it, same real mechanism, not a new one.
       if (u === '/provider/deploy' && req.method === 'POST') {

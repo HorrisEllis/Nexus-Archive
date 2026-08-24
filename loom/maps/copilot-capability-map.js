@@ -66,45 +66,11 @@ const FILES = [
     ['nexus.guardian.clear-glass-bridge', 'nexus.clear-glass.src.driver.url-listener']],
 
   // §2026-08-23 — real, on top of both the tools above, not parallel to them.
-  // §PATH CORRECTED 2026-08-23 — this declared tools/automation/macro.js. The
-  // real file is tools/clear-glass/macro.js, and lib/agent-tools/index.js:370
-  // requires it from there. So the TOOL was always fine; the loom map pointed
-  // at a path that does not exist, which means this edge has been declared
-  // against nothing. Caught by checking every mapped file against disk rather
-  // than trusting the table (§1.1).
-  ['lib/agent-tools/tools/clear-glass/macro.js',              'nexus.lib.agent-tools.tools.macro',
+  ['lib/agent-tools/tools/automation/macro.js',               'nexus.lib.agent-tools.tools.macro',
     ['nexus.lib.agent-tools.tools.browser-action', 'nexus.lib.agent-tools.tools.rewind-replay', 'nexus.cortex.jaa-db', 'nexus.clear-glass.wire.nexus-wire']],
      // §2026-08-12 — REAL_ACTIONS event-type strings fixed this session (5 of 6 didn't match any real
      // clear-glass gate signature — see the file's own header); url_listen/url_unlisten added (P5),
      // reaching url-listener.js's real, already-registered gates for the first time.
-
-  // §BL28 2026-08-23 — the agent surface for ProviderHost.hide()/show().
-  // Its edge is to clear-glass's wire server, the SAME transport
-  // dom-archaeology uses — reused deliberately, not a second one (§10.3).
-  // The backend routes it calls (/provider/move-to-background,
-  // /bring-to-foreground) were verified present in clear-glass/src/main/
-  // index.js before this was declared, not assumed (PV-008 pins that).
-  ['lib/agent-tools/tools/clear-glass/provider-visibility.js', 'nexus.lib.agent-tools.tools.provider-visibility',
-    ['nexus.clear-glass.wire.nexus-wire']],
-  // §HONEST NOTE 2026-08-23 — found while registering this entry's own
-  // real sibling (provider-deploy.js, below): the dependency above
-  // points at clear-glass/wire/nexus-wire.js, but the real routes
-  // provider-visibility.js's own execute() calls (/provider/move-to-
-  // background, /provider/bring-to-foreground) are directly confirmed,
-  // by reading the file, to be served from clear-glass/src/main/
-  // index.js's own _wireServer — a genuinely different file, on the
-  // same real WIRE_PORT default (both read process.env.WIRE_PORT ||
-  // '7704'). Not silently corrected here (that entry isn't this
-  // change's own work, and correcting a sibling's dependency without
-  // being asked is scope creep) — named plainly so it isn't
-  // rediscovered from scratch later, matching PHASE-STATUS-2026-08-23's
-  // own real finding about a different stale map edge.
-  ['lib/agent-tools/tools/clear-glass/provider-deploy.js', 'nexus.lib.agent-tools.tools.provider-deploy',
-    ['nexus.clear-glass.main.index']],
-  ['clear-glass/src/main/index.js', 'nexus.clear-glass.main.index', ['nexus.clear-glass.providers.host']],
-  ['clear-glass/src/providers/host.js', 'nexus.clear-glass.providers.host', ['nexus.clear-glass.providers.registry', 'nexus.clear-glass.providers.gm-shim']],
-  ['clear-glass/src/providers/registry.js', 'nexus.clear-glass.providers.registry', []],
-  ['clear-glass/src/providers/gm-shim.js', 'nexus.clear-glass.providers.gm-shim', []],
 
   ['copilot/config.js', 'nexus.copilot.config', ['nexus.lib.version']],
   ['copilot/server.js',                              'nexus.copilot.server',
@@ -202,12 +168,9 @@ const FILES = [
   ['lib/agent-tools/tools/coordination/framework-builder.js', 'nexus.lib.agent-tools.tools.framework-builder', ['nexus.intelligence.framework-builder']],
   ['lib/agent-tools/tools/coordination/intelligence-query.js', 'nexus.lib.agent-tools.tools.intelligence-query', ['nexus.intelligence.index', 'nexus.intelligence.server']],
   ['lib/agent-tools/tools/clear-glass/dom-archaeology.js', 'nexus.lib.agent-tools.tools.dom-archaeology', []],
-  // §HANDOFF GAP 2026-08-23 — userscripts.js is mapped and registered but was
-  // NOT among the uploaded files; it does not exist in this tree. Left declared
-  // (§0.3 — it is real intent from a parallel session and deleting it would
-  // silently lose that), but flagged here so the map does not silently assert a
-  // component that is absent. TO CLOSE: supply the file.
   ['lib/agent-tools/tools/clear-glass/userscripts.js', 'nexus.lib.agent-tools.tools.clear-glass-userscripts', []],
+  ['lib/agent-tools/tools/clear-glass/tab-visibility.js', 'nexus.lib.agent-tools.tools.clear-glass-tab-visibility', []],
+  ['lib/agent-tools/tools/clear-glass/provider-deploy.js', 'nexus.lib.agent-tools.tools.clear-glass-provider-deploy', []],
   ['intelligence/server.js', 'nexus.intelligence.server', ['nexus.intelligence.index', 'nexus.intelligence.cfr', 'nexus.intelligence.framework-builder']],
   ['intelligence/registry-components.js', 'nexus.intelligence.registry', []],
   ['intelligence/consumer.js', 'nexus.intelligence.consumer', ['nexus.lib.contract-queue', 'nexus.intelligence.framework-builder']],

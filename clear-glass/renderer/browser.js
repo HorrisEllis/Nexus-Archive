@@ -15,43 +15,6 @@
   // never touches ClearGlass's own (locked) property descriptors at all —
   // it just copies function references into a fresh object we own, then
   // proxies THAT (normal, unfrozen, no invariant violation possible).
-  // §UI-CUSTOMIZE 2026-08-23 — James, from real screenshots: "remove the
-  // nexus, health, ja4, health, and cookies. just remove the whole area
-  // from the second image." Real risk found before touching any HTML:
-  // statusHealth/statusUrl/statusCookies/statusAgent are cached via
-  // document.getElementById() at module load (line ~132 below) into
-  // plain consts, and 9 real call sites write to them directly
-  // (.textContent, .style.color, .title) with no null-check — several
-  // fire from live SSE events (nexus.status, cookie counts) that happen
-  // routinely during real operation. Removing the HTML without this
-  // would throw the moment one of those events fired next. Same for
-  // dot-nexus/dot-tls/dot-sse, referenced via raw getElementById() calls
-  // inline (not cached, but equally unguarded at most call sites).
-  //
-  // Real fix: an explicit, transparent inert stand-in — NOT a Proxy.
-  // This same file's own §fix 2026-06-29 comment above documents a real,
-  // separate past incident where wrapping a live object in a Proxy threw
-  // ("proxy did not return its actual value") because the wrapped
-  // object's property descriptors were locked. That specific failure
-  // mode doesn't apply here (this wraps nothing — it's a fresh, owned
-  // plain object used only when the real element is absent), but given
-  // this file's own documented caution about Proxies for exactly this
-  // kind of DOM-stand-in problem, an explicit object with the real,
-  // known properties (checked directly above: .textContent, .style,
-  // .title, .className, .parentElement) is the safer, more legible
-  // choice — a future reader can see everything it supports at a glance
-  // instead of trusting a catch-all.
-  function _safeEl(id) {
-    const el = document.getElementById(id);
-    if (el) return el;
-    return {
-      textContent: '', title: '', className: '',
-      style: { color: '' },
-      parentElement: { title: '' },
-      addEventListener() {}, // some call sites also attach listeners; a no-op keeps those safe too
-    };
-  }
-
   function _wrapNamespace(nsName, nsObj) {
     const wrapped = {};
     if (nsObj) {
@@ -166,10 +129,10 @@
   const domSearch      = document.getElementById('dom-search');
   const picksPanel     = document.getElementById('picks-panel');
   const picksList      = document.getElementById('picks-list');
-  const statusUrl      = _safeEl('status-url');
-  const statusHealth   = _safeEl('status-health');
-  const statusCookies  = _safeEl('status-cookies');
-  const statusAgent    = _safeEl('status-agent');
+  const statusUrl      = document.getElementById('status-url');
+  const statusHealth   = document.getElementById('status-health');
+  const statusCookies  = document.getElementById('status-cookies');
+  const statusAgent    = document.getElementById('status-agent');
 
   // Update agent display
   agentBadge.textContent = agentId;
@@ -592,9 +555,17 @@
     pickerBtn.classList.toggle('active', pickerActive);
 
     if (pickerActive) {
-      await wv.executeJavaScript(PICKER_SCRIPT);
+      try {
+        if (!window.__guardianPickerSrc) {
+          window.__guardianPickerSrc = await fetch('./guardian-picker.js').then(r => r.text());
+        }
+        await wv.executeJavaScript(window.__guardianPickerSrc);
+      } catch (err) {
+        console.error('[pickerBtn] guardian-picker.js load failed, falling back:', err);
+        await wv.executeJavaScript(PICKER_SCRIPT);
+      }
     } else {
-      await wv.executeJavaScript(`if (window.__cgPicker) window.__cgPicker.destroy();`).catch(() => {});
+      await wv.executeJavaScript(`if (window.__gPickerActive) window.__gPickerActive.destroy(); else if (window.__cgPicker) window.__cgPicker.destroy();`).catch(() => {});
     }
   });
 
@@ -934,7 +905,7 @@
       statusHealth.textContent = 'Health: offline';
       statusHealth.style.color = 'var(--red, #ff4466)';
       statusHealth.title = 'No nexus.status event received — orchestrator unreachable or NEXUS not running';
-      const dot = _safeEl('dot-nexus');
+      const dot = document.getElementById('dot-nexus');
       if (dot) {
         dot.className = 'status-dot error';
         dot.parentElement.title = 'orchestrator unreachable — no nexus.status event in 8s';
@@ -945,7 +916,7 @@
     es.addEventListener('nexus.status', (e) => {
       clearTimeout(_healthTimeout);
       const d = JSON.parse(e.data);
-      const dot = _safeEl('dot-nexus');
+      const dot = document.getElementById('dot-nexus');
       dot.className = 'status-dot ' + (d.all ? 'ok' : 'error');
       dot.parentElement.title =
         `orchestrator:${d.orchestrator ? 'up' : 'down'} `
@@ -966,7 +937,7 @@
     });
 
     es.addEventListener('tls.tunnel', (e) => {
-      _safeEl('dot-tls').className = 'status-dot ok';
+      document.getElementById('dot-tls').className = 'status-dot ok';
     });
 
     es.addEventListener('window.maximized', (e) => {
@@ -977,7 +948,7 @@
     });
 
     es.addEventListener('tls.error', (e) => {
-      _safeEl('dot-tls').className = 'status-dot warn';
+      document.getElementById('dot-tls').className = 'status-dot warn';
     });
 
     // ── Context events ────────────────────────────────────────────────
@@ -1045,21 +1016,55 @@
     });
 
     es.onerror = () => {
-      _safeEl('dot-sse').className = 'status-dot error';
+      document.getElementById('dot-sse').className = 'status-dot error';
       setTimeout(connectSSE, 3000);
     };
 
     es.onopen = () => {
-      _safeEl('dot-sse').className = 'status-dot ok';
+      document.getElementById('dot-sse').className = 'status-dot ok';
     };
   }
 
   // ── Mesh button ────────────────────────────────────────────────────
-  document.getElementById('btn-mesh')?.addEventListener('click', async () => {
-    const agents = await cg.driver.exec({ action: 'eval', agentId, code: 'null' })
-      .catch(() => ({ result: null }));
-    // Surface mesh info in co-pilot
-    addMsg('assistant', `Agent Mesh — use Co-pilot to spawn agents:\n"spawn claude agent"\n"route this prompt to perplexity"\n"enqueue task to all agents"`);
+  document.getElementById('btn-mesh')?.addEventListener('click', async (e) => {
+    const panel = document.getElementById('agent-mesh-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const rect = e.target.getBoundingClientRect();
+    panel.style.top = `${rect.bottom + 4}px`;
+    panel.style.right = `${window.innerWidth - rect.right}px`;
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    panel.style.display = 'block';
+    try {
+      const res = await fetch('http://127.0.0.1:3750/api/agent/current');
+      const cur = await res.json();
+      const agents = ['auto', 'claude', 'chatgpt', 'gemini', 'perplexity'];
+      panel.innerHTML = `
+        <div style="padding:6px 4px;font-size:11px;color:var(--text-dim,#999);border-bottom:1px solid var(--border,#333);margin-bottom:6px">
+          Current: <b style="color:var(--text,#ccc)">${(cur.agent || 'auto').replace(/</g,'&lt;')}</b>${cur.hatName ? ` (${cur.hatName.replace(/</g,'&lt;')})` : ''}
+        </div>
+        ${agents.map(a => `<div data-agent="${a}" style="padding:6px 8px;cursor:pointer;font-size:11px;border-radius:4px;${a === cur.agent ? 'background:var(--accent,#00f5ff);color:#000' : 'color:var(--text,#ccc)'}">${a}</div>`).join('')}`;
+      panel.querySelectorAll('[data-agent]').forEach(el => el.addEventListener('click', async () => {
+        const target = el.dataset.agent;
+        panel.innerHTML = `<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">switching to ${target}…</div>`;
+        try {
+          const r = await fetch('http://127.0.0.1:3750/api/agent/switch', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: target === 'auto' ? '' : target }),
+          });
+          const d = await r.json();
+          addMsg('assistant', d.ok ? `✓ Switched to ${target}.` : `Switch failed: ${d.reason || d.error || 'unknown'}`);
+        } catch (err) {
+          addMsg('assistant', `Switch failed: ${err.message}`);
+        }
+        panel.style.display = 'none';
+      }));
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Co-pilot unreachable: ${err.message}</div>`;
+    }
+  });
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('agent-mesh-panel');
+    if (panel && panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'btn-mesh') panel.style.display = 'none';
   });
 
   // ── Diag button ────────────────────────────────────────────────────
@@ -1684,7 +1689,26 @@ It will write and install it for you.`);
       case 'pick': {
         pickerActive = true;
         pickerBtn.classList.add('active');
-        await wv.executeJavaScript(PICKER_SCRIPT);
+        // §BUILD 2026-08-23 — James: "rebuild it completely for this
+        // nexus... do not change any css, style, themes." Real,
+        // complete, faithful port of the old Guardian's pick+popup+
+        // zoom/nearby+listener-config workflow (clear-glass/renderer/
+        // guardian-picker.js — every real CSS/HTML string extracted
+        // byte-for-byte from the confirmed, converged v3.4.0 archive).
+        // Fetched once and cached — same real, relative-to-browser.html
+        // loading browser.js itself already uses, not a new mechanism.
+        // Falls back to the old, simpler PICKER_SCRIPT if the fetch
+        // genuinely fails, so a person still has a working picker
+        // rather than none at all.
+        try {
+          if (!window.__guardianPickerSrc) {
+            window.__guardianPickerSrc = await fetch('./guardian-picker.js').then(r => r.text());
+          }
+          await wv.executeJavaScript(window.__guardianPickerSrc);
+        } catch (err) {
+          console.error('[pick] guardian-picker.js load failed, falling back:', err);
+          await wv.executeJavaScript(PICKER_SCRIPT);
+        }
         break;
       }
       case 'copilot-page': {
