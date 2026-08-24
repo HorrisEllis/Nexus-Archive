@@ -129,10 +129,30 @@ async function processOne(contract) {
       );
     }
 
+    // §TX9 2026-08-24 — real, confirmed gap closed: plan.existingDir
+    // (module-builder.js's map(), §SELF-BUILD-EXT) already survives
+    // into contract.payload.plan, but this build step never read it —
+    // this staged output had no real, recorded link back to the real
+    // component it's meant to replace once verified. Deliberately does
+    // NOT change where THIS build writes (buildDir stays the real,
+    // safe staging location) — writing straight into a live component
+    // before real verification would be a genuinely different, riskier
+    // design than what's built here. Same real pattern as
+    // architecture.json above: a real sidecar file, not a new
+    // mechanism.
+    const existingDir = contract.payload.plan?.existingDir || null;
+    if (existingDir) {
+      fs.writeFileSync(
+        path.join(buildDir, 'replace-target.json'),
+        JSON.stringify({ existingComponentId: contract.payload.plan.existingComponentId || null, existingDir }, null, 2),
+        'utf8'
+      );
+    }
+
     const result = await compile(specPath, buildDir, { verbose: false });
 
     if (result.ok) {
-      cq.complete('emerge', uuid, { outputDir: buildDir, ok: true, skipped: !!result.skipped });
+      cq.complete('emerge', uuid, { outputDir: buildDir, ok: true, skipped: !!result.skipped, existingDir });
       await _reportEvent('emerge.contract.complete', { contractUuid: uuid, moduleName: name, outputDir: buildDir });
       _reportBuildOutput(uuid, name, true);
       console.log(`[${MODULE_ID}] ✓ ${uuid} compiled → ${buildDir}`);

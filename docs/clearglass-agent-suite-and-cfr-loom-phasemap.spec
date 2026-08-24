@@ -232,29 +232,38 @@ spec:
 
     TX9_build_contract_file_dir:
       priority: MEDIUM — new ask, this message, precisely scoped.
-      status: "OPEN, confirmed absent, precisely scoped. \"Contracts for
-        building needs the file dir so it can be replaced when verified.\"
-        Checked copilot/module-builder.js's real contract shape directly:
-        { name, purpose, targetSystem, usesCapabilities, gaps, ready,
-        scope, grammarAliases, contractType } — targetSystem names a
-        SYSTEM (e.g. \"cortex\"), there is no field carrying an actual
-        file path. _resolveExistingTarget() (built earlier this session)
-        DOES resolve a real file path at generation time for edit/expand/
-        repair scope — but whether that resolved path gets PERSISTED
-        into the contract object itself, so a later verify-then-replace
-        step doesn't need to re-resolve it, was not checked in this pass."
+      status: "OPEN — precisely re-scoped, real answer found. James's
+        earlier original question ('does the real path survive from
+        generation to the contract, or get discarded?') is answered:
+        it survives. copilot/module-builder.js's map() already sets
+        plan.existingDir = existingTarget.dir (line 162, §SELF-BUILD-
+        EXT), and build()'s real cq.create() call embeds the entire
+        plan object into the contract's payload (payload.plan = plan)
+        — confirmed by reading the actual code, not assumed. The real
+        gap is one hop later, precisely located: emerge/consumer.js,
+        the real contract receiver, ALWAYS computes buildDir = path.
+        join(OUTPUT_ROOT, uuid) — a fresh, generic staging directory —
+        and never reads contract.payload.plan.existingDir at all
+        (confirmed via a direct grep, zero hits). The real completion
+        signal (cq.complete('emerge', uuid, {outputDir: buildDir, ...}))
+        only carries the staging location forward too, so whatever
+        real 'verify then replace' consumer exists downstream (RAID,
+        presumably, not yet traced) has no way to know the real final
+        target unless it separately re-reads the original contract."
       depends_on: []
       does: >
-        Add a real targetPath field to the contract schema, populated
-        from _resolveExistingTarget()'s already-real resolution (not a
-        second lookup mechanism) so that once RAID verifies a build's
-        output, the apply/replace step has an exact, unambiguous file
-        location to write to.
+        Two real, precise, connected fixes: (1) emerge/consumer.js
+        reads contract.payload.plan.existingDir when present and
+        threads it through — into either the staging metadata or a
+        real, direct build-in-place decision, a real design choice not
+        assumed here; (2) the cq.complete() signal carries existingDir
+        forward too, so a downstream verify/replace step never has to
+        re-derive it from the original contract.
       open_items:
-        - Whether _resolveExistingTarget()'s output currently gets
-          discarded after generation or is already threaded through to
-          where a replace step could use it — needs a direct read of
-          the generation-to-verify handoff path.
+        - Whether RAID's own real verify-then-replace consumer (not
+          yet traced in this pass) already reads the original contract
+          directly, in which case fix (2) may be unnecessary — or
+          only sees the completion signal, in which case it's required.
 
     TX10_component_registry_discipline:
       priority: FOUNDATION — standing instruction, not a one-time build.

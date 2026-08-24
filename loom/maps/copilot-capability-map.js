@@ -66,7 +66,14 @@ const FILES = [
     ['nexus.guardian.clear-glass-bridge', 'nexus.clear-glass.src.driver.url-listener']],
 
   // §2026-08-23 — real, on top of both the tools above, not parallel to them.
-  ['lib/agent-tools/tools/automation/macro.js',               'nexus.lib.agent-tools.tools.macro',
+  // §MOVED 2026-08-24 — path corrected: this file itself moved from tools/
+  // automation/ to tools/clear-glass/ earlier this same session (matching
+  // dom-archaeology.js/userscripts.js/tab-visibility.js/provider-deploy.js,
+  // all real, already registered under this same nexus.lib.agent-tools.
+  // tools.* convention) — this specific loom entry was missed at the time,
+  // confirmed live via a real boot log's own dangling-hook gap
+  // (nexus.lib.agent-tools.tools.clear-glass.macro.import), not guessed.
+  ['lib/agent-tools/tools/clear-glass/macro.js',               'nexus.lib.agent-tools.tools.macro',
     ['nexus.lib.agent-tools.tools.browser-action', 'nexus.lib.agent-tools.tools.rewind-replay', 'nexus.cortex.jaa-db', 'nexus.clear-glass.wire.nexus-wire']],
      // §2026-08-12 — REAL_ACTIONS event-type strings fixed this session (5 of 6 didn't match any real
      // clear-glass gate signature — see the file's own header); url_listen/url_unlisten added (P5),
