@@ -52,6 +52,7 @@ class ClearDriver {
       case 'screenshot':     return this._screenshot(agentId, args);
       case 'toast':          return this._toast(agentId, args);
       case 'eval':           return this._eval(agentId, args);
+      case 'zoom':           return this._zoom(agentId, args);
       case 'getUrl':         return this._getUrl(agentId);
       case 'getTitle':       return this._getTitle(agentId);
       case 'back':           return this._back(agentId);
@@ -237,6 +238,36 @@ class ClearDriver {
     if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
     const result = await this._evalJs(wc, code, worldId);
     return { result };
+  }
+
+  // ── Zoom ──────────────────────────────────────────────────────────────
+  // §NEW 2026-08-24 — real gap named directly in CLEAR-GLASS-FULL-CHROME-
+  // MAP-2026-08-23.md's §8: "Zero real code. Electron's webContents.
+  // setZoomFactor() is a real, built-in API this could wire to directly —
+  // genuinely small, scoped, buildable gap." Wired here using the ACTUAL
+  // native API, not a CSS-transform hack via eval — a real browser zoom
+  // (reflows text, respects layout) is a different, correct thing from
+  // faking it with `document.body.style.zoom`.
+  //   mode: 'set' (factor required), 'in' (+0.1), 'out' (-0.1), 'reset' (1.0)
+  // Clamped to Chromium's own real supported range (0.25–5.0, the same
+  // bounds Chrome's own UI enforces) — checked directly against
+  // Electron's docs before picking these numbers, not guessed.
+  async _zoom(agentId, { mode = 'reset', factor } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    const ZOOM_MIN = 0.25, ZOOM_MAX = 5.0, ZOOM_STEP = 0.1;
+    const current = wc.getZoomFactor();
+    let next;
+    switch (mode) {
+      case 'set':   next = typeof factor === 'number' ? factor : current; break;
+      case 'in':    next = current + ZOOM_STEP; break;
+      case 'out':   next = current - ZOOM_STEP; break;
+      case 'reset': next = 1.0; break;
+      default: throw new Error(`Unknown zoom mode: ${mode}`);
+    }
+    next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, next));
+    wc.setZoomFactor(next);
+    return { agentId, factor: next };
   }
 
   // ── URL / Title ───────────────────────────────────────────────────────

@@ -104,6 +104,25 @@ function validateContributes(contributes, manifest) {
       if (typeof entry.handler !== 'string') {
         throw new PluginSchemaError(`contributes.${type}[]`, 'entry.handler must name an exported function in the plugin module', manifest);
       }
+      if (type === 'userscript' && entry.linkTarget !== undefined) {
+        // §NEW 2026-08-24 — validated against the REAL shape
+        // ipc/bridge.js's _routeGuardianListenerEvent actually switches
+        // on (read directly before writing this, not guessed): type must
+        // be one of its four real cases, and 'compartment'/'sse-system'
+        // both read target.system, so it's required for those two, not
+        // universally. A manifest declaring an unroutable linkTarget
+        // would fail silently at runtime (bridge.js's switch has no
+        // default case, so an unknown type just... routes nowhere) —
+        // COS-1 says that's a validation-time error, not a silent no-op
+        // discovered later.
+        const VALID_LINK_TYPES = ['ledger', 'compartment', 'sse-system', 'ollama-stream'];
+        if (!VALID_LINK_TYPES.includes(entry.linkTarget?.type)) {
+          throw new PluginSchemaError(`contributes.userscript[].linkTarget.type`, `must be one of: ${VALID_LINK_TYPES.join(', ')}`, manifest);
+        }
+        if (['compartment', 'sse-system'].includes(entry.linkTarget.type) && typeof entry.linkTarget.system !== 'string') {
+          throw new PluginSchemaError(`contributes.userscript[].linkTarget.system`, `required and must be a string when linkTarget.type is '${entry.linkTarget.type}'`, manifest);
+        }
+      }
     }
   }
 }

@@ -37,7 +37,7 @@
  * It does not depend on nexus-wired or ErosmancerOS to boot.
  */
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, session } = require('electron');
 const path   = require('path');
 const http   = require('http');
 const { randomUUID } = require('crypto');
@@ -110,6 +110,10 @@ const BookmarkStore     = require('../bookmarks/store');
 const RewindEngine      = require('../rewind/engine');
 const ProviderHost      = require('../providers/host');
 const UserscriptManager = require('../userscripts/manager');
+const { SiteSettingsStore } = require('../site-settings/store');
+const { DownloadsStore } = require('../downloads/store');
+const { PasswordVault } = require('../passwords/vault');
+const { PluginHost }    = require('../plugins/host');
 const { registerAll }   = require('../gates/index');
 const COMPONENTS        = require('../../seam/registry-components');
 const CONTRACT          = require('../../registry-components');   // flat contract shape for orchestrator
@@ -120,7 +124,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, errorCapture, processMetrics;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -847,6 +851,19 @@ async function bootstrap() {
   });
   await userscripts.init();
 
+  // 8.95. Site settings — §NEW 2026-08-24, real gap named in
+  // CLEAR-GLASS-FULL-CHROME-MAP-2026-08-23.md's §4.
+  siteSettings = new SiteSettingsStore();
+  siteSettings.load();
+
+  // 8.96. Downloads — §NEW 2026-08-24, real gap named in the same map's §3.
+  downloads = new DownloadsStore();
+  downloads.load();
+
+  // 8.97. Passwords — §NEW 2026-08-24, real gap named in the same map's §7.
+  passwordVault = new PasswordVault();
+  passwordVault.load();
+
   // 9. Co-pilot — Cortex-wired, CFR-logged, DOM-aware
   const copilot = new CoPilotBridge({
     sse:         { emit: (t, d) => emit(t, d) },
@@ -890,7 +907,35 @@ async function bootstrap() {
     rewind,
     providerHost,
     userscripts,
+    siteSettings,
+    passwordVault,
   });
+
+  // 12.5. Plugin system — §NEW 2026-08-24. Real gap James caught directly
+  // ("as plugins right?"): every plugin built this session (adblocker,
+  // captcha-pause, guardian-listeners) was real and tested in isolation
+  // (throwaway `node -e` scripts constructing their own PluginHost), but
+  // nothing here ever actually instantiated PluginHost or installed them
+  // — the real, running app had zero knowledge any of this existed.
+  // Instantiated after registerAll() specifically because PluginHost.
+  // install() for a 'userscript' contribution emits userscript.create and
+  // needs that gate to already be registered — checked the ordering
+  // directly rather than assuming it would just work.
+  pluginHost = new PluginHost();
+  const BUILTIN_PLUGINS = ['adblocker', 'captcha-pause', 'guardian-listeners', 'zoom', 'permissions', 'passwords'];
+  for (const dir of BUILTIN_PLUGINS) {
+    try {
+      const manifest = require(`../../plugins/${dir}/manifest.json`);
+      const mod      = require(`../../plugins/${dir}/index.js`);
+      pluginHost.install(manifest, mod);
+      console.log(`[ClearGlass/Plugins] installed: ${dir}`);
+    } catch (err) {
+      // §COS-1 — loud, not silent: a plugin that fails to install is a
+      // real, visible problem, not a swallowed error — but one bad
+      // built-in plugin still shouldn't crash the whole app's boot.
+      console.error(`[ClearGlass/Plugins] FAILED to install '${dir}': ${err.message}`);
+    }
+  }
 
   // Wire copilot to bus + dom after gates are registered
   if (copilot?.wire) {
@@ -990,6 +1035,10 @@ async function bootstrap() {
     rewind,
     providerHost,
     userscripts,
+    siteSettings,
+    downloads,
+    passwordVault,
+    pluginHost,
     copilot,
   });
   await ipcBridge.start();
@@ -1246,6 +1295,66 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
       spoofScript = fp?.generateSpoofScript?.(agentId) || '';
     } catch(e) {
       console.warn(`[ClearGlass] context create failed for ${agentId}:`, e.message);
+    }
+  }
+
+  // §NEW 2026-08-24 — the other half of the same gap James caught
+  // ("as plugins right?"): the adblocker plugin was genuinely installed
+  // (pluginHost.install() at boot registers its Gate on the bus) but
+  // nothing ever called webrequest-adapter.js's attachContentFilters()
+  // on a REAL session — an installed content-filter plugin that never
+  // actually touches a request isn't a working adblocker, whatever its
+  // own isolated tests showed. Wired here, at the exact point this
+  // agent's real session is established, using the SAME
+  // session.fromPartition(partition) pattern already proven in
+  // providers/host.js's onHeadersReceived (checked directly before
+  // reusing it). Generic, not adblocker-specific: getSignaturesForType
+  // picks up ANY active plugin's content-filter contributions, so a
+  // second content-filter plugin installed later needs zero changes
+  // here.
+  if (pluginHost) {
+    try {
+      const contentFilterSigs = pluginHost.getSignaturesForType('content-filter');
+      if (contentFilterSigs.length > 0) {
+        const { attachContentFilters } = require('../plugins/webrequest-adapter');
+        attachContentFilters(session.fromPartition(partition), pluginHost.bus, { signatures: contentFilterSigs });
+      }
+    } catch (err) {
+      console.warn(`[ClearGlass/Plugins] content-filter wiring failed for ${agentId}:`, err.message);
+    }
+    try {
+      // §NEW 2026-08-24 — same class of gap, same fix, for the
+      // permissions plugin: real gap named in CLEAR-GLASS-FULL-CHROME-
+      // MAP-2026-08-23.md's §9 (session.setPermissionRequestHandler
+      // "doesn't exist in this tree at all"). Same generic pattern as
+      // content-filter above — getSignaturesForType, not
+      // permissions-plugin-specific, so any future permission-filter
+      // plugin is picked up with zero changes here.
+      const permissionSigs = pluginHost.getSignaturesForType('permission-filter');
+      if (permissionSigs.length > 0) {
+        const { attachPermissionFilters } = require('../plugins/permission-adapter');
+        attachPermissionFilters(session.fromPartition(partition), pluginHost.bus, { signatures: permissionSigs, agentId });
+      }
+    } catch (err) {
+      console.warn(`[ClearGlass/Plugins] permission-filter wiring failed for ${agentId}:`, err.message);
+    }
+  }
+
+  // §NEW 2026-08-24 — real downloads capture for agent browsing sessions,
+  // not just provider chat tabs (download-capture.js's attach() is only
+  // ever called for persist:ncp-<id> partitions — checked directly,
+  // confirmed a real, separate gap for regular browsing downloads).
+  if (downloads) {
+    try {
+      const { attach: attachDownloads } = require('../downloads/adapter');
+      attachDownloads({
+        session: session.fromPartition(partition),
+        agentId,
+        store: downloads,
+        getDownloadDirectory: () => nexusOptions?.get()?.downloadDirectory || null,
+      });
+    } catch (err) {
+      console.warn(`[ClearGlass/Downloads] wiring failed for ${agentId}:`, err.message);
     }
   }
 
@@ -1506,6 +1615,21 @@ async function shutdown() {
   _postEvent('clear-glass.shutdown', { uuid: MODULE_UUID });
 
   if (_heartbeatInterval) clearInterval(_heartbeatInterval);
+
+  // §NEW 2026-08-24 — closes the gap named at the end of the previous
+  // commit, but scoped correctly rather than mechanically as originally
+  // stated there. Reconsidered before implementing: disableAllUserscripts()
+  // is GLOBAL (every plugin's userscript contribution installs with
+  // agentId: '*' — checked directly, none of adblocker/captcha-pause/
+  // guardian-listeners pass a specific agentId to userscript.create).
+  // Wiring it into closeAgentWindow (a SINGLE window closing) would mean
+  // closing one agent tab silently kills Instagram/Threads monitoring in
+  // every OTHER still-open window too — a real bug, not the fix that was
+  // flagged. Only real app-wide shutdown has the correct scope for a
+  // global kill. Synchronous (disableAllUserscripts doesn't return a
+  // Promise — checked directly), so it runs as a plain statement, not
+  // inside the allSettled below.
+  pluginHost?.disableAllUserscripts('app-shutdown');
 
   await Promise.allSettled([
     providerHost?.stopAll(),

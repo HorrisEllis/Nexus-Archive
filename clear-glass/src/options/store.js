@@ -30,6 +30,14 @@ const DEFAULTS = {
   hideToTrayOnClose:    true,   // close (✕) button / OS close → hide to tray instead of destroying
   defaultStartUrl:       'about:blank',
 
+  // §NEW 2026-08-24 — real gap named in CLEAR-GLASS-FULL-CHROME-MAP-
+  // 2026-08-23.md's §3: "no real 'change download directory' setting
+  // anywhere — checked NexusOptions and main/index.js's session config
+  // directly, zero matches." null means "use Electron's own default
+  // downloads path" (unchanged behavior); a real path here is honored by
+  // src/downloads/adapter.js's will-download handler.
+  downloadDirectory: null,
+
   // Co-pilot pane
   autoOpenCopilotPane:   true,
 

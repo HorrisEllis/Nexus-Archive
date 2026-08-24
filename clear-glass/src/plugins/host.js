@@ -67,7 +67,7 @@ const { getBus, getLog, Event } = require('../core/bus.js');
 const { gate } = require('../gates/index.js'); // real, already-exported factory — same one every other gate in this codebase uses
 const { validateManifest, PluginSchemaError } = require('./schema.js');
 const { WarpSpine } = require('../../../lib/warp-bus.js');
-const { registerPluginCommand } = require('../toolbar/commands.js');
+const { registerPluginCommand, unregisterPluginCommand } = require('../toolbar/commands.js');
 
 const PLUGIN_STATE = Object.freeze({
   INSTALLING: 'installing',
@@ -168,22 +168,7 @@ class PluginHost {
       );
     }
 
-    if (type === 'toolbar-command') {
-      // §REAL WIRING — not a plugin-owned parallel toolbar list. Registers
-      // into the SAME registry browser.js already fetches via
-      // cg.toolbar.commands(). See src/toolbar/commands.js's own header
-      // for why a second list was exactly the bug fixed last turn — a
-      // plugin system is not exempt from that fix.
-      registerPluginCommand({
-        id: entry.signature, icon: entry.icon || '⬢', label: entry.label || manifest.displayName,
-        group: entry.group || manifest.displayName, pinnable: true, defaultPinned: false,
-        pluginId: manifest.id,
-      });
-      record.registeredSignatures.push(entry.signature);
-      return;
-    }
-
-    // §COS-4/10/14 — the handler receives event.data plus a narrow `ctx`
+    // §COS-4/10/14 — every contribution type gets this same narrow `ctx`
     // facade: emit()/on() only. Never `stream` itself — that would also
     // hand over `stream.register()` (a plugin registering ITS OWN
     // competing gates outside schema.js's tracked contributions) and
@@ -191,15 +176,92 @@ class PluginHost {
     // — real isolation violations COS-4/14 actually forbid. emit/on is
     // different: COS-10 explicitly sanctions "all inter-compartment
     // communication via host event bus," and composing with an ALREADY-
-    // REGISTERED gate (dom.query, toast's driver.exec) via emit+listen is
-    // exactly that channel, not a bypass of it. This is what makes
-    // captcha-pause's real "compose dom.query with a new wait mechanism"
-    // requirement (CLEAR-GLASS-CAPABILITY-BREAKDOWN-2026-08-23.md)
-    // actually buildable as a plugin instead of requiring host-side code.
+    // REGISTERED gate (dom.query, userscript.create, toast's driver.exec)
+    // via emit+listen is exactly that channel, not a bypass of it.
     const ctx = {
-      emit: (type, data) => this.bus.emit(new Event(type, data)),
-      on:   (type, fn)   => this.bus.on(type, fn),
+      emit: (evType, data) => this.bus.emit(new Event(evType, data)),
+      on:   (evType, fn)   => this.bus.on(evType, fn),
     };
+
+    if (type === 'userscript') {
+      // §REAL WIRING — reuses the ALREADY-REAL userscript.create /
+      // userscript.delete gates (gates/index.js, backed by
+      // src/userscripts/manager.js's real UserscriptManager) instead of
+      // building a second injection/URL-matching system. handlerFn
+      // returns { name, source, matches, persistent } — the plugin
+      // author writes the userscript SOURCE, this host handles getting
+      // it registered.
+      //
+      // §SYNCHRONOUS BY VERIFIED FACT, NOT ASSUMPTION — clear-glass's own
+      // Stream.emit() (siso/index.js) dispatches gate.transform()
+      // synchronously, and userscriptCreateGate's own transform is
+      // itself fully synchronous (UserscriptManager.create() does
+      // fs.writeFileSync, no async I/O) — confirmed by reading both
+      // directly, not assumed. That means the create→created round trip
+      // completes within this single ctx.emit() call, before it returns.
+      // Captured via a plain local variable, not a Promise — a Promise
+      // here would be technically fine but silently implies "this might
+      // resolve later," which isn't true and would be misleading about
+      // the real, verified synchronous behavior.
+      const def = handlerFn(entry);
+      if (!def || typeof def.source !== 'string' || typeof def.name !== 'string') {
+        throw new PluginHostError(`plugin '${manifest.id}' userscript contribution '${entry.signature}' handler must return { name, source, matches?, persistent? }`);
+      }
+      let created = null;
+      let creationError = null;
+      const unsubCreated = ctx.on('userscript.created', (e) => { created = e.data; });
+      const unsubError   = ctx.on('userscript.error',   (e) => { creationError = e.data; });
+      ctx.emit('userscript.create', {
+        name: def.name, source: def.source,
+        matches: def.matches || ['*'], persistent: def.persistent !== false,
+      });
+      unsubCreated(); unsubError();
+      if (creationError) {
+        throw new PluginHostError(`plugin '${manifest.id}' userscript contribution '${entry.signature}' failed: ${creationError.error}`);
+      }
+      if (!created) {
+        // §HONEST FAILURE — if the synchronous assumption above ever
+        // stops being true (UserscriptManager.create() becomes async),
+        // this is a real, loud error, not a silent no-op plugin.
+        throw new PluginHostError(`plugin '${manifest.id}' userscript contribution '${entry.signature}' — no userscript.created response (UserscriptManager may no longer be synchronous; this host's assumption needs revisiting)`);
+      }
+      record.registeredSignatures.push(entry.signature);
+      record.userscriptIds = record.userscriptIds || [];
+      record.userscriptIds.push(created.id);
+      return;
+    }
+
+    if (type === 'toolbar-command') {
+      // §REAL WIRING — not a plugin-owned parallel toolbar list. Registers
+      // into the SAME registry browser.js already fetches via
+      // cg.toolbar.commands(). See src/toolbar/commands.js's own header
+      // for why a second list was exactly the bug fixed last turn — a
+      // plugin system is not exempt from that fix.
+      //
+      // §BUGFIX 2026-08-24 — found by testing before shipping further
+      // work, not by inspection: this branch used to `return` here,
+      // registering ONLY the display entry. Nothing ever registered a
+      // Gate for the signature, so clicking the button in the palette
+      // (cg.plugins.invoke → bus.emit(signature)) fired an event nobody
+      // was listening for — confirmed directly: wrapped adblocker's own
+      // toggleFromToolbar, emitted its signature on the bus exactly as
+      // bridge.js's real handler does, and the wrapped function was never
+      // called. No `return` now — falls through to the same generic Gate
+      // registration every other contribution type gets below, so the
+      // handler is actually reachable, not just displayed.
+      registerPluginCommand({
+        id: entry.signature, icon: entry.icon || '⬢', label: entry.label || manifest.displayName,
+        group: entry.group || manifest.displayName, pinnable: true, defaultPinned: false,
+        pluginId: manifest.id,
+      });
+    }
+
+    // §ASYNC — a pause-resume-gate handler (captcha-pause's real use
+    // case: poll, wait for a human, then respond) cannot return
+    // synchronously. Handled the same way every existing async gate in
+    // gates/index.js does it (domQueryGate, driverExecGate, etc.:
+    // `promise.then(result => stream.emit(...))`), not a new pattern —
+    // checked and matched before writing this, not invented fresh.
     const g = gate(entry.signature, (event, stream) => {
       const _emit = (produced) => {
         if (produced == null) return;
@@ -233,6 +295,15 @@ class PluginHost {
     // Stream (small, mirrors warp/core's real implementation) removes
     // this gap in one line.
     if (this.bus.gates?.delete) this.bus.gates.delete(signature);
+    // §BUGFIX 2026-08-24 — found alongside the toolbar-command Gate fix
+    // above: disable()/a failed install's rollback both called this and
+    // only ever removed the Gate, never the toolbar display entry a
+    // 'toolbar-command' contribution also registers. A disabled plugin
+    // would leave a dead, clickable button behind pointing at a Gate that
+    // no longer exists. Harmless no-op for every non-toolbar signature
+    // (unregisterPluginCommand returns false if not found, by design —
+    // "a caller disabling an already-gone command is not an error").
+    unregisterPluginCommand(signature);
   }
 
   disable(pluginId) {
@@ -248,6 +319,52 @@ class PluginHost {
       id: r.manifest.id, name: r.manifest.name, version: r.manifest.version,
       state: r.state, contributions: r.registeredSignatures,
     }));
+  }
+
+  /**
+   * disableAllUserscripts(reason) — §NEW 2026-08-24. The real,
+   * plugin-scoped fix for a gap James caught directly ("as plugins
+   * right?"): ipc/bridge.js's killswitch full-stop originally
+   * name-matched userscripts whose name started with 'Guardian — ' —
+   * core code hardcoding one specific plugin's naming convention, not a
+   * genuine plugin-system capability. This is the real fix: iterates
+   * THIS HOST'S OWN tracked plugin records (record.userscriptIds, set at
+   * install time by every 'userscript' contribution, regardless of which
+   * plugin or what it's named) and emits userscript.toggle for each via
+   * the real bus — no name-matching, works for any plugin's userscript
+   * contributions, not just guardian-listeners'.
+   */
+  disableAllUserscripts(reason) {
+    const stopped = [];
+    for (const record of this.plugins.values()) {
+      if (record.state !== PLUGIN_STATE.ACTIVE) continue;
+      for (const scriptId of record.userscriptIds || []) {
+        this.bus.emit(new Event('userscript.toggle', { scriptId, enabled: false }));
+        stopped.push(scriptId);
+      }
+    }
+    this.bus.emit(new Event('plugins:killswitch.fullstop', { reason, stopped }));
+    return { stopped };
+  }
+
+  /**
+   * getSignaturesForType(contributionType) — §NEW 2026-08-24. Same
+   * discipline as disableAllUserscripts: a caller (e.g. main/index.js
+   * wiring up a real per-agent session's webRequest) asks the host what
+   * signatures exist for a contribution type, generically, across every
+   * active plugin — not "the adblocker's specific signature," hardcoded.
+   * Any future content-filter-contributing plugin is picked up here with
+   * zero changes to whatever calls this.
+   */
+  getSignaturesForType(contributionType) {
+    const sigs = [];
+    for (const record of this.plugins.values()) {
+      if (record.state !== PLUGIN_STATE.ACTIVE) continue;
+      for (const entry of record.manifest.contributes?.[contributionType] || []) {
+        sigs.push(entry.signature);
+      }
+    }
+    return sigs;
   }
 }
 

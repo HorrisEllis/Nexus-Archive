@@ -37,6 +37,41 @@
  *   context-menu-item   — adds a real entry to #ctx-menu (browser.html),
  *                          same real, wired dispatch documented in
  *                          CLEAR-GLASS-FULL-CHROME-MAP-2026-08-23's §1.
+ *   userscript          — §NEW 2026-08-24. Registers a real userscript
+ *                          via the ALREADY-REAL UserscriptManager
+ *                          (src/userscripts/manager.js — url-pattern
+ *                          matching, auto-inject-on-navigation, all real,
+ *                          all pre-existing) through the already-real
+ *                          userscript.create/userscript.delete gates. The
+ *                          real port target from GUARDIAN-ARCHIVE-MINING-
+ *                          2026-08-23.md's #1 priority ("the social-media
+ *                          listener pattern... genuinely the strongest
+ *                          single piece of prior art") — a platform-aware
+ *                          listener module, injected as a userscript,
+ *                          emitting through the SAME guardian.listener.
+ *                          start/guardian.listener.event wire protocol
+ *                          guardian-picker.js (TX14) already established,
+ *                          so it plugs into the identical, already-real
+ *                          routing (ledger/compartment/sse-to-system/
+ *                          ollama-stream) TX14's listener-config-modal
+ *                          already offers — not a second, competing
+ *                          listener system.
+ *   permission-filter   — §NEW 2026-08-24. Decides allow/deny for a real
+ *                          Electron session.setPermissionRequestHandler
+ *                          request (camera/mic/geolocation/etc — the gap
+ *                          named directly in CLEAR-GLASS-FULL-CHROME-MAP-
+ *                          2026-08-23.md's §9: "session.setPermission
+ *                          RequestHandler... doesn't exist in this tree
+ *                          at all... currently, a page requesting
+ *                          getUserMedia would hit Electron's own default
+ *                          behavior, unconfigured"). Same shape as
+ *                          content-filter (a request comes in, a plugin
+ *                          decides), wired via src/plugins/
+ *                          permission-adapter.js — but fail-CLOSED on
+ *                          timeout, not fail-open like webrequest: an ad
+ *                          request that hangs should still let the page
+ *                          load; a permission request that hangs should
+ *                          default to denied, not granted.
  */
 
 function frozenEnum(values) {
@@ -52,6 +87,8 @@ const CLEAR_GLASS_CONTRIBUTION_TYPE = frozenEnum([
   'page-detector',
   'toolbar-command',
   'context-menu-item',
+  'userscript',
+  'permission-filter',
 ]);
 
 module.exports = { CLEAR_GLASS_CONTRIBUTION_TYPE };

@@ -97,12 +97,18 @@
 <div id="bookmarks-bar">
   <div id="bookmarks-list"></div>
   <button id="bookmark-mgr-btn" title="Manage bookmarks">⋯</button>
+  <button id="downloads-btn" title="Downloads">⬇</button>
 </div>
 
 <!-- §FIXED 2026-08-23 — James: "the 3 dots do nothing." Real, working
      dropdown, using the already-real bookmarks.list()/remove()/visit()
      IPC methods — was previously just a static hint message. -->
 <div id="bookmark-mgr-panel" style="display:none;position:absolute;top:130px;right:12px;width:280px;max-height:360px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
+
+<!-- §NEW 2026-08-24 — real downloads manager panel, same real pattern
+     as bookmark-mgr-panel above (list/clearItem/openFolder against the
+     real IPC surface added this session, not a static placeholder). -->
+<div id="downloads-panel" style="display:none;position:absolute;top:130px;right:12px;width:320px;max-height:400px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
 
 <!-- §WIRED 2026-08-23 — James: "agent mesh needs to connect to the
      agent system for co-pilot." Real, working panel replacing the old

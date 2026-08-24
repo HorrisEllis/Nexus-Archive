@@ -163,7 +163,7 @@ class UserscriptManager {
     if (!script) throw new Error(`Script not found: ${scriptId}`);
     if (!script.enabled) throw new Error(`Script disabled: ${scriptId}`);
 
-    const injectable = this._buildInjectable(script);
+    const injectable = this._buildInjectable(script, agentId);
     try {
       await this.driver.exec({ action: 'eval', agentId, code: injectable });
       this._injected.set(`${agentId}:${scriptId}`, true);
@@ -187,11 +187,20 @@ class UserscriptManager {
   }
 
   // ── Internals ───────────────────────────────────────────────────────────
-  _buildInjectable(script) {
+  _buildInjectable(script, agentId) {
+    // §NEW 2026-08-24 — real gap found while building the passwords
+    // autofill plugin: an injected script had NO way to know its own
+    // agentId, which any script needing to call back into driver.exec
+    // (toast, eval, another autofill-style round trip) genuinely needs.
+    // Not a passwords-specific fix — every current and future userscript
+    // benefits, exposed as window.__cgAgentId, same naming convention as
+    // the existing window.__cgScript_<id> idempotency guard below.
+    //
     // Idempotency guard — never run twice in same page session
     return `(function(){
   if (window.__cgScript_${script.id.replace(/-/g,'_')}) return;
   window.__cgScript_${script.id.replace(/-/g,'_')} = Date.now();
+  window.__cgAgentId = ${JSON.stringify(agentId || null)};
   ${script.source}
 })();`;
   }

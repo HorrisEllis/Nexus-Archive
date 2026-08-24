@@ -17,7 +17,7 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, errorCapture, copilot, postEvent }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, errorCapture, copilot, postEvent, pluginHost }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -40,6 +40,9 @@ class IpcBridge {
     this.rewind      = rewind;
     this.providerHost = providerHost;
     this.userscripts   = userscripts;
+    this.siteSettings  = siteSettings;
+    this.downloads     = downloads;
+    this.pluginHost    = pluginHost;
     // §FIXED 2026-08-23 — real, pre-existing gap found while wiring the
     // new listener-routing work below: main/index.js's real IpcBridge
     // constructor call already passed postEvent (confirmed at the real
@@ -283,6 +286,28 @@ class IpcBridge {
     ipcMain.handle('userscripts:source', async (e, d) => this.userscripts?.getSource(d.scriptId));
     ipcMain.handle('userscripts:edit',   async (e, d) => this.userscripts?.edit(d.scriptId, d.updates));
 
+    // §NEW 2026-08-24 — real per-site settings IPC surface. No panel UI
+    // consumes this yet (this pass built the store + wired it into the
+    // permissions plugin, which is the actual real consumer) — exposed
+    // now so a future settings panel doesn't need new plumbing, just a
+    // renderer.
+    ipcMain.handle('site-settings:get',    async (e, d) => this.siteSettings?.get(d.url, d.key));
+    ipcMain.handle('site-settings:getAll', async (e, d) => this.siteSettings?.getAllForOrigin(d.url));
+    ipcMain.handle('site-settings:set',    async (e, d) => this.siteSettings?.set(d.url, d.key, d.value));
+    ipcMain.handle('site-settings:clear',  async (e, d) => this.siteSettings?.clear(d.url));
+    ipcMain.handle('site-settings:listOrigins', async () => this.siteSettings?.listOrigins());
+
+    // §NEW 2026-08-24 — real downloads manager IPC surface.
+    ipcMain.handle('downloads:list',           async (e, d) => this.downloads?.list(d || {}));
+    ipcMain.handle('downloads:clearItem',      async (e, d) => this.downloads?.clearItem(d.id));
+    ipcMain.handle('downloads:clearCompleted', async ()      => this.downloads?.clearCompleted());
+    ipcMain.handle('downloads:openFolder', async (e, d) => {
+      const record = this.downloads?.list().find(i => i.id === d.id);
+      if (!record?.savePath) return { ok: false, error: 'no savePath for this item' };
+      require('electron').shell.showItemInFolder(record.savePath);
+      return { ok: true };
+    });
+
     // Background tabs
     ipcMain.handle('bgtab:open',  async (e, d) => require('../main/index').openBackgroundTab(d));
     ipcMain.handle('bgtab:close', async (e, d) => require('../main/index').closeBackgroundTab(d.agentId));
@@ -404,12 +429,36 @@ class IpcBridge {
     this._guardianListenerTargets = this._guardianListenerTargets || new Map();
 
     ipcMain.on('dom:event', (e, d) => {
+      if (d && typeof d.type === 'string' && d.type.startsWith('plugin:')) {
+        // §NEW 2026-08-24 — generic forwarding for ANY plugin's in-page
+        // script, not a passwords-specific special case. A plugin's
+        // signatures are already namespaced plugin:<id>:... (schema.js
+        // enforces this), so forwarding by that exact prefix onto the
+        // real bus reaches whatever Gate is registered for it — the
+        // SAME dispatch mechanism plugins:invoke already uses for
+        // renderer-initiated calls, now also reachable from inside a
+        // page. Built for the passwords form-detector, but any future
+        // plugin's userscript gets this for free.
+        emit(d.type, d);
+        return;
+      }
       if (d && typeof d.type === 'string' && d.type.startsWith('guardian.')) {
         emit(d.type, d);
         if (d.type === 'guardian.listener.start' && d.listenerId && d.config?.linkTarget) {
           this._guardianListenerTargets.set(d.listenerId, d.config.linkTarget);
         } else if (d.type === 'guardian.listener.event' && d.listenerId) {
           this._routeGuardianListenerEvent(d.listenerId, d.eventData);
+        } else if (d.type === 'guardian.killswitch') {
+          // §CORRECTED 2026-08-24 — James caught this directly ("as
+          // plugins right?"): the first version of this handler
+          // name-matched userscripts starting with 'Guardian — ' right
+          // here in core bridge.js — hardcoding one specific plugin's
+          // naming convention into core code, not a genuine
+          // plugin-system capability. Fixed: delegates to the plugin
+          // host's own tracked records (src/plugins/host.js's
+          // disableAllUserscripts()) instead. bridge.js no longer knows
+          // or cares what any plugin is named.
+          this.pluginHost?.disableAllUserscripts(d.reason || 'killswitch');
         }
         return;
       }

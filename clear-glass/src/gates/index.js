@@ -350,13 +350,58 @@ const userscriptDeleteGate = (us) => gate('userscript.delete', (event, stream) =
   } catch (err) { stream.emit(new Event('userscript.error', { error: err.message })); }
 });
 
+// ── Site settings — §NEW 2026-08-24 ────────────────────────────────────────
+const siteSettingsGetGate = (ss) => gate('site-settings.get', (event, stream) => {
+  try {
+    const { url, key } = event.data;
+    const value = key ? ss.get(url, key) : ss.getAllForOrigin(url);
+    stream.emit(new Event('site-settings.result', { url, key, value }));
+  } catch (err) { stream.emit(new Event('site-settings.error', { error: err.message })); }
+});
+const siteSettingsSetGate = (ss) => gate('site-settings.set', (event, stream) => {
+  try {
+    const { url, key, value } = event.data;
+    const ok = ss.set(url, key, value);
+    stream.emit(new Event('site-settings.set.result', { url, key, value, ok }));
+  } catch (err) { stream.emit(new Event('site-settings.error', { error: err.message })); }
+});
+
+// ── Passwords — §NEW 2026-08-24 ─────────────────────────────────────────────
+const passwordSaveGate = (pv) => gate('passwords.save', (event, stream) => {
+  try {
+    const { origin, username, password } = event.data;
+    const r = pv.save(origin, username, password);
+    stream.emit(new Event('passwords.saved', r));
+  } catch (err) { stream.emit(new Event('passwords.error', { error: err.message })); }
+});
+const passwordGetGate = (pv) => gate('passwords.get', (event, stream) => {
+  try {
+    const r = pv.get(event.data.origin);
+    stream.emit(new Event('passwords.result', { origin: event.data.origin, entries: r }));
+  } catch (err) { stream.emit(new Event('passwords.error', { error: err.message })); }
+});
+const passwordListGate = (pv) => gate('passwords.list', (event, stream) => {
+  try { stream.emit(new Event('passwords.list.result', { entries: pv.list() })); }
+  catch (err) { stream.emit(new Event('passwords.error', { error: err.message })); }
+});
+const passwordDeleteGate = (pv) => gate('passwords.delete', (event, stream) => {
+  try { stream.emit(new Event('passwords.deleted', { id: event.data.id, ok: pv.delete(event.data.id) })); }
+  catch (err) { stream.emit(new Event('passwords.error', { error: err.message })); }
+});
+
 // ── Registry — register all gates on the bus ──────────────────────────────
 function registerAll(bus, deps) {
   const {
     driver, dom, ctxMgr, vault, copilot, mesh, diag, urlListener, seam,
     openFn, closeFn, minimizeFn, hideFn, maximizeFn, getStatusFn, options,
-    bookmarks, rewind, providerHost, userscripts,
+    bookmarks, rewind, providerHost, userscripts, siteSettings, passwordVault,
   } = deps;
+
+  // §NEW 2026-08-24 — real, structural gap fix: every userscript
+  // injected via userscripts.inject()/autoInject() now needs to know its
+  // own agentId (window.__cgAgentId) for the passwords autofill plugin's
+  // in-page detector to report back correctly — see manager.js's
+  // _buildInjectable fix, same commit.
 
   const gates = [
     // Driver
@@ -425,6 +470,14 @@ function registerAll(bus, deps) {
     userscripts  && userscriptToggleGate(userscripts),
     userscripts  && userscriptCreateGate(userscripts),
     userscripts  && userscriptDeleteGate(userscripts),
+    // Site settings
+    siteSettings && siteSettingsGetGate(siteSettings),
+    siteSettings && siteSettingsSetGate(siteSettings),
+    // Passwords
+    passwordVault && passwordSaveGate(passwordVault),
+    passwordVault && passwordGetGate(passwordVault),
+    passwordVault && passwordListGate(passwordVault),
+    passwordVault && passwordDeleteGate(passwordVault),
     // SEAM
     seam       && seamRegisterGate(seam),
     // Status
@@ -457,4 +510,7 @@ module.exports = {
   providerStartGate, providerStopGate, providerListGate,
   providerShowGate, providerNavigateGate,
   userscriptListGate, userscriptInjectGate, userscriptToggleGate,
+  userscriptCreateGate, userscriptDeleteGate,
+  siteSettingsGetGate, siteSettingsSetGate,
+  passwordSaveGate, passwordGetGate, passwordListGate, passwordDeleteGate,
 };

@@ -127,6 +127,14 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     invoke: (signature, data) => ipcRenderer.invoke('plugins:invoke', { signature, data }),
   },
 
+  // ── Downloads — §NEW 2026-08-24 ─────────────────────────────────────────
+  downloads: {
+    list:           (filter)  => ipcRenderer.invoke('downloads:list', filter),
+    clearItem:      (id)      => ipcRenderer.invoke('downloads:clearItem', { id }),
+    clearCompleted: ()        => ipcRenderer.invoke('downloads:clearCompleted'),
+    openFolder:     (id)      => ipcRenderer.invoke('downloads:openFolder', { id }),
+  },
+
   // ── Accounts (real, per-agentKey identity — §PHASE-3 2026-08-23) ──────
   accounts: {
     list:        ()                    => ipcRenderer.invoke('accounts:list'),

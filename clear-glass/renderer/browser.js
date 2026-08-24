@@ -1158,6 +1158,67 @@
     if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'bookmark-mgr-btn') panel.style.display = 'none';
   });
 
+  // §NEW 2026-08-24 — real downloads manager panel. Same real dropdown
+  // pattern as bookmark-mgr-panel above, against the real downloads IPC
+  // surface (src/downloads/store.js + adapter.js, wired into every real
+  // agent session's will-download).
+  function _formatBytes(n) {
+    if (!n) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0; let v = n;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+  function _stateLabel(state) {
+    return { in_progress: '⏳', completed: '✓', cancelled: '✕', interrupted: '⚠', paused: '⏸' }[state] || state;
+  }
+  async function _renderDownloadsPanel() {
+    const panel = document.getElementById('downloads-panel');
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    try {
+      const list = await cg.downloads.list({});
+      if (!list || !list.length) {
+        panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No downloads yet.</div>';
+        return;
+      }
+      panel.innerHTML = `<div style="display:flex;justify-content:flex-end;padding:2px 4px 6px"><span data-clear-completed style="cursor:pointer;font-size:10px;color:var(--text-dim,#999)">clear completed</span></div>` +
+        list.slice(0, 30).map(d => `
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
+          <span title="${d.state}" style="font-size:11px">${_stateLabel(d.state)}</span>
+          <span data-open="${d.id}" style="flex:1;cursor:pointer;font-size:11px;color:var(--text,#ccc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d.savePath || '').replace(/"/g, '&quot;')}">${d.filename.replace(/</g, '&lt;')}</span>
+          <span style="font-size:10px;color:var(--text-dim,#999)">${_formatBytes(d.bytes)}</span>
+          <span data-remove="${d.id}" style="cursor:pointer;opacity:.5;font-size:12px" title="Remove from list">✕</span>
+        </div>`).join('');
+      panel.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => cg.downloads.openFolder(el.dataset.open)));
+      panel.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        await cg.downloads.clearItem(el.dataset.remove);
+        el.closest('div').remove();
+      }));
+      const clearBtn = panel.querySelector('[data-clear-completed]');
+      if (clearBtn) clearBtn.addEventListener('click', async () => {
+        await cg.downloads.clearCompleted();
+        _renderDownloadsPanel();
+      });
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+    }
+  }
+  document.getElementById('downloads-btn').addEventListener('click', (e) => {
+    const panel = document.getElementById('downloads-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const rect = e.target.getBoundingClientRect();
+    panel.style.top = `${rect.bottom + 4}px`;
+    panel.style.right = `${window.innerWidth - rect.right}px`;
+    panel.style.display = 'block';
+    _renderDownloadsPanel();
+  });
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('downloads-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'downloads-btn') panel.style.display = 'none';
+  });
+
+
   // Update bookmark star on navigation
   wv.addEventListener('did-stop-loading', async () => {
     const url = wv.getURL();
@@ -1409,7 +1470,13 @@ It will write and install it for you.`);
     // TOOLBAR_COMMANDS entry) is the real signal — dispatch through the
     // bus via IPC instead of trying to click something that isn't there.
     if (cmd.id && cmd.pluginId) {
-      cg.plugins.invoke(cmd.id, {})
+      // §NEW 2026-08-24 — agentId wasn't passed before (always {}). A
+      // plugin command that needs to act on the CURRENT page (e.g. a
+      // driver.exec eval into the live webview, same mechanism
+      // UserscriptManager.inject() itself uses) has no way to know which
+      // agent it's running in without this — module-scope `agentId` was
+      // already real and available here, just never forwarded.
+      cg.plugins.invoke(cmd.id, { agentId })
         .catch(err => addMsg('assistant', `Plugin command failed: ${err.message}`));
       return;
     }
