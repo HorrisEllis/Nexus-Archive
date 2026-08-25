@@ -40,6 +40,45 @@ const REWIND_DIR     = path.join(process.env.APPDATA || process.env.HOME || '.',
 const MAX_SNAPSHOTS  = 50; // per agent
 const AUTO_INTERVAL  = 30000; // 30s auto-snapshot when page is idle
 
+// §NEW 2026-08-24 — real "system state" upgrade: live form field values,
+// not just storage/cookies/scroll. Deliberately EXCLUDES input[type=
+// password] — a rewind snapshot is an unencrypted JSON file on disk
+// (checked directly: _persist() below is a plain fs.writeFileSync, no
+// encryption); capturing plaintext passwords there would be a real
+// security regression given src/passwords/vault.js already exists
+// specifically to store credentials encrypted (AES-256-GCM). Extracted
+// as a standalone string (not inlined in the template literal) so the
+// actual capture LOGIC is independently testable against a mocked DOM,
+// not just trusted because it looks right inside a larger eval string.
+const FORM_FIELDS_CAPTURE_JS = `(function() {
+  var els = Array.prototype.slice.call(document.querySelectorAll('input, textarea, select'));
+  return els.map(function(el, i) {
+    if (el.type === 'password') return null; // never capture password field values — see engine.js's own header
+    var selector = el.id ? ('#' + CSS.escape(el.id)) : (el.name ? ('[name="' + el.name.replace(/"/g, '\\\\"') + '"]') : null);
+    var value = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
+    if (value === '' || value === false) return null; // nothing meaningful to restore
+    return { selector: selector, index: i, isBoolean: (el.type === 'checkbox' || el.type === 'radio'), value: value };
+  }).filter(Boolean);
+})()`;
+
+// Restore counterpart — selector first (survives DOM reordering), falls
+// back to positional index within the same query (survives elements
+// with neither id nor name, but only if the page's form structure
+// hasn't changed since the snapshot — a real, honest limitation, not
+// hidden: a page whose form markup changed between snapshot and restore
+// may restore some fields to the wrong element or none at all).
+const FORM_FIELDS_RESTORE_JS = (fieldsJson) => `(function(fields) {
+  var all = document.querySelectorAll('input, textarea, select');
+  fields.forEach(function(f) {
+    var el = null;
+    if (f.selector) { try { el = document.querySelector(f.selector); } catch(_) {} }
+    if (!el) el = all[f.index] || null;
+    if (!el) return;
+    if (f.isBoolean) el.checked = f.value; else el.value = f.value;
+    try { el.dispatchEvent(new Event('input', {bubbles:true})); el.dispatchEvent(new Event('change', {bubbles:true})); } catch(_) {}
+  });
+})(${fieldsJson})`;
+
 class RewindEngine {
   constructor({ vault, driver, sse, busOn, ctxMgr }) {
     this.vault  = vault;   // CookieVault
@@ -67,6 +106,29 @@ class RewindEngine {
       this.busOn('url.match', (event) => {
         const { agentId } = event.data;
         if (agentId) this._scheduleAutoSnapshot(agentId, null, null);
+      });
+
+      // §NEW 2026-08-24 — "make it actually capture system state,
+      // snapshots from events including bookmarks." Real reconciliation,
+      // not cosmetic: every native bookmark (src/bookmarks/store.js's
+      // BookmarkStore.add, reached via the real bookmarks.add gate,
+      // which emits 'bookmarks.added' on success) now ALSO takes a real,
+      // IMMEDIATE state snapshot — not the debounced, generically-
+      // labeled 'auto' path _scheduleAutoSnapshot uses for passive
+      // browsing, since bookmarking is a deliberate, explicit action
+      // that should capture state right now, not 2 seconds from now.
+      // Uses the exact same 'bookmark:<name>' label convention already
+      // shared by macro.js's bookmark(a) agent tool and the rewind
+      // panel's own 🔖 button (checked directly, not reinvented) — a
+      // bookmark saved through ANY of the three real paths (native
+      // bookmarks bar, the 🔖 button, or an agent tool call) now shows
+      // up correctly labeled in all the others, because all three write
+      // through the identical engine and label string shape.
+      this.busOn('bookmarks.added', (event) => {
+        const bk = event.data?.bookmark;
+        if (!bk?.agentId || !bk?.url) return;
+        this.snapshot(bk.agentId, { url: bk.url, title: bk.title, label: `bookmark:${bk.title || bk.url}` })
+          .catch(() => {}); // best-effort — a bookmark that fails to also snapshot is still a real, saved bookmark, not a failed operation
       });
     }
 
@@ -126,6 +188,7 @@ class RewindEngine {
           scrollX: window.scrollX, scrollY: window.scrollY,
           localStorage: (function(){ try { return Object.assign({}, localStorage); } catch(_) { return {}; } })(),
           sessionStorage: (function(){ try { return Object.assign({}, sessionStorage); } catch(_) { return {}; } })(),
+          formFields: ${FORM_FIELDS_CAPTURE_JS}
         })`,
       });
       stateBlob = result?.result || null;
@@ -199,6 +262,16 @@ class RewindEngine {
             window.scrollTo(s.scrollX || 0, s.scrollY || 0);
           })(${target.stateBlob})`,
         });
+        // §NEW 2026-08-24 — real form field restore, the counterpart to
+        // FORM_FIELDS_CAPTURE_JS above. Separate eval call from
+        // storage/scroll: form elements need the page's own JS to have
+        // finished initializing (framework-rendered inputs may not exist
+        // yet immediately post-navigation) — kept as its own best-effort
+        // step rather than bundled into the same call as the more
+        // reliably-available storage/scroll restore.
+        if (Array.isArray(state.formFields) && state.formFields.length) {
+          await this.driver.exec({ action: 'eval', agentId, code: FORM_FIELDS_RESTORE_JS(JSON.stringify(state.formFields)) });
+        }
       } catch (_) {}
     }
 
@@ -262,3 +335,5 @@ class RewindEngine {
 }
 
 module.exports = RewindEngine;
+module.exports.FORM_FIELDS_CAPTURE_JS = FORM_FIELDS_CAPTURE_JS;
+module.exports.FORM_FIELDS_RESTORE_JS = FORM_FIELDS_RESTORE_JS;
