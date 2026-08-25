@@ -106,6 +106,19 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     delete: (id) => ipcRenderer.invoke('passwords:delete', { id }),
   },
 
+  // ── Site settings — §NEW 2026-08-24 ─────────────────────────────────────
+  // §BUGFIX — real IPC handlers existed in bridge.js since the site-
+  // settings commit, but were never actually exposed here, same class of
+  // gap as the passwordVault constructor bug from two commits ago.
+  siteSettings: {
+    get:          (url, key) => ipcRenderer.invoke('site-settings:get', { url, key }),
+    getAll:       (url)      => ipcRenderer.invoke('site-settings:getAll', { url }),
+    set:          (url, key, value) => ipcRenderer.invoke('site-settings:set', { url, key, value }),
+    deleteKey:    (url, key) => ipcRenderer.invoke('site-settings:deleteKey', { url, key }),
+    clear:        (url)      => ipcRenderer.invoke('site-settings:clear', { url }),
+    listOrigins:  ()         => ipcRenderer.invoke('site-settings:listOrigins'),
+  },
+
   // ── Accounts (real, per-agentKey identity — §PHASE-3 2026-08-23) ──────
   accounts: {
     list:        ()                    => ipcRenderer.invoke('accounts:list'),

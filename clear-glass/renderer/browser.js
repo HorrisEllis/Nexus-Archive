@@ -818,6 +818,39 @@
     copilotMsgs.querySelectorAll('.thinking').forEach(el => el.remove());
   }
 
+  // §NEW 2026-08-24 — real, generic, requestId-correlated driver call.
+  // cg.driver.exec() alone is fire-and-forget (confirmed directly:
+  // bridge.js's rendererEmit() returns {ok:true} immediately, the real
+  // result arrives later as a separate driver.result/driver.error SSE
+  // event) — no existing helper in this file correlated a call with its
+  // own real result before this. Needed for real, not hypothetically:
+  // find-in-page's match count can't be a fire-and-forget UI update, it
+  // has to be the actual count that came back.
+  function _execAndAwait(action, args = {}, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+      const requestId = `${action}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      let settled = false;
+      const cleanup = () => { es.removeEventListener('driver.result', onResult); es.removeEventListener('driver.error', onError); };
+      const onResult = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.requestId !== requestId || settled) return;
+        settled = true; cleanup(); resolve(d.result);
+      };
+      const onError = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.requestId !== requestId || settled) return;
+        settled = true; cleanup(); reject(new Error(d.error));
+      };
+      es.addEventListener('driver.result', onResult);
+      es.addEventListener('driver.error', onError);
+      cg.driver.exec({ action, agentId, requestId, ...args });
+      setTimeout(() => {
+        if (settled) return;
+        settled = true; cleanup(); reject(new Error(`timeout waiting for ${action} result`));
+      }, timeoutMs);
+    });
+  }
+
   // ── Voice input — §NEW 2026-08-24 ─────────────────────────────────────
   // Real MediaRecorder-based capture, composed with the real speech
   // engine (src/speech/engine.js) via speech.transcribeBuffer. This
@@ -1274,6 +1307,115 @@
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('downloads-panel');
     if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'downloads-btn') panel.style.display = 'none';
+  });
+
+  // §NEW 2026-08-24 — real per-site settings panel. Lists every origin
+  // with at least one stored setting (currently written by the
+  // permissions plugin as 'permission:<type>': 'allow'|'deny') and lets
+  // a person clear one setting or every setting for an origin — real
+  // read/write against the real store, no separate UI-only state.
+  function _humanizeSettingKey(key) {
+    if (key.startsWith('permission:')) return `Permission: ${key.slice('permission:'.length)}`;
+    return key;
+  }
+  async function _renderSiteSettingsPanel() {
+    const panel = document.getElementById('site-settings-panel');
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    try {
+      const origins = await cg.siteSettings.listOrigins();
+      if (!origins || !origins.length) {
+        panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No site settings saved yet.</div>';
+        return;
+      }
+      const perOrigin = await Promise.all(origins.map(async (origin) => ({ origin, settings: await cg.siteSettings.getAll(origin) })));
+      panel.innerHTML = perOrigin.map(({ origin, settings }) => `
+        <div style="padding:6px 4px;border-bottom:1px solid var(--border,#333)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--text,#ccc);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${origin.replace(/</g, '&lt;')}</span>
+            <span data-clear-origin="${origin}" style="cursor:pointer;font-size:10px;color:var(--text-dim,#999)">clear all</span>
+          </div>
+          ${Object.entries(settings).map(([k, v]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:10px;color:var(--text-dim,#999)">
+              <span>${_humanizeSettingKey(k)}: <b style="color:${v === 'allow' ? '#6bcf6b' : '#ff6b6b'}">${v}</b></span>
+              <span data-clear-key="${origin}|||${k}" style="cursor:pointer;opacity:.6">✕</span>
+            </div>`).join('')}
+        </div>`).join('');
+      panel.querySelectorAll('[data-clear-origin]').forEach(el => el.addEventListener('click', async () => {
+        await cg.siteSettings.clear(el.dataset.clearOrigin);
+        _renderSiteSettingsPanel();
+      }));
+      panel.querySelectorAll('[data-clear-key]').forEach(el => el.addEventListener('click', async () => {
+        const [origin, key] = el.dataset.clearKey.split('|||');
+        await cg.siteSettings.deleteKey(origin, key);
+        _renderSiteSettingsPanel();
+      }));
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+    }
+  }
+  document.getElementById('site-settings-btn').addEventListener('click', (e) => {
+    const panel = document.getElementById('site-settings-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const rect = e.target.getBoundingClientRect();
+    panel.style.top = `${rect.bottom + 4}px`;
+    panel.style.right = `${window.innerWidth - rect.right}px`;
+    panel.style.display = 'block';
+    _renderSiteSettingsPanel();
+  });
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('site-settings-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'site-settings-btn') panel.style.display = 'none';
+  });
+
+  // §NEW 2026-08-24 — real find-in-page bar, using the new real driver
+  // actions (findInPage/stopFindInPage — Electron's actual webContents
+  // API) via the new _execAndAwait helper, since a fire-and-forget call
+  // can't report a real match count back.
+  function openFindBar() {
+    const bar = document.getElementById('find-bar');
+    bar.style.display = 'flex';
+    const input = document.getElementById('find-input');
+    input.focus();
+    input.select();
+  }
+  function closeFindBar() {
+    document.getElementById('find-bar').style.display = 'none';
+    document.getElementById('find-count').textContent = '0/0';
+    _execAndAwait('stopFindInPage', { action: 'clearSelection' }).catch(() => {});
+  }
+  async function _doFind(findNext) {
+    const text = document.getElementById('find-input').value;
+    const countEl = document.getElementById('find-count');
+    if (!text) { countEl.textContent = '0/0'; return; }
+    try {
+      const r = await _execAndAwait('findInPage', { text, findNext, forward: true });
+      countEl.textContent = `${r.activeMatchOrdinal || 0}/${r.matches || 0}`;
+    } catch (err) {
+      countEl.textContent = 'err';
+    }
+  }
+  document.getElementById('find-input').addEventListener('input', () => _doFind(false));
+  document.getElementById('find-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') _doFind(true);
+    if (e.key === 'Escape') closeFindBar();
+  });
+  document.getElementById('find-next').addEventListener('click', () => _doFind(true));
+  document.getElementById('find-prev').addEventListener('click', async () => {
+    const text = document.getElementById('find-input').value;
+    if (!text) return;
+    try {
+      const r = await _execAndAwait('findInPage', { text, findNext: true, forward: false });
+      document.getElementById('find-count').textContent = `${r.activeMatchOrdinal || 0}/${r.matches || 0}`;
+    } catch (_) {}
+  });
+  document.getElementById('find-close').addEventListener('click', closeFindBar);
+
+  // Real Ctrl+F / Cmd+F shortcut, matching every real browser's convention
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f' && document.getElementById('find-bar').style.display === 'none') {
+      e.preventDefault();
+      openFindBar();
+    }
   });
 
 
@@ -1891,6 +2033,26 @@ It will write and install it for you.`);
       case 'snapshot': {
         await cg.rewind.snapshot(agentId, { label: 'manual' });
         addMsg('assistant', '📍 Snapshot saved.');
+        break;
+      }
+      case 'find': {
+        openFindBar();
+        break;
+      }
+      case 'print': {
+        // §CORRECTED before shipping — cg.driver.exec() is fire-and-
+        // forget (confirmed directly: bridge.js's rendererEmit() just
+        // emits onto the bus and returns {ok:true} immediately; the
+        // real result arrives later as a separate driver.result/
+        // driver.error SSE event, not as this call's resolved value).
+        // An earlier version of this handler awaited it and showed a
+        // "Sent to printer" toast right after — that would have shown
+        // "success" even if the print failed or was cancelled. Fixed:
+        // fire the action, no false success claim — the real OS print
+        // dialog opening is itself the visible confirmation, and the
+        // existing generic driver.error SSE listener (below) already
+        // surfaces a genuine failure honestly.
+        cg.driver.exec({ action: 'print', agentId });
         break;
       }
       case 'pick': {

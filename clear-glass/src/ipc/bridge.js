@@ -304,6 +304,7 @@ class IpcBridge {
     ipcMain.handle('site-settings:get',    async (e, d) => this.siteSettings?.get(d.url, d.key));
     ipcMain.handle('site-settings:getAll', async (e, d) => this.siteSettings?.getAllForOrigin(d.url));
     ipcMain.handle('site-settings:set',    async (e, d) => this.siteSettings?.set(d.url, d.key, d.value));
+    ipcMain.handle('site-settings:deleteKey', async (e, d) => this.siteSettings?.deleteKey(d.url, d.key));
     ipcMain.handle('site-settings:clear',  async (e, d) => this.siteSettings?.clear(d.url));
     ipcMain.handle('site-settings:listOrigins', async () => this.siteSettings?.listOrigins());
 

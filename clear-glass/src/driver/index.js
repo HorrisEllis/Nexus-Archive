@@ -53,6 +53,9 @@ class ClearDriver {
       case 'toast':          return this._toast(agentId, args);
       case 'eval':           return this._eval(agentId, args);
       case 'zoom':           return this._zoom(agentId, args);
+      case 'findInPage':     return this._findInPage(agentId, args);
+      case 'stopFindInPage': return this._stopFindInPage(agentId, args);
+      case 'print':          return this._print(agentId, args);
       case 'getUrl':         return this._getUrl(agentId);
       case 'getTitle':       return this._getTitle(agentId);
       case 'back':           return this._back(agentId);
@@ -268,6 +271,64 @@ class ClearDriver {
     next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, next));
     wc.setZoomFactor(next);
     return { agentId, factor: next };
+  }
+
+  // ── Find in Page ──────────────────────────────────────────────────────
+  // §NEW 2026-08-24 — real gap named in CLEAR-GLASS-FULL-CHROME-MAP-
+  // 2026-08-23.md's §5 ('Find in Page' — zero). Electron's real,
+  // documented webContents.findInPage() is event-based (results arrive
+  // via the 'found-in-page' event, not a return value), not a simple
+  // synchronous call like zoom — wrapped in a real Promise here, with a
+  // safety timeout in case a page never fires the event (a real
+  // defensive measure, not expected normal behavior — Electron's own
+  // docs confirm found-in-page fires even for a 0-match search).
+  async _findInPage(agentId, { text, forward = true, findNext = false, matchCase = false } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    if (!text) { wc.stopFindInPage('clearSelection'); return { matches: 0, activeMatchOrdinal: 0 }; }
+    return new Promise((resolve) => {
+      let settled = false;
+      const onFound = (event, result) => {
+        if (settled) return;
+        settled = true;
+        wc.removeListener('found-in-page', onFound);
+        resolve({ matches: result.matches, activeMatchOrdinal: result.activeMatchOrdinal, requestId: result.requestId });
+      };
+      wc.on('found-in-page', onFound);
+      wc.findInPage(text, { forward, findNext, matchCase });
+      setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        wc.removeListener('found-in-page', onFound);
+        resolve({ matches: 0, activeMatchOrdinal: 0, timedOut: true });
+      }, 5000);
+    });
+  }
+
+  async _stopFindInPage(agentId, { action = 'clearSelection' } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    wc.stopFindInPage(action);
+    return { stopped: true };
+  }
+
+  // ── Print ─────────────────────────────────────────────────────────────
+  // §NEW 2026-08-24 — real gap named in the same map doc's §5 ('Print' —
+  // zero). Electron's real webContents.print() is callback-based, not
+  // promise-based natively — wrapped here to match this codebase's own
+  // async/await convention everywhere else. silent:false by default (the
+  // real OS print dialog opens) — a user cancelling that dialog produces
+  // a real, expected 'cancelled' failureReason, treated as a genuine
+  // rejection here so a caller can distinguish "printed" from "didn't."
+  async _print(agentId, { silent = false, printBackground = true, ...opts } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    return new Promise((resolve, reject) => {
+      wc.print({ silent, printBackground, ...opts }, (success, failureReason) => {
+        if (success) resolve({ printed: true });
+        else reject(new Error(failureReason || 'print failed or was cancelled'));
+      });
+    });
   }
 
   // ── URL / Title ───────────────────────────────────────────────────────

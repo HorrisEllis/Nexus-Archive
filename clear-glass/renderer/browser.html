@@ -98,6 +98,7 @@
   <div id="bookmarks-list"></div>
   <button id="bookmark-mgr-btn" title="Manage bookmarks">⋯</button>
   <button id="downloads-btn" title="Downloads">⬇</button>
+  <button id="site-settings-btn" title="Site settings (per-origin permissions)">🛡</button>
 </div>
 
 <!-- §FIXED 2026-08-23 — James: "the 3 dots do nothing." Real, working
@@ -109,6 +110,12 @@
      as bookmark-mgr-panel above (list/clearItem/openFolder against the
      real IPC surface added this session, not a static placeholder). -->
 <div id="downloads-panel" style="display:none;position:absolute;top:130px;right:12px;width:320px;max-height:400px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
+
+<!-- §NEW 2026-08-24 — real per-site settings panel (permission:media,
+     permission:geolocation, etc — the store the permissions plugin
+     already consults, now with a real place a person can actually see
+     and clear what's been remembered). -->
+<div id="site-settings-panel" style="display:none;position:absolute;top:130px;right:12px;width:340px;max-height:420px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
 
 <!-- §WIRED 2026-08-23 — James: "agent mesh needs to connect to the
      agent system for co-pilot." Real, working panel replacing the old
@@ -181,6 +188,17 @@
   <div id="dom-tree"><span style="color:var(--text-dim)">Loading DOM...</span></div>
 </div>
 
+<!-- §NEW 2026-08-24 — real find-in-page bar, wired to the new real
+     driver.exec 'findInPage'/'stopFindInPage' actions (Electron's actual
+     webContents.findInPage API). -->
+<div id="find-bar" style="display:none;position:absolute;top:44px;right:12px;z-index:110;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;padding:4px 6px;align-items:center;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,0.4)">
+  <input id="find-input" type="text" placeholder="Find in page..." style="background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:12px;width:160px" />
+  <span id="find-count" style="font-size:10px;color:var(--text-dim,#999);min-width:44px;text-align:center">0/0</span>
+  <button id="find-prev" title="Previous">↑</button>
+  <button id="find-next" title="Next">↓</button>
+  <button id="find-close" title="Close">✕</button>
+</div>
+
 <!-- Rewind panel -->
 <div id="rewind-panel">
   <div id="rewind-header">
@@ -229,6 +247,8 @@
   <div class="ctx-item sep"></div>
   <div class="ctx-item" data-action="bg-tab">⬡ Move to background tab</div>
   <div class="ctx-item" data-action="new-agent">＋ Open in new agent</div>
+  <div class="ctx-item" data-action="find">🔍 Find in page</div>
+  <div class="ctx-item" data-action="print">🖨 Print page</div>
 </div>
 
 <!-- Picks panel -->

@@ -107,6 +107,21 @@ class SiteSettingsStore {
     return true;
   }
 
+  /**
+   * deleteKey(url, key) -> boolean. Removes ONE setting for one origin,
+   * leaving the rest intact — the real counterpart to clear() (which is
+   * origin-wide). Cleans up the origin entirely if that was its last key,
+   * so listOrigins() doesn't return an origin with an empty {} forever.
+   */
+  deleteKey(url, key) {
+    const origin = normalizeOrigin(url);
+    if (!origin || !this.data[origin] || !(key in this.data[origin])) return false;
+    delete this.data[origin][key];
+    if (Object.keys(this.data[origin]).length === 0) delete this.data[origin];
+    this._persist();
+    return true;
+  }
+
   /** clearAll() — real, used by a future "reset all site settings" control. */
   clearAll() {
     this.data = {};

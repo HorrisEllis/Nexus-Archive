@@ -365,6 +365,13 @@ const siteSettingsSetGate = (ss) => gate('site-settings.set', (event, stream) =>
     stream.emit(new Event('site-settings.set.result', { url, key, value, ok }));
   } catch (err) { stream.emit(new Event('site-settings.error', { error: err.message })); }
 });
+const siteSettingsDeleteKeyGate = (ss) => gate('site-settings.deleteKey', (event, stream) => {
+  try {
+    const { url, key } = event.data;
+    const ok = ss.deleteKey(url, key);
+    stream.emit(new Event('site-settings.deleteKey.result', { url, key, ok }));
+  } catch (err) { stream.emit(new Event('site-settings.error', { error: err.message })); }
+});
 
 // ── Passwords — §NEW 2026-08-24 ─────────────────────────────────────────────
 const passwordSaveGate = (pv) => gate('passwords.save', (event, stream) => {
@@ -483,6 +490,7 @@ function registerAll(bus, deps) {
     // Site settings
     siteSettings && siteSettingsGetGate(siteSettings),
     siteSettings && siteSettingsSetGate(siteSettings),
+    siteSettings && siteSettingsDeleteKeyGate(siteSettings),
     // Passwords
     passwordVault && passwordSaveGate(passwordVault),
     passwordVault && passwordGetGate(passwordVault),
@@ -524,7 +532,7 @@ module.exports = {
   providerShowGate, providerNavigateGate,
   userscriptListGate, userscriptInjectGate, userscriptToggleGate,
   userscriptCreateGate, userscriptDeleteGate,
-  siteSettingsGetGate, siteSettingsSetGate,
+  siteSettingsGetGate, siteSettingsSetGate, siteSettingsDeleteKeyGate,
   passwordSaveGate, passwordGetGate, passwordListGate, passwordDeleteGate,
   speechTranscribeGate, speechAvailableGate,
 };
