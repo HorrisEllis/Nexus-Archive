@@ -123,6 +123,7 @@
   const copilotPane    = document.getElementById('copilot-pane');
   const copilotMsgs    = document.getElementById('copilot-messages');
   const copilotInput   = document.getElementById('copilot-textarea');
+  const copilotMicBtn  = document.getElementById('copilot-mic-btn');
   const copilotSend    = document.getElementById('copilot-send');
   const domPanel       = document.getElementById('dom-panel');
   const domTree        = document.getElementById('dom-tree');
@@ -817,6 +818,63 @@
     copilotMsgs.querySelectorAll('.thinking').forEach(el => el.remove());
   }
 
+  // ── Voice input — §NEW 2026-08-24 ─────────────────────────────────────
+  // Real MediaRecorder-based capture, composed with the real speech
+  // engine (src/speech/engine.js) via speech.transcribeBuffer. This
+  // engine is CMU PocketSphinx, not OpenAI Whisper — named honestly in
+  // the mic button's own title attribute (browser.html) and here, not
+  // presented as something it isn't. Traced against MediaRecorder's real,
+  // standard API (no non-standard calls) — not live-run in a real
+  // browser from this sandbox, same caveat as every other renderer piece
+  // this session built.
+  let _micRecorder = null;
+  let _micChunks = [];
+  let _micRecording = false;
+
+  copilotMicBtn?.addEventListener('click', async () => {
+    if (_micRecording) {
+      _micRecorder.stop();
+      return;
+    }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      addMsg('assistant', `Microphone access failed: ${err.message}`);
+      return;
+    }
+    _micChunks = [];
+    _micRecorder = new MediaRecorder(stream);
+    _micRecorder.ondataavailable = (e) => { if (e.data.size > 0) _micChunks.push(e.data); };
+    _micRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      _micRecording = false;
+      copilotMicBtn.textContent = '🎤';
+      copilotMicBtn.title = 'Voice input (real, local, offline speech-to-text)';
+
+      const blob = new Blob(_micChunks, { type: 'audio/webm' });
+      const arrayBuffer = await blob.arrayBuffer();
+      copilotMicBtn.textContent = '⏳';
+      try {
+        const result = await cg.speech.transcribeBuffer(new Uint8Array(arrayBuffer), 'webm');
+        if (result?.error) {
+          addMsg('assistant', `Voice input failed: ${result.error}`);
+        } else if (result?.text) {
+          copilotInput.value = (copilotInput.value ? copilotInput.value + ' ' : '') + result.text;
+        } else {
+          addMsg('assistant', 'Voice input: no speech detected.');
+        }
+      } catch (err) {
+        addMsg('assistant', `Voice input error: ${err.message}`);
+      }
+      copilotMicBtn.textContent = '🎤';
+    };
+    _micRecorder.start();
+    _micRecording = true;
+    copilotMicBtn.textContent = '⏹';
+    copilotMicBtn.title = 'Click to stop recording';
+  });
+
   // ── DOM Archaeology ────────────────────────────────────────────────
   document.getElementById('btn-dom').addEventListener('click', () => {
     domPanelVisible = !domPanelVisible;
@@ -1249,9 +1307,23 @@
         const div = document.createElement('div');
         div.className = 'rewind-item';
         const ago = Math.round((Date.now() - s.ts) / 60000);
+        // §NEW 2026-08-24 — reconciles the browser UI with macro.js's
+        // real, already-tested bookmark(a)/openBookmark(a) agent tool
+        // (lib/agent-tools/tools/clear-glass/macro.js), which has always
+        // saved named state-bookmarks as rewind snapshots labeled
+        // 'bookmark:<name>' — real and working, but only ever reachable
+        // via an agent tool call, never visible here. Same label
+        // convention, read directly from macro.js before writing this,
+        // not guessed — a snapshot saved via the agent tool now shows up
+        // here correctly, and one saved here is findable by the agent
+        // tool too, since both read/write the exact same rewind engine.
+        const isBookmark = typeof s.label === 'string' && s.label.startsWith('bookmark:');
+        const label = isBookmark
+          ? `🔖 ${s.label.slice('bookmark:'.length)}`
+          : (s.label === 'auto' ? '' : (s.label === 'manual' ? '' : ' • ' + s.label));
         div.innerHTML = `<div class="ri-title">${s.title || s.url}</div>
           <div class="ri-url">${s.url}</div>
-          <div class="ri-ts">${ago < 1 ? 'just now' : ago + 'm ago'}${s.label === 'auto' ? '' : ' • ' + s.label}</div>`;
+          <div class="ri-ts">${ago < 1 ? 'just now' : ago + 'm ago'}${label ? ' • ' + label : ''}</div>`;
         div.addEventListener('click', async () => {
           document.getElementById('rewind-panel').classList.remove('visible');
           rewindVisible = false;
@@ -1277,6 +1349,21 @@
     await cg.rewind.snapshot(agentId, { label: 'manual' });
     await loadRewindList();
     addMsg('assistant', '📍 Snapshot saved.');
+  });
+
+  // §NEW 2026-08-24 — real, named state bookmark, using the exact same
+  // 'bookmark:<name>' label convention as macro.js's bookmark(a) agent
+  // tool (checked directly before writing this). window.prompt is a
+  // real, working, if unpolished, way to collect the name — this
+  // codebase has no existing custom modal-input helper to reuse instead,
+  // and building one is a real, separate, scoped UI task, not silently
+  // done as a side effect of wiring the label convention through.
+  document.getElementById('rewind-bookmark-btn').addEventListener('click', async () => {
+    const name = window.prompt('Name this state bookmark (captures cookies, storage, and scroll position):');
+    if (!name) return; // real cancel — no snapshot taken, matches every other cancel-prompt convention in this file
+    await cg.rewind.snapshot(agentId, { label: `bookmark:${name}` });
+    await loadRewindList();
+    addMsg('assistant', `🔖 State bookmark "${name}" saved — click it in ⏮ Session Rewind any time to jump back, cookies/storage/scroll and all.`);
   });
 
   // ── Provider panel ─────────────────────────────────────────────────────

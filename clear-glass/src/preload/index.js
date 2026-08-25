@@ -50,58 +50,17 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     switchFingerprint: (payload) => ipcRenderer.invoke('context:switchFingerprint', payload),
   },
 
-  // ── API Settings ──────────────────────────────────────────────────────
-  api: {
-    get: ()        => ipcRenderer.invoke('api:get'),
-    set: (payload) => ipcRenderer.invoke('api:set', payload),
-  },
-
   // ── Errors — was missing entirely, the actual gap behind "where are
   //    the errors" ──────────────────────────────────────────────────────
   errors: {
     report: (payload) => ipcRenderer.invoke('errors:report', payload),
     recent: (n)       => ipcRenderer.invoke('errors:recent', { n }),
   },
-  // browser.html calls cg.window.* — these handlers exist in ipc/bridge.js
-  // but were never exposed through the preload. Root cause of every window
-  // control button being a silent no-op.
-  window: {
-    minimize:     (agentId)  => ipcRenderer.invoke('window:minimize', { agentId }),
-    maximize:     (agentId)  => ipcRenderer.invoke('window:maximize', { agentId }),
-    hide:         (agentId)  => ipcRenderer.invoke('window:hide', { agentId }),
-    open:         (payload)  => ipcRenderer.invoke('window:open', payload),
-    openSettings: ()         => ipcRenderer.invoke('window:openSettings'),
-    closeSettings:()         => ipcRenderer.invoke('window:closeSettings'),
-    list:         ()         => ipcRenderer.invoke('window:list'),
-    focus:        (agentId)  => ipcRenderer.invoke('window:focus', { agentId }),
-  },
 
-  // ── Providers (NCP hosted tabs) ───────────────────────────────────────
-  // ipc/bridge.js has providers:list/start/stop/show but preload never
-  // exposed them. Every provider button in browser.html was broken.
-  providers: {
-    list:  ()              => ipcRenderer.invoke('providers:list'),
-    start: (providerId, opts) => ipcRenderer.invoke('providers:start', { providerId, ...opts }),
-    stop:  (providerId)   => ipcRenderer.invoke('providers:stop', { providerId }),
-    show:  (providerId)   => ipcRenderer.invoke('providers:show', { providerId }),
-    deploy:(providerId)   => ipcRenderer.invoke('providers:deploy', { providerId }),
-  },
-
-  // ── Bookmarks ─────────────────────────────────────────────────────────
-  bookmarks: {
-    add:    (payload) => ipcRenderer.invoke('bookmarks:add', payload),
-    remove: (payload) => ipcRenderer.invoke('bookmarks:remove', payload),
-    list:   (payload) => ipcRenderer.invoke('bookmarks:list', payload),
-    check:  (payload) => ipcRenderer.invoke('bookmarks:check', payload),
-    visit:  (payload) => ipcRenderer.invoke('bookmarks:visit', payload),
-  },
-
-  // ── Rewind (session snapshots) ────────────────────────────────────────
-  rewind: {
-    list:     (agentId, limit) => ipcRenderer.invoke('rewind:list', { agentId, limit }),
-    snapshot: (agentId, opts)  => ipcRenderer.invoke('rewind:snapshot', { agentId, ...opts }),
-    restore:  (payload)        => ipcRenderer.invoke('rewind:restore', payload),
-    clear:    (agentId)        => ipcRenderer.invoke('rewind:clear', { agentId }),
+  // ── API Settings ──────────────────────────────────────────────────────
+  api: {
+    get: ()        => ipcRenderer.invoke('api:get'),
+    set: (payload) => ipcRenderer.invoke('api:set', payload),
   },
 
   // ── Options ───────────────────────────────────────────────────────────
@@ -133,6 +92,18 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     clearItem:      (id)      => ipcRenderer.invoke('downloads:clearItem', { id }),
     clearCompleted: ()        => ipcRenderer.invoke('downloads:clearCompleted'),
     openFolder:     (id)      => ipcRenderer.invoke('downloads:openFolder', { id }),
+  },
+
+  // ── Speech-to-text — §NEW 2026-08-24 ────────────────────────────────────
+  speech: {
+    available:          ()              => ipcRenderer.invoke('speech:available'),
+    transcribeBuffer:   (buffer, ext)    => ipcRenderer.invoke('speech:transcribeBuffer', { buffer, ext }),
+  },
+
+  // ── Passwords — §NEW 2026-08-24 ─────────────────────────────────────────
+  passwords: {
+    list:   ()   => ipcRenderer.invoke('passwords:list'),
+    delete: (id) => ipcRenderer.invoke('passwords:delete', { id }),
   },
 
   // ── Accounts (real, per-agentKey identity — §PHASE-3 2026-08-23) ──────

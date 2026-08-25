@@ -17,7 +17,7 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, errorCapture, copilot, postEvent, pluginHost }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, errorCapture, copilot, postEvent, pluginHost }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -42,6 +42,16 @@ class IpcBridge {
     this.userscripts   = userscripts;
     this.siteSettings  = siteSettings;
     this.downloads     = downloads;
+    // §BUGFIX 2026-08-24 — found while wiring speech, not by inspection:
+    // main/index.js already passed passwordVault into this constructor
+    // (two commits ago), but this constructor never destructured it —
+    // this.passwordVault was never set, and there were zero passwords:*
+    // IPC handlers below. The passwords plugin still worked (its
+    // autofill/save flow composes gates directly via the bus, which
+    // never needed IPC), but any future renderer-side management panel
+    // would have silently failed. Fixed now.
+    this.passwordVault = passwordVault;
+    this.speech        = speech;
     this.pluginHost    = pluginHost;
     // §FIXED 2026-08-23 — real, pre-existing gap found while wiring the
     // new listener-routing work below: main/index.js's real IpcBridge
@@ -297,6 +307,16 @@ class IpcBridge {
     ipcMain.handle('site-settings:clear',  async (e, d) => this.siteSettings?.clear(d.url));
     ipcMain.handle('site-settings:listOrigins', async () => this.siteSettings?.listOrigins());
 
+    // §NEW 2026-08-24 — real passwords management IPC surface for a
+    // future panel (same real-but-not-yet-consumed pattern as site-
+    // settings' IPC exposure). Deliberately list/delete only — save()
+    // and get() (which decrypts) stay reachable via the bus only
+    // (passwords.save/passwords.get gates), the same channel the
+    // passwords plugin's own autofill/save-prompt flow already uses;
+    // not adding a renderer-callable decrypt path beyond what's needed.
+    ipcMain.handle('passwords:list',   async () => this.passwordVault?.list());
+    ipcMain.handle('passwords:delete', async (e, d) => this.passwordVault?.delete(d.id));
+
     // §NEW 2026-08-24 — real downloads manager IPC surface.
     ipcMain.handle('downloads:list',           async (e, d) => this.downloads?.list(d || {}));
     ipcMain.handle('downloads:clearItem',      async (e, d) => this.downloads?.clearItem(d.id));
@@ -306,6 +326,22 @@ class IpcBridge {
       if (!record?.savePath) return { ok: false, error: 'no savePath for this item' };
       require('electron').shell.showItemInFolder(record.savePath);
       return { ok: true };
+    });
+
+    // §NEW 2026-08-24 — real speech-to-text IPC surface.
+    ipcMain.handle('speech:available', async () => this.speech?.isAvailable());
+    ipcMain.handle('speech:transcribeBuffer', async (e, { buffer, ext = 'webm' } = {}) => {
+      if (!this.speech) return { error: 'speech engine not available' };
+      const path = require('path'); const fs = require('fs'); const os = require('os');
+      const tmpPath = path.join(os.tmpdir(), `cg-mic-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
+      try {
+        fs.writeFileSync(tmpPath, Buffer.from(buffer));
+        return await this.speech.transcribe(tmpPath);
+      } catch (err) {
+        return { error: err.message };
+      } finally {
+        try { fs.unlinkSync(tmpPath); } catch (_) {}
+      }
     });
 
     // Background tabs

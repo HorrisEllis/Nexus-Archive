@@ -113,6 +113,7 @@ const UserscriptManager = require('../userscripts/manager');
 const { SiteSettingsStore } = require('../site-settings/store');
 const { DownloadsStore } = require('../downloads/store');
 const { PasswordVault } = require('../passwords/vault');
+const speech = require('../speech/engine');
 const { PluginHost }    = require('../plugins/host');
 const { registerAll }   = require('../gates/index');
 const COMPONENTS        = require('../../seam/registry-components');
@@ -909,6 +910,7 @@ async function bootstrap() {
     userscripts,
     siteSettings,
     passwordVault,
+    speech,
   });
 
   // 12.5. Plugin system — §NEW 2026-08-24. Real gap James caught directly
@@ -1038,6 +1040,7 @@ async function bootstrap() {
     siteSettings,
     downloads,
     passwordVault,
+    speech,
     pluginHost,
     copilot,
   });

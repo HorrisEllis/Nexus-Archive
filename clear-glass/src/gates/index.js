@@ -389,12 +389,22 @@ const passwordDeleteGate = (pv) => gate('passwords.delete', (event, stream) => {
   catch (err) { stream.emit(new Event('passwords.error', { error: err.message })); }
 });
 
+// ── Speech-to-text — §NEW 2026-08-24 ────────────────────────────────────────
+const speechTranscribeGate = (speech) => gate('speech.transcribe', (event, stream) => {
+  speech.transcribe(event.data.audioPath)
+    .then(result => stream.emit(new Event('speech.result', { requestId: event.data.requestId, ...result })))
+    .catch(err => stream.emit(new Event('speech.error', { requestId: event.data.requestId, error: err.message })));
+});
+const speechAvailableGate = (speech) => gate('speech.available', (event, stream) => {
+  speech.isAvailable().then(result => stream.emit(new Event('speech.available.result', result)));
+});
+
 // ── Registry — register all gates on the bus ──────────────────────────────
 function registerAll(bus, deps) {
   const {
     driver, dom, ctxMgr, vault, copilot, mesh, diag, urlListener, seam,
     openFn, closeFn, minimizeFn, hideFn, maximizeFn, getStatusFn, options,
-    bookmarks, rewind, providerHost, userscripts, siteSettings, passwordVault,
+    bookmarks, rewind, providerHost, userscripts, siteSettings, passwordVault, speech,
   } = deps;
 
   // §NEW 2026-08-24 — real, structural gap fix: every userscript
@@ -478,6 +488,9 @@ function registerAll(bus, deps) {
     passwordVault && passwordGetGate(passwordVault),
     passwordVault && passwordListGate(passwordVault),
     passwordVault && passwordDeleteGate(passwordVault),
+    // Speech-to-text
+    speech && speechTranscribeGate(speech),
+    speech && speechAvailableGate(speech),
     // SEAM
     seam       && seamRegisterGate(seam),
     // Status
@@ -513,4 +526,5 @@ module.exports = {
   userscriptCreateGate, userscriptDeleteGate,
   siteSettingsGetGate, siteSettingsSetGate,
   passwordSaveGate, passwordGetGate, passwordListGate, passwordDeleteGate,
+  speechTranscribeGate, speechAvailableGate,
 };
