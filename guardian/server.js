@@ -1723,6 +1723,40 @@ const _evLedger = createCFRLedger({
 _evLedger.open();
 _evLedger.startAutoSave(60000);
 
+// §UPGRADE 2026-08-25 — guardian's own real state provider, the first
+// real, live registration of the .nex system-state mechanism (built
+// this session, cortex/snapshot/index.js). guardian's own real, live
+// data already goes two real ways: jaaDB rows (guardian_*-prefixed,
+// already covered automatically by cortex's existing whole-store table
+// snapshot — nothing new needed there) and these two real CFR ledger
+// files (cfr_state.json, event_stats.json — deliberately kept as real
+// files, not jaaDB rows, per this same file's own real comment a few
+// lines above: "NOT row-based tables... belong under the cortex-
+// governed data root as files"). The files are what a table snapshot
+// can't see — that's the real gap this closes. Both are tiny (under
+// 100 bytes each, confirmed directly), safe to embed inline rather
+// than needing a separate archive/reference scheme.
+try {
+  const snap = require('../cortex/snapshot/index.js');
+  const _ledgerCfrDir = require('path').join(__dirname, '..', 'data', 'guardian', 'ledger', 'cfr');
+  snap.registerStateProvider('guardian', {
+    capture: () => {
+      const read = (f) => { try { return JSON.parse(fs.readFileSync(require('path').join(_ledgerCfrDir, f), 'utf8')); } catch (_) { return null; } };
+      return { cfr_state: read('cfr_state.json'), event_stats: read('event_stats.json') };
+    },
+    restore: (state) => {
+      const written = [];
+      const write = (f, data) => { if (data == null) return; fs.writeFileSync(require('path').join(_ledgerCfrDir, f), JSON.stringify(data, null, 2)); written.push(f); };
+      write('cfr_state.json', state.cfr_state);
+      write('event_stats.json', state.event_stats);
+      return { restoredFiles: written };
+    },
+  });
+} catch (e) {
+  // §1.2 — loud, not silent, but never fatal to guardian's own real boot
+  console.warn(`[guardian] could not register .nex state provider (backup/restore for this system will be unavailable): ${e.message}`);
+}
+
 // Intercept every bus emit — write to CFR ledger before routing
 // §LAW II: ledger write happens BEFORE any subscriber processes the event
 const _origEmit = bus.emit.bind(bus);

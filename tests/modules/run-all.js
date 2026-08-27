@@ -49,6 +49,7 @@ const SUITES = [
   'jaa-store-multiprocess.test.js',
   'test-jaa-flush-lock.js',
   'test-nex-system-state.test.js',
+  'test-guardian-state-provider.test.js',
   'spec-container.test.js',
   'queue.test.js',
   'baseline.test.js',
