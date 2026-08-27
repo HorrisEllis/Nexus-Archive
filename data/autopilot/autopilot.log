@@ -196,3 +196,102 @@
 [2026-08-27T20:28:58.432Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
 [2026-08-27T20:28:58.433Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
 [2026-08-27T20:29:12.375Z] autopilot status: http://127.0.0.1:7921/status
+[2026-08-27T20:47:26.837Z] ── boot phase 1 — bgRequired
+[2026-08-27T20:47:26.838Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:47:28.856Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-08-27T20:47:28.857Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-08-27T20:47:36.881Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-27T20:47:36.882Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-08-27T20:47:36.883Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:47:46.945Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-27T20:47:46.945Z] [36m[bgRequired][0m restarting in NaNs (attempt 2)
+[2026-08-27T20:47:46.946Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:47:53.863Z]    ↳ diagnostic for 'bgRequired' exceeded 25s — killed. Partial output below.
+[2026-08-27T20:47:53.867Z]    ↳ diagnostic for 'bgRequired' (exit null) —
+[2026-08-27T20:47:53.867Z]       [1m  Integration health across all running systems:[0m
+[2026-08-27T20:47:53.868Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-27T20:47:53.869Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-27T20:47:53.869Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-27T20:47:53.869Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-27T20:47:53.869Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-27T20:47:53.869Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-27T20:47:53.869Z]       [36m↻[0m FIX: Start cortex
+[2026-08-27T20:47:53.869Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-27T20:47:53.869Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-27T20:47:53.869Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-27T20:47:53.869Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-27T20:47:53.869Z]       [90m    Command : [36mnode orchestrator/orchestrator.js[0m[0m
+[2026-08-27T20:47:53.869Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-27T20:47:53.869Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-27T20:47:53.869Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-27T20:47:53.869Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-27T20:47:53.869Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-27T20:47:53.869Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-27T20:47:53.869Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-27T20:47:53.869Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-27T20:47:53.869Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-27T20:47:53.869Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-27T20:47:53.869Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-27T20:47:53.869Z]       [1m  JS syntax integrity:[0m
+[2026-08-27T20:47:53.869Z] ── ✖ BOOT HALTED at phase 1 — required kernel(s) never became healthy: bgRequired
+[2026-08-27T20:47:53.869Z]    Phases after 1 were NOT started (1 remaining). Already-healthy kernels keep running under supervision; supervisor backoff/restart still applies to the failed one.
+[2026-08-27T20:47:53.869Z]    Diagnostic output for each stalled kernel is above. Fix the cause, then restart autopilot.
+[2026-08-27T20:47:53.870Z] ── boot phase 1 — bgOptional
+[2026-08-27T20:47:53.870Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:47:55.881Z] [bgOptional] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59895/health never answered ok
+[2026-08-27T20:47:55.882Z]    ↳ running diagnostic for stalled 'bgOptional' (phase 1) — cli/diagnose.js bgOptional
+[2026-08-27T20:47:57.008Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-27T20:47:57.008Z] [36m[bgRequired][0m restarting in NaNs (attempt 3)
+[2026-08-27T20:47:57.009Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:03.913Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-27T20:48:03.913Z] [36m[bgOptional][0m restarting in NaNs (attempt 1)
+[2026-08-27T20:48:03.914Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:07.068Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-08-27T20:48:07.068Z] [36m[bgRequired][0m restarting in NaNs (attempt 4)
+[2026-08-27T20:48:07.070Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:13.974Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-27T20:48:13.975Z] [36m[bgOptional][0m restarting in NaNs (attempt 2)
+[2026-08-27T20:48:13.977Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:17.128Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-08-27T20:48:17.128Z] [36m[bgRequired][0m restarting in NaNs (attempt 5)
+[2026-08-27T20:48:17.130Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:20.891Z]    ↳ diagnostic for 'bgOptional' exceeded 25s — killed. Partial output below.
+[2026-08-27T20:48:20.893Z]    ↳ diagnostic for 'bgOptional' (exit null) —
+[2026-08-27T20:48:20.895Z]       [1m  Integration health across all running systems:[0m
+[2026-08-27T20:48:20.895Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-08-27T20:48:20.895Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-08-27T20:48:20.895Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-27T20:48:20.895Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-08-27T20:48:20.895Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-08-27T20:48:20.895Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-08-27T20:48:20.895Z]       [36m↻[0m FIX: Start cortex
+[2026-08-27T20:48:20.895Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-08-27T20:48:20.895Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-08-27T20:48:20.895Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-08-27T20:48:20.895Z]       [36m↻[0m FIX: Start orchestrator
+[2026-08-27T20:48:20.895Z]       [90m    Command : [36mnode orchestrator/orchestrator.js[0m[0m
+[2026-08-27T20:48:20.895Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-08-27T20:48:20.895Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-08-27T20:48:20.895Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-08-27T20:48:20.895Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-08-27T20:48:20.895Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-08-27T20:48:20.895Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-08-27T20:48:20.895Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-08-27T20:48:20.895Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-08-27T20:48:20.895Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-08-27T20:48:20.895Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-08-27T20:48:20.895Z]       [33m⚠[0m   /version endpoint missing
+[2026-08-27T20:48:20.895Z]       [1m  JS syntax integrity:[0m
+[2026-08-27T20:48:20.895Z]    (stalled kernel(s) bgOptional are optional:true — boot continues, as declared)
+[2026-08-27T20:48:20.895Z] ── boot phase 2 — bgAfter
+[2026-08-27T20:48:20.895Z] [35m[bgAfter][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:20.903Z] [bgAfter] phase 2 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-27T20:48:20.903Z] ── boot sequence complete — 2 phase(s)
+[2026-08-27T20:48:20.904Z] ── boot phase 1 — bgDiag
+[2026-08-27T20:48:20.904Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:22.918Z] [bgDiag] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59894/health never answered ok
+[2026-08-27T20:48:22.918Z]    ↳ running diagnostic for stalled 'bgDiag' (phase 1) — cli/diagnose.js bgDiag
+[2026-08-27T20:48:24.032Z] [36m[bgOptional][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-27T20:48:24.032Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
+[2026-08-27T20:48:24.033Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-08-27T20:48:37.792Z] autopilot status: http://127.0.0.1:7921/status

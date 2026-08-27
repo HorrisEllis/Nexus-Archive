@@ -31,6 +31,12 @@ const VERSION    = '10.1.0';
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
 let _reconnectAttempts = 0;
+// §BUGFIX 2026-08-27 — same root cause and same fix as guardian/userscript-chatgpt.js:
+// `const NEXUS` was declared inside _es.onopen's closure, but injectText()
+// (module-scope, every job dispatch runs through it) references the bare
+// name `NEXUS` — never in scope there. ReferenceError on every call. Hoisted
+// to real module scope; onopen below now assigns it instead of shadowing it.
+let NEXUS = null;
 const HB_MS        = 8000;
 
 // ── Tab identity (sessionStorage only — intentionally ephemeral) ──────────────
@@ -788,7 +794,7 @@ function connect() {
     // window.NexusWake is the shared prelude ProviderHost injects before this
     // script; absent under node/tests or if the prelude failed to load, so
     // NEXUS stays null and decorate() below is a no-op rather than a crash.
-    const NEXUS = (typeof window !== 'undefined' && window.NexusWake)
+    NEXUS = (typeof window !== 'undefined' && window.NexusWake)
       ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
       : null;
     if (typeof window !== 'undefined') window.__nexusWakeInstance__ = NEXUS;

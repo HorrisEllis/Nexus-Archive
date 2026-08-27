@@ -32,6 +32,21 @@ const VERSION    = '10.0.0';
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
 let _reconnectAttempts = 0;
+// §BUGFIX 2026-08-27 — James, live: every job on every provider tab failed
+// with "(no response — check ChatGPT tab)", console showing the real,
+// loud §1.2 gate catch: "GATE FAIL: handleJob / NEXUS is not defined".
+// Root cause: `const NEXUS = ...` was declared INSIDE _es.onopen's own
+// closure below, but injectText() (a completely separate, module-scope
+// function every single job dispatch runs through) references the bare
+// name `NEXUS` — never in scope there. A ReferenceError on every call,
+// not a missing feature; NEXUS was never reachable from injectText() at
+// all, from the first commit that added this hookup. Confirmed identical
+// in userscript-claude.js, userscript-gemini.js, userscript-perplexity.js
+// — same NEXUS-WAKE hookup, same bug, fixed the same way in all four.
+// Declared here at real module scope so injectText() can actually see it;
+// onopen below now ASSIGNS this variable instead of shadowing it with its
+// own const.
+let NEXUS = null;
 const HB_MS        = 8000;
 
 // ── Tab identity (sessionStorage only — intentionally ephemeral) ──────────────
@@ -764,7 +779,7 @@ function connect() {
     // window.NexusWake is the shared prelude ProviderHost injects before this
     // script; absent under node/tests or if the prelude failed to load, so
     // NEXUS stays null and decorate() below is a no-op rather than a crash.
-    const NEXUS = (typeof window !== 'undefined' && window.NexusWake)
+    NEXUS = (typeof window !== 'undefined' && window.NexusWake)
       ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
       : null;
     if (_hb) clearInterval(_hb);

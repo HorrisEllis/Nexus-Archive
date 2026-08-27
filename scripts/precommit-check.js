@@ -130,6 +130,49 @@ try {
   warnings.push(`§5.4 version-drift check could not run: ${e.message}`);
 }
 
+// RULE: §5.4 spec-version drift, the OTHER half of it. The block above
+// checks hardcoded per-file version literals (registry-components.js
+// etc.) against lib/version.js. This checks the OTHER real version
+// source — each system's own <system>/spec/<system>.spec `version:`
+// field — against the exact same lib/version.js. These were previously
+// two unrelated mechanisms: orchestrator/lib/spec-drift.js already
+// existed, already ran on every boot, already opened a real gap on
+// drift (confirmed live: 8 systems drifted — orchestrator, cortex,
+// guardian, idearium, emerge, diagnostic, forge, spec-drift itself, all
+// found and fixed 2026-08-27) — but a SOFT boot-time gap never blocks
+// anything, so nothing stopped the drift from being committed in the
+// first place. James: "fix the versioning. have it enforced in the
+// git." Reused, not reimplemented — this calls the real, existing
+// drift.check(), same as orchestrator's own boot phase does, so there
+// is exactly one drift-detection algorithm, never two that could
+// disagree.
+//
+// Same whole-tree philosophy as the block above: drift is a property of
+// the current state of the tree, not of what's staged in this diff, so
+// this runs on every commit regardless of which files changed. HARD
+// BLOCK, same severity — a spec that lies about the code's real version
+// is the same class of problem §5.4 already treats as non-negotiable.
+//
+// Missing specs (11 real modules — ollama-bridge, clear-glass, loom,
+// gap-finder, divergence-watcher, macro-compiler, grammar-fallback,
+// mutation-contract, open-loop-taxonomy, loop-topology, gap-loop — none
+// have ever had a .spec) are a separate, pre-existing gap from drift
+// itself and deliberately WARN only, not block — retroactively forcing
+// a spec into existence for every small module was not the ask, and
+// blocking on it would make this rule punish files it didn't cause.
+try {
+  const drift = require(path.join(ROOT, 'orchestrator/lib/spec-drift.js'));
+  const result = drift.check();
+  for (const d of result.drifted) {
+    errors.push(`§5.4 spec-version drift: ${d.specFile} says version: ${d.specVersion}, lib/version.js says ${d.codeVersion} — update the spec to match the real shipped code version before committing`);
+  }
+  for (const m of result.missing) {
+    warnings.push(`${m.system} (code@${m.codeVersion}) has no .spec anywhere (checked <system>/spec/<system>.spec, <system>/<system>.spec, docs/<system>.spec) — not blocking, but §5.4 says the spec should exist`);
+  }
+} catch (e) {
+  warnings.push(`§5.4 spec-drift check could not run: ${e.message}`);
+}
+
 // RULE: every staged .js file must be syntactically valid AND must not
 // crash on require() from a bare reference error. §BUILT 2026-08-17 —
 // James: "before each output you need to be testing and verifying it...

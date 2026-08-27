@@ -74,9 +74,26 @@ test('NW-005', 'IT ASKS THE REAL CO-PILOT \u2014 not a provider round-trip', () 
   // endpoint missing from its own source. Caught by this test failing while the
   // code was correct — the second time in this file that a scanner mistook one
   // kind of text for another.
+  //
+  // §UPDATED 2026-08-27 — this test itself was the stale one this time, not
+  // the code. askNexus() moved from fetch(COPILOT_PROMPT) to
+  // GM_xmlhttpRequest({url:COPILOT_PROMPT,...}) on 2026-08-22 for a real,
+  // documented, unavoidable reason (guardian/userscript-nexus-wake.js's own
+  // comment at that call site): plain fetch() from an https:// chat page to
+  // a real http://127.0.0.1 target is blocked by the browser as mixed
+  // content, exactly like EventSource is — no server-side CORS header can
+  // fix that. Checked the current code directly before touching this
+  // assertion, not assumed — confirmed the fetch(COPILOT_PROMPT) shape no
+  // longer exists anywhere in this file, on purpose. Updated to assert the
+  // REAL current mechanism instead of reverting correct code to satisfy a
+  // stale check, which would have silently reintroduced the mixed-content
+  // bug this file's own 2026-08-22 fix already found and closed.
   const code = SRC.replace(/(?<!:)\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.ok(/127\.0\.0\.1:3750/.test(code), 'must target the sovereign co-pilot on :3750');
-  assert.ok(/fetch\(COPILOT_PROMPT/.test(code), 'the ask must actually fetch that constant');
+  assert.ok(/GM_xmlhttpRequest\s*\(\s*\{[\s\S]{0,80}url:\s*COPILOT_PROMPT\b/.test(code),
+    'the ask must use GM_xmlhttpRequest targeting COPILOT_PROMPT — plain fetch() to a real http:// target from an https:// page is blocked as mixed content, no CORS header can fix that');
+  assert.ok(!/(?<!GM_x)fetch\(\s*COPILOT_PROMPT/.test(code),
+    'must not regress back to plain fetch(COPILOT_PROMPT) — that is the exact mixed-content bug this file already fixed once');
   assert.ok(!/copilot\/prompt/.test(code),
     'guardian\u2019s relay dispatches to a provider \u2014 that is not NEXUS answering');
 });

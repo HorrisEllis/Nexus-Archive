@@ -152,19 +152,50 @@ function _humanPattern(p) {
 function init(cfg = {}) {
   _cfg = cfg;
 
-  // Stagger scans — don't all fire at once on boot
-  _intervals.push(setInterval(_scanPatterns,   PATTERN_SCAN_MS));
-  _intervals.push(setInterval(_scanFailures,   FAILURE_SCAN_MS));
-  _intervals.push(setInterval(_buildReuseIndex,REUSE_INDEX_MS));
-  _intervals.push(setInterval(_crossLedger,    CROSS_LEDGER_MS));
-  _intervals.push(setInterval(_scanMetaPatterns,META_SCAN_MS));
-  _intervals.push(setInterval(_syncLoomMap,    LOOM_MAP_SYNC_MS));
+  // §BUGFIX 2026-08-27 — James, live: boot log showed near-identical
+  // "pattern crystallised" / "meta-scan" / "loom map synced" lines twice,
+  // once tagged [cortex:cortex/boot.js] and once [intelligence:intelligence/
+  // server.js], a few seconds apart with slightly different counts. Real
+  // root cause, not cosmetic: cortex/boot.js still calls this exact init()
+  // in-process — leftover from before intelligence/server.js existed as
+  // its own standalone process (see that file's own header: "the first
+  // time it runs as its own real, standalone process", 2026-08-22). Since
+  // then, TWO independent processes have been running all 6 of these
+  // intervals against the SAME shared, on-disk JAA tables (event_log,
+  // bep_patterns — confirmed by reading _scanPatterns/_scanMetaPatterns
+  // directly, not assumed) — double the CPU for identical analysis, two
+  // processes racing to write the same pattern rows.
+  //
+  // Cannot simply delete cortex's init() call, though — orchestrator.js
+  // has two REAL, live callers (confirmed by grep: GET('cortex',
+  // '/api/intelligence/failures') and .../reuse) that hit cortex's own
+  // port specifically, and those two routes read _failureIndex/_reuseIndex,
+  // which only _scanFailures/_buildReuseIndex populate. Deleting init()
+  // wholesale would silently break two real endpoints — the exact kind of
+  // regression §1.2 exists to prevent.
+  //
+  // Real fix: an opt-in allowlist. intelligence/server.js's own
+  // `init({})` call is unchanged — no cfg.scans means "run everything",
+  // same as before this fix, so the one authoritative process keeps doing
+  // full pattern/meta/loom-map work. cortex/boot.js's call site now passes
+  // cfg.scans: ['failures','reuse'] — only the two intervals its own real
+  // routes actually consume. Pattern scan, meta-scan, loom-map sync, and
+  // cross-ledger drift detection now run in exactly one process.
+  const scans = Array.isArray(cfg.scans) ? new Set(cfg.scans) : null; // null = run all (unchanged default)
+  const wants = (name) => !scans || scans.has(name);
+
+  if (wants('patterns'))  _intervals.push(setInterval(_scanPatterns,   PATTERN_SCAN_MS));
+  if (wants('failures'))  _intervals.push(setInterval(_scanFailures,   FAILURE_SCAN_MS));
+  if (wants('reuse'))     _intervals.push(setInterval(_buildReuseIndex,REUSE_INDEX_MS));
+  if (wants('crossLedger'))_intervals.push(setInterval(_crossLedger,   CROSS_LEDGER_MS));
+  if (wants('meta'))      _intervals.push(setInterval(_scanMetaPatterns,META_SCAN_MS));
+  if (wants('loomMap'))   _intervals.push(setInterval(_syncLoomMap,    LOOM_MAP_SYNC_MS));
   _intervals.forEach(i => i.unref());
 
   // Initial build after 10s (let JAA settle from boot)
   setTimeout(() => {
-    _scanPatterns();
-    _syncLoomMap();
+    if (wants('patterns')) _scanPatterns();
+    if (wants('loomMap'))  _syncLoomMap();
     // §PERSIST-03: hydrate in-memory indexes from persisted JAA tables on boot
     // Healer and reuse engine work immediately — no cold-start amnesia
     const _storedFaults = jaaDB.query('fault_taxonomy', () => true, 500);

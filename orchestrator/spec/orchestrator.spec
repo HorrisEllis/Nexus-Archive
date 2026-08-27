@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        orchestrator
-    version:     2.0.0
+    version:     2.2.0
     foundation:  nexus-system-foundation@1.0.0
     port:        9000
     uuid:        nexus-orchestrator-v2-0000-2026-0615-jamesbrooks-001

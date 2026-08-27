@@ -1511,8 +1511,19 @@ server.listen(PORT, '127.0.0.1', () => {
     // new crystallization enrichment (James: "make them more detailed,
     // using rfr2 and cfr"). Same real _field this file already exports at
     // module level (getField: () => _field) — reused, not duplicated.
-    require('../intelligence').init({ getField: () => _field });
-    console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active');
+    //
+    // §BUGFIX 2026-08-27 — scans:['failures','reuse'] added. cortex's own
+    // /api/intelligence/failures and /reuse routes (below) are real, live
+    // endpoints orchestrator.js actually calls — confirmed by grep, not
+    // assumed — so this process still needs _scanFailures/_buildReuseIndex
+    // running locally. Pattern scan / meta-scan / loom-map sync / cross-
+    // ledger are NOT restricted here anymore: intelligence/server.js (its
+    // own real, standalone process since 2026-08-22) already owns those
+    // exclusively, and running them here too was pure duplicate work
+    // against the same shared JAA tables — see intelligence/index.js's
+    // own init() comment for the full trace.
+    require('../intelligence').init({ getField: () => _field, scans: ['failures', 'reuse'] });
+    console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active — failures+reuse scans only, pattern/meta/loom-map owned by the standalone intelligence service');
   } catch (e) {
     console.warn(`[cortex] intelligence/index failed to start: ${e.message}`);
   }

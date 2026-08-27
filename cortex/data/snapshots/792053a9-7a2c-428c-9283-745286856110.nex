@@ -1,0 +1,5464 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "792053a9-7a2c-428c-9283-745286856110",
+  "type": "pre_forge",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [
+      {
+        "uuid": "db390b65-b244-4093-9acd-5ef2b3b8cc6e",
+        "type": "intent.low_confidence",
+        "domain": "system",
+        "body": "Intent parsed with confidence 0.343 (threshold: 0.45). verb=\"unknown\" domain=\"general\" raw=\"\"",
+        "source": "intent-classifier",
+        "severity": "medium",
+        "status": "open",
+        "causedBy": "a1b13b78-c939-48a2-9e11-8830831587a8",
+        "dedup_key": "system::intent.low_confidence::intent-classifier",
+        "occurrences": 1,
+        "detectedAt": 1787863723512,
+        "lastSeenAt": 1787863723512,
+        "meta": {
+          "causedBy": "a1b13b78-c939-48a2-9e11-8830831587a8",
+          "path": "intent-classifier/confidence"
+        },
+        "requested": null,
+        "received": null,
+        "systemsInvolved": [
+          "intent-classifier"
+        ],
+        "location": null,
+        "error": null,
+        "resourceState": {
+          "ts": 1787863723521,
+          "pid": 16877,
+          "system": {
+            "totalMem": 4192071680,
+            "freeMem": 3800395776,
+            "freeMemPct": 0.9065674602205275,
+            "usedMemPct": 0.09343253977947252,
+            "cpuPct": null,
+            "loadavg": [
+              1.04,
+              0.36,
+              0.18
+            ],
+            "cpuCount": 1,
+            "platform": "linux"
+          },
+          "process": {
+            "rss": 57704448,
+            "heapUsed": 5938088,
+            "heapTotal": 7704576,
+            "heapUsedPct": 0.7707222305289739,
+            "external": 1754718,
+            "uptimeSec": 0
+          },
+          "pressure": {
+            "level": "ok",
+            "reasons": [],
+            "spawnSafe": true
+          }
+        },
+        "why": null,
+        "component": null,
+        "priority": 0.3925,
+        "id": "2932d3f0-aef5-45c0-b2ab-f0d46a0d035e"
+      }
+    ],
+    "event_log": [
+      {
+        "uuid": "28a3f0fb-34bc-4a5e-97b3-b9de424e4b79",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-75b4ef57",
+          "branch": "main",
+          "parentId": null
+        },
+        "source": "versionium",
+        "causedBy": "39f4ca63-fb87-49ed-9d4a-a014ab3d5ab2",
+        "ts": 1787861470402,
+        "id": "87575004-0d35-4403-99f2-b57cdf3cab2a"
+      },
+      {
+        "uuid": "0865f896-87cb-446b-b908-09c9a6c555c0",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-9fecb36a",
+          "branch": "main",
+          "parentId": "vtm-75b4ef57"
+        },
+        "source": "versionium",
+        "causedBy": "1e24cc83-1477-4709-af46-7e6e5805e791",
+        "ts": 1787861470409,
+        "id": "a4651ea8-8443-49cd-8656-ac49584b6bf2"
+      },
+      {
+        "uuid": "6fb17d96-7ddb-446b-a760-e08860f54360",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-eccc7602",
+          "branch": "main",
+          "parentId": "vtm-9fecb36a"
+        },
+        "source": "versionium",
+        "causedBy": "7fa2f619-21f2-4dd6-92a1-5c8b0549e11c",
+        "ts": 1787861470409,
+        "id": "ed655bc7-8ec6-474a-90bf-75f34f08355b"
+      },
+      {
+        "uuid": "5167c204-4fe1-454e-8957-209e1e24a63f",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-34ba5ad5",
+          "branch": "main",
+          "parentId": "vtm-eccc7602"
+        },
+        "source": "versionium",
+        "causedBy": "4e36d876-9b2d-454e-b6d3-c97306b882ba",
+        "ts": 1787861470410,
+        "id": "9478a32a-5a27-4d25-9b6c-ee1722705225"
+      },
+      {
+        "uuid": "f535a804-ddfb-48f0-87d6-efee63bb12fb",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-bf497a04",
+          "branch": "main",
+          "parentId": "vtm-34ba5ad5"
+        },
+        "source": "versionium",
+        "causedBy": "df1fbc05-f199-4b85-af44-3a7eaf92cbfe",
+        "ts": 1787861470411,
+        "id": "fd51f7c3-d796-47f7-bccd-24bb33afd4d3"
+      },
+      {
+        "uuid": "228beee2-29c0-4e5c-8308-b9c1e602cee9",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-75e17fad",
+          "branch": "main",
+          "parentId": "vtm-bf497a04"
+        },
+        "source": "versionium",
+        "causedBy": "4d61837d-bd45-4497-b11d-c8be979b7802",
+        "ts": 1787861470413,
+        "id": "b4a07f2c-17f4-4500-97c8-c1eba50a1a43"
+      },
+      {
+        "uuid": "907fe0e0-4a65-4d1c-a66f-39a231b8a0ef",
+        "type": "ledger.cortex.registered",
+        "source": "cortex.gaps.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "healing",
+            "monitoring"
+          ],
+          "detail": "List open gaps with severity and friction score",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861472619,
+        "id": "1316fbfb-e6bd-4b09-956f-5ee940325b71"
+      },
+      {
+        "uuid": "344eef69-4fce-4270-8c73-09061f79f063",
+        "type": "ledger.forge.registered",
+        "source": "forge.patch",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "build",
+            "repair"
+          ],
+          "detail": "Apply a targeted patch to a module",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861472629,
+        "id": "a36bd6bd-1d73-47da-86a7-4c404d6fb828"
+      },
+      {
+        "uuid": "9c3ddc0b-cf9a-488f-8804-0e7906587859",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "liminal"
+          ],
+          "detail": "List all five interstitial spaces",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861472630,
+        "id": "764bc1d8-9e0b-4c7d-bf40-3a6150c9d6b2"
+      },
+      {
+        "uuid": "c4fad1ea-8c5b-478c-b265-107d9233e1ba",
+        "type": "ledger.cortex.updated",
+        "source": "cortex.gaps.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "healing",
+            "monitoring"
+          ],
+          "detail": "Updated description",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861472630,
+        "id": "511db84d-bbd9-48bd-849b-d542ee416f88"
+      },
+      {
+        "uuid": "a3ba8c53-c142-47eb-abc9-8275c1c419f9",
+        "type": "ledger.guardian.registered",
+        "source": "guardian.ncp.status",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Guardian NCP provider status",
+          "causedBy": "guardian",
+          "session": null
+        },
+        "causedBy": "guardian",
+        "ts": 1787861472632,
+        "id": "5825628b-7920-44e9-8dba-736c96844591"
+      },
+      {
+        "uuid": "97317178-9755-4593-93ee-3d9c89cc093f",
+        "type": "ledger.forge.registered",
+        "source": "forge.old",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "build",
+            "repair"
+          ],
+          "detail": "Old forge command",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861472633,
+        "id": "0deacabb-22f8-4d83-808e-2c1326555685"
+      },
+      {
+        "uuid": "56e2f2fe-9f62-43e1-897b-bba288b10a7e",
+        "type": "ledger.test.registered",
+        "source": "test.event.check",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Test event emission",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861472637,
+        "id": "0a6607c7-6a8f-42bb-ab79-8e6e54b24be6"
+      },
+      {
+        "uuid": "347ee6be-47ea-4d60-a146-3cd7ff23cc68",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.show",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Show one interstitial space",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787861472642,
+        "id": "2fb1e5d7-fa8e-4426-9b80-d71499d909eb"
+      },
+      {
+        "uuid": "c778add0-b567-45b8-a1a1-e13a1c017574",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.hold",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Manually inject unresolved item",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787861472643,
+        "id": "8dae8ae4-7b92-4259-90da-1183cdfd4119"
+      },
+      {
+        "uuid": "74d30300-8d31-4770-90fc-33d22b3f16fc",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.resolve",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Close an interstitial item with decision",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787861472643,
+        "id": "1f6484d0-1a62-42d8-8b70-a7b7a7e6a6a6"
+      },
+      {
+        "uuid": "efe58397-075a-49b6-96c7-22927d505917",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c0",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553170,
+        "id": "3b32daba-c8bf-4b27-9438-4f1e68d43d00"
+      },
+      {
+        "uuid": "1f55ec7b-705f-4326-8a96-1fac664e280d",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c1",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553180,
+        "id": "f6bf2ed0-b6bb-490d-baf1-9c115c33f833"
+      },
+      {
+        "uuid": "d69eb469-c132-470f-a5b8-24955d6d5725",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c2",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553181,
+        "id": "c475d739-2787-4e7d-afae-3aa525c95693"
+      },
+      {
+        "uuid": "b7d56a24-f82a-4bff-9e46-3093a611ac40",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c3",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553181,
+        "id": "dfb49cc8-7750-485c-b52c-7685c81e1c3e"
+      },
+      {
+        "uuid": "82e7c33a-ad6d-46a7-a00d-85771933cee8",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c4",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553187,
+        "id": "c9ee32d4-26d5-4428-85ae-55b3f7b7aea7"
+      },
+      {
+        "uuid": "08b2f0ee-2d23-482b-a647-8af67e6b2d00",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c5",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553187,
+        "id": "ccc9240b-d72b-4e9e-b5d2-51ed38df3c44"
+      },
+      {
+        "uuid": "f69f3d77-8c83-49e8-b0ef-fcc3583e4d8e",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c6",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553187,
+        "id": "eafac398-fc94-4ee1-85fb-bc8c30bd4b13"
+      },
+      {
+        "uuid": "facf9bbf-d9ba-45bf-abc8-4ad62453b7a7",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c7",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553187,
+        "id": "a2b68380-b9aa-43ae-9a1f-53cf2a44adb1"
+      },
+      {
+        "uuid": "30dfc960-67e7-4b0c-a86e-9dec54fb7cef",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c8",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553188,
+        "id": "f660ed51-c26a-4a55-b55c-241fb05199b3"
+      },
+      {
+        "uuid": "37cce9ef-bada-41e9-b78c-68ee6da88241",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c9",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553188,
+        "id": "265d7055-0e61-4b61-843a-c4a642af0515"
+      },
+      {
+        "uuid": "9e958933-cf97-4e6c-abba-4b7290caea4a",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c10",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553188,
+        "id": "f997aa94-c28e-461a-9d46-7cf5006ec1c2"
+      },
+      {
+        "uuid": "eb2f5d1e-92bb-4653-a7cb-8b7e32d74379",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c11",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553188,
+        "id": "9a47a58c-2694-4e13-801a-0fcfd33bda8c"
+      },
+      {
+        "uuid": "04a7b912-0d84-46d2-bf66-336d8d6d581d",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c12",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553194,
+        "id": "cc25f2dc-a6a5-4abe-a54b-5cfef4af6705"
+      },
+      {
+        "uuid": "60f4ac3b-25ff-4ba9-a401-8ead6fb7b14c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c13",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553194,
+        "id": "3eb56a97-a349-4f41-8f2e-24c4e3c47117"
+      },
+      {
+        "uuid": "4257119c-d6c1-4387-b5be-2fea6b8ffb18",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c14",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553194,
+        "id": "cef03294-f0ab-4466-94e1-7e9d42203cf4"
+      },
+      {
+        "uuid": "1e89baf9-8b89-41ea-8359-19a79dcc3cd9",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c15",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553194,
+        "id": "b21c4909-b48d-4355-844c-77b17a7ad30d"
+      },
+      {
+        "uuid": "eba6762c-0e14-4ebe-899d-130af855bbe1",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c16",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553194,
+        "id": "021b6b63-c809-4790-a1b7-199d1775e0ff"
+      },
+      {
+        "uuid": "95d667d7-c577-4c68-815b-c07d03afd40c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c17",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553194,
+        "id": "d4c3ead3-b753-49ae-994a-5f4f4da540b6"
+      },
+      {
+        "uuid": "42a46b08-a788-432a-9cf9-37c74231230b",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c18",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553195,
+        "id": "f976c4ed-a3be-4d96-bfef-6763f66b820b"
+      },
+      {
+        "uuid": "d4a9a7c8-ca52-44dc-899a-4f495b74b05e",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c19",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553195,
+        "id": "22f9c81a-4383-4b42-8c6e-efd028734900"
+      },
+      {
+        "uuid": "b3a0c7c6-d1a4-438f-9c5e-8680f11f2a58",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c20",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553195,
+        "id": "fb3b78e2-75d1-427e-9a4a-5d38ea4ca483"
+      },
+      {
+        "uuid": "5e67b2dc-0cd1-4f13-acb3-f0c2ff668b54",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c21",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553195,
+        "id": "89c676ea-e9e4-4f0c-a88e-ee3079d1893f"
+      },
+      {
+        "uuid": "4f268a91-12f9-4ae8-8cc4-b140db271c57",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c22",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553195,
+        "id": "ba6fc62c-9967-41d4-995e-a19b75c635c3"
+      },
+      {
+        "uuid": "0324442e-2515-4d11-9737-f7186e1758a9",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c23",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553195,
+        "id": "33ea71a1-27d3-4c4b-ae80-a8107e3f04a0"
+      },
+      {
+        "uuid": "bbfccd2c-8d31-4d76-a5dc-62a6868f7216",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c24",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553195,
+        "id": "aa57d0d0-136b-4944-8ff5-c7270cd75e38"
+      },
+      {
+        "uuid": "bf1c0f87-2996-4278-b8fb-b731532c154f",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c25",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553196,
+        "id": "e7af153d-d85a-4118-b6a2-35e4ac3f695e"
+      },
+      {
+        "uuid": "88d55c15-5889-4116-96fb-21c2bb669621",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c26",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553196,
+        "id": "e3d9d04c-7eda-4b5b-8e24-29c05ea93a3e"
+      },
+      {
+        "uuid": "5c4d5d64-a41f-482a-ba69-5807356bfd59",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c27",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553196,
+        "id": "40c82999-3157-4344-9a1c-0dd03170c3ed"
+      },
+      {
+        "uuid": "52bd0fbd-4c43-41f2-8e2e-a6d3ccff7f32",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c28",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553196,
+        "id": "e764fd80-a60e-4f9d-bd0f-a83783b22f7c"
+      },
+      {
+        "uuid": "eae0a89b-0dc1-4da8-8bc5-ea083097811c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c29",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553196,
+        "id": "a537e1fa-7420-4dcc-8f67-54bee0f673bd"
+      },
+      {
+        "uuid": "8eda11ed-200f-4a89-a324-2c5168c732ed",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c30",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553196,
+        "id": "7316ad86-aaa9-410c-bbf0-b32fed93cf7d"
+      },
+      {
+        "uuid": "f48cea44-f8c5-4ca5-9cf6-11906ce6d399",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c31",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553196,
+        "id": "ecb1946e-47e5-4aaa-93fb-cc3f59b81831"
+      },
+      {
+        "uuid": "345d5304-991e-4dec-b5ba-70a3a12fa75f",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c32",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553197,
+        "id": "e0d32749-2010-4d7a-93a5-e46013068836"
+      },
+      {
+        "uuid": "45bddf2d-7a09-4aac-b3df-d368f7920af4",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c33",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553197,
+        "id": "d11b6f32-272d-4615-9f64-c4fb00b85264"
+      },
+      {
+        "uuid": "2c32e865-a8dd-4eab-bd30-351013fcddd2",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c34",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553197,
+        "id": "6b992b99-269f-48df-9de9-94e156bc6e43"
+      },
+      {
+        "uuid": "a19f345e-0fbd-4b56-bf39-d227285d74e4",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c35",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553197,
+        "id": "dab4611e-d820-4b2f-94ce-90c0a80ccef2"
+      },
+      {
+        "uuid": "b57a79b6-06d9-48fc-b887-d59755842e9e",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c36",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553197,
+        "id": "02cf3628-c332-4cb0-bb55-acf5e4198655"
+      },
+      {
+        "uuid": "4be50e1d-c061-4909-94c3-b22c513bcf83",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c37",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553197,
+        "id": "2b7c8748-aba8-48f7-93c9-a1d45441503d"
+      },
+      {
+        "uuid": "00376729-d4fc-4fea-8412-fa402f2950b0",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c38",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553197,
+        "id": "83d847a2-a43e-4443-b4c1-7dc16da8db27"
+      },
+      {
+        "uuid": "9596ff79-e038-40a1-a5c1-da42f6d94710",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c39",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553204,
+        "id": "321ae6e1-2ba0-425f-99cc-624a0c799c22"
+      },
+      {
+        "uuid": "11c78e39-94a7-46d6-917a-8bb62ad4e1f9",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c40",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553205,
+        "id": "4cd5d3a2-089c-4d68-80da-3bf2c306243a"
+      },
+      {
+        "uuid": "690874d6-f30e-4dc3-b265-819cb7b03db7",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c41",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553205,
+        "id": "c4c42bbb-3738-4af9-83b4-bf9222debef9"
+      },
+      {
+        "uuid": "79b40d4b-6311-4e48-805b-7afb8d65d42c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c42",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553205,
+        "id": "27b6d7ae-c3fb-4a54-a2ef-cebf7c0c123c"
+      },
+      {
+        "uuid": "c706a7aa-6f8d-49cb-abe2-6de2098398f5",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c43",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553205,
+        "id": "d39aeaf0-f36f-4606-ab81-5286cc6a6490"
+      },
+      {
+        "uuid": "aec19e10-a2eb-4956-81a7-857835278d1f",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c44",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553205,
+        "id": "c3e6cb8d-9593-497c-9121-06d3f148a7db"
+      },
+      {
+        "uuid": "a8546f6e-aca4-4ff1-be43-55f1bfe1033f",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c45",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553205,
+        "id": "97191d11-a09b-4a04-8e58-7bef488eaa94"
+      },
+      {
+        "uuid": "256a19d6-1b36-404d-84c0-880725c3fec6",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c46",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553205,
+        "id": "a1486e4e-c18e-4b57-9a54-5242a87eeb91"
+      },
+      {
+        "uuid": "bb4e8a3c-dad8-4dbb-9123-869aac786361",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c47",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553210,
+        "id": "327f6dd1-3e6f-4270-b903-b85eaedf8607"
+      },
+      {
+        "uuid": "a407d96d-55b5-46ce-83d7-1b730a0d53e3",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c48",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553210,
+        "id": "6d6a0946-2fe7-43cf-8944-fa6d73ade881"
+      },
+      {
+        "uuid": "5b312dc4-f33b-4dd5-b53a-9f4cf1ab385f",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c49",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553210,
+        "id": "507c745e-d119-4ba3-90d2-0e5984d506de"
+      },
+      {
+        "uuid": "3e4a793c-d09c-4d27-8f59-5df37c2ee815",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c50",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553210,
+        "id": "15319139-d0c4-415b-a8da-b1cfcdcb7371"
+      },
+      {
+        "uuid": "54cbd0d3-f9bc-4c0b-b0dc-376761c65ec4",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c51",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553210,
+        "id": "ee62fbbc-a2bf-43ba-a541-872e77d48b83"
+      },
+      {
+        "uuid": "d17dd82f-20a5-4667-bb08-b08e86bad8ac",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c52",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "121141b5-7245-444e-955b-f7dad9df00da"
+      },
+      {
+        "uuid": "b31b74de-b116-43e0-8cca-a5c3f9465364",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c53",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "1bc8f54a-93fd-4366-b5ba-0b39505a78b1"
+      },
+      {
+        "uuid": "524895c0-9e70-48cd-8289-4396478ae88c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c54",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "2e7de8ad-d549-49e9-a725-fe4728d6372d"
+      },
+      {
+        "uuid": "03eb6bdd-8f63-47c2-a91b-40f3211fb584",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c55",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "4dc6cc84-c97b-4906-87f8-ee399147b178"
+      },
+      {
+        "uuid": "7780c394-caf9-4626-a303-abfe0b6cc258",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c56",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "d8ce7e20-5059-4912-b057-87cad1676428"
+      },
+      {
+        "uuid": "a57ed4bf-0c28-4f02-a841-e01707bdf9a0",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c57",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "15f17011-5589-4625-a87b-ea93eeb61657"
+      },
+      {
+        "uuid": "5e52058b-1a40-40cf-8e75-318aa80f4f92",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c58",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "f7636591-789c-42da-873a-1193fffa1028"
+      },
+      {
+        "uuid": "9c519e1d-2617-429d-81d7-2d22ac85cb46",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c59",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553211,
+        "id": "9e4d5472-1a00-4666-813a-f04c5e988f08"
+      },
+      {
+        "uuid": "4fec601d-d3e9-484a-9ae2-011813ceca14",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c60",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553212,
+        "id": "228b41e0-4ad9-4403-baf9-81050e33661d"
+      },
+      {
+        "uuid": "eb6617c0-d131-4187-b132-f32e447e6775",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c61",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553212,
+        "id": "81236e7f-9679-45c2-bf0c-d22af47feda7"
+      },
+      {
+        "uuid": "96cc64f5-7636-48b7-8b6f-21918f0706d3",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c62",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553212,
+        "id": "3161cda1-7e71-4d1a-b456-cf0996647611"
+      },
+      {
+        "uuid": "626819cc-916b-42d4-ad86-b03368469af9",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c63",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553212,
+        "id": "91bc67a2-6caa-4571-a76b-d33deb14e8c7"
+      },
+      {
+        "uuid": "2f4178c8-21a1-47f9-a2df-46f91fdf8c7d",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c64",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553212,
+        "id": "aa27a668-2097-4f60-adee-019b58fb144a"
+      },
+      {
+        "uuid": "cc895715-b626-457a-9a67-697b94234ca8",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c65",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553212,
+        "id": "376f9a7c-50bb-4029-bf41-e165d36173cc"
+      },
+      {
+        "uuid": "89998028-64e9-4b20-adfb-8ad7eea062ad",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c66",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553212,
+        "id": "b2af74d9-f944-40b9-9803-411393711b56"
+      },
+      {
+        "uuid": "136bb3db-2274-41a3-a5c0-3fc8d844562e",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c67",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553213,
+        "id": "d8267a0e-539d-41eb-8a4a-1023969f1a0d"
+      },
+      {
+        "uuid": "70713268-0062-4034-bee3-5d6fa62d97da",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c68",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553213,
+        "id": "7796dd64-b62b-43ad-84a2-3805a6a49f51"
+      },
+      {
+        "uuid": "b602488d-75ed-45ce-a653-bb5342346545",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c69",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553213,
+        "id": "8e3a09de-7b7a-45e1-bc2c-eeba2782c53c"
+      },
+      {
+        "uuid": "4530f222-2afa-44dd-b690-69784df28509",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c70",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553213,
+        "id": "cf188e7d-9aa2-4fde-a66d-538f126087ab"
+      },
+      {
+        "uuid": "ee128b5e-63be-4260-8609-fcab1e867960",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c71",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553213,
+        "id": "9355a35e-c7cf-4fbd-9416-cd409597ed18"
+      },
+      {
+        "uuid": "633928fb-5bac-4869-94fc-4fc9d2116d9c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c72",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553213,
+        "id": "b5034943-a0f8-43af-8610-9824c8f9fa41"
+      },
+      {
+        "uuid": "5c7974f9-5216-4ba7-a2ef-948c5c1c80b8",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c73",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553213,
+        "id": "ba678b1c-4c54-4520-a96f-a4a91c18a224"
+      },
+      {
+        "uuid": "31c5ed4b-b124-46fa-a5a9-3dfa87052831",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c74",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553217,
+        "id": "411f602a-8df7-4de0-9ff0-e3f8a432e6e4"
+      },
+      {
+        "uuid": "b00b6803-59d6-4719-bb19-f20fb46e29c0",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c75",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553217,
+        "id": "06ba5860-b2f4-418f-8529-1d9da7f33d8a"
+      },
+      {
+        "uuid": "94990461-68e0-45c0-9ac1-5dbd3cb4f666",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c76",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553218,
+        "id": "e7d1b13a-e133-483e-93a5-8d0460054c13"
+      },
+      {
+        "uuid": "3019e53d-2be2-4b0e-85f5-ba40a80abe6a",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c77",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553218,
+        "id": "e0b65413-aabc-4d32-95dc-75083f8b71e2"
+      },
+      {
+        "uuid": "e27bcd27-021d-4eb0-afc6-08e17d6d9bb3",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c78",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553218,
+        "id": "47d2e669-687a-49c5-9130-273c13acdbce"
+      },
+      {
+        "uuid": "3aa530c4-a0f1-4e53-95cc-fa688eb1470a",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c79",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553218,
+        "id": "a17fda2e-2441-4577-94ea-e4b1399e4834"
+      },
+      {
+        "uuid": "76d5e44e-645b-4bf6-95c0-4027b42f18cf",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c80",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553218,
+        "id": "af3644b4-75c0-4b84-a71f-7f50d8a11b00"
+      },
+      {
+        "uuid": "bc97dcc7-3f99-4a87-a2ba-fdaacbe91692",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c81",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553218,
+        "id": "0a64db24-d665-4f51-8c41-c6438093998d"
+      },
+      {
+        "uuid": "c717305c-9c49-4e1b-8661-5cc8e3151b14",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c82",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553219,
+        "id": "6fcae998-9ccb-4340-be0a-912d525eeaa4"
+      },
+      {
+        "uuid": "eb26145d-1cad-4a02-95ac-c0c3372254c9",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c83",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553219,
+        "id": "1380bc8d-5c54-44f7-9e3a-a88d853bc46a"
+      },
+      {
+        "uuid": "b2881a75-41ad-4e8b-9b67-4419b13672ff",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c84",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553219,
+        "id": "f9e65d26-113a-41ad-b432-c5c4010a824c"
+      },
+      {
+        "uuid": "b931a123-f576-4b96-8c2d-48f5baca037c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c85",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553219,
+        "id": "9790c17e-7033-4b29-9a53-89ced67a828f"
+      },
+      {
+        "uuid": "96b2aabc-eb65-4706-8ac3-124487a2e93c",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c86",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553219,
+        "id": "3c50e40e-a31e-4f62-ba24-f18da6a79933"
+      },
+      {
+        "uuid": "df8dba77-732a-4528-81f8-18f932eb48c3",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c87",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553219,
+        "id": "fd795a3b-f5e7-46ab-ac82-25ba0de637d4"
+      },
+      {
+        "uuid": "d515d95e-1dca-4561-be55-a7c45412ea79",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c88",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553219,
+        "id": "c43e680d-a2c8-446e-a6c5-f2e6db7ddfa0"
+      },
+      {
+        "uuid": "b1fe5989-4845-4b92-bd18-70013658b69b",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c89",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "ec06dd92-ceb2-4cc4-9cfe-532b04661d30"
+      },
+      {
+        "uuid": "c90b0f7a-fe5c-46d7-8b9d-247bdcefd8ea",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c90",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "4cdeb66a-767c-4cf4-ac94-7a9b90c4804a"
+      },
+      {
+        "uuid": "26310b7f-8618-4b20-a3e7-204792811485",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c91",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "28e978ce-5c52-4fa5-95c1-bcd237b33d7d"
+      },
+      {
+        "uuid": "4cc4d42d-3f2f-42b0-8a8e-44e66d65c0e9",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c92",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "e4d5d2c5-5d43-41de-b2ce-ed7932b5a552"
+      },
+      {
+        "uuid": "2eee9400-489c-49d9-a927-99f9c37922bd",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c93",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "77136ff9-ab80-4c6f-b78d-175b3c06f80c"
+      },
+      {
+        "uuid": "a19cc89c-39f2-4d3c-88bf-dcb9dad9bd44",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c94",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "9bc9a469-33f4-48f6-bf1c-0371bd5abad9"
+      },
+      {
+        "uuid": "6f147db1-149e-40de-beca-c066f558575f",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c95",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "4939ab1b-4e53-4f52-aa52-f5f8ed947e2f"
+      },
+      {
+        "uuid": "1a572f76-cccc-47c9-93ec-4583bd90c13f",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c96",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553220,
+        "id": "f5f30f1d-d9b5-4601-8afc-d352b0af6d13"
+      },
+      {
+        "uuid": "ce2193b9-e8ea-472f-8783-dae149cda0f6",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c97",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553221,
+        "id": "6766d552-7edb-49d5-a126-fcf91b1cf01e"
+      },
+      {
+        "uuid": "46fe6ad8-d236-48d0-8bf0-74570362f3e9",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c98",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553221,
+        "id": "b55cd823-7f0a-4a76-8c8a-50a5ccbb4863"
+      },
+      {
+        "uuid": "517aec8b-06c9-43a7-87ed-9622ba1fda74",
+        "type": "ledger.bl7-1787861553165.a",
+        "source": "bl7-1787861553165.c99",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787861553221,
+        "id": "93bc8c6a-4a42-4d7e-8f15-b7860eca1b7a"
+      },
+      {
+        "uuid": "ea0abf5d-07c4-4b09-abc5-4b66f43394fd",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-28e923a9",
+          "branch": "main",
+          "parentId": "vtm-75e17fad"
+        },
+        "source": "versionium",
+        "causedBy": "9731596e-60d3-486c-93f0-43d7936866b5",
+        "ts": 1787862460399,
+        "id": "26cff107-adc7-438c-a1ec-b418479abede"
+      },
+      {
+        "uuid": "b50925cf-8dc2-4649-9d6d-9dd1257b8c6e",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-5a291636",
+          "branch": "main",
+          "parentId": "vtm-28e923a9"
+        },
+        "source": "versionium",
+        "causedBy": "a09de2bf-af8b-4898-b134-486cdd7571da",
+        "ts": 1787862460409,
+        "id": "290aeeac-3997-45da-b336-210dc38f5225"
+      },
+      {
+        "uuid": "7c2f5d82-fb2e-4362-8e68-021c67a6711d",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-00224c52",
+          "branch": "main",
+          "parentId": "vtm-5a291636"
+        },
+        "source": "versionium",
+        "causedBy": "25239e48-8d60-4990-8bde-cb40b9647653",
+        "ts": 1787862460409,
+        "id": "ca10865b-3d30-49d4-b3df-fd4aa42a0ba3"
+      },
+      {
+        "uuid": "41968efc-978d-44a0-83bd-97f6a9c96b94",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-43e9af4d",
+          "branch": "main",
+          "parentId": "vtm-00224c52"
+        },
+        "source": "versionium",
+        "causedBy": "4c38c7a6-4623-491e-a01c-cc58cba0c505",
+        "ts": 1787862460410,
+        "id": "64a06c30-1b6f-48ae-8fcb-fca838f85be6"
+      },
+      {
+        "uuid": "c440ae6f-a618-4706-8016-b179c4876886",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-0ba9d461",
+          "branch": "main",
+          "parentId": "vtm-43e9af4d"
+        },
+        "source": "versionium",
+        "causedBy": "fbd98682-d105-43ff-9969-9b01046863e5",
+        "ts": 1787862460410,
+        "id": "5b5b697d-79f6-461c-8e25-249dd7071de6"
+      },
+      {
+        "uuid": "54c558e9-bc22-4ad0-9d78-288939314628",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-2f20a01f",
+          "branch": "main",
+          "parentId": "vtm-0ba9d461"
+        },
+        "source": "versionium",
+        "causedBy": "51ab364e-9b3a-4562-989e-bf979dc0867f",
+        "ts": 1787862460413,
+        "id": "2b568c1c-349b-43ce-b67a-ae59a57e208b"
+      },
+      {
+        "uuid": "88164e1f-c37b-4757-aecc-f8344d36ea42",
+        "type": "ledger.cortex.registered",
+        "source": "cortex.gaps.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "healing",
+            "monitoring"
+          ],
+          "detail": "List open gaps with severity and friction score",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862462608,
+        "id": "af0ae84f-e2f1-4792-82c0-559d3cfb1f01"
+      },
+      {
+        "uuid": "83b69423-aefc-410e-8e5c-a130233ac516",
+        "type": "ledger.forge.registered",
+        "source": "forge.patch",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "build",
+            "repair"
+          ],
+          "detail": "Apply a targeted patch to a module",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862462620,
+        "id": "324b5559-8eca-40b4-8ea8-4cc976bfb740"
+      },
+      {
+        "uuid": "da768991-4c3d-4c6e-a117-af6de29780c2",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "liminal"
+          ],
+          "detail": "List all five interstitial spaces",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862462621,
+        "id": "6500278f-2276-40ad-a99a-05593b6235c7"
+      },
+      {
+        "uuid": "80629b57-4529-403e-a7e1-d4eba59453b9",
+        "type": "ledger.cortex.updated",
+        "source": "cortex.gaps.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "healing",
+            "monitoring"
+          ],
+          "detail": "Updated description",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862462622,
+        "id": "6afc48d4-5d41-4860-9251-7ef9995c20f0"
+      },
+      {
+        "uuid": "3df41f8b-5eb6-47ef-82b3-8d52b84c4ffd",
+        "type": "ledger.guardian.registered",
+        "source": "guardian.ncp.status",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Guardian NCP provider status",
+          "causedBy": "guardian",
+          "session": null
+        },
+        "causedBy": "guardian",
+        "ts": 1787862462623,
+        "id": "37cd0046-8b74-4cbb-ba86-229752277e91"
+      },
+      {
+        "uuid": "f9c078ea-59a1-4437-9278-e7cf198b9187",
+        "type": "ledger.forge.registered",
+        "source": "forge.old",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "build",
+            "repair"
+          ],
+          "detail": "Old forge command",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862462626,
+        "id": "5b3ba6c4-28e9-48c4-bc2e-16ecb9f09e9d"
+      },
+      {
+        "uuid": "f328f715-ceab-4e1f-af8e-444e62a1ca9f",
+        "type": "ledger.test.registered",
+        "source": "test.event.check",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Test event emission",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862462631,
+        "id": "2c925b8d-23d9-439b-83f3-46657541cd8d"
+      },
+      {
+        "uuid": "a8228573-6edf-45f2-b976-d393dbc83501",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.show",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Show one interstitial space",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787862462632,
+        "id": "7f018f53-1a3a-4608-aeb3-a74f23a095d0"
+      },
+      {
+        "uuid": "82a8820a-5d92-4e2d-a93f-e6c5a8cf3049",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.hold",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Manually inject unresolved item",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787862462633,
+        "id": "2d53a2e5-8bb4-430a-949a-69849a0a5ae1"
+      },
+      {
+        "uuid": "52c45298-1336-4ecc-9bf2-c930a9f56acb",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.resolve",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Close an interstitial item with decision",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787862462634,
+        "id": "e732aa87-d780-44ca-a2f3-f76f02373128"
+      },
+      {
+        "uuid": "682e5aea-4b90-43d3-b853-b6539eff5f7a",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c0",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543573,
+        "id": "cf78a514-bcbc-4f0d-b209-da23d3821512"
+      },
+      {
+        "uuid": "8e834ead-58df-4eed-916b-933ff7a25f7e",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c1",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543595,
+        "id": "27c87ace-f6d3-4973-9d67-50a91a4e577a"
+      },
+      {
+        "uuid": "c00a5854-795d-4291-8d67-ab74c069b600",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c2",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543595,
+        "id": "297c3edc-9fcd-404a-b425-810bcaa010c7"
+      },
+      {
+        "uuid": "b59240be-58b5-4717-ab0f-d8fd7a57a704",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c3",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543597,
+        "id": "661b942f-d985-44fa-8795-176385a37640"
+      },
+      {
+        "uuid": "ede1ea0f-090e-4c4f-9b18-943c861c42e4",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c4",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543597,
+        "id": "26f1e318-4b39-4f54-bdef-b7fef3786a3d"
+      },
+      {
+        "uuid": "4b935879-53a3-4d7d-94e6-0e425bbcb739",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c5",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543599,
+        "id": "da2c23f9-89d0-4806-9849-1461472cb08d"
+      },
+      {
+        "uuid": "5a14333e-8bd6-4f5e-bd79-aeb9c2c397c6",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c6",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543600,
+        "id": "4850e910-b9a1-417c-9ee2-b0bb46d506d0"
+      },
+      {
+        "uuid": "106087b7-81b0-4dea-bfc4-cd7bbdbb4412",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c7",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543600,
+        "id": "e24a6880-fe65-41d3-a82a-15a9cc27211a"
+      },
+      {
+        "uuid": "409e5c67-fd17-4f3b-ad97-316e16ef2f2c",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c8",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543600,
+        "id": "7f86f025-86e0-461d-a570-87f762b0d292"
+      },
+      {
+        "uuid": "66da1c59-5885-4c82-8b36-24fdca60c075",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c9",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543601,
+        "id": "6c497d21-e64e-410b-bbf4-a425dc17e919"
+      },
+      {
+        "uuid": "a03307df-8a25-43e5-8df9-3032f9ffc32b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c10",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543601,
+        "id": "c05856bf-ddf3-4c43-a61d-17a779c179cf"
+      },
+      {
+        "uuid": "3315503a-7994-4857-94de-de98e46f62db",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c11",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543601,
+        "id": "e1e9190e-a3c2-45d4-91ec-da8482c35128"
+      },
+      {
+        "uuid": "23849ff6-b745-42c3-a234-3b3d979c6c83",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c12",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543601,
+        "id": "02bc744f-1992-4826-8af6-c4e0f109bdf2"
+      },
+      {
+        "uuid": "96dd1a80-d63d-4755-907c-d68f383372ce",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c13",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543602,
+        "id": "249b9a60-df40-4c4a-8d63-6adba7801914"
+      },
+      {
+        "uuid": "c78216b1-9bc4-4e57-be80-3c983464bd7d",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c14",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543602,
+        "id": "5472b153-2ca4-4d67-a474-5b97b63e580e"
+      },
+      {
+        "uuid": "76da7435-c9ad-42b9-881c-505a71fe2ef6",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c15",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543602,
+        "id": "e087403d-fde1-4365-af64-229df840435d"
+      },
+      {
+        "uuid": "68bfc273-0b26-4300-99ab-86f570c135e7",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c16",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543602,
+        "id": "c13b1fef-660c-4497-ac77-c7a9e50fa075"
+      },
+      {
+        "uuid": "8bd24f5a-1747-43b7-8efa-95abb892851a",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c17",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543602,
+        "id": "4b019b5a-2ff4-437a-a462-087476352fba"
+      },
+      {
+        "uuid": "c3fcc081-30da-4706-8363-3eb2f8bcb475",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c18",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543603,
+        "id": "6652a6bd-f771-4d9f-b1ab-956dc1c56775"
+      },
+      {
+        "uuid": "20e656e3-0c83-413f-a021-e28b1f9ee63b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c19",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543611,
+        "id": "19fa77d8-d5aa-430c-abe1-69b4c8f1eae8"
+      },
+      {
+        "uuid": "5409e0fc-34a9-4500-a238-0a6cd92da5c7",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c20",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "c668f56a-e4db-4f0a-ba47-e7eb733c3f2d"
+      },
+      {
+        "uuid": "893f2772-9faf-4fae-9261-8e0ffef34c34",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c21",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "79d47ccd-2fbf-4883-a3f3-9b01d13897d7"
+      },
+      {
+        "uuid": "454ac838-87d7-4bd8-acf3-70e1cfa0e1d7",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c22",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "00b255d9-2988-4315-b44d-16e58927a747"
+      },
+      {
+        "uuid": "7b279ed3-ad24-40ec-beb5-da88c498397b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c23",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "69e52968-3e2a-44f1-bac9-d8318b9b0eb3"
+      },
+      {
+        "uuid": "84edb89f-8676-4308-a5e2-7eac6d62829b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c24",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "a32967cb-3d61-4c37-a3aa-8cb30228c500"
+      },
+      {
+        "uuid": "ab66c5e1-9ce9-43eb-afe8-d40dfbf20b4f",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c25",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "10dd03e4-334a-46ba-9626-919989df528e"
+      },
+      {
+        "uuid": "3f512f98-7af5-4fc3-8fc7-dda106d9ac20",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c26",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "0bf55fad-7a29-491d-84da-30ad7cedce06"
+      },
+      {
+        "uuid": "f394d932-47b8-41e8-8efd-2607ac766e16",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c27",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543612,
+        "id": "a751d9f9-711c-4649-b2d2-ae973ff65d52"
+      },
+      {
+        "uuid": "bb130dcc-661d-4696-baf0-815169db3c2b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c28",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543613,
+        "id": "d08914b3-0342-49ce-b6ec-9893fe6f145d"
+      },
+      {
+        "uuid": "e48750c3-eb48-4320-828a-1ba2c43ef17a",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c29",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543613,
+        "id": "64fcb691-edaf-4be5-899a-22dd85063c4d"
+      },
+      {
+        "uuid": "986ddc58-fdaf-4a29-8261-3852f622b4b9",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c30",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543613,
+        "id": "00fd0cc1-a02b-4718-a20f-41c5043b47fc"
+      },
+      {
+        "uuid": "6631487a-00eb-46e2-b8c2-cdd8f026f841",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c31",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543613,
+        "id": "fe6018ea-abba-4c06-b689-bded70d140e5"
+      },
+      {
+        "uuid": "367fef19-0839-4a4f-9aa8-cddea72c3ac6",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c32",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543613,
+        "id": "11b0d8aa-6765-428f-8ad5-235a5c0df102"
+      },
+      {
+        "uuid": "1236614f-b400-4a5d-be03-e056e019d7cb",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c33",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543613,
+        "id": "1ec2e99c-4ebb-4308-b971-8d7f1948411e"
+      },
+      {
+        "uuid": "e8801567-310c-4a8a-96ef-2dc91dd65b28",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c34",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543613,
+        "id": "cca1b136-3237-4127-b50b-08a8855c37cd"
+      },
+      {
+        "uuid": "d5b1a33f-67e0-40df-a99d-b7a5502b3cfd",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c35",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543614,
+        "id": "d396c50d-2431-4b54-a937-91edbc2c8bfd"
+      },
+      {
+        "uuid": "a65536aa-7aac-48cf-9d78-548b1e76ad38",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c36",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543614,
+        "id": "5d3cd929-469a-4ebc-9c63-937362cd6e7b"
+      },
+      {
+        "uuid": "75743473-c846-447e-b9fb-47fa444f9040",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c37",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543614,
+        "id": "68317cae-d205-4e38-adba-9df716041908"
+      },
+      {
+        "uuid": "beea69df-c236-4119-be7e-15d5ae834133",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c38",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543614,
+        "id": "4f7c9072-bebb-418c-bb78-988fd5c86530"
+      },
+      {
+        "uuid": "da824484-d343-4c67-a65e-efd8c671b377",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c39",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543614,
+        "id": "fd70b300-be0c-46a3-a6a8-9fbc6c8a0bd9"
+      },
+      {
+        "uuid": "7e355201-b84d-4c09-b3ef-931e49510686",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c40",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543614,
+        "id": "b36599c5-a158-48df-80ff-6f73d1c38730"
+      },
+      {
+        "uuid": "25adc395-2b9d-40f1-9c66-79f56a1ca266",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c41",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543614,
+        "id": "d4354c1d-554f-437e-a8ff-c7bd2b2ee40c"
+      },
+      {
+        "uuid": "1ca6b626-a808-4f91-bdfb-076b57bf5d51",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c42",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543619,
+        "id": "de1c412b-10c7-4f68-a5cd-f76ec57f75a1"
+      },
+      {
+        "uuid": "c63a0718-3812-4b2b-ba24-3b1002e24b4b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c43",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543619,
+        "id": "9a51bdfb-a945-4db8-840e-af0e7ed7e3ed"
+      },
+      {
+        "uuid": "91d13661-b8ea-4b96-89c4-87b3a1943eaa",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c44",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543619,
+        "id": "c88a6ebd-6f12-4bb3-897e-ea0d6c6dea16"
+      },
+      {
+        "uuid": "ad0a2dab-c9a1-4672-b03f-552656fd4f45",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c45",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543619,
+        "id": "4916e820-b5cc-4ef4-86da-6053fe8bdb40"
+      },
+      {
+        "uuid": "8f1e09ff-7ed2-4347-99d9-06f890d250b5",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c46",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543620,
+        "id": "975b7de2-4437-4f74-95ed-850b8f44e6b0"
+      },
+      {
+        "uuid": "9827249b-bc17-4adb-aa03-0222113ca75a",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c47",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543620,
+        "id": "61b0fe9f-6ac4-4694-8738-8c56ba688972"
+      },
+      {
+        "uuid": "6f8f3f20-165f-496f-81ef-211e45c33202",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c48",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543620,
+        "id": "9a43b8b7-29b6-4bad-9006-c3df20182950"
+      },
+      {
+        "uuid": "8adfb7b1-c7de-49df-b522-d76013144064",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c49",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543620,
+        "id": "64950ff8-5799-4390-bd6f-b3213dca8b07"
+      },
+      {
+        "uuid": "f9c33a89-969f-409c-bda3-9147f97401c8",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c50",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543620,
+        "id": "27288646-c90a-4426-99c3-9954b59e4f54"
+      },
+      {
+        "uuid": "5e677d74-9b9b-4ab4-b5b3-7ea33f1fe398",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c51",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543620,
+        "id": "8853f1a0-7be3-4441-b23b-e6da6634bbf4"
+      },
+      {
+        "uuid": "6404c29a-b29a-4985-b2b3-d7cabaa12d41",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c52",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543621,
+        "id": "bd5df84f-506e-4266-9e27-374c1b9b7d19"
+      },
+      {
+        "uuid": "aace4666-434c-436a-8d29-dae1cf9dbbb2",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c53",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543621,
+        "id": "f9181a00-6574-4488-bf6f-584f8a6644a7"
+      },
+      {
+        "uuid": "08734ab8-9400-47bf-b1b3-e2748a7b7ea6",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c54",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543621,
+        "id": "d0ad78cb-aede-4102-8357-96f6cbc1f8db"
+      },
+      {
+        "uuid": "4b7970c9-6a4e-4ea0-8165-87789f57c932",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c55",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543621,
+        "id": "810cfe0d-9ec7-4ce6-a1d6-7b640167b0a7"
+      },
+      {
+        "uuid": "1b9ae16c-8f92-4ed5-a730-8d3db14c3f12",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c56",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543621,
+        "id": "5d9f1cde-c5f5-42af-adeb-5c4be80a432e"
+      },
+      {
+        "uuid": "cac119ed-7f51-43b2-91ca-fd2d912cdb1a",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c57",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543621,
+        "id": "3953e4bc-de75-4e0a-8d18-1d595504f5cd"
+      },
+      {
+        "uuid": "0c6998f0-3d8e-4d05-837f-21543cce0002",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c58",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543621,
+        "id": "40ac516c-b7d9-498a-9886-89ef95321604"
+      },
+      {
+        "uuid": "d8faa20e-160c-47bf-bcfa-8d0c4199e841",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c59",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543622,
+        "id": "7ec22f40-bae8-4fce-90ef-83bd9e77c177"
+      },
+      {
+        "uuid": "4af4445c-eb24-402b-a87e-8debcf094134",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c60",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543622,
+        "id": "5ebd67f4-ebac-4bd8-8df1-923e813d7df9"
+      },
+      {
+        "uuid": "c51bbad9-741e-4fd7-8b8f-a5f06d503fe1",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c61",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543622,
+        "id": "060a56c5-6045-4e4b-af36-1cd6072f7b83"
+      },
+      {
+        "uuid": "37f6fbcf-24a4-46dc-9b18-06b984f52715",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c62",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543622,
+        "id": "a4a3ba25-85a6-4c7f-825b-7144fc481ca0"
+      },
+      {
+        "uuid": "5b86799f-6eeb-41e9-a0f1-115848b8a382",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c63",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543622,
+        "id": "cd86f257-985b-4a16-8e5c-7e1095351c07"
+      },
+      {
+        "uuid": "7d3fea9e-e5fc-4a1d-a8f1-4c5ec3a22523",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c64",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543622,
+        "id": "cb0c6865-fcb8-416d-8d1b-c7d96ede23c0"
+      },
+      {
+        "uuid": "2345e12d-55ca-4baf-bd31-ac9830de0108",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c65",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543623,
+        "id": "0744114d-6aa0-471b-9206-04e4531c2c6c"
+      },
+      {
+        "uuid": "2c8ad0f5-4daf-48c9-84fe-687ff55afdae",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c66",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543627,
+        "id": "f1891f2d-5808-49c4-8cc0-6733ffc05aa3"
+      },
+      {
+        "uuid": "a9b07686-a7a3-47ad-9aa1-bd032c491348",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c67",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543627,
+        "id": "3781f32d-613e-4a2c-b864-109ad27c4963"
+      },
+      {
+        "uuid": "d50c11a2-f5aa-4e1c-be4d-0829d67c978a",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c68",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543627,
+        "id": "5c625ee1-17a2-4eaf-a247-397db6161949"
+      },
+      {
+        "uuid": "81e0580b-fe23-4ef6-a8df-d6ecae636d74",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c69",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543627,
+        "id": "ff5e8fc3-8d8b-4478-9c5f-d0c36c20f49d"
+      },
+      {
+        "uuid": "2f1c1cc1-24b2-4ccb-b90a-8b61f7b371c3",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c70",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543628,
+        "id": "e474bacb-10db-425c-8c0b-7b1df02e7c7c"
+      },
+      {
+        "uuid": "7e651fda-a628-4121-8ece-3c4e38266eac",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c71",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543628,
+        "id": "1ebd7b0b-d30d-4ff8-b426-f7b0cbfe2174"
+      },
+      {
+        "uuid": "06032e54-675c-4058-8a32-b04fc175d42b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c72",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543628,
+        "id": "81f646f0-c564-460b-b118-6ed28052740d"
+      },
+      {
+        "uuid": "9f9243f1-3f11-4dee-82f5-c2b3dcc1a0db",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c73",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543628,
+        "id": "1d457da4-c7f4-4eae-b46a-7d91958b4435"
+      },
+      {
+        "uuid": "06eea8ed-8f23-4445-b9a3-5b52eb245144",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c74",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543628,
+        "id": "4b23456f-0096-4e82-a5b1-42a994e957af"
+      },
+      {
+        "uuid": "f35485c1-ea1b-4df9-9995-a77b0b608528",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c75",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543628,
+        "id": "6fde275d-889e-47a3-96fc-9004b59a409f"
+      },
+      {
+        "uuid": "f3f67009-8d42-4ca7-8d26-f38f954d51b6",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c76",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543628,
+        "id": "42d0f964-bfcb-4f29-a750-6a84a56a6d95"
+      },
+      {
+        "uuid": "10c8fb2e-073c-4c61-9510-b6227b7c9717",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c77",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543629,
+        "id": "e5fa7c16-5fa4-45aa-84bf-ab29dca199a4"
+      },
+      {
+        "uuid": "cd033659-ef5a-43ca-ba01-f3d605dd4205",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c78",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543629,
+        "id": "fb781c0e-ec0b-4d53-9995-1f9c61d92935"
+      },
+      {
+        "uuid": "19881011-1db9-4b88-b4d4-556c49476ebf",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c79",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543629,
+        "id": "9cd1312d-dc79-4f67-be2a-cc7ccb87cc97"
+      },
+      {
+        "uuid": "84c9f9f2-74b6-4673-9d8d-0d58d30fef5b",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c80",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543629,
+        "id": "4e7a2e2e-9dfe-41db-8b61-bfc1de62dcfb"
+      },
+      {
+        "uuid": "93c90cc9-2a19-41c1-ba94-2ad6fd264930",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c81",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543629,
+        "id": "eb5161ca-73a7-4dc9-a285-c897fbf8d5dc"
+      },
+      {
+        "uuid": "47ed83e5-ec62-4abd-a863-b17b5d2c3eb4",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c82",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543629,
+        "id": "e0ef3fcc-28be-4e42-88b9-13c23bd0c907"
+      },
+      {
+        "uuid": "4d3377e7-dfca-4607-b7db-14ce33d0931f",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c83",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543630,
+        "id": "d304a05f-1b1a-4237-9ff3-043189dbd7f5"
+      },
+      {
+        "uuid": "21a18931-dbb9-4bcb-91cf-c5861f86d320",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c84",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543630,
+        "id": "c673ba8c-05c8-41d1-8016-a38fd70c8cba"
+      },
+      {
+        "uuid": "d1c88029-2f1f-413a-a064-796083e68e93",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c85",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543630,
+        "id": "ccd03920-089e-47f6-be57-ab6fc4e170d9"
+      },
+      {
+        "uuid": "e2810c67-a9b2-4ef9-bbc8-37003c4a305a",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c86",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543630,
+        "id": "b4c3f5c1-e5ff-4cd4-b99d-a417d65628ea"
+      },
+      {
+        "uuid": "03ebed91-57a5-40f3-8f8c-e9bdf83ad4b7",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c87",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543630,
+        "id": "1f485cfb-2ae8-4db0-bf6c-25a9598698af"
+      },
+      {
+        "uuid": "92abb705-0dbf-4cd0-8354-7617bd9d9595",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c88",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543630,
+        "id": "41051c84-8327-4e32-97c3-df1ee82d72f0"
+      },
+      {
+        "uuid": "fe69a94d-3402-4201-8d9e-7298531faa63",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c89",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543630,
+        "id": "b81389b0-a0ab-4d0d-abe9-9aca4fc043e9"
+      },
+      {
+        "uuid": "c838da22-d8dc-4009-9e4d-5c0d3992e8f2",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c90",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543631,
+        "id": "18538fc0-7c15-407c-8690-5151f1f1c271"
+      },
+      {
+        "uuid": "630009ee-5e16-458b-82d1-af01a024cbed",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c91",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543635,
+        "id": "646ba539-f1e4-4e37-baf5-0002c5fb879e"
+      },
+      {
+        "uuid": "162477ec-ed88-46cb-93e6-0bd941271d85",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c92",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543635,
+        "id": "e90b5be9-d8ca-4fa9-b5c5-a3f13c6aa52e"
+      },
+      {
+        "uuid": "0a717064-2a64-48aa-8251-1a60e459f7b6",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c93",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543635,
+        "id": "580bdfd5-171b-47e9-b9d6-2b7312d130ec"
+      },
+      {
+        "uuid": "a76b4b2b-8343-461f-91fe-015aa461c5f1",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c94",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543636,
+        "id": "cb1e6567-d66c-4d6e-99de-c5c2caed1883"
+      },
+      {
+        "uuid": "902a0be0-5cf2-41e9-8903-6e7d927ca9b6",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c95",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543636,
+        "id": "f92cf2de-26cf-4e00-8ac2-d35fcdf193ce"
+      },
+      {
+        "uuid": "ca10b673-3c07-4a90-a424-ed25834db509",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c96",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543636,
+        "id": "92f63441-730c-4c29-ac30-b2d3646b5be6"
+      },
+      {
+        "uuid": "ce25a960-2890-402a-b75e-1c74fdfdf4d2",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c97",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543638,
+        "id": "019de972-f8f1-4589-ae65-10fcf3d0b209"
+      },
+      {
+        "uuid": "0e2e1eec-ab84-461c-b690-11bdb90676ef",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c98",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543638,
+        "id": "0b7158ed-d280-4c29-841a-071671966d8e"
+      },
+      {
+        "uuid": "52d0cff1-0e22-437f-a925-15c99f5ef310",
+        "type": "ledger.bl7-1787862543572.a",
+        "source": "bl7-1787862543572.c99",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787862543638,
+        "id": "67959a25-131f-4173-a6eb-a47862f7da40"
+      },
+      {
+        "uuid": "fa1e86d3-caaa-40f9-8143-fb53e2e520fb",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-ab544a70",
+          "branch": "main",
+          "parentId": "vtm-2f20a01f"
+        },
+        "source": "versionium",
+        "causedBy": "3aa1b28d-730f-4d9d-bca8-125dec89bf74",
+        "ts": 1787863625941,
+        "id": "b75595fb-fd71-40a4-83d3-0cc5e5a806fe"
+      },
+      {
+        "uuid": "d5636b8e-5223-4337-833f-c309b7b11e27",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-c0f699d9",
+          "branch": "main",
+          "parentId": "vtm-ab544a70"
+        },
+        "source": "versionium",
+        "causedBy": "0aceee3c-a62b-43c6-acbb-a60a5e4f1f1c",
+        "ts": 1787863625951,
+        "id": "252212d9-ab37-43d3-bdf9-558f770341ae"
+      },
+      {
+        "uuid": "50df7546-5298-46a6-b100-14f0b1f5d8be",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-be7535df",
+          "branch": "main",
+          "parentId": "vtm-c0f699d9"
+        },
+        "source": "versionium",
+        "causedBy": "ff125d4d-4f20-48c7-ad75-a99d565c3ccf",
+        "ts": 1787863625951,
+        "id": "f4e4b36d-acd0-40b9-b53c-326a1cc2694c"
+      },
+      {
+        "uuid": "3ecd6f57-70ca-45de-896a-0f001ad90679",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-9d8068c2",
+          "branch": "main",
+          "parentId": "vtm-be7535df"
+        },
+        "source": "versionium",
+        "causedBy": "c92c4886-fc06-4aca-b4c5-80dbdd2e105b",
+        "ts": 1787863625952,
+        "id": "cd61f3e6-9393-4f9c-b3cc-28f6fd183bba"
+      },
+      {
+        "uuid": "a28db5b7-3324-4d35-83c1-f637d3e2b298",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-32b95825",
+          "branch": "main",
+          "parentId": "vtm-9d8068c2"
+        },
+        "source": "versionium",
+        "causedBy": "7e4aadba-291e-45da-af40-d74169644664",
+        "ts": 1787863625952,
+        "id": "b1648525-92aa-4c01-a2e9-c8c1cb9fac7f"
+      },
+      {
+        "uuid": "9bb49286-1676-4c6d-98ba-3591276f8ad5",
+        "type": "versionium.committed",
+        "payload": {
+          "commitId": "vtm-456fe31f",
+          "branch": "main",
+          "parentId": "vtm-32b95825"
+        },
+        "source": "versionium",
+        "causedBy": "222cd5b3-ebe0-4fce-8cd3-14f8db48cf6a",
+        "ts": 1787863625955,
+        "id": "82883a8b-87f1-4fd7-9318-b239c799291b"
+      },
+      {
+        "uuid": "ea5d7808-8d3b-47f6-a69d-d66aeb3a9618",
+        "type": "ledger.cortex.registered",
+        "source": "cortex.gaps.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "healing",
+            "monitoring"
+          ],
+          "detail": "List open gaps with severity and friction score",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863628184,
+        "id": "76c3f334-e00f-4c6a-a026-ebb602068a9f"
+      },
+      {
+        "uuid": "c3e67487-b5f5-4862-8e34-9bd6813c76bb",
+        "type": "ledger.forge.registered",
+        "source": "forge.patch",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "build",
+            "repair"
+          ],
+          "detail": "Apply a targeted patch to a module",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863628197,
+        "id": "5b2a7810-5502-48b0-b06f-119aceaeba04"
+      },
+      {
+        "uuid": "b1d445dd-ec9d-4361-95ea-2469369327ae",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "liminal"
+          ],
+          "detail": "List all five interstitial spaces",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863628197,
+        "id": "d423e220-2d10-424f-a05a-e1b395409bc3"
+      },
+      {
+        "uuid": "127d5079-9402-41a5-addd-c1e75a2b4b35",
+        "type": "ledger.cortex.updated",
+        "source": "cortex.gaps.list",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "memory",
+            "healing",
+            "monitoring"
+          ],
+          "detail": "Updated description",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863628198,
+        "id": "29ecb591-c375-4a75-9a75-b5f945108f15"
+      },
+      {
+        "uuid": "f6110cd1-ac56-4b7b-9664-9a0f2caac9db",
+        "type": "ledger.guardian.registered",
+        "source": "guardian.ncp.status",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Guardian NCP provider status",
+          "causedBy": "guardian",
+          "session": null
+        },
+        "causedBy": "guardian",
+        "ts": 1787863628200,
+        "id": "6c4f6d26-90e2-4b08-9143-4fcda1f0bfa9"
+      },
+      {
+        "uuid": "f61fefc6-6a45-4f8f-8826-f77aff73e6d2",
+        "type": "ledger.forge.registered",
+        "source": "forge.old",
+        "payload": {
+          "status": "ok",
+          "tags": [
+            "build",
+            "repair"
+          ],
+          "detail": "Old forge command",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863628203,
+        "id": "eebc46cc-d360-41bd-af42-776cfc1e2f32"
+      },
+      {
+        "uuid": "84823412-7587-4d34-ad66-f652ffa9eb72",
+        "type": "ledger.test.registered",
+        "source": "test.event.check",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Test event emission",
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863628208,
+        "id": "c920502a-8bf0-43ea-bc52-ab37d23e3aac"
+      },
+      {
+        "uuid": "f077804e-09ab-4e4a-b6c4-c52d9dc71515",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.show",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Show one interstitial space",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787863628209,
+        "id": "7d9e90fa-5366-4b57-9ea7-43d15cc9a8b1"
+      },
+      {
+        "uuid": "863ef439-5bae-43a6-a4cc-a70a29d30bc1",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.hold",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Manually inject unresolved item",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787863628210,
+        "id": "24cf41f8-2af0-4f35-9c5f-75e56ad0740d"
+      },
+      {
+        "uuid": "d2a73b0d-9ab5-4e77-bcde-ba746faad1f1",
+        "type": "ledger.liminal.registered",
+        "source": "liminal.spaces.resolve",
+        "payload": {
+          "status": "ok",
+          "tags": [],
+          "detail": "Close an interstitial item with decision",
+          "causedBy": "liminal",
+          "session": null
+        },
+        "causedBy": "liminal",
+        "ts": 1787863628212,
+        "id": "3650daf5-b909-418e-97a5-1fcc668e3320"
+      },
+      {
+        "uuid": "dc73b564-48f8-4429-ae4f-904e410fadd9",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c0",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709013,
+        "id": "29253e4b-b034-44ba-a614-41d2620b5008"
+      },
+      {
+        "uuid": "557d44ed-05a1-4b1a-89e8-aa8d9100bb07",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c1",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709034,
+        "id": "4444900d-7451-4edb-88f9-cf7c19435382"
+      },
+      {
+        "uuid": "d1716427-6d27-4b20-af7c-8756f7bffbd9",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c2",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709035,
+        "id": "5d33ba4d-2b17-4aa0-be36-ec08d3b61f24"
+      },
+      {
+        "uuid": "41c83a73-0288-4ebb-9ae1-9a5c026f5794",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c3",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709039,
+        "id": "e09a6ac1-ffe4-481a-9783-4966cb153567"
+      },
+      {
+        "uuid": "3a009476-edbb-41fd-a239-c7c5043a9d33",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c4",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709040,
+        "id": "d309dcf3-9f0a-4892-88ae-dd7810a1e77b"
+      },
+      {
+        "uuid": "a7b4c24b-1b42-4788-87e1-c8ea6314936f",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c5",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709040,
+        "id": "ab541f4f-5619-41f3-a25a-a50aafb6c1cc"
+      },
+      {
+        "uuid": "ef62e9c9-6b19-4449-a719-35c135012ffa",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c6",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709040,
+        "id": "33443be4-255a-4b81-95d9-50386a4bfffa"
+      },
+      {
+        "uuid": "9584f9c3-e2b0-4ed1-97bf-864c081ddf07",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c7",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709040,
+        "id": "0b00057e-7ec0-4939-9ad8-5ab3a556b114"
+      },
+      {
+        "uuid": "9a77fa2a-1b9b-4054-b019-5ac7a2002f45",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c8",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709041,
+        "id": "df315265-6592-4086-a83f-177a68f13dc1"
+      },
+      {
+        "uuid": "bdea83ba-f098-44e7-8ab9-4a4b5f6940fd",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c9",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709041,
+        "id": "9c74a6d5-adc5-46b6-ba2f-fd073f6bdc15"
+      },
+      {
+        "uuid": "888872d9-0d4a-4fce-949a-a00d2d28cbaf",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c10",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709041,
+        "id": "b590cb8f-6422-4b3b-bd15-9505458526c6"
+      },
+      {
+        "uuid": "acf8b358-fbc3-43eb-baf4-1f56b51c5220",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c11",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709042,
+        "id": "dcbfbfcd-39b3-4980-bd19-52ff7734ddf6"
+      },
+      {
+        "uuid": "356b1828-73fa-4f85-b0f2-436ff1f65c6c",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c12",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709042,
+        "id": "8f3b912f-7a42-4565-bcdd-4248214040f9"
+      },
+      {
+        "uuid": "5f2641ca-30c1-4a0b-9aa6-d53132e5cbb5",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c13",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709042,
+        "id": "200e4e07-7aaf-4e1c-93e3-9b4132131841"
+      },
+      {
+        "uuid": "9da55ec6-86eb-4d96-abc2-0a8627aa9496",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c14",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709042,
+        "id": "b1000c03-968b-4711-9eee-1e3de0cd589b"
+      },
+      {
+        "uuid": "cf0621ae-aaf7-4558-8b34-05730b611349",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c15",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709042,
+        "id": "db67e4fa-e5d0-4489-9349-214bf3fb957a"
+      },
+      {
+        "uuid": "c886efc2-2c93-4900-bd77-5f945c7430e9",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c16",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709042,
+        "id": "7dcb75a1-4457-4214-8922-15d6505d6b72"
+      },
+      {
+        "uuid": "4c2ce80c-641f-408b-bcb8-021305a6e1d9",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c17",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709042,
+        "id": "f5cd134e-8709-4097-a72b-0fe65cfa2b58"
+      },
+      {
+        "uuid": "f85e50ca-d898-44c2-8796-424056143bdf",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c18",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709043,
+        "id": "256040f7-a54c-41fb-b14f-b538ec1b8f30"
+      },
+      {
+        "uuid": "8dab8555-a66f-4382-a6ee-6511aa7dd0b5",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c19",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709050,
+        "id": "7215a556-3d80-4c00-8c3f-dc338e0a8fda"
+      },
+      {
+        "uuid": "f08038a2-746a-4c06-9f4a-818a4b16d367",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c20",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709051,
+        "id": "d8552253-6adc-43ba-8012-4d4f7b00005d"
+      },
+      {
+        "uuid": "9cd58ad5-656b-404b-8626-80938b1cb4ba",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c21",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709051,
+        "id": "82264625-a2a8-4659-806f-d8537276c006"
+      },
+      {
+        "uuid": "25decdb2-d882-4fd8-a3a6-d68d8c9aa0f9",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c22",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709051,
+        "id": "fb252284-3d50-4729-86c0-4cd505d45971"
+      },
+      {
+        "uuid": "f3eaa11d-4cdc-4c10-975f-342ab7c5e66a",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c23",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709051,
+        "id": "fd821539-219a-490a-9c21-523f45865a24"
+      },
+      {
+        "uuid": "7d69ff31-0703-47f0-8552-9bbe37cc58ca",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c24",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709051,
+        "id": "b37f0be3-d9d0-4dfa-a9b9-2af756aa7f4b"
+      },
+      {
+        "uuid": "d15278c2-db6e-45eb-8f6f-5aab5fb11bd2",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c25",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709051,
+        "id": "a6d3092d-7441-4923-b8d9-d6e50449d2e1"
+      },
+      {
+        "uuid": "73d9dddb-3fd5-4802-b966-445d2323dce1",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c26",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709052,
+        "id": "abbc0305-ee6c-448e-addc-021bc73d37a5"
+      },
+      {
+        "uuid": "2c1a0bed-aa2a-481e-9d23-032615521352",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c27",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709052,
+        "id": "3a30d148-0543-4648-a440-bd00ec7da9bb"
+      },
+      {
+        "uuid": "8555558c-b56d-403d-9551-09c3d41d8152",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c28",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709052,
+        "id": "1285a531-3756-46c1-9bc9-b4e14891d7b8"
+      },
+      {
+        "uuid": "e4eeb3e8-47d1-4e80-aa78-0891f49c134c",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c29",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709052,
+        "id": "c3643f19-2480-45c9-b3e7-e37fb6c7f2d6"
+      },
+      {
+        "uuid": "9657bf39-3637-4996-809a-54325d12c3c3",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c30",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709052,
+        "id": "8a6883a7-1d2d-42ec-a61c-4c1078eec3e9"
+      },
+      {
+        "uuid": "7c23ac72-e8f4-4cae-a243-7f7fba21b9b8",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c31",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709052,
+        "id": "dbe9ec91-9b88-4f3a-8cdd-9d72c5ba5bfc"
+      },
+      {
+        "uuid": "a4dc8934-b3cd-4ccb-8a67-f4ccc0915eb6",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c32",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709053,
+        "id": "293c1c09-9855-40cc-ad95-4f03b4a5980e"
+      },
+      {
+        "uuid": "34611e99-76c7-4445-ac67-b409ddca6aa2",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c33",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709053,
+        "id": "3994c777-8924-4c98-9a63-fe56facbd277"
+      },
+      {
+        "uuid": "a75148da-c339-430f-a6e8-6fe0f6758f52",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c34",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709053,
+        "id": "6cbf55f3-d95e-45d2-b41d-369327714ce2"
+      },
+      {
+        "uuid": "922a923a-1c6c-44ac-abb8-3382693aacef",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c35",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709053,
+        "id": "f4179cc9-99f5-4825-bf17-a2d9b59051b4"
+      },
+      {
+        "uuid": "98f91d5c-26a3-4673-bd77-b26f3b9f3525",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c36",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709053,
+        "id": "1f686b04-8be8-4f30-b0fb-169a1ba9b591"
+      },
+      {
+        "uuid": "41da4dc4-b6a7-411b-aaa3-85d4b96bbe31",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c37",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709053,
+        "id": "a1ecbfec-d624-45d4-87fa-3dea2ba4324a"
+      },
+      {
+        "uuid": "19d104a9-d9ce-4a76-8348-fb6575b2c6e2",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c38",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709054,
+        "id": "4dc5d2fc-174f-4f8b-837f-43e400552e30"
+      },
+      {
+        "uuid": "1f379021-a531-44f1-9f24-292617b4c1ff",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c39",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709054,
+        "id": "4a68694a-43b9-42b0-aa87-63240b51cef0"
+      },
+      {
+        "uuid": "45cedc90-c983-4e6a-b9e3-15a3c34907ff",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c40",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709054,
+        "id": "b2d7fe28-3862-4bce-9edf-dd57c77358b4"
+      },
+      {
+        "uuid": "459ac558-e980-4d9b-bc91-08053513791e",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c41",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709054,
+        "id": "a910de92-bb20-4c9b-b29c-6353d319a6f1"
+      },
+      {
+        "uuid": "ab11a0d2-e7b4-417c-b9ef-b5000cb65ae3",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c42",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709054,
+        "id": "5c1a4d47-bb87-4073-93dd-0f46602d342a"
+      },
+      {
+        "uuid": "9bb684ad-ab47-405d-9162-5f3365a60e78",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c43",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709055,
+        "id": "9aa89437-9dab-4809-8ac9-5cfc1699233b"
+      },
+      {
+        "uuid": "f8331e93-229a-4ea8-b966-a138f47eeb02",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c44",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709059,
+        "id": "5cb3c96b-dc82-46da-a8b9-30b0739f571c"
+      },
+      {
+        "uuid": "0ec8e727-4bbd-4d37-a814-b0253ded054f",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c45",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709059,
+        "id": "0523bf73-d7d6-4660-b238-f02d681bce97"
+      },
+      {
+        "uuid": "be41a8ce-2805-4c51-9e61-3b45befa50bc",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c46",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709059,
+        "id": "59d9385d-6c53-4950-a3e6-cdee11b8ed37"
+      },
+      {
+        "uuid": "2aac699c-d389-4d51-a0fe-e0c827ceaca9",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c47",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "59f303d2-2c8d-4b63-92ee-95eda38750cd"
+      },
+      {
+        "uuid": "78eb6350-7abd-47f3-9172-ea73d503ce98",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c48",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "b030d088-ffce-4451-bbf0-8db65b012604"
+      },
+      {
+        "uuid": "d2381626-719f-42e4-800d-76a3cfceb2e2",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c49",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "b687a4d7-382d-4d78-9159-b78c793861a5"
+      },
+      {
+        "uuid": "b519572e-5979-42bb-8455-f97fcb21690e",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c50",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "ff02d72c-a0e6-45ca-a780-c57347f5ebd2"
+      },
+      {
+        "uuid": "10084814-3430-4ea1-ae64-716b02877b8d",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c51",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "55a49fef-3a7c-43d3-935c-72478e6bc8a2"
+      },
+      {
+        "uuid": "f4b201e5-75b6-4c4f-b410-d415a9821a0a",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c52",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "17d5b216-193b-4dc9-9b24-02473670ddd8"
+      },
+      {
+        "uuid": "d601505b-ceb8-4a3b-a483-ef34ea99b6dc",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c53",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "db05c974-1c1b-45e7-9d4f-ba1340e60c54"
+      },
+      {
+        "uuid": "8e15d33c-3dd5-4f52-8c7c-ad79cadd99e8",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c54",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709060,
+        "id": "2877ad20-f4be-4a5b-a5a0-02dd61d05dad"
+      },
+      {
+        "uuid": "97187370-3770-4818-aa3b-f16f4031f4dd",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c55",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "a7c44444-ff5a-4788-ae8e-8a55f8c9bc58"
+      },
+      {
+        "uuid": "4e760dbc-0ebb-4f6e-9ffa-6b7154acf8e4",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c56",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "36c01efe-e663-4f10-bbdd-473feb44d0de"
+      },
+      {
+        "uuid": "cde32890-bd26-474c-9a10-f58e873daf07",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c57",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "0be0d8c3-a898-42e7-92aa-b0103c7ef261"
+      },
+      {
+        "uuid": "db1bed24-dd1d-47e1-a3e8-e1e4eac8e2d1",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c58",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "e0a7cf35-4576-4265-8316-94206cce7118"
+      },
+      {
+        "uuid": "d1930732-1189-4a2e-9ac0-25cb650b377e",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c59",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "c2fbc3df-bb02-4278-9697-f49e97564258"
+      },
+      {
+        "uuid": "f1568b12-7fb4-4595-b980-d52a929d24c9",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c60",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "c4a6244e-565a-4cee-bb86-fb71cdc21623"
+      },
+      {
+        "uuid": "010c71c6-bd0b-4828-8ef3-af56a81a8519",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c61",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "67013aab-8e7b-4d1c-bd0b-1454ff619c15"
+      },
+      {
+        "uuid": "cdbb4da1-aed7-4c5e-b65f-665d74671184",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c62",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709061,
+        "id": "c21e105d-24d0-4db4-b490-5223eb41135b"
+      },
+      {
+        "uuid": "2de11ac5-d972-41a1-ac73-8c937fe8a298",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c63",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "db6abde0-67fd-4afa-8a66-96f62a25198a"
+      },
+      {
+        "uuid": "2167c839-c58f-41fa-8b16-1f0bb198bae0",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c64",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "08e28afe-42ca-452d-8347-b233562477c1"
+      },
+      {
+        "uuid": "4aa2b8d6-4675-4baf-b65f-c8d38522644c",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c65",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "6f7084da-8aa8-41fb-97ae-06a9a74eae03"
+      },
+      {
+        "uuid": "ac0ac4a7-b3ca-439f-8e44-f64a5aaecbeb",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c66",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "6376a147-0b61-4e40-a5bc-0aaed232dece"
+      },
+      {
+        "uuid": "851cb7b0-36f0-4c96-becf-658bdbff49c7",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c67",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "a3041607-fdac-48be-84b0-f4e5f75df221"
+      },
+      {
+        "uuid": "80ef6e66-f5fb-4f94-baad-0e7b93b634c6",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c68",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "785273c5-b6d1-49d2-a74a-57de7df592fd"
+      },
+      {
+        "uuid": "884baea2-d552-4629-85c5-cde61134fffc",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c69",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "f4bd12d5-d859-4c8b-a8b4-153b2bfbc4f6"
+      },
+      {
+        "uuid": "0c24ce72-ae10-4214-8e43-a336fe1f4a58",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c70",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709062,
+        "id": "f7dcaa81-8ff6-4efe-9a9b-c28b9be3ccdb"
+      },
+      {
+        "uuid": "ec4bf86d-8284-4070-8594-2e278d0cb298",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c71",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709063,
+        "id": "1fb14cb2-060c-41f4-9e3a-b96a0dacf8be"
+      },
+      {
+        "uuid": "68b49271-069d-45d8-9e65-6323012f7833",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c72",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709070,
+        "id": "af72d6a7-8bed-4a38-85cd-388e69afb5b5"
+      },
+      {
+        "uuid": "adc9cbee-e490-4795-ab12-935822acf688",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c73",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709070,
+        "id": "20ddfb43-6240-4626-8478-eb5bb36e4de8"
+      },
+      {
+        "uuid": "0e6e0df4-f4b2-4005-b688-59c55d864f71",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c74",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709071,
+        "id": "54a03bef-e614-4d7a-b86d-2d4333b7d5a5"
+      },
+      {
+        "uuid": "219eeb48-2c21-4d61-835b-3fde7917d02d",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c75",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709071,
+        "id": "714d7883-07d1-4402-baf5-801d74ce95b4"
+      },
+      {
+        "uuid": "ae9c155e-85f8-47ac-b824-cc75bafcfd7a",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c76",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709071,
+        "id": "4c40e9a4-91bf-4766-aedd-9ce15aeaee38"
+      },
+      {
+        "uuid": "bdf42960-7d2f-4b30-81b3-38cf511d5188",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c77",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709071,
+        "id": "dddd6a6f-7366-45be-8315-bc1d8c9851a9"
+      },
+      {
+        "uuid": "1b4fbf2c-57c8-491e-ad55-3c833caded50",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c78",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709072,
+        "id": "18c9c5fd-1970-4275-94a6-171a2bd8c47a"
+      },
+      {
+        "uuid": "3fef91fd-a174-4066-92f6-b9122954a315",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c79",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709073,
+        "id": "ff065731-dfcc-49da-9c8f-dfbeaa0a1c79"
+      },
+      {
+        "uuid": "1ebcac67-b13e-4439-b513-75e91107de44",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c80",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709073,
+        "id": "d5e3a43b-d67f-4557-8551-ee901b0bdfd6"
+      },
+      {
+        "uuid": "48336908-59c7-46e8-948d-734f9430bd4d",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c81",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709073,
+        "id": "c2ff4985-d610-4106-a125-70682ad15149"
+      },
+      {
+        "uuid": "2abbdc00-2224-4983-ac9f-75e1c614325e",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c82",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709073,
+        "id": "5d0bcb53-e8b3-4a76-984f-1507b1313c3c"
+      },
+      {
+        "uuid": "da778a32-a64b-4eb5-a8e5-514879618976",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c83",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709074,
+        "id": "fef16c14-0e1b-4aec-a23d-a65c41367b56"
+      },
+      {
+        "uuid": "ae35275d-7406-4cc7-a1b7-5a2d222c9076",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c84",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709074,
+        "id": "8cb646c2-d9ae-4527-9968-653fc57f19a2"
+      },
+      {
+        "uuid": "ae33768b-f0a4-4ac8-ab04-0fff0b3b6aa1",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c85",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709074,
+        "id": "487ec760-052d-434a-a7d0-132d4e00f8e1"
+      },
+      {
+        "uuid": "6482a33a-1969-4410-8539-90a941e5ca8e",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c86",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709074,
+        "id": "7e4b416b-a702-421d-bf8f-93b233bd94b2"
+      },
+      {
+        "uuid": "55efadb4-ee6c-422d-80f0-fe5c955f8474",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c87",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709074,
+        "id": "da4a03f4-7424-45d9-9249-8eb71a9630f3"
+      },
+      {
+        "uuid": "972c8b28-7053-4798-b8c3-549b4327055c",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c88",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709074,
+        "id": "7142b014-f49c-4317-9f93-eed9503ca202"
+      },
+      {
+        "uuid": "5a73f14c-e1ba-4994-b2dd-ccda9e06dbee",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c89",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709074,
+        "id": "3dde3e22-834d-4f25-aac7-d47afd9463c4"
+      },
+      {
+        "uuid": "c8edea8c-89cb-4234-818a-fd9531580d19",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c90",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709075,
+        "id": "13a2d6fd-2628-4ecf-8eb3-cf4588cb5ae2"
+      },
+      {
+        "uuid": "7eca8b9f-788b-4ed3-bcca-abf3d1587ea0",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c91",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709079,
+        "id": "819cb5d2-fec1-40b9-94d4-95b8bb538784"
+      },
+      {
+        "uuid": "4f763474-b510-4383-b49f-eba20b225088",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c92",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709079,
+        "id": "fad5aa99-a57a-46f4-96d0-e8f105229cbc"
+      },
+      {
+        "uuid": "382f099b-5a85-4079-980f-3065319cfffa",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c93",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709079,
+        "id": "5d856abd-126e-434f-9e78-e81ad4545781"
+      },
+      {
+        "uuid": "e8c78e5f-bb5e-47bd-a296-c7673980c327",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c94",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709079,
+        "id": "ae9925fd-5aeb-455f-b2c1-47cc0f8596fb"
+      },
+      {
+        "uuid": "eda46595-be8e-4f13-aa19-27dff2706439",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c95",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709079,
+        "id": "e2d35534-f0aa-46c7-81c1-b9989ca5588f"
+      },
+      {
+        "uuid": "366b4c60-7f3e-484b-891b-b84f73d126f2",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c96",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709080,
+        "id": "c021847f-79e0-447b-b90f-58d0ba718a11"
+      },
+      {
+        "uuid": "8ddac7b8-268f-4c65-8248-6a489caf8ea7",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c97",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709080,
+        "id": "8a110695-916b-4c92-9de1-c3ac96f2219b"
+      },
+      {
+        "uuid": "870f11ba-167f-4052-baee-366a858f8e4c",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c98",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709080,
+        "id": "29692aa8-cbf6-4ef2-a701-e2aabe7bfa80"
+      },
+      {
+        "uuid": "987203d9-7571-41f5-83a6-fa63cf0ac5ac",
+        "type": "ledger.bl7-1787863709012.a",
+        "source": "bl7-1787863709012.c99",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": null,
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1787863709080,
+        "id": "e28e9c10-6e45-4505-b633-05fd7535896e"
+      },
+      {
+        "uuid": "d277d532-80e8-48d6-9576-82c5fd1988a3",
+        "type": "intent.classified",
+        "source": "intent-classifier",
+        "ts": 1787863723511,
+        "payload": {
+          "intentUuid": "a1b13b78-c939-48a2-9e11-8830831587a8",
+          "verb": "unknown",
+          "domain": "general",
+          "risk_level": "LLM_REMOTE",
+          "execution_class": "GENERATIVE",
+          "confidence": 0.343,
+          "source": "USER",
+          "objectCount": 0,
+          "constraintCount": 0,
+          "lowConfidence": true
+        },
+        "id": "de3b97e4-481f-411a-8c7e-67e53c637247"
+      },
+      {
+        "uuid": "cbd394d9-a932-49f4-9138-5d6549e6055b",
+        "type": "intent.classified",
+        "source": "intent-classifier",
+        "ts": 1787863723545,
+        "payload": {
+          "intentUuid": "d1598573-5e45-4a12-b64f-2eaa9b7655a2",
+          "verb": "diagnose",
+          "domain": "general",
+          "risk_level": "LLM_LOCAL",
+          "execution_class": "AUTONOMOUS",
+          "confidence": 0.544,
+          "source": "AUTONOMOUS_LOOP",
+          "objectCount": 4,
+          "constraintCount": 0,
+          "lowConfidence": false
+        },
+        "id": "a52a96bd-e808-470f-932d-9af7f7d397da"
+      },
+      {
+        "uuid": "3e3cfc47-b941-4df4-9b7f-af3c69165239",
+        "type": "case_library.queried",
+        "payload": {
+          "signature": "general:diagnose",
+          "domain": "general",
+          "verb": "diagnose",
+          "tier": "cold",
+          "confidence": null,
+          "workingMemorySeed": null,
+          "blocked": false,
+          "reason": "no lattice edge for this signature yet — never seen, not \"always fails\""
+        },
+        "source": "case-library",
+        "ts": 1787863723546,
+        "id": "43a020e2-6333-4e0e-9349-f732ecc0090f"
+      }
+    ],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "9146c5f4-d76c-4c50-a472-b674a02b652d",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1787861470402
+      },
+      {
+        "id": "050f548a-4ef5-4411-8944-86fda68c41a6",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "5f3a087b-797d-4633-b1b0-a75e43f64890",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "e28eed59-00c1-4718-b54d-7c41b35cdc77",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "e89f169b-4eba-478f-ac66-6e645f1c379c",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "50f123f9-1b21-4411-8a9f-3f6841d7fedc",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "a949605c-62b4-4275-ab85-299b16f07810",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "d6a30d83-75db-417d-9c71-0ee5073b7692",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "9ecb6e63-bf8b-4568-b807-d00088d7c9ae",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "b329a29d-87b5-4d5c-9259-07ec3a3e0b24",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "f269b6a6-f0a8-4cb8-aacb-c3d9727aaf09",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "f4bde996-b133-4fe9-b000-7db748670a92",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1787861470403
+      },
+      {
+        "id": "3bcc329b-3c82-400d-960d-55aca1d71d77",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1787861470404
+      },
+      {
+        "id": "aa61e18d-eb26-44ce-9cc0-260a569004e4",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1787861470404
+      }
+    ],
+    "components": []
+  },
+  "hashVersion": 2,
+  "cortex_state_hash": "293b8e249ae622dec47d2e501ed70cd9829e63c153001480490e1ae3ecd702d0",
+  "prev_snapshot_hash": null,
+  "createdAt": 1787863723560
+}

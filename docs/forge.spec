@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        forge
-    version:     2.0.0
+    version:     2.0.0-spec
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-forge-v2-0000-2026-0707-jamesbrooks-001
     status:      partial — real pipeline exists end to end, three real gaps named below, not hidden

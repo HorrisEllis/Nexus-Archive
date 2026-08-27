@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        diagnostic
-    version:     1.0.0
+    version:     1.1.0
     foundation:  nexus-system-foundation@1.0.0
     port:        :7825
     uuid:        nexus-diagnostic-v1-0000-2026-0615-jamesbrooks-001

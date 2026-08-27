@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cortex
-    version:     3.3.0
+    version:     3.5.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3748
     uuid:        nexus-cortex-v3-0000-2026-0615-jamesbrooks-001
