@@ -107,6 +107,50 @@ function test(id, name, fn) {
   // a count check (hops.length >= maxHops), failure shape is
   // {ok:false, error, hops} — no refused/note/trail[].failed. Rewritten to
   // match the real, current behavior, not the old shape.
+  await test('AC-006b', '§BUGFIX 2026-08-27: REAL guardian /providers shape (objects, not arrays) reports live agents correctly', async () => {
+    // James, live: guardian's boot log showed 4 providers NCP-connected,
+    // but listAgents() always reported none live. Root cause: guardian's
+    // REAL /providers response is two objects keyed by provider name
+    // (`providers: {name: 'connected'|'null'}`, `channels: {name: {tabId,
+    // lastHeartbeat}}`) — never an array, never `.providers` as an array
+    // of objects. The old code's `.map()` on that object threw, and the
+    // catch silently turned it into a generic ok:false every time. This
+    // pins the fix against guardian's actual, real response shape (see
+    // guardian/server.js's GET /providers and guardian/lib/ncp.js's
+    // getProviders()/isConnected()), not a hypothetical one.
+    const server = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true,
+        providers: { claude: 'null', chatgpt: 'connected', gemini: 'connected', perplexity: 'connected', ollama: 'null' },
+        channels: {
+          chatgpt:    { tabId: 'tab-chatgpt',    lastHeartbeat: Date.now() },
+          gemini:     { tabId: 'tab-gemini',     lastHeartbeat: Date.now() },
+          perplexity: { tabId: 'tab-perplexity', lastHeartbeat: Date.now() },
+        },
+      }));
+    });
+    await new Promise(r => server.listen(0, '127.0.0.1', r));
+    const prev = process.env.GUARDIAN_URL;
+    process.env.GUARDIAN_URL = `http://127.0.0.1:${server.address().port}`;
+    delete require.cache[require.resolve(path.join(ROOT, 'lib', 'agent-chat'))];
+    const A = require(path.join(ROOT, 'lib', 'agent-chat'));
+    try {
+      const r = await A.listAgents();
+      assert.strictEqual(r.ok, true, 'a reachable guardian with real connected providers must report ok:true');
+      const live = r.agents.filter(a => a.state === 'live').map(a => a.provider).sort();
+      assert.deepStrictEqual(live, ['chatgpt', 'gemini', 'perplexity'], `expected the 3 connected providers live, got: ${JSON.stringify(live)}`);
+      const claude = r.agents.find(a => a.provider === 'claude');
+      assert.strictEqual(claude.state, 'registered-not-connected', 'claude is known but not connected in this fixture');
+      const chatgpt = r.agents.find(a => a.provider === 'chatgpt');
+      assert.strictEqual(chatgpt.tabId, 'tab-chatgpt');
+    } finally {
+      server.close();
+      if (prev) process.env.GUARDIAN_URL = prev; else delete process.env.GUARDIAN_URL;
+      delete require.cache[require.resolve(path.join(ROOT, 'lib', 'agent-chat'))];
+    }
+  });
+
   await test('AC-007', 'THE HOP CAP: a chain already at maxHops is refused', async () => {
     const hops = Array.from({ length: AC.DEFAULT_MAX_HOPS }, (_, i) => `agent${i}`);
     const r = await AC.ask('chatgpt', 'go', { hops, from: 'claude' });

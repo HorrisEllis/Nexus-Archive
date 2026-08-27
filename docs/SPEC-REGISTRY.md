@@ -475,3 +475,14 @@ this drop, per §8.5. Their §3.3 map is `docs/MAP-2026-08-18-pressure-and-toolk
 Map: `docs/MAP-2026-08-19-idearium-agent-pipeline.md`. No code in this drop
 (§8.5). P0 is blocked on `lib/intake.js` landing in the tree — landed this
 session, so P0 is now unblocked, not yet built (§8.5 order still applies).
+
+## §REGISTERED 2026-08-27 (§6.3)
+
+| spec | version | status | governs | last checked vs code |
+|---|---|---|---|---|
+| `docs/2026-08-27-event-taxonomy-and-brainstorm-phasemap.spec` | 0.1.0-phasemap | PHASEMAP | Per-system event taxonomy (guardian, clear-glass, orchestrator each own their own event-taxonomy.js; loom gets a read-only aggregation scanner mirroring phasemap-map.js) + sigma gates built on top; remainder of James's 2026-08-27 architecture brainstorm, cross-referenced against already-tracked phase IDs rather than duplicated | 2026-08-27 (written; 8 phases verified parsing correctly against loom/scanners/phasemap-map.js's real loadAll() before commit) |
+
+Not built this drop (§8.5) — MAPPED, NOT BUILT. Scoped from real, grepped
+fragmentation (guardian: 6 bus events, all `ncp.*`; clear-glass: 36 files
+independently emitting with no shared registry), not assumed. All 8 real
+phases (ET1-6, BR1-2) start PENDING.

@@ -1,0 +1,131 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "7afeda2f-5d10-43c0-8166-e419fb6ec214",
+  "type": "manual",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [],
+    "event_log": [],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "baef1d30-7218-4793-9c1d-b3a7c4a1ea15",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "f022d0e9-7878-4370-9721-12c44246932f",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "b30ee423-d4d2-4d16-87a5-b6b5fc1c14cc",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "1a7df8e4-fb69-4221-ac03-582035b2b893",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "168c0767-9b8b-4f95-b1cb-180928392e64",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "20f58749-83b2-4665-9bde-71ac8071723f",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "aa1d1dbf-d9e0-4c4a-81d0-fb6ae3e663d3",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "a33966c4-0e1d-410c-a54d-42a59f84b47a",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "2421c126-889f-4242-ba0c-f3aeb4414238",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1787861464510
+      },
+      {
+        "id": "10f3a982-6202-46d0-b893-855d060b1d09",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1787861464511
+      },
+      {
+        "id": "e2c1514c-40dc-45e2-8454-b153faf06ef3",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1787861464511
+      },
+      {
+        "id": "bb5da8b0-99eb-41fd-9115-f3de7ce8bb1f",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1787861464511
+      },
+      {
+        "id": "2000e130-1ddd-4616-9fe2-7220001da12b",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1787861464511
+      },
+      {
+        "id": "310bc6eb-d296-4e37-bf19-94e2c44e8edc",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1787861464511
+      }
+    ],
+    "components": []
+  },
+  "hashVersion": 2,
+  "systemStates": {
+    "guardian": {
+      "ok": true,
+      "state": {
+        "cfr_state": {
+          "coherence": 0.9,
+          "friction": 0.1,
+          "resonance": 0.5,
+          "entropy": 0.05
+        },
+        "event_stats": {
+          "stats": {
+            "real": 1
+          },
+          "baseline": {}
+        }
+      }
+    }
+  },
+  "cortex_state_hash": "e12772a6a010abaaa451774afd094263114d334e5154d99f049011c70673069f",
+  "prev_snapshot_hash": "e12772a6a010abaaa451774afd094263114d334e5154d99f049011c70673069f",
+  "createdAt": 1787861464516
+}
