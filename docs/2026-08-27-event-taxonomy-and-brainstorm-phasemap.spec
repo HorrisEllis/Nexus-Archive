@@ -219,3 +219,24 @@ spec:
         plugin architecture directly) rather than as separate new work —
         erosmancer becoming a plugin is exactly the kind of thing that
         phase exists to standardize.
+
+    BR5_build_contract_per_agent_per_intent:
+      status: "OPEN — James: 'build contract per agent, per intent.' Real
+        precedent confirmed, not starting from nothing: lib/seam/
+        build-contract.js already builds/chunks contracts (createSeamStream
+        factory); lib/agent-router.js's AGENT_CONSTRAINTS already carries
+        real per-agent limits (token sizing etc.) consulted at routing
+        time. Neither currently produces a contract SHAPED by which agent
+        will execute it and what the intent actually needs — chunking and
+        agent-selection are two separate, unconnected mechanisms today.
+        This phase is the real gap: a contract schema keyed on
+        (agent, intent) that pulls the right AGENT_CONSTRAINTS profile
+        into the seam chunker's own build path, instead of chunking
+        generically and hoping it fits whichever agent RAID picks
+        afterward."
+      depends_on: []
+      does: >
+        The actual missing link between 'map it, chunk it, contract it,
+        send through RAID' (James's own stated build pipeline from this
+        session's brainstorm) and the two real mechanisms that already
+        exist to do the chunking and the per-agent limits separately.
