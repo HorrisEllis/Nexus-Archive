@@ -184,3 +184,38 @@ spec:
       does: >
         Small, real, does not block or get blocked by anything above —
         safe to pick up independently whenever convenient.
+
+    # ── 2026-08-27 (cont.) — account IDs + erosmancer-as-plugin ──────────
+    # Not investigated deeply — budget-limited session, mapped not built.
+
+    BR3_account_registry_userscript_hook:
+      status: "OPEN — lib/account-registry.js EXISTS but is a confirmed
+        dangling-hook (zero live callers anywhere in the tree, found
+        during this session's gap review). James wants each agent account
+        to carry a real ID that userscripts hook into, enabling dynamic
+        rotation for retry logic, token-limit handling, intent routing,
+        and erosmancer dispatch. account-registry.js is the real
+        foundation to wire this onto — not new infrastructure, a missing
+        connection to something that already exists."
+      depends_on: []
+      does: >
+        Turns account identity from a dead file into the real rotation
+        key every provider userscript needs for retry/token-limit/intent
+        decisions.
+
+    BR4_erosmancer_as_clearglass_plugin:
+      status: "OPEN — confirmed real, current state before proposing
+        anything: erosmancer-os is its OWN separate system today (real
+        API contract at erosmancer-os/src/api/server.ts's /api/execute),
+        wired to ClearGlass as a sibling service over a dedicated port
+        (EROS_PORT/7432, clear-glass/src/main/index.js), registered with
+        the orchestrator under its own systemId — not a ClearGlass plugin
+        the way adblocker/zoom/guardian-listeners are (clear-glass/src/
+        plugins/). Converting it into a real plugin is a genuine
+        restructure of how it's loaded and wired, not a rename."
+      depends_on: [TX14_plugin_system_v1_build]
+      does: >
+        Sequenced under TX14 (already IN-PROGRESS, covers ClearGlass's
+        plugin architecture directly) rather than as separate new work —
+        erosmancer becoming a plugin is exactly the kind of thing that
+        phase exists to standardize.
