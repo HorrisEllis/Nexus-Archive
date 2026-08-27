@@ -908,7 +908,17 @@ const server = http.createServer(async (req, res) => {
     try {
       const sm = require('./lib/self-model.js');
       const r = sm.switchAgent({ intent: 'directed', directed: body.agent, prompt: body.prompt || '' });
-      json(res, r && r.ok !== false ? 200 : 502, { ok: true, ...r });
+      // §BUGFIX 2026-08-27 — James, live, session-long theme: switchAgent()
+      // is a pure local routing decision — it never confirmed the target's
+      // tab was actually reachable before this. The natural-language
+      // "switch to X" path (below, same file) already fixed this on
+      // 2026-08-14 via verifyAgentReachable's real, cheap NCP round trip
+      // (polls for 'acked', not a full generation) — this HTTP API
+      // endpoint was the one caller that never got the same fix. Same
+      // function, same pattern, applied here instead of reinvented.
+      const reach = r && r.ok ? await sm.verifyAgentReachable(r.agent) : null;
+      const reachNote = reach && !reach.reachable ? ` Heads up: ${r.agent}'s tab didn't ack within the timeout — ${reach.error} — the switch is set, but that agent may not actually be reachable right now.` : '';
+      json(res, r && r.ok !== false ? 200 : 502, { ok: true, ...r, reachability: reach, note: reachNote || undefined });
     } catch (e) { json(res, 500, { ok: false, error: e.message }); }
     return;
   }
