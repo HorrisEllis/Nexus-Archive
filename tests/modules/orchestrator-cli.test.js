@@ -39,7 +39,14 @@ async function runAll() {
 let currentHandler = (req, res) => { res.writeHead(404); res.end('{}'); };
 const fakeCortex = http.createServer((req, res) => currentHandler(req, res));
 
-const ORCH_PATH = path.join(__dirname, '../../orchestrator.js');
+// §BUGFIX 2026-08-25 — was '../../orchestrator.js'. orchestrator.js was
+// moved to orchestrator/orchestrator.js during this session's own BL11
+// (repo-root file consolidation) — this test file was missed in that
+// move's own consumer trace at the time. Every one of this file's 11
+// real tests spawns ORCH_PATH as a child process and asserts on its
+// output; spawning a nonexistent file produces empty output for all of
+// them, which is exactly the failure mode all 11 showed.
+const ORCH_PATH = path.join(__dirname, '../../orchestrator/orchestrator.js');
 const REPO_ROOT = path.join(__dirname, '../..');
 
 function runCli(args, { timeoutMs = 5000 } = {}) {

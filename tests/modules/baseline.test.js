@@ -16,7 +16,7 @@ const fs     = require('fs');
 const os     = require('os');
 const path   = require('path');
 const { createBaseline, sigma, mean, slope } =
-  require(path.join(__dirname, '../../lib/baseline'));
+  require(path.join(__dirname, '../../intelligence/baseline'));
 
 let passed = 0, failed = 0;
 const invariants = [];

@@ -100,6 +100,10 @@ const FILES = [
   // consolidation only, not the many inline timeout literals scattered
   // through this file's route handlers — separate, larger work).
   ['guardian/config.js', 'nexus.guardian.config', 'guardian', []],
+  // §2026-08-24 — found genuinely unregistered while fixing the real
+  // flush-lock infinite-retry bug in this file. Zero real internal
+  // dependencies of its own (only fs/path).
+  ['guardian/jaa-store.js', 'nexus.guardian.jaa-store', 'guardian', []],
   ['idearium/config.js', 'nexus.idearium.config', 'idearium', []],
   ['architect/config.js', 'nexus.architect.config', 'architect', []],
   ['architect/service.js', 'nexus.architect.service', 'architect', ['nexus.architect.config']],

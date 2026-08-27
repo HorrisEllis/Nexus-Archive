@@ -35,10 +35,18 @@ function test(id, desc, fn) {
 }
 
 const ROOT = path.join(__dirname, '../..');
-const SRC = fs.readFileSync(path.join(ROOT, 'cortex/intelligence/index.js'), 'utf8');
+// §BUGFIX 2026-08-25 — this checked cortex/intelligence/index.js, which
+// no longer exists: the real file moved to intelligence/index.js (a
+// separate, earlier real migration than the one this test's own regex
+// assumed). The regex below was ALSO stale for a second, distinct
+// reason — it checked for require('../../meta/cfr/graph'), predating
+// this codebase's own real meta/ -> intelligence/ migration. Both
+// updated together to match the real, current file and its real,
+// current (if slightly redundant-looking but correct) relative require.
+const SRC = fs.readFileSync(path.join(ROOT, 'intelligence/index.js'), 'utf8');
 
 test('IC-001', 'intelligence now builds a real CausalGraph from the events it scans', () => {
-  assert.ok(/require\('\.\.\/\.\.\/meta\/cfr\/graph'\)/.test(SRC), 'must use the EXISTING graph, not a new one');
+  assert.ok(/require\('\.\.\/intelligence\/cfr\/graph'\)/.test(SRC), 'must use the EXISTING graph, not a new one');
   assert.ok(/new CausalGraph\(\)/.test(SRC));
   assert.ok(/_graph\.ingest\(e\)/.test(SRC), 'and feed it the same events the scan sees');
 });

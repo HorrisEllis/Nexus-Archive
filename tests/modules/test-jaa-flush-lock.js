@@ -133,6 +133,54 @@ console.log = (...a) => { if (!String(a[0] ?? '').startsWith('[jaa]')) _origLog(
     fs.unlinkSync(path.join(dir, 'a.json.lock'));
   });
 
+  // §BUGFIX 2026-08-24 — found while running the full real test suite for
+  // the first time (the bug below had silently blocked run-all.js from
+  // ever completing, so no one had a full signal until this was fixed):
+  // ENOENT from the lock file's own parent directory being gone
+  // (permanent) was treated identically to ordinary lock contention
+  // (transient) — the caller rescheduled every 250ms, forever, since the
+  // directory never came back. Confirmed live: 216+ identical errors in
+  // under 15s, and the Node process never exited on its own.
+  test('JFL-006', 'BUGFIX: a permanently gone directory does NOT reschedule forever — one loud message, then give up', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jfl-gone-'));
+    const s = new JaaStore(dir);
+    s.insert('t', { id: 'z1' });
+    fs.rmSync(dir, { recursive: true, force: true }); // the real, exact condition: directory vanishes with a flush still pending
+
+    let scheduledAgain = false;
+    const origSchedule = s._schedule.bind(s);
+    s._schedule = (...args) => { scheduledAgain = true; origSchedule(...args); };
+
+    const origErr = console.error;
+    let sawPermanentMessage = false;
+    console.error = (...a) => { if (String(a[0] ?? '').includes('permanent, not transient')) sawPermanentMessage = true; };
+    try { s._flush('t'); } finally { console.error = origErr; }
+
+    assert.ok(sawPermanentMessage, 'the real, specific "permanent, not transient" message must be logged (§1.2 — loud, not silent)');
+    assert.ok(!scheduledAgain, 'a permanently gone directory must NOT reschedule — this is the exact infinite-loop condition this fix closes');
+    assert.ok(!s._dirty.has('t'), 'the dirty flag must be cleared — there is nowhere left to write this, holding it dirty forever would be its own honest lie');
+
+    for (const t of s._timers.values()) clearTimeout(t); // real test hygiene — don't leak a timer into the next test file
+  });
+
+  test('JFL-007', 'ordinary lock contention (a real, live holder) still reschedules normally — the fix did not break the real, working retry path', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jfl-contend-'));
+    const s = new JaaStore(dir);
+    s.insert('t', { id: 'w1' });
+    fs.writeFileSync(path.join(dir, 't.json.lock'), String(process.pid)); // fresh — a real, live holder
+
+    let scheduledAgain = false;
+    const origSchedule = s._schedule.bind(s);
+    s._schedule = (...args) => { scheduledAgain = true; origSchedule(...args); };
+    s._flush('t');
+
+    assert.ok(scheduledAgain, 'real, ordinary contention must still retry — only a permanently gone directory should give up');
+    assert.ok(s._dirty.has('t'), 'data must stay flagged dirty while genuinely retryable');
+
+    for (const t of s._timers.values()) clearTimeout(t);
+    fs.unlinkSync(path.join(dir, 't.json.lock'));
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })();

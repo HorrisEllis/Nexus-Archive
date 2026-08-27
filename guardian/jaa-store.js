@@ -479,7 +479,22 @@ class JaaStore {
     // write is recoverable, a clobbered one is not (§16.3: an invalid
     // state is refused, not passed through). Data stays safe in this
     // process's in-memory map + _dirty flag the entire time.
-    if (!this._acquireFlushLock(table)) {
+    //
+    // §BUGFIX 2026-08-24 — _acquireFlushLock() now returns the real,
+    // specific string 'gone' (not just falsy) when the lock file's own
+    // parent directory is permanently missing — distinct from ordinary
+    // lock contention (another process mid-flush), which is genuinely
+    // transient and worth retrying. Without this distinction, a
+    // permanently deleted directory (a test's own torn-down temp dir,
+    // with a flush still pending) caused a real, confirmed-live infinite
+    // retry loop — every 250ms, forever, since the directory never
+    // comes back — which kept the whole Node process alive indefinitely.
+    const lockResult = this._acquireFlushLock(table);
+    if (lockResult === 'gone') {
+      this._dirty.delete(table); // §1.2 — honest: the storage location is gone, there is nowhere left to write this to; not silently pretending it was saved
+      return;
+    }
+    if (!lockResult) {
       this._dirty.add(table);        // keep it flagged
       this._schedule(table, 250);    // retry soon — lock holder's flush is ms-scale
       return;
@@ -555,9 +570,28 @@ class JaaStore {
         return true;
       } catch (e) {
         if (e.code !== 'EEXIST') {
-          // Unexpected FS error (permissions, disk). Loud, and do NOT
-          // proceed unlocked — the caller re-schedules.
+          // §BUGFIX 2026-08-24 — found while running the full real test
+          // suite: this branch treated EVERY non-EEXIST error as
+          // "transient, retry soon," including ENOENT from the lock
+          // file's own PARENT DIRECTORY being gone (a test's temp dir,
+          // torn down after the test finished, with a flush still
+          // pending on a debounce timer). That's not transient — it's
+          // permanent. The caller (_flush(), above) used to reschedule
+          // on ANY falsy return, creating a real, genuine infinite
+          // retry loop: every 250ms, forever, since the directory never
+          // comes back. Confirmed live — 216+ identical errors in under
+          // 15s, and the Node process never exited on its own (a real,
+          // live-leaked process, not just noisy logs). Real fix: return
+          // the distinct string 'gone' so the caller can tell "give up,
+          // permanently" from "retry soon, this is normal contention."
+          // §1.2 still applies — loud, not silent — but "loud once,
+          // then give up" is the honest response to a permanently gone
+          // directory; "loud forever" is not.
           console.error(`[jaa] flush-lock error (${table}): ${e.code} ${e.message}`);
+          if (e.code === 'ENOENT' && !fs.existsSync(path.dirname(lockPath))) {
+            console.error(`[jaa] flush-lock (${table}): parent directory is gone — this is permanent, not transient. Dropping this flush rather than retrying forever.`);
+            return 'gone';
+          }
           return false;
         }
         // Lock held. Stale?

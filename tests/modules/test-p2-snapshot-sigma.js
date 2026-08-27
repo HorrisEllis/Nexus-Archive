@@ -11,7 +11,7 @@ async function test(id, desc, fn) {
 }
 const ROOT = path.join(__dirname, '../..');
 const fan = require(path.join(ROOT, 'lib/ledger-fanin'));
-const st = require(path.join(ROOT, 'lib/snapshot-trigger'));
+const st = require(path.join(ROOT, 'intelligence/snapshot-trigger'));
 
 const stubReplay = (sink) => ({ snapshot: (ctx) => { sink.push(ctx); return { uuid: 'snap-' + sink.length }; }, listSnapshots: () => sink.map((c, i) => ({ uuid: 'snap-' + (i + 1), ...c })) });
 const stubRF = (root, conds) => ({ readFieldForFriction: async () => ({ root, conditions: conds, available: true }) });
