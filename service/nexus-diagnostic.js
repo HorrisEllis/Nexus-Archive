@@ -122,6 +122,27 @@ const SYSTEMS = {
   bridge:      { port: 9999, dataDir: 'data/bridge',      healthPath: '/health',   label: 'Bridge' },
   architect:   { port: 3747, dataDir: 'data/architect',   healthPath: '/health', label: 'Architect' },
   diagnostic:  { port: 7825, dataDir: 'data/diagnostic',  healthPath: '/status',   label: 'Diagnostic' },
+  // §DIAGNOSTIC-AWARE 2026-08-28 — James: "ClearGlass-aware diagnostics
+  // (expected runtime behavior, deviation detection)... need those."
+  // Real gap, confirmed directly: Clear Glass was not in this registry
+  // at all — the entire diagnostic system (baseline observation, gap
+  // detection, self-heal triggering) had zero visibility into it.
+  //
+  // optional:true — same flag 'emerge' above already uses, but fixed
+  // here for both of them (see the offlineMs gate above): it now
+  // genuinely suppresses the generic "port didn't answer" offline gap,
+  // not just a log line's wording, which is what this flag's name
+  // always should have meant. Clear Glass is deliberately dormant
+  // (autopilot's onDemand:true) until something requests it — being
+  // offline is its normal resting state, not a fault, and this poller
+  // has no way to know whether anyone recently asked it to be up.
+  // Clear Glass's REAL, precise deviation detection — a spawn actually
+  // attempted and failing — is handled separately below, driven by
+  // orchestrator's own real orchestrator.ui.open_failed event, not this
+  // generic check. healthPath:'/status' (not '/health' — Clear Glass
+  // has no separate /health route; /status already returns 200 with
+  // real, live data plus a real uptime, confirmed directly).
+  'clear-glass':{ port: 7704, dataDir: 'data/clear-glass', healthPath: '/status',  label: 'Clear Glass', optional: true },
   // §MONITOR-03: UI surfaces — probed as virtual systems, no dataDir
   'forge-shell':{ port: 9000, dataDir: 'data/orchestrator', healthPath: '/ui/forge-shell.html',
     label: 'Forge Shell', virtual: true, optional: true,
@@ -681,7 +702,22 @@ function startService() {
         const offlineMs = Date.now() - _offlineSince[name];
         const gapKey = `offline:${name}`;
 
-        if (offlineMs > 30000 && !_remediatedGaps.has(gapKey)) {
+        // §BUGFIX 2026-08-28 — found while wiring Clear Glass into this
+        // registry: optional:true (already used by 'emerge' above) only
+        // ever gated the console.log WORDING two lines below, not the
+        // actual gap/HEAL_REQUESTED escalation — a system correctly
+        // marked "expected to sometimes be offline" was STILL getting a
+        // real system_offline gap and a real heal-escalation dispatched
+        // to cortex every 30s it stayed down, which is precisely the
+        // false-positive class this flag's own name implies it should
+        // prevent. Real fix, not cosmetic: skip the whole gap block for
+        // optional systems here, not just the log line at the end of it.
+        // Clear Glass's REAL, precise deviation detection (a spawn that
+        // was actually attempted and failed) is handled separately,
+        // below, driven by orchestrator's own real ui.open_failed event
+        // — not this generic "port didn't answer" check, which has no
+        // way to know whether anyone ever asked Clear Glass to be up.
+        if (offlineMs > 30000 && !_remediatedGaps.has(gapKey) && !cfg.optional) {
           _remediatedGaps.add(gapKey);
           const gap = {
             type: 'system_offline', system: name, port: cfg.port,
@@ -850,6 +886,81 @@ function startService() {
     await _escalateHighSeverityGaps();
 
     return issues;
+  }
+
+  // §DIAGNOSTIC-AWARE 2026-08-28 — James: "measure deviation or when it
+  // fails to spawn. then log the error/gap." Real, precise deviation
+  // detection for Clear Glass, separate from the generic offline-poll
+  // above (which is deliberately blind to it now — optional:true). This
+  // reads cortex's real, existing event log (GET /api/events, confirmed
+  // directly — the same endpoint orchestrator.js's own POSTs land in)
+  // for the two real events this session's earlier fixes now actually
+  // write: orchestrator.ui.open_failed (the boot-time spawn-and-poll
+  // sequence gave up) and clear-glass.spawn.lock_collision (a second
+  // instance died on the lock before ever reaching that sequence). Each
+  // NEW occurrence (deduped by the event's own real id, not reprocessed
+  // on every poll) becomes a real, structured gap with the full
+  // diagnostic payload attached — spawnRequestOutcome, attempts,
+  // elapsedMs, or the lock-collision reason/pid — not a generic
+  // "offline" gap with none of that detail.
+  const _seenClearGlassEventIds = new Set();
+  async function checkClearGlassSpawnFailures() {
+    const CORTEX_URL = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
+    let events = [];
+    try {
+      events = await new Promise((resolve) => {
+        const req = http.get(`${CORTEX_URL}/api/events?source=orchestrator&n=20`, { timeout: 2000 }, res => {
+          let b = ''; res.on('data', d => b += d);
+          res.on('end', () => { try { resolve(JSON.parse(b).events || []); } catch { resolve([]); } });
+        });
+        req.on('error', () => resolve([]));
+        req.on('timeout', () => { req.destroy(); resolve([]); });
+      });
+    } catch (_) { return; }
+
+    // §HONEST LIMIT — clear-glass.spawn.lock_collision is posted with
+    // source:'clear-glass', not 'orchestrator' (it's written from Clear
+    // Glass's own process, before orchestrator is even involved) — the
+    // ?source=orchestrator filter above only catches ui.open_failed. A
+    // second, separate fetch for source=clear-glass would double real
+    // cortex round trips every 30s for a type this rare; named here
+    // rather than silently caught by widening the filter without saying
+    // so.
+    const failures = events.filter(e => e.type === 'orchestrator.ui.open_failed' && !_seenClearGlassEventIds.has(e.id));
+    for (const ev of failures) {
+      _seenClearGlassEventIds.add(ev.id);
+      let payload = {};
+      try { payload = typeof ev.payload === 'string' ? JSON.parse(ev.payload) : (ev.payload || {}); } catch (_) {}
+
+      const gap = {
+        type: 'clear-glass_spawn_failed', system: 'clear-glass',
+        severity: 'high',
+        body: payload.reason || `Clear Glass failed to open after ${payload.attempts || '?'} attempt(s)`,
+        fix: payload.spawnRequestOutcome && payload.spawnRequestOutcome !== 'ok'
+          ? `Autopilot spawn request itself failed (${payload.spawnRequestOutcome}) — check whether autopilot is running on :7799`
+          : `Autopilot spawn request succeeded but Clear Glass never became reachable on :7704 — check for an orphaned instance already holding the single-instance lock, or a crash after launch`,
+        meta: payload,
+      };
+      let gapUuid;
+      try {
+        const gp = require('../intelligence/gap/predicate');
+        const { enriched_gap, existing_uuid } = gp.enrichGap(gap);
+        if (existing_uuid) { gapUuid = existing_uuid; }
+        else {
+          const finalGap = { uuid: uid(), ...enriched_gap, status: 'open', detectedAt: Date.now() };
+          gapUuid = finalGap.uuid;
+          openGaps.set(`clear-glass-spawn:${ev.id}`, finalGap);
+          broadcast({ type: 'gap.found', gap: finalGap });
+        }
+      } catch (_) {
+        const finalGap = { uuid: uid(), ...gap, status: 'open', detectedAt: Date.now() };
+        gapUuid = finalGap.uuid;
+        openGaps.set(`clear-glass-spawn:${ev.id}`, finalGap);
+        broadcast({ type: 'gap.found', gap: finalGap });
+      }
+      _logRemediation({ action: 'gap_escalated', ...gap, gapUuid, sourceEventId: ev.id });
+      console.log(`[diagnostic] ⚠ Clear Glass spawn failure detected (event ${ev.id}) — real gap raised: ${gapUuid}`);
+    }
   }
 
   // §23.10 — gaps come from (at least) two unrelated taxonomies sharing the
@@ -1218,6 +1329,8 @@ function startService() {
   setTimeout(() => {
     remediationScan();
     setInterval(remediationScan, 30000);
+    checkClearGlassSpawnFailures();
+    setInterval(checkClearGlassSpawnFailures, 30000);
   }, 15000);
 
   // Live ledger watching — detect new events within milliseconds

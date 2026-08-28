@@ -73,25 +73,31 @@
     <button id="identity-badge" title="Browser identity — click to switch fingerprint">🎭 <span id="identity-mode-label">chrome</span> ▾</button>
   </div>
 
-  <!-- §BUILD 2026-08-30 — James: "those icons need to be completely
-       changed to match the rest of the ui, and moved to the 3 dots
-       menu. need a toolbar editor." The 7 tool buttons that used to
-       live in two fixed chrome-groups here (rewind/providers/
-       userscripts/dom/picker/mesh/diag) are now real, independently
-       movable toolbar items — same real elements, same unchanged ids
-       and click handlers already wired in browser.js, just each now
-       carries data-tool-id/label/icon so _applyToolbarPins (browser.js)
-       can relocate them at boot. Default location for all 7 is the 3-dot
-       menu (#toolbar-overflow-slot below, hidden holding pen) —
-       rendered there as real icon+label .menu-item rows matching
-       Downloads/History/Settings' existing visual language, not the
-       bare glyph squares this replaces. "Customize Toolbar…" in that
-       same menu opens #toolbar-editor-panel to drag any of them back
-       onto the bar. #toolbar-pinned-tools below is the real drop target
-       for that — empty and hidden until something is actually pinned. -->
-  <div class="chrome-divider" id="tools-divider-l" style="display:none;"></div>
-  <div class="chrome-group" id="toolbar-pinned-tools" style="display:none;"></div>
-  <div class="chrome-divider" id="tools-divider-r" style="display:none;"></div>
+  <div class="chrome-divider"></div>
+
+  <!-- Page / session tools -->
+  <div class="chrome-group">
+    <button class="nav-btn" id="btn-rewind"   title="Rewind session">⏮</button>
+    <button class="nav-btn" id="btn-providers" title="NCP Providers">⟳</button>
+    <button class="nav-btn" id="btn-userscripts" title="Userscripts">✎</button>
+  </div>
+
+  <div class="chrome-divider"></div>
+
+  <!-- Dev / automation tools -->
+  <div class="chrome-group">
+    <button class="nav-btn" id="btn-dom"    title="DOM Archaeology">⛏</button>
+    <button id="picker-btn"                 title="Element Picker">◎</button>
+    <select id="picker-route" title="Route picks to" style="background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);font-size:10px;border-radius:4px;height:22px;">
+      <option value="sse">→ SSE</option>
+      <option value="api">→ API</option>
+    </select>
+    <input id="picker-api-url" type="text" placeholder="https://..." style="display:none;width:120px;font-size:10px;background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);border-radius:4px;height:22px;padding:0 4px;">
+    <button class="nav-btn" id="btn-mesh" title="Agent Mesh">⬡</button>
+    <button class="nav-btn" id="btn-diag" title="Diagnostics">⚕</button>
+  </div>
+
+  <div class="chrome-divider"></div>
 
   <button id="copilot-toggle" class="active" title="Co-pilot">✦</button>
   <button id="fab-btn" title="Command Palette (Ctrl+K)">⊕</button>
@@ -105,7 +111,9 @@
 <!-- Bookmarks bar -->
 <div id="bookmarks-bar">
   <div id="bookmarks-list"></div>
-  <button id="bookmark-mgr-btn" title="Menu">⋯</button>
+  <button id="bookmark-mgr-btn" title="Manage bookmarks">⋯</button>
+  <button id="downloads-btn" title="Downloads">⬇</button>
+  <button id="site-settings-btn" title="Site settings (per-origin permissions)">🛡</button>
 </div>
 
 <!-- §FIXED 2026-08-23 — James: "the 3 dots do nothing." Real, working
@@ -123,12 +131,6 @@
      already consults, now with a real place a person can actually see
      and clear what's been remembered). -->
 <div id="site-settings-panel" style="display:none;position:absolute;top:130px;right:12px;width:340px;max-height:420px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
-
-<!-- §PORTED 2026-08-29 — real history panel, from a now-diverged branch. -->
-<div id="history-panel" style="display:none;position:absolute;top:130px;right:12px;width:340px;max-height:440px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
-
-<!-- §PORTED 2026-08-29 — real extensions panel, same real source as above. -->
-<div id="extensions-panel" style="display:none;position:absolute;top:130px;right:12px;width:320px;max-height:400px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
 
 <!-- §WIRED 2026-08-23 — James: "agent mesh needs to connect to the
      agent system for co-pilot." Real, working panel replacing the old
@@ -331,62 +333,6 @@
     <h4>System</h4>
     <button class="opt-link-btn" id="opt-link-api-settings">API Settings…</button>
     <button class="opt-link-btn" id="opt-link-nexus-audit">Run NEXUS UI Audit</button>
-  </div>
-</div>
-
-<!-- §BUILD 2026-08-30 — real holding pen for the 7 movable toolbar tools,
-     see the note above #toolbar-pinned-tools. display:none on the
-     container only — each real button inside keeps its own real id,
-     title, and (unchanged) click handler; _toolbarItems in browser.js
-     reads data-tool-id/label/icon off these exact nodes and either
-     leaves them here (rendered as a menu row that forwards its click to
-     the real button) or appendChild's the real node onto the bar. -->
-<div id="toolbar-overflow-slot" style="display:none;">
-  <button class="nav-btn" id="btn-rewind" data-tool-id="rewind" data-tool-label="Rewind Session" data-tool-icon="⏮" title="Rewind session">⏮</button>
-  <button class="nav-btn" id="btn-providers" data-tool-id="providers" data-tool-label="NCP Providers" data-tool-icon="⟳" title="NCP Providers">⟳</button>
-  <button class="nav-btn" id="btn-userscripts" data-tool-id="userscripts" data-tool-label="Userscripts" data-tool-icon="✎" title="Userscripts">✎</button>
-  <button class="nav-btn" id="btn-dom" data-tool-id="dom" data-tool-label="DOM Archaeology" data-tool-icon="⛏" title="DOM Archaeology">⛏</button>
-  <span class="chrome-group" id="tool-picker-group" data-tool-id="picker" data-tool-label="Element Picker" data-tool-icon="◎">
-    <button id="picker-btn" title="Element Picker">◎</button>
-    <select id="picker-route" title="Route picks to" style="background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);font-size:10px;border-radius:4px;height:22px;">
-      <option value="sse">→ SSE</option>
-      <option value="api">→ API</option>
-    </select>
-    <input id="picker-api-url" type="text" placeholder="https://..." style="display:none;width:120px;font-size:10px;background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);border-radius:4px;height:22px;padding:0 4px;">
-  </span>
-  <button class="nav-btn" id="btn-mesh" data-tool-id="mesh" data-tool-label="Agent Mesh" data-tool-icon="⬡" title="Agent Mesh">⬡</button>
-  <button class="nav-btn" id="btn-diag" data-tool-id="diag" data-tool-label="Diagnostics" data-tool-icon="⚕" title="Diagnostics">⚕</button>
-</div>
-
-<!-- §BUILD 2026-08-30 — real toolbar editor, James: "need a toolbar
-     editor" + image reference to Firefox's own drag-and-drop customize
-     screen. Two real drop zones (Toolbar / Menu) — dragging a chip
-     between them appendChild's the SAME real button node used above
-     into #toolbar-pinned-tools or back into #toolbar-overflow-slot, so
-     nothing about any tool's real logic is duplicated or reimplemented
-     here, only its position. Persisted via _saveToolbarPins (browser.js)
-     to localStorage so the layout survives a relaunch. -->
-<div id="toolbar-editor-overlay" style="display:none;">
-  <div id="toolbar-editor-panel">
-    <div id="toolbar-editor-header">
-      <h3>Customize Toolbar</h3>
-      <button id="toolbar-editor-close" title="Close">✕</button>
-    </div>
-    <p id="toolbar-editor-hint">Drag tools between the toolbar and the ⋯ menu.</p>
-    <div id="toolbar-editor-zones">
-      <div class="te-zone" id="te-zone-toolbar" data-zone="toolbar">
-        <div class="te-zone-label">Toolbar</div>
-        <div class="te-zone-drop" id="te-drop-toolbar"></div>
-      </div>
-      <div class="te-zone" id="te-zone-menu" data-zone="menu">
-        <div class="te-zone-label">⋯ Menu</div>
-        <div class="te-zone-drop" id="te-drop-menu"></div>
-      </div>
-    </div>
-    <div id="toolbar-editor-footer">
-      <button class="opt-link-btn" id="toolbar-editor-restore" style="margin-bottom:0;">Restore Defaults</button>
-      <button class="opt-link-btn" id="toolbar-editor-done" style="margin-bottom:0;background:rgba(0,245,255,0.1);border-color:var(--accent);color:var(--accent);">Done</button>
-    </div>
   </div>
 </div>
 

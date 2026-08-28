@@ -1528,6 +1528,100 @@ server.listen(PORT, '127.0.0.1', () => {
     console.warn(`[cortex] intelligence/index failed to start: ${e.message}`);
   }
 
+  // §MERGE-CONSOLIDATE 2026-08-28 — James: "merge and consolidate" (the
+  // .nex naming question from earlier this session). Bottom-up finding,
+  // not assumed: cortex/snapshot/index.js (this file's own real
+  // registry, 11 real dependents including lib/compartment-engine.js)
+  // and cos/foundation/snapshot.js's SnapshotEngine (COS's own, real,
+  // "pre-release" per-compartment engine — file manifests with content
+  // hashes, gzip compression, process state, event tail; only 3 real
+  // dependents, all inside cos/ itself) are NOT duplicates of the same
+  // thing — confirmed by reading both full API surfaces and their real
+  // on-disk paths (cortex/data/snapshots/ vs each compartment's own
+  // <root>/.nex/ — zero collision). Mine coordinates state ACROSS
+  // multiple different systems into one chain-verified snapshot; COS's
+  // captures ONE compartment's rich file/process/event state. Different
+  // scope, same coincidental file-extension name.
+  //
+  // Per axioms §17.11 (name the real benchmark, no unilateral invention)
+  // and the Leverage Principles (prefer additive over replacing what
+  // exists): neither system is replaced. COS's richer per-compartment
+  // capture becomes ONE registered state-provider here — this is the
+  // actual "merge and consolidate": composition, not replacement.
+  //
+  // COS is CLI-driven by design (cos/kernel.js's own comment: "no
+  // http.createServer/express in cos/ core... cos core CLI-driven") —
+  // an embeddable library, not a networked peer, so require()'ing it
+  // directly here is COS's own documented architecture, not a
+  // sovereignty violation of the "every system is sovereign, contracts
+  // only" axiom (that axiom governs systems that ARE separate networked
+  // processes; COS explicitly opted out of being one).
+  //
+  // createHost() is called FRESH inside capture()/restore(), never
+  // cached — it reads real, current state from disk each time
+  // (store.load()), so a live COS process creating/destroying
+  // compartments between calls is always reflected correctly, not read
+  // from a stale in-memory snapshot of a host object created once at
+  // cortex boot.
+  //
+  // capture() stores a REFERENCE (snapId per compartment), not the raw
+  // file/process/event content — COS's own SnapshotEngine.take() already
+  // persists that heavy content to its own real, gzip-compressed .nex.gz
+  // file; duplicating it into cortex's own combined snapshot blob would
+  // mean storing the same bytes twice for no real benefit.
+  try {
+    const { createHost } = require('../cos/host/index.js');
+    const { SnapshotEngine } = require('../cos/foundation/snapshot.js');
+    const snap = require('./snapshot/index.js');
+    snap.registerStateProvider('cos', {
+      capture: () => {
+        const host = createHost();
+        const compartments = host.store.listCompartments();
+        const refs = {};
+        for (const comp of compartments) {
+          try {
+            const engine = new SnapshotEngine(host, comp);
+            const s = engine.take('cortex.combined-snapshot');
+            refs[comp.id] = { ok: true, snapId: s.id };
+          } catch (e) {
+            // §1.2 — one compartment's failed snapshot doesn't block the rest
+            refs[comp.id] = { ok: false, error: e.message };
+          }
+        }
+        return { compartments: refs };
+      },
+      restore: (state) => {
+        const host = createHost();
+        const restored = [], failed = [];
+        for (const [compId, ref] of Object.entries(state?.compartments || {})) {
+          if (!ref?.ok) { failed.push({ compId, error: ref?.error || 'capture had already failed' }); continue; }
+          try {
+            const comp = host.store.getCompartment(compId);
+            if (!comp) { failed.push({ compId, error: 'compartment no longer exists' }); continue; }
+            const engine = new SnapshotEngine(host, comp);
+            engine.restore(ref.snapId);
+            restored.push(compId);
+          } catch (e) {
+            failed.push({ compId, error: e.message });
+          }
+        }
+        // §BUGFIX — found while verifying this, before shipping it: COS's
+        // own state-store debounces writes (setCompartment schedules an
+        // async save, doesn't write synchronously). engine.restore()
+        // above calls setCompartment() internally, so without this, a
+        // caller of THIS restore() could get a "success" result back
+        // while the actual write is still pending — a real rollback
+        // that isn't durable yet if anything reads the store again
+        // immediately after. flushSync() forces it before returning.
+        try { host.store.flushSync(); } catch (_) {}
+        return { restoredCompartments: restored, failed };
+      },
+    });
+    console.log('[cortex] cos state-provider registered — compartment snapshots via COS\'s own real SnapshotEngine, referenced not duplicated');
+  } catch (e) {
+    console.warn(`[cortex] could not register cos state provider (compartment backup/restore via .nex will be unavailable): ${e.message}`);
+  }
+
   // §GAP CLOSED 2026-07-06 — meta/spatial/system-lattice.js was real,
   // tested, and persisted, but nothing fed it in production — the
   // "standing, continuously-updated" half of nexus-relationship-shape.spec

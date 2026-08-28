@@ -113,8 +113,6 @@ const UserscriptManager = require('../userscripts/manager');
 const { SiteSettingsStore } = require('../site-settings/store');
 const { DownloadsStore } = require('../downloads/store');
 const { PasswordVault } = require('../passwords/vault');
-const { HistoryStore } = require('../history/store');
-const { ExtensionManager } = require('../extensions/manager');
 const speech = require('../speech/engine');
 const { PluginHost }    = require('../plugins/host');
 const { registerAll }   = require('../gates/index');
@@ -127,7 +125,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, history, extensions, pluginHost, errorCapture, processMetrics;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -212,6 +210,36 @@ async function acquireSingleInstanceLockOrExit() {
   }
 
   console.error(`[${new Date().toISOString()}] [clear-glass/src/main/index.js] [ClearGlass] requestSingleInstanceLock() failed again after retry — another instance is genuinely already running (Electron's requestSingleInstanceLock() only returns false when a live instance holds it right now — not an ambiguous "maybe a stale file" state). That instance's own 'second-instance' handler will show/focus its window. This launch has done its job just by acquiring-then-losing the lock race — exiting cleanly, not as an error. If you expected a NEW window instead, the running instance is what you're seeing (or should be — check its tray icon if tray-first hiding is on).`);
+  // §BUGFIX 2026-08-28 — James: "i was running autopilot... also why
+  // would it need autopilot?" Real, concrete scenario this connects
+  // to directly: autopilot's :7799/spawn/clear-glass request succeeds
+  // (spawnRequestOutcome:'ok' in orchestrator's own new event), yet the
+  // NEW process launched by that spawn hits exactly this lock-collision
+  // path — an orphaned or hidden prior instance is already holding the
+  // lock — logs to console.error, and exits(0) CLEANLY, which looks
+  // like a successful, intentional exit to whatever spawned it, not a
+  // failure. Orchestrator then keeps polling :7704 against a process
+  // that already gave up, eventually writing orchestrator.ui.open_failed
+  // with spawnRequestOutcome:'ok' — technically correct, but with no way
+  // to tell THIS specific reason (a hidden second instance) apart from
+  // any other reason Clear Glass never became reachable. Fire-and-forget
+  // POST to cortex's real, existing /api/event (confirmed directly —
+  // the same endpoint orchestrator itself already posts through), same
+  // pattern acquireSingleInstanceLockOrExit's own spawn-request sibling
+  // uses elsewhere in this codebase. Best-effort only: cortex may not be
+  // up yet this early in boot, and that's fine — console.error above is
+  // the guaranteed record, this is the queryable one when it lands.
+  try {
+    const http = require('http');
+    const payload = JSON.stringify({
+      type: 'clear-glass.spawn.lock_collision', source: 'clear-glass',
+      payload: { reason: 'requestSingleInstanceLock() failed twice — another instance is already running and holds the lock', pid: process.pid, retryDelayMs: LOCK_RETRY_DELAY_MS },
+    });
+    const req = http.request({ hostname: '127.0.0.1', port: 3748, path: '/api/event', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }, timeout: 1500 }, r => r.resume());
+    req.on('error', () => {}); // best-effort — cortex may not be up yet, console.error above is the guaranteed record
+    req.on('timeout', () => req.destroy());
+    req.write(payload); req.end();
+  } catch (_) { /* best-effort, see above */ }
   app.quit();
   // §FIX 2026-07-24 — was exit(1) with "FATAL" wording. That was correct for
   // the 2026-06-30 case this function was originally built for (a genuine
@@ -867,22 +895,6 @@ async function bootstrap() {
   passwordVault = new PasswordVault();
   passwordVault.load();
 
-  // 8.98. History — §PORTED 2026-08-29, real code from a now-diverged
-  // branch this session started on, brought over at James's direction.
-  history = new HistoryStore();
-  history.load();
-
-  // 8.99. Extensions — §PORTED 2026-08-29, same real source as above.
-  // Loaded onto session.defaultSession, not a per-agent session — real
-  // Chrome extensions apply browser-wide, matching how every actual
-  // browser's extension system works.
-  extensions = new ExtensionManager({ session: session.defaultSession });
-  extensions.loadRegistry();
-  const extReload = await extensions.reloadKnown();
-  if (extReload.loaded.length || extReload.failed.length) {
-    console.log(`[ClearGlass/Extensions] reloaded ${extReload.loaded.length}, failed ${extReload.failed.length}`);
-  }
-
   // 9. Co-pilot — Cortex-wired, CFR-logged, DOM-aware
   const copilot = new CoPilotBridge({
     sse:         { emit: (t, d) => emit(t, d) },
@@ -919,7 +931,6 @@ async function bootstrap() {
     minimizeFn:  minimizeAgentWindow,
     hideFn:      hideAgentWindow,
     maximizeFn:  maximizeAgentWindow,
-    fullscreenFn: toggleFullscreenAgentWindow,
     getStatusFn: getStatus,
     postEvent:   _postEvent,
     options:     nexusOptions,
@@ -930,8 +941,6 @@ async function bootstrap() {
     siteSettings,
     passwordVault,
     speech,
-    history,
-    extensions,
   });
 
   // 12.5. Plugin system — §NEW 2026-08-24. Real gap James caught directly
@@ -994,15 +1003,6 @@ async function bootstrap() {
     }
   });
 
-  // §PORTED 2026-08-29 — real history capture, same real source and
-  // trigger event as the original branch this was built on. Separate
-  // listener from the userscript-autoinject one above, not merged into
-  // it, so nothing about that existing, working logic is touched.
-  on('nav.loaded', (event) => {
-    const { agentId, url, title } = event.data;
-    if (agentId && url && history) history.add({ url, title, agentId });
-  });
-
   // 13. SSE server — subscribes to bus, broadcasts all events
   sse = new SseServer({ port: SSE_PORT, moduleId: MODULE_ID, moduleUuid: MODULE_UUID });
   await sse.start();
@@ -1061,7 +1061,6 @@ async function bootstrap() {
     hideFn:      hideAgentWindow,
     openFn:      openAgentWindow,
     maximizeFn:  maximizeAgentWindow,
-    fullscreenFn: toggleFullscreenAgentWindow,
     openSettingsFn: openSettingsWindow,
     closeSettingsFn: closeSettingsWindow,
     bookmarks,
@@ -1072,8 +1071,6 @@ async function bootstrap() {
     downloads,
     passwordVault,
     speech,
-    history,
-    extensions,
     pluginHost,
     copilot,
   });
@@ -1553,19 +1550,6 @@ function maximizeAgentWindow({ agentId }) {
   if (win.isMaximized()) win.unmaximize(); else win.maximize();
 }
 
-// §BUILD 2026-08-30 — James: "all the hot keys chrome and firefox have."
-// F11 fullscreen was flagged §HONEST LIMIT in browser.js (no real
-// setFullScreen IPC existed) rather than faked with a CSS-only pseudo-
-// fullscreen. Real BrowserWindow.setFullScreen — same window Map, same
-// pattern as maximizeAgentWindow above.
-function toggleFullscreenAgentWindow({ agentId }) {
-  const win = windows.get(agentId);
-  if (!win) return { fullscreen: false };
-  const next = !win.isFullScreen();
-  win.setFullScreen(next);
-  return { fullscreen: next };
-}
-
 function focusAgentWindow({ agentId }) {
   const win = windows.get(agentId) || bgTabs.get(agentId);
   if (!win) return { focused: false };
@@ -1690,7 +1674,6 @@ async function shutdown() {
 
 module.exports = {
   openAgentWindow, closeAgentWindow, minimizeAgentWindow, hideAgentWindow, maximizeAgentWindow,
-  toggleFullscreenAgentWindow,
   focusAgentWindow, listOpenAgents,
   openBackgroundTab, closeBackgroundTab, listBackgroundTabs,
   closeSettingsWindow, windows, bgTabs,

@@ -314,12 +314,6 @@
     let tabs = [{ id: 1, url: initialUrl || 'about:blank', title: 'New tab', loading: false }];
     let activeId = 1;
     let nextId = 2;
-    // §BUILD 2026-08-30 — James: "all the hot keys chrome and firefox
-    // have." Ctrl+Shift+T (reopen closed tab) was a real gap — no
-    // closed-tab memory existed anywhere in this tab system. Real,
-    // bounded (last 10, matching Chrome's own multi-reopen depth) stack
-    // of {url,title}, pushed in closeTab below, popped by reopenClosed.
-    const closedStack = [];
     const list = document.getElementById('tab-list');
 
     function render() {
@@ -365,23 +359,11 @@
     }
 
     function closeTab(id) {
-      const closed = tabs.find(t => t.id === id);
-      if (closed && closed.url && closed.url !== 'about:blank') {
-        closedStack.push({ url: closed.url, title: closed.title });
-        if (closedStack.length > 10) closedStack.shift();
-      }
       if (tabs.length === 1) { tabs[0].url = 'about:blank'; wv.loadURL('about:blank'); urlBar.value=''; render(); return; }
       const idx = tabs.findIndex(t => t.id === id);
       tabs = tabs.filter(t => t.id !== id);
       if (activeId === id) switchTo(tabs[Math.max(0, idx - 1)].id);
       else render();
-    }
-
-    function reopenClosed() {
-      const last = closedStack.pop();
-      if (!last) return false;
-      newTab(last.url);
-      return true;
     }
 
     function setUrl(id, url) {
@@ -400,7 +382,7 @@
     }
 
     render();
-    return { tabs, get activeId(){ return activeId; }, newTab, closeTab, reopenClosed, setUrl, setTitle, setLoading, render, switchTo };
+    return { tabs, get activeId(){ return activeId; }, newTab, closeTab, setUrl, setTitle, setLoading, render };
   })();
 
   document.getElementById('btn-new-tab').addEventListener('click', () => _tabs.newTab());
@@ -1271,137 +1253,6 @@
     if (label) label.textContent = Math.round(_zoomFactor * 100) + '%';
   }
 
-  // §BUILD 2026-08-30 — James: "those icons need to be completely
-  // changed to match the rest of the ui, and moved to the 3 dots menu.
-  // need a toolbar editor." The 7 tool nodes live in
-  // #toolbar-overflow-slot by default (see browser.html) — this reads
-  // their data-tool-id/label/icon directly off those real elements
-  // rather than hardcoding a parallel list, so there's exactly one
-  // source of truth for "what is a toolbar item."
-  const TOOLBAR_PIN_KEY = 'cg-toolbar-pins';
-  function _toolbarItemNodes() {
-    return Array.from(document.querySelectorAll('#toolbar-overflow-slot [data-tool-id], #toolbar-pinned-tools [data-tool-id]'));
-  }
-  function _loadToolbarPins() {
-    try {
-      const raw = localStorage.getItem(TOOLBAR_PIN_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (_) { return []; }
-  }
-  function _saveToolbarPins(ids) {
-    try { localStorage.setItem(TOOLBAR_PIN_KEY, JSON.stringify(ids)); } catch (_) {}
-  }
-  // Moves the real node (never a clone — same appendChild-relocates
-  // pattern already used for #menu-agent-identity-slot elsewhere in
-  // this file, so every existing id-based click handler on these nodes
-  // keeps working untouched no matter which parent they end up in) and
-  // shows/hides the toolbar's pinned group + its two flanking dividers
-  // based on whether anything is actually pinned.
-  function _applyToolbarPins() {
-    const pins = _loadToolbarPins();
-    const toolbarSlot = document.getElementById('toolbar-pinned-tools');
-    const overflowSlot = document.getElementById('toolbar-overflow-slot');
-    _toolbarItemNodes().forEach(node => {
-      const id = node.dataset.toolId;
-      (pins.includes(id) ? toolbarSlot : overflowSlot).appendChild(node);
-    });
-    const hasPins = toolbarSlot.children.length > 0;
-    toolbarSlot.style.display = hasPins ? 'flex' : 'none';
-    document.getElementById('tools-divider-l').style.display = hasPins ? '' : 'none';
-    document.getElementById('tools-divider-r').style.display = hasPins ? '' : 'none';
-  }
-  _applyToolbarPins();
-
-  // Real icon+label rows for the ⋯ menu, one per currently-unpinned
-  // tool, matching the existing Downloads/History/Settings row style
-  // (.menu-item) instead of the bare glyph buttons this replaces.
-  // Clicking a row forwards to the real underlying button's real click
-  // handler (already wired elsewhere in this file) rather than
-  // reimplementing what any of these tools do.
-  function _renderToolMenuRows() {
-    const pins = _loadToolbarPins();
-    const unpinned = _toolbarItemNodes().filter(n => !pins.includes(n.dataset.toolId));
-    if (!unpinned.length) return '';
-    const rows = unpinned.map(n => `
-      <div class="menu-item tool-row" data-tool-menu-id="${n.dataset.toolId}">
-        <span class="tool-row-icon">${n.dataset.toolIcon}</span><span>${n.dataset.toolLabel}</span>
-      </div>`).join('');
-    return `<div class="menu-sep"></div><div class="menu-section"><div class="menu-section-label">Tools</div>${rows}</div>`;
-  }
-  function _wireToolMenuRows(panel) {
-    panel.querySelectorAll('[data-tool-menu-id]').forEach(row => {
-      row.addEventListener('click', () => {
-        const id = row.dataset.toolMenuId;
-        const target = id === 'picker' ? document.getElementById('picker-btn') : document.getElementById('btn-' + id);
-        target?.click();
-        panel.style.display = 'none';
-      });
-    });
-  }
-
-  // ── Toolbar editor ("need a toolbar editor") ──────────────────────────
-  function _openToolbarEditor() {
-    const overlay = document.getElementById('toolbar-editor-overlay');
-    const dropToolbar = document.getElementById('te-drop-toolbar');
-    const dropMenu = document.getElementById('te-drop-menu');
-    const pins = _loadToolbarPins();
-    dropToolbar.innerHTML = '';
-    dropMenu.innerHTML = '';
-    _toolbarItemNodes().forEach(node => {
-      const id = node.dataset.toolId;
-      const chip = document.createElement('div');
-      chip.className = 'te-chip';
-      chip.draggable = true;
-      chip.dataset.toolId = id;
-      chip.innerHTML = `<span class="te-chip-icon">${node.dataset.toolIcon}</span><span>${node.dataset.toolLabel}</span>`;
-      (pins.includes(id) ? dropToolbar : dropMenu).appendChild(chip);
-    });
-    overlay.classList.add('visible');
-  }
-  function _closeToolbarEditor() {
-    document.getElementById('toolbar-editor-overlay').classList.remove('visible');
-    // Whatever the two drop zones currently contain when the editor
-    // closes IS the new pin set — read straight back off the real DOM
-    // rather than tracking a parallel state object that could drift.
-    const pinned = Array.from(document.getElementById('te-drop-toolbar').children).map(c => c.dataset.toolId);
-    _saveToolbarPins(pinned);
-    _applyToolbarPins();
-  }
-  (function _wireToolbarEditorDragDrop() {
-    const zones = [document.getElementById('te-drop-toolbar'), document.getElementById('te-drop-menu')];
-    document.addEventListener('dragstart', (e) => {
-      if (!e.target.classList?.contains('te-chip')) return;
-      e.dataTransfer.setData('text/plain', e.target.dataset.toolId);
-      e.target.classList.add('dragging');
-    });
-    document.addEventListener('dragend', (e) => {
-      if (e.target.classList?.contains('te-chip')) e.target.classList.remove('dragging');
-    });
-    zones.forEach(zone => {
-      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
-      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-      zone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        zone.classList.remove('drag-over');
-        const id = e.dataTransfer.getData('text/plain');
-        const chip = document.querySelector(`.te-chip[data-tool-id="${id}"]`);
-        if (chip) zone.appendChild(chip);
-      });
-    });
-  })();
-  document.getElementById('toolbar-editor-close').addEventListener('click', _closeToolbarEditor);
-  document.getElementById('toolbar-editor-done').addEventListener('click', _closeToolbarEditor);
-  document.getElementById('toolbar-editor-overlay').addEventListener('click', (e) => {
-    if (e.target.id === 'toolbar-editor-overlay') _closeToolbarEditor();
-  });
-  document.getElementById('toolbar-editor-restore').addEventListener('click', () => {
-    // Restored default is "all tools in the ⋯ menu" — the new default
-    // this whole change establishes, not the old all-in-toolbar layout
-    // it replaces.
-    _saveToolbarPins([]);
-    _openToolbarEditor();
-  });
-
   document.getElementById('bookmark-mgr-btn').addEventListener('click', async (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
@@ -1427,20 +1278,9 @@
       </div>
       <div class="menu-sep"></div>
       <div class="menu-item" data-action="downloads">⬇ Downloads</div>
-      <div class="menu-item" data-action="site-settings">🛡 Site Settings</div>
-      <div class="menu-item" data-action="history">🕐 History</div>
-      <div class="menu-item" data-action="extensions">🧩 Extensions</div>
       <div class="menu-item" data-action="settings">☰ Settings</div>
-      ${_renderToolMenuRows()}
-      <div class="menu-sep"></div>
-      <div class="menu-item" data-action="customize-toolbar">🧰 Customize Toolbar…</div>
     `;
     panel.style.display = 'block';
-    _wireToolMenuRows(panel);
-    panel.querySelector('[data-action="customize-toolbar"]').addEventListener('click', () => {
-      panel.style.display = 'none';
-      _openToolbarEditor();
-    });
 
     // Move the real, unchanged agent/identity elements into the now-open
     // menu. Same nodes — appendChild relocates, it doesn't clone, so
@@ -1457,19 +1297,7 @@
     }));
     panel.querySelector('[data-action="downloads"]').addEventListener('click', () => {
       panel.style.display = 'none';
-      _openPanelFromMenu('downloads-panel', _renderDownloadsPanel);
-    });
-    panel.querySelector('[data-action="site-settings"]').addEventListener('click', () => {
-      panel.style.display = 'none';
-      _openPanelFromMenu('site-settings-panel', _renderSiteSettingsPanel);
-    });
-    panel.querySelector('[data-action="history"]').addEventListener('click', () => {
-      panel.style.display = 'none';
-      _openPanelFromMenu('history-panel', () => _renderHistoryPanel(''));
-    });
-    panel.querySelector('[data-action="extensions"]').addEventListener('click', () => {
-      panel.style.display = 'none';
-      _openPanelFromMenu('extensions-panel', _renderExtensionsPanel);
+      document.getElementById('downloads-btn').click();
     });
     panel.querySelector('[data-action="settings"]').addEventListener('click', () => {
       panel.style.display = 'none';
@@ -1527,96 +1355,6 @@
     if (e.key === '=' || e.key === '+') { e.preventDefault(); applyZoom(_zoomFactor + 0.1); }
     else if (e.key === '-') { e.preventDefault(); applyZoom(_zoomFactor - 0.1); }
     else if (e.key === '0') { e.preventDefault(); applyZoom(1.0); }
-  });
-
-  // §BUILD 2026-08-29 — James: "control and scroll wheel. all the
-  // hot keys chrome and firefox have." Real accelerators, matching
-  // each real browser's own convention exactly, wired to the same real
-  // functions their toolbar/menu equivalents already use — one
-  // implementation per action, not a second copy for the shortcut.
-  //
-  // §HONEST LIMIT — NOT built: Ctrl+Shift+Delete clear-browsing-data
-  // (no single real "clear everything" flow exists to hook into —
-  // history/downloads/cookies each clear separately today; wiring one
-  // hotkey to all of them would be inventing a feature, not exposing
-  // one that's already real).
-  // §RESOLVED 2026-08-30 — F11 fullscreen used to be listed here as a
-  // second honest limit (no real setFullScreen IPC existed). That IPC
-  // is now real (main/index.js's toggleFullscreenAgentWindow, bridged
-  // via window:fullscreen, exposed as cg.window.fullscreen) — wired
-  // below like every other real hotkey in this block, not left here.
-  wv.addEventListener('wheel', (e) => {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    e.preventDefault();
-    applyZoom(_zoomFactor + (e.deltaY < 0 ? 0.1 : -0.1));
-  }, { passive: false });
-
-  window.addEventListener('keydown', (e) => {
-    const mod = e.ctrlKey || e.metaKey;
-    if (!mod) {
-      if (e.key === 'F5') { e.preventDefault(); wv.reload(); }
-      // §BUILD 2026-08-30 — real F11 fullscreen, no modifier key, same
-      // convention every real browser uses. cg.window.fullscreen toggles
-      // the real BrowserWindow via the new window:fullscreen IPC.
-      if (e.key === 'F11') { e.preventDefault(); cg.window.fullscreen(agentId); }
-      return;
-    }
-    switch (e.key) {
-      case 't': case 'T':
-        // §BUILD 2026-08-30 — Ctrl+Shift+T (reopen closed tab), a real
-        // Chrome/Firefox binding that was missing — separate branch from
-        // plain Ctrl+T, matching how both real browsers treat these as
-        // two distinct bindings rather than one with a modifier flag.
-        e.preventDefault();
-        if (e.shiftKey) _tabs.reopenClosed(); else _tabs.newTab();
-        break;
-      case 'w': case 'W':
-        e.preventDefault(); _tabs.closeTab(_tabs.activeId); break;
-      case 'Tab': {
-        e.preventDefault();
-        const ids = _tabs.tabs.map(t => t.id);
-        const i = ids.indexOf(_tabs.activeId);
-        const next = e.shiftKey ? (i - 1 + ids.length) % ids.length : (i + 1) % ids.length;
-        _tabs.switchTo(ids[next]);
-        break;
-      }
-      case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': {
-        e.preventDefault();
-        const idx = Number(e.key) - 1;
-        if (_tabs.tabs[idx]) _tabs.switchTo(_tabs.tabs[idx].id);
-        break;
-      }
-      case '9': {
-        // Real Chrome/Firefox convention: Ctrl+9 always jumps to the
-        // LAST tab, not literally "tab 9".
-        e.preventDefault();
-        const last = _tabs.tabs[_tabs.tabs.length - 1];
-        if (last) _tabs.switchTo(last.id);
-        break;
-      }
-      case 'l': case 'L':
-        e.preventDefault(); urlBar.focus(); urlBar.select(); break;
-      case 'r': case 'R':
-        e.preventDefault(); wv.reload(); break;
-      case 'd': case 'D':
-        e.preventDefault(); document.getElementById('btn-bookmark').click(); break;
-      case 'h': case 'H':
-        e.preventDefault(); _openPanelFromMenu('history-panel', () => _renderHistoryPanel('')); break;
-      case 'j': case 'J':
-        e.preventDefault(); _openPanelFromMenu('downloads-panel', _renderDownloadsPanel); break;
-      case 'p': case 'P':
-        e.preventDefault(); cg.driver.exec({ action: 'print', agentId }); break;
-    }
-  });
-
-  // Alt+Left / Alt+Right — real browser back/forward convention,
-  // separate from Ctrl+ since Alt is the real cross-browser standard
-  // for history navigation (Ctrl+Left/Right is reserved for word-
-  // jumping inside text fields in both Chrome and Firefox).
-  window.addEventListener('keydown', (e) => {
-    if (!e.altKey) return;
-    if (e.key === 'ArrowLeft') { e.preventDefault(); if (wv.canGoBack()) wv.goBack(); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); if (wv.canGoForward()) wv.goForward(); }
   });
 
   // §NEW 2026-08-24 — real downloads manager panel. Same real dropdown
@@ -1735,9 +1473,18 @@
       panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
     }
   }
+  document.getElementById('downloads-btn').addEventListener('click', (e) => {
+    const panel = document.getElementById('downloads-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const rect = e.target.getBoundingClientRect();
+    panel.style.top = `${rect.bottom + 4}px`;
+    panel.style.right = `${window.innerWidth - rect.right}px`;
+    panel.style.display = 'block';
+    _renderDownloadsPanel();
+  });
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('downloads-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'downloads-btn') panel.style.display = 'none';
   });
 
   // §NEW 2026-08-24 — real per-site settings panel. Lists every origin
@@ -1784,116 +1531,19 @@
       panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
     }
   }
-  document.addEventListener('click', (e) => {
+  document.getElementById('site-settings-btn').addEventListener('click', (e) => {
     const panel = document.getElementById('site-settings-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
-  });
-
-  // §PORTED 2026-08-29 — real history panel (from the now-diverged
-  // branch this was originally built and tested on). Opened from the
-  // general menu now, not a standalone toolbar button.
-  async function _renderHistoryPanel(query) {
-    const panel = document.getElementById('history-panel');
-    try {
-      const items = await cg.history.list({ agentId, query: query || undefined, limit: 100 });
-      const listHtml = !items.length
-        ? '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No history yet.</div>'
-        : items.map(i => `
-          <div style="display:flex;align-items:center;gap:6px;padding:5px 4px;border-bottom:1px solid var(--border,#333)">
-            <span data-open="${i.id}" data-url="${i.url.replace(/"/g, '&quot;')}" style="flex:1;cursor:pointer;overflow:hidden">
-              <div style="font-size:11px;color:var(--text,#ccc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.title.replace(/</g, '&lt;')}</div>
-              <div style="font-size:10px;color:var(--text-dim,#999);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.url.replace(/</g, '&lt;')}${i.visitCount > 1 ? ` · ${i.visitCount} visits` : ''}</div>
-            </span>
-            <span data-remove="${i.id}" style="cursor:pointer;opacity:.5;font-size:11px" title="Remove">✕</span>
-          </div>`).join('');
-      panel.innerHTML = `
-        <div style="display:flex;gap:4px;padding:2px 2px 6px">
-          <input id="history-search" type="text" placeholder="Search history..." value="${(query || '').replace(/"/g, '&quot;')}" style="flex:1;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:11px" />
-          <span id="history-clear-all" style="cursor:pointer;font-size:10px;color:var(--text-dim,#999);align-self:center;white-space:nowrap">clear all</span>
-        </div>
-        ${listHtml}`;
-      const search = document.getElementById('history-search');
-      search.addEventListener('input', () => _renderHistoryPanel(search.value));
-      search.focus();
-      search.selectionStart = search.selectionEnd = search.value.length;
-      panel.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => {
-        wv.loadURL(el.dataset.url);
-        panel.style.display = 'none';
-      }));
-      panel.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
-        ev.stopPropagation();
-        await cg.history.delete(el.dataset.remove);
-        _renderHistoryPanel(document.getElementById('history-search')?.value);
-      }));
-      document.getElementById('history-clear-all').addEventListener('click', async () => {
-        await cg.history.clear();
-        _renderHistoryPanel('');
-      });
-    } catch (err) {
-      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
-    }
-  }
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('history-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
-  });
-
-  // §PORTED 2026-08-29 — real extensions panel, same real source as above.
-  async function _renderExtensionsPanel() {
-    const panel = document.getElementById('extensions-panel');
-    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
-    try {
-      const exts = await cg.extensions.list();
-      const listHtml = !exts.length
-        ? '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No extensions loaded.</div>'
-        : exts.map(x => `
-          <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
-            <span style="flex:1;overflow:hidden">
-              <div style="font-size:11px;color:var(--text,#ccc)">${x.name.replace(/</g, '&lt;')} <span style="color:var(--text-dim,#999)">v${x.version}</span></div>
-              <div style="font-size:9px;color:var(--text-dim,#999);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.path.replace(/</g, '&lt;')}</div>
-            </span>
-            <span data-unload="${x.id}" style="cursor:pointer;opacity:.6;font-size:11px" title="Unload">✕</span>
-          </div>`).join('');
-      panel.innerHTML = `
-        <div style="padding:2px 2px 6px">
-          <button id="extensions-load-btn" style="width:100%;font-size:11px;padding:5px;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;cursor:pointer">+ Load unpacked extension…</button>
-        </div>
-        ${listHtml}`;
-      document.getElementById('extensions-load-btn').addEventListener('click', async () => {
-        const picked = await cg.extensions.pickDirectory();
-        if (picked.canceled) return;
-        const result = await cg.extensions.load(picked.path);
-        if (result?.error) addMsg('assistant', `Failed to load extension: ${result.error}`);
-        else addMsg('assistant', `🧩 Loaded extension: ${result.name}`);
-        _renderExtensionsPanel();
-      });
-      panel.querySelectorAll('[data-unload]').forEach(el => el.addEventListener('click', async () => {
-        await cg.extensions.unload(el.dataset.unload);
-        _renderExtensionsPanel();
-      }));
-    } catch (err) {
-      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
-    }
-  }
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('extensions-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
-  });
-
-  // §PORTED 2026-08-29 — shared open-from-menu helper: positions a panel
-  // relative to the general menu button (since History/Extensions/Site
-  // Settings no longer have their own standalone toolbar buttons to
-  // position relative to) and calls the matching real render function.
-  function _openPanelFromMenu(panelId, renderFn) {
-    const panel = document.getElementById(panelId);
-    const btn = document.getElementById('bookmark-mgr-btn');
-    const rect = btn.getBoundingClientRect();
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const rect = e.target.getBoundingClientRect();
     panel.style.top = `${rect.bottom + 4}px`;
     panel.style.right = `${window.innerWidth - rect.right}px`;
     panel.style.display = 'block';
-    renderFn();
-  }
-
+    _renderSiteSettingsPanel();
+  });
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('site-settings-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'site-settings-btn') panel.style.display = 'none';
+  });
 
   // §NEW 2026-08-24 — real find-in-page bar, using the new real driver
   // actions (findInPage/stopFindInPage — Electron's actual webContents

@@ -2726,15 +2726,49 @@ try {
       // fatal if autopilot isn't running this session (e.g. orchestrator
       // launched standalone), the poll loop below still runs as a fallback
       // for that case exactly as it did before this fix.
+      // §BUGFIX 2026-08-28 — James, directly: "it opens 127.0.0.1:9000...
+      // that would be an event. It's opened every time since it's been
+      // made." Real, structured tracking through this whole sequence, so
+      // a failure — which has never had a real ledger event, only the
+      // success path did (orchestrator.ui.opened below) — gets one too,
+      // with the actual diagnostic detail: did the autopilot spawn
+      // request itself succeed, how many poll attempts ran, how long it
+      // took. Same real event system the success case already writes
+      // into, not a new one.
+      let spawnRequestOutcome = 'not_attempted';
+      const bootStartedAt = Date.now();
       try {
         await new Promise((resolve) => {
           const spawnReq = _http.request({
             hostname: '127.0.0.1', port: 7799,
             path: '/spawn/clear-glass', method: 'POST',
             timeout: 35000, // requestSpawn's own default spawnTimeoutMs is 30s — give it margin
-          }, r => { r.resume(); r.on('end', resolve); });
-          spawnReq.on('error', () => resolve()); // autopilot not running, or clear-glass not registered — fall through to polling below regardless
-          spawnReq.on('timeout', () => { spawnReq.destroy(); resolve(); });
+          }, r => { r.resume(); r.on('end', () => { spawnRequestOutcome = 'ok'; resolve(); }); });
+          // §BUGFIX 2026-08-28 — James asked directly: "wouldn't [a spawn
+          // failure] be in the event ledger? error.log? gap system?" Real
+          // answer: no, and this line is exactly why not. Autopilot
+          // unreachable (not running, wrong port, crashed) fell through
+          // to the poll loop below with ZERO output anywhere — no
+          // console line, no ledger write, no gap. The poll loop then
+          // fails too (nothing ever told Clear Glass to start), and
+          // THAT failure is what finally surfaces, days later, as an
+          // unexplained "Clear Glass didn't come up in time" with no
+          // link back to the real, silent cause. One real console.warn,
+          // not a ledger write — this path is genuinely expected to fire
+          // whenever orchestrator runs standalone without autopilot, so
+          // a warn (not an error/gap) is the honest severity, but it
+          // must say SOMETHING instead of nothing.
+          spawnReq.on('error', (err) => {
+            spawnRequestOutcome = `error: ${err.code || err.message}`;
+            console.warn(`[nexus] Clear Glass spawn request to autopilot :7799 failed (${err.code || err.message}) — autopilot may not be running. Falling back to polling, which will time out with no further explanation if nothing else starts Clear Glass.`);
+            resolve();
+          });
+          spawnReq.on('timeout', () => {
+            spawnRequestOutcome = 'timeout';
+            console.warn('[nexus] Clear Glass spawn request to autopilot :7799 timed out after 35s — autopilot may be unresponsive. Falling back to polling.');
+            spawnReq.destroy();
+            resolve();
+          });
           spawnReq.end();
         });
         console.log('[nexus] requested Clear Glass spawn via autopilot :7799');
@@ -2752,6 +2786,7 @@ try {
         req.write(body); req.end();
       });
       let opened = false;
+      let attemptsMade = 0;
       // §BUGFIX 2026-07-04: was 8 attempts x 2s = 16s total. Clear Glass's
       // real boot sequence (SSE :7701, IPC :7702, TLS proxy :7703, THEN 4
       // provider tabs loading sequentially, THEN the wire server :7704)
@@ -2764,17 +2799,44 @@ try {
       const MAX_ATTEMPTS = 20;
       const RETRY_DELAY_MS = 3000;
       for (let attempt = 0; attempt < MAX_ATTEMPTS && !opened; attempt++) {
+        attemptsMade = attempt + 1;
         try {
           if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
           await _tryOpen();
           opened = true;
-          ledgerWrite('orchestrator', 'orchestrator.ui.opened', { url: uiUrl, via: 'clear-glass' });
+          // §BUGFIX 2026-08-28 — enriched with the real diagnostic detail
+          // gathered above (spawnRequestOutcome, attempt count, elapsed
+          // time), same real event this line already wrote, not a new
+          // one — so even a SLOW-but-successful boot is now visible as
+          // such instead of looking identical to an instant one.
+          ledgerWrite('orchestrator', 'orchestrator.ui.opened', {
+            url: uiUrl, via: 'clear-glass',
+            spawnRequestOutcome, attempts: attemptsMade, elapsedMs: Date.now() - bootStartedAt,
+          });
           console.log(`[nexus] UI opened in Clear Glass: ${uiUrl} (attempt ${attempt + 1})`);
         } catch (_) {
           console.log(`[nexus] Clear Glass :${cgPort} not ready yet (attempt ${attempt + 1}/${MAX_ATTEMPTS})...`);
         }
       }
       if (opened) return;
+      // §BUGFIX 2026-08-28 — James, directly: "it opens 127.0.0.1:9000...
+      // that would be an event. It's opened every time since it's been
+      // made." This was the real, precise gap: the success path above
+      // has always written a real ledger event; this failure path only
+      // ever did console.log — invisible to anything that isn't watching
+      // stdout at the exact moment it happens. Same real event system,
+      // same ledgerWrite() call, real diagnostic payload: whether the
+      // autopilot spawn request itself succeeded (spawnRequestOutcome —
+      // 'ok', an error code, 'timeout', or 'not_attempted' if this whole
+      // try block threw before even getting there), how many poll
+      // attempts ran, total elapsed time. A failed boot is now queryable
+      // in the exact same place a successful one already was, instead of
+      // only ever surfacing as a stdout line nobody was watching.
+      ledgerWrite('orchestrator', 'orchestrator.ui.open_failed', {
+        url: uiUrl, via: 'clear-glass', spawnRequestOutcome,
+        attempts: attemptsMade, elapsedMs: Date.now() - bootStartedAt,
+        reason: `Clear Glass :${cgPort} never became reachable after ${attemptsMade} attempt(s) over ~${Math.round((Date.now() - bootStartedAt) / 1000)}s`,
+      });
       console.log(`[nexus] Clear Glass didn't start after ${MAX_ATTEMPTS * RETRY_DELAY_MS / 1000}s — falling back to system browser`);
 
       // Fallback: system browser

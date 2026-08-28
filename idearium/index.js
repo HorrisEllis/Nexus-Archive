@@ -707,10 +707,31 @@ class SnapshotGate extends Gate {
     const phaseMap = {};
     for (const p of IDEA_PHASES) phaseMap[p] = os.db.ideas.filter(i=>i.phase===p).length;
     const sha = os.db.snapshots.length.toString(16).padStart(12,'0');
+    // §BUGFIX 2026-08-28 — James: "versionium... bottom up." Fixing the
+    // exact bug docs/versionium.spec names as the reason Versionium
+    // shouldn't inherit this commit graph as-is: parentId pointed at
+    // snapshots[0] — the most recent snapshot OVERALL — regardless of
+    // which branch this commit actually declares. Snapshots are
+    // unshift()'d (newest-first), so committing to a brand-new branch
+    // while 'main' had a more recent commit incorrectly parented the new
+    // branch's commit onto main's HEAD — a single linear chain wearing a
+    // branch label, not a real DAG, exactly as the spec's finding says.
+    //
+    // Real fix: search for the most recent snapshot ON THE SAME BRANCH.
+    // If none exists, this is honestly the first commit ever made on
+    // this branch — parentId is null, not a guess at which other
+    // branch it silently forked from. Recording a REAL fork point (which
+    // branch/commit a brand-new branch's first commit actually forked
+    // FROM) is a separate, larger gap the spec itself names ("a fork
+    // point recorded at branch-creation, not inferred from snapshot
+    // order") — there is no branch-creation event/API in this file at
+    // all today, so that's honestly out of scope for this fix, not
+    // silently solved by it.
+    const parentOnSameBranch = os.db.snapshots.find(s => s.branch === branch);
     const snap = {
       uuid:        randomUUID(),
       commitId:    `vtm-${sha}`,
-      parentId:    os.db.snapshots[0]?.uuid || null,
+      parentId:    parentOnSameBranch?.uuid || null,
       branch, message, author,
       ts:          Date.now(),
       ideasCount:  os.db.ideas.length,
@@ -733,8 +754,14 @@ class SnapshotGate extends Gate {
         links: JSON.parse(JSON.stringify(os.db.links)),
       },
     };
-    // snr delta vs last snapshot
-    if (os.db.snapshots.length) snap.snrDelta = Math.round((os.snr - (os.db.snapshots[0].snr||0)) * 1000)/1000;
+    // §BUGFIX 2026-08-28 — same bug, same fix, immediately adjacent: SNR
+    // delta was compared against snapshots[0] (most recent OVERALL) —
+    // identical cross-branch contamination as parentId above. A commit
+    // on a quiet feature branch would show its SNR "delta" against
+    // whatever unrelated branch happened to commit most recently, not
+    // its own real trend. Reusing parentOnSameBranch, already computed
+    // above — one real fix, not two separate patches for one root cause.
+    if (parentOnSameBranch) snap.snrDelta = Math.round((os.snr - (parentOnSameBranch.snr||0)) * 1000)/1000;
     os.db.snapshots.unshift(snap);
     saveDB(os.db, ['snapshots','ideas']);
     stream.emit(new Event('idearium.snapshot.committed', { snapshot: snap }));
