@@ -204,10 +204,17 @@ function _writeComposite() {
 
   // Threshold events
   const bus = _getBus();
+  // §VERSIONIUM STEP 4 2026-08-28 — record.uuid was missing from both
+  // composite emits, unlike the per-event path below (_subscribe's own
+  // sigma.event.* emits already include it correctly). Without it, a
+  // real subscriber (the new versionium auto-commit hook) had no way to
+  // reference the actual causing sigma_records row for causedBy — same
+  // real gap, same fix, matching the pattern already correct elsewhere
+  // in this same file.
   if (composite >= HALT_THRESHOLD) {
-    bus?.emit('sigma.composite.halt_risk', { sigma: composite, count, ts: now });
+    bus?.emit('sigma.composite.halt_risk', { sigma: composite, count, uuid: record.uuid, ts: now });
   } else if (composite >= WARN_THRESHOLD) {
-    bus?.emit('sigma.composite.warning', { sigma: composite, count, ts: now });
+    bus?.emit('sigma.composite.warning', { sigma: composite, count, uuid: record.uuid, ts: now });
   }
 }
 

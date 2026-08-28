@@ -2531,6 +2531,14 @@ if (nexusBus) {
     sigmaWriter.init({ compositeIntervalMs: 30000 });
     console.log('[orchestrator] §P106: sigma-writer wired — sigma_records now populates');
   } catch(e) { console.warn('[orchestrator] sigma-writer init failed:', e.message); }
+  // §VERSIONIUM STEP 4 2026-08-28 — same real sigma-writer bus, listening
+  // for the threshold events it already emits. Wired right after
+  // sigma-writer itself since this has no reason to exist before that
+  // module's own bus subscription is live.
+  try {
+    require('./lib/versionium-auto-commit').init();
+    console.log('[orchestrator] Versionium step 4 — sigma-gated auto-commit active');
+  } catch(e) { console.warn('[orchestrator] versionium-auto-commit init failed:', e.message); }
   // Compaction belongs to the same write authority, same process (§10.1) —
   // rolls expired sigma_records (>24h, tiers.js short tier) into hourly
   // sigma_rollups, then hard-deletes them. Built 2026-07-20: 13,944 rows

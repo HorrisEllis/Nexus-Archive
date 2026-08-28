@@ -955,7 +955,11 @@ async function handle(req, res, route, query, body) {
       return ok(res, { snapshots: os.snapshots().slice(0, 50) });
 
     case 'snapshot.push': {
-      os.emit('idearium.snapshot.commit', { message: body.message||'snapshot', branch: body.branch||'main', author:'api' });
+      // §VERSIONIUM STEP 4 2026-08-28 — causedBy was already fully
+      // supported by SnapshotGate itself (destructured, persisted on the
+      // snap object) — this HTTP handler was the one real gap not
+      // forwarding it from the request body into the emitted event.
+      os.emit('idearium.snapshot.commit', { message: body.message||'snapshot', branch: body.branch||'main', author: body.author||'api', causedBy: body.causedBy || null });
       return ok(res, { snapshot: os.snapshots()[0] });
     }
 
