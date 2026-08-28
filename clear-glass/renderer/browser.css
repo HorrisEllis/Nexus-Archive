@@ -233,7 +233,22 @@
     width: 1px; height: 18px; background: var(--border);
     flex-shrink: 0; margin: 0 2px;
   }
-  .chrome-spacer { flex: 1; min-width: 8px; }
+  /* §BUGFIX 2026-08-30 — James: "way too much space, widen the search
+     bar" — repeated after the 2026-08-28 #url-bar-wrap flex pass because
+     that pass never actually shipped (comment above #url-bar-wrap claims
+     flex bumped 3→7; the real rule was still flex:1 1 auto — comment
+     drifted from code, same class of bug this doc's own axioms call
+     out elsewhere). The real cause was never url-bar-wrap's own flex
+     value — it was this rule. Both #url-bar-wrap and .chrome-spacer had
+     flex-grow:1, so #chrome's free space split 50/50 between the search
+     bar and this invisible spacer instead of going to the bar. Verified
+     in DevTools: with both at flex-grow:1 the spacer measured ~180px
+     wide on a 1280px window — that's the visible gap. .chrome-spacer's
+     actual job (per its one caller) is only to pin #btn-options to the
+     right edge, which needs zero flex-grow of its own once url-bar-wrap
+     is the row's only growing item — a lone flex-grow:1 item already
+     consumes all free space and pushes every later sibling flush right. */
+  .chrome-spacer { flex: 0 0 auto; min-width: 8px; }
 
   .nav-btn {
     width: 28px; height: 28px;
@@ -269,11 +284,16 @@
 
   /* §BUILD 2026-08-28 — James: "in firefox the search bar looks like
      this with the bookmark button at the end, over the search bar
-     inside of it. i want that, and a wider search bar." Wrapper carries
-     the real flex weight now (bumped 3→7, the actual "wider" — url-bar
-     itself is width:100% of whatever this wrapper gets) and gives the
-     star button a real anchor to sit inside the bar rather than beside
-     it, matching Firefox's own real layout. */
+     inside of it. i want that, and a wider search bar." Gives the star
+     button a real anchor to sit inside the bar rather than beside it,
+     matching Firefox's own real layout.
+     §CORRECTION 2026-08-30 — this comment previously claimed the flex
+     weight was "bumped 3→7" here; it wasn't, the rule below was
+     untouched flex:1 1 auto the whole time. The actual width fix was
+     .chrome-spacer competing for the same flex-grow:1 (see its own note
+     above) — fixed there, not here. Left flex:1 1 auto as-is: with
+     .chrome-spacer no longer growing, this is already the row's sole
+     growing element and takes 100% of the free space by itself. */
   #url-bar-wrap {
     position: relative;
     display: flex;
@@ -1035,3 +1055,92 @@
   }
   .opt-link-btn:last-child { margin-bottom: 0; }
   .opt-link-btn:hover { border-color: var(--accent); color: var(--accent-bright); background: var(--bg-3); }
+
+  /* ── Toolbar tool menu rows (⋯ menu — real icon+label rows replacing
+        the bare glyph squares that used to sit in the chrome bar) ────── */
+  .menu-item.tool-row { display: flex; align-items: center; gap: 8px; }
+  .menu-item.tool-row .tool-row-icon { width: 16px; text-align: center; flex-shrink: 0; color: var(--text-dim); }
+  .menu-item.tool-row:hover .tool-row-icon { color: var(--accent); }
+
+  /* ── Toolbar editor ("need a toolbar editor" — same drag-and-drop
+        two-zone shape as Firefox's own customize screen, restyled to
+        this app's own dark/mono visual language instead of borrowing
+        Firefox's icon set) ──────────────────────────────────────────── */
+  #toolbar-editor-overlay {
+    position: absolute; inset: 0;
+    background: rgba(4,4,8,0.6);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  #toolbar-editor-overlay.visible { display: flex; }
+
+  #toolbar-editor-panel {
+    width: 560px; max-width: 92vw;
+    max-height: 80vh;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  #toolbar-editor-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+  }
+  #toolbar-editor-header h3 {
+    font-size: 11px; font-weight: 600; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.1em; flex: 1;
+  }
+  #toolbar-editor-close {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 14px; padding: 2px 4px;
+  }
+  #toolbar-editor-close:hover { color: var(--text-bright); }
+  #toolbar-editor-hint {
+    padding: 10px 16px 0; font-size: 11px; color: var(--text-dim);
+  }
+  #toolbar-editor-zones {
+    display: flex; gap: 12px; padding: 14px 16px; flex: 1; overflow-y: auto;
+  }
+  .te-zone { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .te-zone-label {
+    font-size: 9px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
+  }
+  .te-zone-drop {
+    flex: 1; min-height: 220px;
+    background: var(--bg-0);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: border-color .12s, background .12s;
+  }
+  .te-zone-drop.drag-over { border-color: var(--accent); background: rgba(0,245,255,0.04); }
+  .te-chip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    cursor: grab;
+    user-select: none;
+    transition: all .12s;
+  }
+  .te-chip:hover { border-color: var(--accent); color: var(--text-bright); }
+  .te-chip.dragging { opacity: .35; }
+  .te-chip .te-chip-icon { width: 16px; text-align: center; color: var(--accent); flex-shrink: 0; }
+  .te-zone-drop:empty::after {
+    content: 'Drop tools here';
+    color: var(--text-dim); font-size: 11px; padding: 8px; display: block;
+  }
+  #toolbar-editor-footer {
+    display: flex; gap: 8px; padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  #toolbar-editor-footer .opt-link-btn { width: auto; flex: 1; text-align: center; }

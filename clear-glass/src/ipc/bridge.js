@@ -475,6 +475,15 @@ class IpcBridge {
     ipcMain.handle('window:hide',     async (e, d) => { this.hideFn?.(d);     emit('window.hide', d);     return { ok: true }; });
     ipcMain.handle('window:open',     async (e, d) => { await this.openFn?.(d); emit('window.open', d); return { agentId: d?.agentId, opened: true }; });
     ipcMain.handle('window:maximize', async (e, d) => { this.maximizeFn?.(d); return { ok: true }; });
+    // §BUILD 2026-08-30 — real F11 fullscreen, same direct (non-bus)
+    // pattern as maximize above, mirrored onto the bus for the same
+    // reason. Was §HONEST LIMIT'd out of browser.js's hotkey pass
+    // because this handler + fullscreenFn didn't exist yet.
+    ipcMain.handle('window:fullscreen', async (e, d) => {
+      const result = this.fullscreenFn?.(d) || { fullscreen: false };
+      emit('window.fullscreen', { ...d, ...result });
+      return result;
+    });
     ipcMain.handle('window:openSettings',  async () => { this.openSettingsFn?.();  return { ok: true }; });
     ipcMain.handle('window:closeSettings', async () => { this.closeSettingsFn?.(); return { ok: true }; });
     ipcMain.handle('window:list',  async ()    => require('../main/index').listOpenAgents());

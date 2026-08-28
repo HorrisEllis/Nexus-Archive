@@ -314,6 +314,12 @@
     let tabs = [{ id: 1, url: initialUrl || 'about:blank', title: 'New tab', loading: false }];
     let activeId = 1;
     let nextId = 2;
+    // §BUILD 2026-08-30 — James: "all the hot keys chrome and firefox
+    // have." Ctrl+Shift+T (reopen closed tab) was a real gap — no
+    // closed-tab memory existed anywhere in this tab system. Real,
+    // bounded (last 10, matching Chrome's own multi-reopen depth) stack
+    // of {url,title}, pushed in closeTab below, popped by reopenClosed.
+    const closedStack = [];
     const list = document.getElementById('tab-list');
 
     function render() {
@@ -359,11 +365,23 @@
     }
 
     function closeTab(id) {
+      const closed = tabs.find(t => t.id === id);
+      if (closed && closed.url && closed.url !== 'about:blank') {
+        closedStack.push({ url: closed.url, title: closed.title });
+        if (closedStack.length > 10) closedStack.shift();
+      }
       if (tabs.length === 1) { tabs[0].url = 'about:blank'; wv.loadURL('about:blank'); urlBar.value=''; render(); return; }
       const idx = tabs.findIndex(t => t.id === id);
       tabs = tabs.filter(t => t.id !== id);
       if (activeId === id) switchTo(tabs[Math.max(0, idx - 1)].id);
       else render();
+    }
+
+    function reopenClosed() {
+      const last = closedStack.pop();
+      if (!last) return false;
+      newTab(last.url);
+      return true;
     }
 
     function setUrl(id, url) {
@@ -382,7 +400,7 @@
     }
 
     render();
-    return { tabs, get activeId(){ return activeId; }, newTab, closeTab, setUrl, setTitle, setLoading, render, switchTo };
+    return { tabs, get activeId(){ return activeId; }, newTab, closeTab, reopenClosed, setUrl, setTitle, setLoading, render, switchTo };
   })();
 
   document.getElementById('btn-new-tab').addEventListener('click', () => _tabs.newTab());
@@ -1253,6 +1271,137 @@
     if (label) label.textContent = Math.round(_zoomFactor * 100) + '%';
   }
 
+  // §BUILD 2026-08-30 — James: "those icons need to be completely
+  // changed to match the rest of the ui, and moved to the 3 dots menu.
+  // need a toolbar editor." The 7 tool nodes live in
+  // #toolbar-overflow-slot by default (see browser.html) — this reads
+  // their data-tool-id/label/icon directly off those real elements
+  // rather than hardcoding a parallel list, so there's exactly one
+  // source of truth for "what is a toolbar item."
+  const TOOLBAR_PIN_KEY = 'cg-toolbar-pins';
+  function _toolbarItemNodes() {
+    return Array.from(document.querySelectorAll('#toolbar-overflow-slot [data-tool-id], #toolbar-pinned-tools [data-tool-id]'));
+  }
+  function _loadToolbarPins() {
+    try {
+      const raw = localStorage.getItem(TOOLBAR_PIN_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) { return []; }
+  }
+  function _saveToolbarPins(ids) {
+    try { localStorage.setItem(TOOLBAR_PIN_KEY, JSON.stringify(ids)); } catch (_) {}
+  }
+  // Moves the real node (never a clone — same appendChild-relocates
+  // pattern already used for #menu-agent-identity-slot elsewhere in
+  // this file, so every existing id-based click handler on these nodes
+  // keeps working untouched no matter which parent they end up in) and
+  // shows/hides the toolbar's pinned group + its two flanking dividers
+  // based on whether anything is actually pinned.
+  function _applyToolbarPins() {
+    const pins = _loadToolbarPins();
+    const toolbarSlot = document.getElementById('toolbar-pinned-tools');
+    const overflowSlot = document.getElementById('toolbar-overflow-slot');
+    _toolbarItemNodes().forEach(node => {
+      const id = node.dataset.toolId;
+      (pins.includes(id) ? toolbarSlot : overflowSlot).appendChild(node);
+    });
+    const hasPins = toolbarSlot.children.length > 0;
+    toolbarSlot.style.display = hasPins ? 'flex' : 'none';
+    document.getElementById('tools-divider-l').style.display = hasPins ? '' : 'none';
+    document.getElementById('tools-divider-r').style.display = hasPins ? '' : 'none';
+  }
+  _applyToolbarPins();
+
+  // Real icon+label rows for the ⋯ menu, one per currently-unpinned
+  // tool, matching the existing Downloads/History/Settings row style
+  // (.menu-item) instead of the bare glyph buttons this replaces.
+  // Clicking a row forwards to the real underlying button's real click
+  // handler (already wired elsewhere in this file) rather than
+  // reimplementing what any of these tools do.
+  function _renderToolMenuRows() {
+    const pins = _loadToolbarPins();
+    const unpinned = _toolbarItemNodes().filter(n => !pins.includes(n.dataset.toolId));
+    if (!unpinned.length) return '';
+    const rows = unpinned.map(n => `
+      <div class="menu-item tool-row" data-tool-menu-id="${n.dataset.toolId}">
+        <span class="tool-row-icon">${n.dataset.toolIcon}</span><span>${n.dataset.toolLabel}</span>
+      </div>`).join('');
+    return `<div class="menu-sep"></div><div class="menu-section"><div class="menu-section-label">Tools</div>${rows}</div>`;
+  }
+  function _wireToolMenuRows(panel) {
+    panel.querySelectorAll('[data-tool-menu-id]').forEach(row => {
+      row.addEventListener('click', () => {
+        const id = row.dataset.toolMenuId;
+        const target = id === 'picker' ? document.getElementById('picker-btn') : document.getElementById('btn-' + id);
+        target?.click();
+        panel.style.display = 'none';
+      });
+    });
+  }
+
+  // ── Toolbar editor ("need a toolbar editor") ──────────────────────────
+  function _openToolbarEditor() {
+    const overlay = document.getElementById('toolbar-editor-overlay');
+    const dropToolbar = document.getElementById('te-drop-toolbar');
+    const dropMenu = document.getElementById('te-drop-menu');
+    const pins = _loadToolbarPins();
+    dropToolbar.innerHTML = '';
+    dropMenu.innerHTML = '';
+    _toolbarItemNodes().forEach(node => {
+      const id = node.dataset.toolId;
+      const chip = document.createElement('div');
+      chip.className = 'te-chip';
+      chip.draggable = true;
+      chip.dataset.toolId = id;
+      chip.innerHTML = `<span class="te-chip-icon">${node.dataset.toolIcon}</span><span>${node.dataset.toolLabel}</span>`;
+      (pins.includes(id) ? dropToolbar : dropMenu).appendChild(chip);
+    });
+    overlay.classList.add('visible');
+  }
+  function _closeToolbarEditor() {
+    document.getElementById('toolbar-editor-overlay').classList.remove('visible');
+    // Whatever the two drop zones currently contain when the editor
+    // closes IS the new pin set — read straight back off the real DOM
+    // rather than tracking a parallel state object that could drift.
+    const pinned = Array.from(document.getElementById('te-drop-toolbar').children).map(c => c.dataset.toolId);
+    _saveToolbarPins(pinned);
+    _applyToolbarPins();
+  }
+  (function _wireToolbarEditorDragDrop() {
+    const zones = [document.getElementById('te-drop-toolbar'), document.getElementById('te-drop-menu')];
+    document.addEventListener('dragstart', (e) => {
+      if (!e.target.classList?.contains('te-chip')) return;
+      e.dataTransfer.setData('text/plain', e.target.dataset.toolId);
+      e.target.classList.add('dragging');
+    });
+    document.addEventListener('dragend', (e) => {
+      if (e.target.classList?.contains('te-chip')) e.target.classList.remove('dragging');
+    });
+    zones.forEach(zone => {
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const id = e.dataTransfer.getData('text/plain');
+        const chip = document.querySelector(`.te-chip[data-tool-id="${id}"]`);
+        if (chip) zone.appendChild(chip);
+      });
+    });
+  })();
+  document.getElementById('toolbar-editor-close').addEventListener('click', _closeToolbarEditor);
+  document.getElementById('toolbar-editor-done').addEventListener('click', _closeToolbarEditor);
+  document.getElementById('toolbar-editor-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'toolbar-editor-overlay') _closeToolbarEditor();
+  });
+  document.getElementById('toolbar-editor-restore').addEventListener('click', () => {
+    // Restored default is "all tools in the ⋯ menu" — the new default
+    // this whole change establishes, not the old all-in-toolbar layout
+    // it replaces.
+    _saveToolbarPins([]);
+    _openToolbarEditor();
+  });
+
   document.getElementById('bookmark-mgr-btn').addEventListener('click', async (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
@@ -1282,8 +1431,16 @@
       <div class="menu-item" data-action="history">🕐 History</div>
       <div class="menu-item" data-action="extensions">🧩 Extensions</div>
       <div class="menu-item" data-action="settings">☰ Settings</div>
+      ${_renderToolMenuRows()}
+      <div class="menu-sep"></div>
+      <div class="menu-item" data-action="customize-toolbar">🧰 Customize Toolbar…</div>
     `;
     panel.style.display = 'block';
+    _wireToolMenuRows(panel);
+    panel.querySelector('[data-action="customize-toolbar"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      _openToolbarEditor();
+    });
 
     // Move the real, unchanged agent/identity elements into the now-open
     // menu. Same nodes — appendChild relocates, it doesn't clone, so
@@ -1378,13 +1535,16 @@
   // functions their toolbar/menu equivalents already use — one
   // implementation per action, not a second copy for the shortcut.
   //
-  // §HONEST LIMIT — NOT built: F11 fullscreen (no real setFullScreen
-  // IPC exists anywhere in this codebase, checked directly — a real,
-  // separate gap, not silently faked here) and Ctrl+Shift+Delete clear-
-  // browsing-data (no single real "clear everything" flow exists to
-  // hook into — history/downloads/cookies each clear separately today;
-  // wiring one hotkey to all of them would be inventing a feature, not
-  // exposing one that's already real).
+  // §HONEST LIMIT — NOT built: Ctrl+Shift+Delete clear-browsing-data
+  // (no single real "clear everything" flow exists to hook into —
+  // history/downloads/cookies each clear separately today; wiring one
+  // hotkey to all of them would be inventing a feature, not exposing
+  // one that's already real).
+  // §RESOLVED 2026-08-30 — F11 fullscreen used to be listed here as a
+  // second honest limit (no real setFullScreen IPC existed). That IPC
+  // is now real (main/index.js's toggleFullscreenAgentWindow, bridged
+  // via window:fullscreen, exposed as cg.window.fullscreen) — wired
+  // below like every other real hotkey in this block, not left here.
   wv.addEventListener('wheel', (e) => {
     if (!(e.ctrlKey || e.metaKey)) return;
     e.preventDefault();
@@ -1395,11 +1555,21 @@
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) {
       if (e.key === 'F5') { e.preventDefault(); wv.reload(); }
+      // §BUILD 2026-08-30 — real F11 fullscreen, no modifier key, same
+      // convention every real browser uses. cg.window.fullscreen toggles
+      // the real BrowserWindow via the new window:fullscreen IPC.
+      if (e.key === 'F11') { e.preventDefault(); cg.window.fullscreen(agentId); }
       return;
     }
     switch (e.key) {
       case 't': case 'T':
-        e.preventDefault(); _tabs.newTab(); break;
+        // §BUILD 2026-08-30 — Ctrl+Shift+T (reopen closed tab), a real
+        // Chrome/Firefox binding that was missing — separate branch from
+        // plain Ctrl+T, matching how both real browsers treat these as
+        // two distinct bindings rather than one with a modifier flag.
+        e.preventDefault();
+        if (e.shiftKey) _tabs.reopenClosed(); else _tabs.newTab();
+        break;
       case 'w': case 'W':
         e.preventDefault(); _tabs.closeTab(_tabs.activeId); break;
       case 'Tab': {

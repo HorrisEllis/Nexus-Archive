@@ -919,6 +919,7 @@ async function bootstrap() {
     minimizeFn:  minimizeAgentWindow,
     hideFn:      hideAgentWindow,
     maximizeFn:  maximizeAgentWindow,
+    fullscreenFn: toggleFullscreenAgentWindow,
     getStatusFn: getStatus,
     postEvent:   _postEvent,
     options:     nexusOptions,
@@ -1060,6 +1061,7 @@ async function bootstrap() {
     hideFn:      hideAgentWindow,
     openFn:      openAgentWindow,
     maximizeFn:  maximizeAgentWindow,
+    fullscreenFn: toggleFullscreenAgentWindow,
     openSettingsFn: openSettingsWindow,
     closeSettingsFn: closeSettingsWindow,
     bookmarks,
@@ -1551,6 +1553,19 @@ function maximizeAgentWindow({ agentId }) {
   if (win.isMaximized()) win.unmaximize(); else win.maximize();
 }
 
+// §BUILD 2026-08-30 — James: "all the hot keys chrome and firefox have."
+// F11 fullscreen was flagged §HONEST LIMIT in browser.js (no real
+// setFullScreen IPC existed) rather than faked with a CSS-only pseudo-
+// fullscreen. Real BrowserWindow.setFullScreen — same window Map, same
+// pattern as maximizeAgentWindow above.
+function toggleFullscreenAgentWindow({ agentId }) {
+  const win = windows.get(agentId);
+  if (!win) return { fullscreen: false };
+  const next = !win.isFullScreen();
+  win.setFullScreen(next);
+  return { fullscreen: next };
+}
+
 function focusAgentWindow({ agentId }) {
   const win = windows.get(agentId) || bgTabs.get(agentId);
   if (!win) return { focused: false };
@@ -1675,6 +1690,7 @@ async function shutdown() {
 
 module.exports = {
   openAgentWindow, closeAgentWindow, minimizeAgentWindow, hideAgentWindow, maximizeAgentWindow,
+  toggleFullscreenAgentWindow,
   focusAgentWindow, listOpenAgents,
   openBackgroundTab, closeBackgroundTab, listBackgroundTabs,
   closeSettingsWindow, windows, bgTabs,

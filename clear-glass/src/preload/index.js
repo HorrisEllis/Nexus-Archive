@@ -186,6 +186,7 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     minimize:     (agentId) => ipcRenderer.invoke('window:minimize', { agentId }),
     hide:         (agentId) => ipcRenderer.invoke('window:hide',     { agentId }),
     maximize:     (agentId) => ipcRenderer.invoke('window:maximize', { agentId }),
+    fullscreen:   (agentId) => ipcRenderer.invoke('window:fullscreen', { agentId }),
     open:         (payload) => ipcRenderer.invoke('window:open',     payload),
     openSettings: ()        => ipcRenderer.invoke('window:openSettings'),
     closeSettings:()        => ipcRenderer.invoke('window:closeSettings'),
