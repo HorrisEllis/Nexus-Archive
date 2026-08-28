@@ -220,6 +220,36 @@ spec:
         erosmancer becoming a plugin is exactly the kind of thing that
         phase exists to standardize.
 
+    BR9_theme_consolidation_to_nexus_dark:
+      status: "OPEN — real finding from reviewing James's earlier NEXUS
+        lineage (v0.53/0.54) for salvageable design work. ui/themes/
+        nexus-dark.css is a real, MORE principled unified theme than that
+        older lineage's own (animated HSL accent, explicit single-source-
+        of-truth philosophy, stated directly in its own header: 'Import
+        this in any UI... No hardcoded colors anywhere else') — but only
+        3 of 12+ real UI surfaces (grepped directly: ui/bridge, ui/cortex,
+        ui/diagnostics, ui/emerge, ui/eravos, ui/forge-shell, ui/guardian,
+        ui/ledger-viewer, ui/orchestrator, clear-glass/renderer/
+        settings.html, and more) actually import it. Each of the rest
+        defines its own separate, competing :root block with different
+        variable names for the same concepts (--void/--surface/--panel
+        vs --bg/--bg2/--bg3 vs this file's own --void/--ink/--plate) —
+        the same 'real correct thing exists, nothing uses it' pattern
+        found repeatedly elsewhere this session, just in CSS instead of
+        code. One salvage already applied directly (not blocked on this
+        phase): --font-display: 'Bebas Neue' added to nexus-dark.css,
+        the one genuinely distinct typographic identity piece worth
+        keeping from that older lineage."
+      depends_on: []
+      does: >
+        The actual highest-leverage move from mining the old NEXUS for
+        design material — not porting its CSS, but noticing the CURRENT
+        system already solved this better and isn't using its own
+        solution. Migrating the 9+ un-adopted UI files to reference
+        nexus-dark.css's real variables (rather than each maintaining
+        its own drifted copy) is real, mechanical, and genuinely too
+        large to do blind in the same pass as finding it.
+
     BR5_build_contract_per_agent_per_intent:
       status: "OPEN — James: 'build contract per agent, per intent.' Real
         precedent confirmed, not starting from nothing: lib/seam/

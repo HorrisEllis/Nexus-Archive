@@ -46,17 +46,32 @@
     <button class="nav-btn" id="btn-reload"  title="Reload">↺</button>
   </div>
 
-  <input id="url-bar" type="text" placeholder="Navigate to..." spellcheck="false" autocomplete="off">
+  <div id="url-bar-wrap">
+    <input id="url-bar" type="text" placeholder="Navigate to..." spellcheck="false" autocomplete="off">
+    <!-- §BUILD 2026-08-28 — James: "in firefox the search bar looks
+         like this with the bookmark button at the end, over the search
+         bar inside of it." Same real #btn-bookmark element (unchanged
+         id, unchanged click handler in browser.js:1209) — just moved
+         into the url bar itself and restyled to sit inside it, Firefox-
+         style, instead of the separate status-strip copy it lived in
+         before. Nothing in browser.js needed to change: every existing
+         getElementById('btn-bookmark') call still finds the same
+         element, just in a new position in the DOM. -->
+    <button id="btn-bookmark" class="status-bookmark-btn url-bar-bookmark-btn" title="Bookmark this page">★</button>
+  </div>
 
-  <button id="agent-badge" title="Agent context — click to switch">default ▾</button>
-
-  <!-- §NEW 2026-07-11 — the fingerprint identity switcher. ContextManager.
-       switchFingerprint() (Firefox/Chrome/Safari/Edge spoofed profiles)
-       already worked for automatic hostile-page rotation and for copilot's
-       own context.fp.switch tool — this is the first manual, user-facing
-       control for it. See ipc/bridge.js's context:switchFingerprint handler for
-       why it never worked from a UI before this. -->
-  <button id="identity-badge" title="Browser identity — click to switch fingerprint">🎭 <span id="identity-mode-label">chrome</span> ▾</button>
+  <!-- §BUILD 2026-08-28 — James: "the agent window manager moved to the
+       menu with the 3 dots, same with the fingerprint engine." Both real
+       elements below are UNCHANGED — same ids, same click handlers
+       already wired in browser.js (openIdentityDropdown, agent-badge's
+       own switch logic) — just moved from the main chrome row into the
+       menu panel, hidden by default (display:none), shown only inside
+       the open menu. Zero logic risk: an id-based getElementById never
+       cared where in the DOM its target lives. -->
+  <div id="menu-agent-identity-slot" style="display:none;">
+    <button id="agent-badge" title="Agent context — click to switch">default ▾</button>
+    <button id="identity-badge" title="Browser identity — click to switch fingerprint">🎭 <span id="identity-mode-label">chrome</span> ▾</button>
+  </div>
 
   <div class="chrome-divider"></div>
 
@@ -131,7 +146,6 @@
   <span id="status-url" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
   <span id="status-health">Health: —</span>
   <span id="status-cookies">Cookies: —</span>
-  <button id="btn-bookmark" class="status-bookmark-btn" title="Bookmark this page">★</button>
 </div>
 
 <!-- Main layout -->

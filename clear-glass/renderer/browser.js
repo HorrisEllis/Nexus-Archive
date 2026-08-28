@@ -1223,42 +1223,138 @@
     loadBookmarks();
   });
 
+  // §BUILD 2026-08-28 — James: "the three dots, I want to be the menu...
+  // the agent window manager moved to the menu with the 3 dots, same
+  // with the fingerprint engine." Repurposed the real, existing
+  // bookmarks-only dropdown into a real general menu — Zoom (real,
+  // wv.setZoomFactor — the same built-in webview API driver/index.js
+  // already uses elsewhere, just never exposed to a person before this),
+  // the real agent-badge/identity-badge elements moved in via
+  // appendChild (same nodes, same ids, same click handlers already
+  // wired below and at openIdentityDropdown — nothing recreated, so
+  // nothing about their real logic changes), then Bookmarks (unchanged
+  // real logic), then Downloads/Settings (call the real, already-named
+  // handlers directly rather than duplicating them).
+  //
+  // §HONEST LIMIT — New Window, History, Passwords, Extensions, Print,
+  // Save Page As, Translate Page, and Report Broken Site are NOT in this
+  // menu. Checked each directly before deciding: Print (webContents.
+  // print()) and New Window (main/index.js's real windows Map) have real
+  // backing and could be added later; History, a real Passwords UI
+  // (only the vault backend exists, no panel), Extensions-as-a-concept,
+  // Translate, and Report Broken Site have no real implementation
+  // anywhere in this codebase today — adding menu entries for them would
+  // be exactly the "pretends to work" this codebase's own axioms forbid.
+  let _zoomFactor = 1.0;
+  function applyZoom(factor) {
+    _zoomFactor = Math.min(3, Math.max(0.25, factor));
+    try { wv.setZoomFactor(_zoomFactor); } catch (_) {}
+    const label = document.getElementById('menu-zoom-pct');
+    if (label) label.textContent = Math.round(_zoomFactor * 100) + '%';
+  }
+
   document.getElementById('bookmark-mgr-btn').addEventListener('click', async (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
     const rect = e.target.getBoundingClientRect();
     panel.style.top = `${rect.bottom + 4}px`;
     panel.style.right = `${window.innerWidth - rect.right}px`;
-    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    panel.innerHTML = `
+      <div class="menu-section">
+        <div class="menu-section-label">Zoom</div>
+        <div class="menu-zoom-row">
+          <button data-zoom="out" class="menu-zoom-btn">−</button>
+          <span id="menu-zoom-pct">${Math.round(_zoomFactor * 100)}%</span>
+          <button data-zoom="in" class="menu-zoom-btn">+</button>
+          <button data-zoom="reset" class="menu-zoom-btn" title="Reset (Ctrl+0)" style="margin-left:auto;font-size:10px;">Reset</button>
+        </div>
+      </div>
+      <div class="menu-sep"></div>
+      <div id="menu-agent-identity-target"></div>
+      <div class="menu-sep"></div>
+      <div class="menu-section">
+        <div class="menu-section-label">Bookmarks</div>
+        <div id="menu-bookmarks-list"><div style="padding:6px 4px;color:var(--text-dim,#999);font-size:11px">loading…</div></div>
+      </div>
+      <div class="menu-sep"></div>
+      <div class="menu-item" data-action="downloads">⬇ Downloads</div>
+      <div class="menu-item" data-action="settings">☰ Settings</div>
+    `;
     panel.style.display = 'block';
+
+    // Move the real, unchanged agent/identity elements into the now-open
+    // menu. Same nodes — appendChild relocates, it doesn't clone, so
+    // every existing addEventListener on them (below, and at
+    // openIdentityDropdown) keeps working exactly as before.
+    const slot = document.getElementById('menu-agent-identity-slot');
+    const target = document.getElementById('menu-agent-identity-target');
+    if (slot && target) { target.appendChild(slot); slot.style.display = ''; }
+
+    panel.querySelectorAll('[data-zoom]').forEach(btn => btn.addEventListener('click', () => {
+      if (btn.dataset.zoom === 'in') applyZoom(_zoomFactor + 0.1);
+      else if (btn.dataset.zoom === 'out') applyZoom(_zoomFactor - 0.1);
+      else applyZoom(1.0);
+    }));
+    panel.querySelector('[data-action="downloads"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      document.getElementById('downloads-btn').click();
+    });
+    panel.querySelector('[data-action="settings"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      openOptionsPanel();
+    });
+
+    const listEl = document.getElementById('menu-bookmarks-list');
     try {
       const list = await cg.bookmarks.list({ agentId });
       if (!list || !list.length) {
-        panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No bookmarks yet — click the ★ on any page to add one.</div>';
+        listEl.innerHTML = '<div style="padding:6px 4px;color:var(--text-dim,#999);font-size:11px">No bookmarks yet — click the ★ in the search bar to add one.</div>';
         return;
       }
-      panel.innerHTML = list.map(b => `
+      listEl.innerHTML = list.map(b => `
         <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
           <span data-visit="${b.id}" style="flex:1;cursor:pointer;font-size:11px;color:var(--text,#ccc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${b.url.replace(/"/g,'&quot;')}">${(b.title || b.url).replace(/</g,'&lt;')}</span>
           <span data-remove="${b.id}" style="cursor:pointer;opacity:.5;font-size:12px" title="Remove">✕</span>
         </div>`).join('');
-      panel.querySelectorAll('[data-visit]').forEach(el => el.addEventListener('click', async () => {
+      listEl.querySelectorAll('[data-visit]').forEach(el => el.addEventListener('click', async () => {
         const bk = list.find(b => b.id === el.dataset.visit);
         if (bk) { wv.loadURL(bk.url); await cg.bookmarks.visit({ id: bk.id, agentId }); panel.style.display = 'none'; }
       }));
-      panel.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
+      listEl.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
         ev.stopPropagation();
         await cg.bookmarks.remove({ id: el.dataset.remove, agentId });
         el.closest('div').remove();
         loadBookmarks?.();
       }));
     } catch (err) {
-      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+      listEl.innerHTML = `<div style="padding:6px 4px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
     }
   });
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'bookmark-mgr-btn') panel.style.display = 'none';
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'bookmark-mgr-btn') {
+      // Put the real agent/identity elements back into their hidden home
+      // before closing, so they're not silently lost from the DOM if the
+      // menu is never reopened before the next reference to them.
+      const slot = document.getElementById('menu-agent-identity-slot');
+      if (slot && slot.parentElement?.id === 'menu-agent-identity-target') {
+        slot.style.display = 'none';
+        document.querySelector('#chrome').insertBefore(slot, document.querySelector('#chrome .chrome-divider'));
+      }
+      panel.style.display = 'none';
+    }
+  });
+
+  // §BUILD 2026-08-28 — James: "hot keys for clearglass, like control
+  // plus and minus to zoom." Real accelerator, not a suggestion — Ctrl/
+  // Cmd +, -, and 0 (reset), matching the exact convention every major
+  // browser already uses, wired to the same real applyZoom()/
+  // setZoomFactor() the menu's own +/− buttons use — one implementation.
+  window.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.key === '=' || e.key === '+') { e.preventDefault(); applyZoom(_zoomFactor + 0.1); }
+    else if (e.key === '-') { e.preventDefault(); applyZoom(_zoomFactor - 0.1); }
+    else if (e.key === '0') { e.preventDefault(); applyZoom(1.0); }
   });
 
   // §NEW 2026-08-24 — real downloads manager panel. Same real dropdown

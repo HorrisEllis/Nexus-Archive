@@ -65,6 +65,20 @@
   /* ── Typography ─────────────────────────────────────────────────────────── */
   --font-mono: 'Space Mono', 'Fira Code', 'Courier New', monospace;
   --font-body: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  /* §SALVAGED 2026-08-28 — from an earlier NEXUS lineage (v0.53/0.54,
+     src/ui/nexus.css), the one genuinely distinct typographic identity
+     piece this file was missing: a display face for headers/logos/nav
+     tabs, separate from body and mono. That lineage's --display: 'Bebas
+     Neue' — condensed, high-contrast, reads as a wordmark at a glance —
+     is real design work worth keeping even though most of that
+     lineage's own theme (palette, component patterns) is superseded by
+     this file's more principled single-source-of-truth approach
+     (animated HSL accent, explicit "swap this file to reskin
+     everything" philosophy that lineage's CSS didn't have).
+     Optional — nothing is required to adopt it; UI that wants a
+     wordmark-style header/logo can opt in with font-family:
+     var(--font-display), everything else is unaffected. */
+  --font-display: 'Bebas Neue', 'Archivo Black', sans-serif;
 
   /* ── Geometry ────────────────────────────────────────────────────────────── */
   --r:    6px;    /* base border-radius */

@@ -256,15 +256,59 @@
     background: var(--bg-0);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 0 16px;
+    padding: 0 40px 0 16px;
     color: var(--text-bright);
     font-family: var(--mono);
     font-size: 14px;
     outline: none;
     transition: border-color 0.15s;
     min-width: 0;
+    width: 100%;
   }
   #url-bar:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,245,255,0.08); }
+
+  /* §BUILD 2026-08-28 — James: "in firefox the search bar looks like
+     this with the bookmark button at the end, over the search bar
+     inside of it. i want that, and a wider search bar." Wrapper carries
+     the real flex weight now (bumped 3→7, the actual "wider" — url-bar
+     itself is width:100% of whatever this wrapper gets) and gives the
+     star button a real anchor to sit inside the bar rather than beside
+     it, matching Firefox's own real layout. */
+  #url-bar-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .url-bar-bookmark-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    z-index: 1;
+  }
+
+  /* §BUILD 2026-08-28 — general menu (repurposed from the old
+     bookmarks-only #bookmark-mgr-panel). Kept deliberately plain/dense
+     to match this bar's existing visual language — no new component
+     system introduced for one menu. */
+  .menu-section { padding: 6px 8px; }
+  .menu-section-label { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .menu-sep { height: 1px; background: var(--border); margin: 2px 0; }
+  .menu-zoom-row { display: flex; align-items: center; gap: 8px; }
+  .menu-zoom-btn {
+    width: 24px; height: 24px;
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text-bright); font-size: 13px; cursor: pointer; flex-shrink: 0;
+  }
+  .menu-zoom-btn:hover { border-color: var(--accent); }
+  #menu-zoom-pct { font-size: 11px; color: var(--text); min-width: 34px; text-align: center; }
+  .menu-item { padding: 8px; font-size: 11px; color: var(--text); cursor: pointer; }
+  .menu-item:hover { background: var(--bg-2); }
+  #menu-agent-identity-target { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; }
+  #menu-agent-identity-target button { width: 100%; text-align: left; }
 
   #agent-badge {
     font-family: var(--mono);
@@ -339,10 +383,20 @@
 
   /* ── Status strip ───────────────────────────────────────────────────── */
   #status-strip {
+    /* §BUGFIX 2026-08-28 — James: "i want the status strip gone."
+       display:none, not deleted from the DOM: every id inside it
+       (dot-nexus, dot-sse, dot-tls, status-agent, status-url,
+       status-health, status-cookies) is a real, live target of real,
+       working JS (connection health polling, TLS fingerprint status,
+       SSE stream status — see browser.js's dot-nexus/dot-sse/dot-tls
+       assignments). Removing the elements outright would throw on the
+       next update tick (null.className), not just visually disappear.
+       Hidden, not deleted — same real data keeps updating invisibly;
+       nothing crashes. */
+    display: none;
     height: 24px;
     background: var(--bg-2);
     border-bottom: 1px solid var(--border);
-    display: flex;
     align-items: center;
     gap: 16px;
     padding: 0 12px;
