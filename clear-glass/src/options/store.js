@@ -60,6 +60,28 @@ const DEFAULTS = {
   // a key that can actually disappear, which set()'s merge can never do).
   listeners: {},
 
+  // §2026-08-28 — James: "a download listener for artifacts." Real,
+  // separate registry from `listeners` above — a download isn't tied to
+  // a page/DOM element the way guardian-picker.js's listeners are, so it
+  // gets its own real key rather than being force-fit into the DOM
+  // listener shape (which requires urlPattern+fingerprint, neither of
+  // which a download has).
+  downloadListeners: {},
+
+  // §2026-08-29 — James: "i want the guardian plugin to be for the
+  // guardian system, like completely built for guardian... a tool that
+  // links guardian directly to dom elements." Real gap found while
+  // investigating: guardian-picker.js's "ADD TO INDEX" button has never
+  // persisted anywhere — its only real attempt at persistence was
+  // URCK.ingest()/registerCallto(), guarded by typeof URCK !== 'undefined'
+  // — and URCK (Guardian's own real kernel, intelligence/rfr2/kernel/) is
+  // never loaded into the Clear Glass webview at all (confirmed directly:
+  // zero references anywhere under clear-glass/). The picker's OTHER real
+  // path (window.__cg.send('dom:event', {type:'guardian.callto.added',...}))
+  // already reaches ipc/bridge.js — it just never wrote anywhere. This is
+  // that missing store.
+  calltos: {},
+
   // §PHASE-1 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md,
   // "NexusOptions: real config surface... per-provider autoStartOnBoot."
   // Real provider ids, matching src/providers/registry.js's own
@@ -376,6 +398,137 @@ class NexusOptions {
       if (!l.enabled) return false;
       const re = new RegExp('^' + l.urlPattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
       return re.test(url);
+    });
+  }
+
+  // ── Download listeners — §2026-08-28 ──────────────────────────────────────
+  // Same real CRUD shape as registerListener/updateListener/removeListener
+  // above, deliberately not merged with them: a download listener has no
+  // urlPattern/fingerprint (nothing DOM-shaped to match), just an
+  // optional filename glob and where to route a completed download.
+  // agentId null/omitted means "every agent" — matching how the DOM
+  // listener registry already treats a missing filter as "match
+  // everything" rather than silently matching nothing.
+
+  getDownloadListener(id) {
+    return this.data.downloadListeners?.[id] || null;
+  }
+
+  listDownloadListeners() {
+    return Object.values(this.data.downloadListeners || {});
+  }
+
+  registerDownloadListener({ agentId, filenamePattern, linkTarget } = {}) {
+    if (!linkTarget?.type) return { error: 'linkTarget required' };
+    const id  = randomUUID();
+    const now = Date.now();
+    const listener = {
+      id, agentId: agentId || null, filenamePattern: filenamePattern || null,
+      linkTarget, enabled: true, createdAt: now, updatedAt: now,
+    };
+    this.data = { ...this.data, downloadListeners: { ...this.data.downloadListeners, [id]: listener } };
+    this._persist();
+    return { ...listener };
+  }
+
+  updateDownloadListener(id, updates = {}) {
+    const existing = this.data.downloadListeners?.[id];
+    if (!existing) return { error: `no download listener "${id}"` };
+    const updated = {
+      ...existing,
+      ...(updates.filenamePattern !== undefined ? { filenamePattern: updates.filenamePattern } : {}),
+      ...(updates.linkTarget !== undefined ? { linkTarget: updates.linkTarget } : {}),
+      ...(updates.enabled !== undefined ? { enabled: !!updates.enabled } : {}),
+      updatedAt: Date.now(),
+    };
+    this.data = { ...this.data, downloadListeners: { ...this.data.downloadListeners, [id]: updated } };
+    this._persist();
+    return { ...updated };
+  }
+
+  removeDownloadListener(id) {
+    if (!this.data.downloadListeners?.[id]) return { error: `no download listener "${id}"` };
+    const { [id]: _removed, ...rest } = this.data.downloadListeners;
+    this.data = { ...this.data, downloadListeners: rest };
+    this._persist();
+    return { ok: true, id };
+  }
+
+  /**
+   * findDownloadListenersForDownload(agentId, filename) — every enabled
+   * listener whose agentId filter matches (or is unset) and whose
+   * filenamePattern glob matches (or is unset). Same escape-then-glob
+   * regex construction as findListenersForUrl above, for the same real
+   * reason (a literal '.' in "report.pdf" must not become "any char").
+   */
+  findDownloadListenersForDownload(agentId, filename) {
+    return this.listDownloadListeners().filter(l => {
+      if (!l.enabled) return false;
+      if (l.agentId && l.agentId !== agentId) return false;
+      if (!l.filenamePattern) return true;
+      const re = new RegExp('^' + l.filenamePattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+      return re.test(filename || '');
+    });
+  }
+
+  // ── Callto Index — §2026-08-29 ──────────────────────────────────────────
+  // Real, persistent registry for guardian-picker.js's "ADD TO INDEX"
+  // button. A callto is a picked DOM element registered as a callable
+  // action (click/type/focus/hover/extract/screenshot) — distinct from a
+  // listener (which observes and reports) — "linking Guardian directly to
+  // a DOM element" in the literal, executable sense. Real id is the
+  // picker's own calltoId (already a stable, generated uuid — no reason
+  // to mint a second one), so re-adding the same picked element with the
+  // same id updates in place rather than accumulating duplicates.
+
+  getCallto(id) {
+    return this.data.calltos?.[id] || null;
+  }
+
+  listCalltos() {
+    return Object.values(this.data.calltos || {});
+  }
+
+  registerCallto(callto = {}) {
+    if (!callto.id) return { error: 'callto.id required' };
+    if (!callto.selector) return { error: 'callto.selector required' };
+    const now = Date.now();
+    const existing = this.data.calltos?.[callto.id];
+    const record = {
+      id: callto.id, selector: callto.selector, xpath: callto.xpath || null,
+      label: callto.label || callto.selector, action: callto.action || 'click',
+      url: callto.url || null, host: callto.host || null,
+      enabled: true, createdAt: existing?.createdAt || now, updatedAt: now,
+    };
+    this.data = { ...this.data, calltos: { ...this.data.calltos, [callto.id]: record } };
+    this._persist();
+    return { ...record };
+  }
+
+  removeCallto(id) {
+    if (!this.data.calltos?.[id]) return { error: `no callto "${id}"` };
+    const { [id]: _removed, ...rest } = this.data.calltos;
+    this.data = { ...this.data, calltos: rest };
+    this._persist();
+    return { ok: true, id };
+  }
+
+  /**
+   * findCalltosForUrl(url) — same real origin-pattern matching as
+   * findListenersForUrl (a callto registered on one page of a site
+   * should still be findable navigating to another page of the same
+   * site), applied to the callto's own stored url instead of a glob
+   * pattern a person configured — converts the stored url to an origin
+   * once, at lookup time, not at registration time, so this stays
+   * correct even for calltos registered before this method existed.
+   */
+  findCalltosForUrl(url) {
+    if (!url) return [];
+    let targetOrigin;
+    try { targetOrigin = new URL(url).origin; } catch (_) { return []; }
+    return this.listCalltos().filter(c => {
+      if (!c.enabled || !c.url) return false;
+      try { return new URL(c.url).origin === targetOrigin; } catch (_) { return false; }
     });
   }
 }

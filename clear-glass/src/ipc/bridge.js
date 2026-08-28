@@ -63,6 +63,32 @@ class IpcBridge {
     this.app         = express();
     this.server      = null;
     this._bindRendererHandlers();
+    this._bindDownloadListeners();
+  }
+
+  // §2026-08-28 — James: "a download listener for artifacts." Real bus
+  // subscription — downloads/adapter.js emits 'downloads.completed' onto
+  // the real core bus (confirmed directly, not the SSE-only broadcast),
+  // so this class can react without the renderer being involved at all.
+  // Every matching, enabled download listener routes through the exact
+  // same _routeToLinkTarget dispatch a DOM listener already uses — same
+  // real ledger/intelligence/compartment/sse-system/copilot-cli/
+  // copilot-panel/ollama-stream targets, no second implementation.
+  _bindDownloadListeners() {
+    on('downloads.completed', (event) => {
+      if (!this.options?.findDownloadListenersForDownload) return;
+      const d = event.data || {};
+      // §HONEST — only a genuinely completed download triggers a
+      // listener. An interrupted or cancelled download still gets
+      // real, honest state in DownloadsStore (adapter.js already
+      // handles that), but nothing "completed" actually happened for a
+      // listener to react to.
+      if (d.state !== 'completed') return;
+      const matches = this.options.findDownloadListenersForDownload(d.agentId, d.filename);
+      for (const listener of matches) {
+        this._routeToLinkTarget(listener.linkTarget, { downloadId: d.id, ...d }, 'downloadId');
+      }
+    });
   }
 
   async start() {
@@ -346,6 +372,17 @@ class IpcBridge {
       return { ok: true };
     });
 
+    // §2026-08-28 — real download-listener IPC surface.
+    ipcMain.handle('downloads:listListeners',   async ()      => this.options?.listDownloadListeners() || []);
+    ipcMain.handle('downloads:registerListener', async (e, d) => this.options?.registerDownloadListener(d));
+    ipcMain.handle('downloads:updateListener',  async (e, d)  => this.options?.updateDownloadListener(d.id, d.updates));
+    ipcMain.handle('downloads:removeListener',  async (e, d)  => this.options?.removeDownloadListener(d.id));
+
+    // §2026-08-29 — real Callto Index IPC surface.
+    ipcMain.handle('calltos:list',   async ()      => this.options?.listCalltos() || []);
+    ipcMain.handle('calltos:forUrl', async (e, d)   => this.options?.findCalltosForUrl(d.url) || []);
+    ipcMain.handle('calltos:remove', async (e, d)   => this.options?.removeCallto(d.id));
+
     // §NEW 2026-08-24 — real speech-to-text IPC surface.
     ipcMain.handle('speech:available', async () => this.speech?.isAvailable());
     ipcMain.handle('speech:transcribeBuffer', async (e, { buffer, ext = 'webm' } = {}) => {
@@ -552,6 +589,22 @@ class IpcBridge {
           }
         } else if (d.type === 'guardian.listener.event' && d.listenerId) {
           this._routeGuardianListenerEvent(d.listenerId, d.eventData);
+        } else if (d.type === 'guardian.callto.added' && d.callto?.id) {
+          // §2026-08-29 — James: "a tool that links guardian directly to
+          // dom elements." Real gap closed: guardian-picker.js's "ADD TO
+          // INDEX" button already sent this exact message with a
+          // complete, real callto shape — the only real path that ever
+          // worked was URCK.ingest()/registerCallto(), and URCK is never
+          // loaded into this webview (confirmed directly, zero
+          // references under clear-glass/). The real emit(d.type, d)
+          // above already broadcasts this for any live listener, but
+          // nothing wrote it anywhere — this is that missing write.
+          try {
+            const result = this.options?.registerCallto(d.callto);
+            if (result?.error) console.warn(`[ipc/bridge] registerCallto rejected: ${result.error}`);
+          } catch (err) {
+            console.warn(`[ipc/bridge] guardian.callto.added persist failed (live broadcast above is unaffected): ${err.message}`);
+          }
         } else if (d.type === 'guardian.killswitch') {
           // §CORRECTED 2026-08-24 — James caught this directly ("as
           // plugins right?"): the first version of this handler
@@ -621,23 +674,54 @@ class IpcBridge {
   _routeGuardianListenerEvent(listenerId, eventData) {
     const target = this._guardianListenerTargets.get(listenerId);
     if (!target) return; // no start message seen yet, or default routing already covered by the real SSE emit above
+    this._routeToLinkTarget(target, { listenerId, ...eventData }, 'listenerId');
+  }
 
+  // §2026-08-28 — James: "a download listener for artifacts." Shared,
+  // single real dispatch table for every linkTarget type — extracted
+  // from _routeGuardianListenerEvent (which now just resolves its own
+  // target and calls this) rather than duplicated, so a download
+  // listener and a DOM listener route through the exact same real
+  // ledger/intelligence/compartment/sse-system/copilot-cli/copilot-panel/
+  // ollama-stream logic instead of two copies that could silently drift.
+  _routeToLinkTarget(target, eventData, idField) {
+    const id = eventData[idField];
     if (target.type === 'ledger') {
-      this.postEvent('guardian.listener.match', { listenerId, ...eventData });
+      this.postEvent('guardian.listener.match', eventData);
+    } else if (target.type === 'intelligence') {
+      // §2026-08-28 — same real transport as 'ledger' (cortex's real
+      // /api/event, confirmed directly), distinct event type so
+      // intelligence's pattern-scan (which reads this exact table) can
+      // tell a deliberately-tagged observation from an ordinary write.
+      this.postEvent('guardian.listener.intelligence-observation', eventData);
     } else if (target.type === 'compartment') {
-      this.postEvent('guardian.listener.match', { listenerId, compartment: target.system, ...eventData });
+      this.postEvent('guardian.listener.match', { ...eventData, compartment: target.system, intent: target.intent || null });
     } else if (target.type === 'sse-system') {
-      this.sse.emit(`system.${target.system}.guardian-event`, { listenerId, ...eventData });
+      this.sse.emit(`system.${target.system}.guardian-event`, eventData);
+    } else if (target.type === 'copilot-cli') {
+      // Real path, confirmed directly: copilot/server.js's POST /api/prompt
+      // (port 3750) — its own _lifeline.route() call already accepts an
+      // 'intent' field, but the endpoint itself hardcoded intent:'ask'
+      // regardless of caller input until this pass (see copilot/server.js
+      // §2026-08-28 for the matching backend change).
+      this._postToApiChannel(`http://127.0.0.1:${process.env.COPILOT_PORT || 3750}/api/prompt`,
+        { prompt: eventData?.text || eventData?.value || eventData?.filename || '', intent: target.intent || 'ask', [idField]: id }
+      ).catch(err => this.sse.emit('guardian.listener.route.error', { [idField]: id, target: 'copilot-cli', error: err.message }));
+    } else if (target.type === 'copilot-panel') {
+      // Fully local — no HTTP call, no external system. browser.js's own
+      // co-pilot panel already listens on the real SSE stream this file
+      // emits through; this just gives it a distinct, real event name to
+      // render as a chat message instead of routing anywhere external.
+      this.sse.emit('guardian.listener.copilot-panel', eventData);
     } else if (target.type === 'ollama-stream') {
       this._postToApiChannel(`http://127.0.0.1:${process.env.OLLAMA_BRIDGE_PORT || 3749}/api/generate`,
-        { prompt: eventData?.text || eventData?.value || '', listenerId, stream: false }
-      ).catch(err => this.sse.emit('guardian.listener.route.error', { listenerId, target: 'ollama-stream', error: err.message }));
+        { prompt: eventData?.text || eventData?.value || eventData?.filename || '', [idField]: id, stream: false }
+      ).catch(err => this.sse.emit('guardian.listener.route.error', { [idField]: id, target: 'ollama-stream', error: err.message }));
     }
-    // §HONEST LIMIT, unchanged from this same port's earlier note —
-    // bridge/callto/url/nexus targets have real UI and are captured in
-    // config, but nothing executes them yet, here or client-side. Only
-    // ledger/compartment/sse-system/ollama-stream (added this pass) are
-    // genuinely wired end to end.
+    // §HONEST LIMIT — no linkTarget selected (null) falls through to
+    // whatever real IR-Layer-default routing already applies elsewhere
+    // (the unconditional emit(d.type, d) above); nothing silently dropped
+    // and nothing here fabricates a destination for the unset case.
   }
 
   // §STATE-LINK 2026-08-27 — shared by the ipcMain handlers above (renderer

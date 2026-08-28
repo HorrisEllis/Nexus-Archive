@@ -92,6 +92,18 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     clearItem:      (id)      => ipcRenderer.invoke('downloads:clearItem', { id }),
     clearCompleted: ()        => ipcRenderer.invoke('downloads:clearCompleted'),
     openFolder:     (id)      => ipcRenderer.invoke('downloads:openFolder', { id }),
+    // §2026-08-28 — real download-listener registry.
+    listListeners:    ()          => ipcRenderer.invoke('downloads:listListeners'),
+    registerListener: (config)    => ipcRenderer.invoke('downloads:registerListener', config),
+    updateListener:   (id, updates) => ipcRenderer.invoke('downloads:updateListener', { id, updates }),
+    removeListener:   (id)        => ipcRenderer.invoke('downloads:removeListener', { id }),
+  },
+
+  // ── Callto Index — §2026-08-29 ───────────────────────────────────────────
+  calltos: {
+    list:   ()    => ipcRenderer.invoke('calltos:list'),
+    forUrl: (url) => ipcRenderer.invoke('calltos:forUrl', { url }),
+    remove: (id)  => ipcRenderer.invoke('calltos:remove', { id }),
   },
 
   // ── Speech-to-text — §NEW 2026-08-24 ────────────────────────────────────

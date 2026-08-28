@@ -2235,6 +2235,13 @@ const server = http.createServer(async (req, res) => {
     const requestId = crypto.randomUUID();
     const session   = _getSession(sessionId, channel, prompt);
     session.exchanges++;
+    // §2026-08-28 — James, live: guardian-picker.js's real "Co-pilot CLI"
+    // link target lets a person set an intent per listener; this endpoint
+    // hardcoded intent:'ask' at the _lifeline.route() call below
+    // regardless of what a caller sent, so that per-listener intent was
+    // silently dropped. Real, minimal fix: accept it here, default to the
+    // existing 'ask' behavior unchanged for every other caller.
+    const callerIntent = typeof body.intent === 'string' && body.intent.trim() ? body.intent.trim() : 'ask';
 
     if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
 
@@ -2370,7 +2377,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const lifeResult = await _lifeline.route(
         `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-        { requestId, sessionId: session.sessionId, intent: 'ask', channel }
+        { requestId, sessionId: session.sessionId, intent: callerIntent, channel }
       );
       text      = lifeResult?.text || '';
       modelUsed = lifeResult?.provider_used || 'none';
@@ -2386,11 +2393,11 @@ const server = http.createServer(async (req, res) => {
 
     const row = { uuid: crypto.randomUUID(), requestId, sessionId,
       prompt: prompt.slice(0,500), response: text.slice(0,2000),
-      modelUsed, intent: 'ask', channel,
+      modelUsed, intent: callerIntent, channel,
       componentId:'copilot.prompt', hookId:'copilot.prompt.reply',
       contextLayers: 7, fromStream: true, ts: Date.now() };
     await _persist('chat_log', row);
-    streamIngest({ type: 'copilot.answered', requestId, intent: 'ask', modelUsed });
+    streamIngest({ type: 'copilot.answered', requestId, intent: callerIntent, modelUsed });
 
     const ui = await _buildSpotlightUI(text);
     json(res, 200, { ok:true, requestId, sessionId, text, modelUsed, intent:'ask',

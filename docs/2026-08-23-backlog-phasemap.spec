@@ -1,7 +1,7 @@
 spec:
   meta:
     name:    2026-08-23-backlog
-    version: 0.1.0-phasemap
+    version: 0.2.0-phasemap
     status:  PHASEMAP 2026-08-23. Real, evidence-grounded where evidence
              already exists (Guardian-zip mining report, live tool-registry
              counts, real file locations checked directly) — everything else
@@ -724,3 +724,77 @@ spec:
       does: >
         A real, working right-click action on tabs that doesn't exist
         at all right now — the backend it would call is now ready.
+
+    # ── System-as-block canvas — James: "zoom out. each system has as
+    #    much calltos() to make them dynamic... we could use architect
+    #    as a system map, as a block based canvas and swap them out." ──
+
+    BL30_registry_components_drift_audit:
+      status: "OPEN — real, scoped prerequisite, found while discussing
+        BL31 below, not assumed. Checked directly: every one of the 13
+        real systems already has its own registry-components.js
+        (cortex/idearium/guardian/loom/ollama/intelligence/eravos/
+        clear-glass/emerge/architect/copilot/bridge/nexus-healer — this
+        is not a gap, it already exists universally). But clear-glass's
+        own copy is badly stale: 32 declared components, zero mention
+        of guardian-listeners, the real Callto Index, download
+        listeners, site-settings, history, extensions, bookmarks-with-
+        state, rewind, passwords, or speech-to-text — an entire
+        session's worth of real, committed, tested capability this
+        phasemap itself documents, invisible to clear-glass's own
+        contract. Same drift risk almost certainly applies to other
+        systems' registries; only clear-glass was checked directly this
+        pass. copilot's real capabilities-listing (this session, commit
+        5f8a34d) reads straight from registry-components.js — a stale
+        registry doesn't just mis-describe the system to a human, it
+        actively lies to co-pilot when asked what a system can do."
+      depends_on: []
+      does: >
+        Every system's registry-components.js becomes trustworthy
+        again — the real prerequisite for BL31's canvas to render
+        anything true, and for co-pilot's own tool-listing (already
+        real for copilot itself) to extend honestly to other systems.
+
+    BL31_architect_block_canvas_component_swap:
+      status: "OPEN — large, genuinely two-part. James's own framing:
+        'each system has as much calltos() to make them dynamic...
+        component, updating... use architect as a system map, as a
+        block based canvas and swap them out.' Real prior art already
+        exists and this builds forward from it, not from nothing: BL20
+        (done, this same file) already turned loom's Map tab into a
+        real, clickable SVG graph — systems as blocks, real wires from
+        /api/graph's hook-level data, click-to-open-detail. That's the
+        VIEW half. This phase is the EDIT half: Architect (real UI at
+        /ui/spec-builder, real spec-blueprint engine, real SNR quality
+        gate already there) becomes a canvas where a block can be
+        swapped for another real, registry-declared component, using
+        each system's registry-components.js entries (grammar/route/
+        hooks.in/hooks.out — already shaped like a callto for
+        system-to-system wiring, discussed directly with James this
+        session) as the uniform plug interface every block exposes.
+
+        Two real, unresolved design questions named honestly rather
+        than hand-waved, both needing real answers before this is
+        buildable, not just UI work:
+          (1) what does 'swap' mean at runtime — hot-restarting a
+              process with a different config, rewiring a hook's
+              wires_to target to point at a different real component,
+              or something else? Each has different real blast-radius
+              and rollback needs.
+          (2) a swap changes real, running system topology — needs a
+              real dry-run/preview step (leaning on Architect's
+              existing SNR quality gate, which already exists for
+              exactly this kind of validation) before anything live is
+              touched, not a blind drag-and-drop that mutates a running
+              NEXUS instance.
+        Not scoped further than this until BL30 lands — building a
+        canvas that reads from known-stale registries would render a
+        map of the system that's already wrong on day one."
+      depends_on: [BL30_registry_components_drift_audit]
+      does: >
+        The real next step past BL20's read-only map — Architect
+        becomes the place a person can see NEXUS as swappable,
+        callto-shaped blocks and change what's wired to what, with the
+        same real evidence-grounded rigor this whole phasemap already
+        holds every other phase to.
+

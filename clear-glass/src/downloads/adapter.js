@@ -20,6 +20,7 @@
  */
 
 const path = require('path');
+const { emit } = require('../core/bus');
 
 function attach({ session, agentId, store, getDownloadDirectory, log = console.log } = {}) {
   if (!session || typeof session.on !== 'function') throw new Error('downloads/adapter.attach needs a real Electron session');
@@ -48,10 +49,27 @@ function attach({ session, agentId, store, getDownloadDirectory, log = console.l
     });
 
     item.once('done', (_e, state) => {
-      store.updateState(record.id, state === 'completed' ? 'completed' : state, {
+      const updated = store.updateState(record.id, state === 'completed' ? 'completed' : state, {
         bytes: item.getReceivedBytes(),
         savePath: item.getSavePath(),
       });
+      // §2026-08-28 — James: "maybe a download listener for artifacts."
+      // Real prerequisite this adapter never had: it tracked every
+      // download into DownloadsStore, but never emitted a real event on
+      // completion — nothing could react to a download finishing even in
+      // principle. Emits on 'done' only (not 'updated'), matching how a
+      // real artifact listener would want to fire once the file is
+      // actually usable, not on every progress tick. Real completion
+      // state carried through, not assumed 'completed' regardless of
+      // what actually happened (cancelled/interrupted are real, distinct
+      // outcomes a listener should be able to tell apart).
+      try {
+        emit('downloads.completed', {
+          agentId, id: record.id, filename: item.getFilename(), url: item.getURL(),
+          savePath: item.getSavePath(), mimeType: item.getMimeType(),
+          bytes: item.getReceivedBytes(), state: state === 'completed' ? 'completed' : state,
+        });
+      } catch (err) { log(`[downloads/adapter] completion event emit failed: ${err.message}`); }
     });
   };
 

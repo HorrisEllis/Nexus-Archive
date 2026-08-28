@@ -54,7 +54,7 @@ const PATTERNS = [
   { intent: 'navigate', re: /\b(take me to|go to|open|navigate to|show me)\s+(the\s+)?(\w[\w-]*)/i },
   { intent: 'note',     re: /^\s*(note|remember|log)(\s+that)?[:\s]/i },
   { intent: 'action',   re: /^\s*(run|execute)\s+(forge\s+\w+|the\s+\w+\s+pipeline)/i },
-  { intent: 'tool',     re: /\b(read|open|show)\s+(the\s+)?file\b|\bread_file\b|\bwhat('s| is) in\s+\S+\.(js|json|md|spec)\b/i },
+  { intent: 'tool',     re: /\b(read|open|show)\s+(the\s+)?file\b|\bread_file\b|\bwhat('s| is) in\s+\S+\.(js|json|md|spec)\b|\b(what can you do|list (your |all )?tools|(what|which) tools|your (real )?tools|show (your |me your )?(capabilit(y|ies)|tools|commands)|help( me)?( with)? what you can do)\b/i },
 ];
 
 function classifyIntent(prompt) {
@@ -121,8 +121,47 @@ async function handleNote(prompt, { pushToCortex }) {
   }
 }
 
+// §2026-08-29 — James: "need co-pilot to be able to tell me all of its
+// tools. i don't even remember what it can do." §DRIFT-PROOF, same
+// discipline as _navigableSurfaces() above: reads copilot's own real,
+// already-existing registry-components.js (the same file /contract
+// already serves — checked directly, not invented) rather than a
+// hand-maintained list that could silently fall out of sync the next
+// time a component is added there.
+const CAPABILITIES_RE = /\b(what can you do|list (your |all )?tools|(what|which) tools|your (real )?tools|show (your |me your )?(capabilit(y|ies)|tools|commands)|help( me)?( with)? what you can do)\b/i;
+
+function _listCapabilities() {
+  try {
+    const registry = require('./registry-components');
+    const components = registry?.components;
+    if (!Array.isArray(components) || !components.length) {
+      return { ok: false, intent: 'tool', error: 'registry-components.js returned no real components' };
+    }
+    const lines = components.map(c => {
+      const grammar = c.grammar?.length ? ` (say: "${c.grammar.join('", "')}")` : '';
+      return `• ${c.name} — ${c.description}${grammar}`;
+    });
+    return {
+      ok: true, intent: 'tool',
+      text: `I have ${components.length} real, currently-registered tools:\n\n${lines.join('\n')}`,
+      capabilities: components.map(c => ({ id: c.id, name: c.name, description: c.description, grammar: c.grammar, route: c.route })),
+    };
+  } catch (e) {
+    // §HONEST — a failure to load the real registry is reported as a
+    // real error, not silently swallowed into an empty-looking answer
+    // that would read as "co-pilot has zero tools."
+    return { ok: false, intent: 'tool', error: `could not load registry-components.js: ${e.message}` };
+  }
+}
+
 // ── tool ─────────────────────────────────────────────────────────────────────
 async function handleTool(prompt, { runTools }) {
+  // Capabilities request short-circuits before the real agent-tool
+  // execution loop — listing what copilot can do isn't itself running
+  // a tool, and running it through runTools would either hallucinate an
+  // answer or genuinely try to execute something nonsensical.
+  if (CAPABILITIES_RE.test(prompt || '')) return _listCapabilities();
+
   if (typeof runTools !== 'function') {
     return { ok: false, intent: 'tool', error: 'no tool runner available' };
   }

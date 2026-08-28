@@ -304,42 +304,18 @@
         </select>
       </div>
       <div class="lm-section-title">LINK TARGET (optional)</div>
-      <div class="lm-info">Where mutation Calltos are routed. Leave blank to route via IR Layer default.</div>
-      <div class="lm-link-opt" data-lm-link="bridge" id="__g-lm-link-bridge">
-        <span class="lm-link-opt-icon">⬡</span>
-        <div><span class="lm-link-opt-label">Another Bridge / Guardian</span><span class="lm-link-opt-desc">POST mutation events to a bridge /bus/emit endpoint</span></div>
-      </div>
-      <div class="lm-url-row" id="__g-lm-bridge-row">
-        <div class="gf-label">Bridge URL</div>
-        <input class="gf-input" id="__g-lm-bridge-url" placeholder="http://192.168.x.x:3747"/>
-      </div>
-      <div class="lm-link-opt" data-lm-link="callto" id="__g-lm-link-callto">
-        <span class="lm-link-opt-icon">⊕</span>
-        <div><span class="lm-link-opt-label">Trigger a Callto</span><span class="lm-link-opt-desc">Execute a registered callto on each mutation</span></div>
-      </div>
-      <div class="lm-url-row" id="__g-lm-callto-row">
-        <div class="gf-label">Callto ID</div>
-        <input class="gf-input" id="__g-lm-callto-id" placeholder="callto-xxxxxxxx"/>
-      </div>
-      <div class="lm-link-opt" data-lm-link="url" id="__g-lm-link-url">
-        <span class="lm-link-opt-icon">↗</span>
-        <div><span class="lm-link-opt-label">External Endpoint</span><span class="lm-link-opt-desc">POST mutation Calltos to any HTTP URL</span></div>
-      </div>
-      <div class="lm-url-row" id="__g-lm-url-row">
-        <div class="gf-label">Endpoint URL</div>
-        <input class="gf-input" id="__g-lm-url-input" placeholder="https://your-service.com/hook"/>
-      </div>
-      <div class="lm-link-opt" data-lm-link="nexus" id="__g-lm-link-nexus">
-        <span class="lm-link-opt-icon">📡</span>
-        <div><span class="lm-link-opt-label">Nexus (via IR Layer)</span><span class="lm-link-opt-desc">Route via IR Layer to Nexus /ingest — default behaviour</span></div>
-      </div>
+      <div class="lm-info">Where matched events are routed. Leave blank to route via IR Layer default.</div>
       <div class="lm-link-opt" data-lm-link="ledger" id="__g-lm-link-ledger">
         <span class="lm-link-opt-icon">📒</span>
         <div><span class="lm-link-opt-label">Event Ledger</span><span class="lm-link-opt-desc">Real, permanent write to Cortex's own event log</span></div>
       </div>
+      <div class="lm-link-opt" data-lm-link="intelligence" id="__g-lm-link-intelligence">
+        <span class="lm-link-opt-icon">🧬</span>
+        <div><span class="lm-link-opt-label">Intelligence System</span><span class="lm-link-opt-desc">Tagged for Cortex's pattern-scan — same real event log, marked as a deliberate observation</span></div>
+      </div>
       <div class="lm-link-opt" data-lm-link="compartment" id="__g-lm-link-compartment">
         <span class="lm-link-opt-icon">🗂</span>
-        <div><span class="lm-link-opt-label">System Compartment</span><span class="lm-link-opt-desc">Ledger write tagged to a specific real NEXUS system</span></div>
+        <div><span class="lm-link-opt-label">Another System</span><span class="lm-link-opt-desc">Ledger write tagged to a specific real NEXUS system, with intent</span></div>
       </div>
       <div class="lm-url-row" id="__g-lm-compartment-row">
         <div class="gf-label">System</div>
@@ -351,10 +327,24 @@
           <option value="idearium">idearium</option><option value="architect">architect</option>
           <option value="emerge">emerge</option><option value="ollama">ollama</option>
         </select>
+        <div class="gf-label" style="margin-top:6px">Intent</div>
+        <input class="gf-input" id="__g-lm-compartment-intent" placeholder="e.g. flag-for-review, price-change"/>
       </div>
       <div class="lm-link-opt" data-lm-link="sse-system" id="__g-lm-link-sse-system">
         <span class="lm-link-opt-icon">📶</span>
-        <div><span class="lm-link-opt-label">SSE → System</span><span class="lm-link-opt-desc">Live stream into a real system's own event bus</span></div>
+        <div><span class="lm-link-opt-label">SSE → System</span><span class="lm-link-opt-desc">Live stream into a real system's own event bus (Guardian's included)</span></div>
+      </div>
+      <div class="lm-link-opt" data-lm-link="copilot-cli" id="__g-lm-link-copilot-cli">
+        <span class="lm-link-opt-icon">⌘</span>
+        <div><span class="lm-link-opt-label">Co-pilot CLI</span><span class="lm-link-opt-desc">Sends the matched text to Co-pilot's real prompt route, with an intent</span></div>
+      </div>
+      <div class="lm-url-row" id="__g-lm-copilot-cli-row">
+        <div class="gf-label">Intent</div>
+        <input class="gf-input" id="__g-lm-copilot-cli-intent" placeholder="e.g. summarize, flag, ask"/>
+      </div>
+      <div class="lm-link-opt" data-lm-link="copilot-panel" id="__g-lm-link-copilot-panel">
+        <span class="lm-link-opt-icon">💬</span>
+        <div><span class="lm-link-opt-label">Co-pilot Panel</span><span class="lm-link-opt-desc">Shows up directly in Clear Glass's own co-pilot chat — no external system</span></div>
       </div>
       <div class="lm-link-opt" data-lm-link="ollama-stream" id="__g-lm-link-ollama-stream">
         <span class="lm-link-opt-icon">🧠</span>
@@ -379,6 +369,46 @@
   for (const e of [selBox, overlay, tip, escHint, toast, popup, listenModal]) {
     document.body.appendChild(e);
   }
+
+  // ── Draggable popups — James: "also i cant move it around." Neither the
+  //    real Guardian source nor the port had drag support; both popups sit
+  //    at fixed positions computed once in openPopup()/openListenModal()
+  //    and never move. Real, generic drag-by-header, matching this file's
+  //    existing bounds-checking style (openPopup/openListenModal already
+  //    clamp initial position to the viewport — dragging clamps the same
+  //    way so a popup can't be dragged fully off-screen and become
+  //    unreachable). Cursor feedback on the header only, not the whole
+  //    panel, so text inside (label inputs etc.) stays normally selectable.
+  function makeDraggable(panel, handle) {
+    let dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+    handle.style.cursor = 'move';
+    handle.addEventListener('pointerdown', (e) => {
+      // Don't start a drag from the close button inside the header
+      if (e.target.closest('button')) return;
+      dragging = true;
+      startX = e.clientX; startY = e.clientY;
+      const r = panel.getBoundingClientRect();
+      origLeft = r.left; origTop = r.top;
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const r  = panel.getBoundingClientRect();
+      let left = origLeft + dx, top = origTop + dy;
+      left = Math.max(4, Math.min(left, vw - r.width  - 4));
+      top  = Math.max(4, Math.min(top,  vh - r.height - 4));
+      panel.style.left = left + 'px';
+      panel.style.top  = top  + 'px';
+    });
+    const endDrag = (e) => { if (dragging) { dragging = false; try { handle.releasePointerCapture(e.pointerId); } catch(_) {} } };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
+  }
+  makeDraggable(popup,       document.getElementById('__g-popup-hdr'));
+  makeDraggable(listenModal, document.getElementById('__g-listen-modal-hdr'));
 
   // ── State — real, unchanged from the source (already extension-agnostic) ──
 
@@ -772,35 +802,46 @@
     };
 
     let linkTarget = null;
-    if (_lmLinkType === 'bridge') {
-      const url = document.getElementById('__g-lm-bridge-url').value.trim();
-      if (!url) { showToast('⚠ Enter a bridge URL', 'warn'); return; }
-      linkTarget = { type: 'bridge', url };
-    } else if (_lmLinkType === 'callto') {
-      const cid = document.getElementById('__g-lm-callto-id').value.trim();
-      if (!cid) { showToast('⚠ Enter a callto ID', 'warn'); return; }
-      linkTarget = { type: 'callto', calltoId: cid };
-    } else if (_lmLinkType === 'url') {
-      const url = document.getElementById('__g-lm-url-input').value.trim();
-      if (!url) { showToast('⚠ Enter an endpoint URL', 'warn'); return; }
-      linkTarget = { type: 'url', url };
-    } else if (_lmLinkType === 'nexus') {
-      linkTarget = { type: 'nexus' };
-    } else if (_lmLinkType === 'ledger') {
+    if (_lmLinkType === 'ledger') {
       // Real, direct write to Cortex's own event log — no extra config
       // needed, matching the existing 'nexus' option's own simplicity.
       linkTarget = { type: 'ledger' };
+    } else if (_lmLinkType === 'intelligence') {
+      // §2026-08-28 — James: "do the intelligence system instead" (of
+      // COS/autopilot, which have no real event-ingest endpoint — checked
+      // directly, neither exposes one). Traced the real path first: the
+      // 'ledger' target above already POSTs to cortex's real /api/event
+      // (registered in cortex/registry-components.js as 'events.write'),
+      // and that's the exact same event_log table cortex's own
+      // intelligence module scans for pattern-crystallization — confirmed
+      // directly in cortex/boot.js, not assumed. So this doesn't need a
+      // new transport, just a distinct, honestly-tagged event type so
+      // intelligence's pattern-scan (and anyone reading the ledger later)
+      // can tell a deliberate observation from an ordinary ledger write.
+      linkTarget = { type: 'intelligence' };
     } else if (_lmLinkType === 'compartment') {
-      linkTarget = { type: 'compartment', system: document.getElementById('__g-lm-compartment-select').value };
+      linkTarget = {
+        type: 'compartment',
+        system: document.getElementById('__g-lm-compartment-select').value,
+        intent: document.getElementById('__g-lm-compartment-intent').value.trim() || null,
+      };
     } else if (_lmLinkType === 'sse-system') {
       linkTarget = { type: 'sse-system', system: document.getElementById('__g-lm-compartment-select')?.value || 'cortex' };
+    } else if (_lmLinkType === 'copilot-cli') {
+      linkTarget = { type: 'copilot-cli', intent: document.getElementById('__g-lm-copilot-cli-intent').value.trim() || 'ask' };
+    } else if (_lmLinkType === 'copilot-panel') {
+      // Fully local — no external system, no HTTP call. Routes into
+      // Clear Glass's own co-pilot chat panel via the same real SSE
+      // stream every other panel already listens on.
+      linkTarget = { type: 'copilot-panel' };
     } else if (_lmLinkType === 'ollama-stream') {
       linkTarget = { type: 'ollama-stream' };
-    } else {
-      // Default: always route to Nexus via bridge bus
-      // This ensures every listener sends data back to NEXUS console/SSE
-      linkTarget = { type: 'bridge', url: BRIDGE_URL_DEFAULT || 'http://127.0.0.1:3747' };
     }
+    // else: no link selected — linkTarget stays null, real IR-Layer-
+    // default routing (the existing emit(d.type, d) that already fires
+    // unconditionally, regardless of link target) still applies. Not
+    // defaulting to a fabricated target here now that 'bridge' is no
+    // longer a real, visible option.
 
     const listenerId = 'listener-' + crypto.randomUUID().slice(0, 8);
     const config = {
@@ -839,7 +880,7 @@
       document.querySelectorAll('.lm-url-row').forEach(r => r.classList.remove('show'));
       opt.classList.add('selected');
       _lmLinkType = opt.dataset.lmLink;
-      const rowMap = { bridge: '__g-lm-bridge-row', callto: '__g-lm-callto-row', url: '__g-lm-url-row', compartment: '__g-lm-compartment-row' };
+      const rowMap = { compartment: '__g-lm-compartment-row', 'copilot-cli': '__g-lm-copilot-cli-row' };
       const rowId = rowMap[_lmLinkType];
       if (rowId) document.getElementById(rowId).classList.add('show');
     });

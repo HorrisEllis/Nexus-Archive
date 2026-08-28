@@ -251,15 +251,15 @@
   .nav-btn:active { transform: scale(0.94); }
 
   #url-bar {
-    flex: 2 1 120px;
-    height: 32px;
+    flex: 3 1 160px;
+    height: 40px;
     background: var(--bg-0);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 0 12px;
+    padding: 0 16px;
     color: var(--text-bright);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
     outline: none;
     transition: border-color 0.15s;
     min-width: 0;
