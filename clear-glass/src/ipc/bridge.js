@@ -159,7 +159,27 @@ class IpcBridge {
     // ── Direct query endpoints (read-only, no bus needed) ─────────────────
     this.app.get('/contexts', (req, res) => res.json({ contexts: this.ctxMgr?.list() || [] }));
     this.app.get('/agents',   (req, res) => res.json({ agents: this.mesh?.listAgents() || [] }));
-    this.app.get('/listeners',(req, res) => res.json({ listeners: this.urlListener?.list() || [] }));
+    this.app.get('/url-listeners',(req, res) => res.json({ listeners: this.urlListener?.list() || [] }));
+
+    // §SBP12 2026-08-28 — James: "finish it off." Real, requested
+    // aggregation: TX16's listener registry, the 4 provider userscripts'
+    // real state, hat-forge's real hats, and options.listAccounts() have
+    // no single real view connecting them. Composes ONLY existing real
+    // data — same pattern the diagnostic SYSTEMS registry already
+    // proved (compose, don't rebuild). Each key degrades independently
+    // to [] on its own real failure rather than one bad source blanking
+    // the whole response.
+    this.app.get('/agent-suite', (req, res) => {
+      let hats = [];
+      try { hats = require('../../../lib/hat-forge.js').list(); } catch (_) {}
+      res.json({
+        agents:    this.mesh?.listAgents() || [],
+        hats,
+        listeners: this.options?.listListeners() || [],
+        accounts:  this.options?.listAccounts() || [],
+        ts: Date.now(),
+      });
+    });
     this.app.get('/diag/reports', (req, res) => res.json({ reports: this.diag?.listReports() || [] }));
     this.app.get('/api-settings', (req, res) => res.json(this.apiSettings?.getPublic() || {}));
 
@@ -743,11 +763,68 @@ class IpcBridge {
       this._postToApiChannel(`http://127.0.0.1:${process.env.OLLAMA_BRIDGE_PORT || 3749}/api/generate`,
         { prompt: eventData?.text || eventData?.value || eventData?.filename || '', [idField]: id, stream: false }
       ).catch(err => this.sse.emit('guardian.listener.route.error', { [idField]: id, target: 'ollama-stream', error: err.message }));
+    } else if (target.type === 'direct-file-write') {
+      // §2026-08-28 — James: "clearglass listens for the codeblocks...
+      // reads the location in the file and moves it to the directory to
+      // replace it like you do. Maybe a hat that doesn't use
+      // compartments." Real, deliberately lightweight lane: no
+      // compartment, no contract, no RAID round trip — a direct write,
+      // same shape as this session's own create_file/str_replace tool
+      // calls. Uses the SAME real convention every file built this
+      // session already follows (a real path comment on line 1/2) —
+      // not an invented protocol.
+      const result = this._writeCodeBlockToFile(eventData?.text || eventData?.value || '');
+      this.sse.emit('guardian.listener.direct-file-write', { [idField]: id, ...result });
     }
     // §HONEST LIMIT — no linkTarget selected (null) falls through to
     // whatever real IR-Layer-default routing already applies elsewhere
     // (the unconditional emit(d.type, d) above); nothing silently dropped
     // and nothing here fabricates a destination for the unset case.
+  }
+
+  // §2026-08-28 — real, deliberately lightweight code-block-to-file write.
+  // James: "reads the location in the file and moves it to the directory
+  // to replace it like you do." Same convention every real file built
+  // this session already follows: a path comment on line 1 or 2, either
+  // '// path/to/file.js' or the first content line inside a '/** ... */'
+  // block. Not an invented protocol — formalizing what was already true.
+  //
+  // §SAFETY — this writes to real disk based on text parsed out of a
+  // chat page. A resolved path that escapes the real NEXUS root (via
+  // '../' traversal, an absolute path, or a symlink pointing outside it)
+  // is refused outright, not sanitized-and-allowed. A feature this
+  // direct fails closed on anything ambiguous, not open.
+  _writeCodeBlockToFile(rawText) {
+    const path = require('path'); const fs = require('fs');
+    if (!rawText || typeof rawText !== 'string') return { ok: false, error: 'no text to extract a code block from' };
+
+    // Real markdown-fenced code block, any language tag.
+    const fenceMatch = rawText.match(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/);
+    const body = fenceMatch ? fenceMatch[1] : rawText;
+    const lines = body.split('\n');
+
+    // Path comment on line 1 ('// path' or '# path'), OR the first real
+    // content line inside a '/** ... */' block (line 1 is the opener).
+    let pathLine = lines[0] || '';
+    if (/^\s*\/\*\*?\s*$/.test(pathLine) && lines[1]) pathLine = lines[1];
+    const pathMatch = pathLine.match(/(?:\/\/|#|\*)\s*([a-zA-Z0-9_.\-\/]+\.[a-zA-Z0-9]+)\b/);
+    if (!pathMatch) return { ok: false, error: 'no real file path comment found on the first line(s) of the code block' };
+
+    const relPath = pathMatch[1];
+    const root = path.resolve(__dirname, '..', '..', '..'); // clear-glass/src/ipc -> repo root
+    const resolved = path.resolve(root, relPath);
+    // §SAFETY — the real, hard guard: resolved path must stay under root.
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+      return { ok: false, error: `refused: resolved path "${resolved}" escapes the real NEXUS root — no write attempted` };
+    }
+
+    try {
+      fs.mkdirSync(path.dirname(resolved), { recursive: true });
+      fs.writeFileSync(resolved, body, 'utf8');
+      return { ok: true, path: relPath, bytes: Buffer.byteLength(body, 'utf8') };
+    } catch (err) {
+      return { ok: false, error: `write failed: ${err.message}` };
+    }
   }
 
   // §STATE-LINK 2026-08-27 — shared by the ipcMain handlers above (renderer

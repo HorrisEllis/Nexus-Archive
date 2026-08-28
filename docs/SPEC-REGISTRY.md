@@ -486,3 +486,33 @@ Not built this drop (§8.5) — MAPPED, NOT BUILT. Scoped from real, grepped
 fragmentation (guardian: 6 bus events, all `ncp.*`; clear-glass: 36 files
 independently emitting with no shared registry), not assumed. All 8 real
 phases (ET1-6, BR1-2) start PENDING.
+
+## §REGISTERED 2026-08-28 (§6.3)
+
+| spec | version | status | governs | last checked vs code |
+|---|---|---|---|---|
+| `docs/2026-08-28-self-building-pipeline-phasemap.spec` | 0.1.0-phasemap | PHASEMAP | Full loom/idearium -> compartment -> repository -> spec -> chunk -> contract -> RAID -> agent pipeline, grounded bottom-up per axiom §3.1. Confirmed real, already-built pieces cross-referenced not duplicated (Versionium all 4 steps, RAID's dependency graph, BR5 agent-aware chunking, COS's blueprint/archetype system, routing-ir.js's agent-preference support) | 2026-08-28 (written; 6 phases verified parsing correctly against loom/scanners/phasemap-map.js's real loadAll() before commit) |
+
+Not built this drop (§8.5) — MAPPED, NOT BUILT, per James's own explicit
+instruction ("Map first. Phasemap. Bottom up."). Real, confirmed findings
+baked into the phase descriptions themselves, not left as open questions
+in prose: COS's `launchBlueprint()` already IS the real template-to-
+compartment mechanism (11 pre-built blueprints confirmed); `routing-ir.js`
+already supports a preferred/specified agent but `contract-intake.js`
+bypasses it entirely; a second, real "repository" concept (idearium's own
+`RepoLayer`) exists independently of COS's compartment persistence and
+needs the SAME reconciliation discipline this session already applied
+once to `.nex` vs COS's `SnapshotEngine` — flagged as SBP1, the required
+first step, not assumed either way. All 6 real phases (SBP1-6) start
+PENDING.
+
+## §REGISTERED 2026-08-28 (§6.3), second entry
+
+| spec | version | status | governs | last checked vs code |
+|---|---|---|---|---|
+| `docs/2026-08-28-definition-of-complete-phasemap.spec` | 0.1.0-phasemap | PHASEMAP | James's own stated conditions for NEXUS to be considered complete (autonomy, self-repair, build-from-idearium, build-from-loom, living model, axiom compliance, COS-based testing, contract/comparison/drift engines) — each graded honestly against real current state, cross-referenced to already-tracked real phases rather than restated | 2026-08-28 (written; 8 phases verified parsing correctly against loom/scanners/phasemap-map.js's real loadAll() before commit — caught and fixed a real false-positive: the literal substring "STARTED" inside the honest phrase "not yet started" flipped a phase's real status to IN-PROGRESS in the scanner's own heuristic) |
+
+Not built — this is a criteria document, not a build phase set. 2 of 8
+conditions (idearium build pipeline, axiom compliance) are already
+genuinely DONE; the rest are real, open gaps named at their actual size
+(loom deciding-and-acting, not just mapping, is the single largest one).

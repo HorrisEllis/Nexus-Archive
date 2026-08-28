@@ -350,6 +350,10 @@
         <span class="lm-link-opt-icon">🧠</span>
         <div><span class="lm-link-opt-label">Ollama Continuous Stream</span><span class="lm-link-opt-desc">Every matched real event sent to Ollama for processing</span></div>
       </div>
+      <div class="lm-link-opt" data-lm-link="direct-file-write" id="__g-lm-link-direct-file-write">
+        <span class="lm-link-opt-icon">📝</span>
+        <div><span class="lm-link-opt-label">Direct File Write</span><span class="lm-link-opt-desc">Writes a matched code block straight to disk, using its own path comment (// path/to/file.js) — no compartment, no contract</span></div>
+      </div>
       <div id="__g-listen-modal-actions">
         <button class="lm-btn-confirm" id="__g-lm-btn-confirm">⦿ START LISTENER</button>
         <button class="lm-btn-cancel"  id="__g-lm-btn-cancel">CANCEL</button>
@@ -836,6 +840,8 @@
       linkTarget = { type: 'copilot-panel' };
     } else if (_lmLinkType === 'ollama-stream') {
       linkTarget = { type: 'ollama-stream' };
+    } else if (_lmLinkType === 'direct-file-write') {
+      linkTarget = { type: 'direct-file-write' };
     }
     // else: no link selected — linkTarget stays null, real IR-Layer-
     // default routing (the existing emit(d.type, d) that already fires

@@ -160,12 +160,27 @@ class AgentMesh {
 
     this.sse.emit('mesh.vault.restore', { agentKey, contextId, cookiesRestored, ts: Date.now() });
 
+    // §SBP8 2026-08-28 — James's own real gap, confirmed by reading
+    // spawn() directly before touching it: real account-vault awareness
+    // already existed here (this.vault.restore, _resolveAccountId above)
+    // but zero AGENT_CONSTRAINTS awareness — a spawned agent's real token
+    // ceiling was invisible to anything holding its mesh state, forcing a
+    // separate lookup every time it mattered. lib/agent-router.js's real,
+    // already-built AGENT_CONSTRAINTS (chatgpt:900/chunk, gemini:1000000,
+    // claude:200000, etc — the same real map BR5's chunking already
+    // reads) is attached here once, at spawn time, not re-derived per
+    // caller.
+    let constraints = null;
+    try { constraints = require('../../../lib/agent-router.js').AGENT_CONSTRAINTS[agentKey] || null; }
+    catch (err) { this.sse.emit('mesh.constraints.unavailable', { agentKey, contextId, error: err.message, ts: Date.now() }); }
+
     const state = {
 
       key:       agentKey,
       contextId,
       accountId,
       def,
+      constraints,
       status:    'spawned',
       health:    100,
       taskCount: 0,

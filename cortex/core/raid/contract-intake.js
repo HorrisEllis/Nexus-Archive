@@ -39,7 +39,7 @@ const VERSION = '1.0.0';
 const TABLE = 'raid_contract_queue';
 
 const STATUS = Object.freeze({
-  QUEUED: 'queued', RUNNING: 'running', PASS: 'pass', FAIL: 'fail',
+  QUEUED: 'queued', RUNNING: 'running', PASS: 'pass', FAIL: 'fail', BLOCKED: 'blocked',
 });
 
 let _qaqcRegistered = false;
@@ -140,6 +140,29 @@ function _registerContractQaQc() {
  * a real testable end-state works, since only file/title/forAgent are
  * read here and everything else rides through to the compartment
  * untouched for the eventual executor to use.
+ *
+ * §GRAPH 2026-08-28 — James: "highest leverage thing... turn RAID's
+ * contract queue into a real dependency graph." The gap named directly:
+ * LangGraph's actual core strength is nodes with conditional edges and
+ * checkpointed state, not agents or tools — this queue was flat FIFO,
+ * no contract could depend on another's outcome, no branching. Two new,
+ * fully backward-compatible opts:
+ *
+ * opts.dependsOn — array of real queueIds this contract requires to have
+ * PASSed before it's eligible to run. Defaults to [] (always eligible),
+ * so every existing real caller (submitIdeariumChunk, BR5's own
+ * spec-parser submissions) is completely unaffected.
+ *
+ * opts.onFail — {action:'retry', maxRetries} | {action:'fallbackAgent',
+ * agent} | {action:'halt'} | null (default). null means exactly today's
+ * behavior: one attempt, FAIL is terminal. 'retry' re-queues the SAME
+ * contract (up to maxRetries) rather than re-invoking the executor
+ * inline within processNext — keeps processNext's real contract intact
+ * ("one unit of queue work per call"), a retry is just next call's work.
+ * 'fallbackAgent' re-queues with a different forAgent after the first
+ * real failure. 'halt' (or exhausting retry/fallback) leaves the row at
+ * a real, terminal FAIL — which the NEXT processNext() call's blocking
+ * pass (below) then propagates to BLOCK anything real that depends on it.
  */
 function submitContract(contract, opts = {}) {
   if (!contract || typeof contract.content !== 'string') {
@@ -154,6 +177,9 @@ function submitContract(contract, opts = {}) {
     title: contract.title || null,
     forAgent: contract.forAgent || opts.forAgent || null,
     contract,                              // the real, full contract object — the end-state lives inside it
+    dependsOn: Array.isArray(opts.dependsOn) ? opts.dependsOn.slice() : [],
+    onFail: opts.onFail || null,
+    retryCount: 0,
     compartmentId: null,
     verdict: null,
     createdAt: Date.now(),
@@ -172,13 +198,48 @@ function listQueue(filter = {}) {
   } catch (_) { return []; }
 }
 
+// §GRAPH — real dependency-graph helpers, both operating on the SAME real
+// queue rows (no separate graph structure invented — the queue IS the
+// graph, dependsOn arrays are the edges).
+function _dependenciesSatisfied(row, allRows) {
+  if (!row.dependsOn || !row.dependsOn.length) return true;
+  return row.dependsOn.every((depId) => {
+    const dep = allRows.find((r) => r.uuid === depId);
+    return dep && dep.status === STATUS.PASS;
+  });
+}
+function _dependencyPermanentlyFailed(row, allRows) {
+  if (!row.dependsOn || !row.dependsOn.length) return false;
+  // §REAL DESIGN NOTE — a row's status is only ever FAIL once retry/
+  // fallback (if any) is exhausted; a still-retriable failure gets
+  // re-queued back to QUEUED by processNext() below rather than settling
+  // at FAIL. So FAIL and BLOCKED are the only two real, permanent
+  // failure states a dependent needs to check for — no separate
+  // "is this dep still retriable" lookup needed here.
+  return row.dependsOn.some((depId) => {
+    const dep = allRows.find((r) => r.uuid === depId);
+    return dep && (dep.status === STATUS.FAIL || dep.status === STATUS.BLOCKED);
+  });
+}
+
 /**
- * processNext(executor) — dequeues the oldest QUEUED row, spawns a real
+ * processNext(executor) — dequeues the oldest QUEUED row whose real
+ * dependencies (opts.dependsOn) have all PASSed, spawns a real
  * compartment per contract (compartmentEngine.spawn), runs it through
  * the real execute()/resolve() lifecycle with the contract's own
  * seam-verdict wired as the end-state check (registered above), and
- * persists the real outcome. Returns null if the queue is empty —
- * a real, honest "nothing to do," not an error.
+ * persists the real outcome. Returns null if the queue is genuinely
+ * empty, or {blocked:true, waitingCount} if queued contracts exist but
+ * none have satisfied dependencies yet — a real, distinct signal from
+ * "nothing to do," not conflated with it.
+ *
+ * §GRAPH 2026-08-28 — before picking a contract to run, every QUEUED row
+ * is checked against the real graph: if any of its dependencies has
+ * permanently FAILed or is BLOCKED, this row is marked BLOCKED too (not
+ * left sitting in the queue looking pending forever) — and that check
+ * runs for every real queued row on every call, so a failure blocks its
+ * whole downstream chain within one processNext() call, not just the
+ * immediate child.
  *
  * executor(workingMemory, constraintFrame) — the real dispatch call
  * (e.g. lib/agent-router.js's routeAgent() result, actually sent to the
@@ -187,9 +248,26 @@ function listQueue(filter = {}) {
  * same separation of concerns agent-router/lifeline already keep.
  */
 async function processNext(executor) {
-  const queued = listQueue({ status: STATUS.QUEUED })
-    .sort((a, b) => a.createdAt - b.createdAt)[0];
-  if (!queued) return null;
+  const allRows   = listQueue();
+  const queuedRows = allRows.filter((r) => r.status === STATUS.QUEUED).sort((a, b) => a.createdAt - b.createdAt);
+
+  // Real blocking pass — every queued row, not just whichever one we're
+  // about to run, so a failure's whole downstream chain gets marked in
+  // one pass rather than one BLOCKED discovered per future call.
+  for (const row of queuedRows) {
+    if (_dependencyPermanentlyFailed(row, allRows)) {
+      try { jaaDB.update(TABLE, row.uuid, { status: STATUS.BLOCKED, updatedAt: Date.now(), blockReason: 'a real dependency permanently failed or was itself blocked' }); } catch (_) {}
+      row.status = STATUS.BLOCKED; // reflect locally so the eligibility filter below excludes it too
+    }
+  }
+
+  const ready = queuedRows.filter((r) => r.status === STATUS.QUEUED && _dependenciesSatisfied(r, allRows));
+  if (!ready.length) {
+    const stillWaiting = queuedRows.filter((r) => r.status === STATUS.QUEUED);
+    if (stillWaiting.length) return { blocked: true, reason: 'queued contracts exist but none have all dependencies satisfied yet', waitingCount: stillWaiting.length };
+    return null; // genuinely nothing left — real, honest "nothing to do"
+  }
+  const queued = ready[0];
 
   const intent = {
     uuid: uid(),
@@ -217,6 +295,29 @@ async function processNext(executor) {
     : await compartmentEngine.resolve(compartment, null);
 
   const finalStatus = resolved.status === 'PASS' ? STATUS.PASS : STATUS.FAIL;
+
+  // §GRAPH — real onFail policy, only consulted on a real failure.
+  if (finalStatus === STATUS.FAIL && queued.onFail) {
+    if (queued.onFail.action === 'retry' && (queued.retryCount || 0) < (queued.onFail.maxRetries || 1)) {
+      const nextAttempt = (queued.retryCount || 0) + 1;
+      try { jaaDB.update(TABLE, queued.uuid, { status: STATUS.QUEUED, retryCount: nextAttempt, updatedAt: Date.now() }); } catch (_) {}
+      return { queueId: queued.uuid, compartmentId: compartment.id, status: 'retrying', attempt: nextAttempt, maxRetries: queued.onFail.maxRetries || 1, compartment: resolved };
+    }
+    if (queued.onFail.action === 'fallbackAgent' && queued.onFail.agent && queued.forAgent !== queued.onFail.agent) {
+      try {
+        jaaDB.update(TABLE, queued.uuid, {
+          status: STATUS.QUEUED, forAgent: queued.onFail.agent, updatedAt: Date.now(),
+          contract: { ...queued.contract, forAgent: queued.onFail.agent },
+        });
+      } catch (_) {}
+      return { queueId: queued.uuid, compartmentId: compartment.id, status: 'retrying_with_fallback_agent', fallbackAgent: queued.onFail.agent, compartment: resolved };
+    }
+    // action==='halt', or retry/fallback exhausted: falls through to the
+    // real, terminal FAIL below — the NEXT processNext() call's blocking
+    // pass (top of this function) is what propagates that to anything
+    // real that depends on this contract.
+  }
+
   try {
     jaaDB.update(TABLE, queued.uuid, {
       status: finalStatus, updatedAt: Date.now(),

@@ -234,7 +234,19 @@ async function _tryGuardian(prompt, opts = {}) {
     //     blocking on a check that may itself be the broken thing.
     if (ragProvider && ragProvider !== 'auto') {
       const provCheck = await _get(`${GD_URL}/providers`, 3000).catch(() => null);
-      if (provCheck?.providers && provCheck.providers[ragProvider]?.connected !== true) {
+      // §BUGFIX 2026-08-28, RE-APPLIED — this exact fix (originally
+      // commit e2f68f6) was silently lost when a parallel session's own
+      // branch, diverged from before this fix landed, overtook this
+      // branch via a later fast-forward merge. Confirmed by grep: this
+      // was the real, broken original code. Guardian's real GET
+      // /providers response is a flat map of provider name -> STRING
+      // status ('connected'|'null'), not {name:{connected:bool}}
+      // objects. provCheck.providers[ragProvider] is a STRING, so
+      // `.connected` on it is always undefined, and `undefined !== true`
+      // is always true — this branch ALWAYS concluded "not connected"
+      // and returned null before ever attempting a real dispatch,
+      // regardless of actual connection state.
+      if (provCheck?.providers && provCheck.providers[ragProvider] !== 'connected') {
         return null; // real evidence of not-connected — fall through to the cascade
       }
     } else if (ragProvider === 'auto') {
@@ -247,7 +259,11 @@ async function _tryGuardian(prompt, opts = {}) {
       // null and let the cascade handle it. Same fail-closed-on-evidence,
       // fail-open-on-no-evidence rule as above.
       const provCheck = await _get(`${GD_URL}/providers`, 3000).catch(() => null);
-      if (provCheck?.providers && !Object.values(provCheck.providers).some(p => p?.connected === true)) {
+      // §BUGFIX 2026-08-28, RE-APPLIED — same shape mismatch as above: p
+      // is a STRING ('connected'|'null'), p?.connected is always
+      // undefined, so .some() always returned false and this branch
+      // always concluded "nothing is connected" regardless of real state.
+      if (provCheck?.providers && !Object.values(provCheck.providers).some(p => p === 'connected')) {
         return null;
       }
     }

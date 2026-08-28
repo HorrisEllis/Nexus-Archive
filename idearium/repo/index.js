@@ -92,7 +92,7 @@ export class RepoLayer {
   // Either way, the repo record never holds file content or byte counts of
   // its own — only a pointer (specUuid) and a content identity (rootHash).
   // Returns { repo, ideaUuid, specUuid }.
-  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null } = {}) {
+  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null, compartmentId = null } = {}) {
     if (!name) return { error: 'repo name required' };
     if (!this.se) return { error: 'repo layer has no spec-engine — cannot store content' };
 
@@ -145,6 +145,15 @@ export class RepoLayer {
       ideaUuid,
       specUuid:  manifest.uuid,
       rootHash:  manifest.rootHash,          // content identity — the archive's address
+      // §SBP1 2026-08-28 — real, additive composition point named when
+      // SBP1 concluded RepoLayer and COS's compartment system don't
+      // overlap: a repo can now point at BOTH its spec content (specUuid,
+      // already real) AND a real COS compartment (compartmentId, this
+      // field) without either system needing to know about the other's
+      // internals. null by default — every existing real caller
+      // (getRepoLayer().ingest() in idearium/api/index.js) is completely
+      // unaffected; this is purely additive.
+      compartmentId: compartmentId || null,
       promotedFromSpec: promotedFromSpec || null,
       parent,                                 // fork lineage
       forks:     [],
