@@ -382,7 +382,7 @@
     }
 
     render();
-    return { tabs, get activeId(){ return activeId; }, newTab, closeTab, setUrl, setTitle, setLoading, render };
+    return { tabs, get activeId(){ return activeId; }, newTab, closeTab, setUrl, setTitle, setLoading, render, switchTo };
   })();
 
   document.getElementById('btn-new-tab').addEventListener('click', () => _tabs.newTab());
@@ -1278,6 +1278,9 @@
       </div>
       <div class="menu-sep"></div>
       <div class="menu-item" data-action="downloads">⬇ Downloads</div>
+      <div class="menu-item" data-action="site-settings">🛡 Site Settings</div>
+      <div class="menu-item" data-action="history">🕐 History</div>
+      <div class="menu-item" data-action="extensions">🧩 Extensions</div>
       <div class="menu-item" data-action="settings">☰ Settings</div>
     `;
     panel.style.display = 'block';
@@ -1297,7 +1300,19 @@
     }));
     panel.querySelector('[data-action="downloads"]').addEventListener('click', () => {
       panel.style.display = 'none';
-      document.getElementById('downloads-btn').click();
+      _openPanelFromMenu('downloads-panel', _renderDownloadsPanel);
+    });
+    panel.querySelector('[data-action="site-settings"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      _openPanelFromMenu('site-settings-panel', _renderSiteSettingsPanel);
+    });
+    panel.querySelector('[data-action="history"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      _openPanelFromMenu('history-panel', () => _renderHistoryPanel(''));
+    });
+    panel.querySelector('[data-action="extensions"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      _openPanelFromMenu('extensions-panel', _renderExtensionsPanel);
     });
     panel.querySelector('[data-action="settings"]').addEventListener('click', () => {
       panel.style.display = 'none';
@@ -1355,6 +1370,83 @@
     if (e.key === '=' || e.key === '+') { e.preventDefault(); applyZoom(_zoomFactor + 0.1); }
     else if (e.key === '-') { e.preventDefault(); applyZoom(_zoomFactor - 0.1); }
     else if (e.key === '0') { e.preventDefault(); applyZoom(1.0); }
+  });
+
+  // §BUILD 2026-08-29 — James: "control and scroll wheel. all the
+  // hot keys chrome and firefox have." Real accelerators, matching
+  // each real browser's own convention exactly, wired to the same real
+  // functions their toolbar/menu equivalents already use — one
+  // implementation per action, not a second copy for the shortcut.
+  //
+  // §HONEST LIMIT — NOT built: F11 fullscreen (no real setFullScreen
+  // IPC exists anywhere in this codebase, checked directly — a real,
+  // separate gap, not silently faked here) and Ctrl+Shift+Delete clear-
+  // browsing-data (no single real "clear everything" flow exists to
+  // hook into — history/downloads/cookies each clear separately today;
+  // wiring one hotkey to all of them would be inventing a feature, not
+  // exposing one that's already real).
+  wv.addEventListener('wheel', (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    applyZoom(_zoomFactor + (e.deltaY < 0 ? 0.1 : -0.1));
+  }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if (!mod) {
+      if (e.key === 'F5') { e.preventDefault(); wv.reload(); }
+      return;
+    }
+    switch (e.key) {
+      case 't': case 'T':
+        e.preventDefault(); _tabs.newTab(); break;
+      case 'w': case 'W':
+        e.preventDefault(); _tabs.closeTab(_tabs.activeId); break;
+      case 'Tab': {
+        e.preventDefault();
+        const ids = _tabs.tabs.map(t => t.id);
+        const i = ids.indexOf(_tabs.activeId);
+        const next = e.shiftKey ? (i - 1 + ids.length) % ids.length : (i + 1) % ids.length;
+        _tabs.switchTo(ids[next]);
+        break;
+      }
+      case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': {
+        e.preventDefault();
+        const idx = Number(e.key) - 1;
+        if (_tabs.tabs[idx]) _tabs.switchTo(_tabs.tabs[idx].id);
+        break;
+      }
+      case '9': {
+        // Real Chrome/Firefox convention: Ctrl+9 always jumps to the
+        // LAST tab, not literally "tab 9".
+        e.preventDefault();
+        const last = _tabs.tabs[_tabs.tabs.length - 1];
+        if (last) _tabs.switchTo(last.id);
+        break;
+      }
+      case 'l': case 'L':
+        e.preventDefault(); urlBar.focus(); urlBar.select(); break;
+      case 'r': case 'R':
+        e.preventDefault(); wv.reload(); break;
+      case 'd': case 'D':
+        e.preventDefault(); document.getElementById('btn-bookmark').click(); break;
+      case 'h': case 'H':
+        e.preventDefault(); _openPanelFromMenu('history-panel', () => _renderHistoryPanel('')); break;
+      case 'j': case 'J':
+        e.preventDefault(); _openPanelFromMenu('downloads-panel', _renderDownloadsPanel); break;
+      case 'p': case 'P':
+        e.preventDefault(); cg.driver.exec({ action: 'print', agentId }); break;
+    }
+  });
+
+  // Alt+Left / Alt+Right — real browser back/forward convention,
+  // separate from Ctrl+ since Alt is the real cross-browser standard
+  // for history navigation (Ctrl+Left/Right is reserved for word-
+  // jumping inside text fields in both Chrome and Firefox).
+  window.addEventListener('keydown', (e) => {
+    if (!e.altKey) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); if (wv.canGoBack()) wv.goBack(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); if (wv.canGoForward()) wv.goForward(); }
   });
 
   // §NEW 2026-08-24 — real downloads manager panel. Same real dropdown
@@ -1473,18 +1565,9 @@
       panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
     }
   }
-  document.getElementById('downloads-btn').addEventListener('click', (e) => {
-    const panel = document.getElementById('downloads-panel');
-    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-    const rect = e.target.getBoundingClientRect();
-    panel.style.top = `${rect.bottom + 4}px`;
-    panel.style.right = `${window.innerWidth - rect.right}px`;
-    panel.style.display = 'block';
-    _renderDownloadsPanel();
-  });
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('downloads-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'downloads-btn') panel.style.display = 'none';
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
   });
 
   // §NEW 2026-08-24 — real per-site settings panel. Lists every origin
@@ -1531,19 +1614,116 @@
       panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
     }
   }
-  document.getElementById('site-settings-btn').addEventListener('click', (e) => {
+  document.addEventListener('click', (e) => {
     const panel = document.getElementById('site-settings-panel');
-    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-    const rect = e.target.getBoundingClientRect();
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
+  });
+
+  // §PORTED 2026-08-29 — real history panel (from the now-diverged
+  // branch this was originally built and tested on). Opened from the
+  // general menu now, not a standalone toolbar button.
+  async function _renderHistoryPanel(query) {
+    const panel = document.getElementById('history-panel');
+    try {
+      const items = await cg.history.list({ agentId, query: query || undefined, limit: 100 });
+      const listHtml = !items.length
+        ? '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No history yet.</div>'
+        : items.map(i => `
+          <div style="display:flex;align-items:center;gap:6px;padding:5px 4px;border-bottom:1px solid var(--border,#333)">
+            <span data-open="${i.id}" data-url="${i.url.replace(/"/g, '&quot;')}" style="flex:1;cursor:pointer;overflow:hidden">
+              <div style="font-size:11px;color:var(--text,#ccc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.title.replace(/</g, '&lt;')}</div>
+              <div style="font-size:10px;color:var(--text-dim,#999);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.url.replace(/</g, '&lt;')}${i.visitCount > 1 ? ` · ${i.visitCount} visits` : ''}</div>
+            </span>
+            <span data-remove="${i.id}" style="cursor:pointer;opacity:.5;font-size:11px" title="Remove">✕</span>
+          </div>`).join('');
+      panel.innerHTML = `
+        <div style="display:flex;gap:4px;padding:2px 2px 6px">
+          <input id="history-search" type="text" placeholder="Search history..." value="${(query || '').replace(/"/g, '&quot;')}" style="flex:1;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:11px" />
+          <span id="history-clear-all" style="cursor:pointer;font-size:10px;color:var(--text-dim,#999);align-self:center;white-space:nowrap">clear all</span>
+        </div>
+        ${listHtml}`;
+      const search = document.getElementById('history-search');
+      search.addEventListener('input', () => _renderHistoryPanel(search.value));
+      search.focus();
+      search.selectionStart = search.selectionEnd = search.value.length;
+      panel.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => {
+        wv.loadURL(el.dataset.url);
+        panel.style.display = 'none';
+      }));
+      panel.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        await cg.history.delete(el.dataset.remove);
+        _renderHistoryPanel(document.getElementById('history-search')?.value);
+      }));
+      document.getElementById('history-clear-all').addEventListener('click', async () => {
+        await cg.history.clear();
+        _renderHistoryPanel('');
+      });
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('history-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
+  });
+
+  // §PORTED 2026-08-29 — real extensions panel, same real source as above.
+  async function _renderExtensionsPanel() {
+    const panel = document.getElementById('extensions-panel');
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    try {
+      const exts = await cg.extensions.list();
+      const listHtml = !exts.length
+        ? '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No extensions loaded.</div>'
+        : exts.map(x => `
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
+            <span style="flex:1;overflow:hidden">
+              <div style="font-size:11px;color:var(--text,#ccc)">${x.name.replace(/</g, '&lt;')} <span style="color:var(--text-dim,#999)">v${x.version}</span></div>
+              <div style="font-size:9px;color:var(--text-dim,#999);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.path.replace(/</g, '&lt;')}</div>
+            </span>
+            <span data-unload="${x.id}" style="cursor:pointer;opacity:.6;font-size:11px" title="Unload">✕</span>
+          </div>`).join('');
+      panel.innerHTML = `
+        <div style="padding:2px 2px 6px">
+          <button id="extensions-load-btn" style="width:100%;font-size:11px;padding:5px;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;cursor:pointer">+ Load unpacked extension…</button>
+        </div>
+        ${listHtml}`;
+      document.getElementById('extensions-load-btn').addEventListener('click', async () => {
+        const picked = await cg.extensions.pickDirectory();
+        if (picked.canceled) return;
+        const result = await cg.extensions.load(picked.path);
+        if (result?.error) addMsg('assistant', `Failed to load extension: ${result.error}`);
+        else addMsg('assistant', `🧩 Loaded extension: ${result.name}`);
+        _renderExtensionsPanel();
+      });
+      panel.querySelectorAll('[data-unload]').forEach(el => el.addEventListener('click', async () => {
+        await cg.extensions.unload(el.dataset.unload);
+        _renderExtensionsPanel();
+      }));
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('extensions-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
+  });
+
+  // §PORTED 2026-08-29 — shared open-from-menu helper: positions a panel
+  // relative to the general menu button (since History/Extensions/Site
+  // Settings no longer have their own standalone toolbar buttons to
+  // position relative to) and calls the matching real render function.
+  function _openPanelFromMenu(panelId, renderFn) {
+    const panel = document.getElementById(panelId);
+    const btn = document.getElementById('bookmark-mgr-btn');
+    const rect = btn.getBoundingClientRect();
     panel.style.top = `${rect.bottom + 4}px`;
     panel.style.right = `${window.innerWidth - rect.right}px`;
     panel.style.display = 'block';
-    _renderSiteSettingsPanel();
-  });
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('site-settings-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'site-settings-btn') panel.style.display = 'none';
-  });
+    renderFn();
+  }
+
 
   // §NEW 2026-08-24 — real find-in-page bar, using the new real driver
   // actions (findInPage/stopFindInPage — Electron's actual webContents

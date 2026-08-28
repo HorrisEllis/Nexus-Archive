@@ -17,7 +17,7 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, errorCapture, copilot, postEvent, pluginHost }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, history, extensions, errorCapture, copilot, postEvent, pluginHost }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -52,6 +52,8 @@ class IpcBridge {
     // would have silently failed. Fixed now.
     this.passwordVault = passwordVault;
     this.speech        = speech;
+    this.history       = history;
+    this.extensions    = extensions;
     this.pluginHost    = pluginHost;
     // §FIXED 2026-08-23 — real, pre-existing gap found while wiring the
     // new listener-routing work below: main/index.js's real IpcBridge
@@ -382,6 +384,28 @@ class IpcBridge {
     ipcMain.handle('calltos:list',   async ()      => this.options?.listCalltos() || []);
     ipcMain.handle('calltos:forUrl', async (e, d)   => this.options?.findCalltosForUrl(d.url) || []);
     ipcMain.handle('calltos:remove', async (e, d)   => this.options?.removeCallto(d.id));
+
+    // §PORTED 2026-08-29 — real history IPC surface (from the now-diverged
+    // branch this was originally built and tested on).
+    ipcMain.handle('history:list',   async (e, d) => this.history?.list(d || {}));
+    ipcMain.handle('history:delete', async (e, d) => this.history?.deleteItem(d.id));
+    ipcMain.handle('history:clear',  async (e, d) => this.history?.clearRange(d?.sinceMs));
+
+    // §PORTED 2026-08-29 — real extension management IPC surface, same
+    // real source as history above.
+    ipcMain.handle('extensions:list', async () => this.extensions?.list() || []);
+    ipcMain.handle('extensions:load', async (e, d) => {
+      if (!this.extensions) return { error: 'extension manager not available' };
+      try { return await this.extensions.load(d.path, d.options); }
+      catch (err) { return { error: err.message }; }
+    });
+    ipcMain.handle('extensions:unload', async (e, d) => this.extensions?.unload(d.id));
+    ipcMain.handle('extensions:pickDirectory', async () => {
+      const { dialog } = require('electron');
+      const result = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Select an unpacked extension folder (must contain manifest.json)' });
+      if (result.canceled || !result.filePaths.length) return { canceled: true };
+      return { canceled: false, path: result.filePaths[0] };
+    });
 
     // §NEW 2026-08-24 — real speech-to-text IPC surface.
     ipcMain.handle('speech:available', async () => this.speech?.isAvailable());

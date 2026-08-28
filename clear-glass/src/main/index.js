@@ -113,6 +113,8 @@ const UserscriptManager = require('../userscripts/manager');
 const { SiteSettingsStore } = require('../site-settings/store');
 const { DownloadsStore } = require('../downloads/store');
 const { PasswordVault } = require('../passwords/vault');
+const { HistoryStore } = require('../history/store');
+const { ExtensionManager } = require('../extensions/manager');
 const speech = require('../speech/engine');
 const { PluginHost }    = require('../plugins/host');
 const { registerAll }   = require('../gates/index');
@@ -125,7 +127,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, history, extensions, pluginHost, errorCapture, processMetrics;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -865,6 +867,22 @@ async function bootstrap() {
   passwordVault = new PasswordVault();
   passwordVault.load();
 
+  // 8.98. History — §PORTED 2026-08-29, real code from a now-diverged
+  // branch this session started on, brought over at James's direction.
+  history = new HistoryStore();
+  history.load();
+
+  // 8.99. Extensions — §PORTED 2026-08-29, same real source as above.
+  // Loaded onto session.defaultSession, not a per-agent session — real
+  // Chrome extensions apply browser-wide, matching how every actual
+  // browser's extension system works.
+  extensions = new ExtensionManager({ session: session.defaultSession });
+  extensions.loadRegistry();
+  const extReload = await extensions.reloadKnown();
+  if (extReload.loaded.length || extReload.failed.length) {
+    console.log(`[ClearGlass/Extensions] reloaded ${extReload.loaded.length}, failed ${extReload.failed.length}`);
+  }
+
   // 9. Co-pilot — Cortex-wired, CFR-logged, DOM-aware
   const copilot = new CoPilotBridge({
     sse:         { emit: (t, d) => emit(t, d) },
@@ -911,6 +929,8 @@ async function bootstrap() {
     siteSettings,
     passwordVault,
     speech,
+    history,
+    extensions,
   });
 
   // 12.5. Plugin system — §NEW 2026-08-24. Real gap James caught directly
@@ -971,6 +991,15 @@ async function bootstrap() {
       const count = await userscripts.autoInject(agentId, url).catch(() => 0);
       if (count > 0) emit('userscript.auto-injected', { agentId, url, count });
     }
+  });
+
+  // §PORTED 2026-08-29 — real history capture, same real source and
+  // trigger event as the original branch this was built on. Separate
+  // listener from the userscript-autoinject one above, not merged into
+  // it, so nothing about that existing, working logic is touched.
+  on('nav.loaded', (event) => {
+    const { agentId, url, title } = event.data;
+    if (agentId && url && history) history.add({ url, title, agentId });
   });
 
   // 13. SSE server — subscribes to bus, broadcasts all events
@@ -1041,6 +1070,8 @@ async function bootstrap() {
     downloads,
     passwordVault,
     speech,
+    history,
+    extensions,
     pluginHost,
     copilot,
   });

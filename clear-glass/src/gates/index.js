@@ -406,12 +406,45 @@ const speechAvailableGate = (speech) => gate('speech.available', (event, stream)
   speech.isAvailable().then(result => stream.emit(new Event('speech.available.result', result)));
 });
 
+// ── History — §PORTED 2026-08-29 (built earlier this session on a now-
+// diverged branch; ported over, not rebuilt, at James's direction) ────────
+const historyAddGate = (hs) => gate('history.add', (event, stream) => {
+  try { stream.emit(new Event('history.added', hs.add(event.data))); }
+  catch (err) { stream.emit(new Event('history.error', { error: err.message })); }
+});
+const historyListGate = (hs) => gate('history.list', (event, stream) => {
+  try { stream.emit(new Event('history.listed', { items: hs.list(event.data) })); }
+  catch (err) { stream.emit(new Event('history.error', { error: err.message })); }
+});
+const historyDeleteGate = (hs) => gate('history.delete', (event, stream) => {
+  try { stream.emit(new Event('history.deleted', { id: event.data.id, ok: hs.deleteItem(event.data.id) })); }
+  catch (err) { stream.emit(new Event('history.error', { error: err.message })); }
+});
+const historyClearGate = (hs) => gate('history.clear', (event, stream) => {
+  try { stream.emit(new Event('history.cleared', { count: hs.clearRange(event.data.sinceMs) })); }
+  catch (err) { stream.emit(new Event('history.error', { error: err.message })); }
+});
+
+// ── Extensions — §PORTED 2026-08-29, same real source as above ────────────
+const extensionLoadGate = (em) => gate('extensions.load', (event, stream) => {
+  em.load(event.data.path, event.data.options)
+    .then(ext => stream.emit(new Event('extensions.loaded', ext)))
+    .catch(err => stream.emit(new Event('extensions.error', { error: err.message })));
+});
+const extensionUnloadGate = (em) => gate('extensions.unload', (event, stream) => {
+  try { stream.emit(new Event('extensions.unloaded', em.unload(event.data.id))); }
+  catch (err) { stream.emit(new Event('extensions.error', { error: err.message })); }
+});
+const extensionListGate = (em) => gate('extensions.list', (event, stream) => {
+  stream.emit(new Event('extensions.listed', { extensions: em.list() }));
+});
+
 // ── Registry — register all gates on the bus ──────────────────────────────
 function registerAll(bus, deps) {
   const {
     driver, dom, ctxMgr, vault, copilot, mesh, diag, urlListener, seam,
     openFn, closeFn, minimizeFn, hideFn, maximizeFn, getStatusFn, options,
-    bookmarks, rewind, providerHost, userscripts, siteSettings, passwordVault, speech,
+    bookmarks, rewind, providerHost, userscripts, siteSettings, passwordVault, speech, history, extensions,
   } = deps;
 
   // §NEW 2026-08-24 — real, structural gap fix: every userscript
@@ -499,6 +532,15 @@ function registerAll(bus, deps) {
     // Speech-to-text
     speech && speechTranscribeGate(speech),
     speech && speechAvailableGate(speech),
+    // History
+    history && historyAddGate(history),
+    history && historyListGate(history),
+    history && historyDeleteGate(history),
+    history && historyClearGate(history),
+    // Extensions
+    extensions && extensionLoadGate(extensions),
+    extensions && extensionUnloadGate(extensions),
+    extensions && extensionListGate(extensions),
     // SEAM
     seam       && seamRegisterGate(seam),
     // Status
@@ -535,4 +577,6 @@ module.exports = {
   siteSettingsGetGate, siteSettingsSetGate, siteSettingsDeleteKeyGate,
   passwordSaveGate, passwordGetGate, passwordListGate, passwordDeleteGate,
   speechTranscribeGate, speechAvailableGate,
+  historyAddGate, historyListGate, historyDeleteGate, historyClearGate,
+  extensionLoadGate, extensionUnloadGate, extensionListGate,
 };

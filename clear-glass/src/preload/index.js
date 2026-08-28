@@ -106,6 +106,21 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     remove: (id)  => ipcRenderer.invoke('calltos:remove', { id }),
   },
 
+  // ── History — §PORTED 2026-08-29 ─────────────────────────────────────────
+  history: {
+    list:   (filter)   => ipcRenderer.invoke('history:list', filter),
+    delete: (id)       => ipcRenderer.invoke('history:delete', { id }),
+    clear:  (sinceMs)  => ipcRenderer.invoke('history:clear', { sinceMs }),
+  },
+
+  // ── Extensions — §PORTED 2026-08-29 ──────────────────────────────────────
+  extensions: {
+    list:          ()              => ipcRenderer.invoke('extensions:list'),
+    load:          (path, options) => ipcRenderer.invoke('extensions:load', { path, options }),
+    unload:        (id)            => ipcRenderer.invoke('extensions:unload', { id }),
+    pickDirectory: ()              => ipcRenderer.invoke('extensions:pickDirectory'),
+  },
+
   // ── Speech-to-text — §NEW 2026-08-24 ────────────────────────────────────
   speech: {
     available:          ()              => ipcRenderer.invoke('speech:available'),
