@@ -299,14 +299,27 @@ class NexusOptions {
    * a person just configured should fire the next time its page loads,
    * not require a second "turn it on" step.
    */
-  registerListener({ urlPattern, fingerprint, eventType, calltoId } = {}) {
+  registerListener({ urlPattern, fingerprint, eventType, calltoId, label, matchCriteria, linkTarget } = {}) {
     if (!urlPattern)  return { error: 'urlPattern required' };
     if (!fingerprint) return { error: 'fingerprint required' };
     const id  = randomUUID();
     const now = Date.now();
     const listener = {
       id, urlPattern, fingerprint, eventType: eventType || 'mutation',
-      calltoId: calltoId || null, enabled: true, createdAt: now, updatedAt: now,
+      // §EXTENDED 2026-08-28 — James, live, in guardian-picker.js's real
+      // listener-config modal: linkTarget already carries far more than a
+      // bare calltoId (bridge url, external url, ledger, compartment,
+      // sse-system, ollama-stream — real options already built there).
+      // calltoId is kept for backward compatibility with anything already
+      // written against the narrower shape; linkTarget is the real,
+      // current one guardian-picker.js actually produces and this store
+      // now holds it honestly instead of silently dropping everything
+      // but a callto id.
+      calltoId: calltoId || (linkTarget?.type === 'callto' ? linkTarget.calltoId : null) || null,
+      label: label || null,
+      matchCriteria: matchCriteria || null,
+      linkTarget: linkTarget || null,
+      enabled: true, createdAt: now, updatedAt: now,
     };
     this.data = { ...this.data, listeners: { ...this.data.listeners, [id]: listener } };
     this._persist();

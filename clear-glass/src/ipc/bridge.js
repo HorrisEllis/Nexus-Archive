@@ -521,6 +521,35 @@ class IpcBridge {
         emit(d.type, d);
         if (d.type === 'guardian.listener.start' && d.listenerId && d.config?.linkTarget) {
           this._guardianListenerTargets.set(d.listenerId, d.config.linkTarget);
+          // §BUGFIX 2026-08-28 — James, live: "it needs to actually be
+          // linked into guardian." This Map above is real but in-memory
+          // only — exactly the §HONEST LIMIT this file already named
+          // above ("on-disk persistence... is a genuinely separate,
+          // not-yet-built piece"). The real, persistent registry already
+          // exists (options/store.js's registerListener, built earlier
+          // this session) — this was the one real call missing to close
+          // that gap. e.sender.getURL() is the REAL current page URL at
+          // the moment this listener was created, not a guess or a
+          // placeholder — converted to an origin-wide pattern since a
+          // listener on one page of a site should survive navigating to
+          // another page of the same site, matching the same real glob
+          // semantics findListenersForUrl already uses.
+          try {
+            const pageUrl = e.sender?.getURL?.();
+            const urlPattern = pageUrl ? new URL(pageUrl).origin + '/*' : null;
+            if (urlPattern && this.options) {
+              this.options.registerListener({
+                urlPattern,
+                fingerprint: { selector: d.config.selector, xpath: d.config.xpath },
+                eventType: d.config.mode,
+                label: d.config.label,
+                matchCriteria: d.config.matchCriteria,
+                linkTarget: d.config.linkTarget,
+              });
+            }
+          } catch (err) {
+            console.warn(`[ipc/bridge] guardian.listener.start persist failed (live routing above is unaffected): ${err.message}`);
+          }
         } else if (d.type === 'guardian.listener.event' && d.listenerId) {
           this._routeGuardianListenerEvent(d.listenerId, d.eventData);
         } else if (d.type === 'guardian.killswitch') {
