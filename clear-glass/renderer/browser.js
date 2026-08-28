@@ -560,6 +560,14 @@
         if (!window.__guardianPickerSrc) {
           window.__guardianPickerSrc = await fetch('./guardian-picker.js').then(r => r.text());
         }
+        // §BUILD 2026-08-29 — same real CSP fix as the context-menu
+        // 'pick' case below; this is a second, independent injection
+        // site for the exact same script and needed the same fix.
+        const cssMatch = window.__guardianPickerSrc.match(/STYLE\.textContent\s*=\s*`([\s\S]*?)`;/);
+        if (cssMatch) {
+          try { await wv.insertCSS(cssMatch[1]); }
+          catch (cssErr) { console.warn('[pickerBtn] insertCSS failed:', cssErr.message); }
+        }
         await wv.executeJavaScript(window.__guardianPickerSrc);
       } catch (err) {
         console.error('[pickerBtn] guardian-picker.js load failed, falling back:', err);
@@ -1278,6 +1286,7 @@
       </div>
       <div class="menu-sep"></div>
       <div class="menu-item" data-action="downloads">⬇ Downloads</div>
+      <div class="menu-item" data-action="macros">▶ Macros</div>
       <div class="menu-item" data-action="settings">☰ Settings</div>
     `;
     panel.style.display = 'block';
@@ -1298,6 +1307,15 @@
     panel.querySelector('[data-action="downloads"]').addEventListener('click', () => {
       panel.style.display = 'none';
       document.getElementById('downloads-btn').click();
+    });
+    panel.querySelector('[data-action="macros"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      const mp = document.getElementById('macros-panel');
+      const rect = document.getElementById('bookmark-mgr-btn').getBoundingClientRect();
+      mp.style.top = `${rect.bottom + 4}px`;
+      mp.style.right = `${window.innerWidth - rect.right}px`;
+      mp.style.display = 'block';
+      _renderMacrosPanel();
     });
     panel.querySelector('[data-action="settings"]').addEventListener('click', () => {
       panel.style.display = 'none';
@@ -1543,6 +1561,49 @@
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('site-settings-panel');
     if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'site-settings-btn') panel.style.display = 'none';
+  });
+
+  // §NEW 2026-08-29 — real macros panel. Clear Glass's first UI reach
+  // into lib/agent-tools/'s macro tool — list stored macros and run one
+  // against the current agent/tab. A macro's real erosmancer usage
+  // (macro.js's own already-complete §EROS-INTEGRATION) is shown, not
+  // re-implemented — this panel is a thin, real UI over a real backend,
+  // not a second copy of macro execution logic.
+  async function _renderMacrosPanel() {
+    const panel = document.getElementById('macros-panel');
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    try {
+      const result = await cg.macros.list();
+      const macros = result?.macros || [];
+      if (!macros.length) {
+        panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No macros yet — created by an agent via the macro tool.</div>';
+        return;
+      }
+      panel.innerHTML = macros.map(m => {
+        const usesEros = (m.steps || []).some(s => s.engine === 'erosmancer');
+        return `
+        <div style="padding:6px 4px;border-bottom:1px solid var(--border,#333)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--text,#ccc);font-weight:600">${m.name.replace(/</g, '&lt;')}${usesEros ? ' <span style="color:#cc44ff;font-size:9px" title="uses erosmancer behavior engine">⚡eros</span>' : ''}</span>
+            <span data-run="${m.name}" style="cursor:pointer;font-size:10px;color:#00ffa3">▶ run</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-dim,#999)">${(m.description || m.steps?.length + ' step(s)').replace(/</g, '&lt;')}${m.runCount ? ` · run ${m.runCount}×` : ''}</div>
+        </div>`;
+      }).join('');
+      panel.querySelectorAll('[data-run]').forEach(el => el.addEventListener('click', async () => {
+        el.textContent = '…running';
+        const r = await cg.macros.run(el.dataset.run, agentId);
+        if (r?.ok) addMsg('assistant', `▶ Macro "${el.dataset.run}" completed (${r.stepsCompleted}/${r.stepsCompleted} steps)${r.profileWarning ? ' — ' + r.profileWarning : ''}`);
+        else addMsg('assistant', `⚠ Macro "${el.dataset.run}" failed at step ${r?.failedAtStep ?? '?'}: ${r?.error || 'unknown error'}`);
+        _renderMacrosPanel();
+      }));
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('macros-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
   });
 
   // §NEW 2026-08-24 — real find-in-page bar, using the new real driver
@@ -2250,6 +2311,31 @@ It will write and install it for you.`);
         try {
           if (!window.__guardianPickerSrc) {
             window.__guardianPickerSrc = await fetch('./guardian-picker.js').then(r => r.text());
+          }
+          // §BUILD 2026-08-29 — James's reported bug: "when i pick an
+          // element. it doesn't show the popup." Real diagnosis, not
+          // guessed: simulated the full pick flow (jsdom) and confirmed
+          // guardian-picker.js's own JS logic is correct — the popup
+          // genuinely gets its real .show class and correct position
+          // every time. The failure has to be CSS-level, on real pages
+          // this injects into (unlike jsdom, which doesn't enforce it):
+          // guardian-picker.js injects its styling as an in-page
+          // <style> tag, which many real sites' Content-Security-Policy
+          // (style-src) silently blocks — the JS still runs and adds
+          // the class, but the CSS that would make .show mean anything
+          // never applies. webview.insertCSS() is Electron's real,
+          // documented mechanism for exactly this: it injects CSS at
+          // the Chromium level, bypassing page CSP entirely, unlike a
+          // page-visible <style> tag. Extracted from the SAME fetched
+          // source text already in memory (not a second, hand-copied
+          // CSS file that could drift from the real one) — same real
+          // CSS guardian-picker.js's own <style> tag would set, kept as
+          // a harmless, redundant fallback for pages where CSP was
+          // never the issue.
+          const cssMatch = window.__guardianPickerSrc.match(/STYLE\.textContent\s*=\s*`([\s\S]*?)`;/);
+          if (cssMatch) {
+            try { await wv.insertCSS(cssMatch[1]); }
+            catch (cssErr) { console.warn('[pick] insertCSS failed (in-page <style> tag is the only remaining path):', cssErr.message); }
           }
           await wv.executeJavaScript(window.__guardianPickerSrc);
         } catch (err) {

@@ -112,6 +112,13 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     transcribeBuffer:   (buffer, ext)    => ipcRenderer.invoke('speech:transcribeBuffer', { buffer, ext }),
   },
 
+  // ── Macros — §NEW 2026-08-29 — first real UI reach into lib/agent-tools/ ──
+  macros: {
+    list: ()                       => ipcRenderer.invoke('macros:list'),
+    get:  (name)                   => ipcRenderer.invoke('macros:get', { name }),
+    run:  (name, agentId, params, skipSnapshot) => ipcRenderer.invoke('macros:run', { name, agentId, params, skipSnapshot }),
+  },
+
   // ── Passwords — §NEW 2026-08-24 ─────────────────────────────────────────
   passwords: {
     list:   ()   => ipcRenderer.invoke('passwords:list'),

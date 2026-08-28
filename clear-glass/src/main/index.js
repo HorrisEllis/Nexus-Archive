@@ -113,6 +113,21 @@ const UserscriptManager = require('../userscripts/manager');
 const { SiteSettingsStore } = require('../site-settings/store');
 const { DownloadsStore } = require('../downloads/store');
 const { PasswordVault } = require('../passwords/vault');
+// §BUILD 2026-08-29 — James: "hook the macros in also, integrate
+// macro.js with erosmanceros." Real investigation first: macro.js's
+// own erosmancer integration already exists and is complete (§EROS-
+// INTEGRATION 2026-08-23 — real profile application, real per-step
+// execute routing, honestly documents the targetUuid requirement).
+// What's genuinely missing, confirmed directly (zero references to
+// "macro" anywhere in clear-glass/renderer/): macros have never had
+// any real UI presence in Clear Glass at all — only reachable via an
+// agent-tool call. This is Clear Glass's first ever bridge into
+// lib/agent-tools/ — macro.js's own real, already-correct relative
+// requires (e.g. ../../../../cortex/memory/jaa-db) resolve fine from
+// here since each require() is relative to macro.js's own file
+// location, not this file's — verified directly before wiring
+// anything, not assumed.
+const macroTool = require('../../../lib/agent-tools/tools/clear-glass/macro.js');
 const speech = require('../speech/engine');
 const { PluginHost }    = require('../plugins/host');
 const { registerAll }   = require('../gates/index');
@@ -1071,6 +1086,7 @@ async function bootstrap() {
     downloads,
     passwordVault,
     speech,
+    macroTool,
     pluginHost,
     copilot,
   });

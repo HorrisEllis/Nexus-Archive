@@ -17,7 +17,7 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, errorCapture, copilot, postEvent, pluginHost }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -52,6 +52,7 @@ class IpcBridge {
     // would have silently failed. Fixed now.
     this.passwordVault = passwordVault;
     this.speech        = speech;
+    this.macroTool     = macroTool;
     this.pluginHost    = pluginHost;
     // §FIXED 2026-08-23 — real, pre-existing gap found while wiring the
     // new listener-routing work below: main/index.js's real IpcBridge
@@ -407,6 +408,23 @@ class IpcBridge {
       }
     });
 
+    // §BUILD 2026-08-29 — real macro IPC surface, giving Clear Glass's
+    // UI its first real reach into lib/agent-tools/. Deliberately only
+    // list/get/run exposed here — create/delete stay on the agent-tool
+    // path for now (a real step-builder UI is a separate, larger piece,
+    // named honestly rather than half-built as a bare JSON textarea).
+    ipcMain.handle('macros:list', async () => {
+      if (!this.macroTool) return { error: 'macro tool not available' };
+      return this.macroTool.execute({ action: 'list' });
+    });
+    ipcMain.handle('macros:get', async (e, d) => {
+      if (!this.macroTool) return { error: 'macro tool not available' };
+      return this.macroTool.execute({ action: 'get', name: d.name });
+    });
+    ipcMain.handle('macros:run', async (e, d) => {
+      if (!this.macroTool) return { error: 'macro tool not available' };
+      return this.macroTool.execute({ action: 'run', name: d.name, agentId: d.agentId, params: d.params, skipSnapshot: d.skipSnapshot });
+    });
     // Background tabs
     ipcMain.handle('bgtab:open',  async (e, d) => require('../main/index').openBackgroundTab(d));
     ipcMain.handle('bgtab:close', async (e, d) => require('../main/index').closeBackgroundTab(d.agentId));
