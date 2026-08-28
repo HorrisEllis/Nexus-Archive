@@ -173,6 +173,23 @@ try {
   warnings.push(`§5.4 spec-drift check could not run: ${e.message}`);
 }
 
+// RULE: package.json's version and lib/version.js's real VERSION.system
+// must agree. Both are real, single-source-of-truth version strings today
+// (confirmed: both 0.39.0), but nothing enforced that before this — same
+// class of problem as §5.4's spec-drift check, same fix pattern: HARD
+// BLOCK, not a soft log line nobody reads until a handoff zip and the
+// actual running system silently disagree about what version they are.
+try {
+  const pkgVersion = require(path.join(ROOT, 'package.json')).version;
+  delete require.cache[require.resolve(path.join(ROOT, 'lib', 'version.js'))];
+  const codeVersion = require(path.join(ROOT, 'lib', 'version.js')).system;
+  if (pkgVersion !== codeVersion) {
+    errors.push(`package.json version (${pkgVersion}) and lib/version.js's VERSION.system (${codeVersion}) disagree — pick one and update the other before committing`);
+  }
+} catch (e) {
+  warnings.push(`version-sync check could not run: ${e.message}`);
+}
+
 // RULE: every staged .js file must be syntactically valid AND must not
 // crash on require() from a bare reference error. §BUILT 2026-08-17 —
 // James: "before each output you need to be testing and verifying it...
