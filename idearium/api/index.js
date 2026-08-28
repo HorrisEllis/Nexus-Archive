@@ -1846,7 +1846,15 @@ export function startAPI() {
     seq.phase({ name:'bridge.handshake', type:'SOFT',
       label:'Bridge handshake with orchestrator',
       fn: async () => {
-        const bBody = JSON.stringify({ systemId:'idearium', appId:'idearium', secret:'nexus-idearium-internal-v1' });
+        // §FIX 2026-08-27 — this POST hits the same /api/register route Phase 4
+        // uses, and orchestrator's registryUpdate() does {...existing, ...data}:
+        // an explicit `port: undefined` key here overwrites Phase 4's correct
+        // port (4800) with undefined. Node's http.request then defaults the
+        // next contract-verification call to port 80 → ECONNREFUSED, logged as
+        // 'contract.unreachable — idearium'. It self-heals within ~10s (the
+        // heartbeat interval below re-sends the correct port), but the registry
+        // is wrong in the window between. Sending the real port here closes it.
+        const bBody = JSON.stringify({ systemId:'idearium', port:PORT, appId:'idearium', secret:'nexus-idearium-internal-v1' });
         const r = _require('http').request({
           hostname:_orchestrator().host, port:_orchestrator().port, path:'/api/register', method:'POST',
           headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(bBody)},

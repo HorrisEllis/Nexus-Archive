@@ -130,6 +130,24 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     unlinkAgent: (id, agentKey)        => ipcRenderer.invoke('accounts:unlinkAgent', { id, agentKey }),
   },
 
+  // §TX16 2026-08-28 — was wired in ipc/bridge.js (listeners:list/get/
+  // register/update/remove/forUrl all already real, real CRUD in
+  // options/store.js) but never exposed to the renderer here — same gap
+  // class the accounts object above already had once (real backend, zero
+  // UI consumers) until this exact settings panel closed it.
+  listeners: {
+    list:      ()             => ipcRenderer.invoke('listeners:list'),
+    get:       (id)           => ipcRenderer.invoke('listeners:get', { id }),
+    register:  (payload)      => ipcRenderer.invoke('listeners:register', payload),
+    update:    (id, updates)  => ipcRenderer.invoke('listeners:update', { id, updates }),
+    remove:    (id)           => ipcRenderer.invoke('listeners:remove', { id }),
+    forUrl:    (url)          => ipcRenderer.invoke('listeners:forUrl', { url }),
+  },
+
+  agents: {
+    list: () => ipcRenderer.invoke('agents:list'),
+  },
+
   // ── Diagnostics ──────────────────────────────────────────────────────────
   diag: {
     run:   (payload) => ipcRenderer.invoke('diag:run', payload),

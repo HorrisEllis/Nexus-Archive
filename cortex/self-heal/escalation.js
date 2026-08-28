@@ -118,6 +118,27 @@ function _onResourcePressure(event) {
     }
     return;
   }
+
+  // §FIX 2026-08-27 — 'critical' pressure is the exact condition that killed
+  // guardian+orchestrator (0xC0000409) at 16.7% free memory on 2026-07-20 (see
+  // header comment above). This process has since seen 'critical' readings as
+  // low as 8.6% free — worse than that crash — and up to now the only response
+  // at any friction level, including FAILURE_MODE, was this file's own
+  // console.warn: raiseFriction() ran, escalation.failure_mode was emitted,
+  // and nothing in the live codebase subscribes to that event (confirmed by
+  // grep — only tests do). cortex/self-heal/index.js's 5-level ladder
+  // (known-fix replay, safe-fix request, propose-to-forge, 12-engine deep
+  // scan, and a real `failure_modes` JAA write on level 4) already exists and
+  // already lists 'memory_pressure' in KNOWN_FAULT_CLASSES, but nothing ever
+  // called it for this fault class — resource pressure and HEAL_REQUESTED
+  // were two disconnected paths. This closes that: a real, safe, immediate
+  // action on 'critical' (forced GC, if the process exposes it), plus routing
+  // into the actual ladder so a human-visible failure_modes record gets
+  // written instead of the alarm firing into a room with nobody in it.
+  if (level === 'critical') {
+    _attemptEmergencyGC(reasons);
+  }
+
   const ladderLevel = level === 'critical' ? 3 : 1;
   let result;
   try {
@@ -128,6 +149,56 @@ function _onResourcePressure(event) {
     return;
   }
   _emitFrictionChange('memory_pressure', result, { cause: 'nexus.resource.pressure', level });
+
+  // Route into the real ladder (cortex/self-heal/index.js), same event shape
+  // its own _onHealRequested expects. On 'critical' this reaches level 3
+  // (deep scan) or, if friction just crossed FAILURE_MODE, the ladder's own
+  // level-4 handler — which writes a `failure_modes` row and emits
+  // cortex.self-heal.failure_mode, giving this a persisted, queryable trace
+  // instead of a log line that scrolls past.
+  if (_bus) {
+    _bus.emit('HEAL_REQUESTED', {
+      gapType: 'memory_pressure',
+      gapUuid: null,
+      body: `nexus.resource.pressure level=${level} reasons=${JSON.stringify(reasons || [])}`,
+      modulePath: 'orchestrator/lib/resource-monitor',
+    });
+  }
+}
+
+// ── Emergency GC — the one thing this organ can safely do itself, in-process,
+// with no cross-process IPC and no risk of killing a healthy kernel. Real,
+// not a stub: only fires if the process was started with --expose-gc (guard
+// is honest about that, doesn't pretend gc ran when it didn't), and is
+// rate-limited so repeated 'critical' ticks inside the same episode don't
+// hammer it (V8's gc() is a stop-the-world pause — useful sparingly, harmful
+// if spammed every 10s alongside a resource monitor that's already sampling
+// that often).
+const _GC_COOLDOWN_MS = 30000;
+let _lastGcAt = 0;
+function _attemptEmergencyGC(reasons) {
+  const now = Date.now();
+  if (now - _lastGcAt < _GC_COOLDOWN_MS) return;
+  if (typeof global.gc !== 'function') {
+    console.warn(`[${MODULE_ID}] critical memory pressure but global.gc() is not exposed ` +
+      `(start this process with --expose-gc to enable forced collection) — reasons: ${JSON.stringify(reasons || [])}`);
+    return;
+  }
+  _lastGcAt = now;
+  try {
+    const before = process.memoryUsage().heapUsed;
+    global.gc();
+    const after = process.memoryUsage().heapUsed;
+    console.warn(`[${MODULE_ID}] critical memory pressure — forced GC freed ` +
+      `${((before - after) / 1048576).toFixed(1)}MB (heapUsed ${(before / 1048576).toFixed(1)}MB → ${(after / 1048576).toFixed(1)}MB)`);
+    if (_bus) {
+      _bus.emit('cortex.self-heal.emergency_gc', {
+        faultClass: 'memory_pressure', freedBytes: before - after, ts: now,
+      });
+    }
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] forced GC threw: ${e.message}`);
+  }
 }
 
 // ── HEAL_REQUESTED → refuse if already in FAILURE_MODE, otherwise no-op ────────

@@ -142,6 +142,7 @@ class IpcBridge {
 
     // Mount new route groups
     this._addBookmarkRoutes();
+    this._addListenerRoutes();
     this._addRewindRoutes();
     this._addProviderRoutes();
 
@@ -277,6 +278,22 @@ class IpcBridge {
     ipcMain.handle('bookmarks:list',   async (e, d) => this.bookmarks?.list(d));
     ipcMain.handle('bookmarks:check',  async (e, d) => this.bookmarks?.isBookmarked(d));
     ipcMain.handle('bookmarks:visit',  async (e, d) => this.bookmarks?.recordVisit(d));
+
+    // §STATE-LINK 2026-08-27 — the "save state" pair. Real, additive
+    // compositions of three already-real pieces (bookmarks, rewind,
+    // options-store accounts), not a new bookmark type — see
+    // src/bookmarks/store.js's own §STATE-LINK header for the full
+    // reasoning. Kept as two explicit handlers rather than an
+    // always-capture flag on bookmarks:add, so the existing quick-toggle
+    // click path (bookmarks:add) is untouched and still synchronous.
+    // §CLI-FIRST 2026-08-27 — logic itself lives in _bookmarkAddWithState/
+    // _bookmarkOpenWithState below, not inline here, so the real HTTP
+    // routes in _addBookmarkRoutes() (which is what the CLI and co-pilot's
+    // agent tool actually reach, over CLEARGL_IPC_PORT — the renderer
+    // can't call those directly) run the exact same code, not a
+    // reimplementation that could drift from this one.
+    ipcMain.handle('bookmarks:addWithState',  async (e, d) => this._bookmarkAddWithState(d));
+    ipcMain.handle('bookmarks:openWithState', async (e, d) => this._bookmarkOpenWithState(d));
 
     // Rewind
     ipcMain.handle('rewind:list',     async (e, d) => this.rewind?.list(d.agentId, d.limit));
@@ -447,6 +464,27 @@ class IpcBridge {
     ipcMain.handle('accounts:linkAgent',  async (e, d) => this.options?.linkAgent(d.id, d.agentKey));
     ipcMain.handle('accounts:unlinkAgent',async (e, d) => this.options?.unlinkAgent(d.id, d.agentKey));
 
+    // §TX16 2026-08-28 — real, persistent listener config. Same pattern as
+    // accounts above (this.options owns the real CRUD; bridge.js exposes
+    // it). The renderer's guardian-picker.js is the real caller once its
+    // listener-modal save path is wired to this instead of only setting
+    // activeListeners.set(...) in memory — that wiring is TX16's own next
+    // slice, named honestly as not done in this pass.
+    ipcMain.handle('listeners:list',       async ()    => this.options?.listListeners());
+    ipcMain.handle('listeners:get',        async (e, d) => this.options?.getListener(d.id));
+    ipcMain.handle('listeners:register',   async (e, d) => this.options?.registerListener(d));
+    ipcMain.handle('listeners:update',     async (e, d) => this.options?.updateListener(d.id, d.updates));
+    ipcMain.handle('listeners:remove',     async (e, d) => this.options?.removeListener(d.id));
+    ipcMain.handle('listeners:forUrl',     async (e, d) => this.options?.findListenersForUrl(d.url));
+
+    // §ACCOUNTS-UI 2026-08-28 — the accounts panel needs a real list of
+    // which agents can actually be linked. agent-mesh.js already has this
+    // exact list (getRegistry(), AGENT_REGISTRY — real DOM selectors,
+    // real colors, the actual agents this process can spawn a tab for),
+    // confirmed directly rather than hardcoding a second list here that
+    // could silently drift from the real one.
+    ipcMain.handle('agents:list', async () => this.mesh?.getRegistry() || []);
+
     // DOM events from page scripts
     // §BUILD 2026-08-23 — the real, faithful Guardian picker port
     // (clear-glass/renderer/guardian-picker.js) sends real, typed
@@ -573,6 +611,54 @@ class IpcBridge {
     // genuinely wired end to end.
   }
 
+  // §STATE-LINK 2026-08-27 — shared by the ipcMain handlers above (renderer
+  // callers) and the express routes below (CLI + agent-tool callers, over
+  // CLEARGL_IPC_PORT) — one real implementation, two real entry points.
+  async _bookmarkAddWithState(d) {
+    if (!this.bookmarks || !this.rewind) return { error: 'bookmarks or rewind unavailable' };
+    const { bookmark, added } = this.bookmarks.add(d);
+    // §HONEST — a snapshot label must be unique per agent to be found
+    // again unambiguously; the bookmark's own uuid guarantees that
+    // (macro.js's bookmark() uses a human label instead, which is right
+    // for macros — a person names them on purpose — but wrong here,
+    // where the bookmark's title/url is already the human label).
+    let snap;
+    try {
+      snap = await this.rewind.snapshot(bookmark.agentId, {
+        url: bookmark.url, title: bookmark.title, label: `cg-bookmark:${bookmark.id}`,
+      });
+    } catch (err) {
+      return { bookmark, added, stateError: err.message };
+    }
+    // §HONEST — snapshot() returns null (not a throw) for a page it won't
+    // capture (about:blank, no live driver context) — real, documented
+    // behavior in rewind/engine.js, not an edge case to paper over. The
+    // bookmark itself still saved; only the state link is missing, and
+    // the caller is told that plainly rather than getting back a
+    // bookmark that silently claims state it doesn't have.
+    if (!snap) return { bookmark, added, stateError: 'rewind returned no snapshot for this page' };
+    const accountId = this.options?.resolveDefaultAccountForAgent
+      ? this.options.resolveDefaultAccountForAgent(bookmark.agentId) : null;
+    const linked = this.bookmarks.linkState({ id: bookmark.id, snapshotId: snap.id, accountId });
+    return { bookmark: linked.bookmark || bookmark, added };
+  }
+
+  async _bookmarkOpenWithState(d) {
+    const bk = this.bookmarks?.list({ agentId: d.agentId }).find(b => b.id === d.id);
+    if (!bk) return { error: `no bookmark "${d.id}"` };
+    this.bookmarks?.recordVisit({ id: bk.id });
+    if (!bk.snapshotId || !this.rewind) return { bookmark: bk, restored: false };
+    try {
+      const r = await this.rewind.restore({ agentId: bk.agentId, snapshotId: bk.snapshotId });
+      return { bookmark: bk, restored: true, result: r };
+    } catch (err) {
+      // §1.2 — a failed restore must not silently fall back to a plain
+      // navigate; the caller needs to know state restoration didn't
+      // happen, not just end up on the right URL with the wrong cookies.
+      return { bookmark: bk, restored: false, restoreError: err.message };
+    }
+  }
+
   _addBookmarkRoutes() {
     const bk = this.bookmarks;
     if (!bk) return;
@@ -593,6 +679,53 @@ class IpcBridge {
 
     this.app.get('/bookmarks/check', (req, res) => {
       res.json({ isBookmarked: bk.isBookmarked(req.query) });
+    });
+
+    // §STATE-LINK / §CLI-FIRST 2026-08-27 — real HTTP entry points for the
+    // CLI (cli/nexus.js's /bookmarks command) and the
+    // clear_glass_bookmark_state agent tool. Same real methods the
+    // renderer's ipcMain handlers call above, not a second copy.
+    this.app.post('/bookmarks/with-state', async (req, res) => {
+      try { res.json(await this._bookmarkAddWithState(req.body)); }
+      catch (err) { res.status(500).json({ error: err.message }); }
+    });
+
+    this.app.post('/bookmarks/:id/open-with-state', async (req, res) => {
+      try { res.json(await this._bookmarkOpenWithState({ id: req.params.id, agentId: req.body.agentId })); }
+      catch (err) { res.status(500).json({ error: err.message }); }
+    });
+  }
+
+  // §TX16 2026-08-28 — real HTTP entry points for the CLI and any agent
+  // tool built against BR8_clearglass_full_agent_tool_parity, same
+  // CLI-first reasoning _addBookmarkRoutes uses above: the renderer's IPC
+  // handlers (listeners:* above) and these routes both call this.options's
+  // real CRUD directly — one implementation, two entry points.
+  _addListenerRoutes() {
+    const opts = this.options;
+    if (!opts) return;
+
+    this.app.get('/listeners', (req, res) => {
+      res.json({ listeners: opts.listListeners() });
+    });
+
+    this.app.get('/listeners/for-url', (req, res) => {
+      res.json({ listeners: opts.findListenersForUrl(req.query.url) });
+    });
+
+    this.app.post('/listeners', (req, res) => {
+      const r = opts.registerListener(req.body);
+      res.status(r.error ? 400 : 200).json(r);
+    });
+
+    this.app.patch('/listeners/:id', (req, res) => {
+      const r = opts.updateListener(req.params.id, req.body);
+      res.status(r.error ? 404 : 200).json(r);
+    });
+
+    this.app.delete('/listeners/:id', (req, res) => {
+      const r = opts.removeListener(req.params.id);
+      res.status(r.error ? 404 : 200).json(r);
     });
   }
 

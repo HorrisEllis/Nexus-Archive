@@ -1,11 +1,11 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_e8847b76",
+  "uuid": "bpi_0c131e70",
   "version": "1.0.0",
-  "builtAt": 1784178506336,
+  "builtAt": 1787878458579,
   "builtBy": "blueprint-index",
   "systemCount": 11,
-  "totalComponents": 135,
+  "totalComponents": 153,
   "systems": [
     {
       "systemId": "orchestrator",
@@ -1537,7 +1537,7 @@
       "systemId": "copilot",
       "label": "Co-pilot",
       "port": 3750,
-      "componentCount": 15,
+      "componentCount": 33,
       "components": [
         {
           "id": "copilot.prompt",
@@ -1770,6 +1770,333 @@
           ],
           "grammar": [
             "copilot contract"
+          ]
+        },
+        {
+          "id": "copilot.person_model.portrait",
+          "name": "person_model.portrait",
+          "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)",
+          "route": {
+            "method": "GET",
+            "path": "/api/person-model/portrait"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "identity"
+          ],
+          "grammar": [
+            "what do you know about me",
+            "person model",
+            "my model",
+            "portrait",
+            "who am i to you"
+          ]
+        },
+        {
+          "id": "copilot.person_model.review",
+          "name": "person_model.review",
+          "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)",
+          "route": {
+            "method": "GET",
+            "path": "/api/person-model/review"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "review"
+          ],
+          "grammar": [
+            "review queue",
+            "what have you noticed",
+            "pending observations"
+          ]
+        },
+        {
+          "id": "copilot.person_model.accept",
+          "name": "person_model.accept",
+          "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)",
+          "route": {
+            "method": "POST",
+            "path": "/api/person-model/accept"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "review"
+          ],
+          "grammar": [
+            "accept observation"
+          ]
+        },
+        {
+          "id": "copilot.person_model.reject",
+          "name": "person_model.reject",
+          "description": "Rejects a proposed observation. A reason is required (§IP-6)",
+          "route": {
+            "method": "POST",
+            "path": "/api/person-model/reject"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "review"
+          ],
+          "grammar": [
+            "reject observation"
+          ]
+        },
+        {
+          "id": "copilot.person_model.state",
+          "name": "person_model.state",
+          "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary",
+          "route": {
+            "method": "POST",
+            "path": "/api/person-model/state"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "identity"
+          ],
+          "grammar": [
+            "remember about me",
+            "i am",
+            "my value",
+            "my goal"
+          ]
+        },
+        {
+          "id": "copilot.person_model.connect",
+          "name": "person_model.connect",
+          "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs",
+          "route": {
+            "method": "POST",
+            "path": "/api/person-model/connect"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "lattice"
+          ],
+          "grammar": [
+            "copilot person_model connect"
+          ]
+        },
+        {
+          "id": "copilot.person_model.meaning",
+          "name": "person_model.meaning",
+          "description": "Meaning-web lens — a projection over the lattice, not a nested graph",
+          "route": {
+            "method": "GET",
+            "path": "/api/person-model/meaning"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "lens"
+          ],
+          "grammar": [
+            "what does mean to me",
+            "meaning of"
+          ]
+        },
+        {
+          "id": "copilot.person_model.chain",
+          "name": "person_model.chain",
+          "description": "Session hash-chain integrity — reports breaks, attributed to the session",
+          "route": {
+            "method": "GET",
+            "path": "/api/person-model/chain"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "integrity"
+          ],
+          "grammar": [
+            "model history",
+            "session chain"
+          ]
+        },
+        {
+          "id": "copilot.person_model.export",
+          "name": "person_model.export",
+          "description": "Everything held about the user, in one object",
+          "route": {
+            "method": "GET",
+            "path": "/api/person-model/export"
+          },
+          "tags": [
+            "copilot",
+            "person-model"
+          ],
+          "grammar": [
+            "export my model",
+            "what do you have on me"
+          ]
+        },
+        {
+          "id": "copilot.person_model.forget",
+          "name": "person_model.forget",
+          "description": "Archives a node with a required reason (§0.3 — never a silent delete)",
+          "route": {
+            "method": "POST",
+            "path": "/api/person-model/forget"
+          },
+          "tags": [
+            "copilot",
+            "person-model"
+          ],
+          "grammar": [
+            "forget that"
+          ]
+        },
+        {
+          "id": "copilot.person_model.purge",
+          "name": "person_model.purge",
+          "description": "HARD DELETE of the whole model. Requires an explicit confirmation string",
+          "route": {
+            "method": "POST",
+            "path": "/api/person-model/purge"
+          },
+          "tags": [
+            "copilot",
+            "person-model",
+            "destructive"
+          ],
+          "grammar": [
+            "copilot person_model purge"
+          ]
+        },
+        {
+          "id": "copilot.person_model.health",
+          "name": "person_model.health",
+          "description": "Person-model stats + chain state",
+          "route": {
+            "method": "GET",
+            "path": "/api/person-model/health"
+          },
+          "tags": [
+            "copilot",
+            "person-model"
+          ],
+          "grammar": [
+            "copilot person_model health"
+          ]
+        },
+        {
+          "id": "copilot.introspect.examine",
+          "name": "introspect.examine",
+          "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion",
+          "route": {
+            "method": "POST",
+            "path": "/api/introspect"
+          },
+          "tags": [
+            "copilot",
+            "introspect",
+            "reflection"
+          ],
+          "grammar": [
+            "introspect",
+            "check your last answer",
+            "was that right",
+            "examine that response"
+          ]
+        },
+        {
+          "id": "copilot.introspect.retry",
+          "name": "introspect.retry",
+          "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\"",
+          "route": {
+            "method": "POST",
+            "path": "/api/introspect/retry"
+          },
+          "tags": [
+            "copilot",
+            "introspect",
+            "reflection"
+          ],
+          "grammar": [
+            "retry the response",
+            "try that again",
+            "redo that"
+          ]
+        },
+        {
+          "id": "copilot.introspect.health",
+          "name": "introspect.health",
+          "description": "Which introspection signals are readable right now, and which are blind",
+          "route": {
+            "method": "GET",
+            "path": "/api/introspect/health"
+          },
+          "tags": [
+            "copilot",
+            "introspect",
+            "observability"
+          ],
+          "grammar": [
+            "introspect health",
+            "what can you check"
+          ]
+        },
+        {
+          "id": "copilot.agent.capability",
+          "name": "agent.capability",
+          "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified",
+          "route": {
+            "method": "GET",
+            "path": "/api/agents/capability"
+          },
+          "tags": [
+            "copilot",
+            "agents",
+            "capability",
+            "measured"
+          ],
+          "grammar": [
+            "agent limits",
+            "what can chatgpt take",
+            "agent capability",
+            "chunk size"
+          ]
+        },
+        {
+          "id": "copilot.agent.calibrate",
+          "name": "agent.calibrate",
+          "description": "Binary-search an agent’s real input limit from live probes",
+          "route": {
+            "method": "POST",
+            "path": "/api/agents/calibrate"
+          },
+          "tags": [
+            "copilot",
+            "agents",
+            "capability"
+          ],
+          "grammar": [
+            "calibrate agent",
+            "find the limit"
+          ]
+        },
+        {
+          "id": "copilot.ledger.stream",
+          "name": "ledger.stream",
+          "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes",
+          "route": {
+            "method": "GET",
+            "path": "/ledger/stream"
+          },
+          "tags": [
+            "copilot",
+            "ledger",
+            "sse",
+            "observability"
+          ],
+          "grammar": [
+            "copilot ledger stream"
           ]
         }
       ],
@@ -2006,6 +2333,332 @@
           "tags": [
             "copilot"
           ]
+        },
+        {
+          "command": "person-model-portrait",
+          "aliases": [
+            "what do you know about me",
+            "person model",
+            "my model",
+            "portrait"
+          ],
+          "usage": "person-model-portrait",
+          "method": "GET",
+          "path": "/api/person-model/portrait",
+          "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)",
+          "componentId": "copilot.person_model.portrait",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "identity"
+          ]
+        },
+        {
+          "command": "person-model-review",
+          "aliases": [
+            "review queue",
+            "what have you noticed",
+            "pending observations"
+          ],
+          "usage": "person-model-review",
+          "method": "GET",
+          "path": "/api/person-model/review",
+          "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)",
+          "componentId": "copilot.person_model.review",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "review"
+          ]
+        },
+        {
+          "command": "person-model-accept",
+          "aliases": [
+            "accept observation"
+          ],
+          "usage": "person-model-accept",
+          "method": "POST",
+          "path": "/api/person-model/accept",
+          "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)",
+          "componentId": "copilot.person_model.accept",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "review"
+          ]
+        },
+        {
+          "command": "person-model-reject",
+          "aliases": [
+            "reject observation"
+          ],
+          "usage": "person-model-reject",
+          "method": "POST",
+          "path": "/api/person-model/reject",
+          "description": "Rejects a proposed observation. A reason is required (§IP-6)",
+          "componentId": "copilot.person_model.reject",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "review"
+          ]
+        },
+        {
+          "command": "person-model-state",
+          "aliases": [
+            "remember about me",
+            "i am",
+            "my value",
+            "my goal"
+          ],
+          "usage": "person-model-state",
+          "method": "POST",
+          "path": "/api/person-model/state",
+          "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary",
+          "componentId": "copilot.person_model.state",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "identity"
+          ]
+        },
+        {
+          "command": "person-model-connect",
+          "aliases": [
+            "copilot person_model connect"
+          ],
+          "usage": "person-model-connect",
+          "method": "POST",
+          "path": "/api/person-model/connect",
+          "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs",
+          "componentId": "copilot.person_model.connect",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "lattice"
+          ]
+        },
+        {
+          "command": "person-model-meaning",
+          "aliases": [
+            "what does mean to me",
+            "meaning of"
+          ],
+          "usage": "person-model-meaning",
+          "method": "GET",
+          "path": "/api/person-model/meaning",
+          "description": "Meaning-web lens — a projection over the lattice, not a nested graph",
+          "componentId": "copilot.person_model.meaning",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "lens"
+          ]
+        },
+        {
+          "command": "person-model-chain",
+          "aliases": [
+            "model history",
+            "session chain"
+          ],
+          "usage": "person-model-chain",
+          "method": "GET",
+          "path": "/api/person-model/chain",
+          "description": "Session hash-chain integrity — reports breaks, attributed to the session",
+          "componentId": "copilot.person_model.chain",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "integrity"
+          ]
+        },
+        {
+          "command": "person-model-export",
+          "aliases": [
+            "export my model",
+            "what do you have on me"
+          ],
+          "usage": "person-model-export",
+          "method": "GET",
+          "path": "/api/person-model/export",
+          "description": "Everything held about the user, in one object",
+          "componentId": "copilot.person_model.export",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model"
+          ]
+        },
+        {
+          "command": "person-model-forget",
+          "aliases": [
+            "forget that"
+          ],
+          "usage": "person-model-forget",
+          "method": "POST",
+          "path": "/api/person-model/forget",
+          "description": "Archives a node with a required reason (§0.3 — never a silent delete)",
+          "componentId": "copilot.person_model.forget",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model"
+          ]
+        },
+        {
+          "command": "person-model-purge",
+          "aliases": [
+            "copilot person_model purge"
+          ],
+          "usage": "person-model-purge",
+          "method": "POST",
+          "path": "/api/person-model/purge",
+          "description": "HARD DELETE of the whole model. Requires an explicit confirmation string",
+          "componentId": "copilot.person_model.purge",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model",
+            "destructive"
+          ]
+        },
+        {
+          "command": "person-model-health",
+          "aliases": [
+            "copilot person_model health"
+          ],
+          "usage": "person-model-health",
+          "method": "GET",
+          "path": "/api/person-model/health",
+          "description": "Person-model stats + chain state",
+          "componentId": "copilot.person_model.health",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "person-model"
+          ]
+        },
+        {
+          "command": "introspect-examine",
+          "aliases": [
+            "introspect",
+            "check your last answer",
+            "was that right",
+            "examine that response"
+          ],
+          "usage": "introspect-examine",
+          "method": "POST",
+          "path": "/api/introspect",
+          "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion",
+          "componentId": "copilot.introspect.examine",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "introspect",
+            "reflection"
+          ]
+        },
+        {
+          "command": "introspect-retry",
+          "aliases": [
+            "retry the response",
+            "try that again",
+            "redo that"
+          ],
+          "usage": "introspect-retry",
+          "method": "POST",
+          "path": "/api/introspect/retry",
+          "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\"",
+          "componentId": "copilot.introspect.retry",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "introspect",
+            "reflection"
+          ]
+        },
+        {
+          "command": "introspect-health",
+          "aliases": [
+            "introspect health",
+            "what can you check"
+          ],
+          "usage": "introspect-health",
+          "method": "GET",
+          "path": "/api/introspect/health",
+          "description": "Which introspection signals are readable right now, and which are blind",
+          "componentId": "copilot.introspect.health",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "introspect",
+            "observability"
+          ]
+        },
+        {
+          "command": "agent-capability",
+          "aliases": [
+            "agent limits",
+            "what can chatgpt take",
+            "agent capability",
+            "chunk size"
+          ],
+          "usage": "agent-capability",
+          "method": "GET",
+          "path": "/api/agents/capability",
+          "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified",
+          "componentId": "copilot.agent.capability",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "agents",
+            "capability",
+            "measured"
+          ]
+        },
+        {
+          "command": "agent-calibrate",
+          "aliases": [
+            "calibrate agent",
+            "find the limit"
+          ],
+          "usage": "agent-calibrate",
+          "method": "POST",
+          "path": "/api/agents/calibrate",
+          "description": "Binary-search an agent’s real input limit from live probes",
+          "componentId": "copilot.agent.calibrate",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "agents",
+            "capability"
+          ]
+        },
+        {
+          "command": "ledger-stream",
+          "aliases": [
+            "copilot ledger stream"
+          ],
+          "usage": "ledger-stream",
+          "method": "GET",
+          "path": "/ledger/stream",
+          "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes",
+          "componentId": "copilot.ledger.stream",
+          "systemId": "copilot",
+          "tags": [
+            "copilot",
+            "ledger",
+            "sse",
+            "observability"
+          ]
         }
       ],
       "seamHooks": [
@@ -2102,6 +2755,155 @@
               ],
               "tags": [
                 "streaming"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.person_model.portrait",
+          "in": [
+            {
+              "id": "copilot.person_model.read",
+              "intent": [
+                "ask"
+              ],
+              "contract": null,
+              "tags": [
+                "read-only"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "copilot.person_model.reply",
+              "wires_to": [
+                "ui.copilot.receive"
+              ],
+              "tags": [
+                "response"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.person_model.accept",
+          "in": [
+            {
+              "id": "copilot.person_model.accept",
+              "intent": [
+                "action"
+              ],
+              "contract": null,
+              "tags": [
+                "user-only"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "copilot.person_model.node.stated",
+              "wires_to": [
+                "cortex.memory.insert"
+              ],
+              "tags": [
+                "identity"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.person_model.state",
+          "in": [
+            {
+              "id": "copilot.person_model.state",
+              "intent": [
+                "note",
+                "action"
+              ],
+              "contract": null,
+              "tags": [
+                "user-only",
+                "stated-only-gate"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "copilot.person_model.node.stated",
+              "wires_to": [
+                "cortex.memory.insert"
+              ],
+              "tags": [
+                "identity"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.introspect.examine",
+          "in": [
+            {
+              "id": "copilot.introspect.examine",
+              "intent": [
+                "ask"
+              ],
+              "contract": null,
+              "tags": [
+                "read-only"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "copilot.introspect.verdict",
+              "wires_to": [
+                "ui.copilot.receive"
+              ],
+              "tags": [
+                "diagnosis"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.introspect.retry",
+          "in": [
+            {
+              "id": "copilot.introspect.retry",
+              "intent": [
+                "action"
+              ],
+              "contract": null,
+              "tags": [
+                "user-initiated"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "copilot.introspect.retried",
+              "wires_to": [
+                "lib.reflection.score"
+              ],
+              "tags": [
+                "diagnosis"
+              ]
+            }
+          ]
+        },
+        {
+          "componentId": "copilot.ledger.stream",
+          "in": [],
+          "out": [
+            {
+              "id": "copilot.ledger.stream",
+              "wires_to": [
+                "autopilot.ledger.consume",
+                "cortex.intelligence.event"
+              ],
+              "tags": [
+                "cross-process",
+                "canonical-schema"
               ]
             }
           ]
@@ -2271,6 +3073,214 @@
           "description": "Co-pilot interaction contract",
           "intents": [
             "copilot contract"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.portrait",
+          "label": "person_model.portrait",
+          "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)",
+          "intents": [
+            "ask",
+            "what do you know about me",
+            "person model",
+            "my model",
+            "portrait",
+            "who am i to you"
+          ],
+          "contract": null,
+          "hookId": "copilot.person_model.read"
+        },
+        {
+          "componentId": "copilot.person_model.review",
+          "label": "person_model.review",
+          "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)",
+          "intents": [
+            "review queue",
+            "what have you noticed",
+            "pending observations"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.accept",
+          "label": "person_model.accept",
+          "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)",
+          "intents": [
+            "action",
+            "accept observation"
+          ],
+          "contract": null,
+          "hookId": "copilot.person_model.accept"
+        },
+        {
+          "componentId": "copilot.person_model.reject",
+          "label": "person_model.reject",
+          "description": "Rejects a proposed observation. A reason is required (§IP-6)",
+          "intents": [
+            "reject observation"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.state",
+          "label": "person_model.state",
+          "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary",
+          "intents": [
+            "note",
+            "action",
+            "remember about me",
+            "i am",
+            "my value",
+            "my goal"
+          ],
+          "contract": null,
+          "hookId": "copilot.person_model.state"
+        },
+        {
+          "componentId": "copilot.person_model.connect",
+          "label": "person_model.connect",
+          "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs",
+          "intents": [
+            "copilot person_model connect"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.meaning",
+          "label": "person_model.meaning",
+          "description": "Meaning-web lens — a projection over the lattice, not a nested graph",
+          "intents": [
+            "what does mean to me",
+            "meaning of"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.chain",
+          "label": "person_model.chain",
+          "description": "Session hash-chain integrity — reports breaks, attributed to the session",
+          "intents": [
+            "model history",
+            "session chain"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.export",
+          "label": "person_model.export",
+          "description": "Everything held about the user, in one object",
+          "intents": [
+            "export my model",
+            "what do you have on me"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.forget",
+          "label": "person_model.forget",
+          "description": "Archives a node with a required reason (§0.3 — never a silent delete)",
+          "intents": [
+            "forget that"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.purge",
+          "label": "person_model.purge",
+          "description": "HARD DELETE of the whole model. Requires an explicit confirmation string",
+          "intents": [
+            "copilot person_model purge"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.person_model.health",
+          "label": "person_model.health",
+          "description": "Person-model stats + chain state",
+          "intents": [
+            "copilot person_model health"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.introspect.examine",
+          "label": "introspect.examine",
+          "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion",
+          "intents": [
+            "ask",
+            "introspect",
+            "check your last answer",
+            "was that right",
+            "examine that response"
+          ],
+          "contract": null,
+          "hookId": "copilot.introspect.examine"
+        },
+        {
+          "componentId": "copilot.introspect.retry",
+          "label": "introspect.retry",
+          "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\"",
+          "intents": [
+            "action",
+            "retry the response",
+            "try that again",
+            "redo that"
+          ],
+          "contract": null,
+          "hookId": "copilot.introspect.retry"
+        },
+        {
+          "componentId": "copilot.introspect.health",
+          "label": "introspect.health",
+          "description": "Which introspection signals are readable right now, and which are blind",
+          "intents": [
+            "introspect health",
+            "what can you check"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.agent.capability",
+          "label": "agent.capability",
+          "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified",
+          "intents": [
+            "agent limits",
+            "what can chatgpt take",
+            "agent capability",
+            "chunk size"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.agent.calibrate",
+          "label": "agent.calibrate",
+          "description": "Binary-search an agent’s real input limit from live probes",
+          "intents": [
+            "calibrate agent",
+            "find the limit"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "copilot.ledger.stream",
+          "label": "ledger.stream",
+          "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes",
+          "intents": [
+            "copilot ledger stream"
           ],
           "contract": null,
           "hookId": null
@@ -6965,6 +7975,332 @@
       ]
     },
     {
+      "command": "person-model-portrait",
+      "aliases": [
+        "what do you know about me",
+        "person model",
+        "my model",
+        "portrait"
+      ],
+      "usage": "person-model-portrait",
+      "method": "GET",
+      "path": "/api/person-model/portrait",
+      "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)",
+      "componentId": "copilot.person_model.portrait",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "identity"
+      ]
+    },
+    {
+      "command": "person-model-review",
+      "aliases": [
+        "review queue",
+        "what have you noticed",
+        "pending observations"
+      ],
+      "usage": "person-model-review",
+      "method": "GET",
+      "path": "/api/person-model/review",
+      "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)",
+      "componentId": "copilot.person_model.review",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "review"
+      ]
+    },
+    {
+      "command": "person-model-accept",
+      "aliases": [
+        "accept observation"
+      ],
+      "usage": "person-model-accept",
+      "method": "POST",
+      "path": "/api/person-model/accept",
+      "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)",
+      "componentId": "copilot.person_model.accept",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "review"
+      ]
+    },
+    {
+      "command": "person-model-reject",
+      "aliases": [
+        "reject observation"
+      ],
+      "usage": "person-model-reject",
+      "method": "POST",
+      "path": "/api/person-model/reject",
+      "description": "Rejects a proposed observation. A reason is required (§IP-6)",
+      "componentId": "copilot.person_model.reject",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "review"
+      ]
+    },
+    {
+      "command": "person-model-state",
+      "aliases": [
+        "remember about me",
+        "i am",
+        "my value",
+        "my goal"
+      ],
+      "usage": "person-model-state",
+      "method": "POST",
+      "path": "/api/person-model/state",
+      "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary",
+      "componentId": "copilot.person_model.state",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "identity"
+      ]
+    },
+    {
+      "command": "person-model-connect",
+      "aliases": [
+        "copilot person_model connect"
+      ],
+      "usage": "person-model-connect",
+      "method": "POST",
+      "path": "/api/person-model/connect",
+      "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs",
+      "componentId": "copilot.person_model.connect",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "lattice"
+      ]
+    },
+    {
+      "command": "person-model-meaning",
+      "aliases": [
+        "what does mean to me",
+        "meaning of"
+      ],
+      "usage": "person-model-meaning",
+      "method": "GET",
+      "path": "/api/person-model/meaning",
+      "description": "Meaning-web lens — a projection over the lattice, not a nested graph",
+      "componentId": "copilot.person_model.meaning",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "lens"
+      ]
+    },
+    {
+      "command": "person-model-chain",
+      "aliases": [
+        "model history",
+        "session chain"
+      ],
+      "usage": "person-model-chain",
+      "method": "GET",
+      "path": "/api/person-model/chain",
+      "description": "Session hash-chain integrity — reports breaks, attributed to the session",
+      "componentId": "copilot.person_model.chain",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "integrity"
+      ]
+    },
+    {
+      "command": "person-model-export",
+      "aliases": [
+        "export my model",
+        "what do you have on me"
+      ],
+      "usage": "person-model-export",
+      "method": "GET",
+      "path": "/api/person-model/export",
+      "description": "Everything held about the user, in one object",
+      "componentId": "copilot.person_model.export",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model"
+      ]
+    },
+    {
+      "command": "person-model-forget",
+      "aliases": [
+        "forget that"
+      ],
+      "usage": "person-model-forget",
+      "method": "POST",
+      "path": "/api/person-model/forget",
+      "description": "Archives a node with a required reason (§0.3 — never a silent delete)",
+      "componentId": "copilot.person_model.forget",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model"
+      ]
+    },
+    {
+      "command": "person-model-purge",
+      "aliases": [
+        "copilot person_model purge"
+      ],
+      "usage": "person-model-purge",
+      "method": "POST",
+      "path": "/api/person-model/purge",
+      "description": "HARD DELETE of the whole model. Requires an explicit confirmation string",
+      "componentId": "copilot.person_model.purge",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model",
+        "destructive"
+      ]
+    },
+    {
+      "command": "person-model-health",
+      "aliases": [
+        "copilot person_model health"
+      ],
+      "usage": "person-model-health",
+      "method": "GET",
+      "path": "/api/person-model/health",
+      "description": "Person-model stats + chain state",
+      "componentId": "copilot.person_model.health",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "person-model"
+      ]
+    },
+    {
+      "command": "introspect-examine",
+      "aliases": [
+        "introspect",
+        "check your last answer",
+        "was that right",
+        "examine that response"
+      ],
+      "usage": "introspect-examine",
+      "method": "POST",
+      "path": "/api/introspect",
+      "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion",
+      "componentId": "copilot.introspect.examine",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "introspect",
+        "reflection"
+      ]
+    },
+    {
+      "command": "introspect-retry",
+      "aliases": [
+        "retry the response",
+        "try that again",
+        "redo that"
+      ],
+      "usage": "introspect-retry",
+      "method": "POST",
+      "path": "/api/introspect/retry",
+      "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\"",
+      "componentId": "copilot.introspect.retry",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "introspect",
+        "reflection"
+      ]
+    },
+    {
+      "command": "introspect-health",
+      "aliases": [
+        "introspect health",
+        "what can you check"
+      ],
+      "usage": "introspect-health",
+      "method": "GET",
+      "path": "/api/introspect/health",
+      "description": "Which introspection signals are readable right now, and which are blind",
+      "componentId": "copilot.introspect.health",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "introspect",
+        "observability"
+      ]
+    },
+    {
+      "command": "agent-capability",
+      "aliases": [
+        "agent limits",
+        "what can chatgpt take",
+        "agent capability",
+        "chunk size"
+      ],
+      "usage": "agent-capability",
+      "method": "GET",
+      "path": "/api/agents/capability",
+      "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified",
+      "componentId": "copilot.agent.capability",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "agents",
+        "capability",
+        "measured"
+      ]
+    },
+    {
+      "command": "agent-calibrate",
+      "aliases": [
+        "calibrate agent",
+        "find the limit"
+      ],
+      "usage": "agent-calibrate",
+      "method": "POST",
+      "path": "/api/agents/calibrate",
+      "description": "Binary-search an agent’s real input limit from live probes",
+      "componentId": "copilot.agent.calibrate",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "agents",
+        "capability"
+      ]
+    },
+    {
+      "command": "ledger-stream",
+      "aliases": [
+        "copilot ledger stream"
+      ],
+      "usage": "ledger-stream",
+      "method": "GET",
+      "path": "/ledger/stream",
+      "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes",
+      "componentId": "copilot.ledger.stream",
+      "systemId": "copilot",
+      "tags": [
+        "copilot",
+        "ledger",
+        "sse",
+        "observability"
+      ]
+    },
+    {
       "command": "jobs-dispatch",
       "aliases": [
         "ollama dispatch",
@@ -8492,6 +9828,155 @@
       ]
     },
     {
+      "componentId": "copilot.person_model.portrait",
+      "in": [
+        {
+          "id": "copilot.person_model.read",
+          "intent": [
+            "ask"
+          ],
+          "contract": null,
+          "tags": [
+            "read-only"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "copilot.person_model.reply",
+          "wires_to": [
+            "ui.copilot.receive"
+          ],
+          "tags": [
+            "response"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "copilot.person_model.accept",
+      "in": [
+        {
+          "id": "copilot.person_model.accept",
+          "intent": [
+            "action"
+          ],
+          "contract": null,
+          "tags": [
+            "user-only"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "copilot.person_model.node.stated",
+          "wires_to": [
+            "cortex.memory.insert"
+          ],
+          "tags": [
+            "identity"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "copilot.person_model.state",
+      "in": [
+        {
+          "id": "copilot.person_model.state",
+          "intent": [
+            "note",
+            "action"
+          ],
+          "contract": null,
+          "tags": [
+            "user-only",
+            "stated-only-gate"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "copilot.person_model.node.stated",
+          "wires_to": [
+            "cortex.memory.insert"
+          ],
+          "tags": [
+            "identity"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "copilot.introspect.examine",
+      "in": [
+        {
+          "id": "copilot.introspect.examine",
+          "intent": [
+            "ask"
+          ],
+          "contract": null,
+          "tags": [
+            "read-only"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "copilot.introspect.verdict",
+          "wires_to": [
+            "ui.copilot.receive"
+          ],
+          "tags": [
+            "diagnosis"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "copilot.introspect.retry",
+      "in": [
+        {
+          "id": "copilot.introspect.retry",
+          "intent": [
+            "action"
+          ],
+          "contract": null,
+          "tags": [
+            "user-initiated"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "copilot.introspect.retried",
+          "wires_to": [
+            "lib.reflection.score"
+          ],
+          "tags": [
+            "diagnosis"
+          ]
+        }
+      ]
+    },
+    {
+      "componentId": "copilot.ledger.stream",
+      "in": [],
+      "out": [
+        {
+          "id": "copilot.ledger.stream",
+          "wires_to": [
+            "autopilot.ledger.consume",
+            "cortex.intelligence.event"
+          ],
+          "tags": [
+            "cross-process",
+            "canonical-schema"
+          ]
+        }
+      ]
+    },
+    {
       "componentId": "ollama.jobs.dispatch",
       "in": [
         {
@@ -9200,6 +10685,214 @@
       "description": "Co-pilot interaction contract",
       "intents": [
         "copilot contract"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.portrait",
+      "label": "person_model.portrait",
+      "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)",
+      "intents": [
+        "ask",
+        "what do you know about me",
+        "person model",
+        "my model",
+        "portrait",
+        "who am i to you"
+      ],
+      "contract": null,
+      "hookId": "copilot.person_model.read"
+    },
+    {
+      "componentId": "copilot.person_model.review",
+      "label": "person_model.review",
+      "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)",
+      "intents": [
+        "review queue",
+        "what have you noticed",
+        "pending observations"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.accept",
+      "label": "person_model.accept",
+      "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)",
+      "intents": [
+        "action",
+        "accept observation"
+      ],
+      "contract": null,
+      "hookId": "copilot.person_model.accept"
+    },
+    {
+      "componentId": "copilot.person_model.reject",
+      "label": "person_model.reject",
+      "description": "Rejects a proposed observation. A reason is required (§IP-6)",
+      "intents": [
+        "reject observation"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.state",
+      "label": "person_model.state",
+      "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary",
+      "intents": [
+        "note",
+        "action",
+        "remember about me",
+        "i am",
+        "my value",
+        "my goal"
+      ],
+      "contract": null,
+      "hookId": "copilot.person_model.state"
+    },
+    {
+      "componentId": "copilot.person_model.connect",
+      "label": "person_model.connect",
+      "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs",
+      "intents": [
+        "copilot person_model connect"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.meaning",
+      "label": "person_model.meaning",
+      "description": "Meaning-web lens — a projection over the lattice, not a nested graph",
+      "intents": [
+        "what does mean to me",
+        "meaning of"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.chain",
+      "label": "person_model.chain",
+      "description": "Session hash-chain integrity — reports breaks, attributed to the session",
+      "intents": [
+        "model history",
+        "session chain"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.export",
+      "label": "person_model.export",
+      "description": "Everything held about the user, in one object",
+      "intents": [
+        "export my model",
+        "what do you have on me"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.forget",
+      "label": "person_model.forget",
+      "description": "Archives a node with a required reason (§0.3 — never a silent delete)",
+      "intents": [
+        "forget that"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.purge",
+      "label": "person_model.purge",
+      "description": "HARD DELETE of the whole model. Requires an explicit confirmation string",
+      "intents": [
+        "copilot person_model purge"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.person_model.health",
+      "label": "person_model.health",
+      "description": "Person-model stats + chain state",
+      "intents": [
+        "copilot person_model health"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.introspect.examine",
+      "label": "introspect.examine",
+      "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion",
+      "intents": [
+        "ask",
+        "introspect",
+        "check your last answer",
+        "was that right",
+        "examine that response"
+      ],
+      "contract": null,
+      "hookId": "copilot.introspect.examine"
+    },
+    {
+      "componentId": "copilot.introspect.retry",
+      "label": "introspect.retry",
+      "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\"",
+      "intents": [
+        "action",
+        "retry the response",
+        "try that again",
+        "redo that"
+      ],
+      "contract": null,
+      "hookId": "copilot.introspect.retry"
+    },
+    {
+      "componentId": "copilot.introspect.health",
+      "label": "introspect.health",
+      "description": "Which introspection signals are readable right now, and which are blind",
+      "intents": [
+        "introspect health",
+        "what can you check"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.agent.capability",
+      "label": "agent.capability",
+      "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified",
+      "intents": [
+        "agent limits",
+        "what can chatgpt take",
+        "agent capability",
+        "chunk size"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.agent.calibrate",
+      "label": "agent.calibrate",
+      "description": "Binary-search an agent’s real input limit from live probes",
+      "intents": [
+        "calibrate agent",
+        "find the limit"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "copilot.ledger.stream",
+      "label": "ledger.stream",
+      "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes",
+      "intents": [
+        "copilot ledger stream"
       ],
       "contract": null,
       "hookId": null
@@ -10130,6 +11823,16 @@
         "description": "Co-pilot health"
       },
       {
+        "componentId": "copilot.person_model.health",
+        "systemId": "copilot",
+        "description": "Person-model stats + chain state"
+      },
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      },
+      {
         "componentId": "ollama.health",
         "systemId": "ollama",
         "description": "Ollama bridge health"
@@ -10606,6 +12309,16 @@
         "componentId": "guardian.job.response",
         "systemId": "guardian",
         "description": "Full response for a job"
+      },
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      },
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
       }
     ],
     "job-response": [
@@ -10724,6 +12437,11 @@
         "description": "Create job compartment"
       },
       {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      },
+      {
         "componentId": "ollama.queue.status",
         "systemId": "ollama",
         "description": "Queue depth and running count"
@@ -10786,6 +12504,11 @@
         "componentId": "guardian.seam.session.create",
         "systemId": "guardian",
         "description": "Create SEAM session"
+      },
+      {
+        "componentId": "copilot.person_model.chain",
+        "systemId": "copilot",
+        "description": "Session hash-chain integrity — reports breaks, attributed to the session"
       }
     ],
     "create": [
@@ -10824,6 +12547,11 @@
         "componentId": "guardian.seam.retry",
         "systemId": "guardian",
         "description": "Retry a failed SEAM chunk"
+      },
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
       }
     ],
     "seam-retry": [
@@ -11164,6 +12892,26 @@
         "description": "Co-pilot interaction contract"
       },
       {
+        "componentId": "copilot.person_model.connect",
+        "systemId": "copilot",
+        "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs"
+      },
+      {
+        "componentId": "copilot.person_model.purge",
+        "systemId": "copilot",
+        "description": "HARD DELETE of the whole model. Requires an explicit confirmation string"
+      },
+      {
+        "componentId": "copilot.person_model.health",
+        "systemId": "copilot",
+        "description": "Person-model stats + chain state"
+      },
+      {
+        "componentId": "copilot.ledger.stream",
+        "systemId": "copilot",
+        "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes"
+      },
+      {
         "componentId": "cg.copilot.message",
         "systemId": "clear-glass",
         "description": "Route to Clear Glass co-pilot"
@@ -11243,6 +12991,11 @@
         "componentId": "copilot.prompt.stream",
         "systemId": "copilot",
         "description": "Streaming SSE prompt — token-by-token, no timeout (P112)"
+      },
+      {
+        "componentId": "copilot.ledger.stream",
+        "systemId": "copilot",
+        "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes"
       }
     ],
     "cs": [
@@ -11515,6 +13268,920 @@
         "componentId": "copilot.contract",
         "systemId": "copilot",
         "description": "Co-pilot interaction contract"
+      }
+    ],
+    "what do you know about me": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "what": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      },
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      },
+      {
+        "componentId": "copilot.person_model.meaning",
+        "systemId": "copilot",
+        "description": "Meaning-web lens — a projection over the lattice, not a nested graph"
+      },
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      },
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      },
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "you": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      },
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      },
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      },
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      }
+    ],
+    "know": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "about": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      },
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "person model": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "person": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "model": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      },
+      {
+        "componentId": "copilot.person_model.chain",
+        "systemId": "copilot",
+        "description": "Session hash-chain integrity — reports breaks, attributed to the session"
+      },
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      },
+      {
+        "componentId": "emerge.models",
+        "systemId": "emerge",
+        "description": "Available Ollama models for compilation"
+      }
+    ],
+    "my model": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "portrait": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "who am i to you": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "who": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "personmodel-portrait": [
+      {
+        "componentId": "copilot.person_model.portrait",
+        "systemId": "copilot",
+        "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)"
+      }
+    ],
+    "review queue": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "review": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "what have you noticed": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "have": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      },
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      }
+    ],
+    "noticed": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "pending observations": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "pending": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "observations": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "pending observation": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "personmodel-review": [
+      {
+        "componentId": "copilot.person_model.review",
+        "systemId": "copilot",
+        "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)"
+      }
+    ],
+    "accept observation": [
+      {
+        "componentId": "copilot.person_model.accept",
+        "systemId": "copilot",
+        "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)"
+      }
+    ],
+    "accept": [
+      {
+        "componentId": "copilot.person_model.accept",
+        "systemId": "copilot",
+        "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)"
+      }
+    ],
+    "observation": [
+      {
+        "componentId": "copilot.person_model.accept",
+        "systemId": "copilot",
+        "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)"
+      },
+      {
+        "componentId": "copilot.person_model.reject",
+        "systemId": "copilot",
+        "description": "Rejects a proposed observation. A reason is required (§IP-6)"
+      }
+    ],
+    "personmodel-accept": [
+      {
+        "componentId": "copilot.person_model.accept",
+        "systemId": "copilot",
+        "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)"
+      }
+    ],
+    "reject observation": [
+      {
+        "componentId": "copilot.person_model.reject",
+        "systemId": "copilot",
+        "description": "Rejects a proposed observation. A reason is required (§IP-6)"
+      }
+    ],
+    "reject": [
+      {
+        "componentId": "copilot.person_model.reject",
+        "systemId": "copilot",
+        "description": "Rejects a proposed observation. A reason is required (§IP-6)"
+      }
+    ],
+    "personmodel-reject": [
+      {
+        "componentId": "copilot.person_model.reject",
+        "systemId": "copilot",
+        "description": "Rejects a proposed observation. A reason is required (§IP-6)"
+      }
+    ],
+    "remember about me": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "remember": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "i am": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "my value": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "value": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "my goal": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "goal": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "personmodel-state": [
+      {
+        "componentId": "copilot.person_model.state",
+        "systemId": "copilot",
+        "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary"
+      }
+    ],
+    "copilot personmodel connect": [
+      {
+        "componentId": "copilot.person_model.connect",
+        "systemId": "copilot",
+        "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs"
+      }
+    ],
+    "personmodel": [
+      {
+        "componentId": "copilot.person_model.connect",
+        "systemId": "copilot",
+        "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs"
+      },
+      {
+        "componentId": "copilot.person_model.purge",
+        "systemId": "copilot",
+        "description": "HARD DELETE of the whole model. Requires an explicit confirmation string"
+      },
+      {
+        "componentId": "copilot.person_model.health",
+        "systemId": "copilot",
+        "description": "Person-model stats + chain state"
+      }
+    ],
+    "connect": [
+      {
+        "componentId": "copilot.person_model.connect",
+        "systemId": "copilot",
+        "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs"
+      }
+    ],
+    "personmodel-connect": [
+      {
+        "componentId": "copilot.person_model.connect",
+        "systemId": "copilot",
+        "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs"
+      }
+    ],
+    "what does mean to me": [
+      {
+        "componentId": "copilot.person_model.meaning",
+        "systemId": "copilot",
+        "description": "Meaning-web lens — a projection over the lattice, not a nested graph"
+      }
+    ],
+    "does": [
+      {
+        "componentId": "copilot.person_model.meaning",
+        "systemId": "copilot",
+        "description": "Meaning-web lens — a projection over the lattice, not a nested graph"
+      }
+    ],
+    "mean": [
+      {
+        "componentId": "copilot.person_model.meaning",
+        "systemId": "copilot",
+        "description": "Meaning-web lens — a projection over the lattice, not a nested graph"
+      }
+    ],
+    "meaning of": [
+      {
+        "componentId": "copilot.person_model.meaning",
+        "systemId": "copilot",
+        "description": "Meaning-web lens — a projection over the lattice, not a nested graph"
+      }
+    ],
+    "meaning": [
+      {
+        "componentId": "copilot.person_model.meaning",
+        "systemId": "copilot",
+        "description": "Meaning-web lens — a projection over the lattice, not a nested graph"
+      }
+    ],
+    "personmodel-meaning": [
+      {
+        "componentId": "copilot.person_model.meaning",
+        "systemId": "copilot",
+        "description": "Meaning-web lens — a projection over the lattice, not a nested graph"
+      }
+    ],
+    "model history": [
+      {
+        "componentId": "copilot.person_model.chain",
+        "systemId": "copilot",
+        "description": "Session hash-chain integrity — reports breaks, attributed to the session"
+      }
+    ],
+    "history": [
+      {
+        "componentId": "copilot.person_model.chain",
+        "systemId": "copilot",
+        "description": "Session hash-chain integrity — reports breaks, attributed to the session"
+      },
+      {
+        "componentId": "architect.blueprint.history",
+        "systemId": "architect",
+        "description": "Blueprint change history"
+      }
+    ],
+    "session chain": [
+      {
+        "componentId": "copilot.person_model.chain",
+        "systemId": "copilot",
+        "description": "Session hash-chain integrity — reports breaks, attributed to the session"
+      }
+    ],
+    "chain": [
+      {
+        "componentId": "copilot.person_model.chain",
+        "systemId": "copilot",
+        "description": "Session hash-chain integrity — reports breaks, attributed to the session"
+      }
+    ],
+    "personmodel-chain": [
+      {
+        "componentId": "copilot.person_model.chain",
+        "systemId": "copilot",
+        "description": "Session hash-chain integrity — reports breaks, attributed to the session"
+      }
+    ],
+    "export my model": [
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      }
+    ],
+    "export": [
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      }
+    ],
+    "what do you have on me": [
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      }
+    ],
+    "personmodel-export": [
+      {
+        "componentId": "copilot.person_model.export",
+        "systemId": "copilot",
+        "description": "Everything held about the user, in one object"
+      }
+    ],
+    "forget that": [
+      {
+        "componentId": "copilot.person_model.forget",
+        "systemId": "copilot",
+        "description": "Archives a node with a required reason (§0.3 — never a silent delete)"
+      }
+    ],
+    "forget": [
+      {
+        "componentId": "copilot.person_model.forget",
+        "systemId": "copilot",
+        "description": "Archives a node with a required reason (§0.3 — never a silent delete)"
+      }
+    ],
+    "that": [
+      {
+        "componentId": "copilot.person_model.forget",
+        "systemId": "copilot",
+        "description": "Archives a node with a required reason (§0.3 — never a silent delete)"
+      },
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      },
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "personmodel-forget": [
+      {
+        "componentId": "copilot.person_model.forget",
+        "systemId": "copilot",
+        "description": "Archives a node with a required reason (§0.3 — never a silent delete)"
+      }
+    ],
+    "copilot personmodel purge": [
+      {
+        "componentId": "copilot.person_model.purge",
+        "systemId": "copilot",
+        "description": "HARD DELETE of the whole model. Requires an explicit confirmation string"
+      }
+    ],
+    "purge": [
+      {
+        "componentId": "copilot.person_model.purge",
+        "systemId": "copilot",
+        "description": "HARD DELETE of the whole model. Requires an explicit confirmation string"
+      }
+    ],
+    "personmodel-purge": [
+      {
+        "componentId": "copilot.person_model.purge",
+        "systemId": "copilot",
+        "description": "HARD DELETE of the whole model. Requires an explicit confirmation string"
+      }
+    ],
+    "copilot personmodel health": [
+      {
+        "componentId": "copilot.person_model.health",
+        "systemId": "copilot",
+        "description": "Person-model stats + chain state"
+      }
+    ],
+    "personmodel-health": [
+      {
+        "componentId": "copilot.person_model.health",
+        "systemId": "copilot",
+        "description": "Person-model stats + chain state"
+      }
+    ],
+    "introspect": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      },
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      }
+    ],
+    "check your last answer": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "check": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      },
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      },
+      {
+        "componentId": "emerge.check",
+        "systemId": "emerge",
+        "description": "Pre-compile spec validation"
+      },
+      {
+        "componentId": "architect.hooks.check",
+        "systemId": "architect",
+        "description": "Check hook against constraints"
+      }
+    ],
+    "your": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "last": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "answer": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "was that right": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "was": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "right": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "examine that response": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "examine": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "introspect-examine": [
+      {
+        "componentId": "copilot.introspect.examine",
+        "systemId": "copilot",
+        "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      }
+    ],
+    "retry the response": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "the": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      },
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "try that again": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "try": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "again": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "redo that": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "redo": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "introspect-retry": [
+      {
+        "componentId": "copilot.introspect.retry",
+        "systemId": "copilot",
+        "description": "Re-ask carrying the SPECIFIC finding that rejected the last answer, not \"try again\""
+      }
+    ],
+    "introspect health": [
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      }
+    ],
+    "what can you check": [
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      }
+    ],
+    "can": [
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      },
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "introspect-health": [
+      {
+        "componentId": "copilot.introspect.health",
+        "systemId": "copilot",
+        "description": "Which introspection signals are readable right now, and which are blind"
+      }
+    ],
+    "agent limits": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "agent": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      },
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "limits": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "agent limit": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "what can chatgpt take": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "chatgpt": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "take": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "agent capability": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "capability": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "chunk size": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "chunk": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "size": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "agent-capability": [
+      {
+        "componentId": "copilot.agent.capability",
+        "systemId": "copilot",
+        "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified"
+      }
+    ],
+    "calibrate agent": [
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "calibrate": [
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "find the limit": [
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "find": [
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "limit": [
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "agent-calibrate": [
+      {
+        "componentId": "copilot.agent.calibrate",
+        "systemId": "copilot",
+        "description": "Binary-search an agent’s real input limit from live probes"
+      }
+    ],
+    "copilot ledger stream": [
+      {
+        "componentId": "copilot.ledger.stream",
+        "systemId": "copilot",
+        "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes"
+      }
+    ],
+    "ledger": [
+      {
+        "componentId": "copilot.ledger.stream",
+        "systemId": "copilot",
+        "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes"
+      }
+    ],
+    "ledger-stream": [
+      {
+        "componentId": "copilot.ledger.stream",
+        "systemId": "copilot",
+        "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes"
       }
     ],
     "ollama dispatch": [
@@ -12070,30 +14737,11 @@
         "description": "Snapshot before applying patch"
       }
     ],
-    "check": [
-      {
-        "componentId": "emerge.check",
-        "systemId": "emerge",
-        "description": "Pre-compile spec validation"
-      },
-      {
-        "componentId": "architect.hooks.check",
-        "systemId": "architect",
-        "description": "Check hook against constraints"
-      }
-    ],
     "emerge check": [
       {
         "componentId": "emerge.check",
         "systemId": "emerge",
         "description": "Pre-compile spec validation"
-      }
-    ],
-    "model": [
-      {
-        "componentId": "emerge.models",
-        "systemId": "emerge",
-        "description": "Available Ollama models for compilation"
       }
     ],
     "emerge models": [
@@ -12488,13 +15136,6 @@
       }
     ],
     "blueprint history": [
-      {
-        "componentId": "architect.blueprint.history",
-        "systemId": "architect",
-        "description": "Blueprint change history"
-      }
-    ],
-    "history": [
       {
         "componentId": "architect.blueprint.history",
         "systemId": "architect",
@@ -13526,5 +16167,5 @@
     ]
   },
   "errors": [],
-  "buildMs": 44
+  "buildMs": 26
 }

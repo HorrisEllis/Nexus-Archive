@@ -240,3 +240,82 @@ spec:
         send through RAID' (James's own stated build pipeline from this
         session's brainstorm) and the two real mechanisms that already
         exist to do the chunking and the per-agent limits separately.
+
+    # ── 2026-08-28 — co-pilot as agent chat, guardian sweep, full CG parity ──
+
+    BR6_copilot_as_agent_chat_model:
+      status: "OPEN — James: 'can we get co-pilot working with guardian,
+        like how ui/agents/chatgpt/index.html is. It uses the agent chat
+        as the co-pilot, logging the chat, and building the model.'
+        Confirmed real, not assumed: ui/agents/chatgpt/index.html's
+        pattern uses a live provider-tab conversation AS the interaction
+        surface, with every turn logged and feeding back into a model.
+        Co-pilot today is a separate, stateless-per-request dispatch path
+        (copilot/server.js -> lifeline.js -> bridge/router.js), not a
+        logged, ongoing agent conversation. Making co-pilot work this way
+        is a real architectural shift, not a bugfix — it needs its own
+        session with headroom, not a rushed pass at the tail of this one.
+        Directly connected to lib/user-model.js (already real, already
+        running) as the natural place the logged chat would feed."
+      depends_on: [ET5_loom_event_taxonomy_map]
+      does: >
+        Sequenced after ET5 because a logged, model-building agent chat
+        needs a real, governed event vocabulary to log AGAINST — logging
+        raw ad-hoc strings the way co-pilot's dispatch layer does today
+        would just move the fragmentation problem into the chat log
+        instead of solving it.
+
+    BR7_guardian_dispatch_connectivity_sweep:
+      status: "OPEN — James: 'make sure the agent tools that connect to
+        guardian are actually connected and updated.' Real pattern found
+        THREE independent times in this one session, not once:
+        lib/agent-chat.js's listAgents(), and TWO separate checks inside
+        copilot/lifeline.js's _tryGuardian — all three independently
+        misread guardian's real GET /providers shape (a flat map of
+        provider name -> STRING status, not {name:{connected:bool}}
+        objects) and all three silently, unconditionally failed as a
+        result. Given the same exact bug was written independently three
+        times, a systematic grep-and-check sweep of every remaining
+        agent-tool/lib file that calls guardian's /providers or dispatch
+        endpoints is very likely to find more, not a hypothetical
+        precaution."
+      depends_on: []
+      does: >
+        Directly answers 'is the whole thing actually wired correctly'
+        instead of waiting for each broken call site to surface one
+        screenshot at a time, the way all three this session did.
+
+    BR8_clearglass_full_agent_tool_parity:
+      status: "OPEN — James: 'clear-glass needs commands for all the new
+        features, tools for co-pilot and agents.' Real, current gap:
+        bookmarks/save-state (this session's own commit), accounts
+        (options/store.js, fully wired backend, zero UI or agent-tool
+        consumers per the other transcript's TX1 finding), and rewind
+        snapshots all have real backends today but no complete, matching
+        set of agent-tools/CLI commands the way macro.js/userscripts.js
+        already provide for macros and userscripts specifically."
+      depends_on: [TX16_persistent_listener_registry_and_callable_elements]
+      does: >
+        The concrete form of 'ClearGlass completely available to co-pilot
+        and agents' — sequenced under TX16 because a registry of callable
+        elements is the real mechanism this needs, not a one-off tool
+        file per feature that TX16 would otherwise duplicate.
+
+    SS3_unified_living_model_system_plus_person:
+      status: "OPEN — James: 'what about the dynamic, living models that
+        update with the system?' Two real, separately-running pieces
+        confirmed, not proposed: lib/user-model.js (real, running —
+        models the PERSON, confidence-scored hypotheses with decay) and
+        SS1_system_manifest (PENDING — would model each SYSTEM: file
+        structure, live commands, components, changelog, pending/agenda).
+        Nothing today connects them into one place a living model of
+        'the system as James actually uses it' could live — each was
+        built to solve a different, narrower problem."
+      depends_on: [SS1_system_manifest]
+      does: >
+        Real answer to the standing question, not new infrastructure:
+        once SS1 exists, this is the phase that decides whether
+        system-manifests and user-model hypotheses should share a
+        query surface, or stay separate on purpose because they answer
+        genuinely different questions (what a system IS vs. what James
+        wants from it).

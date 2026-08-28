@@ -9,7 +9,22 @@
  * Renderer syncs on every change via SSE.
  *
  * Schema per entry:
- *   { id, url, title, agentId, tags[], faviconUrl, createdAt, visitCount, lastVisited }
+ *   { id, url, title, agentId, tags[], faviconUrl, createdAt, visitCount,
+ *     lastVisited, snapshotId, accountId }
+ *
+ * §STATE-LINK 2026-08-27 — snapshotId/accountId, both optional, both null
+ * unless explicitly linked via linkState() below. A plain bookmark (the
+ * existing add() path, unchanged) never gets either — this is additive,
+ * not a new bookmark type. snapshotId points into RewindEngine's real
+ * snapshot store (clear-glass/src/rewind/engine.js — same mechanism
+ * lib/agent-tools/tools/clear-glass/macro.js's bookmark()/openBookmark()
+ * already use for macros, reused here rather than a second one).
+ * accountId points into NexusOptions' real account entities
+ * (src/options/store.js) — which of possibly several logins for this
+ * bookmark's agent the captured cookies/storage belong to. Neither field
+ * is populated by this file — the caller (ipc/bridge.js, which already
+ * holds live references to both RewindEngine and NexusOptions) does the
+ * capture and passes the ids in; this store only holds and returns them.
  */
 
 const path = require('path');
@@ -73,11 +88,33 @@ class BookmarkStore {
       updatedAt:   Date.now(),
       visitCount:  0,
       lastVisited: null,
+      snapshotId:  null,   // §STATE-LINK — set via linkState(), never here
+      accountId:   null,   // §STATE-LINK — set via linkState(), never here
     };
 
     this.data.push(bookmark);
     this._save();
     return { bookmark, added: true };
+  }
+
+  /**
+   * linkState({id, snapshotId, accountId}) — attach a real rewind snapshot
+   * and/or account to an EXISTING bookmark. Separate from add() on purpose,
+   * same reasoning options/store.js already documents for its own account
+   * CRUD: add() runs synchronously off a single click (§the quick path
+   * must stay quick); the snapshot capture is an async round trip to
+   * RewindEngine the caller does first, then links the result here once
+   * it has a real snapshotId — never a placeholder written up front and
+   * filled in later.
+   */
+  linkState({ id, snapshotId, accountId }) {
+    const bk = this.data.find(b => b.id === id);
+    if (!bk) return { error: `no bookmark "${id}"` };
+    if (snapshotId !== undefined) bk.snapshotId = snapshotId;
+    if (accountId  !== undefined) bk.accountId  = accountId;
+    bk.updatedAt = Date.now();
+    this._save();
+    return { bookmark: bk };
   }
 
   remove({ id, url, agentId }) {

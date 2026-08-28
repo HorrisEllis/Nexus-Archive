@@ -60,6 +60,18 @@
   .toggle.on::after{left:14px;background:var(--accent);}
   .note{font-size:10px;color:var(--text-dim);margin-top:6px;line-height:1.5;}
   .sep{margin:16px 0 0;border:none;border-top:1px solid var(--border);}
+  .agent-block{margin-bottom:14px;}
+  .agent-block:last-child{margin-bottom:0;}
+  .agent-block-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .agent-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .agent-name{font-size:12px;font-weight:600;color:var(--text-bright);flex:1;}
+  .btn-add{width:22px;height:22px;border-radius:5px;border:1px solid var(--border);background:var(--bg-0);color:var(--accent);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+  .btn-add:hover{border-color:var(--accent);background:rgba(0,245,255,0.08);}
+  .account-row{display:flex;align-items:center;gap:8px;padding:6px 0 6px 16px;font-size:12px;}
+  .account-row input{flex:1;padding:5px 8px;font-size:11px;}
+  .account-row-empty{padding:4px 0 4px 16px;font-size:11px;color:var(--text-dim);font-style:italic;}
+  .btn-del{background:none;border:none;color:var(--text-dim);font-size:13px;cursor:pointer;padding:2px 6px;border-radius:4px;}
+  .btn-del:hover{color:#ff4466;background:rgba(255,68,102,0.08);}
 </style>
 </head>
 <body>
@@ -180,7 +192,28 @@
   </div>
 </div>
 
+<!-- Accounts — §ACCOUNTS-UI 2026-08-28. Real backend, already fully wired
+     (clear-glass/src/options/store.js's createAccount/updateAccount/
+     deleteAccount/linkAgent/unlinkAgent, already load-bearing in
+     agent-mesh.js for real cookie/session partitioning) — confirmed
+     directly before building this: zero UI in the entire renderer tree
+     called any of it until now. Agent list comes from agent-mesh.js's
+     own real AGENT_REGISTRY via the new agents:list IPC handler, not
+     hardcoded here, so this panel can never silently drift from the
+     agents ClearGlass can actually spawn a tab for. -->
+<div class="section">
+  <div class="section-header"><h2>Accounts</h2></div>
+  <div class="section-body">
+    <p class="note" style="margin-bottom:12px;">
+      Each agent can have more than one account — separate cookies and
+      storage per account, real session isolation, not just a label.
+    </p>
+    <div id="accounts-list"></div>
+  </div>
+</div>
+
 <button class="btn" id="save" style="margin-top:8px;">Save Settings</button>
+
 <div class="status-msg ok" id="save-status">✓ Settings saved</div>
 
 <script>
@@ -299,6 +332,76 @@
   });
 
   load();
+
+  // ── Accounts — real, wired to already-real backend ──────────────────────
+  // options/store.js's createAccount/deleteAccount/updateAccount, already
+  // load-bearing in agent-mesh.js for real session isolation. This panel
+  // is the first real UI consumer of any of it.
+  async function loadAccounts() {
+    const [agents, accounts] = await Promise.all([
+      cg.agents.list().catch(() => []),
+      cg.accounts.list().catch(() => []),
+    ]);
+    const list = document.getElementById('accounts-list');
+    if (!agents.length) {
+      list.innerHTML = '<p class="note">Could not load the agent list — agent-mesh may not be ready yet.</p>';
+      return;
+    }
+    list.innerHTML = agents.map(agent => {
+      const linked = accounts.filter(a => (a.agentKeys || []).includes(agent.id));
+      const rows = linked.length
+        ? linked.map(a => `
+          <div class="account-row" data-account-id="${a.id}">
+            <input type="text" class="acct-label" value="${(a.label || '').replace(/"/g, '&quot;')}" data-account-id="${a.id}">
+            <button class="btn-del" data-del-id="${a.id}" data-del-agent="${agent.id}" title="Remove account">✕</button>
+          </div>`).join('')
+        : `<div class="account-row-empty">No accounts yet for ${agent.name}.</div>`;
+      return `
+        <div class="agent-block" data-agent-id="${agent.id}">
+          <div class="agent-block-head">
+            <span class="agent-dot" style="background:${agent.color || 'var(--text-dim)'}"></span>
+            <span class="agent-name">${agent.name}</span>
+            <button class="btn-add" data-add-agent="${agent.id}" data-add-name="${agent.name}" title="Add account">+</button>
+          </div>
+          ${rows}
+        </div>`;
+    }).join('');
+
+    // "+" — real createAccount({label, agentKeys:[agentId]}), the exact
+    // "plus button to add more than one account" ask. Label defaults to
+    // a real, identifiable placeholder (createAccount's own real default
+    // if left blank is "Account N" — this just seeds something more
+    // useful to start renaming from).
+    list.querySelectorAll('[data-add-agent]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const agentId = btn.dataset.addAgent, agentName = btn.dataset.addName;
+        const existing = list.querySelectorAll(`.agent-block[data-agent-id="${agentId}"] .account-row`).length;
+        await cg.accounts.create({ label: `${agentName} — Account ${existing + 1}`, agentKeys: [agentId] });
+        loadAccounts();
+      });
+    });
+
+    // Rename — real updateAccount(id, {label}) on blur, not on every
+    // keystroke, so a real network/IPC round trip doesn't fire per letter.
+    list.querySelectorAll('.acct-label').forEach(input => {
+      input.addEventListener('blur', async () => {
+        const id = input.dataset.accountId, label = input.value.trim();
+        if (label) await cg.accounts.update(id, { label });
+      });
+    });
+
+    // Remove — real deleteAccount(id). Confirmed before deleting, since
+    // this account's real cookies/session partition go with it, not just
+    // a label.
+    list.querySelectorAll('[data-del-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remove this account? Its saved session (cookies, storage) will no longer be reachable through it.')) return;
+        await cg.accounts.delete(btn.dataset.delId);
+        loadAccounts();
+      });
+    });
+  }
+  loadAccounts();
 })();
 </script>
 </div>

@@ -49,6 +49,17 @@ const DEFAULTS = {
   // pinned on a fresh install or a reset.
   pinnedToolbarButtons:  defaultPinnedIds(),
 
+  // §NEW 2026-08-28 — TX16's real, first buildable slice (docs/clearglass-
+  // agent-suite-and-cfr-loom-phasemap.spec's own TX16 entry, and TX14's own
+  // honest §HONEST LIMIT naming this exact gap: "on-disk callto persistence
+  // (matching UserscriptManager's own real convention)"). guardian-picker.js's
+  // activeListeners is a plain in-memory Map — confirmed directly, dies on
+  // page navigation and on restart. This is the persistence half of the
+  // fix: a real listener config survives both. Keyed by id (same object-map
+  // convention as accounts below, for the same reason — a real delete needs
+  // a key that can actually disappear, which set()'s merge can never do).
+  listeners: {},
+
   // §PHASE-1 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md,
   // "NexusOptions: real config surface... per-provider autoStartOnBoot."
   // Real provider ids, matching src/providers/registry.js's own
@@ -254,6 +265,105 @@ class NexusOptions {
     if (linked.length) return linked[0].id;
     const created = this.createAccount({ label: `Default — ${agentKey}`, agentKeys: [agentKey] });
     return created.id;
+  }
+
+  // ── Listeners — TX16 real slice, real CRUD, never through set() ─────────
+  // Real listener entity: { id (stable uuid), urlPattern (glob, same
+  // semantics as UserscriptManager's own @match — reused, not reinvented:
+  // '*' wildcard segments, e.g. 'https://chatgpt.com/*'), fingerprint (the
+  // real element fingerprint object guardian-picker.js's own fingerprint()
+  // already produces — not re-derived here, just stored), eventType
+  // ('mutation'|'click', matching the listener-config-modal's real options),
+  // calltoId (the registered callto this listener triggers on fire —
+  // reuses the existing callto system rather than inventing a second
+  // action mechanism), enabled, createdAt, updatedAt }.
+  //
+  // §HONEST LIMIT — this store only holds and returns listener CONFIG. It
+  // does not attach anything to a live DOM, does not know whether a tab
+  // matching urlPattern is currently open, and does not re-run
+  // fingerprint() to re-locate the element after a reload — that real
+  // wiring (auto-reattach on navigation) is TX16's own next slice, named
+  // honestly as not done here, same as TX14's own honest-limit convention.
+
+  listListeners() {
+    return Object.values(this.data.listeners || {}).sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  getListener(id) {
+    return this.data.listeners?.[id] || null;
+  }
+
+  /**
+   * registerListener({urlPattern, fingerprint, eventType, calltoId}) —
+   * real, stable uuid, never reused. enabled defaults true — a listener
+   * a person just configured should fire the next time its page loads,
+   * not require a second "turn it on" step.
+   */
+  registerListener({ urlPattern, fingerprint, eventType, calltoId } = {}) {
+    if (!urlPattern)  return { error: 'urlPattern required' };
+    if (!fingerprint) return { error: 'fingerprint required' };
+    const id  = randomUUID();
+    const now = Date.now();
+    const listener = {
+      id, urlPattern, fingerprint, eventType: eventType || 'mutation',
+      calltoId: calltoId || null, enabled: true, createdAt: now, updatedAt: now,
+    };
+    this.data = { ...this.data, listeners: { ...this.data.listeners, [id]: listener } };
+    this._persist();
+    return { ...listener };
+  }
+
+  updateListener(id, updates = {}) {
+    const existing = this.data.listeners?.[id];
+    if (!existing) return { error: `no listener "${id}"` };
+    const updated = {
+      ...existing,
+      ...(updates.urlPattern !== undefined ? { urlPattern: updates.urlPattern } : {}),
+      ...(updates.fingerprint !== undefined ? { fingerprint: updates.fingerprint } : {}),
+      ...(updates.eventType !== undefined ? { eventType: updates.eventType } : {}),
+      ...(updates.calltoId !== undefined ? { calltoId: updates.calltoId } : {}),
+      ...(updates.enabled !== undefined ? { enabled: !!updates.enabled } : {}),
+      updatedAt: Date.now(),
+    };
+    this.data = { ...this.data, listeners: { ...this.data.listeners, [id]: updated } };
+    this._persist();
+    return { ...updated };
+  }
+
+  /**
+   * removeListener(id) — real removal, not a soft-delete flag. Same
+   * rebuild-without-the-key pattern deleteAccount uses, for the same
+   * reason: set()'s one-level merge can only add/overwrite, never delete.
+   */
+  removeListener(id) {
+    if (!this.data.listeners?.[id]) return { error: `no listener "${id}"` };
+    const { [id]: _removed, ...rest } = this.data.listeners;
+    this.data = { ...this.data, listeners: rest };
+    this._persist();
+    return { ok: true, id };
+  }
+
+  /**
+   * findListenersForUrl(url) — every enabled, persisted listener whose
+   * urlPattern matches this url. Real caller: whatever wires TX16's next
+   * slice (auto-reattach on navigation) calls this on every real page
+   * load to know what to re-attach — this store doesn't call it itself.
+   * Same glob semantics as UserscriptManager._matchesUrl (a '*' wildcard
+   * segment, anchored full-string match) — but with one honest
+   * improvement, not a silent behavior change: this version escapes real
+   * regex special characters (the literal '.' in 'chatgpt.com', for one)
+   * before building the pattern, where the original leaves them
+   * unescaped and matching-too-loosely as a side effect. Worth fixing
+   * here since a listener firing on the wrong page is a real, visible
+   * mistake in a way userscript over-matching mostly isn't.
+   */
+  findListenersForUrl(url) {
+    if (!url) return [];
+    return this.listListeners().filter(l => {
+      if (!l.enabled) return false;
+      const re = new RegExp('^' + l.urlPattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+      return re.test(url);
+    });
   }
 }
 
