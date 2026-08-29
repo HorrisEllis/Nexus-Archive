@@ -1593,6 +1593,25 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
     fn: async () => {
       let _rc=[]; try{_rc=require('./registry-components');}catch(_){}
       const r = await nc2.registerWithOrchestrator('guardian', HTTP_PORT, {}, _rc);
+      // §FIX 2026-08-29 — real, serious gap found while continuing this
+      // session's createPulse migration: registerWithOrchestrator (read
+      // directly, confirmed) does a real, one-time register + ledger
+      // post + retry-with-backoff-if-offline — it does NOT start an
+      // ongoing heartbeat. guardian never called startHeartbeat anywhere
+      // (confirmed by grep — zero matches in this entire file), meaning
+      // the most central, load-bearing real system in this architecture
+      // registered once at boot and then went silent forever. Exactly
+      // the "invisible-but-working" failure class this same file's own
+      // §FIX 2026-07-30 comment (three lines above this one, same real
+      // registerWithOrchestrator function) already warns about for a
+      // different reason — orchestrator's own SYSTEM_REGISTRY.lastSeen
+      // would go stale after the TTL and guardian would eventually show
+      // offline in real health tracking while running perfectly fine.
+      // startHeartbeat() (nc2, already required at module scope) now
+      // uses real createPulse() internally as of this session's own
+      // earlier migration — guardian gets that for free, not a second
+      // hand-rolled copy.
+      nc2.startHeartbeat('guardian', HTTP_PORT);
       if (!r || !r.ok) return { ok:true, msg:'standalone — orchestrator offline' };
       return { ok: true };
     }
@@ -2570,29 +2589,11 @@ function handleExtendedRoutes(req, res, url, method) {
   }
 
   // ── Settings ────────────────────────────────────────────────────────────────
-  if (method==='GET' && url.pathname==='/settings') {
-    const settings = jaa.all('settings') || [];
-    const out = {};
-    for (const s of settings) if (s.key) out[s.key] = s.value;
-    pRes(res, 200, { ok:true, settings: out }); return true;
-  }
-  if (method==='PUT' && url.pathname.startsWith('/settings/')) {
-    const key = decodeURIComponent(url.pathname.slice(10));
-    bodyJ(req).then(body => {
-      const existing = (jaa.all('settings') || []).filter(s => s.key === key);
-      if (existing.length) jaa.update('settings', { uuid: existing[0].uuid }, { value: body.value });
-      else jaa.insert('settings', { uuid: require('crypto').randomUUID(), key, value: body.value });
-      pRes(res, 200, { ok:true, key, value: body.value });
-    }).catch(e => pRes(res, 500, { ok:false, error:e.message }));
-    return true;
-  }
-  if (method==='POST' && url.pathname==='/settings/reset') {
-    // Reset all settings to default — clear the settings table
-    jaa.query('settings', () => true, 1000).forEach(s =>
-      jaa.update('settings', s.uuid, { value: null })
-    );
-    pRes(res, 200, { ok:true }); return true;
-  }
+  // §DECOMPOSED 2026-08-29 — the 3 real /settings routes moved to
+  // routes/settings.js verbatim (Phase 116's first real slice for
+  // guardian). jaa/pRes/bodyJ injected via ctx since jaa is a real,
+  // stateful class instance, not a shared-singleton lib module.
+  if (require('./routes/settings.js').handle(req, res, { method, url, jaa, pRes, bodyJ })) return true;
 
   // ── Artifacts (paginated) ────────────────────────────────────────────────────
   if (method==='GET' && url.pathname==='/artifacts') {

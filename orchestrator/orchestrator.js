@@ -2539,6 +2539,14 @@ if (nexusBus) {
     require('./lib/versionium-auto-commit').init();
     console.log('[orchestrator] Versionium step 4 — sigma-gated auto-commit active');
   } catch(e) { console.warn('[orchestrator] versionium-auto-commit init failed:', e.message); }
+  // §RAID-WORKER 2026-08-29 — the missing automatic consumer for RAID's
+  // real contract queue (self-heal, co-pilot, idearium all submit real
+  // contracts now; nothing was ever draining them). Same real, proven
+  // pattern as sigma-writer/versionium-auto-commit right above.
+  try {
+    require('../cortex/core/raid/worker.js').start();
+    console.log('[orchestrator] RAID worker active — draining the real contract queue');
+  } catch (e) { console.warn('[orchestrator] raid-worker init failed:', e.message); }
   // Compaction belongs to the same write authority, same process (§10.1) —
   // rolls expired sigma_records (>24h, tiers.js short tier) into hourly
   // sigma_rollups, then hard-deletes them. Built 2026-07-20: 13,944 rows

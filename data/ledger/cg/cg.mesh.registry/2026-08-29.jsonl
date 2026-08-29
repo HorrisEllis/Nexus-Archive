@@ -1,1 +1,0 @@
-{"uuid":"1db8d9c4-a715-4905-9781-a8fd03f35b65","system":"cg","component":"cg.mesh.registry","action":"registered","status":"ok","tags":["cg","mesh"],"detail":"List available AI agents and their URLs","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787993905835}

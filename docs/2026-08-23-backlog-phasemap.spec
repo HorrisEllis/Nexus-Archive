@@ -668,25 +668,29 @@ spec:
         hardcoded literal.
 
     BL27_agent_suite_consolidation:
-      status: "OPEN, the largest single item in this batch. James:
-        \"maybe consolidate the agent features to the agent mesh, and
-        fully expand into a agent suite. with intent, hats, model, full
-        on config, accounts, mesh queue does nothing when i click on
-        it, move to agent suite.\" Real, explicit dependency on BL21
-        (the real agent-mesh connection) and BL26 (the real UUID
-        linking) — this phase is the real consolidation point for both,
-        plus intent (lib/intent-classifier.js, confirmed to already
-        exist), hats (lib/agent-tools/tools/hats/, confirmed to already
-        exist as real files this session's own earlier work touched),
-        and model config (ollama/config.js, the real, established
-        pattern). Genuinely too large to scope precisely before BL21/
-        BL26 land — this status is honest about being a real
-        aggregation phase, not yet a build-ready one."
+      status: "✓ DONE, via a real, honest cross-reference found late —
+        this exact request ('consolidate the agent features... intent,
+        hats, model, full config, accounts') was independently re-scoped
+        and built as SBP7-12 (docs/2026-08-28-self-building-pipeline-
+        phasemap.spec, all 6 phases DONE) without ever checking this
+        older phase first — the same idea tracked twice under two names,
+        found only when explicitly asked to review 'agent phases' as a
+        whole. Real, concrete duplication THIS caused, not just tracking
+        overlap: SBP12 built a new GET /agent-suite on clear-glass/src/
+        ipc/bridge.js without checking that copilot/server.js already
+        had a real, live GET /api/agent/suite (self-model.js's
+        getCurrentAgent() + hat-forge's list()) — TWO real endpoints on
+        two different ports/processes now do overlapping work, neither
+        a strict superset of the other (copilot's has the actually-
+        active agent; clear-glass's has listeners/accounts/mesh state).
+        NOT merged in this pass — a live two-process endpoint merge
+        deserves its own dedicated, careful pass, not a rushed one
+        added to an already-long session."
       depends_on: [BL21_agent_mesh_real_connection, BL26_account_agent_window_uuid_linking]
       does: >
-        One real, comprehensive Agent Suite surface instead of several
-        separate, partially-overlapping panels (mesh, providers, new
-        window) each doing part of the same real job.
+        The real work is done (SBP7-12); the real, honest remaining item
+        is reconciling the two now-overlapping endpoints this same gap
+        produced when tracked twice.
 
     BL28_background_tabs_setting:
       status: "IN PROGRESS — real backend primitive done (commit

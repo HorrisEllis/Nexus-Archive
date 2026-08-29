@@ -1,1 +1,0 @@
-{"uuid":"d86f94c2-42cc-4c9e-9d71-b646cff84ffb","system":"eros","component":"eros.status","action":"registered","status":"ok","tags":["eros"],"detail":"Full OS status — bridge, nodes, queue, routing","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787993905859}

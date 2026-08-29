@@ -46,6 +46,15 @@ const FILES = [
   ['copilot/ui/person-model.html', 'nexus.copilot.ui.person-model',
     ['nexus.copilot.person-model']],                   // fetches /api/person-model/* on :3750
 
+  // §DECOMPOSED 2026-08-28/wired 2026-08-29 — the 12 person_model.*
+  // routes, previously inline in copilot/server.js (unwired the whole
+  // time, same as every other route this session found lacking a real
+  // loom entry), extracted verbatim to their own real file. Depends on
+  // person-model itself (the module it requires) — not on server.js,
+  // since server.js's role after the extraction is just delegation.
+  ['copilot/routes/person-model.js', 'nexus.copilot.routes.person-model',
+    ['nexus.copilot.person-model']],
+
   // ── session history ───────────────────────────────────────────────────────
   ['tools/record-session-2026-08-17.js', 'nexus.tools.record-session-2026-08-17',
     ['nexus.lib.component-ledger']],

@@ -850,13 +850,7 @@ async function bootstrap() {
   // injects it into the corresponding agent chat using clearglass."
   // Real close of the loop — see src/copilot/wake-relay.js for the full
   // real chain this completes.
-  // §MOVED 2026-08-29 — startWakeRelay() now takes an optional `mesh`
-  // for its guardian-down fallback path (see wake-relay.js's own hook
-  // comment); AgentMesh isn't constructed until step 10 below, so this
-  // call moves there instead of staying here at step ~8. Nothing about
-  // the wake-detection subscription itself depends on boot order —
-  // Cortex's SSE stream is polled the same way regardless of when this
-  // starts, so moving the call later doesn't lose any wake events.
+  require('../copilot/wake-relay.js').startWakeRelay(providerHost, { log: (m) => console.log(m) });
   // §P-CG-01 — NCP provider tabs (claude, chatgpt, gemini, perplexity),
   // each its own persistent session partition + Guardian userscript
   // injected via executeJavaScript, replacing Tampermonkey + manual tab
@@ -930,16 +924,8 @@ async function bootstrap() {
   // account uuid (auto-created on first use, persisted in
   // nexus-options.json). nexusOptions is already loaded by 8.5, well
   // before this line — real ordering, not assumed.
-  // §HOOK 2026-08-29 — `rewind: rewind` wires in the RewindEngine
-  // (created at step 8, well before this line — real ordering) so
-  // AgentMesh.send() can take a real, labeled pre-task snapshot per
-  // mesh task instead of relying solely on rewind's generic 30s
-  // auto-snapshot-on-nav.loaded. See agent-mesh.js's send() for the
-  // actual snapshot/rollback-id logic this enables.
-  const mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, rewind, sse: { emit: (t, d) => emit(t, d) } });
+  const mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, sse: { emit: (t, d) => emit(t, d) } });
   await mesh.init();
-
-  require('../copilot/wake-relay.js').startWakeRelay(providerHost, { log: (m) => console.log(m), mesh });
 
   // 11. Diagnostic engine — Playwright-equivalent on ClearDriver
   const diag = new DiagnosticEngine({ driver, dom, sse: { emit: (t, d) => emit(t, d) } });

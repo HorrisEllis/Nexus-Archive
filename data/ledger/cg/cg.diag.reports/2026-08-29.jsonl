@@ -1,1 +1,0 @@
-{"uuid":"aac982af-1dd6-45ed-9d6d-b0161d4dec46","system":"cg","component":"cg.diag.reports","action":"registered","status":"ok","tags":["cg","diagnostic"],"detail":"List diagnostic run reports","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787993905847}

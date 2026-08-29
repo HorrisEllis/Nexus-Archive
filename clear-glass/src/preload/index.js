@@ -229,11 +229,6 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   mesh: {
     spawn:   (payload) => ipcRenderer.invoke('mesh:spawn',   payload),
     route:   (payload) => ipcRenderer.invoke('mesh:route',   payload),
-    // §NEW 2026-08-29 — direct send had no IPC channel at all (see
-    // ipc/bridge.js's mesh:send comment); this is the manual "send to
-    // this exact agent" path, distinct from route (pick healthiest) and
-    // enqueue (queue for later).
-    send:    (payload) => ipcRenderer.invoke('mesh:send',    payload),
     enqueue: (payload) => ipcRenderer.invoke('mesh:enqueue', payload),
     list:    ()        => ipcRenderer.invoke('mesh:list'),
   },

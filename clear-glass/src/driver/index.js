@@ -9,26 +9,16 @@
  * All actions are CFR-logged with intent/agent/progress.
  */
 
-const { webContents } = require('electron');
+const { BrowserWindow, webContents } = require('electron');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 class ClearDriver {
-  constructor({ ctxMgr, dom, vault, sse, getWebContents }) {
+  constructor({ ctxMgr, dom, vault, sse }) {
     this.ctxMgr = ctxMgr;
     this.dom    = dom;
     this.vault  = vault;
     this.sse    = sse;
     this.queue  = new Map(); // agentId → action queue
-    // §STRUCTURAL FIX 2026-08-29 — real per-agent webview-guest lookup,
-    // passed in from src/main/index.js's did-attach-webview tracking.
-    // Replaces this file's own _getWebContents() below, which matched
-    // BrowserWindow.fromWebContents(wc) against a title — that only ever
-    // resolves the outer chrome window (browser.html), never the
-    // <webview> guest actually displaying the target page, since a
-    // guest's webContents isn't owned by a BrowserWindow. Every command
-    // in this file was silently running against the wrong document. See
-    // main/index.js's §STRUCTURAL FIX note for the full story.
-    this._getRealWebContents = getWebContents;
   }
 
   // ── Primary dispatch ──────────────────────────────────────────────────
@@ -438,48 +428,103 @@ class ClearDriver {
   }
 
   // ── Element picker ────────────────────────────────────────────────────
-  // §BUILD 2026-08-29 — was this file's own weak inline picker
-  // (_pickerScript below): no shadow-DOM awareness, no listener-mode, no
-  // killswitch, no cleanup beyond removing three DOM nodes. Per the
-  // 2026-07-23 decision to make the ported Guardian picker
-  // (renderer/guardian-picker.js) canonical everywhere, replacing BOTH
-  // weaker pickers — the manual UI path (renderer/browser.js) already
-  // does this by fetching the file and injecting it; this is the same
-  // real script, loaded and injected the same way, for the agent-
-  // automation path (Copilot's picker.enable/picker.disable tools, via
-  // src/copilot/bridge.js → driver.exec). Read once and cached, same
-  // reasoning as browser.js's window.__guardianPickerSrc cache — the
-  // file doesn't change at runtime.
   async _enablePicker(agentId) {
     const wc = this._getWebContents(agentId);
     if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
-    if (!ClearDriver._guardianPickerSrc) {
-      const fs = require('fs');
-      const path = require('path');
-      ClearDriver._guardianPickerSrc = fs.readFileSync(
-        path.join(__dirname, '../../renderer/guardian-picker.js'), 'utf8'
-      );
-    }
-    await this._evalJs(wc, ClearDriver._guardianPickerSrc);
+    await this._evalJs(wc, this._pickerScript(agentId));
     return { pickerEnabled: true };
   }
 
   async _disablePicker(agentId) {
     const wc = this._getWebContents(agentId);
     if (!wc) return { pickerEnabled: false };
-    // Matches guardian-picker.js's real, host-facing control surface
-    // (window.__gPickerActive.destroy) — the old __cgPicker fallback kept
-    // for a picker that was already active before this build landed.
-    await this._evalJs(wc, `if (window.__gPickerActive) window.__gPickerActive.destroy(); else if (window.__cgPicker) window.__cgPicker.destroy();`);
+    await this._evalJs(wc, `if (window.__cgPicker) window.__cgPicker.destroy();`);
     return { pickerEnabled: false };
   }
 
-  // §REMOVED 2026-08-29 — _pickerScript(), the weak inline picker
-  // formerly injected here (no shadow-DOM awareness, no listener-mode,
-  // no killswitch), fully superseded by guardian-picker.js above. Kept
-  // its window.__cgSendPick contract nowhere else — searched the repo
-  // directly before removing; nothing but this method's own injected
-  // script referenced it.
+  _pickerScript(agentId) {
+    return `
+(function() {
+  if (window.__cgPicker) window.__cgPicker.destroy();
+
+  const overlay = document.createElement('div');
+  overlay.id = '__cg-picker-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;cursor:crosshair;pointer-events:all;';
+  document.body.appendChild(overlay);
+
+  const highlight = document.createElement('div');
+  highlight.id = '__cg-picker-highlight';
+  highlight.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;border:2px solid #00f5ff;background:rgba(0,245,255,0.08);transition:all 0.08s;box-shadow:0 0 12px #00f5ff44;';
+  document.body.appendChild(highlight);
+
+  const tooltip = document.createElement('div');
+  tooltip.id = '__cg-picker-tooltip';
+  tooltip.style.cssText = 'position:fixed;z-index:2147483648;background:#0a0a0f;color:#00f5ff;font:11px monospace;padding:4px 8px;border:1px solid #00f5ff44;border-radius:4px;pointer-events:none;max-width:300px;word-break:break-all;';
+  document.body.appendChild(tooltip);
+
+  let lastTarget = null;
+
+  overlay.addEventListener('mousemove', (e) => {
+    overlay.style.pointerEvents = 'none';
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    overlay.style.pointerEvents = 'all';
+    if (!el || el === lastTarget) return;
+    lastTarget = el;
+
+    const r = el.getBoundingClientRect();
+    highlight.style.top    = r.top + 'px';
+    highlight.style.left   = r.left + 'px';
+    highlight.style.width  = r.width + 'px';
+    highlight.style.height = r.height + 'px';
+
+    const tag  = el.tagName.toLowerCase();
+    const id   = el.id ? '#' + el.id : '';
+    const cls  = el.className && typeof el.className === 'string'
+      ? '.' + el.className.trim().split(/\\s+/).slice(0,2).join('.') : '';
+    tooltip.textContent = tag + id + cls;
+    tooltip.style.left  = Math.min(e.clientX + 12, window.innerWidth - 310) + 'px';
+    tooltip.style.top   = Math.min(e.clientY + 12, window.innerHeight - 40) + 'px';
+  });
+
+  overlay.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    overlay.style.pointerEvents = 'none';
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    overlay.style.pointerEvents = 'all';
+    if (!el) return;
+
+    const r       = el.getBoundingClientRect();
+    const tag     = el.tagName.toLowerCase();
+    const id      = el.id;
+    const classes = el.className;
+    const text    = el.innerText?.slice(0, 100);
+    const attrs   = {};
+    for (const a of el.attributes) attrs[a.name] = a.value;
+
+    // Send to main process
+    if (window.__cgSendPick) {
+      window.__cgSendPick({
+        tag, id, classes, text, attrs,
+        rect: { top: r.top, left: r.left, width: r.width, height: r.height },
+        agentId: ${JSON.stringify(agentId)},
+        ts: Date.now(),
+      });
+    }
+
+    window.__cgPicker.destroy();
+  });
+
+  window.__cgPicker = {
+    destroy() {
+      overlay.remove();
+      highlight.remove();
+      tooltip.remove();
+      window.__cgPicker = null;
+    }
+  };
+})();
+    `;
+  }
 
   // ── Inject script ─────────────────────────────────────────────────────
   async _inject(agentId, { code, worldId, persistent = false }) {
@@ -531,21 +576,17 @@ class ClearDriver {
 
   // ── Internals ──────────────────────────────────────────────────────────
   _getWebContents(agentId) {
-    if (!this._getRealWebContents) {
-      // §HONEST FAILURE — no lookup was wired in (e.g. constructed
-      // without main/index.js's getAgentWebContents). Previously this
-      // fell back to a title-match heuristic that silently returned the
-      // wrong document; failing loudly here is the correct behavior per
-      // axiom §no-silent-failures, not a regression.
-      throw new Error('ClearDriver: no getWebContents lookup was provided — cannot target an agent\'s real page');
+    // Find the BrowserWindow for this agent
+    const all = webContents.getAllWebContents();
+    // Match by agent ID stored on the window
+    for (const wc of all) {
+      try {
+        const win = BrowserWindow.fromWebContents(wc);
+        if (win && win.getTitle().includes(agentId)) return wc;
+      } catch {}
     }
-    const wc = this._getRealWebContents(agentId);
-    if (wc) return wc;
-    // Genuine fallback for callers that haven't attached a <webview> yet
-    // (e.g. a window just opened, page still loading) — focused
-    // webcontents is a reasonable best-effort here, not a silent
-    // mistargeting, since there's no real per-agent guest to prefer yet.
-    return webContents.getFocusedWebContents() || null;
+    // Fallback: return focused webcontents
+    return webContents.getFocusedWebContents() || all[0] || null;
   }
 
   async _evalJs(wc, code, worldId) {

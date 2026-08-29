@@ -1,1 +1,0 @@
-{"uuid":"e1b7e797-37fc-47f8-8779-fce38b3c46a3","system":"eros","component":"eros.tab.shadow.map","action":"registered","status":"ok","tags":["eros","tab","dom"],"detail":"Map shadow DOM tree for tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787993905869}

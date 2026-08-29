@@ -1659,6 +1659,34 @@ const server = http.createServer(async (req, res) => {
       }
     } catch (_) { /* status/diagnostic poll unavailable — fall through to the normal path */ }
 
+    // §RAID-SOURCE 2026-08-29 — James: "hook... co-pilot system into
+    // raid." Real, honest finding before building this: the '/build
+    // <description>' text in clear-glass's own real textarea placeholder
+    // (browser.html) had ZERO backend anywhere — checked directly,
+    // cosmetic UI text implying a feature that didn't exist. This is
+    // that real feature, built to match exactly what the placeholder
+    // promises: a literal '/build ' prefix (not fuzzy natural-language
+    // matching, unlike /diagnose above — a build request should be
+    // unambiguous, not risk misfiring on ordinary conversation that
+    // happens to mention building something).
+    const buildMatch = prompt.match(/^\/build\s+(.+)/is);
+    if (buildMatch) {
+      const description = buildMatch[1].trim();
+      try {
+        const intake = require('../cortex/core/raid/contract-intake.js');
+        const submitted = intake.submitContract({
+          content: `${description}\n\nRead the relevant real code before proposing or making any change (bottom-up — no guessing at what exists). If you make a real, verified change, report SEAM VERDICT: PASS. If you cannot, report SEAM VERDICT: FAIL with your real findings.`,
+          title: description.slice(0, 80),
+        }, { source: 'copilot' });
+        return json(res, 200, {
+          text: `Queued as a real contract (${submitted.queueId.slice(0, 8)}) — it'll be picked up and dispatched to a real agent. This doesn't run instantly; check RAID's queue for its real status.`,
+          model_used: 'nexus-raid-contract', confidence: 1, escalated: false, requestId, queueId: submitted.queueId,
+        });
+      } catch (e) {
+        return json(res, 200, { text: `Couldn't queue that as a real contract: ${e.message}`, model_used: 'nexus-raid-contract', confidence: 0, escalated: false, requestId });
+      }
+    }
+
     // §P5 DYNAMIC GRAMMAR — resolve the prompt through the registry grammar trie
     // FIRST. This understands ALL capabilities (and future ones) via loom's
     // registry, not hand-written regex. High-confidence → we know the exact

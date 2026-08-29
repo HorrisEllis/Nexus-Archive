@@ -756,18 +756,6 @@
     // conversational send below, unchanged.
     const buildMatch = text.match(/^\/build\s+(.+)/is);
     const diagMatch  = text.match(/^\/diagnose\s*(.*)/is);
-    // §MESH-INTEGRATION 2026-08-29 — same plain-language slash-command
-    // pattern as /build and /diagnose above, now the first manual UI
-    // path to AgentMesh's send()/route(): "/mesh claude summarize this"
-    // sends directly to a named agent; "/route <prompt>" lets the
-    // agent-router-driven fallback chain (see agent-mesh.js's route()
-    // hook) pick. Both now actually work end to end because cg.mesh.send
-    // exists (added to preload) and cg.mesh.route/spawn stopped being
-    // fire-and-forget (ipc/bridge.js's mesh:spawn/mesh:route fix) — a
-    // manual click/type through this box would have silently gotten back
-    // `{ok:true}` with no real response before that fix.
-    const meshMatch  = text.match(/^\/mesh\s+(claude|chatgpt|gemini|perplexity|mistral|grok)\s+(.+)/is);
-    const routeMatch = text.match(/^\/route\s+(.+)/is);
     if (buildMatch) {
       addMsg('thinking', '⋯ building — this can take a couple minutes');
       try {
@@ -791,33 +779,6 @@
       } catch (err) {
         removeThinking();
         addMsg('assistant', `Diagnose error: ${err.message}`);
-      }
-      return;
-    }
-    if (meshMatch) {
-      const [, agentKey, prompt] = meshMatch;
-      addMsg('thinking', `⋯ asking ${agentKey}`);
-      try {
-        const res = await cg.mesh.send({ agentKey, prompt: prompt.trim() });
-        removeThinking();
-        if (res?.error) { addMsg('assistant', `Mesh send failed (${agentKey}): ${res.error}`); }
-        else { addMsg('assistant', res?.response || '(no response text)', false); }
-      } catch (err) {
-        removeThinking();
-        addMsg('assistant', `Mesh send error: ${err.message}`);
-      }
-      return;
-    }
-    if (routeMatch) {
-      addMsg('thinking', '⋯ routing to healthiest agent');
-      try {
-        const res = await cg.mesh.route({ prompt: routeMatch[1].trim() });
-        removeThinking();
-        if (res?.error) { addMsg('assistant', `Route failed: ${res.error}`); }
-        else { addMsg('assistant', `${res?.response || '(no response text)'}\n\n— via ${res?.agentKey || 'unknown agent'}`, false); }
-      } catch (err) {
-        removeThinking();
-        addMsg('assistant', `Route error: ${err.message}`);
       }
       return;
     }

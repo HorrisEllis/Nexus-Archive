@@ -169,10 +169,26 @@ class IpcBridge {
     // proved (compose, don't rebuild). Each key degrades independently
     // to [] on its own real failure rather than one bad source blanking
     // the whole response.
-    this.app.get('/agent-suite', (req, res) => {
+    this.app.get('/agent-suite', async (req, res) => {
       let hats = [];
       try { hats = require('../../../lib/hat-forge.js').list(); } catch (_) {}
+      // §FIX 2026-08-29 — James: "fix them." The real duplicate found
+      // reviewing every agent phase: copilot/server.js's own real GET
+      // /api/agent/suite (self-model.js's getCurrentAgent() + hat-
+      // forge's list()) already existed before this endpoint was built
+      // — confirmed by reading both directly, neither a strict superset
+      // of the other. Two live processes, so the real fix isn't
+      // deleting either one — it's this endpoint pulling the ONE piece
+      // it was genuinely missing (which agent is actually active right
+      // now) from copilot's own real, separate /api/agent/current via a
+      // real network call, same composition pattern already proven this
+      // session for .nex/COS (compose across a real process boundary,
+      // don't force one side to own everything). hat-forge's list() stays
+      // called locally here, not proxied — it's a real, cheap, in-process
+      // call with no reason to add a network hop for data already free.
+      const current = await this._getCopilotCurrentAgent();
       res.json({
+        current,
         agents:    this.mesh?.listAgents() || [],
         hats,
         listeners: this.options?.listListeners() || [],
@@ -478,41 +494,8 @@ class IpcBridge {
       catch (err) { return { ok: false, error: err.message }; }
     });
     ipcMain.handle('url:listen',     async (e, d) => rendererEmit('url.listen', d));
-    // §BUGFIX 2026-08-29 — same disease as context:switch (see that fix's
-    // comment above): `mesh.spawn`/`mesh.route` ARE real, correctly-named
-    // gates (src/gates/index.js) and DO fire on rendererEmit's bus.emit —
-    // the gate runs spawn()/route() for real and pushes mesh.agent.spawned
-    // / mesh.task.complete / mesh.error onto SSE. But rendererEmit() itself
-    // returns `{ok:true}` synchronously, before the gate's async work
-    // resolves — so ipcMain.handle's promise (what the renderer's
-    // `await cg.mesh.spawn(...)` actually receives) was never the real
-    // spawn/route result, just an immediate, contentless ack. Any manual
-    // UI (a "spawn Claude" or "route this prompt" button) awaiting a
-    // useful return value got nothing back — same class of bug, this
-    // time on a real gate rather than a missing one. Calling this.mesh
-    // directly, like mesh:enqueue already did, gives the renderer the
-    // actual state/response instead of a blind ack. SSE events are
-    // unaffected — this.mesh's own methods still emit them internally.
-    ipcMain.handle('mesh:spawn', async (e, d) => {
-      if (!this.mesh) return { error: 'mesh not initialized' };
-      try { return await this.mesh.spawn(d?.agentKey, d || {}); }
-      catch (err) { return { error: err.message }; }
-    });
-    ipcMain.handle('mesh:route', async (e, d) => {
-      if (!this.mesh) return { error: 'mesh not initialized' };
-      try { return await this.mesh.route(d || {}); }
-      catch (err) { return { error: err.message }; }
-    });
-    // §NEW 2026-08-29 — mesh:send never existed at all: preload only ever
-    // exposed spawn/route/enqueue/list, so there was no manual "send this
-    // exact prompt to this exact agent/context" path — only routing
-    // (route) or queueing (enqueue), never a direct call. AgentMesh.send()
-    // was always real and complete; it just had no IPC door.
-    ipcMain.handle('mesh:send', async (e, d) => {
-      if (!this.mesh) return { error: 'mesh not initialized' };
-      try { return await this.mesh.send(d || {}); }
-      catch (err) { return { error: err.message }; }
-    });
+    ipcMain.handle('mesh:spawn',     async (e, d) => rendererEmit('mesh.spawn', d));
+    ipcMain.handle('mesh:route',     async (e, d) => rendererEmit('mesh.route', d));
     ipcMain.handle('mesh:enqueue',   async (e, d) => this.mesh?.enqueue(d));
     ipcMain.handle('mesh:list',      async ()    => ({
       agents:     this.mesh?.listAgents()   || [],
@@ -739,6 +722,31 @@ class IpcBridge {
       req.on('error', reject);
       req.write(body);
       req.end();
+    });
+  }
+
+  // §FIX 2026-08-29 — real, dedicated GET, not a reuse of
+  // _postToApiChannel above (POST-only, drains and discards the response
+  // body by design — the exact opposite of what's needed here, which is
+  // the response body itself). Fails soft, matching every other cross-
+  // process call this session added: copilot being unreachable degrades
+  // this endpoint's real "current" field to null, never throws and
+  // blocks the rest of /agent-suite's real, already-working local data.
+  _getCopilotCurrentAgent() {
+    return new Promise((resolve) => {
+      const req = require('http').get(
+        `http://127.0.0.1:${process.env.COPILOT_PORT || 3750}/api/agent/current`,
+        { timeout: 2000 },
+        (res) => {
+          let body = '';
+          res.on('data', (d) => { body += d; });
+          res.on('end', () => {
+            try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
+          });
+        }
+      );
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
     });
   }
 
