@@ -85,6 +85,12 @@ const SYSTEM  = 'cortex';
 
 // ── JAA memory store ──────────────────────────────────────────────────────────
 const { jaaDB, uid } = require('./memory/jaa-db');
+// §BUILD 2026-08-30 — Versionium/heartbeat continuation: cortex's own
+// heartbeat is the same hand-rolled bare POST /api/heartbeat pattern
+// already replaced in Clear Glass this session — no latency tracking,
+// no miss detection, no online/offline transitions. Real, shared
+// createPulse() replaces it below, not left running alongside it.
+const { createPulse } = require('../orchestrator/lib/pulse.js');
 // §GAP CLOSED 2026-07-19 — nexus-bus.js already existed at repo root, already
 // documented as "the common event fabric," and other systems (guardian,
 // orchestrator) were already POSTing to cortex's /api/event with it in mind
@@ -1329,6 +1335,7 @@ function _register() {
 // fresh — same interval, same payload shape, same fire-and-forget error
 // handling.
 let _heartbeatStarted = false;
+let _pulseClient = null;
 // §B1 2026-07-24 — publish cortex's bus subscriptions to the shared store so
 // the consumer graph spans processes. Before this, lib/consumer-registry.js
 // could only see the subscribers of whichever process happened to be asking,
@@ -1358,19 +1365,22 @@ function _startHeartbeat() {
   if (_heartbeatStarted) return; // _register() can retry; never double-start the interval
   _heartbeatStarted = true;
   _startSubscriptionPublisher();
-  const u = new URL(`${OR_URL}/api/heartbeat`);
-  const timer = setInterval(() => {
-    const body = JSON.stringify({ systemId: SYSTEM, port: PORT, status: 'online' });
-    const req = http.request({
-      hostname: u.hostname, port: u.port || 9000, path: u.pathname,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 2000,
-    });
-    req.on('error', () => {}); // fire-and-forget, matches every other system's heartbeat
-    req.write(body); req.end();
-  }, 10000);
-  if (timer.unref) timer.unref();
+  _pulseClient = createPulse({
+    systemId: SYSTEM,
+    port: PORT,
+    orchPort: new URL(OR_URL).port || 9000,
+    intervalMs: 10000,
+    onMiss: ({ missed, elapsed }) => {
+      if (missed === 3) console.warn(`[cortex/pulse] 3 missed beats to orchestrator (${elapsed}ms since last ack)`);
+    },
+    onOffline: ({ missed, elapsed }) => console.warn(`[cortex/pulse] orchestrator appears OFFLINE — ${missed} missed beats, ${elapsed}ms since last ack`),
+    onOnline: ({ latency }) => console.log(`[cortex/pulse] orchestrator back online, latency=${latency}ms`),
+    log: () => {}, // real pulse lifecycle logging already covered by the callbacks above
+  });
+}
+
+function _stopHeartbeat() {
+  try { _pulseClient?.stop(); } catch (_) {}
 }
 
 // ── Poll CFR field from orchestrator every 5s ─────────────────────────────────

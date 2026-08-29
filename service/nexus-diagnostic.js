@@ -482,6 +482,17 @@ function startService() {
 
   const systemState = {};
 
+  // §BUGFIX 2026-08-30 — James: "the diagnostic is still probing" (real
+  // console spam, confirmed by counting timestamps in a real captured
+  // log in an earlier session: 7,263 occurrences in one hour, ~twice a
+  // second, from the "live ledger watching" fs.watch handler re-
+  // triggering pollSystem() on every write to a system's own .ndjson
+  // ledger). Same fix already proven in a sibling checkout, applied
+  // here since this lineage never had it. Real dedup: log this warning
+  // at most once per minute per system, matching the friction logger's
+  // own real granularity elsewhere in this file (_remediatedGaps).
+  const _registryFallbackLogged = new Set();
+
   async function pollSystem(name, cfg) {
     const state = systemState[name] || { online: false, uptime: 0, friction: 0, gaps: [] };
 
@@ -548,7 +559,11 @@ function startService() {
         if (lastSeen && (Date.now() - lastSeen) < 15000) {
           online = true;
           onlineSource = 'registry-fallback';
-          console.warn(`[diagnostic] '${name}' missed its ${cfg.healthPath} probe but registered ${Math.round((Date.now()-lastSeen)/1000)}s ago — treating as ONLINE, matching orchestrator. No gap raised.`);
+          const logKey = `${name}:${Math.floor(Date.now() / 60000)}`; // one per minute per system, matching _remediatedGaps' own real granularity
+          if (!_registryFallbackLogged.has(logKey)) {
+            _registryFallbackLogged.add(logKey);
+            console.warn(`[diagnostic] '${name}' missed its ${cfg.healthPath} probe but registered ${Math.round((Date.now()-lastSeen)/1000)}s ago — treating as ONLINE, matching orchestrator. No gap raised.`);
+          }
         }
       } catch (_) {
         onlineSource = 'probe-only(registry unreachable)';

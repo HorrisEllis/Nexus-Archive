@@ -2308,32 +2308,57 @@ It will write and install it for you.`);
 
     let dragging = false, startX = 0, startWidth = 0;
 
+    // §BUGFIX 2026-08-30 — James: "adjusting the search bar gets stuck."
+    // Real cause, not guessed: #chrome carries -webkit-app-region:drag
+    // (needed for dragging this frameless window by its empty chrome
+    // area) and the handle is only 10px wide — if the real mouse
+    // pointer drifts even slightly off that strip mid-drag (trivially
+    // easy at normal drag speed), Chromium's native window-drag
+    // recognition can steal the pointer stream before pointerup ever
+    // reaches the handle, even with setPointerCapture — a known class
+    // of interference specific to -webkit-app-region:drag regions, not
+    // something the Pointer Events spec itself accounts for. dragging
+    // stays true forever with nothing left to ever set it back to
+    // false — exactly "gets stuck." Real fix: once a drag starts,
+    // listen on document (not just the 10px handle) for move/up so the
+    // drag keeps tracking regardless of exact pointer position, AND
+    // explicitly neutralize the drag-region for the duration of the
+    // drag so Chromium's native handling can't compete for the pointer
+    // at all.
+    function _onMove(e) {
+      if (!dragging) return;
+      const delta = e.clientX - startX;
+      const next  = Math.min(_maxWidth(), Math.max(MIN_WIDTH, startWidth + delta));
+      wrap.style.flex = `0 0 ${next}px`;
+    }
+
+    function _endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove('dragging');
+      chrome.style.webkitAppRegion = '';
+      document.removeEventListener('pointermove', _onMove);
+      document.removeEventListener('pointerup', _endDrag);
+      document.removeEventListener('pointercancel', _endDrag);
+      const finalWidth = Math.round(wrap.getBoundingClientRect().width);
+      cg.options.set({ urlBarWidthPx: finalWidth }).catch(() => {});
+    }
+
     handle.addEventListener('pointerdown', (e) => {
       dragging = true;
       startX = e.clientX;
       startWidth = wrap.getBoundingClientRect().width;
       handle.classList.add('dragging');
-      handle.setPointerCapture(e.pointerId);
+      // Real neutralization — the whole #chrome row (not just the
+      // handle) stops being a drag-the-window region while an actual
+      // resize drag is in progress, so Chromium has nothing left to
+      // compete with the pointer events over.
+      chrome.style.webkitAppRegion = 'no-drag';
+      document.addEventListener('pointermove', _onMove);
+      document.addEventListener('pointerup', _endDrag);
+      document.addEventListener('pointercancel', _endDrag);
       e.preventDefault();
     });
-
-    handle.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      const delta = e.clientX - startX;
-      const next  = Math.min(_maxWidth(), Math.max(MIN_WIDTH, startWidth + delta));
-      wrap.style.flex = `0 0 ${next}px`;
-    });
-
-    function _endDrag(e) {
-      if (!dragging) return;
-      dragging = false;
-      handle.classList.remove('dragging');
-      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
-      const finalWidth = Math.round(wrap.getBoundingClientRect().width);
-      cg.options.set({ urlBarWidthPx: finalWidth }).catch(() => {});
-    }
-    handle.addEventListener('pointerup', _endDrag);
-    handle.addEventListener('pointercancel', _endDrag);
 
     handle.addEventListener('dblclick', () => {
       wrap.style.flex = '1 1 auto';
@@ -2365,12 +2390,27 @@ It will write and install it for you.`);
         list.innerHTML = '<div class="queue-empty">No mesh agents spawned yet. Co-pilot spawns one when you route a task to Claude, ChatGPT, etc.</div>';
         return;
       }
-      list.innerHTML = agents.map(a => `
+      // §BUILD 2026-08-30 — James: "update guardian plugin in clear-glass
+      // with all the agent mesh and suite features." health and
+      // accountId were already real, already in cg.mesh.list()'s
+      // output, and never rendered; constraints (SBP8's real per-agent
+      // token/chunk ceiling) is newly exposed by agent-mesh.js's own
+      // listAgents() fix this same pass. All three shown now, not
+      // reworking the row's existing status/key/taskCount.
+      list.innerHTML = agents.map(a => {
+        const maxTok = a.constraints?.maxTokens;
+        const constraintLabel = maxTok ? `${maxTok >= 1000 ? Math.round(maxTok/1000)+'k' : maxTok} tok${a.constraints?.chunk ? ' · chunked' : ''}` : '';
+        return `
         <div class="queue-item">
           <span class="q-status ${a.status === 'working' ? 'working' : a.status === 'error' ? 'error' : 'idle'}">${a.status}</span>
-          <span style="flex:1;">${a.key}</span>
+          <span style="flex:1;">
+            <div>${a.key}${a.accountId ? ` <span style="color:var(--text-dim);font-size:10px;">(${a.accountId})</span>` : ''}</div>
+            ${constraintLabel ? `<div style="font-size:9px;color:var(--text-dim);">${constraintLabel}</div>` : ''}
+          </span>
+          <span style="color:var(--text-dim);" title="health">${typeof a.health === 'number' ? a.health + '%' : ''}</span>
           <span style="color:var(--text-dim);">${a.taskCount} task${a.taskCount === 1 ? '' : 's'}</span>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } catch (err) {
       document.getElementById('queue-list').innerHTML = `<div class="queue-empty">Failed to load: ${err.message}</div>`;
     }

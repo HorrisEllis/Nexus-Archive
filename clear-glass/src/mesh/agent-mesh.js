@@ -406,14 +406,24 @@ class AgentMesh {
   _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   listAgents() {
+    // §BUILD 2026-08-30 — James: "update guardian plugin in clear-glass
+    // with all the agent mesh and suite features." Real gap found: spawn()
+    // has stored real Agent Suite constraint data (SBP8's lib/agent-
+    // router.js AGENT_CONSTRAINTS — per-agent token/chunk ceilings) on
+    // each agent's state since that commit, but this function never
+    // included it in what callers actually see — the mesh queue panel
+    // UI had no way to show it even if it wanted to. Added, not
+    // reworked — health/accountId were already here and already unused
+    // by the UI too, all three now real, visible data the panel can draw on.
     return [...this.agents.values()].map(s => ({
-      key:       s.key,
-      contextId: s.contextId,
-      accountId: s.accountId,
-      status:    s.status,
-      health:    s.health,
-      taskCount: s.taskCount,
-      lastUsed:  s.lastUsed,
+      key:         s.key,
+      contextId:   s.contextId,
+      accountId:   s.accountId,
+      status:      s.status,
+      health:      s.health,
+      taskCount:   s.taskCount,
+      lastUsed:    s.lastUsed,
+      constraints: s.constraints,
     }));
   }
 

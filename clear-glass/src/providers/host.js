@@ -311,6 +311,77 @@ class ProviderHost {
       this.sse.emit('provider.host.navigate', { providerId, url: navUrl, ts: Date.now() });
     });
 
+    // §BUILD 2026-08-30 — James: "each agent gets a little tool intro
+    // like use 'hey nexus' to chat... inject an explanation each time a
+    // new chat url opens." Real investigation first: these AI chat
+    // sites are SPAs — a "New Chat" click changes the URL without a
+    // full page load, so the 'did-navigate' listener just above (full
+    // navigations only) never fires for it. Electron's real, native
+    // 'did-navigate-in-page' event is exactly built for this and was
+    // completely unused anywhere in this codebase — confirmed directly
+    // before reaching for a heavier fix (a custom history.pushState
+    // hook inside every userscript, which an earlier pass considered
+    // and correctly declined to rush). No new injection mechanism
+    // needed either: injectAnswer() below already exists, already
+    // works (it's the same real path that delivers co-pilot's answers
+    // into these same pages), and renders as a real, closeable overlay
+    // via the page's own NexusWake.showAnswer() — it does NOT type into
+    // the real chat input, so there's no risk of interfering with
+    // anything the person is actually typing.
+    //
+    // Scoped to claude + chatgpt only initially, per James's own
+    // confirmation — these are the two providers whose real "new chat"
+    // URL shape was directly verifiable (claude.ai/new or claude.ai/ →
+    // claude.ai/chat/<uuid>; chatgpt.com/ → chatgpt.com/c/<uuid>).
+    //
+    // §BUILD 2026-08-30 — extended to gemini + perplexity, James: "yes
+    // do it." Real investigation before writing anything, not a guess:
+    // both guardian/userscript-gemini.js and guardian/userscript-
+    // perplexity.js already have a real, page-side chatId() function
+    // used for session tracking, each carrying its own explicit
+    // §HONEST-NOTE that the URL pattern "isn't a verified-stable
+    // contract — verify against what you actually see." Reused those
+    // exact same regexes verbatim here (not re-derived, so host-side
+    // and page-side logic can't quietly diverge) rather than inventing
+    // a third, independent guess. Both return their own 'home' sentinel
+    // when no chat id matches — that's the real, already-relied-upon
+    // "new chat" signal, carried forward with the same honesty caveat
+    // the source files themselves state, not presented as more certain
+    // than it actually is. Worth it here specifically because the
+    // failure mode is genuinely low-stakes: an intro overlay firing on
+    // the wrong page occasionally, not anything touching real
+    // functionality — a different risk profile than the Claude/ChatGPT
+    // choice was weighed against.
+    const NEW_CHAT_CHECK = {
+      claude:     (path) => path === '/new' || path === '/',
+      chatgpt:    (path) => path === '/',
+      gemini:     (path) => !/\/(?:app|chat)\/([a-zA-Z0-9_-]+)/.test(path),
+      perplexity: (path) => !/\/search\/(.+)/.test(path),
+    };
+    if (NEW_CHAT_CHECK[providerId]) {
+      const _greetedChats = new Set(); // per-window — a fresh window starts with a clean slate, matching how "have I said this before, in THIS conversation" should actually behave
+      win.webContents.on('did-navigate-in-page', (e, navUrl) => {
+        try {
+          const u = new URL(navUrl);
+          if (!NEW_CHAT_CHECK[providerId](u.pathname)) return;
+          // Real per-chat guard: the SAME new-chat URL can fire this
+          // event more than once (query-param-only changes, focus
+          // events some SPAs trigger) — key on the real pathname so a
+          // genuine repeat visit to the same "blank" state doesn't
+          // re-greet every time, but a real, distinct new chat later
+          // still does (a fresh Date.now()-bucketed key would over-
+          // suppress; the pathname alone is what "new chat" actually
+          // means for these providers).
+          const key = `${providerId}:${u.pathname}`;
+          if (_greetedChats.has(key)) return;
+          _greetedChats.add(key);
+          this.injectAnswer(providerId,
+            "You can say \"hey nexus\" anytime you need real-time input or hit something you can't resolve alone — co-pilot is listening."
+          ).catch(() => {}); // best-effort, matches every other fire-and-forget page-side call in this file
+        } catch (_) { /* malformed navUrl — real, defensive, matches this file's own convention elsewhere */ }
+      });
+    }
+
     // Detect crash / unresponsive
     win.webContents.on('render-process-gone', (e, { reason }) => {
       _logWarn(`[ProviderHost] ${providerId} renderer gone: ${reason}`);

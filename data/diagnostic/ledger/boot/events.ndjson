@@ -1,0 +1,4 @@
+{"type":"service.start","port":7825,"pid":864,"ts":1787963710836,"_ts":1787963710837}
+{"type":"service.stop","reason":"SIGTERM","ts":1787963718574,"_ts":1787963718574}
+{"type":"service.start","port":7825,"pid":927,"ts":1787963728942,"_ts":1787963728942}
+{"type":"service.stop","reason":"SIGTERM","ts":1787963736785,"_ts":1787963736785}

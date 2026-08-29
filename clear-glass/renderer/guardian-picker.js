@@ -114,10 +114,10 @@
     #__g-popup-body { padding: 10px 11px; }
 
     .gf { margin-bottom: 8px; }
-    .gf-label { font-size: 8.5px; letter-spacing: 0.14em; color: rgba(200,220,240,0.35); text-transform: uppercase; margin-bottom: 3px; }
-    .gf-val { font-size: 10px; color: #00c8ff; background: rgba(0,200,255,0.06); border: 1px solid rgba(0,200,255,0.15); border-radius: 2px; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gf-label { font-size: 10px; letter-spacing: 0.14em; color: rgba(200,220,240,0.35); text-transform: uppercase; margin-bottom: 3px; }
+    .gf-val { font-size: 12px; color: #00c8ff; background: rgba(0,200,255,0.06); border: 1px solid rgba(0,200,255,0.15); border-radius: 2px; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .gf-input {
-      width: 100%; font: 10px/1.4 'IBM Plex Mono', monospace; color: #c8d8e8;
+      width: 100%; font: 12px/1.4 'IBM Plex Mono', monospace; color: #c8d8e8;
       background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 2px; padding: 4px 8px; outline: none; transition: border-color 0.15s;
     }
@@ -162,8 +162,8 @@
     #__g-listen-modal-close { background: none; border: none; cursor: pointer; color: rgba(204,68,255,0.4); font-size: 14px; line-height: 1; padding: 0 2px; }
     #__g-listen-modal-close:hover { color: #cc44ff; }
     #__g-listen-modal-body { padding: 10px 11px; }
-    .lm-section-title { font-family: 'Rajdhani', sans-serif; font-size: 9px; letter-spacing: 0.18em; color: rgba(204,68,255,0.5); text-transform: uppercase; margin: 8px 0 4px; }
-    .lm-info { font-size: 9px; color: rgba(200,220,240,0.3); line-height: 1.5; margin-bottom: 8px; }
+    .lm-section-title { font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 0.18em; color: rgba(204,68,255,0.5); text-transform: uppercase; margin: 8px 0 4px; }
+    .lm-info { font-size: 11px; color: rgba(200,220,240,0.3); line-height: 1.5; margin-bottom: 8px; }
     #__g-listen-modal-actions { display: flex; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(204,68,255,0.1); }
     .lm-btn-confirm { flex:1; padding:7px; font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; letter-spacing:.1em; border-radius:2px; cursor:pointer; border:1px solid rgba(204,68,255,0.4); background:rgba(204,68,255,0.1); color:#cc44ff; transition:all .15s; }
     .lm-btn-confirm:hover { background:rgba(204,68,255,0.2); border-color:#cc44ff; }
@@ -175,8 +175,8 @@
     .lm-link-opt:hover { background:rgba(204,68,255,0.06); border-color:rgba(204,68,255,0.35); }
     .lm-link-opt.selected { background:rgba(204,68,255,0.1); border-color:#cc44ff; }
     .lm-link-opt-icon { font-size:13px; }
-    .lm-link-opt-label { font-size:10px; color:#cc44ff; display:block; font-family:'Rajdhani',sans-serif; letter-spacing:.08em; }
-    .lm-link-opt-desc  { font-size:9px; color:rgba(200,220,240,0.45); }
+    .lm-link-opt-label { font-size:12px; color:#cc44ff; display:block; font-family:'Rajdhani',sans-serif; letter-spacing:.08em; }
+    .lm-link-opt-desc  { font-size:11px; color:rgba(200,220,240,0.45); }
     .lm-url-row { display:none; margin-top:5px; }
     .lm-url-row.show { display:block; }
     #__g-link-actions { display: flex; gap: 6px; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); }
@@ -305,6 +305,19 @@
       </div>
       <div class="lm-section-title">LINK TARGET (optional)</div>
       <div class="lm-info">Where matched events are routed. Leave blank to route via IR Layer default.</div>
+      <!-- §BUILD 2026-08-30 — James: "make the link target hidden with a
+           check box, it's too big." Real collapse, not a cosmetic
+           scrollbar — all 8 real options + their sub-rows sit inside
+           #__g-lm-link-target-options, hidden until this checkbox is
+           actually checked. Unchecked (hidden) is the real default,
+           matching the modal's own existing "leave blank to route via
+           IR Layer default" behavior — routing was already optional,
+           now the UI matches that instead of showing all 8 choices
+           up front regardless. -->
+      <label style="display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(200,220,240,0.6);cursor:pointer;margin-bottom:6px;">
+        <input type="checkbox" id="__g-lm-link-target-toggle"/> Route to a specific system
+      </label>
+      <div id="__g-lm-link-target-options" style="display:none;">
       <div class="lm-link-opt" data-lm-link="ledger" id="__g-lm-link-ledger">
         <span class="lm-link-opt-icon">📒</span>
         <div><span class="lm-link-opt-label">Event Ledger</span><span class="lm-link-opt-desc">Real, permanent write to Cortex's own event log</span></div>
@@ -353,6 +366,7 @@
       <div class="lm-link-opt" data-lm-link="direct-file-write" id="__g-lm-link-direct-file-write">
         <span class="lm-link-opt-icon">📝</span>
         <div><span class="lm-link-opt-label">Direct File Write</span><span class="lm-link-opt-desc">Writes a matched code block straight to disk, using its own path comment (// path/to/file.js) — no compartment, no contract</span></div>
+      </div>
       </div>
       <div id="__g-listen-modal-actions">
         <button class="lm-btn-confirm" id="__g-lm-btn-confirm">⦿ START LISTENER</button>
@@ -723,6 +737,8 @@
     document.querySelectorAll('.lm-link-opt').forEach(o => o.classList.remove('selected'));
     document.querySelectorAll('.lm-url-row').forEach(r => r.classList.remove('show'));
     _lmLinkType = null;
+    document.getElementById('__g-lm-link-target-toggle').checked = false;
+    document.getElementById('__g-lm-link-target-options').style.display = 'none';
 
     // Position near callto popup (offset slightly so both visible)
     const vw = window.innerWidth, vh = window.innerHeight;
@@ -900,6 +916,11 @@
   // established convention for a checkbox gating an input.
   document.getElementById('__g-lm-mc-keywords-on').addEventListener('change', (e) => {
     document.getElementById('__g-lm-mc-keywords').disabled = !e.target.checked;
+  });
+  // §BUILD 2026-08-30 — real link-target collapse toggle, same real
+  // checkbox-gates-content pattern as __g-lm-mc-keywords-on just above.
+  document.getElementById('__g-lm-link-target-toggle').addEventListener('change', (e) => {
+    document.getElementById('__g-lm-link-target-options').style.display = e.target.checked ? 'block' : 'none';
   });
   document.getElementById('__g-lm-btn-cancel').addEventListener('click',  closeListenModal);
   document.getElementById('__g-listen-modal-close').addEventListener('click', closeListenModal);
