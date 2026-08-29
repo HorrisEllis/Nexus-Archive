@@ -337,6 +337,35 @@
     flex: 1 1 auto;
     min-width: 0;
   }
+  /* §BUILD 2026-08-30 — real resize handle. Thin by default (barely
+     visible, matching this app's own "chrome that gets out of the way"
+     language elsewhere), widens and colors on hover so it's genuinely
+     discoverable without adding visual noise when idle. flex:0 0 auto —
+     never grows, never shrinks, fixed 10px hit target regardless of
+     row width. */
+  #url-bar-resize-handle {
+    flex: 0 0 auto;
+    width: 10px;
+    align-self: stretch;
+    cursor: ew-resize;
+    position: relative;
+    -webkit-app-region: no-drag;
+  }
+  #url-bar-resize-handle::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 20%; bottom: 20%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: var(--border);
+    border-radius: 1px;
+    transition: background 0.15s, width 0.15s;
+  }
+  #url-bar-resize-handle:hover::after,
+  #url-bar-resize-handle.dragging::after {
+    background: var(--accent);
+    width: 3px;
+  }
   .url-bar-bookmark-btn {
     position: absolute;
     right: 10px;

@@ -2276,6 +2276,82 @@ It will write and install it for you.`);
     .then(opts => applyToolbarPins(opts.pinnedToolbarButtons))
     .catch(() => {});
 
+  // §BUILD 2026-08-30 — James: "maybe adjustable search bar like you
+  // can grab the edge?" Real drag-to-resize for #url-bar-wrap, which
+  // normally auto-grows (flex:1 1 auto) to fill all free space in
+  // #chrome. Dragging switches it to an explicit pixel width
+  // (flex: 0 0 <px>), clamped to a real, computed max — the row's
+  // current width minus every OTHER real sibling's actual measured
+  // width, not a guessed constant, so this stays correct if icons are
+  // ever added/removed/pinned to the row later. Double-click resets
+  // back to auto-grow and clears the persisted preference.
+  (function setupUrlBarResize() {
+    const wrap   = document.getElementById('url-bar-wrap');
+    const handle = document.getElementById('url-bar-resize-handle');
+    const chrome = document.getElementById('chrome');
+    if (!wrap || !handle || !chrome) return; // real, defensive — matches this file's own convention elsewhere of never assuming an element exists
+
+    const MIN_WIDTH = 200;
+
+    function _maxWidth() {
+      const chromeRect = chrome.getBoundingClientRect();
+      let othersWidth = 0;
+      for (const child of chrome.children) {
+        if (child !== wrap) othersWidth += child.getBoundingClientRect().width;
+      }
+      const chromeStyle = getComputedStyle(chrome);
+      const gapPx = parseFloat(chromeStyle.gap || chromeStyle.columnGap || '0') || 0;
+      const gapsTotal = gapPx * Math.max(0, chrome.children.length - 1);
+      const paddingTotal = parseFloat(chromeStyle.paddingLeft || '0') + parseFloat(chromeStyle.paddingRight || '0');
+      return Math.max(MIN_WIDTH, chromeRect.width - othersWidth - gapsTotal - paddingTotal - 4);
+    }
+
+    let dragging = false, startX = 0, startWidth = 0;
+
+    handle.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startWidth = wrap.getBoundingClientRect().width;
+      handle.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const delta = e.clientX - startX;
+      const next  = Math.min(_maxWidth(), Math.max(MIN_WIDTH, startWidth + delta));
+      wrap.style.flex = `0 0 ${next}px`;
+    });
+
+    function _endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove('dragging');
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+      const finalWidth = Math.round(wrap.getBoundingClientRect().width);
+      cg.options.set({ urlBarWidthPx: finalWidth }).catch(() => {});
+    }
+    handle.addEventListener('pointerup', _endDrag);
+    handle.addEventListener('pointercancel', _endDrag);
+
+    handle.addEventListener('dblclick', () => {
+      wrap.style.flex = '1 1 auto';
+      cg.options.set({ urlBarWidthPx: null }).catch(() => {});
+    });
+
+    // Real restore-on-load, matching the pinnedToolbarButtons pattern
+    // right above this IIFE — same cg.options.get() call already made
+    // there could theoretically be reused, but this runs in its own
+    // microtask so a failure here can't block toolbar-pin restoration
+    // or vice versa (§1.2 — one feature's failure doesn't break another's).
+    cg.options.get().then(opts => {
+      if (typeof opts.urlBarWidthPx === 'number' && opts.urlBarWidthPx > 0) {
+        wrap.style.flex = `0 0 ${Math.max(MIN_WIDTH, opts.urlBarWidthPx)}px`;
+      }
+    }).catch(() => {});
+  })();
+
   // ── Mesh queue panel ─────────────────────────────────────────────────
   const queuePanel = document.getElementById('queue-panel');
   let queueVisible = false;

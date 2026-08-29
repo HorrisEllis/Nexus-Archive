@@ -60,6 +60,16 @@
     <button id="btn-bookmark" class="status-bookmark-btn url-bar-bookmark-btn" title="Bookmark this page">★</button>
   </div>
 
+  <!-- §BUILD 2026-08-30 — James: "maybe adjustable search bar like you
+       can grab the edge?" Real, grabbable handle — drags #url-bar-wrap
+       to an explicit width, overriding its normal flex:1 1 auto
+       auto-grow. Double-click resets back to auto-grow. Persisted via
+       the real cg.options store (urlBarWidthPx), same merge-safe set()
+       every other option already uses — not localStorage, which
+       doesn't exist in this Electron renderer's real persistence
+       story. -->
+  <div id="url-bar-resize-handle" title="Drag to resize · double-click to reset"></div>
+
   <!-- §BUILD 2026-08-28 — James: "the agent window manager moved to the
        menu with the 3 dots, same with the fingerprint engine." Both real
        elements below are UNCHANGED — same ids, same click handlers
