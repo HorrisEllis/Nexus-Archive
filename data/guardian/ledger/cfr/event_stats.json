@@ -1,0 +1,67 @@
+{
+  "stats": {
+    "guardian.seam.watchdog.started": {
+      "count": 2,
+      "lastTs": 1787993902167,
+      "intervals": [
+        405919
+      ],
+      "totalMs": 405919
+    },
+    "ncp.client.connected": {
+      "count": 4,
+      "lastTs": 1787993915585,
+      "intervals": [
+        3145,
+        2568,
+        3312
+      ],
+      "totalMs": 9025
+    },
+    "guardian.provider.connected": {
+      "count": 4,
+      "lastTs": 1787993915586,
+      "intervals": [
+        3144,
+        2568,
+        3312
+      ],
+      "totalMs": 9024
+    },
+    "ncp.message.received": {
+      "count": 8,
+      "lastTs": 1787993915597,
+      "intervals": [
+        1996,
+        990,
+        223,
+        2001,
+        491,
+        442,
+        2875
+      ],
+      "totalMs": 9018
+    },
+    "guardian.provider.registered": {
+      "count": 4,
+      "lastTs": 1787993915598,
+      "intervals": [
+        3207,
+        2492,
+        3317
+      ],
+      "totalMs": 9016
+    },
+    "guardian.tab.dom_map": {
+      "count": 4,
+      "lastTs": 1787993912723,
+      "intervals": [
+        990,
+        2224,
+        933
+      ],
+      "totalMs": 4147
+    }
+  },
+  "baseline": {}
+}

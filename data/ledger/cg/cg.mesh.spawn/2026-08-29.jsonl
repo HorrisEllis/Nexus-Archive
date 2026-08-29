@@ -1,0 +1,1 @@
+{"uuid":"833c71dd-cf59-46c2-bfe0-26edfcf72271","system":"cg","component":"cg.mesh.spawn","action":"registered","status":"ok","tags":["cg","mesh","agent"],"detail":"Spawn free AI agent in isolated context","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787993905827}

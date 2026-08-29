@@ -1,0 +1,1 @@
+{"uuid":"25031b5a-76e2-4a61-b215-0e68fa663397","system":"cg","component":"cg.cookie.snapshot","action":"registered","status":"ok","tags":["cg","cookie","vault"],"detail":"Snapshot current session cookies","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1787993905822}

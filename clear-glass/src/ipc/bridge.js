@@ -478,8 +478,41 @@ class IpcBridge {
       catch (err) { return { ok: false, error: err.message }; }
     });
     ipcMain.handle('url:listen',     async (e, d) => rendererEmit('url.listen', d));
-    ipcMain.handle('mesh:spawn',     async (e, d) => rendererEmit('mesh.spawn', d));
-    ipcMain.handle('mesh:route',     async (e, d) => rendererEmit('mesh.route', d));
+    // §BUGFIX 2026-08-29 — same disease as context:switch (see that fix's
+    // comment above): `mesh.spawn`/`mesh.route` ARE real, correctly-named
+    // gates (src/gates/index.js) and DO fire on rendererEmit's bus.emit —
+    // the gate runs spawn()/route() for real and pushes mesh.agent.spawned
+    // / mesh.task.complete / mesh.error onto SSE. But rendererEmit() itself
+    // returns `{ok:true}` synchronously, before the gate's async work
+    // resolves — so ipcMain.handle's promise (what the renderer's
+    // `await cg.mesh.spawn(...)` actually receives) was never the real
+    // spawn/route result, just an immediate, contentless ack. Any manual
+    // UI (a "spawn Claude" or "route this prompt" button) awaiting a
+    // useful return value got nothing back — same class of bug, this
+    // time on a real gate rather than a missing one. Calling this.mesh
+    // directly, like mesh:enqueue already did, gives the renderer the
+    // actual state/response instead of a blind ack. SSE events are
+    // unaffected — this.mesh's own methods still emit them internally.
+    ipcMain.handle('mesh:spawn', async (e, d) => {
+      if (!this.mesh) return { error: 'mesh not initialized' };
+      try { return await this.mesh.spawn(d?.agentKey, d || {}); }
+      catch (err) { return { error: err.message }; }
+    });
+    ipcMain.handle('mesh:route', async (e, d) => {
+      if (!this.mesh) return { error: 'mesh not initialized' };
+      try { return await this.mesh.route(d || {}); }
+      catch (err) { return { error: err.message }; }
+    });
+    // §NEW 2026-08-29 — mesh:send never existed at all: preload only ever
+    // exposed spawn/route/enqueue/list, so there was no manual "send this
+    // exact prompt to this exact agent/context" path — only routing
+    // (route) or queueing (enqueue), never a direct call. AgentMesh.send()
+    // was always real and complete; it just had no IPC door.
+    ipcMain.handle('mesh:send', async (e, d) => {
+      if (!this.mesh) return { error: 'mesh not initialized' };
+      try { return await this.mesh.send(d || {}); }
+      catch (err) { return { error: err.message }; }
+    });
     ipcMain.handle('mesh:enqueue',   async (e, d) => this.mesh?.enqueue(d));
     ipcMain.handle('mesh:list',      async ()    => ({
       agents:     this.mesh?.listAgents()   || [],

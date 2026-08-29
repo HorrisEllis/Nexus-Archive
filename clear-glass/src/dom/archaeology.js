@@ -8,7 +8,7 @@
  * Picked elements are registered as named hooks.
  */
 
-const { webContents, BrowserWindow, ipcMain } = require('electron');
+const { webContents } = require('electron');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 // Injected into every page — the DOM mesh observer
@@ -170,13 +170,45 @@ const DOM_OBSERVER_SCRIPT = `
 `;
 
 class DomArchaeology {
-  constructor({ sse }) {
+  constructor({ sse, getWebContents }) {
     this.sse   = sse;
     this.picks = new Map(); // name → pick metadata
-    this._bindIpc();
+    // §STRUCTURAL FIX 2026-08-29 — see src/driver/index.js's identical
+    // note and main/index.js's §STRUCTURAL FIX: this file's own
+    // _getWebContents() below carried the exact same broken title-match
+    // heuristic (byte-for-byte copy of ClearDriver's), which only ever
+    // resolved the outer chrome window, never the <webview> guest holding
+    // the real page. Every query/mutate call below was silently
+    // targeting the wrong document. Now uses the real per-agent lookup
+    // passed in from main.
+    this._getRealWebContents = getWebContents;
+    // §REMOVED 2026-08-29 — _bindIpc() used to register its own
+    // ipcMain.on('dom:event'/'dom:pick-result') here, on the exact same
+    // channels src/ipc/bridge.js already owns as the real, actively
+    // maintained handler (guardian.* routing, plugin:* forwarding,
+    // listener persistence). Two listeners on one channel both fire, so
+    // every guardian/plugin event was being double-processed — real
+    // side effects (registerCallto, registerListener, disableAllUserscripts)
+    // ran twice per event. The one genuinely unique thing this produced,
+    // the 'dom.picked' SSE event renderer/browser.js and
+    // src/bookmarks/browser.js listen for, is now emitted by bridge.js's
+    // own dom:pick-result handler instead — so this channel has a single
+    // owner. See bridge.js's §CONSOLIDATED 2026-08-29 note.
   }
 
   // ── Inject observer into webcontents ─────────────────────────────────
+  // §HONEST NOTE 2026-08-29 — confirmed via repo-wide search: nothing
+  // calls inject() anywhere. Orphaned since before this pass; not wired
+  // up here either, since doing so is a real architectural decision
+  // (which webContents, at what lifecycle point) beyond fixing its bug.
+  // Fixed the bug anyway rather than leaving dead-and-wrong code: this
+  // injected script used to reference window.__cgIpc, which is never
+  // defined anywhere in the codebase. The one real, working bridge for
+  // getting an isolated page's script back to the main process is
+  // src/preload/webview-bridge.js's contextBridge-exposed window.__cg
+  // (see every other window.__cg?.send(...) call across clear-glass) —
+  // renamed to match that exact established pattern rather than
+  // inventing a second bridge name.
   async inject(wc, agentId) {
     try {
       // Inject DOM mesh observer
@@ -185,10 +217,10 @@ class DomArchaeology {
       // Bridge DOM events to SSE via ipc
       await wc.executeJavaScript(`
         window.__cgEmitDom = (data) => {
-          if (window.__cgIpc) window.__cgIpc.send('dom:event', data);
+          if (window.__cg) window.__cg.send('dom:event', data);
         };
         window.__cgSendPick = (data) => {
-          if (window.__cgIpc) window.__cgIpc.send('dom:pick-result', data);
+          if (window.__cg) window.__cg.send('dom:pick-result', data);
         };
       `, true);
 
@@ -196,22 +228,6 @@ class DomArchaeology {
     } catch (err) {
       console.warn('[DOM] Injection error:', err.message);
     }
-  }
-
-  // ── IPC handlers from renderer ────────────────────────────────────────
-  _bindIpc() {
-    ipcMain.on('dom:event', (event, data) => {
-      this.sse.emit(data.type || 'dom.event', { ...data, ts: data.ts || Date.now() });
-    });
-
-    ipcMain.on('dom:pick-result', (event, data) => {
-      const pick = {
-        ...data,
-        pickId: uuidv4(),
-        registeredAt: Date.now(),
-      };
-      this.sse.emit('dom.picked', pick);
-    });
   }
 
   // ── Query ─────────────────────────────────────────────────────────────
@@ -329,14 +345,12 @@ class DomArchaeology {
   }
 
   _getWebContents(agentId) {
-    const all = webContents.getAllWebContents();
-    for (const wc of all) {
-      try {
-        const win = BrowserWindow.fromWebContents(wc);
-        if (win && win.getTitle().includes(agentId)) return wc;
-      } catch {}
+    if (!this._getRealWebContents) {
+      throw new Error('DomArchaeology: no getWebContents lookup was provided — cannot target an agent\'s real page');
     }
-    return webContents.getFocusedWebContents() || all[0] || null;
+    const wc = this._getRealWebContents(agentId);
+    if (wc) return wc;
+    return webContents.getFocusedWebContents() || null;
   }
 
   listPicks() { return [...this.picks.values()]; }

@@ -1,0 +1,288 @@
+[2026-08-29T08:51:35.507Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-08-29T08:51:35.520Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-08-29T08:51:35.521Z] [36m[clear-glass][0m on-demand — staying dormant until requested
+[2026-08-29T08:51:35.522Z] ── boot phase 1 — cortex
+[2026-08-29T08:51:35.522Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-29T08:51:35.546Z] autopilot status: http://127.0.0.1:7799/status
+[2026-08-29T08:51:36.071Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-08-29T08:51:36.072Z] ── boot phase 2 — orchestrator, bridge, guardian, diagnostic
+[2026-08-29T08:51:36.072Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-08-29T08:51:36.081Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-08-29T08:51:36.091Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-08-29T08:51:36.101Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-08-29T08:51:36.280Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T08:51:36.309Z] [36m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-08-29T08:51:36.309Z] [36m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-08-29T08:51:36.620Z] [bridge] phase 2 gate passed — http://127.0.0.1:9999/health
+[2026-08-29T08:51:36.621Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-08-29T08:51:36.622Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-08-29T08:51:36.625Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-08-29T08:51:36.625Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, copilot, loom
+[2026-08-29T08:51:36.625Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-08-29T08:51:36.636Z] [31m[architect][0m starting — node architect/service.js
+[2026-08-29T08:51:36.647Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-08-29T08:51:36.658Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T08:51:36.668Z] [33m[ollama-bridge][0m starting — node ollama/server.js
+[2026-08-29T08:51:36.679Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T08:51:36.692Z] [37m[loom][0m starting — node loom/server.js
+[2026-08-29T08:51:37.220Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-08-29T08:51:37.220Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-08-29T08:51:37.221Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-08-29T08:51:37.222Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-08-29T08:51:37.222Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-08-29T08:51:37.223Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-08-29T08:51:37.230Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-08-29T08:51:37.230Z] ── boot phase 4 — intelligence-consumer, emerge
+[2026-08-29T08:51:37.231Z] [32m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-08-29T08:51:37.241Z] [31m[emerge][0m starting — node emerge/consumer.js
+[2026-08-29T08:51:37.251Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-29T08:51:37.252Z] [emerge] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-29T08:51:37.252Z] ── boot sequence complete — 4 phase(s)
+[2026-08-29T08:51:39.311Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T08:51:39.329Z] [36m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-08-29T08:51:39.329Z] [36m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-08-29T08:51:42.340Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T08:51:42.358Z] [36m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-08-29T08:51:42.359Z] [36m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-08-29T08:51:46.367Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T08:51:46.388Z] [36m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-08-29T08:51:46.389Z] [36m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-08-29T08:51:54.404Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T08:51:54.423Z] [36m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 5/6
+[2026-08-29T08:51:54.424Z] [36m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-08-29T08:52:10.427Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T08:52:10.447Z] [36m[clear-glass][0m [31mexited[0m code=1 signal=null — crashes in window: 6/6
+[2026-08-29T08:52:10.447Z] [36m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-08-29T08:52:35.553Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.093Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.109Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.109Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.125Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.649Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.664Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.664Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.680Z] [35m[intelligence][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.695Z] [33m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.697Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-08-29T08:52:36.711Z] [37m[loom][0m stable for 60s — backoff reset
+[2026-08-29T08:52:37.251Z] [32m[intelligence-consumer][0m stable for 60s — backoff reset
+[2026-08-29T08:52:37.267Z] [31m[emerge][0m stable for 60s — backoff reset
+[2026-08-29T08:55:30.045Z] autopilot received SIGINT — stopping all kernels
+[2026-08-29T08:55:30.049Z] [31m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.050Z] [32m[intelligence-consumer][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.051Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.051Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.052Z] [37m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.052Z] [33m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.056Z] [34m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.061Z] [35m[intelligence][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.062Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.063Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.063Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.064Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.066Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:55:30.066Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T08:58:18.488Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-08-29T08:58:18.500Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, copilot, emerge, loom, clear-glass
+[2026-08-29T08:58:18.501Z] [36m[clear-glass][0m on-demand — staying dormant until requested
+[2026-08-29T08:58:18.501Z] ── boot phase 1 — cortex
+[2026-08-29T08:58:18.502Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-29T08:58:18.569Z] autopilot status: http://127.0.0.1:7799/status
+[2026-08-29T08:58:19.093Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-08-29T08:58:19.093Z] ── boot phase 2 — orchestrator, bridge, guardian, diagnostic
+[2026-08-29T08:58:19.093Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-08-29T08:58:19.103Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-08-29T08:58:19.113Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-08-29T08:58:19.123Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-08-29T08:58:19.328Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T08:58:19.643Z] [bridge] phase 2 gate passed — http://127.0.0.1:9999/health
+[2026-08-29T08:58:19.643Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-08-29T08:58:19.647Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-08-29T08:58:22.675Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-08-29T08:58:22.676Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, copilot, loom
+[2026-08-29T08:58:22.676Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-08-29T08:58:22.687Z] [31m[architect][0m starting — node architect/service.js
+[2026-08-29T08:58:22.697Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-08-29T08:58:22.707Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T08:58:22.718Z] [33m[ollama-bridge][0m starting — node ollama/server.js
+[2026-08-29T08:58:22.729Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T08:58:22.739Z] [37m[loom][0m starting — node loom/server.js
+[2026-08-29T08:58:23.262Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-08-29T08:58:23.263Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-08-29T08:58:23.264Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-08-29T08:58:23.264Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-08-29T08:58:23.265Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-08-29T08:58:23.265Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-08-29T08:58:23.310Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-08-29T08:58:23.310Z] ── boot phase 4 — intelligence-consumer, emerge
+[2026-08-29T08:58:23.311Z] [32m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-08-29T08:58:23.322Z] [31m[emerge][0m starting — node emerge/consumer.js
+[2026-08-29T08:58:23.331Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-29T08:58:23.332Z] [emerge] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-08-29T08:58:23.332Z] ── boot sequence complete — 4 phase(s)
+[2026-08-29T08:59:18.527Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-29T08:59:19.115Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-08-29T08:59:19.133Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-08-29T08:59:19.149Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-08-29T08:59:19.150Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-08-29T08:59:19.365Z] [36m[clear-glass][0m stable for 60s — backoff reset
+[2026-08-29T08:59:22.702Z] [34m[idearium][0m stable for 60s — backoff reset
+[2026-08-29T08:59:22.718Z] [31m[architect][0m stable for 60s — backoff reset
+[2026-08-29T08:59:22.718Z] [36m[eravos][0m stable for 60s — backoff reset
+[2026-08-29T08:59:22.734Z] [35m[intelligence][0m stable for 60s — backoff reset
+[2026-08-29T08:59:22.751Z] [33m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-08-29T08:59:22.753Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-08-29T08:59:22.768Z] [37m[loom][0m stable for 60s — backoff reset
+[2026-08-29T08:59:23.334Z] [32m[intelligence-consumer][0m stable for 60s — backoff reset
+[2026-08-29T08:59:23.353Z] [31m[emerge][0m stable for 60s — backoff reset
+[2026-08-29T09:28:49.026Z] [clear-glass] idle for 624s — despawning (on-demand)
+[2026-08-29T09:28:49.034Z] [36m[clear-glass][0m despawned cleanly (idle, on-demand — will respawn on request)
+[2026-08-29T10:19:50.450Z] [34m[copilot][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-08-29T10:19:50.465Z] [34m[copilot][0m restarting in 1s (attempt 1)
+[2026-08-29T10:19:50.603Z] [32m[cortex][0m [31mexited[0m code=134 signal=null — crashes in window: 1/6
+[2026-08-29T10:19:50.604Z] [32m[cortex][0m restarting in 1s (attempt 1)
+[2026-08-29T10:19:51.470Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:19:51.610Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-29T10:19:53.094Z] [34m[copilot][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 2/6
+[2026-08-29T10:19:53.095Z] [34m[copilot][0m restarting in 2s (attempt 2)
+[2026-08-29T10:19:53.134Z] [32m[cortex][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 2/6
+[2026-08-29T10:19:53.134Z] [32m[cortex][0m restarting in 2s (attempt 2)
+[2026-08-29T10:19:55.109Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:19:55.139Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-29T10:19:56.268Z] [34m[copilot][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 3/6
+[2026-08-29T10:19:56.269Z] [34m[copilot][0m restarting in 4s (attempt 3)
+[2026-08-29T10:19:56.348Z] [36m[orchestrator][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-08-29T10:19:56.348Z] [36m[orchestrator][0m restarting in 1s (attempt 1)
+[2026-08-29T10:19:57.358Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-08-29T10:19:58.693Z] [36m[orchestrator][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 2/6
+[2026-08-29T10:19:58.693Z] [36m[orchestrator][0m restarting in 2s (attempt 2)
+[2026-08-29T10:20:00.269Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:20:00.705Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-08-29T10:20:01.109Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:20:16.113Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:20:31.123Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:20:46.125Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:20:55.173Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-29T10:21:00.287Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-08-29T10:21:00.718Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-08-29T10:21:01.138Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:21:16.140Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:21:31.152Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:21:34.245Z] [36m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-29T10:21:34.247Z] [36m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-08-29T10:21:37.251Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:21:52.259Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:22:07.262Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:22:22.278Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:22:37.283Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:22:52.300Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:23:07.316Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:23:22.332Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:23:37.348Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:23:52.363Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:24:07.365Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:24:22.372Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:24:26.330Z] [34m[copilot][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 4/6
+[2026-08-29T10:24:26.331Z] [34m[copilot][0m restarting in 1s (attempt 4)
+[2026-08-29T10:24:26.386Z] [35m[intelligence][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-08-29T10:24:26.387Z] [35m[intelligence][0m restarting in 1s (attempt 1)
+[2026-08-29T10:24:27.344Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:24:27.393Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:24:37.386Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:24:42.359Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:24:42.406Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:24:52.389Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:24:57.367Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:24:57.413Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:24:58.829Z] [32m[cortex][0m [31mexited[0m code=3221226505 signal=null — crashes in window: 1/6
+[2026-08-29T10:24:58.829Z] [32m[cortex][0m restarting in 1s (attempt 3)
+[2026-08-29T10:24:59.840Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-29T10:25:07.404Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:25:12.382Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:25:12.429Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:25:14.849Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-08-29T10:25:22.413Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:25:27.388Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:25:27.435Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:25:37.429Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:25:42.404Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:25:42.450Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:25:52.441Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:25:57.413Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:25:57.460Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:26:07.446Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:26:12.423Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:26:12.470Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:26:14.866Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-08-29T10:26:22.455Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:26:27.431Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:26:27.477Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:26:37.467Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:26:42.435Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:26:42.481Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:26:52.482Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:26:57.443Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:26:57.489Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:27:07.484Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:27:12.457Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:27:12.504Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:27:22.497Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:27:27.464Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:27:27.511Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:27:37.510Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:27:42.475Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:27:42.521Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:27:52.525Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:27:57.484Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:27:57.530Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:28:07.527Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:28:12.497Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:28:12.545Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:28:22.536Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:28:27.510Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:28:27.555Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:28:37.540Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:28:42.515Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:28:42.561Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:28:52.545Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:28:57.519Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:28:57.565Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:29:07.548Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:29:12.532Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-08-29T10:29:12.761Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-08-29T10:29:22.562Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:29:37.571Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:29:40.302Z] [36m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-08-29T10:29:40.303Z] [36m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-08-29T10:29:43.307Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:29:45.198Z] [36m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-08-29T10:29:45.199Z] [36m[clear-glass][0m restarting in 4s (attempt 3)
+[2026-08-29T10:29:49.204Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:29:51.053Z] [36m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 3/6
+[2026-08-29T10:29:51.053Z] [36m[clear-glass][0m restarting in 8s (attempt 4)
+[2026-08-29T10:29:59.059Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:30:00.928Z] [36m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 4/6
+[2026-08-29T10:30:00.929Z] [36m[clear-glass][0m restarting in 16s (attempt 5)
+[2026-08-29T10:30:12.762Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-08-29T10:30:12.778Z] [35m[intelligence][0m stable for 60s — backoff reset
+[2026-08-29T10:30:16.933Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:30:18.827Z] [36m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 5/6
+[2026-08-29T10:30:18.828Z] [36m[clear-glass][0m restarting in 30s (attempt 6)
+[2026-08-29T10:30:48.837Z] [36m[clear-glass][0m starting — D:\Backups\Downloads\nexus-0_39_21-updated\nexus\node_modules\.bin\electron.cmd .
+[2026-08-29T10:30:50.707Z] [36m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 6/6
+[2026-08-29T10:30:50.708Z] [36m[clear-glass][0m [31m§CIRCUIT BREAKER TRIPPED[0m — 6 crashes in 5min. Not auto-restarting. This needs a human or a forge patch, not another retry. Other kernels keep running.
+[2026-08-29T11:10:40.857Z] autopilot received SIGINT — stopping all kernels
+[2026-08-29T11:10:40.865Z] [31m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.870Z] [32m[intelligence-consumer][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.871Z] [35m[intelligence][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.880Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.881Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.881Z] [34m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.882Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.883Z] [37m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.883Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.884Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.894Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.895Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.925Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-08-29T11:10:40.932Z] [33m[ollama-bridge][0m stopped cleanly (autopilot shutdown)

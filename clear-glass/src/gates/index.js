@@ -135,22 +135,36 @@ const copilotClearGate = (copilot) => gate('copilot.clear', (event, stream) => {
 });
 
 // ── Mesh gates ─────────────────────────────────────────────────────────────
+// §BUGFIX 2026-08-29 — none of these three emissions ever carried
+// event.data.requestId (real gap, checked by reading this file directly
+// against every real caller that goes through :7702/cmd → mesh.* →
+// SSE): the /cmd endpoint's own documented design is fire-and-forget —
+// "Result will arrive on SSE stream" — which only works as a real,
+// usable async pattern if a caller can correlate the SSE event back to
+// the request it made. Every OTHER *.result-shaped gate in this file
+// gets requestId for free because /cmd spreads it into event.data before
+// emit(); these three just never forwarded it into what they emit back
+// out. Fixed on both the success and error path for all three gates —
+// error correlation matters just as much as success correlation (a
+// caller waiting on a specific requestId needs to know THAT one failed,
+// not just that something did). New external caller relying on this:
+// lib/agent-tools/tools/clear-glass/macro.js's engine:"mesh" step.
 const meshSpawnGate = (mesh) => gate('mesh.spawn', (event, stream) => {
   mesh.spawn(event.data.agentKey, event.data)
-    .then(s  => stream.emit(new Event('mesh.agent.spawned', { key: s.key, contextId: s.contextId })))
-    .catch(err => stream.emit(new Event('mesh.error', { op: 'spawn', error: err.message })));
+    .then(s  => stream.emit(new Event('mesh.agent.spawned', { key: s.key, contextId: s.contextId, requestId: event.data.requestId })))
+    .catch(err => stream.emit(new Event('mesh.error', { op: 'spawn', error: err.message, requestId: event.data.requestId })));
 });
 
 const meshSendGate = (mesh) => gate('mesh.send', (event, stream) => {
   mesh.send(event.data)
-    .then(r  => stream.emit(new Event('mesh.task.complete', r)))
-    .catch(err => stream.emit(new Event('mesh.error', { op: 'send', error: err.message })));
+    .then(r  => stream.emit(new Event('mesh.task.complete', { ...r, requestId: event.data.requestId })))
+    .catch(err => stream.emit(new Event('mesh.error', { op: 'send', error: err.message, requestId: event.data.requestId })));
 });
 
 const meshRouteGate = (mesh) => gate('mesh.route', (event, stream) => {
   mesh.route(event.data)
-    .then(r  => stream.emit(new Event('mesh.task.complete', r)))
-    .catch(err => stream.emit(new Event('mesh.error', { op: 'route', error: err.message })));
+    .then(r  => stream.emit(new Event('mesh.task.complete', { ...r, requestId: event.data.requestId })))
+    .catch(err => stream.emit(new Event('mesh.error', { op: 'route', error: err.message, requestId: event.data.requestId })));
 });
 
 const meshEnqueueGate = (mesh) => gate('mesh.enqueue', (event, stream) => {

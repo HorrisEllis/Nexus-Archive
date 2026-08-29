@@ -68,8 +68,16 @@ const TOOLS = [
   { name: 'context.list',     cat: 'agent',    desc: 'List all agent contexts and their health', params: {} },
   { name: 'context.fp.switch',cat: 'agent',    desc: 'Switch fingerprint mode for agent (firefox|chrome|safari)', params: { agentId: 'string', mode: 'string' } },
   { name: 'mesh.spawn',       cat: 'agent',    desc: 'Spawn free AI agent (claude|chatgpt|gemini|perplexity|mistral)', params: { agentKey: 'string' } },
-  { name: 'mesh.route',       cat: 'agent',    desc: 'Route prompt to healthiest available agent', params: { prompt: 'string', preferAgent: 'string?' } },
-  { name: 'mesh.send',        cat: 'agent',    desc: 'Send prompt to specific mesh agent', params: { agentKey: 'string', prompt: 'string' } },
+  { name: 'mesh.route',       cat: 'agent',    desc: 'Route prompt to healthiest available agent (uses agent-router\'s real intent map for ordering)', params: { prompt: 'string', preferAgent: 'string?', intent: 'string?' } },
+  { name: 'mesh.send',        cat: 'agent',    desc: 'Send prompt to specific mesh agent', params: { agentKey: 'string', prompt: 'string', contextId: 'string?', useEros: 'boolean?' } },
+  // §GAP-FIXED 2026-08-29 — mesh.enqueue has had a real, working gate
+  // (src/gates/index.js's meshEnqueueGate) and a real IPC channel
+  // (mesh:enqueue) since before this tools registry existed — checked
+  // both directly. It was simply never added here, so the co-pilot
+  // itself never knew "queue this for later, don't block on it" was an
+  // option distinct from route/send; it could only see two of the three
+  // real ways to hand work to the mesh.
+  { name: 'mesh.enqueue',     cat: 'agent',    desc: 'Queue a task for the mesh to process serially (does not block — task runs via route() when its turn comes)', params: { prompt: 'string', preferAgent: 'string?', fallbackOrder: 'string[]?' } },
 
   // ── Session ────────────────────────────────────────────────────────────
   { name: 'bookmarks.add',    cat: 'session',  desc: 'Bookmark the current page or a URL', params: { url: 'string?', title: 'string?', tags: 'string[]?' } },
