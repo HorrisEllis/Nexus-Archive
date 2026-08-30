@@ -210,6 +210,30 @@ async function buildCtx(types){const parts=[];
   return parts.join('\n\n');
 }
 async function pollJob(jobId,ms=120000){const t0=Date.now();while(Date.now()-t0<ms){await new Promise(r=>setTimeout(r,1500));const d=await api(`${GD}/jobs?limit=80`);const j=(d?.jobs||[]).find(x=>x.id===jobId);if(j&&(j.status==='complete'||j.status==='done'))return j;if(j&&j.status==='error')return j;}return null;}
+// §BUGFIX 2026-08-30, James live: "when i refresh the page and go back
+// it doesn't update the response live." Real, confirmed cause: pollJob's
+// jobId lived only in this function call's own local scope — a real,
+// active poll loop, but tied to one specific tab instance's JS state,
+// with zero persistence anywhere in this file (checked directly, no
+// localStorage/sessionStorage at all). A refresh destroyed the loop
+// entirely with no way to resume watching an in-flight job. Real,
+// minimal fix scoped to the specific symptom named — not full chat-
+// history persistence (a real, separate, larger feature this file
+// doesn't have at all and isn't being added here).
+const PENDING_KEY = 'nexus-console-pending-job';
+function _savePendingJob(jobId, prompt) { try { localStorage.setItem(PENDING_KEY, JSON.stringify({ jobId, prompt, ts: Date.now() })); } catch (_) {} }
+function _clearPendingJob() { try { localStorage.removeItem(PENDING_KEY); } catch (_) {} }
+async function _resumePendingJob() {
+  let pending;
+  try { pending = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch (_) { pending = null; }
+  if (!pending || Date.now() - pending.ts > 120000) { _clearPendingJob(); return; } // real timeout window matches pollJob's own default
+  addMsg('user', pending.prompt);
+  const msgEl = addStream('assistant'); _streaming = true;
+  const job = await pollJob(pending.jobId, Math.max(5000, 120000 - (Date.now() - pending.ts)));
+  finalStream(msgEl, job?.response || job?.responseText || '(no response — check ChatGPT tab)');
+  _streaming = false;
+  _clearPendingJob();
+}
 async function send(){const prompt=document.getElementById('pi').value.trim();if(!prompt||_streaming)return;
   const types=[...document.querySelectorAll('.cc.on')].map(c=>c.dataset.c);
   const ctx=await buildCtx(types);
@@ -219,7 +243,7 @@ async function send(){const prompt=document.getElementById('pi').value.trim();if
     const prov=await api(`${GD}/providers`);const tabLive=!!prov?.channels?.[PROVIDER];
     if(tabLive){
       const r=await post(`${GD}/command`,{command:'general',provider:PROVIDER,prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt,source:'chatgpt-console',meta:{source:'chatgpt-console',chatMode:true}});
-      if(r?.jobId){document.getElementById('ss-tok').textContent='→ ChatGPT tab';const job=await pollJob(r.jobId);finalStream(msgEl,job?.response||job?.responseText||'(no response — check ChatGPT tab)');document.getElementById('ss-tok').textContent='ChatGPT NCP';}
+      if(r?.jobId){_savePendingJob(r.jobId, prompt);document.getElementById('ss-tok').textContent='→ ChatGPT tab';const job=await pollJob(r.jobId);finalStream(msgEl,job?.response||job?.responseText||'(no response — check ChatGPT tab)');document.getElementById('ss-tok').textContent='ChatGPT NCP';_clearPendingJob();}
       else{finalStream(msgEl,'✗ dispatch failed: '+(r?.error||'unknown'));}
     } else {
       const r=await post(`${ORCH}/api/guardian/copilot/prompt`,{prompt:ctx?`[CONTEXT]\n${ctx}\n\n${prompt}`:prompt});
@@ -238,7 +262,7 @@ async function refreshQ(){const d=await api(`${GD}/seam/queues`);allQ=(d?.queues
 function renderL(){const q=allQ.find(q=>q.uuid===selQ);const lad=document.getElementById('ladder');if(!q){lad.innerHTML='';return;}lad.innerHTML=(q.compartments||[]).map((c,i,a)=>{const cls=SC[c.state]||'';return`<div class="rung">${i<a.length-1?'<div style="position:absolute;left:3px;top:12px;bottom:-10px;width:1px;background:var(--border2)"></div>':''}<div class="rd ${cls}"></div><div class="rt">#${c.chunkIdx+1} ${esc(c.chunkTitle||'')}</div><div class="rs ${cls}">${c.state}</div></div>`;}).join('');}
 document.getElementById('pi').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
 document.querySelectorAll('.cc').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
-refresh();refreshQ();setInterval(refresh,6000);setInterval(refreshQ,3000);
+refresh();refreshQ();setInterval(refresh,6000);setInterval(refreshQ,3000);_resumePendingJob();
 </script>
 </body>
 </html>
