@@ -197,17 +197,14 @@ async function _tryOllama(prompt, opts = {}) {
 // ── Route to Guardian NCP ─────────────────────────────────────────────────────
 async function _tryGuardian(prompt, opts = {}) {
   try {
-    // §GAP PARTIALLY CLOSED 2026-07-07 — the comment here used to say
-    // "RAID picks best available" while calling nothing. Now really
-    // calls RAID's RoutingIR for the escalation target. Honest about
-    // what this does and doesn't fix: RAID's decision is now real; the
-    // endpoint it's handed to (/api/copilot/prompt) still doesn't exist
-    // on Guardian's side, confirmed directly, and the one real
-    // synchronous alternative found (/chatgpt-mode/query) also 503s —
-    // its own required file (guardian/agents/chatgpt-mode.js) doesn't
-    // exist either. Both dead ends are on Guardian's receiving side, not
-    // fixable from here. This wiring is correct and ready the moment
-    // either endpoint is real.
+    // §GAP CLOSED 2026-08-29 — this comment used to say "the endpoint it's
+    // handed to (/api/copilot/prompt) still doesn't exist on Guardian's
+    // side" — checked directly, that's now stale: guardian/server.js's
+    // real /api/copilot/prompt route (using ./ask.js's real askSync, with
+    // real createJob/dispatchJob/isProviderConnected/resolveProvider
+    // dependencies genuinely wired, not stubbed) exists and is real. This
+    // dispatch path was correct and ready even while stale; it's now also
+    // confirmed reachable.
     let ragProvider = opts.provider;
     if (!ragProvider) {
       // §SOVEREIGNTY 2026-07-09 — was require('../cortex/core/raid/routing-ir.js'),

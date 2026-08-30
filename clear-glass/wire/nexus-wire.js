@@ -119,14 +119,21 @@ async function registerErosWithNexus() {
 }
 
 // ── Heartbeat ──────────────────────────────────────────────────────────────
+// §MIGRATED 2026-08-29 — real, standalone process (:7704), never touched
+// by clear-glass's main-process createPulse migration since this is a
+// genuinely separate process, not part of that Electron app. Confirmed
+// the caller (line ~220) discards the return value, same as every other
+// real migration this session — safe to change internals freely.
+// Two real createPulse() instances, not one — this process heartbeats
+// on behalf of TWO distinct systemIds (nexus-wire itself, and
+// erosmancer-os, which it fronts), and createPulse is scoped to one
+// systemId+port pair per call, matching how orchestrator's own real
+// SYSTEM_REGISTRY tracks each systemId independently.
 function _startHeartbeat() {
-  const ping = () => {
-    _ncReq(NEXUS_ORCH_PORT, 'POST', '/api/heartbeat', { systemId: 'nexus-wire',    port: WIRE_PORT, status: 'online' }, 2000).catch(() => {});
-    _ncReq(NEXUS_ORCH_PORT, 'POST', '/api/heartbeat', { systemId: 'erosmancer-os', port: EROS_PORT, status: 'online' }, 2000).catch(() => {});
-  };
-  ping();
-  const iv = setInterval(ping, 10000);
-  if (iv.unref) iv.unref();
+  const { createPulse } = require('../../orchestrator/lib/pulse.js');
+  const wirePulse = createPulse({ systemId: 'nexus-wire', port: WIRE_PORT, orchPort: NEXUS_ORCH_PORT });
+  const erosPulse = createPulse({ systemId: 'erosmancer-os', port: EROS_PORT, orchPort: NEXUS_ORCH_PORT });
+  return { wirePulse, erosPulse };
 }
 
 // ── Express ────────────────────────────────────────────────────────────────

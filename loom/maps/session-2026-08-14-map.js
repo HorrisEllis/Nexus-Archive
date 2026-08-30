@@ -175,7 +175,40 @@ const FILES = [
   ['copilot/lib/self-model.js',      'nexus.copilot.lib.self-model',      'copilot/lib',   []],
   ['copilot/lib/grammar-router.js',  'nexus.copilot.lib.grammar-router',  'copilot/lib',   []],
   ['copilot/lifeline.js',            'nexus.copilot.lifeline',            'copilot',       []],
-  ['ollama/server.js',               'nexus.ollama.server',               'ollama',        []],
+  ['ollama/server.js',               'nexus.ollama.server',               'ollama',        [
+    'nexus.ollama.routes.system', 'nexus.ollama.routes.uploads', 'nexus.ollama.routes.stream',
+    'nexus.ollama.routes.jobs', 'nexus.ollama.routes.queue', 'nexus.ollama.routes.models',
+    'nexus.ollama.lib.state', 'nexus.ollama.lib.ollama-client', 'nexus.ollama.lib.dispatch', 'nexus.ollama.lib.http-utils',
+  ]],
+  // §DECOMPOSED 2026-08-28/wired 2026-08-29 — ollama/server.js went from
+  // 693 to 106 lines, split into these 6 real route files + 4 real lib
+  // files (same generic handle()->boolean dispatch contract this
+  // session's copilot/routes/person-model.js extraction also uses — one
+  // real pattern, not two differently-shaped refactors). Every edge
+  // below verified against each file's REAL require() calls, not
+  // guessed from filenames — an earlier pass at this got it wrong (a
+  // narrower grep pattern silently missed most of the real requires,
+  // making every route file look dependency-free when none of them
+  // actually are), caught by re-running with the correct pattern before
+  // committing anything inaccurate into the real component map.
+  ['ollama/routes/system.js',        'nexus.ollama.routes.system',        'ollama/routes', ['nexus.ollama.config', 'nexus.ollama.lib.http-utils', 'nexus.ollama.lib.state']],
+  ['ollama/routes/uploads.js',       'nexus.ollama.routes.uploads',       'ollama/routes', ['nexus.ollama.lib.http-utils', 'nexus.ollama.lib.state']],
+  ['ollama/routes/stream.js',        'nexus.ollama.routes.stream',        'ollama/routes', ['nexus.ollama.config', 'nexus.ollama.lib.http-utils', 'nexus.ollama.lib.state']],
+  ['ollama/routes/jobs.js',          'nexus.ollama.routes.jobs',          'ollama/routes', ['nexus.ollama.config', 'nexus.ollama.lib.dispatch', 'nexus.ollama.lib.http-utils', 'nexus.ollama.lib.ollama-client', 'nexus.ollama.lib.state']],
+  ['ollama/routes/queue.js',         'nexus.ollama.routes.queue',         'ollama/routes', ['nexus.ollama.lib.http-utils', 'nexus.ollama.lib.state']],
+  ['ollama/routes/models.js',        'nexus.ollama.routes.models',        'ollama/routes', ['nexus.ollama.config', 'nexus.ollama.lib.http-utils', 'nexus.ollama.lib.state']],
+  // §REAL, notable cross-system edges found while verifying — lib/
+  // dispatch.js is not ollama-internal-only, it reaches into
+  // lib/seam/detector.js and 5 real warp/ files (Axiom, dispatch/
+  // cascade, dispatch/index, dispatch/population, plugins/crystallizer-
+  // flatfile). lib/ollama-client.js reaches into lib/agent-tools/index.js.
+  // Both real, both confirmed by the actual require() calls, not
+  // hypothetical — ollama's "sovereign system" framing (this file's own
+  // header) doesn't mean isolated; it means not blocking Guardian.
+  ['ollama/lib/dispatch.js',         'nexus.ollama.lib.dispatch',         'ollama/lib',    ['nexus.ollama.config', 'nexus.ollama.lib.ollama-client', 'nexus.ollama.lib.state', 'nexus.lib.seam.detector', 'nexus.warp.core.axiom', 'nexus.warp.dispatch.cascade', 'nexus.warp.dispatch.index', 'nexus.warp.dispatch.population', 'nexus.warp.plugins.crystallizer-flatfile']],
+  ['ollama/lib/ollama-client.js',    'nexus.ollama.lib.ollama-client',    'ollama/lib',    ['nexus.ollama.config', 'nexus.ollama.lib.state', 'nexus.lib.agent-tools']],
+  ['ollama/lib/state.js',            'nexus.ollama.lib.state',            'ollama/lib',    ['nexus.ollama.config']],
+  ['ollama/lib/http-utils.js',       'nexus.ollama.lib.http-utils',       'ollama/lib',    []],
   // §2026-08-23 — real, centralized config (see ollama/config.js's own
   // header for the full real reason) and the hardware-fitted abliterated
   // model catalog it's paired with. No real dependencies of their own —

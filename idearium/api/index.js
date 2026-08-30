@@ -347,6 +347,12 @@ async function _promoteSpecToRepo(ideaOS, se, specUuid, mode = 'emerge') {
 
 const PORT    = config.PORT;
 const BINDING = config.BINDING;
+// §MIGRATED 2026-08-29 — real pulse handle, module scope (not local to
+// the phase closure) so a real shutdown path has something real to call
+// — same naming convention as cortex/boot.js's own real migration
+// (_pulseClient), not a third, differently-named variable for the exact
+// same real concept.
+let _pulseClient = null;
 
 // §CRASH FIX 2026-07-15 — last-resort net. The /sse and static-file branches
 // above had their own uncaught-throw paths fixed directly (see their own
@@ -1419,6 +1425,34 @@ async function handle(req, res, route, query, body) {
 
         se.markChunkBuilding(params.uuid, chunk.uuid, { agent: preferAgent });
 
+        // §RAID-SOURCE 2026-08-29 — James: "hook idearium... into raid."
+        // Real, deliberately SAFE wire, matching self-heal's own pattern
+        // (submitted for real observability, alongside the existing,
+        // proven dispatch — not replacing it). idearium's own
+        // dispatchChunkWithVerification below remains the REAL
+        // dispatcher (cache reuse, WARP exact-cache, verification
+        // retries — sophisticated, proven, not touched). This just gives
+        // RAID's queue a real, visible record of the work, with the
+        // real, already-known outcome reported back once idearium's own
+        // verification decides it — not left permanently 'queued' with
+        // nothing ever calling processNext() on it.
+        //
+        // §HONEST LIMIT — if this specific submitContract() call throws
+        // (e.g., RAID's process isn't reachable), the whole build must
+        // not be blocked over an observability call — caught, logged,
+        // and raidQueueId stays null, which the completion callback
+        // below checks before trying to report anything back.
+        let raidQueueId = null;
+        try {
+          const submitted = _require('../../cortex/core/raid/contract-intake.js').submitContract(
+            { content: chunkPrompt, file: null, title: chunk.title || chunk.sectionId, forAgent: preferAgent },
+            { source: 'idearium' }
+          );
+          raidQueueId = submitted.queueId;
+        } catch (e) {
+          console.warn('[idearium/api] could not submit real RAID observability contract (build proceeds regardless):', e.message);
+        }
+
         // §GAP CLOSED 2026-07-06 — this used to be a single, unverified
         // call to as.buildChunkWithAgent(): one attempt, no retry, no
         // quality check. A truncated or off-topic response was
@@ -1442,6 +1476,29 @@ async function handle(req, res, route, query, body) {
         dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn,
           { preferAgent }
         ).then(async result => {
+          // §RAID-SOURCE 2026-08-29 — report idearium's own real,
+          // already-decided outcome back to RAID's queue, whichever
+          // branch below actually runs. Best-effort — a failure here
+          // never affects the real chunk-completion logic that follows.
+          //
+          // §HONEST LIMIT, found by this wiring's own test before
+          // shipping it — result.queued===true means ChatGPT/Claude's
+          // real completion arrives LATER via a genuinely separate
+          // guardian-job-callback code path, not this .then(). Reporting
+          // FAIL here would be a false negative on a contract that may
+          // well PASS once that real callback fires — worse than simply
+          // not reporting yet. Only PASS/FAIL are reported when this
+          // callback actually knows the real, final outcome; the queued
+          // case is left genuinely pending (still 'running' in RAID),
+          // named honestly rather than silently guessed at.
+          if (raidQueueId && !result.queued) {
+            try {
+              const intake = _require('../../cortex/core/raid/contract-intake.js');
+              intake.reportExternalOutcome(raidQueueId, {
+                status: result.ok ? intake.STATUS.PASS : intake.STATUS.FAIL,
+              });
+            } catch (_) { /* best-effort, see above */ }
+          }
           if (result.ok && !result.queued && result.text) {
             se.completeChunk(params.uuid, chunk.uuid, result.text);
             const updatedManifest = se.loadSpec(params.uuid);
@@ -1835,14 +1892,25 @@ export function startAPI() {
         });
         r.setTimeout(2000, () => r.destroy()); r.on('error', () => {});
         r.write(body); r.end();
-        setInterval(() => {
-          const hb = JSON.stringify({ systemId:'idearium', port:PORT, status:'online' });
-          const r2 = _require('http').request({
-            hostname:_orchestrator().host, port:_orchestrator().port, path:'/api/heartbeat', method:'POST',
-            headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(hb)},
-          });
-          r2.on('error', () => {}); r2.write(hb); r2.end();
-        }, 10000);
+        // §MIGRATED 2026-08-29 — real, shared orchestrator/lib/pulse.js's
+        // createPulse(), replacing the hand-rolled setInterval+raw
+        // http.request this was before. Same class of duplicate this
+        // session already found and removed twice (clear-glass, cortex):
+        // a hand-rolled copy of the exact same idea, carrying none of
+        // pulse.js's real latency tracking, online/offline transition
+        // detection, or missed-beat logging. orchestrator's own real
+        // /api/heartbeat handler (confirmed by reading it directly) was
+        // ALREADY built to accept pulse.js's richer payload (meta, seq,
+        // pulseId) — this was never a compatibility risk, just an unused
+        // capability on the receiving end. _pulse stored on module scope
+        // (not local to this closure) so a real shutdown path — cortex's
+        // own migration found it has none either, a separate, pre-
+        // existing gap, not fixed here — has something real to call.
+        _pulseClient = _require('../../orchestrator/lib/pulse.js').createPulse({
+          systemId: 'idearium', port: PORT,
+          onOffline: () => console.warn('[idearium] orchestrator unreachable — pulse will keep retrying'),
+          onOnline:  ({ latency }) => console.log(`[idearium] orchestrator back online, latency=${latency}ms`),
+        });
       },
     });
 

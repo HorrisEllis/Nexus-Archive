@@ -923,68 +923,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (p.startsWith('/api/person-model')) {
-    let pm;
-    try { pm = require('./lib/person-model'); }
-    catch (e) { json(res, 503, { ok: false, error: `person-model unavailable: ${e.message}` }); return; }
-
-    try {
-      if (p === '/api/person-model/portrait' && method === 'GET') {
-        const port = pm.portrait();
-        const ex   = pm.exportAll();
-        json(res, 200, { ...port, nodes: ex.nodes, edges: ex.edges, sessions: ex.sessions });
-        return;
-      }
-      if (p === '/api/person-model/review' && method === 'GET') { json(res, 200, pm.reviewQueue()); return; }
-      if (p === '/api/person-model/export' && method === 'GET') { json(res, 200, pm.exportAll()); return; }
-      if (p === '/api/person-model/health' && method === 'GET') { json(res, 200, pm.health()); return; }
-      if (p === '/api/person-model/chain'  && method === 'GET') { json(res, 200, pm.verifyChain()); return; }
-      if (p === '/api/person-model/meaning' && method === 'GET') {
-        json(res, 200, pm.meaningOf(url.searchParams.get('of'), +(url.searchParams.get('depth') || 2))); return;
-      }
-
-      if (method === 'POST') {
-        const body = await readBody(req);
-
-        // §IP-5 — accept() is USER-ONLY. The HTTP surface hard-codes by:'user'
-        // rather than trusting the body, so an agent posting by:'user' cannot
-        // launder itself into acceptance through this route.
-        if (p === '/api/person-model/accept') {
-          json(res, 200, { ok: true, node: pm.accept(body.uuid, { type: body.type, label: body.label, by: 'user' }) });
-          return;
-        }
-        if (p === '/api/person-model/reject') {
-          json(res, 200, pm.reject(body.uuid, body.reason)); return;
-        }
-        if (p === '/api/person-model/state') {
-          json(res, 200, { ok: true, node: pm.state(body) }); return;
-        }
-        if (p === '/api/person-model/connect') {
-          json(res, 200, { ok: true, edge: pm.connect(body.from, body.to, body.type, body.opts || {}) }); return;
-        }
-        if (p === '/api/person-model/forget') {
-          json(res, 200, { ok: true, node: pm.forget(body.id, body.reason) }); return;
-        }
-        if (p === '/api/person-model/correct') {
-          json(res, 200, { ok: true, node: pm.correct(body.id, body) }); return;
-        }
-        // Deliberately awkward, and deliberately not reachable by accident:
-        // the confirmation string is checked inside purge() itself.
-        if (p === '/api/person-model/purge') { json(res, 200, pm.purge(body)); return; }
-
-        // NOTE: there is no HTTP route for infer(). Inference is an internal
-        // operation; exposing it would give any caller a way to write guesses
-        // into a person's model from outside.
-      }
-      json(res, 404, { ok: false, error: `no person-model route ${method} ${p}` });
-      return;
-    } catch (e) {
-      // A refusal (§stated-only, §IP-5, missing evidence) is a 400 with its
-      // reason intact — the caller must be able to see WHICH rule refused it.
-      json(res, 400, { ok: false, error: e.message });
-      return;
-    }
-  }
+  // §DECOMPOSED 2026-08-28 — the full person_model.* cluster (12 routes)
+  // moved to routes/person-model.js verbatim. See that file's header for
+  // the §IP-5 user-only note and a flagged undocumented route found
+  // during extraction (POST /api/person-model/correct has no
+  // registry-components.js entry).
+  if (await require('./routes/person-model.js').handle(req, res, { method, url, pathname: p, json, readBody })) return;
 
   if (p === '/contract') { json(res, 200, require('./registry-components')); return; }
 
@@ -1714,6 +1658,34 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { text: rep.text, model_used: 'nexus-status', confidence: 1, escalated: false, status: rep.status, requestId });
       }
     } catch (_) { /* status/diagnostic poll unavailable — fall through to the normal path */ }
+
+    // §RAID-SOURCE 2026-08-29 — James: "hook... co-pilot system into
+    // raid." Real, honest finding before building this: the '/build
+    // <description>' text in clear-glass's own real textarea placeholder
+    // (browser.html) had ZERO backend anywhere — checked directly,
+    // cosmetic UI text implying a feature that didn't exist. This is
+    // that real feature, built to match exactly what the placeholder
+    // promises: a literal '/build ' prefix (not fuzzy natural-language
+    // matching, unlike /diagnose above — a build request should be
+    // unambiguous, not risk misfiring on ordinary conversation that
+    // happens to mention building something).
+    const buildMatch = prompt.match(/^\/build\s+(.+)/is);
+    if (buildMatch) {
+      const description = buildMatch[1].trim();
+      try {
+        const intake = require('../cortex/core/raid/contract-intake.js');
+        const submitted = intake.submitContract({
+          content: `${description}\n\nRead the relevant real code before proposing or making any change (bottom-up — no guessing at what exists). If you make a real, verified change, report SEAM VERDICT: PASS. If you cannot, report SEAM VERDICT: FAIL with your real findings.`,
+          title: description.slice(0, 80),
+        }, { source: 'copilot' });
+        return json(res, 200, {
+          text: `Queued as a real contract (${submitted.queueId.slice(0, 8)}) — it'll be picked up and dispatched to a real agent. This doesn't run instantly; check RAID's queue for its real status.`,
+          model_used: 'nexus-raid-contract', confidence: 1, escalated: false, requestId, queueId: submitted.queueId,
+        });
+      } catch (e) {
+        return json(res, 200, { text: `Couldn't queue that as a real contract: ${e.message}`, model_used: 'nexus-raid-contract', confidence: 0, escalated: false, requestId });
+      }
+    }
 
     // §P5 DYNAMIC GRAMMAR — resolve the prompt through the registry grammar trie
     // FIRST. This understands ALL capabilities (and future ones) via loom's

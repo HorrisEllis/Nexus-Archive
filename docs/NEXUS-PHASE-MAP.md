@@ -381,7 +381,35 @@ automated split needs to handle both, not assume one.
 system that actually has both concerns mixed, before touching guardian —
 splitting the busiest, most load-bearing file first, without room to
 verify nothing broke, is the one place "small and verified" doesn't apply.
-**Deps:** none for the proof system; guardian itself waits for full room.
+
+**§PRECONDITION MET 2026-08-29** — the "prove it smaller first" step this
+phase itself demanded is now real, done, twice: copilot/server.js's
+person_model.* cluster (12 routes) extracted to copilot/routes/person-
+model.js, and the FULL ollama/server.js decomposed 693→106 lines into
+6 real route files + 4 real lib files. Same real `handle(req, res, ctx)
+→ boolean` dispatch contract on both — one proven pattern, not two
+differently-shaped experiments. Both verified end-to-end against real,
+live data (not mocked) before being trusted.
+
+**Real, computed clustering for guardian itself** (depth-aware boundary
+detection, the same technique proven at 99% accuracy for Versionium's
+per-route hashing — 67 real components, not the file's own header-
+comment estimate of ~96): `/api` 15 routes, `/seam` 8, `/queue` 5,
+`/settings` 3, `/gaps` 2, `/command` 2, `/bus` 2, everything else 1 —
+`/forge`, `/open`, `/baseline`, `/version`, `/health`, `/contract`,
+`/status`, `/response`, `/providers`, `/channel`, `/result`, `/stream`,
+`/heartbeat`, `/artifacts`, `/sessions`, `/cli`, `/build`, `/chatgpt-
+mode`, `/jobs`, `/`, `/guardian-ui`, `/ui`, `/events`, plus 6 real
+routes with no clean path prefix.
+
+**Real next step, not guardian whole**: extract the smallest, most
+self-contained cluster first (`/settings` at 3, or `/queue` at 5) —
+same proof-before-scale discipline this phase's own precondition just
+demonstrated — verified live before moving to `/api`/`/seam`, guardian's
+two largest and most central clusters, last.
+**Deps:** none for the proof system (satisfied); guardian itself needs
+the same real, uninterrupted room this note already named — not
+attempted at the tail of an already-long session.
 
 ### Phase 117 — Seam / Role-Confidence Tracker ⬛
 `docs/seam-component-registry.spec`'s confirmed→drifting→violated state machine —

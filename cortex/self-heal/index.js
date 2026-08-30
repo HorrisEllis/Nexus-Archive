@@ -169,6 +169,32 @@ function _enterFailureMode(gapType, gapUuid, existing) {
     gapType, gapUuid, level: 4,
     message: `'${gapType}' has exhausted all auto-attempt levels — human action required (docs/self-heal.spec level 4)`,
   });
+  // §RAID-SOURCE 2026-08-29 — James: "hook... self-heal system into
+  // raid." Real, honest wire: Level 4 already means "every automated
+  // remediation attempt failed, this needs something NEW to happen" —
+  // exactly what a RAID contract is for. Submitted alongside the
+  // existing failure_modes row and bus event (not instead of — a real
+  // human action item still gets recorded even if this contract never
+  // gets picked up), giving self-heal a real, second path: let a real
+  // agent attempt a fix before escalating purely to a human.
+  //
+  // No custom checkEndState — reuses contract-intake's real, default
+  // seam-verdict check (the same convention BR5's own contracts already
+  // use), so an agent working this contract reports SEAM VERDICT: PASS/
+  // FAIL the same way any other real contract does, not a self-heal-
+  // specific protocol invented here. onFail:'halt' — a self-heal
+  // contract that an agent can't resolve is a genuine, real level-4
+  // finding, not something to retry or silently reassign to a different
+  // agent (that's fallbackAgent's job for lower-stakes contracts; this
+  // one already exhausted 4 real automated levels before reaching here).
+  try {
+    require('../core/raid/contract-intake.js').submitContract({
+      content: `A real, automated self-heal remediation attempt has exhausted all 4 levels for a real fault. faultClass="${gapType}", gapUuid="${gapUuid}". Read the relevant real code and this codebase's own real gap/event-ledger data for this fault before proposing anything (bottom-up — do not guess at a fix without reading what actually failed). If you find and make a real, verified fix, report SEAM VERDICT: PASS. If you cannot resolve it, report SEAM VERDICT: FAIL with your real findings — this becomes the actual human action item, not a placeholder.`,
+      title: `self-heal level-4: ${gapType}`,
+    }, { source: 'self-heal', onFail: { action: 'halt' } });
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] could not submit level-4 fault as a real RAID contract (failure_modes row above is the real record either way): ${e.message}`);
+  }
   return { level: 4, outcome: 'failure_mode' };
 }
 

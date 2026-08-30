@@ -53,7 +53,8 @@ function _logWarn(...args)  { console.warn(`[${new Date().toISOString()}] [${_SR
 const SCRIPT_RELOAD_INTERVAL_MS = 60_000; // reload script from disk every 60s
 
 class ProviderHost {
-  constructor({ guardianDir, sse, postEvent } = {}) {
+  constructor({ guardianDir, sse, postEvent, history } = {}) {
+    this.history = history || null;
     this.guardianDir = guardianDir || process.env.GUARDIAN_DIR || null;
     if (!this.guardianDir) {
       _logWarn('[ProviderHost] no guardianDir configured (pass guardianDir or set GUARDIAN_DIR env var) — userscript loading will fail until configured. This is intentional: clear-glass no longer assumes guardian lives at a hardcoded relative path.');
@@ -309,6 +310,9 @@ class ProviderHost {
       const st = this._status.get(providerId) || {};
       this._status.set(providerId, { ...st, url: navUrl });
       this.sse.emit('provider.host.navigate', { providerId, url: navUrl, ts: Date.now() });
+      // §GAP CLOSED 2026-08-30 — history.js's own real, passive subscriber
+      // to this already-proven real event, not a new detection mechanism.
+      try { this.history?.record({ url: navUrl, title: win.webContents.getTitle(), agentId: providerId }); } catch (_) {}
     });
 
     // §BUILD 2026-08-30 — James: "each agent gets a little tool intro

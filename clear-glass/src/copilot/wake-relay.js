@@ -19,6 +19,16 @@ function startWakeRelay(providerHost, opts = {}) {
   const guardianHost = opts.guardianHost || '127.0.0.1';
   const guardianPort = opts.guardianPort || 7820;
   const log = opts.log || (() => {});
+  // §HOOK 2026-08-29 — optional AgentMesh instance, wired in from
+  // main/index.js. Real gap: this file's whole job is "a wake word said
+  // in any agent tab gets a real answer injected back into that tab" —
+  // but the only answer path was Guardian's /copilot/prompt. If Guardian
+  // is down (or the specific provider Guardian would use for `d.agent`
+  // is unhealthy), the wake event was previously just dropped (logged,
+  // not answered) even though AgentMesh — a second, independent way to
+  // reach a live agent — might be perfectly healthy. mesh is optional and
+  // backward-compatible: omit it and behavior is unchanged from before.
+  const mesh = opts.mesh || null;
 
   let stopped = false;
 
@@ -49,6 +59,7 @@ function startWakeRelay(providerHost, opts = {}) {
   async function handleWake(d) {
     if (!d.agent) { log(`[wake-relay] event with no agent, cannot inject back — ${d.request?.slice(0,60)}`); return; }
     log(`[wake-relay] wake from ${d.agent}${d.account ? ' ('+d.account+')' : ''}: ${d.request?.slice(0,80)}`);
+    let text = null;
     try {
       const r = await new Promise((resolve, reject) => {
         const body = JSON.stringify({ prompt: d.request, contextOpts: { intent: d.request } });
@@ -60,12 +71,37 @@ function startWakeRelay(providerHost, opts = {}) {
         req2.on('error', reject);
         req2.write(body); req2.end();
       });
-      const text = r.text || r.response || (r.toolResult ? JSON.stringify(r.toolResult.result || r.toolResult, null, 2) : null);
-      if (!text) { log(`[wake-relay] co-pilot returned no answer for ${d.agent}`); return; }
+      text = r.text || r.response || (r.toolResult ? JSON.stringify(r.toolResult.result || r.toolResult, null, 2) : null);
+    } catch (e) {
+      log(`[wake-relay] guardian relay failed: ${e.message}${mesh ? ' — falling back to agent mesh' : ''}`);
+    }
+
+    // §HOOK 2026-08-29 — mesh fallback: only taken if Guardian's real
+    // path above genuinely failed or returned nothing, never as a
+    // first choice — Guardian's /copilot/prompt carries real Cortex
+    // context (memory, CFR, DOM) that a bare mesh.route() prompt
+    // doesn't have, so it stays primary. `preferAgent: d.agent` asks
+    // the mesh to answer via the SAME agent the wake word came from
+    // when it can (a Claude tab saying "hey nexus" getting answered by
+    // ChatGPT would be a confusing identity mismatch); mesh.route()'s
+    // own agent-router-driven fallback still applies if that agent is
+    // unhealthy.
+    if (!text && mesh) {
+      try {
+        const r = await mesh.route({ prompt: d.request, preferAgent: d.agent });
+        text = r.response || null;
+        if (text) log(`[wake-relay] answered via agent mesh (${r.agentKey})`);
+      } catch (e) {
+        log(`[wake-relay] agent mesh fallback also failed: ${e.message}`);
+      }
+    }
+
+    if (!text) { log(`[wake-relay] no answer available for ${d.agent} (guardian and mesh both failed/unavailable)`); return; }
+    try {
       const injected = await providerHost.injectAnswer(d.agent, text);
       if (!injected.ok) log(`[wake-relay] injectAnswer failed for ${d.agent}: ${injected.reason}`);
     } catch (e) {
-      log(`[wake-relay] relay failed: ${e.message}`);
+      log(`[wake-relay] inject failed: ${e.message}`);
     }
   }
 

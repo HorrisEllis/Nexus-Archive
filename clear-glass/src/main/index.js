@@ -111,6 +111,7 @@ const RewindEngine      = require('../rewind/engine');
 const ProviderHost      = require('../providers/host');
 const UserscriptManager = require('../userscripts/manager');
 const { SiteSettingsStore } = require('../site-settings/store');
+const { HistoryStore } = require('../history/store');
 const { DownloadsStore } = require('../downloads/store');
 const { PasswordVault } = require('../passwords/vault');
 // §BUILD 2026-08-29 — James: "hook the macros in also, integrate
@@ -159,7 +160,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -876,6 +877,7 @@ async function bootstrap() {
     guardianDir: process.env.GUARDIAN_DIR || null,
     sse:         { emit: (t, d) => emit(t, d) },
     postEvent:   (type, data) => _postEvent(type, data),
+    history:     history,
   });
   // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
   // injects it into the corresponding agent chat using clearglass."
@@ -932,6 +934,11 @@ async function bootstrap() {
   // CLEAR-GLASS-FULL-CHROME-MAP-2026-08-23.md's §4.
   siteSettings = new SiteSettingsStore();
   siteSettings.load();
+
+  // 8.955. History — §GAP CLOSED 2026-08-30, real IPC-only registry
+  // entry that had zero implementing code anywhere in this lineage.
+  history = new HistoryStore();
+  history.load();
 
   // 8.96. Downloads — §NEW 2026-08-24, real gap named in the same map's §3.
   downloads = new DownloadsStore();
@@ -1115,6 +1122,7 @@ async function bootstrap() {
     userscripts,
     siteSettings,
     downloads,
+    history,
     passwordVault,
     speech,
     macroTool,

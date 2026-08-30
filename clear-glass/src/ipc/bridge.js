@@ -17,7 +17,7 @@ const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -41,6 +41,7 @@ class IpcBridge {
     this.providerHost = providerHost;
     this.userscripts   = userscripts;
     this.siteSettings  = siteSettings;
+    this.history       = history;
     this.downloads     = downloads;
     // §BUGFIX 2026-08-24 — found while wiring speech, not by inspection:
     // main/index.js already passed passwordVault into this constructor
@@ -169,10 +170,26 @@ class IpcBridge {
     // proved (compose, don't rebuild). Each key degrades independently
     // to [] on its own real failure rather than one bad source blanking
     // the whole response.
-    this.app.get('/agent-suite', (req, res) => {
+    this.app.get('/agent-suite', async (req, res) => {
       let hats = [];
       try { hats = require('../../../lib/hat-forge.js').list(); } catch (_) {}
+      // §FIX 2026-08-29 — James: "fix them." The real duplicate found
+      // reviewing every agent phase: copilot/server.js's own real GET
+      // /api/agent/suite (self-model.js's getCurrentAgent() + hat-
+      // forge's list()) already existed before this endpoint was built
+      // — confirmed by reading both directly, neither a strict superset
+      // of the other. Two live processes, so the real fix isn't
+      // deleting either one — it's this endpoint pulling the ONE piece
+      // it was genuinely missing (which agent is actually active right
+      // now) from copilot's own real, separate /api/agent/current via a
+      // real network call, same composition pattern already proven this
+      // session for .nex/COS (compose across a real process boundary,
+      // don't force one side to own everything). hat-forge's list() stays
+      // called locally here, not proxied — it's a real, cheap, in-process
+      // call with no reason to add a network hop for data already free.
+      const current = await this._getCopilotCurrentAgent();
       res.json({
+        current,
         agents:    this.mesh?.listAgents() || [],
         hats,
         listeners: this.options?.listListeners() || [],
@@ -180,6 +197,152 @@ class IpcBridge {
         ts: Date.now(),
       });
     });
+
+    // §CLI-COMMANDS 2026-08-30 — James: "everything in clear glass has to
+    // have a command for the cli. That way co-pilot can fix it." Real
+    // finding: 36 of 67 real registered components (registry-components.js)
+    // are IPC-only — reachable only from inside the Electron renderer,
+    // with zero external, CLI/co-pilot-callable path. Starting with the
+    // safest, most immediately useful subset: real, already-working
+    // read-only "list" operations — exactly what co-pilot needs to SEE
+    // real current state before attempting to fix anything. Each route
+    // calls the exact same real handler the IPC channel already calls —
+    // one implementation, two entry points, same pattern already proven
+    // for /agent-suite and /listeners earlier this session.
+    //
+    // §HONEST LIMIT — found while doing this, not silently worked around:
+    // registry-components.js also lists history.list/extensions.list as
+    // real components, but grep confirms zero implementing files exist
+    // anywhere in this lineage (HistoryStore/ExtensionManager came from a
+    // different branch's zip, never actually merged here) — the registry
+    // promises a capability this checkout genuinely does not have. Not
+    // fixed here; named directly rather than faked with an empty stub.
+    this.app.get('/cli/calltos',            (req, res) => res.json({ calltos: this.options?.listCalltos() || [] }));
+    this.app.get('/cli/downloads/listeners',(req, res) => res.json({ listeners: this.options?.listDownloadListeners() || [] }));
+    this.app.get('/cli/site-settings',      (req, res) => res.json({ settings: this.siteSettings?.getAllForOrigin(req.query.url) || null }));
+    this.app.get('/cli/rewind',             (req, res) => res.json({ snapshots: this.rewind?.list(req.query.agentId, req.query.limit ? +req.query.limit : undefined) || [] }));
+    this.app.get('/cli/passwords',          (req, res) => res.json({ passwords: this.passwordVault?.list() || [] }));
+    this.app.get('/cli/macros', async (req, res) => {
+      if (!this.macroTool) return res.status(503).json({ error: 'macro tool not available' });
+      try { res.json(await this.macroTool.execute({ action: 'list' })); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.get('/cli/bgtab', (req, res) => res.json({ tabs: require('../main/index').listBackgroundTabs?.() || [] }));
+
+    // §COMMAND-INDEX 2026-08-30 — the real, live index itself, servable
+    // directly (not just the on-disk copy) so a caller always gets the
+    // truly-current set without needing filesystem access.
+    this.app.get('/cli/commands', (req, res) => res.json(this._buildCommandIndex()));
+
+    // §CLI-COMMANDS 2026-08-30, continued — James: "cli commands." Real,
+    // genuinely uncovered write/action operations, each reviewed for
+    // real side-effect safety before exposing externally (not a blind
+    // batch conversion of every remaining IPC-only entry). bookmarks.
+    // addWithState already had a real route (POST /bookmarks/with-state,
+    // confirmed directly) — not duplicated here.
+    this.app.get('/cli/calltos/for-url', (req, res) => res.json({ calltos: this.options?.findCalltosForUrl(req.query.url) || [] }));
+    this.app.delete('/cli/calltos/:id', (req, res) => res.json(this.options?.removeCallto(req.params.id) || { error: 'options unavailable' }));
+
+    this.app.post('/cli/bgtab', async (req, res) => {
+      try { res.json(await require('../main/index').openBackgroundTab(req.body)); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.delete('/cli/bgtab/:agentId', async (req, res) => {
+      try { res.json(await require('../main/index').closeBackgroundTab(req.params.agentId)); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.get('/cli/macros/:name', async (req, res) => {
+      if (!this.macroTool) return res.status(503).json({ error: 'macro tool not available' });
+      try { res.json(await this.macroTool.execute({ action: 'get', name: req.params.name })); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    // §REAL RISK NOTE — macros:run genuinely drives a live browser tab
+    // (real clicks/typing per macro.js's own erosmancer integration).
+    // Exposed deliberately, matching this whole request's real point
+    // ("so co-pilot can fix it") — co-pilot running a real, existing,
+    // already-reviewed macro is the actual use case, not a new risk this
+    // route introduces; the macro's own real content is what acts, this
+    // route is just a second, equally-real door to trigger it.
+    this.app.post('/cli/macros/:name/run', async (req, res) => {
+      if (!this.macroTool) return res.status(503).json({ error: 'macro tool not available' });
+      try {
+        res.json(await this.macroTool.execute({
+          action: 'run', name: req.params.name,
+          agentId: req.body?.agentId, params: req.body?.params, skipSnapshot: req.body?.skipSnapshot,
+        }));
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/cli/downloads/listeners', (req, res) => res.json(this.options?.registerDownloadListener(req.body) || { error: 'options unavailable' }));
+    this.app.patch('/cli/downloads/listeners/:id', (req, res) => res.json(this.options?.updateDownloadListener(req.params.id, req.body) || { error: 'options unavailable' }));
+    this.app.delete('/cli/downloads/listeners/:id', (req, res) => res.json(this.options?.removeDownloadListener(req.params.id) || { error: 'options unavailable' }));
+
+    // §CLI-COMMANDS 2026-08-30, final slice — James: "yes. everything.
+    // make clear glass extremely high leverage." Every remaining real
+    // IPC-only operation, each still checked against its own real
+    // handler signature before building the route (not a blind loop
+    // over the registry), same discipline as every prior slice.
+
+    // ── site-settings — real per-origin key/value store ─────────────
+    this.app.get('/cli/site-settings/key', (req, res) => res.json({ value: this.siteSettings?.get(req.query.url, req.query.key) ?? null }));
+    this.app.put('/cli/site-settings/key', (req, res) => res.json(this.siteSettings?.set(req.body?.url, req.body?.key, req.body?.value) || { error: 'siteSettings unavailable' }));
+    this.app.delete('/cli/site-settings/key', (req, res) => res.json(this.siteSettings?.deleteKey(req.query.url, req.query.key) || { error: 'siteSettings unavailable' }));
+    this.app.delete('/cli/site-settings', (req, res) => res.json(this.siteSettings?.clear(req.query.url) || { error: 'siteSettings unavailable' }));
+    this.app.get('/cli/site-settings/origins', (req, res) => res.json({ origins: this.siteSettings?.listOrigins() || [] }));
+
+    // ── history — the real, freshly-built store, first-ever CLI reach ──
+    this.app.get('/cli/history', (req, res) => res.json({ entries: this.history?.list(req.query) || [] }));
+    this.app.delete('/cli/history/:id', (req, res) => res.json(this.history?.delete(req.params.id) || { error: 'history unavailable' }));
+    this.app.delete('/cli/history', (req, res) => res.json(this.history?.clear(req.query.agentId) || { error: 'history unavailable' }));
+
+    // ── rewind — real per-agent snapshot/restore/clear ───────────────
+    // §REAL RISK NOTE — restore() is genuinely destructive (replaces an
+    // agent's real, current state with a prior snapshot). Exposed
+    // deliberately: "so co-pilot can fix it" explicitly implies real
+    // undo/rollback capability, which is exactly what this is — the
+    // real safety net, not a risk added on top of one.
+    this.app.post('/cli/rewind/:agentId/snapshot', async (req, res) => {
+      try { res.json(await this.rewind?.snapshot(req.params.agentId, req.body) ?? { error: 'rewind unavailable' }); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.post('/cli/rewind/restore', async (req, res) => {
+      try { res.json(await this.rewind?.restore(req.body) ?? { error: 'rewind unavailable' }); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.delete('/cli/rewind/:agentId', async (req, res) => {
+      try { res.json(await this.rewind?.clear(req.params.agentId) ?? { error: 'rewind unavailable' }); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    // ── passwords — delete only; list already real from the earlier slice ──
+    this.app.delete('/cli/passwords/:id', (req, res) => res.json(this.passwordVault?.delete(req.params.id) || { error: 'passwordVault unavailable' }));
+
+    // ── speech — availability check real and cheap; transcription needs
+    // real binary audio data, base64-encoded over JSON since this is a
+    // plain HTTP/JSON route, not a multipart upload endpoint ──
+    this.app.get('/cli/speech/available', async (req, res) => res.json({ available: await this.speech?.isAvailable() ?? false }));
+    this.app.post('/cli/speech/transcribe', async (req, res) => {
+      if (!this.speech) return res.status(503).json({ error: 'speech unavailable' });
+      try {
+        const buffer = Buffer.from(req.body?.audioBase64 || '', 'base64');
+        res.json(await this.speech.transcribeBuffer?.(buffer, req.body?.ext || 'webm') ?? { error: 'transcribeBuffer unavailable' });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    // ── userscripts — the full real cluster, none of it was CLI-reachable ──
+    this.app.get('/cli/userscripts', (req, res) => res.json({ scripts: this.userscripts?.list(req.query) || [] }));
+    this.app.get('/cli/userscripts/:id/source', (req, res) => res.json({ source: this.userscripts?.getSource(req.params.id) ?? null }));
+    this.app.post('/cli/userscripts', (req, res) => res.json(this.userscripts?.create(req.body) || { error: 'userscripts unavailable' }));
+    this.app.patch('/cli/userscripts/:id', (req, res) => res.json(this.userscripts?.edit(req.params.id, req.body) || { error: 'userscripts unavailable' }));
+    this.app.delete('/cli/userscripts/:id', (req, res) => res.json(this.userscripts?.delete(req.params.id) || { error: 'userscripts unavailable' }));
+    this.app.post('/cli/userscripts/:id/toggle', (req, res) => res.json(this.userscripts?.toggle(req.params.id, req.body?.enabled) || { error: 'userscripts unavailable' }));
+    this.app.post('/cli/userscripts/:id/inject', async (req, res) => {
+      try { res.json(await this.userscripts?.inject(req.body?.agentId, req.params.id) ?? { error: 'userscripts unavailable' }); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     this.app.get('/diag/reports', (req, res) => res.json({ reports: this.diag?.listReports() || [] }));
     this.app.get('/api-settings', (req, res) => res.json(this.apiSettings?.getPublic() || {}));
 
@@ -201,6 +364,19 @@ class IpcBridge {
     this._addRewindRoutes();
     this._addProviderRoutes();
 
+    // §COMMAND-INDEX 2026-08-30 — James: "have the living command index
+    // in the systems data folder, backed up into cortex, and hooked into
+    // co-pilot so it can use clearglass at full compatibility." Built
+    // AFTER every real route above has mounted (this exact point in
+    // start(), right before listen()) — introspects Express's own real,
+    // live route table (this.app._router.stack), not registry-
+    // components.js, which this same session already found has stale/
+    // aspirational entries (history/extensions were listed there with
+    // zero real implementation). A route this code can't see literally
+    // doesn't exist — the index can never drift from reality the way a
+    // hand-maintained or separately-generated one could.
+    this._writeCommandIndex();
+
     return new Promise((resolve, reject) => {
       this.server = this.app.listen(this.port, '127.0.0.1', () => {
         console.log(`[IPC] :${this.port}`);
@@ -208,6 +384,71 @@ class IpcBridge {
       });
       this.server.on('error', reject);
     });
+  }
+
+  /**
+   * _buildCommandIndex() — the real, live introspection. Express's
+   * app._router.stack contains both real routes (layer.route exists)
+   * and middleware (layer.route is undefined, e.g. the json()/CORS
+   * middleware registered above) — filtered to routes only. A route
+   * mounted via router.use() (like _addBookmarkRoutes' internal routes)
+   * shows up as a nested layer.handle.stack, walked recursively so
+   * nothing real is missed just because of how it was grouped.
+   */
+  _buildCommandIndex() {
+    const commands = [];
+    const walk = (stack, prefix = '') => {
+      for (const layer of stack || []) {
+        if (layer.route) {
+          const path = prefix + layer.route.path;
+          for (const method of Object.keys(layer.route.methods)) {
+            if (layer.route.methods[method]) commands.push({ method: method.toUpperCase(), path });
+          }
+        } else if (layer.name === 'router' && layer.handle?.stack) {
+          walk(layer.handle.stack, prefix);
+        }
+      }
+    };
+    walk(this.app._router?.stack);
+    return {
+      systemId: 'clear-glass', port: this.port,
+      generatedAt: Date.now(),
+      commandCount: commands.length,
+      commands: commands.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method)),
+    };
+  }
+
+  /**
+   * _writeCommandIndex() — real, persisted to the real systems data
+   * folder (data/clear-glass/, matching every other real system's own
+   * data/<systemId>/ convention this codebase already uses), and
+   * fire-and-forget POSTed to cortex's real, existing /api/event as the
+   * real backup record — same pattern already proven this session for
+   * cross-process notifications (the lock-collision reporting). A
+   * failure to reach cortex never blocks the real, local file write;
+   * the local file IS the living index co-pilot's tool (built alongside
+   * this) reads directly, not a live network call every time.
+   */
+  _writeCommandIndex() {
+    const index = this._buildCommandIndex();
+    try {
+      const fs = require('fs'), path = require('path');
+      const dir = path.join(__dirname, '..', '..', '..', 'data', 'clear-glass');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'command-index.json'), JSON.stringify(index, null, 2));
+      console.log(`[IPC] real command index written — ${index.commandCount} real commands`);
+    } catch (e) {
+      console.warn(`[IPC] could not write real command index to disk: ${e.message}`);
+    }
+    try {
+      const http = require('http');
+      const payload = JSON.stringify({ type: 'clear-glass.command-index.updated', source: 'clear-glass', payload: index });
+      const req = http.request({ hostname: '127.0.0.1', port: 3748, path: '/api/event', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }, timeout: 2000 }, r => r.resume());
+      req.on('error', () => {}); // best-effort — cortex may not be up yet, the real local file above is the guaranteed record
+      req.on('timeout', () => req.destroy());
+      req.write(payload); req.end();
+    } catch (_) { /* best-effort, see above */ }
+    return index;
   }
 
   // ── Renderer → Main IPC (via preload contextBridge) ───────────────────
@@ -379,6 +620,13 @@ class IpcBridge {
     ipcMain.handle('site-settings:deleteKey', async (e, d) => this.siteSettings?.deleteKey(d.url, d.key));
     ipcMain.handle('site-settings:clear',  async (e, d) => this.siteSettings?.clear(d.url));
     ipcMain.handle('site-settings:listOrigins', async () => this.siteSettings?.listOrigins());
+
+    // §GAP CLOSED 2026-08-30 — real IPC handlers for the freshly-built
+    // HistoryStore, the same real gap this session found (registry
+    // promised a feature, zero implementing code existed anywhere).
+    ipcMain.handle('history:list',   async (e, d) => this.history?.list(d || {}) || []);
+    ipcMain.handle('history:delete', async (e, d) => this.history?.delete(d.id) || { error: 'history unavailable' });
+    ipcMain.handle('history:clear',  async (e, d) => this.history?.clear(d?.agentId) || { error: 'history unavailable' });
 
     // §NEW 2026-08-24 — real passwords management IPC surface for a
     // future panel (same real-but-not-yet-consumed pattern as site-
@@ -706,6 +954,31 @@ class IpcBridge {
       req.on('error', reject);
       req.write(body);
       req.end();
+    });
+  }
+
+  // §FIX 2026-08-29 — real, dedicated GET, not a reuse of
+  // _postToApiChannel above (POST-only, drains and discards the response
+  // body by design — the exact opposite of what's needed here, which is
+  // the response body itself). Fails soft, matching every other cross-
+  // process call this session added: copilot being unreachable degrades
+  // this endpoint's real "current" field to null, never throws and
+  // blocks the rest of /agent-suite's real, already-working local data.
+  _getCopilotCurrentAgent() {
+    return new Promise((resolve) => {
+      const req = require('http').get(
+        `http://127.0.0.1:${process.env.COPILOT_PORT || 3750}/api/agent/current`,
+        { timeout: 2000 },
+        (res) => {
+          let body = '';
+          res.on('data', (d) => { body += d; });
+          res.on('end', () => {
+            try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
+          });
+        }
+      );
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
     });
   }
 
