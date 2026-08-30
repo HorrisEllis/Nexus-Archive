@@ -22,6 +22,30 @@ const fs     = require('fs');
 const path   = require('path');
 const { execSync, spawnSync } = require('child_process');
 const { randomUUID } = require('crypto');
+// §BUGFIX 2026-08-30 — real, confirmed bug from the uploaded audit
+// (#2, "postLedger ReferenceError"): used at lines ~211/460 below but
+// never required anywhere in this file. Real, exported function
+// already exists in nexus-connect.js (used the same way by guardian/
+// copilot/etc.) — was simply never imported here.
+const { postLedger, postEvent } = require('../nexus-connect.js');
+
+// §BUGFIX 2026-08-30 — a SECOND, real, pre-existing bug found while
+// fixing the first: _escalateGap is called in 5 real places below
+// (F-BRIDGE-DOWN, F-GUARDIAN-BOTTLENECK, F-GUARDIAN-DOWN, and the two
+// generic fault-escalation call sites) but was never defined anywhere
+// in this file, and no function by this exact name exists anywhere
+// else in the codebase (checked directly). This file self-invokes
+// runAll() at module scope (see the §MOVED 2026-07-24 comment further
+// down) — meaning this ReferenceError fires on every real diagnostic
+// run that reaches any of these 5 call sites, not just a hypothetical
+// one. Built from the same real postEvent() primitive this whole
+// session's own cross-process notifications already use, tagged as a
+// real, structured gap so it's genuinely queryable afterward, not just
+// a console line.
+function _escalateGap(system, faultId, description, severity, meta = {}) {
+  return postEvent('diagnostic.gap.escalated', { system, faultId, description, severity, ...meta }, {})
+    .catch((err) => console.warn(`[diagnose] _escalateGap could not reach cortex (fault still real, just unrecorded): ${err.message}`));
+}
 
 const ROOT = path.join(__dirname, '..');
 const FIX  = process.argv.includes('--fix');

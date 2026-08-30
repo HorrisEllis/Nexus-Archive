@@ -42,6 +42,26 @@ const STATUS = Object.freeze({
   QUEUED: 'queued', RUNNING: 'running', PASS: 'pass', FAIL: 'fail', BLOCKED: 'blocked',
 });
 
+// §RR4 2026-08-30 — real, physical lifecycle-position tracker, separate
+// from STATUS (the dependency-graph state). Confirmed genuinely missing
+// by this session's own direct question ("what tracks the contract file
+// through the system, the dag?"): STATUS answers "did it pass," this
+// answers "where is it right now." Only QUEUED and HANDSHAKE_VERIFIED
+// are real, tagged today (acknowledge(), below) — the remaining stages
+// (INPUT_FOLDER, SYSTEM_QUEUE, PROCESSING, OUTPUT_FOLDER, QC_PENDING)
+// are named here as the real, intended sequence for IC5's future event
+// gates to tag forward, not yet reachable — a contract cannot currently
+// advance past HANDSHAKE_VERIFIED via any real code path.
+const STAGE = Object.freeze({
+  QUEUED: 'queued',
+  HANDSHAKE_VERIFIED: 'handshake_verified',
+  INPUT_FOLDER: 'input_folder',
+  SYSTEM_QUEUE: 'system_queue',
+  PROCESSING: 'processing',
+  OUTPUT_FOLDER: 'output_folder',
+  QC_PENDING: 'qc_pending',
+});
+
 let _qaqcRegistered = false;
 
 /**
@@ -172,6 +192,19 @@ function submitContract(contract, opts = {}) {
   const row = {
     uuid: queueId,
     status: STATUS.QUEUED,
+    // §RR4 2026-08-30 — real, additive schema fields from this session's
+    // own architectural review (docs/raid-routing-fidelity-phasemap.spec's
+    // RR4). intention/dir/language are new; source/forAgent/compartmentId
+    // already existed and are unchanged. `stage` is the real, separate
+    // physical-lifecycle tracker this review found genuinely missing —
+    // status answers "did it pass," stage answers "where is it right
+    // now." Starts at STAGE.QUEUED; every later real event gate (IC5,
+    // not built yet) tags it forward as the file physically moves.
+    intention: opts.intention || null,   // what this contract is FOR (feeds IC3's taxonomy once real data exists)
+    dir: opts.dir || null,               // real working directory/file scope this contract touches
+    language: opts.language || null,     // only when applicable — a code contract vs a prose contract
+    stage: STAGE.QUEUED,
+    system: opts.system || null,         // which SYSTEM originated this contract (distinct from source, which names the subsystem/mechanism)
     source: opts.source || 'unknown',      // 'spec-parser' | 'loom' | 'idearium' | 'copilot' | 'self-heal'
     file: contract.file || null,
     title: contract.title || null,
@@ -189,6 +222,28 @@ function submitContract(contract, opts = {}) {
     console.warn(`[${MODULE_ID}] queue insert failed, proceeding without persistence: ${e.message}`);
   }
   return { queueId, status: STATUS.QUEUED };
+}
+
+/**
+ * acknowledge(queueId, {system}) — RR4's real handshake ACK. A
+ * receiving system calls this to confirm it genuinely received a
+ * contract and understands its constraints BEFORE work starts — the
+ * actual, minimal mechanism RR4 names ("the receiving system
+ * acknowledges the contract + its constraints before work starts").
+ * Advances stage from QUEUED to HANDSHAKE_VERIFIED. Real, honest
+ * validation: refuses to ACK a contract that's already past this
+ * stage (a stale or duplicate ACK is a real signal something's wrong,
+ * not something to silently accept twice).
+ */
+function acknowledge(queueId, { system } = {}) {
+  const rows = jaaDB.query(TABLE, r => r.uuid === queueId, 1);
+  const row = rows[0];
+  if (!row) return { ok: false, error: `no real contract with queueId "${queueId}"` };
+  if (row.stage !== STAGE.QUEUED) {
+    return { ok: false, error: `contract is already at stage "${row.stage}" — cannot acknowledge a contract that's past QUEUED` };
+  }
+  jaaDB.update(TABLE, queueId, { stage: STAGE.HANDSHAKE_VERIFIED, updatedAt: Date.now(), acknowledgedBy: system || null });
+  return { ok: true, stage: STAGE.HANDSHAKE_VERIFIED };
 }
 
 /** listQueue(filter) — real, current queue state. */
@@ -423,4 +478,4 @@ function reportExternalOutcome(queueId, { status, verdict } = {}) {
   }
 }
 
-module.exports = { submitContract, submitIdeariumChunk, reportExternalOutcome, listQueue, processNext, MODULE_ID, VERSION, STATUS };
+module.exports = { submitContract, submitIdeariumChunk, reportExternalOutcome, acknowledge, listQueue, processNext, MODULE_ID, VERSION, STATUS, STAGE };

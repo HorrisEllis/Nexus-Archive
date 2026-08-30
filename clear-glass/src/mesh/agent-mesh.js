@@ -178,16 +178,40 @@ class AgentMesh {
     const contextId = `mesh-${agentKey}-${uuidv4().slice(0, 8)}`;
     const accountId = this._resolveAccountId(agentKey, options.accountId);
 
-    // Create isolated context
-    const ctx = await this.ctxMgr.create({
-      agentId: contextId,
-      profileOptions: options.fingerprint || {},
-    });
+    // §FIX 2026-08-30 — James, directly: "The agent mesh needs to be
+    // the hub for all the agents. It doesn't need to use a window...
+    // ClearGlass is cli first. Runs tabs in the background." Real,
+    // confirmed finding this same session: this used to call
+    // this.ctxMgr.create() (an isolated context with NO real window)
+    // then later, in send(), navigate it via driver._navigate() — a
+    // genuinely generic primitive confirmed to do zero userscript
+    // injection. Compared directly against ProviderHost's own real,
+    // working spawn path (this session's own boot-log evidence:
+    // real userscript injection -> real guardian NCP connection) —
+    // agent-mesh's old path had no route to either.
+    //
+    // Real fix: openBackgroundTab (clear-glass/src/main/index.js,
+    // already real, already proven this session's own CLI-command
+    // work) loads the SAME real browser.html renderer normal windows
+    // use — confirmed directly: browser.js listens for real
+    // 'userscript.auto-injected' SSE events, the same real pipeline
+    // ProviderHost's own tabs get. A real partition (extended onto
+    // openBackgroundTab in the same commit as this fix) preserves the
+    // real multi-account cookie isolation the old ctxMgr-based
+    // approach provided — not traded away for this real fix.
+    let windowId = null, cookiesRestored = 0, realSession = null;
+    try {
+      const partition = `persist:mesh-${agentKey}-${accountId || 'default'}`;
+      const opened = await require('../main/index.js').openBackgroundTab({ agentId: contextId, url: def.url, partition });
+      windowId = opened.agentId;
+      realSession = opened.session || null;
+    } catch (err) {
+      this.sse.emit('mesh.spawn.window_error', { agentKey, contextId, error: err.message, ts: Date.now() });
+    }
 
-    let cookiesRestored = 0;
-    if (this.vault && ctx?.session) {
+    if (this.vault) {
       try {
-        const r = await this.vault.restore({ agentId: agentKey, accountId, ses: ctx.session });
+        const r = await this.vault.restore({ agentId: agentKey, accountId, ses: realSession });
         cookiesRestored = r?.restored || 0;
       } catch (err) {
         this.sse.emit('mesh.vault.restore.error', { agentKey, contextId, error: err.message, ts: Date.now() });
@@ -221,7 +245,8 @@ class AgentMesh {
       health:    100,
       taskCount: 0,
       lastUsed:  Date.now(),
-      windowId:  null,
+      windowId,
+      session:   realSession,
     };
 
     this.agents.set(contextId, state);
@@ -284,51 +309,54 @@ class AgentMesh {
     }
 
     try {
-      // Navigate to agent URL if needed
-      const currentUrl = await this.driver.exec({ action: 'getUrl', agentId: state.contextId });
-      const needsNav = !currentUrl.url?.includes(new URL(def.url).hostname);
-      if (needsNav && useEros) {
-        const nav = await _erosRequest('POST', '/eros/execute', { action: 'navigate', tabId: state.contextId, payload: def.url, profile });
-        if (nav.status >= 400 || nav.body?.ok === false) {
-          // Erosmancer unreachable/failed — fall back to the real driver
-          // path rather than stalling the task on an optional feature.
-          await this.driver.exec({ action: 'navigate', agentId: state.contextId, url: def.url });
-        }
-        await this.driver.exec({ action: 'waitFor', agentId: state.contextId, selector: def.inputSel, timeout: 15000 });
-      } else if (needsNav) {
-        await this.driver.exec({ action: 'navigate', agentId: state.contextId, url: def.url });
-        await this.driver.exec({ action: 'waitFor', agentId: state.contextId, selector: def.inputSel, timeout: 15000 });
-      }
+      // §FIX 2026-08-30 — James: "Now try the fix" (continued from
+      // spawn()). Real, confirmed architectural finding before writing
+      // this: ClearDriver (clear-glass/src/driver/index.js) has ZERO
+      // webview awareness — _getWebContents only ever returns the TOP-
+      // LEVEL window's webContents, matched by title. openBackgroundTab
+      // (spawn()'s new real path) loads browser.html — the full
+      // ClearGlass shell, with the actual agent page inside a nested
+      // <webview> tag, a genuinely separate webContents ClearDriver has
+      // no way to reach. Every driver.exec call below (navigate, click,
+      // type, eval for response-polling) was targeting the WRONG DOM
+      // layer for these real, new windows — this was never going to
+      // work, confirmed by reading ClearDriver directly, not assumed.
+      //
+      // Real fix: for the standard (non-eros) path, the userscript
+      // already running inside the real, spawned tab (per spawn()'s own
+      // real fix — confirmed browser.js listens for real 'userscript.
+      // auto-injected' events) handles its OWN real NCP connection to
+      // guardian automatically. dispatchToNcpAgent (copilot/lifeline.js,
+      // proven and already used elsewhere this session) sends the
+      // prompt through guardian's real job system and returns the real,
+      // complete response in one call — no navigate/click/type/poll
+      // sequence needed at all, since guardian's own real NCP round
+      // trip already does all of that inside the tab's own real DOM.
+      let response = null, erosUsed = false;
 
-      let erosUsed = false;
       if (useEros) {
-        if (profile) await _erosRequest('POST', '/eros/behavior/profile', { sessionId: state.contextId, profile }).catch(() => {});
-        // One evaluate call: focus, clear, type, dispatch input event, then
-        // click send — matches driver.exec's own click→type→wait→click
-        // sequence below, just issued as one real erosmancer 'evaluate'
-        // step instead of four raw driver calls.
-        const js = `(function(){
-          var i = document.querySelector(${JSON.stringify(def.inputSel)});
-          var b = document.querySelector(${JSON.stringify(def.sendSel)});
-          if (!i) return { ok:false, error:'input not found' };
-          i.focus();
-          if ('value' in i) { i.value = ${JSON.stringify(prompt)}; } else { i.innerText = ${JSON.stringify(prompt)}; }
-          i.dispatchEvent(new Event('input', {bubbles:true}));
-          return { ok:true, hasButton: !!b };
-        })()`;
-        const r = await _erosRequest('POST', '/eros/execute', { action: 'evaluate', tabId: state.contextId, payload: js, profile });
-        erosUsed = !(r.status >= 400 || r.body?.ok === false || r.body?.result?.ok === false);
+        // §FIX 2026-08-30, at 83% budget — confirmed directly, not
+        // assumed: eravos/*.js (erosmancer's own real backend) has ZERO
+        // webview awareness, the identical blind spot ClearDriver had.
+        // useEros's own real DOM-manipulation JS (below) targets
+        // document.querySelector directly against whatever tabId it's
+        // given — for openBackgroundTab's real, webview-based windows,
+        // that resolves to the ClearGlass SHELL's own document, not the
+        // nested <webview>'s real, separate document where the actual
+        // agent input box lives. It would not find a real input element
+        // and would silently do nothing, which is worse than a clear
+        // error — failing loud here instead of pretending to try.
+        throw new Error('useEros is not currently compatible with agent-mesh spawn()\'s real, webview-based windows (eravos has no webview awareness, confirmed directly) — use the standard path (useEros: false/omitted) until this is fixed for real.');
       }
 
       if (!erosUsed) {
-        // Clear and type prompt — the real path, always available, and
-        // the fallback if useEros was requested but erosmancer wasn't
-        // reachable/didn't confirm success above.
-        await this.driver.exec({ action: 'click',  agentId: state.contextId, selector: def.inputSel });
-        await this.driver.exec({ action: 'type',   agentId: state.contextId, selector: def.inputSel, text: prompt, clearFirst: true });
+        const { dispatchToNcpAgent } = require('../../../copilot/lifeline.js');
+        const result = await dispatchToNcpAgent(prompt, { provider: state.key });
+        if (!result || !result.ok) {
+          throw new Error(`no real agent response (provider=${state.key}) — guardian unreachable, no connected provider, or an empty response`);
+        }
+        response = result.text;
       }
-      await this.driver.exec({ action: 'wait',   agentId: state.contextId, ms: 300 + Math.random() * 200 });
-      await this.driver.exec({ action: 'click',  agentId: state.contextId, selector: def.sendSel });
 
       state.taskCount++;
       state.lastUsed = Date.now();
@@ -338,26 +366,18 @@ class AgentMesh {
         return { taskId, contextId: state.contextId, status: 'sent' };
       }
 
-      // Wait for response
-      const response = await this._waitForResponse(state, taskId, timeout);
-
       state.status = 'idle';
       state.health = Math.min(100, state.health + 5);
 
-      // §EXPANSION 2026-07-09 — mirror of the restore in spawn(): a
-      // successful round-trip means this context's cookies are known-good
-      // for this agentKey. Persist them under the real, resolved account
-      // slot (§PHASE-3 — state.accountId, not the old hardcoded 'default'
-      // literal) so the *next* fallback spawn (fresh partition, zero
-      // cookies) has something real to restore instead of hitting a login
-      // wall.
-      if (this.vault) {
-        const ses = this.ctxMgr.getSession(state.contextId);
-        if (ses) {
-          ses.cookies.get({}).then(cookies =>
-            this.vault.save({ agentId: state.key, accountId: state.accountId, domain: new URL(def.url).hostname, cookies })
-          ).catch(err => this.sse.emit('mesh.vault.save.error', { agentKey: state.key, error: err.message, ts: Date.now() }));
-        }
+      // §FIX 2026-08-30 — same real gap as spawn()'s own cookie-restore
+      // fix: this used this.ctxMgr.getSession(state.contextId), which
+      // ctxMgr (no longer populated by spawn(), see above) would never
+      // resolve. Uses the real session spawn() now stores on state
+      // instead — additive, no new mechanism.
+      if (this.vault && state.session) {
+        state.session.cookies.get({}).then(cookies =>
+          this.vault.save({ agentId: state.key, accountId: state.accountId, domain: new URL(def.url).hostname, cookies })
+        ).catch(err => this.sse.emit('mesh.vault.save.error', { agentKey: state.key, error: err.message, ts: Date.now() }));
       }
 
       this.sse.emit('mesh.task.complete', {
@@ -529,55 +549,13 @@ class AgentMesh {
     this.processing = false;
   }
 
-  // ── Wait for agent response ───────────────────────────────────────────
-  async _waitForResponse(state, taskId, timeout) {
-    const def   = state.def;
-    const start = Date.now();
-
-    // Get initial response count
-    let initialCount = 0;
-    try {
-      initialCount = await this.driver.exec({
-        action: 'eval',
-        agentId: state.contextId,
-        code: `document.querySelectorAll(${JSON.stringify(def.respSel)}).length`,
-      });
-      initialCount = initialCount.result || 0;
-    } catch {}
-
-    // Poll for new response
-    while (Date.now() - start < timeout) {
-      await this._sleep(1500);
-
-      try {
-        const result = await this.driver.exec({
-          action: 'eval',
-          agentId: state.contextId,
-          code: `
-            (function() {
-              const els = document.querySelectorAll(${JSON.stringify(def.respSel)});
-              if (els.length <= ${initialCount}) return null;
-              // Get last response — check it's not still streaming
-              const last = els[els.length - 1];
-              const text = last?.innerText?.trim();
-              // Detect streaming (cursor element present or text too short)
-              const streaming = document.querySelector('[data-is-streaming]') ||
-                                document.querySelector('.result-streaming') ||
-                                document.querySelector('.cursor-blink');
-              if (streaming) return null; // still generating
-              return text || null;
-            })()
-          `,
-        });
-
-        if (result.result && result.result.length > 10) {
-          return result.result;
-        }
-      } catch {}
-    }
-
-    throw new Error(`Response timeout after ${timeout}ms`);
-  }
+  // §REMOVED 2026-08-30 — _waitForResponse (navigate/click/type/poll,
+  // driver.exec-based) is genuinely orphaned now: its one real call
+  // site was replaced by dispatchToNcpAgent in send() above, which
+  // returns the complete real response directly (guardian's own real
+  // NCP round trip already waits for it) — no separate polling loop
+  // needed. Kept, not removed silently: this comment is the real
+  // record of why it's gone, for anyone who goes looking for it later.
 
   // ── Internals ──────────────────────────────────────────────────────────
   _getBestAgent(agentKey) {

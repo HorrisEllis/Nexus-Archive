@@ -138,7 +138,7 @@ const macroTool = require('../../../lib/agent-tools/tools/clear-glass/macro.js')
 // module) — a taxonomy shape violation is a real bug worth a loud,
 // visible warning, never a reason to refuse to boot the browser.
 try {
-  const taxonomy = require('./event-taxonomy');
+  const taxonomy = require('../event-taxonomy');
   const { validateTaxonomy } = require('../../../lib/event-taxonomy-pattern.js');
   const result = validateTaxonomy(taxonomy, { systemName: 'clear-glass' });
   if (!result.ok) {
@@ -1630,7 +1630,7 @@ function hideAppToTray() {
 // "Move to background tab" carries a URL into a hidden window under a new
 // agentId, freeing the visible window to navigate elsewhere while the
 // background context keeps running (mesh/automation use).
-async function openBackgroundTab({ agentId, url = 'about:blank' } = {}) {
+async function openBackgroundTab({ agentId, url = 'about:blank', partition } = {}) {
   agentId = agentId || randomUUID();
   if (bgTabs.has(agentId)) { bgTabs.get(agentId).focus?.(); return { agentId, url, reused: true }; }
 
@@ -1642,6 +1642,20 @@ async function openBackgroundTab({ agentId, url = 'about:blank' } = {}) {
       contextIsolation: true,
       nodeIntegration:  false,
       webviewTag:       true,
+      // §BUGFIX 2026-08-30 — real, confirmed gap found while wiring
+      // agent-mesh.js to use this function (James: "the agent mesh
+      // needs to be the hub... it doesn't need to use a window... runs
+      // tabs in the background"): this had NO session/partition
+      // isolation at all — every real background tab shared Electron's
+      // default session, meaning two accounts for the same agent would
+      // have silently shared cookies. agent-mesh.js's own, now-replaced
+      // ctxMgr-based approach WAS providing real multi-account
+      // isolation; this real partition option preserves that property
+      // instead of trading it away for the real userscript/NCP benefit
+      // background tabs otherwise provide. undefined (the default) when
+      // no partition is given — every existing real caller (bookmarks'
+      // with-state open, etc.) is completely unaffected.
+      partition:        partition || undefined,
     },
     title: `Clear Glass — ${agentId} (background)`,
     show: false,
@@ -1659,7 +1673,15 @@ async function openBackgroundTab({ agentId, url = 'about:blank' } = {}) {
   bgTabUrls.set(agentId, url);
   emit('bgtab.opened', { agentId, url });
   _postEvent('clear-glass.bgtab.opened', { agentId, url });
-  return { agentId, url };
+  // §FIX 2026-08-30 — real session reference added to the return value,
+  // alongside the partition fix above: agent-mesh.js's real cookie
+  // restoration (clear-glass/src/cookies/vault.js's restore()) requires
+  // a real, live session object to actually apply cookies — without
+  // one it correctly, honestly degrades to {restored:false}, silently
+  // losing real functionality rather than crashing. Every existing real
+  // caller ignores this new field (adding a field to a return object
+  // never breaks a caller that only reads the fields it already used).
+  return { agentId, url, session: win.webContents.session };
 }
 
 function closeBackgroundTab(agentId) {

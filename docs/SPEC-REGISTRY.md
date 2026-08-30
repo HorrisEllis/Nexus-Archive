@@ -512,7 +512,26 @@ PENDING.
 |---|---|---|---|---|
 | `docs/2026-08-28-definition-of-complete-phasemap.spec` | 0.1.0-phasemap | PHASEMAP | James's own stated conditions for NEXUS to be considered complete (autonomy, self-repair, build-from-idearium, build-from-loom, living model, axiom compliance, COS-based testing, contract/comparison/drift engines) — each graded honestly against real current state, cross-referenced to already-tracked real phases rather than restated | 2026-08-28 (written; 8 phases verified parsing correctly against loom/scanners/phasemap-map.js's real loadAll() before commit — caught and fixed a real false-positive: the literal substring "STARTED" inside the honest phrase "not yet started" flipped a phase's real status to IN-PROGRESS in the scanner's own heuristic) |
 
-Not built — this is a criteria document, not a build phase set. 2 of 8
+Not built this drop — this is a criteria document, not a build phase set. 2 of 8
 conditions (idearium build pipeline, axiom compliance) are already
 genuinely DONE; the rest are real, open gaps named at their actual size
 (loom deciding-and-acting, not just mapping, is the single largest one).
+
+## §REGISTERED 2026-08-30 (§6.3), third entry
+
+| spec | version | status | governs | last checked vs code |
+|---|---|---|---|---|
+| `docs/2026-08-30-interaction-contract-context-phasemap.spec` | 0.1.0-phasemap | PHASEMAP | Real, distinct pieces of James's handshake/context/introspection ask NOT already covered by RR4 (handshake, expanded in the same commit) or the uploaded audit's #23 (adaptive-fulfillment, already built): context-by-UUID injection into agent chats, RAID's real test-env hook (cross-ref DOD7), a per-system intention taxonomy, and idearium's system template update — the last two deliberately sequenced after the others, not designed or written blind ahead of real usage data | 2026-08-30 (written; 4 new phases + RR4's own expansion verified parsing correctly against loom/scanners/phasemap-map.js's real loadAll() before commit) |
+
+Not built — mapped only, per James's own explicit instruction ("Map it
+all first. Always."). Real, load-bearing findings baked into the phase
+descriptions themselves: intelligence/rfr2/enforcement/index.js's
+RuntimeGuard (RR4's own named guarantee-layer candidate) confirmed real,
+not aspirational; associative-lattice.js confirmed real and already
+tested (the audit's #21) as the actual context source IC1 would query;
+adaptive-fulfillment.js confirmed real and already IS the introspect/
+iterate loop James described (the audit's #23) — not re-opened as new
+scope, only its existing single-provider limitation remains open. All
+4 new phases (IC1-4) start PENDING, correctly sequenced so the taxonomy
+and template-update phases depend on the mechanisms they'd otherwise be
+designed blind ahead of.

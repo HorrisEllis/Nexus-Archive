@@ -126,6 +126,41 @@ spec:
 
     RR4_governed_handshake_on_handoff:
       depends_on: [RR1, RR2]
+      status: "OPEN, real design detail added 2026-08-30, not built. James:
+        'need intention. Dir. conditions for passing the test env. Agent
+        and system. Language if applicable. Compartment if needed. Chunk
+        id. Request or contract id... Doesn't leave the input folder
+        until handoff.' Checked the real guarantee-layer candidate this
+        phase itself names, not assumed real: intelligence/rfr2/
+        enforcement/index.js's RuntimeGuard IS real and already carries
+        its own real @hook UUID tag (this codebase's own established
+        convention) — confirmed by reading it directly, not aspirational
+        text. Real schema for the handshake contract, additive to
+        contract-intake.js's existing shape (content/forAgent/dependsOn/
+        onFail, all real and unchanged): intention (what this contract
+        is FOR, not just its content — feeds IC6's intention taxonomy
+        below once that exists), dir (the real working directory/file
+        scope this contract touches), conditions (the real end-state
+        check — already exists as the SEAM VERDICT convention, formalize
+        as a named field rather than only living in the prompt text),
+        agent + system (both, not just agent — RAID already tracks
+        forAgent; system is new, which SYSTEM originated this contract),
+        language (real, only when applicable — a code contract vs a
+        prose contract), compartment (already real via compartment-
+        engine, link explicitly), chunk_id (already real, BR5), request/
+        contract_id (already real, queueId) logged to a real contract
+        ledger + index for RAID (extends the real cortex event_log
+        pattern already proven this session for the command-index
+        backup, not a new ledger mechanism).
+        Real, concrete mechanism for 'doesn't leave the input folder
+        until handoff': a submitted contract's real source file/data
+        physically stays in a real input/ dir until the receiving
+        system's real ACK (not just reaching 'queued' — a genuine
+        acknowledgment the receiving system got it and understood its
+        constraints) moves it — same real, physical-file-lifecycle
+        discipline this codebase already uses elsewhere (COS's real
+        compartment directories, Versionium's real snapshot files), not
+        a new pattern invented for this specifically."
       does: >
         Every cross-system contract handoff is a governed HANDSHAKE through RAID —
         especially Guardian (accepts chunks) and clear-glass. Handshake = the
