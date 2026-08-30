@@ -375,9 +375,29 @@ class ProviderHost {
           const key = `${providerId}:${u.pathname}`;
           if (_greetedChats.has(key)) return;
           _greetedChats.add(key);
+          // §BUILD 2026-08-30 — James: "need wake word to be an event. i
+          // can't tell if it worked or not." Real gap, found directly:
+          // this call already resolves a real, honest {ok, reason}
+          // (injectAnswer's own real fallback when the page hasn't
+          // loaded __nexusInjectAnswer yet, or NexusWake genuinely isn't
+          // installed) — the previous version threw that real result
+          // away with a bare .catch(() => {}), which only ever silenced
+          // a THROWN error, not a resolved failure. Now both a real SSE
+          // event (immediate, for anything watching live) and a real
+          // postEvent (reaches event_log — the same table intelligence's
+          // pattern-scan reads, same real path this session already
+          // traced end to end) report the true outcome either way, not
+          // just on success.
           this.injectAnswer(providerId,
             "You can say \"hey nexus\" anytime you need real-time input or hit something you can't resolve alone — co-pilot is listening."
-          ).catch(() => {}); // best-effort, matches every other fire-and-forget page-side call in this file
+          ).then(result => {
+            const ok = !!result?.ok;
+            this.sse.emit('provider.host.wake-intro', { providerId, ok, reason: result?.reason || null, ts: Date.now() });
+            this.postEvent('provider.host.wake-intro', { providerId, ok, reason: result?.reason || null });
+          }).catch(err => {
+            this.sse.emit('provider.host.wake-intro', { providerId, ok: false, reason: err.message, ts: Date.now() });
+            this.postEvent('provider.host.wake-intro', { providerId, ok: false, reason: err.message });
+          });
         } catch (_) { /* malformed navUrl — real, defensive, matches this file's own convention elsewhere */ }
       });
     }

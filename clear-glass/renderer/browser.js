@@ -1426,6 +1426,7 @@
       <div class="menu-item" data-action="site-settings">🛡 Site Settings</div>
       <div class="menu-item" data-action="history">🕐 History</div>
       <div class="menu-item" data-action="extensions">🧩 Extensions</div>
+      <div class="menu-item" data-action="bgtabs">⬡ Background Tabs</div>
       <div class="menu-item" data-action="settings">☰ Settings</div>
       ${_renderToolMenuRows()}
       <div class="menu-sep"></div>
@@ -1466,6 +1467,10 @@
     panel.querySelector('[data-action="extensions"]').addEventListener('click', () => {
       panel.style.display = 'none';
       _openPanelFromMenu('extensions-panel', _renderExtensionsPanel);
+    });
+    panel.querySelector('[data-action="bgtabs"]').addEventListener('click', () => {
+      panel.style.display = 'none';
+      _openPanelFromMenu('bgtabs-panel', _renderBgTabsPanel);
     });
     panel.querySelector('[data-action="settings"]').addEventListener('click', () => {
       panel.style.display = 'none';
@@ -1871,6 +1876,54 @@
       panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
     }
   }
+  // §BUILD 2026-08-30 — real background-tab manager, James: "need a
+  // background tab manager." Real gap found: cg.bgTabs.open()/close()/
+  // list() were already fully wired end to end on the backend (checked
+  // directly — bgtab:open/close/list, not a broken-wiring bug), but
+  // listBackgroundTabs() only ever returned {agentId}, and nothing
+  // rendered even that. Fixed the backend to also track each tab's real
+  // url (a separate small map, not restructuring bgTabs' existing
+  // shape other real code depends on) and built this panel around it.
+  async function _renderBgTabsPanel() {
+    const panel = document.getElementById('bgtabs-panel');
+    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
+    try {
+      const tabs = await cg.bgTabs.list();
+      const listHtml = !tabs.length
+        ? '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No background tabs open.</div>'
+        : tabs.map(t => `
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
+            <span style="flex:1;overflow:hidden">
+              <div style="font-size:11px;color:var(--text,#ccc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(t.url || '(no url)').replace(/</g, '&lt;')}</div>
+              <div style="font-size:9px;color:var(--text-dim,#999)">${t.agentId}</div>
+            </span>
+            <span data-bgtab-close="${t.agentId}" style="cursor:pointer;opacity:.6;font-size:11px" title="Close">✕</span>
+          </div>`).join('');
+      panel.innerHTML = `
+        <div style="display:flex;gap:4px;padding:2px 2px 6px">
+          <input id="bgtabs-new-url" type="text" placeholder="https://... (open in background)" style="flex:1;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:11px" />
+          <button id="bgtabs-open-btn" style="font-size:11px;padding:0 8px;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;cursor:pointer">+</button>
+        </div>
+        ${listHtml}`;
+      document.getElementById('bgtabs-open-btn').addEventListener('click', async () => {
+        const url = document.getElementById('bgtabs-new-url').value.trim();
+        if (!url) return;
+        await cg.bgTabs.open({ url });
+        _renderBgTabsPanel();
+      });
+      panel.querySelectorAll('[data-bgtab-close]').forEach(el => el.addEventListener('click', async () => {
+        await cg.bgTabs.close(el.dataset.bgtabClose);
+        _renderBgTabsPanel();
+      }));
+    } catch (err) {
+      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('bgtabs-panel');
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
+  });
+
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('extensions-panel');
     if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';

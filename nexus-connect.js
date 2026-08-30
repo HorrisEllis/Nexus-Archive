@@ -297,22 +297,11 @@ function _scheduleRegisterRetry(systemId, port, meta, components) {
 
 // ── Heartbeat — all systems ping orchestrator every 10s ───────────────────────
 function startHeartbeat(systemId, port) {
-  // §MIGRATED 2026-08-29 — nexus-connect.js's own startHeartbeat() is a
-  // SHARED utility, not a per-system duplicate — confirmed 3 real, live
-  // callers (loom/server.js, ollama/server.js, copilot/server.js), all
-  // of which discard the return value entirely (checked directly, not
-  // assumed — none capture or call anything on it), so the internal
-  // implementation is free to change without touching any caller.
-  // Replaces the hand-rolled setInterval+_req pattern with real,
-  // shared orchestrator/lib/pulse.js's createPulse() — real latency
-  // tracking, real online/offline transitions, real missed-beat
-  // logging, none of which this had. One real fix here migrates all 3
-  // callers at once, higher leverage than migrating each individually
-  // (the earlier real migrations — clear-glass, cortex, idearium — each
-  // had their OWN separate hand-rolled copy; this one function serving
-  // 3 systems is a different, better-leveraged case).
-  const { createPulse } = require('./orchestrator/lib/pulse.js');
-  return createPulse({ systemId, port });
+  const ping = () => _req('orchestrator','POST','/api/heartbeat',{systemId,port,status:'online'},2000).catch(()=>{});
+  ping(); // immediate on call
+  const iv = setInterval(ping, 10000);
+  if (iv.unref) iv.unref();
+  return iv;
 }
 
 // ── postBridge — post an event to Bridge SSE/ledger ───────────────────────────

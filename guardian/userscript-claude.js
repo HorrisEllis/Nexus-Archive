@@ -19,6 +19,12 @@
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NCP_URL    = 'http://127.0.0.1:7820';
+// §BUILD 2026-08-30 — James: "changing ollama to co-pilot. hook it into
+// the copilot cli or server.js." Real port confirmed directly from
+// copilot/config.js (PORT: process.env.COPILOT_PORT || '3750'), not
+// guessed — matches the same real default already used elsewhere in
+// this codebase for copilot's own POST /api/prompt route.
+const COPILOT_URL = 'http://127.0.0.1:3750';
 const NCP_CHANNEL = `${NCP_URL}/channel`;
 const NCP_RESULT  = `${NCP_URL}/result`;
 const NCP_HB      = `${NCP_URL}/heartbeat`;
@@ -1127,7 +1133,16 @@ async function renderLedger() {
   const a = document.getElementById('__g10ledger__'); if (!a) return;
   a.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:10px 12px">Loading ledger…</div>';
   try {
-    const r = await fetch(`${CORTEX_URL}/api/events?limit=30&source=userscript-claude`, { signal:AbortSignal.timeout(2000) });
+    // §BUILD 2026-08-30 — James: "they need updated and completely
+    // agent and nexus aware." Real bug found: source=userscript-claude
+    // meant this tab could NEVER show anything but this one script's
+    // own narrow slice of activity — confirmed directly against
+    // cortex/boot.js's real /api/events route, where `source` is a
+    // genuinely optional filter (omitted = the real, full, system-wide
+    // event_log, exactly what a "Ledger" tab should show). This is
+    // almost certainly why the screenshot showed "No ledger entries"
+    // despite cortex having real data.
+    const r = await fetch(`${CORTEX_URL}/api/events?limit=30`, { signal:AbortSignal.timeout(2000) });
     const d = r.ok ? await r.json() : { rows:[] };
     const rows = (d.rows || d.events || []).slice(0,30);
     if (!rows.length) { a.innerHTML='<div style="color:#1e293b;font-size:9px;padding:20px;text-align:center">No ledger entries</div>'; return; }
@@ -1393,6 +1408,32 @@ function renderSys() {
     </div>`;
   }
   html += '</div>';
+  // §BUILD 2026-08-30 — James: "they need updated and completely agent
+  // and nexus aware." Real gap found: guardian/server.js's own
+  // dashboard already fetches these exact real endpoints (GET
+  // /providers, GET /jobs) and has for a while — this panel, embedded
+  // in the actual chat page instead of a separate dashboard tab, never
+  // showed any of it. Reused the same real endpoints and shape, not a
+  // second implementation — id="__g10sys-agents__" filled in
+  // asynchronously below since fetch can't block this synchronous
+  // render.
+  html += `<div class="g10sys-section">
+    <div class="g10sys-title">Agents &amp; Jobs (NCP)</div>
+    <div id="__g10sys-agents__"><div class="g10sys-row"><span class="g10sys-label" style="color:#1e293b">loading…</span></div></div>
+  </div>`;
+  // §BUILD 2026-08-30 — closes GA3_guardian_userscript_capability_wiring's
+  // real, confirmed open item: "guardian and clear-glass have ZERO
+  // references to tool-index anywhere... the userscript layer cannot
+  // see or use the same real tools co-pilot already has." Found the
+  // backend HALF of this was already real (guardian/server.js's own
+  // GET /api/tools, built 2026-08-17, reusing lib/agent-tools/index.js's
+  // exact same TOOLS map co-pilot uses — not a second implementation) —
+  // but confirmed directly that nothing in this file ever called it.
+  // This is that missing userscript-side half.
+  html += `<div class="g10sys-section">
+    <div class="g10sys-title">Tools (agent-tools)</div>
+    <div id="__g10sys-tools__"><div class="g10sys-row"><span class="g10sys-label" style="color:#1e293b">loading…</span></div></div>
+  </div>`;
   html += `<div class="g10sys-section">
     <div class="g10sys-title">Connection</div>
     <div class="g10sys-row"><span class="g10sys-label">NCP</span><span class="g10sys-val">${NCP_URL}</span></div>
@@ -1414,6 +1455,90 @@ function renderSys() {
   const refreshBtn = `<div style="padding:8px 12px"><button onclick="window.__g10pollSys?.()" style="background:none;border:1px solid rgba(255,255,255,.08);color:#475569;border-radius:3px;padding:3px 10px;font:inherit;font-size:9px;cursor:pointer;width:100%">↺ Refresh</button></div>`;
   a.innerHTML = html + refreshBtn;
   window.__g10pollSys = pollSystemStatus;
+  _refreshSysAgents(a);
+  _refreshSysTools(a);
+}
+
+/**
+ * _refreshSysAgents(a) — real, live providers + jobs, same proven
+ * endpoints guardian/server.js's own dashboard already uses
+ * successfully (GET /providers, GET /jobs?limit=8). Real, honest
+ * failure: a fetch failure shows a real error line, not a silent
+ * empty section that reads as "no agents exist."
+ */
+async function _refreshSysAgents(a) {
+  const el = a.querySelector('#__g10sys-agents__'); if (!el) return;
+  try {
+    const [pr, jr] = await Promise.all([
+      fetch(`${NCP_URL}/providers`, { signal: AbortSignal.timeout(3000) }).then(x => x.json()),
+      fetch(`${NCP_URL}/jobs?limit=6`, { signal: AbortSignal.timeout(3000) }).then(x => x.json()),
+    ]);
+    const provEntries = Object.entries(pr.providers || {});
+    const jobs = jr.jobs || [];
+    let html = '';
+    if (provEntries.length) {
+      html += provEntries.map(([name, status]) => `<div class="g10sys-row">
+        <div class="g10sys-dot" style="background:${status==='connected'?'#22c55e':'#64748b'}"></div>
+        <span class="g10sys-label">${escHtml(name)}</span>
+        <span class="g10sys-val ${status==='connected'?'g10online':'g10offline'}">${escHtml(status)}</span>
+      </div>`).join('');
+    } else {
+      html += `<div class="g10sys-row"><span class="g10sys-label" style="color:#1e293b">No providers connected</span></div>`;
+    }
+    if (jobs.length) {
+      html += `<div style="margin-top:6px;color:#334466;font-size:9px;padding:2px 0">Recent jobs</div>`;
+      html += jobs.map(j => `<div class="g10sys-row">
+        <span class="g10sys-label" style="color:#94a3b8">#${escHtml((j.id||'').slice(0,8))}</span>
+        <span class="g10sys-val" style="color:${j.provider==='claude'?'#a78bfa':'#34d399'}">${escHtml(j.provider||'—')}</span>
+        <span class="g10sys-val ${j.status==='complete'||j.status==='ok'?'g10online':j.status==='error'?'g10offline':''}">${escHtml(j.status||'—')}</span>
+      </div>`).join('');
+    }
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<div class="g10sys-row"><span class="g10sys-val g10offline">agents/jobs unreachable — ${escHtml(e.message)}</span></div>`;
+  }
+}
+
+/**
+ * _refreshSysTools(a) — real, live tool list from guardian's own real
+ * GET /api/tools (built 2026-08-17, reuses lib/agent-tools/index.js's
+ * exact TOOLS map — the same real engine co-pilot already calls, not a
+ * second implementation). Closes GA3's confirmed real gap: the
+ * userscript layer never had any way to see these tools exist. A tool
+ * name is clickable — fills the ask-box below with a real, ready-to-
+ * edit POST /api/tools/:name call rather than guessing at each tool's
+ * own real parameter shape, which varies per tool and isn't safe to
+ * invoke blind with an empty body.
+ */
+async function _refreshSysTools(a) {
+  const el = a.querySelector('#__g10sys-tools__'); if (!el) return;
+  try {
+    const r = await fetch(`${NCP_URL}/api/tools`, { signal: AbortSignal.timeout(3000) }).then(x => x.json());
+    const tools = r.tools || [];
+    if (!tools.length) {
+      el.innerHTML = `<div class="g10sys-row"><span class="g10sys-label" style="color:#1e293b">No tools registered</span></div>`;
+      return;
+    }
+    el.innerHTML = `<div class="g10sys-row"><span class="g10sys-label" style="color:#334466">${tools.length} real tool${tools.length===1?'':'s'} available</span></div>` +
+      tools.slice(0, 12).map(t => `<div class="g10sys-row" style="cursor:pointer" data-tool="${escHtml(t.name)}" title="${escHtml(t.description||'')}">
+        <span class="g10sys-label" style="color:#94a3b8">${escHtml(t.name)}</span>
+        <span class="g10sys-val" style="color:#1e293b;font-size:8px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.description||'')}</span>
+      </div>`).join('');
+    el.querySelectorAll('[data-tool]').forEach(row => row.addEventListener('click', () => {
+      // §ROBUST — __nx_query__ only exists once the NEXUS tab has
+      // rendered at least once (real DOM elements, not recreated on
+      // every tab switch — confirmed directly against switchTab()).
+      // Switch there first rather than silently doing nothing if
+      // someone clicks a tool from SYS without having visited NEXUS yet.
+      if (!document.getElementById('__nx_query__')) switchTab('nexus');
+      const qi = document.getElementById('__nx_query__');
+      if (!qi) return; // real, defensive last resort — should be unreachable given the switch above
+      qi.value = `POST ${NCP_URL}/api/tools/${row.dataset.tool} — fill in real params, then send manually (varies per tool, not safe to guess)`;
+      qi.focus();
+    }));
+  } catch (e) {
+    el.innerHTML = `<div class="g10sys-row"><span class="g10sys-val g10offline">tools unreachable — ${escHtml(e.message)}</span></div>`;
+  }
 }
 
 // ── Options tab ───────────────────────────────────────────────────────────────
@@ -1584,6 +1709,12 @@ function _nexusPullContext(query) {
 // there too) — prefer any qwen2.5-coder-family model actually installed,
 // then any qwen, then mistral, then whatever's first — rather than trust a
 // hardcoded guess of what "the" model is.
+//
+// §BUILD 2026-08-30 — James, correcting an earlier misread this same day:
+// "It's supposed to be able to toggle between ollama and guardian." An
+// earlier version of this pass REMOVED this function believing "changing
+// ollama to co-pilot" meant full replacement — wrong, and restored here
+// verbatim. The real intent was always a toggle, not a replacement.
 function _nexusPickOllamaModel() {
   const models = _nexus.ollamaModels || [];
   if (!models.length) return 'qwen2.5-coder:1.5b'; // §1.2 — honest last-resort guess, only when discovery itself has never succeeded
@@ -1622,7 +1753,56 @@ function _nexusOllamaQuery(prompt, cb) {
   });
 }
 
+// §BUILD 2026-08-30 — James: "changing ollama to co-pilot. hook it into
+// the copilot cli or server.js." The REAL, corrected intent (see the
+// note above _nexusPickOllamaModel): a second, genuinely NEXUS-aware
+// backend a person can TOGGLE to, alongside Ollama, not instead of it.
+// copilot's real POST /api/prompt (confirmed directly against copilot/
+// server.js, the same route this session already wired guardian-
+// picker.js's "Co-pilot CLI" link target to) does real context
+// assembly (7 real context layers, per its own response shape), real
+// chat_log persistence, and real model routing via lifeline — asking
+// through co-pilot makes the query part of NEXUS's own real memory,
+// something raw Ollama structurally can't do. _nexusQueryBackend()
+// below picks between this and _nexusOllamaQuery based on the real,
+// persisted toggle.
+function _nexusCopilotQuery(prompt, cb) {
+  GM_xmlhttpRequest({
+    method: 'POST',
+    url: COPILOT_URL + '/api/prompt',
+    headers: { 'Content-Type': 'application/json' },
+    data: JSON.stringify({
+      prompt,
+      channel: PROVIDER + '-userscript',
+      sessionId: MY_TAB,
+      intent: 'ask',
+    }),
+    timeout: 30000,
+    onload: (r) => {
+      try {
+        const d = JSON.parse(r.responseText);
+        if (!d.ok) { cb(d.error || 'copilot returned an error', null); return; }
+        _nexus.copilotOk = true;
+        cb(null, d.text || '');
+      } catch(e) { cb(e.message, null); }
+    },
+    onerror: () => {
+      _nexus.copilotOk = false;
+      cb('Co-pilot unreachable', null);
+    },
+    ontimeout: () => {
+      _nexus.copilotOk = false;
+      cb('Co-pilot timeout', null);
+    },
+  });
+}
+
 // Check Ollama availability on boot
+// Check Ollama availability on boot
+// §BUILD 2026-08-30 — restored to its real, original behavior after an
+// earlier misread this same day replaced it outright — see the note
+// above _nexusPickOllamaModel(). This checks Ollama's own real
+// /api/tags again, including real model discovery.
 function _nexusCheckOllama() {
   GM_xmlhttpRequest({
     method: 'GET', url: 'http://127.0.0.1:11434/api/tags',
@@ -1637,6 +1817,23 @@ function _nexusCheckOllama() {
     },
     onerror: () => { _nexus.ollamaOk = false; if (activeTab==='nexus') renderNexus(); },
     ontimeout:()=> { _nexus.ollamaOk = false; },
+  });
+}
+
+// §BUILD 2026-08-30 — real, separate co-pilot health check — genuinely
+// independent from _nexusCheckOllama above, not a shared/overloaded
+// flag. Probes copilot's real GET /health (confirmed directly in
+// copilot/server.js).
+function _nexusCheckCopilot() {
+  GM_xmlhttpRequest({
+    method: 'GET', url: COPILOT_URL + '/health',
+    timeout: 3000,
+    onload:  () => {
+      _nexus.copilotOk = true;
+      if (activeTab==='nexus') renderNexus();
+    },
+    onerror: () => { _nexus.copilotOk = false; if (activeTab==='nexus') renderNexus(); },
+    ontimeout:()=> { _nexus.copilotOk = false; },
   });
 }
 
@@ -1699,141 +1896,9 @@ function _nexusStartObserver() {
   _nexus.observer.observe(target, { childList: true, subtree: true, characterData: false });
 }
 
-// ── Render NEXUS tab ──────────────────────────────────────────────────────────
-function renderNexus() {
-  const el = document.getElementById('__g10nexus__');
-  if (!el) return;
-
-  const msgs    = _nexusGetMessages();
-  const signals = _nexus.signals.slice(-5);
-  const context = _nexus.context || [];
-  const ollamaStatus = _nexus.ollamaOk === null ? '...' : _nexus.ollamaOk ? '✓ online' : '✗ offline';
-  const ollamaCol    = _nexus.ollamaOk ? '#00ff88' : _nexus.ollamaOk === false ? '#ff2d55' : '#818cf8';
-
-  el.innerHTML = '';
-
-  const pad = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06)';
-  const dim = 'color:#334466;font-size:9px';
-  const bright = 'color:#b8cfe0;font-size:10px';
-
-  // ── Status bar ───────────────────────────────────────────────────────────────
-  const status = document.createElement('div');
-  status.style.cssText = pad + ';display:flex;gap:12px;align-items:center;flex-wrap:wrap';
-  status.innerHTML =
-    '<span style="' + dim + ';text-transform:uppercase;letter-spacing:.08em">NEXUS</span>' +
-    '<span style="font:9px monospace;color:' + ollamaCol + '">ollama ' + ollamaStatus + '</span>' +
-    '<span style="' + dim + '">' + msgs.length + ' messages</span>' +
-    '<span style="' + dim + '">' + signals.length + ' signals</span>' +
-    '<span style="' + dim + '">' + context.length + ' context hits</span>' +
-    '<button style="margin-left:auto;background:none;border:1px solid rgba(129,140,248,.3);color:#818cf8;border-radius:3px;padding:2px 8px;font:9px monospace;cursor:pointer" ' +
-    'onclick="_nexusCheckOllama()">↺ ping ollama</button>';
-  el.appendChild(status);
-
-  // ── BDA Signals ───────────────────────────────────────────────────────────────
-  if (signals.length) {
-    const sdiv = document.createElement('div');
-    sdiv.style.cssText = pad;
-    sdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">BDA SIGNALS</div>';
-    const latest = signals[signals.length - 1];
-    const axes = ['valence','certainty','openness','tension','selfref'];
-    const sigRow = document.createElement('div');
-    sigRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
-    for (const ax of axes) {
-      const v = latest[ax] ?? 0;
-      const pct = Math.round(v * 100);
-      const col = ax === 'tension' ? (pct > 60 ? '#ff2d55' : '#818cf8') :
-                  ax === 'valence' ? (pct > 50 ? '#00ff88' : '#ff6b35') : '#818cf8';
-      const chip = document.createElement('div');
-      chip.style.cssText = 'font:9px monospace;color:' + col + ';border:1px solid ' + col + ';border-radius:3px;padding:2px 6px;opacity:.8';
-      chip.textContent = ax + ':' + pct + '%';
-      sigRow.appendChild(chip);
-    }
-    // Regime
-    if (latest.regime) {
-      const reg = document.createElement('div');
-      reg.style.cssText = 'margin-top:5px;font:9px monospace;color:#ff6b35';
-      reg.textContent = 'regime: ' + latest.regime;
-      sdiv.appendChild(sigRow);
-      sdiv.appendChild(reg);
-    } else {
-      sdiv.appendChild(sigRow);
-    }
-    el.appendChild(sdiv);
-  }
-
-  // ── Semantic context from NEXUS memory ───────────────────────────────────────
-  if (context.length) {
-    const cdiv = document.createElement('div');
-    cdiv.style.cssText = pad;
-    cdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">RELEVANT MEMORY</div>';
-    for (const hit of context.slice(0, 4)) {
-      const pct = Math.round((hit.snr || hit.similarity || 0) * 100);
-      const col = pct >= 85 ? '#00ff88' : pct >= 72 ? '#00d4ff' : '#818cf8';
-      const row = document.createElement('div');
-      row.style.cssText = 'margin-bottom:4px;padding:5px 8px;background:rgba(0,0,0,.3);border-radius:3px;border-left:2px solid ' + col;
-      row.innerHTML =
-        '<div style="font:9px monospace;color:' + col + '">' + pct + '% · ' + (hit.type || hit.table || '?') + '</div>' +
-        '<div style="font:10px monospace;color:#5a7a96;margin-top:2px;line-height:1.4">' +
-        (hit.text || '').slice(0, 100) + '</div>';
-      cdiv.appendChild(row);
-    }
-    // Inject context button
-    const injectBtn = document.createElement('button');
-    injectBtn.style.cssText = 'margin-top:6px;background:none;border:1px solid rgba(0,212,255,.3);color:#00d4ff;border-radius:3px;padding:3px 10px;font:9px monospace;cursor:pointer;width:100%';
-    injectBtn.textContent = '⬡ inject context into next prompt';
-    injectBtn.onclick = () => _nexusInjectContext();
-    cdiv.appendChild(injectBtn);
-    el.appendChild(cdiv);
-  }
-
-  // ── Ollama quick-query ────────────────────────────────────────────────────────
-  const qdiv = document.createElement('div');
-  qdiv.style.cssText = pad;
-  qdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">OLLAMA DIRECT</div>';
-  const qInput = document.createElement('textarea');
-  qInput.id = '__nx_query__';
-  qInput.placeholder = 'Ask Ollama directly (qwen2.5-coder:1.5b)…';
-  qInput.style.cssText = 'width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.07);color:#b8cfe0;font:10px monospace;padding:6px 8px;border-radius:3px;resize:none;height:52px;outline:none;box-sizing:border-box';
-  const qBtn = document.createElement('button');
-  qBtn.textContent = '↗ ask ollama';
-  qBtn.style.cssText = 'margin-top:4px;background:none;border:1px solid rgba(0,255,136,.3);color:#00ff88;border-radius:3px;padding:3px 10px;font:9px monospace;cursor:pointer';
-  const qOut = document.createElement('div');
-  qOut.id = '__nx_qout__';
-  qOut.style.cssText = 'margin-top:6px;font:10px monospace;color:#5a7a96;line-height:1.5;min-height:20px';
-  qBtn.onclick = () => {
-    const q = document.getElementById('__nx_query__')?.value?.trim();
-    if (!q) return;
-    qOut.style.color = '#818cf8'; qOut.textContent = '⟳ querying ollama…';
-    _nexusOllamaQuery(q, (err, text) => {
-      const out = document.getElementById('__nx_qout__');
-      if (!out) return;
-      if (err) { out.style.color='#ff2d55'; out.textContent='✗ ' + err; }
-      else      { out.style.color='#b8cfe0'; out.textContent = text.slice(0, 400); }
-    });
-  };
-  qdiv.append(qInput, qBtn, qOut);
-  el.appendChild(qdiv);
-
-  // ── Recent conversation summary ────────────────────────────────────────────
-  if (msgs.length) {
-    const mdiv = document.createElement('div');
-    mdiv.style.cssText = 'padding:8px 12px';
-    mdiv.innerHTML = '<div style="' + dim + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">CONVERSATION (' + msgs.length + ')</div>';
-    for (const m of msgs.slice(-4)) {
-      const row = document.createElement('div');
-      row.style.cssText = 'margin-bottom:3px;display:flex;gap:6px';
-      const role = document.createElement('span');
-      role.style.cssText = 'font:8px monospace;color:' + (m.role==='user'?'#00d4ff':'#00ff88') + ';width:52px;flex-shrink:0;padding-top:1px';
-      role.textContent = m.role.toUpperCase();
-      const text = document.createElement('span');
-      text.style.cssText = 'font:10px monospace;color:#334466;line-height:1.4';
-      text.textContent = m.text.slice(0, 80) + (m.text.length > 80 ? '…' : '');
-      row.append(role, text);
-      mdiv.appendChild(row);
-    }
-    el.appendChild(mdiv);
-  }
-}
+// ── (dead, duplicate renderNexus removed here — see the real, live one below;
+//    the old copy was captured into _renderNexusOrig but never actually called,
+//    confirmed directly before removing it, not assumed) ──────────────────────
 
 // ── Inject NEXUS context into the Claude input field ─────────────────────────
 function _nexusInjectContext() {
@@ -1855,12 +1920,11 @@ function _nexusInjectContext() {
   document.execCommand('insertText', false, ctx + (existing ? '\n\n' + existing : ''));
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-function _nexusInit() {
-  _nexus.sessionId = MY_TAB + '-' + Date.now().toString(36);
-  _nexusCheckOllama();
-  setTimeout(_nexusStartObserver, 2000); // wait for DOM to settle
-}
+// §BUGFIX 2026-08-30 — the first, dead _nexusInit() removed here. Confirmed
+//    safe first: the surviving version below is a strict superset (same
+//    real logic, plus the real memory/heal boot calls) — nothing lost,
+//    unlike the earlier renderNexus duplicate where the wrap was left
+//    unfinished and real functionality had silently stopped running.
 
 // ══ NEXUS HOOKS — Memory · RAID · Self-Heal ═════════════════════════════════
 // The userscript is now a full NEXUS agent.
@@ -2294,11 +2358,14 @@ function renderNexus() {
   const msgs = _nexusGetMessages();
   const os   = _nexus.ollamaOk===null?'...':_nexus.ollamaOk?'✓':'✗';
   const oc   = _nexus.ollamaOk?'#00ff88':_nexus.ollamaOk===false?'#ff2d55':'#818cf8';
+  const cs   = _nexus.copilotOk===null||_nexus.copilotOk===undefined?'...':_nexus.copilotOk?'✓':'✗';
+  const cc   = _nexus.copilotOk?'#00d4ff':_nexus.copilotOk===false?'#ff2d55':'#818cf8';
   const sb   = document.createElement('div');
   sb.style.cssText = 'padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(0,0,0,.2)';
   sb.innerHTML =
     '<span style="color:#00d4ff;font:9px monospace;font-weight:700">⬡ NEXUS</span>' +
     '<span style="font:9px monospace;color:' + oc + '">ollama ' + os + '</span>' +
+    '<span style="font:9px monospace;color:' + cc + '">co-pilot ' + cs + '</span>' +
     '<span style="color:#1e3050;font:9px monospace">' + msgs.length + ' msgs</span>' +
     '<span style="color:#1e3050;font:9px monospace">' + _heal.gaps.length + ' gaps</span>' +
     '<span style="color:#1e3050;font:9px monospace">' + _mem.working.length + ' mem</span>' +
@@ -2353,23 +2420,46 @@ function renderNexus() {
   // Self-Heal
   _renderNexusHeal(el);
 
-  // Ollama direct (compact)
+  // §BUILD 2026-08-30 — James, correcting an earlier misread: "It's
+  // supposed to be able to toggle between ollama and guardian." Real
+  // toggle, persisted via GM_setValue same as every other real setting
+  // in this file (OPTIONS above), just not folded into that boolean-
+  // checkbox array since this is a two-way pick, not an on/off switch.
+  // Defaults to 'ollama' — the original, established behavior before
+  // any of this — so nobody's existing workflow changes unless they
+  // actually flip it.
   const qdiv=document.createElement('div');
   qdiv.style.cssText='padding:8px 12px';
-  qdiv.innerHTML='<div style="color:#334466;font:8px monospace;margin-bottom:4px;text-transform:uppercase">OLLAMA DIRECT</div>';
+  const backend = GM_getValue('g10_queryBackend', 'ollama');
+  qdiv.innerHTML='<div style="color:#334466;font:8px monospace;margin-bottom:4px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center">'
+    + '<span>ASK</span>'
+    + '<span style="display:flex;border:1px solid rgba(255,255,255,.1);border-radius:3px;overflow:hidden">'
+    + '<button id="__nx_be_ollama__" style="font:8px monospace;padding:2px 6px;border:none;cursor:pointer;background:'+(backend==='ollama'?'rgba(0,255,136,.15)':'transparent')+';color:'+(backend==='ollama'?'#00ff88':'#334466')+'">Ollama</button>'
+    + '<button id="__nx_be_copilot__" style="font:8px monospace;padding:2px 6px;border:none;cursor:pointer;background:'+(backend==='copilot'?'rgba(0,212,255,.15)':'transparent')+';color:'+(backend==='copilot'?'#00d4ff':'#334466')+'">Co-pilot</button>'
+    + '</span></div>';
   const qi=document.createElement('textarea');qi.id='__nx_query__';
-  qi.placeholder='qwen2.5-coder:1.5b…';
+  qi.placeholder = backend === 'copilot' ? 'ask co-pilot anything…' : 'qwen2.5-coder:1.5b…';
   qi.style.cssText='width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.07);color:#b8cfe0;font:9px monospace;padding:5px 7px;border-radius:3px;resize:none;height:44px;outline:none;box-sizing:border-box';
   const qb=document.createElement('button');qb.textContent='↗ ask';
   qb.style.cssText='margin-top:3px;background:none;border:1px solid rgba(0,255,136,.2);color:#00ff88;border-radius:3px;padding:2px 8px;font:8px monospace;cursor:pointer';
   const qo=document.createElement('div');qo.id='__nx_qout__';
   qo.style.cssText='margin-top:4px;font:9px monospace;color:#334466;line-height:1.5;min-height:16px';
-  qb.onclick=()=>{const q=document.getElementById('__nx_query__')?.value?.trim();if(!q)return;qo.style.color='#818cf8';qo.textContent='⟳';_nexusOllamaQuery(q,(err,text)=>{const o=document.getElementById('__nx_qout__');if(!o)return;if(err){o.style.color='#ff2d55';o.textContent='✗ '+err;}else{o.style.color='#b8cfe0';o.textContent=text.slice(0,400);}});};
+  qb.onclick=()=>{
+    const q=document.getElementById('__nx_query__')?.value?.trim();if(!q)return;
+    qo.style.color='#818cf8';qo.textContent='⟳';
+    const query = GM_getValue('g10_queryBackend','ollama') === 'copilot' ? _nexusCopilotQuery : _nexusOllamaQuery;
+    query(q,(err,text)=>{const o=document.getElementById('__nx_qout__');if(!o)return;if(err){o.style.color='#ff2d55';o.textContent='✗ '+err;}else{o.style.color='#b8cfe0';o.textContent=text.slice(0,400);}});
+  };
   qdiv.append(qi,qb,qo);el.appendChild(qdiv);
+  // Toggle handlers — set the real, persisted value and re-render so
+  // the active button and placeholder both reflect it immediately.
+  qdiv.querySelector('#__nx_be_ollama__').onclick = () => { GM_setValue('g10_queryBackend','ollama'); if(activeTab==='nexus') renderNexus(); };
+  qdiv.querySelector('#__nx_be_copilot__').onclick = () => { GM_setValue('g10_queryBackend','copilot'); if(activeTab==='nexus') renderNexus(); };
 }
 
 function _nexusRefreshAll() {
   _nexusCheckOllama();
+  _nexusCheckCopilot(); // §BUILD 2026-08-30 — both real backends checked, toggle picks which is used
   _memFetch(() => { if(activeTab==='nexus') renderNexus(); });
   _healFetch(() => { if(activeTab==='nexus') renderNexus(); });
   const msgs = _nexusGetMessages();
@@ -2382,6 +2472,7 @@ const _nexusInitBase = _nexusInit;
 function _nexusInit() {
   _nexus.sessionId = MY_TAB + '-' + Date.now().toString(36);
   _nexusCheckOllama();
+  _nexusCheckCopilot(); // §BUILD 2026-08-30 — both real backends checked, toggle picks which is used
   setTimeout(_nexusStartObserver, 2000);
   setTimeout(() => { _memFetch(); _healFetch(); }, 3000);
 }

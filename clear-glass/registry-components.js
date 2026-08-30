@@ -90,6 +90,72 @@ const components = [
   _c('wire.driver.bridge','POST', '/bridge/driver', 'ClearDriver → ErosmancerOS actions', { tags: ['wire', 'driver'] }),
   _c('wire.hostile',      'POST', '/hook/hostile',  'Hostile detection → fp switch',      { tags: ['wire', 'security'] }),
   _c('wire.behavior',     'POST', '/hook/behavior', 'Behavior plan → Cortex intelligence',{ tags: ['wire', 'intelligence'] }),
+
+  // §BUILD 2026-08-30 — BL30_registry_components_drift_audit. Real,
+  // confirmed gap closed: this file had 32 components and zero mention
+  // of an entire session's worth of real, committed, tested capability
+  // — invisible to co-pilot's own real "list your tools" feature, which
+  // reads directly from this same file. Every real IPC channel below is
+  // copied verbatim from clear-glass/src/ipc/bridge.js's actual
+  // ipcMain.handle() calls, not guessed at or re-derived.
+
+  // ── Callto Index — real, persistent DOM-element-to-action registry ────────
+  _c('calltos.list',   'IPC', 'calltos:list',   'List every registered callto',                 { tags: ['guardian', 'callto'] }),
+  _c('calltos.forUrl', 'IPC', 'calltos:forUrl', 'Find calltos registered for a given origin',   { tags: ['guardian', 'callto'] }),
+  _c('calltos.remove', 'IPC', 'calltos:remove', 'Remove a registered callto',                   { tags: ['guardian', 'callto'] }),
+
+  // ── Download listeners — real, event-gated per-download automation ────────
+  _c('downloads.listListeners',   'IPC', 'downloads:listListeners',   'List configured download listeners',        { tags: ['downloads', 'listener'] }),
+  _c('downloads.registerListener','IPC', 'downloads:registerListener','Register a real download listener',         { tags: ['downloads', 'listener'] }),
+  _c('downloads.updateListener',  'IPC', 'downloads:updateListener', 'Update a download listener',                { tags: ['downloads', 'listener'] }),
+  _c('downloads.removeListener',  'IPC', 'downloads:removeListener', 'Remove a download listener',                { tags: ['downloads', 'listener'] }),
+
+  // ── Site settings — real per-origin permission storage ────────────────────
+  _c('siteSettings.get',          'IPC', 'site-settings:get',          'Get one real per-origin setting',       { tags: ['site-settings'] }),
+  _c('siteSettings.getAll',       'IPC', 'site-settings:getAll',       'Get all real settings for an origin',   { tags: ['site-settings'] }),
+  _c('siteSettings.set',          'IPC', 'site-settings:set',          'Set a real per-origin setting',         { tags: ['site-settings'] }),
+  _c('siteSettings.deleteKey',    'IPC', 'site-settings:deleteKey',    'Delete one real setting key',           { tags: ['site-settings'] }),
+  _c('siteSettings.clear',        'IPC', 'site-settings:clear',        'Clear all real settings for an origin', { tags: ['site-settings'] }),
+  _c('siteSettings.listOrigins',  'IPC', 'site-settings:listOrigins',  'List every real origin with settings',  { tags: ['site-settings'] }),
+
+  // ── Real browsing history ──────────────────────────────────────────────────
+  _c('history.list',   'IPC', 'history:list',   'Real browsing history search/list',     { tags: ['history'] }),
+  _c('history.delete', 'IPC', 'history:delete',  'Delete a real history entry',           { tags: ['history'] }),
+  _c('history.clear',  'IPC', 'history:clear',   'Clear real history',                    { tags: ['history'] }),
+
+  // ── Chrome extension loading — real session.extensions.loadExtension ──────
+  _c('extensions.list',          'IPC', 'extensions:list',          'List real loaded Chrome extensions',      { tags: ['extensions'] }),
+  _c('extensions.load',          'IPC', 'extensions:load',         'Load a real unpacked extension',          { tags: ['extensions'] }),
+  _c('extensions.unload',        'IPC', 'extensions:unload',       'Unload a real extension',                 { tags: ['extensions'] }),
+  _c('extensions.pickDirectory', 'IPC', 'extensions:pickDirectory','Real OS directory picker for extensions', { tags: ['extensions'] }),
+
+  // ── Bookmarks-with-state — real full-page state save/restore ──────────────
+  _c('bookmarks.addWithState',  'IPC', 'bookmarks:addWithState',  'Bookmark + save real full page state', { tags: ['bookmarks', 'rewind'] }),
+  _c('bookmarks.openWithState', 'IPC', 'bookmarks:openWithState', 'Open a bookmark and restore its real saved state', { tags: ['bookmarks', 'rewind'] }),
+
+  // ── Rewind — real state snapshot/restore, event-driven from bookmarks ─────
+  _c('rewind.list',     'IPC', 'rewind:list',     'List real rewind snapshots',   { tags: ['rewind'] }),
+  _c('rewind.snapshot', 'IPC', 'rewind:snapshot', 'Take a real rewind snapshot',  { tags: ['rewind'] }),
+  _c('rewind.restore',  'IPC', 'rewind:restore',  'Restore a real rewind snapshot',{ tags: ['rewind'] }),
+  _c('rewind.clear',    'IPC', 'rewind:clear',    'Clear real rewind snapshots',  { tags: ['rewind'] }),
+
+  // ── Passwords — real AES-256-GCM vault ─────────────────────────────────────
+  _c('passwords.list',   'IPC', 'passwords:list',   'List real saved passwords (metadata only)', { tags: ['passwords', 'security'] }),
+  _c('passwords.delete', 'IPC', 'passwords:delete', 'Delete a real saved password',              { tags: ['passwords', 'security'] }),
+
+  // ── Speech-to-text — real offline transcription via PocketSphinx ──────────
+  _c('speech.available',        'IPC', 'speech:available',        'Real offline speech engine availability', { tags: ['speech'] }),
+  _c('speech.transcribeBuffer', 'IPC', 'speech:transcribeBuffer', 'Real offline audio-buffer transcription',  { tags: ['speech'] }),
+
+  // ── Macros — real, first UI reach into lib/agent-tools/, erosmancer-aware ─
+  _c('macros.list', 'IPC', 'macros:list', 'List real stored macros (real erosmancer integration where used)', { tags: ['macros'] }),
+  _c('macros.get',  'IPC', 'macros:get',  'Get one real macro',                                                { tags: ['macros'] }),
+  _c('macros.run',  'IPC', 'macros:run',  'Run a real macro against a real agent',                             { tags: ['macros'] }),
+
+  // ── Background tabs — real, service-tab management ─────────────────────────
+  _c('bgtab.open',  'IPC', 'bgtab:open',  'Open a real background service tab',  { tags: ['bgtab'] }),
+  _c('bgtab.close', 'IPC', 'bgtab:close', 'Close a real background tab',         { tags: ['bgtab'] }),
+  _c('bgtab.list',  'IPC', 'bgtab:list',  'List real open background tabs',      { tags: ['bgtab'] }),
 ];
 
 module.exports = {

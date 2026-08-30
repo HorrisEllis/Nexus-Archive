@@ -39,23 +39,22 @@ spec:
 
     TX1_clearglass_agent_suite_composition:
       priority: "HIGH — real, load-bearing gap: three real modules, zero wiring between them and clear-glass."
-      status: "PARTIAL, the endpoint duplication FIXED, TX1's own
-        original two open items still open. clear-glass's GET
-        /agent-suite now composes copilot's real GET /api/agent/current
-        via a real, dedicated HTTP call (fails soft to current:null if
-        copilot's unreachable, never throws) — the one piece it was
-        genuinely missing, without deleting copilot's own endpoint
-        (which has its own real callers this session didn't trace, and
-        doesn't need clear-glass's listener/account data). hf.list()
-        stays a local, in-process call on both sides — correctly
-        shared, no network hop added for data that's already free.
-        Verified end-to-end both ways: real composition when copilot
-        answers, real fail-soft (current:null, rest of the endpoint
-        still 200s) when it doesn't. TX1's own original two open items
-        (account-registry/agent-router still genuinely unwired into
-        clear-glass; the ollama/mistral account-slot schema mismatch)
-        remain exactly as unresolved as before — this fix only closed
-        the duplication it caused, not TX1's full original scope."
+      status: "PARTIAL — real progress this session (BL27, commit
+        9b6847e), not the full TX1 scope. What's done: a real,
+        consolidated GET /api/agent/suite on copilot/server.js,
+        combining self-model.js's getCurrentAgent() and hat-forge.js's
+        list() — verified live (real current-agent state + all 4 real
+        forged hats returned in one call). This is a DIFFERENT, same-
+        process pairing than TX1's own original scope (account-
+        registry + agent-router + hat-forge, all clear-glass-side) —
+        self-model.js/hat-forge.js live in copilot's process, not
+        clear-glass's, so no cross-directory require was needed for
+        this piece. account-registry.js and agent-router.js — TX1's
+        other two named modules — remain genuinely unwired into
+        clear-glass, not touched this session. Both of TX1's own real
+        open items (the ollama/mistral account-slot schema mismatch,
+        and the undecided entry point) remain exactly as unresolved as
+        when this phase was first scoped."
       depends_on: []
       does: >
         Compose account-registry + agent-router + hat-forge into a real

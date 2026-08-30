@@ -169,26 +169,10 @@ class IpcBridge {
     // proved (compose, don't rebuild). Each key degrades independently
     // to [] on its own real failure rather than one bad source blanking
     // the whole response.
-    this.app.get('/agent-suite', async (req, res) => {
+    this.app.get('/agent-suite', (req, res) => {
       let hats = [];
       try { hats = require('../../../lib/hat-forge.js').list(); } catch (_) {}
-      // §FIX 2026-08-29 — James: "fix them." The real duplicate found
-      // reviewing every agent phase: copilot/server.js's own real GET
-      // /api/agent/suite (self-model.js's getCurrentAgent() + hat-
-      // forge's list()) already existed before this endpoint was built
-      // — confirmed by reading both directly, neither a strict superset
-      // of the other. Two live processes, so the real fix isn't
-      // deleting either one — it's this endpoint pulling the ONE piece
-      // it was genuinely missing (which agent is actually active right
-      // now) from copilot's own real, separate /api/agent/current via a
-      // real network call, same composition pattern already proven this
-      // session for .nex/COS (compose across a real process boundary,
-      // don't force one side to own everything). hat-forge's list() stays
-      // called locally here, not proxied — it's a real, cheap, in-process
-      // call with no reason to add a network hop for data already free.
-      const current = await this._getCopilotCurrentAgent();
       res.json({
-        current,
         agents:    this.mesh?.listAgents() || [],
         hats,
         listeners: this.options?.listListeners() || [],
@@ -722,31 +706,6 @@ class IpcBridge {
       req.on('error', reject);
       req.write(body);
       req.end();
-    });
-  }
-
-  // §FIX 2026-08-29 — real, dedicated GET, not a reuse of
-  // _postToApiChannel above (POST-only, drains and discards the response
-  // body by design — the exact opposite of what's needed here, which is
-  // the response body itself). Fails soft, matching every other cross-
-  // process call this session added: copilot being unreachable degrades
-  // this endpoint's real "current" field to null, never throws and
-  // blocks the rest of /agent-suite's real, already-working local data.
-  _getCopilotCurrentAgent() {
-    return new Promise((resolve) => {
-      const req = require('http').get(
-        `http://127.0.0.1:${process.env.COPILOT_PORT || 3750}/api/agent/current`,
-        { timeout: 2000 },
-        (res) => {
-          let body = '';
-          res.on('data', (d) => { body += d; });
-          res.on('end', () => {
-            try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
-          });
-        }
-      );
-      req.on('error', () => resolve(null));
-      req.on('timeout', () => { req.destroy(); resolve(null); });
     });
   }
 

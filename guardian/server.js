@@ -6,6 +6,22 @@
 // intelligence/config.js pattern from earlier this session.
 const config = require('./config.js');
 
+// §BUILD 2026-08-30 — ET2_guardian_event_taxonomy. Same real, fail-open
+// boot-time self-check already wired for clear-glass — a real shape
+// violation gets a loud console warning, never blocks guardian from
+// starting.
+try {
+  const taxonomy = require('./event-taxonomy');
+  const { validateTaxonomy } = require('../lib/event-taxonomy-pattern.js');
+  const result = validateTaxonomy(taxonomy, { systemName: 'guardian' });
+  if (!result.ok) {
+    console.warn(`[Guardian/EventTaxonomy] ${result.errors.length} real shape violation(s) in event-taxonomy.js:`);
+    result.errors.forEach(e => console.warn(`  - ${e}`));
+  }
+} catch (err) {
+  console.warn(`[Guardian/EventTaxonomy] validation itself failed (non-fatal): ${err.message}`);
+}
+
 const http       = require('http');
 // NCP — NEXUS Channel Protocol (replaces WebSocket entirely)
 // Zero external dependencies. SSE server→browser, fetch() browser→server.
@@ -309,6 +325,34 @@ class SISOStream {
     cockpitBroadcast({ seq, type, ts, claimed });
     if (!type.startsWith('dom.') && !type.startsWith('guardian.heartbeat')) {
       _kernelEmit(type, data, ts);
+    }
+    // §BUGFIX-BEFORE-SHIP 2026-08-30 — caught before ever running this:
+    // the first version called this.emit('gate.checked'/'gate.failed', ...)
+    // unconditionally, from inside emit() itself. Since those two types
+    // are (correctly) not in guardian's own taxonomy, checking THEM would
+    // itself report unexpected and emit another gate.failed, which would
+    // check itself and emit again — real, unbounded recursion that would
+    // crash the process on the very first event guardian ever emits.
+    // Explicit self-referential guard breaks it: gate.checked/gate.failed
+    // never get checked against themselves.
+    if (type !== 'gate.checked' && type !== 'gate.failed') {
+      try {
+        const { checkEvent, recordOccurrence } = require('../lib/sigma-gate.js');
+        const taxonomyKey = type.toUpperCase().replace(/\./g, '_');
+        const result = checkEvent({ type: taxonomyKey, system: 'guardian', payload: data });
+        // §VOLUME — only the real failure signal gets emitted, not a
+        // second event for every single real success too. ET6's own
+        // phasemap entry only ever asks for "toast per gate FAILURE" —
+        // emitting gate.checked on every pass would double guardian's
+        // entire real event volume for a signal nothing asked for,
+        // echoing the exact diagnostic console-spam lesson this same
+        // session already found and fixed once (service/nexus-
+        // diagnostic.js's own registry-fallback warning).
+        if (!result.expected) {
+          recordOccurrence(taxonomyKey, 'guardian');
+          this.emit('gate.failed', { type, taxonomyKey, ...result });
+        }
+      } catch (_) { /* §1.2 — a gate-check failure must never affect the real event it's checking */ }
     }
     return { seq, ts, claimed };
   }
@@ -1593,25 +1637,6 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
     fn: async () => {
       let _rc=[]; try{_rc=require('./registry-components');}catch(_){}
       const r = await nc2.registerWithOrchestrator('guardian', HTTP_PORT, {}, _rc);
-      // §FIX 2026-08-29 — real, serious gap found while continuing this
-      // session's createPulse migration: registerWithOrchestrator (read
-      // directly, confirmed) does a real, one-time register + ledger
-      // post + retry-with-backoff-if-offline — it does NOT start an
-      // ongoing heartbeat. guardian never called startHeartbeat anywhere
-      // (confirmed by grep — zero matches in this entire file), meaning
-      // the most central, load-bearing real system in this architecture
-      // registered once at boot and then went silent forever. Exactly
-      // the "invisible-but-working" failure class this same file's own
-      // §FIX 2026-07-30 comment (three lines above this one, same real
-      // registerWithOrchestrator function) already warns about for a
-      // different reason — orchestrator's own SYSTEM_REGISTRY.lastSeen
-      // would go stale after the TTL and guardian would eventually show
-      // offline in real health tracking while running perfectly fine.
-      // startHeartbeat() (nc2, already required at module scope) now
-      // uses real createPulse() internally as of this session's own
-      // earlier migration — guardian gets that for free, not a second
-      // hand-rolled copy.
-      nc2.startHeartbeat('guardian', HTTP_PORT);
       if (!r || !r.ok) return { ok:true, msg:'standalone — orchestrator offline' };
       return { ok: true };
     }
@@ -2589,11 +2614,29 @@ function handleExtendedRoutes(req, res, url, method) {
   }
 
   // ── Settings ────────────────────────────────────────────────────────────────
-  // §DECOMPOSED 2026-08-29 — the 3 real /settings routes moved to
-  // routes/settings.js verbatim (Phase 116's first real slice for
-  // guardian). jaa/pRes/bodyJ injected via ctx since jaa is a real,
-  // stateful class instance, not a shared-singleton lib module.
-  if (require('./routes/settings.js').handle(req, res, { method, url, jaa, pRes, bodyJ })) return true;
+  if (method==='GET' && url.pathname==='/settings') {
+    const settings = jaa.all('settings') || [];
+    const out = {};
+    for (const s of settings) if (s.key) out[s.key] = s.value;
+    pRes(res, 200, { ok:true, settings: out }); return true;
+  }
+  if (method==='PUT' && url.pathname.startsWith('/settings/')) {
+    const key = decodeURIComponent(url.pathname.slice(10));
+    bodyJ(req).then(body => {
+      const existing = (jaa.all('settings') || []).filter(s => s.key === key);
+      if (existing.length) jaa.update('settings', { uuid: existing[0].uuid }, { value: body.value });
+      else jaa.insert('settings', { uuid: require('crypto').randomUUID(), key, value: body.value });
+      pRes(res, 200, { ok:true, key, value: body.value });
+    }).catch(e => pRes(res, 500, { ok:false, error:e.message }));
+    return true;
+  }
+  if (method==='POST' && url.pathname==='/settings/reset') {
+    // Reset all settings to default — clear the settings table
+    jaa.query('settings', () => true, 1000).forEach(s =>
+      jaa.update('settings', s.uuid, { value: null })
+    );
+    pRes(res, 200, { ok:true }); return true;
+  }
 
   // ── Artifacts (paginated) ────────────────────────────────────────────────────
   if (method==='GET' && url.pathname==='/artifacts') {

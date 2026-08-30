@@ -82,18 +82,6 @@ spec:
       axioms: [§0.4, §2.2, §12.5]
 
     CA7_clearglass_multi_account:   # ← BACKEND DONE 2026-07-30 (registry+routing); UI gear + live login Electron-side, James-verified. 1223/0
-      status: "✓ DONE, real correction 2026-08-29 — the specific UI this
-        entry describes ('a gear in the tv-ui') does not exist anywhere
-        checked directly: zero references to accounts/account-registry
-        anywhere in ui/tv-shell. Either genuinely regressed at some point
-        (same class as this session's own real lifeline.js regression)
-        or was a different, now-defunct surface. The REAL, currently
-        working equivalent: clear-glass/renderer/settings.html's real
-        Accounts panel (built this session, verified end-to-end — '+'
-        button creates a real account, real rename, real delete, all
-        confirmed against actual storage). Different location (ClearGlass
-        settings, not a tv-ui gear), same real gate satisfied: a user can
-        add a second account for a provider and route to it."
       does: "A gear in the tv-ui to log into MULTIPLE accounts in ClearGlass (app-password style) — so routing to a specific agent uses the right account."
       reuse: "§8.6 — ClearGlass already manages provider tabs (claude/chatgpt/gemini/perplexity); CA7 adds multi-account credential slots + a UI gear."
       gate: "a user can add a second account for a provider and route to it."

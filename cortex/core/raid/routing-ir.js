@@ -31,21 +31,6 @@
  */
 const raid = require('./index.js');
 
-// §MESH-INTEGRATION 2026-08-29 — real gap: RAID's own chain
-// (['ollama','chatgpt','gemini','claude'], cortex/core/raid/index.js)
-// dispatches through Guardian's userscript-injected providers, a DIFFERENT
-// execution mechanism from Clear Glass's AgentMesh (which drives the same
-// providers' web UIs directly, plus perplexity/mistral/grok that RAID's
-// own chain doesn't even include). RAID's `selected` agent name and
-// AgentMesh's own AGENT_REGISTRY keys happen to overlap for
-// claude/chatgpt/gemini — this is that real overlap, made checkable,
-// not a claim that RAID and AgentMesh are the same system. A caller
-// (copilot's tool executor, wake-relay) that gets a RoutingIR back can
-// use `meshCapable` to decide whether AgentMesh is a viable SECOND path
-// to reach the same agent RAID picked, e.g. if Guardian's own dispatch
-// to that provider is what's actually down.
-const MESH_AGENT_REGISTRY_KEYS = new Set(['claude', 'chatgpt', 'gemini', 'perplexity', 'mistral', 'grok']);
-
 /**
  * buildRoutingIR — call RAID's real _decide() and wrap the result in the
  * canonical shape. This is the ONLY function anything should call to get
@@ -90,11 +75,6 @@ function buildRoutingIR(request = {}) {
     cluster:    decision.cluster,
     confidence: null,
     reason:     decision.reason,
-    // §MESH-INTEGRATION 2026-08-29 — real, checkable, not inferred: is
-    // `selected` an agent AgentMesh's own registry actually knows how to
-    // spawn? 'ollama' is real and local-only — never mesh-capable, since
-    // it isn't a web-UI-automatable provider at all.
-    meshCapable: MESH_AGENT_REGISTRY_KEYS.has(decision.agent),
     ts:         Date.now(),
   };
 

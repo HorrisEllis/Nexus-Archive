@@ -149,6 +149,38 @@ const SYSTEMS = {
     // Forge shell is served by orchestrator — it's healthy when orch is healthy
     // We track it separately to surface in the diagnostic tile
   },
+  // §BUILD 2026-08-30 — DOD2_diagnose_and_self_repair's real, confirmed
+  // remaining gap: "only a handful of real systems are actually
+  // registered... most of the ~30+ real systems in this codebase are
+  // not yet diagnostic-aware. Not a design gap, a coverage gap." Cross-
+  // checked this registry against autopilot.js's own real, authoritative
+  // ALL_KERNELS list (the true source of what's actually supervised) and
+  // found 6 real systems missing entirely. Adding the 5 with a real,
+  // confirmed healthUrl in autopilot's own definition — ports/paths
+  // copied directly from there, not guessed. optional:true mirrors
+  // autopilot's own real optional flag for each, so a dormant/not-yet-
+  // started one doesn't trip a false alarm the same way clear-glass's
+  // own optional:true already prevents above.
+  eravos:      { port: 3751, dataDir: 'data/eravos',      healthPath: '/health', label: 'Eravos' },
+  intelligence:{ port: 3753, dataDir: 'data/intelligence', healthPath: '/health', label: 'Intelligence' },
+  'ollama-bridge':{ port: 3749, dataDir: 'data/ollama',    healthPath: '/health', label: 'Ollama Bridge', optional: true },
+  copilot:     { port: 3750, dataDir: 'data/copilot',      healthPath: '/health', label: 'Co-pilot', optional: true },
+  loom:        { port: 3752, dataDir: 'data/loom',         healthPath: '/health', label: 'Loom', optional: true },
+  // §HONEST LIMIT — intelligence-consumer (autopilot.js: { name:
+  // 'intelligence-consumer', cmd: 'node', args: ['intelligence/
+  // consumer.js'], optional: true, phase: 4 }) deliberately NOT added
+  // here. Checked directly: it has no port and no healthUrl anywhere in
+  // its own real autopilot definition — a pure file-watcher with zero
+  // network presence, not even the "wrong path" situation emerge's own
+  // existing (separate, pre-existing, not touched here) registration
+  // has. This polling mechanism is fundamentally port-based
+  // (pollSystem builds http://127.0.0.1:${port}${healthPath} — a
+  // missing healthPath would produce a literal "undefined" in that
+  // URL, a worse bug than not registering it at all). Real remaining
+  // work, not silently dropped: either pollSystem needs a genuine
+  // no-probe/registry-only mode, or intelligence-consumer needs its own
+  // minimal real health endpoint added — a decision and a change this
+  // pass didn't make unilaterally.
 };
 
 // ── CLI dispatch ──────────────────────────────────────────────────────────────

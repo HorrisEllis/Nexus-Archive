@@ -292,7 +292,7 @@ async function processNext(executor) {
 
   const resolved = executor
     ? await compartmentEngine.execute(compartment, executor)
-    : await compartmentEngine.execute(compartment, () => _realAgentExecutor(queued));
+    : await compartmentEngine.resolve(compartment, null);
 
   const finalStatus = resolved.status === 'PASS' ? STATUS.PASS : STATUS.FAIL;
 
@@ -360,67 +360,4 @@ async function submitIdeariumChunk(manifest, chunk) {
   }, { source: 'idearium', forAgent: chunk.agent });
 }
 
-// §HIGHEST LEVERAGE 2026-08-29 — James: "highest leverage... to get the
-// system coding." Real, honest finding checked before building anything:
-// RAID's contract queue (real dependency graph, real qaqcLayer, real
-// retry/fallback/halt) has ONLY ever been run against fake test-string
-// executors — never a real, live agent. That's the actual reason "has
-// nexus generated any code?" was still 'no' as of this session's own
-// earlier honest answer. This is the one real wire that closes it.
-//
-// dispatchToNcpAgent (copilot/lifeline.js's real, exported _tryGuardian)
-// is a proven, real, complete dispatch chain — POST guardian's real
-// /api/copilot/prompt (confirmed real: guardian/ask.js's real askSync,
-// with real createJob/dispatchJob/isProviderConnected/resolveProvider
-// genuinely wired, not stubbed — a STALE comment in lifeline.js claimed
-// this endpoint didn't exist; checked directly, fixed the comment
-// separately). This IS the real path from a contract to a real, live
-// provider tab's real response.
-//
-// §HONEST LIMIT — this is the default used only when processNext() is
-// called with NO explicit executor (every existing real caller that
-// passes one, including every test this session wrote, is completely
-// unaffected). Requires a live guardian process with at least one real,
-// connected provider tab to produce a real result; without one, this
-// correctly fails soft (dispatchToNcpAgent returns null on no real
-// evidence of connection) and the contract's own real onFail policy
-// (retry/fallbackAgent/halt) takes over exactly as designed.
-async function _realAgentExecutor(queueRow) {
-  const { dispatchToNcpAgent } = require('../../../copilot/lifeline.js');
-  // §BUGFIX — found by this executor's own first real test run: reading
-  // .forAgent off the raw contract object (queueRow.contract) silently
-  // returned 'auto' even when a real forAgent was submitted, because
-  // submitContract() resolves forAgent onto the QUEUE ROW itself
-  // (contract.forAgent || opts.forAgent), never writing it back onto the
-  // raw contract object. queueRow.forAgent is the real, resolved value.
-  const result = await dispatchToNcpAgent(queueRow.contract.content, { provider: queueRow.forAgent || 'auto' });
-  if (!result || !result.ok) {
-    throw new Error(`no real agent response available (forAgent=${queueRow.forAgent || 'auto'}) — guardian unreachable, no connected provider, or an empty response`);
-  }
-  return { text: result.text };
-}
-
-/**
- * reportExternalOutcome(queueId, {status, verdict}) — for a real system
- * (idearium, this session's own wiring) that dispatches its own
- * contracts through ITS OWN proven mechanism (not RAID's processNext) —
- * a real way to report the already-known, real outcome back, so RAID's
- * queue stays an accurate observability layer instead of every idearium-
- * sourced contract sitting at 'queued' forever with nothing ever calling
- * processNext() on it. status must be STATUS.PASS or STATUS.FAIL — not
- * a generic passthrough, so a caller can't write an arbitrary string
- * into a real, shared table.
- */
-function reportExternalOutcome(queueId, { status, verdict } = {}) {
-  if (status !== STATUS.PASS && status !== STATUS.FAIL) {
-    throw new Error(`[${MODULE_ID}] reportExternalOutcome requires status to be '${STATUS.PASS}' or '${STATUS.FAIL}', got ${JSON.stringify(status)}`);
-  }
-  try {
-    jaaDB.update(TABLE, queueId, { status, verdict: verdict || null, updatedAt: Date.now() });
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
-}
-
-module.exports = { submitContract, submitIdeariumChunk, reportExternalOutcome, listQueue, processNext, MODULE_ID, VERSION, STATUS };
+module.exports = { submitContract, submitIdeariumChunk, listQueue, processNext, MODULE_ID, VERSION, STATUS };

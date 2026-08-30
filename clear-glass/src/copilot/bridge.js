@@ -294,16 +294,6 @@ class CoPilotBridge {
       'mesh.spawn':        'mesh.spawn',
       'mesh.route':        'mesh.route',
       'mesh.send':         'mesh.send',
-      // §BUGFIX 2026-08-29 — mesh.enqueue had no entry here, so any
-      // co-pilot tool call for it fell through to this map's default
-      // ('driver.exec') — a co-pilot-issued ```driver{"action":"mesh.
-      // enqueue",...}``` block was being dispatched as a browser
-      // automation command, not a mesh task. Silent misroute: driver.
-      // exec's real gate would have just ignored the unrecognized
-      // action shape rather than throwing, so this never surfaced as an
-      // error, just as enqueue quietly never working via co-pilot. Now
-      // added to tools.js in the same pass — see that file's own gap note.
-      'mesh.enqueue':      'mesh.enqueue',
       'url.listen':        'url.listen',
       'url.listen.remove': 'url.listen.remove',
       'url.listen.list':   'status.request',

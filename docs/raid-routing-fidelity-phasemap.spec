@@ -51,20 +51,6 @@ spec:
 
     RR1_verify_and_wire_the_snr_fidelity_gate:
       priority: FOUNDATION — the spine already exists; prove it, then route contracts through it.
-      status: "OPEN, real finding, corrected 2026-08-29 — checked directly
-        before assuming complete: cortex/core/raid/snr-filter.js IS real
-        and IS wired into cortex/core/raid/index.js's real _decide(), but
-        ONLY when the caller declares a real faultClass (fault-
-        remediation calls) — deliberately gated, per that file's own
-        comment ('must never become a silent second path'). For general
-        contract/prompt routing (no faultClass — the case lib/seam/
-        spec-parser.js's real chunking, BR5, actually uses), SNR/fidelity
-        scoring is never consulted at all; the real decision goes
-        straight to preferredAgent -> LAW_I -> the computed fitness
-        chain. RR1's own ask ('route a CONTRACT through it... confirm
-        the intent->agent + AGENT_CONSTRAINTS path feeds it') is
-        genuinely NOT satisfied for the general case — found while
-        checking RR2 (below) against BR5's real, already-shipped work."
       does: >
         Verify cortex/core/raid/snr-filter.js does real SNR + fidelity scoring
         (§1.1 — declared≠real). Then route a CONTRACT (not a raw call) through it:
@@ -76,20 +62,6 @@ spec:
 
     RR2_contract_based_chunking:
       depends_on: RR1
-      status: "PARTIAL, real correction 2026-08-29 — this is, almost
-        word-for-word, what got built this session as BR5_build_
-        contract_per_agent_per_intent (docs/2026-08-27-event-taxonomy-
-        and-brainstorm-phasemap.spec) without ever cross-checking this
-        older, more specific phase first — the same class of tracking
-        gap already found once today (BL27/SBP7). What BR5 actually
-        built: real, verified token-sized chunking from AGENT_CONSTRAINTS
-        (chatgpt 900, gemini 1M, etc. — confirmed live, proportional
-        scaling proven). What RR2 additionally asks for, NOT built: 'the
-        chunker asks RAID who's the best agent for this? (RR1), THEN
-        sizes to that agent' — BR5 sizes to whatever forAgent was ALREADY
-        given; it never asks RAID's own fidelity-scored decision first,
-        because RR1 (above) isn't done. Real, working, partial — not the
-        same as complete."
       does: >
         Replace character-based chunking with CONTRACT-based, TOKEN-sized chunking.
         lib/chunk-service chunks work into contracts; each contract is sized to the
@@ -103,17 +75,6 @@ spec:
 
     RR3_per_agent_config_in_cortex:
       depends_on: RR1
-      status: "PARTIAL, real correction 2026-08-29 — SBP8_agent_mesh_
-        consolidation (docs/2026-08-28-self-building-pipeline-phasemap.spec)
-        attached AGENT_CONSTRAINTS to every spawned mesh agent's state,
-        real and verified live (chatgpt/gemini shown with correct,
-        distinct real budgets). RR3's own actual ask is more ambitious
-        and NOT satisfied by that: 'one editable source, not constants
-        in agent-router... changing a token limit or adding an account
-        changes routing with no code change.' AGENT_CONSTRAINTS is still
-        a hardcoded JS object — SBP8 exposed it, didn't move it into a
-        real, live-editable cortex table. Real progress toward RR3, not
-        RR3 itself."
       does: >
         Consolidate per-agent config (token limits, accounts, availability) into a
         fluid cortex database — one editable source, not constants in agent-router.
@@ -138,17 +99,6 @@ spec:
 
     RR5_clearglass_accounts_and_features:
       depends_on: RR3
-      status: "PARTIAL, real correction 2026-08-29 — cross-referenced
-        against CA7 (docs/copilot-awareness-routing-phasemap.spec, same
-        real ask) at the same time. The 'app-password-style multi-account
-        logins' half is done — real Accounts panel in clear-glass/
-        renderer/settings.html, verified end-to-end this session,
-        though in ClearGlass's own settings, not 'tv-ui top-right' as
-        this phase's own wording assumes (that surface has zero real
-        account UI, checked directly). The 'break userscripts into
-        FEATURES with SSE/API I/O, browser-bridge tool' half is NOT
-        done — genuinely separate, unbuilt scope this correction doesn't
-        touch."
       does: >
         Hook account-registry to clear-glass: app-password-style multi-account
         logins in the tv-ui top-right. Break the clear-glass userscripts into

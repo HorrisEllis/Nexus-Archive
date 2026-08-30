@@ -128,6 +128,25 @@ const { PasswordVault } = require('../passwords/vault');
 // location, not this file's — verified directly before wiring
 // anything, not assumed.
 const macroTool = require('../../../lib/agent-tools/tools/clear-glass/macro.js');
+// §BUILD 2026-08-30 — ET3_clearglass_event_taxonomy. Real, boot-time
+// self-check, giving lib/event-taxonomy-pattern.js's real validateTaxonomy()
+// its first real consumer anywhere in this codebase (confirmed zero
+// before this). Fail-open, matching this file's own established
+// convention for non-critical checks elsewhere (e.g. copilot/lifeline.js's
+// real fail-open/fail-closed distinction, cited directly in ET1's own
+// module) — a taxonomy shape violation is a real bug worth a loud,
+// visible warning, never a reason to refuse to boot the browser.
+try {
+  const taxonomy = require('./event-taxonomy');
+  const { validateTaxonomy } = require('../../../lib/event-taxonomy-pattern.js');
+  const result = validateTaxonomy(taxonomy, { systemName: 'clear-glass' });
+  if (!result.ok) {
+    console.warn(`[ClearGlass/EventTaxonomy] ${result.errors.length} real shape violation(s) in event-taxonomy.js:`);
+    result.errors.forEach(e => console.warn(`  - ${e}`));
+  }
+} catch (err) {
+  console.warn(`[ClearGlass/EventTaxonomy] validation itself failed (non-fatal): ${err.message}`);
+}
 const speech = require('../speech/engine');
 const { PluginHost }    = require('../plugins/host');
 const { registerAll }   = require('../gates/index');
@@ -149,6 +168,18 @@ let apiSettings = null;   // ApiSettings        — set in bootstrap()
 let _heartbeatInterval = null;
 const windows        = new Map(); // agentId → BrowserWindow (visible)
 const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service tabs)
+// §BUILD 2026-08-30 — James: "need a background tab manager." Real gap
+// found: openBackgroundTab/closeBackgroundTab/listBackgroundTabs were
+// already fully wired end to end (bgtab:open/close/list, confirmed
+// directly — not a broken-wiring bug as first suspected from a case-
+// sensitive grep miss), but listBackgroundTabs() only ever returned
+// {agentId} — no url, nothing a real panel could show. The window's OWN
+// top-level webContents can't answer this either: it loads browser.html
+// itself, not the target url directly (the url is a query param
+// browser.html's own <webview> navigates to internally). Separate,
+// small map instead of restructuring bgTabs' existing agentId→win shape
+// (several real call sites already depend on that exact shape).
+const bgTabUrls       = new Map(); // agentId → the real url it was opened with
 
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
@@ -1615,8 +1646,9 @@ async function openBackgroundTab({ agentId, url = 'about:blank' } = {}) {
     },
   });
 
-  win.on('closed', () => bgTabs.delete(agentId));
+  win.on('closed', () => { bgTabs.delete(agentId); bgTabUrls.delete(agentId); });
   bgTabs.set(agentId, win);
+  bgTabUrls.set(agentId, url);
   emit('bgtab.opened', { agentId, url });
   _postEvent('clear-glass.bgtab.opened', { agentId, url });
   return { agentId, url };
@@ -1624,13 +1656,23 @@ async function openBackgroundTab({ agentId, url = 'about:blank' } = {}) {
 
 function closeBackgroundTab(agentId) {
   const win = bgTabs.get(agentId);
-  if (win) { win.destroy(); bgTabs.delete(agentId); }
+  if (win) { win.destroy(); bgTabs.delete(agentId); bgTabUrls.delete(agentId); }
   emit('bgtab.closed', { agentId });
   return { agentId, closed: !!win };
 }
 
 function listBackgroundTabs() {
-  return [...bgTabs.keys()].map(agentId => ({ agentId }));
+  // §HONEST — no title field: win.getTitle() on the top-level window
+  // would just echo the static "Clear Glass — <agentId> (background)"
+  // set at creation (browser.html loads INSIDE it, and the real target
+  // page loads inside THAT webview) — reaching the real inner page
+  // title needs IPC into that specific renderer, a real, separate
+  // piece not built this pass. Shipping a fake-looking-real title field
+  // would be worse than no field at all.
+  return [...bgTabs.keys()].map(agentId => ({
+    agentId,
+    url: bgTabUrls.get(agentId) || null,
+  }));
 }
 
 // ── Settings window — single instance, reused/focused rather than

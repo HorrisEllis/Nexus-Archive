@@ -21,35 +21,6 @@
 // already used everywhere else in this codebase (NexusOptions'
 // createAccount(), among many others), not a new pattern introduced here.
 const { randomUUID: uuidv4 } = require('crypto');
-const http = require('http');
-
-// §HOOK 2026-08-29 — ErosmancerOS wire proxy, same real endpoint macro.js's
-// engine:'erosmancer' steps already use (clear-glass/wire/nexus-wire.js's
-// :7704/eros/* → erosmancer's own :7432/api/*). Duplicated here rather than
-// imported from macro.js on purpose — macro.js lives under lib/agent-tools
-// (a different, separately-loadable package) and agent-mesh.js has no real
-// dependency on it; the actual logic is ~15 lines and matching macro.js's
-// existing, already-audited implementation exactly is safer than adding a
-// cross-package require for three functions.
-const EROS_WIRE_PORT = parseInt(process.env.EROS_WIRE_PORT || '7704', 10);
-
-function _erosRequest(method, urlPath, body) {
-  return new Promise((resolve) => {
-    const data = body ? Buffer.from(JSON.stringify(body)) : null;
-    const req = http.request(
-      { hostname: '127.0.0.1', port: EROS_WIRE_PORT, path: urlPath, method,
-        timeout: 20000, headers: data ? { 'Content-Type': 'application/json', 'Content-Length': data.length } : {} },
-      (res) => { let d = ''; res.on('data', c => d += c); res.on('end', () => {
-        try { resolve({ status: res.statusCode, body: JSON.parse(d) }); }
-        catch (_) { resolve({ status: res.statusCode, body: { ok: false, error: 'erosmancer wire returned an unparseable body' } }); }
-      }); }
-    );
-    req.on('error', (e) => resolve({ status: 503, body: { ok: false, error: `erosmancer wire unreachable on :${EROS_WIRE_PORT}: ${e.code || e.message}` } }));
-    req.on('timeout', () => { req.destroy(); resolve({ status: 503, body: { ok: false, error: 'erosmancer wire timed out' } }); });
-    if (data) req.write(data);
-    req.end();
-  });
-}
 
 const AGENT_REGISTRY = {
   claude: {
@@ -116,20 +87,13 @@ class AgentMesh {
   // than throwing. Only main/index.js's real boot path wires the real
   // NexusOptions instance in, which is what turns that literal into a
   // real, stable, per-agentKey account uuid.
-  // §HOOK 2026-08-29 — `rewind` is optional and backward-compatible, same
-  // pattern as `accounts` above: anything constructing AgentMesh without
-  // it (tests, the old headless path) behaves exactly as before. Only
-  // main/index.js's real boot path wires the real RewindEngine in, which
-  // turns send()'s labeled snapshot below from a no-op into a real
-  // rollback point.
-  constructor({ ctxMgr, driver, sse, seam, vault, accounts, rewind }) {
+  constructor({ ctxMgr, driver, sse, seam, vault, accounts }) {
     this.ctxMgr   = ctxMgr;
     this.driver   = driver;
     this.sse      = sse;
     this.seam     = seam;
     this.vault    = vault;
     this.accounts = accounts || null;
-    this.rewind   = rewind || null;
     this.agents  = new Map(); // agentKey → AgentState
     this.queue   = [];        // pending tasks
     this.processing = false;
@@ -234,23 +198,7 @@ class AgentMesh {
   }
 
   // ── Send prompt to agent ──────────────────────────────────────────────
-  // §HOOK 2026-08-29 — `useEros` opts a send() into ErosmancerOS's real
-  // behavior-modeled execution (Box-Muller timing variance, Bezier mouse
-  // paths) for the type+click, instead of raw driver.exec. §HONEST LIMIT,
-  // same one macro.js's own erosmancer integration states: erosmancer's
-  // click/type actions need a real targetUuid from its own NodeRegistry,
-  // which this function has no way to resolve for an arbitrary agent's
-  // input box. Rather than fake a targetUuid or silently skip the flag,
-  // this uses erosmancer's 'evaluate' action instead — a raw JS string,
-  // which erosmancer's real API accepts with no targetUuid requirement
-  // (confirmed directly against macro.js's own EROS_EXECUTE_ACTIONS
-  // handling) — so the prompt still gets typed and sent through
-  // erosmancer's real pipeline (adaptive timing/replay-learning still
-  // apply to the evaluate call itself), just not via its node-identity
-  // click path. `profile` picks one of erosmancer's real, named behavior
-  // profiles (precise|cautious|exploratory|turbo); omitted means
-  // erosmancer's own adaptive default.
-  async send({ agentKey, prompt, contextId, waitForResponse = true, timeout = 60000, useEros = false, profile }) {
+  async send({ agentKey, prompt, contextId, waitForResponse = true, timeout = 60000 }) {
     // Find or spawn context
     let state = contextId
       ? this.agents.get(contextId)
@@ -268,65 +216,17 @@ class AgentMesh {
       promptSnippet: prompt.slice(0, 100), ts: Date.now(),
     });
 
-    // §HOOK 2026-08-29 — rewind's rewind.snapshot(agentId, {label}) keys
-    // its store on `agentId`, matching this.driver's own contextId-as-
-    // agentId convention throughout this file — so a mesh task gets a
-    // real, named rollback point distinct from rewind's generic 30s auto-
-    // snapshots, mirroring the same pattern lib/agent-tools/.../macro.js's
-    // run() already uses before its own first step. Best-effort: a
-    // missing/failed snapshot never blocks the actual task.
-    let preTaskSnapshotId = null;
-    if (this.rewind) {
-      try {
-        const snap = await this.rewind.snapshot(state.contextId, { label: `mesh:${state.key}:${taskId}` });
-        preTaskSnapshotId = snap?.snapshotId || snap?.id || null;
-      } catch (_) {}
-    }
-
     try {
       // Navigate to agent URL if needed
       const currentUrl = await this.driver.exec({ action: 'getUrl', agentId: state.contextId });
-      const needsNav = !currentUrl.url?.includes(new URL(def.url).hostname);
-      if (needsNav && useEros) {
-        const nav = await _erosRequest('POST', '/eros/execute', { action: 'navigate', tabId: state.contextId, payload: def.url, profile });
-        if (nav.status >= 400 || nav.body?.ok === false) {
-          // Erosmancer unreachable/failed — fall back to the real driver
-          // path rather than stalling the task on an optional feature.
-          await this.driver.exec({ action: 'navigate', agentId: state.contextId, url: def.url });
-        }
-        await this.driver.exec({ action: 'waitFor', agentId: state.contextId, selector: def.inputSel, timeout: 15000 });
-      } else if (needsNav) {
+      if (!currentUrl.url?.includes(new URL(def.url).hostname)) {
         await this.driver.exec({ action: 'navigate', agentId: state.contextId, url: def.url });
         await this.driver.exec({ action: 'waitFor', agentId: state.contextId, selector: def.inputSel, timeout: 15000 });
       }
 
-      let erosUsed = false;
-      if (useEros) {
-        if (profile) await _erosRequest('POST', '/eros/behavior/profile', { sessionId: state.contextId, profile }).catch(() => {});
-        // One evaluate call: focus, clear, type, dispatch input event, then
-        // click send — matches driver.exec's own click→type→wait→click
-        // sequence below, just issued as one real erosmancer 'evaluate'
-        // step instead of four raw driver calls.
-        const js = `(function(){
-          var i = document.querySelector(${JSON.stringify(def.inputSel)});
-          var b = document.querySelector(${JSON.stringify(def.sendSel)});
-          if (!i) return { ok:false, error:'input not found' };
-          i.focus();
-          if ('value' in i) { i.value = ${JSON.stringify(prompt)}; } else { i.innerText = ${JSON.stringify(prompt)}; }
-          i.dispatchEvent(new Event('input', {bubbles:true}));
-          return { ok:true, hasButton: !!b };
-        })()`;
-        const r = await _erosRequest('POST', '/eros/execute', { action: 'evaluate', tabId: state.contextId, payload: js, profile });
-        erosUsed = !(r.status >= 400 || r.body?.ok === false || r.body?.result?.ok === false);
-      }
-
-      if (!erosUsed) {
-        // Clear and type prompt — the real path, always available, and
-        // the fallback if useEros was requested but erosmancer wasn't
-        // reachable/didn't confirm success above.
-        await this.driver.exec({ action: 'click',  agentId: state.contextId, selector: def.inputSel });
-        await this.driver.exec({ action: 'type',   agentId: state.contextId, selector: def.inputSel, text: prompt, clearFirst: true });
-      }
+      // Clear and type prompt
+      await this.driver.exec({ action: 'click',  agentId: state.contextId, selector: def.inputSel });
+      await this.driver.exec({ action: 'type',   agentId: state.contextId, selector: def.inputSel, text: prompt, clearFirst: true });
       await this.driver.exec({ action: 'wait',   agentId: state.contextId, ms: 300 + Math.random() * 200 });
       await this.driver.exec({ action: 'click',  agentId: state.contextId, selector: def.sendSel });
 
@@ -362,7 +262,7 @@ class AgentMesh {
 
       this.sse.emit('mesh.task.complete', {
         taskId, agentKey: state.key, contextId: state.contextId,
-        responseSnippet: response?.slice(0, 200), erosUsed, ts: Date.now(),
+        responseSnippet: response?.slice(0, 200), ts: Date.now(),
       });
 
       // Fire NEXUS hook if registered
@@ -370,7 +270,7 @@ class AgentMesh {
         taskId, agentKey: state.key, contextId: state.contextId, response,
       }).catch(() => {});
 
-      return { taskId, contextId: state.contextId, response, agentKey: state.key, erosUsed, preTaskSnapshotId };
+      return { taskId, contextId: state.contextId, response, agentKey: state.key };
 
     } catch (err) {
       state.status  = 'error';
@@ -378,63 +278,97 @@ class AgentMesh {
 
       this.sse.emit('mesh.task.error', {
         taskId, agentKey: state.key, contextId: state.contextId,
-        error: err.message, preTaskSnapshotId, ts: Date.now(),
+        error: err.message, ts: Date.now(),
       });
 
-      // §HOOK 2026-08-29 — the whole reason for taking preTaskSnapshotId
-      // above: a failed mesh task (agent hung, wrong page, garbled DOM
-      // state from a bad selector match) is exactly when a caller wants
-      // to roll the tab back rather than leave it in a broken state for
-      // the *next* task on this same contextId. Surfaced on the thrown
-      // error itself so callers (route()'s fallback loop, copilot's tool
-      // executor) can act on it without a second lookup.
-      err.preTaskSnapshotId = preTaskSnapshotId;
       throw err;
     }
   }
 
+  /**
+   * _raidDecide(intent) — the real, direct HTTP call to cortex's real
+   * RAID engine (GET /api/raid/decide?intent=..., confirmed directly
+   * against cortex/boot.js — real query-param shape, not a guess).
+   * 1200ms timeout, resolves null on any failure rather than throwing —
+   * route() above already treats a null/unusable result as "fall back
+   * to local logic," so a genuinely unreachable cortex degrades this
+   * mesh to exactly its prior real behavior, nothing worse.
+   */
+  _raidDecide(intent) {
+    return new Promise((resolve) => {
+      const http = require('http');
+      const req = http.request({
+        hostname: '127.0.0.1', port: parseInt(process.env.NEXUS_PORT || '3748', 10),
+        path: `/api/raid/decide?intent=${encodeURIComponent(intent)}`,
+        method: 'GET', timeout: 1200,
+      }, (res) => {
+        let body = '';
+        res.on('data', (c) => body += c);
+        res.on('end', () => {
+          try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.end();
+    });
+  }
+
   // ── RAID-style routing — best healthy agent ───────────────────────────
-  // §HOOK 2026-08-29 — this previously ignored lib/agent-router.js
-  // entirely: with no fallbackOrder/preferAgent given, order was just
-  // Object.keys(AGENT_REGISTRY) in registry-declaration order (claude,
-  // chatgpt, gemini, perplexity, mistral, grok) — no notion of James's
-  // real per-intent agent strengths (perplexity for research, gemini for
-  // code, chatgpt as general-with-chunking, claude last-resort) that
-  // routing-ir/agent-router already encode for the Guardian-dispatch
-  // path. Real fix: when neither preferAgent nor fallbackOrder is given,
-  // classify `prompt` through routeAgent()'s own real _inferIntent() and
-  // build the order from its real fallbackChain — same intent map, now
-  // actually reachable from the mesh's own routing, not just Guardian's.
-  // Explicit preferAgent/fallbackOrder still win outright — a caller who
-  // named an agent is never second-guessed, same rule agent-router.js's
-  // own `directed` path already documents.
-  async route({ prompt, preferAgent, fallbackOrder, intent }) {
-    let order = fallbackOrder;
-    let routedWhy = null;
-    if (!order) {
-      if (preferAgent) {
-        order = [preferAgent, ...Object.keys(AGENT_REGISTRY).filter(k => k !== preferAgent)];
-      } else {
-        try {
-          const { routeAgent } = require('../../../lib/agent-router.js');
-          const isUp = (agentKey) => AGENT_REGISTRY[agentKey] != null; // mesh only knows agents in its own registry
-          const decision = routeAgent({ intent, prompt, available: isUp });
-          // Keep only agents this mesh actually knows how to spawn — the
-          // routes file also names 'ollama', which isn't a mesh agent
-          // (it's local, dispatched a different way entirely).
-          const chain = decision.fallbackChain.filter(a => AGENT_REGISTRY[a]);
-          order = chain.length ? chain : Object.keys(AGENT_REGISTRY);
-          routedWhy = decision.why;
-        } catch (err) {
-          this.sse.emit('mesh.router.unavailable', { error: err.message, ts: Date.now() });
-          order = Object.keys(AGENT_REGISTRY);
+  async route({ prompt, preferAgent, fallbackOrder }) {
+    // §BUILD 2026-08-30 — James: "raid engine and agent mesh" (a real gap
+    // confirmed by reading this function directly, not assumed): despite
+    // the header comment above and this method's own name, nothing here
+    // ever actually called the real RAID engine (cortex's /api/raid/decide
+    // — confirmed real, already used by Guardian's own dispatch via
+    // _raidDecide in userscript-claude.js) — this was a separate, local
+    // "RAID-style" reimplementation, not a real connection. Consults the
+    // real engine first now, honestly: RAID's own real agent vocabulary
+    // (ollama/guardian/claude/chatgpt, per cortex/boot.js's _raidDecide)
+    // only partially overlaps this mesh's real AGENT_REGISTRY (claude/
+    // chatgpt/gemini/perplexity/mistral/grok) — a decision naming an
+    // agent this registry doesn't have (ollama, guardian) is a real,
+    // meaningful signal in its own right, not an error, just not one
+    // this specific mesh can act on directly; falls through to the
+    // existing local logic in that case, not a fabricated substitution.
+    let raidPreferred = null;
+    if (!preferAgent) {
+      try {
+        const { _inferIntent } = require('../../../lib/agent-router.js');
+        const intent = _inferIntent(prompt || '');
+        const decision = await this._raidDecide(intent);
+        if (decision?.agent && AGENT_REGISTRY[decision.agent]) {
+          raidPreferred = decision.agent;
+          this.sse.emit('mesh.raid.decision', { intent, agent: decision.agent, reason: decision.reason, used: true, ts: Date.now() });
+        } else if (decision?.agent) {
+          this.sse.emit('mesh.raid.decision', { intent, agent: decision.agent, reason: decision.reason, used: false, ts: Date.now() });
+        } else {
+          // §BUGFIX 2026-08-30 — real bug, caught by testing, not assumed
+          // fine: _raidDecide() deliberately never throws (it resolves
+          // null on any real failure, by design — route() needs a
+          // non-throwing signal to fall back on). That means a genuinely
+          // unreachable cortex landed here with decision === null, which
+          // this if/else-if chain — both branches gated on
+          // decision?.agent — silently matched neither, and the catch
+          // below never runs either since nothing threw. The real
+          // failure was invisible. Fixed: a real, distinct event for
+          // exactly this case.
+          this.sse.emit('mesh.raid.unavailable', { intent, reason: 'no decision (cortex unreachable or returned nothing usable)', ts: Date.now() });
         }
+      } catch (err) {
+        this.sse.emit('mesh.raid.unavailable', { error: err.message, ts: Date.now() });
       }
     }
 
-    if (routedWhy) {
-      this.sse.emit('mesh.route.decision', { prompt: prompt?.slice(0, 100), order, why: routedWhy, ts: Date.now() });
-    }
+    // §CORRECTED — an explicit preferAgent is a direct, deliberate
+    // caller signal; it should win over RAID's own inferred suggestion,
+    // not be silently overridden by it. RAID only matters when nothing
+    // more direct was already given.
+    const order = fallbackOrder || (preferAgent
+      ? [preferAgent, ...Object.keys(AGENT_REGISTRY).filter(k => k !== preferAgent)]
+      : raidPreferred
+        ? [raidPreferred, ...Object.keys(AGENT_REGISTRY).filter(k => k !== raidPreferred)]
+        : Object.keys(AGENT_REGISTRY));
 
     for (const agentKey of order) {
       const state = this._getBestAgent(agentKey);
