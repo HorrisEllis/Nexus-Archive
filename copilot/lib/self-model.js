@@ -408,6 +408,15 @@ function verifyAgentReachable(providerId, opts = {}) {
     const body = Buffer.from(JSON.stringify({
       provider: providerId, command: 'ping',
       prompt: '(connectivity check — no reply needed)',
+      // §BUGFIX 2026-08-31, James live: "RAID denied dispatch: proof
+      // required, none supplied for 'chat'" on every real reachability
+      // check. Traced exactly: this real request body never included
+      // source, so guardian's /command route's real _approveTool check
+      // (cortex/contract/index.js) fell to _default (proof_required:
+      // true, no chat in allowed_actions) instead of the real,
+      // already-registered 'copilot' contract (chat allowed, no proof
+      // required) — this function genuinely lives in copilot.
+      source: 'copilot',
     }));
     const req = http.request({
       hostname: '127.0.0.1', port: GUARDIAN_PORT, path: '/command', method: 'POST',

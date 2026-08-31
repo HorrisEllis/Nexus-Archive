@@ -1771,7 +1771,23 @@ const server = http.createServer(async (req, res) => {
             return json(res, 200, { text: `Wanted to switch you to guardian, but guardian itself is unreachable: ${listed.error}`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, requestId });
           }
           const live = new Set(listed.agents.filter(a => a.state === 'live').map(a => a.provider));
-          const pick = DEFAULT_FALLBACK.find(a => live.has(a));
+          // §BUGFIX 2026-08-31, James live: "switch agent to guardian using
+          // agent chatgpt" — real symptom, "it works to route but not to
+          // switch agents. keeps using perplexity." Traced exactly: switchM's
+          // real regex only captures the ONE word right after "to" — in this
+          // real phrasing that's "guardian", and "chatgpt" (the actual real,
+          // named target later in the same sentence) was never even looked
+          // at. This branch then always fell through to DEFAULT_FALLBACK.find
+          // (['perplexity', 'gemini', 'chatgpt', 'claude'] — perplexity
+          // first), silently overriding whatever specific agent the user
+          // actually named. Real fix: check the REST of the real prompt for
+          // a real, named KNOWN_AGENTS mention before falling back to the
+          // generic "pick whichever's live" behavior — "switch to guardian
+          // using chatgpt" means "route through guardian, specifically to
+          // chatgpt," not "pick guardian's own default."
+          const namedMatch = prompt.match(/\b(claude|chatgpt|gemini|perplexity)\b/gi);
+          const namedAgent = namedMatch?.map(m => m.toLowerCase()).find(a => a !== switchTarget && live.has(a));
+          const pick = namedAgent || DEFAULT_FALLBACK.find(a => live.has(a));
           if (!pick) {
             return json(res, 200, { text: `Guardian is reachable, but no real agent tab is currently live to route through (checked: ${DEFAULT_FALLBACK.join(', ')}). Open one, or say "switch to <agent>" directly.`, model_used: 'nexus-agent-router', confidence: 1, escalated: false, requestId });
           }
