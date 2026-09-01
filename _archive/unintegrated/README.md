@@ -47,7 +47,84 @@ just because it's organized now.
 
 ---
 
-## 2026-07-branch-a-additions/
+## 2026-09-01-uploaded-batch/nexus-pages/
+
+James uploaded 20 zips (`NEXUS-v0_51_0` x5, `Nexus-v1_0_0` x4 + `-rebuilt`,
+`nexus-output` x9, `nexus-slim` x2, `nexus-pages` x1). Full content-level
+audit of all 20 is NOT done — that's a real, multi-hour task this pass
+didn't have room for, flagged honestly rather than claimed complete.
+
+What WAS done: exact-duplicate detection via md5sum across all 20 (real,
+cheap, complete) found several true byte-identical duplicates —
+`NEXUS-v0_51_0`/`-1`/`-3` (419 files, identical); `NEXUS-v0_51_0-9`/`-10`
+(206 files, identical, a smaller/different snapshot from the -1/-3 trio
+despite the same version name); `nexus-slim-v1_0_0`/`-1` (identical);
+`Nexus-v1_0_0-1`/`-2` (identical). The 8 real `nexus-output` files
+(`Nexus(chatui + Erosmanceros)` project) are genuinely distinct from each
+other, not duplicates — confirmed by md5sum, file counts climb 174→186
+across them, a real sequential development history, not yet diffed for
+content beyond that.
+
+Only `nexus-pages-v1_0_0.zip` (33 files, smallest of the 20) was actually
+opened and read this pass — staged here in full because it's a direct,
+confirmed match to two things James asked for by name: `nexus-testenv.html`
++ `src/ui/nexus-testenv.js` is literally "the text env" he referenced;
+`nexus-coder.html` (1155 lines, checked directly — real dual-mode editor/
+preview/output/diff/AST panels, a CLI panel, a files panel, a settings
+panel, `<textarea id="forge-editor">` as the real edit surface) is a
+close, already-built precedent for the "IDE with dual panel, run button,
+CLI... editing the system from the compartments" ask from the same
+conversation. `nexus-compiler.html` (590 lines) and `nexus-spec.html`
+(136 lines) are adjacent, not yet read in depth.
+
+`node --check` passes on `src/ui/nexus-testenv.js` (the only file
+spot-checked for validity this pass). Not cross-checked against this
+tree's own current `ui/agents/chatgpt/index.html` or `forge-ide` (named
+in this session's own precommit spec-drift warnings as existing but
+unspecced) for redundancy — that comparison is the real next step before
+anything here gets wired in, same discipline this file already uses
+everywhere else.
+
+**Genuinely not yet done, named honestly rather than skipped silently**:
+the remaining 19 archives' actual content (only de-duplicated, not read);
+the `nexus-output` series' real content (ErosmancerOS-adjacent, and
+ErosmancerOS is a real, already-partially-wired subsystem in this tree —
+worth checking for anything this tree is missing); `nexus-compiler.html`/
+`nexus-spec.html`'s real content; any redundancy check against this
+tree's own existing UI.
+
+## 2026-09-01-uploaded-batch/brainos-agents/ + apk-builder/
+
+Continued reading `nexus-output-2.zip` (`Nexus(chatui + Erosmanceros)`,
+the most complete of the 8 real `nexus-output` snapshots) and
+`Nexus-v1_0_0.zip`'s `modules/apk/`.
+
+**ErosmancerOS: confirmed fully redundant, not staged.** `diff -rq`
+between `nexus-output-2`'s `bridge/erosmancer-os/src` and this tree's own
+`erosmancer/erosmancer-os/src` returned zero differences — byte-identical,
+same 25 files. Already completely integrated; nothing additive here.
+
+**`bridge/agents/*.js` — genuinely new, staged as `brainos-agents/`.**
+Four real files (`base-agent.js` 157 lines, `ai-agent.js` 145,
+`automation-agent.js` 96, `system-agent.js` 91) — confirmed absent from
+this tree by name (grepped, zero matches). A real, coherent agent-
+abstraction layer from a different, related project ("BrainOS" — UUID
+prefix `brainos-*`, not `nexus-*`): a base class with a standard
+`execute(plan, context)`/`canHandle(intent)`/`health()` interface, bus
+wiring, trace-event emission, timeout enforcement, retry logic. Worth a
+real look against this tree's own agent-mesh work (LM7/LM8 in the
+2026-09-01 living-model phasemap) before wiring — same interface shape,
+different lineage, not yet cross-checked for overlap with `lib/agent-
+tools/index.js`'s own real `executeTool` or the mesh's own dispatch.
+
+**`modules/apk/apk.js` — genuinely new, staged as `apk-builder/`.** Real,
+substantial (1049 lines), a working 9-step APK-build wizard: real Android
+permission catalog with per-permission danger flags and descriptions,
+known-project registry (packaging a web app into an APK). Legitimate
+build/packaging tooling — not the anti-tamper/crypter territory declined
+elsewhere in this conversation. `node --check` passes.
+
+
 
 §2026-07-11 — this tree (`nexus-full-5` baseline) turned out to be one of at
 least two divergent branches under active development. 20 additional zips

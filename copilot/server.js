@@ -1804,6 +1804,18 @@ const server = http.createServer(async (req, res) => {
       if (switchIsReal) {
         const sm = require('./lib/self-model');
         const r = sm.switchAgent({ intent: 'directed', directed: switchTarget, prompt });
+        // §BUGFIX 2026-09-01, James live: "switch agent to chatgpt using
+        // guardian says 'routing to chatgpt' which didn't work." Traced
+        // exactly: switchAgent() is a pure, local, synchronous decision —
+        // it resolves a valid target and returns ok:true, but never
+        // itself persists WHICH agent is now current. The sibling
+        // 'switch to guardian' branch above already does this correctly
+        // (if (r.ok) sm.setCurrentAgent(r.agent)) — this branch, the
+        // real path "switch agent to X" actually takes, never did.
+        // Every subsequent message kept routing to whatever agent was
+        // ALREADY current, while this branch's own response text
+        // falsely reported the switch had happened.
+        if (r.ok) sm.setCurrentAgent(r.agent);
         // §BUILT 2026-08-14 — real request: "switch agent tool needs to use
         // NCP like: job created -> dispatched via NCP -> job.dispatched
         // ack." switchAgent() alone was a pure local decision, never

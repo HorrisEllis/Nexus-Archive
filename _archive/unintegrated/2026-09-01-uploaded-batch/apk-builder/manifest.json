@@ -1,0 +1,11 @@
+{
+  "id": "apk",
+  "version": "0.54.0",
+  "description": "APK builder — permissions, packaging, signing",
+  "layer": 5,
+  "framework": "SISO",
+  "author": "James Brooks",
+  "files": ["apk.js"],
+  "hooks": [],
+  "dependencies": []
+}

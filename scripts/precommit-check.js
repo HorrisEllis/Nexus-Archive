@@ -209,6 +209,19 @@ try {
 const { spawnSync } = require('child_process');
 for (const f of files) {
   if (!/\.js$/.test(f) || /\.test\.js$/.test(f) || /^tests\//.test(f)) continue;
+  // §STAGED-NOT-INSTALLED, 2026-09-01 — _archive/unintegrated/'s own
+  // README states explicitly: "Nothing in here runs. Nothing in here is
+  // required by anything else in the repo." A require()-crash test is
+  // checking whether a file works as a live NEXUS module — the wrong
+  // question for reference material intentionally staged, not wired.
+  // Found live: nexus-pages/src/ui/*.js (multi-file browser HTML app,
+  // page-shared globals like FORGE/NXGate/switchTab defined in sibling
+  // <script> tags) fails this check the same way every browser-only
+  // file does, just via custom globals the existing browser-global
+  // regex above doesn't and shouldn't try to enumerate exhaustively —
+  // the real, correct signal here is the folder's own documented
+  // purpose, not the specific undefined identifier's name.
+  if (/^_archive\/unintegrated\//.test(f)) continue;
   const full = path.join(ROOT, f);
   if (!fs.existsSync(full)) continue; // deleted/renamed in this commit — nothing to check
   const syntax = spawnSync(process.execPath, ['--check', full], { encoding: 'utf8', timeout: 5000 });
