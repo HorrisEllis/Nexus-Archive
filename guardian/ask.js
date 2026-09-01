@@ -143,7 +143,7 @@ async function askSync(prompt, opts = {}, deps = {}) {
         finalPrompt = `${prompt}\n\n---\nReal tools available for this request. To use one, respond with a single line, exactly: TOOL_CALL: {"name": "<tool_name>", "args": {...}}\n${manifest}\n---`;
       }
     }
-    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt: finalPrompt, content: opts.content || '' });
+    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt: finalPrompt, content: opts.content || '', tools: opts.tools || null });
     dispatchJob(job);
   } catch (e) {
     return { ok: false, error: `failed to enqueue job: ${e.message}` };

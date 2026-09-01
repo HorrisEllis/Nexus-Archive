@@ -601,9 +601,10 @@ async function writeToNexus(job) {
 
 // ── job lifecycle ─────────────────────────────────────────────────────────────
 
-function createJob({ command, provider, prompt, content, source }) {
+function createJob({ command, provider, prompt, content, source, tools }) {
   const id  = randomUUID();
   const job = { id, command, provider, prompt, content: content || null, source: source || null,
+    tools: Array.isArray(tools) ? tools : null,
     status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now() };
   jobs.set(id, job);
   console.log(`[guardian] job created: ${id} → ${provider} /${command}`);
@@ -743,6 +744,14 @@ function _doDispatch(job) {
   ncp.push(job.provider, {
     type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
     provider: job.provider, prompt: job.prompt, content: job.content,
+    // §BUILT 2026-08-31, James live: "the chats aren't two way. like the
+    // tools don't work." Real phase 2 — tools was accepted by askSync
+    // and even createJob's caller passed it, but createJob itself never
+    // stored it and this push never sent it, so the userscript's own
+    // handleJob had no way to know tools existed at all, regardless of
+    // whether a real execution route existed (it does — POST
+    // /api/tools/:name, confirmed working).
+    tools: job.tools || null,
   });
   updateJob(job.id, { status: 'delivered', deliveredAt: Date.now() });
   console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP`);

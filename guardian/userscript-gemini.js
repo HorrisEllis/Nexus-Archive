@@ -468,6 +468,30 @@ function startWatch(jobId, prompt, retryCount = 0) {
 }
 
 async function _onJobComplete(jobId, text, responseEl, ms, prompt, retryCount) {
+  if (_toolCallCounts.has(jobId)) {
+    const call = _parseToolCall(text);
+    const count = _toolCallCounts.get(jobId);
+    const MAX_TOOL_CALLS = 5;
+    if (call.found && count < MAX_TOOL_CALLS) {
+      _toolCallCounts.set(jobId, count + 1);
+      _log('job', `Tool call: ${call.name}`, `#${jobId.slice(0,8)} (${count + 1}/${MAX_TOOL_CALLS})`);
+      toast(`🔧 ${call.name}`, 'job', 2500);
+      const result = await _runToolCall(call);
+      const followUp = _formatToolResult(call.name, result);
+      stopWatch();
+      if (!injectText(followUp)) {
+        _log('err', 'Tool follow-up inject failed', `#${jobId.slice(0,8)}`);
+      } else {
+        setTimeout(() => { submit(); startWatch(jobId, followUp, retryCount); }, 500);
+      }
+      return;
+    }
+    if (call.found && count >= MAX_TOOL_CALLS) {
+      _log('err', 'Tool call cap reached', `#${jobId.slice(0,8)} — completing anyway`);
+    }
+    _toolCallCounts.delete(jobId);
+  }
+
   stopWatch();
   send({ type:'GUARDIAN_LEDGER_WRITE', jobId, category:'UPGRADE', msg:`Complete · ${text.length}ch · ${Math.round(ms/1000)}s`,
     meta:{ jobId, chars:text.length, ms, provider:PROVIDER, ts:Date.now() } });
@@ -494,8 +518,62 @@ async function _onJobComplete(jobId, text, responseEl, ms, prompt, retryCount) {
 }
 
 // ── Job handler ───────────────────────────────────────────────────────────────
+// §BUILT 2026-08-31, James live, phase 2 of 2 — real tool-call detection
+// for a browser-typed reply. Guardian's userscripts are standalone
+// Tampermonkey-style scripts with no require() at all (confirmed directly
+// — checked for any require() call anywhere in this file, found none), so
+// this is a deliberate, minimal duplicate of lib/agent-tool-call.js's real
+// regex — same syntax, same shape, kept here because the browser has no
+// other way to run it. If that file's real syntax ever changes, this must
+// change with it (not a shared module, same real tradeoff this codebase
+// already accepts for config.js-style per-system files).
+const AGENT_TOOL_CALL_RE = /\[\[TOOL:\s*([\w-]+)\s*(\{[\s\S]*?\})?\s*\]\]/;
+const _toolCallCounts = new Map(); // jobId -> count, real per-job safety cap
+
+function _parseToolCall(text) {
+  if (typeof text !== 'string' || !text) return { found: false };
+  const m = AGENT_TOOL_CALL_RE.exec(text);
+  if (!m) return { found: false };
+  let args = {};
+  if (m[2]) {
+    try { args = JSON.parse(m[2]); }
+    catch (e) { return { found: true, name: m[1], args: null, raw: m[0], argsError: e.message }; }
+  }
+  return { found: true, name: m[1], args, raw: m[0] };
+}
+
+function _formatToolResult(name, result) {
+  if (result && result.error) return `[Tool "${name}" failed: ${result.error}]`;
+  const body = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+  return `[Tool "${name}" result]\n${body}`;
+}
+
+function _buildToolsHeader(tools) {
+  if (!Array.isArray(tools) || !tools.length) return '';
+  const lines = tools.map(t => `- ${t.name}${t.description ? `: ${t.description}` : ''}`).join('\n');
+  return `You have real tools available. To use one, reply with EXACTLY this ` +
+    `syntax on its own line: [[TOOL: tool_name {"param": "value"}]] — the ` +
+    `result will be sent back to you as a follow-up message. Available tools:\n${lines}\n\n`;
+}
+
+async function _runToolCall(call) {
+  if (call.argsError) return { error: `tool call args are not valid JSON: ${call.argsError}` };
+  try {
+    const r = await fetch(`${NCP_URL}/api/tools/${encodeURIComponent(call.name)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(call.args || {}),
+      signal: AbortSignal.timeout(20000),
+    });
+    const d = await r.json();
+    if (!d.ok) return { error: d.error || `tool "${call.name}" failed` };
+    return d.result;
+  } catch (e) {
+    return { error: `real tool execution request failed: ${e.message}` };
+  }
+}
+
 async function handleJob(msg) {
-  const { jobId, prompt='', content='', command='' } = msg;
+  const { jobId, prompt='', content='', command='', tools=null } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
 
@@ -508,10 +586,14 @@ async function handleJob(msg) {
   _toCortex('agent.call.start', { jobId, provider:PROVIDER, command, promptLen:text.length, hasMedia: hasAttachedMedia() });
   _toBridge('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
 
+  if (Array.isArray(tools) && tools.length) _toolCallCounts.set(jobId, 0);
+
   await gate('handleJob', async () => {
     const intel    = await pullIntelligenceContext(text, command);
     const intelHdr = buildContextHeader(intel);
-    const finalText = intelHdr + text;
+    const toolsHdr = _buildToolsHeader(tools);
+
+    const finalText = toolsHdr + intelHdr + text;
     if (!injectText(finalText)) throw new Error('Input not found — Gemini composer not detected');
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });
     await dbPut('requests', { uuid:jobId, status:'dispatched', sessionId, dispatchedAt:Date.now() });

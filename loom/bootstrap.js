@@ -13,6 +13,7 @@ const { mapObservability } = require('./maps/observability-map');
 const { mapCopilotCapability } = require('./maps/copilot-capability-map');
 const { mapSession20260814 } = require('./maps/session-2026-08-14-map');
 const { mapUi } = require('./maps/ui-map');
+const { mapRaidEventsAndTools } = require('./maps/raid-events-and-tools-map');
 
 const driver = new LoomDriver(); // default dataDir = loom/data/
 
@@ -133,6 +134,7 @@ const handMapped = [
   ...require('./maps/copilot-capability-map').FILES.map(f => f[0]),
   ...require('./maps/session-2026-08-14-map').FILES.map(f => f[0]),
   ...require('./maps/ui-map').FILES.map(f => f[0]),
+  ...require('./maps/raid-events-and-tools-map').FILES.map(f => f[0]),
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -188,6 +190,21 @@ if (mappedObs.failures.length) {
   console.log(`  FAILURES:`);
   for (const f of mappedObs.failures) console.log(`    ${JSON.stringify(f)}`);
   failures += mappedObs.failures.length;
+}
+
+// ── RAID events + browser-agent tool-call parser — this session's own new
+// components (§BUILT 2026-08-31), mapped AFTER observability so the real
+// jaa-db/cfr.ledger .export hooks it declares already exist for this map's
+// wires to reference ──
+console.log('\nmapping RAID events + tool-call components (real require() edges only)...\n');
+const mappedRaidTools = mapRaidEventsAndTools(driver);
+console.log(`  components: ${mappedRaidTools.components.length} ok`);
+console.log(`  hooks:      ${mappedRaidTools.hooks.length} ok`);
+console.log(`  wires:      ${mappedRaidTools.wires.length} ok`);
+if (mappedRaidTools.failures.length) {
+  console.log(`  FAILURES:`);
+  for (const f of mappedRaidTools.failures) console.log(`    ${JSON.stringify(f)}`);
+  failures += mappedRaidTools.failures.length;
 }
 
 // ── Session 2026-08-14 — the 3 genuinely-new components from that session ──
