@@ -33,10 +33,25 @@
 
 const { jaaDB, uid } = require('../../memory/jaa-db');
 const compartmentEngine = require('../../../lib/compartment-engine');
+const { createCFRLedger } = require('../../../intelligence/cfr/ledger');
+const EVENTS = require('./event-taxonomy');
 
 const MODULE_ID = 'cortex/core/raid/contract-intake';
 const VERSION = '1.0.0';
 const TABLE = 'raid_contract_queue';
+
+// §BUILT 2026-08-31, James live: "raid needs events" — real, own ledger
+// instance matching guardian's exact pattern (guardian/server.js's own
+// _evLedger, same createCFRLedger call). RAID had zero real event
+// emissions before this — no bus.emit, no ledger writes — invisible to
+// the causal graph and to intelligence's pattern-scanning regardless of
+// how many real contracts moved through it. record() self-opens on first
+// call (checked directly in intelligence/cfr/ledger.js), so no explicit
+// open() needed here.
+const _raidLedger = createCFRLedger({
+  ledgerDir: require('path').join(__dirname, '..', '..', '..', 'data', 'raid', 'ledger', 'cfr'),
+  systemId:  'raid',
+});
 
 const STATUS = Object.freeze({
   QUEUED: 'queued', RUNNING: 'running', PASS: 'pass', FAIL: 'fail', BLOCKED: 'blocked',
@@ -221,6 +236,9 @@ function submitContract(contract, opts = {}) {
   try { jaaDB.insert(TABLE, row); } catch (e) {
     console.warn(`[${MODULE_ID}] queue insert failed, proceeding without persistence: ${e.message}`);
   }
+  _raidLedger.record('raid.contract.submitted', {
+    queueId, source: row.source, system: row.system, forAgent: row.forAgent, intention: row.intention,
+  }, { source: 'raid', causedBy: null });
   return { queueId, status: STATUS.QUEUED };
 }
 
@@ -243,6 +261,7 @@ function acknowledge(queueId, { system } = {}) {
     return { ok: false, error: `contract is already at stage "${row.stage}" — cannot acknowledge a contract that's past QUEUED` };
   }
   jaaDB.update(TABLE, queueId, { stage: STAGE.HANDSHAKE_VERIFIED, updatedAt: Date.now(), acknowledgedBy: system || null });
+  _raidLedger.record('raid.contract.acknowledged', { queueId, acknowledgedBy: system || null }, { source: 'raid', causedBy: queueId });
   return { ok: true, stage: STAGE.HANDSHAKE_VERIFIED };
 }
 
@@ -472,6 +491,8 @@ function reportExternalOutcome(queueId, { status, verdict } = {}) {
   }
   try {
     jaaDB.update(TABLE, queueId, { status, verdict: verdict || null, updatedAt: Date.now() });
+    _raidLedger.record(status === STATUS.PASS ? 'raid.contract.pass' : 'raid.contract.fail',
+      { queueId, verdict: verdict || null }, { source: 'raid', causedBy: queueId });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e.message };
