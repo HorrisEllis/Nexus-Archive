@@ -32,6 +32,23 @@
  * idearium's own SnapshotGate/SnapshotRestoreGate remain real and useful
  * for idearium's own ideas/specs/gaps/links state — just no longer fed by
  * this sigma trigger, and no longer described as "Versionium."
+ *
+ * §VS1 2026-09-02 (docs/2026-09-02-versionium-sovereign-and-cleanup-
+ * phasemap.spec) — repointed from systemId 'cortex' to 'versionium' now
+ * that Versionium is its own sovereign system (port 3754), not embedded
+ * in cortex's process. §HONEST COEXISTENCE, not a duplicate-truth bug:
+ * versionium/server.js also runs its OWN internal auto-commit trigger
+ * now (versionium/lib/engine.js's _tick(), polling cortex's real
+ * /cfr/field for local field entropy > threshold, its own 5-min
+ * cooldown). This module's trigger is a DIFFERENT real signal —
+ * orchestrator's system-wide COMPOSITE sigma (sigma-writer.js,
+ * aggregated across sigma_records) — not the same fact tracked twice
+ * disagreeing with itself (the real problem the 2026-09-01 reconciliation
+ * above fixed). Two independent, real reasons a commit might be
+ * warranted, each with its own cooldown, both landing on the same real
+ * commit endpoint — not decided to be consolidated further in this pass;
+ * flagged here so a future reader sees this as a deliberate, understood
+ * state, not an overlooked duplicate.
  */
 
 const nx = require('../../lib/nexus-client.js');
@@ -74,7 +91,7 @@ function _getBus() {
  */
 async function _pushCommit({ message, causedBy }) {
   try {
-    const result = await nx.post('cortex', '/api/versionium/commit',
+    const result = await nx.post('versionium', '/api/versionium/commit',
       { message, branch: 'main', causedBy, system: 'orchestrator' });
     console.log(`[${MODULE_ID}] auto-commit succeeded: ${message}`);
     return { ok: true, result };

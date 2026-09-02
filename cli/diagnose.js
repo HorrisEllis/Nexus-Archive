@@ -393,18 +393,21 @@ async function diagCortex() {
     ['file: cortex/foundation/store/FileStore.js', () => fileExists('cortex/foundation/store/FileStore.js')],
     ['file: cortex/foundation/store/FileRefs.js', () => fileExists('cortex/foundation/store/FileRefs.js')],
     ['file: cortex/memory/jaa-db.js',            () => fileExists('cortex/memory/jaa-db.js')],
-    ['file: cortex/versionium/index.js',         () => fileExists('cortex/versionium/index.js')],
     ['file: cortex/agents/index.js',             () => fileExists('cortex/agents/index.js')],
     ['file: cortex/ess-gap-engine.js',           () => fileExists('cortex/ess-gap-engine.js')],
     ['data/cortex dir writable', () => {
       const dir = path.join(ROOT,'data','cortex');
       try { fs.mkdirSync(dir,{recursive:true}); return true; } catch { return false; }
     }],
-    ['cortex/versionium alias check', () => {
-      // boot.js requires ./versionium but the folder is cortex/versionium/index.js
-      // This resolves correctly if index.js exists
-      return fileExists('cortex/versionium/index.js');
-    }],
+    // §VS1 2026-09-02 — versionium is its own sovereign system now
+    // (versionium/server.js, port 3754), not embedded in cortex's boot
+    // sequence. The old "cortex/versionium alias check" tested a require
+    // path (boot.js requiring ./versionium) that no longer exists —
+    // checking it would report a real, misleading PASS for a wire that's
+    // gone, worse than reporting nothing. Real replacement: check the
+    // sovereign system's own real entry point exists instead.
+    ['file: versionium/server.js', () => fileExists('versionium/server.js')],
+    ['file: versionium/lib/engine.js', () => fileExists('versionium/lib/engine.js')],
     ['syntax: cortex/boot.js', () => {
       const r = spawnSync('node',['--check','cortex/boot.js'],{cwd:ROOT,encoding:'utf8',timeout:5000});
       if (r.status !== 0) { console.log(info('    → '+r.stderr.split('\n').find(l=>l.trim()))); }

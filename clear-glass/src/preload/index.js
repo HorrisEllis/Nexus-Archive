@@ -197,6 +197,24 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     visit:  (payload) => ipcRenderer.invoke('bookmarks:visit',  payload),
   },
 
+  // ── History — §fix 2026-09-02 ────────────────────────────────────────
+  // James: "Error: cg.history not available — namespace missing from
+  // window.ClearGlass entirely." Real backend (src/history/store.js) and
+  // real IPC handlers (history:list/delete/clear, ipc/bridge.js:628-630)
+  // both already existed and were both already wired to a live
+  // HistoryStore in main/index.js — this was the one remaining real gap:
+  // nothing in this file ever called contextBridge to expose them to the
+  // renderer, so `cg.history` was undefined even though every layer
+  // beneath it worked. Same call shape ipc/bridge.js's handlers expect:
+  // list takes a filter object; delete/clear take a bare id/agentId,
+  // wrapped into the {id}/{agentId} shape the handlers destructure.
+  history: {
+    list:   (filter) => ipcRenderer.invoke('history:list', filter || {}),
+    record: (payload) => ipcRenderer.invoke('history:record', payload),
+    delete: (id)      => ipcRenderer.invoke('history:delete', { id }),
+    clear:  (agentId) => ipcRenderer.invoke('history:clear', { agentId }),
+  },
+
   // ── Rewind ────────────────────────────────────────────────────────────
   rewind: {
     list:     (agentId, limit) => ipcRenderer.invoke('rewind:list',     { agentId, limit }),

@@ -260,6 +260,26 @@
     const url = wv.getURL();
     urlBar.value = url;
     statusUrl.textContent = url;
+    _restoreZoomForOrigin();
+    _recordHistoryVisit(url);
+  }
+
+  // §fix 2026-09-02 — the missing write half of "history works though it
+  // doesn't seem to work" (see history:record, ipc/bridge.js and
+  // preload/index.js). Fires on every real navigation of the tab the
+  // person is actually looking at — same event (updateUrl, driven by
+  // did-navigate/did-navigate-in-page/did-stop-loading) already used for
+  // the URL bar and cookie count, not a new listener. Skips about:blank
+  // and skips repeat calls for the same URL in a row (did-navigate and
+  // did-stop-loading can both fire updateUrl for one real navigation;
+  // real distinct revisits — a different navigation back to the same
+  // URL later — still record, matching HistoryStore's own "real browser"
+  // convention of not collapsing repeat visits).
+  let _lastRecordedUrl = null;
+  function _recordHistoryVisit(url) {
+    if (!url || url === 'about:blank' || url === _lastRecordedUrl) return;
+    _lastRecordedUrl = url;
+    cg.history.record({ url, title: wv.getTitle() || url, agentId }).catch(() => {});
   }
 
   async function updateCookieCount() {
@@ -1224,6 +1244,29 @@
     } catch (_) {}
   }
 
+  // §BUILD 2026-09-02 — wiring for the new inline #btn-zoom / #zoom-popover
+  // (see applyZoom above). Same show/hide-on-outside-click pattern the
+  // other url-bar-adjacent panels (bookmark-mgr-panel etc.) already use.
+  (function _wireZoomPopover() {
+    const btn = document.getElementById('btn-zoom');
+    const popover = document.getElementById('zoom-popover');
+    if (!btn || !popover) return;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      popover.style.display = (popover.style.display === 'none') ? 'block' : 'none';
+    });
+    popover.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.zoom === 'in') applyZoom(_zoomFactor + 0.1);
+      else if (b.dataset.zoom === 'out') applyZoom(_zoomFactor - 0.1);
+      else applyZoom(1.0);
+    }));
+    document.addEventListener('click', (e) => {
+      if (popover.style.display !== 'none' && !popover.contains(e.target) && e.target !== btn) {
+        popover.style.display = 'none';
+      }
+    });
+  })();
+
   document.getElementById('btn-bookmark').addEventListener('click', async () => {
     const url   = wv.getURL();
     const title = wv.getTitle();
@@ -1263,12 +1306,55 @@
   // Translate, and Report Broken Site have no real implementation
   // anywhere in this codebase today — adding menu entries for them would
   // be exactly the "pretends to work" this codebase's own axioms forbid.
+  // §BUILD 2026-09-02 — James: "per site zoom, i want it like the 3rd
+  // image, inline with the search bar like the bookmarks icon... also
+  // remove zoom [from the ⋯ menu]." applyZoom now does two more real
+  // things it didn't before: (1) drives the new #btn-zoom readout
+  // docked in the url bar instead of (only) the removed ⋯-menu row,
+  // hidden at 100% same as Chrome's own native control, and (2) persists
+  // per *origin*, not globally, via the real existing site-settings
+  // store (site-settings:set 'zoomFactor') — same store the Site
+  // Settings panel itself already reads/writes, not a new mechanism.
+  // `persist` defaults true; passed false from _restoreZoomForOrigin
+  // below so loading a site's saved zoom on navigate doesn't immediately
+  // re-write the same value back.
   let _zoomFactor = 1.0;
-  function applyZoom(factor) {
-    _zoomFactor = Math.min(3, Math.max(0.25, factor));
+  let _zoomOrigin = null; // origin the current _zoomFactor was loaded/saved for
+  function _updateZoomUi() {
+    const pct = Math.round(_zoomFactor * 100) + '%';
+    const btn = document.getElementById('btn-zoom');
+    const btnPct = document.getElementById('btn-zoom-pct');
+    const popoverPct = document.getElementById('zoom-popover-pct');
+    if (btnPct) btnPct.textContent = pct;
+    if (popoverPct) popoverPct.textContent = pct;
+    if (btn) btn.style.display = (_zoomFactor === 1.0) ? 'none' : 'flex';
+  }
+  function applyZoom(factor, persist = true) {
+    _zoomFactor = Math.round(Math.min(3, Math.max(0.25, factor)) * 100) / 100;
     try { wv.setZoomFactor(_zoomFactor); } catch (_) {}
-    const label = document.getElementById('menu-zoom-pct');
-    if (label) label.textContent = Math.round(_zoomFactor * 100) + '%';
+    _updateZoomUi();
+    if (persist) {
+      try {
+        const url = wv.getURL();
+        if (url) {
+          _zoomOrigin = new URL(url).origin;
+          cg.siteSettings.set(url, 'zoomFactor', _zoomFactor).catch(() => {});
+        }
+      } catch (_) {}
+    }
+  }
+  // Loads (and applies) the saved zoom for whatever origin the webview
+  // is currently on. Guarded by _zoomOrigin so an in-page navigation
+  // within the same origin (SPA route change, hash change) doesn't fire
+  // a redundant IPC round-trip every time updateUrl() runs.
+  async function _restoreZoomForOrigin() {
+    let url, origin;
+    try { url = wv.getURL(); origin = url ? new URL(url).origin : null; } catch (_) { return; }
+    if (!origin || origin === _zoomOrigin) return;
+    _zoomOrigin = origin;
+    let saved = 1.0;
+    try { saved = (await cg.siteSettings.get(url, 'zoomFactor')) ?? 1.0; } catch (_) {}
+    applyZoom(saved, false);
   }
 
   // §MERGED 2026-08-30 — James: "remove the command pallet and move
@@ -1405,16 +1491,6 @@
     panel.style.top = `${rect.bottom + 4}px`;
     panel.style.right = `${window.innerWidth - rect.right}px`;
     panel.innerHTML = `
-      <div class="menu-section">
-        <div class="menu-section-label">Zoom</div>
-        <div class="menu-zoom-row">
-          <button data-zoom="out" class="menu-zoom-btn">−</button>
-          <span id="menu-zoom-pct">${Math.round(_zoomFactor * 100)}%</span>
-          <button data-zoom="in" class="menu-zoom-btn">+</button>
-          <button data-zoom="reset" class="menu-zoom-btn" title="Reset (Ctrl+0)" style="margin-left:auto;font-size:10px;">Reset</button>
-        </div>
-      </div>
-      <div class="menu-sep"></div>
       <div id="menu-agent-identity-target"></div>
       <div class="menu-sep"></div>
       <div class="menu-section">
@@ -1425,7 +1501,6 @@
       <div class="menu-item" data-action="downloads">⬇ Downloads</div>
       <div class="menu-item" data-action="site-settings">🛡 Site Settings</div>
       <div class="menu-item" data-action="history">🕐 History</div>
-      <div class="menu-item" data-action="extensions">🧩 Extensions</div>
       <div class="menu-item" data-action="bgtabs">⬡ Background Tabs</div>
       <div class="menu-item" data-action="settings">☰ Settings</div>
       ${_renderToolMenuRows()}
@@ -1447,11 +1522,6 @@
     const target = document.getElementById('menu-agent-identity-target');
     if (slot && target) { target.appendChild(slot); slot.style.display = ''; }
 
-    panel.querySelectorAll('[data-zoom]').forEach(btn => btn.addEventListener('click', () => {
-      if (btn.dataset.zoom === 'in') applyZoom(_zoomFactor + 0.1);
-      else if (btn.dataset.zoom === 'out') applyZoom(_zoomFactor - 0.1);
-      else applyZoom(1.0);
-    }));
     panel.querySelector('[data-action="downloads"]').addEventListener('click', () => {
       panel.style.display = 'none';
       _openPanelFromMenu('downloads-panel', _renderDownloadsPanel);
@@ -1463,10 +1533,6 @@
     panel.querySelector('[data-action="history"]').addEventListener('click', () => {
       panel.style.display = 'none';
       _openPanelFromMenu('history-panel', () => _renderHistoryPanel(''));
-    });
-    panel.querySelector('[data-action="extensions"]').addEventListener('click', () => {
-      panel.style.display = 'none';
-      _openPanelFromMenu('extensions-panel', _renderExtensionsPanel);
     });
     panel.querySelector('[data-action="bgtabs"]').addEventListener('click', () => {
       panel.style.display = 'none';
@@ -1839,43 +1905,21 @@
     if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
   });
 
-  // §PORTED 2026-08-29 — real extensions panel, same real source as above.
-  async function _renderExtensionsPanel() {
-    const panel = document.getElementById('extensions-panel');
-    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
-    try {
-      const exts = await cg.extensions.list();
-      const listHtml = !exts.length
-        ? '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No extensions loaded.</div>'
-        : exts.map(x => `
-          <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
-            <span style="flex:1;overflow:hidden">
-              <div style="font-size:11px;color:var(--text,#ccc)">${x.name.replace(/</g, '&lt;')} <span style="color:var(--text-dim,#999)">v${x.version}</span></div>
-              <div style="font-size:9px;color:var(--text-dim,#999);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.path.replace(/</g, '&lt;')}</div>
-            </span>
-            <span data-unload="${x.id}" style="cursor:pointer;opacity:.6;font-size:11px" title="Unload">✕</span>
-          </div>`).join('');
-      panel.innerHTML = `
-        <div style="padding:2px 2px 6px">
-          <button id="extensions-load-btn" style="width:100%;font-size:11px;padding:5px;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;cursor:pointer">+ Load unpacked extension…</button>
-        </div>
-        ${listHtml}`;
-      document.getElementById('extensions-load-btn').addEventListener('click', async () => {
-        const picked = await cg.extensions.pickDirectory();
-        if (picked.canceled) return;
-        const result = await cg.extensions.load(picked.path);
-        if (result?.error) addMsg('assistant', `Failed to load extension: ${result.error}`);
-        else addMsg('assistant', `🧩 Loaded extension: ${result.name}`);
-        _renderExtensionsPanel();
-      });
-      panel.querySelectorAll('[data-unload]').forEach(el => el.addEventListener('click', async () => {
-        await cg.extensions.unload(el.dataset.unload);
-        _renderExtensionsPanel();
-      }));
-    } catch (err) {
-      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
-    }
-  }
+  // §removed 2026-09-02 — James: "Remove the Extensions menu item/panel
+  // until it's built, per this codebase's own stated discipline of not
+  // shipping menu entries with nothing behind them." Confirmed before
+  // removing: no store, no IPC handler, nothing anywhere in src/ backed
+  // this — cg.extensions was never real at any layer (unlike history,
+  // which had a real backend just missing from preload). Menu item,
+  // click wiring, and this panel's render function all removed together
+  // rather than leaving a partially-dead panel with nothing that opens
+  // it. #extensions-panel's now-orphaned container div in browser.html
+  // and .js:2008's leftover outside-click-to-close listener for it were
+  // removed with it — same reasoning as this comment, not separate.
+  // If real extension loading (Electron's session.loadExtension() for
+  // unpacked Chrome extensions, the same real API Chrome DevTools-style
+  // "Load unpacked" uses) gets built later, this is a clean re-add: same
+  // menu-item pattern as Downloads/History/Site Settings above.
   // §BUILD 2026-08-30 — real background-tab manager, James: "need a
   // background tab manager." Real gap found: cg.bgTabs.open()/close()/
   // list() were already fully wired end to end on the backend (checked
@@ -1921,11 +1965,6 @@
   }
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('bgtabs-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
-  });
-
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('extensions-panel');
     if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
   });
 
@@ -2619,6 +2658,11 @@ It will write and install it for you.`);
   // Null for a page right-click (wv's context-menu listener) or a
   // chrome-bar right-click that didn't land on a pinned command.
   let ctxPinTarget = null;
+  // §fix 2026-09-02 — companion flag to ctxPinTarget: whether this
+  // right-click landed on the chrome bar at all (vs. page content),
+  // independent of whether it hit a *pinned* command specifically.
+  // Drives the new "Customize Toolbar…" row's visibility.
+  let ctxIsChrome = false;
 
   function _findPinnedCommandAt(target) {
     return TOOLBAR_COMMANDS.find(c => {
@@ -2631,6 +2675,8 @@ It will write and install it for you.`);
   function showCtxMenu(x, y) {
     ctxMenu.querySelector('[data-action="unpin"]').style.display = ctxPinTarget ? '' : 'none';
     ctxMenu.querySelector('[data-action="unpin-sep"]').style.display = ctxPinTarget ? '' : 'none';
+    ctxMenu.querySelector('[data-action="customize-toolbar"]').style.display = ctxIsChrome ? '' : 'none';
+    ctxMenu.querySelector('[data-action="customize-toolbar-sep"]').style.display = ctxIsChrome ? '' : 'none';
     ctxMenu.style.left = Math.min(x, window.innerWidth - 180) + 'px';
     ctxMenu.style.top  = Math.min(y, window.innerHeight - 220) + 'px';
     ctxMenu.classList.add('visible');
@@ -2644,12 +2690,14 @@ It will write and install it for you.`);
   document.getElementById('chrome').addEventListener('contextmenu', (e) => {
     e.preventDefault();
     ctxPinTarget = _findPinnedCommandAt(e.target);
+    ctxIsChrome = true;
     showCtxMenu(e.clientX, e.clientY);
   });
 
   wv.addEventListener('context-menu', (e) => {
     e.preventDefault();
     ctxPinTarget = null; // page content is never a pinned toolbar command
+    ctxIsChrome = false;
     showCtxMenu(e.x, e.y);
   });
 
@@ -2659,6 +2707,10 @@ It will write and install it for you.`);
     hideCtxMenu();
 
     switch (action) {
+      case 'customize-toolbar': {
+        _openToolbarEditor();
+        break;
+      }
       case 'unpin': {
         if (!ctxPinTarget) break;
         const next = currentPinned.filter(id => id !== ctxPinTarget.id);

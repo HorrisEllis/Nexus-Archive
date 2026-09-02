@@ -256,11 +256,26 @@ function verifySnapshotIntegrity(nex) {
  * checkChainIntegrity() — walk every real snapshot on disk, verify each,
  * and check the chain links between them. Never throws — a missing or
  * corrupt file is a REPORTED finding, not an uncaught crash (§1.2).
+ *
+ * §HALF-LIFE PRUNING 2026-09-02 — James: "it was taking way too many
+ * snapshots so i gave it a half life." Pruning (see prune() below)
+ * legitimately breaks unbroken hash-chain continuity — a pruned or
+ * hard-deleted record is gone, so the next surviving record's
+ * prev_snapshot_hash genuinely won't match the record immediately
+ * before it anymore. Reporting that as an undifferentiated
+ * "chainBreak" would look identical to real tampering and, over time,
+ * train whoever reads this report to ignore it — the exact failure
+ * mode a tamper-detection system must not have. snapshot_prune_log
+ * (written by prune(), below) is the real, cross-referenced explanation:
+ * a chain break whose gap matches a logged prune event is reported
+ * separately, as prunedGaps, not chainBreaks.
  */
 function checkChainIntegrity() {
   const jaa = _jaa();
   const records = jaa.query(TABLE, () => true, 1000000) || [];
-  const report = { totalChecked: records.length, valid: 0, corrupt: [], missingFiles: [], chainBreaks: [] };
+  const pruneLog = jaa.query(PRUNE_LOG_TABLE, () => true, 1000000) || [];
+  const prunedHashes = new Set(pruneLog.map(p => p.cortex_state_hash).filter(Boolean));
+  const report = { totalChecked: records.length, valid: 0, corrupt: [], missingFiles: [], chainBreaks: [], prunedGaps: [] };
 
   let prevHash = null;
   for (const rec of records) {
@@ -272,12 +287,123 @@ function checkChainIntegrity() {
     if (!result.valid) { report.corrupt.push({ snapId: rec.snapId, reason: result.reason }); prevHash = rec.cortex_state_hash; continue; }
 
     if (nex.prev_snapshot_hash !== prevHash) {
-      report.chainBreaks.push({ snapId: rec.snapId, expected: prevHash, found: nex.prev_snapshot_hash });
+      const entry = { snapId: rec.snapId, expected: prevHash, found: nex.prev_snapshot_hash };
+      if (prevHash && prunedHashes.has(prevHash)) report.prunedGaps.push(entry);
+      else report.chainBreaks.push(entry);
     }
     report.valid++;
     prevHash = nex.cortex_state_hash;
   }
   return report;
+}
+
+// ── Half-life pruning ─────────────────────────────────────────────────────────
+// §BUILT 2026-09-02 — James: "it was taking way too many snapshots so i
+// gave it a half life." Real, deterministic retention policy (not
+// random — the same snapId always makes the same decision on repeated
+// ticks, so a record is never "re-considered" and pruned twice, and two
+// separate processes computing this independently would agree):
+//   - older than 1 week: PRUNE 1/3 (soft — delete the real .nex file
+//     from disk, the actual disk-space problem, but keep a light
+//     tombstone row so the hash chain stays walkable and
+//     checkChainIntegrity() can still report on it honestly).
+//   - older than 2 weeks, of what's still real (not already a
+//     tombstone from the pass above): PRUNE 1/2 of those.
+//   - older than 3 weeks: HARD DELETE — tombstone row removed too, real
+//     gap in the chain from this point on (see checkChainIntegrity()'s
+//     own prunedGaps/snapshot_prune_log cross-reference for why that's
+//     reported as a known gap, not flagged as tampering).
+const PRUNE_LOG_TABLE = 'snapshot_prune_log';
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Deterministic pseudo-bucket for a given snapId — stable across ticks,
+// stable across processes, no shared mutable counter needed.
+function _stableBucket(snapId, mod) {
+  const h = crypto.createHash('md5').update(String(snapId)).digest('hex').slice(0, 8);
+  return parseInt(h, 16) % mod;
+}
+
+/**
+ * prune(opts) — apply the real half-life policy once. Called on a
+ * ticker (startPruneTicker, below) and safe to call manually / in a
+ * test — idempotent per record (a tombstoned record is never
+ * reconsidered for soft-pruning again; a hard-deleted record's row is
+ * simply gone).
+ */
+function prune(opts = {}) {
+  const jaa = _jaa();
+  const now = opts.now || Date.now();
+  const records = jaa.query(TABLE, () => true, 1000000) || [];
+  const result = { softPruned: 0, hardDeleted: 0, checked: records.length };
+
+  for (const rec of records) {
+    const age = now - rec.createdAt;
+    if (rec.pruned && age < 3 * WEEK_MS) continue; // already a tombstone, not yet past hard-delete age
+
+    if (age >= 3 * WEEK_MS) {
+      // Hard delete — real file (if a tombstone already removed it,
+      // this is a no-op, not an error) and the index row, gone.
+      try { fs.unlinkSync(rec.snapPath); } catch (_) { /* already gone, or was already a tombstone */ }
+      try {
+        jaa.insert(PRUNE_LOG_TABLE, { snapId: rec.snapId, cortex_state_hash: rec.cortex_state_hash, action: 'hard-delete', ageMs: age, ts: now });
+        jaa.delete(TABLE, r => r.snapId === rec.snapId);
+      } catch (e) { console.warn(`[cortex/snapshot] hard-delete index update failed for ${rec.snapId}: ${e.message}`); }
+      result.hardDeleted++;
+      continue;
+    }
+
+    if (rec.pruned) continue; // already a tombstone, younger than 3wk — leave it
+
+    if (age >= 2 * WEEK_MS && _stableBucket(rec.snapId, 2) === 0) {
+      _softPrune(jaa, rec, now, '2wk-half');
+      result.softPruned++;
+      continue;
+    }
+    if (age >= WEEK_MS && age < 2 * WEEK_MS && _stableBucket(rec.snapId, 3) === 0) {
+      _softPrune(jaa, rec, now, '1wk-third');
+      result.softPruned++;
+    }
+  }
+  return result;
+}
+
+function _softPrune(jaa, rec, now, reason) {
+  try { fs.unlinkSync(rec.snapPath); } catch (e) { console.warn(`[cortex/snapshot] prune could not remove ${rec.snapPath}: ${e.message}`); }
+  try {
+    jaa.insert(PRUNE_LOG_TABLE, { snapId: rec.snapId, cortex_state_hash: rec.cortex_state_hash, action: 'soft-prune', reason, ts: now });
+    // §TOMBSTONE — keeps the real hash-chain fields (cortex_state_hash,
+    // prev_snapshot_hash lives only inside the .nex file, not the index
+    // row — the index row never had it) so checkChainIntegrity() can
+    // still walk past this record via cortex_state_hash; snapPath is
+    // cleared honestly (load()/rollback() on a pruned snapId report a
+    // real "file was pruned" error, not a fabricated empty snapshot).
+    jaa.update(TABLE, r => r.snapId === rec.snapId, { pruned: true, prunedAt: now, snapPath: null });
+  } catch (e) {
+    console.warn(`[cortex/snapshot] prune index update failed for ${rec.snapId}: ${e.message}`);
+  }
+}
+
+let _pruneInterval = null;
+function startPruneTicker(intervalMs) {
+  if (_pruneInterval) return; // already running — real idempotency, not a silent double-schedule
+  const tick = () => {
+    try {
+      const r = prune();
+      if (r.softPruned || r.hardDeleted) {
+        console.log(`[cortex/snapshot] half-life prune: ${r.softPruned} soft-pruned, ${r.hardDeleted} hard-deleted (of ${r.checked} checked)`);
+      }
+    } catch (e) {
+      console.warn(`[cortex/snapshot] prune tick failed (non-fatal): ${e.message}`);
+    }
+  };
+  _pruneInterval = setInterval(tick, intervalMs || 6 * 60 * 60 * 1000);
+  _pruneInterval.unref();
+  tick(); // real first pass at boot, not just 6 hours from now
+}
+
+function stopPruneTicker() {
+  clearInterval(_pruneInterval);
+  _pruneInterval = null;
 }
 
 /**
@@ -295,7 +421,20 @@ function checkChainIntegrity() {
  */
 function rollback(snapId, opts = {}) {
   const nex = load(snapId);
-  if (!nex) return { ok: false, reason: `no snapshot found for ${snapId}` };
+  if (!nex) {
+    // §HALF-LIFE PRUNING 2026-09-02 — a real, honest distinction: this
+    // snapId may genuinely never have existed, OR it may have been
+    // deliberately thinned by prune()'s own retention policy. Checking
+    // the index row (which survives soft-pruning as a tombstone) gives
+    // the true reason instead of one generic message covering both.
+    try {
+      const row = _jaa().query(TABLE, r => r.snapId === snapId, 1)[0];
+      if (row && row.pruned) {
+        return { ok: false, reason: `snapshot ${snapId} was pruned (${row.prunedAt ? new Date(row.prunedAt).toISOString() : 'unknown time'}) — this codebase's own half-life retention policy already removed its real .nex file; no rollback is possible to it now` };
+      }
+    } catch (_) { /* fall through to the generic message below */ }
+    return { ok: false, reason: `no snapshot found for ${snapId}` };
+  }
   const check = verifySnapshotIntegrity(nex);
   if (!check.valid) return { ok: false, reason: `refusing to rollback to a snapshot that fails integrity check: ${check.reason}` };
 
@@ -333,5 +472,6 @@ function rollback(snapId, opts = {}) {
 
 module.exports = {
   create, load, verifySnapshotIntegrity, checkChainIntegrity, rollback,
-  registerStateProvider, FORMAT, MODULE_ID: 'cortex-snapshot', VERSION: '1.1.0',
+  registerStateProvider, prune, startPruneTicker, stopPruneTicker,
+  FORMAT, MODULE_ID: 'cortex-snapshot', VERSION: '1.2.0',
 };

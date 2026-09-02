@@ -625,6 +625,17 @@ class IpcBridge {
     // HistoryStore, the same real gap this session found (registry
     // promised a feature, zero implementing code existed anywhere).
     ipcMain.handle('history:list',   async (e, d) => this.history?.list(d || {}) || []);
+    // §fix 2026-09-02 — James: "history works. though it doesn't seem to
+    // work." Root cause: no channel existed for a page actually being
+    // visited to WRITE a history entry in the first place. The only real
+    // call to HistoryStore.record() anywhere (providers/host.js:315) is
+    // scoped to the hidden NCP provider windows (claude/chatgpt/gemini/
+    // perplexity) — the person's own main browsing tab never recorded a
+    // single visit. list/delete/clear all worked correctly the whole
+    // time; the store was just always empty for real browsing. Added
+    // the missing write path; renderer's did-navigate handler (below,
+    // browser.js) calls it.
+    ipcMain.handle('history:record', async (e, d) => this.history?.record(d || {}) || { error: 'history unavailable' });
     ipcMain.handle('history:delete', async (e, d) => this.history?.delete(d.id) || { error: 'history unavailable' });
     ipcMain.handle('history:clear',  async (e, d) => this.history?.clear(d?.agentId) || { error: 'history unavailable' });
 

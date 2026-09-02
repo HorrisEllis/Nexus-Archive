@@ -1136,9 +1136,13 @@ if (section('§22 healer/index.js')) {
   test('init+stop cycle',()=>{h.init({pollMs:999999});h.stop();},{invariant:true,expect:'healer init/stop completes'});
 }
 
-// ─── §23 versionium/causality.js ─────────────────────────────────────────────
-if (section('§23 versionium/causality.js')) {
-  const c=require(path.join(ROOT,'cortex/versionium/causality'));
+// ─── §23 versionium/lib/causality.js ─────────────────────────────────────────
+// §VS1 2026-09-02 — repointed from cortex/versionium/causality.js (kept,
+// unchanged, as real archived reference — §0.3 never delete — but no
+// longer required by anything live) to the real, sovereign path this
+// invariant should actually be pinning now.
+if (section('§23 versionium/lib/causality.js')) {
+  const c=require(path.join(ROOT,'versionium/lib/causality'));
   test('exports ancestors+descendants+init+stop',()=>{
     assert.strictEqual(typeof c.ancestors,'function');
     assert.strictEqual(typeof c.descendants,'function');

@@ -117,10 +117,25 @@ function rewind(uuid, { reason = 'user-initiated rewind' } = {}) {
   }
 
   // Snapshot before rewind (§VERSIONIUM)
+  // §VS1 2026-09-02 — this used to require('../../cortex/versionium/
+  // index') directly. Real, live bug, same class as last session's own
+  // AX-010 finding in the agent-tool: a cross-process require() from
+  // intelligence's own process gave THIS process its own separate,
+  // never-init()'d module instance — the try/catch's "versionium may
+  // not be loaded" comment was more honest than anyone realized, since
+  // that instance's commit() would write into cortex's shared jaaDB
+  // directly, bypassing the real, sovereign versionium system entirely
+  // (and after this migration, writing to the WRONG store — cortex's
+  // old shared tables, not versionium's own). Fixed: real sovereign
+  // transport, fire-and-forget (matches this call's own prior semantics
+  // — best-effort, rewind must never block or fail because a snapshot
+  // couldn't be taken).
   try {
-    const versionium = require('../../cortex/versionium/index');
-    versionium.commit({ message: `pre-rewind: ${original.intent} (${uuid.slice(0,8)})`, causedBy: uuid });
-  } catch(_) { /* versionium may not be loaded */ }
+    const nx = require('../../lib/nexus-client.js');
+    nx.post('versionium', '/api/versionium/commit', {
+      message: `pre-rewind: ${original.intent} (${uuid.slice(0, 8)})`, causedBy: uuid,
+    }).catch(e => { process.stderr.write(`[ALK] pre-rewind versionium commit failed (non-fatal): ${e.message}\n`); });
+  } catch (_) { /* versionium may not be reachable */ }
 
   // Record the rewind decision
   const rewindNode = record({

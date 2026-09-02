@@ -289,8 +289,26 @@ const FILES = [
   // assumed; hat-forge predates this map file and was never added to it
   // either — a separate, pre-existing gap, not fixed here).
   ['lib/agent-intent-contract.js', 'nexus.lib.agent-intent-contract', 'lib', []],
-];
 
+  // §ADDED 2026-09-02 — §VS1. James: "map it in looms system map."
+  // versionium promoted from a library embedded in cortex to its own
+  // real sovereign system (docs/2026-09-02-versionium-sovereign-and-
+  // cleanup-phasemap.spec) — every real file below is new this pass,
+  // registered the same way this map already registers every other
+  // real file it tracks, dependencies matched to each file's own real
+  // require() calls, not guessed.
+  ['versionium/config.js',                   'nexus.versionium.config',              'versionium',       []],
+  ['versionium/lib/store.js',                'nexus.versionium.lib.store',           'versionium/lib',   ['nexus.versionium.config']],
+  ['versionium/lib/http-utils.js',           'nexus.versionium.lib.http-utils',      'versionium/lib',   []],
+  ['versionium/lib/engine.js',               'nexus.versionium.lib.engine',          'versionium/lib',   ['nexus.versionium.lib.store', 'nexus.versionium.config']],
+  ['versionium/lib/causality.js',            'nexus.versionium.lib.causality',       'versionium/lib',   ['nexus.versionium.lib.store']],
+  ['versionium/lib/migrate-legacy-data.js',  'nexus.versionium.lib.migrate-legacy-data', 'versionium/lib', ['nexus.versionium.lib.store']],
+  ['versionium/registry-components.js',      'nexus.versionium.registry',            'versionium',       []],
+  ['versionium/event-taxonomy.js',           'nexus.versionium.event-taxonomy',      'versionium',       []],
+  ['versionium/routes/system.js',            'nexus.versionium.routes.system',       'versionium/routes', ['nexus.versionium.config', 'nexus.versionium.lib.http-utils', 'nexus.versionium.registry']],
+  ['versionium/routes/versionium.js',        'nexus.versionium.routes.versionium',   'versionium/routes', ['nexus.versionium.lib.engine', 'nexus.versionium.lib.store', 'nexus.versionium.lib.http-utils']],
+  ['versionium/server.js',                   'nexus.versionium.server',              'versionium',       ['nexus.versionium.config', 'nexus.versionium.lib.engine', 'nexus.versionium.lib.causality', 'nexus.versionium.lib.http-utils', 'nexus.versionium.lib.migrate-legacy-data', 'nexus.versionium.routes.system', 'nexus.versionium.routes.versionium']],
+];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };
 

@@ -1,16 +1,43 @@
 spec:
   meta:
     name:        versionium
-    version:     2.0.0
+    version:     3.0.0
     status:      active
-    canonical_implementation: cortex/versionium/index.js
+    canonical_implementation: versionium/lib/engine.js
     canonical_http_surface:
-      commit:   "POST /api/versionium/commit  { message, branch?, causedBy?, system? }"
-      history:  "GET  /api/versionium/history?system=<name>"
-      restore:  "GET  /api/versionium/restore/:commitId"
-      calendar: "GET  /api/versionium/calendar/:date"
-    reached_via: "lib/nexus-client.js (sovereign transport) — never a direct require() across a process boundary"
-    uuid:        nexus-versionium-v2-0000-2026-0901-jamesbrooks-001
+      commit:   "POST http://127.0.0.1:3754/api/versionium/commit  { message, branch?, causedBy?, system?, state? }"
+      history:  "GET  http://127.0.0.1:3754/api/versionium/history?system=<name>"
+      restore:  "GET  http://127.0.0.1:3754/api/versionium/restore/:commitId"
+      state:    "GET  http://127.0.0.1:3754/api/versionium/state/:commitId"
+      calendar: "GET  http://127.0.0.1:3754/api/versionium/calendar/:date"
+    reached_via: "lib/nexus-client.js (sovereign transport, systemId 'versionium') — never a direct require() across a process boundary"
+    uuid:        nexus-versionium-v3-0000-2026-0902-jamesbrooks-001
+    status_change_2026_09_02: >
+      James: "versionium is its own folder. it's system with a server.js.
+      cli. api. event driven interaction contract. with handshake gated
+      verification... needs the component registery. spec as living
+      model. event taxonomy. data folder. ring buffer. causal field to
+      track changes and trajectory... migrate cortex and idearium's
+      versionium to the new folder and system and map it in looms system
+      map." §VS1 (docs/2026-09-02-versionium-sovereign-and-cleanup-
+      phasemap.spec) — promoted from a library embedded inside cortex's
+      own process to a real sovereign system: own folder (versionium/),
+      own port (3754), own data directory (data/versionium/, genuinely
+      separate from cortex's shared jaaDB — see versionium/lib/store.js's
+      own header for the one deliberate exception, event_log), own
+      component registry (registry-components.js), own event taxonomy
+      (event-taxonomy.js), own L0-L4 structure matching ollama/loom's
+      real precedent exactly. Every real caller (the versionium_commit/
+      versionium_history/versionium_restore agent tools, orchestrator's
+      sigma-gated auto-commit trigger) repointed from systemId 'cortex'
+      to 'versionium'. cortex/boot.js's own former /api/versionium/*
+      routes now return a real 410 with a redirect notice, not a silent
+      404, so any caller that missed this migration fails loud.
+      cortex/versionium/index.js and causality.js themselves are kept,
+      unexecuted, as real historical reference (§0.3 never delete,
+      archive) — nothing requires them anymore; the real logic moved
+      wholesale into versionium/lib/engine.js and causality.js, comments
+      and all, not rewritten from scratch.
     status_change_2026_09_01: >
       James: "migrate to versionium completely." Real investigation before
       changing status: this spec's own build_order (below, kept for
@@ -209,6 +236,33 @@ spec:
           decision: write a one-time backfill script, or accept the
           history gap.
         opened: 2026-09-02
+      - id: V6
+        type: coverage
+        summary: >
+          Production versionium_commits/branches/calendar rows that
+          existed in cortex's shared jaaDB (data/cortex/memory/) before
+          this VS1 migration do NOT automatically appear in the new
+          sovereign store (data/versionium/) — a fresh boot of
+          versionium/server.js starts with real, empty tables, not the
+          old history. Real, separate decision, same as V5: write a
+          one-time copy script, or accept that pre-2026-09-02 commit
+          history stays queryable only via the old, now-unrequired
+          cortex/versionium/index.js code kept as archive reference.
+        opened: 2026-09-02
+      - id: V7
+        type: design
+        summary: >
+          Two independent, real sigma-gated auto-commit triggers now
+          exist for the same commit endpoint: versionium/lib/engine.js's
+          own internal trigger (cortex's live field entropy) and
+          orchestrator/lib/versionium-auto-commit.js's trigger
+          (orchestrator's composite sigma). Documented as a deliberate,
+          understood coexistence in both files' own headers — not
+          consolidated further in this pass. A future call on whether
+          one should be retired, or whether they should share one
+          cooldown clock instead of two independent ones, is real,
+          undecided work.
+        opened: 2026-09-02
 
   version_history:
     - version: 1.0.0
@@ -222,4 +276,8 @@ spec:
     - version: 2.1.0
       date: 2026-09-02
       summary: "SnapshotGate merge reversal — idearium's local snapshot copy fully retired; commit() gained a state param + getState(); idearium/index.js, cli, and api all repointed to sovereign transport."
+      versioniumCommitId: null
+    - version: 3.0.0
+      date: 2026-09-02
+      summary: "VS1 — promoted from a library embedded in cortex's process to its own sovereign system (versionium/server.js, port 3754, own data folder, own component registry, own event taxonomy). Every real caller repointed."
       versioniumCommitId: null

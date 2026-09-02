@@ -57,6 +57,27 @@
          before. Nothing in browser.js needed to change: every existing
          getElementById('btn-bookmark') call still finds the same
          element, just in a new position in the DOM. -->
+    <!-- §BUILD 2026-09-02 — James: "remove zoom [from the ⋯ menu], per
+         site zoom, i want it like the 3rd image, inline with the search
+         bar like the bookmarks icon." Chrome's own native per-site zoom
+         control lives right here — a %-readout that only appears once
+         you're off 100%, opening a small popover with -/reset/+ on
+         click. Real per-origin persistence via the already-existing
+         site-settings store (src/site-settings/store.js, wired at
+         site-settings:get/set) — the same store the Site Settings panel
+         itself reads, not a new one. Hidden by default; toggled in
+         applyZoom() below. -->
+    <button id="btn-zoom" class="url-bar-zoom-btn" title="Zoom" style="display:none;">
+      <span id="btn-zoom-pct">100%</span><span class="url-bar-zoom-caret">▾</span>
+    </button>
+    <div id="zoom-popover" style="display:none;position:absolute;top:40px;right:10px;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)">
+      <div class="menu-zoom-row">
+        <button data-zoom="out" class="menu-zoom-btn">−</button>
+        <span id="zoom-popover-pct">100%</span>
+        <button data-zoom="in" class="menu-zoom-btn">+</button>
+        <button data-zoom="reset" class="menu-zoom-btn" title="Reset (Ctrl+0)" style="margin-left:auto;font-size:10px;">Reset</button>
+      </div>
+    </div>
     <button id="btn-bookmark" class="status-bookmark-btn url-bar-bookmark-btn" title="Bookmark this page">★</button>
   </div>
 
@@ -150,8 +171,10 @@
 <!-- §PORTED 2026-08-29 — real history panel, from a now-diverged branch. -->
 <div id="history-panel" style="display:none;position:absolute;top:130px;right:12px;width:340px;max-height:440px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
 
-<!-- §PORTED 2026-08-29 — real extensions panel, same real source as above. -->
-<div id="extensions-panel" style="display:none;position:absolute;top:130px;right:12px;width:320px;max-height:400px;overflow-y:auto;background:var(--bg2,#111);border:1px solid var(--border,#333);border-radius:6px;z-index:100;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
+<!-- §removed 2026-09-02 — #extensions-panel deleted along with the menu
+     item and _renderExtensionsPanel (browser.js) — see that removal's
+     comment for why. No element opened this panel anymore, so nothing
+     else in this file references its id. -->
 
 <!-- §WIRED 2026-08-23 — James: "agent mesh needs to connect to the
      agent system for co-pilot." Real, working panel replacing the old
@@ -271,6 +294,18 @@
        browser.js); a page right-click never has anything to unpin. -->
   <div class="ctx-item" data-action="unpin" style="display:none;">📌 Unpin from toolbar</div>
   <div class="ctx-item sep" data-action="unpin-sep" style="display:none;"></div>
+  <!-- §fix 2026-09-02 — James: "right clicking on them shows no context
+       menu." A menu WAS actually showing (the generic bookmark/snapshot/
+       pick-element page menu — #chrome's contextmenu listener always
+       fired that one, same as a page right-click), just with nothing
+       toolbar-related in it, which is why it read as no menu at all.
+       This is the entry that was genuinely missing: a direct
+       right-click → Customize Toolbar path, matching Chrome/Firefox's
+       own convention, instead of forcing ⋯ → Customize Toolbar… as the
+       only entry point. Chrome-bar-only (toggled by ctxIsChrome, wired
+       below) — doesn't make sense on a page right-click. -->
+  <div class="ctx-item" data-action="customize-toolbar" style="display:none;">🧰 Customize Toolbar…</div>
+  <div class="ctx-item sep" data-action="customize-toolbar-sep" style="display:none;"></div>
   <div class="ctx-item" data-action="bookmark">★ Bookmark this page</div>
   <div class="ctx-item" data-action="snapshot">📍 Rewind snapshot</div>
   <div class="ctx-item" data-action="pick">◎ Pick element</div>
@@ -390,7 +425,7 @@
      not localStorage — so the layout is the same one src/toolbar/
      commands.js's defaultPinnedIds() and the ⋯ menu's overflow rows
      already read, and survives a relaunch. -->
-<div id="toolbar-editor-overlay" style="display:none;">
+<div id="toolbar-editor-overlay">
   <div id="toolbar-editor-panel">
     <div id="toolbar-editor-header">
       <h3>Customize Toolbar</h3>

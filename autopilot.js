@@ -237,6 +237,19 @@ const ALL_KERNELS = [
   { name: 'intelligence-consumer', cmd: 'node', args: ['intelligence/consumer.js'], optional: true, phase: 4 },
   { name: 'ollama-bridge',cmd: 'node', args: ['ollama/server.js'], optional: true,
     phase: 3, healthUrl: 'http://127.0.0.1:3749/health' },
+  // §VS1 2026-09-02 (docs/2026-09-02-versionium-sovereign-and-cleanup-
+  // phasemap.spec) — James: "versionium is its own folder. it's system
+  // with a server.js." Previously embedded in cortex/boot.js's own
+  // process; promoted to sovereign here. phase 3, same as ollama-bridge
+  // and copilot — no real dependency on anything phase-2-or-earlier
+  // other than orchestrator itself (for registration) being up, and its
+  // own real live-field trigger already degrades honestly (logs
+  // "unreachable, non-fatal") if cortex isn't up yet when it starts.
+  // optional: true — a missing versionium shouldn't trip the whole
+  // system's circuit breaker; agent-mesh dispatch and RAID contract
+  // intake keep working, just without commit history for this boot.
+  { name: 'versionium',   cmd: 'node', args: ['versionium/server.js'], optional: true,
+    phase: 3, healthUrl: 'http://127.0.0.1:3754/health' },
   { name: 'copilot',      cmd: 'node', args: ['copilot/server.js'], optional: true,
     phase: 3, healthUrl: 'http://127.0.0.1:3750/health' },
   // §NEW 2026-07-11 — emerge/consumer.js. Emerge itself is a compiler

@@ -70,10 +70,18 @@ class HistoryStore {
     return entry;
   }
 
-  list({ agentId, limit, since } = {}) {
+  list({ agentId, limit, since, query } = {}) {
     let out = this.entries;
     if (agentId) out = out.filter(e => e.agentId === agentId);
     if (since) out = out.filter(e => e.ts >= since);
+    // §fix 2026-09-02 — `query` was accepted by every caller (renderer's
+    // history search box sends it on every keystroke) but silently
+    // dropped here — destructured never, filtered on never. Search box
+    // rendered fine, just filtered nothing.
+    if (query) {
+      const q = query.toLowerCase();
+      out = out.filter(e => (e.title || '').toLowerCase().includes(q) || (e.url || '').toLowerCase().includes(q));
+    }
     if (limit) out = out.slice(0, limit);
     return out;
   }

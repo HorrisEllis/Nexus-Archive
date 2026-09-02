@@ -163,12 +163,15 @@ const _pushRecall = new CortexPushRecall({
   },
 });
 
-// §VERSIONIUM MIGRATION 2026-09-01 — James: "migrate to versionium
-// completely." Required here (not just inside the boot-time init() call
-// below) so the new /api/versionium/* routes below can reach the SAME
-// singleton instance versionium.init() already started — require()
-// caches by path, this is not a second instance.
-const versionium = require('./versionium');
+// §VS1 2026-09-02 (docs/2026-09-02-versionium-sovereign-and-cleanup-
+// phasemap.spec) — versionium is now its own sovereign system
+// (versionium/server.js, port 3754), not embedded in this process. The
+// require('./versionium') that used to live here, and the boot-time
+// init()/setDeps() calls below it, are gone — the real logic moved
+// wholesale to versionium/lib/engine.js. cortex/versionium/ itself is
+// kept, unexecuted, as a real historical reference (§0.3 never delete,
+// archive) rather than silently vanishing; nothing in this file
+// requires it anymore.
 
 // Ensure data dirs exist
 ['data/cortex/memory', 'data/cortex/ledger', 'data/snapshots'].forEach(d => {
@@ -1131,101 +1134,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Versionium ───────────────────────────────────────────────────────────
-  // §VERSIONIUM MIGRATION 2026-09-01 — James: "migrate to versionium
-  // completely." Before this, the ONLY real caller of cortex/versionium's
-  // commit()/restore()/calendar() was lib/agent-tools/tools/governance/
-  // versionium-commit.js, and it reached them via a direct cross-process
-  // require('../../../../cortex/versionium/index.js') from guardian's and
-  // copilot's own processes — a live AX-010 violation (§nexus-system-
-  // foundation-addendum-v1.2.0.spec), and a real, silent bug: that require()
-  // gives guardian/copilot their OWN separate module instance, with its own
-  // separate in-memory kernel (createKernel() at module scope), NOT cortex's
-  // real running one. Every agent-issued commit's stored snapshot reflected
-  // only that OTHER process's own near-empty kernel ring, not cortex's real
-  // accumulated commit history — restore() on an agent-issued commit would
-  // silently replay a near-empty history. These routes are the real,
-  // sovereign-transport-compliant fix: one canonical instance (this
-  // process's), reached by HTTP like every other cross-process capability
-  // in this codebase, same as /api/raid/decide above.
-  if (p === '/api/versionium/commit' && method === 'POST') {
-    const body = await readBody(req);
-    // §SNAPSHOTGATE MERGE 2026-09-01 — `state` added so a caller (idearium,
-    // going forward) can commit its actual restorable working state, not
-    // just a message. Optional — every existing caller (agent tool,
-    // cortex's own live-field auto-commit) never sends one, unaffected.
-    const { message, branch, causedBy, system, state } = body || {};
-    if (!message) { json(res, 400, { ok: false, error: 'message is required' }); return; }
-    try {
-      const commit = versionium.commit({ message, branch, causedBy, system: system || null, state: state ?? null });
-      json(res, 200, { ok: true, commit });
-    } catch (e) {
-      json(res, 500, { ok: false, error: `versionium commit failed: ${e.message}` });
-    }
-    return;
-  }
-
-  if (p === '/api/versionium/history') {
-    // Real, per-system commit history — the piece LM1's spec schema
-    // (version_history:) and co-pilot's "what changed in system X" both
-    // need to read from, so that section stops being hand-maintained.
-    // §HONEST SCOPE: this is a live QUERY, not a file-writer — it does not
-    // rewrite any .spec file's version_history: block automatically.
-    // Auto-rewriting YAML on every commit is real, additional scope (closer
-    // to LM2's watchdog territory) and is not done here; this route is the
-    // live source a future writer, or co-pilot directly, would read from.
-    const system = url.searchParams.get('system') || null;
-    try {
-      const rows = system
-        ? jaaDB.query('versionium_commits', r => r.system === system, 200)
-        : jaaDB.query('versionium_commits', () => true, 200);
-      json(res, 200, { ok: true, system, count: rows.length, commits: rows });
-    } catch (e) {
-      json(res, 500, { ok: false, error: `versionium history query failed: ${e.message}` });
-    }
-    return;
-  }
-
-  if (p.startsWith('/api/versionium/restore/')) {
-    const commitId = p.slice('/api/versionium/restore/'.length);
-    try {
-      const result = versionium.restore(commitId);
-      if (result.error) { json(res, 404, { ok: false, error: result.error }); return; }
-      // context carries live run()/complete() functions — not serializable
-      // over HTTP as-is. Real, honest choice: run the replay server-side
-      // here and return its completion record, rather than exposing a
-      // half-working object with functions silently dropped by JSON.
-      const completion = result.context.complete ? result.context.complete() : null;
-      json(res, 200, { ok: true, commit: result.commit, completion });
-    } catch (e) {
-      json(res, 500, { ok: false, error: `versionium restore failed: ${e.message}` });
-    }
-    return;
-  }
-
-  // §SNAPSHOTGATE MERGE 2026-09-01 — direct-restore read, distinct from
-  // /restore/ above: returns the raw state stored on the commit (if the
-  // caller sent one), not a causal replay/completion record. This is the
-  // route idearium's restore-with-auto-stash calls into.
-  if (p.startsWith('/api/versionium/state/')) {
-    const commitId = p.slice('/api/versionium/state/'.length);
-    try {
-      const result = versionium.getState(commitId);
-      if (result.error) { json(res, 404, { ok: false, error: result.error }); return; }
-      json(res, 200, { ok: true, commit: result.commit, state: result.state });
-    } catch (e) {
-      json(res, 500, { ok: false, error: `versionium state read failed: ${e.message}` });
-    }
-    return;
-  }
-
-  if (p.startsWith('/api/versionium/calendar/')) {
-    const date = p.slice('/api/versionium/calendar/'.length);
-    try {
-      const rows = versionium.calendar(date);
-      json(res, 200, { ok: true, date, count: rows.length, commits: rows });
-    } catch (e) {
-      json(res, 500, { ok: false, error: `versionium calendar query failed: ${e.message}` });
-    }
+  // §VS1 2026-09-02 (docs/2026-09-02-versionium-sovereign-and-cleanup-
+  // phasemap.spec) — these routes moved wholesale to versionium/server.js
+  // (port 3754), a real sovereign system, not embedded here anymore. A
+  // caller hitting /api/versionium/* on THIS port now gets a real,
+  // honest redirect notice rather than a silent 404 or stale behavior —
+  // every real caller (lib/agent-tools/tools/governance/versionium-
+  // commit.js, orchestrator/lib/versionium-auto-commit.js) was updated in
+  // this same migration to call the new port directly instead.
+  if (p.startsWith('/api/versionium/')) {
+    json(res, 410, { ok: false, error: 'versionium moved to its own sovereign system — call http://127.0.0.1:3754' + p + ' instead', movedTo: 'versionium', movedPort: 3754 });
     return;
   }
 
@@ -1523,6 +1441,11 @@ server.listen(PORT, '127.0.0.1', () => {
   try { require('./memory/decay').startDecayTicker(5 * 60 * 1000); } catch (e) {
     console.warn(`[cortex] memory decay ticker failed to start: ${e.message}`);
   }
+  // Half-life snapshot pruning: 1/3 pruned past 1wk, 1/2 of what's left
+  // pruned past 2wk, hard-deleted past 3wk. See cortex/snapshot/index.js.
+  try { require('./snapshot').startPruneTicker(6 * 60 * 60 * 1000); } catch (e) {
+    console.warn(`[cortex] snapshot decay ticker failed to start: ${e.message}`);
+  }
   // §GAP CLOSED 2026-07-19 — versionium/index.js, versionium/causality.js,
   // liminal-space/index.js and intelligence/index.js existed fully written
   // and tested (unintegrated/2026-07-branch-b-cortex-v2) but were never
@@ -1541,25 +1464,13 @@ server.listen(PORT, '127.0.0.1', () => {
   // listener. Now required above as `bus`, wired into /api/event and
   // /api/gaps (POST) so both cross-process events and cortex's own gap
   // creation fan out live, and passed to liminal-space for real below.
-  try {
-    versionium.init({ pollMs: 3000 });
-    // §VERSIONIUM MIGRATION 2026-09-01 — real live-field wire, replacing
-    // the dead shape_samples poll versionium's own _tick() used to run.
-    // _field is this file's own module-level CFR state (kept live by the
-    // already-real, already-working POST /cfr/field from orchestrator) —
-    // passed as a closure so versionium/index.js always reads the CURRENT
-    // _field, not a one-time snapshot taken at boot.
-    versionium.setDeps({ fieldReader: () => _field });
-    console.log('[cortex] versionium (causal version control) active — live-field auto-commit wired');
-  } catch (e) {
-    console.warn(`[cortex] versionium failed to start: ${e.message}`);
-  }
-  try {
-    require('./versionium/causality').init({ pollMs: 5000 });
-    console.log('[cortex] versionium/causality active');
-  } catch (e) {
-    console.warn(`[cortex] versionium/causality failed to start: ${e.message}`);
-  }
+  // §VS1 2026-09-02 — versionium.init()/setDeps() and versionium/
+  // causality's own init() used to live here (this process fed them
+  // cortex's own in-process _field state directly). Both are gone —
+  // versionium/server.js now runs as its own sovereign process and
+  // polls this cortex process's real GET /cfr/field over sovereign
+  // transport instead (see that file's own header for the full
+  // reasoning). Nothing to start here anymore.
   // ── Organs array — one line per bus-wired SISO organ ────────────────────────
   // Replaces six structurally-identical try/catch blocks that accreted one
   // Phase at a time (the exact monolith-bottleneck pattern the organ model
