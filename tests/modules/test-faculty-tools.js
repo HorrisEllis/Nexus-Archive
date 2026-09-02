@@ -20,12 +20,12 @@ const ROOT = path.join(__dirname, '../..');
 const at = require(path.join(ROOT, 'lib/agent-tools'));
 
 (async () => {
-  await test('T-001', 'all four faculty tools are registered alongside the base tools', () => {
+  await test('T-001', 'all five faculty tools are registered alongside the base tools', () => {
     const names = at.getToolSchemas().map(s => (s.function ? s.function.name : s.name));
-    for (const t of ['module_builder', 'run_adversarial', 'axiom_check', 'analyze']) {
+    for (const t of ['module_builder', 'run_adversarial', 'axiom_check', 'analyze', 'synthesize']) {
       assert.ok(names.includes(t), `${t} must be registered`);
     }
-    assert.ok(at.TOOLS.size >= 14, `expected >=14 tools, got ${at.TOOLS.size}`);
+    assert.ok(at.TOOLS.size >= 15, `expected >=15 tools, got ${at.TOOLS.size}`);
   });
 
   await test('T-002', 'axiom_check executes through the loop and returns a real result', async () => {
@@ -45,6 +45,11 @@ const at = require(path.join(ROOT, 'lib/agent-tools'));
     }
     // and the adapter file is separate, in agent-tools
     assert.ok(fs.existsSync(path.join(ROOT, 'lib/agent-tools/tools/faculty/faculty-tools.js')), 'adapters live in agent-tools');
+  });
+
+  await test('T-005', 'synthesize is wired to the real officiator.synthesizeFromContext, not a stub', async () => {
+    const r = await at.executeTool('synthesize', {});
+    assert.ok(r.error && r.error.includes('contextText is required'), 'must validate params through the real function, not a fake success');
   });
 
   _log(`\n${passed} passed, ${failed} failed`);

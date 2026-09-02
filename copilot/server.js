@@ -1677,7 +1677,7 @@ const server = http.createServer(async (req, res) => {
         const submitted = intake.submitContract({
           content: `${description}\n\nRead the relevant real code before proposing or making any change (bottom-up — no guessing at what exists). If you make a real, verified change, report SEAM VERDICT: PASS. If you cannot, report SEAM VERDICT: FAIL with your real findings.`,
           title: description.slice(0, 80),
-        }, { source: 'copilot' });
+        }, { source: 'copilot', intention: 'build' });
         return json(res, 200, {
           text: `Queued as a real contract (${submitted.queueId.slice(0, 8)}) — it'll be picked up and dispatched to a real agent. This doesn't run instantly; check RAID's queue for its real status.`,
           model_used: 'nexus-raid-contract', confidence: 1, escalated: false, requestId, queueId: submitted.queueId,

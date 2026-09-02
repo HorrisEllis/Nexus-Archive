@@ -1449,7 +1449,7 @@ async function handle(req, res, route, query, body) {
         try {
           const submitted = _require('../../cortex/core/raid/contract-intake.js').submitContract(
             { content: chunkPrompt, file: null, title: chunk.title || chunk.sectionId, forAgent: preferAgent },
-            { source: 'idearium' }
+            { source: 'idearium', intention: 'build' }
           );
           raidQueueId = submitted.queueId;
         } catch (e) {

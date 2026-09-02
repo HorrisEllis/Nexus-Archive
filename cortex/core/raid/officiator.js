@@ -121,24 +121,93 @@ function _parseSynthesizedContract(text) {
   }
 }
 
-async function officiate(drop, opts = {}) {
+// §SHARED CORE 2026-09-02 — officiate() (drop-based, tick-driven) and the
+// new synthesizeFromContext() (arbitrary text, agent-tool-driven) were
+// about to duplicate the exact same hat-check -> dispatch -> parse
+// sequence. Factored out so there is one real place that talks to
+// the_officiator hat, not two copies that could drift.
+async function _synthesizeCore(prompt, opts = {}) {
   const forAgent = opts.forAgent || 'claude';
   const hat = hatForge.get('the_officiator');
   if (!hat) {
     return { ok: false, reason: 'the_officiator hat is not seeded — run lib/hat-seed.js\'s seedHats() first' };
   }
-
-  const prompt = _buildSynthesisPrompt(drop);
   const { dispatchToNcpAgent } = require('../../../copilot/lifeline.js');
   const result = await dispatchToNcpAgent(prompt, { provider: forAgent });
   if (!result || !result.ok) {
     return { ok: false, reason: `no real agent response (forAgent=${forAgent}) — guardian unreachable or an empty response` };
   }
-
   const synthesized = _parseSynthesizedContract(result.text);
   if (!synthesized) {
     return { ok: false, reason: `the_officiator's real response could not be parsed as a real contract JSON object: ${(result.text || '').slice(0, 200)}` };
   }
+  return { ok: true, synthesized };
+}
+
+// §SYNTHESIS TOOL 2026-09-02 — James: "each build contract needs the file
+// name for the artifact, primitives for the build, compartment uuid, and
+// synthesized context with a synthesis tool that the agents can use for
+// context." officiate() only ever ran from the intake-drop tick loop —
+// no agent could call synthesis directly to get grounded context for its
+// OWN reasoning. This is that direct path: same real hat, same real B1
+// schema (fileName, warpPrimitives, compartmentUuid, context, ...), but
+// takes plain text instead of requiring a staged intake drop, and does
+// NOT submit a contract by default — an agent asking "what does this
+// context synthesize to" is not the same act as officiate()'s "turn this
+// staged artifact into a queued build contract." Pass submit:true to also
+// queue it as a real contract via the same submitContract() path
+// officiate() uses — the two are NOT reimplemented separately.
+async function synthesizeFromContext(contextText, opts = {}) {
+  if (!contextText || typeof contextText !== 'string') {
+    return { ok: false, reason: 'contextText is required and must be a string' };
+  }
+  const prompt = [
+    'Synthesize ONE real build contract from the context below.',
+    'Output ONLY a single JSON object — no prose, no markdown fences.',
+    '',
+    'Required keys: endState, conditions, intent, context, warpPrimitives, axioms, tools, compartmentUuid, fileDirectory, fileName.',
+    'A key you cannot determine from the context must be null — never invent a value.',
+    '',
+    'Context:',
+    contextText,
+  ].join('\n');
+
+  const core = await _synthesizeCore(prompt, opts);
+  if (!core.ok) return core;
+  const synthesized = core.synthesized;
+
+  if (!opts.submit) {
+    return { ok: true, synthesized };
+  }
+
+  const { queueId } = submitContract(
+    {
+      content: synthesized.context || contextText.slice(0, 200),
+      title: synthesized.fileName || null,
+      forAgent: opts.dispatchTo || opts.forAgent || 'claude',
+      endState: synthesized.endState ?? null,
+      conditions: synthesized.conditions ?? null,
+      warpPrimitives: synthesized.warpPrimitives ?? null,
+      axioms: synthesized.axioms ?? null,
+      compartmentUuid: synthesized.compartmentUuid ?? null,
+      fileDirectory: synthesized.fileDirectory ?? null,
+      fileName: synthesized.fileName ?? null,
+    },
+    {
+      source: 'officiator-synthesis-tool',
+      intention: synthesized.intent || 'build',
+      forAgent: opts.dispatchTo || opts.forAgent || 'claude',
+      sourceDropId: null,
+    },
+  );
+  return { ok: true, queueId, synthesized };
+}
+
+async function officiate(drop, opts = {}) {
+  const forAgent = opts.forAgent || 'claude';
+  const core = await _synthesizeCore(_buildSynthesisPrompt(drop), { ...opts, forAgent });
+  if (!core.ok) return core;
+  const synthesized = core.synthesized;
 
   const s = drop.summary || {};
   const { queueId } = submitContract(
@@ -219,4 +288,4 @@ function stop() {
   if (_timer) { clearInterval(_timer); _timer = null; }
 }
 
-module.exports = { start, stop, tick, officiate, MODULE_ID, VERSION };
+module.exports = { start, stop, tick, officiate, synthesizeFromContext, MODULE_ID, VERSION };

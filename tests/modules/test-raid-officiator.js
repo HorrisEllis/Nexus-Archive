@@ -165,6 +165,37 @@ await test('OFF-007', 'markOfficiated() itself refuses a real double-mark, match
   assert.ok(second.reason.includes('already officiated'));
 });
 
+await test('OFF-008', 'synthesizeFromContext() returns the real B1 object from plain text — no drop, no intake — and does NOT submit a contract by default', async () => {
+  _mockResponse = { ok: true, text: JSON.stringify({ endState: 'a helper fn exists', conditions: [], intent: 'build', context: 'synthesized', warpPrimitives: ['Gate'], axioms: [], tools: [], compartmentUuid: 'cmp-123', fileDirectory: 'lib/', fileName: 'helper.js' }) };
+  const before = raid.list ? raid.list().length : 0;
+  const result = await officiator.synthesizeFromContext('build a helper function that formats dates');
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.synthesized.fileName, 'helper.js');
+  assert.strictEqual(result.synthesized.compartmentUuid, 'cmp-123');
+  assert.deepStrictEqual(result.synthesized.warpPrimitives, ['Gate']);
+  assert.strictEqual(result.queueId, undefined, 'no contract should be queued without opts.submit');
+});
+
+await test('OFF-009', 'synthesizeFromContext({submit:true}) queues a real contract via the same submitContract() path officiate() uses', async () => {
+  _mockResponse = { ok: true, text: JSON.stringify({ endState: 'b', conditions: [], intent: 'build', context: 'ctx', warpPrimitives: ['Event'], axioms: [], tools: [], compartmentUuid: 'cmp-456', fileDirectory: 'lib/', fileName: 'thing.js' }) };
+  const result = await officiator.synthesizeFromContext('build a thing', { submit: true });
+  assert.strictEqual(result.ok, true);
+  assert.ok(result.queueId, 'a contract must be queued when submit:true');
+});
+
+await test('OFF-010', 'synthesizeFromContext() with an unparseable response fails honestly, same as officiate()', async () => {
+  _mockResponse = { ok: true, text: 'not json at all' };
+  const result = await officiator.synthesizeFromContext('build something');
+  assert.strictEqual(result.ok, false);
+  assert.ok(result.reason.includes('could not be parsed'));
+});
+
+await test('OFF-011', 'synthesizeFromContext() rejects a missing/non-string contextText before ever dispatching', async () => {
+  const result = await officiator.synthesizeFromContext('');
+  assert.strictEqual(result.ok, false);
+  assert.ok(result.reason.includes('contextText is required'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 delete process.env.NEXUS_INTAKE_DIR;
 delete process.env.JAA_DATA_DIR;
