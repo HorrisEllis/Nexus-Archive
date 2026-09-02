@@ -19,7 +19,9 @@
  * LAYER 1 (constraints, deny-only) — fully implemented:
  *   _agentAvailable() — online + consecutiveFails<3
  *   explicit preferredAgent honored if available
- *   LAW_I — ollama always tried first for non-specialist clusters
+ *   LAW_I — ChatGPT tried first, Gemini as its fallback, for all clusters
+ *     (§DEFAULT-AGENT-CHANGE 2026-09-02 below — this replaces the prior
+ *     ollama-first default; ollama moved into the general chain)
  *   LAW_III — claude (API) is the unconditional last resort, never excluded
  *   §P97 — CFR sigma floor tightens the consecutiveFails threshold when
  *          the causal field is outside 'stable' regime
@@ -192,25 +194,33 @@ function _decide(call, health, weights) {
     // falls through to LAW_I / chain — preference offline is not fatal
   }
 
-  // LAW_I — ollama first, for all clusters until "specialist" is enumerated.
-  if (_agentAvailable('ollama', health, { tightened })) {
-    return { agent: 'ollama', cluster, reason: 'LAW_I: ollama always first for non-specialist clusters' };
+  // LAW_I — ChatGPT first, Gemini as its fallback, for all clusters until
+  // "specialist" is enumerated.
+  // §DEFAULT-AGENT-CHANGE 2026-09-02 — James, direct, explicit: "use
+  // Gemini or ChatGPT as the default agent" / "ChatGPT first, Gemini
+  // fallback." This REPLACES the prior ollama-first LAW_I, it does not
+  // sit alongside it — ollama moves down into the general chain below
+  // (still a real, available agent, just no longer the guaranteed-first
+  // one). LAW_III (claude, unconditional last resort) is UNCHANGED —
+  // this request named only the default, not the reserve.
+  if (_agentAvailable('chatgpt', health, { tightened })) {
+    return { agent: 'chatgpt', cluster, reason: 'LAW_I: chatgpt always first for non-specialist clusters' };
+  }
+  if (_agentAvailable('gemini', health, { tightened })) {
+    return { agent: 'gemini', cluster, reason: 'LAW_I: gemini fallback (chatgpt unavailable)' };
   }
 
   // Computed chain (replaces the retired hardcoded CLUSTER_CHAINS, per
   // docs/raid.spec v6.1 note) — today this is one fixed order because
   // role_confidence data doesn't exist yet to differentiate by cluster.
   // Becomes per-cluster once that lands; flagged, not silently faked.
-  // §UPDATED 2026-08-18 — James, direct, explicit preference: "I want to
-  // use ChatGPT and Gemini since they are free. Use you [claude] as a
-  // last resort." The real, existing LAW_III below (further down this
-  // function) already named claude "the unconditional last resort" — but
-  // this chain contradicted it, putting claude BEFORE chatgpt, and never
-  // included gemini at all. Reordered to genuinely match both the
-  // person's stated preference and this function's own already-declared
-  // law, not just the label. gemini added — was completely absent before,
-  // confirmed by reading this array directly, not assumed present.
-  const chain = ['ollama', 'chatgpt', 'gemini', 'claude'];
+  // §DEFAULT-AGENT-CHANGE 2026-09-02 — chatgpt/gemini already handled by
+  // LAW_I above (they only reach this array if BOTH were unavailable,
+  // and are listed again here only so a mid-request state change during
+  // the survivors scan can't skip them — same defensive shape LAW_III
+  // already relies on). ollama moved from position 1 to position 3: still
+  // tried, no longer guaranteed-first. claude stays last per LAW_III.
+  const chain = ['chatgpt', 'gemini', 'ollama', 'claude'];
   const survivors = chain.filter(name => _agentAvailable(name, health, { tightened }));
 
   if (survivors.length === 1) {
