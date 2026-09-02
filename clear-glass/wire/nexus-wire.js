@@ -192,11 +192,31 @@ wireApp.post('/bridge/driver', async (req, res) => {
 });
 
 // Wire status
+// §FIX 2026-09-02 — James: diagnostic logging "'clear-glass' missed its
+// /status probe but registered 2s ago — treating as ONLINE... No gap
+// raised." Traced to root cause, not patched in diagnostic's fallback
+// logic (which is working exactly as designed — §COMPETING TRUTH FIXED
+// 2026-07-24, service/nexus-diagnostic.js). The real bug is HERE:
+// diagnostic probes this exact endpoint with its own 2000ms OUTER
+// timeout (service/nexus-diagnostic.js's pollSystem(), `{ timeout: 2000 }`
+// against http://127.0.0.1:7704/status), while this handler's three
+// upstream proxy calls each carried their OWN 2000ms timeout. They run
+// in parallel (Promise.allSettled), so total wait is ~max(single call),
+// not the sum — but "max" can legitimately BE ~2000ms if any one of
+// erosmancer/clear-glass-ipc/orchestrator is briefly slow, which is
+// equal to or past diagnostic's own outer cutoff for the SAME request.
+// A perfectly healthy wire process, with one slow upstream, could push
+// its own /status past 2000ms and get marked as a missed probe —
+// exactly the intermittent, non-persistent symptom observed. Fixed by
+// giving each internal proxy call real headroom under diagnostic's
+// 2000ms budget: 800ms each means the worst case (all three maximally
+// slow, run in parallel) still responds in ~800ms + overhead, safely
+// inside diagnostic's window.
 wireApp.get('/status', async (req, res) => {
   const [e, cg, o] = await Promise.allSettled([
-    _proxy(EROS_URL, 'GET', '/api/health', null, 2000),
-    _proxy(CG_IPC_URL, 'GET', '/health', null, 2000),
-    _ncReq(NEXUS_ORCH_PORT, 'GET', '/health', null, 2000),
+    _proxy(EROS_URL, 'GET', '/api/health', null, 800),
+    _proxy(CG_IPC_URL, 'GET', '/health', null, 800),
+    _ncReq(NEXUS_ORCH_PORT, 'GET', '/health', null, 800),
   ]);
   res.json({
     wire:         { ok: true, uuid: MODULE_UUID, port: WIRE_PORT },

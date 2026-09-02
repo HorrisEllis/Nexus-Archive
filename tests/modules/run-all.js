@@ -80,6 +80,7 @@ const SUITES = [
   'test-grammar-engine.js',
   'test-grammar-fallback.js',
   'test-mutation-contract.js',
+  'test-versionium-migration.js',
   'test-intelligence-bridge.js',
   'test-liminal-space.js',
   'test-fault-taxonomy.js',

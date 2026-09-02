@@ -2,7 +2,7 @@
 /**
  * orchestrator/lib/versionium-auto-commit.js — Sigma-gated auto-commit
  * UUID: nexus-versionium-auto-commit-v1-0000-2026-0828-001
- * Version: 1.0.0
+ * Version: 1.1.0
  *
  * §VERSIONIUM STEP 4 — docs/versionium.spec's own words: "CFR sigma
  * crossing a threshold triggers an automatic snapshot via the mechanism
@@ -16,25 +16,28 @@
  * bus. This module is the one piece that didn't exist: something
  * listening for those and actually triggering a real commit.
  *
- * "the mechanism above" = idearium's SnapshotGate (docs/versionium.spec's
- * commit_graph section, this session's step 1) — the real commit-graph
- * system with branch/parentId/message, not cortex/snapshot's cross-system
- * state coordination (a different, lower-level mechanism, not framed
- * around commits/branches/messages the way Versionium's whole framing is).
- *
- * causedBy: SnapshotGate already fully supported this field before this
- * module existed (destructured, persisted on the snap object) — the one
- * real gap was idearium/api/index.js's HTTP handler not forwarding it
- * from the request body, fixed alongside this file, not by this file.
+ * §VERSIONIUM MIGRATION 2026-09-01 — James: "migrate to versionium
+ * completely." This module originally targeted idearium's SnapshotGate
+ * (docs/versionium.spec's own build_order treated idearium's commit graph
+ * as "the mechanism" Versionium would inherit). Investigated directly
+ * before touching anything: idearium's SnapshotGate and
+ * cortex/versionium/index.js turned out to be two separate, real,
+ * NEVER-RECONCILED commit-graph implementations under the same name —
+ * a genuine §10.3 competing-truth finding, not a naming quibble. Per
+ * James's explicit direction, cortex/versionium is now canonical (it
+ * already had the more complete real capability set — kernel-based
+ * temporal replay via restore(), calendar(), and correctly branch-scoped
+ * commits from the start). This module now targets cortex's real
+ * /api/versionium/commit route instead of idearium's /api/snapshots.
+ * idearium's own SnapshotGate/SnapshotRestoreGate remain real and useful
+ * for idearium's own ideas/specs/gaps/links state — just no longer fed by
+ * this sigma trigger, and no longer described as "Versionium."
  */
 
-const http = require('http');
+const nx = require('../../lib/nexus-client.js');
 
 const MODULE_ID = 'versionium-auto-commit';
-const VERSION   = '1.0.0';
-
-const IDEARIUM_HOST = process.env.IDEARIUM_HOST || '127.0.0.1';
-const IDEARIUM_PORT = parseInt(process.env.IDEARIUM_PORT || '4800', 10);
+const VERSION   = '1.1.0';
 
 // §REAL DESIGN DECISION — _writeComposite() runs on a fixed interval
 // (COMPOSITE_WRITE_INTERVAL) and re-emits its threshold event EVERY tick
@@ -59,46 +62,26 @@ function _getBus() {
 }
 
 /**
- * _pushSnapshot({message, causedBy}) — the one real HTTP call this module
- * makes. POST /api/snapshots on idearium (confirmed real, existing route:
- * idearium/api/index.js's ROUTES table maps this exact path+method to
- * action 'snapshot.push', requiring CAPS.ADMIN — but that file's own
- * comment confirms "internal API, no auth, no remote surface": idearium
- * only accepts traffic from trusted internal callers like this one, no
- * token needed). Fire-and-forget by design, same reasoning as every other
- * cross-process notification this session added: a failed auto-commit
- * attempt should never be allowed to affect anything else orchestrator is
- * doing, it should just be logged honestly.
+ * _pushCommit({message, causedBy}) — the one real call this module makes.
+ * §VERSIONIUM MIGRATION 2026-09-01 — now POST /api/versionium/commit on
+ * cortex, via lib/nexus-client.js (sovereign transport — names a system
+ * and a path, never a host/port), replacing the direct raw-http POST to
+ * idearium's /api/snapshots. system: 'orchestrator' since this trigger is
+ * about orchestrator's own composite sigma reading, not any one
+ * downstream system. Fire-and-forget by design, same reasoning as before:
+ * a failed auto-commit attempt should never affect anything else
+ * orchestrator is doing, it should just be logged honestly.
  */
-function _pushSnapshot({ message, causedBy }) {
-  return new Promise((resolve) => {
-    const payload = JSON.stringify({ message, branch: 'main', author: 'versionium-auto-commit', causedBy });
-    const req = http.request({
-      hostname: IDEARIUM_HOST, port: IDEARIUM_PORT,
-      path: '/api/snapshots', method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-      timeout: 5000,
-    }, (res) => {
-      let body = '';
-      res.on('data', (d) => { body += d; });
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          console.log(`[${MODULE_ID}] auto-commit succeeded: ${message}`);
-          resolve({ ok: true });
-        } else {
-          console.warn(`[${MODULE_ID}] auto-commit request reached idearium but was rejected (HTTP ${res.statusCode}): ${body.slice(0, 200)}`);
-          resolve({ ok: false, error: `HTTP ${res.statusCode}` });
-        }
-      });
-    });
-    req.on('error', (err) => {
-      console.warn(`[${MODULE_ID}] auto-commit request could not reach idearium :${IDEARIUM_PORT} (${err.code || err.message}) — sigma stayed high with no commit made to show for it`);
-      resolve({ ok: false, error: err.code || err.message });
-    });
-    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'timeout' }); });
-    req.write(payload);
-    req.end();
-  });
+async function _pushCommit({ message, causedBy }) {
+  try {
+    const result = await nx.post('cortex', '/api/versionium/commit',
+      { message, branch: 'main', causedBy, system: 'orchestrator' });
+    console.log(`[${MODULE_ID}] auto-commit succeeded: ${message}`);
+    return { ok: true, result };
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] auto-commit request could not reach cortex (${e.message}) — sigma stayed high with no commit made to show for it`);
+    return { ok: false, error: e.message };
+  }
 }
 
 async function _onThresholdEvent(level, event) {
@@ -110,7 +93,7 @@ async function _onThresholdEvent(level, event) {
   }
   _lastAutoCommitAt = now;
   const message = `auto-commit: sigma composite ${level === 'halt_risk' ? 'HALT RISK' : 'warning'} — sigma=${event?.sigma?.toFixed?.(3) ?? '?'} (${event?.count ?? '?'} samples)`;
-  await _pushSnapshot({ message, causedBy: event?.uuid || null });
+  await _pushCommit({ message, causedBy: event?.uuid || null });
 }
 
 function init() {

@@ -267,6 +267,20 @@ const FILES = [
   ['guardian/userscript-perplexity.js', 'nexus.guardian.userscript.perplexity', 'guardian', []],
   ['lib/introspect.js', 'nexus.lib.introspect', 'lib', []],
   ['lib/work-queue.js', 'nexus.lib.work-queue', 'lib', []],
+
+  // §ADDED 2026-09-01 — §VERSIONIUM MIGRATION. precommit-check.js flagged
+  // both as orphans after this session's real edits to them (CLAUDE.md
+  // rule 3). Checked directly, not assumed: cortex/versionium/index.js
+  // requires cortex/memory/jaa-db.js (already registered elsewhere as
+  // nexus.cortex.jaa-db, same id loom/maps/session-2026-08-14-map.js's
+  // own liminal-space entry above already references) and
+  // intelligence/rfr2/{kernel,compress,context} (no findable registered
+  // id for those three individually — left out rather than guessed,
+  // same convention as spec-wizard.js above). versionium-commit.js's one
+  // real require (lib/nexus-client.js) has no registered id either, same
+  // honest gap.
+  ['cortex/versionium/index.js', 'nexus.cortex.versionium', 'cortex/versionium', ['nexus.cortex.jaa-db']],
+  ['lib/agent-tools/tools/governance/versionium-commit.js', 'nexus.lib.agent-tools.governance.versionium-commit', 'lib/agent-tools/tools/governance', []],
 ];
 
 function mapSession20260814(driver) {

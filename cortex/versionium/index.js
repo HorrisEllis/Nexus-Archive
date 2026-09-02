@@ -2,12 +2,19 @@
 // ── versionium/index.js ───────────────────────────────────────────────────────
 // UUID: mod-versionium-v5-0000-4000-0000-000000000001
 //
-// Causal version control. Reads artifacts + shape_samples for sigma deviations.
-// Auto-commits when sigma > threshold. Writes to versionium_commits/branches.
+// Causal version control. Auto-commits when cortex's own live field
+// entropy (_fieldReader, injected via setDeps — see cortex/boot.js's
+// versionium.setDeps() call) crosses SIGMA_THRESH. Writes to
+// versionium_commits/branches.
+//
+// §VERSIONIUM MIGRATION 2026-09-01 — this module's own header used to say
+// "reads shape_samples for sigma deviations." Checked directly, tree-wide:
+// nothing ever wrote to shape_samples — that table has been permanent
+// silence since this module was built. Corrected here, not left stale.
 //
 // §M1: init(cfg) + stop() + setDeps(deps).
-// §M2: reads: artifacts, shape_samples. writes: versionium_commits, versionium_branches,
-//      versionium_file_index, versionium_calendar, event_log.
+// §M2: reads: cortex's live _field (via fieldReader). writes: versionium_commits,
+//      versionium_branches, versionium_file_index, versionium_calendar, event_log.
 
 const { jaaDB, uid } = require('../memory/jaa-db');
 // §BUILD 2026-08-30 — James: "step 2" (of versionium.spec's own build_order
@@ -38,11 +45,32 @@ const { createReplayContext } = require('../../intelligence/rfr2/context');
 
 const MODULE_ID     = 'versionium';
 const SIGMA_THRESH  = 0.7;
+// §VERSIONIUM MIGRATION 2026-09-01 — real cooldown for the live-field
+// trigger below, same 5-minute value and same commit-spam rationale
+// already proven correct in orchestrator/lib/versionium-auto-commit.js
+// (a sustained-high-entropy episode should produce one commit per
+// window, not one every pollMs while the condition holds).
+const AUTOCOMMIT_COOLDOWN_MS = 5 * 60 * 1000;
 
 let _interval  = null;
 let _cfg       = {};
 let _fileStore = null;
 let _fileRefs  = null;
+// §VERSIONIUM MIGRATION 2026-09-01 — real replacement for the dead
+// shape_samples poll below. jaaDB.tail('shape_samples', 20) was checked
+// directly, tree-wide: NOTHING in this codebase ever inserts into
+// shape_samples — this trigger has been polling permanent silence since
+// it was built, the same "listening to a bus nothing emits on" failure
+// class this codebase's own AX-011 finding already named once (self-heal
+// / nexus-heal-loop). cortex/boot.js already maintains a real, live,
+// continuously-updated field (_field.entropy/_field.regime), fed
+// cross-process from orchestrator via the already-real, already-working
+// POST /cfr/field — the exact sovereign-transport pattern AX-010
+// prescribes. _fieldReader is that live read, injected via setDeps() so
+// this module doesn't reach into cortex/boot.js directly (would be
+// circular — boot.js requires this module already).
+let _fieldReader = null;
+let _lastAutoCommitAt = 0;
 // §BUILD 2026-08-30 — real, persistent kernel Versionium feeds every
 // commit into. Module-level (not per-commit) so the kernel's own event
 // ring accumulates Versionium's FULL causal history over the process's
@@ -63,19 +91,29 @@ function stop() {
   _interval = null;
 }
 
-function setDeps({ fileStore, fileRefs }) {
-  _fileStore = fileStore;
-  _fileRefs  = fileRefs;
+function setDeps({ fileStore, fileRefs, fieldReader } = {}) {
+  _fileStore  = fileStore;
+  _fileRefs   = fileRefs;
+  if (fieldReader) _fieldReader = fieldReader;
 }
 
 async function _tick() {
   try {
-    // Check shape samples for sigma spikes
-    const samples = jaaDB.tail('shape_samples', 20);
-    const sigmaSpike = samples.find(s => (s.sigma || 0) > SIGMA_THRESH && !s.committed);
-
-    if (sigmaSpike) {
-      await _autoCommit(sigmaSpike);
+    // §VERSIONIUM MIGRATION 2026-09-01 — replaced the dead shape_samples
+    // poll (see _fieldReader comment above) with cortex's own real,
+    // live field state. No fieldReader wired (setDeps never called with
+    // one) means honestly no trigger fires — never a fabricated one.
+    if (_fieldReader) {
+      const field = _fieldReader();
+      const sigma = field?.entropy ?? 0;
+      const now   = Date.now();
+      if (sigma > SIGMA_THRESH && (now - _lastAutoCommitAt) >= AUTOCOMMIT_COOLDOWN_MS) {
+        _lastAutoCommitAt = now;
+        await _autoCommit({
+          sigma, module: field?.regime || 'cortex-field',
+          uuid: null, system: 'cortex',
+        });
+      }
     }
 
   } catch (err) {
@@ -113,15 +151,18 @@ async function _autoCommit(trigger) {
   const branches = jaaDB.query('versionium_branches', r => r.branch === branch, 1);
   const parentId = branches[0]?.headCommitId || null;
 
-  const message = `auto-commit: shape deviation sigma ${trigger.sigma?.toFixed(2)} at ${trigger.module || 'unknown'}`;
+  const message = `auto-commit: sigma deviation ${trigger.sigma?.toFixed(2)} at ${trigger.module || 'unknown'}`;
   const snap    = _kernelSnapshotFor(commitId, branch, message, trigger.uuid);
 
-  // Write commit
+  // Write commit — §VERSIONIUM MIGRATION 2026-09-01: carries trigger.system
+  // through (e.g. 'cortex' for the live-field trigger above) so auto-commits
+  // are attributable the same way manual commits now are.
   const commit = jaaDB.insert('versionium_commits', {
     uuid:      commitId,
     commitId,
     parentId,
     branch,
+    system:    trigger.system || null,
     message,
     wall:      now,
     source:    MODULE_ID,
@@ -154,20 +195,16 @@ async function _autoCommit(trigger) {
     });
   }
 
-  // Calendar entry
-  const date = new Date(now).toISOString().slice(0, 10);
-  jaaDB.insert('versionium_calendar', {
-    uuid:     uid(),
-    date,
-    commitId,
-    branch,
-    source:   MODULE_ID,
-    causedBy: trigger.uuid,
-    ts:       now,
-  });
+  // Calendar entry — shared helper, see _writeCalendarEntry's own comment
+  _writeCalendarEntry({ commitId, branch, causedBy: trigger.uuid, ts: now });
 
-  // Mark sample as committed
-  jaaDB.update('shape_samples', trigger.uuid, { committed: true, commitId });
+  // §VERSIONIUM MIGRATION 2026-09-01 — removed: `jaaDB.update('shape_samples',
+  // trigger.uuid, {committed:true, commitId})`. That table is dead (nothing
+  // ever writes to it — see the header comment on _tick above) and the new
+  // live-field trigger passes uuid: null, so this update was a guaranteed
+  // silent no-op even before the table's deadness was fixed. Removed rather
+  // than left as inert code calling a real jaaDB method against a
+  // nonexistent row.
 
   jaaDB.insert('event_log', {
     uuid:     uid(),
@@ -181,8 +218,27 @@ async function _autoCommit(trigger) {
   return commit;
 }
 
+// §VERSIONIUM MIGRATION 2026-09-01 — real bug found while writing the
+// migration's own smoke test (V-006): manual commit() never wrote to
+// versionium_calendar — only _autoCommit() did. "Calendar playback" is
+// one of the three real capabilities docs/versionium.spec's own purpose
+// section names for Versionium; a calendar that's silently blind to
+// every manually-triggered commit (which, via the agent tool, is most of
+// them) isn't real calendar playback. Shared here so both paths write
+// identically, not two near-duplicate inserts that could drift.
+function _writeCalendarEntry({ commitId, branch, causedBy, ts }) {
+  const date = new Date(ts).toISOString().slice(0, 10);
+  jaaDB.insert('versionium_calendar', {
+    uuid: uid(), date, commitId, branch, source: MODULE_ID, causedBy, ts,
+  });
+}
+
 // ── Manual commit API ─────────────────────────────────────────────────────────
-function commit({ message, branch = 'main', causedBy = null } = {}) {
+// §VERSIONIUM MIGRATION 2026-09-01 — added `system` (optional, default null).
+// Needed so /api/versionium/history?system=X (cortex/boot.js) and, later,
+// LM1's per-system version_history: section can trace a commit back to the
+// system it was made for — this field genuinely did not exist before.
+function commit({ message, branch = 'main', causedBy = null, system = null } = {}) {
   const now       = Date.now();
   const commitId  = 'vtm-' + uid().slice(0, 8);
   const branches  = jaaDB.query('versionium_branches', r => r.branch === branch, 1);
@@ -191,7 +247,7 @@ function commit({ message, branch = 'main', causedBy = null } = {}) {
   const snap      = _kernelSnapshotFor(commitId, branch, realMsg, causedBy);
 
   const c = jaaDB.insert('versionium_commits', {
-    uuid: commitId, commitId, parentId, branch,
+    uuid: commitId, commitId, parentId, branch, system,
     message: realMsg,
     wall: now, source: MODULE_ID, causedBy,
     snapshot: snap,
@@ -203,7 +259,8 @@ function commit({ message, branch = 'main', causedBy = null } = {}) {
     jaaDB.insert('versionium_branches', { uuid: branch + ':branch', branch, headCommitId: commitId, createdAt: now, updatedAt: now, source: MODULE_ID });
   }
 
-  jaaDB.insert('event_log', { uuid: uid(), type: 'versionium.committed', payload: { commitId, branch, parentId }, source: MODULE_ID, causedBy, ts: now });
+  jaaDB.insert('event_log', { uuid: uid(), type: 'versionium.committed', payload: { commitId, branch, parentId, system }, source: MODULE_ID, causedBy, ts: now });
+  _writeCalendarEntry({ commitId, branch, causedBy, ts: now });
   return c;
 }
 

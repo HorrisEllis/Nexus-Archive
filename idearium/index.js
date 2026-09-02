@@ -693,6 +693,17 @@ class GapIgnoreGate extends Gate {
   }
 }
 
+// §VERSIONIUM MIGRATION 2026-09-01 — James: "migrate to versionium
+// completely." This class and SnapshotRestoreGate below were, until this
+// pass, described in docs/versionium.spec's own build_order as "the
+// mechanism" Versionium would inherit — but cortex/versionium/index.js
+// was independently built as a SEPARATE, real commit-graph, never
+// reconciled with this one (a genuine §10.3 competing-truth finding).
+// Per James's direction, cortex/versionium is now canonical. This class
+// is real, tested, and still useful — idearium's own push/pull for its
+// ideas/specs/gaps/links state — but it is idearium's own feature now,
+// not Versionium. orchestrator/lib/versionium-auto-commit.js no longer
+// triggers this (repointed at cortex's real /api/versionium/commit).
 class SnapshotGate extends Gate {
   constructor(os) { super('idearium.snapshot.commit'); this.os = os; }
   transform(event, stream) {
