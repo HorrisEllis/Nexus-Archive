@@ -252,6 +252,15 @@ function submitContract(contract, opts = {}) {
  * validation: refuses to ACK a contract that's already past this
  * stage (a stale or duplicate ACK is a real signal something's wrong,
  * not something to silently accept twice).
+ *
+ * §AM1 2026-09-02 — this is also now the real intent-contract GATE
+ * (lib/agent-intent-contract.js). A contract naming a real forAgent AND
+ * a real intent gets checked here, before HANDSHAKE_VERIFIED, not just
+ * routed to hopefully — the exact "agent aware and specific for each
+ * intent" enforcement point RAID's own real handshake already existed
+ * to be. A contract with no forAgent or no intent (most contracts
+ * before this session) skips the check entirely — this is additive,
+ * not a new requirement on every existing caller.
  */
 function acknowledge(queueId, { system } = {}) {
   const rows = jaaDB.query(TABLE, r => r.uuid === queueId, 1);
@@ -259,6 +268,23 @@ function acknowledge(queueId, { system } = {}) {
   if (!row) return { ok: false, error: `no real contract with queueId "${queueId}"` };
   if (row.stage !== STAGE.QUEUED) {
     return { ok: false, error: `contract is already at stage "${row.stage}" — cannot acknowledge a contract that's past QUEUED` };
+  }
+  if (row.forAgent && row.intention) {
+    try {
+      const { checkAgentIntentContract } = require('../../../lib/agent-intent-contract.js');
+      const check = checkAgentIntentContract(row.forAgent, row.intention);
+      if (!check.ok) {
+        jaaDB.update(TABLE, queueId, { status: STATUS.BLOCKED, updatedAt: Date.now(), blockReason: `intent contract refused: ${check.reason}` });
+        _raidLedger.record('raid.contract.rejected', { queueId, forAgent: row.forAgent, intention: row.intention, reason: check.reason }, { source: 'raid', causedBy: queueId });
+        return { ok: false, error: `intent contract refused: ${check.reason}` };
+      }
+    } catch (e) {
+      // §HONEST DEGRADATION — a contract-check failure (module load
+      // error, etc.) must never silently block real work that has
+      // nothing to do with it. Logged, not swallowed; the handshake
+      // proceeds as it did before AM1 existed.
+      console.warn(`[${MODULE_ID}] intent contract check failed (non-fatal, proceeding): ${e.message}`);
+    }
   }
   jaaDB.update(TABLE, queueId, { stage: STAGE.HANDSHAKE_VERIFIED, updatedAt: Date.now(), acknowledgedBy: system || null });
   _raidLedger.record('raid.contract.acknowledged', { queueId, acknowledgedBy: system || null }, { source: 'raid', causedBy: queueId });
@@ -434,6 +460,56 @@ async function submitIdeariumChunk(manifest, chunk) {
   }, { source: 'idearium', forAgent: chunk.agent });
 }
 
+/**
+ * submitBuildPhaseContract(phase, opts) — "a contract for building
+ * phases" (James, 2026-09-02). The real third contract source, alongside
+ * spec-parser's and idearium's own: a real phasemap PHASE — the same
+ * shape every docs/*.spec phasemap in this repo already writes (name,
+ * status, does, depends_on) — becomes a real RAID contract an agent can
+ * be dispatched against, end to end, tonight.
+ *
+ * §REAL, NOT INVENTED SHAPE — `phase` matches exactly what a phasemap's
+ * own `phases:` entries already look like (checked against this
+ * session's own docs/2026-09-02-agent-mesh-full-map-phasemap.spec):
+ *   { name, status, does, depends_on, forAgent }
+ * `does` becomes the real prompt content; `forAgent` is required (a
+ * build-phase contract with no target agent is meaningless — refused
+ * here, not defaulted to 'auto' and silently routed nowhere in
+ * particular). intention is set to 'build' — a real verb from intent-
+ * classifier's own VERB_PATTERNS — so AM1's intent-contract gate
+ * (acknowledge(), above) actually checks it against the target agent's
+ * real hats, not skipped for lack of an intention.
+ *
+ * checkEndState is intentionally the same honest bar submitIdeariumChunk
+ * uses (non-empty response = pass) — a stronger, phase-specific
+ * acceptance check is real, future work (this phasemap's own AM6 already
+ * names "RAID checks... before the NCP push," not after), not invented
+ * here to look more finished than it is.
+ */
+function submitBuildPhaseContract(phase, opts = {}) {
+  if (!phase || typeof phase.does !== 'string' || !phase.does.trim()) {
+    throw new Error(`[${MODULE_ID}] submitBuildPhaseContract requires phase.does — a real, non-empty description of the work`);
+  }
+  if (!phase.forAgent) {
+    throw new Error(`[${MODULE_ID}] submitBuildPhaseContract requires phase.forAgent — a build-phase contract must name a real target agent`);
+  }
+  const content = phase.name
+    ? `[Phase: ${phase.name}]\n\n${phase.does}`
+    : phase.does;
+  return submitContract({
+    content,
+    title: phase.name || null,
+    forAgent: phase.forAgent,
+    dependsOn: Array.isArray(phase.depends_on) ? phase.depends_on : [],
+    checkEndState: (resultText) => ({ pass: !!resultText && resultText.trim().length > 0 }),
+  }, {
+    source: 'agent-mesh',
+    intention: 'build',
+    forAgent: phase.forAgent,
+    dependsOn: Array.isArray(phase.depends_on) ? phase.depends_on : [],
+  });
+}
+
 // §HIGHEST LEVERAGE 2026-08-29 — James: "highest leverage... to get the
 // system coding." Real, honest finding checked before building anything:
 // RAID's contract queue (real dependency graph, real qaqcLayer, real
@@ -471,6 +547,19 @@ async function _realAgentExecutor(queueRow) {
   if (!result || !result.ok) {
     throw new Error(`no real agent response available (forAgent=${queueRow.forAgent || 'auto'}) — guardian unreachable, no connected provider, or an empty response`);
   }
+  // §AGENT-MESH-ARTIFACTS 2026-09-02 — James: "hook it into agent mesh."
+  // dispatchToNcpAgent (lifeline.js's own _tryGuardian) now carries the
+  // real guardian jobId it created (askSync always returns one — this
+  // was just never threaded through). Recorded on the queue row here so
+  // a download captured later (clear-glass's download-capture ->
+  // guardian's /api/intake) can be correlated back to the exact RAID
+  // contract that caused it, not just guessed at from timing. A missing
+  // jobId (result.jobId falsy — e.g. a provider path that doesn't create
+  // a guardian job) is recorded as null, not silently omitted, so a
+  // later reader can tell "no correlation possible" from "not checked".
+  if (result.jobId) {
+    try { jaaDB.update(TABLE, queueRow.uuid, { dispatchedJobId: result.jobId, updatedAt: Date.now() }); } catch (_) {}
+  }
   return { text: result.text };
 }
 
@@ -499,4 +588,4 @@ function reportExternalOutcome(queueId, { status, verdict } = {}) {
   }
 }
 
-module.exports = { submitContract, submitIdeariumChunk, reportExternalOutcome, acknowledge, listQueue, processNext, MODULE_ID, VERSION, STATUS, STAGE };
+module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, reportExternalOutcome, acknowledge, listQueue, processNext, MODULE_ID, VERSION, STATUS, STAGE };

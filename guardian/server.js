@@ -667,6 +667,28 @@ function updateJob(id, patch) {
   return job;
 }
 
+// §AGENT-MESH-ARTIFACTS 2026-09-02 — James: "hook it into agent mesh...
+// like idearium works end to end." Real, honest correlation for a
+// download arriving with no jobId attached (clear-glass's download-
+// capture.js has no knowledge of guardian's job objects — different
+// process, and Electron's own will-download event carries no job
+// context at all). The most recent job dispatched-but-not-yet-resolved
+// for that provider is the best real evidence available; when more than
+// one is plausible (e.g. rapid-fire dispatches to the same tab) this
+// picks the most recent by updatedAt and is honest that it's a
+// best-effort match, not a guaranteed one — a caller that needs
+// certainty should pass jobId explicitly instead of relying on this.
+function _findActiveJobForProvider(provider) {
+  if (!provider) return null;
+  let best = null;
+  for (const job of jobs.values()) {
+    if (job.provider !== provider) continue;
+    if (job.status !== 'dispatched') continue;
+    if (!best || job.updatedAt > best.updatedAt) best = job;
+  }
+  return best ? best.id : null;
+}
+
 // Jobs waiting for provider to connect
 const { pool: _dispatchPool } = require('../guardian/lib/dispatch-pool'); // §P11: per-provider semaphore
 const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-pool paths)
@@ -3185,6 +3207,24 @@ function handleExtendedRoutes(req, res, url, method) {
   if (method === 'POST' && url.pathname === '/api/intake') {
     bodyJ(req).then(body => {
       const intake = require('../lib/intake.js');
+      // §AGENT-MESH-ARTIFACTS 2026-09-02 — real correlation, not fabricated:
+      // if the caller (clear-glass's download-capture.js) didn't supply a
+      // jobId, best-effort resolve one from guardian's own live job state
+      // (see _findActiveJobForProvider's own comment for the honest limit
+      // of this). If that job was itself dispatched by RAID's real
+      // contract-intake (cortex/core/raid/contract-intake.js's
+      // _realAgentExecutor now records dispatchedJobId on its queue row),
+      // the queueId is looked up too — real, tree-wide search over a real
+      // table, not assumed present.
+      const jobId = body.jobId || _findActiveJobForProvider(body.provider) || null;
+      let raidQueueId = null;
+      if (jobId) {
+        try {
+          const raid = require('../cortex/core/raid/contract-intake.js');
+          const match = raid.listQueue().find(r => r.dispatchedJobId === jobId);
+          if (match) raidQueueId = match.uuid;
+        } catch (_) { /* RAID module load failure is real and honest here — leave null */ }
+      }
       const r = intake.stage({
         source: body.source,
         provenance: {
@@ -3192,10 +3232,12 @@ function handleExtendedRoutes(req, res, url, method) {
           chatUrl:      body.chatUrl  || null,
           filename:     body.filename || null,
           downloadedAt: body.downloadedAt || Date.now(),
+          jobId,
+          raidQueueId,
         },
       });
       if (!r.ok) return json(res, 400, r);
-      try { bus.emit('guardian.intake.staged', { dropId: r.dropId, provider: body.provider, summary: r.contract.summary, ts: Date.now() }); } catch (_) {}
+      try { bus.emit('guardian.intake.staged', { dropId: r.dropId, provider: body.provider, summary: r.contract.summary, jobId, raidQueueId, ts: Date.now() }); } catch (_) {}
       json(res, 200, { ok: true, dropId: r.dropId, state: r.contract.state, summary: r.contract.summary, contract: r.contract });
     }).catch(e => json(res, 500, { ok: false, error: e.message }));
     return;

@@ -297,7 +297,14 @@ async function _tryGuardian(prompt, opts = {}) {
     // The 07-07 branch reported the dispatched agent and was right to.
     // ragProvider is always known here, so there is never a reason to
     // report a placeholder.
-    return { ok: true, text: result.text, confidence, provider: result.modelUsed || result.provider || ragProvider, fromGuardian: true };
+    // §AGENT-MESH-ARTIFACTS 2026-09-02 — James: "hook it into agent mesh...
+    // like idearium works end to end." Checked directly: guardian/ask.js's
+    // askSync ALREADY returns a real jobId on every branch (its own JSDoc
+    // says so: "@returns {Promise<{ok, text?, jobId, provider, error?}>}"),
+    // but this function discarded it — the one real thing missing for a
+    // download-captured artifact to ever be traced back to the RAID
+    // contract/job that produced it. Carried through below.
+    return { ok: true, text: result.text, confidence, provider: result.modelUsed || result.provider || ragProvider, fromGuardian: true, jobId: result.jobId || null };
   } catch(e) {
     try {
       const gapField = require('../lib/gap-field');

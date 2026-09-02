@@ -281,6 +281,14 @@ const FILES = [
   // honest gap.
   ['cortex/versionium/index.js', 'nexus.cortex.versionium', 'cortex/versionium', ['nexus.cortex.jaa-db']],
   ['lib/agent-tools/tools/governance/versionium-commit.js', 'nexus.lib.agent-tools.governance.versionium-commit', 'lib/agent-tools/tools/governance', []],
+
+  // §ADDED 2026-09-02 — §AM1. precommit-check.js flagged this as an
+  // orphan after this session's own commit added it (CLAUDE.md rule 3).
+  // Real dependency: checkAgentIntentContract() requires lib/hat-forge.js
+  // directly — no registered id found for hat-forge itself (checked, not
+  // assumed; hat-forge predates this map file and was never added to it
+  // either — a separate, pre-existing gap, not fixed here).
+  ['lib/agent-intent-contract.js', 'nexus.lib.agent-intent-contract', 'lib', []],
 ];
 
 function mapSession20260814(driver) {

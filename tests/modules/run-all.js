@@ -82,6 +82,7 @@ const SUITES = [
   'test-mutation-contract.js',
   'test-versionium-migration.js',
   'test-ack-injection-fix.js',
+  'test-am1-intent-contract.js',
   'test-intelligence-bridge.js',
   'test-liminal-space.js',
   'test-fault-taxonomy.js',
