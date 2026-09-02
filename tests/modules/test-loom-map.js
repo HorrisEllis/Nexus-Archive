@@ -49,12 +49,54 @@ check('resolveSystem returns null for null/undefined/empty input, does not throw
   assert.strictEqual(loomMap.resolveSystem(''), null);
 });
 
+// §FIX 2026-09-02 — James, live, twice, watching the real boot log:
+// "there isn't 41 systems" and then "isn't 42 systems. please fix."
+// Real, live-verified root cause: resolveSystem() trusted ANY first
+// dot-segment as a real system name. Verified against real, live
+// production data before fixing anything (not assumed): the top
+// "systems" by component count were tests (257), lib (234), spec (152),
+// cos (85), cg (81) — folder/category prefixes and abbreviations, not
+// real systems; cos/cg are the SAME real systems as their fuller names,
+// counted twice. Fixed by validating the candidate against a real
+// allowlist (orchestrator.config.json's real ports block, merged with a
+// small, documented list of systems known to register dynamically
+// without one — clear-glass, erosmancer-os). Re-ran the real, live map
+// after fixing: 41/42 fell to 13 real systems (+ 'unknown'), matching
+// the ~15-17 this session had already estimated by hand — real
+// component/hook TOTALS unchanged (1649/1389), only attribution fixed.
+check('resolveSystem trusts a real system name (guardian)', () => {
+  assert.strictEqual(loomMap.resolveSystem('nexus.guardian.dropzone'), 'guardian');
+});
+check('resolveSystem refuses a folder/category prefix that is not a real system', () => {
+  assert.strictEqual(loomMap.resolveSystem('tests.something.fixture'), null);
+  assert.strictEqual(loomMap.resolveSystem('lib.some.helper'), null);
+  assert.strictEqual(loomMap.resolveSystem('spec.some.thing'), null);
+});
+check('resolveSystem trusts clear-glass — a real system with no ports.json entry', () => {
+  assert.strictEqual(loomMap.resolveSystem('clear-glass.wire.status'), 'clear-glass');
+});
+check('a component with a fake system prefix is bucketed as unknown, not counted as its own new system', () => {
+  const map = loomMap.getMap({ dataDir: DATA_DIR, maxAgeMs: 0 });
+  assert.ok(!('lm' in map.systems), 'the fake "lm" prefix must never appear as a real system key');
+  assert.ok('unknown' in map.systems, 'components with an unresolvable system must be bucketed as unknown');
+});
+
 // ── resolveComponent — real registry lookup ─────────────────────────────
 
 check('resolveComponent finds a real, registered component by its own id', () => {
   const r = loomMap.resolveComponent('lm.a', { dataDir: DATA_DIR, maxAgeMs: 0 });
   assert.strictEqual(r.found, true);
-  assert.strictEqual(r.system, 'lm');
+  // §FIX 2026-09-02 — James, live, twice: "there isn't 41 systems...
+  // please fix." resolveSystem() now validates its candidate against a
+  // real system allowlist instead of trusting any first dot-segment
+  // (that trust-anything behavior was the actual bug — see lib/
+  // loom-map.js's own _isRealSystem() for the real fix and why). This
+  // fixture's own 'lm' prefix was never a real system to begin with —
+  // asserting 'lm' here was pinning the OLD, buggy behavior. The
+  // correct, honest result for a synthetic test id with a made-up
+  // prefix is 'unknown', matching every other component whose real
+  // system can't be determined.
+  assert.strictEqual(r.system, 'unknown');
 });
 check('resolveComponent finds a component via one of its real hooks', () => {
   const r = loomMap.resolveComponent('lm.a.export', { dataDir: DATA_DIR, maxAgeMs: 0 });

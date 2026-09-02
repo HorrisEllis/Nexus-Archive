@@ -308,6 +308,14 @@ const FILES = [
   ['versionium/routes/system.js',            'nexus.versionium.routes.system',       'versionium/routes', ['nexus.versionium.config', 'nexus.versionium.lib.http-utils', 'nexus.versionium.registry']],
   ['versionium/routes/versionium.js',        'nexus.versionium.routes.versionium',   'versionium/routes', ['nexus.versionium.lib.engine', 'nexus.versionium.lib.store', 'nexus.versionium.lib.http-utils']],
   ['versionium/server.js',                   'nexus.versionium.server',              'versionium',       ['nexus.versionium.config', 'nexus.versionium.lib.engine', 'nexus.versionium.lib.causality', 'nexus.versionium.lib.http-utils', 'nexus.versionium.lib.migrate-legacy-data', 'nexus.versionium.routes.system', 'nexus.versionium.routes.versionium']],
+
+  // §ADDED 2026-09-02 — precommit-check.js flagged this as a real,
+  // pre-existing orphan (CLAUDE.md rule 3) once this session's deepseek
+  // addition touched the file — genuinely never registered before,
+  // not a regression from that edit. No real dependency of its own
+  // (checked directly: only requires cortex/memory/jaa-db.js, already
+  // covered elsewhere in this map under nexus.cortex.jaa-db).
+  ['lib/account-registry.js', 'nexus.lib.account-registry', 'lib', ['nexus.cortex.jaa-db']],
 ];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

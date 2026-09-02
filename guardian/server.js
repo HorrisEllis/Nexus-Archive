@@ -470,7 +470,79 @@ const PROVIDER_ALIASES = {
   'localhost':           'ollama',
   '127.0.0.1':          'ollama',
   'chat.mistral.ai':     'mistral',
+  'chat.deepseek.com':   'deepseek',
 };
+
+// ── DeepSeek dispatch — routes to ollama-bridge at :3749 ─────────────────────
+// §ADDED 2026-09-02 — James: "I want deepseek added as an agent." Same
+// real pattern mistral already uses immediately below (mirrored, not
+// reinvented): DeepSeek's real, commonly-available local models
+// (deepseek-coder-v2, deepseek-r1) are served through Ollama, not a
+// browser tab, so this routes directly to the sovereign ollama-bridge
+// HTTP service, exactly like mistral does. chat.deepseek.com is mapped
+// above too, for the real, separate case of a browser-tab NCP dispatch
+// if one is ever wired for it — not built here, this function is the
+// real, immediate local-model path.
+async function _dispatchToDeepseek(job) {
+  const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
+  const model = process.env.DEEPSEEK_MODEL || 'deepseek-coder-v2';
+  const http2 = require('http');
+  return new Promise(resolve => {
+    const body = JSON.stringify({
+      prompt:   job.prompt || job.content || '',
+      model,
+      command:  job.command || 'chat',
+      jobId:    job.id,
+      meta:     { source: 'guardian-deepseek', jobId: job.id },
+    });
+    const req = http2.request({
+      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/api/jobs',
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 120000,
+    }, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try {
+          const d = JSON.parse(raw);
+          const jobId = d.jobId || d.uuid;
+          if (!jobId) { resolve({ ok:false, error:'no jobId returned' }); return; }
+          let polls = 0;
+          const poll = () => {
+            polls++;
+            if (polls > 120) { resolve({ ok:false, error:'poll timeout' }); return; }
+            const pr = http2.request({ hostname:'127.0.0.1', port:BRIDGE_PORT, path:`/api/jobs/${jobId}`, method:'GET', timeout:5000 }, rs => {
+              let rb = ''; rs.on('data', c => rb += c);
+              rs.on('end', () => {
+                try {
+                  const pd = JSON.parse(rb);
+                  if (pd.status === 'complete' || pd.progress === 'complete') {
+                    updateJob(job.id, { status:'complete', response:pd.result||pd.text||'', completedAt:Date.now() });
+                    bus.emit('guardian.job.complete', { jobId:job.id, provider:'deepseek', chars:(pd.result||'').length });
+                    resolve({ ok:true, text:pd.result||pd.text||'' });
+                  } else if (pd.status === 'failed' || pd.progress === 'failed') {
+                    resolve({ ok:false, error:pd.error||'ollama job failed' });
+                  } else {
+                    setTimeout(poll, 1000);
+                  }
+                } catch(_) { setTimeout(poll, 1000); }
+              });
+            });
+            pr.on('error', () => setTimeout(poll, 1000));
+            pr.end();
+          };
+          setTimeout(poll, 1000);
+        } catch(e) {
+          updateJob(job.id, { status: 'error', error: 'parse error: ' + e.message });
+          resolve({ ok: false, error: e.message });
+        }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); updateJob(job.id, { status: 'error', error: 'deepseek timeout' }); resolve({ ok:false, error:'timeout' }); });
+    req.on('error', e => { updateJob(job.id, { status: 'error', error: e.message }); resolve({ ok:false, error: e.message }); });
+    req.write(body); req.end();
+  });
+}
 
 // ── Mistral dispatch — routes to ollama-bridge at :3749 ──────────────────────
 // Mistral jobs don't go through NCP/browser tabs; they hit the sovereign
@@ -774,6 +846,16 @@ function _doDispatch(job) {
     });
     return true;
   }
+  // §ADDED 2026-09-02 — DeepSeek, same real routing as mistral above.
+  if (job.provider === 'deepseek') {
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log('[guardian] deepseek job → ollama-bridge :3749');
+    _dispatchToDeepseek(job).catch(e => {
+      updateJob(job.id, { status: 'error', error: e.message });
+      bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'deepseek' });
+    });
+    return true;
+  }
   // Ollama provider also routes to bridge (legacy path)
   if (job.provider === 'ollama') {
     updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
@@ -801,6 +883,7 @@ function _doDispatch(job) {
       gemini:     'https://gemini.google.com/',
       perplexity: 'https://www.perplexity.ai/',
       mistral:    'https://chat.mistral.ai/',
+      deepseek:   'https://chat.deepseek.com/',
     };
     const url = provUrls[job.provider];
     if (url) {

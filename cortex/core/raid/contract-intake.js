@@ -221,6 +221,15 @@ function submitContract(contract, opts = {}) {
     stage: STAGE.QUEUED,
     system: opts.system || null,         // which SYSTEM originated this contract (distinct from source, which names the subsystem/mechanism)
     source: opts.source || 'unknown',      // 'spec-parser' | 'loom' | 'idearium' | 'copilot' | 'self-heal'
+    // §ADDED 2026-09-02 — cortex/core/raid/officiator.js's own real
+    // need: a contract synthesized FROM a staged artifact must be able
+    // to trace back to it, both for a human auditing "why does this
+    // contract exist" and so officiator.js's own dedup can eventually
+    // be made real/persisted instead of the in-memory-only stopgap its
+    // own header honestly documents today. null for every other real
+    // source (spec-parser, idearium, self-heal, a manual submit) — this
+    // isn't a new requirement on them.
+    sourceDropId: opts.sourceDropId || null,
     file: contract.file || null,
     title: contract.title || null,
     forAgent: contract.forAgent || opts.forAgent || null,
@@ -368,6 +377,33 @@ async function processNext(executor) {
     return null; // genuinely nothing left — real, honest "nothing to do"
   }
   const queued = ready[0];
+
+  // §AM6-CLOSED 2026-09-02 — James confirmed: "yes. sure." (to fixing
+  // this). Real gap found while explaining how to test the agent mesh:
+  // this function dequeued and dispatched purely on status===QUEUED,
+  // never checking stage — meaning AM1's real intent-contract gate
+  // (acknowledge(), which only runs when a caller happens to call it
+  // explicitly) was bypassable simply by never calling it. The auto-
+  // drain worker (cortex/core/raid/worker.js, ticking every 15s) never
+  // called it either — so in the real, automatic path, AM1's gate never
+  // ran at all. Fixed at the one real choke point every dispatch passes
+  // through, rather than requiring every caller (submitBuildPhaseContract,
+  // submitIdeariumChunk, self-heal, co-pilot, the raid-worker) to
+  // remember to call acknowledge() themselves. A contract already past
+  // QUEUED stage (a caller that DID call acknowledge() explicitly, e.g.
+  // this session's own manual-test flow) is left alone — acknowledge()
+  // itself already refuses to re-run past QUEUED, so this is a safe,
+  // idempotent call, not a second gate stacked on top of a first.
+  if (queued.stage === STAGE.QUEUED) {
+    const ack = acknowledge(queued.uuid, { system: 'raid-processNext-auto' });
+    if (!ack.ok) {
+      // acknowledge() itself already moved this row to BLOCKED with a
+      // real blockReason — nothing further to do here except report it
+      // honestly and let the caller (raid-worker's tick(), or a direct
+      // caller) see a real, specific reason, not a generic "blocked".
+      return { queueId: queued.uuid, status: 'blocked_at_handshake', reason: ack.error };
+    }
+  }
 
   const intent = {
     uuid: uid(),

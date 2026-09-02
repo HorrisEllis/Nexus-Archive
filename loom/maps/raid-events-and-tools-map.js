@@ -30,6 +30,16 @@ const FILES = [
   ['cortex/core/raid/contract-intake.js', 'nexus.cortex.core.raid.contract-intake',
     ['nexus.cortex.jaa-db', 'nexus.intelligence.cfr.ledger', 'nexus.cortex.core.raid.event-taxonomy']],
   ['cortex/core/raid/event-taxonomy.js',  'nexus.cortex.core.raid.event-taxonomy', []],
+  // §ADDED 2026-09-02 — James: "did you finish the synthesis for the
+  // contracts. thats top priority." The real, agent-synthesized
+  // contract module (B1's own second half). Real deps: lib/intake.js
+  // (no registered id found — checked, not assumed; left out per this
+  // map's own established convention for unregistered dependencies
+  // elsewhere in this file), lib/hat-forge.js (same, unregistered),
+  // and contract-intake.js's own submitContract, already registered
+  // directly above.
+  ['cortex/core/raid/officiator.js', 'nexus.cortex.core.raid.officiator',
+    ['nexus.cortex.core.raid.contract-intake']],
   ['lib/agent-tool-call.js',              'nexus.lib.agent-tool-call', []],
 ];
 

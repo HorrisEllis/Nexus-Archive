@@ -134,6 +134,80 @@ spec:
         ask implies — "the compartment uuid FOR the repository," i.e.
         targeting a specific, pre-existing compartment, not always
         spawning a fresh one).
+      real_field_schema_2026_09_02: >
+        James, follow-up, gave the complete real field list: "end-state,
+        conditions, intent, context, warp primitives, axioms, relevant
+        agent tools for the request, compartment uuid, file directory,
+        file name. need to synthesize contracts for each request."
+        Checked against real precedent rather than inventing new
+        vocabulary: "warp primitives" and "axioms" are NOT metaphorical
+        here — warp/spec/warp.spec already defines exactly 5 real
+        primitives (Event, Gate, Stream, StreamLog, Axiom) that
+        orchestrator's own real warp-spine (confirmed live in every boot
+        log — "[warp-spine] attached to orchestrator bus — 4 axioms,
+        StreamLog mapping active") already runs. A real build contract
+        under this schema would carry:
+          uuid, forAgent, intent (a real verb from intent-classifier's
+          VERB_PATTERNS, checked by AM1's own gate), system,
+          endState (the real target condition, not just a task
+          description), conditions (structured pre/post, genuinely
+          missing today), context (real, not the old force-fed blob
+          this session's ACK-injection fix removed — pulled via the
+          contract's own toolScope, on demand), warpPrimitives (which
+          of the 5 real WARP primitives this contract's work is
+          expected to touch or produce — Event/Gate/Stream/StreamLog/
+          Axiom), axioms (which of docs/AXIOMS-v3.1.md's real numbered
+          axioms constrain this specific contract — not all of them
+          blindly, the relevant subset), tools (the real, hat-scoped
+          toolScope AM1 already computes), compartmentUuid (a real,
+          specific target, not always freshly spawned), and
+          fileDirectory/fileName (the real, specific target location
+          the contract's work lands in). "Synthesize" (James's own
+          word) implies an automated builder for this schema, not just
+          the schema itself — a real, second piece of scope on top of
+          the schema definition.
+      intent_taxonomy_2026_09_02: >
+        James, further follow-up: real, named intent taxonomy —
+        "intention: repair, attack, diagnose, build, co-pilot, anything
+        more. these are also hats." Checked against intent-classifier's
+        real VERB_PATTERNS list (analyze, build, delete, diagnose,
+        dispatch, explain, forge, heal, overwrite, query, recall,
+        rollback, snapshot, validate, write): build and diagnose already
+        exist as real verbs. repair maps most naturally onto the
+        existing heal verb (self-heal's own real domain) rather than a
+        new one — a real naming decision, not assumed here. attack is
+        genuinely new — no existing verb covers adversarial/red-team
+        intent (copilot's own real adversarial-probing module exists,
+        confirmed live in boot logs — "[copilot/adversarial] started —
+        probing every 60s" — but has no corresponding intent-classifier
+        verb yet). co-pilot as an intent (not an agent) is a real
+        category shift worth flagging: every other item in this list is
+        an ACTION a request wants done; "co-pilot" reads as a REQUEST TO
+        USE a specific agent, which is what forAgent already covers —
+        real, open question whether this means "the intent is to consult
+        co-pilot specifically" (a genuine 16th verb) or is shorthand for
+        something else. "These are also hats" restates AM1's already-
+        real design (a hat's allowedIntents field IS the same list) —
+        confirms the schema, doesn't add new scope by itself.
+      agent_synthesized_contracts_2026_09_02: >
+        James: "we can have one of the agents synthesize a contract,
+        feed it the primitives for the contract and inject the context.
+        gemini, chatgpt, or ollama." Real, substantial design shift from
+        "synthesize contracts programmatically" (the real_field_schema
+        note above) to "delegate synthesis TO an agent" — the agent
+        receives the real primitive list (end-state/conditions/intent/
+        context/warp-primitives/axioms/tools/compartment-uuid/file-
+        location) as its OWN prompt, and produces the actual contract
+        content itself, rather than a fixed function assembling it.
+        Real, direct precedent found in automation_1.zip (2026-09-02
+        upload): intent-router.js's own real pipeline — "raw input ->
+        IntentParser.parse() -> IntentScorer.score() -> IntentRouter.
+        route() -> AgentFactory.execute()" — is structurally the same
+        idea (a request becomes a structured intent object BEFORE being
+        handed to an agent), though that pipeline computes the structure
+        itself rather than having an agent synthesize it. This ask is a
+        genuine escalation beyond that precedent: the AGENT does the
+        synthesis step, not just the execution step.
       depends_on: []
 
     B2_chunk_contract_chaining:
@@ -199,24 +273,47 @@ spec:
       depends_on: [C1_copilot_spec_wizard]
 
     D1_bridgeos_readme_template:
-      status: OPEN — real reference material named, not attached
+      status: OPEN — real reference material now attached, template extracted
       does: >
         "Only look at bridge os demo. I want that readme as a template."
-        James named a real, specific reference (a "bridge os demo"
-        README) but it wasn't attached to any upload this session —
-        needed before this phase can start for real, not guessed at.
-        The real structure IS fully specified in the vision dump
-        though: project name, summary (what/why/vision), file tree, full
-        CLI+API index by consuming component, per-module breakdown
-        (components/consumers/features/commands/edge cases), schemas
-        (data/contract/architecture-consistency), version history with
-        real change context (not just a version bump), toolbox/toolkit
-        section per agent, a diagnostic schema using the real sigma-
-        deviation system for expected-vs-actual runtime behavior, a
-        full test suite section, and a living seams/components/hooks/
-        wires/consumers registry with real fields (type, id, file dir,
-        systemId, event types, toasts, tags, per-component commands, api
-        calls, consumers, edge cases, memory arch/type/module).
+        James attached the real Bridge-OS-full-project-5.zip this
+        session — its README.md (2318 lines, 31 modules) was read
+        directly, not guessed at. Real, extracted per-module template
+        (every one of Bridge OS's real 29+ module sections follows this
+        exact shape, confirmed by reading multiple full sections, not
+        assumed from the first one):
+          - "What it does" — real purpose, in plain language
+          - "How it works internally" — real mechanism, including
+            named sub-components and their real interaction
+          - an optional "<topic> addendum" — real, dated history/gap
+            notes (Bridge-OS's own "Security review addendum (2026)"
+            is the real precedent — matches this codebase's own
+            AX-013 history: field almost exactly)
+          - numbered "invariants enforced in source" — a real, counted
+            list of hard constraints (bridge-IME's real section has
+            exactly 12), each one a single testable sentence
+          - "How to use it" — a real, runnable code example
+          - "What it connects to" — real upstream/downstream
+            dependencies, named specifically (matches this codebase's
+            own registry-components.js dependency edges)
+          - "Bus events emitted" — a real, per-event list with real
+            payload shapes (matches T2/T4's own event-taxonomy work
+            almost exactly — same real shape, different name)
+        Top-level document structure (also real, extracted directly):
+        title + one-line tagline (module count, real capability
+        summary), "What It Is" (2-3 real sentences, no marketing
+        filler), "Quick Start" (a real, copy-pasteable boot sequence
+        with real sample output), "Philosophy" (real, named author
+        voice — "Why This Exists" / "What We Will Never Do" — this
+        codebase's own AXIOMS-v3.1.md is the closest real analog), a
+        per-module section for every real module, a real "Modules Not
+        Yet Built" table (status/depends-on/description columns — this
+        codebase's own phasemap OPEN/depends_on shape is already
+        extremely close), and a real "Module Conflict Registry" section
+        with an actual JSON schema example (conflicts/requires/vital/
+        regime fields) enforced at boot — a real, directly-portable
+        precedent for this codebase's own component-registration
+        discipline, not just documentation.
       depends_on: []
 
     D2_idearium_compartment_structure:
@@ -231,13 +328,12 @@ spec:
       depends_on: [D1_bridgeos_readme_template]
 
     D3_loom_compartment_readme:
-      status: OPEN
+      status: OPEN — unblocked, D1's real template now available
       does: >
         Same D1 structure, applied to loom's own real per-NEXUS-system
         compartments (not idearium's user-project compartments) — "each
         compartment in loom for each nexus system/repository needs a
-        bridge os style readme." Same real dependency on D1's actual
-        reference material.
+        bridge os style readme."
       depends_on: [D1_bridgeos_readme_template]
 
     D4_spec_bulk_import:
@@ -301,7 +397,7 @@ spec:
       depends_on: []
 
     AM11_per_agent_tasks_automation:
-      status: OPEN
+      status: OPEN — major real precedent found (2026-09-02 uploads)
       does: >
         "Maybe each agent has intent map, jobs and scheduled tasks, an
         index for each agent with a tasks and automation manager, which
@@ -311,7 +407,88 @@ spec:
         confirmed in the agent-mesh phasemap) already covers "scheduled
         tasks per hat." Missing: a real per-agent INDEX/UI surface for
         managing these, and explicit background-tab options.
+      real_archive_precedent: >
+        James uploaded 7 zips this session containing a real, dated
+        (2026-04/05) earlier "BrainOS" iteration — checked directly, not
+        assumed from filenames. automation_1.zip's routing-engine.js
+        (v5.0.0, real, documented) is a substantially complete real
+        answer to WF1/WF2 below — genuine trigger types (manual/timer/
+        cron/datetime/heartbeat/health_score/data/intent), real step
+        types (agent/http/condition/transform/delay/notification/
+        branch/framework_inject/log/bridge), template variables
+        ({{input}}/{{prev}}/{{runId}}/{{ts}}/{{wf}}), per-step and
+        per-workflow onFail policy (abort/skip/retry), and a real
+        conversation-capture JSONL log per run. agent-registry.js's own
+        real axiom — "no agent is called directly — always through
+        registry -> factory -> bus" — is the same real discipline this
+        codebase's own AX-010 (sovereign transport) already enforces,
+        independently arrived at. §8.6 reuse-before-build: this is
+        real, substantial prior work to adapt, not something to build
+        from a blank file.
       depends_on: [AM7_agent_suite_welcome_ui]
+
+    WF1_workflow_automation_engine:
+      status: OPEN — real, substantial precedent found, not greenfield
+      does: >
+        "I want these mapped to a .config file or database that updates
+        with co-pilot's tool, similar to tasks scheduler on windows or
+        like tasker or automate." Directly answered by automation_1.zip's
+        real routing-engine.js (see AM11's real_archive_precedent above)
+        — a real, working workflow/trigger/step engine already exists in
+        an earlier iteration of this project. This phase is porting and
+        adapting that real engine into the current sovereign-system
+        architecture (its own folder, own config, own data dir — same
+        VS1 pattern), not designing one from scratch.
+      depends_on: [AM11_per_agent_tasks_automation]
+
+    WF2_canvas_visual_pipeline:
+      status: OPEN — real, substantial precedent found
+      does: >
+        "Beautiful canvas based visual pipeline workflow and
+        automation." James's Nexus-Cobalt_54b637.zip upload has a real
+        canvas/ directory — checked directly: spec-a/ contains
+        cfr-physics.js, cfr-render.js, cfr-rewind.js, rewind-scrubber.js,
+        node-inspector.js, image-analyzer.js, renderer.js; spec-b/
+        contains a real bus-to-cfr.js bridge. This is a CFR-based (causal
+        field renderer) node-graph visualization with real rewind/scrub
+        controls and a node inspector — this is the SAME real capability
+        named in docs/2026-09-02-versionium-sovereign-and-cleanup-
+        phasemap.spec's CLEANUP6 ("a live map with nodes that represent
+        packets or files moving through and from each system, like a
+        brain") — not a separate ask, the same one, with real prior
+        work now found for it. Two real specs (spec-a, spec-b) exist —
+        a real design decision on which (or a merge of both) is the
+        right starting point, not decided here.
+      depends_on: []
+
+    WF3_cockpit_ui_shell:
+      status: OPEN — real, complete UI prototype found
+      does: >
+        James's Nexus-Cockpit_1.zip is a real, single-file, 314KB HTML
+        UI shell — "NEXUS · Cognitive Cockpit v10," a complete dark-
+        themed dashboard with named operational modes (deep/fast/audit/
+        creative/emergency/silent — real CSS custom properties, not
+        placeholder text) already styled. Real, substantial candidate
+        for AM7's own "welcome to the agent suite" screen and/or a
+        broader master-settings shell — worth reviewing as a real
+        starting point before designing a new one from scratch (§8.6).
+      depends_on: [AM7_agent_suite_welcome_ui]
+
+    ARCHIVE1_cortex_cobalt_history_backfill:
+      status: OPEN — ties to CLEANUP8
+      does: >
+        Nexus-Cortex_1.zip and Nexus-Cobalt_54b637.zip are real, dated
+        (2026-05) earlier snapshots of this project's own cortex/
+        (agents/, automation/, core/raid/, gate/, healer/, memory/,
+        nas/, orion/, versionium/ — real, matching today's live
+        directory names almost exactly) and a later, more expansive
+        Cobalt iteration (adds admin/, canvas/, crystalball/,
+        extension/, guardian/, plugins/, schemas/, tauri/). Real,
+        direct match to docs/2026-09-02-versionium-sovereign-and-
+        cleanup-phasemap.spec's CLEANUP8 ("have the original archives of
+        nexus if you can add them to the living model to update
+        history") — this IS that real archive material, now in hand.
+      depends_on: [VS1_sovereign_folder_and_foundation]
 
     G1_guardian_agents_folder:
       status: OPEN — real, concrete structure given
@@ -622,7 +799,18 @@ spec:
     (T3, T4) depend on it, VM1 because it's a small, well-specified fix
     to a bug James already found and diagnosed correctly. B1 (full build
     contract schema) is the next real gate, since B2, V9, and D4 all
-    depend on it existing first. D1 (Bridge-OS README template) is
-    blocked on real reference material — flagged, not guessed at. AX
-    candidate needs a real yes/no from James before it's real law, not
-    drafted law.
+    depend on it existing first — its real field schema, intent
+    taxonomy, and agent-synthesis design are all now fully specified
+    (2026-09-02 follow-ups), so B1 is buildable as soon as picked up.
+    D1 (Bridge-OS README template) is UNBLOCKED — real reference
+    material attached and its template extracted directly — so D3 (loom
+    compartment READMEs) is buildable now too. WF1/WF2/WF3 (workflow
+    engine, canvas visualization, cockpit UI shell) all have REAL,
+    SUBSTANTIAL prior-work precedent found in this session's 7 archive
+    uploads — porting/adapting real code, not designing from a blank
+    file, per §8.6. AX candidate needs a real yes/no from James before
+    it's real law, not drafted law. Given how much real precedent just
+    surfaced across WF1-3 and ARCHIVE1, a real triage pass over all 7
+    uploaded zips (which files are genuinely reusable vs. superseded by
+    what's live today) is itself worth doing before committing to a
+    specific build order for that whole cluster.

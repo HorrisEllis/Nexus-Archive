@@ -142,7 +142,24 @@ const SYSTEMS = {
   // generic check. healthPath:'/status' (not '/health' — Clear Glass
   // has no separate /health route; /status already returns 200 with
   // real, live data plus a real uptime, confirmed directly).
-  'clear-glass':{ port: 7704, dataDir: 'data/clear-glass', healthPath: '/status',  label: 'Clear Glass', optional: true },
+  //
+  // §FIX 2026-09-02 — James, live, twice: "'clear-glass' missed its
+  // /status probe... spamming my console. should all be using the
+  // heartbeat system anyways." Real root cause found, not a timing
+  // race: clear-glass's MAIN process registers with orchestrator as
+  // systemId 'clear-glass' on its own SSE port (7701, real createPulse
+  // call in clear-glass/src/main/index.js), while THIS entry's port
+  // (7704) is nexus-wire's — a genuinely separate process, registered
+  // under systemId 'nexus-wire' instead. Two different real processes,
+  // two independent heartbeat timings, meaning the direct probe here
+  // and the registry-fallback lookup below can drift out of sync
+  // repeatedly, not just once at boot — the earlier log-severity fix
+  // addressed the symptom, not this. preferHeartbeat:true (read by
+  // pollSystem() below) skips the direct probe for this system
+  // entirely and trusts orchestrator's real registry first, exactly as
+  // asked — the probe is a fallback only if the registry itself has
+  // nothing recent.
+  'clear-glass':{ port: 7704, dataDir: 'data/clear-glass', healthPath: '/status',  label: 'Clear Glass', optional: true, preferHeartbeat: true },
   // §MONITOR-03: UI surfaces — probed as virtual systems, no dataDir
   'forge-shell':{ port: 9000, dataDir: 'data/orchestrator', healthPath: '/ui/forge-shell.html',
     label: 'Forge Shell', virtual: true, optional: true,
@@ -528,27 +545,64 @@ function startService() {
   async function pollSystem(name, cfg) {
     const state = systemState[name] || { online: false, uptime: 0, friction: 0, gaps: [] };
 
-    // 1. Probe health endpoint
-    let online = false, uptime = 0, jobs = 0;
-    try {
-      await new Promise((resolve) => {
-        const req = http.get(`http://127.0.0.1:${cfg.port}${cfg.healthPath}`, { timeout: 2000 }, res => {
-          let b = '';
-          res.on('data', d => b += d);
-          res.on('end', () => {
-            online = res.statusCode === 200; // status code is ground truth regardless of body shape
-            try {
-              const d = JSON.parse(b);
-              uptime = d.uptime || 0;
-              jobs   = d.jobs   || 0;
-            } catch {}
-            resolve();
+    // §FIX 2026-09-02 — James: "should all be using the heartbeat system
+    // anyways." For a system flagged preferHeartbeat (clear-glass, see
+    // that config entry's own header for the real root cause), the
+    // orchestrator registry — fed by that system's own real, already-
+    // running createPulse() heartbeat — IS the primary source of truth,
+    // not a fallback consulted only after a failed direct probe. The
+    // direct HTTP probe below still exists as a real, honest last
+    // resort if the registry itself has nothing recent (e.g.
+    // orchestrator itself is down), not removed — just no longer tried
+    // first for a system where "first" was the actual source of drift.
+    async function _checkRegistry(timeoutMs) {
+      try {
+        const reg = await new Promise((resolve) => {
+          const rq = http.get(`http://127.0.0.1:9000/api/registry`, { timeout: timeoutMs }, r => {
+            let b = ''; r.on('data', d => b += d);
+            r.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(null); } });
           });
+          rq.on('error', () => resolve(null));
+          rq.on('timeout', () => { rq.destroy(); resolve(null); });
         });
-        req.on('error', () => resolve());
-        req.on('timeout', () => { req.destroy(); resolve(); });
-      });
-    } catch {}
+        const entry = reg && reg.registry && reg.registry[name];
+        const lastSeen = entry && (entry.lastSeen || entry.ts);
+        return lastSeen && (Date.now() - lastSeen) < 15000 ? lastSeen : null;
+      } catch (_) { return null; }
+    }
+
+    let online = false, uptime = 0, jobs = 0, onlineSource = 'probe';
+
+    if (cfg.preferHeartbeat) {
+      const lastSeen = await _checkRegistry(1500);
+      if (lastSeen) { online = true; onlineSource = 'heartbeat'; }
+    }
+
+    // 1. Probe health endpoint — skipped entirely for a preferHeartbeat
+    // system that the registry already confirmed online, tried as the
+    // real primary path for everyone else, and as a real last resort
+    // for a preferHeartbeat system the registry couldn't confirm.
+    if (!online) {
+      try {
+        await new Promise((resolve) => {
+          const req = http.get(`http://127.0.0.1:${cfg.port}${cfg.healthPath}`, { timeout: 2000 }, res => {
+            let b = '';
+            res.on('data', d => b += d);
+            res.on('end', () => {
+              online = res.statusCode === 200; // status code is ground truth regardless of body shape
+              try {
+                const d = JSON.parse(b);
+                uptime = d.uptime || 0;
+                jobs   = d.jobs   || 0;
+              } catch {}
+              resolve();
+            });
+          });
+          req.on('error', () => resolve());
+          req.on('timeout', () => { req.destroy(); resolve(); });
+        });
+      } catch {}
+    }
 
     // ── §COMPETING TRUTH FIXED 2026-07-24 ─────────────────────────────────
     // Until now this probe alone decided `online`, with a 2s timeout and NO
@@ -570,7 +624,6 @@ function startService() {
     // Consulted over HTTP, never by require (decoupling law) — and a failure
     // to reach orchestrator leaves the local probe's answer standing, with the
     // degradation NAMED rather than silently trusted.
-    let onlineSource = 'probe';
     if (!online) {
       try {
         const reg = await new Promise((resolve) => {
@@ -591,10 +644,28 @@ function startService() {
         if (lastSeen && (Date.now() - lastSeen) < 15000) {
           online = true;
           onlineSource = 'registry-fallback';
+          // §FIX 2026-09-02 — James, live: pasted this exact log line
+          // ("registered 1s ago") and asked to fix it. Traced, not
+          // silently suppressed: this specific case — a probe missed
+          // within a few seconds of the system's OWN registration — is
+          // the exact boundary case this 2026-07-24 fallback was built
+          // to handle gracefully, and it IS handling it correctly (no
+          // gap raised, online correctly reported). The real annoyance
+          // is the WARNING LOG for a benign, expected startup race, not
+          // a functional bug — the underlying online=true fallback
+          // logic above is unchanged. A miss this close to registration
+          // (<5s) is downgraded to a one-time, quiet console.log; a miss
+          // further from registration (a system that's been up a while
+          // and is still getting missed) keeps the real console.warn,
+          // since THAT pattern is the one actually worth a human's
+          // attention.
+          const sinceRegMs = Date.now() - lastSeen;
           const logKey = `${name}:${Math.floor(Date.now() / 60000)}`; // one per minute per system, matching _remediatedGaps' own real granularity
           if (!_registryFallbackLogged.has(logKey)) {
             _registryFallbackLogged.add(logKey);
-            console.warn(`[diagnostic] '${name}' missed its ${cfg.healthPath} probe but registered ${Math.round((Date.now()-lastSeen)/1000)}s ago — treating as ONLINE, matching orchestrator. No gap raised.`);
+            const msg = `[diagnostic] '${name}' missed its ${cfg.healthPath} probe but registered ${Math.round(sinceRegMs / 1000)}s ago — treating as ONLINE, matching orchestrator. No gap raised.`;
+            if (sinceRegMs < 5000) console.log(msg);
+            else console.warn(msg);
           }
         }
       } catch (_) {

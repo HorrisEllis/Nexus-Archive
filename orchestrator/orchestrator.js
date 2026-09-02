@@ -2561,6 +2561,16 @@ if (nexusBus) {
     require('../cortex/core/raid/worker.js').start();
     console.log('[orchestrator] RAID worker active — draining the real contract queue');
   } catch (e) { console.warn('[orchestrator] raid-worker init failed:', e.message); }
+  // §OFFICIATOR 2026-09-02 — James: "did you finish the synthesis for
+  // the contracts. thats top priority." Real, second automatic
+  // consumer alongside raid-worker above: this one turns a staged
+  // artifact (clear-glass download -> guardian intake -> lib/intake.js)
+  // into a real, agent-synthesized build contract, which raid-worker
+  // then picks up and dispatches exactly like any other real contract.
+  try {
+    require('../cortex/core/raid/officiator.js').start();
+    console.log('[orchestrator] RAID officiator active — synthesizing contracts from staged artifacts');
+  } catch (e) { console.warn('[orchestrator] raid-officiator init failed:', e.message); }
   // Compaction belongs to the same write authority, same process (§10.1) —
   // rolls expired sigma_records (>24h, tiers.js short tier) into hourly
   // sigma_rollups, then hard-deletes them. Built 2026-07-20: 13,944 rows

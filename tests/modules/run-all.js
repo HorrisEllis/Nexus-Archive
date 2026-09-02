@@ -72,6 +72,8 @@ const SUITES = [
   'crystal-lattice.test.js',
   'case-library.test.js',
   'contract-intake-dependency-graph.test.js',
+  'test-raid-processnext-am1-gate.js',
+  'test-raid-officiator.js',
   'autonomous-loop.test.js',
   // FIX (James, 2026-06-19): these six suites existed, passed standalone,
   // and were never registered here — `node tests/modules/run-all.js` was

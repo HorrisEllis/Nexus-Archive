@@ -67,6 +67,54 @@ test('F6: syntax check on critical files', () =>
   read('service/nexus-diagnostic.js').includes('orchestrator.js') &&
   read('service/nexus-diagnostic.js').includes('--check'));
 
+// §FIX 2026-09-02 — James, live: pasted the exact "'clear-glass' missed
+// its /status probe but registered 1s ago" log and asked to fix it.
+// Real, functional online=true fallback (2026-07-24) is unchanged and
+// correct — verified here that it's still present — only the WARNING
+// LOG for a benign, near-registration miss is downgraded to console.log,
+// keeping console.warn for a miss further from registration (the
+// pattern actually worth a human noticing).
+test('F7: registry-fallback online=true logic still present, unchanged', () =>
+  read('service/nexus-diagnostic.js').includes('online = true') &&
+  read('service/nexus-diagnostic.js').includes("onlineSource = 'registry-fallback'"));
+test('F7: a near-registration probe miss (<5s) logs quietly, not as a warning', () => {
+  const src = read('service/nexus-diagnostic.js');
+  return src.includes('sinceRegMs < 5000') && src.includes('console.log(msg)');
+});
+test('F7: a probe miss further from registration still warns', () =>
+  read('service/nexus-diagnostic.js').includes('else console.warn(msg)'));
+test('F7: the real 15s fallback window itself is unchanged', () =>
+  read('service/nexus-diagnostic.js').includes('(Date.now() - lastSeen) < 15000'));
+
+// §FIX 2026-09-02 — James, live: "should all be using the heartbeat
+// system anyways." Real root cause found (not the timing race F7
+// addressed): clear-glass's main process and its wire sub-process
+// register with orchestrator under two different names on two
+// different ports — a structural mismatch, not a boot-time coincidence.
+// clear-glass now checks the real heartbeat/registry FIRST, skipping
+// its own direct probe when the registry already confirms it online.
+test('F8: clear-glass config carries preferHeartbeat:true', () => {
+  const src = read('service/nexus-diagnostic.js');
+  const m = src.match(/'clear-glass':\{[^}]*preferHeartbeat:\s*true/);
+  return !!m;
+});
+test('F8: pollSystem checks the registry before the direct probe when preferHeartbeat is set', () => {
+  const src = read('service/nexus-diagnostic.js');
+  const preferIdx = src.indexOf('if (cfg.preferHeartbeat)');
+  const probeIdx  = src.indexOf('// 1. Probe health endpoint');
+  return preferIdx > -1 && probeIdx > -1 && preferIdx < probeIdx;
+});
+test('F8: a heartbeat-confirmed system is labeled onlineSource "heartbeat", not "probe"', () =>
+  read('service/nexus-diagnostic.js').includes("onlineSource = 'heartbeat'"));
+test('F8: the direct probe still runs as a real fallback if the registry has nothing recent', () => {
+  const src = read('service/nexus-diagnostic.js');
+  // The probe block's own real guard — must still fire when online is
+  // false, whether that's because preferHeartbeat found nothing or
+  // because this is any other, non-preferHeartbeat system.
+  const probeBlock = src.slice(src.indexOf('// 1. Probe health endpoint'), src.indexOf('// ── §COMPETING TRUTH FIXED'));
+  return probeBlock.includes('if (!online) {');
+});
+
 // Syntax checks
 const { spawnSync } = require('child_process');
 const files = ['orchestrator/orchestrator.js','idearium/index.js','cortex/self-heal/index.js',

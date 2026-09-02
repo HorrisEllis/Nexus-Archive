@@ -369,6 +369,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
     assert.strictEqual(rows[rows.length - 1].seedKey, key, 'what a revoked hat WAS must stay readable (§0.3)');
   });
 
+  await test('HAT-030', 'deepseek is a real, valid base agent — James: "I want deepseek added as an agent"', () => {
+    assert.ok(hf.VALID_BASE_AGENTS.has('deepseek'));
+    const f = mk({ baseAgent: 'deepseek', allowedAgents: ['deepseek'] });
+    assert.strictEqual(f.ok, true, `expected forge() to accept baseAgent:'deepseek', got: ${JSON.stringify(f.errors)}`);
+    assert.strictEqual(f.hat.baseAgent, 'deepseek');
+  });
+
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   // §FIXED 2026-08-19 — real root cause of the flush-lock ENOENT storm
   // found and closed, not deferred again: jaaDB's own real close() clears
