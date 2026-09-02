@@ -1,0 +1,1 @@
+{"action":"gap_escalated","type":"system_offline","system":"idearium","port":4800,"severity":"high","offlineMs":30251,"fix":"Start idearium: node idearium/boot.js or node service/idearium-service.js","body":"idearium offline for 30s — :4800 not responding","gapUuid":"20e0a9f0-123e-4c6b-8d75-956339cac8f2","ts":1788330742839}

@@ -238,19 +238,34 @@ function _writeCalendarEntry({ commitId, branch, causedBy, ts }) {
 // Needed so /api/versionium/history?system=X (cortex/boot.js) and, later,
 // LM1's per-system version_history: section can trace a commit back to the
 // system it was made for — this field genuinely did not exist before.
-function commit({ message, branch = 'main', causedBy = null, system = null } = {}) {
+//
+// §SNAPSHOTGATE MERGE 2026-09-01 — added `state` (optional, default null).
+// idearium's SnapshotGate stored the caller's actual restorable working
+// state (ideas/specs/gaps/links, deep-cloned) directly on the commit row —
+// a capability this module never had; `snapshot` above is the rfr2 KERNEL's
+// causal event-ring snapshot (replay material), not a raw state blob, and
+// the two are not interchangeable. Stored as its own field so a caller that
+// wants direct state back (getState, below) doesn't have to reconstruct it
+// from replay context, and a caller that never passes state (the existing
+// cortex live-field auto-commit, the agent tool) is unaffected — state
+// stays null, exactly as before this change.
+function commit({ message, branch = 'main', causedBy = null, system = null, state = null } = {}) {
   const now       = Date.now();
   const commitId  = 'vtm-' + uid().slice(0, 8);
   const branches  = jaaDB.query('versionium_branches', r => r.branch === branch, 1);
   const parentId  = branches[0]?.headCommitId || null;
   const realMsg   = message || 'manual commit';
   const snap      = _kernelSnapshotFor(commitId, branch, realMsg, causedBy);
+  // Deep-cloned so a caller mutating its live state after commit can never
+  // corrupt history — same convention idearium's own SnapshotGate used.
+  const rawState  = state !== null ? JSON.parse(JSON.stringify(state)) : null;
 
   const c = jaaDB.insert('versionium_commits', {
     uuid: commitId, commitId, parentId, branch, system,
     message: realMsg,
     wall: now, source: MODULE_ID, causedBy,
     snapshot: snap,
+    state: rawState,
   });
 
   if (branches.length) {
@@ -305,4 +320,25 @@ function calendar(date) {
   return jaaDB.query('versionium_calendar', r => r.date === date, 100);
 }
 
-module.exports = { init, stop, setDeps, commit, restore, calendar };
+/**
+ * getState(commitId) — §SNAPSHOTGATE MERGE 2026-09-01. Direct-restore read:
+ * hands back the raw `state` stored on a commit (see commit() above), not a
+ * replay context. This is the capability idearium's SnapshotRestoreGate
+ * actually needs — "give me back exactly what was there," not "let me step
+ * through the causal events leading up to it" (that's what restore() above
+ * is still for, unchanged). A commit made without a state payload (every
+ * commit before this pass, and every future commit from a caller that
+ * doesn't pass one) honestly has none — reported as an error, not a
+ * fabricated empty object.
+ */
+function getState(commitId) {
+  const rows = jaaDB.query('versionium_commits', r => r.commitId === commitId, 1);
+  const row  = rows[0];
+  if (!row) return { error: `no commit "${commitId}"` };
+  if (row.state === null || row.state === undefined) {
+    return { error: `commit "${commitId}" has no stored state (committed without one, or predates the SnapshotGate merge)` };
+  }
+  return { commit: row, state: row.state };
+}
+
+module.exports = { init, stop, setDeps, commit, restore, calendar, getState };

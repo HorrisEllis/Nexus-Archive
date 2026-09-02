@@ -1,0 +1,1 @@
+{"uuid":"c89a49ff-81b6-4fe7-b27c-d9c43b6c6ce9","system":"idearium","component":"idearium.repo.list","action":"registered","status":"ok","tags":["idearium"],"detail":"List ingested repos","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788328851064}

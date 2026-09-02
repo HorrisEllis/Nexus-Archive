@@ -1,0 +1,1 @@
+{"uuid":"786652b5-54a1-44d9-8000-6bc628ad3c7b","system":"idearium","component":"idearium.idea.create","action":"registered","status":"ok","tags":["idearium"],"detail":"Create a new idea from free text","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788328851024}

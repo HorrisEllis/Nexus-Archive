@@ -60,5 +60,33 @@ test('V-007', 'setDeps(fieldReader) wires without throwing, and live-field trigg
   assert.ok(true);
 });
 
+// §SNAPSHOTGATE MERGE 2026-09-01 — real tests for the new state/getState
+// capability, added when idearium's SnapshotGate/SnapshotRestoreGate were
+// removed in favor of this module (idearium/index.js's commitSnapshot()/
+// restoreSnapshot() now call these over HTTP; these two tests cover the
+// in-process contract they depend on).
+test('V-008', 'commit() with a state payload stores it, getState() returns it back deep-cloned', () => {
+  const original = { ideas: [{ uuid: 'i1', phase: 'seed' }], gaps: [] };
+  const c = versionium.commit({ message: 'state-test commit', system: 'idearium', state: original });
+  const r = versionium.getState(c.commitId);
+  assert.ok(!r.error, `unexpected error: ${r.error}`);
+  assert.deepStrictEqual(r.state, original);
+  // deep-cloned, not the same reference — mutating the caller's object
+  // after commit must not corrupt stored history.
+  original.ideas.push({ uuid: 'i2', phase: 'seed' });
+  assert.strictEqual(r.state.ideas.length, 1);
+});
+
+test('V-009', 'getState() on a commit made without state reports a real error, not an empty object', () => {
+  const c = versionium.commit({ message: 'no-state commit' });
+  const r = versionium.getState(c.commitId);
+  assert.ok(r.error, 'expected a real error for a commit with no stored state');
+});
+
+test('V-010', 'getState() on a nonexistent commit reports a real error, not a crash', () => {
+  const r = versionium.getState('vtm-doesnotexist');
+  assert.ok(r.error);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

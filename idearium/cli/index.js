@@ -427,18 +427,24 @@ const COMMANDS = {
 
   // ── idearium push / vortex ─────────────────────────────────────────────────
 
+  // §SNAPSHOTGATE MERGE 2026-09-01 — now a real network round trip to
+  // cortex/versionium (via idearium's commitSnapshot()), not a local,
+  // synchronous write. Errors are real now too (cortex unreachable, etc.) —
+  // reported, not swallowed.
   async 'push'(os, { flags }) {
     const message = flags.message || 'snapshot';
     const branch  = flags.branch  || 'main';
-    os.emit('idearium.snapshot.commit', { message, branch, author:'cli' });
-    const snap = os.snapshots()[0];
+    const snap = await os.commitSnapshot({ message, branch, author:'cli' });
+    if (snap?.error) { die(`push failed: ${snap.error}`); return; }
     console.log(mint(`✓ pushed: ${bold(snap.commitId)}`));
     console.log(`  ${dim('message')} ${snap.message}`);
     console.log(`  ${dim('ideas')}   ${snap.ideasCount}  ${dim('gaps')} ${snap.gapCount}  ${dim('snr')} ${sky(snap.snr)}`);
   },
 
   async 'log'(os, { flags }) {
-    const snaps = os.snapshots().slice(0, parseInt(flags.n)||20);
+    const result = await os.snapshots(parseInt(flags.n)||20);
+    if (result?.error) { die(`log failed: ${result.error}`); return; }
+    const snaps = result;
     if (!snaps.length) { console.log(gray('  no snapshots yet')); return; }
     header('Vortex Log');
     for (const s of snaps) {

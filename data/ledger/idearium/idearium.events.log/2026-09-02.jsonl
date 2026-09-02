@@ -1,0 +1,1 @@
+{"uuid":"c322eae9-3625-4fde-958a-1421d1e0e447","system":"idearium","component":"idearium.events.log","action":"registered","status":"ok","tags":["idearium"],"detail":"Recent internal event log","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788328851018}

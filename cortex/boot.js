@@ -1149,10 +1149,14 @@ const server = http.createServer(async (req, res) => {
   // in this codebase, same as /api/raid/decide above.
   if (p === '/api/versionium/commit' && method === 'POST') {
     const body = await readBody(req);
-    const { message, branch, causedBy, system } = body || {};
+    // §SNAPSHOTGATE MERGE 2026-09-01 — `state` added so a caller (idearium,
+    // going forward) can commit its actual restorable working state, not
+    // just a message. Optional — every existing caller (agent tool,
+    // cortex's own live-field auto-commit) never sends one, unaffected.
+    const { message, branch, causedBy, system, state } = body || {};
     if (!message) { json(res, 400, { ok: false, error: 'message is required' }); return; }
     try {
-      const commit = versionium.commit({ message, branch, causedBy, system: system || null });
+      const commit = versionium.commit({ message, branch, causedBy, system: system || null, state: state ?? null });
       json(res, 200, { ok: true, commit });
     } catch (e) {
       json(res, 500, { ok: false, error: `versionium commit failed: ${e.message}` });
@@ -1194,6 +1198,22 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, { ok: true, commit: result.commit, completion });
     } catch (e) {
       json(res, 500, { ok: false, error: `versionium restore failed: ${e.message}` });
+    }
+    return;
+  }
+
+  // §SNAPSHOTGATE MERGE 2026-09-01 — direct-restore read, distinct from
+  // /restore/ above: returns the raw state stored on the commit (if the
+  // caller sent one), not a causal replay/completion record. This is the
+  // route idearium's restore-with-auto-stash calls into.
+  if (p.startsWith('/api/versionium/state/')) {
+    const commitId = p.slice('/api/versionium/state/'.length);
+    try {
+      const result = versionium.getState(commitId);
+      if (result.error) { json(res, 404, { ok: false, error: result.error }); return; }
+      json(res, 200, { ok: true, commit: result.commit, state: result.state });
+    } catch (e) {
+      json(res, 500, { ok: false, error: `versionium state read failed: ${e.message}` });
     }
     return;
   }

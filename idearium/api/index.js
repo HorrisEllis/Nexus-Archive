@@ -957,36 +957,39 @@ async function handle(req, res, route, query, body) {
 
     // ── Snapshots ──────────────────────────────────────────────────────────
 
-    case 'snapshot.list':
-      return ok(res, { snapshots: os.snapshots().slice(0, 50) });
+    // §SNAPSHOTGATE MERGE 2026-09-01 — all four now real network calls to
+    // cortex/versionium via idearium's commitSnapshot()/snapshots()/
+    // snapshot()/diffSnapshots()/restoreSnapshot() (see idearium/index.js).
+    // Errors are real now (cortex unreachable, etc.) — reported as 502, not
+    // swallowed into an empty result.
+    case 'snapshot.list': {
+      const snaps = await os.snapshots(50);
+      if (snaps?.error) return err(res, 502, snaps.error);
+      return ok(res, { snapshots: snaps });
+    }
 
     case 'snapshot.push': {
-      // §VERSIONIUM STEP 4 2026-08-28 — causedBy was already fully
-      // supported by SnapshotGate itself (destructured, persisted on the
-      // snap object) — this HTTP handler was the one real gap not
-      // forwarding it from the request body into the emitted event.
-      os.emit('idearium.snapshot.commit', { message: body.message||'snapshot', branch: body.branch||'main', author: body.author||'api', causedBy: body.causedBy || null });
-      return ok(res, { snapshot: os.snapshots()[0] });
+      const snap = await os.commitSnapshot({ message: body.message||'snapshot', branch: body.branch||'main', author: body.author||'api', causedBy: body.causedBy || null });
+      if (snap?.error) return err(res, 502, snap.error);
+      return ok(res, { snapshot: snap });
     }
 
     case 'snapshot.show': {
-      const snap = os.snapshot(params.uuid);
+      const snap = await os.snapshot(params.uuid);
       if (!snap) return err(res, 404, `snapshot not found: ${params.uuid}`);
       return ok(res, { snapshot: snap });
     }
 
     case 'snapshot.diff': {
-      const diff = os.diffSnapshots(params.a, params.b);
-      if (!diff) return err(res, 404, 'one or both snapshots not found');
+      const diff = await os.diffSnapshots(params.a, params.b);
+      if (diff?.error) return err(res, 404, diff.error);
       return ok(res, { diff });
     }
 
     case 'snapshot.restore': {
-      const target = os.db.snapshots.find(s => s.uuid === params.uuid || s.commitId === params.uuid);
-      if (!target) return err(res, 404, `snapshot not found: ${params.uuid}`);
-      if (!target.state) return err(res, 400, `snapshot ${params.uuid} predates full-state capture — nothing to restore`);
-      os.emit('idearium.snapshot.restore', { commitId: target.commitId, author: 'api' });
-      return ok(res, { restored: target.commitId, ideas: target.state.ideas.length, specs: target.state.specs.length, gaps: target.state.gaps.length });
+      const result = await os.restoreSnapshot(params.uuid, { author: 'api' });
+      if (result?.error) return err(res, 400, result.error);
+      return ok(res, { restored: result.commitId, stashCommitId: result.stashCommitId, ideas: result.ideas, specs: result.specs, gaps: result.gaps });
     }
 
     // ── Repos ──────────────────────────────────────────────────────────────

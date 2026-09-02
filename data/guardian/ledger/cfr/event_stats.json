@@ -1,4 +1,250 @@
 {
-  "stats": {},
-  "baseline": {}
+  "stats": {
+    "guardian.seam.watchdog.started": {
+      "count": 2,
+      "lastTs": 1788330697450,
+      "intervals": [
+        1852243
+      ],
+      "totalMs": 1852243
+    },
+    "gate.failed": {
+      "count": 34,
+      "lastTs": 1788330708186,
+      "intervals": [
+        4196,
+        95,
+        1913,
+        981,
+        85,
+        66,
+        1644,
+        61,
+        274,
+        927,
+        1822,
+        50,
+        153691,
+        2392,
+        8964,
+        3283,
+        28878,
+        17454,
+        35,
+        102049,
+        1523512,
+        2027,
+        63,
+        1937,
+        655,
+        64,
+        266,
+        1741,
+        630,
+        42,
+        255,
+        2823,
+        48
+      ],
+      "totalMs": 1862923
+    },
+    "ncp.client.connected": {
+      "count": 8,
+      "lastTs": 1788330708092,
+      "intervals": [
+        3079,
+        1721,
+        3096,
+        1842321,
+        2673,
+        2703,
+        3110
+      ],
+      "totalMs": 1858703
+    },
+    "guardian.provider.connected": {
+      "count": 8,
+      "lastTs": 1788330708118,
+      "intervals": [
+        3075,
+        1718,
+        3089,
+        1842330,
+        2662,
+        2702,
+        3118
+      ],
+      "totalMs": 1858694
+    },
+    "ncp.message.received": {
+      "count": 46,
+      "lastTs": 1788330708142,
+      "intervals": [
+        1926,
+        987,
+        149,
+        1707,
+        273,
+        936,
+        1876,
+        153690,
+        49,
+        54,
+        2287,
+        821,
+        8143,
+        51,
+        27,
+        3203,
+        51,
+        24,
+        24,
+        28766,
+        67,
+        12043,
+        4432,
+        933,
+        43,
+        38,
+        24,
+        22,
+        82415,
+        83,
+        14967,
+        1216,
+        3165,
+        74,
+        86,
+        44,
+        40,
+        1525462,
+        1943,
+        723,
+        266,
+        1743,
+        674,
+        252,
+        2865
+      ],
+      "totalMs": 1858664
+    },
+    "guardian.provider.registered": {
+      "count": 8,
+      "lastTs": 1788330708165,
+      "intervals": [
+        3051,
+        1706,
+        3080,
+        1842349,
+        2659,
+        2681,
+        3122
+      ],
+      "totalMs": 1858648
+    },
+    "guardian.tab.dom_map": {
+      "count": 10,
+      "lastTs": 1788330705297,
+      "intervals": [
+        984,
+        2127,
+        938,
+        157953,
+        822,
+        1687386,
+        986,
+        1741,
+        927
+      ],
+      "totalMs": 1853864
+    },
+    "guardian.job.dispatched": {
+      "count": 4,
+      "lastTs": 1788329154493,
+      "intervals": [
+        11360,
+        32125,
+        100023
+      ],
+      "totalMs": 143508
+    },
+    "guardian.ledger.write": {
+      "count": 7,
+      "lastTs": 1788329174010,
+      "intervals": [
+        11356,
+        3283,
+        28873,
+        17463,
+        82552,
+        19439
+      ],
+      "totalMs": 162966
+    },
+    "GUARDIAN_LEDGER_WRITE": {
+      "count": 7,
+      "lastTs": 1788329174043,
+      "intervals": [
+        11356,
+        3282,
+        28879,
+        17453,
+        82579,
+        19425
+      ],
+      "totalMs": 162974
+    },
+    "guardian.job.confirmed": {
+      "count": 4,
+      "lastTs": 1788329169628,
+      "intervals": [
+        11331,
+        44190,
+        102958
+      ],
+      "totalMs": 158479
+    },
+    "guardian.job.chunk": {
+      "count": 2,
+      "lastTs": 1788329170826,
+      "intervals": [
+        99743
+      ],
+      "totalMs": 99743
+    },
+    "guardian.artifact": {
+      "count": 2,
+      "lastTs": 1788329174085,
+      "intervals": [
+        102027
+      ],
+      "totalMs": 102027
+    }
+  },
+  "baseline": {
+    "gate.failed": {
+      "avgIntervalMs": 64129,
+      "stddevMs": 277746,
+      "consistency": 0,
+      "count": 30,
+      "sampleSize": 29,
+      "computedAt": 1788330705019
+    },
+    "ncp.message.received": {
+      "avgIntervalMs": 47491,
+      "stddevMs": 241301,
+      "consistency": 0,
+      "count": 40,
+      "sampleSize": 39,
+      "computedAt": 1788330701619
+    },
+    "guardian.tab.dom_map": {
+      "avgIntervalMs": 205985,
+      "stddevMs": 526030,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788330705297
+    }
+  }
 }
