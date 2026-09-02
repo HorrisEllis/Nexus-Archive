@@ -768,6 +768,21 @@ function _formatToolResult(name, result) {
  * now flowing through createJob -> ncp.push -> here, previously dropped
  * at createJob's own signature before this fix).
  */
+// §ACK-INJECTION-FIX 2026-09-02 — see guardian/userscript-chatgpt.js's own
+// header comment for the full real root-cause writeup. Same bug, same
+// fix, applied identically across every provider userscript.
+function _buildHatHeader(hat) {
+  if (!hat || !hat.personaPrompt) return '';
+  return `[${hat.name}] ${hat.personaPrompt}\n\n`;
+}
+
+function _scopedTools(tools, hat) {
+  if (!hat || !Array.isArray(hat.toolScope) || !hat.toolScope.length) return tools;
+  if (!Array.isArray(tools) || !tools.length) return tools;
+  const scoped = tools.filter(t => hat.toolScope.includes(t.name));
+  return scoped.length ? scoped : tools;
+}
+
 function _buildToolsHeader(tools) {
   if (!Array.isArray(tools) || !tools.length) return '';
   const lines = tools.map(t => `- ${t.name}${t.description ? `: ${t.description}` : ''}`).join('\n');
@@ -801,7 +816,7 @@ async function _runToolCall(call) {
 }
 
 async function handleJob(msg) {
-  const { jobId, prompt='', content='', command='', tools=null, seam_chunk_idx, seam_total, seam_title, seam_queue_id } = msg;
+  const { jobId, prompt='', content='', command='', tools=null, hat=null, seam_chunk_idx, seam_total, seam_title, seam_queue_id } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
   if (seam_queue_id != null) {
@@ -824,18 +839,28 @@ async function handleJob(msg) {
   _toCortex('agent.call.start', { jobId, provider:PROVIDER, command, promptLen:text.length });
   _toBridge('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
 
-  if (Array.isArray(tools) && tools.length) _toolCallCounts.set(jobId, 0);
+  // §ACK-INJECTION-FIX — moved inside gate(), keyed off scopedTools.
 
   await gate('handleJob', async () => {
-    // §US-04 — pre-prompt intelligence injection
-    const intel   = await pullIntelligenceContext(text, command);
-    const intelHdr= buildContextHeader(intel);
-    // Legacy cortex context
-    const legacyCtx = _settings.enableContextInjection !== false
-      ? await pullCortexContext(text) : '';
-    const toolsHdr = _buildToolsHeader(tools);
+    // §ACK-INJECTION-FIX 2026-09-02 — a real hat means a short, targeted
+    // persona replaces the generic context blob (the agent has real tools
+    // to pull gaps/patterns/recall on demand — that's what they're for).
+    // No hat (the common case) keeps the prior behavior exactly.
+    let intelHdr = '', legacyCtx = '';
+    const hatHdr = _buildHatHeader(hat);
+    if (!hatHdr) {
+      // §US-04 — pre-prompt intelligence injection
+      const intel = await pullIntelligenceContext(text, command);
+      intelHdr = buildContextHeader(intel);
+      // Legacy cortex context
+      legacyCtx = _settings.enableContextInjection !== false
+        ? await pullCortexContext(text) : '';
+    }
+    const scopedTools = _scopedTools(tools, hat);
+    if (Array.isArray(scopedTools) && scopedTools.length) _toolCallCounts.set(jobId, 0);
+    const toolsHdr = _buildToolsHeader(scopedTools);
 
-    const finalText = toolsHdr + (intelHdr || legacyCtx) + text;
+    const finalText = toolsHdr + (hatHdr || intelHdr || legacyCtx) + text;
     if (!injectText(finalText)) throw new Error('Input not found — no contenteditable');
 
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });

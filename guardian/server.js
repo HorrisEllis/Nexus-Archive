@@ -41,6 +41,26 @@ const { createBaseline }    = require('../intelligence/baseline');
 // read, via the shared lib/grammar-fallback.js resolver — not duplicated
 // inline (§5.7 low coupling, high cohesion).
 const grammarFallback = require('../guardian/lib/grammar-fallback');
+// §ACK-INJECTION-FIX 2026-09-02 — James, live: "ack is injecting way to much
+// into chatgpt, the tools are for that exact reason. need the intent map and
+// hats." Real, checked root cause: createJob() below has never carried any
+// hat/persona information — every browser-dispatched job (chatgpt, gemini,
+// perplexity, claude) got a generic, always-on context blob
+// (pullIntelligenceContext + pullCortexContext, guardian/userscript-*.js)
+// stacked in front of the actual prompt, regardless of what the prompt
+// needed, because there was no cheaper, more targeted alternative wired in.
+// There already IS one: lib/intent-hat-router.js's suggestHat() (built
+// 2026-08-17) classifies the prompt's real verb and returns a real hat with
+// a short personaPrompt and a real toolScope — built for copilot's own
+// internal dispatch, never reached the browser-agent path until now. Wired
+// in here (read-only — suggestHat() never mutates copilot's current-agent
+// state, safe to call per-job) so a job can carry { name, personaPrompt,
+// toolScope } instead of nothing, and each userscript's own handleJob (see
+// that file's own §ACK-INJECTION-FIX comment) can use the short persona
+// instead of the generic blob, and narrow its tools list to the hat's real
+// scope instead of the county-wide list every job got before.
+const intentHatRouter = require('../lib/intent-hat-router.js');
+const hatForge = require('../lib/hat-forge.js');
 
 // Per-kernel baseline monitor — establishes runtime baseline from first 20 events
 // Sigma deviations → gap.found in JAA
@@ -601,13 +621,42 @@ async function writeToNexus(job) {
 
 // ── job lifecycle ─────────────────────────────────────────────────────────────
 
+// §ACK-INJECTION-FIX 2026-09-02 — real, read-only hat lookup. Never throws
+// (suggestHat() itself is pure — classify + a map lookup, no I/O — but this
+// still guards it: a job must never fail to create because a persona
+// suggestion had a problem). No hat is a legitimate, common result (most
+// prompts don't map to a seeded hat's verb) — returns null, not a fabricated
+// default persona.
+function _suggestJobHat(prompt) {
+  try {
+    const suggestion = intentHatRouter.suggestHat(prompt || '');
+    if (!suggestion.suggested) return null;
+    const hat = hatForge.get(suggestion.hatName);
+    if (!hat) return null;
+    return {
+      name: hat.name,
+      personaPrompt: hat.personaPrompt || '',
+      toolScope: Array.isArray(hat.toolScope) ? hat.toolScope : [],
+      verb: suggestion.verb,
+      confidence: suggestion.confidence,
+    };
+  } catch (e) {
+    console.warn(`[guardian] hat suggestion failed for job (non-fatal): ${e.message}`);
+    return null;
+  }
+}
+
 function createJob({ command, provider, prompt, content, source, tools }) {
   const id  = randomUUID();
+  // §ACK-INJECTION-FIX — computed once at creation, not per-dispatch-retry,
+  // so a job's persona stays stable across any real redelivery.
+  const hat = _suggestJobHat(prompt);
   const job = { id, command, provider, prompt, content: content || null, source: source || null,
     tools: Array.isArray(tools) ? tools : null,
+    hat,
     status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now() };
   jobs.set(id, job);
-  console.log(`[guardian] job created: ${id} → ${provider} /${command}`);
+  console.log(`[guardian] job created: ${id} → ${provider} /${command}${hat ? ` [hat: ${hat.name}]` : ''}`);
   return job;
 }
 
@@ -752,6 +801,13 @@ function _doDispatch(job) {
     // whether a real execution route existed (it does — POST
     // /api/tools/:name, confirmed working).
     tools: job.tools || null,
+    // §ACK-INJECTION-FIX 2026-09-02 — carries createJob()'s real hat
+    // suggestion (persona + toolScope) so the userscript can use a short,
+    // targeted persona instead of the generic always-on context blob. null
+    // is a real, common, honest result (most prompts don't classify to a
+    // seeded hat's verb) — the userscript falls back to its prior behavior
+    // when this is null, not a fabricated default persona.
+    hat: job.hat || null,
   });
   updateJob(job.id, { status: 'delivered', deliveredAt: Date.now() });
   console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP`);

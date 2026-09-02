@@ -548,6 +548,24 @@ function _formatToolResult(name, result) {
   return `[Tool "${name}" result]\n${body}`;
 }
 
+// §ACK-INJECTION-FIX 2026-09-02 — see guardian/userscript-chatgpt.js's own
+// header comment for the full real root-cause writeup (same bug, same
+// fix, applied identically across every provider userscript — leaving
+// the other three with the same known over-injection would be exactly
+// the "silent bug in a sibling copy" pattern this codebase treats as a
+// real, separate failure, not a style choice).
+function _buildHatHeader(hat) {
+  if (!hat || !hat.personaPrompt) return '';
+  return `[${hat.name}] ${hat.personaPrompt}\n\n`;
+}
+
+function _scopedTools(tools, hat) {
+  if (!hat || !Array.isArray(hat.toolScope) || !hat.toolScope.length) return tools;
+  if (!Array.isArray(tools) || !tools.length) return tools;
+  const scoped = tools.filter(t => hat.toolScope.includes(t.name));
+  return scoped.length ? scoped : tools;
+}
+
 function _buildToolsHeader(tools) {
   if (!Array.isArray(tools) || !tools.length) return '';
   const lines = tools.map(t => `- ${t.name}${t.description ? `: ${t.description}` : ''}`).join('\n');
@@ -573,7 +591,7 @@ async function _runToolCall(call) {
 }
 
 async function handleJob(msg) {
-  const { jobId, prompt='', content='', command='', tools=null } = msg;
+  const { jobId, prompt='', content='', command='', tools=null, hat=null } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
 
@@ -586,14 +604,21 @@ async function handleJob(msg) {
   _toCortex('agent.call.start', { jobId, provider:PROVIDER, command, promptLen:text.length, hasMedia: hasAttachedMedia() });
   _toBridge('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
 
-  if (Array.isArray(tools) && tools.length) _toolCallCounts.set(jobId, 0);
+  // §ACK-INJECTION-FIX — moved inside gate(), keyed off scopedTools.
 
   await gate('handleJob', async () => {
-    const intel    = await pullIntelligenceContext(text, command);
-    const intelHdr = buildContextHeader(intel);
-    const toolsHdr = _buildToolsHeader(tools);
+    // §ACK-INJECTION-FIX — see chatgpt userscript for full writeup.
+    let intelHdr = '';
+    const hatHdr = _buildHatHeader(hat);
+    if (!hatHdr) {
+      const intel = await pullIntelligenceContext(text, command);
+      intelHdr = buildContextHeader(intel);
+    }
+    const scopedTools = _scopedTools(tools, hat);
+    if (Array.isArray(scopedTools) && scopedTools.length) _toolCallCounts.set(jobId, 0);
+    const toolsHdr = _buildToolsHeader(scopedTools);
 
-    const finalText = toolsHdr + intelHdr + text;
+    const finalText = toolsHdr + (hatHdr || intelHdr) + text;
     if (!injectText(finalText)) throw new Error('Input not found — Gemini composer not detected');
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });
     await dbPut('requests', { uuid:jobId, status:'dispatched', sessionId, dispatchedAt:Date.now() });

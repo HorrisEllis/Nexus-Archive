@@ -1,1 +1,0 @@
-{"uuid":"3b97b9dd-bad3-4063-93d1-fe1343541848","system":"idearium","component":"idearium.gap.show","action":"registered","status":"ok","tags":["idearium"],"detail":"Get a single gap by uuid","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788328851051}

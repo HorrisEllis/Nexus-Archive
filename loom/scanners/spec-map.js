@@ -17,7 +17,7 @@
  *
  * ── WHAT IS CHECKED, AND WHY ONLY THESE ─────────────────────────────────────
  *
- * 1. §6.3 COVERAGE — every authored .spec appears in docs/SPEC-REGISTRY.md.
+ * 1. §6.3 COVERAGE — every authored .spec appears in docs/SPEC-REGISTRY.spec.
  *    Unambiguous: the axiom says tracked, either it is or it is not.
  *
  * 2. SPEC ROUTES SERVED BY NOTHING — every `{ method: X, path: Y }` a spec
@@ -149,9 +149,9 @@ function divergentPairs(specs) {
   return out;
 }
 
-/** §6.3 — every authored .spec tracked in docs/SPEC-REGISTRY.md */
+/** §6.3 — every authored .spec tracked in docs/SPEC-REGISTRY.spec */
 function checkRegistryCoverage(specs) {
-  const reg = fs.readFileSync(path.join(ROOT, 'docs/SPEC-REGISTRY.md'), 'utf8');
+  const reg = fs.readFileSync(path.join(ROOT, 'docs/SPEC-REGISTRY.spec'), 'utf8');
   return specs.filter(s => !reg.includes(path.basename(s.file)) && !reg.includes(s.file))
               .map(s => s.file);
 }

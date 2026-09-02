@@ -734,6 +734,36 @@ function _formatToolResult(name, result) {
   return `[Tool "${name}" result]\n${body}`;
 }
 
+// §ACK-INJECTION-FIX 2026-09-02 — James, live: "ack is injecting way to
+// much into chatgpt, the tools are for that exact reason." Real root
+// cause: every job's context header stacked a full "known failure modes /
+// reusable artifacts / patterns" or "open gaps / recent artifacts" blob in
+// front of the actual prompt regardless of relevance, because there was
+// no cheaper, targeted alternative. There now is: guardian/server.js's
+// createJob() computes a real hat suggestion (lib/intent-hat-router.js,
+// built 2026-08-17) and sends it as msg.hat — { name, personaPrompt,
+// toolScope }. When present, this uses that short, real persona instead
+// of pulling the generic blob, and narrows the tools list to the hat's
+// own real scope. When absent (most prompts don't classify to a seeded
+// hat's verb — a real, common, honest result, not a bug), falls back to
+// the prior behavior unchanged, so nothing regresses for unclassified
+// prompts.
+function _buildHatHeader(hat) {
+  if (!hat || !hat.personaPrompt) return '';
+  return `[${hat.name}] ${hat.personaPrompt}\n\n`;
+}
+
+function _scopedTools(tools, hat) {
+  if (!hat || !Array.isArray(hat.toolScope) || !hat.toolScope.length) return tools;
+  if (!Array.isArray(tools) || !tools.length) return tools;
+  const scoped = tools.filter(t => hat.toolScope.includes(t.name));
+  // A hat's toolScope naming real tools that this job's own tools list
+  // happens not to include (different subsystem, different registration)
+  // is a real, honest mismatch — fall back to the full list rather than
+  // silently handing the agent zero tools over a naming gap.
+  return scoped.length ? scoped : tools;
+}
+
 function _buildToolsHeader(tools) {
   if (!Array.isArray(tools) || !tools.length) return '';
   const lines = tools.map(t => `- ${t.name}${t.description ? `: ${t.description}` : ''}`).join('\n');
@@ -759,7 +789,7 @@ async function _runToolCall(call) {
 }
 
 async function handleJob(msg) {
-  const { jobId, prompt='', content='', command='', tools=null, seam_chunk_idx, seam_total, seam_title, seam_queue_id } = msg;
+  const { jobId, prompt='', content='', command='', tools=null, hat=null, seam_chunk_idx, seam_total, seam_title, seam_queue_id } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
   if (seam_queue_id != null) {
@@ -782,19 +812,32 @@ async function handleJob(msg) {
   _toCortex('agent.call.start', { jobId, provider:PROVIDER, command, promptLen:text.length });
   _toBridge('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
 
-  if (Array.isArray(tools) && tools.length) _toolCallCounts.set(jobId, 0);
+  // §ACK-INJECTION-FIX 2026-09-02 — moved inside gate() below, keyed off
+  // scopedTools (the hat-filtered list) rather than the raw incoming
+  // tools, so the tool-call budget matches what the agent was actually
+  // told it has access to.
 
   await gate('handleJob', async () => {
-    // §US-04 — pre-prompt intelligence injection
-    const intel   = await pullIntelligenceContext(text, command);
-    const intelHdr= buildContextHeader(intel);
-    // Legacy cortex context
-    const legacyCtx = _settings.enableContextInjection !== false
-      ? await pullCortexContext(text) : '';
+    // §ACK-INJECTION-FIX 2026-09-02 — a real hat means a short, targeted
+    // persona replaces the generic context blob (the agent has real tools
+    // to pull gaps/patterns/recall on demand — that's what they're for).
+    // No hat (the common case) keeps the prior behavior exactly.
+    let intelHdr = '', legacyCtx = '';
+    const hatHdr = _buildHatHeader(hat);
+    if (!hatHdr) {
+      // §US-04 — pre-prompt intelligence injection
+      const intel = await pullIntelligenceContext(text, command);
+      intelHdr = buildContextHeader(intel);
+      // Legacy cortex context
+      legacyCtx = _settings.enableContextInjection !== false
+        ? await pullCortexContext(text) : '';
+    }
 
-    const toolsHdr = _buildToolsHeader(tools);
+    const scopedTools = _scopedTools(tools, hat);
+    if (Array.isArray(scopedTools) && scopedTools.length) _toolCallCounts.set(jobId, 0);
+    const toolsHdr = _buildToolsHeader(scopedTools);
 
-    const finalText = toolsHdr + (intelHdr || legacyCtx) + text;
+    const finalText = toolsHdr + (hatHdr || intelHdr || legacyCtx) + text;
     if (!injectText(finalText)) throw new Error('Input not found — no contenteditable');
 
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });

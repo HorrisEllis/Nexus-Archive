@@ -124,6 +124,38 @@ spec:
         tool is most of them. Fixed alongside — both paths now share one
         _writeCalendarEntry() helper. 7/7 real assertions pass against an
         isolated JAA_DATA_DIR, not production data.
+    - date: 2026-09-02
+      summary: >
+        §SNAPSHOTGATE MERGE — this spec's own 2026-09-01 entry above is
+        now WRONG on one point, corrected here rather than silently left
+        stale (the exact class of problem this migration exists to fix).
+        It said idearium's SnapshotGate was "kept as idearium's own
+        separate feature." That decision was reversed: idearium now has
+        NO local snapshot copy at all. cortex/versionium/index.js's
+        commit() gained an optional `state` param (idearium's actual
+        restorable working state — ideas/specs/gaps/links, deep-cloned —
+        distinct from the kernel's causal-replay snapshot, which is
+        unrelated and untouched); a new getState(commitId) reads it back
+        directly. cortex/boot.js gained GET /api/versionium/state/:id.
+        idearium/index.js's SnapshotGate/SnapshotRestoreGate and their
+        SISO registrations are gone — checked directly first (siso/core/
+        index.js's Stream.emit() calls gate.transform() with no await, so
+        an async gate's promise would've been silently dropped, and
+        nothing else in this codebase listens for idearium.snapshot.
+        committed/.restored on the bus) — replaced with direct async
+        methods (commitSnapshot/snapshots/snapshot/diffSnapshots/
+        restoreSnapshot) that idearium/cli/index.js and idearium/api/
+        index.js now await directly, reaching cortex over HTTP via
+        lib/nexus-client.js. Verified: 10/10 tests (3 new — state stored
+        and retrieved deep-cloned, getState() errors correctly on a
+        state-less or nonexistent commit), node --check clean on all 6
+        touched files, idearium reboots 8/8. Real, undecided tradeoff
+        surfaced by this change and not resolved here: idearium's commit/
+        restore now require cortex to be up and reachable over HTTP —
+        before, they worked fully offline/in-process. Whether that needs
+        a local fallback queue (lib/nexus-client.js already has a
+        postDurable/buffer-drain pattern for exactly this; this change
+        calls nx.post/nx.get directly, bypassing it) is an open call.
 
   gaps:
     as_of: 2026-09-01
@@ -146,6 +178,37 @@ spec:
           there's no record of which branch/commit a new branch actually
           forked FROM. Pre-existing, not newly introduced.
         opened: unknown
+      - id: V3
+        type: availability
+        summary: >
+          idearium's commit/restore now require cortex to be up and
+          reachable over HTTP (§SNAPSHOTGATE MERGE, 2026-09-02) — before
+          that reversal, idearium's own SnapshotGate worked fully
+          offline/in-process. lib/nexus-client.js already has a
+          postDurable/buffer-drain pattern for exactly this failure mode;
+          idearium's new commitSnapshot()/restoreSnapshot() call nx.post/
+          nx.get directly instead, so a cortex outage means a hard
+          failure rather than a durable, replayed-later write. Whether
+          that tradeoff is acceptable or needs the durable path is a
+          real, undecided call.
+        opened: 2026-09-02
+      - id: V4
+        type: coverage
+        summary: >
+          snrDelta (branch-relative, vs. the prior same-branch commit) is
+          not reconstructed in idearium's new async snapshots() — the old
+          SnapshotGate computed it from a local array scan that no longer
+          exists. Left at 0. Real follow-up: derive it from two adjacent
+          same-branch commits' state.snr via the history list.
+        opened: 2026-09-02
+      - id: V5
+        type: coverage
+        summary: >
+          Pre-merge idearium_snapshots rows are orphaned — not deleted,
+          not auto-migrated into versionium_commits. Real, separate
+          decision: write a one-time backfill script, or accept the
+          history gap.
+        opened: 2026-09-02
 
   version_history:
     - version: 1.0.0
@@ -155,4 +218,8 @@ spec:
     - version: 2.0.0
       date: 2026-09-01
       summary: "Reconciliation — cortex/versionium made canonical, dead trigger fixed, sovereign transport applied. Status changed proposed -> active."
+      versioniumCommitId: null
+    - version: 2.1.0
+      date: 2026-09-02
+      summary: "SnapshotGate merge reversal — idearium's local snapshot copy fully retired; commit() gained a state param + getState(); idearium/index.js, cli, and api all repointed to sovereign transport."
       versioniumCommitId: null

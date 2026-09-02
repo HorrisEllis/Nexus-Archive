@@ -1,6 +1,6 @@
 {
-  "coherence": 0.994,
-  "friction": 0.39700056402973866,
-  "resonance": 0.37997629385692383,
-  "entropy": 0.3325785049948977
+  "coherence": 0.6,
+  "friction": 0.2,
+  "resonance": 0.3,
+  "entropy": 0.2
 }

@@ -73,14 +73,18 @@ for (const f of files) {
   }
 }
 
-// RULE: a new .spec should be registered in docs/SPEC-REGISTRY.md (§6.3).
-const specReg = fs.existsSync(path.join(ROOT, 'docs/SPEC-REGISTRY.md'))
-  ? fs.readFileSync(path.join(ROOT, 'docs/SPEC-REGISTRY.md'), 'utf8') : '';
+// RULE: a new .spec should be registered in docs/SPEC-REGISTRY.spec (§6.3).
+// §2026-09-02 — converted from .md to .spec (James: "seems stupid to have
+// it a md"). Both real consumers here and in loom/scanners/spec-map.js do
+// a plain substring match, not markdown-table parsing, so this rename is
+// the only change needed — checked directly before converting.
+const specReg = fs.existsSync(path.join(ROOT, 'docs/SPEC-REGISTRY.spec'))
+  ? fs.readFileSync(path.join(ROOT, 'docs/SPEC-REGISTRY.spec'), 'utf8') : '';
 for (const f of files) {
   if (!/\.spec$/.test(f)) continue;
   const base = path.basename(f);
   if (specReg && !specReg.includes(base) && !specReg.includes(f)) {
-    warnings.push(`${f} is not in docs/SPEC-REGISTRY.md — register it (CLAUDE.md rule 4 / §6.3)`);
+    warnings.push(`${f} is not in docs/SPEC-REGISTRY.spec — register it (CLAUDE.md rule 4 / §6.3)`);
   }
 }
 

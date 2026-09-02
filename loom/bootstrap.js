@@ -252,7 +252,7 @@ if (mappedCap.failures.length) { console.log(`  FAILURES: ${mappedCap.failures.l
 console.log('\nmapping spec layer...\n');
 const mappedSpec = mapSpecs(driver);
 console.log(`  specs: ${mappedSpec.specs}  routes: ${mappedSpec.routes}  components: ${mappedSpec.components.length}  wires: ${mappedSpec.wires.length}`);
-console.log(`  §6.3 SPECS NOT TRACKED IN SPEC-REGISTRY.md: ${mappedSpec.untracked.length}`);
+console.log(`  §6.3 SPECS NOT TRACKED IN SPEC-REGISTRY.spec: ${mappedSpec.untracked.length}`);
 console.log(`  SPEC ROUTES SERVED BY NOTHING: ${mappedSpec.unserved.length}`);
 if (mappedSpec.failures.length) { console.log(`  FAILURES: ${mappedSpec.failures.length}`); failures += mappedSpec.failures.length; }
 
