@@ -575,31 +575,18 @@ test('_cluster returns general for unknown', () => {
   assert.strictEqual(_cluster(undefined), 'general');
 });
 
-test('_decide with ChatGPT online → LAW_I routes to chatgpt', () => {
-  // §DEFAULT-AGENT-CHANGE 2026-09-02 — LAW_I now means chatgpt-first
-  // (was ollama-first). Health key is 'guardian-chatgpt' per HEALTH_KEY.
-  const health = { 'guardian-chatgpt': { online: true, consecutiveFails: 0 } };
+test('_decide with Ollama online → LAW_I routes to ollama', () => {
+  const health = { ollama: { online: true, consecutiveFails: 0 } };
   const d = _decide({ prompt: 'build code' }, health, new Map());
-  assert.strictEqual(d.agent, 'chatgpt');
+  assert.strictEqual(d.agent, 'ollama');
   assert.ok(d.reason.startsWith('LAW_I'));
 });
 
-test('_decide with ChatGPT offline, Gemini online → LAW_I fallback to gemini', () => {
+test('_decide with Ollama offline (3+ fails) → claude (via the guardian-claude health key)', () => {
   const health = {
-    'guardian-chatgpt': { online: false, consecutiveFails: 3 },
-    'guardian-gemini':  { online: true,  consecutiveFails: 0 },
-  };
-  const d = _decide({ prompt: 'build code' }, health, new Map());
-  assert.strictEqual(d.agent, 'gemini');
-  assert.ok(d.reason.startsWith('LAW_I'));
-});
-
-test('_decide with ChatGPT and Gemini offline (3+ fails) → claude (via the guardian-claude health key)', () => {
-  const health = {
-    'guardian-chatgpt': { online: false, consecutiveFails: 3 },
-    'guardian-gemini':  { online: false, consecutiveFails: 3 },
     ollama:             { online: false, consecutiveFails: 3 },
     'guardian-claude':  { online: true,  consecutiveFails: 0 },
+    'guardian-chatgpt': { online: false, consecutiveFails: 0 },
   };
   const d = _decide({ prompt: 'build code' }, health, new Map());
   // §FIX — the chain's agent identifier is the bare name ('claude'), which is
@@ -613,20 +600,18 @@ test('_decide with ChatGPT and Gemini offline (3+ fails) → claude (via the gua
   assert.ok(d.reason.includes('cluster_chain'));
 });
 
-test('_decide with guardian-claude and ollama online but chatgpt still used (LAW_I)', () => {
-  // §DEFAULT-AGENT-CHANGE 2026-09-02 — LAW_I means chatgpt MUST be tried
-  // first even when claude/ollama are available.
+test('_decide with guardian-claude online but ollama still used (LAW_I)', () => {
+  // LAW_I means ollama MUST be tried first even when guardian is available
   const health = {
-    'guardian-chatgpt': { online: true,  consecutiveFails: 0 },
-    ollama:             { online: true,  consecutiveFails: 0 },
-    'guardian-claude':  { online: true,  consecutiveFails: 0 },
+    ollama:            { online: true,  consecutiveFails: 0 },
+    'guardian-claude': { online: true,  consecutiveFails: 0 },
   };
   const d = _decide({ prompt: 'code' }, health, new Map());
-  assert.strictEqual(d.agent, 'chatgpt'); // LAW_I enforced
+  assert.strictEqual(d.agent, 'ollama'); // LAW_I enforced
 });
 
 test('_decide is deterministic — same inputs → same output (10 runs)', () => {
-  const health = { 'guardian-chatgpt': { online: true, consecutiveFails: 0 } };
+  const health = { ollama: { online: true, consecutiveFails: 0 } };
   const weights = new Map();
   const call = { prompt: 'test prompt' };
   const results = new Set();
@@ -638,8 +623,8 @@ test('_decide is deterministic — same inputs → same output (10 runs)', () =>
 
 test('_decide respects explicit preference when agent available', () => {
   const health = {
-    'guardian-chatgpt': { online: true,  consecutiveFails: 0 },
-    'guardian-claude':  { online: true,  consecutiveFails: 0 },
+    ollama:            { online: true,  consecutiveFails: 0 },
+    'guardian-claude': { online: true,  consecutiveFails: 0 },
   };
   const d = _decide({ prompt: 'test', preferredAgent: 'guardian-claude' }, health, new Map());
   assert.strictEqual(d.agent, 'guardian-claude');
@@ -648,16 +633,16 @@ test('_decide respects explicit preference when agent available', () => {
 
 test('_decide ignores preference if agent offline', () => {
   const health = {
-    'guardian-chatgpt': { online: true,  consecutiveFails: 0 },
-    'guardian-claude':  { online: false, consecutiveFails: 5 },
+    ollama:            { online: true,  consecutiveFails: 0 },
+    'guardian-claude': { online: false, consecutiveFails: 5 },
   };
   const d = _decide({ prompt: 'test', preferredAgent: 'guardian-claude' }, health, new Map());
   // guardian-claude offline → falls back to LAW_I
-  assert.strictEqual(d.agent, 'chatgpt');
+  assert.strictEqual(d.agent, 'ollama');
 });
 
 test('_decide includes cluster in output', () => {
-  const health = { 'guardian-chatgpt': { online: true, consecutiveFails: 0 } };
+  const health = { ollama: { online: true, consecutiveFails: 0 } };
   const d = _decide({ prompt: 'analyze this code' }, health, new Map());
   assert.ok(d.cluster); // has a cluster
 });
@@ -922,32 +907,30 @@ test('ICO invariant.del() removes key', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 section('10. LAW_I invariant');
 
-test('LAW_I: ChatGPT always wins when online, regardless of other agents', () => {
-  // §DEFAULT-AGENT-CHANGE 2026-09-02 — LAW_I now means chatgpt-first
-  // (was ollama-first).
+test('LAW_I: Ollama always wins when online, regardless of other agents', () => {
   const health = {
-    'guardian-chatgpt': { online: true,  consecutiveFails: 0 },
     ollama:             { online: true,  consecutiveFails: 0 },
     'guardian-claude':  { online: true,  consecutiveFails: 0 },
+    'guardian-chatgpt': { online: true,  consecutiveFails: 0 },
     claude:             { online: true,  consecutiveFails: 0 },
   };
-  // No matter what the intent or cluster, ChatGPT wins
+  // No matter what the intent or cluster, Ollama wins
   const calls = ['code', 'analyze', 'spec', 'data', 'diagnostic', 'creative', 'general'];
   for (const intent of calls) {
     const d = _decide({ prompt: intent }, health, new Map());
-    assert.strictEqual(d.agent, 'chatgpt', `Expected chatgpt for intent "${intent}", got ${d.agent}`);
+    assert.strictEqual(d.agent, 'ollama', `Expected ollama for intent "${intent}", got ${d.agent}`);
     assert.ok(d.reason.includes('LAW_I'));
   }
 });
 
 test('LAW_I: bypass only when consecutiveFails >= 3', () => {
-  // 2 fails — should still use chatgpt
-  const health2 = { 'guardian-chatgpt': { online: true, consecutiveFails: 2 }, 'guardian-claude': { online: true, consecutiveFails: 0 } };
+  // 2 fails — should still use ollama
+  const health2 = { ollama: { online: true, consecutiveFails: 2 }, 'guardian-claude': { online: true, consecutiveFails: 0 } };
   const d2 = _decide({ prompt: 'test' }, health2, new Map());
-  assert.strictEqual(d2.agent, 'chatgpt');
+  assert.strictEqual(d2.agent, 'ollama');
 
-  // 3 fails, gemini also unavailable — LAW_I bypass allowed, falls through to claude
-  const health3 = { 'guardian-chatgpt': { online: false, consecutiveFails: 3 }, 'guardian-claude': { online: true, consecutiveFails: 0 } };
+  // 3 fails — LAW_I bypass allowed
+  const health3 = { ollama: { online: false, consecutiveFails: 3 }, 'guardian-claude': { online: true, consecutiveFails: 0 } };
   const d3 = _decide({ prompt: 'test' }, health3, new Map());
   // §FIX — see the other corrected test above for the full trace; bare
   // 'claude' is what actually gets dispatched, 'guardian-claude' is the
@@ -955,28 +938,16 @@ test('LAW_I: bypass only when consecutiveFails >= 3', () => {
   assert.strictEqual(d3.agent, 'claude');
 });
 
-test('LAW_I: gemini before API (free > paid) when chatgpt is down', () => {
-  const health = {
-    'guardian-chatgpt': { online: false, consecutiveFails: 5 },
-    'guardian-gemini':  { online: true,  consecutiveFails: 0 },
-    'guardian-claude':  { online: false, consecutiveFails: 5 },
-    claude:             { online: true,  consecutiveFails: 0 },
-  };
-  const d = _decide({ prompt: 'test' }, health, new Map());
-  assert.strictEqual(d.agent, 'gemini'); // free gemini before paid claude
-});
-
-test('LAW_I: guardian before API (free > paid) — all free agents offline', () => {
+test('LAW_I: guardian before API (free > paid)', () => {
   const health = {
     ollama:             { online: false, consecutiveFails: 5 },
     'guardian-claude':  { online: false, consecutiveFails: 5 },
     'guardian-chatgpt': { online: false, consecutiveFails: 5 },
-    'guardian-gemini':  { online: false, consecutiveFails: 5 },
     claude:             { online: true,  consecutiveFails: 0 },
   };
-  // Every free/local option offline → falls to API claude (LAW_III)
+  // Guardian is offline → falls to API claude, not chatgpt
   const d = _decide({ prompt: 'test' }, health, new Map());
-  assert.strictEqual(d.agent, 'claude');
+  assert.strictEqual(d.agent, 'claude'); // API claude before API chatgpt
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

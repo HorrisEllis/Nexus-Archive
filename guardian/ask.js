@@ -131,19 +131,54 @@ async function askSync(prompt, opts = {}, deps = {}) {
     // through the exact same real NCP round trip that already exists.
     // No CORS surface either -- tool execution below runs in guardian's
     // own process, in-process, never as a browser-originated request.
-    let finalPrompt = prompt;
+    // §FIX 2026-09-02 — real bug, found by tracing why an NCP-dispatched
+    // agent (chatgpt/claude/gemini/perplexity) told a user it had no real
+    // tools despite opts.tools being set (ESCALATION_TOOLS, from
+    // copilot/lifeline.js's dispatchToNcpAgent default). Root cause: two
+    // independent tool-call mechanisms exist on this same path and were
+    // never reconciled —
+    //   (1) this function's own finalPrompt manifest (below, until this
+    //       fix), which resolved names correctly and told the model to
+    //       reply with `TOOL_CALL: {"name":..., "args":{...}}`; and
+    //   (2) each userscript's own _buildToolsHeader (built in the phase 1/2
+    //       commits, 100fe02 + 40e3de7), which reads job.tools directly off
+    //       the NCP payload and tells the model to reply with
+    //       `[[TOOL: name {"arg":"val"}]]` instead — a DIFFERENT syntax.
+    // job.tools was stored as the raw opts.tools array (createJob's own
+    // `tools: Array.isArray(tools) ? tools : null`, unchanged) — i.e. plain
+    // name strings for every caller that (like ESCALATION_TOOLS) never
+    // resolved them, exactly what this function's own manifest-building
+    // below already did correctly for (1). _buildToolsHeader assumes
+    // {name, description} objects (`t.name`, `t.description`), so a plain
+    // string produced `- undefined` for every tool. Net effect for any
+    // NCP-dispatched job: the model received a broken, unusable tools list
+    // under the NEW syntax, immediately followed by a second, correct,
+    // CONFLICTING manifest under the OLD syntax later in the same prompt —
+    // two different real conventions, one visibly broken, in one message.
+    // A model reasonably refusing to act on that is not a model bug.
+    //
+    // Real fix, done once, upstream, rather than patched separately in 4
+    // near-duplicate userscript copies: resolve tool names to real
+    // {name, description} objects HERE, store the resolved objects (not
+    // raw strings) on the job, and stop injecting this function's own
+    // separate TOOL_CALL: instruction into the prompt text. The userscript
+    // side (client-side interception, before the reply is even "final",
+    // with its own 5-call safety cap) is the more capable of the two real
+    // mechanisms for NCP/browser-tab providers — this makes it the single
+    // source of truth for that path instead of two competing ones.
+    // finalPrompt therefore stays byte-identical to prompt again, same as
+    // any caller that never sets opts.tools — additive only in what
+    // job.tools now correctly carries.
+    let resolvedTools = null;
     if (Array.isArray(opts.tools) && opts.tools.length) {
       const agentTools = require('../lib/agent-tools/index.js');
-      const manifest = opts.tools
+      resolvedTools = opts.tools
         .map(name => agentTools.TOOLS.get(name))
         .filter(Boolean)
-        .map(t => `- ${t.name}: ${(t.description || '').split('\n')[0].slice(0, 140)}`)
-        .join('\n');
-      if (manifest) {
-        finalPrompt = `${prompt}\n\n---\nReal tools available for this request. To use one, respond with a single line, exactly: TOOL_CALL: {"name": "<tool_name>", "args": {...}}\n${manifest}\n---`;
-      }
+        .map(t => ({ name: t.name, description: (t.description || '').split('\n')[0].slice(0, 140) }));
+      if (!resolvedTools.length) resolvedTools = null;
     }
-    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt: finalPrompt, content: opts.content || '', tools: opts.tools || null });
+    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt, content: opts.content || '', tools: resolvedTools });
     dispatchJob(job);
   } catch (e) {
     return { ok: false, error: `failed to enqueue job: ${e.message}` };
