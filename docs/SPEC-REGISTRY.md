@@ -536,3 +536,48 @@ scope, only its existing single-provider limitation remains open. All
 4 new phases (IC1-4) start PENDING, correctly sequenced so the taxonomy
 and template-update phases depend on the mechanisms they'd otherwise be
 designed blind ahead of.
+
+## §REGISTERED 2026-09-01 (§6.3) — LM1, per-system living-model schema + real missing specs
+
+| spec | version | status | governs | last checked vs code |
+|---|---|---|---|---|
+| `docs/nexus-system-foundation-addendum-v1.3.0.spec` | 1.3.0 | proposed | Adds AX-013: three new, additive per-system spec sections (`history`, `gaps`, `version_history`) — the real schema LM1 called for. Additive/revertible, same convention as the v1.2.0 addendum. | 2026-09-01 (written against nexus-system-foundation@1.1.0) |
+| `clear-glass/spec/clear-glass.spec` | 3.1.0 | active | First real spec for clear-glass — written FROM the live `clear-glass/registry-components.js` contract (67 components), not from scratch. | 2026-09-01 |
+| `loom/spec/loom.spec` | 1.5.0 | active | First real spec for loom — routes traced directly from `loom/server.js`. | 2026-09-01 |
+| `docs/grammar-fallback.spec` | 1.0.1 | active | guardian's CLI grammar-resolution fallback (`guardian/lib/grammar-fallback.js`). Library module, not a service — placed in `docs/` per spec-drift.js's docs-fallback matching (no top-level dir of this name). | 2026-09-01 |
+| `docs/mutation-contract.spec` | 1.0.1 | active | orchestrator's component-mutation governance layer (`orchestrator/lib/mutation-contract.js`), implementing seam-component-registry-spec.md §9.5. | 2026-09-01 |
+| `docs/open-loop-taxonomy.spec` | 1.0.0 | active | The 10-type/5-state open-loop taxonomy (`lib/open-loop-taxonomy.js`) — 8 confirmed real consumers. | 2026-09-01 |
+| `docs/loop-topology.spec` | 1.0.0 | active | Focal-point/leverage-scoring module (`lib/loop-topology.js`). **Real finding**: zero confirmed live consumers — built and tested per its own header, genuinely disconnected. Flagged as gap LT1, not wired this pass. | 2026-09-01 |
+| `docs/gap-finder.spec` | 1.1.0 | active | Cortex's gap-emission organ (`cortex/gap-finder/index.js`) — listens for `anomaly.detected`/`sigma.event.*`, dedups against the live `gaps` table. | 2026-09-01 |
+
+`ollama/spec/ollama.spec` — **renamed, not rewritten**: `meta.name` corrected
+from `ollama` to `ollama-bridge` to match `lib/version.js`'s real
+code-version key. Content was already accurate and complete (confirmed by
+direct read); `spec-drift.js` had been reporting it missing purely because
+its own name-matcher doesn't bridge `ollama-bridge` <-> `ollama`. Given
+`history`/`gaps`/`version_history` sections per AX-013 in the same pass.
+
+**Live verification, not assumed**: ran `node orchestrator/lib/spec-drift.js`
+before and after this batch. Before: 45 synced / 0 drifted / 11 missing.
+After: **53 synced / 0 drifted / 3 missing**. The 3 remaining —
+`divergence-watcher`, `macro-compiler`, `gap-loop` — are deliberately NOT
+given specs this pass: checked directly and found none is a single-file,
+single-owner module the way the other 8 were. `divergence-watcher` is a
+route alias in `orchestrator/orchestrator.js` forwarding to cortex;
+`macro-compiler` appears only as a comment reference in
+`orchestrator/lib/sigma-compaction.js` with no dedicated module found;
+`gap-loop` is a conceptual label spanning a dozen-plus real files
+(`guardian/event-taxonomy.js`, `orchestrator/lib/autonomous-loop.js`,
+`intelligence/gap/*`, others), not one module. Writing a spec for any of
+these three would either claim false ownership or require a real design
+decision (which module IS canonical, if any) that's recorded as an open
+question in the addendum's compliance section, not silently guessed here.
+
+**Separate, pre-existing gap found and recorded (not fixed this pass)**:
+`loom/scanners/spec-map.js`'s own `SPEC_DIRS` allowlist (`docs`,
+`warp/spec`, `cortex/spec`, `idearium/spec`, `copilot/spec`, `bridge/spec`)
+does not include the ~24 other system-local `<system>/spec/` locations
+`spec-drift.js` itself already discovers — including, now, `clear-glass/spec`
+and `loom/spec`. Loom's own §6.3 coverage scanner is therefore blind to
+roughly a quarter of the real specs this registry now tracks. Named
+honestly in the addendum (SM1/SM2) as a separate, small, out-of-scope fix.
