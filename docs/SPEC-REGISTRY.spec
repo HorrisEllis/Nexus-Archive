@@ -47,6 +47,11 @@ spec:
   # ── The real registry — 146 entries, mechanically extracted from the
   # original markdown table, not retyped ──
   registry:
+    - spec:             'docs/2026-09-02-nexus-vision-master-phasemap.spec'
+      version:          '1.0.0'
+      last_drift_check: 'not applicable — phasemap, mapped-not-built'
+      status: >
+        Master phasemap for James's full vision dump this session (tool/event awareness, build-contract primitives, idearium spec pipeline, agent-mesh UI, guardian agents/ refactor, clear-glass macros+CLI-first architecture, versionium's deeper file-tracking role, the living-model framework itself, co-pilot rigidity/learning/model-selection, and a draft AX-014 candidate axiom). Two real, concrete findings folded in: the loom-map 41-systems count is confirmed inflated (real bug in lib/loom-map.js's resolveSystem(), folder/category prefixes like tests/lib/spec counted as systems, cos/cg double-counted against their full names), and the duplicate boot-log lines are confirmed already-fixed (stale log from before the fix reached that machine). Explicitly mapped-not-built per James's own instruction.
     - spec:             'alk-perception.spec'
       version:          '1.0.0'
       last_drift_check: '—'
