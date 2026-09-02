@@ -92,7 +92,7 @@ function _latticeLink(a, b, w = 0.7, t = 'associated') {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const VERSION   = '3.2.0';   // §5.4 fix 2026-08-08 — was 3.0.0, drifted from canonical lib/version.js's services.idearium (3.2.0)
+export const VERSION   = '3.2.1';   // §5.4 fix 2026-09-02 — [0.39.39] contract submission now passes intention alongside source; was 3.0.0 pre-2026-08-08, drifted from canonical lib/version.js's services.idearium
 export const NAMESPACE = 'idearium';
 export const PORT      = 4800;
 

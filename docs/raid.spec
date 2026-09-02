@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        raid
-    version:     6.3.0
+    version:     6.4.0
     foundation:  nexus-system-foundation@1.0.0
     uuid:        nexus-raid-v1-0000-2026-0615-jamesbrooks-001
     purpose: >
