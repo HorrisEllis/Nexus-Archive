@@ -74,6 +74,11 @@ const SUITES = [
   'contract-intake-dependency-graph.test.js',
   'test-raid-processnext-am1-gate.js',
   'test-raid-officiator.js',
+  'test-vector-memory-pipeline.js',
+  'test-nexus-intelligence-section.js',
+  'test-cookie-vault-ipc-roundtrip.js',
+  'test-userscript-protocol-parity.js',
+  'test-guardian-agent-registry.js',
   'autonomous-loop.test.js',
   // FIX (James, 2026-06-19): these six suites existed, passed standalone,
   // and were never registered here — `node tests/modules/run-all.js` was

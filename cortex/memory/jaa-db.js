@@ -82,6 +82,32 @@ function _getStore() {
 // by observation, not lockdown — James: fluid, not rigid). Recursion-guarded:
 // the registry's OWN writes (schemas, schema_drift) must not trigger observation,
 // or an insert would loop. §16.5 — wraps the facade, never touches the shared
+// §WIRED 2026-09-02 — James, building toward "give agents context,
+// persistent memory, reduce noise": lib/vector-memory.js's own real
+// onJaaInsert(table, row) hook has existed since that module was
+// built, but nothing in this file (the one real choke point every
+// cortex-domain jaaDB write passes through) ever called it — checked
+// directly, confirmed by grep, not assumed. The vector index has
+// therefore been receiving zero real writes in production; every table
+// already in EMBEDDABLE_TABLES has been dead weight. Fire-and-forget,
+// same real non-blocking discipline _observeWrite (above) already
+// uses — a slow or failed embed must never delay or break a real
+// jaaDB write.
+let _embedding = false;
+function _observeForEmbedding(table, row) {
+  if (_embedding) return; // reentrancy guard, same pattern as _observeWrite
+  _embedding = true;
+  try {
+    const vm = require('../../lib/vector-memory.js');
+    vm.onJaaInsert(table, row).catch(() => {}); // real, already-established fire-and-forget contract
+  } catch (_) {
+    // vector-memory unavailable (Ollama down, index not ready) — a
+    // real, honest degradation, never a reason to fail the write itself.
+  } finally {
+    _embedding = false;
+  }
+}
+
 // JaaStore class the 9 processes depend on.
 const _OBSERVE_SKIP = new Set(['schemas', 'schema_drift', 'event_log', 'component_ledger']);
 let _observing = false;   // reentrancy guard
@@ -118,7 +144,7 @@ function _observeWrite(table, row) {
 
 // Thin adapter — exposes the jaaDB call shape used across the codebase
 const jaaDB = {
-  insert(table, row)             { const r = _getStore().insert(table, row); _observeWrite(table, r); return r; },
+  insert(table, row)             { const r = _getStore().insert(table, row); _observeWrite(table, r); _observeForEmbedding(table, r); return r; },
   upsert(table, row, keyField)   { return _getStore().upsert(table, row, keyField); },
   get(table, where)              { return _getStore().get(table, where); },
   getById(table, id)             { return _getStore().get(table, { id }); },

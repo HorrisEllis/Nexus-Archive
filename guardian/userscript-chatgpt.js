@@ -907,6 +907,46 @@ function connect() {
     NEXUS = (typeof window !== 'undefined' && window.NexusWake)
       ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
       : null;
+    // §FIXED 2026-09-02 — found while checking protocol parity across
+    // all 4 provider userscripts (James: "get the userscripts done"):
+    // claude/chatgpt both wire window.__nexusInjectAnswer, the real
+    // page-side half of clear-glass/src/providers/host.js's
+    // injectAnswer() — this file never did, meaning a real wake-word
+    // answer for THIS provider would silently fail to render on-page
+    // (injectAnswer()'s own real code degrades honestly — "page has not
+    // loaded __nexusInjectAnswer yet" — but the real capability was
+    // simply missing here, not just failing gracefully). Same real
+    // wiring as claude/chatgpt now, not a second implementation.
+    if (typeof window !== 'undefined') {
+      window.__nexusWakeInstance__ = NEXUS;
+      window.__nexusInjectAnswer = (text) => {
+        if (!window.__nexusWakeInstance__) return { ok: false, reason: 'wake module not installed on this tab' };
+        return window.__nexusWakeInstance__.showAnswer(text);
+      };
+    }
+    // §ADDED 2026-09-02 — same real cookie-vault round-trip added to
+    // guardian/userscript-claude.js this session (see that file's own
+    // header comment for the full design) — protocol parity, not a
+    // second implementation; identical real logic, just present here too.
+    if (typeof window !== 'undefined') {
+      window.__nexusCookiePending = window.__nexusCookiePending || new Map();
+      window.__nexusCookieResponse = (requestId, result) => {
+        const resolve = window.__nexusCookiePending.get(requestId);
+        if (resolve) { window.__nexusCookiePending.delete(requestId); resolve(result); }
+      };
+      window.nexusCookieCount = (url) => new Promise((resolve) => {
+        if (typeof window.__cg?.send !== 'function') { resolve({ ok: false, error: 'no __cg bridge on this page — not running inside clear-glass, or webview-bridge.js failed to load' }); return; }
+        const requestId = `cookie-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        window.__nexusCookiePending.set(requestId, resolve);
+        setTimeout(() => {
+          if (window.__nexusCookiePending.has(requestId)) {
+            window.__nexusCookiePending.delete(requestId);
+            resolve({ ok: false, error: 'cookie request timed out — no response from clear-glass main process within 5s' });
+          }
+        }, 5000);
+        window.__cg.send('nexus:cookie-request', { requestId, op: 'count', url: url || location.href, agentId: PROVIDER });
+      });
+    }
     if (_hb) clearInterval(_hb);
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
@@ -2391,6 +2431,84 @@ function renderNexus() {
   qo.style.cssText='margin-top:4px;font:9px monospace;color:#334466;line-height:1.5;min-height:16px';
   qb.onclick=()=>{const q=document.getElementById('__nx_query__')?.value?.trim();if(!q)return;qo.style.color='#818cf8';qo.textContent='⟳';_nexusOllamaQuery(q,(err,text)=>{const o=document.getElementById('__nx_qout__');if(!o)return;if(err){o.style.color='#ff2d55';o.textContent='✗ '+err;}else{o.style.color='#b8cfe0';o.textContent=text.slice(0,400);}});};
   qdiv.append(qi,qb,qo);el.appendChild(qdiv);
+
+  // §BUILD 2026-09-02 — same real Intelligence & Contracts section
+  // added to guardian/userscript-claude.js this session (see that
+  // file's own header comment for the full design/reasoning) —
+  // protocol parity, calling the same real, confirmed-existing
+  // POST /api/tools/:name, not a second implementation.
+  el.appendChild(_renderNexusIntelligence());
+}
+
+function _renderNexusIntelligence() {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'padding:8px 12px;border-top:1px solid rgba(255,255,255,.06)';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'color:#334466;font:8px monospace;margin-bottom:5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center';
+  title.innerHTML = '<span>Intelligence &amp; Contracts</span>';
+  wrap.appendChild(title);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px';
+  const TOOLS = [
+    { name: 'intuition',  label: 'Intuition',  color: '#818cf8', param: 'prompt' },
+    { name: 'mastermind', label: 'Mastermind', color: '#00d4ff', param: 'prompt' },
+    { name: 'analyze',    label: 'Analyze',    color: '#00ff88', param: 'question' },
+    { name: 'synthesize', label: 'Synthesize', color: '#f59e0b', param: 'contextText' },
+  ];
+  for (const t of TOOLS) {
+    const b = document.createElement('button');
+    b.textContent = t.label;
+    b.dataset.tool = t.name; b.dataset.param = t.param;
+    b.style.cssText = `background:none;border:1px solid ${t.color}55;color:${t.color};border-radius:3px;padding:2px 8px;font:8px monospace;cursor:pointer`;
+    btnRow.appendChild(b);
+  }
+  wrap.appendChild(btnRow);
+
+  const ta = document.createElement('textarea');
+  ta.id = '__nx_intel_input__';
+  ta.placeholder = 'context/prompt for the selected tool…';
+  ta.style.cssText = 'width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.07);color:#b8cfe0;font:9px monospace;padding:5px 7px;border-radius:3px;resize:none;height:44px;outline:none;box-sizing:border-box;margin-bottom:3px';
+  wrap.appendChild(ta);
+
+  const submitRow = document.createElement('label');
+  submitRow.style.cssText = 'display:none;align-items:center;gap:4px;font:8px monospace;color:#94a3b8;margin-bottom:3px;cursor:pointer';
+  const submitCk = document.createElement('input'); submitCk.type = 'checkbox'; submitCk.id = '__nx_intel_submit__';
+  submitRow.append(submitCk, document.createTextNode('submit as a real, queued contract (not just preview)'));
+  wrap.appendChild(submitRow);
+
+  const out = document.createElement('div');
+  out.id = '__nx_intel_out__';
+  out.style.cssText = 'font:9px monospace;color:#334466;line-height:1.5;min-height:16px;white-space:pre-wrap;word-break:break-word';
+  wrap.appendChild(out);
+
+  btnRow.querySelectorAll('button').forEach(b => b.addEventListener('click', async () => {
+    const toolName = b.dataset.tool;
+    const paramKey = b.dataset.param;
+    const text = ta.value.trim();
+    submitRow.style.display = toolName === 'synthesize' ? 'flex' : 'none';
+    if (!text) { out.style.color = '#ff2d55'; out.textContent = `✗ ${paramKey} is required`; return; }
+    out.style.color = '#818cf8'; out.textContent = '⟳ running…';
+    const body = { [paramKey]: text };
+    if (toolName === 'synthesize') body.submit = !!submitCk.checked;
+    try {
+      const r = await fetch(`${NCP_URL}/api/tools/${toolName}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body), signal: AbortSignal.timeout(30000),
+      });
+      const data = await r.json();
+      if (!data.ok) { out.style.color = '#ff2d55'; out.textContent = `✗ ${data.error || data.result?.error || 'failed'}`; return; }
+      out.style.color = '#b8cfe0';
+      const res = data.result;
+      out.textContent = typeof res === 'string' ? res.slice(0, 600) : JSON.stringify(res, null, 2).slice(0, 600);
+      if (res?.result?.queueId) toast(`Contract queued — ${res.result.queueId.slice(0,8)}`, 'success', 3000);
+    } catch (e) {
+      out.style.color = '#ff2d55'; out.textContent = `✗ ${e.message}`;
+    }
+  }));
+
+  return wrap;
 }
 
 function _nexusRefreshAll() {

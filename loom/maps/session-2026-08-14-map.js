@@ -316,6 +316,19 @@ const FILES = [
   // (checked directly: only requires cortex/memory/jaa-db.js, already
   // covered elsewhere in this map under nexus.cortex.jaa-db).
   ['lib/account-registry.js', 'nexus.lib.account-registry', 'lib', ['nexus.cortex.jaa-db']],
+
+  // §ADDED 2026-09-02 — precommit-check.js flagged both as real
+  // orphans (CLAUDE.md rule 3) once this session's embedding-pipeline
+  // fix touched them. Genuinely never registered before.
+  ['lib/local-vector-index.js', 'nexus.lib.local-vector-index', 'lib', []],
+  ['lib/vector-memory.js', 'nexus.lib.vector-memory', 'lib', ['nexus.lib.local-vector-index', 'nexus.cortex.jaa-db']],
+
+  // §ADDED 2026-09-02 — precommit-check.js flagged both as real
+  // orphans (CLAUDE.md rule 3) while reconciling a parallel session's
+  // work into this tree. cortex/self-heal/fault-taxonomy.js (a sibling
+  // file) was already registered; the main module itself never was.
+  ['cortex/core/raid/contract-boundary.js', 'nexus.cortex.core.raid.contract-boundary', 'cortex/core/raid', []],
+  ['cortex/self-heal/index.js', 'nexus.cortex.self-heal', 'cortex/self-heal', ['nexus.cortex.self-heal.fault-taxonomy', 'nexus.cortex.core.raid.contract-intake']],
 ];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

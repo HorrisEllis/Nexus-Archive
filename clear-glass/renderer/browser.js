@@ -633,6 +633,16 @@
       // Live MutationObserver stream — forward straight through, no local
       // UI cost (this can fire many times a second on a busy page).
       window.ClearGlass?._sendDomEvent?.({ ...e.args[0], agentId });
+    } else if (e.channel === 'nexus:cookie-request') {
+      // §ADDED 2026-09-02 — James: "check clear-glass for an ipc" (for
+      // cookie-vault reachability from a page-level userscript). The
+      // real bridge mechanism already existed (webview-bridge.js, this
+      // relay pattern); this channel + the real round-trip is new. A
+      // request carries a real requestId so the response (delivered
+      // back into the page separately, see main/index.js's own real
+      // relay) can be matched to the right caller — this channel can
+      // legitimately fire more than once concurrently.
+      window.ClearGlass?._sendCookieRequest?.({ ...e.args[0], agentId });
     }
   });
 

@@ -40,6 +40,18 @@ const FILES = [
   // directly above.
   ['cortex/core/raid/officiator.js', 'nexus.cortex.core.raid.officiator',
     ['nexus.cortex.core.raid.contract-intake']],
+  // §ADDED 2026-09-02 — precommit-check.js flagged this as a real
+  // orphan (CLAUDE.md rule 3) once this session's intuition/mastermind/
+  // synthesize_contract tools touched it. Genuinely never registered
+  // before — its own id (nexus.lib.agent-tools.tools.faculty-tools) was
+  // already referenced as a DEPENDENCY elsewhere (loom/maps/copilot-
+  // capability-map.js), which is why a plain grep for the id looked
+  // like coverage — but the FILE itself was never declared as a real
+  // component with that id, which is what precommit's own check
+  // actually looks for. Real dep: cortex/core/raid/officiator.js,
+  // registered directly above, via synthesize_contract's own new call.
+  ['lib/agent-tools/tools/faculty/faculty-tools.js', 'nexus.lib.agent-tools.tools.faculty-tools',
+    ['nexus.cortex.core.raid.officiator']],
   ['lib/agent-tool-call.js',              'nexus.lib.agent-tool-call', []],
 ];
 

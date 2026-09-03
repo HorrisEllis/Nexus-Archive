@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     3.2.1
+    version:     3.2.0
     foundation:  nexus-system-foundation@1.0.0
     port:        4800
     uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001

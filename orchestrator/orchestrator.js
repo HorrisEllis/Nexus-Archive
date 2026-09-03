@@ -923,9 +923,35 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     } catch(e) { return json(res, 500, { ok:false, error:e.message }); }
   }
 
-  // ── /api/contract — Unified Interaction Contract ──────────────────────────
-  if (u.pathname === '/api/contract' && M === 'GET') {
+  // §OFFICIATOR TOOL SURFACE 2026-09-02 — James: "agent tool for
+  // analysis, intuition, mastermind, synthesis... co-pilot should have
+  // all those tools, same with guardian agents." cortex/core/raid/
+  // officiator.js runs in THIS process (started right above, same file,
+  // §OFFICIATOR block) — a real HTTP route here is the sovereign-
+  // transport door a new agent tool (running in guardian's or copilot's
+  // own process) needs to reach it, matching every other cross-process
+  // capability in this codebase.
+  if (u.pathname === '/api/officiator/synthesize' && M === 'POST') {
     try {
+      const officiator = require('../cortex/core/raid/officiator.js');
+      const body = await readBody(req);
+      if (!body || typeof body.context !== 'string' || !body.context.trim()) {
+        return json(res, 400, { ok: false, error: 'context is required — a real, non-empty string' });
+      }
+      const result = await officiator.synthesizeFromContext(body.context, {
+        forAgent: body.forAgent || undefined,
+        dispatchTo: body.dispatchTo || undefined,
+        // §MERGED 2026-09-02 — a parallel session's real synthesizeFromContext()
+        // separates preview from submission (submit:true/false); this route
+        // now passes it through instead of always submitting.
+        submit: !!body.submit,
+      });
+      return json(res, result.ok ? 200 : 502, result);
+    } catch (e) { return json(res, 500, { ok: false, error: e.message }); }
+  }
+
+  // ── /api/contract — Unified Interaction Contract ──────────────────────────
+  if (u.pathname === '/api/contract' && M === 'GET') {    try {
       const { getVersionedContract } = require('../contracts/nexus-interaction-contract');
       const version = u.searchParams?.get('version') || null;
       const contract = getVersionedContract(version);

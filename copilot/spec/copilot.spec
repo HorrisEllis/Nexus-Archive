@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        copilot
-    version:     3.5.1
+    version:     3.5.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3750
     uuid:        nexus-copilot-v2-0000-2026-0627-jamesbrooks-001

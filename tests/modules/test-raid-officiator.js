@@ -166,21 +166,37 @@ await test('OFF-007', 'markOfficiated() itself refuses a real double-mark, match
 });
 
 await test('OFF-008', 'synthesizeFromContext() returns the real B1 object from plain text — no drop, no intake — and does NOT submit a contract by default', async () => {
-  _mockResponse = { ok: true, text: JSON.stringify({ endState: 'a helper fn exists', conditions: [], intent: 'build', context: 'synthesized', warpPrimitives: ['Gate'], axioms: [], tools: [], compartmentUuid: 'cmp-123', fileDirectory: 'lib/', fileName: 'helper.js' }) };
-  const before = raid.list ? raid.list().length : 0;
-  const result = await officiator.synthesizeFromContext('build a helper function that formats dates');
-  assert.strictEqual(result.ok, true);
-  assert.strictEqual(result.synthesized.fileName, 'helper.js');
+  _mockResponse = {
+    ok: true,
+    text: JSON.stringify({
+      endState: 'a real utility exists', conditions: [], intent: 'build',
+      context: 'pasted spec text', warpPrimitives: ['Gate'], axioms: [],
+      tools: [], compartmentUuid: 'cmp-123', fileDirectory: 'lib', fileName: 'thing.js',
+    }),
+  };
+  const result = await officiator.synthesizeFromContext('a pasted spec describing a real utility', { forAgent: 'deepseek' });
+  assert.strictEqual(result.ok, true, `expected synthesis to succeed: ${result.reason}`);
+  assert.strictEqual(result.synthesized.fileName, 'thing.js');
   assert.strictEqual(result.synthesized.compartmentUuid, 'cmp-123');
-  assert.deepStrictEqual(result.synthesized.warpPrimitives, ['Gate']);
   assert.strictEqual(result.queueId, undefined, 'no contract should be queued without opts.submit');
 });
 
 await test('OFF-009', 'synthesizeFromContext({submit:true}) queues a real contract via the same submitContract() path officiate() uses', async () => {
-  _mockResponse = { ok: true, text: JSON.stringify({ endState: 'b', conditions: [], intent: 'build', context: 'ctx', warpPrimitives: ['Event'], axioms: [], tools: [], compartmentUuid: 'cmp-456', fileDirectory: 'lib/', fileName: 'thing.js' }) };
-  const result = await officiator.synthesizeFromContext('build a thing', { submit: true });
+  _mockResponse = {
+    ok: true,
+    text: JSON.stringify({
+      endState: 'b', conditions: [], intent: 'build', context: 'ctx',
+      warpPrimitives: ['Event'], axioms: [], tools: [], compartmentUuid: 'cmp-456',
+      fileDirectory: 'lib', fileName: 'thing2.js',
+    }),
+  };
+  const result = await officiator.synthesizeFromContext('build a thing', { submit: true, forAgent: 'deepseek' });
   assert.strictEqual(result.ok, true);
   assert.ok(result.queueId, 'a contract must be queued when submit:true');
+  const row = raid.listQueue().find(r => r.uuid === result.queueId);
+  assert.ok(row);
+  assert.strictEqual(row.source, 'officiator-synthesis-tool');
+  assert.strictEqual(row.sourceDropId, null, 'no artifact behind a context-triggered synthesis');
 });
 
 await test('OFF-010', 'synthesizeFromContext() with an unparseable response fails honestly, same as officiate()', async () => {

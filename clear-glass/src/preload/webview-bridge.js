@@ -23,7 +23,16 @@ contextBridge.exposeInMainWorld('__cg', {
     // Allowlist — this is a bridge out of an arbitrary, untrusted guest
     // page (could be any site an agent navigates to). Don't let injected
     // page code send anything but the channels we actually handle.
-    if (channel !== 'dom:pick-result' && channel !== 'dom:event') return;
+    // §ADDED 2026-09-02 — James: "check clear-glass for an ipc." This
+    // one already existed (this whole file, built 2026-07-09) — the
+    // real gap was a real channel for cookie-vault requests, not the
+    // bridge mechanism itself. 'nexus:cookie-request' added to the
+    // allowlist for exactly that — see browser.js's own real receiver
+    // and main/index.js's own real cookie-vault relay for the full
+    // round-trip (request in via this channel, response delivered back
+    // into the page via the same executeJavaScript pattern injectAnswer()
+    // already uses for wake-word answers).
+    if (channel !== 'dom:pick-result' && channel !== 'dom:event' && channel !== 'nexus:cookie-request') return;
     ipcRenderer.sendToHost(channel, data);
   },
 });

@@ -690,6 +690,46 @@ function connect() {
     NEXUS = (typeof window !== 'undefined' && window.NexusWake)
       ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
       : null;
+    // §FIXED 2026-09-02 — found while checking protocol parity across
+    // all 4 provider userscripts (James: "get the userscripts done"):
+    // claude/chatgpt both wire window.__nexusInjectAnswer, the real
+    // page-side half of clear-glass/src/providers/host.js's
+    // injectAnswer() — this file never did, meaning a real wake-word
+    // answer for THIS provider would silently fail to render on-page
+    // (injectAnswer()'s own real code degrades honestly — "page has not
+    // loaded __nexusInjectAnswer yet" — but the real capability was
+    // simply missing here, not just failing gracefully). Same real
+    // wiring as claude/chatgpt now, not a second implementation.
+    if (typeof window !== 'undefined') {
+      window.__nexusWakeInstance__ = NEXUS;
+      window.__nexusInjectAnswer = (text) => {
+        if (!window.__nexusWakeInstance__) return { ok: false, reason: 'wake module not installed on this tab' };
+        return window.__nexusWakeInstance__.showAnswer(text);
+      };
+    }
+    // §ADDED 2026-09-02 — same real cookie-vault round-trip added to
+    // guardian/userscript-claude.js this session (see that file's own
+    // header comment for the full design) — protocol parity, not a
+    // second implementation; identical real logic, just present here too.
+    if (typeof window !== 'undefined') {
+      window.__nexusCookiePending = window.__nexusCookiePending || new Map();
+      window.__nexusCookieResponse = (requestId, result) => {
+        const resolve = window.__nexusCookiePending.get(requestId);
+        if (resolve) { window.__nexusCookiePending.delete(requestId); resolve(result); }
+      };
+      window.nexusCookieCount = (url) => new Promise((resolve) => {
+        if (typeof window.__cg?.send !== 'function') { resolve({ ok: false, error: 'no __cg bridge on this page — not running inside clear-glass, or webview-bridge.js failed to load' }); return; }
+        const requestId = `cookie-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        window.__nexusCookiePending.set(requestId, resolve);
+        setTimeout(() => {
+          if (window.__nexusCookiePending.has(requestId)) {
+            window.__nexusCookiePending.delete(requestId);
+            resolve({ ok: false, error: 'cookie request timed out — no response from clear-glass main process within 5s' });
+          }
+        }, 5000);
+        window.__cg.send('nexus:cookie-request', { requestId, op: 'count', url: url || location.href, agentId: PROVIDER });
+      });
+    }
     if (_hb) clearInterval(_hb);
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();

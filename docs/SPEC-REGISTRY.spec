@@ -47,6 +47,21 @@ spec:
   # ── The real registry — 146 entries, mechanically extracted from the
   # original markdown table, not retyped ──
   registry:
+    - spec:             'docs/contracts/synthesis-contract.spec'
+      version:          '1.0.0'
+      last_drift_check: 'written 2026-09-02'
+      status: >
+        Real B1 contract schema spec (endState/conditions/warpPrimitives/axioms/tools/compartmentUuid/fileDirectory/fileName) plus the boundary block (primitive/invariants/principles) cortex/core/raid/contract-boundary.js implements. Corrected mid-session: boundary.primitive accepts a confirmed-real module/function path as well as a loom-registered id, since 2 of the 4 real contract sources (self-heal, agent-mesh) have no HTTP route and are not loom-registerable.
+    - spec:             'docs/contracts/context-candidate.spec'
+      version:          '1.0.0'
+      last_drift_check: 'written 2026-09-02'
+      status: >
+        Real spec for a context-candidate object — the intermediate shape between raw context and a synthesized contract.
+    - spec:             'docs/contracts/context-synthesis-pipeline.spec'
+      version:          '1.0.0'
+      last_drift_check: 'written 2026-09-02'
+      status: >
+        Real spec for the end-to-end context-synthesis pipeline (stage_2_schema_registry and related real rows) that cortex/core/raid/officiator.js and contract-boundary.js implement.
     - spec:             'docs/2026-09-02-nexus-vision-master-phasemap.spec'
       version:          '1.0.0'
       last_drift_check: 'not applicable — phasemap, mapped-not-built'

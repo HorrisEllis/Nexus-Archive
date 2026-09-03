@@ -68,6 +68,14 @@ const DEFAULTS = {
   // which a download has).
   downloadListeners: {},
 
+  // §BUILT 2026-09-02 — AM8, James: "the guardian plugin maps to adding
+  // a new agent to the mesh." Real, separate registry from `listeners`
+  // above — an agent pairing isn't an observation-and-route rule (no
+  // eventType/matchCriteria/linkTarget), it's a real, standing input+
+  // output element pair that identifies a whole SITE as a dispatchable
+  // agent. Keyed by id, same real convention as listeners/accounts.
+  agents: {},
+
   // §2026-08-29 — James: "i want the guardian plugin to be for the
   // guardian system, like completely built for guardian... a tool that
   // links guardian directly to dom elements." Real gap found while
@@ -315,6 +323,14 @@ class NexusOptions {
     return this.data.listeners?.[id] || null;
   }
 
+  listAgents() {
+    return Object.values(this.data.agents || {}).sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  getAgent(id) {
+    return this.data.agents?.[id] || null;
+  }
+
   /**
    * registerListener({urlPattern, fingerprint, eventType, calltoId}) —
    * real, stable uuid, never reused. enabled defaults true — a listener
@@ -346,6 +362,40 @@ class NexusOptions {
     this.data = { ...this.data, listeners: { ...this.data.listeners, [id]: listener } };
     this._persist();
     return { ...listener };
+  }
+
+  /**
+   * registerAgent({agentName, origin, url, input, output}) — AM8's real
+   * persistence: a custom agent identified purely by an input element +
+   * an output element on a specific origin. Both real fingerprints
+   * required — a one-sided pairing (only an input, or only an output)
+   * isn't a real, dispatchable agent, it's an incomplete pairing that
+   * shouldn't be silently accepted as if it were whole.
+   *
+   * §HONEST SCOPE — this is registration only. Actually DISPATCHING a
+   * job to a custom agent (injecting text into `input`, reading a real
+   * response back out of `output`, knowing when a response is "done"
+   * streaming on a site this system has never seen before) is real,
+   * separate, non-trivial work — not built here, not implied by this
+   * method's own name. A caller reading this record back gets exactly
+   * what was captured: two real element fingerprints and nothing more.
+   */
+  registerAgent({ agentName, origin, url, input, output } = {}) {
+    if (!agentName) return { error: 'agentName required' };
+    if (!origin)    return { error: 'origin required' };
+    if (!input || !input.selector)   return { error: 'a real input element fingerprint is required' };
+    if (!output || !output.selector) return { error: 'a real output element fingerprint is required' };
+    const id  = randomUUID();
+    const now = Date.now();
+    const agent = {
+      id, agentName, origin, url: url || null,
+      input:  { selector: input.selector, xpath: input.xpath || null },
+      output: { selector: output.selector, xpath: output.xpath || null },
+      enabled: true, createdAt: now, updatedAt: now,
+    };
+    this.data = { ...this.data, agents: { ...this.data.agents, [id]: agent } };
+    this._persist();
+    return { ...agent };
   }
 
   updateListener(id, updates = {}) {

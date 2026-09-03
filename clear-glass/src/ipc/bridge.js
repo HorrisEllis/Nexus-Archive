@@ -473,7 +473,10 @@ class IpcBridge {
     // No cookies:count handler existed anywhere — this capability was a stub.
     // Real implementation: session.cookies.get({url}) for the agent's actual
     // partition, per Electron's documented cookie API.
-    ipcMain.handle('cookies:count', async (e, { url, agentId } = {}) => {
+    // §EXTRACTED 2026-09-02 — pulled the real body into a named function so
+    // the new webview-reachable relay below (nexus:cookie-request) can call
+    // the exact same real logic instead of a second, duplicated copy.
+    const _countCookies = async ({ url, agentId } = {}) => {
       try {
         if (!url) return { ok: false, error: 'url required', count: 0 };
         const partition = `persist:ncp-${agentId || 'default'}`;
@@ -483,7 +486,8 @@ class IpcBridge {
       } catch (err) {
         return { ok: false, error: err.message, count: 0 };
       }
-    });
+    };
+    ipcMain.handle('cookies:count', async (e, args) => _countCookies(args));
     // §fix 2026-07-04 — copilot:send was fire-and-forget (rendererEmit only).
     // Now calls the real CoPilotBridge.send() and returns its response,
     // so the renderer gets an actual {text, commands, msgId} back.
@@ -819,6 +823,13 @@ class IpcBridge {
     ipcMain.handle('listeners:remove',     async (e, d) => this.options?.removeListener(d.id));
     ipcMain.handle('listeners:forUrl',     async (e, d) => this.options?.findListenersForUrl(d.url));
 
+    // §BUILT 2026-09-02 — AM8's real IPC surface, same real pattern as
+    // listeners: above — a future settings/agent-suite UI reads/manages
+    // custom agents through this, not a direct options.js require.
+    ipcMain.handle('agents:list',   async ()    => this.options?.listAgents() || []);
+    ipcMain.handle('agents:get',    async (e, d) => this.options?.getAgent(d.id));
+    ipcMain.handle('agents:register', async (e, d) => this.options?.registerAgent(d));
+
     // §ACCOUNTS-UI 2026-08-28 — the accounts panel needs a real list of
     // which agents can actually be linked. agent-mesh.js already has this
     // exact list (getRegistry(), AGENT_REGISTRY — real DOM selectors,
@@ -910,6 +921,21 @@ class IpcBridge {
           } catch (err) {
             console.warn(`[ipc/bridge] guardian.callto.added persist failed (live broadcast above is unaffected): ${err.message}`);
           }
+        } else if (d.type === 'guardian.agent.create' && d.agentName && d.input && d.output) {
+          // §BUILT 2026-09-02 — AM8, James: "the guardian plugin maps to
+          // adding a new agent to the mesh." guardian-picker.js's own
+          // real two-step pairing (commitListener()'s new-agent branch)
+          // sends this exact shape once both the input and output
+          // elements have been picked and paired. Real emit(d.type, d)
+          // above already broadcasts it live; this is the real write —
+          // same pattern as guardian.callto.added right above.
+          try {
+            const result = this.options?.registerAgent({ agentName: d.agentName, origin: d.origin, url: d.url, input: d.input, output: d.output });
+            if (result?.error) console.warn(`[ipc/bridge] registerAgent rejected: ${result.error}`);
+            else console.log(`[ipc/bridge] agent "${d.agentName}" registered — input+output pair persisted (id ${result.id})`);
+          } catch (err) {
+            console.warn(`[ipc/bridge] guardian.agent.create persist failed (live broadcast above is unaffected): ${err.message}`);
+          }
         } else if (d.type === 'guardian.killswitch') {
           // §CORRECTED 2026-08-24 — James caught this directly ("as
           // plugins right?"): the first version of this handler
@@ -926,6 +952,40 @@ class IpcBridge {
       }
       emit('dom.mutations', d);
     });
+    // §ADDED 2026-09-02 — James: "check clear-glass for an ipc" (for
+    // cookie-vault reachability from inside a page-level userscript,
+    // which has no Node access at all — checked directly, this is why
+    // webview-bridge.js's own contextBridge relay exists in the first
+    // place). Real, complete round-trip: a request comes in here (via
+    // browser.js's own relay of webview-bridge.js's allowlisted
+    // 'nexus:cookie-request' channel), gets answered using the SAME
+    // real _countCookies() logic the existing cookies:count IPC handler
+    // already uses (not a second implementation), and the response is
+    // delivered back into the SAME webview that asked — e.sender is
+    // that webview's own real WebContents, no providerId lookup needed
+    // (unlike injectAnswer(), which has to look one up by id since it's
+    // called from elsewhere, not from an event this specific webview
+    // just sent). Same real host-side delivery mechanism injectAnswer()
+    // already uses (executeJavaScript calling a real, page-exposed
+    // function) — one real pattern, two real real callers, not two
+    // patterns that could drift.
+    ipcMain.on('nexus:cookie-request', async (e, d) => {
+      const requestId = d?.requestId || null;
+      let result;
+      if (d?.op === 'count') {
+        result = await _countCookies({ url: d.url, agentId: d.agentId });
+      } else {
+        result = { ok: false, error: `unknown cookie op "${d?.op}" — only "count" is real today; save/restore need the same real round-trip built for them separately` };
+      }
+      try {
+        await e.sender.executeJavaScript(
+          `(typeof window.__nexusCookieResponse === 'function') ? window.__nexusCookieResponse(${JSON.stringify(requestId)}, ${JSON.stringify(result)}) : undefined`
+        );
+      } catch (err) {
+        console.warn(`[ipc/bridge] nexus:cookie-request response delivery failed (non-fatal): ${err.message}`);
+      }
+    });
+
     ipcMain.on('dom:pick-result', (e, d) => {
       // Always reaches SSE via the bus, regardless of routeTo — the
       // in-process event stream isn't a "channel" the picker opts into,

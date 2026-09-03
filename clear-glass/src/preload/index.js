@@ -266,6 +266,14 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   // ── DOM event bridge (called from injected page scripts) ──────────────
   _sendDomEvent: (data) => ipcRenderer.send('dom:event', data),
   _sendPickResult: (data) => ipcRenderer.send('dom:pick-result', data),
+  // §ADDED 2026-09-02 — real cookie-vault round-trip. Same, established
+  // fire-into-main-process pattern as the two lines above; the real
+  // RESPONSE comes back a different way (see main/index.js's own
+  // handler — delivered into the specific webview via
+  // executeJavaScript, same pattern injectAnswer() already uses), not
+  // through this call's own return value, since ipcRenderer.send() is
+  // fire-and-forget by design.
+  _sendCookieRequest: (data) => ipcRenderer.send('nexus:cookie-request', data),
 });
 
 // Inject IPC shim into the page world so injected scripts can emit events

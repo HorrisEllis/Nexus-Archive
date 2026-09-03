@@ -121,11 +121,21 @@ function _parseSynthesizedContract(text) {
   }
 }
 
-// §SHARED CORE 2026-09-02 — officiate() (drop-based, tick-driven) and the
-// new synthesizeFromContext() (arbitrary text, agent-tool-driven) were
-// about to duplicate the exact same hat-check -> dispatch -> parse
-// sequence. Factored out so there is one real place that talks to
-// the_officiator hat, not two copies that could drift.
+/**
+ * _dispatchAndSubmit(prompt, opts) — the real, shared core both
+ * officiate() (artifact-triggered) and synthesizeFromContext() (tool-
+ * triggered, arbitrary text) use — one real dispatch/parse/submit path,
+ * not two near-duplicate ones that could drift.
+ */
+// §MERGED 2026-09-02 — a parallel session independently built the same
+// real refactor (shared hat-check -> dispatch -> parse core) with one
+// real improvement over this session's own first draft: synthesis and
+// submission are separable (submit:true/false), so an agent can preview
+// what a piece of context synthesizes to without committing a real
+// contract. Adopted as the final version; officiate()'s own real
+// persisted-dedup (markOfficiated(), this session's own earlier fix)
+// moved to sit around the shared core rather than inside it, since
+// that's specific to the artifact-triggered path, not synthesis itself.
 async function _synthesizeCore(prompt, opts = {}) {
   const forAgent = opts.forAgent || 'claude';
   const hat = hatForge.get('the_officiator');
@@ -144,19 +154,21 @@ async function _synthesizeCore(prompt, opts = {}) {
   return { ok: true, synthesized };
 }
 
-// §SYNTHESIS TOOL 2026-09-02 — James: "each build contract needs the file
-// name for the artifact, primitives for the build, compartment uuid, and
-// synthesized context with a synthesis tool that the agents can use for
-// context." officiate() only ever ran from the intake-drop tick loop —
-// no agent could call synthesis directly to get grounded context for its
-// OWN reasoning. This is that direct path: same real hat, same real B1
-// schema (fileName, warpPrimitives, compartmentUuid, context, ...), but
-// takes plain text instead of requiring a staged intake drop, and does
-// NOT submit a contract by default — an agent asking "what does this
-// context synthesize to" is not the same act as officiate()'s "turn this
-// staged artifact into a queued build contract." Pass submit:true to also
-// queue it as a real contract via the same submitContract() path
-// officiate() uses — the two are NOT reimplemented separately.
+/**
+ * synthesizeFromContext(contextText, opts) — James: "each build contract
+ * needs the file name for the artifact, primitives for the build,
+ * compartment uuid, and synthesized context with a synthesis tool that
+ * the agents can use for context." officiate() only ever ran from the
+ * intake-drop tick loop — no agent could call synthesis directly to get
+ * grounded context for its OWN reasoning. This is that direct path: same
+ * real hat, same real B1 schema (fileName, warpPrimitives,
+ * compartmentUuid, context, ...), but takes plain text instead of a
+ * staged intake drop, and does NOT submit a contract by default — an
+ * agent asking "what does this context synthesize to" is not the same
+ * act as officiate()'s "turn this staged artifact into a queued build
+ * contract." Pass submit:true to also queue it as a real contract via
+ * the same submitContract() path officiate() uses.
+ */
 async function synthesizeFromContext(contextText, opts = {}) {
   if (!contextText || typeof contextText !== 'string') {
     return { ok: false, reason: 'contextText is required and must be a string' };
@@ -221,11 +233,6 @@ async function officiate(drop, opts = {}) {
       axioms: synthesized.axioms ?? null,
       compartmentUuid: synthesized.compartmentUuid ?? null,
       fileDirectory: synthesized.fileDirectory ?? null,
-      // §B1 SCHEMA — a real, literal fileName key too, not just reused
-      // as the row's existing top-level `title` column. B1's own real
-      // field list names both endState/conditions/etc AND fileName
-      // explicitly — this keeps the nested contract object a complete,
-      // honest record of everything the_officiator actually produced.
       fileName: synthesized.fileName ?? null,
     },
     {
@@ -237,7 +244,7 @@ async function officiate(drop, opts = {}) {
   );
 
   // §PERSISTED DEDUP 2026-09-02 — real, physical marker on the drop
-  // itself (lib/intake.js's own new markOfficiated()), not just this
+  // itself (lib/intake.js's own markOfficiated()), not just this
   // process's in-memory _seen set. A failure here is logged, not
   // fatal — the contract is already real and queued; a drop that
   // somehow gets re-scanned and re-officiated after this is a real,

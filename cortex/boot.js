@@ -1446,6 +1446,29 @@ server.listen(PORT, '127.0.0.1', () => {
   try { require('./snapshot').startPruneTicker(6 * 60 * 60 * 1000); } catch (e) {
     console.warn(`[cortex] snapshot decay ticker failed to start: ${e.message}`);
   }
+  // §FIX 2026-09-02 — James, building toward "give agents context,
+  // persistent memory, reduce noise": lib/vector-memory.js's own real
+  // init() has NEVER been called anywhere in this codebase, confirmed
+  // by grep before fixing — the entire embedding pipeline (8 real
+  // tables already listed in EMBEDDABLE_TABLES, cortex/memory/jaa-
+  // db.js's own new onJaaInsert hook, this session) has been silently
+  // inert regardless of any of that wiring, since _ready stayed false
+  // forever. Started here, once, at cortex boot — the real home of
+  // this module's own domain (embedding cortex's own tables).
+  try {
+    require('../lib/vector-memory').init().then(() => {
+      console.log('[cortex] vector-memory initialized — semantic search + auto-embed active');
+      // Component registries are static files, not jaaDB rows — no
+      // insert() event to hook, so this is a real, explicit, one-time
+      // scan at boot (registries only change on redeploy) rather than
+      // an interval ticker.
+      require('../lib/vector-memory').embedComponentRegistries().then(r => {
+        console.log(`[cortex] component registries embedded: ${r.embedded} components across ${r.systemsScanned} systems (${r.failed} failed, ${r.skipped} skipped)`);
+      }).catch(e => console.warn(`[cortex] embedComponentRegistries failed (non-fatal): ${e.message}`));
+    }).catch(e => console.warn(`[cortex] vector-memory init failed (non-fatal, semantic search disabled): ${e.message}`));
+  } catch (e) {
+    console.warn(`[cortex] vector-memory require failed (non-fatal): ${e.message}`);
+  }
   // §GAP CLOSED 2026-07-19 — versionium/index.js, versionium/causality.js,
   // liminal-space/index.js and intelligence/index.js existed fully written
   // and tested (unintegrated/2026-07-branch-b-cortex-v2) but were never

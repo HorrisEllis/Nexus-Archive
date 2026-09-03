@@ -367,6 +367,29 @@
         <span class="lm-link-opt-icon">📝</span>
         <div><span class="lm-link-opt-label">Direct File Write</span><span class="lm-link-opt-desc">Writes a matched code block straight to disk, using its own path comment (// path/to/file.js) — no compartment, no contract</span></div>
       </div>
+      <!-- §BUILD 2026-09-02 — AM8, James: "the guardian plugin maps to
+           adding a new agent to the mesh. selecting a new element has
+           the option in the listener settings to add to new agent,
+           then asks if this is an input or an output element. then
+           when you choose asks you to select the opposite to create a
+           system." Two-step pairing, not a single-pick option — the
+           real flow (see startAgentPairing()/commitListener()'s own
+           new-agent branch below) picks THIS element first, asks its
+           role, then reopens the picker for the opposite role before
+           a real agent record is ever created. -->
+      <div class="lm-link-opt" data-lm-link="new-agent" id="__g-lm-link-new-agent">
+        <span class="lm-link-opt-icon">🔌</span>
+        <div><span class="lm-link-opt-label">Add to New Agent</span><span class="lm-link-opt-desc">Pair this element with its input/output counterpart to register a new, custom agent in the mesh</span></div>
+      </div>
+      <div class="lm-url-row" id="__g-lm-new-agent-row">
+        <div class="gf-label">Agent Name</div>
+        <input class="gf-input" id="__g-lm-new-agent-name" placeholder="e.g. my-custom-chat-tool"/>
+        <div class="gf-label" style="margin-top:6px">This Element Is The</div>
+        <select class="gf-input" id="__g-lm-new-agent-role">
+          <option value="input">Input (where a prompt is typed)</option>
+          <option value="output">Output (where the response appears)</option>
+        </select>
+      </div>
       </div>
       <div id="__g-listen-modal-actions">
         <button class="lm-btn-confirm" id="__g-lm-btn-confirm">⦿ START LISTENER</button>
@@ -443,6 +466,13 @@
   const _listenerLog   = {};
   const LISTENER_LOG_MAX = 500;
   let _lmLinkType    = null;       // selected link type inside listener modal
+  // §BUILT 2026-09-02 — AM8's real two-step pairing state. null when no
+  // pairing is in progress; { agentName, firstRole, firstSelector,
+  // firstXpath } while waiting for the opposite-role element to be
+  // picked. Module-level, not stored on the modal's own DOM, since the
+  // modal is fully closed and reopened (via startPicker('listener'))
+  // between the two real picks.
+  let _pendingAgentPair = null;
   let _pendingListenerId = null;   // pending listener config
 
   // Active listeners on this page: listenerId → { observer, el, badges }
@@ -805,6 +835,58 @@
   // ── Commit listener — called from modal CONFIRM button ───────────────────
   async function commitListener() {
     if (!_pendingListenerId) return;
+
+    // §BUILT 2026-09-02 — AM8's real two-step pairing, intercepted here
+    // before any of the normal listener-attach machinery below runs —
+    // this isn't a real "listener" at all, it's a one-time agent-
+    // registration act. See startAgentPairing() for the real second-
+    // pick completion.
+    if (_lmLinkType === 'new-agent') {
+      const agentName = document.getElementById('__g-lm-new-agent-name').value.trim();
+      const role = document.getElementById('__g-lm-new-agent-role').value;
+      if (!agentName) { showToast('✗ agent name is required', 'err', 3000); return; }
+      const selector = _pendingListenerId.selector, xpath = _pendingListenerId.xpath;
+      closeListenModal();
+      if (!_pendingAgentPair) {
+        // First real pick of the pair — save it, ask for the opposite.
+        _pendingAgentPair = { agentName, firstRole: role, firstSelector: selector, firstXpath: xpath };
+        showToast(`◆ ${role} captured for "${agentName}" — now pick the ${role === 'input' ? 'output' : 'input'} element`, 'ok', 5000);
+        setTimeout(() => startPicker('listener'), 300);
+        return;
+      }
+      // Second real pick — must be the OPPOSITE role of the first, and
+      // for the SAME agent (a person could theoretically start a
+      // second, unrelated pairing before finishing the first by
+      // reopening this modal manually — checked, not assumed safe).
+      if (_pendingAgentPair.agentName !== agentName) {
+        showToast(`✗ pairing "${_pendingAgentPair.agentName}" is still open — finish or cancel it before starting a new one`, 'err', 4000);
+        return;
+      }
+      if (role === _pendingAgentPair.firstRole) {
+        showToast(`✗ you already picked the ${role} element — pick the ${role === 'input' ? 'output' : 'input'} element instead`, 'err', 4000);
+        setTimeout(() => startPicker('listener'), 300);
+        return;
+      }
+      const pair = _pendingAgentPair;
+      _pendingAgentPair = null;
+      const inputSel  = pair.firstRole === 'input' ? { selector: pair.firstSelector, xpath: pair.firstXpath } : { selector, xpath };
+      const outputSel = pair.firstRole === 'output' ? { selector: pair.firstSelector, xpath: pair.firstXpath } : { selector, xpath };
+      try {
+        window.__cg?.send('dom:event', {
+          type: 'guardian.agent.create',
+          agentName: pair.agentName,
+          origin: location.origin,
+          url: location.href,
+          input:  inputSel,
+          output: outputSel,
+        });
+        showToast(`⚡ agent "${pair.agentName}" registered — input + output paired`, 'ok', 4000);
+      } catch (e) {
+        showToast('✗ could not register agent: ' + e.message, 'err', 4000);
+      }
+      return;
+    }
+
     const label    = document.getElementById('__g-lm-label').value.trim();
     const mode     = document.getElementById('__g-lm-mode').value;
     const calltoType = document.getElementById('__g-lm-callto-type').value;
@@ -902,7 +984,7 @@
       document.querySelectorAll('.lm-url-row').forEach(r => r.classList.remove('show'));
       opt.classList.add('selected');
       _lmLinkType = opt.dataset.lmLink;
-      const rowMap = { compartment: '__g-lm-compartment-row', 'copilot-cli': '__g-lm-copilot-cli-row' };
+      const rowMap = { compartment: '__g-lm-compartment-row', 'copilot-cli': '__g-lm-copilot-cli-row', 'new-agent': '__g-lm-new-agent-row' };
       const rowId = rowMap[_lmLinkType];
       if (rowId) document.getElementById(rowId).classList.add('show');
     });
