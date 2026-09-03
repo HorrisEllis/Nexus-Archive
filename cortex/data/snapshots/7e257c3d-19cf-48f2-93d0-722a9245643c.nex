@@ -1,0 +1,161 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "7e257c3d-19cf-48f2-93d0-722a9245643c",
+  "type": "post_promote",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [],
+    "event_log": [
+      {
+        "uuid": "0c064cf8-f359-4b45-9b47-d7a83b7297b0",
+        "type": "ledger.nexus.post-promote-housekeeping",
+        "source": "self-build-loop",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": {
+            "pipelineId": "p1",
+            "snapshot": {
+              "ok": true,
+              "snapId": "86107547-145a-44a1-be82-7cf2969f2e94"
+            },
+            "mapDrift": {
+              "ok": true,
+              "scanned": 1232,
+              "knownComponents": 1655,
+              "possiblyUndeclared": 126,
+              "sample": [
+                "bridge/index.js",
+                "clear-glass/src/copilot/wake-relay.js",
+                "clear-glass/src/diagnostic/error-capture.js",
+                "clear-glass/src/downloads/intake-bridge.js",
+                "clear-glass/src/network/canvas-persistence.js",
+                "clear-glass/src/network/config.js",
+                "clear-glass/src/network/crypto-engine.js",
+                "clear-glass/src/network/daemons.js",
+                "clear-glass/src/network/ddns.js",
+                "clear-glass/src/network/dns-server.js"
+              ],
+              "stats": {
+                "scanned": 1232,
+                "excluded": 0,
+                "withEdges": 584,
+                "totalEdges": 1821,
+                "dynamicRequiresNotCaptured": 476,
+                "unresolvedSpecifiers": 29,
+                "unreadable": 0
+              }
+            }
+          },
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1788451234857,
+        "id": "84057e1b-bce8-4d3b-9353-febf9f8ca576"
+      }
+    ],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "d35b2264-4fcb-429f-a19e-09fdcdfa275f",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "7d1624fc-6603-4a15-83dd-d80c1761db11",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "8836dfeb-fbf3-4d61-a152-770b066ec1c6",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "c90f7a89-f6fa-43e9-9e0f-31cecb5cb877",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "30718e1a-fbe0-49b5-b004-914ac25a9819",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "99823876-46a8-4ccb-b044-5460639b8ee5",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "469f7aac-2d65-41b4-a30c-77ca63dc8784",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "c0e93964-de67-4efd-a34a-d5b065e0c6c9",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "aaf842dd-cc97-4aae-b0ee-8c5b17f84155",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "c857d5be-9403-4ac5-baf4-282aaae52f13",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "7706b97a-7a4c-4893-a86e-10bc43bab789",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "bce6a9ec-cdcb-45e0-8660-5336a03f230c",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "36e0b483-dcf6-46b6-abaf-74f67265c29e",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1788451234346
+      },
+      {
+        "id": "24bd32ca-6aec-4c29-ac9f-16aebccc6cef",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1788451234346
+      }
+    ],
+    "components": []
+  },
+  "hashVersion": 2,
+  "cortex_state_hash": "8ffa7b1e5ce40aeeb96e17b2d32d4b82b0b37a42b8ebee7fa8b7d22198de42a4",
+  "prev_snapshot_hash": "285346df749be8af81936829604e2cc9c2847f0109274d5899cd1409b7625caf",
+  "createdAt": 1788451234916
+}

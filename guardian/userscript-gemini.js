@@ -875,7 +875,16 @@ function updatePill() {
 }
 function _injectWidget() {
   _pill = document.createElement('div');
-  _pill.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#05080f;border:1px solid #00ff88;border-radius:4px;padding:6px 10px;font:10px monospace;color:#e0e8ff;user-select:none;cursor:pointer;opacity:.85';
+  _pill.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#05080f;border:1px solid #00ff88;border-radius:4px;padding:6px 10px;font:10px monospace;color:#e0e8ff;user-select:none;cursor:pointer;opacity:.85;display:none';
+  // §FIXED 2026-09-03 — James: "remove headless flag and taskbar from the
+  // main. not supposed to broadcast that." Was a real, visible, always-on
+  // fixed-position badge on the real page — the exact "Guardian · Gemini
+  // · ACTIVE" bottom-right corner overlay this whole system otherwise
+  // works hard to not be detectable as. This script has no OPTIONS/
+  // settings system (unlike chatgpt/claude's, lighter script by design)
+  // so no toggle to wire — `display:none` baked into cssText above is
+  // the real off-switch; updatePill() below still runs, keeps _pill's
+  // internal state current, just never paints it.
   _pill.title = `Guardian NCP — Gemini v${VERSION}\nTab: ${MY_TAB}`;
   _pill.onclick = () => {}; // passive mode removed — nothing to toggle
   document.body.appendChild(_pill);

@@ -1,3 +1,26 @@
+# mesh — BrainOS, rebuilt for nexus (RELOCATED 2026-09-03)
+
+**§MOVED — this subsystem no longer lives here.** James, 2026-09-03:
+"DNS/firewall/crypto/host-rotation/reverse-proxy maybe recycle to
+clearglass." All 10 real modules that used to live in `mesh/lib/`
+(dns-server, firewall, reverse-proxy, ddns, crypto-engine, key-manager,
+host-rotation, port-registry, the SNR filter, and canvas-persistence)
+moved together as one unit to `clear-glass/src/network/` — checked first
+that none of them require() each other directly (every real cross-module
+dependency, like key-manager's use of a crypto engine, is constructor
+dependency-injection, not a file-level require), so there was no
+correctness reason to split them across two processes. They're wired to
+clear-glass's own bus now instead of guardian's, and served at
+`/network/*` on clear-glass's own HTTP surface instead of guardian's
+`/mesh/*`. Guardian's boot-sequence install() call and
+`guardian/routes/mesh.js` were removed as part of the same commit.
+
+This README is kept as the historical record of the original BrainOS
+port below — the table of what came across and what didn't is still
+accurate, only the *location* of what came across has changed.
+
+---
+
 # mesh — BrainOS, rebuilt for nexus
 
 UUID: `nexus-mesh-subsystem-v1-0000-4700-0000-000000000000`

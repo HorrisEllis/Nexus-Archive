@@ -688,12 +688,25 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(HTTP_PORT, '127.0.0.1', async () => {
-  // ── Mesh (ported from BrainOS) ────────────────────────────────────────────
-  // One-time install, same pattern nexus-bridge-modules.js's own install()
-  // used — wired to guardian's REAL bus (SISOStream, declared above), not
-  // BrainOS's own duplicate bus.js. See mesh/install.js's header.
-  try { require('../mesh/install.js').install(bus); }
-  catch (e) { console.error('[guardian] mesh/install.js failed:', e.message); }
+  // Mesh subsystem relocated 2026-09-03 to clear-glass/src/network/
+  // (James: "DNS/firewall/crypto/host-rotation/reverse-proxy maybe
+  // recycle to clearglass" — moved as one whole unit, see that folder's
+  // install.js header for the full rationale). See mesh/README.md for
+  // the historical record of what used to live here.
+
+  // §SR9-first-slice 2026-09-03 — James: "sr9". SR9 itself is the full
+  // composite end-state and still depends on SR4/SR7/SR8/SR10 (all still
+  // OPEN) — this installs only the narrow, dependency-free real piece:
+  // automatic snapshot + map-drift detection on every real, governed
+  // pipeline promote. See lib/self-build-loop.js's own header for the
+  // full honest scope. nexus-bus.js is the real, already-shared singleton
+  // every pipeline trigger path (run_pipeline/run_chain/run_closed_loop)
+  // already emits to — not a second, guardian-local event path.
+  try {
+    require('../lib/self-build-loop.js').install(require('../nexus-bus.js'));
+  } catch (err) {
+    console.warn('[guardian] self-build-loop install failed:', err.message);
+  }
 
   const { BootSequence } = require('../lib/boot-sequence');
   const nc2 = require('../nexus-connect');
@@ -1972,14 +1985,9 @@ function handleExtendedRoutes(req, res, url, method) {
   // complete and callerless — confirmed by grep before writing this).
   if (require('./routes/autonomous-loop.js').handle(req, res, { method, url, jaa, pRes, bodyJ, jobs, createJob, dispatchJob, ncp, nc, bus })) return true;
 
-  // ── Mesh (ported from BrainOS) ──────────────────────────────────────────────
-  // SNR/keys/hosts/ports/canvas/crypto — see mesh/README.md for what came
-  // across from BrainOS and what didn't. No-ops until mesh/install.js has
-  // been called at boot (see the require('../mesh/install.js').install(bus)
-  // line near guardian's other startup wiring); falls through to 404 until then.
-  if (require('./routes/mesh.js').handle(req, res, { method, url, jaa, pRes, bodyJ })) return true;
-
-
+  // Mesh route relocated 2026-09-03 to clear-glass/src/network/routes.js
+  // (see guardian/server.js's boot-sequence comment above and
+  // mesh/README.md for the historical record).
   // ── Artifacts (paginated) ────────────────────────────────────────────────────
   if (method==='GET' && url.pathname==='/artifacts') {
     const limit = parseInt(url.searchParams.get('limit')||'100');
@@ -2488,6 +2496,14 @@ function handleExtendedRoutes(req, res, url, method) {
           downloadedAt: body.downloadedAt || Date.now(),
           jobId,
           raidQueueId,
+          // §2026-09-03 — clear-glass/src/downloads/intake-bridge.js now
+          // announces plain browsing-window downloads too (provider:
+          // 'browsing', no chat behind them), and carries the real
+          // window's agentId separately since it isn't a provider id and
+          // shouldn't be conflated with one. Additive field only —
+          // existing callers (download-capture.js) never send this and
+          // are unaffected.
+          agentId:      body.agentId || null,
         },
       });
       if (!r.ok) return json(res, 400, r);

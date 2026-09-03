@@ -1,0 +1,1 @@
+{"uuid":"0361fa6f-a82c-4991-b29c-e9bb97469177","system":"architect","component":"architect.blueprint.list","action":"registered","status":"ok","tags":["architect"],"detail":"Blueprint list","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139655}

@@ -357,6 +357,36 @@ const FILES = [
   // doesn't actually require.
   ['guardian/lib/ncp-handler.js', 'nexus.guardian.lib.ncp-handler', 'guardian/lib',
     ['nexus.intelligence.gap.hunter', 'nexus.lib.seam.detector']],
+  // guardian/lib/artifact-namer.js really does require('../spec-namer') —
+  // no edge claimed to it because guardian/spec-namer.js itself has no
+  // registered component id anywhere in loom yet (checked, pre-existing
+  // gap, not introduced here — separate from this fix's scope).
+  ['guardian/lib/artifact-namer.js', 'nexus.guardian.lib.artifact-namer', 'guardian/lib', []],
+  // §2026-09-03 checkpoint (commit a0bebe4) — registering the 6 files
+  // precommit-check.js flagged as loom orphans after that commit landed.
+  // All 6 are real, already registered in their owning system's .spec
+  // (guardian.spec/idearium.spec/etc.) — this is the separate loom-map
+  // registration CLAUDE.md rule 3 requires, not a second source of truth.
+  ['guardian/routes/autonomous-loop.js', 'nexus.guardian.routes.autonomous-loop', 'guardian/routes',
+    ['nexus.lib.autonomous-loop']],
+  // guardian/routes/mesh.js removed 2026-09-03 — relocated to
+  // clear-glass/src/network/routes.js (see that folder's install.js
+  // header). Not re-added here; clear-glass has its own registration
+  // convention this map doesn't cover.
+  ['lib/autonomous-loop.js', 'nexus.lib.autonomous-loop', 'lib', []],
+  ['lib/project-compartment.js', 'nexus.lib.project-compartment', 'lib', []],
+  ['lib/dynamic-project-parser.js', 'nexus.lib.dynamic-project-parser', 'lib',
+    ['nexus.lib.project-compartment', 'nexus.lib.spec-from-markdown']],
+  ['lib/spec-from-markdown.js', 'nexus.lib.spec-from-markdown', 'lib', []],
+  ['lib/node-export.js', 'nexus.lib.node-export', 'lib', []],
+  ['lib/node-schemas.js', 'nexus.lib.node-schemas', 'lib',
+    ['nexus.lib.hat-forge']],
+  ['lib/self-build-loop.js', 'nexus.lib.self-build-loop', 'lib', []],
+  // run-closed-loop.js is a tool file (module.exports =
+  // {name,description,parameters,execute}), not a component in this
+  // map's sense — its real registration point is lib/agent-tools/
+  // index.js's tool registry (checked: it's already there). Not added
+  // here to avoid a second, conflicting registration for the same file.
 ];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

@@ -1,0 +1,1 @@
+{"uuid":"5ba225a4-5d2c-45a2-8289-d51df4ac29fa","system":"idearium","component":"idearium.snapshot.list","action":"registered","status":"ok","tags":["idearium"],"detail":"List saved snapshots","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139436}

@@ -128,11 +128,20 @@ const CATALOG = [
     desc: 'Real Mixture-of-Experts build — fewer active params per token than a dense 5B, worth trying if the dense 4b tier feels thin.',
   },
 
-  // ── COMPACT UTILITY (already in ollama/config.js's own real default) ──
+  // ── COMPACT UTILITY ──────────────────────────────────────────────────────
   {
     id: 'mistral:7b-instruct-q4_K_M',
     category: 'chat', tier: 3, sizeGB: 4.4, params: '7B',
-    desc: 'NOT abliterated — the real, existing FALLBACK_MODEL in ollama/config.js. Listed for comparison: this is what "the fallback" already means on this hardware.',
+    // §FIX 2026-09-03 — James, from a real screenshot of his own Ollama
+    // model list: "no mistral." This entry's own description used to claim
+    // it "is the real, existing FALLBACK_MODEL in ollama/config.js" — that
+    // was true when written, and is now false: FALLBACK_MODEL was changed
+    // to huihui_ai/qwen3-abliterated (the real, other locally-runnable
+    // model actually present in his install) because this exact tag does
+    // not exist on his real hardware at all. Kept in the catalog for
+    // historical/comparison record, not deleted — but no longer described
+    // as "the real fallback," which would now be a stale, false claim.
+    desc: 'NOT abliterated. Was ollama/config.js\'s real FALLBACK_MODEL until 2026-09-03 — confirmed absent from James\'s real install (screenshot showed no mistral anywhere in his pulled models) and replaced there with huihui_ai/qwen3-abliterated. Left here only as a historical/comparison entry, not a claim that it is present or in use.',
   },
 ];
 

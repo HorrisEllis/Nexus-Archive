@@ -115,7 +115,30 @@ spec:
         how much of the agent-mesh vision routes through RAID contracts.
 
     B1_full_build_contract_schema:
-      status: OPEN — real partial precedent (AM1's submitBuildPhaseContract)
+      status: BUILT 2026-09-03 (commit cc88eeb) — schema + synthesizeContract(), verified
+      built_2026_09_03: >
+        cortex/core/raid/contract-intake.js's BUILD_CONTRACT_SCHEMA +
+        synthesizeContract() — every field from James's real_field_schema
+        below is now real and validated: uuid (assigned), forAgent
+        (required), intent (validated against intent-classifier.js's
+        real VALID_VERBS — a new, small, additive export added for
+        this), system, endState (required), conditions (structured
+        {pre,post}), context, warpPrimitives (validated against
+        warp/core's real, exact 5 exports), axioms (validated live
+        against docs/AXIOMS-v3.1.md's real §N.N section headers — 100
+        real refs), tools (defaults from forAgent's real hat-forge
+        toolScope when omitted), compartmentUuid, fileDirectory,
+        fileName. submitBuildPhaseContract() (AM1) not replaced —
+        synthesizeContract() composes with the same real submitContract()
+        both call. 13 real tests (tests/modules/test-b1-
+        synthesize-contract.js), including every real verb accepted, a
+        fake verb/warpPrimitive/axiom correctly refused, and full
+        end-to-end persistence verified by reading the real queue row
+        back. §REAL NAMING NOTE — the persisted field is `intention`
+        (RAID's own pre-existing convention), not `intent`; the
+        caller-facing API param stays `intent` (matches this ask's own
+        language), mapped internally — found by a real test failure,
+        fixed to match reality rather than inventing a second field.
       does: >
         "Need build contracts primitives for each agent, intent, hat...
         the contract has the uuid for the contract, intended agent,
@@ -822,7 +845,7 @@ spec:
       depends_on: []
 
     SR3_artifact_extraction_introspect_bridge:
-      status: OPEN — real precedent on both sides, not yet connected
+      status: BUILT 2026-09-03 (commit 395fef9) — real hook, fire-and-forget, verified
       does: >
         "Artifact extraction also can connect to the introspect tool."
         Both sides are real and unconnected today: guardian/server.js's
@@ -919,50 +942,216 @@ spec:
       depends_on: []
 
     SR8_deterministic_claude_replication:
-      status: OPEN — the field-schema question, drafted here not answered
+      status: OPEN — REFRAMED 2026-09-03, procedure not persona, model-agnostic
       does: >
-        "I want to replicate you as much as possible deterministically
-        ... replicate the process you do when I give you an idea."
-        Honest framing: what's replicable isn't a persona, it's a
-        PROCEDURE — read the real file before editing it; verify by
-        booting/testing, not syntax-checking; diff-scope edits with
-        exact old_str matches instead of rewriting whole files; run a
-        git-stash baseline before claiming a test failure is pre-
-        existing; state assumptions inline instead of guessing silently.
-        Every one of those is already this repo's own stated discipline
-        (AXIOMS-v3.1.md, CLAUDE.md rule 3, this session's own commit
-        messages) — the gap isn't that Nexus lacks the RULES, it's that
-        no single agent-facing surface enforces the SEQUENCE as one
-        procedure a dispatched agent (ChatGPT/Gemini/DeepSeek) is
-        walked through automatically, the way a human reviewer would
-        walk a junior engineer through it. Real next step: a real
-        checklist/gate co-pilot or guardian can attach to a build-intent
-        job (view real file → edit scoped diff → verify by execution →
-        compare against a stash baseline → report honestly), not a
-        prompt asking the agent to "be careful."
+        §REFRAMED — James, 2026-09-03: "I meant we give nexus the tools
+        to code like you. Decoupled from you, unless ncp." The original
+        wording of this track ("replicate you... deterministically")
+        risked being read as "make Nexus depend on Claude specifically."
+        That is explicitly NOT the ask. Corrected framing: what's
+        replicable isn't a persona or a dependency on any one model —
+        it's a PROCEDURE, and the procedure must run on whichever agent
+        Guardian dispatches to (ollama/mistral/deepseek locally, or
+        chatgpt/gemini/claude over the real NCP browser-agent bridge —
+        Claude appearing there on equal footing with the other three,
+        never as a required backend). The procedure itself: read the
+        real file before editing it; verify by booting/testing, not
+        syntax-checking; diff-scope edits with exact old_str matches
+        instead of rewriting whole files; run a git-stash baseline
+        before claiming a test failure is pre-existing; state
+        assumptions inline instead of guessing silently. Every one of
+        those is already this repo's own stated discipline (AXIOMS-
+        v3.1.md, CLAUDE.md rule 3) — the gap isn't that Nexus lacks the
+        RULES, it's that no single agent-facing surface enforces the
+        SEQUENCE as one procedure ANY dispatched agent is walked
+        through automatically, regardless of which provider is behind
+        it. Real next step: a real checklist/gate co-pilot or guardian
+        attaches to a build-intent job (view real file → edit scoped
+        diff → verify by execution → compare against a stash baseline →
+        report honestly) — implemented as a real guardian-side gate
+        that wraps whichever agent is dispatched, not a prompt asking
+        one specific agent to "be careful."
       depends_on: [SR3_artifact_extraction_introspect_bridge, B1_full_build_contract_schema]
 
     SR9_autonomous_self_build_end_state:
-      status: OPEN — the actual end-state; depends on nearly everything above
+      status: PARTIAL 2026-09-03 (commit — see lib/self-build-loop.js) — narrow, dependency-free real slice built; full end-state still OPEN
       does: >
         "The system can build nexus autonomously. Update its maps,
         update and track versions and file changes, snapshot and
         backup, debug and heal, optimize and remember. Doubt and attack
         its outputs... can code any project/spec, using ChatGPT, Gemini,
-        deepseek, and Claude if all else fails." This is the composite
-        end-state, not a single buildable phase — real precedent exists
-        per-piece (loom's map, lib/version.js's registry, cortex/
-        snapshot's tombstone-pruned snapshots, cortex/self-heal/,
-        intelligence/baseline's optimize signal, cortex/memory's real
-        recall), but nothing wires them into one closed loop where
-        Nexus initiates its own build/verify/heal cycle without a human
-        prompt per step. Every track above (B1/SR3/SR4/SR5/SR7/SR8) is
-        a real prerequisite piece of this loop, not a side quest — this
-        entry exists so the dependency is explicit rather than
-        Nexus appearing "almost done" once a few flashy pieces land.
+        deepseek, and Claude if all else fails." §REFRAMED 2026-09-03
+        alongside SR8, same correction: "Claude if all else fails" means
+        Claude reachable the SAME way as chatgpt/gemini/deepseek — over
+        the real NCP browser-agent bridge, one more entry in guardian's
+        real provider-routing table (cortex/core/raid/index.js's
+        _fitness ranking already treats agents interchangeably by real
+        health score, not by hardcoded preference) — not a special
+        fallback path that makes the rest of the loop depend on Claude
+        specifically to function. This is the composite end-state, not
+        a single buildable phase — real precedent exists per-piece
+        (loom's map, lib/version.js's registry, cortex/snapshot's
+        tombstone-pruned snapshots, cortex/self-heal/, intelligence/
+        baseline's optimize signal, cortex/memory's real recall,
+        SR11's now-real import pipeline), but nothing wires them into
+        one closed loop where Nexus initiates its own build/verify/heal
+        cycle without a human prompt per step. Every track above
+        (B1/SR3/SR4/SR7/SR8/SR10/SR11) is a real prerequisite piece of
+        this loop, not a side quest — this entry exists so the
+        dependency is explicit rather than Nexus appearing "almost
+        done" once a few flashy pieces land.
+      built_2026_09_03_partial: >
+        James: "sr9" — checked dependencies first rather than building
+        the whole ask: SR4/SR7/SR8/SR10 are still OPEN, so the full
+        composite end-state genuinely isn't buildable yet. Built exactly
+        the two real pieces SR9 names that need none of those open
+        tracks: lib/self-build-loop.js subscribes to nexus-bus.js's real,
+        already-shared singleton for lib/execution-pipeline.js's real
+        `pipeline.promoted` event (fires only after sandbox-verify +
+        compare-to-golden both pass — the pipeline self-gates this) and
+        on every real promote: (1) creates a real cortex snapshot
+        (cortex/snapshot/index.js's create(), unchanged, not
+        reimplemented) — real "snapshot and backup"; (2) runs loom's real
+        scanTree() and reports (not auto-applies — every real loom
+        registration this session was a deliberate, reviewed act, and
+        this doesn't get to silently break that) drift against loom/data/
+        registry.json — real "update its maps" awareness. A live smoke
+        test against the real repo found 125 genuinely undeclared files
+        (mostly clear-glass/, which loom's maps don't cover — expected,
+        not a bug). "Debug and heal," "optimize," "doubt and attack its
+        outputs" genuinely need SR4/SR7/SR8/SR10 and are NOT claimed
+        here. 5 real tests (tests/modules/test-self-build-loop.js).
       depends_on: [B1_full_build_contract_schema, SR3_artifact_extraction_introspect_bridge,
                    SR4_fitness_driven_contract_adjustment, SR7_token_reduction_toolkit,
-                   SR8_deterministic_claude_replication]
+                   SR8_deterministic_claude_replication, SR10_iterative_prompt_optimization_loop,
+                   SR11_spec_project_import_to_compartment]
+
+    # ══════════════════════════════════════════════════════════════════
+    # §ADDENDUM 2026-09-02c — James, immediately after SR1-9 landed:
+    # "how do we get there... what can nexus do right now, that's of
+    # any use?" Narrows the ask to one explicit end-state — co-pilot or
+    # idearium building code autonomously, the way this session does —
+    # and four concrete new pieces (prompt-optimization loop, importing
+    # the 40 specs into working compartments, a parse/query surface,
+    # a real co-pilot chat UI). Checked against real code first, same
+    # discipline as SR1-9: two of these four (SR12, partially SR11) turn
+    # out to already exist far more than the ask assumed.
+    #
+    # §UPDATE 2026-09-03 — SR11 moved from OPEN to SUBSTANTIALLY BUILT
+    # in the time between this addendum being written and this line
+    # being added (commits a0bebe4, eda64f0) — see that entry below for
+    # what's real now. Also: James, same day — "I meant we give nexus
+    # the tools to code like you. Decoupled from you, unless ncp." This
+    # is a real correction to how SR8/SR9 were framed below and has
+    # been applied to both entries in place, not left as the original
+    # misreading — see the §REFRAMED notes on each.
+    # ══════════════════════════════════════════════════════════════════
+
+    SR10_iterative_prompt_optimization_loop:
+      status: OPEN — genuinely new, real hook to attach it to already exists
+      does: >
+        "Iterative loops to agents, with the prompt — how could that
+        have been more optimized. I want the system learning from the
+        agents and me." Checked directly: lib/reflection.js's
+        scoreDecision() (real, deterministic, no hidden LLM judge per
+        its own header) grades a DECISION's outcome — {score, reason}
+        against `chosen`/`outcome`/`output` — it does not look at the
+        PROMPT TEXT that produced that decision at all. Genuine gap.
+        Real, buildable shape: after a job completes or fails
+        introspect.examine() (SR3), a cheap local pass (ollama-bridge,
+        already real) asks "given this prompt and this outcome, what
+        wording would likely have scored higher" and logs the
+        before/after prompt pair to jaa keyed by (intent, agent) — B1's
+        contract synthesis (once real) reads this log before writing
+        the next prompt to that same agent for that same intent, so the
+        wording actually improves run over run instead of resetting
+        each time. "Learning from me" is the same mechanism with a real
+        existing trigger already ranked highest: introspect.js's own
+        header says a user correction "outranks everything" — a
+        correction just needs to feed this same prompt-pair log instead
+        of only updating the immediate answer.
+      depends_on: [SR3_artifact_extraction_introspect_bridge, B1_full_build_contract_schema]
+
+    SR11_spec_project_import_to_compartment:
+      status: SUBSTANTIALLY BUILT 2026-09-03 (commits a0bebe4, eda64f0) — verified, not test-covered
+      does: >
+        "I have like 40 specs I want to build... importing specs,
+        important projects/zips to compartment to work on them." What
+        was OPEN when this track was first written is now real: lib/
+        intake.js's expandArchive() (real .zip expansion via the system
+        unzip binary, argv-array execFileSync, no shell-injection
+        surface), lib/project-compartment.js (staged/expanded intake ->
+        a real, bounded workingMemorySeed), lib/dynamic-project-parser.js
+        (any project shape, text-vs-binary decided by sniffing real
+        bytes, not a hand-maintained extension list — tested directly
+        against 4 real uploaded zips per its own header), lib/spec-
+        from-markdown.js (fixes a confirmed real meta-extraction bug for
+        non-canonical .md), idearium/api/index.js's real POST /api/
+        repos/import endpoint, and ui/import-project/ as the human-
+        facing screen. lib/autonomous-loop.js's run() — previously
+        real but callerless, confirmed by grep before this session's
+        prior addendum — now has its first real caller (guardian/
+        routes/autonomous-loop.js) with a projectSeed param composing
+        an imported project into a compartment's working memory
+        alongside case-library's existing pattern-memory seed.
+        §HONEST GAP — none of this has dedicated entries in tests/
+        modules/run-all.js yet; verified so far by direct manual runs
+        documented in each file's own header, not by an automated
+        regression suite (see eda64f0's commit message). Closing that
+        gap is real remaining work, not a formality.
+      test_coverage_closed_2026_09_03: >
+        commit c692d5d — tests/modules/test-sr11-import-pipeline.js,
+        17 real tests across project-compartment.js, intake.js's
+        expandArchive(), dynamic-project-parser.js, and spec-from-
+        markdown.js. Found and fixed a real, unrelated blocker first:
+        adm-zip was declared in package.json but never actually
+        installed in this checkout (113 packages missing total) — every
+        prior "verified" claim for parseProjectZip() was necessarily
+        made somewhere the install had actually run. All 17 tests
+        passed on the first real run against the now-really-installed
+        adm-zip and the real system unzip binary.
+      depends_on: []
+
+    SR12_system_parse_query_surface:
+      status: MOSTLY ALREADY REAL — connect, don't rebuild
+      does: >
+        "A parse tool to map the system, query tool to build upon or
+        edit — basically how you do right now." Checked directly before
+        assuming this needs building: it is already substantially real.
+        lib/agent-tools/tools/query/nexus-map.js's own header states the
+        exact reasoning James is asking for here was already applied —
+        "re-walking the file tree and parsing each file from scratch
+        would rebuild, at real token cost, something loom has already
+        computed" — so nexus_map is a chunked reader OVER loom's real
+        live graph (driver.graph()), already paginated per calling
+        agent's real token ceiling (lib/agent-system/contracts.js's
+        getContract(agentId)). read-file.js, search-files.js, and
+        file-tree.js (same query/ folder) cover the "how you do right
+        now" read side; execution/safe-apply.js and execution/
+        run-command.js cover the edit side. The real gap is narrower
+        than the ask implies: these tools exist but are not yet the
+        DEFAULT path a dispatched coding job (idearium/warp-build-
+        dispatch) reaches for before writing new code — confirm that
+        wiring, close it if missing, before building anything new here.
+      depends_on: []
+
+    SR13_copilot_chat_ui:
+      status: OPEN — real pattern exists in a sibling surface, not yet copilot's own
+      does: >
+        "A chat like ui/agents/chatgpt/index.html but for co-pilot
+        specifically. A toggle for guardian or ollama. A list of
+        commands." Real, direct precedent: ui/agents/chatgpt/index.html
+        already hits a real endpoint (`${ORCH}/api/guardian/copilot/
+        prompt`) and has a working `/cli/exec` command console — this
+        is a genuine near-clone, not a from-scratch UI. New pieces:
+        (1) a real guardian-vs-ollama toggle wired to copilot/
+        lifeline.js's already-real `priority: ['ollama','guardian']`
+        cascade (same real mechanism CP4 above asks a CLI switch for —
+        this is that same switch, in the chat UI instead of cli.js),
+        and (2) a real command list surfaced from wherever the actual
+        command set lives (checked: guardian's /cli/exec path — trace
+        its real command registry before hardcoding a list in the UI).
+      depends_on: []
 
     AX_candidate_map_first_discipline:
       status: PROPOSED — drafted here, NOT applied to AXIOMS-v3.1.md
@@ -1031,3 +1220,49 @@ spec:
     existing as real hooks before there's anywhere to attach a real
     verify-before-promote checklist, so it should not be started first
     even though it reads as the "headline" ask.
+
+    §CRITICAL PATH (2026-09-02c, updated 2026-09-03) — James: "I want
+    nothing else until I can use co-pilot or idearium to build code
+    like you are now" — later corrected to "give nexus the tools to
+    code like you, decoupled from you, unless ncp." One named end-state
+    narrows all of the above to a real, minimal sequence:
+      1. B1_full_build_contract_schema — DONE (commit cc88eeb) — schema
+         + synthesizeContract(), 13 real tests, verified end-to-end.
+         Was everything downstream's real blocker; no longer is.
+      2. SR12_system_parse_query_surface — mostly already real
+         (nexus_map/read-file/search-files/safe-apply); confirm this is
+         actually idearium's build-dispatch DEFAULT path, don't rebuild.
+      3. artifact-namer.js — DONE (commits 483a9d5 on the prior working
+         copy, reapplied as eda64f0 on this checkout after the 2026-09-03
+         upload branched from before the fix existed) — was a hard
+         crash on every artifact-bearing agent response through the
+         callto/IPC path; the single most concrete blocker James named
+         ("artifacts are the main issue").
+      4. SR11_spec_project_import_to_compartment — DONE as of this
+         update (commits a0bebe4, eda64f0) — real zip/project import to
+         a compartment, end to end. Remaining real work: dedicated
+         tests/modules/run-all.js coverage (currently manual-verified
+         only, per each new file's own header — see that entry).
+      5. SR3_artifact_extraction_introspect_bridge — the real
+         doubt-and-attack step; needs the guardian decomposition's
+         still-open artifact-extraction extraction to land first so
+         there's one real call site to hook, not two inline copies.
+         Now unblocked (B1 done) — the next real, un-DONE step on this
+         list.
+      6. SR4_fitness_driven_contract_adjustment + SR10_iterative_
+         prompt_optimization_loop — both depended on B1 (now real) +
+         SR3 (still open) — what makes repeated builds actually get
+         BETTER instead of re-running the same routing/prompt every
+         time.
+      7. SR13_copilot_chat_ui — the human-facing surface for all of the
+         above; deliberately last because it is a thin client over
+         whichever of steps 1-6 are real by the time it's built.
+    Per the 2026-09-03 correction: every step above is a real guardian-
+    side capability any dispatched agent (ollama/deepseek locally,
+    chatgpt/gemini/claude over the real NCP bridge) can use — none of
+    it should end up requiring Claude specifically to run. SR9 (the
+    full autonomous end-state) and SR8 (the now-reframed procedure
+    track) remain the outer boundary, not on this narrower critical
+    path. With B1 done, SR3 is now the single highest-leverage next
+    step — it's the only remaining item on this list with no other
+    open dependency in front of it.

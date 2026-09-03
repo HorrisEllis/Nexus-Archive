@@ -40,5 +40,10 @@ function emit(type, data = {}) {
 
 // ── Subscribe shorthand ────────────────────────────────────────────────────
 function on(type, fn) { return getBus().on(type, fn); }
+// §FIX 2026-09-03 — off() exists on the real Stream class (siso/index.js)
+// but was never re-exported here, unlike on()/emit(). Confirmed by grep
+// before adding this. Needed for downloads/intake-bridge.js's
+// install().detach().
+function off(type, fn) { return getBus().off(type, fn); }
 
-module.exports = { createBus, getBus, getLog, emit, on, Event, Gate, Stream, StreamLog };
+module.exports = { createBus, getBus, getLog, emit, on, off, Event, Gate, Stream, StreamLog };

@@ -41,7 +41,19 @@ module.exports = {
   // ollama/co-pilot." Real tag, verified against ollama.com before it was
   // ever written down (1.9GB, Q4_K_M, real arch qwen2).
   DEFAULT_MODEL:  process.env.OLLAMA_DEFAULT_MODEL  || 'huihui_ai/qwen2.5-coder-abliterate:3b',
-  FALLBACK_MODEL: process.env.OLLAMA_FALLBACK_MODEL || 'mistral:7b-instruct-q4_K_M',
+  // §FIX 2026-09-03 — James, from a real screenshot of his own Ollama
+  // model list: "no mistral." FALLBACK_MODEL was never updated in the
+  // 2026-08-23 change above — DEFAULT_MODEL got the real, actually-pulled
+  // model; this one was left at the old 'mistral:7b-instruct-q4_K_M',
+  // which does not exist in his real install at all (confirmed directly
+  // against the screenshot: glm-5.3(:cloud), deepseek-v4-flash:cloud,
+  // gemma4:31b-cloud/26b, huihui_ai/qwen2.5-coder-abliterate,
+  // huihui_ai/qwen3-abliterated — no mistral anywhere in the list).
+  // Real fallback needs to be a DIFFERENT real, locally-runnable model
+  // than DEFAULT_MODEL (a fallback that's identical to the primary isn't
+  // a real fallback) — huihui_ai/qwen3-abliterated is the other real,
+  // non-cloud model actually present in his install.
+  FALLBACK_MODEL: process.env.OLLAMA_FALLBACK_MODEL || 'huihui_ai/qwen3-abliterated',
 
   // ── Concurrency ────────────────────────────────────────────────────────
   // 1 is the honest default for a single-GPU/single-box install: it

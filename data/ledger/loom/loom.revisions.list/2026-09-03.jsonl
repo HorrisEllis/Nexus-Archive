@@ -1,0 +1,1 @@
+{"uuid":"02f121b1-b412-4161-a984-019d4d8701d0","system":"loom","component":"loom.revisions.list","action":"registered","status":"ok","tags":["loom"],"detail":"List registry revisions","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139629}

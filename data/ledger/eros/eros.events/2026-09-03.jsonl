@@ -1,0 +1,1 @@
+{"uuid":"8b4c0335-237f-4396-8b14-0760bb2b5aac","system":"eros","component":"eros.events","action":"registered","status":"ok","tags":["eros","stream"],"detail":"WebSocket event stream","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139779}

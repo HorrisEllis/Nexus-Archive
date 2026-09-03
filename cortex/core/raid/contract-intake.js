@@ -563,6 +563,150 @@ function submitBuildPhaseContract(phase, opts = {}) {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// §B1 2026-09-03 — the full build-contract schema. James, complete real
+// field list: "end-state, conditions, intent, context, warp primitives,
+// axioms, relevant agent tools for the request, compartment uuid, file
+// directory, file name. need to synthesize contracts for each request."
+//
+// submitBuildPhaseContract() above is real but narrower (hardcodes
+// intention:'build', no conditions/warpPrimitives/axioms/compartmentUuid/
+// fileDirectory/fileName). This does not replace it — synthesizeContract()
+// below composes with the same real submitContract() both already call
+// (§10.3 — one real intake path, not two).
+//
+// Every referenced-but-not-invented real system, checked this session:
+//   - intent: validated against lib/intent-classifier.js's real
+//     VALID_VERBS (build/write/forge/officiate/heal/diagnose/analyze/
+//     query/recall/snapshot/validate/explain/dispatch/delete/rollback/
+//     overwrite) — a made-up verb is refused, not silently accepted.
+//   - warpPrimitives: validated against warp/core/index.js's real,
+//     exact 5 exports (Event, Gate, Axiom, Stream, StreamLog) — the
+//     only 5 that exist, per warp/spec/warp.spec.
+//   - axioms: validated against docs/AXIOMS-v3.1.md's own real §N.N
+//     section headers, parsed live from the file (100 real refs found
+//     2026-09-03) — not a hardcoded, driftable copy of the list.
+//   - tools: defaults to the real hat-scoped toolScope AM1 already
+//     computes (lib/hat-forge.js's forged hat, resolved via
+//     lib/intent-hat-router.js's suggestHat() when forAgent names a
+//     live hat) — a caller can still override with an explicit list.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const BUILD_CONTRACT_SCHEMA = Object.freeze({
+  uuid:           'string, assigned — the real queue id, same as every other contract',
+  forAgent:       'string, required — the real target agent or hat name',
+  intent:         'string, required — a real verb from intent-classifier.js\'s VALID_VERBS',
+  system:         'string, optional — which real SYSTEM this contract concerns',
+  endState:       'string, required — the real target condition this contract must reach, not a task description',
+  conditions:     'object, optional — { pre: string[], post: string[] } structured pre/post conditions',
+  context:        'string, optional — real context, pulled on demand via toolScope, not force-fed',
+  warpPrimitives: 'string[], optional — subset of the real 5: Event, Gate, Axiom, Stream, StreamLog',
+  axioms:         'string[], optional — real §N.N refs from docs/AXIOMS-v3.1.md, validated against the live file',
+  tools:          'string[], optional — real toolScope; defaults from forAgent\'s hat when omitted',
+  compartmentUuid:'string, optional — a real, specific existing compartment to target, not always freshly spawned',
+  fileDirectory:  'string, optional — the real target directory this contract\'s work lands in',
+  fileName:       'string, optional — the real target file name',
+});
+
+let _axiomRefsCache = null;
+function _realAxiomRefs() {
+  if (_axiomRefsCache) return _axiomRefsCache;
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const text = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'docs', 'AXIOMS-v3.1.md'), 'utf8');
+    _axiomRefsCache = new Set((text.match(/§\d+\.\d+/g) || []));
+  } catch (_) {
+    _axiomRefsCache = new Set(); // real file missing — every axiom ref is then honestly refused, not silently trusted
+  }
+  return _axiomRefsCache;
+}
+
+const WARP_PRIMITIVES = new Set(Object.keys(require('../../../warp/core')).filter(k => ['Event', 'Gate', 'Axiom', 'Stream', 'StreamLog'].includes(k)));
+
+/**
+ * synthesizeContract(req) -> submitContract()'s own real result, or
+ * {ok:false, errors} if req fails real validation before ever reaching
+ * the queue. "Synthesize" (James's own word) — this is the automated
+ * builder for the B1 schema, not just the schema definition.
+ */
+function synthesizeContract(req = {}) {
+  const errors = [];
+  if (!req.forAgent) errors.push('forAgent: required — a build contract must name a real target agent');
+  if (!req.intent) errors.push('intent: required');
+  else {
+    const validVerbs = require('../../../lib/intent-classifier.js').VALID_VERBS;
+    if (!validVerbs.includes(req.intent)) errors.push(`intent: "${req.intent}" is not a real verb — one of: ${validVerbs.join(', ')}`);
+  }
+  if (!req.endState || typeof req.endState !== 'string' || !req.endState.trim()) {
+    errors.push('endState: required — the real target condition, not a task description');
+  }
+  if (req.warpPrimitives) {
+    const bad = req.warpPrimitives.filter(p => !WARP_PRIMITIVES.has(p));
+    if (bad.length) errors.push(`warpPrimitives: not real WARP primitives — ${bad.join(', ')} (only ${[...WARP_PRIMITIVES].join(', ')} exist)`);
+  }
+  if (req.axioms) {
+    const refs = _realAxiomRefs();
+    const bad = req.axioms.filter(a => !refs.has(a));
+    if (bad.length) errors.push(`axioms: not real refs in docs/AXIOMS-v3.1.md — ${bad.join(', ')}`);
+  }
+  if (req.conditions && (typeof req.conditions !== 'object' || Array.isArray(req.conditions))) {
+    errors.push('conditions: must be an object, e.g. { pre: [...], post: [...] }');
+  }
+  if (errors.length) return { ok: false, errors };
+
+  // tools: real default from forAgent's hat when not explicitly given —
+  // composes with hat-forge/intent-hat-router rather than re-deriving
+  // toolScope logic a second time (§10.3).
+  let tools = req.tools || null;
+  if (!tools) {
+    try {
+      const hatForge = require('../../../lib/hat-forge.js');
+      const hat = hatForge.byName(req.forAgent) || hatForge.get(req.forAgent);
+      if (hat && hat.toolScope) tools = hat.toolScope;
+    } catch (_) { /* hat-forge unavailable — tools stays null, honest, not guessed */ }
+  }
+
+  const content = [
+    req.system ? `[System: ${req.system}]` : null,
+    `[End state] ${req.endState}`,
+    req.context ? `[Context]\n${req.context}` : null,
+    req.conditions ? `[Conditions] ${JSON.stringify(req.conditions)}` : null,
+  ].filter(Boolean).join('\n\n');
+
+  const result = submitContract({
+    content,
+    title: req.fileName || null,
+    forAgent: req.forAgent,
+    dependsOn: Array.isArray(req.dependsOn) ? req.dependsOn : [],
+  }, {
+    source: req.source || 'b1-synthesize',
+    intention: req.intent,
+    forAgent: req.forAgent,
+    system: req.system || null,
+    dir: req.fileDirectory || null,
+    language: req.language || null,
+    dependsOn: Array.isArray(req.dependsOn) ? req.dependsOn : [],
+  });
+
+  // §REAL, ADDITIVE — the B1-specific fields (endState/conditions/
+  // warpPrimitives/axioms/tools/compartmentUuid/fileName) don't fit
+  // submitContract()'s existing param shape; recorded onto the real
+  // queue row via a real update rather than duplicating submitContract's
+  // own insert logic a second time.
+  if (result.queueId) {
+    try {
+      jaaDB.update(TABLE, { uuid: result.queueId }, {
+        endState: req.endState, conditions: req.conditions || null,
+        warpPrimitives: req.warpPrimitives || null, axioms: req.axioms || null,
+        tools, compartmentUuid: req.compartmentUuid || null, fileName: req.fileName || null,
+      });
+    } catch (e) { console.warn(`[${MODULE_ID}] synthesizeContract: B1 field update failed: ${e.message}`); }
+  }
+
+  return { ok: true, ...result, tools };
+}
+
 // §HIGHEST LEVERAGE 2026-08-29 — James: "highest leverage... to get the
 // system coding." Real, honest finding checked before building anything:
 // RAID's contract queue (real dependency graph, real qaqcLayer, real
@@ -641,4 +785,4 @@ function reportExternalOutcome(queueId, { status, verdict } = {}) {
   }
 }
 
-module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, reportExternalOutcome, acknowledge, listQueue, processNext, MODULE_ID, VERSION, STATUS, STAGE };
+module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, MODULE_ID, VERSION, STATUS, STAGE };

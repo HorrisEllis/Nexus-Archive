@@ -240,6 +240,48 @@ function createNCPMessageHandler(deps) {
               jobId, outDir, count: codeBlocks.length,
               files: codeBlocks.map(b => b.filename),
             });
+
+            // §SR3 2026-09-03 — artifact-extraction -> introspect bridge.
+            // James: "artifact extraction also can connect to the
+            // introspect tool" — this IS the real mechanism behind "doubt
+            // and attack its outputs." Fire-and-forget: this handler must
+            // stay a plain, synchronous function (createNCPServer's
+            // contract, see this file's own header) — introspect.examine()
+            // is async, so it runs after this handler returns and never
+            // blocks or delays the real completion path above. Failure
+            // here must never affect the artifacts already written — they
+            // are real and on disk regardless of what introspect finds.
+            try {
+              require('../../lib/introspect.js').examine({
+                prompt:     job?.prompt || null,
+                response:   finalText,
+                requestId:  jobId,
+                sessionId:  chatId || chatUrl || null,
+                intent:     job?.command || null,
+              }).then(verdict => {
+                try {
+                  require('fs').writeFileSync(
+                    require('path').join(outDir, '_introspect.json'),
+                    JSON.stringify(verdict, null, 2), 'utf8'
+                  );
+                } catch (_) {}
+                bus.emit('guardian.artifacts.examined', {
+                  jobId, outDir, verdict: verdict.verdict, confidence: verdict.confidence,
+                });
+                try {
+                  require('../../lib/component-ledger.js').write({
+                    system: 'guardian', component: 'ncp-handler.artifact-introspect', action: 'examine',
+                    status: (verdict.verdict === 'WRONG' || verdict.verdict === 'SUSPECT') ? 'warn' : 'info',
+                    detail: { verdict: verdict.verdict, confidence: verdict.confidence, readable: verdict.readable, total: verdict.total },
+                    session: jobId,
+                  });
+                } catch (_) {}
+              }).catch(err => {
+                console.warn(`[ncp-handler] introspect.examine failed for job ${jobId}: ${err.message}`);
+              });
+            } catch (err) {
+              console.warn(`[ncp-handler] introspect bridge setup failed for job ${jobId}: ${err.message}`);
+            }
           }
 
           // Server-side gap analysis — §LAW II: write before acting

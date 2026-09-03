@@ -1,0 +1,62 @@
+{
+  "stats": {
+    "idearium.idea.create": {
+      "count": 1,
+      "lastTs": 1788459359924,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.spec-engine.created": {
+      "count": 1,
+      "lastTs": 1788459368594,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.idea.update": {
+      "count": 1,
+      "lastTs": 1788459368595,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.idea.phase": {
+      "count": 2,
+      "lastTs": 1788459444118,
+      "intervals": [
+        75521
+      ],
+      "totalMs": 75521
+    },
+    "idearium.spec-engine.chunk.complete": {
+      "count": 10,
+      "lastTs": 1788459444120,
+      "intervals": [
+        1249,
+        1252,
+        1236,
+        1255,
+        1279,
+        1299,
+        1255,
+        1254,
+        1287
+      ],
+      "totalMs": 11366
+    },
+    "idearium.spec.update": {
+      "count": 1,
+      "lastTs": 1788459444116,
+      "intervals": [],
+      "totalMs": 0
+    }
+  },
+  "baseline": {
+    "idearium.spec-engine.chunk.complete": {
+      "avgIntervalMs": 1263,
+      "stddevMs": 19,
+      "consistency": 0.984648264831548,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788459444121
+    }
+  }
+}

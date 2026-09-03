@@ -1,0 +1,1 @@
+{"uuid":"b2029d04-9563-4015-966e-c6a29bad6b57","system":"loom","component":"loom.contracts.close","action":"registered","status":"ok","tags":["loom","write"],"detail":"Close a contract","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139628}
