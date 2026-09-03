@@ -70,6 +70,11 @@ spec:
         Watches for .spec files. On detect: validates, queues,
         dispatches to spec-compiler via Guardian.
 
+  command_index:
+    status: specced   # §1.1 -- not built yet. See docs/command-index-per-system.spec, build_order phase 1.
+    spec: "docs/command-index-per-system.spec"
+    note: "idearium's existing routes array (72 entries) maps directly -- cheapest phase, exposure not extraction."
+
   routes:
     external:
       - "GET  /health"

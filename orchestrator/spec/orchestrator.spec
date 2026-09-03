@@ -40,6 +40,11 @@ spec:
     handles:
       - "All events from all systems via bridge relay"
 
+  command_index:
+    status: specced   # §1.1 -- not built yet. See docs/command-index-per-system.spec, build_order phase 4.
+    spec: "docs/command-index-per-system.spec"
+    note: "bridge shares guardian's dispatch shape (raw inline method checks) -- same source-extraction mechanism, phase 4."
+
   routes:
     external:
       - "GET  /                         NEXUS shell UI"

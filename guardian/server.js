@@ -1817,6 +1817,80 @@ function handleExtendedRoutes(req, res, url, method) {
     const streamJobId = url.pathname.slice('/stream/'.length);
     ncp.handleStream(req, res, bodyJ, streamJobId); return true;
   }
+  // §FIX 2026-09-03 — guardian/cli.js's watchJob() does `http.get(BASE +
+  // '/stream/' + jobId)` — a GET. Only a POST route existed at this exact
+  // path (above — the unrelated job, userscripts pushing tokens IN). GET
+  // never matched anything, so the CLI's SSE watch silently fell through
+  // to a 404 every single call. Confirmed, not assumed, before writing
+  // this: grepped guardian/server.js for a second /stream/ handler —
+  // none existed.
+  //
+  // Real event names used below, confirmed by reading their actual emit
+  // call sites (not guessed from naming convention):
+  //   ncp.stream.chunk    — guardian/lib/ncp.js's handleStream(), the
+  //                         POST route directly above. {jobId,token,done,seq,provider,tabId,ts}
+  //   guardian.job.chunk  — guardian/lib/ncp-handler.js's GUARDIAN_CHUNK/
+  //                         NCP_CHUNK path. {jobId,text,full,provider}
+  //   guardian.job.complete / guardian.job.error — real, unscoped,
+  //                         jobId is a PAYLOAD field, not part of the
+  //                         event name (unlike the Lab Manager's
+  //                         `guardian.job.${jobId}.complete`, which is
+  //                         NOT real — checked, nothing emits it; a
+  //                         second, separate, already-broken instance of
+  //                         this same bug class, not fixed here).
+  if (method==='GET' && url.pathname.startsWith('/stream/')) {
+    const streamJobId = url.pathname.slice('/stream/'.length);
+    const existing = jobs.get(streamJobId);
+
+    // Already finished before the client even connected — one message, done.
+    if (existing && (existing.status === 'complete' || existing.status === 'error' || existing.status === 'delivered_confirmed')) {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
+      res.write(`data: ${JSON.stringify({ text: existing.result || existing.response || '', done: true })}\n\n`);
+      res.end();
+      return true;
+    }
+
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
+
+    const _onChunk = (ev) => {
+      if (ev.data?.jobId !== streamJobId) return;
+      const text = ev.data.token ?? ev.data.text ?? '';
+      if (text) res.write(`data: ${JSON.stringify({ text, done: false })}\n\n`);
+      if (ev.data.done) _finish('');
+    };
+    const _onComplete = (ev) => {
+      if (ev.data?.jobId !== streamJobId) return;
+      _finish(ev.data.text ?? ev.data.response ?? '');
+    };
+    const _onError = (ev) => {
+      if (ev.data?.jobId !== streamJobId) return;
+      res.write(`data: ${JSON.stringify({ error: ev.data.error || 'job failed', done: true })}\n\n`);
+      _cleanup(); try { res.end(); } catch(_) {}
+    };
+    let _finished = false;
+    function _finish(finalText) {
+      if (_finished) return; // both a chunk carrying done:true and a separate complete event can fire — one real end, not two
+      _finished = true;
+      if (finalText) res.write(`data: ${JSON.stringify({ text: finalText, done: true })}\n\n`);
+      else res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      _cleanup();
+      try { res.end(); } catch(_) {}
+    }
+    function _cleanup() {
+      bus.off('ncp.stream.chunk', _onChunk);
+      bus.off('guardian.job.chunk', _onChunk);
+      bus.off('guardian.job.complete', _onComplete);
+      bus.off('guardian.job.error', _onError);
+    }
+
+    bus.on('ncp.stream.chunk', _onChunk);
+    bus.on('guardian.job.chunk', _onChunk);
+    bus.on('guardian.job.complete', _onComplete);
+    bus.on('guardian.job.error', _onError);
+    req.on('close', _cleanup); // client disconnected before the job finished — stop listening, don't leak
+
+    return true;
+  }
   if (method==='POST' && url.pathname==='/heartbeat') {
     ncp.handleHeartbeat(req, res, bodyJ); return true;
   }

@@ -85,6 +85,11 @@ spec:
       - 'guardian.job.cancel'       # cancel a queued job
       - 'orchestrator.shutdown'     # graceful drain and stop
 
+  command_index:
+    status: specced   # §1.1 -- not built yet. See docs/command-index-per-system.spec, build_order phase 2.
+    spec: "docs/command-index-per-system.spec"
+    note: "each routes/*.js module self-declares a commands export -- aggregated at boot into the real index."
+
   routes:
     - method: GET  path: /health
       returns: "{ ok, model, queue_depth, running, uptime, models_available }"

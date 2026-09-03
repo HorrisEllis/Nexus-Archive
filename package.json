@@ -33,6 +33,7 @@
     "playwright": "^1.61.1"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "express": "^5.2.1",
     "js-yaml": "^5.2.1",
     "multer": "^2.2.0",

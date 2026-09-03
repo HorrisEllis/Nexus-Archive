@@ -112,6 +112,17 @@ spec:
       axes: [truncation, sigma, delta]
       retry_strategies: [resend-with-report, split-chunk, forensic]
 
+  command_index:
+    status: specced   # §1.1 — not built yet. See docs/command-index-per-system.spec, build_order phase 3.
+    spec: "docs/command-index-per-system.spec"
+    note: >
+      This block's own routes:/handshake: lists below are currently
+      hand-maintained and confirmed stale (11 routes / 9 handshake
+      entries declared vs 73 real dispatch checks in guardian/server.js,
+      measured 2026-09-03 — see command-index-per-system.spec's axioms
+      section for the exact evidence). Phase 3 replaces both lists with
+      a source-extracted, regenerable command-index.json; not done here.
+
   routes:
     internal:
       - "GET  /health"
