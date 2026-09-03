@@ -442,6 +442,59 @@ class AgentMesh {
     });
   }
 
+  /**
+   * _dispatchViaGuardian(prompt, provider) — §CONNECT 2026-09-03, James:
+   * "Connect them." Real finding before writing this: this file's own
+   * send() (below) and Guardian's real /api/copilot/prompt (guardian/
+   * server.js, wired through ask.js's askSync -> the same real NCP
+   * channel + userscripts that already have sigma-gate/event-taxonomy/
+   * SSE/health-tracking built around them) are TWO SEPARATE, independent
+   * automation systems both driving claude.ai and chatgpt.com — this
+   * file's AGENT_REGISTRY has its own inputSel/sendSel/respSel DOM
+   * scraping for claude/chatgpt, genuinely distinct from Guardian's
+   * NCP+userscript path, not two names for the same mechanism. Confirmed
+   * by reading both real dispatch paths directly, not assumed.
+   *
+   * This does not remove either system (gemini/perplexity/mistral have
+   * no Guardian userscripts yet, and this mesh's own DOM automation is
+   * the only real coverage for them) — it makes Guardian the preferred
+   * path for the two agents where a working, more-instrumented mechanism
+   * already exists, instead of silently duplicating it. Reuses the exact
+   * real HTTP pattern _raidDecide() above already established (same
+   * NEXUS_PORT env convention would be a Guardian port, not cortex's —
+   * see the real, distinct GUARDIAN_PORT default below).
+   *
+   * Resolves null on ANY failure (unreachable, non-ok, empty text) —
+   * never throws — so route() below can fall through to this mesh's own
+   * real DOM automation exactly as if this function didn't exist. §1.2 —
+   * a Guardian outage must never be the reason a real dispatch can't be
+   * attempted at all.
+   */
+  _dispatchViaGuardian(prompt, provider) {
+    return new Promise((resolve) => {
+      const http = require('http');
+      const body = JSON.stringify({ prompt, provider, timeoutMs: 45000 });
+      const req = http.request({
+        hostname: '127.0.0.1', port: parseInt(process.env.GUARDIAN_PORT || '7820', 10),
+        path: '/api/copilot/prompt', method: 'POST', timeout: 45000,
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, (res) => {
+        let respBody = '';
+        res.on('data', (c) => respBody += c);
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(respBody);
+            resolve(parsed?.ok && parsed?.text ? parsed : null);
+          } catch (_) { resolve(null); }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.write(body);
+      req.end();
+    });
+  }
+
   // ── RAID-style routing — best healthy agent ───────────────────────────
   async route({ prompt, preferAgent, fallbackOrder }) {
     // §BUILD 2026-08-30 — James: "raid engine and agent mesh" (a real gap
@@ -497,6 +550,33 @@ class AgentMesh {
       : raidPreferred
         ? [raidPreferred, ...Object.keys(AGENT_REGISTRY).filter(k => k !== raidPreferred)]
         : Object.keys(AGENT_REGISTRY));
+
+    // §CONNECT 2026-09-03 — try Guardian's real, more-instrumented path
+    // FIRST for the two agents it actually covers, before this mesh's
+    // own duplicate DOM automation. Deliberately scoped to exactly
+    // claude/chatgpt (Guardian's real, confirmed userscript coverage —
+    // gemini/perplexity/mistral have none, per this same investigation),
+    // and skipped entirely when fallbackOrder was explicitly given (a
+    // caller naming a specific order gets exactly that order, not a
+    // silently-inserted extra hop).
+    if (!fallbackOrder) {
+      // §BUGFIX — caught by MESH-006 before shipping: order.find(...)
+      // scanned the WHOLE fallback list, so preferAgent:'gemini' wrongly
+      // triggered Guardian because claude/chatgpt appear later in the
+      // same array as fallback candidates. Must check only the agent
+      // actually being attempted first (order[0]), not the full list.
+      const guardianKey = (order[0] === 'claude' || order[0] === 'chatgpt') ? order[0] : null;
+      if (guardianKey) {
+        const viaGuardian = await this._dispatchViaGuardian(prompt, guardianKey);
+        if (viaGuardian) {
+          this.sse.emit('mesh.guardian.dispatch', { agentKey: guardianKey, jobId: viaGuardian.jobId || null, used: true, ts: Date.now() });
+          return { agentKey: guardianKey, text: viaGuardian.text, via: 'guardian', jobId: viaGuardian.jobId || null };
+        }
+        this.sse.emit('mesh.guardian.dispatch', { agentKey: guardianKey, used: false, reason: 'guardian unreachable, non-ok, or empty response', ts: Date.now() });
+        // falls through to this mesh's own real DOM automation below —
+        // never a dead end, matching _raidDecide's own honest-degrade contract.
+      }
+    }
 
     for (const agentKey of order) {
       const state = this._getBestAgent(agentKey);

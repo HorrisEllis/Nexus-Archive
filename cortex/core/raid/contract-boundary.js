@@ -45,6 +45,25 @@ const REGISTRY = {
     invariants: [],
     principles: ['§3.1'],
   },
+  // §BUGFIX 2026-09-03 — found while investigating "RAID keeps failing
+  // contracts": officiator.js (2026-09-02) submits with source
+  // 'officiator-synthesis-tool' and 'officiator-synthesis-tool' (see
+  // synthesizeFromContext) but was never added here, so every real
+  // synthesized contract logged "no registered boundary" on every
+  // submission — not a hard failure (§1.2's own design: unregistered
+  // is real, inspectable information, not a swallowed gap), but a real,
+  // easy-to-close gap directly adjacent to the SEAM VERDICT fix in the
+  // same file this session, added while already here for it.
+  'officiator:build': {
+    primitive:  'cortex/core/raid/officiator.js#officiate',
+    invariants: [],
+    principles: ['§3.1'],
+  },
+  'officiator-synthesis-tool:build': {
+    primitive:  'cortex/core/raid/officiator.js#synthesizeFromContext',
+    invariants: [],
+    principles: ['§3.1'],
+  },
   'copilot:build': {
     primitive:  'copilot/server.js /build handler',
     invariants: [],
@@ -52,20 +71,6 @@ const REGISTRY = {
   },
 };
 
-/**
- * resolveBoundary(source, intention) — real lookup, no fuzzy matching.
- * Returns the real { primitive, invariants, principles } object for an
- * EXACT (source, intention) pair, or null.
- *
- * §NEVER REFUSES — per synthesis-contract.spec's own corrected posture,
- * an unresolved boundary is real, honest information ("this contract's
- * source/intention combination has no registered boundary yet"), not a
- * reason to block submitContract(). The registry is sparse by design
- * (4 real rows, not pre-populated speculatively) — most contracts will
- * legitimately resolve to null for a while. Refusing on null would block
- * real traffic the same way a fabricated route would have; this module
- * only ever informs, never gates.
- */
 function resolveBoundary(source, intention) {
   if (!source || !intention) return null;
   const key = `${source}:${intention}`;
@@ -73,10 +78,6 @@ function resolveBoundary(source, intention) {
   return row ? { key, ...row } : null;
 }
 
-/**
- * listBoundaries() — every real row, for an auditor or a UI to enumerate
- * without reaching into the module-private REGISTRY object directly.
- */
 function listBoundaries() {
   return Object.entries(REGISTRY).map(([key, row]) => ({ key, ...row }));
 }

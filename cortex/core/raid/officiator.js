@@ -194,7 +194,21 @@ async function synthesizeFromContext(contextText, opts = {}) {
 
   const { queueId } = submitContract(
     {
-      content: synthesized.context || contextText.slice(0, 200),
+      // §BUGFIX 2026-09-03 — found while investigating "RAID keeps
+      // failing contracts": contract-intake.js's DEFAULT checkEndState
+      // (the one actually used here — no checkEndState function is
+      // passed in opts below) requires a literal "SEAM VERDICT: PASS|
+      // FAIL" somewhere in the agent's response, per contract-intake.js
+      // itself. Every contract submitted from THIS function only ever
+      // sent synthesized.context (a free-form description) as content —
+      // never an instruction to report a verdict in that format. An
+      // agent doing genuinely correct work here still had no reason to
+      // say those words, so the default check reported FAIL every time,
+      // regardless of real outcome. self-heal's own _enterFailureMode
+      // already does this correctly (see cortex/self-heal/index.js) —
+      // reusing that exact real convention here, not inventing a new one.
+      content: (synthesized.context || contextText.slice(0, 200))
+        + `\n\nWhen finished, verify your work against the real end-state above (not a guess), then report exactly "SEAM VERDICT: PASS" if it genuinely holds, or "SEAM VERDICT: FAIL" with what's still wrong if it doesn't.`,
       title: synthesized.fileName || null,
       forAgent: opts.dispatchTo || opts.forAgent || 'claude',
       endState: synthesized.endState ?? null,
@@ -224,7 +238,12 @@ async function officiate(drop, opts = {}) {
   const s = drop.summary || {};
   const { queueId } = submitContract(
     {
-      content: synthesized.context || `Artifact with ${s.files || 0} file(s) from ${(drop.provenance && drop.provenance.provider) || 'unknown'}`,
+      // §BUGFIX 2026-09-03 — same real fix as synthesizeFromContext
+      // above, same root cause: this path (the automatic drop->contract
+      // pipeline, the one officiator.js's own header says runs every
+      // 20s against staged artifacts) had the identical gap.
+      content: (synthesized.context || `Artifact with ${s.files || 0} file(s) from ${(drop.provenance && drop.provenance.provider) || 'unknown'}`)
+        + `\n\nWhen finished, verify your work against the real end-state above (not a guess), then report exactly "SEAM VERDICT: PASS" if it genuinely holds, or "SEAM VERDICT: FAIL" with what's still wrong if it doesn't.`,
       title: synthesized.fileName || null,
       forAgent: opts.dispatchTo || forAgent,
       endState: synthesized.endState ?? null,
