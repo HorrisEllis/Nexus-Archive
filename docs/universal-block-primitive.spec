@@ -220,6 +220,46 @@ spec:
 
 
   # ────────────────────────────────────────────────────────────────
+  phase_files:
+  # ────────────────────────────────────────────────────────────────
+    ext: ".phase"
+    status: "NOT NEW -- already the shape used two spec files ago"
+    anchors_to: >
+      docs/command-index-per-system.spec's own `build_order:` section
+      is already phase-shaped (phase number, why, exit_criteria) -- the
+      only thing missing is splitting it OUT into one real .phase file
+      per system instead of leaving it embedded in one master doc. "Each
+      gap a phase" reuses the same status lifecycle already established
+      for blocks (open/closed, from lib/gap-field.js) -- a phase is OPEN
+      until its exit_criteria are met, then CLOSED. Not a new state
+      machine, the same one, applied at the phase granularity instead
+      of the block granularity.
+    shape: "one .phase file per system, each block = one phase = one gap, status:open|closed, exit_criteria required to close (no phase closes on claim alone -- Section 1.1)"
+
+  # ────────────────────────────────────────────────────────────────
+  living_index_unification:
+  # ────────────────────────────────────────────────────────────────
+    status: "CLARIFICATION, not a new system"
+    finding: >
+      "Living tool index" and "command line index" are not two things
+      to build -- lib/tool-index.js is ALREADY, in its own words, "the
+      living tool index" (register()/record(), grows from real usage,
+      Section AP1). docs/command-index-per-system.spec's five per-system
+      command indices are the SAME kind of registry at a different
+      granularity -- tool_index tracks function-level tools
+      (lib/agent-tools/), command-index tracks route-level surface
+      (guardian/ollama/bridge/idearium/clear-glass HTTP commands). Both
+      should populate the SAME underlying living-index mechanism
+      (register/record/query) rather than becoming two parallel
+      registries that can drift from each other the same way
+      guardian.spec's routes: list already drifted from real code.
+      Concretely: command-index-per-system.spec's phase files should
+      call tool-index.js's real register() for each discovered route,
+      not write a second, disconnected JSON file per system.
+
+  # ────────────────────────────────────────────────────────────────
+  open_gaps_this_pass:
+  # ────────────────────────────────────────────────────────────────
     - "ollama's real context window size — not confirmed, needed before system_behavior.ollama can be built exactly right"
     - "claude's inject:['warp','context'] — declared but its actual wiring/effect not traced; needs reading before assuming it already does part of block-level injection"
     - "gemini's per-agent behavior — undecided, flagged not guessed"
