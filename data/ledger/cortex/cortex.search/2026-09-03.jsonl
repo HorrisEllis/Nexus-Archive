@@ -1,1 +1,0 @@
-{"uuid":"df352083-2206-4507-b954-1411faa4d4fc","system":"cortex","component":"cortex.search","action":"registered","status":"ok","tags":["cortex"],"detail":"Cross-table search","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237966}

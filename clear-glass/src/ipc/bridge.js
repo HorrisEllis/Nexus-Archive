@@ -823,12 +823,24 @@ class IpcBridge {
     ipcMain.handle('listeners:remove',     async (e, d) => this.options?.removeListener(d.id));
     ipcMain.handle('listeners:forUrl',     async (e, d) => this.options?.findListenersForUrl(d.url));
 
-    // §BUILT 2026-09-02 — AM8's real IPC surface, same real pattern as
-    // listeners: above — a future settings/agent-suite UI reads/manages
-    // custom agents through this, not a direct options.js require.
-    ipcMain.handle('agents:list',   async ()    => this.options?.listAgents() || []);
-    ipcMain.handle('agents:get',    async (e, d) => this.options?.getAgent(d.id));
-    ipcMain.handle('agents:register', async (e, d) => this.options?.registerAgent(d));
+    // §FIXED 2026-09-02 — James, live, from a real boot log: "Attempted
+    // to register a second handler for 'agents:list'" (an unhandled
+    // rejection at boot) and "agent mesh doesn't do anything either when
+    // i click on it." Real root cause, found together, not two separate
+    // bugs: AM8's own new agents:list handler (added this session)
+    // collided with THIS pre-existing one below — this.mesh?.getRegistry(),
+    // the real, live agent-mesh registry (claude/chatgpt/gemini/
+    // perplexity/mistral/grok, confirmed in James's own boot log:
+    // "[AgentMesh] Registry: ..."). Electron's ipcMain.handle() throws
+    // on a duplicate channel registration — whichever handler registered
+    // second either silently failed or the whole main-process init took
+    // an unhandled rejection, either of which would leave the real,
+    // pre-existing Agent Mesh UI inert. Renamed AM8's own, genuinely
+    // different concept (custom, user-paired input/output agents) to
+    // custom-agents:* so it no longer shadows the real mesh registry.
+    ipcMain.handle('custom-agents:list',     async ()    => this.options?.listAgents() || []);
+    ipcMain.handle('custom-agents:get',      async (e, d) => this.options?.getAgent(d.id));
+    ipcMain.handle('custom-agents:register', async (e, d) => this.options?.registerAgent(d));
 
     // §ACCOUNTS-UI 2026-08-28 — the accounts panel needs a real list of
     // which agents can actually be linked. agent-mesh.js already has this

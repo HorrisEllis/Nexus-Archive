@@ -120,6 +120,13 @@ test('AGT-010', 'ipc/bridge.js relays guardian.agent.create to the real register
   if (!src.includes('this.options?.registerAgent({')) throw new Error('missing the real call to the store');
 });
 
+test('AGT-011', 'the real custom-agents:* IPC channels do not collide with the pre-existing agent-mesh agents:list handler', () => {
+  const src = _realReadFile('clear-glass/src/ipc/bridge.js');
+  const agentsListCount = (src.match(/ipcMain\.handle\('agents:list'/g) || []).length;
+  if (agentsListCount !== 1) throw new Error(`expected exactly 1 real 'agents:list' handler (the real agent-mesh registry), found ${agentsListCount} — a duplicate registration crashes Electron's ipcMain at boot (the real bug James found live)`);
+  if (!src.includes("ipcMain.handle('custom-agents:list'")) throw new Error("AM8's own channels must be renamed off 'agents:*' entirely");
+});
+
 function _realReadFile(rel) {
   return _fs2.readFileSync(path.join(ROOT, rel), 'utf8');
 }

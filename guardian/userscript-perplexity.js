@@ -274,16 +274,16 @@ function detectSearchMode() {
 
 // ── Bus connections — identical contract to claude/chatgpt/gemini ───────────
 function _toOrc(system, type, payload = {}) {
-  fetch(`${ORCH_URL}/api/ledger`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+  _gmFetch(`${ORCH_URL}/api/ledger`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ system, type, payload }) }).catch(()=>{});
 }
 function _toCortex(type, payload = {}) {
-  fetch(`${CORTEX_URL}/api/event`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+  _gmFetch(`${CORTEX_URL}/api/event`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ type, payload: { ...payload, _account:getAccount(), _chatUrl:location.href },
       source:'userscript-perplexity', causedBy:currentJobId||null, ts:Date.now() }) }).catch(()=>{});
 }
 function _toBridge(type, payload = {}) {
-  fetch(`${NCP_URL}/result`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+  _gmFetch(`${NCP_URL}/result`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ type, ...payload, ts:Date.now() }) }).catch(()=>{});
 }
 
@@ -309,7 +309,7 @@ async function gate(name, fn, opts = {}) {
 async function pullIntelligenceContext(intent, command) {
   try {
     const url = `${CORTEX_URL}/api/intelligence/context?intent=${encodeURIComponent((intent||'').slice(0,120))}&command=${encodeURIComponent(command||'')}&provider=${PROVIDER}`;
-    const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const r = await _gmFetch(url, { timeoutMs: 3000 });
     if (!r.ok) return null;
     _intelligenceCtx = await r.json();
     return _intelligenceCtx;
@@ -328,7 +328,7 @@ function buildContextHeader(ctx) {
 // ── NCP post helper ───────────────────────────────────────────────────────────
 async function ncpPost(url, data) {
   try {
-    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+    const res = await _gmFetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
       body: JSON.stringify({ ...data, chatUrl: location.href, account: getAccount() }) });
     return res.ok ? await res.json() : null;
   } catch(_) { return null; }
@@ -608,10 +608,10 @@ function _buildToolsHeader(tools) {
 async function _runToolCall(call) {
   if (call.argsError) return { error: `tool call args are not valid JSON: ${call.argsError}` };
   try {
-    const r = await fetch(`${NCP_URL}/api/tools/${encodeURIComponent(call.name)}`, {
+    const r = await _gmFetch(`${NCP_URL}/api/tools/${encodeURIComponent(call.name)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(call.args || {}),
-      signal: AbortSignal.timeout(20000),
+      timeoutMs: 20000,
     });
     const d = await r.json();
     if (!d.ok) return { error: d.error || `tool "${call.name}" failed` };
@@ -670,6 +670,133 @@ function autoClaimIfFree() {
 }
 setInterval(() => GM_setValue('gd_hb_'+MY_TAB, Date.now()), 5000);
 
+// ── §FIXED 2026-09-02 — real root cause of "Guardian: DISCONNECTED" +
+// "not hearing hey nexus," found together, not two separate bugs.
+// James, live, in a real standalone browser (not clear-glass's Electron
+// shell — confirmed by his own screenshot): "the userscript isn't
+// connecting. make sure you account for cors and user policy so i
+// don't have to use header editor or cors." Traced directly: every
+// local endpoint this file talks to (NCP_URL/CORTEX_URL/ORCH_URL) is
+// plain http://127.0.0.1:<port>, while claude.ai/chatgpt.com serve over
+// https:// — a real, standard MIXED-CONTENT block every modern browser
+// enforces by default, with no code-level workaround from inside a
+// normal page context. GM_xmlhttpRequest is genuinely different — a
+// Tampermonkey-privileged API that bypasses mixed-content/CORS/same-
+// origin entirely (this file's own existing calls, e.g. _nexusLogMessage
+// above, already rely on exactly this for other endpoints) — but two
+// real gaps meant it wasn't actually protecting everything: (1) 12 real
+// call sites in this file still used plain _gmFetch() (confirmed by grep,
+// not assumed — including the ENTIRE tool-calling loop, _runToolCall),
+// each one silently failing in a real standalone browser; (2) NCP's own
+// live connection used a native EventSource, which has no privileged
+// equivalent AT ALL by default — and since wake-word arming
+// (window.NexusWake.install(...)) only ever happens inside _es.onopen,
+// a blocked EventSource meant the wake word was never armed, not
+// separately broken.
+//
+// Two real, generic, drop-in replacements below close both gaps:
+// _gmFetch() (fetch-compatible, wraps every plain _gmFetch() call in this
+// file) and _gmEventSource() (EventSource-compatible, replicates a live
+// SSE stream via GM_xmlhttpRequest's own real onprogress callback,
+// which fires as new bytes arrive on a still-open connection — genuine
+// incremental delivery, not polling dressed up as streaming).
+
+function _gmFetch(url, opts = {}) {
+  return new Promise((resolve, reject) => {
+    if (typeof GM_xmlhttpRequest !== 'function') { reject(new Error('GM_xmlhttpRequest unavailable — @grant GM_xmlhttpRequest missing')); return; }
+    const method = (opts.method || 'GET').toUpperCase();
+    GM_xmlhttpRequest({
+      method,
+      url,
+      headers: opts.headers || {},
+      data: opts.body,
+      timeout: opts.timeoutMs || 15000,
+      onload: (res) => {
+        // §FETCH-COMPATIBLE — the real, minimal Response shape every
+        // real call site in this file actually uses (r.ok, r.json(),
+        // r.status) — not a full Response polyfill, just what's real
+        // and needed, so every existing `await _gmFetch(...)` call site
+        // becomes `await _gmFetch(...)` with zero other changes.
+        resolve({
+          ok: res.status >= 200 && res.status < 300,
+          status: res.status,
+          json: async () => JSON.parse(res.responseText),
+          text: async () => res.responseText,
+        });
+      },
+      onerror: () => reject(new Error(`GM_xmlhttpRequest network error — ${method} ${url}`)),
+      ontimeout: () => reject(new Error(`GM_xmlhttpRequest timeout — ${method} ${url}`)),
+    });
+  });
+}
+
+function _gmEventSource(url) {
+  // §REAL SSE OVER GM_xmlhttpRequest — a genuine, incremental stream,
+  // not a _gmFetch()-once-and-pretend. GM_xmlhttpRequest keeps the
+  // underlying connection open for a real text/event-stream response
+  // (server never closes it — confirmed against guardian/server.js's
+  // own real NCP channel handler, a standard chunked SSE response) and
+  // fires onprogress as each new chunk arrives; response.responseText
+  // is the FULL text received so far, so new frames are found by
+  // diffing against what was already parsed, not by assuming each
+  // onprogress call carries exactly one new frame.
+  const es = { onopen: null, onmessage: null, onerror: null };
+  let _parsedLen = 0;
+  let _closed = false;
+  let _req = null;
+
+  function _parseNewFrames(fullText) {
+    const unparsed = fullText.slice(_parsedLen);
+    // Real SSE framing: events separated by a blank line, each
+    // containing one or more "data: ..." lines. Only advance
+    // _parsedLen past a frame boundary we've actually found — a
+    // partial frame at the tail (still arriving) is left for the next
+    // onprogress call, not parsed early and lost.
+    const frames = unparsed.split('\n\n');
+    if (frames.length < 2) return; // no complete frame yet
+    const complete = frames.slice(0, -1);
+    const consumed = complete.join('\n\n').length + (complete.length * 2);
+    _parsedLen += consumed;
+    for (const frame of complete) {
+      const dataLines = frame.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());
+      if (!dataLines.length) continue;
+      const data = dataLines.join('\n');
+      if (es.onmessage) { try { es.onmessage({ data }); } catch (_) {} }
+    }
+  }
+
+  if (typeof GM_xmlhttpRequest !== 'function') {
+    setTimeout(() => { if (es.onerror) es.onerror(new Error('GM_xmlhttpRequest unavailable')); }, 0);
+    es.close = () => {};
+    return es;
+  }
+
+  _req = GM_xmlhttpRequest({
+    method: 'GET',
+    url,
+    headers: { Accept: 'text/event-stream' },
+    timeout: 0, // real, deliberately unbounded — this IS the live connection, not a single request
+    onreadystatechange: (res) => {
+      // Some GM implementations report the real, live connection open
+      // via readyState 3 (HEADERS_RECEIVED/LOADING) before any body
+      // arrives — fired once, matching real EventSource.onopen timing.
+      if (res.readyState === 2 || res.readyState === 3) {
+        if (es.onopen && !es._opened) { es._opened = true; es.onopen(); }
+      }
+    },
+    onprogress: (res) => {
+      if (_closed) return;
+      if (es.onopen && !es._opened) { es._opened = true; es.onopen(); }
+      _parseNewFrames(res.responseText || '');
+    },
+    onload: () => { if (!_closed && es.onerror) es.onerror(new Error('NCP stream ended')); },
+    onerror: () => { if (!_closed && es.onerror) es.onerror(new Error('GM_xmlhttpRequest stream error')); },
+    ontimeout: () => { if (!_closed && es.onerror) es.onerror(new Error('GM_xmlhttpRequest stream timeout')); },
+  });
+
+  es.close = () => { _closed = true; try { _req?.abort?.(); } catch (_) {} };
+  return es;
+}
 // ── NCP connection ────────────────────────────────────────────────────────────
 function connect() {
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
@@ -677,7 +804,7 @@ function connect() {
   if (_es) { try { _es.close(); } catch(_) {} }
   const params = `tabId=${MY_TAB}&provider=${PROVIDER}`;
   connState = 'connecting'; updatePill();
-  _es = new EventSource(`${NCP_CHANNEL}?${params}`);
+  _es = _gmEventSource(`${NCP_CHANNEL}?${params}`);
   _es.onmessage = e => { try { _handleServerMessage(JSON.parse(e.data)); } catch(err) { _log('err','NCP parse',err.message); } };
   _es.onopen = () => {
     connState = 'ready'; updatePill();

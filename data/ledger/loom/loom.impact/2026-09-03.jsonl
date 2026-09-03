@@ -1,1 +1,0 @@
-{"uuid":"c90e30da-7419-47bd-97de-4709dab75770","system":"loom","component":"loom.impact","action":"registered","status":"ok","tags":["loom","analysis"],"detail":"Blast-radius / impact query for a component","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237982}

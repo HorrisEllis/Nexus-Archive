@@ -1,1 +1,0 @@
-{"uuid":"bd68a448-b1fa-4226-b454-a45ee7e1c452","system":"loom","component":"loom.contracts.create","action":"registered","status":"ok","tags":["loom","write"],"detail":"Create an interaction contract","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237987}

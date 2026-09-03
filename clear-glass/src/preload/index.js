@@ -167,6 +167,16 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     list: () => ipcRenderer.invoke('agents:list'),
   },
 
+  // §FIXED 2026-09-02 — real, distinct from window.ClearGlass.agents
+  // above (the real agent-mesh registry) — AM8's own custom, user-paired
+  // input/output agents, renamed off the colliding 'agents:*' channels
+  // (see ipc/bridge.js's own header for the full real bug this fixes).
+  customAgents: {
+    list:     ()       => ipcRenderer.invoke('custom-agents:list'),
+    get:      (id)      => ipcRenderer.invoke('custom-agents:get', { id }),
+    register: (payload) => ipcRenderer.invoke('custom-agents:register', payload),
+  },
+
   // ── Diagnostics ──────────────────────────────────────────────────────────
   diag: {
     run:   (payload) => ipcRenderer.invoke('diag:run', payload),

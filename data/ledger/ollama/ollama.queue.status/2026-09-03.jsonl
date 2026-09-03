@@ -1,1 +1,0 @@
-{"uuid":"70a73fb2-41e9-4b9d-b940-0ed0c7a3c399","system":"ollama","component":"ollama.queue.status","action":"registered","status":"ok","tags":["ollama"],"detail":"Queue depth and running count","causedBy":"ollama","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237577}

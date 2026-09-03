@@ -1,1 +1,0 @@
-{"uuid":"053ddca6-dd10-402d-87ea-432fcf1653ff","system":"bridge","component":"bridge.contract","action":"registered","status":"ok","tags":["bridge"],"detail":"Bridge interaction contract","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237460}

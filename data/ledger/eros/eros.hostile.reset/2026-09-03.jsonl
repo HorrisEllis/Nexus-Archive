@@ -1,1 +1,0 @@
-{"uuid":"b0695a39-eb92-44ab-9fec-85724238d8c3","system":"eros","component":"eros.hostile.reset","action":"registered","status":"ok","tags":["eros","hostile"],"detail":"Reset threat signals for tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238079}

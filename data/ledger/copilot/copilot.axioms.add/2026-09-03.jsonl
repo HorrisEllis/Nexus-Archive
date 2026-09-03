@@ -1,1 +1,0 @@
-{"uuid":"6b30c00b-84fd-42a5-afba-e41b3f72ae70","system":"copilot","component":"copilot.axioms.add","action":"registered","status":"ok","tags":["copilot"],"detail":"Add a runtime axiom","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237849}

@@ -1,1 +1,0 @@
-{"uuid":"ccc437f2-ccd8-46cb-95b5-b87528e96c87","system":"architect","component":"architect.blueprint.route","action":"registered","status":"ok","tags":["architect"],"detail":"Route intent via blueprint","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238401}

@@ -1,1 +1,0 @@
-{"uuid":"6f58ee7b-b49f-4b83-bd69-3f4391134056","system":"eravos","component":"eravos.organism.list","action":"registered","status":"ok","tags":["eravos"],"detail":"List all mounted organisms","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237562}

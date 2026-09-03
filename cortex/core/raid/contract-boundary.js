@@ -71,6 +71,20 @@ const REGISTRY = {
   },
 };
 
+/**
+ * resolveBoundary(source, intention) — real lookup, no fuzzy matching.
+ * Returns the real { primitive, invariants, principles } object for an
+ * EXACT (source, intention) pair, or null.
+ *
+ * §NEVER REFUSES — per synthesis-contract.spec's own corrected posture,
+ * an unresolved boundary is real, honest information ("this contract's
+ * source/intention combination has no registered boundary yet"), not a
+ * reason to block submitContract(). The registry is sparse by design
+ * (not pre-populated speculatively) — most contracts will legitimately
+ * resolve to null for a while. Refusing on null would block real
+ * traffic the same way a fabricated route would have; this module
+ * only ever informs, never gates.
+ */
 function resolveBoundary(source, intention) {
   if (!source || !intention) return null;
   const key = `${source}:${intention}`;
@@ -78,6 +92,10 @@ function resolveBoundary(source, intention) {
   return row ? { key, ...row } : null;
 }
 
+/**
+ * listBoundaries() — every real row, for an auditor or a UI to enumerate
+ * without reaching into the module-private REGISTRY object directly.
+ */
 function listBoundaries() {
   return Object.entries(REGISTRY).map(([key, row]) => ({ key, ...row }));
 }

@@ -1,1 +1,0 @@
-{"uuid":"332fc08c-369f-484b-9c1d-b1d75f4bfd5f","system":"cortex","component":"cortex.cfr.compounds","action":"registered","status":"ok","tags":["cortex"],"detail":"Compound effect scan (ripple/wave/tidal)","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237936}

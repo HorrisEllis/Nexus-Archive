@@ -79,6 +79,8 @@ const SUITES = [
   'test-cookie-vault-ipc-roundtrip.js',
   'test-userscript-protocol-parity.js',
   'test-guardian-agent-registry.js',
+  'test-userscript-mixed-content-fix.js',
+  'test-contract-handshake-paths.js',
   'autonomous-loop.test.js',
   // FIX (James, 2026-06-19): these six suites existed, passed standalone,
   // and were never registered here — `node tests/modules/run-all.js` was

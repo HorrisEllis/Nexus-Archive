@@ -1,1 +1,0 @@
-{"uuid":"f498ffed-1669-4e65-b3b6-3c6a23952c0e","system":"idearium","component":"idearium.spec.create","action":"registered","status":"ok","tags":["idearium"],"detail":"Create a new spec from an idea","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237535}

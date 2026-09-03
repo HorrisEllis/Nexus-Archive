@@ -1,1 +1,0 @@
-{"uuid":"f0436b84-4aea-40e0-9ebd-119d47311e00","system":"cortex","component":"cortex.versionium.log","action":"registered","status":"ok","tags":["cortex"],"detail":"Version commit log","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237963}

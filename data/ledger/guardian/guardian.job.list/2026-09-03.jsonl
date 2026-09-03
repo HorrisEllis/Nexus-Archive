@@ -1,1 +1,0 @@
-{"uuid":"269b1d4d-4a07-497d-903b-5fd02a37f37d","system":"guardian","component":"guardian.job.list","action":"registered","status":"ok","tags":["guardian"],"detail":"Active + recent jobs","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237494}

@@ -69,6 +69,15 @@ const CONTRACT_PATHS = {
   // same bare-path convention — but never added here, so every poll fell
   // through to the '/api/contract' default and 404'd.
   loom:           '/contract',
+  // §FIXED 2026-09-02 — James, live, from a real boot log: "[orch]
+  // contract.unreachable — versionium (invalid JSON: Unexpected token
+  // 'N', "Not found" is not valid JSON)". Exact same real bug class as
+  // loom's own comment right above — versionium/routes/system.js's real
+  // GET /contract route (built this session, VS1) was simply never
+  // added here, so this poller fell through to '/api/contract' and hit
+  // a real, honest 404 whose plain-text body ("Not found") isn't valid
+  // JSON, hence the parse error James saw.
+  versionium:     '/contract',
 };
 
 function contractPathFor(systemId) {
@@ -228,4 +237,4 @@ function _log(jaaInsert, type, payload) {
   }
 }
 
-module.exports = { verifySystem, verifyAll, getEntry, getAllEntries, getTrustMap, TRUST, MODULE_ID };
+module.exports = { verifySystem, verifyAll, getEntry, getAllEntries, getTrustMap, TRUST, MODULE_ID, CONTRACT_PATHS };

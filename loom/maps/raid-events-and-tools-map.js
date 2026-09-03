@@ -40,6 +40,16 @@ const FILES = [
   // directly above.
   ['cortex/core/raid/officiator.js', 'nexus.cortex.core.raid.officiator',
     ['nexus.cortex.core.raid.contract-intake']],
+  // §ADDED 2026-09-03 — merged from a parallel session's real work
+  // (context-gate.js, context-synthesis.js — the primitive/invariant
+  // boundary-check pieces of docs/contracts/context-synthesis-
+  // pipeline.spec's own real pipeline). Registered here even though
+  // precommit-check.js's own orphan scan didn't flag either — matching
+  // established discipline rather than relying on that scan's own
+  // possibly-incomplete coverage.
+  ['cortex/core/raid/context-gate.js', 'nexus.cortex.core.raid.context-gate',
+    ['nexus.cortex.core.raid.contract-boundary']],
+  ['cortex/core/raid/context-synthesis.js', 'nexus.cortex.core.raid.context-synthesis', []],
   // §ADDED 2026-09-02 — precommit-check.js flagged this as a real
   // orphan (CLAUDE.md rule 3) once this session's intuition/mastermind/
   // synthesize_contract tools touched it. Genuinely never registered

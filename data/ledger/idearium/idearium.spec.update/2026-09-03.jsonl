@@ -1,1 +1,0 @@
-{"uuid":"fb58f515-8951-48fc-9e76-2011936a9681","system":"idearium","component":"idearium.spec.update","action":"registered","status":"ok","tags":["idearium"],"detail":"Update a spec's section content","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237537}

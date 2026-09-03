@@ -212,6 +212,23 @@ await test('OFF-011', 'synthesizeFromContext() rejects a missing/non-string cont
   assert.ok(result.reason.includes('contextText is required'));
 });
 
+await test('OFF-012', 'synthesizeFromContext() instructs the agent to report a real SEAM VERDICT — the fix for contracts that always failed regardless of real outcome', async () => {
+  _mockResponse = { ok: true, text: JSON.stringify({ endState: 'a', conditions: [], intent: 'build', context: 'a', warpPrimitives: [], axioms: [], tools: [], compartmentUuid: null, fileDirectory: null, fileName: null }) };
+  await officiator.synthesizeFromContext('build a thing', { submit: true });
+  const row = raid.listQueue().slice(-1)[0];
+  assert.ok(row.contract.content.includes('SEAM VERDICT: PASS'), 'the real content sent to the agent must ask for a SEAM VERDICT — contract-intake.js\'s default checkEndState requires this literal phrase, and nothing else in the prompt ever asked for it');
+  assert.ok(row.contract.content.includes('SEAM VERDICT: FAIL'));
+});
+
+await test('OFF-013', 'officiate() (the artifact-triggered path) carries the same real SEAM VERDICT instruction', async () => {
+  const { dropId } = stageRealTestArtifact('console.log("verdict test");');
+  const drop = intake.read(dropId);
+  _mockResponse = { ok: true, text: JSON.stringify({ endState: 'a', conditions: [], intent: 'build', context: 'a', warpPrimitives: [], axioms: [], tools: [], compartmentUuid: null, fileDirectory: null, fileName: null }) };
+  const result = await officiator.officiate(drop);
+  const row = raid.listQueue().find(r => r.uuid === result.queueId);
+  assert.ok(row.contract.content.includes('SEAM VERDICT: PASS'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 delete process.env.NEXUS_INTAKE_DIR;
 delete process.env.JAA_DATA_DIR;

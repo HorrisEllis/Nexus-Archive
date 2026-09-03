@@ -1,1 +1,0 @@
-{"uuid":"fda33dc8-3ce4-4036-b70c-b2191cacf950","system":"architect","component":"architect.blueprint.scan","action":"registered","status":"ok","tags":["architect"],"detail":"Scan path → generate blueprint","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238397}

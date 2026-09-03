@@ -1,1 +1,0 @@
-{"uuid":"e2aecbd1-633f-4573-a878-066196918693","system":"idearium","component":"idearium.snr.current","action":"registered","status":"ok","tags":["idearium"],"detail":"Current SNR (signal-to-noise) score","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237519}
