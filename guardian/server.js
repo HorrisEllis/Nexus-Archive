@@ -688,6 +688,13 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(HTTP_PORT, '127.0.0.1', async () => {
+  // ── Mesh (ported from BrainOS) ────────────────────────────────────────────
+  // One-time install, same pattern nexus-bridge-modules.js's own install()
+  // used — wired to guardian's REAL bus (SISOStream, declared above), not
+  // BrainOS's own duplicate bus.js. See mesh/install.js's header.
+  try { require('../mesh/install.js').install(bus); }
+  catch (e) { console.error('[guardian] mesh/install.js failed:', e.message); }
+
   const { BootSequence } = require('../lib/boot-sequence');
   const nc2 = require('../nexus-connect');
 
@@ -1885,6 +1892,19 @@ function handleExtendedRoutes(req, res, url, method) {
   // guardian). jaa/pRes/bodyJ injected via ctx since jaa is a real,
   // stateful class instance, not a shared-singleton lib module.
   if (require('./routes/settings.js').handle(req, res, { method, url, jaa, pRes, bodyJ })) return true;
+
+  // ── Autonomous loop trigger ───────────────────────────────────────────────
+  // First real caller of lib/autonomous-loop.js's run() (Phase 13 was
+  // complete and callerless — confirmed by grep before writing this).
+  if (require('./routes/autonomous-loop.js').handle(req, res, { method, url, jaa, pRes, bodyJ, jobs, createJob, dispatchJob, ncp, nc, bus })) return true;
+
+  // ── Mesh (ported from BrainOS) ──────────────────────────────────────────────
+  // SNR/keys/hosts/ports/canvas/crypto — see mesh/README.md for what came
+  // across from BrainOS and what didn't. No-ops until mesh/install.js has
+  // been called at boot (see the require('../mesh/install.js').install(bus)
+  // line near guardian's other startup wiring); falls through to 404 until then.
+  if (require('./routes/mesh.js').handle(req, res, { method, url, jaa, pRes, bodyJ })) return true;
+
 
   // ── Artifacts (paginated) ────────────────────────────────────────────────────
   if (method==='GET' && url.pathname==='/artifacts') {
