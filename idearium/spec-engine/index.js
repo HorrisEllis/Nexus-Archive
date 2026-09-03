@@ -33,11 +33,6 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { getTemplate, listTemplates, readSeed } from './templates.js';
 import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
-// §BUILT 2026-09-03 — js-yaml is already a real root-workspace dependency
-// (package.json's workspaces include 'idearium'; compiler-bridge.js in
-// this same module already imports it, dynamically). Static import here —
-// SPEC_SECTIONS is computed at module load, not inside an async function.
-import yaml from 'js-yaml';
 
 const _require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -92,57 +87,21 @@ function _migrateManifestsOnce() {
 }
 _migrateManifestsOnce(); // runs once at module load, mirrors repo/index.js's constructor-time _load()
 
-// §BUILT 2026-09-03 — James: "list of primitives... for the spec being
-// made and use warps primitives." The real, current set — derived
-// directly from warp/core's own real exports (Event, Gate, Axiom,
-// Stream, StreamLog; GateFusion's fuseChain/canFuse are real too but are
-// composition helpers, not primitives), the exact same filter
-// cortex/core/raid/contract-intake.js's WARP_PRIMITIVES already computes
-// for its own warpPrimitives validation. Computed independently HERE
-// rather than imported from that RAID module — RAID stays untouched per
-// "skip raid for now," and warp/core is this session's one shared,
-// correct source for what a WARP primitive actually is, not RAID's
-// business to own.
-const WARP_PRIMITIVES = new Set(
-  Object.keys(_require('../../warp/core')).filter(k => ['Event', 'Gate', 'Axiom', 'Stream', 'StreamLog'].includes(k))
-);
-
 // ── Standard spec sections (the seam boundaries) ─────────────────────────────
 // Each section = one chunk = one SEAM contract = one file on disk.
-//
-// §BUILT 2026-09-03 — James: "using a yaml with block ids for each block.
-// each block is a slot for the chunks." This was a hardcoded 10-entry JS
-// array literal — the same 10 ids were ALSO independently hardcoded as the
-// disk fileName pattern (`00-meta.md`) and as RepoLayer's sectionId match
-// (idearium/repo/index.js's _resolveChunk). Three places agreeing by
-// convention, not by declaration. Now declared once, in
-// spec-engine/blocks.yaml, and loaded here — `id`/`title`/`desc` unchanged
-// (every existing reader of SPEC_SECTIONS is unaffected), plus a new
-// `agent` field per block: the default agent that section's chunk gets at
-// creation (see _buildManifest below), never the only word on it —
-// createSpec's `sectionAgents` overrides per-spec, setChunkAgent()
-// overrides per-chunk any time before dispatch.
-//
-// §1.2 loud, not silent — a missing/malformed blocks.yaml is a hard error
-// at module load, not a silent fallback to an empty section list; every
-// spec ever created depends on this list being real.
-function _loadBlocks() {
-  const yamlPath = path.join(__dirname, 'blocks.yaml');
-  let raw;
-  try { raw = fs.readFileSync(yamlPath, 'utf8'); }
-  catch (e) { throw new Error(`[${MODULE_ID}] blocks.yaml unreadable at ${yamlPath}: ${e.message}`); }
-  let doc;
-  try { doc = yaml.load(raw); }
-  catch (e) { throw new Error(`[${MODULE_ID}] blocks.yaml failed to parse: ${e.message}`); }
-  if (!doc || !Array.isArray(doc.blocks) || !doc.blocks.length) {
-    throw new Error(`[${MODULE_ID}] blocks.yaml has no real 'blocks' array — cannot build specs without a section schema`);
-  }
-  for (const b of doc.blocks) {
-    if (!b.id || !b.title) throw new Error(`[${MODULE_ID}] blocks.yaml has a block missing id/title: ${JSON.stringify(b)}`);
-  }
-  return doc.blocks.map(b => ({ id: b.id, title: b.title, desc: b.desc || '', agent: b.agent || null }));
-}
-export const SPEC_SECTIONS = _loadBlocks();
+// Agent gets one chunk at a time. Mistral first, ChatGPT fallback, Claude fallback.
+export const SPEC_SECTIONS = [
+  { id: 'meta',          title: 'Meta & Identity',       desc: 'UUID, version, phase, comp_id, seam_id, status, author, dependencies' },
+  { id: 'purpose',       title: 'Purpose & Intent',      desc: 'What this component does, why it exists, what problem it solves' },
+  { id: 'axioms',        title: 'Axioms Enforced',        desc: 'Which AXIOMS-v1.0 axioms this component satisfies, with evidence' },
+  { id: 'schema',        title: 'Data Schema',            desc: 'JAA tables, field shapes, types, constraints, decay tier' },
+  { id: 'api',           title: 'API & Routes',           desc: 'HTTP routes, request/response shapes, error codes' },
+  { id: 'events',        title: 'Events & Bus',           desc: 'Bus events emitted, bus events consumed, event payload shapes' },
+  { id: 'integration',   title: 'Integration Points',     desc: 'What talks to this, what this talks to, seam contracts' },
+  { id: 'failure_modes', title: 'Failure Modes',          desc: 'What can fail, how it fails loudly (§1.2), recovery paths' },
+  { id: 'build_order',   title: 'Build Order',            desc: 'Bottom-up build sequence (§3.1), what must exist first' },
+  { id: 'tests',         title: 'Tests & Verification',   desc: 'How each piece is proven (§1.1), test cases, invariants' },
+];
 
 // ── Contract states ────────────────────────────────────────────────────────────
 export const CHUNK_STATES = {
@@ -283,38 +242,9 @@ function _seedMetaFromGenesis(seed, specName, templateId) {
 // SPEC_SECTIONS template. createSpec() below is now a thin wrapper that
 // passes SPEC_SECTIONS as its default — behavior for existing callers is
 // unchanged, byte for byte.
-// §BUILT 2026-09-03 — `agent` default changed from 'ollama' to null. It
-// used to be the ONLY agent value every chunk ever got (line below, was
-// `agent: agent`). Now it's an explicit spec-wide OVERRIDE: null means
-// "use each block's own default from blocks.yaml" (the routing table);
-// a real value forces every chunk in this spec to that one agent,
-// unchanged behavior for any existing caller that passes one. New
-// `sectionAgents` ({ sectionId: agent }) is the third, most specific
-// level — a per-block override for this one spec, e.g. from the UI
-// before the first build call. Precedence:
-//   sectionAgents[section.id]  >  agent (if explicitly given)  >  section.agent (blocks.yaml)  >  'ollama'
-// §BUG FOUND BY TESTING 2026-09-03 — first version put section.agent
-// ahead of the explicit `agent` override. Since blocks.yaml gives every
-// block a real, non-null default, that meant an explicit
-// createSpec({agent:'claude'}) call — the exact backward-compat contract
-// this param exists to preserve — silently never forced anything; the
-// yaml default always won instead. Caught by actually running
-// createSpec({agent:'claude'}) and checking every chunk was 'claude': it
-// wasn't. Fixed by moving the explicit override ahead of the table
-// default — the table is what fills in the GAP when no explicit choice
-// was made, not something an explicit choice has to fight past.
-function _buildManifest({ name, type = 'component', description = '', agent = null, sectionAgents = {}, warpPrimitives = [], author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto', ideaUuid = null }) {
+function _buildManifest({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto', ideaUuid = null }) {
   _ensureRoot();
   if (!name) throw new Error('spec name required');
-  // §BUILT 2026-09-03 — loud, not silent (§1.2): an unreal primitive name
-  // in a manifest that's supposed to declare what WARP primitives this
-  // component actually uses would be a lie recorded at creation time, not
-  // caught later. Same real-set validation RAID's own warpPrimitives
-  // check uses (contract-intake.js), computed independently above.
-  if (warpPrimitives.length) {
-    const bad = warpPrimitives.filter(p => !WARP_PRIMITIVES.has(p));
-    if (bad.length) throw new Error(`warpPrimitives: not real WARP primitives — ${bad.join(', ')} (only ${[...WARP_PRIMITIVES].join(', ')} exist)`);
-  }
 
   // §MERGED 2026-07-11 — two independent sessions extended createSpec
   // differently: this branch (single templateId, seedSection-based
@@ -375,22 +305,7 @@ function _buildManifest({ name, type = 'component', description = '', agent = nu
       fileName:    `${String(idx).padStart(2,'0')}-${section.id}.md`,
       // Contract state
       status:      CHUNK_STATES.PENDING,
-      // §BUILT 2026-09-03 — per-block routing. Most specific wins:
-      // an explicit override for THIS section, then this section's own
-      // blocks.yaml default, then a spec-wide forced agent, then ollama.
-      // `section.agent` only exists for callers using the real
-      // SPEC_SECTIONS default (blocks.yaml) — importSpec's own
-      // source-shaped sections have no .agent, so this falls through to
-      // `agent`/'ollama' exactly as before for that caller, unaffected.
-      // §CHANGED 2026-09-03 — James: "set default to chatgpt, fallback
-      // gemini." Was 'ollama'. This tail only fires when nothing more
-      // specific said otherwise (sectionAgents override, explicit spec-
-      // wide agent, or blocks.yaml's own per-block default) — in
-      // practice that's importSpec/ingestFilesAsSpec, whose sections
-      // carry no .agent of their own. The real chatgpt→gemini fallback
-      // ON DISPATCH FAILURE lives in chunk-dispatch.js (dispatchChunkWithVerification's
-      // fallbackAgent), not here — this is just which agent gets tried first.
-      agent:       sectionAgents[section.id] || agent || section.agent || 'chatgpt',
+      agent:       agent,        // which agent built this chunk
       agentModel:  null,         // which model was used
       attempts:    0,
       failureMode: null,
@@ -413,13 +328,7 @@ function _buildManifest({ name, type = 'component', description = '', agent = nu
     version:     '0.1.0',
     phase:       '40',
     status:      'building',    // pending | building | complete | archived
-    // §BUILT 2026-09-03 — `agent` param is now nullable (see _buildManifest
-    // header). manifest.agent stays a real, honest string either way:
-    // the forced spec-wide agent if one was given, or 'auto' meaning
-    // "each chunk carries its own agent from blocks.yaml/sectionAgents" —
-    // never a bare null sitting in a field every other reader (speceng.build's
-    // fallback chain, the UI's spec-list agent column) expects to be a string.
-    agent: agent || 'auto',
+    agent,                      // primary agent (Mistral first)
     agentPriority: ['ollama', 'chatgpt', 'claude'],  // LAW_I: local first
     buildEngine,                 // auto | warp | direct — §MERGED
     // §MERGED 2026-07-11 — ideaUuid closes the gap where the promote path
@@ -445,12 +354,6 @@ function _buildManifest({ name, type = 'component', description = '', agent = nu
     // is valid), but the redundancy is now visible instead of silent.
     duplicateOf:    existing ? existing.uuid : null,
     rootHash:       null,  // computed below, after chunks[] exists
-    // §BUILT 2026-09-03 — which real WARP primitives (Event/Gate/Axiom/
-    // Stream/StreamLog) this spec's component actually uses. Validated
-    // above at creation; editable after via setWarpPrimitives (PENDING-
-    // equivalent guard doesn't apply here — this is spec-level metadata,
-    // not a chunk's dispatch state, so it stays editable any time).
-    warpPrimitives,
     chunks,
   };
   manifest.rootHash = computeRootHash(manifest);
@@ -512,32 +415,12 @@ function _buildManifest({ name, type = 'component', description = '', agent = nu
     console.warn(`[${MODULE_ID}] templates [${templates.map(t=>t.id).join(', ')}] produced no deterministic seed — all ${chunks.length} chunks will dispatch`);
   }
 
-  console.log(`[${MODULE_ID}] spec created: ${specUuid.slice(0,8)} "${name}" · ${chunks.length} chunks · agent:${manifest.agent}` +
-    (manifest.agent === 'auto' ? ` (per-block: ${chunks.map(c => `${c.sectionId}→${c.agent}`).join(', ')})` : ''));
+  console.log(`[${MODULE_ID}] spec created: ${specUuid.slice(0,8)} "${name}" · ${chunks.length} chunks · agent:${agent}`);
   return manifest;
 }
 
-// §BUILT 2026-09-03 — `agent` default is now null (see _buildManifest),
-// not 'ollama' — an explicit createSpec({agent:'ollama'}) call still forces
-// every chunk to ollama exactly as before; omitting it now means "read each
-// block's own default from blocks.yaml" instead of silently meaning
-// ollama-for-everything. `sectionAgents` is new and additive.
-export function createSpec({ name, type = 'component', description = '', agent = null, sectionAgents = {}, warpPrimitives = [], author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto', ideaUuid = null }) {
-  return _buildManifest({ name, type, description, agent, sectionAgents, warpPrimitives, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine, ideaUuid });
-}
-
-// §BUILT 2026-09-03 — edit a spec's declared WARP primitives after
-// creation. Same real validation as at creation time — a bad name is a
-// loud error, never silently dropped or accepted.
-export function setWarpPrimitives(specUuid, primitives) {
-  if (!Array.isArray(primitives)) throw new Error('primitives must be an array');
-  const bad = primitives.filter(p => !WARP_PRIMITIVES.has(p));
-  if (bad.length) throw new Error(`warpPrimitives: not real WARP primitives — ${bad.join(', ')} (only ${[...WARP_PRIMITIVES].join(', ')} exist)`);
-  const manifest = loadSpec(specUuid);
-  manifest.warpPrimitives = primitives;
-  manifest.updatedAt = Date.now();
-  saveSpec(manifest);
-  return manifest;
+export function createSpec({ name, type = 'component', description = '', agent = 'ollama', author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto', ideaUuid = null }) {
+  return _buildManifest({ name, type, description, agent, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine, ideaUuid });
 }
 
 // ── Load spec manifest from disk ──────────────────────────────────────────────
@@ -612,7 +495,6 @@ export function listSpecs({ includeDeleted = false } = {}) {
         totalChunks: manifest.totalChunks,
         doneChunks:  manifest.doneChunks,
         agent:       manifest.agent,
-        warpPrimitives: manifest.warpPrimitives || [],
         createdAt:   manifest.createdAt,
         updatedAt:   manifest.updatedAt,
         version:     manifest.version,
@@ -621,23 +503,9 @@ export function listSpecs({ includeDeleted = false } = {}) {
         // §2026-07-10 — lightweight per-section status for the UI's Spec Library
         // chips. Id/title/done only, NOT content: the list must stay small even
         // with many specs. The detail view loads full chunk content on demand.
-        //
-        // §BUG FOUND 2026-09-03 — this omitted chunk.uuid entirely. The new
-        // per-chunk agent <select> (ui/js/app.js) calls
-        // setChunkAgent(specUuid, c.uuid, agent) on change — with no uuid in
-        // this list, that call was always setChunkAgent(specUuid, undefined,
-        // agent), which fails on the very first real click ("chunk not
-        // found"). Caught by tracing the data source, not by clicking it in
-        // a browser (no live server here) — real gap either way, fixed at
-        // the source rather than patched around in the UI. agent/jobId/
-        // dispatchDir/dispatchedAt are the same story: all real scalars
-        // (never chunk .content), needed for the UI to show what's
-        // actually true instead of falling back to a default that isn't.
         chunks: (manifest.chunks || []).map(c => ({
-          uuid: c.uuid, sectionId: c.sectionId, sectionTitle: c.sectionTitle,
+          sectionId: c.sectionId, sectionTitle: c.sectionTitle,
           chunkIdx: c.chunkIdx, status: c.status, byteSize: c.byteSize || 0,
-          agent: c.agent, agentModel: c.agentModel,
-          jobId: c.jobId || null, dispatchDir: c.dispatchDir || null, dispatchedAt: c.dispatchedAt || null,
         })),
         totalBytes: (manifest.chunks || []).reduce((sum, c) => sum + (c.byteSize || 0), 0),
       });
@@ -650,54 +518,6 @@ export function listSpecs({ includeDeleted = false } = {}) {
 export function nextPendingChunk(specUuid) {
   const manifest = loadSpec(specUuid);
   return manifest.chunks.find(c => c.status === CHUNK_STATES.PENDING) || null;
-}
-
-// ── Reassign a pending chunk's agent (UI per-chunk override, pre-dispatch) ────
-// §BUILT 2026-09-03 — the per-chunk agent <select> in the UI writes through
-// this. Deliberately refuses on anything past PENDING: changing which agent
-// "built" a chunk that's already building/complete would rewrite provenance
-// for content that agent never touched — §1.2, loud refusal, not a silent
-// no-op or an overwrite that makes the record lie.
-export function setChunkAgent(specUuid, chunkUuid, agent) {
-  if (!agent || typeof agent !== 'string') throw new Error('agent required (non-empty string)');
-  const manifest = loadSpec(specUuid);
-  const chunk = manifest.chunks.find(c => c.uuid === chunkUuid);
-  if (!chunk) throw new Error(`chunk ${chunkUuid} not found in spec ${specUuid}`);
-  if (chunk.status !== CHUNK_STATES.PENDING) {
-    throw new Error(`cannot reassign agent on a '${chunk.status}' chunk — only PENDING chunks can be reassigned before dispatch`);
-  }
-  chunk.agent = agent;
-  chunk.updatedAt = Date.now();
-  saveSpec(manifest);
-  return chunk;
-}
-
-// ── Record an in-flight dispatch's return address (the "compartment") ─────────
-// §BUILT 2026-09-03 — James: "specs in idearium are also supposed to be
-// compartments with the specs as the metadata... contracts always need an
-// end point... each contract has the start dir. defaults back to the
-// start point." No new compartment gets spawned (RAID stays untouched,
-// deliberately, for now) — the spec's own directory on disk already IS
-// the compartment; this just writes the real, currently-in-flight job's
-// return address into the chunk that's waiting on it, the moment that
-// job exists on guardian's side (called from chunk-dispatch.js's
-// onQueued hook, BEFORE the up-to-5-minute poll for a browser-automated
-// NCP provider, not after) — so a process restart mid-poll leaves a real,
-// on-disk trace of what was in flight and where it belongs, instead of
-// nothing at all. Cleared by completeChunk/failChunk once the chunk
-// actually resolves — a resolved chunk showing a stale in-flight jobId
-// would be exactly the kind of state that lies about what's really
-// happening (§1.2).
-export function recordDispatchJob(specUuid, chunkUuid, { jobId, agent } = {}) {
-  const manifest = loadSpec(specUuid);
-  const chunk = manifest.chunks.find(c => c.uuid === chunkUuid);
-  if (!chunk) throw new Error(`chunk ${chunkUuid} not found in spec ${specUuid}`);
-  chunk.jobId       = jobId || null;
-  chunk.dispatchDir = path.join(SPECS_ROOT, specUuid);   // "the start dir" — this spec's own compartment
-  chunk.dispatchedAt= Date.now();
-  if (agent) chunk.agent = agent;   // real, confirmed agent from the queued response, not just what was requested
-  saveSpec(manifest);
-  return chunk;
 }
 
 // ── Mark chunk as building (dispatched to agent) ──────────────────────────────
@@ -774,12 +594,6 @@ export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace
   chunk.updatedAt   = Date.now();
   chunk.completedAt = Date.now();
   chunk.failureMode = null;
-  // §BUILT 2026-09-03 — resolved; the in-flight return-address record
-  // (recordDispatchJob) is stale the instant this chunk is real content
-  // on disk. A completed chunk still showing an "in flight" jobId would
-  // lie about its own state.
-  chunk.jobId       = null;
-  chunk.dispatchDir = null;
 
   // Update spec progress
   manifest.doneChunks  = manifest.chunks.filter(c => c.status === CHUNK_STATES.COMPLETE).length;
@@ -810,10 +624,6 @@ export function failChunk(specUuid, chunkUuid, reason) {
   chunk.status      = chunk.attempts >= maxAttempts ? CHUNK_STATES.ESCALATED : CHUNK_STATES.FAILED;
   chunk.failureMode = reason;
   chunk.updatedAt   = Date.now();
-  // §BUILT 2026-09-03 — same as completeChunk: resolved (as a failure,
-  // still resolved), the in-flight record is stale.
-  chunk.jobId       = null;
-  chunk.dispatchDir = null;
 
   manifest.failedChunks = manifest.chunks.filter(c =>
     c.status === CHUNK_STATES.FAILED || c.status === CHUNK_STATES.ESCALATED).length;
@@ -965,11 +775,11 @@ export default {
   listTemplates, getTemplate, readSeed,
   findByDedupKey, findPriorSection, importSpec,
   createSpec, loadSpec, saveSpec, listSpecs,
-  nextPendingChunk, markChunkBuilding, completeChunk, failChunk, setChunkAgent, recordDispatchJob, setWarpPrimitives,
+  nextPendingChunk, markChunkBuilding, completeChunk, failChunk,
   buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec,
   computeRootHash, findByRootHash, ingestFilesAsSpec, addChunk, removeChunk,
   reconstructSpecText,
-  SPEC_SECTIONS, CHUNK_STATES, WARP_PRIMITIVES: [...WARP_PRIMITIVES],
+  SPEC_SECTIONS, CHUNK_STATES,
   MODULE_ID, VERSION, COMP_ID,
 };
 

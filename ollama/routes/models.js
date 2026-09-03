@@ -66,3 +66,7 @@ async function handle(req, res, { method, pathname }) {
 }
 
 module.exports = { handle };
+module.exports.commands = [
+  { method: 'GET', path: '/api/models' },
+  { method: 'PUT', path: '/api/model', description: 'validated against ollama\'s real /api/tags before accepting' },
+];

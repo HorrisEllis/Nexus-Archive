@@ -86,8 +86,10 @@ spec:
       - 'orchestrator.shutdown'     # graceful drain and stop
 
   command_index:
-    status: specced   # §1.1 -- not built yet. See docs/command-index-per-system.spec, build_order phase 2.
+    status: DONE   # verified 2026-09-03 — GET /commands live, 17 real commands, matches docs/command-index-per-system.spec build_order phase 2's own exit criteria (independently re-derived and confirmed equal, tests/modules/ollama-command-index.test.js)
     spec: "docs/command-index-per-system.spec"
+    served_at: "GET /commands"
+    file: "ollama/lib/command-index.js"
     note: "each routes/*.js module self-declares a commands export -- aggregated at boot into the real index."
 
   routes:

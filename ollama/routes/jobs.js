@@ -93,3 +93,10 @@ async function handle(req, res, { method, url, pathname }) {
 }
 
 module.exports = { handle };
+module.exports.commands = [
+  { method: 'POST', path: '/api/jobs/tools' },
+  { method: 'POST', path: '/api/jobs' },
+  { method: 'GET', path: '/api/jobs' },
+  { method: 'GET', path: '/api/jobs/:id', description: 'prefix match — pathname.startsWith(\'/api/jobs/\')' },
+  { method: 'DELETE', path: '/api/jobs/:id', description: 'prefix match — pathname.startsWith(\'/api/jobs/\')' },
+];

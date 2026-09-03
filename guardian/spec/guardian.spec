@@ -113,15 +113,19 @@ spec:
       retry_strategies: [resend-with-report, split-chunk, forensic]
 
   command_index:
-    status: specced   # §1.1 — not built yet. See docs/command-index-per-system.spec, build_order phase 3.
+    status: DONE   # verified 2026-09-03 — GET /commands live, real source-extraction from guardian/server.js's own literal dispatch code (guardian/lib/command-index-extract.js). 50 real top-level commands + 14 named sub-router prefixes (19 real nested checks honestly disclosed as unresolved, not silently folded into the count). tests/modules/guardian-command-index.test.js, 9/9 passing, self-verifying against a fresh re-extraction every run.
     spec: "docs/command-index-per-system.spec"
+    served_at: "GET /commands"
+    file: "guardian/lib/command-index-extract.js"
     note: >
-      This block's own routes:/handshake: lists below are currently
-      hand-maintained and confirmed stale (11 routes / 9 handshake
-      entries declared vs 73 real dispatch checks in guardian/server.js,
-      measured 2026-09-03 — see command-index-per-system.spec's axioms
-      section for the exact evidence). Phase 3 replaces both lists with
-      a source-extracted, regenerable command-index.json; not done here.
+      This block's own routes:/handshake: lists below are still
+      hand-maintained and confirmed stale (4 routes declared in this
+      block's own format vs 50 real matched + 19 unresolved-nested in
+      the live-extracted index, measured 2026-09-03 by tests/modules/
+      guardian-command-index.test.js's own real diff). GET /commands is
+      now the real, non-drifting source; replacing this block's own
+      routes:/handshake: lists to point at it (rather than duplicating
+      them by hand) is real, separate follow-up, not done in this pass.
 
   routes:
     internal:

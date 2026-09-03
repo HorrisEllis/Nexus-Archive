@@ -58,7 +58,14 @@ const intake = require('../../cortex/core/raid/contract-intake.js');
 // ── §A: basic dependency gating ──────────────────────────────────────────────
 await test('T-001', 'a contract with an unmet dependency does not run', async () => {
   resetStore();
-  const a = intake.submitContract({ content: 'A' }, { source: 'test' });
+  // §UPDATED 2026-09-03 — contract-intake.js now gives every contract a
+  // real default retry policy when none is declared (James: "we need
+  // all files in raids drainer with a retry logic if it fails"). This
+  // test's own real intent is dependency-BLOCKING, a separate concern
+  // from retry — explicit onFail:halt isolates that, same real contract
+  // shape T-002 below still expects (one real failure, no retry, then
+  // genuinely 'blocked'), not a side effect of the new default.
+  const a = intake.submitContract({ content: 'A' }, { source: 'test', onFail: { action: 'halt' } });
   const b = intake.submitContract({ content: 'B' }, { source: 'test', dependsOn: [a.queueId] });
   const r = await intake.processNext(async () => ({ text: '' })); // runs A (oldest, unblocked), fails it
   assert.strictEqual(r.queueId, a.queueId);

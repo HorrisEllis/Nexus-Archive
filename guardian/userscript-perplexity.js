@@ -904,8 +904,7 @@ function updatePill() {
 }
 function _injectWidget() {
   _pill = document.createElement('div');
-  _pill.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#05080f;border:1px solid #818cf8;border-radius:4px;padding:6px 10px;font:10px monospace;color:#e0e8ff;user-select:none;cursor:pointer;opacity:.85;display:none';
-  // §FIXED 2026-09-03 — same real fix as userscript-gemini.js's identical widget.
+  _pill.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#05080f;border:1px solid #818cf8;border-radius:4px;padding:6px 10px;font:10px monospace;color:#e0e8ff;user-select:none;cursor:pointer;opacity:.85';
   _pill.title = `Guardian NCP — Perplexity v${VERSION}\nTab: ${MY_TAB}`;
   _pill.onclick = () => {}; // passive mode removed — nothing to toggle
   document.body.appendChild(_pill);

@@ -387,6 +387,22 @@ const FILES = [
   // map's sense — its real registration point is lib/agent-tools/
   // index.js's tool registry (checked: it's already there). Not added
   // here to avoid a second, conflicting registration for the same file.
+
+  // §BRAINOS 2026-09-03 — James: "Just do BrainOS." First real slice,
+  // built against docs/brainos-live-control-panel.spec. Client-side
+  // widget, no server component (see nexus/ui/brainos/brainos-
+  // interaction-contract.json's own honest scope note) — registered
+  // here anyway per this session's own established discipline that
+  // every new file gets a real loom entry, code or UI alike.
+  ['nexus/ui/brainos/brainos.js', 'nexus.ui.brainos.panel', 'nexus/ui/brainos', []],
+  ['nexus/ui/brainos/brainos-canvas.js', 'nexus.ui.brainos.canvas', 'nexus/ui/brainos', ['nexus.ui.brainos.panel']],
+
+  // §COMMAND-INDEX 2026-09-03 — docs/command-index-per-system.spec's
+  // real build_order, phases 2-4 (phase 1 idearium, phase 5 clear-glass
+  // were already DONE before this session touched them).
+  ['ollama/lib/command-index.js', 'nexus.ollama.command-index', 'ollama/lib', []],
+  ['guardian/lib/command-index-extract.js', 'nexus.guardian.command-index', 'guardian/lib', []],
+  ['bridge/lib/command-index-extract.js', 'nexus.bridge.command-index', 'bridge/lib', []],
 ];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

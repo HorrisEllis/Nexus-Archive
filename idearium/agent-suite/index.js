@@ -221,12 +221,7 @@ export async function generateWithOllama(system, prompt, { model = _OLLAMA_FALLB
 // never a silent redirect to whichever provider happened to be hardcoded.
 const REAL_GUARDIAN_PROVIDERS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek'];
 
-// §CHANGED 2026-09-03 — default param 'ollama' → 'chatgpt' (James: "set
-// default to chatgpt"). Only matters when a caller passes no preferAgent
-// at all — every real caller today (spec-engine's speceng.build handler)
-// already resolves and passes one explicitly, so this is the bottom-most
-// fallback, not the active default in practice.
-export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'chatgpt' } = {}) {
+export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama' } = {}) {
   // 1. Local model — no guardian round-trip.
   if (preferAgent === 'ollama' || preferAgent === 'mistral') {
     const r = await generateWithOllama(

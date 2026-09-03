@@ -247,7 +247,22 @@ function submitContract(contract, opts = {}) {
     forAgent: contract.forAgent || opts.forAgent || null,
     contract,                              // the real, full contract object — the end-state lives inside it
     dependsOn: Array.isArray(opts.dependsOn) ? opts.dependsOn.slice() : [],
-    onFail: opts.onFail || null,
+    onFail: opts.onFail || {
+      // §FIX 2026-09-03 — James: "we need all files in raids drainer with
+      // a retry logic if it fails." Checked directly first: onFail was
+      // only ever consulted when a submitter explicitly declared one
+      // (contract-intake.js's own real retry/fallback branches below,
+      // already built and tested) — a contract submitted with no onFail
+      // at all got exactly one attempt and went straight to terminal
+      // FAIL. This default gives every real contract genuine retry
+      // behavior without every one of RAID's real submitters (self-heal,
+      // co-pilot, idearium, spec-parser, loom) needing to remember to
+      // declare it themselves. 2 retries — 3 total real attempts spread
+      // across raid-worker.js's real 15s drain cadence (~30-45s of real
+      // wall-clock retry) — matches that file's own documented reasoning
+      // for its interval, not a separate guessed number.
+      action: 'retry', maxRetries: 2,
+    },
     retryCount: 0,
     compartmentId: null,
     verdict: null,
@@ -477,6 +492,41 @@ async function processNext(executor) {
       verdict: resolved.trace_log?.find(t => t.event === 'QA_QC')?.data?.verdict ?? null,
     });
   } catch (_) {}
+
+  // §FIX 2026-09-03 — James: "runs an escalation strategy using
+  // diagnostic system, over and over until it either proceeds or fails
+  // completely... failure mode from escalation strategy is logged to
+  // the data folder." A contract reaching this line has genuinely
+  // exhausted every real option above (no onFail, or retry/fallback
+  // already used up, or an explicit halt) — this is real, terminal
+  // failure, not a case already handled by an early return higher up.
+  // Real self-heal escalation ladder already exists and is already
+  // bus-wired (cortex/self-heal/index.js, 5 real levels ending in
+  // _enterFailureMode's real failure_modes JAA row — a real data-folder
+  // record, not a new logging mechanism invented here) — this contract's
+  // own terminal failure now feeds that SAME real ladder instead of
+  // dead-ending silently.
+  //
+  // §LOOP GUARD — checked directly before wiring this: self-heal's own
+  // level-4 _enterFailureMode() submits its OWN new RAID contract with
+  // onFail:'halt' when every automated level fails. Without this guard,
+  // THAT contract's own eventual terminal failure would re-emit
+  // HEAL_REQUESTED for the same gapType, which _levelFor() would then
+  // read back at an already-elevated count/level — a real infinite
+  // loop. source==='self-heal' contracts are self-heal's own terminal
+  // human-action items by design (they already wrote failure_modes);
+  // they do not re-enter the ladder.
+  if (finalStatus === STATUS.FAIL && queued.source !== 'self-heal') {
+    try {
+      require('../../../nexus-bus.js').emit('HEAL_REQUESTED', {
+        gapType: 'raid_contract_exhausted',
+        gapUuid: queued.uuid,
+        body: `RAID contract "${queued.title || queued.uuid}" (source: ${queued.source}) failed with no further retry/fallback available. verdict: ${resolved.trace_log?.find(t => t.event === 'QA_QC')?.data?.verdict ?? 'none'}`,
+      }, { source: 'raid-contract-intake' });
+    } catch (e) {
+      console.warn(`[${MODULE_ID}] could not emit HEAL_REQUESTED for exhausted contract ${queued.uuid}: ${e.message}`);
+    }
+  }
 
   return { queueId: queued.uuid, compartmentId: compartment.id, status: finalStatus, compartment: resolved };
 }

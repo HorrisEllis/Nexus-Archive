@@ -1631,6 +1631,15 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
+  // §PHASE 3 2026-09-03 — docs/command-index-per-system.spec's own
+  // "real proof case." Placed here, right before /health, matching the
+  // position a real meta-endpoint belongs at rather than buried deep
+  // in the dispatch chain.
+  if (method==='GET' && url.pathname==='/commands') {
+    pRes(res, 200, require('./lib/command-index-extract.js').extractCommandIndex());
+    return true;
+  }
+
   if (method==='GET' && url.pathname==='/health') {
     const connectedProviders = {};
     for (const [k,v] of ncp._clients || new Map()) {

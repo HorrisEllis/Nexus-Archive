@@ -337,6 +337,12 @@ function createBridgeServer({ identity, registry, router, ledger, cfrLedger }) {
       if (pathname === '/health' && method === 'GET')
         return handleHealth(req, res, deps);
 
+      // §PHASE 4 2026-09-03 — docs/command-index-per-system.spec's own
+      // build_order.phase-4, "same mechanism as phase 3, proven —
+      // this phase is replication, not invention."
+      if (pathname === '/commands' && method === 'GET')
+        return _json(res, 200, require('./lib/command-index-extract.js').extractCommandIndex());
+
       if (pathname === '/contract' && method === 'GET') {
         const fs = require('fs'), path = require('path');
         try {

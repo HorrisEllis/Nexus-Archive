@@ -267,16 +267,6 @@ class ProviderHost {
       width:  1280,
       height: 800,
       show:   opts.show === true && process.env.CG_HEADLESS !== '1',
-      // §FIXED 2026-09-03 — James: "remove headless flag and taskbar from
-      // the main." skipTaskbar was never set on these automation windows.
-      // show:false already keeps a window off the taskbar WHILE hidden,
-      // but that's incidental to `show`, not a real guarantee — anything
-      // that later calls .show() on one of these (a debug path, a stray
-      // code change) would put a "NEXUS NCP — <provider>" window straight
-      // into the taskbar with no real intent behind it. Setting this
-      // explicitly means taskbar absence is guaranteed by config, not by
-      // accident of current visibility state.
-      skipTaskbar: true,
       webPreferences: {
         partition,
         nodeIntegration:             false,

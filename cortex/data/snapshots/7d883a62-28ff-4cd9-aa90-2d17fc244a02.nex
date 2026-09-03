@@ -1,0 +1,126 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "7d883a62-28ff-4cd9-aa90-2d17fc244a02",
+  "type": "pre_forge",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [],
+    "event_log": [
+      {
+        "uuid": "bee39fad-8b9b-4bff-8f11-4a6cf721fda3",
+        "type": "compartment.fail",
+        "payload": {
+          "id": "de428685-017b-446c-b964-f70a3884b693",
+          "intent_uuid": "f49d33b2-b887-4291-b629-e9cf9ab07c21",
+          "reason": "QA/QC check failed",
+          "status": "REWOUND"
+        },
+        "source": "compartment-engine",
+        "ts": 1788470553195,
+        "id": "5dcba7e8-28fc-48b9-8262-30ace9a80df8"
+      }
+    ],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "dbeaf2e0-568b-4ea8-8b58-eb84ef653137",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "1e86b47f-0b4a-410e-a9bd-c019ed139785",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "87f6f44f-ebcc-437e-bb00-1b8c17f500ec",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "150a62fb-200e-44ef-be94-ef594bd49979",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "8523e1ac-e409-4ce8-8b54-96bd598a34d9",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "097df95a-e29a-4df0-a137-07f6fd81464f",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "82561a71-f664-41f7-9ef8-8b7d5bb52432",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "88ba1c66-701e-4a22-bb89-da084a2a5638",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "b7a601ac-d139-4dd5-9b6d-9ecad26a3fe6",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "b834f516-85ca-4449-a816-b606d4cde86f",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "68f445c5-a3a5-477b-9286-e6e65647e9ef",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "e6ba6d58-5caa-495d-8391-f8b87ec8174d",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "1aa39b84-ca64-4c34-ab76-125a4e09b8fc",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1788470553181
+      },
+      {
+        "id": "924c17b8-fd11-41e8-913e-065ed0d0129b",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1788470553181
+      }
+    ],
+    "components": []
+  },
+  "hashVersion": 2,
+  "cortex_state_hash": "90aeffaba9104493b99b3d5a99ac105ff6a6db356875f69e90fa44f4b96bbea4",
+  "prev_snapshot_hash": "390248791d4ecfa560714d75b197088893312dea23dc3adcb1d4ea0d0a7b65bb",
+  "createdAt": 1788470553196
+}
