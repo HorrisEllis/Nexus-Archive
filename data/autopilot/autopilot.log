@@ -196,3 +196,66 @@
 [2026-09-02T04:49:32.903Z] [36m[bgOptional][0m restarting in NaNs (attempt 3)
 [2026-09-02T04:49:32.904Z] [36m[bgOptional][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
 [2026-09-02T04:49:46.487Z] autopilot status: http://127.0.0.1:7921/status
+[2026-09-03T04:53:42.921Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-09-03T04:53:42.946Z] autopilot starting — supervising: orchestrator, bridge, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, versionium, copilot, emerge, loom, clear-glass
+[2026-09-03T04:53:42.947Z] [35m[clear-glass][0m on-demand — staying dormant until requested
+[2026-09-03T04:53:42.948Z] ── boot phase 1 — cortex
+[2026-09-03T04:53:42.948Z] [32m[cortex][0m starting — node cortex/boot.js
+[2026-09-03T04:53:43.038Z] autopilot status: http://127.0.0.1:7799/status
+[2026-09-03T04:53:52.059Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-09-03T04:53:52.060Z] ── boot phase 2 — orchestrator, bridge, guardian, diagnostic
+[2026-09-03T04:53:52.061Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-09-03T04:53:52.072Z] [35m[bridge][0m starting — node bridge/index.js
+[2026-09-03T04:53:52.083Z] [33m[guardian][0m starting — node guardian/server.js
+[2026-09-03T04:53:52.096Z] [37m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-09-03T04:53:52.292Z] [35m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_46-leading-token-match\node_modules\.bin\electron.cmd .
+[2026-09-03T04:53:52.629Z] [bridge] phase 2 gate passed — http://127.0.0.1:9999/health
+[2026-09-03T04:53:52.631Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-09-03T04:53:52.634Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-09-03T04:53:55.757Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-09-03T04:53:55.758Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, versionium, copilot, loom
+[2026-09-03T04:53:55.759Z] [34m[idearium][0m starting — node idearium/api/index.js
+[2026-09-03T04:53:55.770Z] [31m[architect][0m starting — node architect/service.js
+[2026-09-03T04:53:55.782Z] [36m[eravos][0m starting — node eravos/server.js
+[2026-09-03T04:53:55.794Z] [35m[intelligence][0m starting — node intelligence/server.js
+[2026-09-03T04:53:55.806Z] [33m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-03T04:53:55.818Z] [34m[versionium][0m starting — node versionium/server.js
+[2026-09-03T04:53:55.832Z] [31m[copilot][0m starting — node copilot/server.js
+[2026-09-03T04:53:55.850Z] [36m[loom][0m starting — node loom/server.js
+[2026-09-03T04:53:56.376Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-09-03T04:53:56.377Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-09-03T04:53:56.378Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-09-03T04:53:56.379Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-09-03T04:53:56.379Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-09-03T04:53:56.380Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-09-03T04:53:56.381Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-09-03T04:53:56.381Z] [versionium] phase 3 gate passed — http://127.0.0.1:3754/health
+[2026-09-03T04:53:56.382Z] ── boot phase 4 — intelligence-consumer, emerge
+[2026-09-03T04:53:56.382Z] [32m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-03T04:53:56.393Z] [37m[emerge][0m starting — node emerge/consumer.js
+[2026-09-03T04:53:56.404Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-03T04:53:56.404Z] [emerge] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-03T04:53:56.405Z] ── boot sequence complete — 4 phase(s)
+[2026-09-03T04:54:42.965Z] [32m[cortex][0m stable for 60s — backoff reset
+[2026-09-03T04:54:52.073Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-09-03T04:54:52.088Z] [35m[bridge][0m stable for 60s — backoff reset
+[2026-09-03T04:54:52.105Z] [33m[guardian][0m stable for 60s — backoff reset
+[2026-09-03T04:54:52.108Z] [37m[diagnostic][0m stable for 60s — backoff reset
+[2026-09-03T04:54:52.319Z] [35m[clear-glass][0m stable for 60s — backoff reset
+[2026-09-03T04:54:54.966Z] autopilot received SIGINT — stopping all kernels
+[2026-09-03T04:54:54.976Z] [32m[intelligence-consumer][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.977Z] [37m[emerge][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.978Z] [34m[versionium][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.979Z] [33m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.979Z] [36m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.980Z] [36m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.980Z] [31m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.981Z] [35m[intelligence][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.985Z] [34m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.988Z] [35m[bridge][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.994Z] [35m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.996Z] [31m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:54.999Z] [33m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:55.000Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:55.000Z] [37m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-09-03T04:54:55.001Z] [32m[cortex][0m stopped cleanly (autopilot shutdown)

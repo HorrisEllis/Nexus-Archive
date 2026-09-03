@@ -1,0 +1,1 @@
+{"uuid":"44a20d14-d9a8-4fe0-beb8-3bf28b837259","system":"cortex","component":"cortex.intelligence.confidence","action":"registered","status":"ok","tags":["cortex"],"detail":"Confidence score for query","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237954}

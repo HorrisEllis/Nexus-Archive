@@ -1,0 +1,1 @@
+{"uuid":"7208e8d1-d05e-4f5b-9b6a-b6074262ad1d","system":"loom","component":"loom.registry.get","action":"registered","status":"ok","tags":["loom"],"detail":"Read a registry entry (component/seam/wire)","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237977}

@@ -1,0 +1,1 @@
+{"uuid":"341cf055-0c42-4f70-9829-aa951a53a5cd","system":"bridge","component":"bridge.requests.list","action":"registered","status":"ok","tags":["bridge"],"detail":"Request log","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237471}

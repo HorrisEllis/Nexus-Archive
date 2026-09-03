@@ -1,0 +1,1 @@
+{"uuid":"5fa329d1-01f8-40cf-a3cb-21b61f1eaaad","system":"eros","component":"eros.telemetry.recent","action":"registered","status":"ok","tags":["eros","telemetry"],"detail":"Recent telemetry events","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238087}

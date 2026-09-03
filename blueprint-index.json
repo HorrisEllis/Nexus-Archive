@@ -1,11 +1,11 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_0c131e70",
+  "uuid": "bpi_604ccfe8",
   "version": "1.0.0",
-  "builtAt": 1787878458579,
+  "builtAt": 1788411238108,
   "builtBy": "blueprint-index",
   "systemCount": 11,
-  "totalComponents": 153,
+  "totalComponents": 189,
   "systems": [
     {
       "systemId": "orchestrator",
@@ -5882,7 +5882,7 @@
       "systemId": "clear-glass",
       "label": "Clear Glass",
       "port": 7701,
-      "componentCount": 31,
+      "componentCount": 67,
       "components": [
         {
           "id": "cg.health",
@@ -6384,6 +6384,593 @@
           ],
           "grammar": [
             "wire behavior"
+          ]
+        },
+        {
+          "id": "cg.calltos.list",
+          "name": "calltos.list",
+          "description": "List every registered callto",
+          "route": {
+            "method": "IPC",
+            "path": "calltos:list"
+          },
+          "tags": [
+            "cg",
+            "guardian",
+            "callto"
+          ],
+          "grammar": [
+            "calltos list"
+          ]
+        },
+        {
+          "id": "cg.calltos.forUrl",
+          "name": "calltos.forUrl",
+          "description": "Find calltos registered for a given origin",
+          "route": {
+            "method": "IPC",
+            "path": "calltos:forUrl"
+          },
+          "tags": [
+            "cg",
+            "guardian",
+            "callto"
+          ],
+          "grammar": [
+            "calltos forUrl"
+          ]
+        },
+        {
+          "id": "cg.calltos.remove",
+          "name": "calltos.remove",
+          "description": "Remove a registered callto",
+          "route": {
+            "method": "IPC",
+            "path": "calltos:remove"
+          },
+          "tags": [
+            "cg",
+            "guardian",
+            "callto"
+          ],
+          "grammar": [
+            "calltos remove"
+          ]
+        },
+        {
+          "id": "cg.downloads.listListeners",
+          "name": "downloads.listListeners",
+          "description": "List configured download listeners",
+          "route": {
+            "method": "IPC",
+            "path": "downloads:listListeners"
+          },
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ],
+          "grammar": [
+            "downloads listListeners"
+          ]
+        },
+        {
+          "id": "cg.downloads.registerListener",
+          "name": "downloads.registerListener",
+          "description": "Register a real download listener",
+          "route": {
+            "method": "IPC",
+            "path": "downloads:registerListener"
+          },
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ],
+          "grammar": [
+            "downloads registerListener"
+          ]
+        },
+        {
+          "id": "cg.downloads.updateListener",
+          "name": "downloads.updateListener",
+          "description": "Update a download listener",
+          "route": {
+            "method": "IPC",
+            "path": "downloads:updateListener"
+          },
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ],
+          "grammar": [
+            "downloads updateListener"
+          ]
+        },
+        {
+          "id": "cg.downloads.removeListener",
+          "name": "downloads.removeListener",
+          "description": "Remove a download listener",
+          "route": {
+            "method": "IPC",
+            "path": "downloads:removeListener"
+          },
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ],
+          "grammar": [
+            "downloads removeListener"
+          ]
+        },
+        {
+          "id": "cg.siteSettings.get",
+          "name": "siteSettings.get",
+          "description": "Get one real per-origin setting",
+          "route": {
+            "method": "IPC",
+            "path": "site-settings:get"
+          },
+          "tags": [
+            "cg",
+            "site-settings"
+          ],
+          "grammar": [
+            "siteSettings get"
+          ]
+        },
+        {
+          "id": "cg.siteSettings.getAll",
+          "name": "siteSettings.getAll",
+          "description": "Get all real settings for an origin",
+          "route": {
+            "method": "IPC",
+            "path": "site-settings:getAll"
+          },
+          "tags": [
+            "cg",
+            "site-settings"
+          ],
+          "grammar": [
+            "siteSettings getAll"
+          ]
+        },
+        {
+          "id": "cg.siteSettings.set",
+          "name": "siteSettings.set",
+          "description": "Set a real per-origin setting",
+          "route": {
+            "method": "IPC",
+            "path": "site-settings:set"
+          },
+          "tags": [
+            "cg",
+            "site-settings"
+          ],
+          "grammar": [
+            "siteSettings set"
+          ]
+        },
+        {
+          "id": "cg.siteSettings.deleteKey",
+          "name": "siteSettings.deleteKey",
+          "description": "Delete one real setting key",
+          "route": {
+            "method": "IPC",
+            "path": "site-settings:deleteKey"
+          },
+          "tags": [
+            "cg",
+            "site-settings"
+          ],
+          "grammar": [
+            "siteSettings deleteKey"
+          ]
+        },
+        {
+          "id": "cg.siteSettings.clear",
+          "name": "siteSettings.clear",
+          "description": "Clear all real settings for an origin",
+          "route": {
+            "method": "IPC",
+            "path": "site-settings:clear"
+          },
+          "tags": [
+            "cg",
+            "site-settings"
+          ],
+          "grammar": [
+            "siteSettings clear"
+          ]
+        },
+        {
+          "id": "cg.siteSettings.listOrigins",
+          "name": "siteSettings.listOrigins",
+          "description": "List every real origin with settings",
+          "route": {
+            "method": "IPC",
+            "path": "site-settings:listOrigins"
+          },
+          "tags": [
+            "cg",
+            "site-settings"
+          ],
+          "grammar": [
+            "siteSettings listOrigins"
+          ]
+        },
+        {
+          "id": "cg.history.list",
+          "name": "history.list",
+          "description": "Real browsing history search/list",
+          "route": {
+            "method": "IPC",
+            "path": "history:list"
+          },
+          "tags": [
+            "cg",
+            "history"
+          ],
+          "grammar": [
+            "history list"
+          ]
+        },
+        {
+          "id": "cg.history.delete",
+          "name": "history.delete",
+          "description": "Delete a real history entry",
+          "route": {
+            "method": "IPC",
+            "path": "history:delete"
+          },
+          "tags": [
+            "cg",
+            "history"
+          ],
+          "grammar": [
+            "history delete"
+          ]
+        },
+        {
+          "id": "cg.history.clear",
+          "name": "history.clear",
+          "description": "Clear real history",
+          "route": {
+            "method": "IPC",
+            "path": "history:clear"
+          },
+          "tags": [
+            "cg",
+            "history"
+          ],
+          "grammar": [
+            "history clear"
+          ]
+        },
+        {
+          "id": "cg.extensions.list",
+          "name": "extensions.list",
+          "description": "List real loaded Chrome extensions",
+          "route": {
+            "method": "IPC",
+            "path": "extensions:list"
+          },
+          "tags": [
+            "cg",
+            "extensions"
+          ],
+          "grammar": [
+            "extensions list"
+          ]
+        },
+        {
+          "id": "cg.extensions.load",
+          "name": "extensions.load",
+          "description": "Load a real unpacked extension",
+          "route": {
+            "method": "IPC",
+            "path": "extensions:load"
+          },
+          "tags": [
+            "cg",
+            "extensions"
+          ],
+          "grammar": [
+            "extensions load"
+          ]
+        },
+        {
+          "id": "cg.extensions.unload",
+          "name": "extensions.unload",
+          "description": "Unload a real extension",
+          "route": {
+            "method": "IPC",
+            "path": "extensions:unload"
+          },
+          "tags": [
+            "cg",
+            "extensions"
+          ],
+          "grammar": [
+            "extensions unload"
+          ]
+        },
+        {
+          "id": "cg.extensions.pickDirectory",
+          "name": "extensions.pickDirectory",
+          "description": "Real OS directory picker for extensions",
+          "route": {
+            "method": "IPC",
+            "path": "extensions:pickDirectory"
+          },
+          "tags": [
+            "cg",
+            "extensions"
+          ],
+          "grammar": [
+            "extensions pickDirectory"
+          ]
+        },
+        {
+          "id": "cg.bookmarks.addWithState",
+          "name": "bookmarks.addWithState",
+          "description": "Bookmark + save real full page state",
+          "route": {
+            "method": "IPC",
+            "path": "bookmarks:addWithState"
+          },
+          "tags": [
+            "cg",
+            "bookmarks",
+            "rewind"
+          ],
+          "grammar": [
+            "bookmarks addWithState"
+          ]
+        },
+        {
+          "id": "cg.bookmarks.openWithState",
+          "name": "bookmarks.openWithState",
+          "description": "Open a bookmark and restore its real saved state",
+          "route": {
+            "method": "IPC",
+            "path": "bookmarks:openWithState"
+          },
+          "tags": [
+            "cg",
+            "bookmarks",
+            "rewind"
+          ],
+          "grammar": [
+            "bookmarks openWithState"
+          ]
+        },
+        {
+          "id": "cg.rewind.list",
+          "name": "rewind.list",
+          "description": "List real rewind snapshots",
+          "route": {
+            "method": "IPC",
+            "path": "rewind:list"
+          },
+          "tags": [
+            "cg",
+            "rewind"
+          ],
+          "grammar": [
+            "rewind list"
+          ]
+        },
+        {
+          "id": "cg.rewind.snapshot",
+          "name": "rewind.snapshot",
+          "description": "Take a real rewind snapshot",
+          "route": {
+            "method": "IPC",
+            "path": "rewind:snapshot"
+          },
+          "tags": [
+            "cg",
+            "rewind"
+          ],
+          "grammar": [
+            "rewind snapshot"
+          ]
+        },
+        {
+          "id": "cg.rewind.restore",
+          "name": "rewind.restore",
+          "description": "Restore a real rewind snapshot",
+          "route": {
+            "method": "IPC",
+            "path": "rewind:restore"
+          },
+          "tags": [
+            "cg",
+            "rewind"
+          ],
+          "grammar": [
+            "rewind restore"
+          ]
+        },
+        {
+          "id": "cg.rewind.clear",
+          "name": "rewind.clear",
+          "description": "Clear real rewind snapshots",
+          "route": {
+            "method": "IPC",
+            "path": "rewind:clear"
+          },
+          "tags": [
+            "cg",
+            "rewind"
+          ],
+          "grammar": [
+            "rewind clear"
+          ]
+        },
+        {
+          "id": "cg.passwords.list",
+          "name": "passwords.list",
+          "description": "List real saved passwords (metadata only)",
+          "route": {
+            "method": "IPC",
+            "path": "passwords:list"
+          },
+          "tags": [
+            "cg",
+            "passwords",
+            "security"
+          ],
+          "grammar": [
+            "passwords list"
+          ]
+        },
+        {
+          "id": "cg.passwords.delete",
+          "name": "passwords.delete",
+          "description": "Delete a real saved password",
+          "route": {
+            "method": "IPC",
+            "path": "passwords:delete"
+          },
+          "tags": [
+            "cg",
+            "passwords",
+            "security"
+          ],
+          "grammar": [
+            "passwords delete"
+          ]
+        },
+        {
+          "id": "cg.speech.available",
+          "name": "speech.available",
+          "description": "Real offline speech engine availability",
+          "route": {
+            "method": "IPC",
+            "path": "speech:available"
+          },
+          "tags": [
+            "cg",
+            "speech"
+          ],
+          "grammar": [
+            "speech available"
+          ]
+        },
+        {
+          "id": "cg.speech.transcribeBuffer",
+          "name": "speech.transcribeBuffer",
+          "description": "Real offline audio-buffer transcription",
+          "route": {
+            "method": "IPC",
+            "path": "speech:transcribeBuffer"
+          },
+          "tags": [
+            "cg",
+            "speech"
+          ],
+          "grammar": [
+            "speech transcribeBuffer"
+          ]
+        },
+        {
+          "id": "cg.macros.list",
+          "name": "macros.list",
+          "description": "List real stored macros (real erosmancer integration where used)",
+          "route": {
+            "method": "IPC",
+            "path": "macros:list"
+          },
+          "tags": [
+            "cg",
+            "macros"
+          ],
+          "grammar": [
+            "macros list"
+          ]
+        },
+        {
+          "id": "cg.macros.get",
+          "name": "macros.get",
+          "description": "Get one real macro",
+          "route": {
+            "method": "IPC",
+            "path": "macros:get"
+          },
+          "tags": [
+            "cg",
+            "macros"
+          ],
+          "grammar": [
+            "macros get"
+          ]
+        },
+        {
+          "id": "cg.macros.run",
+          "name": "macros.run",
+          "description": "Run a real macro against a real agent",
+          "route": {
+            "method": "IPC",
+            "path": "macros:run"
+          },
+          "tags": [
+            "cg",
+            "macros"
+          ],
+          "grammar": [
+            "macros run"
+          ]
+        },
+        {
+          "id": "cg.bgtab.open",
+          "name": "bgtab.open",
+          "description": "Open a real background service tab",
+          "route": {
+            "method": "IPC",
+            "path": "bgtab:open"
+          },
+          "tags": [
+            "cg",
+            "bgtab"
+          ],
+          "grammar": [
+            "bgtab open"
+          ]
+        },
+        {
+          "id": "cg.bgtab.close",
+          "name": "bgtab.close",
+          "description": "Close a real background tab",
+          "route": {
+            "method": "IPC",
+            "path": "bgtab:close"
+          },
+          "tags": [
+            "cg",
+            "bgtab"
+          ],
+          "grammar": [
+            "bgtab close"
+          ]
+        },
+        {
+          "id": "cg.bgtab.list",
+          "name": "bgtab.list",
+          "description": "List real open background tabs",
+          "route": {
+            "method": "IPC",
+            "path": "bgtab:list"
+          },
+          "tags": [
+            "cg",
+            "bgtab"
+          ],
+          "grammar": [
+            "bgtab list"
           ]
         }
       ],
@@ -6889,6 +7476,593 @@
             "wire",
             "intelligence"
           ]
+        },
+        {
+          "command": "calltos-list",
+          "aliases": [
+            "calltos list"
+          ],
+          "usage": "calltos-list",
+          "method": "IPC",
+          "path": "calltos:list",
+          "description": "List every registered callto",
+          "componentId": "cg.calltos.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "guardian",
+            "callto"
+          ]
+        },
+        {
+          "command": "calltos-forurl",
+          "aliases": [
+            "calltos forUrl"
+          ],
+          "usage": "calltos-forurl",
+          "method": "IPC",
+          "path": "calltos:forUrl",
+          "description": "Find calltos registered for a given origin",
+          "componentId": "cg.calltos.forUrl",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "guardian",
+            "callto"
+          ]
+        },
+        {
+          "command": "calltos-remove",
+          "aliases": [
+            "calltos remove"
+          ],
+          "usage": "calltos-remove",
+          "method": "IPC",
+          "path": "calltos:remove",
+          "description": "Remove a registered callto",
+          "componentId": "cg.calltos.remove",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "guardian",
+            "callto"
+          ]
+        },
+        {
+          "command": "downloads-listlisteners",
+          "aliases": [
+            "downloads listListeners"
+          ],
+          "usage": "downloads-listlisteners",
+          "method": "IPC",
+          "path": "downloads:listListeners",
+          "description": "List configured download listeners",
+          "componentId": "cg.downloads.listListeners",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ]
+        },
+        {
+          "command": "downloads-registerlistener",
+          "aliases": [
+            "downloads registerListener"
+          ],
+          "usage": "downloads-registerlistener",
+          "method": "IPC",
+          "path": "downloads:registerListener",
+          "description": "Register a real download listener",
+          "componentId": "cg.downloads.registerListener",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ]
+        },
+        {
+          "command": "downloads-updatelistener",
+          "aliases": [
+            "downloads updateListener"
+          ],
+          "usage": "downloads-updatelistener",
+          "method": "IPC",
+          "path": "downloads:updateListener",
+          "description": "Update a download listener",
+          "componentId": "cg.downloads.updateListener",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ]
+        },
+        {
+          "command": "downloads-removelistener",
+          "aliases": [
+            "downloads removeListener"
+          ],
+          "usage": "downloads-removelistener",
+          "method": "IPC",
+          "path": "downloads:removeListener",
+          "description": "Remove a download listener",
+          "componentId": "cg.downloads.removeListener",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "downloads",
+            "listener"
+          ]
+        },
+        {
+          "command": "sitesettings-get",
+          "aliases": [
+            "siteSettings get"
+          ],
+          "usage": "sitesettings-get",
+          "method": "IPC",
+          "path": "site-settings:get",
+          "description": "Get one real per-origin setting",
+          "componentId": "cg.siteSettings.get",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "site-settings"
+          ]
+        },
+        {
+          "command": "sitesettings-getall",
+          "aliases": [
+            "siteSettings getAll"
+          ],
+          "usage": "sitesettings-getall",
+          "method": "IPC",
+          "path": "site-settings:getAll",
+          "description": "Get all real settings for an origin",
+          "componentId": "cg.siteSettings.getAll",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "site-settings"
+          ]
+        },
+        {
+          "command": "sitesettings-set",
+          "aliases": [
+            "siteSettings set"
+          ],
+          "usage": "sitesettings-set",
+          "method": "IPC",
+          "path": "site-settings:set",
+          "description": "Set a real per-origin setting",
+          "componentId": "cg.siteSettings.set",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "site-settings"
+          ]
+        },
+        {
+          "command": "sitesettings-deletekey",
+          "aliases": [
+            "siteSettings deleteKey"
+          ],
+          "usage": "sitesettings-deletekey",
+          "method": "IPC",
+          "path": "site-settings:deleteKey",
+          "description": "Delete one real setting key",
+          "componentId": "cg.siteSettings.deleteKey",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "site-settings"
+          ]
+        },
+        {
+          "command": "sitesettings-clear",
+          "aliases": [
+            "siteSettings clear"
+          ],
+          "usage": "sitesettings-clear",
+          "method": "IPC",
+          "path": "site-settings:clear",
+          "description": "Clear all real settings for an origin",
+          "componentId": "cg.siteSettings.clear",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "site-settings"
+          ]
+        },
+        {
+          "command": "sitesettings-listorigins",
+          "aliases": [
+            "siteSettings listOrigins"
+          ],
+          "usage": "sitesettings-listorigins",
+          "method": "IPC",
+          "path": "site-settings:listOrigins",
+          "description": "List every real origin with settings",
+          "componentId": "cg.siteSettings.listOrigins",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "site-settings"
+          ]
+        },
+        {
+          "command": "history-list",
+          "aliases": [
+            "history list"
+          ],
+          "usage": "history-list",
+          "method": "IPC",
+          "path": "history:list",
+          "description": "Real browsing history search/list",
+          "componentId": "cg.history.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "history"
+          ]
+        },
+        {
+          "command": "history-delete",
+          "aliases": [
+            "history delete"
+          ],
+          "usage": "history-delete",
+          "method": "IPC",
+          "path": "history:delete",
+          "description": "Delete a real history entry",
+          "componentId": "cg.history.delete",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "history"
+          ]
+        },
+        {
+          "command": "history-clear",
+          "aliases": [
+            "history clear"
+          ],
+          "usage": "history-clear",
+          "method": "IPC",
+          "path": "history:clear",
+          "description": "Clear real history",
+          "componentId": "cg.history.clear",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "history"
+          ]
+        },
+        {
+          "command": "extensions-list",
+          "aliases": [
+            "extensions list"
+          ],
+          "usage": "extensions-list",
+          "method": "IPC",
+          "path": "extensions:list",
+          "description": "List real loaded Chrome extensions",
+          "componentId": "cg.extensions.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "extensions"
+          ]
+        },
+        {
+          "command": "extensions-load",
+          "aliases": [
+            "extensions load"
+          ],
+          "usage": "extensions-load",
+          "method": "IPC",
+          "path": "extensions:load",
+          "description": "Load a real unpacked extension",
+          "componentId": "cg.extensions.load",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "extensions"
+          ]
+        },
+        {
+          "command": "extensions-unload",
+          "aliases": [
+            "extensions unload"
+          ],
+          "usage": "extensions-unload",
+          "method": "IPC",
+          "path": "extensions:unload",
+          "description": "Unload a real extension",
+          "componentId": "cg.extensions.unload",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "extensions"
+          ]
+        },
+        {
+          "command": "extensions-pickdirectory",
+          "aliases": [
+            "extensions pickDirectory"
+          ],
+          "usage": "extensions-pickdirectory",
+          "method": "IPC",
+          "path": "extensions:pickDirectory",
+          "description": "Real OS directory picker for extensions",
+          "componentId": "cg.extensions.pickDirectory",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "extensions"
+          ]
+        },
+        {
+          "command": "bookmarks-addwithstate",
+          "aliases": [
+            "bookmarks addWithState"
+          ],
+          "usage": "bookmarks-addwithstate",
+          "method": "IPC",
+          "path": "bookmarks:addWithState",
+          "description": "Bookmark + save real full page state",
+          "componentId": "cg.bookmarks.addWithState",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "bookmarks",
+            "rewind"
+          ]
+        },
+        {
+          "command": "bookmarks-openwithstate",
+          "aliases": [
+            "bookmarks openWithState"
+          ],
+          "usage": "bookmarks-openwithstate",
+          "method": "IPC",
+          "path": "bookmarks:openWithState",
+          "description": "Open a bookmark and restore its real saved state",
+          "componentId": "cg.bookmarks.openWithState",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "bookmarks",
+            "rewind"
+          ]
+        },
+        {
+          "command": "rewind-list",
+          "aliases": [
+            "rewind list"
+          ],
+          "usage": "rewind-list",
+          "method": "IPC",
+          "path": "rewind:list",
+          "description": "List real rewind snapshots",
+          "componentId": "cg.rewind.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "rewind"
+          ]
+        },
+        {
+          "command": "rewind-snapshot",
+          "aliases": [
+            "rewind snapshot"
+          ],
+          "usage": "rewind-snapshot",
+          "method": "IPC",
+          "path": "rewind:snapshot",
+          "description": "Take a real rewind snapshot",
+          "componentId": "cg.rewind.snapshot",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "rewind"
+          ]
+        },
+        {
+          "command": "rewind-restore",
+          "aliases": [
+            "rewind restore"
+          ],
+          "usage": "rewind-restore",
+          "method": "IPC",
+          "path": "rewind:restore",
+          "description": "Restore a real rewind snapshot",
+          "componentId": "cg.rewind.restore",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "rewind"
+          ]
+        },
+        {
+          "command": "rewind-clear",
+          "aliases": [
+            "rewind clear"
+          ],
+          "usage": "rewind-clear",
+          "method": "IPC",
+          "path": "rewind:clear",
+          "description": "Clear real rewind snapshots",
+          "componentId": "cg.rewind.clear",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "rewind"
+          ]
+        },
+        {
+          "command": "passwords-list",
+          "aliases": [
+            "passwords list"
+          ],
+          "usage": "passwords-list",
+          "method": "IPC",
+          "path": "passwords:list",
+          "description": "List real saved passwords (metadata only)",
+          "componentId": "cg.passwords.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "passwords",
+            "security"
+          ]
+        },
+        {
+          "command": "passwords-delete",
+          "aliases": [
+            "passwords delete"
+          ],
+          "usage": "passwords-delete",
+          "method": "IPC",
+          "path": "passwords:delete",
+          "description": "Delete a real saved password",
+          "componentId": "cg.passwords.delete",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "passwords",
+            "security"
+          ]
+        },
+        {
+          "command": "speech-available",
+          "aliases": [
+            "speech available"
+          ],
+          "usage": "speech-available",
+          "method": "IPC",
+          "path": "speech:available",
+          "description": "Real offline speech engine availability",
+          "componentId": "cg.speech.available",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "speech"
+          ]
+        },
+        {
+          "command": "speech-transcribebuffer",
+          "aliases": [
+            "speech transcribeBuffer"
+          ],
+          "usage": "speech-transcribebuffer",
+          "method": "IPC",
+          "path": "speech:transcribeBuffer",
+          "description": "Real offline audio-buffer transcription",
+          "componentId": "cg.speech.transcribeBuffer",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "speech"
+          ]
+        },
+        {
+          "command": "macros-list",
+          "aliases": [
+            "macros list"
+          ],
+          "usage": "macros-list",
+          "method": "IPC",
+          "path": "macros:list",
+          "description": "List real stored macros (real erosmancer integration where used)",
+          "componentId": "cg.macros.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "macros"
+          ]
+        },
+        {
+          "command": "macros-get",
+          "aliases": [
+            "macros get"
+          ],
+          "usage": "macros-get",
+          "method": "IPC",
+          "path": "macros:get",
+          "description": "Get one real macro",
+          "componentId": "cg.macros.get",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "macros"
+          ]
+        },
+        {
+          "command": "macros-run",
+          "aliases": [
+            "macros run"
+          ],
+          "usage": "macros-run",
+          "method": "IPC",
+          "path": "macros:run",
+          "description": "Run a real macro against a real agent",
+          "componentId": "cg.macros.run",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "macros"
+          ]
+        },
+        {
+          "command": "bgtab-open",
+          "aliases": [
+            "bgtab open"
+          ],
+          "usage": "bgtab-open",
+          "method": "IPC",
+          "path": "bgtab:open",
+          "description": "Open a real background service tab",
+          "componentId": "cg.bgtab.open",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "bgtab"
+          ]
+        },
+        {
+          "command": "bgtab-close",
+          "aliases": [
+            "bgtab close"
+          ],
+          "usage": "bgtab-close",
+          "method": "IPC",
+          "path": "bgtab:close",
+          "description": "Close a real background tab",
+          "componentId": "cg.bgtab.close",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "bgtab"
+          ]
+        },
+        {
+          "command": "bgtab-list",
+          "aliases": [
+            "bgtab list"
+          ],
+          "usage": "bgtab-list",
+          "method": "IPC",
+          "path": "bgtab:list",
+          "description": "List real open background tabs",
+          "componentId": "cg.bgtab.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "bgtab"
+          ]
         }
       ],
       "seamHooks": [],
@@ -7199,6 +8373,366 @@
           "description": "Behavior plan → Cortex intelligence",
           "intents": [
             "wire behavior"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.calltos.list",
+          "label": "calltos.list",
+          "description": "List every registered callto",
+          "intents": [
+            "calltos list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.calltos.forUrl",
+          "label": "calltos.forUrl",
+          "description": "Find calltos registered for a given origin",
+          "intents": [
+            "calltos forUrl"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.calltos.remove",
+          "label": "calltos.remove",
+          "description": "Remove a registered callto",
+          "intents": [
+            "calltos remove"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.downloads.listListeners",
+          "label": "downloads.listListeners",
+          "description": "List configured download listeners",
+          "intents": [
+            "downloads listListeners"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.downloads.registerListener",
+          "label": "downloads.registerListener",
+          "description": "Register a real download listener",
+          "intents": [
+            "downloads registerListener"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.downloads.updateListener",
+          "label": "downloads.updateListener",
+          "description": "Update a download listener",
+          "intents": [
+            "downloads updateListener"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.downloads.removeListener",
+          "label": "downloads.removeListener",
+          "description": "Remove a download listener",
+          "intents": [
+            "downloads removeListener"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.siteSettings.get",
+          "label": "siteSettings.get",
+          "description": "Get one real per-origin setting",
+          "intents": [
+            "siteSettings get"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.siteSettings.getAll",
+          "label": "siteSettings.getAll",
+          "description": "Get all real settings for an origin",
+          "intents": [
+            "siteSettings getAll"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.siteSettings.set",
+          "label": "siteSettings.set",
+          "description": "Set a real per-origin setting",
+          "intents": [
+            "siteSettings set"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.siteSettings.deleteKey",
+          "label": "siteSettings.deleteKey",
+          "description": "Delete one real setting key",
+          "intents": [
+            "siteSettings deleteKey"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.siteSettings.clear",
+          "label": "siteSettings.clear",
+          "description": "Clear all real settings for an origin",
+          "intents": [
+            "siteSettings clear"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.siteSettings.listOrigins",
+          "label": "siteSettings.listOrigins",
+          "description": "List every real origin with settings",
+          "intents": [
+            "siteSettings listOrigins"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.history.list",
+          "label": "history.list",
+          "description": "Real browsing history search/list",
+          "intents": [
+            "history list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.history.delete",
+          "label": "history.delete",
+          "description": "Delete a real history entry",
+          "intents": [
+            "history delete"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.history.clear",
+          "label": "history.clear",
+          "description": "Clear real history",
+          "intents": [
+            "history clear"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.extensions.list",
+          "label": "extensions.list",
+          "description": "List real loaded Chrome extensions",
+          "intents": [
+            "extensions list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.extensions.load",
+          "label": "extensions.load",
+          "description": "Load a real unpacked extension",
+          "intents": [
+            "extensions load"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.extensions.unload",
+          "label": "extensions.unload",
+          "description": "Unload a real extension",
+          "intents": [
+            "extensions unload"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.extensions.pickDirectory",
+          "label": "extensions.pickDirectory",
+          "description": "Real OS directory picker for extensions",
+          "intents": [
+            "extensions pickDirectory"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.bookmarks.addWithState",
+          "label": "bookmarks.addWithState",
+          "description": "Bookmark + save real full page state",
+          "intents": [
+            "bookmarks addWithState"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.bookmarks.openWithState",
+          "label": "bookmarks.openWithState",
+          "description": "Open a bookmark and restore its real saved state",
+          "intents": [
+            "bookmarks openWithState"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.rewind.list",
+          "label": "rewind.list",
+          "description": "List real rewind snapshots",
+          "intents": [
+            "rewind list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.rewind.snapshot",
+          "label": "rewind.snapshot",
+          "description": "Take a real rewind snapshot",
+          "intents": [
+            "rewind snapshot"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.rewind.restore",
+          "label": "rewind.restore",
+          "description": "Restore a real rewind snapshot",
+          "intents": [
+            "rewind restore"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.rewind.clear",
+          "label": "rewind.clear",
+          "description": "Clear real rewind snapshots",
+          "intents": [
+            "rewind clear"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.passwords.list",
+          "label": "passwords.list",
+          "description": "List real saved passwords (metadata only)",
+          "intents": [
+            "passwords list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.passwords.delete",
+          "label": "passwords.delete",
+          "description": "Delete a real saved password",
+          "intents": [
+            "passwords delete"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.speech.available",
+          "label": "speech.available",
+          "description": "Real offline speech engine availability",
+          "intents": [
+            "speech available"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.speech.transcribeBuffer",
+          "label": "speech.transcribeBuffer",
+          "description": "Real offline audio-buffer transcription",
+          "intents": [
+            "speech transcribeBuffer"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.macros.list",
+          "label": "macros.list",
+          "description": "List real stored macros (real erosmancer integration where used)",
+          "intents": [
+            "macros list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.macros.get",
+          "label": "macros.get",
+          "description": "Get one real macro",
+          "intents": [
+            "macros get"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.macros.run",
+          "label": "macros.run",
+          "description": "Run a real macro against a real agent",
+          "intents": [
+            "macros run"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.bgtab.open",
+          "label": "bgtab.open",
+          "description": "Open a real background service tab",
+          "intents": [
+            "bgtab open"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.bgtab.close",
+          "label": "bgtab.close",
+          "description": "Close a real background tab",
+          "intents": [
+            "bgtab close"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.bgtab.list",
+          "label": "bgtab.list",
+          "description": "List real open background tabs",
+          "intents": [
+            "bgtab list"
           ],
           "contract": null,
           "hookId": null
@@ -9669,6 +11203,593 @@
         "wire",
         "intelligence"
       ]
+    },
+    {
+      "command": "calltos-list",
+      "aliases": [
+        "calltos list"
+      ],
+      "usage": "calltos-list",
+      "method": "IPC",
+      "path": "calltos:list",
+      "description": "List every registered callto",
+      "componentId": "cg.calltos.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "guardian",
+        "callto"
+      ]
+    },
+    {
+      "command": "calltos-forurl",
+      "aliases": [
+        "calltos forUrl"
+      ],
+      "usage": "calltos-forurl",
+      "method": "IPC",
+      "path": "calltos:forUrl",
+      "description": "Find calltos registered for a given origin",
+      "componentId": "cg.calltos.forUrl",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "guardian",
+        "callto"
+      ]
+    },
+    {
+      "command": "calltos-remove",
+      "aliases": [
+        "calltos remove"
+      ],
+      "usage": "calltos-remove",
+      "method": "IPC",
+      "path": "calltos:remove",
+      "description": "Remove a registered callto",
+      "componentId": "cg.calltos.remove",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "guardian",
+        "callto"
+      ]
+    },
+    {
+      "command": "downloads-listlisteners",
+      "aliases": [
+        "downloads listListeners"
+      ],
+      "usage": "downloads-listlisteners",
+      "method": "IPC",
+      "path": "downloads:listListeners",
+      "description": "List configured download listeners",
+      "componentId": "cg.downloads.listListeners",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "downloads",
+        "listener"
+      ]
+    },
+    {
+      "command": "downloads-registerlistener",
+      "aliases": [
+        "downloads registerListener"
+      ],
+      "usage": "downloads-registerlistener",
+      "method": "IPC",
+      "path": "downloads:registerListener",
+      "description": "Register a real download listener",
+      "componentId": "cg.downloads.registerListener",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "downloads",
+        "listener"
+      ]
+    },
+    {
+      "command": "downloads-updatelistener",
+      "aliases": [
+        "downloads updateListener"
+      ],
+      "usage": "downloads-updatelistener",
+      "method": "IPC",
+      "path": "downloads:updateListener",
+      "description": "Update a download listener",
+      "componentId": "cg.downloads.updateListener",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "downloads",
+        "listener"
+      ]
+    },
+    {
+      "command": "downloads-removelistener",
+      "aliases": [
+        "downloads removeListener"
+      ],
+      "usage": "downloads-removelistener",
+      "method": "IPC",
+      "path": "downloads:removeListener",
+      "description": "Remove a download listener",
+      "componentId": "cg.downloads.removeListener",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "downloads",
+        "listener"
+      ]
+    },
+    {
+      "command": "sitesettings-get",
+      "aliases": [
+        "siteSettings get"
+      ],
+      "usage": "sitesettings-get",
+      "method": "IPC",
+      "path": "site-settings:get",
+      "description": "Get one real per-origin setting",
+      "componentId": "cg.siteSettings.get",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "site-settings"
+      ]
+    },
+    {
+      "command": "sitesettings-getall",
+      "aliases": [
+        "siteSettings getAll"
+      ],
+      "usage": "sitesettings-getall",
+      "method": "IPC",
+      "path": "site-settings:getAll",
+      "description": "Get all real settings for an origin",
+      "componentId": "cg.siteSettings.getAll",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "site-settings"
+      ]
+    },
+    {
+      "command": "sitesettings-set",
+      "aliases": [
+        "siteSettings set"
+      ],
+      "usage": "sitesettings-set",
+      "method": "IPC",
+      "path": "site-settings:set",
+      "description": "Set a real per-origin setting",
+      "componentId": "cg.siteSettings.set",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "site-settings"
+      ]
+    },
+    {
+      "command": "sitesettings-deletekey",
+      "aliases": [
+        "siteSettings deleteKey"
+      ],
+      "usage": "sitesettings-deletekey",
+      "method": "IPC",
+      "path": "site-settings:deleteKey",
+      "description": "Delete one real setting key",
+      "componentId": "cg.siteSettings.deleteKey",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "site-settings"
+      ]
+    },
+    {
+      "command": "sitesettings-clear",
+      "aliases": [
+        "siteSettings clear"
+      ],
+      "usage": "sitesettings-clear",
+      "method": "IPC",
+      "path": "site-settings:clear",
+      "description": "Clear all real settings for an origin",
+      "componentId": "cg.siteSettings.clear",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "site-settings"
+      ]
+    },
+    {
+      "command": "sitesettings-listorigins",
+      "aliases": [
+        "siteSettings listOrigins"
+      ],
+      "usage": "sitesettings-listorigins",
+      "method": "IPC",
+      "path": "site-settings:listOrigins",
+      "description": "List every real origin with settings",
+      "componentId": "cg.siteSettings.listOrigins",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "site-settings"
+      ]
+    },
+    {
+      "command": "history-list",
+      "aliases": [
+        "history list"
+      ],
+      "usage": "history-list",
+      "method": "IPC",
+      "path": "history:list",
+      "description": "Real browsing history search/list",
+      "componentId": "cg.history.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "history"
+      ]
+    },
+    {
+      "command": "history-delete",
+      "aliases": [
+        "history delete"
+      ],
+      "usage": "history-delete",
+      "method": "IPC",
+      "path": "history:delete",
+      "description": "Delete a real history entry",
+      "componentId": "cg.history.delete",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "history"
+      ]
+    },
+    {
+      "command": "history-clear",
+      "aliases": [
+        "history clear"
+      ],
+      "usage": "history-clear",
+      "method": "IPC",
+      "path": "history:clear",
+      "description": "Clear real history",
+      "componentId": "cg.history.clear",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "history"
+      ]
+    },
+    {
+      "command": "extensions-list",
+      "aliases": [
+        "extensions list"
+      ],
+      "usage": "extensions-list",
+      "method": "IPC",
+      "path": "extensions:list",
+      "description": "List real loaded Chrome extensions",
+      "componentId": "cg.extensions.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "extensions"
+      ]
+    },
+    {
+      "command": "extensions-load",
+      "aliases": [
+        "extensions load"
+      ],
+      "usage": "extensions-load",
+      "method": "IPC",
+      "path": "extensions:load",
+      "description": "Load a real unpacked extension",
+      "componentId": "cg.extensions.load",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "extensions"
+      ]
+    },
+    {
+      "command": "extensions-unload",
+      "aliases": [
+        "extensions unload"
+      ],
+      "usage": "extensions-unload",
+      "method": "IPC",
+      "path": "extensions:unload",
+      "description": "Unload a real extension",
+      "componentId": "cg.extensions.unload",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "extensions"
+      ]
+    },
+    {
+      "command": "extensions-pickdirectory",
+      "aliases": [
+        "extensions pickDirectory"
+      ],
+      "usage": "extensions-pickdirectory",
+      "method": "IPC",
+      "path": "extensions:pickDirectory",
+      "description": "Real OS directory picker for extensions",
+      "componentId": "cg.extensions.pickDirectory",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "extensions"
+      ]
+    },
+    {
+      "command": "bookmarks-addwithstate",
+      "aliases": [
+        "bookmarks addWithState"
+      ],
+      "usage": "bookmarks-addwithstate",
+      "method": "IPC",
+      "path": "bookmarks:addWithState",
+      "description": "Bookmark + save real full page state",
+      "componentId": "cg.bookmarks.addWithState",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "bookmarks",
+        "rewind"
+      ]
+    },
+    {
+      "command": "bookmarks-openwithstate",
+      "aliases": [
+        "bookmarks openWithState"
+      ],
+      "usage": "bookmarks-openwithstate",
+      "method": "IPC",
+      "path": "bookmarks:openWithState",
+      "description": "Open a bookmark and restore its real saved state",
+      "componentId": "cg.bookmarks.openWithState",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "bookmarks",
+        "rewind"
+      ]
+    },
+    {
+      "command": "rewind-list",
+      "aliases": [
+        "rewind list"
+      ],
+      "usage": "rewind-list",
+      "method": "IPC",
+      "path": "rewind:list",
+      "description": "List real rewind snapshots",
+      "componentId": "cg.rewind.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "rewind"
+      ]
+    },
+    {
+      "command": "rewind-snapshot",
+      "aliases": [
+        "rewind snapshot"
+      ],
+      "usage": "rewind-snapshot",
+      "method": "IPC",
+      "path": "rewind:snapshot",
+      "description": "Take a real rewind snapshot",
+      "componentId": "cg.rewind.snapshot",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "rewind"
+      ]
+    },
+    {
+      "command": "rewind-restore",
+      "aliases": [
+        "rewind restore"
+      ],
+      "usage": "rewind-restore",
+      "method": "IPC",
+      "path": "rewind:restore",
+      "description": "Restore a real rewind snapshot",
+      "componentId": "cg.rewind.restore",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "rewind"
+      ]
+    },
+    {
+      "command": "rewind-clear",
+      "aliases": [
+        "rewind clear"
+      ],
+      "usage": "rewind-clear",
+      "method": "IPC",
+      "path": "rewind:clear",
+      "description": "Clear real rewind snapshots",
+      "componentId": "cg.rewind.clear",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "rewind"
+      ]
+    },
+    {
+      "command": "passwords-list",
+      "aliases": [
+        "passwords list"
+      ],
+      "usage": "passwords-list",
+      "method": "IPC",
+      "path": "passwords:list",
+      "description": "List real saved passwords (metadata only)",
+      "componentId": "cg.passwords.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "passwords",
+        "security"
+      ]
+    },
+    {
+      "command": "passwords-delete",
+      "aliases": [
+        "passwords delete"
+      ],
+      "usage": "passwords-delete",
+      "method": "IPC",
+      "path": "passwords:delete",
+      "description": "Delete a real saved password",
+      "componentId": "cg.passwords.delete",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "passwords",
+        "security"
+      ]
+    },
+    {
+      "command": "speech-available",
+      "aliases": [
+        "speech available"
+      ],
+      "usage": "speech-available",
+      "method": "IPC",
+      "path": "speech:available",
+      "description": "Real offline speech engine availability",
+      "componentId": "cg.speech.available",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "speech"
+      ]
+    },
+    {
+      "command": "speech-transcribebuffer",
+      "aliases": [
+        "speech transcribeBuffer"
+      ],
+      "usage": "speech-transcribebuffer",
+      "method": "IPC",
+      "path": "speech:transcribeBuffer",
+      "description": "Real offline audio-buffer transcription",
+      "componentId": "cg.speech.transcribeBuffer",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "speech"
+      ]
+    },
+    {
+      "command": "macros-list",
+      "aliases": [
+        "macros list"
+      ],
+      "usage": "macros-list",
+      "method": "IPC",
+      "path": "macros:list",
+      "description": "List real stored macros (real erosmancer integration where used)",
+      "componentId": "cg.macros.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "macros"
+      ]
+    },
+    {
+      "command": "macros-get",
+      "aliases": [
+        "macros get"
+      ],
+      "usage": "macros-get",
+      "method": "IPC",
+      "path": "macros:get",
+      "description": "Get one real macro",
+      "componentId": "cg.macros.get",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "macros"
+      ]
+    },
+    {
+      "command": "macros-run",
+      "aliases": [
+        "macros run"
+      ],
+      "usage": "macros-run",
+      "method": "IPC",
+      "path": "macros:run",
+      "description": "Run a real macro against a real agent",
+      "componentId": "cg.macros.run",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "macros"
+      ]
+    },
+    {
+      "command": "bgtab-open",
+      "aliases": [
+        "bgtab open"
+      ],
+      "usage": "bgtab-open",
+      "method": "IPC",
+      "path": "bgtab:open",
+      "description": "Open a real background service tab",
+      "componentId": "cg.bgtab.open",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "bgtab"
+      ]
+    },
+    {
+      "command": "bgtab-close",
+      "aliases": [
+        "bgtab close"
+      ],
+      "usage": "bgtab-close",
+      "method": "IPC",
+      "path": "bgtab:close",
+      "description": "Close a real background tab",
+      "componentId": "cg.bgtab.close",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "bgtab"
+      ]
+    },
+    {
+      "command": "bgtab-list",
+      "aliases": [
+        "bgtab list"
+      ],
+      "usage": "bgtab-list",
+      "method": "IPC",
+      "path": "bgtab:list",
+      "description": "List real open background tabs",
+      "componentId": "cg.bgtab.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "bgtab"
+      ]
     }
   ],
   "allSEAM": [
@@ -11803,6 +13924,366 @@
       ],
       "contract": null,
       "hookId": null
+    },
+    {
+      "componentId": "cg.calltos.list",
+      "label": "calltos.list",
+      "description": "List every registered callto",
+      "intents": [
+        "calltos list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.calltos.forUrl",
+      "label": "calltos.forUrl",
+      "description": "Find calltos registered for a given origin",
+      "intents": [
+        "calltos forUrl"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.calltos.remove",
+      "label": "calltos.remove",
+      "description": "Remove a registered callto",
+      "intents": [
+        "calltos remove"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.downloads.listListeners",
+      "label": "downloads.listListeners",
+      "description": "List configured download listeners",
+      "intents": [
+        "downloads listListeners"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.downloads.registerListener",
+      "label": "downloads.registerListener",
+      "description": "Register a real download listener",
+      "intents": [
+        "downloads registerListener"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.downloads.updateListener",
+      "label": "downloads.updateListener",
+      "description": "Update a download listener",
+      "intents": [
+        "downloads updateListener"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.downloads.removeListener",
+      "label": "downloads.removeListener",
+      "description": "Remove a download listener",
+      "intents": [
+        "downloads removeListener"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.siteSettings.get",
+      "label": "siteSettings.get",
+      "description": "Get one real per-origin setting",
+      "intents": [
+        "siteSettings get"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.siteSettings.getAll",
+      "label": "siteSettings.getAll",
+      "description": "Get all real settings for an origin",
+      "intents": [
+        "siteSettings getAll"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.siteSettings.set",
+      "label": "siteSettings.set",
+      "description": "Set a real per-origin setting",
+      "intents": [
+        "siteSettings set"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.siteSettings.deleteKey",
+      "label": "siteSettings.deleteKey",
+      "description": "Delete one real setting key",
+      "intents": [
+        "siteSettings deleteKey"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.siteSettings.clear",
+      "label": "siteSettings.clear",
+      "description": "Clear all real settings for an origin",
+      "intents": [
+        "siteSettings clear"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.siteSettings.listOrigins",
+      "label": "siteSettings.listOrigins",
+      "description": "List every real origin with settings",
+      "intents": [
+        "siteSettings listOrigins"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.history.list",
+      "label": "history.list",
+      "description": "Real browsing history search/list",
+      "intents": [
+        "history list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.history.delete",
+      "label": "history.delete",
+      "description": "Delete a real history entry",
+      "intents": [
+        "history delete"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.history.clear",
+      "label": "history.clear",
+      "description": "Clear real history",
+      "intents": [
+        "history clear"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.extensions.list",
+      "label": "extensions.list",
+      "description": "List real loaded Chrome extensions",
+      "intents": [
+        "extensions list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.extensions.load",
+      "label": "extensions.load",
+      "description": "Load a real unpacked extension",
+      "intents": [
+        "extensions load"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.extensions.unload",
+      "label": "extensions.unload",
+      "description": "Unload a real extension",
+      "intents": [
+        "extensions unload"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.extensions.pickDirectory",
+      "label": "extensions.pickDirectory",
+      "description": "Real OS directory picker for extensions",
+      "intents": [
+        "extensions pickDirectory"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.bookmarks.addWithState",
+      "label": "bookmarks.addWithState",
+      "description": "Bookmark + save real full page state",
+      "intents": [
+        "bookmarks addWithState"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.bookmarks.openWithState",
+      "label": "bookmarks.openWithState",
+      "description": "Open a bookmark and restore its real saved state",
+      "intents": [
+        "bookmarks openWithState"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.rewind.list",
+      "label": "rewind.list",
+      "description": "List real rewind snapshots",
+      "intents": [
+        "rewind list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.rewind.snapshot",
+      "label": "rewind.snapshot",
+      "description": "Take a real rewind snapshot",
+      "intents": [
+        "rewind snapshot"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.rewind.restore",
+      "label": "rewind.restore",
+      "description": "Restore a real rewind snapshot",
+      "intents": [
+        "rewind restore"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.rewind.clear",
+      "label": "rewind.clear",
+      "description": "Clear real rewind snapshots",
+      "intents": [
+        "rewind clear"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.passwords.list",
+      "label": "passwords.list",
+      "description": "List real saved passwords (metadata only)",
+      "intents": [
+        "passwords list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.passwords.delete",
+      "label": "passwords.delete",
+      "description": "Delete a real saved password",
+      "intents": [
+        "passwords delete"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.speech.available",
+      "label": "speech.available",
+      "description": "Real offline speech engine availability",
+      "intents": [
+        "speech available"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.speech.transcribeBuffer",
+      "label": "speech.transcribeBuffer",
+      "description": "Real offline audio-buffer transcription",
+      "intents": [
+        "speech transcribeBuffer"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.macros.list",
+      "label": "macros.list",
+      "description": "List real stored macros (real erosmancer integration where used)",
+      "intents": [
+        "macros list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.macros.get",
+      "label": "macros.get",
+      "description": "Get one real macro",
+      "intents": [
+        "macros get"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.macros.run",
+      "label": "macros.run",
+      "description": "Run a real macro against a real agent",
+      "intents": [
+        "macros run"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.bgtab.open",
+      "label": "bgtab.open",
+      "description": "Open a real background service tab",
+      "intents": [
+        "bgtab open"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.bgtab.close",
+      "label": "bgtab.close",
+      "description": "Close a real background tab",
+      "intents": [
+        "bgtab close"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.bgtab.list",
+      "label": "bgtab.list",
+      "description": "List real open background tabs",
+      "intents": [
+        "bgtab list"
+      ],
+      "contract": null,
+      "hookId": null
     }
   ],
   "grammarIndex": {
@@ -12091,6 +14572,41 @@
         "componentId": "cg.url.listen.list",
         "systemId": "clear-glass",
         "description": "List active listeners"
+      },
+      {
+        "componentId": "cg.calltos.list",
+        "systemId": "clear-glass",
+        "description": "List every registered callto"
+      },
+      {
+        "componentId": "cg.history.list",
+        "systemId": "clear-glass",
+        "description": "Real browsing history search/list"
+      },
+      {
+        "componentId": "cg.extensions.list",
+        "systemId": "clear-glass",
+        "description": "List real loaded Chrome extensions"
+      },
+      {
+        "componentId": "cg.rewind.list",
+        "systemId": "clear-glass",
+        "description": "List real rewind snapshots"
+      },
+      {
+        "componentId": "cg.passwords.list",
+        "systemId": "clear-glass",
+        "description": "List real saved passwords (metadata only)"
+      },
+      {
+        "componentId": "cg.macros.list",
+        "systemId": "clear-glass",
+        "description": "List real stored macros (real erosmancer integration where used)"
+      },
+      {
+        "componentId": "cg.bgtab.list",
+        "systemId": "clear-glass",
+        "description": "List real open background tabs"
       }
     ],
     "providers-list": [
@@ -12808,6 +15324,16 @@
         "componentId": "architect.hook.get",
         "systemId": "architect",
         "description": "Single hook detail"
+      },
+      {
+        "componentId": "cg.siteSettings.get",
+        "systemId": "clear-glass",
+        "description": "Get one real per-origin setting"
+      },
+      {
+        "componentId": "cg.macros.get",
+        "systemId": "clear-glass",
+        "description": "Get one real macro"
       }
     ],
     "settings-get": [
@@ -13130,6 +15656,11 @@
         "componentId": "eravos.organism.remove",
         "systemId": "eravos",
         "description": "Remove an organism"
+      },
+      {
+        "componentId": "cg.calltos.remove",
+        "systemId": "clear-glass",
+        "description": "Remove a registered callto"
       }
     ],
     "axioms-remove": [
@@ -13703,6 +16234,21 @@
         "componentId": "architect.blueprint.history",
         "systemId": "architect",
         "description": "Blueprint change history"
+      },
+      {
+        "componentId": "cg.history.list",
+        "systemId": "clear-glass",
+        "description": "Real browsing history search/list"
+      },
+      {
+        "componentId": "cg.history.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real history entry"
+      },
+      {
+        "componentId": "cg.history.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real history"
       }
     ],
     "session chain": [
@@ -14252,6 +16798,11 @@
         "componentId": "cg.diag.run",
         "systemId": "clear-glass",
         "description": "Run diagnostic suite"
+      },
+      {
+        "componentId": "cg.macros.run",
+        "systemId": "clear-glass",
+        "description": "Run a real macro against a real agent"
       }
     ],
     "jobs-dispatch": [
@@ -14707,6 +17258,11 @@
         "componentId": "emerge.hot.load",
         "systemId": "emerge",
         "description": "Hot-patch a running module (QUARANTINE→PROVE→INTEGRATE→MONITOR)"
+      },
+      {
+        "componentId": "cg.extensions.load",
+        "systemId": "clear-glass",
+        "description": "Load a real unpacked extension"
       }
     ],
     "emerge hot": [
@@ -14728,6 +17284,11 @@
         "componentId": "emerge.snapshot",
         "systemId": "emerge",
         "description": "Snapshot before applying patch"
+      },
+      {
+        "componentId": "cg.rewind.snapshot",
+        "systemId": "clear-glass",
+        "description": "Take a real rewind snapshot"
       }
     ],
     "emerge snapshot": [
@@ -15282,6 +17843,11 @@
         "componentId": "cg.window.open",
         "systemId": "clear-glass",
         "description": "Open agent browser window"
+      },
+      {
+        "componentId": "cg.bgtab.open",
+        "systemId": "clear-glass",
+        "description": "Open a real background service tab"
       }
     ],
     "open canva": [
@@ -15792,6 +18358,11 @@
         "componentId": "cg.cookie.restore",
         "systemId": "clear-glass",
         "description": "Restore cookies from vault"
+      },
+      {
+        "componentId": "cg.rewind.restore",
+        "systemId": "clear-glass",
+        "description": "Restore a real rewind snapshot"
       }
     ],
     "cookie-restore": [
@@ -16051,6 +18622,11 @@
         "componentId": "cg.window.close",
         "systemId": "clear-glass",
         "description": "Close agent window to tray"
+      },
+      {
+        "componentId": "cg.bgtab.close",
+        "systemId": "clear-glass",
+        "description": "Close a real background tab"
       }
     ],
     "window-close": [
@@ -16164,8 +18740,845 @@
         "systemId": "clear-glass",
         "description": "Behavior plan → Cortex intelligence"
       }
+    ],
+    "calltos list": [
+      {
+        "componentId": "cg.calltos.list",
+        "systemId": "clear-glass",
+        "description": "List every registered callto"
+      }
+    ],
+    "calltos": [
+      {
+        "componentId": "cg.calltos.list",
+        "systemId": "clear-glass",
+        "description": "List every registered callto"
+      },
+      {
+        "componentId": "cg.calltos.forUrl",
+        "systemId": "clear-glass",
+        "description": "Find calltos registered for a given origin"
+      },
+      {
+        "componentId": "cg.calltos.remove",
+        "systemId": "clear-glass",
+        "description": "Remove a registered callto"
+      }
+    ],
+    "calltos-list": [
+      {
+        "componentId": "cg.calltos.list",
+        "systemId": "clear-glass",
+        "description": "List every registered callto"
+      }
+    ],
+    "calltos forurl": [
+      {
+        "componentId": "cg.calltos.forUrl",
+        "systemId": "clear-glass",
+        "description": "Find calltos registered for a given origin"
+      }
+    ],
+    "forurl": [
+      {
+        "componentId": "cg.calltos.forUrl",
+        "systemId": "clear-glass",
+        "description": "Find calltos registered for a given origin"
+      }
+    ],
+    "calltos-forurl": [
+      {
+        "componentId": "cg.calltos.forUrl",
+        "systemId": "clear-glass",
+        "description": "Find calltos registered for a given origin"
+      }
+    ],
+    "calltos remove": [
+      {
+        "componentId": "cg.calltos.remove",
+        "systemId": "clear-glass",
+        "description": "Remove a registered callto"
+      }
+    ],
+    "calltos-remove": [
+      {
+        "componentId": "cg.calltos.remove",
+        "systemId": "clear-glass",
+        "description": "Remove a registered callto"
+      }
+    ],
+    "downloads listlisteners": [
+      {
+        "componentId": "cg.downloads.listListeners",
+        "systemId": "clear-glass",
+        "description": "List configured download listeners"
+      }
+    ],
+    "downloads": [
+      {
+        "componentId": "cg.downloads.listListeners",
+        "systemId": "clear-glass",
+        "description": "List configured download listeners"
+      },
+      {
+        "componentId": "cg.downloads.registerListener",
+        "systemId": "clear-glass",
+        "description": "Register a real download listener"
+      },
+      {
+        "componentId": "cg.downloads.updateListener",
+        "systemId": "clear-glass",
+        "description": "Update a download listener"
+      },
+      {
+        "componentId": "cg.downloads.removeListener",
+        "systemId": "clear-glass",
+        "description": "Remove a download listener"
+      }
+    ],
+    "listlisteners": [
+      {
+        "componentId": "cg.downloads.listListeners",
+        "systemId": "clear-glass",
+        "description": "List configured download listeners"
+      }
+    ],
+    "downloads listlistener": [
+      {
+        "componentId": "cg.downloads.listListeners",
+        "systemId": "clear-glass",
+        "description": "List configured download listeners"
+      }
+    ],
+    "downloads-listlisteners": [
+      {
+        "componentId": "cg.downloads.listListeners",
+        "systemId": "clear-glass",
+        "description": "List configured download listeners"
+      }
+    ],
+    "downloads registerlistener": [
+      {
+        "componentId": "cg.downloads.registerListener",
+        "systemId": "clear-glass",
+        "description": "Register a real download listener"
+      }
+    ],
+    "registerlistener": [
+      {
+        "componentId": "cg.downloads.registerListener",
+        "systemId": "clear-glass",
+        "description": "Register a real download listener"
+      }
+    ],
+    "downloads-registerlistener": [
+      {
+        "componentId": "cg.downloads.registerListener",
+        "systemId": "clear-glass",
+        "description": "Register a real download listener"
+      }
+    ],
+    "downloads updatelistener": [
+      {
+        "componentId": "cg.downloads.updateListener",
+        "systemId": "clear-glass",
+        "description": "Update a download listener"
+      }
+    ],
+    "updatelistener": [
+      {
+        "componentId": "cg.downloads.updateListener",
+        "systemId": "clear-glass",
+        "description": "Update a download listener"
+      }
+    ],
+    "downloads-updatelistener": [
+      {
+        "componentId": "cg.downloads.updateListener",
+        "systemId": "clear-glass",
+        "description": "Update a download listener"
+      }
+    ],
+    "downloads removelistener": [
+      {
+        "componentId": "cg.downloads.removeListener",
+        "systemId": "clear-glass",
+        "description": "Remove a download listener"
+      }
+    ],
+    "removelistener": [
+      {
+        "componentId": "cg.downloads.removeListener",
+        "systemId": "clear-glass",
+        "description": "Remove a download listener"
+      }
+    ],
+    "downloads-removelistener": [
+      {
+        "componentId": "cg.downloads.removeListener",
+        "systemId": "clear-glass",
+        "description": "Remove a download listener"
+      }
+    ],
+    "sitesettings get": [
+      {
+        "componentId": "cg.siteSettings.get",
+        "systemId": "clear-glass",
+        "description": "Get one real per-origin setting"
+      }
+    ],
+    "sitesettings": [
+      {
+        "componentId": "cg.siteSettings.get",
+        "systemId": "clear-glass",
+        "description": "Get one real per-origin setting"
+      },
+      {
+        "componentId": "cg.siteSettings.getAll",
+        "systemId": "clear-glass",
+        "description": "Get all real settings for an origin"
+      },
+      {
+        "componentId": "cg.siteSettings.set",
+        "systemId": "clear-glass",
+        "description": "Set a real per-origin setting"
+      },
+      {
+        "componentId": "cg.siteSettings.deleteKey",
+        "systemId": "clear-glass",
+        "description": "Delete one real setting key"
+      },
+      {
+        "componentId": "cg.siteSettings.clear",
+        "systemId": "clear-glass",
+        "description": "Clear all real settings for an origin"
+      },
+      {
+        "componentId": "cg.siteSettings.listOrigins",
+        "systemId": "clear-glass",
+        "description": "List every real origin with settings"
+      }
+    ],
+    "sitesettings-get": [
+      {
+        "componentId": "cg.siteSettings.get",
+        "systemId": "clear-glass",
+        "description": "Get one real per-origin setting"
+      }
+    ],
+    "sitesettings getall": [
+      {
+        "componentId": "cg.siteSettings.getAll",
+        "systemId": "clear-glass",
+        "description": "Get all real settings for an origin"
+      }
+    ],
+    "getall": [
+      {
+        "componentId": "cg.siteSettings.getAll",
+        "systemId": "clear-glass",
+        "description": "Get all real settings for an origin"
+      }
+    ],
+    "sitesettings-getall": [
+      {
+        "componentId": "cg.siteSettings.getAll",
+        "systemId": "clear-glass",
+        "description": "Get all real settings for an origin"
+      }
+    ],
+    "sitesettings set": [
+      {
+        "componentId": "cg.siteSettings.set",
+        "systemId": "clear-glass",
+        "description": "Set a real per-origin setting"
+      }
+    ],
+    "set": [
+      {
+        "componentId": "cg.siteSettings.set",
+        "systemId": "clear-glass",
+        "description": "Set a real per-origin setting"
+      }
+    ],
+    "sitesettings-set": [
+      {
+        "componentId": "cg.siteSettings.set",
+        "systemId": "clear-glass",
+        "description": "Set a real per-origin setting"
+      }
+    ],
+    "sitesettings deletekey": [
+      {
+        "componentId": "cg.siteSettings.deleteKey",
+        "systemId": "clear-glass",
+        "description": "Delete one real setting key"
+      }
+    ],
+    "deletekey": [
+      {
+        "componentId": "cg.siteSettings.deleteKey",
+        "systemId": "clear-glass",
+        "description": "Delete one real setting key"
+      }
+    ],
+    "sitesettings-deletekey": [
+      {
+        "componentId": "cg.siteSettings.deleteKey",
+        "systemId": "clear-glass",
+        "description": "Delete one real setting key"
+      }
+    ],
+    "sitesettings clear": [
+      {
+        "componentId": "cg.siteSettings.clear",
+        "systemId": "clear-glass",
+        "description": "Clear all real settings for an origin"
+      }
+    ],
+    "clear": [
+      {
+        "componentId": "cg.siteSettings.clear",
+        "systemId": "clear-glass",
+        "description": "Clear all real settings for an origin"
+      },
+      {
+        "componentId": "cg.history.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real history"
+      },
+      {
+        "componentId": "cg.rewind.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real rewind snapshots"
+      }
+    ],
+    "sitesettings-clear": [
+      {
+        "componentId": "cg.siteSettings.clear",
+        "systemId": "clear-glass",
+        "description": "Clear all real settings for an origin"
+      }
+    ],
+    "sitesettings listorigins": [
+      {
+        "componentId": "cg.siteSettings.listOrigins",
+        "systemId": "clear-glass",
+        "description": "List every real origin with settings"
+      }
+    ],
+    "listorigins": [
+      {
+        "componentId": "cg.siteSettings.listOrigins",
+        "systemId": "clear-glass",
+        "description": "List every real origin with settings"
+      }
+    ],
+    "sitesettings listorigin": [
+      {
+        "componentId": "cg.siteSettings.listOrigins",
+        "systemId": "clear-glass",
+        "description": "List every real origin with settings"
+      }
+    ],
+    "sitesettings-listorigins": [
+      {
+        "componentId": "cg.siteSettings.listOrigins",
+        "systemId": "clear-glass",
+        "description": "List every real origin with settings"
+      }
+    ],
+    "history list": [
+      {
+        "componentId": "cg.history.list",
+        "systemId": "clear-glass",
+        "description": "Real browsing history search/list"
+      }
+    ],
+    "history-list": [
+      {
+        "componentId": "cg.history.list",
+        "systemId": "clear-glass",
+        "description": "Real browsing history search/list"
+      }
+    ],
+    "history delete": [
+      {
+        "componentId": "cg.history.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real history entry"
+      }
+    ],
+    "delete": [
+      {
+        "componentId": "cg.history.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real history entry"
+      },
+      {
+        "componentId": "cg.passwords.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real saved password"
+      }
+    ],
+    "history-delete": [
+      {
+        "componentId": "cg.history.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real history entry"
+      }
+    ],
+    "history clear": [
+      {
+        "componentId": "cg.history.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real history"
+      }
+    ],
+    "history-clear": [
+      {
+        "componentId": "cg.history.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real history"
+      }
+    ],
+    "extensions list": [
+      {
+        "componentId": "cg.extensions.list",
+        "systemId": "clear-glass",
+        "description": "List real loaded Chrome extensions"
+      }
+    ],
+    "extensions": [
+      {
+        "componentId": "cg.extensions.list",
+        "systemId": "clear-glass",
+        "description": "List real loaded Chrome extensions"
+      },
+      {
+        "componentId": "cg.extensions.load",
+        "systemId": "clear-glass",
+        "description": "Load a real unpacked extension"
+      },
+      {
+        "componentId": "cg.extensions.unload",
+        "systemId": "clear-glass",
+        "description": "Unload a real extension"
+      },
+      {
+        "componentId": "cg.extensions.pickDirectory",
+        "systemId": "clear-glass",
+        "description": "Real OS directory picker for extensions"
+      }
+    ],
+    "extensions-list": [
+      {
+        "componentId": "cg.extensions.list",
+        "systemId": "clear-glass",
+        "description": "List real loaded Chrome extensions"
+      }
+    ],
+    "extensions load": [
+      {
+        "componentId": "cg.extensions.load",
+        "systemId": "clear-glass",
+        "description": "Load a real unpacked extension"
+      }
+    ],
+    "extensions-load": [
+      {
+        "componentId": "cg.extensions.load",
+        "systemId": "clear-glass",
+        "description": "Load a real unpacked extension"
+      }
+    ],
+    "extensions unload": [
+      {
+        "componentId": "cg.extensions.unload",
+        "systemId": "clear-glass",
+        "description": "Unload a real extension"
+      }
+    ],
+    "unload": [
+      {
+        "componentId": "cg.extensions.unload",
+        "systemId": "clear-glass",
+        "description": "Unload a real extension"
+      }
+    ],
+    "extensions-unload": [
+      {
+        "componentId": "cg.extensions.unload",
+        "systemId": "clear-glass",
+        "description": "Unload a real extension"
+      }
+    ],
+    "extensions pickdirectory": [
+      {
+        "componentId": "cg.extensions.pickDirectory",
+        "systemId": "clear-glass",
+        "description": "Real OS directory picker for extensions"
+      }
+    ],
+    "pickdirectory": [
+      {
+        "componentId": "cg.extensions.pickDirectory",
+        "systemId": "clear-glass",
+        "description": "Real OS directory picker for extensions"
+      }
+    ],
+    "extensions-pickdirectory": [
+      {
+        "componentId": "cg.extensions.pickDirectory",
+        "systemId": "clear-glass",
+        "description": "Real OS directory picker for extensions"
+      }
+    ],
+    "bookmarks addwithstate": [
+      {
+        "componentId": "cg.bookmarks.addWithState",
+        "systemId": "clear-glass",
+        "description": "Bookmark + save real full page state"
+      }
+    ],
+    "bookmarks": [
+      {
+        "componentId": "cg.bookmarks.addWithState",
+        "systemId": "clear-glass",
+        "description": "Bookmark + save real full page state"
+      },
+      {
+        "componentId": "cg.bookmarks.openWithState",
+        "systemId": "clear-glass",
+        "description": "Open a bookmark and restore its real saved state"
+      }
+    ],
+    "addwithstate": [
+      {
+        "componentId": "cg.bookmarks.addWithState",
+        "systemId": "clear-glass",
+        "description": "Bookmark + save real full page state"
+      }
+    ],
+    "bookmarks-addwithstate": [
+      {
+        "componentId": "cg.bookmarks.addWithState",
+        "systemId": "clear-glass",
+        "description": "Bookmark + save real full page state"
+      }
+    ],
+    "bookmarks openwithstate": [
+      {
+        "componentId": "cg.bookmarks.openWithState",
+        "systemId": "clear-glass",
+        "description": "Open a bookmark and restore its real saved state"
+      }
+    ],
+    "openwithstate": [
+      {
+        "componentId": "cg.bookmarks.openWithState",
+        "systemId": "clear-glass",
+        "description": "Open a bookmark and restore its real saved state"
+      }
+    ],
+    "bookmarks-openwithstate": [
+      {
+        "componentId": "cg.bookmarks.openWithState",
+        "systemId": "clear-glass",
+        "description": "Open a bookmark and restore its real saved state"
+      }
+    ],
+    "rewind list": [
+      {
+        "componentId": "cg.rewind.list",
+        "systemId": "clear-glass",
+        "description": "List real rewind snapshots"
+      }
+    ],
+    "rewind": [
+      {
+        "componentId": "cg.rewind.list",
+        "systemId": "clear-glass",
+        "description": "List real rewind snapshots"
+      },
+      {
+        "componentId": "cg.rewind.snapshot",
+        "systemId": "clear-glass",
+        "description": "Take a real rewind snapshot"
+      },
+      {
+        "componentId": "cg.rewind.restore",
+        "systemId": "clear-glass",
+        "description": "Restore a real rewind snapshot"
+      },
+      {
+        "componentId": "cg.rewind.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real rewind snapshots"
+      }
+    ],
+    "rewind-list": [
+      {
+        "componentId": "cg.rewind.list",
+        "systemId": "clear-glass",
+        "description": "List real rewind snapshots"
+      }
+    ],
+    "rewind snapshot": [
+      {
+        "componentId": "cg.rewind.snapshot",
+        "systemId": "clear-glass",
+        "description": "Take a real rewind snapshot"
+      }
+    ],
+    "rewind-snapshot": [
+      {
+        "componentId": "cg.rewind.snapshot",
+        "systemId": "clear-glass",
+        "description": "Take a real rewind snapshot"
+      }
+    ],
+    "rewind restore": [
+      {
+        "componentId": "cg.rewind.restore",
+        "systemId": "clear-glass",
+        "description": "Restore a real rewind snapshot"
+      }
+    ],
+    "rewind-restore": [
+      {
+        "componentId": "cg.rewind.restore",
+        "systemId": "clear-glass",
+        "description": "Restore a real rewind snapshot"
+      }
+    ],
+    "rewind clear": [
+      {
+        "componentId": "cg.rewind.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real rewind snapshots"
+      }
+    ],
+    "rewind-clear": [
+      {
+        "componentId": "cg.rewind.clear",
+        "systemId": "clear-glass",
+        "description": "Clear real rewind snapshots"
+      }
+    ],
+    "passwords list": [
+      {
+        "componentId": "cg.passwords.list",
+        "systemId": "clear-glass",
+        "description": "List real saved passwords (metadata only)"
+      }
+    ],
+    "passwords": [
+      {
+        "componentId": "cg.passwords.list",
+        "systemId": "clear-glass",
+        "description": "List real saved passwords (metadata only)"
+      },
+      {
+        "componentId": "cg.passwords.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real saved password"
+      }
+    ],
+    "passwords-list": [
+      {
+        "componentId": "cg.passwords.list",
+        "systemId": "clear-glass",
+        "description": "List real saved passwords (metadata only)"
+      }
+    ],
+    "passwords delete": [
+      {
+        "componentId": "cg.passwords.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real saved password"
+      }
+    ],
+    "passwords-delete": [
+      {
+        "componentId": "cg.passwords.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a real saved password"
+      }
+    ],
+    "speech available": [
+      {
+        "componentId": "cg.speech.available",
+        "systemId": "clear-glass",
+        "description": "Real offline speech engine availability"
+      }
+    ],
+    "speech": [
+      {
+        "componentId": "cg.speech.available",
+        "systemId": "clear-glass",
+        "description": "Real offline speech engine availability"
+      },
+      {
+        "componentId": "cg.speech.transcribeBuffer",
+        "systemId": "clear-glass",
+        "description": "Real offline audio-buffer transcription"
+      }
+    ],
+    "available": [
+      {
+        "componentId": "cg.speech.available",
+        "systemId": "clear-glass",
+        "description": "Real offline speech engine availability"
+      }
+    ],
+    "speech-available": [
+      {
+        "componentId": "cg.speech.available",
+        "systemId": "clear-glass",
+        "description": "Real offline speech engine availability"
+      }
+    ],
+    "speech transcribebuffer": [
+      {
+        "componentId": "cg.speech.transcribeBuffer",
+        "systemId": "clear-glass",
+        "description": "Real offline audio-buffer transcription"
+      }
+    ],
+    "transcribebuffer": [
+      {
+        "componentId": "cg.speech.transcribeBuffer",
+        "systemId": "clear-glass",
+        "description": "Real offline audio-buffer transcription"
+      }
+    ],
+    "speech-transcribebuffer": [
+      {
+        "componentId": "cg.speech.transcribeBuffer",
+        "systemId": "clear-glass",
+        "description": "Real offline audio-buffer transcription"
+      }
+    ],
+    "macros list": [
+      {
+        "componentId": "cg.macros.list",
+        "systemId": "clear-glass",
+        "description": "List real stored macros (real erosmancer integration where used)"
+      }
+    ],
+    "macros": [
+      {
+        "componentId": "cg.macros.list",
+        "systemId": "clear-glass",
+        "description": "List real stored macros (real erosmancer integration where used)"
+      },
+      {
+        "componentId": "cg.macros.get",
+        "systemId": "clear-glass",
+        "description": "Get one real macro"
+      },
+      {
+        "componentId": "cg.macros.run",
+        "systemId": "clear-glass",
+        "description": "Run a real macro against a real agent"
+      }
+    ],
+    "macros-list": [
+      {
+        "componentId": "cg.macros.list",
+        "systemId": "clear-glass",
+        "description": "List real stored macros (real erosmancer integration where used)"
+      }
+    ],
+    "macros get": [
+      {
+        "componentId": "cg.macros.get",
+        "systemId": "clear-glass",
+        "description": "Get one real macro"
+      }
+    ],
+    "macros-get": [
+      {
+        "componentId": "cg.macros.get",
+        "systemId": "clear-glass",
+        "description": "Get one real macro"
+      }
+    ],
+    "macros run": [
+      {
+        "componentId": "cg.macros.run",
+        "systemId": "clear-glass",
+        "description": "Run a real macro against a real agent"
+      }
+    ],
+    "macros-run": [
+      {
+        "componentId": "cg.macros.run",
+        "systemId": "clear-glass",
+        "description": "Run a real macro against a real agent"
+      }
+    ],
+    "bgtab open": [
+      {
+        "componentId": "cg.bgtab.open",
+        "systemId": "clear-glass",
+        "description": "Open a real background service tab"
+      }
+    ],
+    "bgtab": [
+      {
+        "componentId": "cg.bgtab.open",
+        "systemId": "clear-glass",
+        "description": "Open a real background service tab"
+      },
+      {
+        "componentId": "cg.bgtab.close",
+        "systemId": "clear-glass",
+        "description": "Close a real background tab"
+      },
+      {
+        "componentId": "cg.bgtab.list",
+        "systemId": "clear-glass",
+        "description": "List real open background tabs"
+      }
+    ],
+    "bgtab-open": [
+      {
+        "componentId": "cg.bgtab.open",
+        "systemId": "clear-glass",
+        "description": "Open a real background service tab"
+      }
+    ],
+    "bgtab close": [
+      {
+        "componentId": "cg.bgtab.close",
+        "systemId": "clear-glass",
+        "description": "Close a real background tab"
+      }
+    ],
+    "bgtab-close": [
+      {
+        "componentId": "cg.bgtab.close",
+        "systemId": "clear-glass",
+        "description": "Close a real background tab"
+      }
+    ],
+    "bgtab list": [
+      {
+        "componentId": "cg.bgtab.list",
+        "systemId": "clear-glass",
+        "description": "List real open background tabs"
+      }
+    ],
+    "bgtab-list": [
+      {
+        "componentId": "cg.bgtab.list",
+        "systemId": "clear-glass",
+        "description": "List real open background tabs"
+      }
     ]
   },
   "errors": [],
-  "buildMs": 26
+  "buildMs": 18
 }

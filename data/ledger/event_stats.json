@@ -1,0 +1,433 @@
+{
+  "stats": {
+    "orchestrator.boot.started": {
+      "count": 1,
+      "lastTs": 1788411232258,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.phase.ok": {
+      "count": 7,
+      "lastTs": 1788411238407,
+      "intervals": [
+        1,
+        16,
+        10,
+        2,
+        1,
+        6112
+      ],
+      "totalMs": 6142
+    },
+    "bridge.booted": {
+      "count": 1,
+      "lastTs": 1788411232277,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.phase.ok": {
+      "count": 1,
+      "lastTs": 1788411232280,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.boot.complete": {
+      "count": 1,
+      "lastTs": 1788411232281,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "system.registered": {
+      "count": 44,
+      "lastTs": 1788411240407,
+      "intervals": [
+        2011,
+        78,
+        5,
+        742,
+        1,
+        2,
+        863,
+        43,
+        6,
+        11,
+        7,
+        10,
+        6,
+        85,
+        3,
+        11,
+        4,
+        67,
+        26,
+        7,
+        115,
+        0,
+        1086,
+        25,
+        4,
+        4,
+        1,
+        1,
+        479,
+        45,
+        16,
+        4,
+        3,
+        25,
+        2,
+        75,
+        3,
+        10,
+        16,
+        68,
+        24,
+        6,
+        1217
+      ],
+      "totalMs": 7217
+    },
+    "bridge.registered": {
+      "count": 1,
+      "lastTs": 1788411233193,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.seam.watchdog.started": {
+      "count": 1,
+      "lastTs": 1788411235238,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "gate.failed": {
+      "count": 16,
+      "lastTs": 1788411251618,
+      "intervals": [
+        462,
+        56,
+        2619,
+        858,
+        61,
+        1941,
+        768,
+        54,
+        178,
+        1805,
+        953,
+        1264,
+        51,
+        5269,
+        40
+      ],
+      "totalMs": 16379
+    },
+    "guardian.boot.started": {
+      "count": 1,
+      "lastTs": 1788411235239,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.phase.ok": {
+      "count": 12,
+      "lastTs": 1788411235289,
+      "intervals": [
+        19,
+        1,
+        2,
+        1,
+        1,
+        12,
+        1,
+        0,
+        1,
+        9,
+        2
+      ],
+      "totalMs": 49
+    },
+    "guardian.registered": {
+      "count": 1,
+      "lastTs": 1788411235280,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.pulse": {
+      "count": 66,
+      "lastTs": 1788411288400,
+      "intervals": [
+        741,
+        914,
+        17,
+        16,
+        89,
+        15,
+        87,
+        14,
+        0,
+        1233,
+        6881,
+        739,
+        926,
+        1,
+        19,
+        89,
+        16,
+        82,
+        16,
+        1,
+        1192,
+        6930,
+        737,
+        921,
+        1,
+        14,
+        94,
+        15,
+        92,
+        1,
+        1,
+        1201,
+        6930,
+        740,
+        911,
+        15,
+        0,
+        108,
+        15,
+        93,
+        1,
+        0,
+        1196,
+        6934,
+        739,
+        912,
+        14,
+        1,
+        111,
+        15,
+        79,
+        1,
+        0,
+        1199,
+        6930,
+        742,
+        918,
+        15,
+        1,
+        103,
+        20,
+        76,
+        0,
+        1,
+        1198
+      ],
+      "totalMs": 53113
+    },
+    "guardian.boot": {
+      "count": 1,
+      "lastTs": 1788411235288,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.boot.complete": {
+      "count": 1,
+      "lastTs": 1788411235289,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "ncp.client.connected": {
+      "count": 5,
+      "lastTs": 1788411251577,
+      "intervals": [
+        3532,
+        2771,
+        4254,
+        5320
+      ],
+      "totalMs": 15877
+    },
+    "guardian.provider.connected": {
+      "count": 5,
+      "lastTs": 1788411251578,
+      "intervals": [
+        3533,
+        2771,
+        4253,
+        5321
+      ],
+      "totalMs": 15878
+    },
+    "ncp.message.received": {
+      "count": 10,
+      "lastTs": 1788411251617,
+      "intervals": [
+        2618,
+        920,
+        1941,
+        822,
+        177,
+        1805,
+        955,
+        1314,
+        5309
+      ],
+      "totalMs": 15861
+    },
+    "guardian.provider.registered": {
+      "count": 5,
+      "lastTs": 1788411251618,
+      "intervals": [
+        3537,
+        2764,
+        4251,
+        5309
+      ],
+      "totalMs": 15861
+    },
+    "idearium.boot.started": {
+      "count": 1,
+      "lastTs": 1788411236000,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.phase.ok": {
+      "count": 8,
+      "lastTs": 1788411236032,
+      "intervals": [
+        13,
+        4,
+        7,
+        3,
+        1,
+        2,
+        1
+      ],
+      "totalMs": 31
+    },
+    "idearium.booted": {
+      "count": 1,
+      "lastTs": 1788411236029,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.boot.complete": {
+      "count": 1,
+      "lastTs": 1788411236032,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "provider.host.starting": {
+      "count": 4,
+      "lastTs": 1788411246711,
+      "intervals": [
+        2785,
+        2481,
+        4302
+      ],
+      "totalMs": 9568
+    },
+    "clear-glass.registered": {
+      "count": 1,
+      "lastTs": 1788411237165,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.ui.opened": {
+      "count": 1,
+      "lastTs": 1788411237449,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.booted": {
+      "count": 1,
+      "lastTs": 1788411238364,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "clear-glass.window.opened": {
+      "count": 1,
+      "lastTs": 1788411238370,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.tab.dom_map": {
+      "count": 5,
+      "lastTs": 1788411244994,
+      "intervals": [
+        2860,
+        999,
+        1805,
+        954
+      ],
+      "totalMs": 6618
+    },
+    "orchestrator.boot.complete": {
+      "count": 1,
+      "lastTs": 1788411238408,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "provider.host.wake-intro": {
+      "count": 2,
+      "lastTs": 1788411245193,
+      "intervals": [
+        4281
+      ],
+      "totalMs": 4281
+    },
+    "system.offline": {
+      "count": 1,
+      "lastTs": 1788411250394,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "clear-glass.providers.booted": {
+      "count": 1,
+      "lastTs": 1788411252235,
+      "intervals": [],
+      "totalMs": 0
+    }
+  },
+  "baseline": {
+    "guardian.phase.ok": {
+      "avgIntervalMs": 4,
+      "stddevMs": 6,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788411235278
+    },
+    "system.registered": {
+      "avgIntervalMs": 151,
+      "stddevMs": 389,
+      "consistency": 0,
+      "count": 40,
+      "sampleSize": 39,
+      "computedAt": 1788411239092
+    },
+    "orchestrator.pulse": {
+      "avgIntervalMs": 877,
+      "stddevMs": 1886,
+      "consistency": 0,
+      "count": 60,
+      "sampleSize": 59,
+      "computedAt": 1788411287002
+    },
+    "gate.failed": {
+      "avgIntervalMs": 777,
+      "stddevMs": 867,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788411242236
+    },
+    "ncp.message.received": {
+      "avgIntervalMs": 1762,
+      "stddevMs": 1426,
+      "consistency": 0.19077269870769742,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788411251617
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"uuid":"9b39a71d-816d-4631-ad76-de0800d59a6c","system":"guardian","component":"guardian.queue.compartment.create","action":"registered","status":"ok","tags":["guardian"],"detail":"Create job compartment","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237507}

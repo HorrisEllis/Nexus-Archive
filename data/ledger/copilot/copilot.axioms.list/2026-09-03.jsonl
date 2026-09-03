@@ -1,0 +1,1 @@
+{"uuid":"2463b733-67f3-4b0b-8abf-d4cdece87418","system":"copilot","component":"copilot.axioms.list","action":"registered","status":"ok","tags":["copilot"],"detail":"List all axioms","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237845}

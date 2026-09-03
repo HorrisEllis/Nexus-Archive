@@ -1,0 +1,1 @@
+{"uuid":"cf656928-1606-4d78-b981-521f33af45d8","system":"eros","component":"eros.observer.unwatch","action":"registered","status":"ok","tags":["eros","observer"],"detail":"Stop DOM observer on tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238086}

@@ -1,0 +1,1 @@
+{"uuid":"c407d4b7-84b2-4858-bbec-0edcff6dcdf5","system":"architect","component":"architect.hooks.graph","action":"registered","status":"ok","tags":["architect"],"detail":"Hook topology graph (json|mermaid)","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238394}

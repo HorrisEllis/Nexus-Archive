@@ -1,0 +1,1 @@
+{"uuid":"aeec88e9-be1e-46e5-a01b-f7532f30e884","system":"copilot","component":"copilot.build","action":"registered","status":"ok","tags":["copilot"],"detail":"Build a new module from description","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237853}

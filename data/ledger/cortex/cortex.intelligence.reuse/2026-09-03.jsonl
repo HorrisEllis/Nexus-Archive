@@ -1,0 +1,1 @@
+{"uuid":"42826a63-f16c-4574-88f5-77d8a73be3d5","system":"cortex","component":"cortex.intelligence.reuse","action":"registered","status":"ok","tags":["cortex"],"detail":"SEAM reuse candidates","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237946}

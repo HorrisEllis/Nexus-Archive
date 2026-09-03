@@ -1,0 +1,1 @@
+{"uuid":"89c630be-e8eb-4d42-a23f-c2141f698e0c","system":"bridge","component":"bridge.events","action":"registered","status":"ok","tags":["bridge","stream"],"detail":"SSE — all bridge events","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237461}

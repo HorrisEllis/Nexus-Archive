@@ -1,0 +1,1 @@
+{"uuid":"96ffeec0-3173-4599-8e83-5bb6f3d48674","system":"idearium","component":"idearium.idea.phase","action":"registered","status":"ok","tags":["idearium"],"detail":"Advance an idea's lifecycle phase","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237533}

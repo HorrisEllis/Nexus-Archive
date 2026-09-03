@@ -1,0 +1,1 @@
+{"uuid":"aa23f8d2-c754-4345-b3dd-e2bc465b947e","system":"cg","component":"cg.health","action":"registered","status":"ok","tags":["cg"],"detail":"Clear Glass health, context count, bus stats","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238000}

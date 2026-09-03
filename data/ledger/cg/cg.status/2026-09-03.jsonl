@@ -1,0 +1,1 @@
+{"uuid":"4f908916-96fe-4d58-982d-80b8d7e22a64","system":"cg","component":"cg.status","action":"registered","status":"ok","tags":["cg"],"detail":"Full system status — bus sample, agents, listeners, TLS","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238002}

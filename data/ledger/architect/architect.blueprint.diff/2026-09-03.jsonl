@@ -1,0 +1,1 @@
+{"uuid":"cfd782c1-4f8f-4570-b879-811327f728ba","system":"architect","component":"architect.blueprint.diff","action":"registered","status":"ok","tags":["architect"],"detail":"Diff two blueprints","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411238398}

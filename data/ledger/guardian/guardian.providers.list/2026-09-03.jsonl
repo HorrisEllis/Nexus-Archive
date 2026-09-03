@@ -1,0 +1,1 @@
+{"uuid":"60358b8b-81b9-41db-8409-027264d268fb","system":"guardian","component":"guardian.providers.list","action":"registered","status":"ok","tags":["guardian"],"detail":"Connected NCP browser tab providers","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237491}

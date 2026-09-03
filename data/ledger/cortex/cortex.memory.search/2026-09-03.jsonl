@@ -1,0 +1,1 @@
+{"uuid":"3583a36a-7df6-40f7-8118-14c55a15a687","system":"cortex","component":"cortex.memory.search","action":"registered","status":"ok","tags":["cortex","memory"],"detail":"Semantic search across memory","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237921}

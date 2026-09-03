@@ -1,0 +1,1 @@
+{"uuid":"03ce4644-793d-45fe-8e43-bae8b32d2e95","system":"eravos","component":"eravos.health","action":"registered","status":"ok","tags":["eravos"],"detail":"ERAVOS health","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788411237569}
