@@ -329,6 +329,34 @@ const FILES = [
   // file) was already registered; the main module itself never was.
   ['cortex/core/raid/contract-boundary.js', 'nexus.cortex.core.raid.contract-boundary', 'cortex/core/raid', []],
   ['cortex/self-heal/index.js', 'nexus.cortex.self-heal', 'cortex/self-heal', ['nexus.cortex.self-heal.fault-taxonomy', 'nexus.cortex.core.raid.contract-intake']],
+
+  // §ADDED 2026-09-02 — guardian/server.js decomposition, wired this
+  // session (commit 91b2c46). Five real, new components; precommit-
+  // check.js flagged all five as orphans (CLAUDE.md rule 3) on commit.
+  // Edges are the real require()/injected-dependency relationships read
+  // directly from each file. guardian/lib/dispatch-pool.js is dispatcher's
+  // real dependency too but has no loom entry anywhere in this repo under
+  // any id (checked directly) — a pre-existing gap, not introduced here,
+  // left out rather than inventing an id for it.
+  ['guardian/lib/jobs.js', 'nexus.guardian.lib.jobs', 'guardian/lib',
+    ['nexus.lib.intent-hat-router', 'nexus.lib.hat-forge']],
+  ['guardian/lib/provider-routing.js', 'nexus.guardian.lib.provider-routing', 'guardian/lib', []],
+  ['guardian/lib/dispatcher.js', 'nexus.guardian.lib.dispatcher', 'guardian/lib', []],
+  ['guardian/lib/dispatch-pool-bridge.js', 'nexus.guardian.lib.dispatch-pool-bridge', 'guardian/lib', []],
+  ['guardian/lib/index.js', 'nexus.guardian.lib.lib-index', 'guardian/lib',
+    ['nexus.guardian.lib.jobs', 'nexus.guardian.lib.provider-routing', 'nexus.guardian.lib.dispatcher', 'nexus.guardian.lib.dispatch-pool-bridge']],
+
+  // §ADDED 2026-09-02 — guardian's NCP protocol handler, the largest
+  // remaining piece of the same server.js decomposition (see the guardian
+  // decomposition entries just above). Requires GapHunter/Detector
+  // directly (real, stateless utility modules — both already registered
+  // under these ids); jaa/physQueue/baseline/evLedger/activeQueues and the
+  // still-inline extractCodeBlocks/extractToolCallsFromDOM/
+  // findActiveSeamCompartment stay injected dependencies from server.js,
+  // not requires, so this map doesn't claim edges to things this file
+  // doesn't actually require.
+  ['guardian/lib/ncp-handler.js', 'nexus.guardian.lib.ncp-handler', 'guardian/lib',
+    ['nexus.intelligence.gap.hunter', 'nexus.lib.seam.detector']],
 ];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

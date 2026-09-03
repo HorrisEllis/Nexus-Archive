@@ -769,6 +769,201 @@ spec:
         explicitly, not just let the cascade decide.
       depends_on: []
 
+    # ══════════════════════════════════════════════════════════════════
+    # §ADDENDUM 2026-09-02b — James: "what can we do to get nexus to
+    # build like you? phase all of this." A second, distinct dump —
+    # Nexus's own end-state as an autonomous, self-improving builder
+    # (ChatGPT/Gemini/DeepSeek/Claude fallback chain, self-heal, self-
+    # optimize, adversarial self-critique) and the concrete surfaces
+    # that would make that real: wake words, clarifying questions,
+    # chunked large-file analysis, a per-output build surface/IDE.
+    # Checked against the master phasemap above first — genuinely new
+    # ground: zero keyword overlap on wake_word/introspect/fitness/
+    # build_surface/autocomplete/working_memory/self-build/token
+    # reduction (grepped directly). Cross-referenced against B1/C1/C3/
+    # C4/AM11/WF1/CP1-4 above where they DO overlap, rather than
+    # duplicating those tracks.
+    # ══════════════════════════════════════════════════════════════════
+
+    SR1_per_agent_wake_words:
+      status: OPEN — real precedent exists, this extends it
+      does: >
+        "Maybe the wake words" — per-agent wake words (e.g. "hey
+        chatgpt"), already named on James's own horizon list. Real
+        precedent: guardian/userscript-nexus-wake.js's "hey nexus" is
+        ONE global wake word, deliberately kept separate from the
+        model-facing agent hint (see that file's own header — "two
+        features, deliberately separate"). This is the same pattern,
+        per-provider: "hey chatgpt" in Claude's tab should route to
+        guardian's chatgpt dispatch instead of Claude answering it —
+        cross-agent delegation FROM inside a tab, not just human-to-
+        nexus. Real new surface: the listener needs to know which
+        providers are live (ncp.isConnected — real, already exists)
+        before claiming a wake word is routable.
+      depends_on: []
+
+    SR2_copilot_clarifying_questions:
+      status: OPEN — genuinely new, no existing mechanism found
+      does: >
+        "I want co-pilot to ask questions when it doesn't know, like
+        you do." Checked directly: guardian/ask.js is a synchronous
+        FACADE over dispatch (waits for a job to finish), not a
+        clarification flow — no existing "the intent is ambiguous, ask
+        one question before proceeding" mechanism anywhere in copilot/
+        or guardian/. Real, buildable shape: reuse intent-hat-router's
+        real confidence score (already computed per _suggestJobHat,
+        guardian/lib/jobs.js) as the trigger — low confidence + no
+        forced hat match asks ONE targeted question via the existing
+        chat surface instead of guessing; high confidence proceeds with
+        a stated assumption, same asymmetry this session's own
+        assistant behavior uses. Real precedent for the "ask sparingly,
+        prefer stated assumptions" discipline: none yet in this
+        codebase — this would be the first.
+      depends_on: []
+
+    SR3_artifact_extraction_introspect_bridge:
+      status: OPEN — real precedent on both sides, not yet connected
+      does: >
+        "Artifact extraction also can connect to the introspect tool."
+        Both sides are real and unconnected today: guardian/server.js's
+        extractCodeBlocks/autoUploadBlocks (still inline — see the
+        guardian decomposition's own "not yet traced" list) writes code
+        blocks to disk on GUARDIAN_COMPLETE; lib/introspect.js
+        (examine()) reads real ground-truth signals — reflection score,
+        lifeline-contract shape match, gap-field, component-ledger, and
+        the user's own correction, which "outranks everything" per that
+        file's header — but is only wired to co-pilot's retry path
+        today, never to a freshly-extracted artifact. Real, concrete
+        next step: after extractCodeBlocks writes files, run
+        introspect.examine() against the job before marking it fully
+        "complete" rather than "complete, unexamined" — this is the
+        real mechanism behind James's "doubt and attack its outputs."
+        Natural companion piece to the guardian decomposition's still-
+        open artifact-extraction extraction (MANIFEST.md), since
+        extracting that inline code is what makes it easy to insert
+        this hook at the one real call site instead of guessing where
+        artifacts get created.
+      depends_on: []
+
+    SR4_fitness_driven_contract_adjustment:
+      status: OPEN — real fitness engine exists, feedback loop does not
+      does: >
+        "I want the system to reflect fitness scores, adjust contracts
+        to agents." Checked directly: cortex/core/raid/index.js's real
+        Layer 2 (_fitness(), ranked survivors, a live health snapshot
+        fed back from real outcomes — confirmed real, not a stub, per
+        that file's own header) already ranks agents and updates health
+        after the fact. What's missing: B1's contract schema (above)
+        doesn't yet read _fitness's live ranking when SYNTHESIZING a
+        contract, and there's no real path for a contract whose target
+        agent's fitness drops mid-flight to be re-routed to the next-
+        ranked agent instead of failing outright. Depends on B1 landing
+        first — this is B1 plus a live read from RAID's existing health
+        snapshot at synthesis and retry time, not a new scoring engine.
+      depends_on: [B1_full_build_contract_schema]
+
+    SR5_large_file_chunk_working_memory:
+      status: OPEN — real SEAM-chunking precedent exists in the opposite direction
+      does: >
+        "Analysis can decompose and parse files if they're too big, can
+        be requeried, each chunk as a uuid temporary for working
+        memory." Real, existing precedent runs the OTHER way: SEAM
+        chunking (guardian's _buildSeamQueue/seam-watchdog, referenced
+        throughout guardian/lib/ncp-handler.js's own §74.2/§70.2
+        comments) splits OUTGOING generation requests into chunks sent
+        TO an agent. This is the inverse — splitting a large file being
+        READ/analyzed FOR context — and doesn't exist yet under any
+        name found this pass. Real shape: an ingest-time chunker that
+        assigns each chunk a session-scoped UUID (not a persistent
+        component id — "temporary for working memory" is explicit),
+        stores chunk→byte-range + a summary, and exposes a real re-
+        query-by-uuid call so an agent that only saw a summary can pull
+        one specific chunk back in full without re-reading the whole
+        file. lib/vector-memory.js's real embedding pipeline is the
+        closest existing infrastructure to adapt rather than duplicate.
+      depends_on: []
+
+    SR6_per_output_build_surface:
+      status: OPEN — genuinely new, real building blocks exist separately
+      does: >
+        "A build surface for each output that can automatically save to
+        file, had a line count for LLMs to parse and replace chunks,
+        also an IDE with autocomplete." Real, separate building blocks
+        found, not yet composed: guardian's dropzone/artifact-upload.js
+        already does real auto-save-to-file on artifact arrival; this
+        session's own str_replace-style workflow (exact old_str match,
+        line-numbered view) is the real discipline James is asking
+        Nexus to grow, not a metaphor — a real line-counted view +
+        targeted-chunk-replace tool, scoped per generated file, is the
+        concrete deliverable. Autocomplete is the genuinely hardest,
+        least-precedented piece here — no existing inline-completion
+        surface found anywhere in clear-glass/cockpit/idearium's UI
+        code this pass; likely the last sub-phase, not the first.
+      depends_on: [C3_component_import_decomposition]
+
+    SR7_token_reduction_toolkit:
+      status: OPEN — real infra exists scattered, not catalogued as one toolkit
+      does: >
+        "Any tools you have that help reduce tokens, help you code
+        better." Real, already-built pieces, confirmed by direct check,
+        that already do this but aren't presented to agents as one
+        coherent toolkit: lib/vector-memory.js (retrieve-relevant-chunk
+        instead of whole-document context), lib/chat-logger.js
+        (session-scoped recall instead of re-sending history),
+        AM1/ACK-injection's real per-hat toolScope narrowing (hat-
+        forge.js — an agent gets ITS tools, not all 63), and SEAM
+        chunking's chunk-sized dispatch. This phase is a real catalog +
+        gap-check (are all four actually reachable by every agent type,
+        or only some?) rather than new invention — §8.6 reuse-before-
+        build applies directly here.
+      depends_on: []
+
+    SR8_deterministic_claude_replication:
+      status: OPEN — the field-schema question, drafted here not answered
+      does: >
+        "I want to replicate you as much as possible deterministically
+        ... replicate the process you do when I give you an idea."
+        Honest framing: what's replicable isn't a persona, it's a
+        PROCEDURE — read the real file before editing it; verify by
+        booting/testing, not syntax-checking; diff-scope edits with
+        exact old_str matches instead of rewriting whole files; run a
+        git-stash baseline before claiming a test failure is pre-
+        existing; state assumptions inline instead of guessing silently.
+        Every one of those is already this repo's own stated discipline
+        (AXIOMS-v3.1.md, CLAUDE.md rule 3, this session's own commit
+        messages) — the gap isn't that Nexus lacks the RULES, it's that
+        no single agent-facing surface enforces the SEQUENCE as one
+        procedure a dispatched agent (ChatGPT/Gemini/DeepSeek) is
+        walked through automatically, the way a human reviewer would
+        walk a junior engineer through it. Real next step: a real
+        checklist/gate co-pilot or guardian can attach to a build-intent
+        job (view real file → edit scoped diff → verify by execution →
+        compare against a stash baseline → report honestly), not a
+        prompt asking the agent to "be careful."
+      depends_on: [SR3_artifact_extraction_introspect_bridge, B1_full_build_contract_schema]
+
+    SR9_autonomous_self_build_end_state:
+      status: OPEN — the actual end-state; depends on nearly everything above
+      does: >
+        "The system can build nexus autonomously. Update its maps,
+        update and track versions and file changes, snapshot and
+        backup, debug and heal, optimize and remember. Doubt and attack
+        its outputs... can code any project/spec, using ChatGPT, Gemini,
+        deepseek, and Claude if all else fails." This is the composite
+        end-state, not a single buildable phase — real precedent exists
+        per-piece (loom's map, lib/version.js's registry, cortex/
+        snapshot's tombstone-pruned snapshots, cortex/self-heal/,
+        intelligence/baseline's optimize signal, cortex/memory's real
+        recall), but nothing wires them into one closed loop where
+        Nexus initiates its own build/verify/heal cycle without a human
+        prompt per step. Every track above (B1/SR3/SR4/SR5/SR7/SR8) is
+        a real prerequisite piece of this loop, not a side quest — this
+        entry exists so the dependency is explicit rather than
+        Nexus appearing "almost done" once a few flashy pieces land.
+      depends_on: [B1_full_build_contract_schema, SR3_artifact_extraction_introspect_bridge,
+                   SR4_fitness_driven_contract_adjustment, SR7_token_reduction_toolkit,
+                   SR8_deterministic_claude_replication]
+
     AX_candidate_map_first_discipline:
       status: PROPOSED — drafted here, NOT applied to AXIOMS-v3.1.md
       does: >
@@ -814,3 +1009,25 @@ spec:
     uploaded zips (which files are genuinely reusable vs. superseded by
     what's live today) is itself worth doing before committing to a
     specific build order for that whole cluster.
+
+    §ADDENDUM 2026-09-02b (SR1-SR9): SR2 (copilot clarifying questions)
+    and SR7 (token-reduction toolkit catalog) are the two cheapest SR
+    entry points — SR2 has zero dependencies and reuses intent-hat-
+    router's existing confidence score outright; SR7 is a catalog-and-
+    gap-check pass over infrastructure that already exists, not new
+    build. SR1 (per-agent wake words) is similarly small and dependency-
+    free, extending userscript-nexus-wake.js's existing pattern rather
+    than inventing one. SR3 (artifact-extraction → introspect) should
+    land alongside the guardian decomposition's still-open artifact-
+    extraction work (see MANIFEST.md) — extracting extractCodeBlocks/
+    autoUploadBlocks out of server.js is the natural moment to also wire
+    introspect.examine() at that one real call site. SR4 (fitness-driven
+    contract routing) and SR9 (the actual self-build end-state) both
+    hard-depend on B1 landing first, same as B2/V9/D4 already did — B1
+    remains the single highest-leverage unblock in this entire file, now
+    gating even more downstream work than it did before this addendum.
+    SR8 (deterministic Claude-replication procedure) is honestly the
+    least mechanical of the nine — it depends on SR3 and B1 both
+    existing as real hooks before there's anywhere to attach a real
+    verify-before-promote checklist, so it should not be started first
+    even though it reads as the "headline" ask.
