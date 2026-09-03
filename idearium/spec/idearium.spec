@@ -71,7 +71,7 @@ spec:
         dispatches to spec-compiler via Guardian.
 
   command_index:
-    status: specced   # §1.1 -- not built yet. See docs/command-index-per-system.spec, build_order phase 1.
+    status: DONE       # verified 2026-09-03 -- GET /api/contract/live, 72 real endpoints, 72=72 against fresh grep
     spec: "docs/command-index-per-system.spec"
     note: "idearium's existing routes array (72 entries) maps directly -- cheapest phase, exposure not extraction."
 

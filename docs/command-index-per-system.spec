@@ -116,13 +116,24 @@ spec:
       - system: idearium
         dispatch_shape: "declared route array — [method, ['api','repos'], 'repo.ingest'] etc, 72 entries, confirmed by grep"
         mechanism: >
-          Map the existing `routes` array directly to a command-index
-          shape (method, path, action-name) at boot. No introspection
-          needed — the array already IS the real index; it just isn't
-          exposed as one yet.
-        file: "idearium/lib/command-index.js (new) + idearium/data/command-index.json (new)"
-        served_at: "GET /api/command-index (new route, same file idearium/api/index.js already declares routes in)"
-        status: SPECCED
+          §CORRECTED 2026-09-03 — this was specced as new work; it
+          already existed. `case 'contract.live'` (idearium/api/index.js,
+          dated \u00a7PHASE 3 2026-07-10) reads its own source file and
+          regex-extracts every real [method, segs, action] tuple at
+          request time -- source-derived, same discipline as guardian/
+          bridge's phase 3/4 mechanism below, not the array-mapping this
+          spec originally proposed. Actually run this pass, not assumed:
+          returned 72 endpoints, matched an independent fresh grep count
+          exactly (72=72).
+        file: "idearium/api/index.js — case 'contract.live' (real, pre-existing, not built this session)"
+        served_at: "GET /api/contract/live (real path -- corrected; this spec originally invented /api/command-index, which does not exist)"
+        status: DONE
+        remaining_gap: >
+          Does not yet populate lib/tool-index.js (see
+          universal-block-primitive.spec's living_index_unification) --
+          it's a pure projection endpoint, not persisted into the shared
+          registry. Real, small, separate follow-up, not blocking phase-1
+          completion.
 
       - system: ollama
         dispatch_shape: >
@@ -178,7 +189,8 @@ spec:
     - phase: 1
       system: idearium
       why_first: "cheapest — the route array already exists, this is exposure not extraction"
-      exit_criteria: "GET /api/command-index returns all 72 real routes, verified count matches grep count of the routes array at time of test"
+      exit_criteria: "GET /api/contract/live returns all 72 real routes, verified count matches grep count of the routes array at time of test"
+      status: DONE — verified 2026-09-03, 72=72, real endpoint pre-existed under a different name than this spec originally guessed
 
     - phase: 2
       system: ollama

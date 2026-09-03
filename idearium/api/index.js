@@ -1186,7 +1186,14 @@ async function handle(req, res, route, query, body) {
       const SKIP_DIRS = new Set(['node_modules', '.git', '.svn', 'dist', 'build', '__pycache__', '.next']);
       const TEXT_EXT  = new Set(['.js', '.ts', '.jsx', '.tsx', '.json', '.md', '.txt', '.py', '.html', '.css', '.yml', '.yaml', '.spec', '.sh']);
 
-      const tmpZip = path.join(os.tmpdir(), `idearium-import-${crypto.randomUUID()}.zip`);
+      // §FIX 2026-09-03 — found by actually running this against a live
+      // server, not by review: `os` here is the local IdeaOS instance
+      // (`const os = getIdeaOS();` at the top of handle()), shadowing the
+      // module-level `import os from 'os'` for this entire function. Every
+      // other Node builtin this file needs mid-function goes through
+      // _require() for exactly this reason (see contract.live's own
+      // _require('fs')/_require('url')) — matched here, not a new pattern.
+      const tmpZip = path.join(_require('os').tmpdir(), `idearium-import-${crypto.randomUUID()}.zip`);
       try { fs.writeFileSync(tmpZip, buf); }
       catch (e) { return err(res, 500, `write temp zip failed: ${e.message}`); }
 
