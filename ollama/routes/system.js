@@ -49,8 +49,3 @@ async function handle(req, res, { method, pathname }) {
 }
 
 module.exports = { handle };
-module.exports.commands = [
-  { method: 'GET', path: '/events', description: 'SSE stream, real ollama.connected event on open' },
-  { method: 'GET', path: '/contract' },
-  { method: 'GET', path: '/health' },
-];

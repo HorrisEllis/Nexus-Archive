@@ -1,2 +1,0 @@
-{"type":"session.start","sessionId":"ec1e0483-3ba4-4bb8-91c0-826744112e17","ts":1788414238703,"meta":{"source":"guardian"}}
-{"uuid":"2dc49863-e1e9-4aef-8502-4974b3bbc556","sessionId":"ec1e0483-3ba4-4bb8-91c0-826744112e17","role":"user","provider":"claude","content":"write a haiku function","contentLength":22,"truncated":false,"intent":"code","outcome":"complete","gapScore":0,"bdaSignals":{"valence":0.5,"certainty":0.5,"openness":0.5,"tension":0,"selfref":0},"jobId":"job-1","ts":1788414238704,"meta":{}}

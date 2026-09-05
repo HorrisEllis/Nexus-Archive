@@ -198,31 +198,13 @@ export async function generateWithOllama(system, prompt, { model = _OLLAMA_FALLB
   });
 }
 
-// ── Dispatch chunk to agent ─────────────────────────────────────────────────
-// §FIX 2026-09-03 — James: "make sure the ui reflects the backend system.
-// like the chunk contracts sent to where?" Traced the real dispatch path
-// end to end to answer that question honestly, and found a real,
-// previously-undocumented bug while doing it: this function's own header
-// comment and code structure LOOKED like a real per-agent router
-// (`preferAgent` parameter, a documented "priority chain"), but line 219
-// hardcoded `provider: 'chatgpt'` regardless of what `preferAgent` actually
-// was. Requesting gemini, deepseek, or perplexity — all real, working
-// guardian providers (guardian/lib/provider-routing.js's own
-// KNOWN_PROVIDERS, checked directly) — silently dispatched to ChatGPT
-// instead, with zero indication anywhere that the requested agent was
-// ignored. A caller (or a future UI agent-selector) trusting `preferAgent`
-// would have been lied to about where its own contract actually went.
-//
-// Real fix: route by the REAL requested agent using guardian's REAL known
-// provider list, not a hardcoded 3-name chain. ollama/mistral still run
-// directly (no guardian round-trip needed for a local model); every other
-// real provider goes to guardian's /command with THAT exact provider, not
-// a substituted one. An unrecognized agent is now a real, loud error —
-// never a silent redirect to whichever provider happened to be hardcoded.
-const REAL_GUARDIAN_PROVIDERS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek'];
-
+// ── Dispatch chunk to agent (Mistral → ChatGPT → Claude) ─────────────────────
+// Returns { ok, text, agent, model } or { ok: false, error }
 export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama' } = {}) {
-  // 1. Local model — no guardian round-trip.
+  // Agent priority: Mistral (local) → ChatGPT → Claude
+  // Mistral runs directly. ChatGPT/Claude go through guardian NCP.
+
+  // 1. Try Mistral (Ollama native)
   if (preferAgent === 'ollama' || preferAgent === 'mistral') {
     const r = await generateWithOllama(
       'You are a precise technical spec writer for the NEXUS sovereign AI orchestration system. Write only the requested section content — no preamble.',
@@ -230,29 +212,32 @@ export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama' 
       { model: _OLLAMA_FALLBACK, timeoutMs: 120000 }
     );
     if (r.ok && r.text) return { ok: true, text: r.text, agent: 'ollama', model: r.model };
-    return { ok: false, error: `ollama dispatch failed: ${r.error}` };
+    console.warn(`[${MODULE_ID}] Mistral failed: ${r.error} — falling back to ChatGPT`);
   }
 
-  // 2. Any real guardian-reachable provider — dispatched to exactly the
-  // agent that was actually requested, not a hardcoded stand-in.
-  if (REAL_GUARDIAN_PROVIDERS.includes(preferAgent)) {
+  // 2. Fall back to ChatGPT via guardian
+  if (preferAgent !== 'claude') {
     const r = await _http(GUARDIAN_PORT, 'POST', '/command', {
-      command: 'spec', provider: preferAgent, prompt: chunkPrompt,
+      command: 'spec', provider: 'chatgpt', prompt: chunkPrompt,
       meta: { source: 'idearium.agent-suite', task: 'spec_chunk' },
-    }, 300000); // 5min — browser-agent NCP dispatch can be slow
+    }, 300000); // 5min — ChatGPT via NCP can be slow
     if (r.ok && r.data?.jobId) {
-      // Job was queued — caller polls (pollGuardianJob), same real contract
-      // this function has always returned for a queued job.
-      return { ok: true, queued: true, jobId: r.data.jobId, agent: preferAgent };
+      // Job was queued — return jobId so caller can poll
+      return { ok: true, queued: true, jobId: r.data.jobId, agent: 'chatgpt' };
     }
-    return { ok: false, error: `${preferAgent} dispatch failed: ${r.data?.error || r.error || 'unknown error'}` };
+    console.warn(`[${MODULE_ID}] ChatGPT dispatch failed: ${r.data?.error} — falling back to Claude`);
   }
 
-  // 3. A genuinely unrecognized agent name — a real, named error, never a
-  // silent substitution. The caller (or WARP's cascade) decides what to
-  // try next; this function no longer decides that FOR them by pretending
-  // an unknown agent was actually chatgpt or claude.
-  return { ok: false, error: `unknown agent "${preferAgent}" — real, dispatchable agents are: ollama, mistral, ${REAL_GUARDIAN_PROVIDERS.join(', ')}` };
+  // 3. Fall back to Claude via guardian
+  const r = await _http(GUARDIAN_PORT, 'POST', '/command', {
+    command: 'spec', provider: 'claude', prompt: chunkPrompt,
+    meta: { source: 'idearium.agent-suite', task: 'spec_chunk' },
+  }, 300000);
+  if (r.ok && r.data?.jobId) {
+    return { ok: true, queued: true, jobId: r.data.jobId, agent: 'claude' };
+  }
+
+  return { ok: false, error: 'all agents failed or unavailable' };
 }
 
 // ── Wizard question builder — Qwen drives the spec wizard ─────────────────────

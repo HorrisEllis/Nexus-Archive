@@ -568,11 +568,6 @@ async function _startWire() {
 
       const u = req.url;
 
-      // §RELOCATED 2026-09-03 — network subsystem routes (formerly
-      // guardian's /mesh/*, see src/network/routes.js's header). `parsed`
-      // is the same already-parsed JSON body every other route here uses.
-      if (require('../network/routes.js').handle(req, res, { method: req.method, url: new URL(u, `http://127.0.0.1`), body: parsed })) return;
-
       // Contract endpoint — what the orchestrator verifies on boot
       if (u === '/contract' && req.method === 'GET') {
         return res.end(JSON.stringify(CONTRACT));
@@ -800,15 +795,6 @@ async function bootstrap() {
   const bus = createBus('EVENTS');
   console.log('[ClearGlass] SISO bus →E→E→');
 
-  // 0.1 Network subsystem — §RELOCATED 2026-09-03 from mesh/install.js
-  // (guardian-side). Same real modules (crypto, keys, host-rotation,
-  // port-registry, canvas-persistence, SNR filter), now wired to clear-
-  // glass's own bus since these are genuinely browser/network-adjacent
-  // concerns clear-glass actually has a surface for. See src/network/
-  // install.js's header for the full move rationale.
-  try { require('../network/install.js').install(bus); }
-  catch (err) { console.error('[ClearGlass] network/install.js failed:', err.message); }
-
   // 1. TLS proxy — Firefox JA4 rewrite
   const tlsProxy = new TlsProxy({ port: TLS_PORT });
   await tlsProxy.start();
@@ -957,17 +943,6 @@ async function bootstrap() {
   // 8.96. Downloads — §NEW 2026-08-24, real gap named in the same map's §3.
   downloads = new DownloadsStore();
   downloads.load();
-
-  // 8.96.1 — §NEW 2026-09-03: bridge regular-window downloads into
-  // guardian's real intake/artifacts pipeline. Installed once, process-
-  // wide (the bus event already carries agentId per-download — this is
-  // not per-session wiring like adapter.js/download-capture.js, which
-  // attach to one specific session each). See intake-bridge.js's header
-  // for why this didn't already happen: download-capture.js only ever
-  // covers persist:ncp-<id> provider sessions, never a plain agent
-  // window's persist:agent-<id> session.
-  try { require('../downloads/intake-bridge').install({}); }
-  catch (err) { console.warn('[ClearGlass/Downloads] intake-bridge install failed:', err.message); }
 
   // 8.97. Passwords — §NEW 2026-08-24, real gap named in the same map's §7.
   passwordVault = new PasswordVault();

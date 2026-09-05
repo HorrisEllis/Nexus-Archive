@@ -1,1 +1,0 @@
-{"uuid":"e7bda45d-c7ac-4914-9772-5613d08f07c1","system":"idearium","component":"idearium.idea.archive","action":"registered","status":"ok","tags":["idearium"],"detail":"Archive (soft-delete) an idea","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139419}

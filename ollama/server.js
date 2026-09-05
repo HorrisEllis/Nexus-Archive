@@ -49,18 +49,6 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const ctx = { method: req.method, url, pathname: url.pathname };
 
-  // §PHASE 2 2026-09-03 — docs/command-index-per-system.spec's own real
-  // exit criteria for this system. Checked before the routes[] loop
-  // (same position system.js's own /health/contract meta-endpoints
-  // would occupy if they lived here) because this endpoint needs to
-  // read all six route modules including system.js itself — putting it
-  // inside one of the six would make that module self-referential for
-  // no real benefit.
-  if (ctx.method === 'GET' && ctx.pathname === '/commands') {
-    json(res, 200, require('./lib/command-index.js').buildCommandIndex());
-    return;
-  }
-
   for (const route of routes) {
     try {
       if (await route.handle(req, res, ctx)) return;

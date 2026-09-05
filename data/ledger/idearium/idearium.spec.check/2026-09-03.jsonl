@@ -1,1 +1,0 @@
-{"uuid":"0aeba896-fc62-4705-bafa-23c053dd4220","system":"idearium","component":"idearium.spec.check","action":"registered","status":"ok","tags":["idearium"],"detail":"Validate spec completeness before build","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139429}

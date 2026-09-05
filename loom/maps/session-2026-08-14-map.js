@@ -330,79 +330,14 @@ const FILES = [
   ['cortex/core/raid/contract-boundary.js', 'nexus.cortex.core.raid.contract-boundary', 'cortex/core/raid', []],
   ['cortex/self-heal/index.js', 'nexus.cortex.self-heal', 'cortex/self-heal', ['nexus.cortex.self-heal.fault-taxonomy', 'nexus.cortex.core.raid.contract-intake']],
 
-  // §ADDED 2026-09-02 — guardian/server.js decomposition, wired this
-  // session (commit 91b2c46). Five real, new components; precommit-
-  // check.js flagged all five as orphans (CLAUDE.md rule 3) on commit.
-  // Edges are the real require()/injected-dependency relationships read
-  // directly from each file. guardian/lib/dispatch-pool.js is dispatcher's
-  // real dependency too but has no loom entry anywhere in this repo under
-  // any id (checked directly) — a pre-existing gap, not introduced here,
-  // left out rather than inventing an id for it.
-  ['guardian/lib/jobs.js', 'nexus.guardian.lib.jobs', 'guardian/lib',
-    ['nexus.lib.intent-hat-router', 'nexus.lib.hat-forge']],
-  ['guardian/lib/provider-routing.js', 'nexus.guardian.lib.provider-routing', 'guardian/lib', []],
-  ['guardian/lib/dispatcher.js', 'nexus.guardian.lib.dispatcher', 'guardian/lib', []],
-  ['guardian/lib/dispatch-pool-bridge.js', 'nexus.guardian.lib.dispatch-pool-bridge', 'guardian/lib', []],
-  ['guardian/lib/index.js', 'nexus.guardian.lib.lib-index', 'guardian/lib',
-    ['nexus.guardian.lib.jobs', 'nexus.guardian.lib.provider-routing', 'nexus.guardian.lib.dispatcher', 'nexus.guardian.lib.dispatch-pool-bridge']],
-
-  // §ADDED 2026-09-02 — guardian's NCP protocol handler, the largest
-  // remaining piece of the same server.js decomposition (see the guardian
-  // decomposition entries just above). Requires GapHunter/Detector
-  // directly (real, stateless utility modules — both already registered
-  // under these ids); jaa/physQueue/baseline/evLedger/activeQueues and the
-  // still-inline extractCodeBlocks/extractToolCallsFromDOM/
-  // findActiveSeamCompartment stay injected dependencies from server.js,
-  // not requires, so this map doesn't claim edges to things this file
-  // doesn't actually require.
-  ['guardian/lib/ncp-handler.js', 'nexus.guardian.lib.ncp-handler', 'guardian/lib',
-    ['nexus.intelligence.gap.hunter', 'nexus.lib.seam.detector']],
-  // guardian/lib/artifact-namer.js really does require('../spec-namer') —
-  // no edge claimed to it because guardian/spec-namer.js itself has no
-  // registered component id anywhere in loom yet (checked, pre-existing
-  // gap, not introduced here — separate from this fix's scope).
-  ['guardian/lib/artifact-namer.js', 'nexus.guardian.lib.artifact-namer', 'guardian/lib', []],
-  // §2026-09-03 checkpoint (commit a0bebe4) — registering the 6 files
-  // precommit-check.js flagged as loom orphans after that commit landed.
-  // All 6 are real, already registered in their owning system's .spec
-  // (guardian.spec/idearium.spec/etc.) — this is the separate loom-map
-  // registration CLAUDE.md rule 3 requires, not a second source of truth.
-  ['guardian/routes/autonomous-loop.js', 'nexus.guardian.routes.autonomous-loop', 'guardian/routes',
-    ['nexus.lib.autonomous-loop']],
-  // guardian/routes/mesh.js removed 2026-09-03 — relocated to
-  // clear-glass/src/network/routes.js (see that folder's install.js
-  // header). Not re-added here; clear-glass has its own registration
-  // convention this map doesn't cover.
-  ['lib/autonomous-loop.js', 'nexus.lib.autonomous-loop', 'lib', []],
-  ['lib/project-compartment.js', 'nexus.lib.project-compartment', 'lib', []],
-  ['lib/dynamic-project-parser.js', 'nexus.lib.dynamic-project-parser', 'lib',
-    ['nexus.lib.project-compartment', 'nexus.lib.spec-from-markdown']],
-  ['lib/spec-from-markdown.js', 'nexus.lib.spec-from-markdown', 'lib', []],
-  ['lib/node-export.js', 'nexus.lib.node-export', 'lib', []],
-  ['lib/node-schemas.js', 'nexus.lib.node-schemas', 'lib',
-    ['nexus.lib.hat-forge']],
-  ['lib/self-build-loop.js', 'nexus.lib.self-build-loop', 'lib', []],
-  // run-closed-loop.js is a tool file (module.exports =
-  // {name,description,parameters,execute}), not a component in this
-  // map's sense — its real registration point is lib/agent-tools/
-  // index.js's tool registry (checked: it's already there). Not added
-  // here to avoid a second, conflicting registration for the same file.
-
-  // §BRAINOS 2026-09-03 — James: "Just do BrainOS." First real slice,
-  // built against docs/brainos-live-control-panel.spec. Client-side
-  // widget, no server component (see nexus/ui/brainos/brainos-
-  // interaction-contract.json's own honest scope note) — registered
-  // here anyway per this session's own established discipline that
-  // every new file gets a real loom entry, code or UI alike.
-  ['nexus/ui/brainos/brainos.js', 'nexus.ui.brainos.panel', 'nexus/ui/brainos', []],
-  ['nexus/ui/brainos/brainos-canvas.js', 'nexus.ui.brainos.canvas', 'nexus/ui/brainos', ['nexus.ui.brainos.panel']],
-
-  // §COMMAND-INDEX 2026-09-03 — docs/command-index-per-system.spec's
-  // real build_order, phases 2-4 (phase 1 idearium, phase 5 clear-glass
-  // were already DONE before this session touched them).
-  ['ollama/lib/command-index.js', 'nexus.ollama.command-index', 'ollama/lib', []],
-  ['guardian/lib/command-index-extract.js', 'nexus.guardian.command-index', 'guardian/lib', []],
-  ['bridge/lib/command-index-extract.js', 'nexus.bridge.command-index', 'bridge/lib', []],
+  // §ADDED 2026-09-05 — flagged automatically by the new git post-
+  // commit hook's own real orphan check (scripts/post-commit-history-
+  // writer.js), the first time it ran for real, live, against the
+  // commit that introduced both files. Real, working self-detection —
+  // registered here by a human, not auto-guessed by the hook itself,
+  // matching the hook's own deliberate, honest design.
+  ['versionium/lib/history-writer.js', 'nexus.versionium.lib.history-writer', 'versionium/lib', ['nexus.lib.loom-map', 'nexus.versionium.lib.engine']],
+  ['scripts/post-commit-history-writer.js', 'nexus.scripts.post-commit-history-writer', 'scripts', ['nexus.versionium.lib.history-writer']],
 ];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

@@ -1,1 +1,0 @@
-{"uuid":"f71ecc23-785b-4837-ae95-d0aa659c70e3","system":"cortex","component":"cortex.intelligence.failures","action":"registered","status":"ok","tags":["cortex"],"detail":"Failure mode taxonomy","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139511}

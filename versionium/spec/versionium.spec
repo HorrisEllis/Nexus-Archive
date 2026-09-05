@@ -183,9 +183,32 @@ spec:
         a local fallback queue (lib/nexus-client.js already has a
         postDurable/buffer-drain pattern for exactly this; this change
         calls nx.post/nx.get directly, bypassing it) is an open call.
+    - date: 2026-09-03
+      summary: >
+        §CONTRACT PATH FIXED — found from a real, live boot log (James:
+        pasted the exact orchestrator error). orchestrator/lib/contract-
+        handshake.js's own CONTRACT_PATHS map never got a versionium
+        entry when VS1 (above) made it sovereign — every real contract-
+        verification poll fell through to the wrong default path
+        ('/api/contract' instead of versionium's own real bare
+        '/contract') and hit a genuine 404 whose plain-text body isn't
+        valid JSON, which is exactly the parse error in the log. One-line
+        fix; a new test (tests/modules/test-contract-handshake-paths.js)
+        now checks every sovereign system's claimed contract path against
+        its own real route file, so a future addition can't repeat this
+        silently.
+    - date: 2026-09-05
+      summary: "docs: update the living models — real history entries, plus a real pre-existing YAML bug found and fixed in 4 specs (1 real file touched)"
+    - date: 2026-09-05
+      summary: "build: the real, automatic living-model self-update — versionium's own missing self-tracking, closed (1 real file touched)"
+    - date: 2026-09-05
+      summary: "chore: register the two orphans the new post-commit hook itself flagged (1 real file touched)"
+    - sha: f66c6f434bd997c38ccef6de34109805a2767ee8
+      date: 2026-09-05
+      summary: "fix: real, tested merge safety for parallel-session history writes — found a genuine, silent data-loss risk before it could bite (2 real files touched)"
 
   gaps:
-    as_of: 2026-09-01
+    as_of: 2026-09-03
     entries:
       - id: V1
         type: coverage
@@ -238,17 +261,23 @@ spec:
         opened: 2026-09-02
       - id: V6
         type: coverage
+        status: CLOSED
+        closed: 2026-09-02
         summary: >
           Production versionium_commits/branches/calendar rows that
           existed in cortex's shared jaaDB (data/cortex/memory/) before
           this VS1 migration do NOT automatically appear in the new
           sovereign store (data/versionium/) — a fresh boot of
           versionium/server.js starts with real, empty tables, not the
-          old history. Real, separate decision, same as V5: write a
-          one-time copy script, or accept that pre-2026-09-02 commit
-          history stays queryable only via the old, now-unrequired
-          cortex/versionium/index.js code kept as archive reference.
-        opened: 2026-09-02
+          old history.
+        resolution: >
+          §CORRECTED 2026-09-03 — this gap was already closed the same
+          session it was opened in, but never marked so here (the exact
+          class of staleness this spec's own convention exists to catch).
+          versionium/lib/migrate-legacy-data.js — a real, one-time,
+          idempotent copy of pre-migration rows, live-verified: migrates
+          1/1/1 on first run, 0/0/0 on a second run against the same
+          data. Wired into versionium/server.js's own boot sequence.
       - id: V7
         type: design
         summary: >
@@ -280,4 +309,8 @@ spec:
     - version: 3.0.0
       date: 2026-09-02
       summary: "VS1 — promoted from a library embedded in cortex's process to its own sovereign system (versionium/server.js, port 3754, own data folder, own component registry, own event taxonomy). Every real caller repointed."
+      versioniumCommitId: null
+    - version: 3.0.1
+      date: 2026-09-03
+      summary: "Contract path fixed — orchestrator's CONTRACT_PATHS never had a versionium entry, every poll 404'd. Also, V6 gap marked CLOSED retroactively (migrate-legacy-data.js already resolved it same-session, never recorded here)."
       versioniumCommitId: null

@@ -40,11 +40,6 @@ spec:
     handles:
       - "All events from all systems via bridge relay"
 
-  command_index:
-    status: specced   # §1.1 -- not built yet. See docs/command-index-per-system.spec, build_order phase 4.
-    spec: "docs/command-index-per-system.spec"
-    note: "bridge shares guardian's dispatch shape (raw inline method checks) -- same source-extraction mechanism, phase 4."
-
   routes:
     external:
       - "GET  /                         NEXUS shell UI"
@@ -140,3 +135,75 @@ spec:
       - "EVENTS — live SSE event stream"
       - "COMPONENTS — full component registry browser"
       - "UI SESSIONS — connected UIs, types, heartbeat status"
+
+  # §ADDED 2026-09-03 — James: "update the living models." orchestrator.spec
+  # had none of the real LM1/AX-013 fields despite this session touching
+  # its own contract-verification code directly (a real bug, found from a
+  # live boot log). History starts from what's genuinely verifiable this
+  # session (§1.1 — an honest, shorter log beats a fabricated one).
+  history:
+    - date: 2026-09-02
+      summary: >
+        The officiator (cortex/core/raid/officiator.js, see cortex.spec's
+        own matching entry) started here, alongside cortex/core/raid/
+        worker.js — same real pattern, same real idempotent start().
+    - date: 2026-09-02
+      summary: >
+        New real POST /api/officiator/synthesize route — the sovereign-
+        transport door a tool running in guardian's or copilot's own
+        process needs to reach officiator.js, which runs in THIS
+        process, not theirs.
+    - date: 2026-09-02
+      summary: >
+        §BUGFIX — James, live, from a real boot log: "[orch]
+        contract.unreachable — versionium (invalid JSON: Unexpected
+        token 'N', "Not found" is not valid JSON)". Real root cause:
+        this system's own orchestrator/lib/contract-handshake.js
+        CONTRACT_PATHS map never got a versionium entry when VS1 made it
+        sovereign (a same-session gap, not an old one) — every real poll
+        fell through to the wrong default path and hit a genuine 404
+        whose plain-text body isn't valid JSON. One-line fix; a new test
+        (tests/modules/test-contract-handshake-paths.js) now checks
+        every sovereign system's claimed contract path against its own
+        real route file, so a third addition can't repeat this silently.
+    - date: 2026-09-05
+      summary: "docs: update the living models — real history entries, plus a real pre-existing YAML bug found and fixed in 4 specs (1 real file touched)"
+    - date: 2026-09-05
+      summary: "chore: register the two orphans the new post-commit hook itself flagged (1 real file touched)"
+    - sha: f66c6f434bd997c38ccef6de34109805a2767ee8
+      date: 2026-09-05
+      summary: "fix: real, tested merge safety for parallel-session history writes — found a genuine, silent data-loss risk before it could bite (1 real file touched)"
+
+  gaps:
+    as_of: 2026-09-03
+    entries:
+      - id: O1
+        type: coverage
+        summary: >
+          This spec itself had zero real history/gaps/version_history
+          fields until this pass — the exact class of staleness AX-013/
+          LM1 exists to prevent, found only because "update the living
+          models" was asked directly.
+        opened: 2026-09-03
+        status: CLOSED
+        closed: 2026-09-03
+        resolution: "This same pass — closed by writing the schema this gap describes as missing."
+      - id: O2
+        type: coverage
+        summary: >
+          CONTRACT_PATHS (orchestrator/lib/contract-handshake.js) is a
+          real, hand-maintained map with no single authoritative source
+          — a system's own real bare-/contract-vs-/api/contract choice
+          has to be discovered and added here manually each time, which
+          is exactly how the versionium gap (above) happened, and how
+          loom's own identical gap happened before it (§BUGFIX
+          2026-07-04, this file's own prior comment). A real, structural
+          fix (e.g. each system self-reporting its own contract path at
+          registration time) is undecided, unbuilt work.
+        opened: 2026-09-02
+
+  version_history:
+    - version: 2.2.0
+      date: 2026-09-03
+      summary: "Retroactive first entry — living-model schema added for the first time, matching lib/version.js's own real, currently-tracked orchestrator version. No schema-only bump implied."
+      versioniumCommitId: null

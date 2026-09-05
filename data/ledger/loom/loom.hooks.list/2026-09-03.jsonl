@@ -1,1 +1,0 @@
-{"uuid":"19323c8a-1948-4ac9-b7e4-3cedb3c683e0","system":"loom","component":"loom.hooks.list","action":"registered","status":"ok","tags":["loom"],"detail":"List hooks — the registry loom is write authority for","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139610}

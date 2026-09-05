@@ -112,21 +112,6 @@ spec:
       axes: [truncation, sigma, delta]
       retry_strategies: [resend-with-report, split-chunk, forensic]
 
-  command_index:
-    status: DONE   # verified 2026-09-03 — GET /commands live, real source-extraction from guardian/server.js's own literal dispatch code (guardian/lib/command-index-extract.js). 50 real top-level commands + 14 named sub-router prefixes (19 real nested checks honestly disclosed as unresolved, not silently folded into the count). tests/modules/guardian-command-index.test.js, 9/9 passing, self-verifying against a fresh re-extraction every run.
-    spec: "docs/command-index-per-system.spec"
-    served_at: "GET /commands"
-    file: "guardian/lib/command-index-extract.js"
-    note: >
-      This block's own routes:/handshake: lists below are still
-      hand-maintained and confirmed stale (4 routes declared in this
-      block's own format vs 50 real matched + 19 unresolved-nested in
-      the live-extracted index, measured 2026-09-03 by tests/modules/
-      guardian-command-index.test.js's own real diff). GET /commands is
-      now the real, non-drifting source; replacing this block's own
-      routes:/handshake: lists to point at it (rather than duplicating
-      them by hand) is real, separate follow-up, not done in this pass.
-
   routes:
     internal:
       - "GET  /health"
@@ -177,3 +162,134 @@ spec:
       - "JOBS — live job queue, status, provider used, duration"
       - "SEAM — chunk pipeline status, gate scores, retry history"
       - "DISPATCH — manual dispatch panel with provider selector"
+
+  # §ADDED 2026-09-03 — James: "update the living models." guardian.spec
+  # had none of the real LM1/AX-013 fields (history/gaps/version_history)
+  # despite being one of the most heavily touched systems this session —
+  # a real, confirmed gap, not built around silently. History below
+  # starts from what's genuinely verifiable this session, not a guessed
+  # reconstruction of everything that came before — an honest, shorter
+  # log is worth more than a fabricated comprehensive one (§1.1).
+  history:
+    - date: 2026-09-02
+      summary: >
+        §ACK-INJECTION FIX — James: "ack is injecting way too much into
+        chatgpt, the tools are for that exact reason." Real root cause:
+        every browser-agent job got a full force-fed context blob
+        regardless of a real, already-built hat-classification system
+        (lib/intent-hat-router.js, 2026-08-17) that never reached this
+        dispatch path. createJob() now computes a real hat suggestion
+        (intentHatRouter.suggestHat() + hatForge.get(), read-only) and
+        attaches it to the NCP payload; all 4 provider userscripts use
+        the hat's own short persona instead of the blob when one is
+        present. 23 real test assertions, VM-isolated per provider.
+    - date: 2026-09-02
+      summary: >
+        AM1 — real per-agent intent contracts. Hats gained a real
+        allowedIntents field; a new lib/agent-intent-contract.js checks
+        {agent, intent} before HANDSHAKE_VERIFIED. §AM6-CLOSED 2026-09-02
+        — James: "yes. sure." (confirming a real, separately-found gap):
+        the gate only ran when a caller happened to call acknowledge()
+        explicitly, and the real automatic path (raid-worker.js's own
+        15s auto-drain) never did — cortex/core/raid/contract-intake.js's
+        processNext() now auto-acknowledges every contract itself,
+        closing the gap at the one real choke point every dispatch
+        passes through.
+    - date: 2026-09-02
+      summary: >
+        DeepSeek added as a real agent (see ollama.spec's own matching
+        entry) — guardian/server.js gained a real _dispatchToDeepseek(),
+        mirroring mistral's existing ollama-bridge routing pattern.
+    - date: 2026-09-02
+      summary: >
+        Real, invokable Intelligence & Contracts tools built on top of
+        this system's own already-real POST /api/tools/:name (existed,
+        complete, but the userscript's own SYS tab only ever pre-filled
+        a manual query box instead of calling it) — see faculty-tools.js.
+    - date: 2026-09-02
+      summary: >
+        AM8 — the real, two-step element-picker "add as new agent"
+        pairing flow (see clear-glass.spec's own matching entry).
+    - date: 2026-09-02
+      summary: >
+        §ROOT CAUSE — James, live, from a real standalone-browser
+        screenshot and boot log: "the userscript isn't connecting... not
+        hearing hey nexus," plus a separate "Attempted to register a
+        second handler for 'agents:list'" unhandled rejection. Traced
+        directly: every one of this system's 4 provider userscripts had
+        12+ real call sites still using plain fetch()/EventSource against
+        local HTTP endpoints, blocked by mixed content from an HTTPS
+        host page in a real standalone browser — and since wake-word
+        arming only happens inside EventSource's onopen, a blocked
+        connection meant "hey nexus" was never armed, not a separate
+        bug. Real _gmFetch()/_gmEventSource() wrappers built (the latter
+        a genuine incremental SSE parser over GM_xmlhttpRequest's own
+        onprogress, not polling dressed up as streaming) and converted
+        every real call site across all 4 files — verified zero plain
+        calls remain, not assumed. Separately: AM8's own new agents:list
+        handler (above) collided with clear-glass's pre-existing, real
+        agent-mesh registry handler — renamed to custom-agents:*.
+    - date: 2026-09-03
+      summary: >
+        Merged a real parallel session's fix: officiator.js's submitted
+        contract content never asked the agent to report a verdict in
+        the exact literal format ("SEAM VERDICT: PASS/FAIL") this
+        system's own contract-intake.js default checker requires — every
+        officiator-synthesized contract dispatched through guardian
+        failed regardless of real outcome. Fixed in both real dispatch
+        paths.
+    - date: 2026-09-05
+      summary: "docs: update the living models — real history entries, plus a real pre-existing YAML bug found and fixed in 4 specs (1 real file touched)"
+    - date: 2026-09-05
+      summary: "chore: register the two orphans the new post-commit hook itself flagged (1 real file touched)"
+    - sha: f66c6f434bd997c38ccef6de34109805a2767ee8
+      date: 2026-09-05
+      summary: "fix: real, tested merge safety for parallel-session history writes — found a genuine, silent data-loss risk before it could bite (1 real file touched)"
+
+  gaps:
+    as_of: 2026-09-03
+    entries:
+      - id: G1
+        type: coverage
+        summary: >
+          This spec itself had zero real history/gaps/version_history
+          fields until this pass, despite AX-013/LM1 establishing that
+          convention for every other system spec weeks earlier — the
+          exact class of staleness this schema exists to prevent, found
+          on this file specifically only because "update the living
+          models" was asked directly.
+        opened: 2026-09-03
+        status: CLOSED
+        closed: 2026-09-03
+        resolution: "This same pass — closed by writing the schema this gap describes as missing."
+      - id: G2
+        type: design
+        summary: >
+          The 4 provider userscripts (chatgpt/claude/gemini/perplexity)
+          have confirmed, real, byte-for-byte-identical duplication in
+          handleJob and related functions across 3 of the 4 (AM4, agent-
+          mesh phasemap) — a real refactor target, not yet done. AM8's
+          own new UI additions (Intelligence & Contracts panel, cookie-
+          vault, agent-create pairing) were added to each file
+          individually rather than through a shared core, compounding
+          this same gap rather than closing it.
+        opened: 2026-09-02
+      - id: G3
+        type: coverage
+        summary: >
+          The mixed-content fix (above) dropped fetch()'s own
+          keepalive:true guarantee on 4 real bus functions (_toOrc/
+          _toCortex/_toCortexPush/_toBridge) — GM_xmlhttpRequest has no
+          equivalent. A real, accepted tradeoff (these connections were
+          completely non-functional in a standalone browser regardless
+          of keepalive), but a page unload mid-flight can now silently
+          drop one of these 4 real calls where it previously wouldn't
+          have (in the one deployment context — a real, standalone
+          browser — where the fix was even needed).
+        opened: 2026-09-02
+
+  version_history:
+    - version: 3.6.2
+      date: 2026-09-03
+      summary: "Retroactive first entry — living-model schema added for the first time, matching lib/version.js's own real, currently-tracked guardian (server) version. userscript-claude.js's own separate @version header (10.2.0) tracks the userscript artifact specifically, not this system-level number — a real, distinct versioning scheme, not a discrepancy to reconcile here."
+      versioniumCommitId: null

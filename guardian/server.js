@@ -59,10 +59,8 @@ const grammarFallback = require('../guardian/lib/grammar-fallback');
 // that file's own §ACK-INJECTION-FIX comment) can use the short persona
 // instead of the generic blob, and narrow its tools list to the hat's real
 // scope instead of the county-wide list every job got before.
-// §DECOMPILED 2026-09-02 — intent-hat-router/hat-forge were only used by
-// _suggestJobHat/createJob, both now in guardian/lib/jobs.js (which requires
-// them itself). Removed here rather than left as unused dead requires.
-const { wireGuardianCore } = require('./lib');
+const intentHatRouter = require('../lib/intent-hat-router.js');
+const hatForge = require('../lib/hat-forge.js');
 
 // Per-kernel baseline monitor — establishes runtime baseline from first 20 events
 // Sigma deviations → gap.found in JAA
@@ -405,9 +403,45 @@ const DROPZONE_PORT = config.DROPZONE_PORT;
 const NEXUS_URL     = config.NEXUS_URL;
 
 // ── RAID routing seam ─────────────────────────────────────────────────────────
-// §DECOMPILED 2026-09-02 — chooseProvider() and _RAID_AGENT_TO_PROVIDER moved
-// verbatim to guardian/lib/provider-routing.js (createProviderRouter). Bound
-// below via wireGuardianCore() once ncp/cockpitBroadcast/pendingQueue exist.
+// Guardian asks cortex's RAID which provider for this intent before dispatch.
+// Non-fatal: cortex unreachable -> fall back. LAW I lives in RAID.
+const _RAID_AGENT_TO_PROVIDER = {
+  'ollama':             'ollama',
+  'guardian-claude':    'claude',
+  'guardian-chatgpt':   'chatgpt',
+  'guardian-gemini':    'gemini',
+  'guardian-perplexity':'perplexity',
+  'claude':      'claude',
+  'chatgpt':     'chatgpt',
+  'gemini':      'gemini',
+  'perplexity':  'perplexity',
+};
+async function chooseProvider(intent, fallback = 'claude', preferred = '') {
+  if (process.env.GUARDIAN_RAID_OFF === '1') return fallback;
+  try {
+    const http = require('http');
+    const u = new URL('/api/raid/decide', NEXUS_URL);
+    u.searchParams.set('intent', (intent || '').slice(0, 300));
+    if (preferred) u.searchParams.set('preferred', preferred);
+    const decision = await new Promise((resolve, reject) => {
+      const req = http.get(u, { timeout: 1500 }, res => {
+        let raw = ''; res.on('data', d => raw += d);
+        res.on('end', () => { try { resolve(JSON.parse(raw)); } catch (e) { reject(e); } });
+      });
+      req.on('timeout', () => req.destroy(new Error('raid timeout')));
+      req.on('error', reject);
+    });
+    if (decision?.ok && decision.agent) {
+      const provider = _RAID_AGENT_TO_PROVIDER[decision.agent.toLowerCase()] || fallback;
+      _postEvent('guardian.route.decided', { agent: decision.agent, provider, reason: decision.reason, cluster: decision.cluster });
+      return provider;
+    }
+    return fallback;
+  } catch (e) {
+    _postEvent('guardian.route.fallback', { reason: e.message, fallback });
+    return fallback;
+  }
+}
 
 const DB_FILE   = path.join(__dirname, 'guardian.db');
 const SCHEMA_FILE = path.join(__dirname, 'schema.sql');
@@ -426,16 +460,159 @@ const SCHEMA_FILE = path.join(__dirname, 'schema.sql');
 // ── provider registry ─────────────────────────────────────────────────────────
 
 
-// §DECOMPILED 2026-09-02 — PROVIDER_ALIASES, _dispatchToDeepseek, and
-// _dispatchToMistral moved verbatim to guardian/lib/provider-routing.js
-// (createProviderRouter), reconciled to keep deepseek routing intact.
-// Bound below via wireGuardianCore().
+const PROVIDER_ALIASES = {
+  'claude.ai':           'claude',
+  'chat.openai.com':     'chatgpt',
+  'chatgpt.com':         'chatgpt',
+  'gemini.google.com':   'gemini',
+  'aistudio.google.com': 'gemini',
+  'perplexity.ai':       'perplexity',
+  'localhost':           'ollama',
+  '127.0.0.1':          'ollama',
+  'chat.mistral.ai':     'mistral',
+  'chat.deepseek.com':   'deepseek',
+};
+
+// ── DeepSeek dispatch — routes to ollama-bridge at :3749 ─────────────────────
+// §ADDED 2026-09-02 — James: "I want deepseek added as an agent." Same
+// real pattern mistral already uses immediately below (mirrored, not
+// reinvented): DeepSeek's real, commonly-available local models
+// (deepseek-coder-v2, deepseek-r1) are served through Ollama, not a
+// browser tab, so this routes directly to the sovereign ollama-bridge
+// HTTP service, exactly like mistral does. chat.deepseek.com is mapped
+// above too, for the real, separate case of a browser-tab NCP dispatch
+// if one is ever wired for it — not built here, this function is the
+// real, immediate local-model path.
+async function _dispatchToDeepseek(job) {
+  const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
+  const model = process.env.DEEPSEEK_MODEL || 'deepseek-coder-v2';
+  const http2 = require('http');
+  return new Promise(resolve => {
+    const body = JSON.stringify({
+      prompt:   job.prompt || job.content || '',
+      model,
+      command:  job.command || 'chat',
+      jobId:    job.id,
+      meta:     { source: 'guardian-deepseek', jobId: job.id },
+    });
+    const req = http2.request({
+      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/api/jobs',
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 120000,
+    }, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try {
+          const d = JSON.parse(raw);
+          const jobId = d.jobId || d.uuid;
+          if (!jobId) { resolve({ ok:false, error:'no jobId returned' }); return; }
+          let polls = 0;
+          const poll = () => {
+            polls++;
+            if (polls > 120) { resolve({ ok:false, error:'poll timeout' }); return; }
+            const pr = http2.request({ hostname:'127.0.0.1', port:BRIDGE_PORT, path:`/api/jobs/${jobId}`, method:'GET', timeout:5000 }, rs => {
+              let rb = ''; rs.on('data', c => rb += c);
+              rs.on('end', () => {
+                try {
+                  const pd = JSON.parse(rb);
+                  if (pd.status === 'complete' || pd.progress === 'complete') {
+                    updateJob(job.id, { status:'complete', response:pd.result||pd.text||'', completedAt:Date.now() });
+                    bus.emit('guardian.job.complete', { jobId:job.id, provider:'deepseek', chars:(pd.result||'').length });
+                    resolve({ ok:true, text:pd.result||pd.text||'' });
+                  } else if (pd.status === 'failed' || pd.progress === 'failed') {
+                    resolve({ ok:false, error:pd.error||'ollama job failed' });
+                  } else {
+                    setTimeout(poll, 1000);
+                  }
+                } catch(_) { setTimeout(poll, 1000); }
+              });
+            });
+            pr.on('error', () => setTimeout(poll, 1000));
+            pr.end();
+          };
+          setTimeout(poll, 1000);
+        } catch(e) {
+          updateJob(job.id, { status: 'error', error: 'parse error: ' + e.message });
+          resolve({ ok: false, error: e.message });
+        }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); updateJob(job.id, { status: 'error', error: 'deepseek timeout' }); resolve({ ok:false, error:'timeout' }); });
+    req.on('error', e => { updateJob(job.id, { status: 'error', error: e.message }); resolve({ ok:false, error: e.message }); });
+    req.write(body); req.end();
+  });
+}
+
+// ── Mistral dispatch — routes to ollama-bridge at :3749 ──────────────────────
+// Mistral jobs don't go through NCP/browser tabs; they hit the sovereign
+// ollama-bridge HTTP service directly, same as forge_repair jobs.
+async function _dispatchToMistral(job) {
+  const BRIDGE_PORT = parseInt(process.env.OLLAMA_BRIDGE_PORT || '3749');
+  const model = process.env.MISTRAL_MODEL || 'mistral:7b-instruct-q4_K_M';
+  const http2 = require('http');
+  return new Promise(resolve => {
+    const body = JSON.stringify({
+      prompt:   job.prompt || job.content || '',
+      model,
+      command:  job.command || 'chat',
+      jobId:    job.id,
+      meta:     { source: 'guardian-mistral', jobId: job.id },
+    });
+    // §fix 2026-07-04: /generate never existed on ollama-bridge. Real route is POST /api/jobs + poll GET /api/jobs/:id
+    const req = http2.request({
+      hostname: '127.0.0.1', port: BRIDGE_PORT, path: '/api/jobs',
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 120000,
+    }, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try {
+          const d = JSON.parse(raw);
+          const jobId = d.jobId || d.uuid;
+          if (!jobId) { resolve({ ok:false, error:'no jobId returned' }); return; }
+          // Poll for completion
+          let polls = 0;
+          const poll = () => {
+            polls++;
+            if (polls > 120) { resolve({ ok:false, error:'poll timeout' }); return; }
+            const pr = http2.request({ hostname:'127.0.0.1', port:BRIDGE_PORT, path:`/api/jobs/${jobId}`, method:'GET', timeout:5000 }, rs => {
+              let rb = ''; rs.on('data', c => rb += c);
+              rs.on('end', () => {
+                try {
+                  const pd = JSON.parse(rb);
+                  if (pd.status === 'complete' || pd.progress === 'complete') {
+                    updateJob(job.id, { status:'complete', response:pd.result||pd.text||'', completedAt:Date.now() });
+                    bus.emit('guardian.job.complete', { jobId:job.id, provider:'mistral', chars:(pd.result||'').length });
+                    resolve({ ok:true, text:pd.result||pd.text||'' });
+                  } else if (pd.status === 'failed' || pd.progress === 'failed') {
+                    resolve({ ok:false, error:pd.error||'ollama job failed' });
+                  } else {
+                    setTimeout(poll, 1000);
+                  }
+                } catch(_) { setTimeout(poll, 1000); }
+              });
+            });
+            pr.on('error', () => setTimeout(poll, 1000));
+            pr.end();
+          };
+          setTimeout(poll, 1000);
+        } catch(e) {
+          updateJob(job.id, { status: 'error', error: 'parse error: ' + e.message });
+          resolve({ ok: false, error: e.message });
+        }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); updateJob(job.id, { status: 'error', error: 'mistral timeout' }); resolve({ ok:false, error:'timeout' }); });
+    req.on('error', e => { updateJob(job.id, { status: 'error', error: e.message }); resolve({ ok:false, error: e.message }); });
+    req.write(body); req.end();
+  });
+}
 
 // ── job store ─────────────────────────────────────────────────────────────────
-// §DECOMPILED 2026-09-02 — the `jobs` Map, createJob, updateJob,
-// _suggestJobHat, _findActiveJobForProvider moved verbatim to
-// guardian/lib/jobs.js (createJobStore). Bound below via wireGuardianCore().
 
+const jobs = new Map();
 const responseLog = [];
 const LOG_MAX = config.RESPONSE_LOG_MAX;
 
@@ -459,9 +636,26 @@ function broadcast(obj) {
   ncp.broadcast(obj);
 }
 
-// §DECOMPILED 2026-09-02 — normaliseProvider() and parseCommand() moved to
-// guardian/lib/provider-routing.js, with the real PROVIDERS-Proxy bug fixed
-// there (see that file's header). Bound below via wireGuardianCore().
+function normaliseProvider(raw) {
+  if (!raw) return null;
+  const r = raw.toLowerCase().trim();
+  if (PROVIDER_ALIASES[r]) return PROVIDER_ALIASES[r];
+  if (PROVIDERS.hasOwnProperty(r)) return r;
+  for (const key of Object.keys(PROVIDERS)) {
+    if (r.includes(key)) return key;
+  }
+  return null;
+}
+
+function parseCommand(raw) {
+  const str   = (raw || '').trim();
+  const match = str.match(/^\/(\w+)\s+(\w[\w.-]*)\s*([\s\S]*)$/);
+  if (!match) return null;
+  const [, command, providerRaw, rest] = match;
+  const provider = normaliseProvider(providerRaw);
+  const prompt   = rest.trim().replace(/^["']|["']$/g, '');
+  return { command: command.toLowerCase(), provider, prompt, raw: str };
+}
 
 // ── NEXUS write ───────────────────────────────────────────────────────────────
 
@@ -497,15 +691,776 @@ async function writeToNexus(job) {
   } catch(_) {}
 }
 
-// §DECOMPILED 2026-09-02 — _suggestJobHat, createJob, updateJob,
-// _findActiveJobForProvider moved to guardian/lib/jobs.js. dispatchJob and
-// _doDispatch (and the dispatch-pool require + pendingQueue Map they used)
-// moved to guardian/lib/dispatcher.js, reconciled to keep deepseek routing
-// intact — see that file's header. All bound below via wireGuardianCore().
+// ── job lifecycle ─────────────────────────────────────────────────────────────
 
-// §DECOMPILED 2026-09-02 — _handleNCPMessage moved verbatim to
-// guardian/lib/ncp-handler.js (createNCPMessageHandler). Wired further
-// down, right after `jaa` exists — see that call site's comment for why.
+// §ACK-INJECTION-FIX 2026-09-02 — real, read-only hat lookup. Never throws
+// (suggestHat() itself is pure — classify + a map lookup, no I/O — but this
+// still guards it: a job must never fail to create because a persona
+// suggestion had a problem). No hat is a legitimate, common result (most
+// prompts don't map to a seeded hat's verb) — returns null, not a fabricated
+// default persona.
+function _suggestJobHat(prompt) {
+  try {
+    const suggestion = intentHatRouter.suggestHat(prompt || '');
+    if (!suggestion.suggested) return null;
+    const hat = hatForge.get(suggestion.hatName);
+    if (!hat) return null;
+    return {
+      name: hat.name,
+      personaPrompt: hat.personaPrompt || '',
+      toolScope: Array.isArray(hat.toolScope) ? hat.toolScope : [],
+      verb: suggestion.verb,
+      confidence: suggestion.confidence,
+    };
+  } catch (e) {
+    console.warn(`[guardian] hat suggestion failed for job (non-fatal): ${e.message}`);
+    return null;
+  }
+}
+
+function createJob({ command, provider, prompt, content, source, tools }) {
+  const id  = randomUUID();
+  // §ACK-INJECTION-FIX — computed once at creation, not per-dispatch-retry,
+  // so a job's persona stays stable across any real redelivery.
+  const hat = _suggestJobHat(prompt);
+  const job = { id, command, provider, prompt, content: content || null, source: source || null,
+    tools: Array.isArray(tools) ? tools : null,
+    hat,
+    status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now() };
+  jobs.set(id, job);
+  console.log(`[guardian] job created: ${id} → ${provider} /${command}${hat ? ` [hat: ${hat.name}]` : ''}`);
+  return job;
+}
+
+function updateJob(id, patch) {
+  const job = jobs.get(id);
+  if (!job) return null;
+  Object.assign(job, patch, { updatedAt: Date.now() });
+  return job;
+}
+
+// §AGENT-MESH-ARTIFACTS 2026-09-02 — James: "hook it into agent mesh...
+// like idearium works end to end." Real, honest correlation for a
+// download arriving with no jobId attached (clear-glass's download-
+// capture.js has no knowledge of guardian's job objects — different
+// process, and Electron's own will-download event carries no job
+// context at all). The most recent job dispatched-but-not-yet-resolved
+// for that provider is the best real evidence available; when more than
+// one is plausible (e.g. rapid-fire dispatches to the same tab) this
+// picks the most recent by updatedAt and is honest that it's a
+// best-effort match, not a guaranteed one — a caller that needs
+// certainty should pass jobId explicitly instead of relying on this.
+function _findActiveJobForProvider(provider) {
+  if (!provider) return null;
+  let best = null;
+  for (const job of jobs.values()) {
+    if (job.provider !== provider) continue;
+    if (job.status !== 'dispatched') continue;
+    if (!best || job.updatedAt > best.updatedAt) best = job;
+  }
+  return best ? best.id : null;
+}
+
+// Jobs waiting for provider to connect
+const { pool: _dispatchPool } = require('../guardian/lib/dispatch-pool'); // §P11: per-provider semaphore
+const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-pool paths)
+
+function dispatchJob(job) {
+  // §P11: route through dispatch pool — per-provider semaphore, job stealing
+  _dispatchPool.enqueue(job.provider, { id: job.id, provider: job.provider, priority: job.priority || 'normal', payload: job },
+    (poolJob) => _doDispatch(poolJob.payload));
+
+  // If pool enqueued (slot available) _doDispatch was called synchronously.
+  // If queued or stolen, it will be called when slot frees.
+  return; // pool owns dispatch from here
+}
+
+// Ollama dispatch removed — all ollama work goes through ollama/server.js (:3749)
+
+
+
+
+
+function _doDispatch(job) {
+  // §BUILT 2026-07-13 — "Guardian is supposed to use Clear Glass. It's
+  // NEXUS' browser. Give the co-pilot more access." Real, direct dispatch
+  // to Clear Glass's command surface instead of a chat provider — same
+  // pattern as mistral/ollama below (route directly, no NCP tab needed),
+  // because a browser action isn't a chat completion either.
+  if (job.provider === 'browser') {
+    // §BUILT 2026-07-14 — real physical browser control had zero
+    // approval gate before this, arguably the highest-stakes gap found
+    // in this audit (navigate/DOM-mutate/driver-exec are real actions
+    // with real side effects, not just text generation). 'browser' added
+    // to copilot's and cli's contracts specifically for this — see
+    // cortex/contract/index.js's own dated note.
+    let _approval;
+    try {
+      const raid = require('../cortex/core/raid');
+      _approval = raid._approveTool(job.source || 'unknown', String(job.command || ''), { action: 'browser' });
+    } catch (e) {
+      updateJob(job.id, { status: 'error', error: `RAID approval gate unavailable: ${e.message}` });
+      bus.emit('guardian.job.error', { jobId: job.id, error: 'raid_unavailable', provider: 'browser' });
+      return true;
+    }
+    if (!_approval.approved) {
+      updateJob(job.id, { status: 'error', error: `RAID denied browser dispatch: ${_approval.reason}` });
+      bus.emit('guardian.job.error', { jobId: job.id, error: _approval.reason, provider: 'browser' });
+      return true;
+    }
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log(`[guardian] browser job → Clear Glass :7702/cmd (${job.command})`);
+    const { dispatchBrowserCommand } = require('./clear-glass-bridge.js');
+    // job.content arrives as whatever the caller sent over HTTP — a real
+    // http.request caller (like the browser_action agent-tool) sends it
+    // JSON-stringified, since request bodies are strings; a direct
+    // in-process call might pass an object. Handle both rather than
+    // assume the shape and fail confusingly on the more common real path.
+    let cmdData = job.content;
+    if (typeof cmdData === 'string') {
+      try { cmdData = JSON.parse(cmdData); } catch (_) { cmdData = { raw: cmdData }; }
+    }
+    dispatchBrowserCommand({ eventType: job.command, data: cmdData || {} })
+      .then(result => {
+        if (result.ok) {
+          updateJob(job.id, { status: 'complete', response: JSON.stringify(result.result), completedAt: Date.now() });
+          bus.emit('guardian.job.complete', { jobId: job.id, provider: 'browser', command: job.command });
+        } else {
+          updateJob(job.id, { status: 'error', error: result.error });
+          bus.emit('guardian.job.error', { jobId: job.id, error: result.error, provider: 'browser' });
+        }
+      })
+      .catch(e => {
+        updateJob(job.id, { status: 'error', error: e.message });
+        bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'browser' });
+      });
+    return true;
+  }
+  // Mistral routes directly to ollama-bridge — no NCP browser tab needed
+  if (job.provider === 'mistral') {
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log('[guardian] mistral job → ollama-bridge :3749');
+    _dispatchToMistral(job).catch(e => {
+      updateJob(job.id, { status: 'error', error: e.message });
+      bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'mistral' });
+    });
+    return true;
+  }
+  // §ADDED 2026-09-02 — DeepSeek, same real routing as mistral above.
+  if (job.provider === 'deepseek') {
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log('[guardian] deepseek job → ollama-bridge :3749');
+    _dispatchToDeepseek(job).catch(e => {
+      updateJob(job.id, { status: 'error', error: e.message });
+      bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'deepseek' });
+    });
+    return true;
+  }
+  // Ollama provider also routes to bridge (legacy path)
+  if (job.provider === 'ollama') {
+    updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
+    console.log('[guardian] ollama job → ollama-bridge :3749');
+    _dispatchToMistral({ ...job, provider: 'ollama' }).catch(e => {
+      updateJob(job.id, { status: 'error', error: e.message });
+      bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'ollama' });
+    });
+    return true;
+  }
+  // NCP: push job via SSE channel instead of WebSocket
+  if (!ncp.isConnected(job.provider)) {
+    // Queue it — will flush when provider connects via GET /channel
+    if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
+    pendingQueue.get(job.provider).push(job);
+    updateJob(job.id, { status: 'queued', queuedAt: Date.now(),
+      queueReason: `waiting for ${job.provider} NCP channel` });
+    console.log(`[guardian] queued ${job.id} — waiting for ${job.provider} userscript`);
+    bus.emit('guardian.job.queued', { jobId: job.id, provider: job.provider });
+    // Emit tab.needed — Forge cockpit SSE listeners will open the tab
+    // CLI watcher will print the URL for the operator to open
+    const provUrls = {
+      claude:     'https://claude.ai/new',
+      chatgpt:    'https://chatgpt.com/',
+      gemini:     'https://gemini.google.com/',
+      perplexity: 'https://www.perplexity.ai/',
+      mistral:    'https://chat.mistral.ai/',
+      deepseek:   'https://chat.deepseek.com/',
+    };
+    const url = provUrls[job.provider];
+    if (url) {
+      bus.emit('guardian.tab.needed', { provider: job.provider, url, jobId: job.id });
+      // Broadcast to all connected SSE clients (Forge, nexus-chat) so they can open it
+      cockpitBroadcast({ type: 'GUARDIAN_TAB_NEEDED', provider: job.provider, url, jobId: job.id });
+      console.log(`[guardian] tab needed: ${url} — job ${job.id} will flush when connected`);
+    }
+    return false;
+  }
+  // Push via SSE — userscript's EventSource.onmessage receives it
+  ncp.push(job.provider, {
+    type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
+    provider: job.provider, prompt: job.prompt, content: job.content,
+    // §BUILT 2026-08-31, James live: "the chats aren't two way. like the
+    // tools don't work." Real phase 2 — tools was accepted by askSync
+    // and even createJob's caller passed it, but createJob itself never
+    // stored it and this push never sent it, so the userscript's own
+    // handleJob had no way to know tools existed at all, regardless of
+    // whether a real execution route existed (it does — POST
+    // /api/tools/:name, confirmed working).
+    tools: job.tools || null,
+    // §ACK-INJECTION-FIX 2026-09-02 — carries createJob()'s real hat
+    // suggestion (persona + toolScope) so the userscript can use a short,
+    // targeted persona instead of the generic always-on context blob. null
+    // is a real, common, honest result (most prompts don't classify to a
+    // seeded hat's verb) — the userscript falls back to its prior behavior
+    // when this is null, not a fabricated default persona.
+    hat: job.hat || null,
+  });
+  updateJob(job.id, { status: 'delivered', deliveredAt: Date.now() });
+  console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP`);
+  // §ALK-09: record dispatch decision
+  try {
+    const alk = require('../intelligence/alk');
+    alk.record({
+      actor:   'llm',
+      intent:  'generate',
+      payload: { jobId: job.id, provider: job.provider, command: job.command, promptHash: job.prompt?.slice(0,40) },
+    });
+  } catch(_) {}
+  bus.emit('guardian.job.dispatched', { jobId: job.id, provider: job.provider });
+  return true;
+}
+
+// ── NCP message handler — replaces wss.on('connection', ws.on('message')) ────
+function _handleNCPMessage(msg) {
+  const { type, jobId, provider, tabId, text, content, lang, hash,
+          gaps, error, gate, chatUrl, chatId, account } = msg;
+
+  // ── §5.2 Cortex write — every significant userscript event reaches cortex ──
+  // Fire-and-forget: timeout 2s, never block the NCP response.
+  function _toCortex(eventType, payload) {
+    if (!nc) return;
+    nc._req('cortex', 'POST', '/api/event', {
+      type:     eventType,
+      payload:  { ...payload, _provider: provider, _chatUrl: chatUrl, _account: account },
+      source:   'guardian-ncp',
+      causedBy: jobId || null,
+      ts:       Date.now(),
+    }, 2000).catch(() => {});
+  }
+
+  // Chunk accumulator — flush to cortex every 5 chunks or ≥500 chars
+  // Avoids per-token writes while keeping cortex alive with stream data
+  if (!_handleNCPMessage._buf)   _handleNCPMessage._buf   = {};
+  if (!_handleNCPMessage._count) _handleNCPMessage._count = {};
+
+  switch(type) {
+
+    case 'GUARDIAN_REGISTER':
+    case 'NCP_REGISTER': {
+      // Provider registered via GET /channel — already handled by NCP onConnect.
+      // Propagate claimed/chatId into the NCP client entry NOW so that
+      // GET /providers returns the correct state immediately, without waiting
+      // for the first heartbeat (HB_MS = 8 s). Fixes the UI badge staying at
+      // "NO TAB CONNECTED" or "CONNECTED · PASSIVE" for the first 8 s.
+      if (tabId) {
+        ncp.updateClient(provider, tabId, {
+          claimed: msg.claimed ?? false,
+          chatId:  msg.chatId  ?? null,
+        });
+      }
+      ncp.push(provider, { type: 'GUARDIAN_READY', provider, ts: Date.now() });
+      bus.emit('guardian.provider.registered', { provider, tabId });
+      break;
+    }
+
+    case 'GUARDIAN_DELIVERED':
+    case 'NCP_DELIVERED': {
+      if (jobId) {
+        updateJob(jobId, { status: 'delivered_confirmed', confirmedAt: Date.now() });
+        bus.emit('guardian.job.confirmed', { jobId, provider });
+      }
+      break;
+    }
+
+    case 'GUARDIAN_CHUNK':
+    case 'NCP_CHUNK': {
+      if (jobId && text) {
+        const full = msg.full || null;
+        updateJob(jobId, { status: 'streaming', lastChunk: Date.now() });
+        bus.emit('guardian.job.chunk', { jobId, text, full, provider });
+        cockpitBroadcast({ type: 'job.chunk', jobId, text, full, provider, ts: Date.now() });
+
+        // ── Stream to cortex: batch before writing ────────────────────────
+        _handleNCPMessage._buf[jobId]   = (_handleNCPMessage._buf[jobId]   || '') + text;
+        _handleNCPMessage._count[jobId] = (_handleNCPMessage._count[jobId] || 0)  + 1;
+        const bufLen   = _handleNCPMessage._buf[jobId].length;
+        const chunkCnt = _handleNCPMessage._count[jobId];
+        if (bufLen >= 500 || chunkCnt % 5 === 0) {
+          const batch = _handleNCPMessage._buf[jobId];
+          _handleNCPMessage._buf[jobId] = '';
+          _toCortex('guardian.job.stream', {
+            jobId, provider, text: batch.slice(0, 2000), chars: batch.length,
+            chunkIndex: chunkCnt, fullLen: full ? full.length : bufLen,
+          });
+        }
+      }
+      break;
+    }
+
+    case 'GUARDIAN_COMPLETE':
+    case 'NCP_COMPLETE': {
+      if (jobId) {
+        const finalText = text || content || '';
+        const job = jobs.get(jobId);
+
+        // ── SEAM queue routing ────────────────────────────────────────────
+        // A SEAM-dispatched chunk's jobId is never in the `jobs` Map (that's
+        // for raw jobs only) — this is the only place its response goes.
+        // §LAW II: onResponse() writes DETECTING to JAA before evaluating.
+        const seamQueue = _findActiveSeamCompartment(jobId);
+        if (seamQueue) {
+          seamQueue.onResponse(jobId, finalText);
+        }
+        // Fall through — gap/artifact extraction below is generically useful
+        // for SEAM-generated content too, so it still runs either way.
+        // Store response text on job so /response/:jobId can serve it
+        if (job) {
+          job.responseText = finalText.slice(0, 100000);
+          job.status = 'complete';
+          // §WIRED 2026-08-14 — the tool-call half of P4. See
+          // _extractToolCallsFromDOM's header note: this is the one real
+          // producer for job.tool_calls, which /command/tools's
+          // resolveJob has been reading since P4 shipped with nothing
+          // ever writing it.
+          job.tool_calls = _extractToolCallsFromDOM(finalText);
+        }
+
+        // Feed event to baseline monitor
+        const latencyMs = job?.startedAt ? Date.now() - job.startedAt : 0;
+        _baseline.observe({ type: 'GUARDIAN_COMPLETE', latencyMs, error: false, ts: Date.now() });
+
+        // §LAW II — log conversation turn before artifact processing
+        // (jobId is already guaranteed truthy here — the outer `currentJobId`
+        // reference was leftover from the browser-side userscripts, which
+        // declare that variable in their own module scope; it doesn't exist
+        // in this process and was throwing ReferenceError on every completion)
+        if (jobId) {
+          const sessionId = chatId || chatUrl || jobId || 'unknown';
+          _physQueue.logConversation(sessionId.slice(0, 40), {
+            role:      'assistant',
+            content:   (finalText || '').slice(0, 10000),
+            jobId,
+            provider:  provider || 'unknown',
+            ts:        Date.now(),
+          });
+        }
+
+        // §LAW II — write artifact files to disk before JAA insert
+        // Chunks and synthesized output written as real files
+        const codeBlocks = extractCodeBlocks(finalText, provider || 'ai');
+        if (codeBlocks.length > 0) {
+          const outDir = require('path').join(
+            __dirname, '..', 'data', 'output',
+            new Date().toISOString().slice(0, 10),
+            jobId.slice(0, 8)
+          );
+          require('fs').mkdirSync(outDir, { recursive: true });
+          for (const block of codeBlocks) {
+            const filepath = require('path').join(outDir, block.filename);
+            require('fs').writeFileSync(filepath, block.content, 'utf8');
+          }
+          bus.emit('guardian.artifacts.written', {
+            jobId, outDir, count: codeBlocks.length,
+            files: codeBlocks.map(b => b.filename),
+          });
+        }
+
+        // Server-side gap analysis — §LAW II: write before acting
+        const gaps = GapHunter.analyze(finalText);
+        const gapDrift = GapHunter.drift(gaps);
+        if (gaps.length > 0) {
+          for (const g of gaps) {
+            jaa.insert('gaps', { uuid: require('crypto').randomUUID(),
+              jobId, provider, type: g.type, domain: g.domain,
+              reason: g.reason, description: g.description,
+              score: g.score, evidence: g.evidence, ts: Date.now() });
+          }
+          bus.emit('guardian.gaps', { jobId, gaps, drift: gapDrift, provider });
+        }
+
+        // Server-side detector — only if we have a SEAM chunk to compare against
+        let detection = null;
+        if (job?.seam_chunk_content) {
+          const profile = Detector.profile(job.seam_chunk_content);
+          detection = Detector.evaluate(finalText, job.seam_chunk_content, profile, job.axioms || []);
+          bus.emit('guardian.detection', { jobId, ...detection });
+        }
+
+        updateJob(jobId, {
+          status: 'complete', response: finalText, completedAt: Date.now(),
+          gaps: gaps.length, gapDrift, detection,
+        });
+        jaa.insert('artifacts', {
+          uuid: require('crypto').randomUUID(), jobId, provider: provider || 'unknown',
+          content: finalText.slice(0, 10000), ts: Date.now(), chatUrl, account,
+          gaps: gaps.length, gapDrift,
+        });
+
+        // §CHAT-LOG: persist every exchange for context injection and querying
+        // Queryable via GET /api/memory?table=chat_log
+        // Used by context-builder to surface recent completions to Ollama
+        try {
+          const jobRec = jobs.get(jobId);
+
+          // ── Chat logger — full exchange to disk + JAA + vector index ─────
+          try {
+            const cl = require('../lib/chat-logger');
+            if (!cl.getSession()) cl.startSession({ meta: { source: 'guardian' } });
+            // Log the prompt (user turn)
+            if (jobRec?.prompt) {
+              cl.log({ role:'user', content: jobRec.prompt, provider: provider||'ollama',
+                jobId, intent: jobRec.command, outcome:'complete' }).catch(()=>{});
+            }
+          } catch(_) {}
+
+          jaa.insert('chat_log', {
+            uuid:       require('crypto').randomUUID(),
+            jobId,
+            provider:   provider || 'unknown',
+            prompt:     (jobRec?.prompt || '').slice(0, 2000),
+            response:   finalText.slice(0, 5000),
+            tokensIn:   Math.ceil((jobRec?.prompt || '').length / 4),
+            tokensOut:  Math.ceil(finalText.length / 4),
+            gapCount:   gaps.length,
+            chatUrl,
+            account,
+            ts:         Date.now(),
+            source:     'ncp',
+          });
+        } catch(e) { console.error(`[guardian] failed to insert chat_log record for job ${jobId}: ${e.message}`); }
+
+        // §23.7 — include gapUuid and meta in the complete event so gap-loop's
+        // closure verifier can find the gap and run verifyClosure immediately
+        const jobRec2 = jobs.get(jobId);
+        bus.emit('guardian.job.complete', {
+          jobId, provider, chars: finalText.length,
+          gaps: gaps.length, gapDrift,
+          command: jobRec2?.command || null,
+          meta: {
+            gapUuid:     jobRec2?.gapUuid    || null,
+            gapType:     jobRec2?.gapType    || null,
+            raidAgent:   jobRec2?.raidAgent  || provider,
+            source:      jobRec2?.source     || 'guardian',
+            contractUuid:jobRec2?.contractUuid||null,
+          },
+        });
+        cockpitBroadcast({ type: 'job.complete', jobId, provider,
+          chars: finalText.length, gaps: gaps.length, gapDrift, ts: Date.now() });
+
+        // ── §2.1 Write full response + gaps + artifacts to cortex ─────────
+        // Clear chunk buffer for this job
+        delete _handleNCPMessage._buf[jobId];
+        delete _handleNCPMessage._count[jobId];
+
+        if (nc) {
+          // 1. Full response to cortex (cortex_memory + agent_messages via WELL_KNOWN router)
+          nc._req('cortex', 'POST', '/api/event', {
+            type:    'guardian.job.complete',
+            payload: {
+              jobId, provider, chars: finalText.length,
+              response:    finalText.slice(0, 8000),
+              gaps:        gaps.length, gapDrift, detection: detection || null,
+              chatUrl, account, completedAt: Date.now(),
+            },
+            source: 'guardian-ncp', causedBy: jobId, ts: Date.now(),
+          }, 3000).catch(() => {});
+
+          // 2. Each gap → cortex gaps table
+          for (const g of gaps) {
+            nc._req('cortex', 'POST', '/api/event', {
+              type:    'cortex.gap.found',
+              payload: {
+                jobId, provider, type: g.type, domain: g.domain,
+                reason: g.reason, description: g.description,
+                score: g.score, evidence: g.evidence, source: 'guardian-gaphunter',
+              },
+              source: 'guardian-ncp', causedBy: jobId, ts: Date.now(),
+            }, 1500).catch(() => {});
+          }
+
+          // 3. Each extracted code block → cortex artifacts table
+          for (const block of codeBlocks.slice(0, 8)) {
+            nc._req('cortex', 'POST', '/api/event', {
+              type:    'guardian.artifact.extracted',
+              payload: {
+                jobId, provider, filename: block.filename,
+                lang: block.lang || null, chars: (block.content || '').length,
+                content: (block.content || '').slice(0, 4000), chatUrl,
+              },
+              source: 'guardian-ncp', causedBy: jobId, ts: Date.now(),
+            }, 1500).catch(() => {});
+          }
+        }
+      }
+      break;
+    }
+
+    case 'GUARDIAN_ARTIFACT':
+    case 'NCP_ARTIFACT': {
+      if (jobId && content) {
+        const artId = require('crypto').randomUUID();
+        jaa.insert('artifacts', {
+          uuid: artId, jobId, provider: provider || 'unknown',
+          content: content.slice(0, 4000), lang: lang || 'text',
+          hash, ts: Date.now(), chatUrl,
+        });
+        ncp.push(provider, { type: 'GUARDIAN_ARTIFACT_SAVED', jobId, artifactId: artId, ts: Date.now() });
+        bus.emit('guardian.artifact', { jobId, artifactId: artId, provider });
+        // Write to cortex artifacts table
+        _toCortex('guardian.artifact', {
+          jobId, artifactId: artId, lang: lang || 'text', hash,
+          chars: (content || '').length, content: (content || '').slice(0, 4000), chatUrl,
+        });
+      }
+      break;
+    }
+
+    case 'GUARDIAN_GAPS':
+    case 'NCP_GAPS': {
+      if (gaps?.length) {
+        bus.emit('guardian.gaps', { jobId, gaps, provider });
+        cockpitBroadcast({ type: 'job.gaps', jobId, gaps, ts: Date.now() });
+        // Write each gap to cortex gaps table
+        for (const g of gaps) {
+          _toCortex('cortex.gap.found', {
+            jobId, provider, type: g.type, domain: g.domain,
+            reason: g.reason, description: g.description,
+            score: g.score, source: 'userscript-detector',
+          });
+        }
+      }
+      break;
+    }
+
+    case 'GUARDIAN_ERROR':
+    case 'NCP_ERROR': {
+      if (jobId) {
+        // ── SEAM queue routing ────────────────────────────────────────────
+        // A provider-side error on a SEAM chunk isn't a content failure (no
+        // Detector verdict to run), so it goes through the same
+        // forceRetryActive() path the watchdog uses, not onResponse().
+        const seamQueue = _findActiveSeamCompartment(jobId);
+        if (seamQueue) {
+          seamQueue.forceRetryActive('provider_error');
+        }
+        updateJob(jobId, { status: 'error', error, errorGate: gate, errorAt: Date.now() });
+        bus.emit('guardian.job.error', { jobId, error, gate, provider });
+        cockpitBroadcast({ type: 'job.error', jobId, error, ts: Date.now() });
+      }
+      break;
+    }
+
+    case 'GUARDIAN_LEDGER_WRITE': {
+      // §LAW II — this is the ledger-as-source-of-truth write
+      // Comes BEFORE action in the userscript. Write to JAA immediately.
+      const entry = {
+        uuid:     require('crypto').randomUUID(),
+        jobId:    jobId || null,
+        category: msg.category || 'EVENT',
+        msg:      msg.msg || '',
+        meta:     JSON.stringify(msg.meta || {}),
+        provider: msg.meta?.provider || provider || 'unknown',
+        chatUrl:  msg.meta?.chatUrl || chatUrl || '',
+        ts:       msg.meta?.ts || Date.now(),
+      };
+      jaa.insert('ledger', entry);
+      bus.emit('guardian.ledger.write', entry);
+      _evLedger?.record('GUARDIAN_LEDGER_WRITE', entry, { source: 'userscript' });
+      break;
+    }
+
+    case 'GUARDIAN_LEDGER_EVENT':
+    case 'NCP_LEDGER': {
+      jaa.insert('ledger', { uuid: require('crypto').randomUUID(),
+        category: msg.level || 'EVENT', msg: msg.msg, meta: msg.meta,
+        provider, chatUrl, account, ts: Date.now() });
+      break;
+    }
+
+    case 'GUARDIAN_HEARTBEAT':
+    case 'NCP_HEARTBEAT': {
+      // Handled directly by ncp.handleHeartbeat() — ACK returned in response body
+      break;
+    }
+
+    case 'GUARDIAN_CORTEX_RESULT': {
+      // Cortex query result from userscript — store in job context
+      if (jobId) {
+        updateJob(jobId, { cortexResult: msg.result, cortexQuery: msg.query });
+        bus.emit('guardian.cortex.result', { jobId, query: msg.query, result: msg.result, provider });
+      }
+      break;
+    }
+
+    case 'GUARDIAN_CLAIM_ACK': {
+      // Tab acknowledged a claim request — update provider registry
+      const key = `${provider}:${tabId}`;
+      if (_activeQueues.size) bus.emit('guardian.tab.claimed', { provider, tabId });
+      break;
+    }
+
+    case 'GUARDIAN_EVENT': {
+      // Generic event from userscript — log to ledger
+      if (msg.event) {
+        bus.emit('guardian.tab.event', { provider, tabId, event: msg.event, data: msg.data });
+      }
+      break;
+    }
+
+    case 'NEXUS_DOM_MAP': {
+      // DOM snapshot from userscript — store in tab context for agent tooling
+      if (msg.nodes && Array.isArray(msg.nodes)) {
+        bus.emit('guardian.tab.dom_map', { provider, tabId, nodes: msg.nodes, ts: msg.ts || Date.now(), meta: msg.meta });
+      }
+      break;
+    }
+
+    case 'GUARDIAN_SESSION_NAMED': {
+      if (msg.chatId && msg.sessionName) {
+        bus.emit('guardian.session.named', { chatId: msg.chatId, sessionName: msg.sessionName, provider });
+        _toCortex('guardian.session.named', {
+          chatId: msg.chatId, sessionName: msg.sessionName, provider,
+        });
+      }
+      break;
+    }
+
+
+    case 'GUARDIAN_ABRUPT_STOP': {
+      // §74.2 — userscript detected open fence or suspiciously short SEAM response.
+      // Route through forceRetryActive so the compartment enters RETRYING (or
+      // ESCALATED if watchdog budget is exhausted) — same path as a watchdog trip.
+      // INTERRUPTED is a recoverable state; ESCALATED is not.
+      if (jobId) {
+        const seamQueue = _findActiveSeamCompartment(jobId);
+        if (seamQueue) {
+          const { escalated } = seamQueue.forceRetryActive('abrupt_stop');
+          console.log(`[guardian §74.2] abrupt stop on ${jobId.slice(0,8)} — escalated:${escalated}`);
+          _toCortex('guardian.abrupt_stop.handled', {
+            jobId,
+            seam_queue_id: msg.seam_queue_id ?? null,
+            seam_chunk_idx: msg.seam_chunk_idx ?? null,
+            escalated,
+            provider: provider || 'unknown',
+            chunkLen: msg.chunkLen ?? 0,
+            openFence: msg.openFence ?? false,
+          });
+        } else {
+          // Non-SEAM job abrupt stop — log as gap, no retry
+          _toCortex('cortex.gap.found', {
+            jobId, provider: provider || 'unknown',
+            type: 'abrupt_stop', score: 0.85,
+            reason: `open fence:${msg.openFence} len:${msg.chunkLen}`,
+            source: 'userscript-detector',
+          });
+        }
+        bus.emit('guardian.abrupt_stop', { jobId, provider, openFence: msg.openFence, ts: Date.now() });
+        cockpitBroadcast({ type: 'job.abrupt_stop', jobId, provider, ts: Date.now() });
+      }
+      break;
+    }
+
+    case 'GUARDIAN_SEAM_RESUME_NEEDED': {
+      // §70.2 — tab refreshed mid-SEAM. userscript found interrupted state in
+      // localStorage. If the queue is still active, forceRetryActive picks up
+      // from the right chunk. If the queue is gone (server restarted), log the
+      // orphan as a gap so it surfaces in the review panel.
+      const { seam_queue_id, seam_chunk_idx, seam_total, partialText, interruptedAt } = msg;
+      if (seam_queue_id) {
+        const seamQueue = _activeQueues.get(seam_queue_id);
+        if (seamQueue) {
+          // Queue still alive — force retry on whatever chunk is active
+          seamQueue.forceRetryActive('tab_resume');
+          console.log(`[guardian §70.2] resume: queue ${seam_queue_id.slice(0,8)} chunk ${(seam_chunk_idx ?? '?')+1}/${seam_total ?? '?'}`);
+          _toCortex('guardian.seam.resumed', {
+            seam_queue_id, seam_chunk_idx, seam_total, provider: provider || 'unknown',
+            interruptedAt, resumedAt: Date.now(),
+          });
+          ncp.push(provider, {
+            type: 'GUARDIAN_SEAM_RESUME_ACK',
+            seam_queue_id, seam_chunk_idx,
+            status: 'retrying',
+            ts: Date.now(),
+          });
+        } else {
+          // Queue gone — server restarted. Surface as orphaned gap.
+          console.log(`[guardian §70.2] orphan resume: queue ${seam_queue_id.slice(0,8)} not in memory — logging gap`);
+          _toCortex('cortex.gap.found', {
+            jobId: seam_queue_id, provider: provider || 'unknown',
+            type: 'seam_orphan_resume',
+            score: 0.9,
+            reason: `tab resumed after server restart, chunk ${(seam_chunk_idx ?? '?')+1}/${seam_total ?? '?'}`,
+            description: 'SEAM queue lost on server restart. Manual re-spec needed.',
+            source: 'guardian-resume',
+          });
+          ncp.push(provider, {
+            type: 'GUARDIAN_SEAM_RESUME_ACK',
+            seam_queue_id, seam_chunk_idx,
+            status: 'orphaned',
+            message: 'Server restarted — queue lost. Re-submit the spec.',
+            ts: Date.now(),
+          });
+        }
+      }
+      break;
+    }
+
+    case 'GUARDIAN_REPLAY': {
+      // Userscript signals it replayed a job result. Acknowledgment only.
+      // Without this case the message fell through to 'unhandled' and caused
+      // log spam + confused the flapping detector into thinking the tab was
+      // misbehaving when it was actually working correctly.
+      if (jobId && jobs.has(jobId)) {
+        const job = jobs.get(jobId);
+        job.status = 'complete';
+        bus.emit('guardian.job.complete', { jobId, provider, replay: true });
+      }
+      console.log(`[guardian] GUARDIAN_REPLAY ack from ${provider}: ${jobId}`);
+      break;
+    }
+
+    case 'guardian.job.dispatched': {
+      // Userscript echoing back that it dispatched the job. Acknowledgment only.
+      // §BUILT 2026-08-14 — was log-only, never touched job.status, checked
+      // directly before this: no queryable signal existed for this specific
+      // ack (distinct from 'delivered', which guardian sets OPTIMISTICALLY
+      // right after pushing to NCP, before any real round trip to the
+      // browser — 'delivered' means "I tried," this means "the browser
+      // actually got it back to me"). Needed for switchAgent's real
+      // reachability check (self-model.js's verifyAgentReachable) to have
+      // something fast and reliable to poll instead of waiting for a full,
+      // costly AI generation just to confirm NCP connectivity.
+      const _ackJob = jobs.get(jobId);
+      if (_ackJob && _ackJob.status !== 'complete' && _ackJob.status !== 'error') {
+        updateJob(jobId, { status: 'acked', ackedAt: Date.now() });
+      }
+      console.log(`[guardian] job.dispatched ack from ${provider}: ${jobId}`);
+      break;
+    }
+
+    case 'guardian.job.complete': {
+      // Userscript echoing back job completion. Real completion already handled
+      // via GUARDIAN_COMPLETE above. Acknowledge and discard.
+      console.log(`[guardian] job.complete ack from ${provider}: ${jobId}`);
+      break;
+    }
+
+    default:
+      // Unknown but don't spam the bus — log at debug level only
+      if (type && !type.startsWith('GUARDIAN_LEDGER')) {
+        console.log(`[guardian] unhandled message type: ${type} from ${provider}`);
+      }
+  }
+}
 
 function flushQueuedJobs(provider) {
   const queued = pendingQueue.get(provider) || [];
@@ -599,20 +1554,6 @@ const ncp = createNCPServer({
   busEmit: (type, data) => bus.emit(type, data),
 });
 
-// §DECOMPILED 2026-09-02 — guardian's job/provider/dispatch core, wired from
-// guardian/lib/. pendingQueue stays a plain Map owned here (dispatcher.js,
-// flushQueuedJobs, and the extended-routes handlers below all read/write it
-// directly) — wireGuardianCore() does not create it, matching the original
-// module-scope semantics. cockpitBroadcast is a hoisted function declaration
-// (defined further down) so it's already a valid reference here.
-const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-pool paths)
-const {
-  jobs, createJob, updateJob, _suggestJobHat, _findActiveJobForProvider,
-  chooseProvider, normaliseProvider, parseCommand, dispatchJob,
-} = wireGuardianCore({
-  bus, ncp, pendingQueue, cockpitBroadcast, NEXUS_URL, postEvent: _postEvent,
-});
-
 // ── Stream token accumulator ──────────────────────────────────────────────────
 // Registered as a SISOGate after bus is declared (see below — search STREAM_GATE).
 // NCP handleStream fires busEmit('ncp.stream.chunk', ...) on every token.
@@ -688,26 +1629,6 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(HTTP_PORT, '127.0.0.1', async () => {
-  // Mesh subsystem relocated 2026-09-03 to clear-glass/src/network/
-  // (James: "DNS/firewall/crypto/host-rotation/reverse-proxy maybe
-  // recycle to clearglass" — moved as one whole unit, see that folder's
-  // install.js header for the full rationale). See mesh/README.md for
-  // the historical record of what used to live here.
-
-  // §SR9-first-slice 2026-09-03 — James: "sr9". SR9 itself is the full
-  // composite end-state and still depends on SR4/SR7/SR8/SR10 (all still
-  // OPEN) — this installs only the narrow, dependency-free real piece:
-  // automatic snapshot + map-drift detection on every real, governed
-  // pipeline promote. See lib/self-build-loop.js's own header for the
-  // full honest scope. nexus-bus.js is the real, already-shared singleton
-  // every pipeline trigger path (run_pipeline/run_chain/run_closed_loop)
-  // already emits to — not a second, guardian-local event path.
-  try {
-    require('../lib/self-build-loop.js').install(require('../nexus-bus.js'));
-  } catch (err) {
-    console.warn('[guardian] self-build-loop install failed:', err.message);
-  }
-
   const { BootSequence } = require('../lib/boot-sequence');
   const nc2 = require('../nexus-connect');
 
@@ -1122,24 +2043,6 @@ const jaa = new JaaStore(STORE_DIR, { tablePrefix: 'guardian_' });
   try { jaa._ensureTable?.(t); } catch(e) {
     console.error(`[guardian] failed to provision table '${t}' at boot — inserts to it will likely fail later: ${e.message}`);
   }
-});
-
-// §DECOMPILED 2026-09-02 — the real NCP protocol handler (_handleNCPMessage),
-// moved to guardian/lib/ncp-handler.js. Wired here, not earlier, because
-// this is the first point in server.js's boot sequence where every real
-// dependency it touches (jaa, above) actually exists — ncp's own
-// `onMessage: (msg) => _handleNCPMessage(msg)` config (defined earlier)
-// only references this by closure and doesn't invoke it until a real
-// message arrives, well after this line has run. See that file's header
-// for the full dependency list and what's still intentionally inline
-// (SEAM/artifact-extraction — separate, larger, not-yet-done work).
-const { createNCPMessageHandler } = require('./lib/ncp-handler');
-const _handleNCPMessage = createNCPMessageHandler({
-  nc, ncp, bus, jaa, jobs, updateJob, cockpitBroadcast,
-  physQueue: _physQueue, baseline: _baseline, evLedger: _evLedger,
-  activeQueues: _activeQueues, extractCodeBlocks,
-  extractToolCallsFromDOM: _extractToolCallsFromDOM,
-  findActiveSeamCompartment: _findActiveSeamCompartment,
 });
 
 // ── Lab Manager — §LAB-01 every experiment has a UUID and a hypothesis ────
@@ -1631,15 +2534,6 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
-  // §PHASE 3 2026-09-03 — docs/command-index-per-system.spec's own
-  // "real proof case." Placed here, right before /health, matching the
-  // position a real meta-endpoint belongs at rather than buried deep
-  // in the dispatch chain.
-  if (method==='GET' && url.pathname==='/commands') {
-    pRes(res, 200, require('./lib/command-index-extract.js').extractCommandIndex());
-    return true;
-  }
-
   if (method==='GET' && url.pathname==='/health') {
     const connectedProviders = {};
     for (const [k,v] of ncp._clients || new Map()) {
@@ -1839,80 +2733,6 @@ function handleExtendedRoutes(req, res, url, method) {
     const streamJobId = url.pathname.slice('/stream/'.length);
     ncp.handleStream(req, res, bodyJ, streamJobId); return true;
   }
-  // §FIX 2026-09-03 — guardian/cli.js's watchJob() does `http.get(BASE +
-  // '/stream/' + jobId)` — a GET. Only a POST route existed at this exact
-  // path (above — the unrelated job, userscripts pushing tokens IN). GET
-  // never matched anything, so the CLI's SSE watch silently fell through
-  // to a 404 every single call. Confirmed, not assumed, before writing
-  // this: grepped guardian/server.js for a second /stream/ handler —
-  // none existed.
-  //
-  // Real event names used below, confirmed by reading their actual emit
-  // call sites (not guessed from naming convention):
-  //   ncp.stream.chunk    — guardian/lib/ncp.js's handleStream(), the
-  //                         POST route directly above. {jobId,token,done,seq,provider,tabId,ts}
-  //   guardian.job.chunk  — guardian/lib/ncp-handler.js's GUARDIAN_CHUNK/
-  //                         NCP_CHUNK path. {jobId,text,full,provider}
-  //   guardian.job.complete / guardian.job.error — real, unscoped,
-  //                         jobId is a PAYLOAD field, not part of the
-  //                         event name (unlike the Lab Manager's
-  //                         `guardian.job.${jobId}.complete`, which is
-  //                         NOT real — checked, nothing emits it; a
-  //                         second, separate, already-broken instance of
-  //                         this same bug class, not fixed here).
-  if (method==='GET' && url.pathname.startsWith('/stream/')) {
-    const streamJobId = url.pathname.slice('/stream/'.length);
-    const existing = jobs.get(streamJobId);
-
-    // Already finished before the client even connected — one message, done.
-    if (existing && (existing.status === 'complete' || existing.status === 'error' || existing.status === 'delivered_confirmed')) {
-      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
-      res.write(`data: ${JSON.stringify({ text: existing.result || existing.response || '', done: true })}\n\n`);
-      res.end();
-      return true;
-    }
-
-    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
-
-    const _onChunk = (ev) => {
-      if (ev.data?.jobId !== streamJobId) return;
-      const text = ev.data.token ?? ev.data.text ?? '';
-      if (text) res.write(`data: ${JSON.stringify({ text, done: false })}\n\n`);
-      if (ev.data.done) _finish('');
-    };
-    const _onComplete = (ev) => {
-      if (ev.data?.jobId !== streamJobId) return;
-      _finish(ev.data.text ?? ev.data.response ?? '');
-    };
-    const _onError = (ev) => {
-      if (ev.data?.jobId !== streamJobId) return;
-      res.write(`data: ${JSON.stringify({ error: ev.data.error || 'job failed', done: true })}\n\n`);
-      _cleanup(); try { res.end(); } catch(_) {}
-    };
-    let _finished = false;
-    function _finish(finalText) {
-      if (_finished) return; // both a chunk carrying done:true and a separate complete event can fire — one real end, not two
-      _finished = true;
-      if (finalText) res.write(`data: ${JSON.stringify({ text: finalText, done: true })}\n\n`);
-      else res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      _cleanup();
-      try { res.end(); } catch(_) {}
-    }
-    function _cleanup() {
-      bus.off('ncp.stream.chunk', _onChunk);
-      bus.off('guardian.job.chunk', _onChunk);
-      bus.off('guardian.job.complete', _onComplete);
-      bus.off('guardian.job.error', _onError);
-    }
-
-    bus.on('ncp.stream.chunk', _onChunk);
-    bus.on('guardian.job.chunk', _onChunk);
-    bus.on('guardian.job.complete', _onComplete);
-    bus.on('guardian.job.error', _onError);
-    req.on('close', _cleanup); // client disconnected before the job finished — stop listening, don't leak
-
-    return true;
-  }
   if (method==='POST' && url.pathname==='/heartbeat') {
     ncp.handleHeartbeat(req, res, bodyJ); return true;
   }
@@ -1989,14 +2809,6 @@ function handleExtendedRoutes(req, res, url, method) {
   // stateful class instance, not a shared-singleton lib module.
   if (require('./routes/settings.js').handle(req, res, { method, url, jaa, pRes, bodyJ })) return true;
 
-  // ── Autonomous loop trigger ───────────────────────────────────────────────
-  // First real caller of lib/autonomous-loop.js's run() (Phase 13 was
-  // complete and callerless — confirmed by grep before writing this).
-  if (require('./routes/autonomous-loop.js').handle(req, res, { method, url, jaa, pRes, bodyJ, jobs, createJob, dispatchJob, ncp, nc, bus })) return true;
-
-  // Mesh route relocated 2026-09-03 to clear-glass/src/network/routes.js
-  // (see guardian/server.js's boot-sequence comment above and
-  // mesh/README.md for the historical record).
   // ── Artifacts (paginated) ────────────────────────────────────────────────────
   if (method==='GET' && url.pathname==='/artifacts') {
     const limit = parseInt(url.searchParams.get('limit')||'100');
@@ -2505,14 +3317,6 @@ function handleExtendedRoutes(req, res, url, method) {
           downloadedAt: body.downloadedAt || Date.now(),
           jobId,
           raidQueueId,
-          // §2026-09-03 — clear-glass/src/downloads/intake-bridge.js now
-          // announces plain browsing-window downloads too (provider:
-          // 'browsing', no chat behind them), and carries the real
-          // window's agentId separately since it isn't a provider id and
-          // shouldn't be conflated with one. Additive field only —
-          // existing callers (download-capture.js) never send this and
-          // are unaffected.
-          agentId:      body.agentId || null,
         },
       });
       if (!r.ok) return json(res, 400, r);

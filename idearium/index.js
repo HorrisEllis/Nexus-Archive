@@ -366,17 +366,7 @@ export class IdeaOS {
   // must await these. No local fallback on failure: a failed read is
   // reported as an error, not silently returned as an empty list.
   async snapshots(n = 20) {
-    // §FIX 2026-09-03 — real production log: this call hit cortex's OLD
-    // embedded versionium proxy, which now returns a real HTTP 410 ("moved
-    // to its own sovereign system... call :3754 instead") on every single
-    // call — confirmed firing repeatedly in James's actual boot log.
-    // versionium has been its own sovereign system with its own registered
-    // port (orchestrator.config.json's ports.versionium: 3754) since the
-    // versionium-sovereignty work landed; this callsite was never updated
-    // to match. Real fix: call the system directly, per the 410's own
-    // stated instruction, not a guessed port — nx.get() already resolves
-    // 'versionium' via that same real config.
-    const rows = await nx.get('versionium', `/api/versionium/history?system=idearium`);
+    const rows = await nx.get('cortex', `/api/versionium/history?system=idearium`);
     if (rows?.error) return { error: rows.error };
     // Same enrichment as commitSnapshot() above, derived from each row's
     // stored `state` instead of live db — historical commits, not "now".
@@ -402,9 +392,7 @@ export class IdeaOS {
     });
   }
   async snapshot(commitId) {
-    // §FIX 2026-09-03 — same real 410 as snapshots() above; see that
-    // method's comment for the full finding.
-    const rows = await nx.get('versionium', `/api/versionium/history?system=idearium`);
+    const rows = await nx.get('cortex', `/api/versionium/history?system=idearium`);
     if (rows?.error) return null;
     return (rows.commits || []).find(s => s.commitId === commitId || s.uuid === commitId) || null;
   }

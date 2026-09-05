@@ -1,1 +1,0 @@
-{"uuid":"c83b2c57-ecc3-4e0a-9421-da5a8c8944f1","system":"architect","component":"architect.health","action":"registered","status":"ok","tags":["architect"],"detail":"Architect health + hook counts","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139642}

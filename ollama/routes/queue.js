@@ -22,6 +22,3 @@ async function handle(req, res, { method, pathname }) {
 }
 
 module.exports = { handle };
-module.exports.commands = [
-  { method: 'GET', path: '/api/queue' },
-];

@@ -403,32 +403,6 @@ function err(res, code, message, detail = null) {
   res.end(JSON.stringify({ ok: false, error: message, detail }));
 }
 
-// §FIX 2026-09-03 — James, from a real production boot log + UI screenshot:
-// an idea ("Daw") and its linked spec both permanently stuck showing phase
-// "building" with 0% tension, long after the real build had finished.
-// Traced to a real gap: idearium/spec-engine/index.js's completeChunk()
-// correctly flips manifest.status to 'complete' once every real chunk is
-// done (confirmed by reading that function directly), but NOTHING in this
-// file ever read that real status back and told the idea/spec phase
-// tracker about it. The exact same class of bug was already found and
-// fixed once, in the OLDER legacy `spec.build` -> compileIdeariumSpec()
-// path (search this file for "phase was parked at 'building' above and
-// nothing ever moved it forward") — but the newer WARP chunk-dispatch path
-// (the one the real boot log confirms is actually active: "[idearium/api]
-// WARP chunk dispatch active") never got the same fix. This is that fix,
-// as one real, shared helper instead of four separate copies (this file
-// has four real completeChunk() call sites) so the two paths can't drift
-// apart from each other again.
-function _syncPhaseFromManifest(os, manifest) {
-  if (!manifest) return;
-  if (manifest.status === 'complete') {
-    os.emit('idearium.spec.update', { uuid: manifest.uuid, fields: { phase: 'complete' } });
-    if (manifest.ideaUuid) {
-      os.emit('idearium.idea.phase', { uuid: manifest.ideaUuid, phase: 'complete', source: 'spec-engine' });
-    }
-  }
-}
-
 const CORS = config.CORS;
 
 // ── Capability model ──────────────────────────────────────────────────────────
@@ -513,14 +487,6 @@ function matchRoute(method, url) {
     ['POST',   ['api','cli','exec'],      'cli.exec'],      // unified CLI axiom
     ['GET',    ['api','repos'],           'repo.list'],
     ['POST',   ['api','repos'],           'repo.ingest'],
-    // §IMPORT-PROJECT 2026-09-03 — the Import Project screen's zip path.
-    // Distinct from POST /api/repos (flat text-file drops, no archive
-    // handling) and from POST /api/projects (opaque zip shelf, no
-    // RepoLayer/spec-engine — "store this zip, list it, get it back").
-    // This one produces a real repo compartment FROM a zip, synchronously,
-    // in one request — see handler for why the existing zip-ingest code
-    // (idearium/repo/watcher.js) isn't called as-is.
-    ['POST',   ['api','repos','import'],  'repo.import-archive'],
     // ── Projects (§PROJECTS 2026-07-19) — flat zip shelf, separate from repos ──
     ['GET',    ['api','projects'],                    'project.list'],
     ['POST',   ['api','projects'],                    'project.upload'],
@@ -732,57 +698,7 @@ async function handle(req, res, route, query, body) {
       if (!idea) return err(res, 404, `idea not found: ${params.uuid}`);
       if (!body.phase) return err(res, 400, 'phase required');
       os.emit('idearium.idea.phase', { uuid: params.uuid, phase: body.phase, source: 'api' });
-
-      // §FIX 2026-09-03 — James: "clicking on idearium phase to building
-      // does nothing, needs to change for the compartment... we need a
-      // compartment specifically made for idearium." Checked directly:
-      // IdeaPhaseGate.transform() (idearium/index.js) really does flip
-      // idea.phase and persist it — the UI's click was never a no-op at
-      // the data layer. But nothing beyond that field flip ever happened:
-      // no real compartment gets created, so "building" was cosmetic.
-      // §WHY THIS LIVES HERE, NOT IN THE GATE — same real constraint this
-      // file's own SnapshotGate removal already documented: siso's
-      // Stream.emit() calls gate.transform() synchronously with no await,
-      // so an async spawn() call inside IdeaPhaseGate would have its
-      // promise silently dropped. This route handler is already async and
-      // already awaited by its caller — the same precedent SnapshotGate's
-      // removal established (commitSnapshot/restoreSnapshot as direct
-      // async methods the API awaits, not async Gates).
-      //
-      // Real chain, nothing invented: lib/intent-classifier.js's real
-      // classify()+freeze() turns the idea's own real text into a real,
-      // frozen intent (the exact shape lib/compartment-engine.js's spawn()
-      // requires — "a frozen intent with a uuid"); spawn() creates a real
-      // compartment (real pre-forge snapshot, real constraint frame, real
-      // JAA row); the idea's own real `compartment` field (already an
-      // IdeaUpdateGate-allowed field — checked, was never populated by
-      // anything) gets set to that real compartment id via the same
-      // idea.update path the UI's other fields already use.
-      let compartmentId = null;
-      if (body.phase === 'building' && !idea.compartment) {
-        try {
-          // §FIX 2026-09-03 — James's own real boot log caught this:
-          // "compartment spawn failed... require is not defined."
-          // idearium/package.json sets "type":"module" — this whole
-          // file is a real ES module, raw require() genuinely doesn't
-          // exist in this scope. The correct, already-established
-          // pattern this exact file already uses at its own top (line
-          // 24: `const _require = createRequire(import.meta.url)`) is
-          // the real fix — not a new one invented here, the one
-          // already sitting right above, just not used at this call
-          // site when it was first written.
-          const { classify, freeze } = _require('../../lib/intent-classifier.js');
-          const { spawn } = _require('../../lib/compartment-engine.js');
-          const { intent } = classify({ text: idea.text, source: 'idearium-idea-phase' });
-          const compartment = await spawn({ intent: freeze(intent) });
-          compartmentId = compartment.id;
-          os.emit('idearium.idea.update', { uuid: params.uuid, fields: { compartment: compartmentId }, source: 'idea.phase' });
-        } catch (e) {
-          console.warn(`[idearium/api] idea.phase → building: compartment spawn failed for ${params.uuid}: ${e.message}`);
-        }
-      }
-
-      return ok(res, { idea: os.idea(params.uuid), compartmentId });
+      return ok(res, { idea: os.idea(params.uuid) });
     }
 
     case 'idea.tension': {
@@ -1218,101 +1134,6 @@ async function handle(req, res, route, query, body) {
       return ok(res, result);
     }
 
-    // §IMPORT-PROJECT 2026-09-03 — zip -> real repo compartment, synchronous.
-    //
-    // Why not just call idearium/repo/watcher.js's RepoWatcher:
-    //   1. It's never instantiated anywhere in this codebase — no live
-    //      caller, confirmed by grep before writing this (only referenced
-    //      in a test-name string and a comment). Its dropDir
-    //      (idearium/data/drop/) doesn't exist on disk either.
-    //   2. Its _extractFileList() only reads file CONTENT for .spec files
-    //      — every other file gets {path, bytes} with content:undefined.
-    //      Calling it as-is would create a repo with a correct file
-    //      LISTING and empty files, which defeats the point of importing
-    //      a project to build/edit/debug against.
-    //   3. Even fixed, fs.watch's queue model (drop a file, wait, hope it
-    //      got picked up) is the wrong UX for a screen that should return
-    //      the created repo in the same request.
-    // So: reuse adm-zip the same way watcher.js does (same library, same
-    // fallback-to-system-unzip, same last-resort-opaque-entry safety net —
-    // not a second unzip strategy), but read bounded content for every
-    // real text file, matching lib/project-compartment.js's already-
-    // established, already-reasoned bounds (MAX_FILES/MAX_BYTES_PER_FILE/
-    // MAX_TOTAL_BYTES — imported directly, not re-derived; SKIP_DIRS/
-    // TEXT_EXT aren't exported by that module, so matched here by value,
-    // called out explicitly rather than silently duplicated).
-    case 'repo.import-archive': {
-      const { name, filename, contentBase64, ideaUuid } = body;
-      if (!filename)       return err(res, 400, 'filename required');
-      if (!contentBase64)  return err(res, 400, 'contentBase64 required (base64-encoded zip contents)');
-      let buf;
-      try { buf = Buffer.from(contentBase64, 'base64'); }
-      catch (e) { return err(res, 400, 'invalid base64 content'); }
-      if (!buf.length) return err(res, 400, 'empty file');
-      if (!/\.zip$/i.test(filename)) return err(res, 400, 'only .zip archives are handled by this endpoint — use POST /api/repos for flat file drops');
-
-      const pc = _require('../../lib/project-compartment.js'); // MAX_FILES etc. — real, shared bounds
-      const MAX_FILES          = pc.MAX_FILES;
-      const MAX_BYTES_PER_FILE = pc.MAX_BYTES_PER_FILE;
-      const MAX_TOTAL_BYTES    = pc.MAX_TOTAL_BYTES;
-      // §MATCHED, NOT IMPORTED — project-compartment.js keeps these two
-      // private (not in its module.exports); values copied here on purpose
-      // so both places stay in sync by inspection, not coupled by a
-      // private-member import.
-      const SKIP_DIRS = new Set(['node_modules', '.git', '.svn', 'dist', 'build', '__pycache__', '.next']);
-      const TEXT_EXT  = new Set(['.js', '.ts', '.jsx', '.tsx', '.json', '.md', '.txt', '.py', '.html', '.css', '.yml', '.yaml', '.spec', '.sh']);
-
-      // §FIX 2026-09-03 — found by actually running this against a live
-      // server, not by review: `os` here is the local IdeaOS instance
-      // (`const os = getIdeaOS();` at the top of handle()), shadowing the
-      // module-level `import os from 'os'` for this entire function. Every
-      // other Node builtin this file needs mid-function goes through
-      // _require() for exactly this reason (see contract.live's own
-      // _require('fs')/_require('url')) — matched here, not a new pattern.
-      const tmpZip = path.join(_require('os').tmpdir(), `idearium-import-${crypto.randomUUID()}.zip`);
-      try { fs.writeFileSync(tmpZip, buf); }
-      catch (e) { return err(res, 500, `write temp zip failed: ${e.message}`); }
-
-      let entries;
-      try {
-        const AdmZip = _require('adm-zip');
-        const zip = new AdmZip(tmpZip);
-        entries = zip.getEntries().filter(e => !e.isDirectory).map(e => ({ entry: e, zip }));
-      } catch (e) {
-        try { fs.unlinkSync(tmpZip); } catch (_) {}
-        return err(res, 400, `could not read zip (adm-zip): ${e.message}`);
-      }
-
-      const included = [];
-      const omitted  = [];
-      let totalBytes = 0;
-      for (const { entry, zip } of entries) {
-        const rel = entry.entryName;
-        if (SKIP_DIRS.has(rel.split('/')[0]) || rel.split('/').some(seg => SKIP_DIRS.has(seg))) {
-          omitted.push({ path: rel, why: 'skipped dir (node_modules/.git/etc.)' }); continue;
-        }
-        if (included.length >= MAX_FILES) { omitted.push({ path: rel, why: 'maxFiles reached' }); continue; }
-        const ext = path.extname(rel).toLowerCase();
-        if (!TEXT_EXT.has(ext)) { omitted.push({ path: rel, why: `binary/unlisted extension (${ext || 'none'})` }); continue; }
-        if (totalBytes >= MAX_TOTAL_BYTES) { omitted.push({ path: rel, why: 'maxTotalBytes reached' }); continue; }
-        let text;
-        try { text = zip.readAsText(entry); }
-        catch (e) { omitted.push({ path: rel, why: `read failed: ${e.message}` }); continue; }
-        const truncated = text.length > MAX_BYTES_PER_FILE;
-        const slice = truncated ? text.slice(0, MAX_BYTES_PER_FILE) : text;
-        totalBytes += slice.length;
-        included.push({ path: rel, bytes: entry.header.size, content: slice, truncated });
-      }
-      try { fs.unlinkSync(tmpZip); } catch (_) {}
-
-      if (!included.length) return err(res, 400, 'no text files matched the bounds — nothing to import (see omitted reasons for what was skipped)');
-
-      const repoName = (name || filename.replace(/\.zip$/i, '')).slice(0, 200);
-      const result = getRepoLayer().ingest({ name: repoName, files: included, source: 'import', ideaUuid: ideaUuid || null });
-      if (result.error) return err(res, 400, result.error);
-      return ok(res, { ...result, fileCount: included.length, omittedCount: omitted.length, omitted: omitted.slice(0, 50) });
-    }
-
     case 'repo.fork': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
@@ -1590,7 +1411,6 @@ async function handle(req, res, route, query, body) {
             if (prior && prior.content) {
               se.completeChunk(params.uuid, chunk.uuid, prior.content);
               const um = se.loadSpec(params.uuid);
-              _syncPhaseFromManifest(os, um);
               os.emit('idearium.spec-engine.chunk.complete', {
                 specUuid: params.uuid, chunkUuid: chunk.uuid, sectionId: chunk.sectionId,
                 progress: um.progress, source: 'reuse', reusedFrom: prior.specUuid, cost: 0, cacheHit: true,
@@ -1685,7 +1505,6 @@ async function handle(req, res, route, query, body) {
           if (result.ok && !result.queued && result.text) {
             se.completeChunk(params.uuid, chunk.uuid, result.text);
             const updatedManifest = se.loadSpec(params.uuid);
-            _syncPhaseFromManifest(os, updatedManifest);
             os.emit('idearium.spec-engine.chunk.complete', {
               specUuid: params.uuid, chunkUuid: chunk.uuid,
               sectionId: chunk.sectionId, progress: updatedManifest.progress,
@@ -1721,7 +1540,6 @@ async function handle(req, res, route, query, body) {
       try {
         const chunk = se.completeChunk(params.uuid, params.chunkUuid, content);
         const manifest = se.loadSpec(params.uuid);
-        _syncPhaseFromManifest(os, manifest);
         os.emit('idearium.spec-engine.chunk.complete', {
           specUuid: params.uuid, chunkUuid: params.chunkUuid,
           sectionId: chunk.sectionId, progress: manifest.progress,

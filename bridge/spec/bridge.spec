@@ -11,19 +11,6 @@ spec:
       If a downstream system is down, Bridge holds requests and replays them.
 
   core:
-    command_index:
-      status: DONE   # verified 2026-09-03 — GET /commands live, real source-extraction from bridge/server.js's own literal dispatch code (bridge/lib/command-index-extract.js). 17 real commands (16 dispatch checks + this endpoint itself) + 1 named unresolved sub-router (/cfr/*). tests/modules/bridge-command-index.test.js, 9/9 passing.
-      spec: "docs/command-index-per-system.spec"
-      served_at: "GET /commands"
-      file: "bridge/lib/command-index-extract.js"
-      note: >
-        This same server.js also carries its own hand-maintained
-        routes: array (in its /contract response, 15 entries) —
-        confirmed real and stale relative to the live-extracted index
-        (15 vs 17, measured by tests/modules/bridge-command-index.test.js's
-        own real diff) while building this. GET /commands is the real,
-        non-drifting source; pointing /contract's own routes: field at
-        it instead of maintaining both is real, separate follow-up.
     schemas:
       - BridgeRequest:  "{ uuid, from, to, method, path, body, status, retries, ts }"
       - TrustRecord:    "{ systemId, trust, lastSeen, consecutiveFails }"

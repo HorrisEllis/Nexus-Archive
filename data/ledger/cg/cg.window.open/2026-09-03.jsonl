@@ -1,1 +1,0 @@
-{"uuid":"23f83d26-2533-476d-a489-09ab90854830","system":"cg","component":"cg.window.open","action":"registered","status":"ok","tags":["cg","window"],"detail":"Open agent browser window","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139771}

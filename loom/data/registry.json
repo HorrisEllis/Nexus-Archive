@@ -10498,7 +10498,7 @@
       "version": "3.5.0",
       "uuid": "nexus-loom-cap-cortex.events-v1-0000-2026-0804-001",
       "route": "GET /events",
-      "description": "SSE \u2014 all cortex events",
+      "description": "SSE — all cortex events",
       "tags": [
         "cortex",
         "stream"
@@ -10665,7 +10665,7 @@
       "version": "3.5.0",
       "uuid": "nexus-loom-cap-cortex.cfr.health-v1-0000-2026-0804-001",
       "route": "GET /cfr/health",
-      "description": "CFR field health \u2014 sigma, regime, coherence",
+      "description": "CFR field health — sigma, regime, coherence",
       "tags": [
         "cortex"
       ],
@@ -11135,7 +11135,7 @@
       "version": "1.0.0",
       "uuid": "nexus-loom-cap-idearium.stats.get-v1-0000-2026-0804-001",
       "route": "GET /api/stats",
-      "description": "Runtime stats \u2014 idea/spec/gap counts, SNR",
+      "description": "Runtime stats — idea/spec/gap counts, SNR",
       "tags": [
         "idearium"
       ],
@@ -11856,7 +11856,7 @@
       "version": "3.6.2",
       "uuid": "nexus-loom-cap-guardian.events-v1-0000-2026-0804-001",
       "route": "GET /events",
-      "description": "SSE \u2014 all guardian bus events",
+      "description": "SSE — all guardian bus events",
       "tags": [
         "guardian",
         "stream"
@@ -11921,7 +11921,7 @@
       "version": "3.6.2",
       "uuid": "nexus-loom-cap-guardian.provider.channel-v1-0000-2026-0804-001",
       "route": "GET /channel",
-      "description": "NCP SSE channel \u2014 browser tabs connect here",
+      "description": "NCP SSE channel — browser tabs connect here",
       "tags": [
         "guardian",
         "ncp"
@@ -11988,7 +11988,7 @@
       "version": "3.6.2",
       "uuid": "nexus-loom-cap-guardian.job.build-v1-0000-2026-0804-001",
       "route": "POST /build",
-      "description": "Full T0\u2192T1\u2192T2 build pipeline from spec",
+      "description": "Full T0→T1→T2 build pipeline from spec",
       "tags": [
         "guardian",
         "build"
@@ -12326,7 +12326,7 @@
       "version": "1.5.0",
       "uuid": "nexus-loom-cap-loom.health-v1-0000-2026-0804-001",
       "route": "GET /health",
-      "description": "Loom health \u2014 hooks.total + components.total it owns",
+      "description": "Loom health — hooks.total + components.total it owns",
       "tags": [
         "loom"
       ],
@@ -12342,7 +12342,7 @@
       "version": "1.5.0",
       "uuid": "nexus-loom-cap-loom.hooks.list-v1-0000-2026-0804-001",
       "route": "GET /api/hooks",
-      "description": "List hooks \u2014 the registry loom is write authority for",
+      "description": "List hooks — the registry loom is write authority for",
       "tags": [
         "loom"
       ],
@@ -12375,7 +12375,7 @@
       "version": "1.5.0",
       "uuid": "nexus-loom-cap-loom.hooks.wire-v1-0000-2026-0804-001",
       "route": "POST /api/hooks/wire",
-      "description": "Wire a hook\u2192hook binding (fromId\u2192toId) \u2014 the consumer-edge write path",
+      "description": "Wire a hook→hook binding (fromId→toId) — the consumer-edge write path",
       "tags": [
         "loom",
         "write",
@@ -12444,7 +12444,7 @@
       "version": "1.5.0",
       "uuid": "nexus-loom-cap-loom.graph-v1-0000-2026-0804-001",
       "route": "GET /api/graph",
-      "description": "The wire graph \u2014 nodes and edges of NEXUS",
+      "description": "The wire graph — nodes and edges of NEXUS",
       "tags": [
         "loom"
       ],
@@ -12660,7 +12660,7 @@
       "version": "1.5.0",
       "uuid": "nexus-loom-cap-loom.phasemap.system-v1-0000-2026-0804-001",
       "route": "GET /api/phasemap/:system",
-      "description": "One system's roadmap \u2014 done/pending phase breakdown",
+      "description": "One system's roadmap — done/pending phase breakdown",
       "tags": [
         "loom",
         "analysis"
@@ -12857,7 +12857,7 @@
       "version": "3.0.0",
       "uuid": "nexus-loom-cap-eravos.canvas-v1-0000-2026-0804-001",
       "route": "GET /",
-      "description": "Main ERAVOS canvas \u2014 organisms, wires, transport",
+      "description": "Main ERAVOS canvas — organisms, wires, transport",
       "tags": [
         "eravos"
       ],
@@ -13065,7 +13065,7 @@
       "version": "3.1.0",
       "uuid": "nexus-loom-cap-cg.status-v1-0000-2026-0804-001",
       "route": "GET /status",
-      "description": "Full system status \u2014 bus sample, agents, listeners, TLS",
+      "description": "Full system status — bus sample, agents, listeners, TLS",
       "tags": [
         "cg"
       ],
@@ -13097,7 +13097,7 @@
       "version": "3.1.0",
       "uuid": "nexus-loom-cap-cg.events-v1-0000-2026-0804-001",
       "route": "GET /events",
-      "description": "SSE \u2014 all SISO bus events",
+      "description": "SSE — all SISO bus events",
       "tags": [
         "cg",
         "stream"
@@ -13184,7 +13184,7 @@
       "version": "3.1.0",
       "uuid": "nexus-loom-cap-cg.dom.tokens-v1-0000-2026-0804-001",
       "route": "POST /cmd",
-      "description": "Token archaeology \u2014 detect LLM API patterns",
+      "description": "Token archaeology — detect LLM API patterns",
       "tags": [
         "cg",
         "dom",
@@ -13528,7 +13528,7 @@
       "version": "3.1.0",
       "uuid": "nexus-loom-cap-cg.wire.driver.bridge-v1-0000-2026-0804-001",
       "route": "POST /bridge/driver",
-      "description": "ClearDriver \u2192 ErosmancerOS actions",
+      "description": "ClearDriver → ErosmancerOS actions",
       "tags": [
         "cg",
         "wire",
@@ -13546,7 +13546,7 @@
       "version": "3.1.0",
       "uuid": "nexus-loom-cap-cg.wire.hostile-v1-0000-2026-0804-001",
       "route": "POST /hook/hostile",
-      "description": "Hostile detection \u2192 fp switch",
+      "description": "Hostile detection → fp switch",
       "tags": [
         "cg",
         "wire",
@@ -13564,7 +13564,7 @@
       "version": "3.1.0",
       "uuid": "nexus-loom-cap-cg.wire.behavior-v1-0000-2026-0804-001",
       "route": "POST /hook/behavior",
-      "description": "Behavior plan \u2192 Cortex intelligence",
+      "description": "Behavior plan → Cortex intelligence",
       "tags": [
         "cg",
         "wire",
@@ -13599,7 +13599,7 @@
       "version": "3.0.0",
       "uuid": "nexus-loom-cap-cg.context.health-v1-0000-2026-0804-001",
       "route": "GET /contexts",
-      "description": "Agent health \u2014 RAID routing weight",
+      "description": "Agent health — RAID routing weight",
       "tags": [
         "cg",
         "context",
@@ -13721,7 +13721,7 @@
       "version": "3.0.0",
       "uuid": "nexus-loom-cap-cg.diag.page-v1-0000-2026-0804-001",
       "route": "POST /cmd",
-      "description": "Page audit \u2014 broken images, JS errors, performance",
+      "description": "Page audit — broken images, JS errors, performance",
       "tags": [
         "cg",
         "diagnostic"
@@ -13789,7 +13789,7 @@
       "version": "3.0.0",
       "uuid": "nexus-loom-cap-cg.tls.stats-v1-0000-2026-0804-001",
       "route": "GET /status",
-      "description": "TLS proxy \u2014 JA4 rewrite stats, tunnels, errors",
+      "description": "TLS proxy — JA4 rewrite stats, tunnels, errors",
       "tags": [
         "cg",
         "tls"
@@ -13839,7 +13839,7 @@
       "version": "1.1.0",
       "uuid": "nexus-loom-cap-emerge.compile-v1-0000-2026-0804-001",
       "route": "POST /compile",
-      "description": "Compile .emerge spec \u2192 T0/T1/T2 pipeline",
+      "description": "Compile .emerge spec → T0/T1/T2 pipeline",
       "tags": [
         "emerge",
         "build"
@@ -13873,7 +13873,7 @@
       "version": "1.1.0",
       "uuid": "nexus-loom-cap-emerge.hot.load-v1-0000-2026-0804-001",
       "route": "POST /api/hot-load",
-      "description": "Hot-patch a running module (QUARANTINE\u2192PROVE\u2192INTEGRATE\u2192MONITOR)",
+      "description": "Hot-patch a running module (QUARANTINE→PROVE→INTEGRATE→MONITOR)",
       "tags": [
         "emerge",
         "hot-load"
@@ -14003,7 +14003,7 @@
       "version": "1.0.0",
       "uuid": "nexus-loom-cap-architect.hooks.list-v1-0000-2026-0804-001",
       "route": "GET /api/hooks",
-      "description": "Hook registry \u2014 all declared hooks",
+      "description": "Hook registry — all declared hooks",
       "tags": [
         "architect"
       ],
@@ -14165,7 +14165,7 @@
       "version": "1.0.0",
       "uuid": "nexus-loom-cap-architect.blueprint.scan-v1-0000-2026-0804-001",
       "route": "POST /api/blueprint/scan",
-      "description": "Scan path \u2192 generate blueprint",
+      "description": "Scan path → generate blueprint",
       "tags": [
         "architect"
       ],
@@ -14245,7 +14245,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.prompt-v1-0000-2026-0804-001",
       "route": "POST /api/prompt",
-      "description": "Primary entry \u2014 all co-pilot interactions",
+      "description": "Primary entry — all co-pilot interactions",
       "tags": [
         "copilot"
       ],
@@ -14421,7 +14421,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.prompt.fulfill-v1-0000-2026-0804-001",
       "route": "POST /api/prompt/fulfill",
-      "description": "Adaptive iteration \u2014 RAID-routed, fault-classified, reflection-scored (\u00a715.1-15.3)",
+      "description": "Adaptive iteration — RAID-routed, fault-classified, reflection-scored (§15.1-15.3)",
       "tags": [
         "copilot"
       ],
@@ -14437,7 +14437,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.prompt.stream-v1-0000-2026-0804-001",
       "route": "POST /api/prompt/stream",
-      "description": "Streaming SSE prompt \u2014 token-by-token, no timeout (P112)",
+      "description": "Streaming SSE prompt — token-by-token, no timeout (P112)",
       "tags": [
         "copilot"
       ],
@@ -14485,7 +14485,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.portrait-v1-0000-2026-0804-001",
       "route": "GET /api/person-model/portrait",
-      "description": "Lens reading of the user model \u2014 always carries provenance and lens coverage (\u00a7LN-7)",
+      "description": "Lens reading of the user model — always carries provenance and lens coverage (§LN-7)",
       "tags": [
         "copilot",
         "person-model",
@@ -14503,7 +14503,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.review-v1-0000-2026-0804-001",
       "route": "GET /api/person-model/review",
-      "description": "Observations the co-pilot has proposed about the user \u2014 pending, never claims (\u00a7IP-5)",
+      "description": "Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)",
       "tags": [
         "copilot",
         "person-model",
@@ -14521,7 +14521,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.accept-v1-0000-2026-0804-001",
       "route": "POST /api/person-model/accept",
-      "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (\u00a7IP-5)",
+      "description": "USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)",
       "tags": [
         "copilot",
         "person-model",
@@ -14539,7 +14539,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.reject-v1-0000-2026-0804-001",
       "route": "POST /api/person-model/reject",
-      "description": "Rejects a proposed observation. A reason is required (\u00a7IP-6)",
+      "description": "Rejects a proposed observation. A reason is required (§IP-6)",
       "tags": [
         "copilot",
         "person-model",
@@ -14557,7 +14557,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.state-v1-0000-2026-0804-001",
       "route": "POST /api/person-model/state",
-      "description": "The user states something about themselves \u2014 the ONLY route into trigger/sensitive/boundary",
+      "description": "The user states something about themselves — the ONLY route into trigger/sensitive/boundary",
       "tags": [
         "copilot",
         "person-model",
@@ -14575,7 +14575,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.connect-v1-0000-2026-0804-001",
       "route": "POST /api/person-model/connect",
-      "description": "Typed edge between two model nodes \u2014 supports/tensions/causes/co_occurs",
+      "description": "Typed edge between two model nodes — supports/tensions/causes/co_occurs",
       "tags": [
         "copilot",
         "person-model",
@@ -14593,7 +14593,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.meaning-v1-0000-2026-0804-001",
       "route": "GET /api/person-model/meaning",
-      "description": "Meaning-web lens \u2014 a projection over the lattice, not a nested graph",
+      "description": "Meaning-web lens — a projection over the lattice, not a nested graph",
       "tags": [
         "copilot",
         "person-model",
@@ -14611,7 +14611,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.chain-v1-0000-2026-0804-001",
       "route": "GET /api/person-model/chain",
-      "description": "Session hash-chain integrity \u2014 reports breaks, attributed to the session",
+      "description": "Session hash-chain integrity — reports breaks, attributed to the session",
       "tags": [
         "copilot",
         "person-model",
@@ -14646,7 +14646,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.person_model.forget-v1-0000-2026-0804-001",
       "route": "POST /api/person-model/forget",
-      "description": "Archives a node with a required reason (\u00a70.3 \u2014 never a silent delete)",
+      "description": "Archives a node with a required reason (§0.3 — never a silent delete)",
       "tags": [
         "copilot",
         "person-model"
@@ -14698,7 +14698,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.introspect.examine-v1-0000-2026-0804-001",
       "route": "POST /api/introspect",
-      "description": "Examine the last answer against REAL signals \u2014 reflection score, contract shape, gaps, ledger. Never the model\u2019s own opinion",
+      "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion",
       "tags": [
         "copilot",
         "introspect",
@@ -14752,7 +14752,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.agent.capability-v1-0000-2026-0804-001",
       "route": "GET /api/agents/capability",
-      "description": "Per-agent limits MEASURED from real outcomes, with the basis attached \u2014 declared vendor figures are marked unverified",
+      "description": "Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are marked unverified",
       "tags": [
         "copilot",
         "agents",
@@ -14771,7 +14771,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.agent.calibrate-v1-0000-2026-0804-001",
       "route": "POST /api/agents/calibrate",
-      "description": "Binary-search an agent\u2019s real input limit from live probes",
+      "description": "Binary-search an agent’s real input limit from live probes",
       "tags": [
         "copilot",
         "agents",
@@ -14789,7 +14789,7 @@
       "version": "2.0.0",
       "uuid": "nexus-loom-cap-copilot.ledger.stream-v1-0000-2026-0804-001",
       "route": "GET /ledger/stream",
-      "description": "Canonical component-ledger rows as SSE \u2014 the cross-process wire autopilot consumes",
+      "description": "Canonical component-ledger rows as SSE — the cross-process wire autopilot consumes",
       "tags": [
         "copilot",
         "ledger",
@@ -14840,7 +14840,7 @@
       "version": "3.2.0",
       "uuid": "nexus-loom-cap-bridge.events-v1-0000-2026-0804-001",
       "route": "GET /events",
-      "description": "SSE \u2014 all bridge events",
+      "description": "SSE — all bridge events",
       "tags": [
         "bridge",
         "stream"
@@ -17769,66 +17769,6 @@
       "tracked_in_spec_registry": true,
       "schemaVersion": "1.2.0",
       "registeredAt": 1788299489304
-    },
-    "nexus.guardian.lib.jobs": {
-      "id": "nexus.guardian.lib.jobs",
-      "namespace": "lib",
-      "name": "guardian/lib/jobs.js",
-      "version": "1.0.0",
-      "dir": "guardian/lib",
-      "uuid": "nexus-loom-map-nexus.guardian.lib.jobs-v1-0000-2026-0902-001",
-      "schemaVersion": "1.2.0",
-      "registeredAt": 1788413673168
-    },
-    "nexus.guardian.lib.provider-routing": {
-      "id": "nexus.guardian.lib.provider-routing",
-      "namespace": "lib",
-      "name": "guardian/lib/provider-routing.js",
-      "version": "1.0.0",
-      "dir": "guardian/lib",
-      "uuid": "nexus-loom-map-nexus.guardian.lib.provider-routing-v1-0000-2026-0902-001",
-      "schemaVersion": "1.2.0",
-      "registeredAt": 1788413673169
-    },
-    "nexus.guardian.lib.dispatcher": {
-      "id": "nexus.guardian.lib.dispatcher",
-      "namespace": "lib",
-      "name": "guardian/lib/dispatcher.js",
-      "version": "1.0.0",
-      "dir": "guardian/lib",
-      "uuid": "nexus-loom-map-nexus.guardian.lib.dispatcher-v1-0000-2026-0902-001",
-      "schemaVersion": "1.2.0",
-      "registeredAt": 1788413673170
-    },
-    "nexus.guardian.lib.dispatch-pool-bridge": {
-      "id": "nexus.guardian.lib.dispatch-pool-bridge",
-      "namespace": "lib",
-      "name": "guardian/lib/dispatch-pool-bridge.js",
-      "version": "1.0.0",
-      "dir": "guardian/lib",
-      "uuid": "nexus-loom-map-nexus.guardian.lib.dispatch-pool-bridge-v1-0000-2026-0902-001",
-      "schemaVersion": "1.2.0",
-      "registeredAt": 1788413673171
-    },
-    "nexus.guardian.lib.lib-index": {
-      "id": "nexus.guardian.lib.lib-index",
-      "namespace": "lib",
-      "name": "guardian/lib/index.js",
-      "version": "1.0.0",
-      "dir": "guardian/lib",
-      "uuid": "nexus-loom-map-nexus.guardian.lib.lib-index-v1-0000-2026-0902-001",
-      "schemaVersion": "1.2.0",
-      "registeredAt": 1788413673172
-    },
-    "nexus.guardian.lib.ncp-handler": {
-      "id": "nexus.guardian.lib.ncp-handler",
-      "namespace": "lib",
-      "name": "guardian/lib/ncp-handler.js",
-      "version": "1.0.0",
-      "dir": "guardian/lib",
-      "uuid": "nexus-loom-map-nexus.guardian.lib.ncp-handler-v1-0000-2026-0902-001",
-      "schemaVersion": "1.2.0",
-      "registeredAt": 1788414279562
     }
   },
   "seam": {},

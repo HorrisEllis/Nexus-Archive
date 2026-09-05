@@ -86,61 +86,95 @@ spec:
     # against a real `p === '<path>'` match in copilot/server.js — none are
     # asserted from memory (§0.1, §1.1).
 
-    - method: POST  path: /api/prompt
+    - method: POST
+
+      path: /api/prompt
       body: "CopilotRequest"
       returns: "CopilotResponse"
       description: "Primary entry. All co-pilot interactions."
 
-    - method: POST  path: /api/prompt/stream
+    - method: POST
+
+      path: /api/prompt/stream
       returns: "SSE token stream"
       description: "Streaming variant of /api/prompt."
 
-    - method: POST  path: /api/prompt/tools
+    - method: POST
+
+      path: /api/prompt/tools
       description: "Prompt routed explicitly through the agent-tools loop."
 
-    - method: POST  path: /api/prompt/fulfill
+    - method: POST
+
+      path: /api/prompt/fulfill
       description: "Adaptive fulfillment path (copilot/adaptive-fulfillment.js)."
 
-    - method: POST  path: /api/channel
+    - method: POST
+
+      path: /api/channel
       body: "{ sessionId, channel, channelName, uiState }"
       returns: "{ ok }"
       description: "Update current channel context for session"
 
-    - method: GET   path: /api/sessions
+    - method: GET
+
+      path: /api/sessions
       returns: "{ sessions: CopilotSession[] }"
 
-    - method: POST  path: /api/build
+    - method: POST
+
+      path: /api/build
       description: "Module build request (copilot/module-builder.js)."
 
-    - method: POST  path: /api/diagnose
+    - method: POST
+
+      path: /api/diagnose
       description: "Run a real diagnostic sweep."
 
-    - method: GET   path: /api/diagnose/list
+    - method: GET
+
+      path: /api/diagnose/list
       description: "List available diagnostics."
 
-    - method: GET   path: /api/axioms
+    - method: GET
+
+      path: /api/axioms
       description: "Read the live axiom set (copilot/axiom-manager.js)."
 
-    - method: POST  path: /api/axioms/add
-    - method: POST  path: /api/axioms/remove
+    - method: POST
 
-    - method: POST  path: /api/observe
+      path: /api/axioms/add
+    - method: POST
+      path: /api/axioms/remove
+    - method: POST
+
+      path: /api/observe
       description: "Ingest an observation into the stream digest."
 
-    - method: GET   path: /api/stream
+    - method: GET
+
+      path: /api/stream
       returns: "SSE"
       description: "Live copilot activity stream."
 
-    - method: POST  path: /api/stream/ingest
+    - method: POST
+
+      path: /api/stream/ingest
       description: "Push an event into the activity stream."
 
-    - method: POST  path: /api/event
+    - method: POST
+
+      path: /api/event
       description: "Event ingress from other systems."
 
-    - method: GET   path: /api/lifeline/health
+    - method: GET
+
+      path: /api/lifeline/health
       description: "Lifeline cascade health (ollama → guardian escalation)."
 
-    - method: POST  path: /bridge/deliver
+    - method: POST
+
+      path: /bridge/deliver
       description: "Bridge delivery endpoint."
 
     # §BUILT 2026-08-13 — both of these were declared here with no handler in
@@ -149,21 +183,25 @@ spec:
     # already called on the prompt path) — there was simply no way to LOOK at
     # either. Verified live against a running cortex+copilot pair.
 
-    - method: GET   path: /api/sessions/:sessionId
+    - method: GET
+
+      path: /api/sessions/:sessionId
       returns: "{ session: CopilotSession, exchanges: [], exchangeCount }"
       description: "Session record + its recent chat_log exchanges, read from cortex. 404 on unknown session; exchanges:null + exchangesError if cortex is unreachable (never a bare [], which would read as 'said nothing')."
 
-    - method: GET   path: /api/context/:sessionId
+    - method: GET
+
+      path: /api/context/:sessionId
       returns: "{ layerCount, tokensUsed, layers, text, sessionKnown }"
       description: "Assembled 7-layer context snapshot (copilot-context.js). sessionKnown flags whether the snapshot is session-specific or a generic system snapshot."
 
-    - method: GET   path: /health
-    - method: GET   path: /contract
-    - method: GET   path: /events
+    - method: GET
 
-
-
-
+      path: /health
+    - method: GET
+      path: /contract
+    - method: GET
+      path: /events
   handshake:
     components:
       - id: 'copilot.prompt'
