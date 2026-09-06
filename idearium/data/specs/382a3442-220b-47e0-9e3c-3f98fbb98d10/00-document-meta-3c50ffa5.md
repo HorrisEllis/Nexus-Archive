@@ -9,7 +9,7 @@ contract_id: spec-contract:382a3442:document-meta:3c50ffa5
 agent: import
 model: import:.spec
 status: complete
-completed_at: 2026-09-06T00:03:56.173Z
+completed_at: 2026-09-06T00:17:18.335Z
 ---
 
 <!-- imported: document → meta -->

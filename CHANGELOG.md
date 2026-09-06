@@ -1,5 +1,30 @@
 # NEXUS Changelog
 
+## 2026-09-06 — idearium spec-engine never loaded on a real npm install (v0.39.49)
+
+James's own real boot log on his actual machine showed this failing
+constantly: "spec-engine load failed: The requested module 'js-yaml'
+does not provide an export named 'default'". Idearium's spec-engine
+never loaded at all in his real environment — every idea shown in his
+screenshot was stuck at 'building' forever (Repo: tesr x3, Repo:
+e2e-idearium) because the thing that actually dispatches chunks
+couldn't start.
+
+Root cause confirmed by pulling the real published js-yaml@5.2.1
+tarball (root package.json declares "^5.2.1") and reading its actual
+dist/js-yaml.mjs: named exports only, genuinely no default export — a
+real breaking change from 4.x. spec-engine/index.js's `import yaml from
+'js-yaml'` was a default import, exactly why it broke. Fixed to a named
+import. This session's own earlier testing never caught it — the only
+js-yaml copy available in that sandbox was a borrowed 4.3.0, which
+still has a default, so every prior "verified working" claim about
+spec-engine was real against the wrong dependency version. Re-verified
+properly this time: installed the actual 5.2.1 package for real, re-ran
+the entire idearium test suite and the full 9-stage e2e pipeline test
+against it — all still pass. Swept the whole codebase for the same
+broken pattern elsewhere; nowhere else had it.
+
+
 ## 2026-09-03 — merge-regression recovery, guardian pipeline hardening, real schema separation (v0.39.48)
 
 A merge ("Merge handoff (nexus-6, newest) into v0.39.47 base") silently

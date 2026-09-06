@@ -37,7 +37,20 @@ import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
 // (package.json's workspaces include 'idearium'; compiler-bridge.js in
 // this same module already imports it, dynamically). Static import here —
 // SPEC_SECTIONS is computed at module load, not inside an async function.
-import yaml from 'js-yaml';
+// §FIXED 2026-09-06 — James's own real boot log showed this crashing on
+// every real npm install: "spec-engine load failed: The requested module
+// 'js-yaml' does not provide an export named 'default'". Traced it for
+// real, not guessed: root package.json declares "js-yaml": "^5.2.1"; that
+// major version's real dist/js-yaml.mjs (confirmed by pulling the actual
+// published tarball, not assumed) exports load/dump/etc. as named exports
+// only — genuinely no default export at all, a real breaking change from
+// 4.x. This session's own earlier testing used a borrowed js-yaml@4.3.0
+// copy (the only one available in that sandbox), which still had a
+// default — so `import yaml from 'js-yaml'` looked fine there and was
+// never actually exercised against the real declared dependency version
+// until this real log surfaced it. Named import, matching what 5.x
+// actually exports.
+import { load } from 'js-yaml';
 
 const _require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -132,7 +145,7 @@ function _loadBlocks() {
   try { raw = fs.readFileSync(yamlPath, 'utf8'); }
   catch (e) { throw new Error(`[${MODULE_ID}] blocks.yaml unreadable at ${yamlPath}: ${e.message}`); }
   let doc;
-  try { doc = yaml.load(raw); }
+  try { doc = load(raw); }
   catch (e) { throw new Error(`[${MODULE_ID}] blocks.yaml failed to parse: ${e.message}`); }
   if (!doc || !Array.isArray(doc.blocks) || !doc.blocks.length) {
     throw new Error(`[${MODULE_ID}] blocks.yaml has no real 'blocks' array — cannot build specs without a section schema`);
