@@ -13,6 +13,12 @@
  * resolve to the same real cortex/memory/jaa-db.js path.
  */
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const _raidInputIsolated5 = fs.mkdtempSync(path.join(os.tmpdir(), 'raid-input-processnext-'));
+process.env.RAID_INPUT_DIR = _raidInputIsolated5;
+process.on('exit', () => { try { fs.rmSync(_raidInputIsolated5, { recursive: true, force: true }); } catch (_) {} });
 let passed = 0, failed = 0;
 
 async function test(id, desc, fn) {

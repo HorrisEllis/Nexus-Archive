@@ -15,6 +15,7 @@
 const crypto  = require('crypto');
 const fs      = require('fs');
 const path    = require('path');
+const cq      = require('../lib/contract-queue');
 const lifeline = require('./lifeline');
 const axiomMgr = require('./axiom-manager');
 
@@ -645,85 +646,61 @@ Return the fixed spec only, starting with "spec:"`;
     }
   }
 
-  // §FIX 2026-09-06 — PULSE_ALL_2026-09-06 / emerge simplification. James:
-  // "its just a compiler thats it, the rest is trash." Traced the full
-  // real chain before touching anything: this cq.dispatch() wrote a file
-  // to emerge/input/, and emerge/consumer.js was a separate, standalone
-  // process (spawned by autopilot.js) that polled that directory every
-  // 5s, accepted the contract, wrote the spec back to disk a SECOND time,
-  // and only then called the real compiler — compile() itself was always
-  // the only real work; everything else was file-drop/poll/accept
-  // ceremony around it. idearium/compiler-bridge.js already proves the
-  // direct-call pattern works for the exact same compiler. Replaced with
-  // exactly that: write the spec once, call compile() directly, await
-  // its real result. No queue, no poller, no second process.
-  const buildUuid = require('crypto').randomUUID();
-  const buildDir  = path.join(__dirname, '..', 'data', 'emerge', 'builds', buildUuid);
-  fs.mkdirSync(buildDir, { recursive: true });
-  const safeName  = plan.name.replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'module';
-  const specPath  = path.join(buildDir, `${safeName}.spec`);
+  // Create build contract
+  const contract = cq.create({
+    fromSystem:    'copilot',
+    fromComponent: 'copilot.module-builder',
+    fromHook:      'copilot.module-builder.output',
+    toSystem:      'emerge',
+    toComponent:   'emerge.compiler',
+    toHook:        'emerge.compiler.receive',
+    intent:        'build',
+    agent:         'ollama',
+    tags:          ['module-build', plan.targetSystem, plan.name],
+    requestId,
+    payload: {
+      type:          'module_build',
+      name:          plan.name,
+      spec,
+      plan,
+      capability:    description,
+      targetSystem:  plan.targetSystem,
+      qcStatus:      qcResult?.passed ? 'passed' : 'failed',
+      qcFailReason:  qcResult?.reason || null,
+      qcSuggestions: qcResult?.suggestions || [],
+      qcConfidence:  qcResult?.confidence || 0,
+      iterations:    iteration,
+      // §NEW 2026-07-11 — the real, traceable architecture decision:
+      // which idearium templates were selected and the spec UUID/rootHash
+      // that grounded this build, so "which architecture did this use and
+      // why" is answerable from the contract itself, not lost the moment
+      // the LLM call that used it as context finished.
+      architecture:  architecture ? {
+        ideariumSpecUuid: architecture.ideariumSpecUuid,
+        ideariumRootHash: architecture.ideariumRootHash,
+        templateIds:      architecture.templateIds,
+      } : null,
+    },
+    priority: 'normal',
+    ttlMs: 300000, // 5 minutes
+  });
 
-  let buildResult = { ok: false, error: 'build skipped — QC did not pass' };
+  // Dispatch to Emerge
   if (qcResult?.passed) {
-    fs.writeFileSync(specPath, spec, 'utf8');
-    // Real, kept sidecar — genuinely useful traceability
-    // (idearium spec/rootHash/templateIds behind this build), not queue
-    // ceremony. Same real data as before, written once instead of twice.
-    if (architecture) {
-      fs.writeFileSync(
-        path.join(buildDir, 'architecture.json'),
-        JSON.stringify({
-          ideariumSpecUuid: architecture.ideariumSpecUuid,
-          ideariumRootHash: architecture.ideariumRootHash,
-          templateIds:      architecture.templateIds,
-        }, null, 2), 'utf8'
-      );
-    }
-    const existingDir = plan.existingDir || null;
-    if (existingDir) {
-      fs.writeFileSync(
-        path.join(buildDir, 'replace-target.json'),
-        JSON.stringify({ existingComponentId: plan.existingComponentId || null, existingDir }, null, 2),
-        'utf8'
-      );
-    }
-
-    const { compile } = require('../emerge/compiler/pipeline');
-    try {
-      const result = await compile(specPath, buildDir, { verbose: false });
-      buildResult = result.ok
-        ? { ok: true, outputDir: buildDir, skipped: !!result.skipped }
-        : { ok: false, error: result.error || 'compile pipeline produced no result' };
-    } catch (e) {
-      buildResult = { ok: false, error: e.message };
-    }
-    // Real event, kept — genuinely useful observability, same real
-    // event_log write consumer.js used to do, one call, no separate
-    // process needed to make it.
-    try {
-      const et = require('../lib/event-types.js');
-      require('../cortex/memory/jaa-db.js').jaaDB.insert('event_log', {
-        type: buildResult.ok ? et.INTENT.BUILD_OUTPUT : et.INTENT.BUILD_OUTPUT,
-        blockId: buildUuid, agent: 'copilot', moduleName: plan.name,
-        ok: buildResult.ok, error: buildResult.error || null, ts: Date.now(),
-      });
-    } catch (_) { /* event pipeline unreachable — the real build result is unaffected */ }
-    console.log(`[module-builder] ${buildResult.ok ? '✓' : '✗'} build ${buildUuid} (${plan.name}) — ${buildResult.ok ? buildDir : buildResult.error}`);
+    cq.dispatch(contract);
+    console.log(`[module-builder] contract ${contract.uuid} dispatched to emerge`);
   }
 
   return {
     ok:            true,
     passed:        qcResult?.passed || false,
-    buildId:       buildUuid,
-    buildResult,
+    contract:      contract.uuid,
     architecture,
     plan,
     qcResult,
     iterations:    iteration,
     message:       qcResult?.passed
-      ? (buildResult.ok
-          ? `Module "${plan.name}" passed QC and was built — ${buildResult.outputDir}`
-          : `Module "${plan.name}" passed QC but the build itself failed: ${buildResult.error}`)
+      ? `Module "${plan.name}" passed QC and dispatched to Emerge for build.`
       : `Module "${plan.name}" failed QC after ${iteration} iterations. Needs: ${qcResult?.reason}`,
     requestId,
   };

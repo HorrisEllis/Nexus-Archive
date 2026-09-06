@@ -51,6 +51,12 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
   },
 };
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const _raidInputIsolated6 = fs.mkdtempSync(path.join(os.tmpdir(), 'raid-input-depgraph-'));
+process.env.RAID_INPUT_DIR = _raidInputIsolated6;
+process.on('exit', () => { try { fs.rmSync(_raidInputIsolated6, { recursive: true, force: true }); } catch (_) {} });
 const intake = require('../../cortex/core/raid/contract-intake.js');
 
 (async () => {

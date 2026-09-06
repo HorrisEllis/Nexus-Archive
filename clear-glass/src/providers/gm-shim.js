@@ -25,24 +25,6 @@
  * already establishes that fetch() to 127.0.0.1 works fine from an https://
  * page under Private Network Access, which is exactly what these calls do
  * (Guardian, Cortex, Orchestrator, Ollama — all loopback).
- *
- * §FIX 2026-09-06 — James: "clearglass needs to work. the ncp." Traced
- * directly: guardian/userscript-claude.js's _gmEventSource() (the real
- * incremental SSE parser NCP's live channel connection depends on)
- * requires GM_xmlhttpRequest to call onprogress repeatedly as new SSE
- * chunks arrive, with res.responseText carrying the FULL text received
- * so far — and to stay open indefinitely for timeout:0. The shim below,
- * before this fix, did one single fetch().then(res => res.text()) and
- * only ever called onload ONCE, after the entire response body finished.
- * For a real, live, intentionally-never-closing SSE stream, that never
- * happens — onprogress was never called at all, meaning NCP's live
- * connection could never see a single frame when baked into Electron
- * this way, even though it worked under real Tampermonkey (whose real
- * GM_xmlhttpRequest genuinely streams). Fixed by reading fetch()'s own
- * real response.body ReadableStream incrementally via a reader, calling
- * onprogress after every chunk with the true accumulated responseText —
- * the same real contract Tampermonkey's own implementation provides,
- * not a fetch()-once-and-pretend.
  */
 
 function buildGmShim() {
@@ -53,7 +35,6 @@ function buildGmShim() {
   window.GM_xmlhttpRequest = function(opts) {
     const controller = new AbortController();
     let timedOut = false;
-    let aborted  = false;
     const t = opts.timeout ? setTimeout(() => { timedOut = true; controller.abort(); }, opts.timeout) : null;
 
     fetch(opts.url, {
@@ -62,56 +43,22 @@ function buildGmShim() {
       body:    opts.data,
       signal:  controller.signal,
     }).then(async (res) => {
-      // Real "connection open" signal — headers are in, body streaming
-      // begins now. Matches real EventSource/XHR readyState 2/3 timing,
-      // which _gmEventSource() checks for onopen.
-      opts.onreadystatechange && opts.onreadystatechange({ readyState: 3, status: res.status });
-
-      if (!res.body || typeof res.body.getReader !== 'function') {
-        // No real streaming body available (older engine, or a response
-        // type that genuinely has none) — fall back to the original
-        // one-shot behavior rather than hanging forever on a reader
-        // that doesn't exist.
-        if (t) clearTimeout(t);
-        const responseText = await res.text();
-        opts.onload && opts.onload({ status: res.status, statusText: res.statusText, responseText, response: responseText, finalUrl: res.url });
-        return;
-      }
-
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = '';
-      for (;;) {
-        let chunk;
-        try { chunk = await reader.read(); }
-        catch (e) {
-          if (t) clearTimeout(t);
-          if (aborted && timedOut) { opts.ontimeout && opts.ontimeout(); return; }
-          if (aborted) return; // deliberate close() — not a real error
-          opts.onerror && opts.onerror(e);
-          return;
-        }
-        if (chunk.done) break;
-        accumulated += decoder.decode(chunk.value, { stream: true });
-        // Real, repeated progress callback — the exact thing the old
-        // shim never called even once. responseText is the FULL text
-        // received so far, matching the real XHR/GM contract
-        // _gmEventSource()'s own _parseNewFrames() already relies on.
-        opts.onprogress && opts.onprogress({ status: res.status, statusText: res.statusText, responseText: accumulated, response: accumulated, finalUrl: res.url });
-      }
       if (t) clearTimeout(t);
-      // Real, genuine end of stream (server actually closed it) — not
-      // fired on every chunk, only here, matching _gmEventSource()'s
-      // own onload handler ("NCP stream ended").
-      opts.onload && opts.onload({ status: res.status, statusText: res.statusText, responseText: accumulated, response: accumulated, finalUrl: res.url });
+      const responseText = await res.text();
+      opts.onload && opts.onload({
+        status: res.status,
+        statusText: res.statusText,
+        responseText,
+        response: responseText,
+        finalUrl: res.url,
+      });
     }).catch((err) => {
       if (t) clearTimeout(t);
       if (timedOut) { opts.ontimeout && opts.ontimeout(); return; }
-      if (aborted) return; // deliberate close() before any response — not a real error
       opts.onerror && opts.onerror(err);
     });
 
-    return { abort: () => { aborted = true; controller.abort(); } };
+    return { abort: () => controller.abort() };
   };
 
   window.GM_getValue = function(key, defaultValue) {

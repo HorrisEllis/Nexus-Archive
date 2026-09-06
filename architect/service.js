@@ -63,6 +63,7 @@ const { createCompileRoutes }   = (() => { try { return require('./compile-route
 const config = require('./config.js');
 const PORT = config.PORT;
 const CORTEX_PORT = config.CORTEX_PORT;
+const ORCH_PORT   = config.ORCH_PORT;
 const ROOT        = path.join(__dirname, '..');
 const DATA_DIR    = path.join(__dirname, 'data');
 const LEDGER_DIR  = path.join(ROOT, 'data', 'architect');
@@ -142,26 +143,20 @@ function createBusEmit(cfrLedger) {
 }
 
 // ── Register with orchestrator ────────────────────────────────────────────
-// §FIX 2026-09-06 — PULSE_ALL_2026-09-06. This was a fully separate,
-// hand-rolled raw http.request() call, not even using nexus-connect.js —
-// confirmed by grep, zero `nc2`/`nexus-connect` references anywhere in
-// this file before this fix. That's a bigger version of the exact same
-// gap guardian itself had until 0.39.38 fixed it (guardian at least used
-// nc2.registerWithOrchestrator but forgot startHeartbeat) — architect
-// registered once at boot via its own duplicate logic and then went
-// completely silent forever, with no ongoing heartbeat of any kind.
-// Replaced with the real, shared nc2 client — same proven pattern
-// guardian/server.js already uses (registerWithOrchestrator + real
-// startHeartbeat, which uses createPulse() internally, not a second
-// hand-rolled implementation).
-const nc2 = require('../nexus-connect');
 function registerWithOrchestrator() {
   let _rc = []; try { _rc = require('./registry-components'); } catch(_) {}
-  nc2.registerWithOrchestrator('architect', PORT, {
-    version: '3.0.0', label: 'Architect', healthPath: '/health',
-    uuid: 'architect-service-v1-0000-4000', hooks: [],
-  }, _rc).catch(() => {});
-  nc2.startHeartbeat('architect', PORT);
+  const body = JSON.stringify({
+    systemId: 'architect', port: PORT, version: '3.0.0',
+    label: 'Architect', healthPath: '/health',
+    uuid: 'architect-service-v1-0000-4000',
+    hooks: [], timestamp: Date.now(), components: _rc,
+  });
+  const req = http.request({
+    hostname: '127.0.0.1', port: ORCH_PORT, path: '/api/register',
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+  }, () => {});
+  req.on('error', () => {});
+  req.end(body);
 }
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────

@@ -2063,9 +2063,18 @@ const server = http.createServer(async (req, res) => {
     // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
     let text = '', modelUsed = 'none', confidence = null, escalated = false, escalationReason = null;
     try {
+      // §BUILT 2026-09-06 — James: "a toggle switch to switch between
+      // ollama and guardian." lifeline.route() already accepts a real
+      // opts.provider override (checked directly before adding this —
+      // it already validates 'auto'/a real guardian agent name against
+      // guardian's own live /providers); this endpoint just never passed
+      // the caller's own choice through, always letting lifeline
+      // auto-decide. body.provider is optional — every existing caller
+      // that never sends it gets the exact same auto-decide behavior as
+      // before, unchanged.
       const life = await _lifeline.route(
         `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-        { requestId, sessionId, intent: 'ask', channel }
+        { requestId, sessionId, intent: 'ask', channel, provider: body.provider || undefined }
       );
       text      = life?.text || '';
       modelUsed = life?.provider_used || 'none';

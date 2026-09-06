@@ -23,6 +23,7 @@ const PORT    = config.PORT;
 const ROOT    = __dirname;
 const UI_DIR  = path.join(ROOT, 'ui');
 const DATA_DIR = config.DATA_DIR;
+const ORCH_URL = config.ORCH_URL;
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(_) {}
 
@@ -244,21 +245,25 @@ const server = http.createServer(async (req, res) => {
 });
 
 // ── Register with orchestrator ────────────────────────────────────────────────
-// §FIX 2026-09-06 — PULSE_ALL_2026-09-06. Same real gap class as
-// architect/service.js's own fix this session: a fully separate,
-// hand-rolled http.request() to /api/register, retried only if the
-// INITIAL attempt failed (setTimeout(register, 5000) on error) — never
-// an ongoing heartbeat after a successful register. Replaced with the
-// real, shared nexus-connect.js client (nc2.registerWithOrchestrator +
-// nc2.startHeartbeat, which wraps createPulse() internally — confirmed
-// directly in nexus-connect.js, not assumed).
-const nc2 = require('../nexus-connect');
 function register() {
   const components = require('./registry-components');
-  nc2.registerWithOrchestrator(SYSTEM_ID, PORT, {
-    version: VERSION, status: 'online', label: 'ERAVOS', color: '#a78bfa',
-  }, components.components || []).catch(() => {});
-  nc2.startHeartbeat(SYSTEM_ID, PORT);
+  const body = JSON.stringify({
+    systemId: SYSTEM_ID, port: PORT, version: VERSION,
+    status: 'online', meta: { label:'ERAVOS', color:'#a78bfa' },
+    components: components.components || [],
+  });
+  const u = new URL(`${ORCH_URL}/api/register`);
+  const req = http.request({
+    hostname: u.hostname, port: u.port || 9000,
+    path: u.pathname, method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) },
+    timeout: 4000,
+  }, r => {
+    let d = ''; r.on('data', c => d += c);
+    r.on('end', () => console.log(`[eravos] registered with orchestrator`));
+  });
+  req.on('error', () => setTimeout(register, 5000));
+  req.write(body); req.end();
 }
 
 server.listen(PORT, () => {
