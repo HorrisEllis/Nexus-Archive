@@ -273,40 +273,70 @@ const ALL_KERNELS = [
   // optional: true — missing Electron install won't trip the circuit breaker.
   // One-time: run `npm install` inside clear-glass/ before first boot.
   // Windows needs electron.cmd; Unix uses the symlink — detect at runtime.
+  // §FIXED 2026-09-06 — James: "i want you to decouple the userscripts
+  // from the ui. nothing is reliant on the ui." AND, the concrete bug
+  // this same finding explains: "it routes to it. but doesnt do anything
+  // beyond that" (chatgpt dispatch never acking). Traced directly: the
+  // real dispatch/ack path (copilot/lib/self-model.js's _pollForAck)
+  // posts straight to guardian and polls for a status change — it has
+  // ZERO awareness of onDemand/idleTimeoutMs below, or of requestSpawn/
+  // _ensureClearGlassUp (guardian/clear-glass-bridge.js, built earlier
+  // this session for the /providers/:id/spawn route, which NOTHING in
+  // the real ack-polling path ever calls). If clear-glass had despawned
+  // from 10 minutes of idle (exactly the kind of gap a real conversation
+  // has between messages), the very next dispatch attempt would create a
+  // job, get a jobId back from guardian, and then poll forever for an
+  // ack that can never arrive — there's no tab, and nothing in that path
+  // knows to ask for one.
+  //
+  // The onDemand design wasn't wrong on its own terms — it was a real,
+  // deliberate fix for a real, documented OOM crisis (see the
+  // haltPctOverride comment below, kept unchanged: cortex OOM'd, unable
+  // to restart at 6-7% free, while clear-glass held memory it wasn't
+  // using). But "the heaviest process, so make it optional" and "the
+  // provider tabs are vital, always needed" are in direct conflict once
+  // NCP is core rather than a UI convenience — this session's own real
+  // finding (guardian/lib/ncp.js's staleSweep fix, clear-glass/src/
+  // providers/host.js's unexpected-close respawn fix) both assumed
+  // clear-glass is simply up; onDemand quietly broke that assumption
+  // after any 10-minute lull. Promoted to a real, always-running,
+  // supervised kernel — not critical (a browser-automation outage
+  // degrades NCP-routed dispatch, it doesn't halt the rest of NEXUS,
+  // matching _dispatchViaGuardian's own honest-degrade contract) — and
+  // launched with --headless (clear-glass/src/main/index.js's own
+  // documented tray-only mode, built specifically "for: background NCP
+  // provider" — this is that mode's real intended use, just never wired
+  // into the supervision tree that would actually keep it alive). The
+  // haltPctOverride memory safety valve below is kept exactly as-is:
+  // clear-glass specifically still refuses to (re)start under tighter
+  // memory pressure than everything else, so the original crisis this
+  // whole design responded to still can't recur.
+  // §CORRECTED 2026-09-06 — James: "it cant anounce it is headless. i want
+  // to be able to use clearglass. it opens on boot. i use it. i want a
+  // backend." Real course-correction from the previous fix in this same
+  // file: promoting clear-glass off onDemand (below, unchanged — that part
+  // was right) does not mean hiding its window. §5.12's actual text is
+  // "removing the UI must not affect execution" — never "there must be no
+  // UI". James wants both at once: a real, visible, usable window that
+  // opens on boot, AND a backend (NCP/provider dispatch) that doesn't stop
+  // working if that window is ever closed or crashes. --headless was the
+  // wrong tool for that — it removes the window entirely, which directly
+  // contradicts "I use it. It opens on boot." Reverted; the window opens
+  // normally now. The actual backend-independence work is in what's
+  // ALREADY real and unchanged here: onDemand/idleTimeoutMs removed
+  // (clear-glass no longer despawns from under a live dispatch), phase:3
+  // supervision (crash-restarted like every other real system), and
+  // ProviderHost's own unexpected-close respawn fix from the commit
+  // before this one — none of which required hiding anything.
   { name: 'clear-glass',
     cmd: _ELECTRON_CMD,
     args: ['.'], cwd: 'clear-glass', optional: true,
+    phase: 3, healthUrl: 'http://127.0.0.1:7701/health',
     // §PRIORITY 2026-07-31 — the heaviest single process in the stack
     // (Electron + four provider webviews) gets a HIGHER halt floor than the
     // default 10%, so it's the first thing refused under pressure, not the
-    // same as everything else. Directly answers the failure mode below:
-    // cortex OOM'd, then couldn't restart at 6-7% free while clear-glass —
-    // requested unconditionally on every boot despite onDemand — held its
-    // memory.
+    // same as everything else.
     haltPctOverride: 0.15,
-    // §BUILT 2026-07-15 — "cos as a kind of PID service, only running
-    // what's needed." Clear Glass is the heaviest single process in the
-    // stack (Electron + however many provider webviews) and the clearest
-    // real case of "not needed most of the time" — nobody's controlling
-    // a browser unless something is actively using it. onDemand:true
-    // means autopilot does NOT auto-spawn this at boot; it stays dormant
-    // until a real request needs it (see _requestSpawn/_maybeDespawnIdle
-    // below), health-gated the same way orchestrator's own boot sequence
-    // already gates every other system ("Verify /health returns
-    // ok=true") before anything is allowed to treat it as available.
-    onDemand: true,
-    healthUrl: 'http://127.0.0.1:7701/health',
-    idleTimeoutMs: 10 * 60 * 1000, // 10 min with no activity -> despawn
-    // §GAP CLOSED 2026-07-09 (from a live console log) — clear-glass logged
-    // "[ProviderHost] no guardianDir configured … userscript loading will
-    // fail until configured", then "[Userscripts] 0 scripts loaded".
-    // Consequence: the 4 provider tabs boot, but none ever connects to
-    // Guardian's NCP /channel, so guardian has no answerer and every ask
-    // fails fast. clear-glass/src/main/index.js deliberately removed its
-    // hardcoded '../../../guardian' fallback ("not supposed to be baked
-    // in") and requires GUARDIAN_DIR explicitly — but nothing set it. The
-    // supervisor knows where guardian lives; that is the right place to say
-    // so. Absolute, because clear-glass runs with cwd='clear-glass'.
     env: { GUARDIAN_DIR: path.join(ROOT, 'guardian') },
     // §CRITICAL fix 2026-06-30 — root cause of a real 6-crash circuit-
     // breaker trip, traced from a live boot log: requestSingleInstanceLock()

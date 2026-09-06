@@ -86,6 +86,8 @@ const SUITES = [
   'test-cookie-vault-ipc-roundtrip.js',
   'test-userscript-protocol-parity.js',
   'test-guardian-agent-registry.js',
+  'test-agent-mesh-guardian-coverage.js',
+  'test-provider-host-respawn.js',
   'test-userscript-mixed-content-fix.js',
   'test-contract-handshake-paths.js',
   'autonomous-loop.test.js',

@@ -1,0 +1,34 @@
+[2026-09-06T05:05:01.847Z] ── boot phase 1 — bgRequired
+[2026-09-06T05:05:01.848Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-09-06T05:05:03.864Z] [bgRequired] ⚠ phase 1 gate STALLED after 2s — http://127.0.0.1:59897/health never answered ok
+[2026-09-06T05:05:03.865Z]    ↳ running diagnostic for stalled 'bgRequired' (phase 1) — cli/diagnose.js bgRequired
+[2026-09-06T05:05:11.887Z] [36m[bgRequired][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-09-06T05:05:11.887Z] [36m[bgRequired][0m restarting in NaNs (attempt 1)
+[2026-09-06T05:05:11.893Z] [36m[bgRequired][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-09-06T05:05:15.384Z] autopilot received SIGTERM — stopping all kernels
+[2026-09-06T05:05:15.389Z]    ↳ diagnostic for 'bgRequired' (exit null) —
+[2026-09-06T05:05:15.390Z]       [1m  Integration health across all running systems:[0m
+[2026-09-06T05:05:15.390Z]       [31m✗[0m   Guardian :7820 unreachable
+[2026-09-06T05:05:15.390Z]       [31m[1m  ══ ERROR: CROSS › guardian-ncp ══[0m
+[2026-09-06T05:05:15.390Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-09-06T05:05:15.390Z]       [90m    Fix     : Start guardian: node guardian/server.js[0m
+[2026-09-06T05:05:15.390Z]       [90m    Command : [36mnode guardian/server.js[0m[0m
+[2026-09-06T05:05:15.390Z]       [33m⚠[0m   Cortex :3748 unreachable — memory unavailable
+[2026-09-06T05:05:15.390Z]       [36m↻[0m FIX: Start cortex
+[2026-09-06T05:05:15.390Z]       [90m    Command : [36mnode cortex/boot.js[0m[0m
+[2026-09-06T05:05:15.390Z]       [90m    Why     : Cortex provides JAA memory for all systems[0m
+[2026-09-06T05:05:15.390Z]       [33m⚠[0m   Orchestrator :9000 unreachable
+[2026-09-06T05:05:15.390Z]       [36m↻[0m FIX: Start orchestrator
+[2026-09-06T05:05:15.390Z]       [90m    Command : [36mnode orchestrator/orchestrator.js[0m[0m
+[2026-09-06T05:05:15.390Z]       [90m    Why     : Orchestrator is the boot authority[0m
+[2026-09-06T05:05:15.390Z]       [31m✗[0m   Ledger round-trip FAILED
+[2026-09-06T05:05:15.390Z]       [31m[1m  ══ ERROR: CROSS › ledger-roundtrip ══[0m
+[2026-09-06T05:05:15.390Z]       [90m    Error   : [33mwrite:FAIL read:FAIL[0m[0m
+[2026-09-06T05:05:15.390Z]       [90m    Fix     : Guardian JAA ledger may be corrupt[0m
+[2026-09-06T05:05:15.390Z]       [90m    Command : [36mnode cli/diagnose.js guardian --fix[0m[0m
+[2026-09-06T05:05:15.390Z]       [31m✗[0m   SEAM /seam/queues not responding
+[2026-09-06T05:05:15.390Z]       [31m[1m  ══ ERROR: CROSS › seam ══[0m
+[2026-09-06T05:05:15.390Z]       [90m    Error   : [33mECONNREFUSED[0m[0m
+[2026-09-06T05:05:15.390Z]       [90m    Fix     : Check guardian/lib/seam-queue.js[0m
+[2026-09-06T05:05:15.390Z]       [33m⚠[0m   /version endpoint missing
+[2026-09-06T05:05:15.390Z]       [1m  JS syntax integrity:[0m

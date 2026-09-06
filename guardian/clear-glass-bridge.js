@@ -68,7 +68,27 @@ function _ensureClearGlassUp(timeoutMs = 30000) {
       hostname: '127.0.0.1', port: AUTOPILOT_PORT, path: '/spawn/clear-glass', method: 'POST', timeout: timeoutMs,
     }, (res) => {
       let d = ''; res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch (e) { resolve({ ok: false, error: `bad response from autopilot: ${e.message}` }); } });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(d);
+          // §FIXED 2026-09-06 — clear-glass was promoted from an on-demand
+          // kernel to a real, always-running supervised one (autopilot.js,
+          // James: "decouple the userscripts from the ui"). requestSpawn()
+          // now honestly answers a spawn request for an always-on kernel
+          // with { ok:false, error:"...already always-on" } — correct from
+          // requestSpawn's own point of view (it didn't spawn anything,
+          // there was nothing to spawn), but this caller was written when
+          // clear-glass really was on-demand and never distinguished "spawn
+          // refused because it's already up" from "spawn genuinely failed".
+          // Without this, every real dispatch would have been blocked
+          // right here on what is actually good news.
+          if (!parsed.ok && /already always-on/.test(parsed.error || '')) {
+            resolve({ ok: true, alreadyAlwaysOn: true });
+            return;
+          }
+          resolve(parsed);
+        } catch (e) { resolve({ ok: false, error: `bad response from autopilot: ${e.message}` }); }
+      });
     });
     // Honest degrade — if autopilot's status server isn't reachable at
     // all (e.g. running outside the supervised stack), don't block the
