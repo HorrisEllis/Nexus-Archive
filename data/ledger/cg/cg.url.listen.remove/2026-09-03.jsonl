@@ -1,1 +1,0 @@
-{"uuid":"904c6a6e-8a74-45ce-a180-e96c3040e1a5","system":"cg","component":"cg.url.listen.remove","action":"registered","status":"ok","tags":["cg","listener"],"detail":"Remove URL pattern listener by ID","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139760}

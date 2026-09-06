@@ -1,1 +1,0 @@
-{"uuid":"2c82fbf8-e9df-4d09-afb4-1fdf1d9ade69","system":"architect","component":"architect.hook.update","action":"registered","status":"ok","tags":["architect"],"detail":"Update hook metadata","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139648}

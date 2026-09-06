@@ -1,1 +1,0 @@
-{"uuid":"9122f41d-bbbe-4b39-9493-ae050bcdb1e8","system":"cortex","component":"cortex.intelligence.event","action":"registered","status":"ok","tags":["cortex"],"detail":"Feed event for analysis","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139515}

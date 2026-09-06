@@ -155,6 +155,49 @@ async function main() {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
+  // §FIXED 2026-09-06 — James: "all chats from the ncp need to log to
+  // the chat log index." Real, confirmed gap: lib/chat-logger.js's own
+  // log() is the real function that writes to disk, to jaaDB, AND
+  // embeds via vector-memory.js for real semantic search — but this
+  // handler only ever called it for the user's prompt (role:'user').
+  // The agent's own real response — half of every real exchange — only
+  // ever reached the separate, raw jaa.insert('chat_log', ...) a few
+  // lines below, which writes a row but never embeds it: no disk log,
+  // not findable by any real semantic search over past chats. These
+  // tests use the REAL lib/chat-logger.js and a real, isolated jaaDB
+  // (this file's own top-level JAA_DATA_DIR=TMP already covers it) —
+  // not the no-op `jaa` mock makeHandler() injects elsewhere, since the
+  // real bug lives inside chat-logger.js's own separate require(), not
+  // in anything the mock could intercept.
+  await test('NCP-006', 'a real completion logs BOTH the user prompt AND the agent response through chat-logger.js — not just the prompt', async () => {
+    const { jaaDB } = require(path.join(ROOT, 'cortex/memory/jaa-db.js'));
+    const { handler, jobs } = makeHandler([]);
+    const jobId = 'job-chatlog-symmetry';
+    jobs.set(jobId, { id: jobId, prompt: 'a real, distinctive test prompt about narwhals', command: 'ask', status: 'pending' });
+    handler({ type: 'GUARDIAN_COMPLETE', jobId, provider: 'claude', text: 'a real, distinctive test response about narwhals' });
+    await new Promise(r => setTimeout(r, 300));
+
+    const rows = jaaDB.query('chat_log', r => r.jobId === jobId, 100);
+    const userRow = rows.find(r => r.role === 'user');
+    const assistantRow = rows.find(r => r.role === 'assistant');
+    assert.ok(userRow, 'expected a real chat-logger.js row for the user prompt (already worked before this fix)');
+    assert.ok(assistantRow, 'expected a real chat-logger.js row for the agent response — this is the real fix; it did not exist before');
+    assert.ok(assistantRow.content.includes('narwhals'), 'the real response content must actually be logged, not a placeholder');
+  });
+
+  await test('NCP-007', 'a completion with no real response text (finalText falsy) does not write a fabricated assistant entry', async () => {
+    const { jaaDB } = require(path.join(ROOT, 'cortex/memory/jaa-db.js'));
+    const { handler, jobs } = makeHandler([]);
+    const jobId = 'job-chatlog-empty';
+    jobs.set(jobId, { id: jobId, prompt: 'a prompt with no real reply', command: 'ask', status: 'pending' });
+    handler({ type: 'GUARDIAN_COMPLETE', jobId, provider: 'claude', text: '' });
+    await new Promise(r => setTimeout(r, 300));
+
+    const rows = jaaDB.query('chat_log', r => r.jobId === jobId, 100);
+    const assistantRow = rows.find(r => r.role === 'assistant');
+    assert.ok(!assistantRow, 'an empty real response must not produce a fabricated assistant log entry');
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   if (PRIOR_DIR === undefined) delete process.env.JAA_DATA_DIR; else process.env.JAA_DATA_DIR = PRIOR_DIR;
   process.exitCode = failed > 0 ? 1 : 0;

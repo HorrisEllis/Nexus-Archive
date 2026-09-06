@@ -1,1 +1,0 @@
-{"uuid":"9f5de223-da6a-4b35-ac29-fd09dbbf61e2","system":"guardian","component":"guardian.bus.emit","action":"registered","status":"ok","tags":["guardian"],"detail":"Emit event onto bus","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139368}

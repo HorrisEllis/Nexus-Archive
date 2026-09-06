@@ -1,1 +1,0 @@
-{"uuid":"676dc5b1-a218-442e-a57b-1ea84f9ab83d","system":"eros","component":"eros.cmd.hover","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP hover over node","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139797}

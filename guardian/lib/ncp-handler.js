@@ -330,6 +330,25 @@ function createNCPMessageHandler(deps) {
                 cl.log({ role:'user', content: jobRec.prompt, provider: provider||'ollama',
                   jobId, intent: jobRec.command, outcome:'complete' }).catch(()=>{});
               }
+              // §FIXED 2026-09-06 — James: "all chats from the ncp need to
+              // log to the chat log index." Real, confirmed gap: this
+              // block's own comment already says "full exchange to disk +
+              // JAA + vector index," but only the user's PROMPT (above)
+              // ever reached cl.log() — the actual real function that
+              // writes to disk, to jaaDB, AND embeds via vector-memory.js
+              // for real semantic search (confirmed by reading lib/chat-
+              // logger.js's own log() directly before writing this, not
+              // assumed). The agent's own response — half of every real
+              // exchange — only ever reached the separate, raw
+              // jaa.insert('chat_log', ...) below, which writes a row but
+              // never embeds it: no disk log, no real index entry, not
+              // findable by any real semantic search over past chats.
+              // Symmetric fix: the real response gets the exact same
+              // real treatment the prompt already had.
+              if (finalText) {
+                cl.log({ role:'assistant', content: finalText, provider: provider||'ollama',
+                  jobId, intent: jobRec?.command || null, outcome:'complete' }).catch(()=>{});
+              }
             } catch(_) {}
 
             jaa.insert('chat_log', {

@@ -1,1 +1,0 @@
-{"uuid":"b1c2746f-3fa9-44e9-aca4-dff8c4c801d1","system":"idearium","component":"idearium.cli.exec","action":"registered","status":"ok","tags":["idearium"],"detail":"Execute a unified CLI command","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139454}

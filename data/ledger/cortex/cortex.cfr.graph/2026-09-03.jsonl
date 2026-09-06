@@ -1,1 +1,0 @@
-{"uuid":"3b7bb83d-ebd7-436c-9bdb-6188fd6dfda8","system":"cortex","component":"cortex.cfr.graph","action":"registered","status":"ok","tags":["cortex"],"detail":"Causal graph nodes + edges","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139502}
