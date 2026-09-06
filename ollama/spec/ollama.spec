@@ -85,57 +85,45 @@ spec:
       - 'guardian.job.cancel'       # cancel a queued job
       - 'orchestrator.shutdown'     # graceful drain and stop
 
+  command_index:
+    status: DONE   # verified 2026-09-03 — GET /commands live, 17 real commands, matches docs/command-index-per-system.spec build_order phase 2's own exit criteria (independently re-derived and confirmed equal, tests/modules/ollama-command-index.test.js)
+    spec: "docs/command-index-per-system.spec"
+    served_at: "GET /commands"
+    file: "ollama/lib/command-index.js"
+    note: "each routes/*.js module self-declares a commands export -- aggregated at boot into the real index."
+
   routes:
-    - method: GET
-      path: /health
+    - method: GET  path: /health
       returns: "{ ok, model, queue_depth, running, uptime, models_available }"
 
-    - method: GET
-
-      path: /contract
+    - method: GET  path: /contract
       returns: "Full interaction contract"
 
-    - method: GET
-
-      path: /events
+    - method: GET  path: /events
       returns: "SSE stream — all ollama events"
 
-    - method: POST
-
-      path: /api/jobs
+    - method: POST path: /api/jobs
       body: "{ prompt, model?, contractId, componentId, hookId, requestId, sessionId, intent, stream? }"
       returns: "{ ok, jobId, status: 'queued' }"
 
-    - method: GET
-
-      path: /api/jobs
+    - method: GET  path: /api/jobs
       params: "status?, limit?"
       returns: "{ jobs: OllamaJob[] }"
 
-    - method: GET
-
-      path: /api/jobs/:jobId
+    - method: GET  path: /api/jobs/:jobId
       returns: "OllamaJob"
 
-    - method: DELETE
-
-      path: /api/jobs/:jobId
+    - method: DELETE path: /api/jobs/:jobId
       returns: "{ ok, cancelled }"
 
-    - method: GET
-
-      path: /api/models
+    - method: GET  path: /api/models
       returns: "{ models: string[], active: string }"
 
-    - method: POST
-
-      path: /api/models/load
+    - method: POST path: /api/models/load
       body: "{ model: string }"
       returns: "{ ok, model, loaded }"
 
-    - method: GET
-
-      path: /api/queue
+    - method: GET  path: /api/queue
       returns: "{ depth, running, completed_today, failed_today }"
 
   handshake:
@@ -266,29 +254,6 @@ spec:
         (§LM1, docs/2026-09-01-living-model-and-autonomous-pipeline-
         phasemap.spec). Content unchanged; this was a naming fix, not a
         rewrite — the spec was already accurate and complete.
-    - date: 2026-09-02
-      summary: >
-        DeepSeek added as a real agent, mirroring mistral's exact real
-        dispatch pattern — the closest real precedent, not invented from
-        scratch. lib/hat-forge.js's VALID_BASE_AGENTS and lib/account-
-        registry.js's PROVIDERS both gained 'deepseek'; guardian/
-        server.js gained a real _dispatchToDeepseek() routing to this
-        same ollama-bridge service, env-overridable model
-        (DEEPSEEK_MODEL, default deepseek-coder-v2).
-    - date: 2026-09-03
-      summary: >
-        §BUGFIX — this spec's own routes: section had a real, pre-
-        existing YAML syntax error ("- method: GET path: /contract", two
-        keys on one line) since it was first written — never actually
-        parseable as real YAML by any tool. Found and fixed alongside
-        the identical bug in 3 sibling specs (clear-glass/copilot/loom).
-    - date: 2026-09-05
-      summary: "docs: update the living models — real history entries, plus a real pre-existing YAML bug found and fixed in 4 specs (1 real file touched)"
-    - date: 2026-09-05
-      summary: "chore: register the two orphans the new post-commit hook itself flagged (1 real file touched)"
-    - sha: f66c6f434bd997c38ccef6de34109805a2767ee8
-      date: 2026-09-05
-      summary: "fix: real, tested merge safety for parallel-session history writes — found a genuine, silent data-loss risk before it could bite (1 real file touched)"
 
   gaps:
     as_of: 2026-09-01
@@ -298,8 +263,4 @@ spec:
     - version: 1.0.0
       date: 2026-06-27
       summary: "Original build, matches live code@1.0.0 — no drift found this pass."
-      versioniumCommitId: null
-    - version: 1.0.1
-      date: 2026-09-03
-      summary: "DeepSeek added as a real agent (mirroring mistral's dispatch pattern); this spec's own routes: YAML syntax error fixed (never actually parseable before this)."
       versioniumCommitId: null

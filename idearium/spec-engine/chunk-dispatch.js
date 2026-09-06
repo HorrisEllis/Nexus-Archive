@@ -115,7 +115,7 @@ function _memoryJaa() {
  * @param {object} opts          — { preferAgent, axioms, specUuid, busEmit }
  * @returns {Promise<{ok, text, escalated, detection, attempts, queued, jobId, agent}>}
  */
-export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn, opts = {}) {
+async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
   const jaa = _memoryJaa();
   const comp = new QueueCompartment({
     queueId:      opts.specUuid || 'idearium-spec',
@@ -159,7 +159,25 @@ export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatch
     // real resolution and feeds the result through the same
     // detecting()/evaluate() verification every direct response gets —
     // a chatgpt/claude chunk is no longer a second-class, unverified path.
+    //
+    // §BUILT 2026-09-03 — James: "contracts always need an end point...
+    // each contract has the start dir. defaults back to the start point."
+    // Between here and _pollGuardianJob resolving (up to 5 real minutes
+    // for a browser-automated NCP provider), this jobId exists on
+    // guardian's side and NOWHERE ELSE — a process restart mid-poll loses
+    // it completely, and the chunk sits at 'building' forever with no
+    // record anything was ever in flight. opts.onQueued, when the caller
+    // supplies it, fires HERE — before the poll, not after — so the
+    // chunk's own record on disk (its "start dir," spec-engine/index.js's
+    // recordDispatchJob) gets the real jobId the moment it exists,
+    // regardless of whether the poll below ever gets to finish. No
+    // RAID compartment, no new machinery — the spec's own directory IS
+    // the compartment; this just writes the return address into it.
     if (dispatchResult.queued) {
+      if (typeof opts.onQueued === 'function') {
+        try { opts.onQueued({ jobId: dispatchResult.jobId, agent: dispatchResult.agent }); }
+        catch (e) { console.warn('[chunk-dispatch] onQueued hook failed (poll proceeds regardless):', e.message); }
+      }
       const polled = await _pollGuardianJob(dispatchResult.jobId);
       if (!polled.ok) {
         const { escalated } = comp.watchdogRetry(polled.error);
@@ -203,6 +221,31 @@ export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatch
   }
 
   return { ok: false, escalated: true, detection: comp.detection, attempts, error: 'exceeded outer wall-clock attempt cap' };
+}
+
+// §BUILT 2026-09-03 — James: "set default to chatgpt, fallback gemini."
+// The retry ladder above (_dispatchChunkOnce, unchanged) already retries
+// against the SAME agent — it has no notion of switching agents on
+// failure. This wraps it: one real, named fallback attempt against a
+// different agent when the primary genuinely escalates (exhausts its own
+// retry ladder), not a silent retry-forever. Never cascades — the
+// fallback attempt itself carries no fallbackAgent, so a failing gemini
+// attempt fails for real rather than hunting through more agents nobody
+// asked for. The chunk's own agent (spec-engine's markChunkBuilding, then
+// completeChunk) ends up recording whichever agent actually produced the
+// content — real provenance, not "chatgpt" left standing for a chunk
+// gemini actually wrote.
+export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn, opts = {}) {
+  const primary = await _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts);
+  if (primary.ok || !opts.fallbackAgent || opts.fallbackAgent === opts.preferAgent) return primary;
+
+  console.warn(`[chunk-dispatch] ${opts.preferAgent} escalated for '${chunk.sectionId}' (${primary.error || 'verification failed'}) — falling back to ${opts.fallbackAgent}, one attempt`);
+  const fallbackResult = await _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, { ...opts, preferAgent: opts.fallbackAgent, fallbackAgent: null });
+  // §HONEST — if the fallback also failed, the caller gets the FALLBACK's
+  // error (the more recent, more relevant failure), not the primary's,
+  // but both are real and neither is hidden — primaryError is carried
+  // alongside so nothing about the first attempt is lost.
+  return { ...fallbackResult, primaryAgent: opts.preferAgent, primaryError: primary.error };
 }
 
 // §BROKEN IMPORT FIXED 2026-07-09 — warp-build-dispatch.js does

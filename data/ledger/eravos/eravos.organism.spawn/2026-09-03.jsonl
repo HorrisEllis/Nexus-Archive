@@ -1,0 +1,1 @@
+{"uuid":"1e840700-3150-4529-9a6b-5afe298396f4","system":"eravos","component":"eravos.organism.spawn","action":"registered","status":"ok","tags":["eravos"],"detail":"Spawn an organism by id onto the canvas","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139560}

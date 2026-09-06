@@ -168,4 +168,42 @@ function _dispatchBrowserCommandInner({ eventType, data = {}, timeoutMs = 15000 
   });
 }
 
-module.exports = { dispatchBrowserCommand, _responseTypeFor };
+/**
+ * spawnProviderTab(providerId, opts) — James: "adding agent on canvas
+ * opens tab in clear glass." Deliberately NOT dispatchBrowserCommand's
+ * two-step bus+SSE round trip — checked clear-glass/src/ipc/bridge.js's
+ * real POST /providers/:id/start handler directly: it responds inline
+ * with `res.json(await ph.start(...))`, a plain REST call, not a
+ * fire-and-ack-then-listen-on-SSE command. Reusing that two-step pattern
+ * here would be waiting on an SSE event that this endpoint never emits.
+ * Reuses _ensureClearGlassUp() — same auto-spawn-via-autopilot gate every
+ * other real Clear Glass call in this file already goes through.
+ */
+async function spawnProviderTab(providerId, opts = {}) {
+  if (!providerId) return { ok: false, error: 'providerId is required' };
+  const spawnResult = await _ensureClearGlassUp();
+  if (!spawnResult.ok) {
+    return { ok: false, error: `Clear Glass could not be brought up on demand: ${spawnResult.error}` };
+  }
+  return new Promise((resolve) => {
+    const body = Buffer.from(JSON.stringify({ show: true, ...opts }));
+    const req = http.request({
+      hostname: '127.0.0.1', port: CG_IPC_PORT, path: `/providers/${encodeURIComponent(providerId)}/start`,
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': body.length }, timeout: 15000,
+    }, (res) => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => {
+        let parsed;
+        try { parsed = JSON.parse(d); } catch (e) { resolve({ ok: false, error: `bad response from Clear Glass: ${e.message}` }); return; }
+        if (res.statusCode >= 400) { resolve({ ok: false, error: parsed.error || `HTTP ${res.statusCode}` }); return; }
+        resolve({ ok: true, provider: parsed });
+      });
+    });
+    req.on('error', (e) => resolve({ ok: false, error: `could not reach Clear Glass IPC bridge (:${CG_IPC_PORT}): ${e.message}` }));
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'Clear Glass /providers/:id/start timed out' }); });
+    req.write(body);
+    req.end();
+  });
+}
+
+module.exports = { dispatchBrowserCommand, spawnProviderTab, _responseTypeFor };

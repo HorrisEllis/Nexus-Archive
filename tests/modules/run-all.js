@@ -73,6 +73,13 @@ const SUITES = [
   'case-library.test.js',
   'contract-intake-dependency-graph.test.js',
   'test-raid-processnext-am1-gate.js',
+  'raid-retry-escalation.test.js',
+  'brainos-panel.test.js',
+  'brainos-canvas.test.js',
+  'brainos-panel-canvas-integration.test.js',
+  'ollama-command-index.test.js',
+  'guardian-command-index.test.js',
+  'bridge-command-index.test.js',
   'test-raid-officiator.js',
   'test-vector-memory-pipeline.js',
   'test-nexus-intelligence-section.js',
@@ -81,8 +88,6 @@ const SUITES = [
   'test-guardian-agent-registry.js',
   'test-userscript-mixed-content-fix.js',
   'test-contract-handshake-paths.js',
-  'test-spec-yaml-validity.js',
-  'test-versionium-history-writer.js',
   'autonomous-loop.test.js',
   // FIX (James, 2026-06-19): these six suites existed, passed standalone,
   // and were never registered here — `node tests/modules/run-all.js` was
@@ -193,6 +198,10 @@ const SUITES = [
   'copilot-adversarial-wire.test.js',
   'copilot-adversarial-consolidation.test.js',
   'idearium-warp-dispatch.test.mjs',
+  'idearium-phase-sync.test.mjs',
+  'idearium-phase-compartment.test.mjs',
+  'idearium-phase-compartment-integration.test.js',
+  'idearium-agent-routing.test.mjs',
   'lifeline-fluid-routing.test.js',
   'run-command-tool.test.js',
   'tutorial-engine.test.js',
@@ -235,6 +244,13 @@ const SUITES = [
   // the freeze-thaw branch — 29 real tests, invisible to the project's
   // own tally until this line was added.
   'test-hat-forge.js',
+  'test-artifact-namer.js',
+  'test-node-export.js',
+  'test-node-schemas.js',
+  'test-ncp-handler-sr3.js',
+  'test-self-build-loop.js',
+  'test-sr11-import-pipeline.js',
+  'test-b1-synthesize-contract.js',
   // §2026-08-23 — real screenshot tool + the driver.exec payload-injection
   // bugfix it surfaced (navigate was also affected).
   'test-browser-action-screenshot.js',

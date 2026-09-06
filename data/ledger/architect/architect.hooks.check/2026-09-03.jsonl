@@ -1,0 +1,1 @@
+{"uuid":"c1a49c22-60e8-4750-b988-99165187faee","system":"architect","component":"architect.hooks.check","action":"registered","status":"ok","tags":["architect"],"detail":"Check hook against constraints","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139654}

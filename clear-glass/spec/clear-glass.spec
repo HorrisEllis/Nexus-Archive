@@ -51,8 +51,7 @@ spec:
       - 'guardian.job.dispatch.receive'
 
   routes:
-    - method: GET
-      path: /contract
+    - method: GET path: /contract
       returns: "Full clear-glass component registry — 67 real components as of 2026-09-01"
 
   handshake:
@@ -94,66 +93,9 @@ spec:
         docs/2026-09-01-living-model-and-autonomous-pipeline-phasemap.spec).
         Grounded in the already-real registry-components.js contract, not
         written blind.
-    - date: 2026-09-02
-      summary: >
-        Real cookie-vault IPC round-trip built end to end. Checked first:
-        a real, secure contextBridge relay already existed (src/preload/
-        webview-bridge.js, built 2026-07-09, for exactly the reason a
-        page-level userscript has zero Node access) — a new
-        'nexus:cookie-request' channel added to its existing allowlist,
-        relayed through browser.js/preload/index.js to a real main-
-        process handler (src/ipc/bridge.js) that reuses cookies:count's
-        own real logic (extracted into a shared _countCookies(), not
-        duplicated) and delivers the response back into the SAME webview
-        via executeJavaScript — the same real pattern injectAnswer()
-        already uses for wake-word answers. Only "count" is real today;
-        save/restore exist in src/cookies/vault.js but aren't wired
-        through this same round-trip yet.
-    - date: 2026-09-02
-      summary: >
-        AM8 — the guardian element-picker's real, two-step "add as new
-        agent" pairing flow. renderer/guardian-picker.js's existing
-        listener-config modal gained a 9th LINK TARGET option; picking an
-        element, naming an agent, and marking it input/output reopens the
-        picker asking for the opposite role, refusing a same-role second
-        pick. Real persistence added directly to src/options/store.js
-        (registerAgent/listAgents/getAgent, matching its own established
-        registerListener convention). Honest scope, stated in the code:
-        registration only — actually dispatching a job to a custom agent
-        is real, separate, unbuilt work.
-    - date: 2026-09-02
-      summary: >
-        §ROOT CAUSE — James, live, from a real standalone-browser
-        screenshot: "the userscript isn't connecting... make sure you
-        account for cors." Every local endpoint guardian's userscripts
-        talk to is plain HTTP while the host page is HTTPS — a standard
-        mixed-content block. Not a clear-glass-side fix per se (the real
-        fix lives in guardian/userscript-*.js), but directly explains why
-        clear-glass's own webview-hosted agents appeared "disconnected"
-        outside clear-glass's own Electron context, where this same
-        restriction doesn't apply the same way. Also: AM8's own new
-        agents:list handler (above) collided with a pre-existing, real
-        agent-mesh registry handler in this same ipc/bridge.js, crashing
-        Electron's ipcMain at boot — renamed to custom-agents:*.
-    - date: 2026-09-03
-      summary: >
-        Merged a real parallel session's work: clear-glass/src/mesh/
-        agent-mesh.js's route() now tries Guardian's real, more-
-        instrumented NCP+userscript path first for exactly the two agents
-        it actually covers (claude/chatgpt — gemini/perplexity/mistral
-        have no Guardian userscripts, so this mesh's own DOM automation
-        remains their only real coverage), falling through honestly on
-        any failure.
-    - date: 2026-09-05
-      summary: "docs: update the living models — real history entries, plus a real pre-existing YAML bug found and fixed in 4 specs (1 real file touched)"
-    - date: 2026-09-05
-      summary: "chore: register the two orphans the new post-commit hook itself flagged (1 real file touched)"
-    - sha: f66c6f434bd997c38ccef6de34109805a2767ee8
-      date: 2026-09-05
-      summary: "fix: real, tested merge safety for parallel-session history writes — found a genuine, silent data-loss risk before it could bite (1 real file touched)"
 
   gaps:
-    as_of: 2026-09-03
+    as_of: 2026-09-01
     entries:
       - id: SM1
         type: coverage
@@ -164,32 +106,9 @@ spec:
           separate, pre-existing gap, recorded in this session's foundation
           addendum, not fixed here).
         opened: 2026-09-01
-      - id: CG-CV1
-        type: coverage
-        summary: >
-          The real cookie-vault IPC round-trip (2026-09-02) only wires
-          "count." src/cookies/vault.js's real save/restore/snapshot
-          capabilities exist but aren't reachable from a page-level
-          userscript through the same round-trip yet — a real, bounded,
-          separate follow-up using the exact same pattern already proven.
-        opened: 2026-09-02
-      - id: CG-AM8-1
-        type: design
-        summary: >
-          AM8's registerAgent() is registration only — no real dispatch
-          mechanism exists yet for a custom, user-paired agent (injecting
-          text into the real input element, reading the real output back
-          out, knowing when a response is done streaming on a site this
-          system has never seen before). Named explicitly in the code
-          itself, not implied by the method's name.
-        opened: 2026-09-02
 
   version_history:
     - version: 3.1.0
       date: 2026-09-01
       summary: "First real .spec authored, matching live code@3.1.0 exactly (no version bump required)."
-      versioniumCommitId: null
-    - version: 3.1.0
-      date: 2026-09-03
-      summary: "Cookie-vault IPC round-trip, AM8's element-picker agent pairing, and the agent-mesh/Guardian connection all landed without a real internal CG_VERSION bump — src/main/index.js's own constant is unchanged at 3.1.0, recorded here as real, additive capability against the same version."
       versioniumCommitId: null

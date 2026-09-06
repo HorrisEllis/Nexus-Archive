@@ -144,15 +144,20 @@ function refreshOnEvent(ev) {
 let IDEAS=[], GAPS=[], SPECS=[], SNAPSHOTS=[], STATS=null;
 let SELECTED=null, SELECTED_SPEC=null, SELECTED_SNAP=null;
 let CURRENT_SORT='tension';
-let BRAINSTORMS = JSON.parse(localStorage.getItem('idearium.brainstorms')||'[]');
+let BRAINSTORMS = [];  // §CHANGED 2026-09-03 — was JSON.parse(localStorage...); loaded from data/ via loadBrainstorms() below, matching every other real state in this file.
 const IDEA_PHASES   = ['seed','expanding','tensioned','specced','building','complete','archived'];
 const GAP_SEVERITIES= ['fatal','high','medium','low'];
 const LINK_TYPES    = ['resonance','tension','causal','temporal','semantic'];
 const SECTION_IDS   = ['intent','api_callto','module_hooks','cli_spec','schemas','gap_contract','failure_modes','tests','phase_map'];
 
 async function loadAll() {
-  await Promise.all([loadIdeas(), loadGaps(), loadSpecs(), loadSnapshots(), loadStats(), loadApiRepos()]);
+  await Promise.all([loadIdeas(), loadGaps(), loadSpecs(), loadSnapshots(), loadStats(), loadApiRepos(), loadBrainstorms()]);
 }
+// §BUILT 2026-09-03 — real data/-backed load, replacing the old
+// localStorage.getItem at module-load time. Same shape (array of
+// {uuid,text,tags,ts,promoted}), sourced from the real idearium_brainstorms
+// JAA table now, not the browser.
+async function loadBrainstorms() { try { BRAINSTORMS = (await api('/api/brainstorms')).brainstorms || []; renderBrainstorms(); updateStats(); } catch(e){ console.warn('[idearium] loadBrainstorms failed:', e.message); } }
 async function loadIdeas()    { try { IDEAS = (await api('/api/ideas')).ideas || []; renderIdeaList(); if(SELECTED){const i=IDEAS.find(x=>x.uuid===SELECTED); if(i) renderDetail(i);} } catch(e){ console.warn('[idearium] loadIdeas failed:', e.message); toast('failed to load ideas: '+e.message,'err'); } }
 async function loadGaps()     { try { GAPS  = (await api('/api/gaps')).gaps  || []; renderIdeaList(); } catch(e){ console.warn('[idearium] loadGaps failed:', e.message); } }
 // §BUG FIXED 2026-07-15 — loadIdeas() re-renders the open idea detail panel
@@ -580,26 +585,32 @@ async function doSnapshot() {
 }
 
 // ════════════════════════════════════════════════════
-// BRAINSTORM — local quick-capture (genuinely user-authored, not seeded),
-// promotable into a real tracked idea via POST /api/ideas
+// BRAINSTORM — quick-capture (genuinely user-authored, not seeded),
+// promotable into a real tracked idea via POST /api/ideas.
+// §CHANGED 2026-09-03 — James: "idearium needs to use data folder. no DOM
+// storage." Was entirely localStorage; every write now goes through the
+// real idearium_brainstorms table (api/index.js's brainstorm.* handlers).
+// Same UX, same function names, real backend underneath.
 // ════════════════════════════════════════════════════
-function saveBrainstorms(){ localStorage.setItem('idearium.brainstorms', JSON.stringify(BRAINSTORMS)); }
-function addBrainstorm() {
+async function addBrainstorm() {
   const text = document.getElementById('brain-text').value.trim();
   if (!text) { toast('write something first','err'); return; }
   const tags = document.getElementById('brain-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  BRAINSTORMS.unshift({ id: 'b-'+Date.now().toString(36), text, tags, ts: Date.now(), promoted:false });
-  saveBrainstorms();
-  document.getElementById('brain-text').value=''; document.getElementById('brain-tags').value='';
-  renderBrainstorms(); updateStats();
+  try {
+    await api('/api/brainstorms', { method: 'POST', body: JSON.stringify({ text, tags }) });
+    document.getElementById('brain-text').value=''; document.getElementById('brain-tags').value='';
+    await loadBrainstorms();
+  } catch(e) { toast(e.message, 'err'); }
 }
-function deleteBrainstorm(id){ BRAINSTORMS = BRAINSTORMS.filter(b=>b.id!==id); saveBrainstorms(); renderBrainstorms(); updateStats(); }
+async function deleteBrainstorm(id) {
+  try { await api(`/api/brainstorms/${id}`, { method: 'DELETE' }); await loadBrainstorms(); }
+  catch(e) { toast(e.message, 'err'); }
+}
 async function promoteBrainstorm(id) {
-  const b = BRAINSTORMS.find(x=>x.id===id); if (!b) return;
   if (!CONNECTED) { toast('connect to nexus to promote','err'); return; }
   try {
-    await api('/api/ideas', { method:'POST', body: JSON.stringify({text:b.text, tags:b.tags}) });
-    b.promoted = true; saveBrainstorms(); renderBrainstorms();
+    await api(`/api/brainstorms/${id}/promote`, { method: 'POST' });
+    await loadBrainstorms();
     await loadIdeas();
     toast('promoted to idea','ok');
   } catch(e) { toast(e.message,'err'); }
@@ -615,9 +626,9 @@ function renderBrainstorms() {
         <span class="brain-ts">${new Date(b.ts).toLocaleString()}</span>
       </div>
       <div class="action-row">
-        ${b.promoted ? `<span class="ic-tag" style="color:var(--mint)">promoted ✓</span>` : `<button class="action-btn primary" onclick="promoteBrainstorm('${b.id}')">promote → idea</button>`}
+        ${b.promoted ? `<span class="ic-tag" style="color:var(--mint)">promoted ✓</span>` : `<button class="action-btn primary" onclick="promoteBrainstorm('${b.uuid}')">promote → idea</button>`}
         <button class="action-btn" onclick='openNewSpecModal({name:${JSON.stringify(b.text.slice(0,60))}, description:${JSON.stringify(b.text)}})'>+ spec</button>
-        <button class="action-btn danger" onclick="deleteBrainstorm('${b.id}')">discard</button>
+        <button class="action-btn danger" onclick="deleteBrainstorm('${b.uuid}')">discard</button>
       </div>
     </div>
   `).join('');
@@ -743,7 +754,13 @@ function renderSpecEngineBuilder(spec) {
   const chunks = spec.chunks || [];
   const done = chunks.filter(c => c.status === 'complete').length;
   const pct = chunks.length ? Math.round(done / chunks.length * 100) : 0;
-  const repo = API_REPOS.find(r => r.promotedFromSpec === spec.uuid);
+  // §CHANGED 2026-09-03 — was `r.promotedFromSpec === spec.uuid`, which
+  // only matches repos created via the completion-gated /promote path.
+  // Repo-first shells (created at spec creation, submitNewSpec above) set
+  // specUuid but never promotedFromSpec — specUuid is the real, always-set
+  // correlation field either way (RepoLayer.ingest sets it on every path),
+  // so it's the correct match regardless of how the repo came to exist.
+  const repo = API_REPOS.find(r => r.specUuid === spec.uuid);
   const building = !!BUILD_IN_PROGRESS[spec.uuid];
 
   wrap.innerHTML = `
@@ -765,7 +782,36 @@ function renderSpecEngineBuilder(spec) {
             <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--b0)">
               <span style="color:${c.status==='complete'?'var(--mint)':c.status==='building'?'var(--amber)':'var(--text3)'}">${c.status==='complete'?'✓':c.status==='building'?'…':'○'}</span>
               <span style="flex:1;color:var(--text2)">${escapeHtml(c.sectionId)}</span>
-              <span style="color:var(--text3)">${escapeHtml(c.agent||'')}${c.agentModel&&c.agentModel.startsWith('template')?' (template)':''}</span>
+              ${
+                // §BUILT 2026-09-03 — James: "send each chunk to the
+                // respectable agent... needs to have a drop for the agent
+                // to send it to." Was static text (c.agent||''). Only
+                // PENDING chunks are editable — matches setChunkAgent()'s
+                // own real refusal (spec-engine/index.js) on anything past
+                // PENDING, so the UI never offers a change the backend
+                // would reject; a chunk that's already building/complete
+                // shows its real, already-fixed agent as text instead.
+                c.status === 'pending'
+                  ? `<select class="agent-select" style="font-family:var(--mono);font-size:11px;background:var(--bg2,#1a1a1a);color:var(--text2);border:1px solid var(--b0);border-radius:3px;padding:1px 4px" onchange="setChunkAgent('${spec.uuid}','${c.uuid}',this.value)">
+                      ${AGENT_OPTIONS.map(a => `<option value="${a}" ${a===c.agent?'selected':''}>${a}</option>`).join('')}
+                    </select>`
+                  : `<span style="color:var(--text3)">${escapeHtml(c.agent||'')}${c.agentModel&&c.agentModel.startsWith('template')?' (template)':''}</span>`
+              }
+              ${
+                // §BUILT 2026-09-03 — the chunk's own real return address
+                // while it's genuinely in flight (jobId/dispatchDir, set
+                // by spec-engine's recordDispatchJob the instant a queued
+                // job exists on guardian's side). This is the visibility
+                // James was asking for: is a 'building' chunk actually
+                // moving, or stuck with nothing anyone can see. A chunk
+                // still 'building' with no jobId is the local-ollama path
+                // (synchronous, no guardian job to track) — shown plainly
+                // as 'local', not blank, so the absence reads as real
+                // information, not a missed field.
+                c.status === 'building'
+                  ? `<span title="${c.dispatchDir ? escapeHtml(c.dispatchDir) : ''}" style="color:var(--amber);font-size:10px">${c.jobId ? `job:${escapeHtml(String(c.jobId)).slice(0,10)}` : 'local'}</span>`
+                  : ''
+              }
             </div>`).join('')}
         </div>
       </div>
@@ -774,9 +820,16 @@ function renderSpecEngineBuilder(spec) {
         <div id="spec-history-panel">${buildSpecHistoryHtml(spec.uuid)}</div>
       </div>
       <div class="action-row">
-        ${repo
-          ? `<button class="action-btn primary" onclick="openRepoFor('${spec.ideaUuid||''}', '${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">open repository →</button>`
-          : `<button class="action-btn primary" ${building?'disabled':''} onclick="buildAllAndPromote('${spec.uuid}')">${building?'building…':(done===chunks.length?'promote → repository':'build repository (end-state)')}</button>`
+        <button class="action-btn primary" ${building||done===chunks.length?'disabled':''} onclick="createRepoThenBuild('${spec.uuid}')">${building?'building…':(done===chunks.length?'all chunks built':'build remaining chunks')}</button>
+        ${
+          // §CHANGED 2026-09-03 — repo-first: `repo` is now real from the
+          // moment the spec was created (submitNewSpec), not only once
+          // every chunk is done, so this shows ALONGSIDE the build button
+          // rather than replacing it — the repo is genuinely open-able
+          // while chunks are still landing into it.
+          repo
+            ? `<button class="action-btn" onclick="openRepoFor('${spec.ideaUuid||''}', '${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">open repository →</button>`
+            : ''
         }
         <button class="action-btn" onclick="exportSpec('${spec.uuid}')">export markdown</button>
         <button class="action-btn danger" onclick="deleteSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">remove from library</button>
@@ -786,24 +839,59 @@ function renderSpecEngineBuilder(spec) {
   renderSpecHistoryPanel(spec.uuid); // async — fills in the badge + panel above once the fetch resolves
 }
 
-// specUuid -> true while a build-all-and-promote loop is running, so the
-// button can't be double-clicked into two concurrent loops.
+// §BUILT 2026-09-03 — real, dispatchable agents (agent-suite/index.js's
+// REAL_GUARDIAN_PROVIDERS + the two local paths, ollama/mistral — same
+// list buildChunkWithAgent() actually checks against). Not a guess: an
+// agent offered here that agent-suite doesn't recognize would be a UI
+// promising a destination that doesn't exist.
+const AGENT_OPTIONS = ['ollama', 'mistral', 'claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek'];
+
+// §BUILT 2026-09-03 — per-chunk agent reassignment, PENDING chunks only
+// (the select in renderSpecEngineBuilder only renders for pending chunks
+// in the first place, so this mirrors the backend's own real refusal
+// rather than introducing a second place that decides it).
+async function setChunkAgent(specUuid, chunkUuid, agent) {
+  try {
+    await api(`/api/spec-engine/specs/${specUuid}/chunk/${chunkUuid}/agent`, {
+      method: 'POST', body: JSON.stringify({ agent }),
+    });
+    await loadSpecs();
+    const spec = SPECS.find(s => s.uuid === specUuid);
+    if (spec) renderSpecBuilder(spec);
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// specUuid -> true while a build loop is running, so the button can't be
+// double-clicked into two concurrent loops.
 let BUILD_IN_PROGRESS = {};
 
-// The "system can build and repair itself" flow: repeatedly call
-// speceng.build (each call dispatches the NEXT pending chunk — WARP cache,
-// cross-spec reuse, or an agent, whichever resolves it) until every chunk
-// is complete or a chunk fails outright, then promote to a real repository.
-// "Repair" here means what the pipeline already gives us for free: WARP's
-// verification/retry ladder on each chunk build, and cross-spec reuse
-// pulling a known-good section instead of regenerating — this function's
-// job is just to drive that loop to completion and stop cleanly on a real
-// failure rather than spinning forever.
-async function buildAllAndPromote(specUuid) {
+// §RENAMED 2026-09-03 — was buildAllAndPromote. Repo-first (submitNewSpec
+// creates the repo shell the moment the spec exists, RepoLayer._enrich
+// reads live off specUuid) means there is no longer a separate "promote"
+// step at the end of a successful build — the repo already IS this spec,
+// chunks appear in it as they land. This function's only job now is
+// driving the build loop (WARP cache / cross-spec reuse / real per-chunk
+// agent dispatch, whichever resolves each chunk) to completion, plus one
+// self-heal: a spec created before this change (or whose repo-first call
+// failed at creation time) has no repo yet — create it here, once, before
+// looping, rather than leaving it permanently repo-less.
+async function createRepoThenBuild(specUuid) {
   if (BUILD_IN_PROGRESS[specUuid]) return;
   BUILD_IN_PROGRESS[specUuid] = true;
   selectSpec(specUuid);
   try {
+    const spec0 = SPECS.find(s => s.uuid === specUuid);
+    const hasRepo = API_REPOS.some(r => r.specUuid === specUuid);
+    if (!hasRepo && spec0) {
+      try {
+        await api('/api/repos', {
+          method: 'POST',
+          body: JSON.stringify({ name: spec0.name, specUuid, source: 'repo-first' }),
+        });
+        await loadApiRepos();
+      } catch (e) { toast(`repo shell failed, building anyway: ${e.message}`, 'err'); }
+    }
+
     const MAX_STEPS = 40; // generous ceiling — a stuck loop must stop, not spin (§1.2)
     for (let i = 0; i < MAX_STEPS; i++) {
       const spec = SPECS.find(s => s.uuid === specUuid);
@@ -829,11 +917,9 @@ async function buildAllAndPromote(specUuid) {
       return;
     }
 
-    toast('all chunks built — promoting to repository…', 'ok');
-    const promoted = await api(`/api/spec-engine/specs/${specUuid}/promote`, { method: 'POST', body: JSON.stringify({ mode: 'emerge' }) });
-    toast('repository built — end state reached', 'ok');
-    await loadSpecs(); await loadApiRepos();
-    if (spec?.ideaUuid) await loadIdeas(); // phase just advanced to 'complete'
+    toast('all chunks built', 'ok');
+    await loadApiRepos();
+    if (spec?.ideaUuid) await loadIdeas(); // phase just advanced
     openRepoFor(spec?.ideaUuid || null, specUuid, spec?.name || '');
   } catch (e) {
     toast(`build failed: ${e.message}`, 'err');
@@ -967,6 +1053,27 @@ async function submitNewSpec(mapToRepo) {
         openRepoFor(ideaUuid || null, manifest.uuid, name);
         return;
       } catch (e) { toast(`spec created, map-to-repo failed: ${e.message}`, 'err'); }
+    }
+
+    // §BUILT 2026-09-03 — James: "create a repository, then send each
+    // chunk to the respective agent." Every spec now gets a real repo
+    // shell the moment it exists — not only once every chunk is done (the
+    // explicit "map to repo now" branch above, unchanged, still template-
+    // gated). RepoLayer._enrich() always resolves live off specUuid, so
+    // this same repo record shows chunks landing as each one completes —
+    // no second promote step needed once the build loop below finishes.
+    try {
+      const repoRes = await api('/api/repos', {
+        method: 'POST',
+        body: JSON.stringify({ name, specUuid: manifest.uuid, source: 'repo-first', ideaUuid: ideaUuid || undefined }),
+      });
+      if (repoRes.error) toast(`spec created, repo shell failed: ${repoRes.error}`, 'err');
+      else await loadApiRepos();
+    } catch (e) {
+      // §1.2 loud, non-fatal — the spec is real regardless; a failed repo
+      // shell is surfaced, not silently swallowed, and createRepoThenBuild()
+      // below self-heals this (creates it late) if the user builds anyway.
+      toast(`spec created, repo shell failed: ${e.message}`, 'err');
     }
 
     closeNewSpecModal();

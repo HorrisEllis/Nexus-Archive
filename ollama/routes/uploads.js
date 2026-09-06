@@ -45,3 +45,7 @@ async function handle(req, res, { method, pathname }) {
 }
 
 module.exports = { handle };
+module.exports.commands = [
+  { method: 'POST', path: '/api/upload' },
+  { method: 'GET', path: '/api/upload/:id', description: 'prefix match — pathname.startsWith(\'/api/upload/\')' },
+];

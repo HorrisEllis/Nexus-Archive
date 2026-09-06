@@ -70,6 +70,11 @@ spec:
         Watches for .spec files. On detect: validates, queues,
         dispatches to spec-compiler via Guardian.
 
+  command_index:
+    status: DONE       # verified 2026-09-03 -- GET /api/contract/live, 72 real endpoints, 72=72 against fresh grep
+    spec: "docs/command-index-per-system.spec"
+    note: "idearium's existing routes array (72 entries) maps directly -- cheapest phase, exposure not extraction."
+
   routes:
     external:
       - "GET  /health"

@@ -1,0 +1,10 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "0cb75b9f-d5ec-4e46-b069-91de51aa42af",
+  "type": "pre_forge",
+  "tables": {},
+  "hashVersion": 2,
+  "cortex_state_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "prev_snapshot_hash": null,
+  "createdAt": 1788469639546
+}

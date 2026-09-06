@@ -1,0 +1,1 @@
+{"uuid":"8abd3aa3-00db-4151-a4da-5c9e11448142","system":"ollama","component":"ollama.health","action":"registered","status":"ok","tags":["ollama"],"detail":"Ollama bridge health","causedBy":"ollama","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139595}

@@ -1,0 +1,1 @@
+{"uuid":"4dbcb1a1-01c8-4cae-a82f-6cf63e29e105","system":"ollama","component":"ollama.jobs.list","action":"registered","status":"ok","tags":["ollama"],"detail":"List recent jobs","causedBy":"ollama","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139587}

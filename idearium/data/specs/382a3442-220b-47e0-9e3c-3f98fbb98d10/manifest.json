@@ -1,0 +1,381 @@
+{
+  "uuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+  "dedupKey": "dcce0c2bcd2e23af",
+  "name": "e2e-idearium",
+  "type": "system",
+  "description": "imported from .spec",
+  "author": "import",
+  "version": "0.1.0",
+  "phase": "40",
+  "status": "complete",
+  "agent": "auto",
+  "agentPriority": [
+    "ollama",
+    "chatgpt",
+    "claude"
+  ],
+  "buildEngine": "auto",
+  "ideaUuid": null,
+  "totalChunks": 8,
+  "doneChunks": 8,
+  "failedChunks": 0,
+  "progress": 100,
+  "createdAt": 1788653036142,
+  "updatedAt": 1788653036174,
+  "completedAt": 1788653036173,
+  "archivePath": null,
+  "templateId": null,
+  "templateIds": [],
+  "templateSeeded": [],
+  "duplicateOf": null,
+  "rootHash": "69ac2afe252879286923666d1c3a3227b8d4bf9951f9f077bfd67fe2d90afd5f",
+  "warpPrimitives": [],
+  "chunks": [
+    {
+      "uuid": "3c50ffa5-9ee8-4405-af84-175857a6c8b0",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 0,
+      "sectionId": "document-meta",
+      "sectionTitle": "document — meta",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: meta)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-meta",
+      "contract_id": "spec-contract:382a3442:document-meta:3c50ffa5",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/00-document-meta-3c50ffa5.md",
+      "fileName": "00-document-meta.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → meta -->\n\nspec:\n  meta:\n    name:        idearium\n    version:     3.2.0\n    foundation:  nexus-system-foundation@1.0.0\n    port:        4800\n    uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001\n    purpose: >\n      The idea manager and project repository. Every build starts here\n      as a seed idea and progresses through phases.\n      The Spatial lattice builds a resonance-weighted graph connecting\n      ideas to specs to gaps. High-weight edges = strong association.",
+      "byteSize": 909,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036173,
+      "completedAt": 1788653036173,
+      "tags": [
+        "document-meta",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 477,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "520bb95b-775f-497f-ad0d-a8ab7aa0ab22",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 1,
+      "sectionId": "document-core",
+      "sectionTitle": "document — core",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: core)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-core",
+      "contract_id": "spec-contract:382a3442:document-core:520bb95b",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/01-document-core-520bb95b.md",
+      "fileName": "01-document-core.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → core -->\n\n\n  core:\n    schemas:\n      - Idea:    \"{ uuid, text, phase, tags, specRef, gapScore, weight, ts }\"\n      - Project: \"{ uuid, name, phase, specFile, artifacts[], gaps[], ts }\"\n    phases: [seed, expanding, tensioned, specced, building, complete]\n    axioms: [AX-001, AX-002, AX-003, AX-007, AX-008]\n    constants:\n      LATTICE_THRESHOLD:  0.65   # minimum edge weight to cluster\n      PHASE_TRANSITIONS:  \"seed→expanding→tensioned→specced→building→complete\"\n\n  # ── AX-008 (foundation addendum v1.1.0) ────────────────────────────────────\n  # ✅ CLOSED 2026-06-29 — idearium/index.js's _broadcast() pushes every\n  # os.emit() to all SSE clients on GET /sse. copilot/server.js had an\n  # IDR_URL constant declared since at least v3 but never connected to it —\n  # scoped, never wired. Added _connectIdeariumStream() (same pattern as\n  # _connectCortexStream/_connectGuardianStream), wired into copilot's boot\n  # sequence, and added hooks/idearium.hooks.js's 4th entry\n  # (idearium-to-copilot, seam:idearium-copilot-bridge) so the wire is\n  # registry-visible, not just code. idea/project/lattice activity now\n  # reaches copilot live.\n",
+      "byteSize": 1661,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036148,
+      "completedAt": 1788653036148,
+      "tags": [
+        "document-core",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 1136,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "2729e7ab-1395-4154-98aa-bc267a2792ad",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 2,
+      "sectionId": "document-events",
+      "sectionTitle": "document — events",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: events)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-events",
+      "contract_id": "spec-contract:382a3442:document-events:2729e7ab",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/02-document-events-2729e7ab.md",
+      "fileName": "02-document-events.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → events -->\n\n\n  events:\n    emits:\n      - \"idearium.booted\"\n      - \"idearium.idea.created\"\n      - \"idearium.idea.phase_changed\"\n      - \"idearium.project.created\"\n      - \"idearium.project.spec_dropped\"\n      - \"idearium.project.build_started\"\n      - \"idearium.lattice.connected\"\n      - \"idearium.lattice.crystallised\"\n    handles:\n      - \"guardian.job.complete → artifact.store\"\n      - \"cortex.gap.found     → project.gap_attach\"\n      - \"spec.compile.complete → project.build_start\"\n",
+      "byteSize": 928,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036150,
+      "completedAt": 1788653036150,
+      "tags": [
+        "document-events",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 479,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "c1d53f9a-76c8-4281-98b8-6eaa14e6a3cc",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 3,
+      "sectionId": "document-modules",
+      "sectionTitle": "document — modules",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: modules)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-modules",
+      "contract_id": "spec-contract:382a3442:document-modules:c1d53f9a",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/03-document-modules-c1d53f9a.md",
+      "fileName": "03-document-modules.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → modules -->\n\n\n  modules:\n    - id: idea-store\n      description: \"CRUD for ideas. Phase management. JAA-backed.\"\n\n    - id: project-repo\n      description: >\n        Project manager. Accepts dropped zips via file-push router.\n        Watches for .spec files and queues them for build.\n        Links projects to ideas, specs, artifacts, gaps.\n\n    - id: lattice\n      description: >\n        Spatial engine integration. Builds resonance-weighted graph.\n        Nodes: ideas, specs, gaps, artifacts.\n        Edges: reinforced on every association (view, link, co-occurrence).\n        Connected-components clustering above weight threshold.\n        High-weight edges crystallise into long-term cortex memory.\n\n    - id: queue-listener\n      description: >\n        Watches for .spec files. On detect: validates, queues,\n        dispatches to spec-compiler via Guardian.\n",
+      "byteSize": 1300,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036152,
+      "completedAt": 1788653036152,
+      "tags": [
+        "document-modules",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 852,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "34fd9291-9718-4dc2-809e-be35aed9e9d1",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 4,
+      "sectionId": "document-command-index",
+      "sectionTitle": "document — command_index",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: command_index)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-command-index",
+      "contract_id": "spec-contract:382a3442:document-command-index:34fd9291",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/04-document-command-index-34fd9291.md",
+      "fileName": "04-document-command-index.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → command_index -->\n\n\n  command_index:\n    status: DONE       # verified 2026-09-03 -- GET /api/contract/live, 72 real endpoints, 72=72 against fresh grep\n    spec: \"docs/command-index-per-system.spec\"\n    note: \"idearium's existing routes array (72 entries) maps directly -- cheapest phase, exposure not extraction.\"\n",
+      "byteSize": 775,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036155,
+      "completedAt": 1788653036155,
+      "tags": [
+        "document-command-index",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 297,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "2387d0cd-6b2d-46eb-a2f2-ac7641699fcb",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 5,
+      "sectionId": "document-routes",
+      "sectionTitle": "document — routes",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: routes)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-routes",
+      "contract_id": "spec-contract:382a3442:document-routes:2387d0cd",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/05-document-routes-2387d0cd.md",
+      "fileName": "05-document-routes.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → routes -->\n\n\n  routes:\n    external:\n      - \"GET  /health\"\n      - \"GET  /contract\"\n      - \"GET  /api/projects\"\n      - \"POST /api/projects\"\n      - \"GET  /api/projects/:id\"\n      - \"POST /api/projects/:id/spec\"\n      - \"GET  /api/ideas\"\n      - \"POST /api/ideas\"\n      - \"PUT  /api/ideas/:id/phase\"\n      - \"GET  /api/lattice\"\n      - \"POST /api/lattice/connect\"\n",
+      "byteSize": 797,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036158,
+      "completedAt": 1788653036158,
+      "tags": [
+        "document-routes",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 354,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "fde9be29-b1b1-4f9d-9456-bcb7def4490e",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 6,
+      "sectionId": "document-handshake",
+      "sectionTitle": "document — handshake",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: handshake)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-handshake",
+      "contract_id": "spec-contract:382a3442:document-handshake:fde9be29",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/06-document-handshake-fde9be29.md",
+      "fileName": "06-document-handshake.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → handshake -->\n\n\n  handshake:\n    components:\n      - id: \"idearium.projects.list\"\n        grammar: [\"idearium projects\", \"projects\", \"proj\"]\n        route: { method: GET, path: \"/api/idearium/projects\" }\n        description: \"List all projects by phase\"\n\n      - id: \"idearium.ideas.list\"\n        grammar: [\"idearium ideas\", \"ideas\"]\n        route: { method: GET, path: \"/api/idearium/ideas\" }\n        description: \"List all ideas with phase and weight\"\n\n      - id: \"idearium.ideas.create\"\n        grammar: [\"idearium new idea\", \"new idea\", \"idea\"]\n        route: { method: POST, path: \"/api/idearium/ideas\" }\n        description: \"Create a new seed idea\"\n        params: [{ name: text, type: string, required: true }]\n\n      - id: \"idearium.lattice.view\"\n        grammar: [\"idearium lattice\", \"lattice\"]\n        route: { method: GET, path: \"/api/idearium/lattice\" }\n        description: \"View the current idea-spec-gap lattice\"\n",
+      "byteSize": 1373,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036162,
+      "completedAt": 1788653036162,
+      "tags": [
+        "document-handshake",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 915,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    },
+    {
+      "uuid": "f6ca00b0-b1c2-4d0b-9857-59416639272f",
+      "specUuid": "382a3442-220b-47e0-9e3c-3f98fbb98d10",
+      "chunkIdx": 7,
+      "sectionId": "document-ui",
+      "sectionTitle": "document — ui",
+      "sectionDesc": "auto-split from \"document\" (natural boundary: ui)",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:382a3442:document-ui",
+      "contract_id": "spec-contract:382a3442:document-ui:f6ca00b0",
+      "filePath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/07-document-ui-f6ca00b0.md",
+      "fileName": "07-document-ui.md",
+      "status": "complete",
+      "agent": "import",
+      "agentModel": "import:.spec",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "<!-- imported: document → ui -->\n\n\n  ui:\n    type: \"panel in nexus-shell\"\n    hotswap: true\n    panels:\n      - \"PROJECTS — phase board (seed→complete), spec drop zone\"\n      - \"IDEAS — idea list with weight and lattice connections\"\n      - \"LATTICE — resonance graph visualisation\"\n",
+      "byteSize": 680,
+      "createdAt": 1788653036142,
+      "updatedAt": 1788653036165,
+      "completedAt": 1788653036165,
+      "tags": [
+        "document-ui",
+        "system",
+        "e2e-idearium"
+      ],
+      "jobId": null,
+      "dispatchDir": null,
+      "structuralProfile": {
+        "chars": 249,
+        "structure": {
+          "deps": 0,
+          "hookEvents": 0,
+          "failureModes": 0
+        },
+        "constraints": {
+          "invariantRefs": 0
+        },
+        "structuralTotal": 0
+      }
+    }
+  ],
+  "specPath": "/home/claude/nexus-merged/idearium/data/specs/382a3442-220b-47e0-9e3c-3f98fbb98d10/382a3442-220b-47e0-9e3c-3f98fbb98d10.spec",
+  "importedBlocks": [
+    "document"
+  ],
+  "importedUnmatched": [],
+  "byteFidelity": {
+    "verified": true,
+    "sourceBytes": 4759,
+    "reconstructedBytes": 4759
+  }
+}

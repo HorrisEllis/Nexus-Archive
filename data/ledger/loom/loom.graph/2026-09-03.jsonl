@@ -1,0 +1,1 @@
+{"uuid":"5879c7a7-9db3-4960-bd2d-9a392d276b47","system":"loom","component":"loom.graph","action":"registered","status":"ok","tags":["loom"],"detail":"The wire graph — nodes and edges of NEXUS","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139620}

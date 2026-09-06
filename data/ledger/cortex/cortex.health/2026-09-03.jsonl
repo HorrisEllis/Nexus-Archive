@@ -1,0 +1,1 @@
+{"uuid":"d7cef8f4-21c2-4cd2-bf41-40686db7c9bb","system":"cortex","component":"cortex.health","action":"registered","status":"ok","tags":["cortex"],"detail":"Cortex health + JAA stats","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139456}

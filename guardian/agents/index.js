@@ -71,9 +71,9 @@ function _loadOptionalModules() {
   }
   if (!_namer) {
     try {
-      _namer = { inferFilename: () => null, inferSpecFilename: () => null };
+      _namer = require('../lib/artifact-namer.js');
     } catch (_) {
-      // Namer not yet built — fall back to raw naming
+      _namer = null; // genuinely missing/broken — real fallback branch below handles it
     }
   }
 }
@@ -319,7 +319,7 @@ function _extractAndNameArtifacts(text, { provider, chatUrl, causedBy, callRole 
     const contextText  = text.slice(contextStart, m.index).trim().slice(-200);
 
     let record;
-    if (_namer) {
+    if (_namer && typeof _namer.buildArtifactRecord === 'function') {
       record = _namer.buildArtifactRecord({
         content,
         lang,

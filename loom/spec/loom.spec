@@ -34,67 +34,47 @@ spec:
       than guessed.
 
   routes:
-    - method: GET
-      path: /api/hooks
+    - method: GET  path: /api/hooks
       returns: "hookRegistry contents, optional ?id= lookup"
-    - method: GET
-      path: /api/gaps
+    - method: GET  path: /api/gaps
       returns: "gap-field entries, optional /api/gaps/:id"
-    - method: GET
-      path: /api/registry/:kind/:id
+    - method: GET  path: /api/registry/:kind/:id
       returns: "driver.registry.get(kind, id) — component/hook/wire lookup"
-    - method: GET
-      path: /api/graph
+    - method: GET  path: /api/graph
       returns: "full component/hook/wire graph"
-    - method: GET
-      path: /api/context-graph
+    - method: GET  path: /api/context-graph
       returns: "context graph view"
-    - method: GET
-      path: /api/contracts
+    - method: GET  path: /api/contracts
       returns: "LoomContracts live state"
-    - method: GET
-      path: /api/friction
+    - method: GET  path: /api/friction
       returns: "friction/tension live state (in-memory, per 2026-08-09 diagnostic wiring)"
-    - method: GET
-      path: /api/tension
+    - method: GET  path: /api/tension
       returns: "tension live state"
-    - method: GET
-      path: /api/history
+    - method: GET  path: /api/history
       returns: "history entries, ?/component/:id, ?/session/:id, ?/system/:id variants"
-    - method: GET
-      path: /api/impact/:id
+    - method: GET  path: /api/impact/:id
       returns: "impact analysis for a given component/id"
-    - method: POST
-      path: /api/ingest
+    - method: POST path: /api/ingest
       body:    "LoomIngest.ingestZip payload"
       returns: "sha256 identity + parent-diff lineage (phase 144, wired 2026-07-05)"
-    - method: POST
-      path: /api/ingest-upload
+    - method: POST path: /api/ingest-upload
       returns: "upload variant of /api/ingest"
-    - method: GET
-      path: /api/phasemap
+    - method: GET  path: /api/phasemap
       returns: "phasemapMap.loadAll() — every real phasemap in the tree (LP1/LP2, wired 2026-08-08)"
-    - method: GET
-      path: /api/phasemap/:system
+    - method: GET  path: /api/phasemap/:system
       returns: "phasemapMap.forSystem(system)"
-    - method: GET
-      path: /api/phasemap/history/:id
+    - method: GET  path: /api/phasemap/history/:id
       returns: "phasemap history for one entry"
-    - method: POST
-      path: /api/scaffold
+    - method: POST path: /api/scaffold
       body:    "scaffoldSystem() operations-list payload (phase 145, wired 2026-07-05)"
       returns: "generated CLI+API+contract projection"
-    - method: GET
-      path: /api/templates
+    - method: GET  path: /api/templates
       returns: "available system-scaffold templates"
-    - method: GET
-      path: /api/revisions
+    - method: GET  path: /api/revisions
       returns: "ingest.revisions — real revision history from LoomIngest"
-    - method: POST
-      path: /api/register
+    - method: POST path: /api/register
       returns: "component registration — the real write path every other system's declare() call reaches"
-    - method: GET
-      path: /api/component/:id
+    - method: GET  path: /api/component/:id
       returns: "single component lookup"
 
   handshake:
@@ -149,40 +129,6 @@ spec:
       summary: "/api/phasemap[/:system] wired — LP1/LP2's scanner existed as a pure lib module, never had an endpoint."
     - date: 2026-09-01
       summary: "First .spec written for loom, closing one of the 11 real gaps orchestrator/lib/spec-drift.js's live check reported (§LM1)."
-    - date: 2026-09-02
-      summary: >
-        §BUGFIX — James, live, twice, watching a real boot log: "there
-        isn't 41 systems" and then "isn't 42 systems. please fix." Real
-        root cause: lib/loom-map.js's resolveSystem() trusted ANY first
-        dot-segment of a component id as a real system name, with zero
-        validation. Live-verified before fixing: the top "systems" by
-        component count were tests (257), lib (234), spec (152), cos (85),
-        cg (81) — folder/category prefixes and abbreviations, not real
-        systems; cos/cg were the SAME real systems as their fuller names,
-        double-counted. Fixed with a real allowlist (orchestrator.config.
-        json's live ports block, merged with a small, documented list of
-        systems confirmed to register dynamically without one). Re-ran
-        against live data: 41/42 fell to 13 real systems, component/hook
-        totals unchanged (1649/1389) — only attribution was wrong.
-    - date: 2026-09-03
-      summary: >
-        §BUGFIX — this spec's own routes: section (and 3 siblings —
-        copilot/ollama/clear-glass) had an identical, real, pre-existing
-        YAML syntax error ("- method: GET path: /contract", two keys
-        crammed onto one line) since the day each was first written —
-        meaning none of them had ever actually been parseable as real
-        YAML by any tool, including loom's own real spec-map.js scanner
-        this file's own header names as the reason loom/spec isn't
-        "self-covering" yet. Found and fixed while doing an unrelated
-        living-model update, via a genuine Python yaml.safe_load parse
-        across all 19 real specs, not a visual read.
-    - date: 2026-09-05
-      summary: "docs: update the living models — real history entries, plus a real pre-existing YAML bug found and fixed in 4 specs (1 real file touched)"
-    - date: 2026-09-05
-      summary: "chore: register the two orphans the new post-commit hook itself flagged (2 real files touched)"
-    - sha: f66c6f434bd997c38ccef6de34109805a2767ee8
-      date: 2026-09-05
-      summary: "fix: real, tested merge safety for parallel-session history writes — found a genuine, silent data-loss risk before it could bite (1 real file touched)"
 
   gaps:
     as_of: 2026-09-01
@@ -209,8 +155,4 @@ spec:
     - version: 1.5.0
       date: 2026-09-01
       summary: "First real .spec authored, matching live code@1.5.0 exactly (no version bump required)."
-      versioniumCommitId: null
-    - version: 1.5.1
-      date: 2026-09-03
-      summary: "resolveSystem() bug fixed (41 phantom systems -> 13 real ones); this spec's own routes: YAML syntax error fixed (never actually parseable before this)."
       versioniumCommitId: null

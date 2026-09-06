@@ -350,6 +350,17 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   const _staleSweep = setInterval(() => {
     for (const [key, client] of _clients) {
       if (!_isStale(client)) continue;
+      // §FIX 2026-09-03 — James: "build what gets the pipeline working."
+      // Traced this several turns back and never patched it: this loop
+      // forgot the client server-side (_clients.delete) but never closed
+      // the real socket. The browser-side EventSource never saw an error,
+      // so its own real, already-correct reconnect logic (userscript-
+      // chatgpt.js's _es.onerror -> exponential backoff) never fired.
+      // Guardian said "disconnected" forever; the tab never knew and
+      // never recovered. Same close-before-forget pattern handleChannel
+      // already uses two cases above for "same key reconnects" (stale.res.end()) —
+      // this is that exact bug's sibling, not a new mechanism.
+      try { client.res.end(); } catch(_) {}
       _clients.delete(key);
       busEmit?.('ncp.client.stale', { provider: client.provider, tabId: client.tabId, key, lastHeartbeat: client.lastHeartbeat }, 'WARN');
       onDisconnect?.({ provider: client.provider, tabId: client.tabId, key, reason: 'stale' });

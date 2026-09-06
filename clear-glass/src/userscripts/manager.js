@@ -18,6 +18,7 @@
 
 const path = require('path');
 const fs   = require('fs');
+const yaml = require('js-yaml');
 const { randomUUID } = require('crypto');
 
 const SCRIPTS_DIR = path.join(
@@ -64,28 +65,52 @@ class UserscriptManager {
   }
 
   // ── Load Guardian NCP userscripts (read-only entries) ─────────────────
+  // §REWRITTEN 2026-09-03 — James: "userscripts yaml, very roomy blocks,
+  // each block a component or system." Previously a hand-maintained array
+  // here duplicated each script's own real `// @match` header — a second
+  // copy of the same facts, and one that had already drifted: it
+  // referenced 'userscript-ollama.js' (doesn't exist — only the
+  // .deprecated file does, so that entry always silently no-op'd via the
+  // existsSync guard below) and never listed userscript-memory.js at all
+  // (a real, standalone script — confirmed by reading its own header —
+  // that was therefore never loadable through this manager). Both are
+  // fixed as part of this rewrite, not left as-is (see guardian/
+  // userscripts.yaml's own §FIX notes on those two entries).
+  //
+  // guardian/userscripts.yaml is now the single real registry. Parse
+  // failure or a missing file logs a warning and yields zero guardian
+  // scripts rather than silently falling back to the old hardcoded array
+  // — an out-of-date manifest should be visible, not masked by a second,
+  // hidden source of truth reappearing underneath it.
   async _loadGuardianScripts() {
     if (!this.guardianDir) return;
-    const guardianScripts = [
-      { file: 'userscript-claude.js',      id: 'guardian-claude',      name: 'Guardian — Claude',      matches: ['https://claude.ai/*'] },
-      { file: 'userscript-chatgpt.js',     id: 'guardian-chatgpt',     name: 'Guardian — ChatGPT',     matches: ['https://chatgpt.com/*', 'https://chat.openai.com/*'] },
-      { file: 'userscript-gemini.js',      id: 'guardian-gemini',      name: 'Guardian — Gemini',      matches: ['https://gemini.google.com/*'] },
-      { file: 'userscript-perplexity.js',  id: 'guardian-perplexity',  name: 'Guardian — Perplexity',  matches: ['https://www.perplexity.ai/*'] },
-      { file: 'userscript-ollama.js',      id: 'guardian-ollama',      name: 'Guardian — Ollama',      matches: ['http://localhost:11434/*'] },
-    ];
+    const manifestPath = path.join(this.guardianDir, 'userscripts.yaml');
+    let manifest;
+    try {
+      manifest = yaml.load(fs.readFileSync(manifestPath, 'utf8'));
+    } catch (err) {
+      console.warn(`[Userscripts] guardian/userscripts.yaml not readable (${err.message}) — zero guardian scripts loaded`);
+      return;
+    }
+    const components = (manifest && manifest.components) || {};
 
-    for (const s of guardianScripts) {
-      const fp = path.join(this.guardianDir, s.file);
-      if (!fs.existsSync(fp)) continue;
+    for (const [key, c] of Object.entries(components)) {
+      if (c.standalone === false) continue;      // composed into another script (e.g. nexus_wake) — not independently loadable
+      if (c.loadable === false) continue;         // real, explicit deprecation — see the manifest's own status field
+      const fp = path.join(this.guardianDir, c.file);
+      if (!fs.existsSync(fp)) {
+        console.warn(`[Userscripts] ${key}: ${c.file} not found on disk (guardian/userscripts.yaml is stale)`);
+        continue;
+      }
       try {
         const source = fs.readFileSync(fp, 'utf8');
-        this._scripts.set(s.id, {
-          id:         s.id,
-          name:       s.name,
+        this._scripts.set(c.id, {
+          id:         c.id,
+          name:       c.name,
           source,
           enabled:    true,
           agentId:    '*',
-          matches:    s.matches,
+          matches:    c.matches || [],
           persistent: true,
           type:       'guardian',
           path:       fp,

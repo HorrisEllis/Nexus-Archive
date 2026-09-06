@@ -1,0 +1,1 @@
+{"uuid":"85c83b41-2fb1-4f07-9e8f-30c89f8068fd","system":"loom","component":"loom.health","action":"registered","status":"ok","tags":["loom"],"detail":"Loom health — hooks.total + components.total it owns","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139607}

@@ -1,0 +1,1 @@
+{"uuid":"cb66dccc-22b3-458f-a459-e46364e5df3e","system":"bridge","component":"bridge.identity.verify","action":"registered","status":"ok","tags":["bridge","identity"],"detail":"Verify system identity token","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139358}

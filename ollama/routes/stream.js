@@ -134,3 +134,9 @@ async function handle(req, res, { method, pathname }) {
 }
 
 module.exports = { handle };
+module.exports.commands = [
+  { method: 'GET', path: '/api/streams' },
+  { method: 'PUT', path: '/api/stream/:id/context', description: 'checked before the generic /api/stream/:id prefix — see this file\'s own §ROUTE ORDER comment' },
+  { method: 'GET', path: '/api/stream/:id' },
+  { method: 'POST', path: '/api/stream/:id' },
+];
