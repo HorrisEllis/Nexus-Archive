@@ -118,8 +118,15 @@ const SYSTEMS = {
   cortex:      { port: 3748, dataDir: 'cortex/data',      healthPath: '/health', label: 'Cortex' },
   idearium:    { port: 4800, dataDir: 'data/idearium',    healthPath: '/health', label: 'Idearium' },
   orchestrator:{ port: 9000, dataDir: 'data/orchestrator',healthPath: '/health',   label: 'Orchestrator' },
-  emerge:      { port: 4242, dataDir: 'data/emerge',      healthPath: '/status',  label: 'Emerge', optional: true },
-  bridge:      { port: 9999, dataDir: 'data/bridge',      healthPath: '/health',   label: 'Bridge' },
+  // §RETIRED 2026-09-06 — emerge is no longer a standalone process
+  // (see PULSE_ALL_2026-09-06 in the phasemap): copilot/module-
+  // builder.js now calls emerge/compiler/pipeline.js's compile()
+  // directly. Nothing serves :4242/status anymore — polling it would
+  // recreate the exact stale-registry-entry problem bridge's own dead
+  // entry caused before this session's earlier bridge removal pass.
+  // emerge/registry-components.js (a few lines below, _REGISTRY_PATHS)
+  // is untouched — that's about the still-real compiler's components,
+  // not this retired service entry.
   architect:   { port: 3747, dataDir: 'data/architect',   healthPath: '/health', label: 'Architect' },
   diagnostic:  { port: 7825, dataDir: 'data/diagnostic',  healthPath: '/status',   label: 'Diagnostic' },
   // §DIAGNOSTIC-AWARE 2026-08-28 — James: "ClearGlass-aware diagnostics
@@ -2210,10 +2217,7 @@ function startService() {
     const EDGES = [
       ['orchestrator','guardian'],
       ['orchestrator','cortex'],
-      ['orchestrator','bridge'],
       ['guardian','cortex'],
-      ['guardian','bridge'],
-      ['cortex','bridge'],
       ['cortex','idearium'],
       ['cortex','architect'],
       ['cortex','diagnostic'],
@@ -2529,7 +2533,6 @@ const _REGISTRY_PATHS = {
   cortex:       path.join(ROOT, 'cortex/registry-components.js'),
   guardian:     path.join(ROOT, 'guardian/registry-components.js'),
   architect:    path.join(ROOT, 'architect/registry-components.js'),
-  bridge:       path.join(ROOT, 'bridge/registry-components.js'),
   emerge:       path.join(ROOT, 'emerge/registry-components.js'),
   copilot:      path.join(ROOT, 'copilot/registry-components.js'),
   idearium:     path.join(ROOT, 'idearium/registry-components.js'),

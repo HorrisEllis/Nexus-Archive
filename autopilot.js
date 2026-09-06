@@ -265,7 +265,13 @@ const ALL_KERNELS = [
   // phase 4 — reports to copilot:3750, so copilot (phase 3) must be up.
   // No healthUrl: emerge is a file-watcher with no HTTP server (confirmed
   // above) — process-alive is the only honest readiness signal it has.
-  { name: 'emerge',       cmd: 'node', args: ['emerge/consumer.js'], optional: true, phase: 4 },
+  // §RETIRED 2026-09-06 — PULSE_ALL_2026-09-06 / James: "its just a
+  // compiler thats it, the rest is trash." emerge/consumer.js (the
+  // standalone poller this spawned) is archived; copilot/module-
+  // builder.js now calls emerge/compiler/pipeline.js's real compile()
+  // directly, synchronously, no file-drop queue, no separate process.
+  // emerge/compiler/ itself is untouched and still the real, load-
+  // bearing thing — only the poller wrapper around it is gone.
   { name: 'loom',         cmd: 'node', args: ['loom/server.js'],    optional: true,
     phase: 3, healthUrl: 'http://127.0.0.1:3752/health' },
   // Clear Glass sovereign browser — Electron + inline wire bridge.
@@ -331,7 +337,7 @@ const ALL_KERNELS = [
   { name: 'clear-glass',
     cmd: _ELECTRON_CMD,
     args: ['.'], cwd: 'clear-glass', optional: true,
-    phase: 3, healthUrl: 'http://127.0.0.1:7701/health',
+    phase: 3, healthUrl: 'http://127.0.0.1:7704/health',
     // §PRIORITY 2026-07-31 — the heaviest single process in the stack
     // (Electron + four provider webviews) gets a HIGHER halt floor than the
     // default 10%, so it's the first thing refused under pressure, not the

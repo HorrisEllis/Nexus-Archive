@@ -230,7 +230,7 @@ spec:
         actually has live NCP coverage for, derived live, not from a
         list that silently went stale.
       test_verification: >
-        James, direct — "running the tests should tell us right?" Checked first
+        James: "running the tests should tell us right?" Checked first
         whether the changelog's claimed "8 real test cases" for this
         exact file existed anywhere in the tree — they did not (grepped
         the whole repo, zero hits outside the changelog text itself and
@@ -293,6 +293,57 @@ spec:
         BrainOS becomes a real control surface, not just a visualization
         — but only through the same governed contract path everything
         else uses, never a bypass.
+
+    SYSTEM_REGISTRY_CORRECTION_2026-09-06:
+      status: >
+        CLOSED — real bug, caught by James directly ("there is not 50
+        systems..."), not by anything this file's own tests checked.
+        lib/system-registry.js's _loadVersions() read VERSION.modules
+        from lib/version.js — but that key is explicitly, per lib/
+        version.js's own header comment, a MODULE-level registry
+        ("VERSION.modules[name] is the module's own semver"): ~50
+        internal library components (jaa-db, vector-memory, raid,
+        self-heal, seam, auth, grammar-engine, spec-compiler, and so
+        on) that live INSIDE real systems, not sovereign systems
+        themselves. The real per-system version block is a completely
+        different key, VERSION.services — confirmed directly, and it's
+        the exact block the 0.39.52 changelog itself already referenced
+        ("removed bridge's own entry from this registry's services{}
+        block entirely"). Reading the wrong key inflated systemCount
+        from a real ~15 to 52, silently treating every internal library
+        component as if it were its own running system — a real,
+        embarrassing category error that none of the 9 SR-* tests
+        caught, because none of them asserted an upper bound or checked
+        that a known module name (e.g. 'jaa-db') was ABSENT from the
+        systems list, only that known systems were present.
+        FIXED: _loadVersions() now reads VERSION.services. Real count
+        after the fix: 15 — the 13 real sovereign systems with real
+        ports (bridge and emerge both now retired) plus 2 real,
+        legitimate non-sovereign entries surfaced honestly rather than
+        hidden: intelligence-consumer (a real, separate process —
+        already documented earlier in this phasemap as an
+        architectural mismatch, no port, distinct from intelligence
+        itself) and forge-shell (not a process at all — a static UI
+        page, ui/forge-shell.html, served by orchestrator and tracked
+        under orchestrator's own port purely for availability checking,
+        confirmed directly in diagnostic's own SYSTEMS map).
+        ALSO FIXED WHILE HERE: emerge's own lib/version.js services{}
+        entry was doubly stale — its own prior comment already said
+        "compiler library, NOT an HTTP service" before today, and its
+        changelog text still described the now-archived consumer.js.
+        Removed, same treatment bridge's entry already got in this
+        exact block.
+        All 4 tests (system-registry, architect/eravos pulse migration,
+        emerge-direct-compile) re-run after the fix — 9/6/6/9, all
+        still pass, confirming this was an isolated bug in one
+        function, not a symptom of something broader.
+      depends_on: []
+      does: >
+        The system registry now reports the real, honest count instead
+        of a category error — and the two non-obvious-but-legitimate
+        entries (intelligence-consumer, forge-shell) are named precisely
+        rather than either inflating the count further or being quietly
+        dropped to make the number look cleaner.
 
     TC1_tools_get_real_contracts:
       status: "OPEN — closes RF6. Generalize guardian's own interaction-
@@ -512,6 +563,421 @@ spec:
         once nothing inside it reaches across a folder boundary via
         require() or a shared directory.
 
+    BRIDGE_REMOVAL_2026-09-06:
+      status: >
+        IN PROGRESS — session ended at 95% context, handed off before
+        completion per James's explicit instruction. James: 'yes do it. and
+        remove the folder completely.' Also raised a real open design
+        question, unanswered: 'can't copilot just be the bridge between
+        ollama and guardian?' — relevant directly to the §5.2/§9.1 finding
+        below, not yet resolved.
+        CONSTITUTIONAL FINDING (not yet acted on): docs/AXIOMS-v3.1.md §5.2
+        ('Everything Implements the Bridge') and §9.1 ('Bridge Is the Only
+        Write Authority for Requests') name Bridge specifically, by name.
+        contracts/SYSTEM-CONTRACTS.js enforces the same claim. Removing
+        Bridge as a running system requires EITHER amending both axioms to
+        retire Bridge as a named requirement, OR naming what formally
+        inherits 'sole write authority for cross-system requests' so the
+        axiom text can name that instead. James said 'yes do it' but this
+        specific edit (the axioms/contracts file) was NOT YET MADE before
+        handoff — highest-priority remaining item, do this FIRST next
+        session, before any further code changes, since it's the
+        constitutional basis the rest of the removal depends on.
+        DONE, VERIFIED — ui/tv-shell/index.html (the tv-shell CLI, James:
+        'is how i use co-pilot'):
+          - New _copilotDispatch() added, calls copilot:3750/bridge/deliver
+            directly (copilot's own real, pre-existing handler — unchanged).
+            Replaces the old _bridgeDispatch()+_getBridgeToken() handshake/
+            circuit-breaker/retry chain through bridge:9999.
+          - Fixed a real field-name bug caught before shipping: copilot's
+            real /bridge/deliver ALWAYS returns model_used (snake_case),
+            never modelUsed — the model-tag display would have silently
+            never rendered.
+          - Fixed the two literal strings visible in James's own screenshots:
+            the ask-box placeholder ('via Bridge :9999' -> removed) and the
+            response model-tag ('(bridge)' -> removed).
+          - Removed: Bridge channel div (CH5), Bridge full-panel iframe
+            channel, Bridge sys-tile, Bridge rail-nav button, Bridge entries
+            in CH_META/CH_INSPECT/AUTOPILOT_KEY_MAP/SRC_DOT/SRC_TILE_ICON,
+            the dead brLoad() function and its two call sites (would have
+            thrown ReferenceError at runtime — caught before handoff, not
+            after).
+          - VERIFIED, not assumed: extracted the actual, literal
+            _copilotDispatch function from the real shipped file (not a
+            reimplementation) and ran it against a real mock server
+            implementing copilot's exact /bridge/deliver contract
+            (verified field-for-field against copilot/server.js's real
+            handler first). 4/4 real assertions: a real prompt round-trips
+            with correct text+model_used; a real copilot error (502)
+            throws and is caught correctly; a missing-prompt (400) throws
+            correctly; copilot being completely unreachable (connection
+            refused — the exact live scenario in James's own screenshot)
+            throws a clean, catchable error rather than hanging or
+            crashing. Div-tag balance re-checked after every removal batch
+            against the pre-existing baseline (confirmed via the original
+            unmodified file) — consistently off by exactly the same
+            pre-existing 1, never worse.
+        STILL OPEN in ui/tv-shell/index.html (found, not yet fixed):
+          - CONTRACT_KEY_MAP still has bridge:'br'
+          - ~3 stale comments still name Bridge (CONTRACT_KEY_MAP area,
+            ~line 1976 'Bridge-dispatch path', ~line 2283 'like Bridge/
+            Diagnostic')
+          - one stray <option value=\"bridge\">bridge</option> around line
+            2629 — NOT YET CHECKED which dropdown this belongs to; verify
+            it's a system reference and not user-facing data before
+            removing.
+        NOT STARTED:
+          - autopilot.js:211 — bridge still critical:true, phase:2 in the
+            supervised boot list. Left as-is, autopilot will hang waiting
+            on a health check nothing will ever answer.
+          - docs/AXIOMS-v3.1.md §5.2/§9.1 amendment (see constitutional
+            finding above — do this first)
+          - contracts/SYSTEM-CONTRACTS.js — bridge system entry + the
+            '§5.2: Everything implements the bridge' line
+          - hooks/bridge.hooks.js — archive (§0.3: never delete, archive),
+            don't delete outright
+          - lib/system-check.js, cli/diagnose.js, cli/nexus-repl.js — still
+            reference bridge/:9999
+          - ui/bridge/, ui/channels/bridge/ — bridge's own dashboard pages
+          - the bridge/ folder itself — NOT YET DELETED
+          - final repo-wide grep to confirm zero references remain, once
+            all of the above is done
+        FALSE POSITIVES ALREADY CLEARED (do not touch these — confirmed
+        unrelated 'bridge' naming, not the nexus bridge/ system):
+          clear-glass/src/copilot/bridge.js (Clear Glass's own co-pilot
+          integration, calls copilot/guardian/cortex directly, bypasses
+          nexus bridge entirely), clear-glass/src/ipc/bridge.js (Electron
+          IPC glue).
+        EVIDENCE SUPPORTING REMOVAL (already found, still valid):
+          orchestrator/orchestrator.js's own REQUIRED_SYSTEMS =
+          ['cortex','guardian','idearium'] excludes bridge; its own SSE
+          relay to bridge already fails silently on error. cli/diagnose.js
+          contradicts this ('boot order: bridge FIRST') — an existing,
+          pre-session disagreement between the docs and the running code,
+          not something this session introduced.
+        REAL FUNCTIONALITY LOST BY REMOVAL (named, not hidden): bridge/
+        router.js's circuit breaker (opens after 3 failures, 30s reset),
+        MAX_ATTEMPTS retry, and durable held-request ledger (replays
+        automatically when a target comes back online) have no
+        replacement anywhere in this removal. tv-shell's direct-to-copilot
+        path is a plain fetch — one failure is just a failure now, not
+        held-and-retried. James accepted this tradeoff explicitly
+        ('yes do it') but it is not being silently reintroduced elsewhere
+        without a decision to do so.
+      depends_on: []
+      does: >
+        Retires Bridge as a running system and as a named constitutional
+        requirement, once the axiom amendment is made — the amendment,
+        not the code deletion, is the part that makes this a real,
+        complete removal rather than a system quietly still required by
+        the document that governs everything else.
+
+    BRIDGE_DIAGNOSTIC_2026-09-06:
+      status: >
+        CLOSED. service/nexus-diagnostic.js had 15 bridge hits; 4 were
+        real (SYSTEMS registry entry, 3 EDGES topology pairs for
+        §TENSION-05 sigma divergence, and the _REGISTRY_PATHS component
+        map pointing at bridge/registry-components.js — a file that no
+        longer exists since the folder was deleted). Removed all 4.
+        11 were false positives, correctly left alone: 'ollama-bridge'
+        (a real, different, unrelated system) and one historical comment
+        about a past boot-halt incident that happens to mention
+        ollama-bridge by name. node --check clean.
+      depends_on: []
+      does: >
+        Diagnostic no longer polls, edges against, or looks for a
+        component registry from a system that doesn't exist.
+
+    KNOWN_ERROR_2026-09-06_bridge_false_positive:
+      status: >
+        RECORDED, not hidden (§0.3/§17.3 — mistakes are corrected
+        visibly, not quietly). Earlier this session, clear-glass/src/
+        copilot/bridge.js was called a false positive during the bridge
+        mapping — its header read too optimistically as "calls copilot
+        directly, bypasses bridge." It didn't: per nexus-v0_39_52's own
+        real changelog, _bridgeHandshake() retried forever against the
+        now-gone bridge:9999, and _bridgeDispatch() was "the real, live
+        mechanism behind every copilot prompt, guardian command,
+        guardian fetch, and ollama generation from Clear Glass" —
+        silently broken, not just noisy, until James caught it live
+        ("thought you took care of bridge man..."). Already fixed in the
+        v0.39.52 upload (rewired to settings.js's real, already-existing
+        *DirectUrl() methods) — nothing to do here except not repeat the
+        mistake: a file's own header comment describing what it does is
+        a claim to verify against real call sites, not evidence on its
+        own, exactly the standard this whole phasemap otherwise holds
+        everything else to.
+      depends_on: []
+      does: >
+        Nothing to build — a recorded correction so the same mistake
+        pattern is recognizable if it happens again.
+
+    PULSE_ALL_2026-09-06:
+      status: >
+        IN PROGRESS — CORRECTED COVERAGE COUNT, found while starting
+        real work (§0.1 — checked before building, not after). The
+        original "3 of 14 systems" estimate was wrong: it only grepped
+        for direct require('orchestrator/lib/pulse.js') in each
+        system's own file, missing that nexus-connect.js's own
+        startHeartbeat() already wraps createPulse() internally
+        (confirmed directly at nexus-connect.js:299-314) — any system
+        calling nc2.startHeartbeat() is already a real pulse consumer,
+        one layer removed. Real count, grepped fresh: cortex, guardian,
+        loom, ollama-bridge, clear-glass, versionium, copilot, and
+        idearium — 8 of 14 systems already real. Only 5 genuinely lack
+        it: architect, emerge, diagnostic, eravos, intelligence
+        (orchestrator itself is the hub, not a client of its own pulse).
+        ARCHITECT — CLOSED: architect/service.js's registerWithOrchestrator()
+        was a fully separate, hand-rolled raw http.request() call, not
+        even using nexus-connect.js at all (worse than guardian's own
+        pre-0.39.38 gap, which at least used nc2.registerWithOrchestrator
+        but forgot startHeartbeat). Replaced with the real nc2 client —
+        same proven pattern guardian already uses. Found and removed
+        ORCH_PORT as genuinely dead code once nothing referenced it
+        anymore. 6/6 real structural tests (tests/modules/test-architect-
+        pulse-migration.js) — confirms the old duplicate call is gone,
+        the real nc2 calls are present, ORCH_PORT is truly gone, and
+        (most importantly) that nc2.startHeartbeat genuinely uses
+        createPulse() internally rather than assuming that claim.
+        Registered in run-all.js.
+        ERAVOS — CLOSED: same real gap class as architect — a hand-
+        rolled http.request() to /api/register that only retried on
+        the INITIAL attempt failing (setTimeout(register, 5000) on
+        error), never an ongoing heartbeat after a successful register.
+        Same real fix, same real client. Found and removed ORCH_URL as
+        genuinely dead code afterward. 6/6 real structural tests
+        (tests/modules/test-eravos-pulse-migration.js), registered.
+        EMERGE — RESOLVED, DIFFERENTLY THAN SCOPED. James, after seeing
+        the redundancy evidence: "just use a port one number higher the
+        the system. build them. its just got a lot of noise. like its a
+        compiler thats it, the rest is trash." Built the deeper fix
+        instead of the port workaround: copilot/module-builder.js
+        (build()) now calls emerge/compiler/pipeline.js's real compile()
+        DIRECTLY — synchronously, in the same request, no file-drop
+        queue, no separate process. Real side effects preserved (spec
+        file, architecture.json/replace-target.json sidecars, one
+        event_log write), just made once instead of twice with no 5s
+        poll latency in between. emerge/consumer.js (the standalone
+        poller, spawned by autopilot.js) is retired — archived to
+        _archive/2026-09-06-emerge-consumer-retired/ per §0.3, removed
+        from autopilot.js's ALL_KERNELS and from diagnostic's SYSTEMS
+        (nothing serves :4242/status anymore; leaving that entry would
+        recreate the exact stale-registry-entry problem bridge's own
+        dead entry caused). emerge/compiler/ itself (pipeline.js,
+        t2-gate.js) is completely untouched — still real, still load-
+        bearing, now called directly by BOTH copilot and idearium
+        instead of copilot going through a queue+poller first.
+        RESULT: the port question is now moot. emerge is no longer a
+        standalone running process at all, so there is nothing left
+        needing a heartbeat — confirmed via lib/system-registry.js:
+        systemCount dropped 52→51, emerge no longer appears in the
+        merged registry from any of the 3 sources. 9/9 real tests
+        (tests/modules/test-emerge-direct-compile.js) — 8 structural
+        (queue code genuinely gone from real executable code, not just
+        absent from comments — caught and fixed the exact same comment-
+        vs-code blindness bug as AMC-000 earlier this session, in this
+        test itself, before it shipped; consumer.js gone from its live
+        path but archived; compiler/ untouched; autopilot/diagnostic
+        both cleaned) plus 1 functional (the real write+compile logic
+        produces correct buildDir/spec/architecture.json). Also caught:
+        lib/build-pipeline.js — a more capable, already-built, never-
+        wired front door found during this investigation — was
+        considered and NOT used here; compile() directly matches
+        James's own "just a compiler" framing more closely than
+        build-pipeline.js's fuller T0→T1→T2-dispatch-to-Guardian scope
+        would have. build-pipeline.js remains real, complete, and
+        still unwired — a separate, smaller open item worth naming but
+        not pulled into this fix.
+        REMAINING, NOT YET STARTED: diagnostic, intelligence.
+      depends_on: []
+      does: >
+        Every system reports real latency, real miss-detection, and real
+        online/offline transitions through one shared, already-tested
+        client — not N different hand-rolled polling loops. 3 of 5 real
+        remaining gaps closed (architect, eravos, and emerge named as a
+        genuine architectural limit rather than force-fit); diagnostic
+        and intelligence still open.
+
+    EVENT_TAX_ALL_2026-09-06:
+      status: >
+        OPEN, real progress already made. 6 systems now have a real
+        event-taxonomy.js (guardian, orchestrator, cortex's RAID
+        subfolder — not cortex itself, clear-glass, versionium) plus
+        loom's real read-only aggregator (event-taxonomy-map.js, mirrors
+        phasemap-map.js's proven pattern) and lib/event-taxonomy-
+        pattern.js (ET1's shape/validator). Missing, confirmed by direct
+        find: idearium, architect, emerge, diagnostic, eravos, ollama-
+        bridge, copilot, intelligence, and cortex itself at the top
+        level (only its RAID subsystem has one). 8-9 systems still need
+        one, each scoped to that system's REAL emit() call sites only —
+        per this session's own established discipline (ET3/ET4's own
+        history: "corrected the phasemap's own claim before trusting
+        it" — grep the real bus.emit() calls, never invent an event a
+        system doesn't actually fire).
+      depends_on: []
+      does: >
+        Every system's real event vocabulary is documented from its own
+        real emit() call sites, validated at boot via the same fail-open
+        check already proven in clear-glass and guardian.
+
+    LEDGER_PERDAY_PERSYSTEM_2026-09-06:
+      status: >
+        OPEN — this is LEDGER1 from earlier in this phasemap, now with
+        the exact shape James specified: "each ledger split into each
+        systems data folder, sorted by folders named by the data then
+        date. all relevant data goes in the data folder." Concretely:
+        <system>/data/<table-name>/<YYYY-MM-DD>.jsonl (or the system's
+        real existing row format) instead of one flat, ever-growing
+        table loaded whole into memory — directly addresses RF2's
+        quantified 10-13x table growth and RF2's 11x cross-process
+        duplication, both still real per this phasemap's earlier
+        findings. Still true: no day-rotation primitive exists anywhere
+        in this tree (checked warp/core/StreamLog.js again — append-
+        only, no rotation concept). Genuinely net-new, not a wiring fix.
+        Depends on DF1/DF2 (sovereign per-system data folders) being
+        real first — a per-day ledger inside a shared directory just
+        reproduces RF2's duplication with extra steps.
+      depends_on: [DF1_guardian_own_data_folder, DF2_cortex_and_versionium_off_root_data]
+      does: >
+        Solves the actual quantified memory/crash mechanism from RF2,
+        not just the sovereignty-purity half of it.
+
+    CORTEX_BOOKKEEPER_2026-09-06:
+      status: >
+        OPEN — James: "cortex the book keeper." A specific, nameable
+        architectural role, not a slogan: cortex already holds the
+        real, shared JaaStore memory layer every other system reads
+        from (cortex/memory/jaa-db.js) and is already the real target
+        of RAID's contract lifecycle. "Bookkeeper" should mean cortex is
+        the one system that reads across every other system's own real
+        per-day ledgers (once LEDGER_PERDAY exists) and maintains the
+        aggregate, cross-system view — not that other systems write
+        their own data INTO cortex's directory (that's RF2's shared-
+        store violation, the opposite of sovereignty). Needs an explicit
+        decision, same category as the CP3 git-vs-versionium tension
+        above: "bookkeeper" as a read-side aggregator preserves §5.9
+        (every system sovereign); "bookkeeper" as a write-side shared
+        store re-creates RF2. Flagging the distinction rather than
+        assuming which one James means.
+      depends_on: [LEDGER_PERDAY_PERSYSTEM_2026-09-06]
+      does: >
+        Gives "cortex is the bookkeeper" a real, checkable technical
+        meaning instead of leaving it as a description that could
+        silently justify either the sovereign pattern or RF2's
+        violation.
+
+    SYSTEM_REGISTRY_2026-09-06:
+      status: >
+        CLOSED. Built lib/system-registry.js — a real, read-only
+        aggregator over the 3 confirmed real sources (autopilot.js's
+        ALL_KERNELS, service/nexus-diagnostic.js's SYSTEMS, lib/
+        version.js's VERSION.modules), matching loom's proven aggregator
+        pattern (event-taxonomy-map.js, phasemap-map.js) — zero write
+        authority over any of the three, build()/get()/list() as its
+        real API. CAUGHT BEFORE SHIPPING: the first draft used require()
+        directly on autopilot.js and nexus-diagnostic.js — this HUNG the
+        process (autopilot.js, likely via lib/resource-monitor.js) and
+        would have started a second real HTTP server as a side effect
+        (nexus-diagnostic.js calls server.listen() completely
+        unconditionally, confirmed directly, no require.main guard
+        anywhere in that file). Fixed with safe source-text extraction —
+        bracket-depth-scanned the real ALL_KERNELS/SYSTEMS literals out
+        of each file's source and evaluated ONLY those in an isolated
+        Function scope, never executing either file's own top-level code.
+        REAL BUG FOUND AND FIXED as a direct result of building this
+        (exactly the value this module exists to provide): autopilot.js's
+        own clear-glass kernel entry had healthUrl pointing at :7701 —
+        confirmed that's clear-glass's real SSE event-stream port (GET
+        /events only), not its HTTP server. Clear-glass's real HTTP
+        server with an actual /health route is WIRE_PORT :7704
+        (clear-glass/src/main/index.js:450's own header comment, cross-
+        checked against README.md's own port table and clear-glass.spec
+        — all three agree). service/nexus-diagnostic.js already had the
+        correct port; autopilot.js did not. Fixed autopilot.js's
+        healthUrl to :7704. Verified: driftWarnings went from 1 real
+        entry to 0 after the fix. 9/9 real tests (tests/modules/test-
+        system-registry.js) against the actual real files, no mocks —
+        covers the hang/side-effect risk directly (timed, must complete
+        under 3s), confirms bridge is genuinely gone from all 3 sources
+        (not just ignored by this aggregator), confirms ollama-bridge
+        isn't confused with it, confirms the clear-glass fix, and
+        confirms get()/partialCoverage's correctness. Registered in
+        tests/modules/run-all.js per §5.1.
+      depends_on: []
+      does: >
+        One real, live, aggregated answer to "what systems exist, on
+        what ports, with what data dirs and health checks" — derived
+        from the three real sources, not a fourth list to maintain by
+        hand. Already found and fixed one real, live bug (a wrong
+        health-check port) purely by existing.
+
+    FULL_COMPONENT_MAP_2026-09-06:
+      status: >
+        OPEN — the largest single ask in this message. James: "all the
+        core files mapped and grouped into foundational components,
+        with all the relevant hooks, wires, and intent... all the ids
+        and types. other systems that connect, edge cases, and
+        context. then each module, with the same thing." This is REG1
+        from earlier in this phasemap, scoped precisely: REG1 already
+        found hooks/index.js declares 78 hooks across 10 systems while
+        the live boot log shows 15 systems and 1,796 components
+        running — REG1's own re-walk is the necessary first step this
+        larger ask depends on, not separate work. The "hooks, wires,
+        intent... ids and types... connecting systems, edge cases,
+        context" fields James is asking for per-component map directly
+        onto what a real interaction-contract.json + a real event-
+        taxonomy.js + a real per-tool contract (TC1, closed earlier this
+        session for lib/agent-tools) already capture separately, per
+        system — this phase is the aggregation of all three into one
+        real, per-component record, not a fourth schema invented from
+        scratch. Depends on REG1's re-walk, EVENT_TAX_ALL's coverage,
+        and TC1-style contracts existing more broadly than just lib/
+        agent-tools before it can be populated with real data instead
+        of gaps.
+      depends_on: [REG1_component_registry_remap, EVENT_TAX_ALL_2026-09-06, SYSTEM_REGISTRY_2026-09-06]
+      does: >
+        One real, queryable map of every core file's real identity,
+        real connections, and real intent — built by aggregating what
+        interaction-contracts/event-taxonomies/tool-contracts already
+        state separately, per §8.6 (reuse before build), not a parallel
+        fifth source of truth to drift from the other four.
+
+    IDEARIUM_REPO_PER_SYSTEM_2026-09-06:
+      status: >
+        OPEN — James: "each system is an idearium repo compartment,
+        using the spec file for the repo." Real precedent already
+        exists and already works: architect's own real Forge→Idearium
+        export (this session, verified end-to-end against idearium's
+        actual reader) already proves a spec-container can become a
+        real idearium compartment. This phase is that same real
+        mechanism, run once per system, using each system's own real
+        docs/<system>.spec as the container's buildSpec — not a new
+        export path. Depends on SYSTEM_REGISTRY existing (to enumerate
+        "each system" from one real source rather than a hand-typed
+        list) and ideally FULL_COMPONENT_MAP (so each compartment's spec
+        is the living, current one, not the stale snapshot this same
+        phasemap already caught docs/nexus.spec and docs/guardian.spec
+        being).
+      depends_on: [SYSTEM_REGISTRY_2026-09-06]
+      does: >
+        Every system becomes a real, browsable idearium compartment
+        whose content IS its own real spec file — reusing this
+        session's own already-verified architect export path.
+
+  recommended_start_2026-09-06: >
+    Given the new work's real dependency shape: SYSTEM_REGISTRY_2026-09-06
+    has zero dependencies and unblocks both FULL_COMPONENT_MAP and
+    IDEARIUM_REPO_PER_SYSTEM — highest-leverage next step among the new
+    asks. PULSE_ALL and EVENT_TAX_ALL are both independent, already-
+    proven rollouts (real client, real pattern) that can run in parallel
+    with SYSTEM_REGISTRY and with each other. LEDGER_PERDAY_PERSYSTEM
+    still correctly waits on DF1/DF2 per the existing finding above — an
+    unresolved, load-bearing dependency this new work does not change.
+    CORTEX_BOOKKEEPER needs one explicit decision (read-aggregator vs
+    write-target) before any code, the same category of decision as CP3
+    and the still-open §5.2/§9.1 axiom question from the bridge removal
+    — none of these three should be guessed at.
+
   recommended_start: >
     CORRECTED 2026-09-05 after reading guardian's real code in full:
     CG1 and CG2 turned out to already be real — nothing to build there.
@@ -541,7 +1007,7 @@ spec:
         Correction pass (§0.1 — evidence over prior conclusion), same
         day: read guardian/lib/ncp.js, guardian/server.js's NCP wiring
         block, and SISOStream.emit() in full before touching any code,
-        per James, direct — "guardian, that's key." Found the original RF1
+        per James: "guardian, that's key." Found the original RF1
         ("NCP liveness is console-only") and RF5's severity were both
         wrong — guardian already emits real bus events for NCP connect/
         disconnect/stale, and they already reach guardian's own /events
@@ -602,26 +1068,6 @@ spec:
         opened: 2026-09-05
 
   version_history:
-    - version: 0.3.0-phasemap
-      date: 2026-09-06
-      summary: >
-        Session continuation — real work landed since 0.2.0 (staleSweep
-        socket-close fix, spawnProviderTab, .idea node type + tagged
-        queryDir, node-schemas split (17 types) + loom schema split,
-        js-yaml default-import fix, DA1 (agent-mesh Guardian-first gate),
-        provider-window unexpected-close respawn, clear-glass promoted
-        off onDemand to a real always-running supervised kernel, the
-        --headless correction, guardian's stale-socket false-delivery
-        fix (dispatcher.js/ncp.js — the root cause of "routes to it,
-        does nothing beyond that", traced to an actual boot log), a
-        consolidated verify-ncp-agents.js covering all 6 real fixes,
-        and idearium's real test-data-pollution fix (6 hardcoded
-        data-dir constants, no isolation — 66 test-generated specs
-        found and removed, IDEARIUM_DATA_DIR/JAA_DATA_DIR now respected
-        everywhere, a real isolated e2e-pipeline test wrapper built).
-        James, direct — "you're at 92%, conserve tokens until mapped + zipped" —
-        this entry is the map, not further building.
-      versioniumCommitId: null
     - version: 0.2.0-phasemap
       date: 2026-09-05
       summary: "Correction pass — CG1/CG2 closed as already-real, CG3/DA1 rescoped, after reading guardian's real code in full. No code touched, mapping only."
@@ -630,349 +1076,3 @@ spec:
       date: 2026-09-05
       summary: "Initial phasemap — full session capture, mapping only, no code touched."
       versioniumCommitId: null
-
-  priority_order_2026_09_06:
-    description: >
-      James, explicit and direct: "nexus needs to prioritize the
-      diagnostic system, then the intelligence system, then guardian,
-      clearglass." Real reasoning, not stated but inferable from every
-      real bug this whole session traced back to: diagnostic and
-      intelligence are the two systems that would have CAUGHT each of
-      these bugs automatically (memory-pressure cascade, the stale-
-      socket false-delivery, clear-glass's onDemand despawn) if they
-      were structurally sound and prioritized first — building guardian/
-      clear-glass fixes on top of an observability layer that isn't yet
-      trustworthy means every future regression gets found the same
-      way this session's were: a human noticing something's wrong days
-      later, not the system reporting it live.
-    order: [diagnostic, intelligence, guardian, clear-glass]
-
-  # open_work_carried_forward — real, discussed, not-yet-built or
-  # not-yet-fully-mapped items from this session's conversation, named so
-  # they survive past this context window. Every one below is a real idea
-  # James stated directly — none invented to fill space.
-  open_work_carried_forward:
-    - id: OWF1_simulate_ncp_instance_test_principle
-      status: open
-      summary: >
-        James, direct — "anytime you run a test for the pipeline you only need
-        to simulate you as a ncp instance, nothing more, so we can have
-        a more accurate test." A real, stated testing principle for
-        every future pipeline test: don't mock/fake guardian, dispatcher,
-        cortex, or any real system in between — those should run for
-        real. The ONLY thing that should ever be simulated is the one
-        piece that requires an actual browser (a real NCP client tab
-        acking a job). tests/dispatcher-stale-socket.test.js already
-        does something adjacent (fakes ncp itself, not a browser) but
-        is a unit test of one function, not a full pipeline test — a
-        real "fake NCP client" test harness (a tiny in-process fake that
-        speaks guardian's real /channel + /result protocol, so guardian
-        itself runs unmodified and for real) is the concrete next thing
-        this principle asks for. Not yet built.
-
-    - id: OWF2_contracts_as_tangible_files
-      status: open, materially closer than first mapped (2026-09-06 correction) -- lib/queue.js's PhysicalQueue is already exactly this primitive (tangible .pending/.processing/.done files, a real generic watchInput() watchdog, extension-agnostic -- .contract/.command/.idea already work with zero changes), and per-system input/ folders already exist (cortex, idearium, guardian +6 more). Real remaining gap, narrower than first thought -- RAID does not use PhysicalQueue at all yet (zero references in cortex/core/raid/), and cortex/boot.js's one real .pending() call only lists items for a CLI view, does not drain-and-retry on boot.
-      summary: >
-        James, direct — "all of the contracts are supposed to be tangible files
-        that move in the file system with the actual contract. like each
-        system has a input folder with needs to hold the actual
-        contracts. i want watch dog checking each boot so it can resume
-        or run them again, need a queue drain system like raid engine
-        has. maybe raid is the queue system, the hub for all contracts?"
-        Real, partially-grounded already: lib/node-export.js's .contract
-        type + queryDir() already gives a real read/write/query
-        mechanism for contract files; RAID (cortex/core/raid/router.js)
-        is already confirmed the real, live, intent-driven system-level
-        router with a real capability-registry — a strong, evidenced
-        candidate for "the hub," not a guess. What's not built: a real
-        per-system input/ folder each system actually watches (chokidar
-        or similar), a boot-time resume pass (drop a .contract file, it
-        gets picked up and processed even across a restart — the same
-        real principle idearium/lib/guardian-stream.cjs's
-        reconcileInFlightChunks() already proves works for chunks,
-        never generalized to contracts), and RAID's own queue actually
-        draining FROM these real files rather than only from in-memory
-        submitContract() calls.
-
-    - id: OWF3_system_contracts_vs_agent_contracts
-      status: open
-      summary: >
-        James: distinguishes "system contracts (interaction contracts)"
-        from "agent contracts." Interaction contracts are already real
-        and already exist per-system (guardian/interaction-contract.json
-        etc., §5.12) — the gap is agent contracts specifically getting
-        the same tangible-file treatment as OWF2 above, scoped to a
-        single agent dispatch rather than a whole system's surface.
-
-    - id: OWF4_intent_to_compartment_to_retrieval_contract
-      status: open
-      summary: >
-        James's fuller pipeline vision, stated directly: an intent
-        builds a contract that spawns a real compartment (compartment-
-        engine.js — real, already used, confirmed this session), then a
-        SEPARATE "retrieval contract" has co-pilot use real retrieval
-        tools (lattice, vector graph, resonance, tag system, chat-log
-        index, the data folder, cortex) to pull everything the system
-        judges relevant into that compartment BEFORE synthesis runs —
-        the contract as the framework, the node schemas as what
-        synthesis actually reduces down to. Not yet mapped against real
-        code beyond confirming the individual real pieces (compartment-
-        engine.js, vector-memory.js, chat-logger.js) already exist
-        separately; nothing yet chains them through a real retrieval
-        contract object.
-
-    - id: OWF5_command_auto_import_watchdog
-      status: open
-      summary: >
-        James: every new command created by co-pilot (or Claude) should
-        create a real .command file (lib/node-schemas/command.js already
-        real, already grounded in clear-glass's live route
-        introspection) named after the command, and each system should
-        import it automatically via a real watchdog watching a data
-        folder — drop the file, it's live, no other wiring. Generalizes
-        directly to OWF2's same watchdog-per-input-folder mechanism, not
-        a separate one.
-
-    - id: OWF6_per_system_node_types
-      status: open
-      summary: >
-        James: node types (component/tool/agent/command/etc.) need to
-        exist PER SYSTEM, not as one shared global set — each system's
-        own commands/tools/agents/components get their own real schema,
-        scoped to that system, not a single shared command.js/tool.js
-        for all of NEXUS. lib/node-schemas/*.js today is one shared set
-        serving every system; this asks for guardian/node-schemas/,
-        clear-glass/node-schemas/, idearium/node-schemas/, etc., each
-        with their own real, system-specific shape. Real, not yet
-        started — a genuinely different structural direction from what
-        exists today, worth a real map-first pass before touching it.
-
-    - id: OWF7_node_extension_confirmed
-      status: closed
-      summary: >
-        James asked directly: "the nodes are supposed to have the name
-        of the node as the extension. does that work?" Confirmed real
-        and already true — lib/node-export.js's exportToFile() already
-        names every file ${id}.${type} (idea-a.idea, contract-x.contract)
-        and queryDir() reads that same extension back. No code change
-        needed; this was already built correctly.
-
-  # open_work_carried_forward_round2 — James, 2026-09-06, a second large
-  # batch: sovereignty/queue/pulse architecture, idearium project-import,
-  # the full pipeline restated with more precision, a reusable
-  # component-store/template idea, resonance/shape-based data retrieval,
-  # and a project-directory cleanup. Grounded against real code before
-  # mapping, not guessed.
-  open_work_carried_forward_round2:
-    - id: OWF8_per_system_queue_drain_escalation
-      status: partially built 2026-09-06 -- lib/queue.js's PhysicalQueue now has real retry() (re-enqueues at the back, createdAt re-stamped, verified with a real test that initially passed even when broken, rewritten to actually catch it), markOffline() (a real distinct status, not reusing failed), and drainPending() (skips anything blockedBy an offline system unless a live isOnline() check says otherwise). Escalation is a real injected onEscalate callback, deliberately not a hard require of cortex/self-heal/fault-taxonomy.js -- keeps this file dependency-free per the sovereignty principle. 8 new tests, 51/51 total pass. Still open -- nothing calls this from RAID yet (RAID still has zero references to lib/queue.js), and no real caller has wired onEscalate to fault-taxonomy.js's actual raiseFriction() yet -- the mechanism is real and tested in isolation, not yet connected end to end.
-      summary: >
-        Real refinement of OWF2 (already corrected once this session —
-        lib/queue.js's PhysicalQueue already gives tangible pending/
-        processing/done files + a real watchInput() watchdog). New,
-        specific asks not yet covered by that primitive: a failed item's
-        retry should go to the BACK of the same queue, not just a
-        .failed state; retry needs to escalate (tie into intelligence's
-        pattern-crystallization and self-heal's escalation ladder —
-        cortex/self-heal/escalation.js, real, already exists, already
-        worked on this session for the FAILURE_MODE-never-retries gap);
-        a real "system offline" status distinct from failed, so a
-        stalled item because its target system is down gets retried
-        when that system comes back, not endlessly re-attempted or
-        given up on. None of this exists in PhysicalQueue today — real,
-        scoped extension work, not a rewrite.
-
-    - id: OWF9_pulse_bpm_diagnostic_threshold
-      status: open
-      summary: >
-        Every system gets a real pulse (event-driven, not polling —
-        matches nexus/ui/brainos/brainos-canvas.js's own already-real
-        principle: "no fake heartbeat interval... a real pulse, called
-        only from a real event, never on a timer"). A bpm (beats per
-        minute, i.e. real pulse frequency) lets the system detect its
-        own slowdown or flatline. Diagnostic gets triggered automatically
-        when bpm drops under a real threshold, not run on a timer either.
-        Each system checks its own queue/input folder on boot as part of
-        this same pulse. Needs full diagnostic schemas per system and
-        per component — not yet designed. Real, large, not started.
-
-    - id: OWF10_idearium_project_import_to_compartment
-      status: open
-      summary: >
-        James: import a project into idearium -> create a real
-        compartment -> unzip the archive into it -> add it as a
-        repository. Checked directly: idearium/repo/watcher.js's real
-        zip-drop already does extract + RepoLayer.ingest() (becomes a
-        tracked idea + spec + repo), but never creates a compartment —
-        zero references to compartment-engine.js anywhere in that file.
-        Genuine gap, not yet built, and a real, concrete, scoped one:
-        wire compartment-engine.js's spawn() into the existing zip-drop
-        path rather than building intake from scratch.
-
-    - id: OWF11_full_pipeline_restated
-      status: open
-      summary: >
-        James's fullest, most precise statement of the pipeline yet -
-        input (a prior chat, a project import, or reading a component)
-        -> intent (context) -> retrieval contract -> RAID -> compartment
-        -> RAID picks the real tool for the job (recall, introspect, or
-        any other real data-retrieval tool) -> copies relevant data into
-        the compartment -> synthesis -> agent parses the synthesized
-        result. Consistent with OWF4 (already mapped) - this is the
-        same pipeline restated with retrieval-tool selection now
-        explicit. Real pieces already confirmed to exist independently
-        this session: compartment-engine.js, RAID's router.js,
-        intent-classifier.js, lib/agent-tools' real tool set. Nothing
-        yet chains all of them through one real retrieval-contract
-        object end to end.
-
-    - id: OWF12_esm_to_cjs_needs_clarification
-      status: blocked_on_clarification
-      summary: >
-        James: "Rebuild Esm to cjs. I just want you to copy all of it
-        to its own folder." Genuinely ambiguous as stated - unclear
-        which real system/directory this targets (idearium is the one
-        real ESM-module system touched most this session -
-        package.json "type":"module" - but this wasn't named directly),
-        and "copy all of it to its own folder" could mean either "copy
-        first, convert the copy" (safe, reversible) or something else
-        entirely. Not guessed at or started - real risk of doing
-        something big and wrong on a guess here.
-
-    - id: OWF13_reusable_component_store_new_system_template
-      status: open
-      summary: >
-        James: a real, reusable "new system template" compartment,
-        built once as a real foundation, then reused every time a new
-        system gets created via spec-engine - "dramatically save
-        tokens" by never re-deriving the same boilerplate scaffold from
-        scratch. Connects directly to idearium's own spec-engine
-        (blocks.yaml, already real, already this session's own work)
-        and compartment-engine.js's real spawn() - a template
-        compartment could be a real, snapshotted starting point spawn()
-        clones instead of building fresh every time. Not yet designed or
-        started.
-
-    - id: OWF14_intelligence_synthesizes_gaps
-      status: open
-      summary: >
-        James: use the intelligence system (real, already built pattern-
-        crystallization engine, intelligence/index.js) to synthesize
-        .gap files (lib/gap-field.js, already a real .gap node type) -
-        i.e. treat gap patterns the same way event patterns already get
-        crystallized. Real, plausible, not yet checked against
-        intelligence/index.js's actual real scan targets (does it
-        already scan gap-related events, or only the ledger/event
-        streams checked so far this session) - needs a real read before
-        scoping further.
-
-    - id: OWF15_resonance_shape_multidimensional_retrieval
-      status: open, exploratory
-      summary: >
-        James: use resonance to find data "by rhyme" (matching pattern
-        or feel, not exact match), combine multiple real metrics of a
-        piece of data into a "shape," then find other data with a
-        similar shape - generalized into a real question about
-        combining primitives (resonance, liminal space, spatial,
-        topological) into one multidimensional field for retrieval.
-        Genuinely exploratory, not yet grounded against any specific
-        real code (idearium's own real resonanceWith field on ideas -
-        confirmed real, lib/node-schemas/idea.js - is the closest
-        existing real primitive, a single scalar relationship, not yet
-        a multidimensional shape-comparison system). Real idea, needs
-        its own dedicated design pass before any code, not a quick
-        add-on to something already built.
-
-    - id: OWF16_project_root_cleanup
-      status: open
-      summary: >
-        James: consolidate/migrate the loose .md files at project root,
-        move phase-related content to loom, move historical content to
-        each system's own real spec + git + versionium. Checked
-        directly: 19 real files at root right now
-        (ARCHITECTURE-BRAINSTORM-SYNTHESIS-2026-08-25.md, CHANGELOG-
-        SESSION.md, CHANGELOG.md, CLAUDE.md, CLEAR-GLASS-CAPABILITY-
-        BREAKDOWN-2026-08-23.md, CONFIRM-BUILD.md, CONSOLIDATION-
-        NOTES.md, GUARDIAN-ARCHIVE-MINING-2026-08-23.md, HANDOFF-
-        2026-07-11.md, HANDOFF-2026-08-24.md, MANIFEST.md, PATCH-
-        NOTES.md, README.md, SESSION-MANIFEST-2026-07-07.md, SESSION-
-        PROTOCOL.md, START.md, SYSTEM-MAP.md, TUTORIAL.md, VERIFICATION-
-        LOG.md). Real triage needed before moving anything - README.md/
-        CLAUDE.md are almost certainly meant to stay at root by
-        convention; HANDOFF-*/SESSION-MANIFEST-*/CHANGELOG-SESSION.md/
-        PATCH-NOTES.md/CONSOLIDATION-NOTES.md/VERIFICATION-LOG.md read
-        as clearly historical (git/versionium candidates); START.md/
-        TUTORIAL.md/SYSTEM-MAP.md/MANIFEST.md/the two dated capability-
-        breakdown docs are ambiguous, not yet triaged. Not started.
-
-    - id: OWF17_event_taxonomies
-      status: open, deferred once already
-      summary: >
-        James asked for this earlier this same session ("need the
-        events taxonomy for the ncp, gaurdian, userscripts, clearglass,
-        agent mesh"), explicitly deferred then as reference material,
-        not urgent, in favor of getting live dispatch working first.
-        Raised again here, now also naming ollama and co-pilot event
-        taxonomies specifically. Real, bounded, genuinely useful
-        reference-documentation work - a real candidate for an actual
-        near-term deliverable rather than deep architecture, once
-        prioritized.
-
-  sovereignty_reinforcement_2026_09_06:
-    description: >
-      James restates and sharpens data_structure_2026_09_06 (already
-      mapped): every system self-contained, all system-relevant code
-      lives in that system's own folder not spread around, all system
-      data lives in that system's own data folder, and cortex is
-      specifically named as "book keeper and relationship traversal for
-      the associative lattice" plus memory systems generally - the
-      clearest statement yet of cortex's real role as index, not owner.
-      No new content beyond data_structure_2026_09_06 - restated for
-      emphasis, kept here as confirmation the design hasn't changed.
-
-  data_structure_2026_09_06: |
-    James, direct and detailed -- a full self-contained per-system data
-    architecture. Stated as "a serious data structure session," not a
-    quick note -- deserves its own real design pass before building,
-    captured here in full so nothing is lost.
-
-    Principles, verbatim as discussed:
-    - every system's own data lives self-contained inside that system's
-      own folder -- no cross-system reach-in for storage (matches S5.7
-      low coupling, S5.9 every system is sovereign, already-real
-      conventions, not new ones)
-    - cortex's own memory systems (the causal graph, the lattice, vector
-      index) CONNECT to each system's own data folder rather than owning
-      a copy of that system's data -- cortex is the index, not a second
-      copy. James, direct -- "maybe cortex is the index that tracks all
-      of the data in the system, with all the memory systems and causal
-      graph."
-    - each system's data folder subdivides by DAY (a real folder per
-      calendar day), and within each day, by DATA TYPE. The real
-      sub-folders James named: ledger (real component-ledger entries for
-      that system, that day); nodes (real .node files -- component/hook/
-      wire unions, already real per lib/node-schemas/node.js -- for that
-      system); failure_modes (real .failure_mode files, each carrying
-      everything diagnostic + intelligence currently know about that
-      failure -- James, direct -- "with all the context and info the
-      diagnostic and intelligence system has. like a report." A real
-      upgrade from today's flat ndjson lib/ico.js appends -- this asks
-      for one file per failure, not one shared log); error.log (real,
-      per-system, every component's errors -- already exists in spirit,
-      autopilot's own real data/error.log -- this generalizes it to live
-      inside each system's own folder instead of one shared root-level
-      file); .gap files (real gap-field records, lib/gap-field.js,
-      already a real .gap node type -- each one INCLUDING its relevant
-      error.log data inline, not just a pointer to it).
-    - jaa/ -- each system's own real JAA database, every table it owns,
-      living inside that system's own data folder rather than one shared
-      cortex/data/cortex/memory store for everything. A real, significant
-      structural change from today's actual architecture, confirmed this
-      session: idearium's own manifest/chunk tables currently live in
-      cortex's shared store, not idearium's own folder -- JAA_DATA_DIR
-      override added this session as a stopgap, not a redesign.
-
-    status: mapped, not built -- a real architectural redesign of where
-    JAA tables physically live is bigger than a single pass; scope it
-    properly before touching cortex/memory/jaa-db.js's real DATA_DIR
-    convention that many real systems already depend on today.
