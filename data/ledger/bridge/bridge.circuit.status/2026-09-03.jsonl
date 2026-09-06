@@ -1,1 +1,0 @@
-{"uuid":"ae29a87e-423e-44e1-88cc-c2f43d48a4c8","system":"bridge","component":"bridge.circuit.status","action":"registered","status":"ok","tags":["bridge"],"detail":"Circuit breaker state per node","causedBy":"bridge","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139354}

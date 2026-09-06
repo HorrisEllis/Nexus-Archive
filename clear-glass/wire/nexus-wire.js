@@ -158,35 +158,13 @@ wireApp.post('/cg/cmd', async (req, res) => {
 
 // Hostile detection webhook
 wireApp.post('/hook/hostile', async (req, res) => {
-  const { level, type, tabId, recommendation, matchedScripts } = req.body;
+  const { level, type, tabId, recommendation } = req.body;
   console.log(`[Wire] Hostile: ${type} (${level}) tab=${tabId}`);
   if (level === 'high' || level === 'critical') {
     _proxy(CG_IPC_URL, 'POST', '/cmd', {
       eventType: 'context.fp.switch',
       data: { agentId: tabId, mode: 'firefox', reason: `hostile:${type}` },
     }, 5000).catch(() => {});
-  }
-  // §BUILT 2026-09-06 — same fingerprint-script → adblocker feedback as
-  // src/main/index.js's own /hook/hostile handler, but this file runs as
-  // a SEPARATE OS process from Clear Glass (checked: this is
-  // wireApp.listen, a standalone HTTP server, not something sharing
-  // memory with Clear Glass's Electron main process) — so unlike that
-  // in-process handler, this can't call learnHostileHost directly.
-  // Requiring plugins/adblocker here would silently create a second,
-  // disconnected module instance that no real session.webRequest filter
-  // ever reads — exactly the kind of dead wiring this whole integration
-  // pass was meant to fix, not add another instance of. Proxying through
-  // CG_IPC_URL (the same real POST /cmd path already used for
-  // context.fp.switch two lines up) reaches the live instance instead.
-  if (type === 'fingerprint-script' && Array.isArray(matchedScripts)) {
-    for (const scriptUrl of matchedScripts) {
-      let host;
-      try { host = new URL(scriptUrl).hostname; } catch (_) { continue; } // not parseable — skip, don't guess
-      _proxy(CG_IPC_URL, 'POST', '/cmd', {
-        eventType: 'adblocker.learn-host',
-        data: { host, reason: `fingerprint-script on tab ${tabId}` },
-      }, 5000).catch(() => {});
-    }
   }
   _postEvent('eros.hostile.detected', { level, type, tabId, recommendation });
   res.json({ ok: true });

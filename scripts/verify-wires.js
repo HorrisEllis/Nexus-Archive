@@ -35,7 +35,7 @@ const SURFACE_FILES = {
   copilot:      ['copilot/server.js'],
   architect:    ['architect/service.js'],
   ollama:       ['ollama/server.js'],
-  bridge:       ['bridge/server.js', 'bridge/router.js'],
+  // §RETIRED 2026-09-06 — bridge entry removed, files archived.
   emerge:       ['emerge-kernel.js', 'emerge-codegen-v2.js', 'emerge-ide.js'],
 };
 

@@ -226,160 +226,6 @@ async function diagOrchestrator() {
   }
 }
 
-async function diagBridge() {
-  console.log(hdr('bridge', C.cyan));
-  console.log(info('Trust relay — all cross-system requests routed through here'));
-  console.log(info('Port :9999  § boot order: bridge FIRST, everything else second\n'));
-
-  const ledger = (phase, status, detail) =>
-    postLedger('bridge', `bridge.diagnose.${phase}`, { status, detail, ts: Date.now() });
-
-  // ── File checks ────────────────────────────────────────────────────────────
-  const FILES = [
-    ['bridge/index.js',      'entry point (BootSequence)'],
-    ['bridge/server.js',     'HTTP :9999'],
-    ['bridge/ledger.js',     'JSONL append-only request ledger'],
-    ['bridge/identity.js',   'token issuance (MAX_TOKENS_PER_SYS=10)'],
-    ['bridge/registry.js',   'HeartbeatManager + fallback chains'],
-    ['bridge/router.js',     'ResolveGate→CircuitGate→DispatchGate→HoldGate'],
-    ['bridge/types.js',      '16 request types, 7 statuses'],
-  ];
-  console.log(C.bold + '  FILES:' + C.reset);
-  let fileFails = 0;
-  for (const [i, [file, desc]] of FILES.entries()) {
-    const ok_ = fileExists(file);
-    if (ok_) {
-      console.log(ok(step(i+1, FILES.length, `${file} — ${desc}`)));
-      await ledger(`file.${path.basename(file)}`, 'PASS');
-    } else {
-      console.log(fail(step(i+1, FILES.length, `${file} — MISSING (${desc})`)));
-      await ledger(`file.${path.basename(file)}`, 'FAIL', 'missing');
-      record('bridge', `file:${file}`, 'FAIL', 'missing');
-      fileFails++;
-    }
-  }
-
-  // ── Syntax check ───────────────────────────────────────────────────────────
-  console.log('');
-  for (const file of ['bridge/index.js','bridge/server.js','bridge/router.js']) {
-    if (!fileExists(file)) continue;
-    const r = spawnSync('node', ['--check', file], { cwd:ROOT, encoding:'utf8', timeout:5000 });
-    if (r.status === 0) {
-      console.log(ok(`  syntax: ${file}`));
-    } else {
-      const errLine = r.stderr?.split('\n').find(l=>l.trim()) || 'syntax error';
-      console.log(fail(`  syntax: ${file} — ${errLine}`));
-      record('bridge', `syntax:${file}`, 'FAIL', errLine);
-      // Named gap: §1.2 nothing silently fails
-      detail_error('bridge', 'F-BRIDGE-SYNTAX',
-        `syntax error in ${file}: ${errLine}`,
-        'Fix syntax error then restart bridge', null);
-    }
-  }
-
-  // ── Data dir ───────────────────────────────────────────────────────────────
-  const dataDir = path.join(ROOT, 'data', 'bridge');
-  try {
-    fs.mkdirSync(dataDir, { recursive:true });
-    console.log(ok('  data/bridge/ writable'));
-    await ledger('data.dir', 'PASS');
-  } catch(e) {
-    console.log(fail(`  data/bridge/ not writable: ${e.message}`));
-    await ledger('data.dir', 'FAIL', e.message);
-    record('bridge', 'data.dir', 'FAIL', e.message);
-  }
-
-  // ── nexus-connect postBridge ───────────────────────────────────────────────
-  console.log('');
-  try {
-    const nc = require(path.join(ROOT, 'nexus-connect'));
-    if (typeof nc.postBridge === 'function') {
-      console.log(ok('  nexus-connect: postBridge() exported'));
-      await ledger('nc.postBridge', 'PASS');
-    } else {
-      console.log(fail('  nexus-connect: postBridge() MISSING — bridge Phase 8 will fail'));
-      await ledger('nc.postBridge', 'FAIL', 'not exported');
-      record('bridge', 'nc.postBridge', 'FAIL', 'not exported');
-      detail_error('bridge', 'F-BRIDGE-NC-001',
-        'nc.postBridge is not a function — bridge Phase 8 (announce boot) will throw',
-        'Add postBridge() to nexus-connect.js exports', null);
-    }
-  } catch(e) {
-    console.log(fail(`  nexus-connect: require failed — ${e.message}`));
-  }
-
-  // ── Live checks ────────────────────────────────────────────────────────────
-  console.log('');
-  const hr = await probe(9999, '/health');
-  if (hr.ok) {
-    console.log(ok(`LIVE :9999  v${hr.data.version||'?'}  uptime=${hr.data.uptime?.toFixed(0)||'?'}s`));
-    await ledger('live.health', 'PASS');
-    record('bridge', 'live /health', 'PASS');
-
-    // Registration test
-    const rr = await probePost(9999, '/api/register', {
-      systemId:'diag-probe', appId:'diag-probe', secret:'nexus-orchestrator-internal-v1'
-    });
-    if (rr.ok) {
-      console.log(ok(`    register: token issued`));
-      await ledger('live.register', 'PASS');
-    } else {
-      console.log(warn(`    register: ${JSON.stringify(rr.data).slice(0,80)}`));
-      await ledger('live.register', 'WARN');
-    }
-
-    // Ledger endpoint
-    const lr = await probe(9999, '/ledger?n=5');
-    if (lr.ok) {
-      const rows = lr.data.entries || lr.data.rows || [];
-      console.log(ok(`    ledger: ${rows.length} recent entries`));
-      await ledger('live.ledger', 'PASS');
-    } else {
-      console.log(warn(`    ledger: endpoint missing or empty`));
-      await ledger('live.ledger', 'WARN');
-    }
-
-    // Registry state
-    const regR = await probe(9999, '/registry');
-    if (regR.ok) {
-      const sys = regR.data.systems || regR.data.nodes || {};
-      const online = Object.values(sys).filter(s=>s.online||s.status==='online').length;
-      console.log(ok(`    registry: ${Object.keys(sys).length} systems, ${online} online`));
-      await ledger('live.registry', 'PASS');
-    } else {
-      console.log(warn(`    registry: endpoint missing`));
-      await ledger('live.registry', 'WARN');
-    }
-
-    // SSE endpoint
-    const sseR = await probe(9999, '/sse');
-    if (sseR.status === 200) {
-      console.log(ok(`    SSE /sse: ready`));
-      await ledger('live.sse', 'PASS');
-    } else {
-      console.log(warn(`    SSE /sse: not responding (status ${sseR.status||'?'})`));
-      await ledger('live.sse', 'WARN');
-    }
-
-  } else {
-    console.log(fail('NOT RUNNING on :9999'));
-    console.log(info('  → Start: node bridge/index.js'));
-    console.log(info('  → Or:    node orchestrator/orchestrator.js  (boots all systems)'));
-    await ledger('live.health', 'FAIL', 'not running');
-    record('bridge', 'live /health', 'FAIL', 'not running');
-    // Named gap — §1.2
-    detail_error('bridge', 'F-BRIDGE-DOWN',
-      'Bridge not responding on :9999',
-      'node bridge/index.js  (must start before all other systems)',
-      null);
-    // Escalate immediately — bridge is §boot-order: FIRST
-    _escalateGap('bridge', 'F-BRIDGE-DOWN', 'bridge offline', 'high', {
-      fix: 'node bridge/index.js',
-      note: '§AXIOM boot order — bridge must be first'
-    });
-  }
-}
-
 async function diagCortex() {
   console.log(hdr('cortex', C.cyan));
   console.log(info('Source of truth — 28 JAA tables, event_log, gap engine, memory'));
@@ -1131,7 +977,7 @@ async function runAll() {
     // §FIX 2026-07-30 — found in James's real boot log. autopilot's
     // stall-diagnostic invokes `cli/diagnose.js <kernel>` for whichever kernel
     // failed its gate, but SYSTEM_MAP only covers 5 of the 13 supervised
-    // kernels. So for bridge, diagnostic, architect, eravos, ollama-bridge,
+    // kernels. So for diagnostic, architect, eravos, ollama-bridge,
     // copilot, loom and clear-glass the diagnostic printed "Unknown system"
     // and exited 1 — meaning the one moment it was designed for produced NO
     // diagnosis at all. It happened exactly as designed and told us nothing.
@@ -1178,7 +1024,7 @@ runAll().catch(e => { console.error(e); process.exit(1); });
 //   L1: health probe (port alive, HTTP 200)
 //   L2: deep probe (routes, queue depth, latency, gap count)
 //   L3: file integrity (required files, syntax, known fault patterns)
-//   L4: cross-system integrity (dependency chain, bridge routing)
+//   L4: cross-system integrity (dependency chain, RAID routing)
 //   L5: agent dispatch (send gap summary to guardian → agent for repair)
 //
 // §1.2 Nothing silently fails — every gap is named, typed, logged.
@@ -1188,7 +1034,7 @@ runAll().catch(e => { console.error(e); process.exit(1); });
 
 const ALL_PORTS = [
   { system:'orchestrator', port:9000, health:'/health',  critical:true  },
-  { system:'bridge',       port:9999, health:'/health',  critical:true  },
+  // §RETIRED 2026-09-06 — bridge system removed.
   { system:'cortex',       port:3748, health:'/health',  critical:true  },
   { system:'guardian',     port:7820, health:'/health',  critical:false },
   { system:'architect',    port:3747, health:'/health',  critical:false },
@@ -1234,7 +1080,6 @@ async function sweepPorts(targets = ALL_PORTS) {
 async function deepProbe(port, system) {
   const routes = {
     orchestrator: ['/health','/api/recall?n=5'],
-    bridge:       ['/health','/registry','/ledger?n=5'],
     cortex:       ['/health','/api/events?n=5','/api/gaps?status=open'],
     guardian:     ['/health','/jobs','/providers','/seam/queues','/lab'],
     architect:    ['/health','/api/hooks','/api/snr'],
@@ -1270,9 +1115,6 @@ const INTEGRITY_MANIFEST = [
   { file:'orchestrator/orchestrator.js', system:'orchestrator', critical:true,  check: src => !src.includes('require is not defined') },
   { file:'package.json',             system:'orchestrator', critical:true,  check: src => src.includes('"type": "commonjs"') || !src.includes('"type"') },
   { file:'nexus-connect.js',         system:'orchestrator', critical:true,  check: src => src.includes('postBridge') },
-  // Bridge
-  { file:'bridge/server.js',         system:'bridge',       critical:true,  check: src => src.includes('BRIDGE_PORT') },
-  { file:'bridge/ledger.js',         system:'bridge',       critical:true,  check: src => src.includes('createBridgeLedger') },
   // Guardian
   { file:'guardian/server.js',       system:'guardian',     critical:true,  check: src => {
     const hasWrite = src.includes('function _write(res, data)');
@@ -1376,14 +1218,11 @@ async function recursiveDiagnose(system, opts = {}) {
   // L4: Cross-system dependency check
   if (maxLevel >= 4) {
     log('L4: cross-system deps', C.cyan);
-    // Check cortex → bridge dependency
-    if (system === 'cortex') {
-      const bridgeHealth = await probe(9999, '/health');
-      if (!bridgeHealth.ok) {
-        _namedGap('bridge', 'F-BRIDGE-DOWN-FROM-CORTEX',
-          'Cortex depends on Bridge but Bridge is offline', 'high');
-      }
-    }
+    // §RETIRED 2026-09-06 — Bridge removed (James: "it has to go"). This
+    // check treated Bridge being offline as a real cross-system failure
+    // for cortex, but no real functional dependency was ever confirmed
+    // (checked directly earlier the same session this was retired) — a
+    // false, misleading high-severity gap on every run otherwise.
     // Check guardian → cortex
     if (system === 'guardian') {
       const cortexHealth = await probe(3748, '/health');

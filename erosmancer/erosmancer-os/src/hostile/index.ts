@@ -50,11 +50,6 @@ export interface ThreatSignal {
   tabId:      string;
   evidence:   string;
   raw?:       unknown;
-  // §BUILT 2026-09-06 — the actual matched third-party script URL(s), when
-  // this signal's pattern has extractHosts (currently: fingerprint-script
-  // only). Absent for page-content-based patterns (cloudflare-challenge,
-  // recaptcha, honeypot, etc.) — those have no single responsible host.
-  matchedScripts?: string[];
 }
 
 export interface ThreatState {
@@ -79,13 +74,6 @@ const THREAT_PATTERNS: Array<{
   level:    ThreatLevel;
   score:    number;
   match:    (data: ThreatInput) => boolean;
-  // §BUILT 2026-09-06 — optional, only meaningful for patterns that match
-  // against a specific third-party script URL (as opposed to page HTML/
-  // title/status, which have no single host to hold responsible). Returns
-  // the actual matched script src(s) so a consumer (e.g. the adblocker
-  // feedback loop) can extract a real hostname to block — the page's own
-  // `url` is NOT that host, and evidence strings alone don't expose it.
-  extractHosts?: (data: ThreatInput) => string[];
 }> = [
   // Cloudflare challenge page
   {
@@ -139,19 +127,13 @@ const THREAT_PATTERNS: Array<{
       /too many requests/i.test(title ?? ""),
   },
 
-  // Browser fingerprinting libraries — the one pattern type where the
-  // match is genuinely a specific third-party script, not page content,
-  // so it's the one pattern where extractHosts is meaningful.
+  // Browser fingerprinting libraries
   {
     type:  "fingerprint-script",
     level: "low",
     score: 25,
     match: ({ scripts }) =>
       (scripts ?? []).some((s) =>
-        /fp2\.js|fingerprintjs|datadome|px\.gif|perimeterx|distil|botd/i.test(s)
-      ),
-    extractHosts: ({ scripts }) =>
-      (scripts ?? []).filter((s) =>
         /fp2\.js|fingerprintjs|datadome|px\.gif|perimeterx|distil|botd/i.test(s)
       ),
   },
@@ -279,7 +261,6 @@ export class HostileDetection extends EventEmitter<HostileDetectionEvents> {
 
     for (const pattern of THREAT_PATTERNS) {
       if (pattern.match(input)) {
-        const matchedScripts = pattern.extractHosts?.(input);
         const signal: ThreatSignal = {
           id:       `sig-${Math.random().toString(36).slice(2, 10)}`,
           ts:       Date.now(),
@@ -288,7 +269,6 @@ export class HostileDetection extends EventEmitter<HostileDetectionEvents> {
           tabId,
           evidence: this.buildEvidence(pattern.type, input),
           raw:      undefined,
-          ...(matchedScripts && matchedScripts.length > 0 ? { matchedScripts } : {}),
         };
         newSignals.push(signal);
       }

@@ -167,14 +167,33 @@ function createDispatcher(deps) {
     }
 
     // Push via SSE — userscript's EventSource.onmessage receives it
-    ncp.push(job.provider, {
+    // §FIXED 2026-09-06 — see ncp.js's own _write()/push() comments for
+    // the full trace. This return value used to be silently discarded —
+    // ncp.isConnected() (the check above) can say true one moment and
+    // the actual write can still fail the next if the socket died in
+    // between (exactly what a disconnect/reconnect cycle produces), and
+    // nothing here ever noticed. A job that reaches zero real clients is
+    // functionally identical to "not connected" from the job's own point
+    // of view, so it gets the exact same real recovery path — requeued,
+    // a fresh tab requested — instead of being falsely marked delivered
+    // with nothing left to ever retry it.
+    const sent = ncp.push(job.provider, {
       type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
       provider: job.provider, prompt: job.prompt, content: job.content,
       tools: job.tools || null,
       hat: job.hat || null,
     });
+    if (sent === 0) {
+      if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
+      pendingQueue.get(job.provider).push(job);
+      updateJob(job.id, { status: 'queued', queuedAt: Date.now(),
+        queueReason: `NCP reported connected for ${job.provider} but the real write reached zero clients — socket likely stale` });
+      console.log(`[guardian] ${job.id} → ${job.provider}: NCP said connected, real write reached 0 clients — requeued, not falsely marked delivered`);
+      bus.emit('guardian.job.queued', { jobId: job.id, provider: job.provider, reason: 'stale_socket' });
+      return false;
+    }
     updateJob(job.id, { status: 'delivered', deliveredAt: Date.now() });
-    console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP`);
+    console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP (${sent} client${sent === 1 ? '' : 's'})`);
     try {
       const alk = require('../../intelligence/alk');
       alk.record({

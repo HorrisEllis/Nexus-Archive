@@ -140,7 +140,9 @@ const SNR_WINDOW = 50;
 // as the event ledger path, same root cause, fixed together. The flat file
 // this bug describes is now only read ONCE, as a migration source (below) —
 // left on disk afterward, untouched, as an archive (§7.4).
-const DATA_DIR = join(__dir, '../data');
+// §FIXED 2026-09-06 — same real fix as idearium/api/index.js's
+// IDEARIUM_DATA_DIR (see that file's own comment for the full finding).
+const DATA_DIR = process.env.IDEARIUM_DATA_DIR || join(__dir, '../data');
 const DB_FILE  = join(DATA_DIR, 'idearium.json');
 
 function ensureDataDir() {

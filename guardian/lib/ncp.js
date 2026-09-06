@@ -73,8 +73,22 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   function _isStale(client) { return (Date.now() - client.lastHeartbeat) > STALE_MS; }
 
   // §1.2 — SSE write helper. try/catch: never crash on broken pipe.
+  // §FIXED 2026-09-06 — James, live: "when switching agents to chatgpt,
+  // it doesnt even connect to the ncp anymore. it routes to it. but
+  // doesnt do anything beyond that." Traced this to its real root cause
+  // from an actual boot log: guardian created and dispatched a real
+  // /ping job to chatgpt (job 8d24a3ab), logged "dispatched ... via
+  // NCP", and that job never completes anywhere in the log — no ack, no
+  // error, nothing. Ever. Traced why: this function swallowed ANY
+  // res.write() failure silently (correct intent — a broken pipe must
+  // never crash guardian — but with zero way for a caller to tell "the
+  // write actually reached a live client" apart from "the client's
+  // socket was already dead and the write silently no-op'd"). push()
+  // below counted every attempt as a success regardless of whether this
+  // returned true. Returns the real outcome now so callers can finally
+  // tell the difference.
   function _write(res, data) {
-    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(_) {}
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); return true; } catch(_) { return false; }
   }
 
   /**
@@ -290,8 +304,12 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     let sent = 0;
     for (const [key, client] of _clients) {
       if (client.provider === provider) {
-        _write(client.res, data);
-        sent++;
+        // §FIXED 2026-09-06 — was `sent++` unconditionally (see _write's
+        // own comment above for the full trace). Now only counts a
+        // write that actually reached a live socket, so a caller can
+        // finally tell "I sent this to N real clients" from "I attempted
+        // N writes, and every single one silently failed."
+        if (_write(client.res, data)) sent++;
       }
     }
     return sent;
@@ -304,8 +322,10 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     const key = `${provider}:${tabId}`;
     const client = _clients.get(key);
     if (!client) return false;
-    _write(client.res, data);
-    return true;
+    // §FIXED 2026-09-06 — same real fix as push() above: was returning
+    // true unconditionally once a client was found, regardless of
+    // whether the write itself actually reached it.
+    return _write(client.res, data);
   }
 
   /**
@@ -350,6 +370,17 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   const _staleSweep = setInterval(() => {
     for (const [key, client] of _clients) {
       if (!_isStale(client)) continue;
+      // §FIX 2026-09-03 — James: "build what gets the pipeline working."
+      // Traced this several turns back and never patched it: this loop
+      // forgot the client server-side (_clients.delete) but never closed
+      // the real socket. The browser-side EventSource never saw an error,
+      // so its own real, already-correct reconnect logic (userscript-
+      // chatgpt.js's _es.onerror -> exponential backoff) never fired.
+      // Guardian said "disconnected" forever; the tab never knew and
+      // never recovered. Same close-before-forget pattern handleChannel
+      // already uses two cases above for "same key reconnects" (stale.res.end()) —
+      // this is that exact bug's sibling, not a new mechanism.
+      try { client.res.end(); } catch(_) {}
       _clients.delete(key);
       busEmit?.('ncp.client.stale', { provider: client.provider, tabId: client.tabId, key, lastHeartbeat: client.lastHeartbeat }, 'WARN');
       onDisconnect?.({ provider: client.provider, tabId: client.tabId, key, reason: 'stale' });

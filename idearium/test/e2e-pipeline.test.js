@@ -82,7 +82,14 @@ if (repoView && repoView.files.length) {
   repoLayer.writeFile(repoUuid, firstFile.path, rf.content); // revert, keep repeated runs clean
 
   console.log('\n── Stage 7: materialize to real files on disk ──');
-  const outDir = path.join(IDEARIUM_ROOT, '.e2e-materialized-tmp');
+  // §FIXED 2026-09-06 — same real isolation fix as elsewhere in this
+  // session's pass: respects IDEARIUM_DATA_DIR when a caller (like
+  // run-e2e-pipeline-isolated.cjs) sets it, so this scratch output lands
+  // in a real, disposable temp dir during an isolated run instead of
+  // always inside the real idearium/ tree.
+  const outDir = process.env.IDEARIUM_DATA_DIR
+    ? path.join(process.env.IDEARIUM_DATA_DIR, '.e2e-materialized-tmp')
+    : path.join(IDEARIUM_ROOT, '.e2e-materialized-tmp');
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
   let written = 0;

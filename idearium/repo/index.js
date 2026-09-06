@@ -59,7 +59,7 @@ export class RepoLayer {
     // a RepoLayer constructed before that load finishes still sees it once
     // ready, instead of permanently caching a null snapshot).
     this._seGetter = typeof specEngine === 'function' ? specEngine : () => specEngine;
-    this.dataDir = dataDir || path.join(__dirname, '..', 'data');
+    this.dataDir = dataDir || process.env.IDEARIUM_DATA_DIR || path.join(__dirname, '..', 'data');
     this.reposFile = path.join(this.dataDir, REPOS_FILE_NAME);
     this.repos = this._load();
   }
@@ -111,7 +111,24 @@ export class RepoLayer {
     // error: return the existing repo instead of indexing a byte-identical
     // duplicate. This is the free-fork lever in reverse — content that
     // already exists doesn't need a second index entry either.
-    const existing = this.repos.repos.find(r => r.rootHash === manifest.rootHash && r.status !== 'archived');
+    //
+    // §BUG FIXED 2026-09-03 — found while wiring repo-first creation
+    // (James: "create a repository, then send each chunk..."). computeRootHash
+    // hashes only {sectionId, content} per chunk (spec-engine/index.js's
+    // _hashChunk) — nothing spec-identity-bearing. A brand-new spec has
+    // every chunk's content === null until built, so EVERY fresh spec built
+    // from the same block set (blocks.yaml's standard 10) computes the
+    // identical rootHash at creation, regardless of name or uuid. Ingesting
+    // a repo immediately after spec creation (chunks all still PENDING)
+    // would have hit this dedup check on the very first empty spec ever
+    // made and silently reused that ONE repo for every subsequent new spec
+    // forever — never actually creating a distinct repo, no error, no
+    // warning. Dedup is only meaningful once there's real content to be a
+    // duplicate OF; an all-pending manifest has none, so it never qualifies.
+    const hasRealContent = manifest.chunks.some(c => c.status === 'complete' && c.content);
+    const existing = hasRealContent
+      ? this.repos.repos.find(r => r.rootHash === manifest.rootHash && r.status !== 'archived')
+      : null;
     if (existing && !parent) {
       console.log(`[idearium/repo] content dedup — "${name}" matches existing repo ${existing.uuid.slice(0,8)} (rootHash ${manifest.rootHash.slice(0,12)}…), reusing`);
       return { repo: existing, ideaUuid: existing.ideaUuid, specUuid: existing.specUuid, deduped: true };

@@ -17,7 +17,7 @@
  *   - Ledger taxonomy (every named ledger and its authority)
  *
  * §5.1  Everything has a UUID — every contract entry has a UUID.
- * §5.2  Everything implements the bridge — all systems listed here.
+ * §5.2  Everything routes through RAID — all systems listed here.
  * §6.1  Documentation generated from proof — this file is the proof layer.
  * §7.0  Event ontology separation — observational vs authoritative events named.
  * §1.2  Nothing silently fails — every failure mode named and classified.
@@ -52,7 +52,7 @@ const AXIOMS = Object.freeze({
   '§4.2':  'Fix bugs pre-emptively.',
   '§4.3':  'Enterprise grade. Military grade security.',
   '§5.1':  'Everything has a UUID, hook, and event bus registration.',
-  '§5.2':  'Everything implements the bridge.',
+  '§5.2':  'Everything routes through RAID.',
   '§5.3':  'No monkey patches — full system patches only.',
   '§5.4':  'Versions persist across the entire project.',
   '§5.5':  'What does not exist must be built.',
@@ -73,10 +73,10 @@ const AXIOMS = Object.freeze({
   '§8.2':  'Nothing passes the idea gate without hostile review.',
   '§8.3':  'SISO and Jaa are load-order prerequisites.',
   // Session-established rules
-  '§BRIDGE-01': 'Bridge is the only write authority for requests.',
-  '§BRIDGE-02': 'Ledger write before dispatch. Always.',
-  '§BRIDGE-03': 'Held requests never leave the queue.',
-  '§BRIDGE-04': 'MAX_ROUTE_DEPTH = 3. routeHistory written on every hop.',
+  '§RAID-01': 'RAID is the only write authority for requests.',
+  '§RAID-02': 'Ledger write before dispatch. Always.',
+  '§RAID-03': 'Held requests never leave the queue.',
+  '§RAID-04': 'MAX_ROUTE_DEPTH = 3. routeHistory written on every hop.',
   '§IDENTITY-01': 'One UUID per request event. Assigned by Bridge.',
   '§IDENTITY-02': 'One SHA-256 hash per content artifact.',
   '§IDENTITY-03': 'Session UUID chain links prompts within a conversation.',
@@ -121,17 +121,7 @@ const SYSTEMS = Object.freeze({
     secret:      'nexus-orchestrator-internal-v1',
     bootOrder:   0,
   },
-  BRIDGE: {
-    id:          'bridge',
-    uuid:        'nexus-bridge-v1-0000-4000-0000-000000000001',
-    port:        9999,
-    healthPath:  '/health',
-    role:        'Trust relay. Identity, routing, durable request queue.',
-    bootFile:    'bridge/index.js',
-    ledger:      'data/bridge/ledger/requests.jsonl',
-    secret:      'nexus-bridge-internal-v1',
-    bootOrder:   1,
-  },
+  // §RETIRED 2026-09-06 — bridge system entry removed (James: "it has to go"). See docs/AXIOMS-v3.1.md §5.2/§9.1.
   CORTEX: {
     id:          'cortex',
     uuid:        'cortex-boot-v2-0000',
@@ -272,20 +262,6 @@ const EVENTS = Object.freeze({
   },
 
   // ── Bridge lifecycle ───────────────────────────────────────────────────────
-  BRIDGE: {
-    BOOTED:           'bridge.booted',
-    SYSTEM_HANDSHAKE: 'bridge.system.handshake',
-    REQUEST_CREATED:  'bridge.request.created',
-    REQUEST_UPDATED:  'bridge.request.updated',
-    EVENT:            'bridge.event',
-    TAGS_UPDATED:     'bridge.tags.updated',
-    TAGS_WRITTEN:     'bridge.tags.written',
-    SSE_READY:        'bridge.sse.ready',
-    CIRCUIT_OPEN:     'bridge.circuit.open',
-    CIRCUIT_CLOSED:   'bridge.circuit.closed',
-    HELD_DRAIN:       'bridge.held.drain',
-  },
-
   // ── Orchestrator ───────────────────────────────────────────────────────────
   ORCHESTRATOR: {
     BOOTED:           'orchestrator.booted',
@@ -507,19 +483,15 @@ const EDGES = Object.freeze({
 
   // Named edges — every connection between systems
   USERSCRIPT_GUARDIAN:   { from: 'userscript',   to: 'guardian',     protocol: 'NCP/SSE+fetch', port: 7820, auth: 'none',         bidirectional: true },
-  USERSCRIPT_BRIDGE:     { from: 'userscript',   to: 'bridge',       protocol: 'HTTP',          port: 9999, auth: 'BRIDGE_TOKEN',  bidirectional: false },
-  GUARDIAN_BRIDGE:       { from: 'guardian',     to: 'bridge',       protocol: 'HTTP',          port: 9999, auth: 'BRIDGE_TOKEN',  bidirectional: false },
   GUARDIAN_CORTEX:       { from: 'guardian',     to: 'cortex',       protocol: 'HTTP',          port: 3748, auth: 'none',         bidirectional: false },
   GUARDIAN_ORCHESTRATOR: { from: 'guardian',     to: 'orchestrator', protocol: 'HTTP',          port: 9000, auth: 'none',         bidirectional: false },
-  CORTEX_BRIDGE_SSE:     { from: 'cortex',       to: 'bridge',       protocol: 'SSE',           port: 9999, auth: 'none',         bidirectional: false, note: 'cortex subscribes to bridge SSE for requests projection' },
-  ORCHESTRATOR_BRIDGE:   { from: 'orchestrator', to: 'bridge',       protocol: 'SSE+HTTP',      port: 9999, auth: 'BRIDGE_TOKEN',  bidirectional: false },
   ORCHESTRATOR_CORTEX:   { from: 'orchestrator', to: 'cortex',       protocol: 'HTTP',          port: 3748, auth: 'none',         bidirectional: false },
   ORCHESTRATOR_GUARDIAN: { from: 'orchestrator', to: 'guardian',     protocol: 'HTTP',          port: 7820, auth: 'none',         bidirectional: false },
   ORCHESTRATOR_IDEARIUM: { from: 'orchestrator', to: 'idearium',     protocol: 'HTTP',          port: 4800, auth: 'none',         bidirectional: false },
   IDEARIUM_GUARDIAN:     { from: 'idearium',     to: 'guardian',     protocol: 'HTTP',          port: 7820, auth: 'none',         bidirectional: false },
   EMERGE_OLLAMA:         { from: 'emerge',       to: 'ollama',       protocol: 'HTTP',          port: 11434,auth: 'none',         bidirectional: false },
   GUARDIAN_OLLAMA:       { from: 'guardian',     to: 'ollama',       protocol: 'HTTP',          port: 11434,auth: 'none',         bidirectional: false },
-  UDP_PULSE:             { from: '*',            to: 'bridge',       protocol: 'UDP',           port: 7777, auth: 'signed_pulse',  bidirectional: false, note: 'all systems broadcast pulse' },
+  UDP_PULSE:             { from: '*',            to: 'orchestrator', protocol: 'UDP',           port: 7777, auth: 'signed_pulse',  bidirectional: false, note: 'all systems broadcast pulse — orchestrator receives, not bridge (retired)' },
 
   // Edge failure modes
   FAILURE_MODES: {
@@ -653,15 +625,7 @@ const BOTTLENECKS = Object.freeze({
 
 const LEDGERS = Object.freeze({
 
-  BRIDGE_REQUESTS: {
-    id:        'bridge_requests',
-    file:      'data/bridge/ledger/requests.jsonl',
-    authority: 'bridge',
-    write_rule: 'Bridge only. No direct writes.',
-    type:      'append_only',
-    schema:    'RequestSchema (bridge/types.js)',
-    projection: 'cortex.jaa.requests',
-  },
+  // §RETIRED 2026-09-06 — bridge_requests table removed with Bridge.
 
   ORCHESTRATOR: {
     id:        'orchestrator',
@@ -779,45 +743,7 @@ const LEDGERS = Object.freeze({
 const INTERACTION_CONTRACTS = Object.freeze({
 
   // Bridge interaction contract
-  BRIDGE: {
-    id:       'bridge-v1',
-    uuid:     'nexus-bridge-contract-v1-0000-4000-0000-000000000001',
-    version:  '1.0.0',
-    port:     9999,
-    role:     'Trust-aware request relay with persistence and degradation management',
-    health:   { method: 'GET', path: '/health', returns: { ok: true, sessions: 0, pendingRequests: 0 } },
-    routes: [
-      { method: 'POST', path: '/bridge/handshake',  auth: 'system_secret',  desc: 'System boot identity handshake → token' },
-      { method: 'POST', path: '/bridge/request',    auth: 'bridge_token',   desc: 'Submit cross-system request → UUID + status' },
-      { method: 'POST', path: '/bridge/event',      auth: 'optional_token', desc: 'Fire-and-forget event → ledger record' },
-      { method: 'POST', path: '/bridge/broadcast',  auth: 'optional_token', desc: 'Broadcast to all SSE subscribers' },
-      { method: 'POST', path: '/bridge/tags',       auth: 'optional_token', desc: 'Tag any entity by UUID' },
-      { method: 'POST', path: '/bridge/revoke',     auth: 'bridge_token',   desc: 'Revoke a session token' },
-      { method: 'GET',  path: '/bridge/requests',   auth: 'none',           desc: 'Query request ledger' },
-      { method: 'GET',  path: '/bridge/requests/:uuid', auth: 'none',       desc: 'Single request by UUID' },
-      { method: 'GET',  path: '/bridge/registry',   auth: 'none',           desc: 'Live system health map' },
-      { method: 'GET',  path: '/bridge/circuits',   auth: 'none',           desc: 'Circuit breaker states' },
-      { method: 'GET',  path: '/bridge/stats',      auth: 'none',           desc: 'Request ledger statistics' },
-      { method: 'GET',  path: '/bridge/contract',   auth: 'none',           desc: 'This contract' },
-      { method: 'GET',  path: '/bridge/sse',        auth: 'none',           desc: 'SSE stream of bridge events' },
-      { method: 'GET',  path: '/health',            auth: 'none',           desc: 'Bridge health' },
-    ],
-    siso: {
-      emits:    Object.values(EVENTS.BRIDGE),
-      consumes: [],
-    },
-    valid_request_types: [
-      'job.dispatch', 'job.complete', 'memory.ingest', 'artifact.store',
-      'spec.build', 'gap.open', 'gap.resolve', 'idea.create', 'snapshot.push',
-      'seam.deliver', 'event.emit', 'health.check', 'intake.file',
-      'bridge.handshake', 'bridge.ping', 'bridge.sync',
-    ],
-    request_statuses: ['pending', 'dispatched', 'fulfilled', 'failed', 'held', 'cancelled', 'quarantined'],
-    max_route_depth:  3,
-    max_attempts:     5,
-    circuit_breaker:  { fail_threshold: 3, reset_ms: 30000 },
-  },
-
+  // §RETIRED 2026-09-06 — bridge interaction contract removed.
   // Seam contracts (from seams/seam-contracts.js)
   SEAM: {
     CORTEX:   { name: 'CORTEX_CONTRACT',      between: ['forge', 'cortex-3748'] },
@@ -832,7 +758,6 @@ const INTERACTION_CONTRACTS = Object.freeze({
     'Respond to GET /health within 3000ms',
     'Emit UDP pulse on :7777 every 10s',
     'Register with orchestrator on boot via POST :9000/api/register',
-    'Handshake with Bridge on boot via POST :9999/bridge/handshake',
     'Write boot record to event_log on successful start',
     'Never call another system directly — always via Bridge or nexus-connect',
     'Every request carries X-Bridge-UUID if it crossed Bridge',
@@ -864,23 +789,7 @@ const VERIFICATION_CONTRACTS = Object.freeze({
     { id: 'V-UNI-10', check: 'Version number matches MANIFEST.json version field' },
   ],
 
-  BRIDGE: [
-    { id: 'V-BRG-01', check: 'POST /bridge/handshake with valid secret returns { ok:true, token }' },
-    { id: 'V-BRG-02', check: 'POST /bridge/handshake with invalid secret returns 401' },
-    { id: 'V-BRG-03', check: 'POST /bridge/request creates ledger entry before HTTP response' },
-    { id: 'V-BRG-04', check: 'POST /bridge/request to offline target sets status=held' },
-    { id: 'V-BRG-05', check: 'Held requests drain when target comes online' },
-    { id: 'V-BRG-06', check: 'routeHistory grows by 1 on each fallback hop' },
-    { id: 'V-BRG-07', check: 'MAX_ROUTE_DEPTH=3 enforced — 4th hop returns FAILED' },
-    { id: 'V-BRG-08', check: 'Circuit breaker opens after 3 failures to same target' },
-    { id: 'V-BRG-09', check: 'Circuit breaker half-opens after 30s' },
-    { id: 'V-BRG-10', check: 'GET /bridge/requests returns array' },
-    { id: 'V-BRG-11', check: 'GET /bridge/registry shows all known systems' },
-    { id: 'V-BRG-12', check: 'GET /bridge/sse returns text/event-stream' },
-    { id: 'V-BRG-13', check: 'SSE emits bridge.request.created on new request' },
-    { id: 'V-BRG-14', check: 'Cortex requests table updated after bridge.request.created event' },
-  ],
-
+  // §RETIRED 2026-09-06 — bridge verification contract removed.
   CORTEX: [
     { id: 'V-CTX-01', check: 'GET /health returns { status: ok, jaa: { counts } }' },
     { id: 'V-CTX-02', check: 'POST /api/event writes to event_log JAA table' },
@@ -920,7 +829,6 @@ const VERIFICATION_CONTRACTS = Object.freeze({
     { id: 'V-ORC-04', check: 'GET /api/registry returns live heartbeat map' },
     { id: 'V-ORC-05', check: 'GET /sse returns unified SSE stream' },
     { id: 'V-ORC-06', check: 'Watchdog detects system offline within 15s' },
-    { id: 'V-ORC-07', check: 'GET /api/bridge/* proxies to Bridge :9999' },
     { id: 'V-ORC-08', check: '_bootSystems invoked after server listen' },
     { id: 'V-ORC-09', check: 'Bridge added as first in boot sequence' },
     { id: 'V-ORC-10', check: 'cliRequests() and cliTag() defined and callable' },

@@ -1,110 +1,32 @@
 'use strict';
 /**
- * loom/schema/definitions.js — LOOM Phase 131: component/seam/hook/wire schema
+ * loom/schema/definitions.js — LOOM Phase 131: component/seam/hook/wire
+ * schema.
  * comp_id: nexus.loom.schema
  * UUID: nexus-loom-schema-v1-0000-2026-0701-jamesbrooks-001
  * Spec source: NEXUS-LATTICE-COGNITION-ROADMAP-v0.2.md, phase-map entry 131
- * Status: schema/config layer — step 1 of 5 in the stated build order
- *         (schema/config -> CLI -> API -> interaction contract -> UI).
- *         Nothing past step 1 exists yet. This file IS step 1.
  *
- * Four primitives, matching the four nouns you named. Each mirrors the
- * shape architect/registry-components.js already uses for its own
- * per-component declarations (id, namespace, version, tags) so LOOM
- * doesn't invent a fifth convention next to Architect's existing one.
+ * §SPLIT 2026-09-03 — James: "look at all the rest. all schemas should be
+ * seperated." Was a 5-schema monolith (component/seam/hook/wire/concern
+ * all defined inline in this one file) — same shape lib/node-schemas.js
+ * was before its own split earlier this session. This file is now a real
+ * thin loader, same real export names as before (both real consumers —
+ * lib/node-schemas/component.js's destructure, and anything else that
+ * requires this file — keep working unchanged), sourcing each schema
+ * from its own file under this directory instead of defining it inline.
  *
- * Wire "type" is intentionally an open string, not a closed enum — per
- * the Architect spec's own authorial intent: "type (api, event bus,
- * callto, direct and any invention you can think of, like webserver.)"
- * KNOWN_HOOK_TYPES below is a *seed list*, not a ceiling. New types are
- * added by registering them, not by editing an enum.
+ * Four primitives, matching the four nouns James named, plus concern
+ * (added 2026-07-14). Each mirrors the shape architect/registry-
+ * components.js already uses for its own per-component declarations
+ * (id, namespace, version, tags) so LOOM doesn't invent a fifth
+ * convention next to Architect's existing one.
  */
 
-// ── Known hook/wire types — seed list, extensible, never closed ────────────
-const KNOWN_HOOK_TYPES = Object.freeze([
-  'api',        // REST/HTTP surface
-  'event_bus',  // pub/sub, SSE fanout
-  'callto',     // direct function/method invocation across a boundary
-  'direct',     // in-process direct reference, no boundary crossing
-  'webserver',  // a hook that itself serves, not just calls
-  'cli',        // command-line surface
-]);
-
-// ── Component — a named, versioned unit of the system ──────────────────────
-// Mirrors architect/registry-components.js's _c() shape.
-const COMPONENT_SCHEMA = Object.freeze({
-  requiredKeys: ['id', 'namespace', 'name', 'version'],
-  types: {
-    id: 'string', namespace: 'string', name: 'string', version: 'string',
-  },
-  // uuid is required too, but enforced by the loom.uuid-present Axiom,
-  // not duplicated here — see axioms.js. Two mechanisms guarding one
-  // field means the first one to run silently decides the reason code;
-  // the Axiom runs first in driver.js, so it's the single authority.
-});
-
-// ── Seam — a named boundary a component exposes or crosses ─────────────────
-// "Seam" here means what it means across the rest of NEXUS's own docs
-// (grep hits in cortex/guardian/bridge hook files, per phase 61's note
-// on backfilling seam.componentIds) — a declared crossing point, not a
-// synonym for hook. A hook is *how* you cross it; a seam is *that* a
-// crossing point exists and which component owns it.
-const SEAM_SCHEMA = Object.freeze({
-  requiredKeys: ['id', 'component_id', 'name', 'kind'],
-  types: {
-    id: 'string', component_id: 'string', name: 'string', kind: 'string',
-  },
-  // kind: 'ingress' | 'egress' | 'bidirectional' — checked by axiom,
-  // not baked into the type table (Gate.schema only checks JS typeof).
-  // uuid enforced by loom.uuid-present Axiom, same reasoning as above.
-});
-
-// ── Hook — a named, typed wire endpoint on one component ───────────────────
-// Directly the Architect spec's own primitive: "a named, typed wire
-// between two system surfaces." A hook is one end of that; a wire (below)
-// is the pairing of two hooks.
-const HOOK_SCHEMA = Object.freeze({
-  requiredKeys: ['id', 'component_id', 'name', 'type', 'direction'],
-  types: {
-    id: 'string', component_id: 'string', name: 'string',
-    type: 'string', direction: 'string',
-  },
-  // direction: 'in' | 'out' | 'bidirectional'. uuid — see note above.
-});
-
-// ── Wire — the connection between exactly two hooks ─────────────────────────
-const WIRE_SCHEMA = Object.freeze({
-  requiredKeys: ['id', 'from_hook_id', 'to_hook_id'],
-  types: {
-    id: 'string', from_hook_id: 'string', to_hook_id: 'string',
-  },
-  // uuid — see note above.
-});
-
-// ── Concern — a real, detected roadmap item ─────────────────────────────────
-// §BUILT 2026-07-14 — "a roadmap that loom automatically builds from...
-// I'm a dialectic thinker, there isn't a category." A flat todo list with
-// one category field can't hold that; this can, the same way wire already
-// holds relationships instead of a flat list of components. `kind` is an
-// open string, same philosophy as hook/wire's own type fields above — not
-// a closed enum, since the real kinds of concern this session alone found
-// (closed door, spec-drift, stuck cross-system state, weak safety gate,
-// a failed hypothesis) weren't known in advance and more will exist later.
-// relatesTo/blocks are plain id arrays, not wires — a concern isn't a hook
-// and doesn't need one just to be connected to another concern or to a
-// component; this stays purely additive to concern's own schema rather
-// than changing what a wire means everywhere else it's used.
-const CONCERN_SCHEMA = Object.freeze({
-  requiredKeys: ['id', 'kind', 'title', 'severity', 'source'],
-  types: {
-    id: 'string', kind: 'string', title: 'string', severity: 'string', source: 'string',
-  },
-  // severity: 'low'|'medium'|'high' — informational, not axiom-enforced.
-  // source: which scanner found this (e.g. 'closed-door-scanner') — real
-  // provenance, so a concern's origin is never a guess later.
-  // Optional pass-through: relatesTo: [id], blocks: [id], detail: {} —
-  // scanner-specific context, same pattern as wire's own 'intent' field.
-});
+const { COMPONENT_SCHEMA }               = require('./component.js');
+const { SEAM_SCHEMA }                    = require('./seam.js');
+const { HOOK_SCHEMA, KNOWN_HOOK_TYPES }  = require('./hook.js');
+const { WIRE_SCHEMA }                    = require('./wire.js');
+const { CONCERN_SCHEMA }                 = require('./concern.js');
 
 module.exports = {
   KNOWN_HOOK_TYPES,

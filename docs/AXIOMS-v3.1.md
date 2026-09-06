@@ -128,8 +128,9 @@ There is no "good enough for now." Both are architectural constraints that shape
 Every module, every feature, every significant operation has a UUID that never changes. Every integration point is a registered hook with a declared side-effect policy. All execution flows through the event bus.
 *↳ An unregistered hook is an orphan. No orphan modules or hooks are allowed. The formal schema for what a registered component/hook must declare lives in `docs/nexus-system-foundation.spec`'s `required_exports` and `interaction_contract` — this law states the requirement, that file states the shape.*
 
-**§5.2 Everything Implements the Bridge**
-Every system connects to Bridge. Bridge is the only write authority for cross-system requests (§9.1). A module that does not implement the bridge is isolated — isolation is incompatible with the principle that everything is alive and interconnected.
+**§5.2 Everything Routes Through RAID**
+*↳ §RETIRED 2026-09-06 — this axiom named Bridge (bridge/index.js, port 9999) as the required connection point. Bridge is fully removed (James: "it has to go") — checked directly first: neither guardian nor cortex had any real functional dependency on it, and orchestrator's own REQUIRED_SYSTEMS list never included it. The one real thing Bridge did (relaying tv-shell/Clear Glass requests to copilot) now goes to copilot directly.*
+Every system connects to RAID (`cortex/core/raid/router.js`) for cross-system dispatch. RAID is the only write authority for cross-system requests (§9.1). A module that does not route through RAID is isolated — isolation is incompatible with the principle that everything is alive and interconnected.
 
 **§5.3 No Monkey Patches — Full System Patches Only**
 A fix that patches behaviour at the call site without addressing the root cause is debt with interest. Every patch must address the root cause structurally.
@@ -251,11 +252,12 @@ Before building anything new, read the codebase recursively and make effective u
 
 ---
 
-### § Group 9 — Bridge & Identity
+### § Group 9 — RAID Routing & Identity
 
-**§9.1 Bridge Is the Only Write Authority for Requests**
-No system writes directly to the requests table. No system calls another system's API directly for cross-system work. Everything goes through `POST /bridge/request`.
-*↳ A cross-system call that does not cross Bridge is a rogue bypass. §FAULTS.CLASS.ROGUE_BYPASS.*
+**§9.1 RAID Is the Only Write Authority for Requests**
+*↳ §RETIRED 2026-09-06 — named Bridge (`POST /bridge/request`) before Bridge's removal. RAID's real router.js already was, independently, the live intent-driven system-level dispatch hub before this rename — this axiom now names what was already true in the running code, not a new mechanism.*
+No system writes directly to the requests table. No system calls another system's API directly for cross-system work. Everything goes through RAID's real `route(intent, opts)`.
+*↳ A cross-system call that does not cross RAID is a rogue bypass. §FAULTS.CLASS.ROGUE_BYPASS.*
 
 **§9.2 Ledger Write Before Dispatch. Always.**
 A request not written to the ledger before dispatch is a phantom. The write gate is not optional.
@@ -277,7 +279,7 @@ Each prompt carries its session UUID as `causedBy`. A broken session chain is a 
 ### § Group 10 — Truth Layers
 
 **§10.1 Each Data Type Has Exactly One Write Authority**
-Bridge ledger owns requests. Cortex event_log owns events. Idearium owns ideas/specs/gaps. Guardian owns execution state.
+RAID owns requests. Cortex event_log owns events. Idearium owns ideas/specs/gaps. Guardian owns execution state.
 *↳ Each sovereign system's own memory needs (which JAA tables, which lib/ memory primitives) are mapped in `docs/META-SYSTEM-AND-SUBSYSTEM-SPECS.md` — this law states the ownership rule, that doc states the per-system map.*
 
 **§10.2 Projections Are Derived, Not Written**
@@ -398,7 +400,7 @@ Removing code is preferred over writing it. Every line is maintenance debt owed 
 
 **§16.6 The Architecture Decides**
 A local decision that disagrees with a global invariant is wrong, regardless of how convenient it is at the call site. Convenience never outranks consistency. Every module serves the system it lives in, not its own author's momentary path of least resistance.
-*↳ Same spirit as §5.7 (low coupling, high cohesion) and §9.1 (Bridge as sole write authority), stated as the general rule those two are specific instances of.*
+*↳ Same spirit as §5.7 (low coupling, high cohesion) and §9.1 (RAID as sole write authority), stated as the general rule those two are specific instances of.*
 
 **§16.7 Every New Abstraction Must Remove More Complexity Than It Introduces**
 Abstractions are investments, not decorations. If removing the abstraction would make the system easier to understand without losing capability, the abstraction should not exist.
@@ -523,7 +525,7 @@ A "faster," "cheaper," or "better" claim is only as good as the measurement behi
 §4.2   Fix bugs pre-emptively.
 §4.3   Enterprise grade. Military grade security. Cybersecurity grade privacy.
 §5.1   Everything has a UUID, hook, and event bus registration.
-§5.2   Everything implements the bridge.
+§5.2   Everything routes through RAID.
 §5.3   No monkey patches — full system patches only.
 §5.4   Versions persist across the entire project.
 §5.5   What does not exist must be built.
@@ -552,7 +554,7 @@ A "faster," "cheaper," or "better" claim is only as good as the measurement behi
 §8.3   SISO and Jaa are load-order prerequisites.
 §8.6   Reuse before build. Read the codebase recursively; build outward from what exists.
 §8.7   Full context before any change: loom map, spec, phasemap history, tool index — named, not vague. Enables real revert, not just diagnosis.
-§9.1   Bridge is the only write authority for requests.
+§9.1   RAID is the only write authority for requests.
 §9.2   Ledger write before dispatch. Always.
 §9.3   Held requests never leave the queue.
 §9.4   Route depth is bounded. History is written on every hop.

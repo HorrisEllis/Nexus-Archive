@@ -167,12 +167,21 @@ import { fileURLToPath as _fileURLToPath } from 'url';
 // spec-engine/index.js derives SPECS_ROOT — file-relative, not cwd-relative —
 // so compileIdeariumSpec's output actually lands next to data/specs/ instead
 // of wherever the launcher's cwd happened to be.
-const IDEARIUM_DATA_DIR = path.join(path.dirname(_fileURLToPath(import.meta.url)), '..', 'data');
+// §FIXED 2026-09-06 — James: "need to clear out test data from idearium."
+// Real, confirmed cause: this path was hardcoded with no override, so
+// every real test file this whole session (idearium-phase-sync,
+// idearium-reuse, idearium-warp-cache, idearium-loop, and idearium/
+// test/e2e-pipeline.test.js itself) wrote directly into the same real
+// data directory that ships in every zip — 63 test-generated specs
+// found and removed from idearium/data/specs/ this same pass, alongside
+// the 3 genuinely real ones (brainos-real-import x3). IDEARIUM_DATA_DIR
+// env var lets a test point this somewhere real-but-disposable instead.
+const IDEARIUM_DATA_DIR = process.env.IDEARIUM_DATA_DIR || path.join(path.dirname(_fileURLToPath(import.meta.url)), '..', 'data');
 import { dispatchChunkWithVerification } from '../spec-engine/chunk-dispatch.js';
 import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
 import fs from 'fs';
-import { loadTable, appendRow, deleteRow } from '../lib/db.js';
+import { loadTable, appendRow, deleteRow, syncTable } from '../lib/db.js';
 
 // §PROJECTS 2026-07-19 — "a place to store projects, easily." A flat
 // binary shelf for whole project archives (zips built elsewhere — MASTERMIND
@@ -455,6 +464,10 @@ const ROUTE_CAP = {
   'idea.list':        CAPS.READ_IDEAS,
   'idea.show':        CAPS.READ_IDEAS,
   'idea.create':      CAPS.WRITE_IDEAS,
+  'brainstorm.list':    CAPS.READ_IDEAS,
+  'brainstorm.create':  CAPS.WRITE_IDEAS,
+  'brainstorm.delete':  CAPS.WRITE_IDEAS,
+  'brainstorm.promote': CAPS.WRITE_IDEAS,
   'idea.update':      CAPS.WRITE_IDEAS,
   'idea.tension':     CAPS.WRITE_IDEAS,
   'idea.link':        CAPS.WRITE_IDEAS,
@@ -480,6 +493,7 @@ const ROUTE_CAP = {
   'snapshot.push':    CAPS.ADMIN,
   'queue.show':       CAPS.READ_IDEAS,
   'queue.progress':   CAPS.WRITE_IDEAS,
+  'speceng.setWarpPrimitives': CAPS.WRITE_IDEAS,
   'cli.exec':         CAPS.ADMIN,
 };
 
@@ -504,6 +518,16 @@ function matchRoute(method, url) {
     ['GET',    ['api','events'],          'events.log'],
     ['GET',    ['api','ideas'],           'idea.list'],
     ['POST',   ['api','ideas'],           'idea.create'],
+    // §BUILT 2026-09-03 — James: "idearium needs to use data folder. no
+    // DOM storage." Was localStorage('idearium.brainstorms') in the
+    // browser, ui/js/app.js — genuinely the one place in idearium that
+    // held real user data outside the JAA-backed data/ folder every other
+    // feature already goes through. Same table pattern as everything
+    // else (loadTable/appendRow/deleteRow, lib/db.js).
+    ['GET',    ['api','brainstorms'],           'brainstorm.list'],
+    ['POST',   ['api','brainstorms'],           'brainstorm.create'],
+    ['DELETE', ['api','brainstorms',':uuid'],   'brainstorm.delete'],
+    ['POST',   ['api','brainstorms',':uuid','promote'], 'brainstorm.promote'],
     ['GET',    ['api','specs'],           'spec.list'],
     ['POST',   ['api','specs'],           'spec.create'],
     ['GET',    ['api','gaps'],            'gap.list'],
@@ -587,6 +611,13 @@ function matchRoute(method, url) {
     ['POST',   ['api','spec-engine','specs',':uuid','build'],      'speceng.build'],
     ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','complete'], 'speceng.chunk.complete'],
     ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','fail'],     'speceng.chunk.fail'],
+    // §BUILT 2026-09-03 — per-chunk agent reassignment, PENDING chunks only
+    // (spec-engine/index.js's setChunkAgent enforces this, not this route).
+    ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','agent'],    'speceng.chunk.setAgent'],
+    // §BUILT 2026-09-03 — WARP primitives, spec-level (not chunk-level,
+    // no PENDING guard — this is declared metadata about the component,
+    // editable any time).
+    ['POST',   ['api','spec-engine','specs',':uuid','warp-primitives'],   'speceng.setWarpPrimitives'],
     ['POST',   ['api','spec-engine','specs',':uuid','archive'],    'speceng.archive'],
     ['DELETE', ['api','spec-engine','specs',':uuid'],              'speceng.delete'],
     ['POST',   ['api','spec-engine','specs',':uuid','restore'],    'speceng.restore'],
@@ -712,6 +743,38 @@ async function handle(req, res, route, query, body) {
       return ok(res, { idea, eventId: ev.uuid });
     }
 
+    // ── Brainstorms (real, data/-backed — see route comment above) ──────────
+
+    case 'brainstorm.list':
+      return ok(res, { brainstorms: loadTable('idearium_brainstorms').sort((a, b) => b.ts - a.ts) });
+
+    case 'brainstorm.create': {
+      const { text, tags } = body;
+      if (!text || !text.trim()) return err(res, 400, 'text required');
+      const row = { uuid: `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`, text: text.trim(), tags: tags || [], ts: Date.now(), promoted: false };
+      appendRow('idearium_brainstorms', row);
+      return ok(res, { brainstorm: row });
+    }
+
+    case 'brainstorm.delete': {
+      deleteRow('idearium_brainstorms', params.uuid);
+      return ok(res, { deleted: true, uuid: params.uuid });
+    }
+
+    case 'brainstorm.promote': {
+      // §CONVENTION — syncTable, not delete+reinsert, matching how every
+      // other real update in this codebase touches a JAA table (repo/
+      // index.js's _save, spec-engine's saveSpec) — one row mutated
+      // in-memory, whole table synced back, not a delete/insert pair.
+      const rows = loadTable('idearium_brainstorms');
+      const b = rows.find(r => r.uuid === params.uuid);
+      if (!b) return err(res, 404, `brainstorm not found: ${params.uuid}`);
+      const ev = os.emit('idearium.idea.create', { text: b.text, tags: b.tags || [], compartment: null, source: 'brainstorm' });
+      b.promoted = true;
+      syncTable('idearium_brainstorms', rows, 'uuid');
+      return ok(res, { promoted: true, idea: os.db.ideas[os.db.ideas.length - 1], eventId: ev.uuid });
+    }
+
     case 'idea.show': {
       const idea = os.idea(params.uuid);
       if (!idea) return err(res, 404, `idea not found: ${params.uuid}`);
@@ -761,16 +824,15 @@ async function handle(req, res, route, query, body) {
       let compartmentId = null;
       if (body.phase === 'building' && !idea.compartment) {
         try {
-          // §FIX 2026-09-03 — James's own real boot log caught this:
-          // "compartment spawn failed... require is not defined."
-          // idearium/package.json sets "type":"module" — this whole
-          // file is a real ES module, raw require() genuinely doesn't
-          // exist in this scope. The correct, already-established
-          // pattern this exact file already uses at its own top (line
-          // 24: `const _require = createRequire(import.meta.url)`) is
-          // the real fix — not a new one invented here, the one
-          // already sitting right above, just not used at this call
-          // site when it was first written.
+          // §FIX 2026-09-03 — real handoff-branch fix, reconciled in
+          // during the merge revert-recovery: James's own real boot log
+          // caught this — "compartment spawn failed... require is not
+          // defined." idearium/package.json sets "type":"module", this
+          // whole file is a real ES module, raw require() doesn't exist
+          // in this scope. The correct pattern this exact file already
+          // uses at its own top (`const _require = createRequire(...)`)
+          // just wasn't used at this specific call site when it was
+          // first written.
           const { classify, freeze } = _require('../../lib/intent-classifier.js');
           const { spawn } = _require('../../lib/compartment-engine.js');
           const { intent } = classify({ text: idea.text, source: 'idearium-idea-phase' });
@@ -1210,10 +1272,25 @@ async function handle(req, res, route, query, body) {
     }
 
     case 'repo.ingest': {
-      const { name, files, source, ideaUuid } = body;
+      // §EXTENDED 2026-09-03 — James: "create a repository, then send each
+      // chunk to the respective agent." Was drag-and-drop files[] only.
+      // RepoLayer.ingest() itself already had a specUuid path (an existing
+      // spec-engine manifest, no new content created) — this endpoint just
+      // never exposed it. Now a caller can create the repo the moment a
+      // spec exists, before any chunk is built, and the same repo record
+      // (resolved live off specUuid every read — RepoLayer._enrich) shows
+      // chunks landing as each one completes. files[] path unchanged for
+      // every existing drag-and-drop caller.
+      const { name, files, source, ideaUuid, specUuid } = body;
       if (!name) return err(res, 400, 'name required');
-      if (!Array.isArray(files) || files.length === 0) return err(res, 400, 'files[] required (drag-and-drop payload)');
-      const result = getRepoLayer().ingest({ name, files, source: source || 'drop', ideaUuid: ideaUuid || null });
+      if (!specUuid && (!Array.isArray(files) || files.length === 0)) {
+        return err(res, 400, 'specUuid or files[] required');
+      }
+      const result = getRepoLayer().ingest({
+        name, specUuid: specUuid || undefined, files: files || [],
+        source: source || (specUuid ? 'repo-first' : 'drop'),
+        ideaUuid: ideaUuid || null,
+      });
       if (result.error) return err(res, 400, result.error);
       return ok(res, result);
     }
@@ -1498,7 +1575,7 @@ async function handle(req, res, route, query, body) {
     case 'speceng.create': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      const { name, type, description, agent, templateId, templateIds, buildEngine, ideaUuid, compartmentTemplateName } = body;
+      const { name, type, description, agent, sectionAgents, warpPrimitives, templateId, templateIds, buildEngine, ideaUuid, compartmentTemplateName } = body;
       if (!name) return err(res, 400, 'name required');
       if (ideaUuid && !os.idea(ideaUuid)) return err(res, 404, `idea not found: ${ideaUuid}`);
       try {
@@ -1518,7 +1595,7 @@ async function handle(req, res, route, query, body) {
         // An unknown templateId/templateIds (or buildEngine) throws inside
         // createSpec (§1.2) and surfaces as a 400 here rather than silently
         // creating an unseeded / mis-configured spec.
-        const manifest = se.createSpec({ name, type, description, agent, templateId, templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
+        const manifest = se.createSpec({ name, type, description, agent, sectionAgents: sectionAgents || {}, warpPrimitives: warpPrimitives || [], templateId, templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
         if (compartmentSeed) {
           const schemaChunk = (manifest.chunks || []).find(c => c.sectionId === 'schema');
           if (schemaChunk && schemaChunk.status === 'pending') {
@@ -1604,7 +1681,23 @@ async function handle(req, res, route, query, body) {
         // Get system context for the agent
         const systemContext = await as.getSystemContext().catch(() => '');
         const chunkPrompt   = se.buildChunkPrompt(manifest, chunk, systemContext);
-        const preferAgent   = body.agent || manifest.agent || 'ollama';
+        // §BUILT 2026-09-03 — James: "send each chunk to the respectable
+        // agent." Was `body.agent || manifest.agent || 'ollama'` — one
+        // agent for every chunk in the spec, `chunk.agent` never read here
+        // at all despite being a real per-chunk field (spec-engine/index.js
+        // sets it per block from blocks.yaml at creation, or per-chunk via
+        // setChunkAgent()). body.agent stays the highest-priority override
+        // for a genuine one-off manual dispatch; chunk.agent (this chunk's
+        // real, assigned agent) now wins over the spec-wide manifest.agent
+        // fallback, which only still matters for a pre-existing spec built
+        // before this change (manifest.agent was a real per-spec value
+        // then) or a spec built via importSpec/ingestFilesAsSpec (no
+        // per-block agent to read — falls through the same as before).
+        // §CHANGED 2026-09-03 — tail default 'ollama' → 'chatgpt' (James:
+        // "set default to chatgpt"). Real fallback-on-failure to gemini
+        // is wired via fallbackAgent below, not here.
+        const preferAgent   = body.agent || chunk.agent || manifest.agent || 'chatgpt';
+        const fallbackAgent = body.fallbackAgent || (preferAgent === 'chatgpt' ? 'gemini' : null);
 
         se.markChunkBuilding(params.uuid, chunk.uuid, { agent: preferAgent });
 
@@ -1657,7 +1750,21 @@ async function handle(req, res, route, query, body) {
           : (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts);
 
         dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn,
-          { preferAgent }
+          {
+            preferAgent,
+            fallbackAgent,
+            // §BUILT 2026-09-03 — fires the instant a queued job is
+            // confirmed on guardian's side, before the (up to 5-minute)
+            // poll for a browser-automated NCP provider — see
+            // chunk-dispatch.js's own comment at this call site. Writes
+            // the chunk's real return address (this spec's own
+            // directory — "the start dir," no RAID compartment spawned)
+            // to disk immediately, not after the fact.
+            onQueued: (info) => {
+              try { se.recordDispatchJob(params.uuid, chunk.uuid, info); }
+              catch (e) { console.warn(`[idearium/api] recordDispatchJob failed (dispatch proceeds regardless): ${e.message}`); }
+            },
+          }
         ).then(async result => {
           // §RAID-SOURCE 2026-08-29 — report idearium's own real,
           // already-decided outcome back to RAID's queue, whichever
@@ -1737,6 +1844,34 @@ async function handle(req, res, route, query, body) {
         const chunk = se.failChunk(params.uuid, params.chunkUuid, body.reason || 'manual fail');
         return ok(res, { chunk });
       } catch(e) { return err(res, 500, e.message); }
+    }
+
+    case 'speceng.setWarpPrimitives': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      if (!Array.isArray(body.warpPrimitives)) return err(res, 400, 'warpPrimitives must be an array');
+      try {
+        const manifest = se.setWarpPrimitives(params.uuid, body.warpPrimitives);
+        return ok(res, { warpPrimitives: manifest.warpPrimitives });
+      } catch (e) {
+        return err(res, /not real WARP primitives/.test(e.message) ? 400 : 500, e.message);
+      }
+    }
+
+    case 'speceng.chunk.setAgent': {
+      const se = getSpecEngine();
+      if (!se) return err(res, 503, 'spec-engine not ready');
+      if (!body.agent) return err(res, 400, 'agent required');
+      try {
+        const chunk = se.setChunkAgent(params.uuid, params.chunkUuid, body.agent);
+        os.emit('idearium.spec-engine.chunk.agent_set', {
+          specUuid: params.uuid, chunkUuid: params.chunkUuid, sectionId: chunk.sectionId, agent: chunk.agent,
+        });
+        return ok(res, { chunk });
+      } catch(e) {
+        const status = /not found/.test(e.message) ? 404 : /cannot reassign/.test(e.message) ? 409 : 400;
+        return err(res, status, e.message);
+      }
     }
 
     case 'speceng.archive': {
@@ -2161,6 +2296,24 @@ export function startAPI() {
         if (BINDING !== '127.0.0.1') {
           console.warn(`[idearium] binding=${BINDING} — this system has no auth. Use 127.0.0.1 unless you know what you are doing.`);
         }
+      },
+    });
+
+    // Phase 7.5 SOFT: guardian job-completion — reconcile any chunks left
+    // 'building' by a prior process's restart, then subscribe live.
+    // §BUILT 2026-09-03 — see lib/guardian-stream.cjs's own header for the
+    // full reasoning (real /events, not copilot's buggy /bus; no new
+    // queue table, chunk.jobId/dispatchDir already IS the durable record).
+    // SOFT — guardian being down at idearium's own boot must never block
+    // idearium itself from coming up; the connector keeps retrying.
+    seq.phase({ name:'guardian.reconcile', type:'SOFT',
+      label:'Reconcile in-flight chunks + connect guardian job stream',
+      fn: async () => {
+        const se = getSpecEngine();
+        if (!se) { console.warn('[idearium] guardian.reconcile: spec-engine not ready, skipping'); return; }
+        const { reconcileInFlightChunks, connectGuardianStream } = _require('../lib/guardian-stream.cjs');
+        await reconcileInFlightChunks(se);
+        connectGuardianStream(se);
       },
     });
 

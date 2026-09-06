@@ -1,1 +1,0 @@
-{"uuid":"4e81de44-23a2-4877-9623-d95c2603c693","system":"cortex","component":"cortex.intelligence.patterns","action":"registered","status":"ok","tags":["cortex"],"detail":"Crystallised BEP patterns","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139509}

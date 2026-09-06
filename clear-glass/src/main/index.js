@@ -149,13 +149,6 @@ try {
   console.warn(`[ClearGlass/EventTaxonomy] validation itself failed (non-fatal): ${err.message}`);
 }
 const speech = require('../speech/engine');
-// §BUILT 2026-09-06 — direct require, not through PluginHost's generic
-// dir-loop loader: this is one specific function call from the hostile-
-// detection webhook below, not a plugin lifecycle hookup, so it's used
-// the same direct way webrequest-adapter/permission-adapter already are
-// elsewhere in this file (checked: neither of those goes through
-// PluginHost either).
-const { learnHostileHost } = require('../../plugins/adblocker');
 const { PluginHost }    = require('../plugins/host');
 const { registerAll }   = require('../gates/index');
 const COMPONENTS        = require('../../seam/registry-components');
@@ -706,26 +699,10 @@ async function _startWire() {
 
       // Hostile detection → SISO bus (direct emit, no HTTP round-trip)
       if (u === '/hook/hostile' && req.method === 'POST') {
-        const { level, type, tabId, recommendation, matchedScripts } = parsed;
+        const { level, type, tabId, recommendation } = parsed;
         console.log(`[ClearGlass/Wire] Hostile: ${type} (${level}) tab=${tabId}`);
         if (level === 'high' || level === 'critical') {
           emit('context.fp.switch', { agentId: tabId, mode: 'firefox', reason: `hostile:${type}` });
-        }
-        // §BUILT 2026-09-06 — the network-layer half of the hostile→
-        // adblocker feedback loop. Deliberately scoped to type ===
-        // 'fingerprint-script' only: that's the one pattern where
-        // erosmancer-os's hostile/index.ts can actually attribute the
-        // signal to a specific third-party script host (checked
-        // directly — every other type matches page HTML/title/status,
-        // not a script URL, so there is no single host it would be
-        // correct to block). matchedScripts is a script src, not a bare
-        // host — parsed here before handing to learnHostileHost, which
-        // itself still validates the result.
-        if (type === 'fingerprint-script' && Array.isArray(matchedScripts)) {
-          for (const scriptUrl of matchedScripts) {
-            try { learnHostileHost(new URL(scriptUrl).hostname, { reason: `fingerprint-script on tab ${tabId}` }); }
-            catch (_) { /* not a parseable URL — skip, don't guess a host */ }
-          }
         }
         _postEvent('eros.hostile.detected', { level, type, tabId, recommendation });
         return res.end(JSON.stringify({ ok: true }));
@@ -1084,23 +1061,6 @@ async function bootstrap() {
       providerHost,
     });
   }
-
-  // §BUILT 2026-09-06 — the reachable-from-a-separate-process half of the
-  // hostile→adblocker feedback loop. nexus-wire.js (the standalone wire
-  // process, as opposed to this file's own in-process _wireServer variant
-  // of the same role) cannot require('../plugins/adblocker') and expect
-  // it to affect anything — that would be a second, disconnected module
-  // instance with its own LEARNED_HOSTS, never touched by the real
-  // session.webRequest filter running in THIS process. This bus event,
-  // reached via IpcBridge's existing POST /cmd (:7702) — the same real
-  // command surface guardian/clear-glass-bridge.js's header already
-  // documents — is the actual bridge: nexus-wire.js emits it over IPC
-  // instead, landing here where the real, live adblocker module lives.
-  on('adblocker.learn-host', (event) => {
-    const { host, reason } = event.data || {};
-    const result = learnHostileHost(host, { reason });
-    if (!result.learned) console.warn(`[ClearGlass/Adblocker] learn-host rejected: ${result.error} (host="${host}")`);
-  });
 
   // Auto-inject matching userscripts on navigation
   on('nav.loaded', async (event) => {

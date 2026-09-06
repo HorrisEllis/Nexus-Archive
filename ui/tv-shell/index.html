@@ -958,7 +958,7 @@ function pulseCard(tileId){
 // Maps autopilot's kernel names to SYSTEMS' short keys. Emerge isn't in
 // autopilot's supervised kernel set (ALL_KERNELS in autopilot.js) — no entry
 // here means no entry there either, not an oversight on this side.
-const AUTOPILOT_KEY_MAP={orchestrator:'orch',bridge:'br',cortex:'cx',guardian:'gd',idearium:'idr',architect:'arch',diagnostic:'dg'};
+const AUTOPILOT_KEY_MAP={orchestrator:'orch',cortex:'cx',guardian:'gd',idearium:'idr',architect:'arch',diagnostic:'dg'};
 
 async function pollHealth(){
   for(const s of SYSTEMS){
@@ -1184,7 +1184,7 @@ function flashDot(src){
 // tile. Not a hard gate (the proxy itself doesn't gate on this either — see
 // note in the chat) — visibility first, enforcement is a separate decision.
 const _verifiedSystems = {};
-const CONTRACT_KEY_MAP = {orchestrator:'orch',guardian:'gd',cortex:'cx',idearium:'idr',architect:'arch',emerge:'em',bridge:'br'};
+const CONTRACT_KEY_MAP = {orchestrator:'orch',guardian:'gd',cortex:'cx',idearium:'idr',architect:'arch',emerge:'em'};
 
 function addEvent(d){
   evCount++;
@@ -2071,7 +2071,7 @@ async function asSend(){
   // above always returns, and _asMode is permanently 'copilot' since the
   // SYSTEM CONSOLE / CO-PILOT toggle was removed — this ~75 lines could
   // never execute. Removed rather than left as dead weight. If tv-shell's
-  // Bridge-dispatch path and ui/home's orchestrator-proxy path should be
+  // §RETIRED 2026-09-06 — Bridge removed (James: "it has to go"). ui/home's orchestrator-proxy path should be
   // unified into one shared module, that's a real decision to make
   // explicitly, not something to guess at while deleting unreachable code.
 }
@@ -2378,7 +2378,7 @@ async function _refreshAgentSuite() {
   const provPill = document.getElementById('as-provider-pill');
   const provLbl = document.getElementById('as-provider-label');
   if (cfg.provider === 'ollama') {
-    // Ollama has no orchestrator proxy either (like Bridge/Diagnostic) — it's
+    // Ollama has no orchestrator proxy either (like Diagnostic) — it's
     // a local HTTP service, not one of orchestrator's SYS entries with a
     // dedicated /api/<name>/* block. Direct call, same flagged category.
     const ol = await get('http://127.0.0.1:11434/api/tags').catch(() => null);

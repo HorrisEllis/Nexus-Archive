@@ -267,6 +267,16 @@ class ProviderHost {
       width:  1280,
       height: 800,
       show:   opts.show === true && process.env.CG_HEADLESS !== '1',
+      // §FIXED 2026-09-03 — James: "remove headless flag and taskbar from
+      // the main." skipTaskbar was never set on these automation windows.
+      // show:false already keeps a window off the taskbar WHILE hidden,
+      // but that's incidental to `show`, not a real guarantee — anything
+      // that later calls .show() on one of these (a debug path, a stray
+      // code change) would put a "NEXUS NCP — <provider>" window straight
+      // into the taskbar with no real intent behind it. Setting this
+      // explicitly means taskbar absence is guaranteed by config, not by
+      // accident of current visibility state.
+      skipTaskbar: true,
       webPreferences: {
         partition,
         nodeIntegration:             false,
@@ -421,6 +431,15 @@ class ProviderHost {
       if (this.windows.get(providerId) === win) {
         this.windows.delete(providerId);
         this._status.delete(providerId);
+      }
+      // §FIXED 2026-09-06 — see stop()'s own comment for the full finding.
+      // Same 5s auto-restart render-process-gone already uses below —
+      // deliberately not instant, matching that handler's own real reason
+      // (a respawn racing the same resource pressure that likely caused
+      // the disappearance would just die again immediately).
+      if (!win._nexusIntentionalStop) {
+        this.sse.emit('provider.host.closed_unexpectedly', { providerId, ts: Date.now() });
+        setTimeout(() => this.start(providerId), 5000);
       }
     });
 
@@ -599,6 +618,22 @@ class ProviderHost {
 
   async stop(providerId) {
     const win = this.windows.get(providerId);
+    // §FIXED 2026-09-06 — James: "nothing is supposed to rely on a ui."
+    // Real, confirmed gap: win.on('closed', ...) below had zero respawn
+    // logic — only render-process-gone (an actual Chromium crash) ever
+    // triggered the real 5s auto-restart already built for that case.
+    // A window that closes for any OTHER reason (Electron/OS reclaiming
+    // it under memory pressure, anything else calling win.destroy()
+    // directly instead of through this method) just vanished forever —
+    // guardian would keep routing jobs to a tab that no longer existed,
+    // getting a jobId back but never an ack (exactly James's live report:
+    // "it routes to it. but doesn't do anything beyond that"). Marking
+    // the window here, right before the one real intentional-destroy
+    // path in this class, so 'closed' below can tell "someone asked for
+    // this" apart from "this just disappeared" — the same distinction
+    // render-process-gone's handler already makes for crashes, applied
+    // to the other real way a window goes away.
+    if (win) win._nexusIntentionalStop = true;
     if (win && !win.isDestroyed()) { win.destroy(); }
     this.windows.delete(providerId);
     this._status.delete(providerId);

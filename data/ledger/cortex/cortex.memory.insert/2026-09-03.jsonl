@@ -1,1 +1,0 @@
-{"uuid":"84efeb8a-db39-4fc7-b136-ce066e5bd6d4","system":"cortex","component":"cortex.memory.insert","action":"registered","status":"ok","tags":["cortex","memory"],"detail":"Insert row into any JAA table","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139471}

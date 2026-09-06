@@ -1,1 +1,0 @@
-{"uuid":"efce0715-0121-4748-8d15-b9cecbc441e0","system":"cg","component":"cg.tls.stats","action":"registered","status":"ok","tags":["cg","tls"],"detail":"TLS proxy — JA4 rewrite stats, tunnels, errors","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139769}

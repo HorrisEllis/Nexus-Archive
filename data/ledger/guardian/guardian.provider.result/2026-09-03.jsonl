@@ -1,1 +1,0 @@
-{"uuid":"39b7a385-8e72-49ad-8b2a-e1bbe2ab4c57","system":"guardian","component":"guardian.provider.result","action":"registered","status":"ok","tags":["guardian","ncp"],"detail":"NCP result from browser tab","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139371}

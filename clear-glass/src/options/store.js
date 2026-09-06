@@ -548,17 +548,6 @@ class NexusOptions {
       id: callto.id, selector: callto.selector, xpath: callto.xpath || null,
       label: callto.label || callto.selector, action: callto.action || 'click',
       url: callto.url || null, host: callto.host || null,
-      // §BUILT 2026-09-06 — real erosmancer NodeRegistry uuid, when one
-      // was resolved (ipc/bridge.js's guardian.callto.added handler
-      // resolves this via the now-real POST /api/nodes before calling
-      // here). Falls back to whatever was already stored so a re-
-      // registration that didn't attempt erosmancer resolution (e.g.
-      // erosmancer wasn't running that time) doesn't wipe out a uuid a
-      // previous, successful registration already got. null, not
-      // undefined, when there's genuinely never been one — this field
-      // being present but null is the honest "not yet resolved" state,
-      // not silently absent.
-      erosUuid: callto.erosUuid ?? existing?.erosUuid ?? null,
       enabled: true, createdAt: existing?.createdAt || now, updatedAt: now,
     };
     this.data = { ...this.data, calltos: { ...this.data.calltos, [callto.id]: record } };

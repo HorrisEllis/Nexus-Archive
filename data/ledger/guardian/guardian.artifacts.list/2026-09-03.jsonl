@@ -1,1 +1,0 @@
-{"uuid":"8bc0c24d-1431-4d9a-88d1-c11e8bc2e75a","system":"guardian","component":"guardian.artifacts.list","action":"registered","status":"ok","tags":["guardian"],"detail":"SHA-256 deduplicated code artifacts","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139398}

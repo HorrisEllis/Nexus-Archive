@@ -1,1 +1,0 @@
-{"uuid":"50caabb7-94cc-4677-b0e5-4428520b4f6a","system":"eros","component":"eros.cmd.screenshot","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP screenshot","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139801}

@@ -51,50 +51,6 @@ function _hostMatches(hostname, blockedHost) {
   return hostname === blockedHost || hostname.endsWith('.' + blockedHost);
 }
 
-// §BUILT 2026-09-06 — LEARNED_HOSTS is deliberately separate from the
-// curated, frozen BLOCKLIST above, not merged into it. Keeping them apart
-// means: (1) BLOCKLIST stays exactly what its own header says it is — a
-// genuinely curated, immutable set — so nothing here weakens that
-// guarantee; (2) isBlocked's reason string can tell a curated block from
-// a learned one apart (learned:<host> vs the bare host), which matters
-// for auditing what erosmancer's Hostile Detection has actually taught
-// this session versus what shipped by default; (3) it can be cleared
-// independently (a bad learn shouldn't require touching curated data).
-// In-memory only, same honesty as guardian-picker's activeListeners Map
-// elsewhere in this codebase — does not survive a restart, and isn't
-// pretending to.
-const LEARNED_HOSTS = new Map(); // host -> { reason, addedAt, hits }
-
-/**
- * learnHostileHost(host, { reason }) — called from the /hook/hostile
- * receiver (clear-glass/wire/nexus-wire.js and src/main/index.js) when a
- * threat signal carries a real matchedScripts host (currently only
- * erosmancer's fingerprint-script pattern provides one — checked in
- * erosmancer-os/src/hostile/index.ts, not assumed). Deliberately does
- * NOT accept arbitrary threat types: a page merely showing a CAPTCHA or
- * Cloudflare challenge is not evidence that a *host* should be blocked
- * (blocking Cloudflare's own domain would just break the page), so this
- * is the caller's job to gate, not this function's — but this function
- * still validates the host string itself rather than trusting it blindly.
- */
-function learnHostileHost(host, { reason = 'hostile-detection' } = {}) {
-  if (typeof host !== 'string' || !host || /[^a-z0-9.-]/i.test(host)) {
-    return { learned: false, error: 'not a valid hostname' };
-  }
-  const existing = LEARNED_HOSTS.get(host);
-  LEARNED_HOSTS.set(host, {
-    reason,
-    addedAt: existing?.addedAt ?? Date.now(),
-    hits: (existing?.hits ?? 0) + 1,
-  });
-  return { learned: true, host };
-}
-
-/** getLearnedHosts() — introspection, e.g. for a future options/debug panel. */
-function getLearnedHosts() {
-  return Object.fromEntries(LEARNED_HOSTS);
-}
-
 /**
  * isBlocked(url) — pure. Returns { blocked, reason } — reason is the
  * matched blocklist entry, or null if not blocked. Malformed input never
@@ -115,11 +71,6 @@ function isBlocked(url) {
   for (const { host, path } of PATH_BLOCKLIST) {
     if (_hostMatches(parsed.hostname, host) && parsed.pathname.startsWith(path)) {
       return { blocked: true, reason: `${host}${path}` };
-    }
-  }
-  for (const learnedHost of LEARNED_HOSTS.keys()) {
-    if (_hostMatches(parsed.hostname, learnedHost)) {
-      return { blocked: true, reason: `learned:${learnedHost}` };
     }
   }
   return { blocked: false, reason: null };
@@ -162,4 +113,4 @@ function filterRequestWithToggle(data) {
   return _realFilterRequest(data);
 }
 
-module.exports = { isBlocked, filterRequest: filterRequestWithToggle, toggleFromToolbar, BLOCKLIST, learnHostileHost, getLearnedHosts };
+module.exports = { isBlocked, filterRequest: filterRequestWithToggle, toggleFromToolbar, BLOCKLIST };

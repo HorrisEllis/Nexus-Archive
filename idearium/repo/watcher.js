@@ -49,7 +49,7 @@ const WATCHED_EXTS = ['.zip', '.spec'];
 export class RepoWatcher {
   constructor({ repoLayer, dropDir, onEvent } = {}) {
     this.repoLayer = repoLayer;
-    this.dropDir   = dropDir || path.join(__dirname, '..', 'data', 'drop');
+    this.dropDir   = dropDir || path.join(process.env.IDEARIUM_DATA_DIR || path.join(__dirname, '..', 'data'), 'drop');
     this.onEvent   = onEvent || (() => {});
     this._watcher  = null;
     this._debounce = new Map();

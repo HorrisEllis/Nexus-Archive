@@ -59,7 +59,7 @@ function _getCache() {
   // Same real classes ollama/server.js already runs in production —
   // not a reimplementation, one cache file scoped to idearium's own builds.
   if (!_crystallizer) {
-    const dataDir = path.join(__dirname, '..', 'data');
+    const dataDir = process.env.IDEARIUM_DATA_DIR || path.join(__dirname, '..', 'data');
     // §BUG CAUGHT BEFORE IT SHIPPED — FlatFileCrystallizer.set() calls
     // fs.writeFileSync(this._path, ...) directly, no parent-directory
     // creation. idearium/data/ didn't exist. The first successful chunk
