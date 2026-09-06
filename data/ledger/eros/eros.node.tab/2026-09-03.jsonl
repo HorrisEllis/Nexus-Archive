@@ -1,0 +1,1 @@
+{"uuid":"15919a66-054d-494e-a0b0-7292c4cd89bb","system":"eros","component":"eros.node.tab","action":"registered","status":"ok","tags":["eros","registry"],"detail":"All nodes for a tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139793}

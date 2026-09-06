@@ -1278,8 +1278,6 @@ function buildUI() {
   injectStyles();
   const root = document.createElement('div'); root.id='__g10root__';
   document.body.appendChild(root);
-  // §FIXED 2026-09-03 — see userscript-chatgpt.js's identical fix.
-  if (!_settings.showHud) root.style.display = 'none';
 
   // Pill
   const pill  = document.createElement('div'); pill.id='__g10pill__';
@@ -1849,10 +1847,6 @@ const OPTIONS = [
   { key:'enableStreamCapture',    label:'Stream response to cortex',          default:true },
   { key:'enableSeamAutoInject',   label:'SEAM auto-inject mode',              default:false },
   { key:'verboseLog',             label:'Verbose logging',                    default:false },
-  // §FIXED 2026-09-03 — same real fix, same reasoning, as
-  // userscript-chatgpt.js's identical OPTIONS entry (protocol parity, not
-  // a second implementation — see that file's own comment).
-  { key:'showHud',                label:'Show status HUD on page (debug only)', default:false },
 ];
 function loadSettings() {
   for (const opt of OPTIONS) {

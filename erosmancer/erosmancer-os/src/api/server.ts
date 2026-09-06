@@ -33,6 +33,41 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT      = Number(process.env.PORT ?? 7432);
 const DATA_DIR  = process.env.DATA_DIR   ?? "./.erosmancer";
 
+// §BUILT 2026-09-06 — same env var / default nexus-wire.js itself uses
+// (checked directly: WIRE_PORT, default 7704) — reused rather than a new
+// name, so this can't silently point somewhere nexus-wire isn't.
+const WIRE_HOOK_URL = `http://127.0.0.1:${Number(process.env.WIRE_PORT ?? 7704)}/hook/hostile`;
+
+/**
+ * forwardHostileSignal — POSTs a threat:detected signal to nexus-wire's
+ * real /hook/hostile (checked: clear-glass/wire/nexus-wire.js and
+ * clear-glass/src/main/index.js both already implement this receiver —
+ * this only had to complete the sender side). Includes matchedScripts
+ * when the pattern that fired provides one (currently: fingerprint-
+ * script only) so the receiving end can feed a real adblocker blocklist
+ * addition, not just log the event.
+ */
+async function forwardHostileSignal(sig: { type: string; level: string; tabId: string; evidence: string; matchedScripts?: string[] }, state: { recommendProfile: string }): Promise<void> {
+  const body = JSON.stringify({
+    level: sig.level,
+    type:  sig.type,
+    tabId: sig.tabId,
+    recommendation: state.recommendProfile,
+    matchedScripts: sig.matchedScripts,
+  });
+  await new Promise<void>((resolve, reject) => {
+    const req = http.request(
+      WIRE_HOOK_URL,
+      { method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }, timeout: 5000 },
+      (res) => { res.resume(); resolve(); },
+    );
+    req.on("error", reject);
+    req.on("timeout", () => { req.destroy(); reject(new Error("hostile webhook forward timed out")); });
+    req.write(body);
+    req.end();
+  });
+}
+
 // ─── Express + WS ────────────────────────────────────────────
 
 const app    = express();
@@ -199,6 +234,28 @@ app.post("/api/tabs/:tabId/attach", async (req, res) => {
 });
 
 // ─── /api/nodes ──────────────────────────────────────────────
+
+// §BUILT 2026-09-06 — the missing half of node registration. Checked
+// directly: clear-glass/src/main/index.js's own /bridge/driver 'register'
+// action already calls POST /api/nodes (via _proxyEros) and expects a
+// real uuid back — that call has been 404ing silently since it was
+// written, because this route never existed. This is the real handler,
+// not a new feature invented on top — it completes an integration
+// ClearGlass's own code already assumed was there. Accepts the same
+// shape NodeRegistry.register() itself takes (tag/selector/xpath/
+// textContent/attributes/boundingBox) so a caller — including the
+// guardian-picker → ipc/bridge.js path wired up alongside this — can
+// register an already-identified DOM element and get back a real
+// erosmancer targetUuid usable in /api/execute or a macro step.
+app.post("/api/nodes", (req, res) => {
+  if (!requireOS(res)) return;
+  const { tag, tabId, selector, xpath, textContent, attributes, boundingBox } = req.body ?? {};
+  if (!tag || !tabId) { res.status(400).json({ ok: false, error: "tag and tabId are required" }); return; }
+  try {
+    const node = os!.registerNode({ tag, tabId, selector, xpath, textContent, attributes, boundingBox });
+    res.json({ ok: true, node });
+  } catch (err) { res.status(500).json({ ok: false, error: (err as Error).message }); }
+});
 
 app.get("/api/nodes", (_req, res) => {
   if (!requireOS(res)) return;
@@ -482,7 +539,17 @@ function wireEvents(): void {
   observer?.on("dom:changed", (c) => push({ type: "dom:changed", tabId: c.tabId, changeType: c.type }));
   observer?.on("dom:batch",   (b) => push({ type: "dom:batch",   count: b.length }));
 
-  hostile?.on("threat:detected",   (sig, state) => push({ type: "threat:detected",  signal: { type: sig.type, level: sig.level }, score: state.score, recommendProfile: state.recommendProfile }));
+  hostile?.on("threat:detected",   (sig, state) => {
+    push({ type: "threat:detected",  signal: { type: sig.type, level: sig.level }, score: state.score, recommendProfile: state.recommendProfile });
+    // §BUILT 2026-09-06 — the real, missing outbound half of the hostile-
+    // detection pipeline. registry-components.js already DECLARES
+    // 'eros.hostile.detected' wires_to clear-glass.context.fp.switch and
+    // wire.hook.hostile — checked directly, that declaration was never
+    // backed by an actual HTTP call anywhere in erosmancer-os. This is
+    // that missing call. Fire-and-forget: hostile detection must never
+    // block on nexus-wire being reachable.
+    forwardHostileSignal(sig, state).catch(() => {});
+  });
   hostile?.on("threat:cleared",    (tabId)       => push({ type: "threat:cleared",   tabId }));
   hostile?.on("threat:escalated",  (tabId, f, t) => push({ type: "threat:escalated", tabId, from: f, to: t }));
 

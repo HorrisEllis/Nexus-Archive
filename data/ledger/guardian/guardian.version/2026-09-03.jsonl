@@ -1,0 +1,1 @@
+{"uuid":"6f99c442-1a63-48fc-be60-2f7e832aeabf","system":"guardian","component":"guardian.version","action":"registered","status":"ok","tags":["guardian"],"detail":"Guardian + userscript versions","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139363}

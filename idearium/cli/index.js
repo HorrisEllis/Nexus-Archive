@@ -45,70 +45,6 @@
  */
 
 import { getIdeaOS, VERSION, IDEA_PHASES } from '../core/index.js';
-// §BUILT 2026-09-03 — spec-engine/repo commands (below) call these
-// directly, no HTTP — matches this file's own §3.1 law for everything
-// except speceng.build (see that command's own header note).
-import * as se from '../spec-engine/index.js';
-import { RepoLayer } from '../repo/index.js';
-import http from 'http';
-
-let _repoLayer = null;
-function repoLayer() {
-  if (!_repoLayer) _repoLayer = new RepoLayer({ specEngine: se });
-  return _repoLayer;
-}
-
-// §BUG FOUND BY RUNNING IT 2026-09-03 — short() slices the first 8 chars,
-// right for a plain UUID but repo uuids are `nexus-id-repo-<8hex>` (repo/
-// index.js's own format) — the distinguishing part is the LAST segment,
-// not the first. short() on a real repo uuid printed "nexus-id" for
-// every single repo in the list, identical, useless. shortRepo() takes
-// the real distinguishing suffix instead.
-function shortRepo(uuid) { return uuid?.split('-repo-')[1] || short(uuid); }
-
-// §BUG FOUND BY RUNNING IT 2026-09-03 — every other command in this file
-// resolves a short uuid prefix (short(uuid) is literally what printSpec/
-// printIdea/etc. print back at you to copy). se.loadSpec() does an exact
-// directory lookup, no prefix match — `speceng show 30ed9da7` on the real
-// tesr spec from this session's own screenshots failed with "not found"
-// on first real run. Same convention as the legacy commands, applied here.
-function _resolveSpecUuid(prefix) {
-  if (!prefix) return null;
-  const specs = se.listSpecs({ includeDeleted: true });
-  const exact = specs.find(s => s.uuid === prefix);
-  if (exact) return exact.uuid;
-  const match = specs.find(s => s.uuid.startsWith(prefix));
-  return match ? match.uuid : prefix; // fall through — let the real call give the real error if truly not found
-}
-
-// §HONEST LIMIT — real HTTP to the local idearium server, the one
-// deliberate exception to "no HTTP round-trip" in this file (speceng.build
-// only). Not abstracted further than this — a single small helper, not a
-// second API client.
-const IDEARIUM_PORT = parseInt(process.env.IDEARIUM_PORT || '4800');
-function _localApi(method, path, body = null) {
-  return new Promise((resolve, reject) => {
-    const payload = body ? JSON.stringify(body) : null;
-    const req = http.request({
-      hostname: '127.0.0.1', port: IDEARIUM_PORT, path, method,
-      headers: { 'Content-Type': 'application/json', ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}) },
-      timeout: 10000,
-    }, (res) => {
-      let data = ''; res.on('data', d => data += d);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (res.statusCode >= 400) reject(new Error(parsed.error || `HTTP ${res.statusCode}`));
-          else resolve(parsed);
-        } catch (e) { reject(new Error(`unparseable response: ${e.message}`)); }
-      });
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
 
 // ─── Colour helpers ──────────────────────────────────────────────────────────
 
@@ -437,120 +373,6 @@ const COMMANDS = {
     process.stdout.write(md);
   },
 
-  // ── idearium speceng ─────────────────────────────────────────────────────────
-  // §BUILT 2026-09-03 — spec-engine (spec-engine/index.js) has been the
-  // real, actively-built chunk/agent-routing system this whole session and
-  // had ZERO CLI commands. This file's own header claims "every feature
-  // has a CLI command" — that was false for the single largest feature in
-  // idearium. Separate namespace from `spec` (above) deliberately: `spec`
-  // already means the legacy os.specs system; overloading it would make
-  // one command name resolve to two genuinely different data stores
-  // depending on which uuid you gave it — real ambiguity, not saved
-  // typing. `speceng` matches the internal action-name convention already
-  // used everywhere on the wire (api/index.js's `speceng.build`,
-  // `speceng.chunk.setAgent`, etc.) — same vocabulary, CLI to HTTP.
-  //
-  // list/show/chunk-agent call spec-engine's own functions directly — no
-  // HTTP round-trip, same law every other command here follows. `build`
-  // is the one deliberate exception: the real dispatch orchestration
-  // (agent-suite → WARP → guardian, verification, RAID observability) is
-  // ~150 lines of handler-embedded logic in api/index.js, not exported as
-  // a reusable function anywhere. Duplicating it here would violate §
-  // no-repetition worse than one honest HTTP call to the running server
-  // does — named as a real, current limitation, not hidden.
-
-  async 'speceng.list'(os, { flags }) {
-    const specs = se.listSpecs({ includeDeleted: !!flags.all }).filter(s => flags.all || !s.deleted);
-    if (!specs.length) { console.log(gray('  no spec-engine specs')); return; }
-    header(`spec-engine specs (${specs.length})`);
-    for (const s of specs) {
-      console.log(`\n  ${bold(s.name)}  ${dim(short(s.uuid))}`);
-      console.log(`  ${dim('status')} ${s.status === 'complete' ? mint(s.status) : sky(s.status)}  ${dim('progress')} ${mint(`${s.doneChunks}/${s.totalChunks}`)}  ${dim('agent')} ${violet(s.agent)}`);
-    }
-    console.log('');
-  },
-
-  async 'speceng.show'(os, { positional }) {
-    const uuid = _resolveSpecUuid(positional[0]);
-    if (!uuid) die('usage: idearium speceng show <uuid>');
-    let manifest;
-    try { manifest = se.loadSpec(uuid); } catch (e) { die(e.message); }
-    header(`spec-engine: ${manifest.name}`);
-    console.log(`  ${dim('uuid')}     ${gray(manifest.uuid)}`);
-    console.log(`  ${dim('status')}   ${sky(manifest.status)}  ${dim('progress')} ${mint(pct(manifest.progress/100))}  ${dim('agent')} ${violet(manifest.agent)}`);
-    section('chunks');
-    for (const c of manifest.chunks.slice().sort((a,b)=>a.chunkIdx-b.chunkIdx)) {
-      const statusMark = c.status === 'complete' ? mint('✓') : c.status === 'building' ? amber('…') : c.status === 'failed' || c.status === 'escalated' ? coral('✗') : gray('○');
-      const inFlight = c.status === 'building' ? (c.jobId ? gray(` job:${String(c.jobId).slice(0,10)}`) : gray(' local')) : '';
-      console.log(`  ${statusMark} ${c.sectionId.padEnd(16)} ${violet(String(c.agent).padEnd(10))} ${gray(short(c.uuid))}${inFlight}`);
-    }
-    console.log('');
-  },
-
-  async 'speceng.chunk-agent'(os, { positional }) {
-    const specUuid = _resolveSpecUuid(positional[0]);
-    const [, chunkPrefix, agent] = positional;
-    if (!specUuid || !chunkPrefix || !agent) die('usage: idearium speceng chunk-agent <spec-uuid> <chunk-uuid> <agent>');
-    let manifest;
-    try { manifest = se.loadSpec(specUuid); } catch (e) { die(e.message); }
-    const chunk0 = manifest.chunks.find(c => c.uuid === chunkPrefix) || manifest.chunks.find(c => c.uuid.startsWith(chunkPrefix));
-    if (!chunk0) die(`chunk not found in spec: ${chunkPrefix}`);
-    try {
-      const chunk = se.setChunkAgent(specUuid, chunk0.uuid, agent);
-      console.log(mint(`✓ ${chunk.sectionId} → ${chunk.agent}`));
-    } catch (e) { die(e.message); }
-  },
-
-  async 'speceng.build'(os, { positional }) {
-    const uuid = _resolveSpecUuid(positional[0]);
-    if (!uuid) die('usage: idearium speceng build <uuid>');
-    // §HONEST LIMIT — see header note above this command group. Real HTTP
-    // call to the running idearium server, not a direct spec-engine call —
-    // the dispatch orchestration only exists inline in api/index.js today.
-    try {
-      const res = await _localApi('POST', `/api/spec-engine/specs/${uuid}/build`);
-      if (res.done) { console.log(mint('✓ all chunks complete')); return; }
-      if (res.reused) { console.log(mint(`✓ ${res.sectionId} reused from prior spec — 0 tokens`)); return; }
-      console.log(sky(`→ dispatched ${res.sectionTitle || res.sectionId} to ${violet(res.agent)} (${res.status})`));
-    } catch (e) { die(`build dispatch failed (is idearium running on :4800?): ${e.message}`); }
-  },
-
-  // ── idearium repo ────────────────────────────────────────────────────────────
-  // Same direct-call law as speceng.list/show above — RepoLayer resolves
-  // live off spec-engine, no HTTP needed for read-only listing.
-
-  async 'repo.list'(os, { flags }) {
-    const repos = repoLayer().list({ includeArchived: !!flags.all });
-    if (!repos.length) { console.log(gray('  no repos')); return; }
-    header(`repos (${repos.length})`);
-    for (const r of repos) {
-      console.log(`\n  ${bold(r.name)}  ${dim(shortRepo(r.uuid))}`);
-      console.log(`  ${dim('source')} ${sky(r.source)}  ${dim('files')} ${mint(r.fileCount)}  ${dim('spec')} ${gray(short(r.specUuid))}`);
-    }
-    console.log('');
-  },
-
-  async 'repo.show'(os, { positional }) {
-    const prefix = positional[0];
-    if (!prefix) die('usage: idearium repo show <uuid>');
-    const repos = repoLayer().list({ includeArchived: true });
-    // matches either the full uuid, a prefix of it, OR the suffix
-    // shortRepo() actually prints in `repo list` — a user copying what
-    // they were just shown needs the suffix to work, not just a prefix.
-    const repo = repos.find(r => r.uuid === prefix) || repos.find(r => r.uuid.startsWith(prefix)) || repos.find(r => r.uuid.endsWith(prefix));
-    if (!repo) die(`repo not found: ${prefix}`);
-    header(`repo: ${repo.name}`);
-    console.log(`  ${dim('uuid')}    ${gray(repo.uuid)}`);
-    console.log(`  ${dim('source')}  ${sky(repo.source)}  ${dim('spec')} ${gray(short(repo.specUuid))}`);
-    if (repo.filesError) console.log(`  ${coral('files unreadable: ' + repo.filesError)}`);
-    section('files');
-    for (const f of repo.files) {
-      const done = f.status === 'complete' ? mint('✓') : gray('○');
-      console.log(`  ${done} ${f.path.padEnd(30)} ${dim(`${f.bytes}b`)}`);
-    }
-    console.log('');
-  },
-
   // ── idearium gap ───────────────────────────────────────────────────────────
 
   async 'gap.list'(os, { flags }) {
@@ -706,8 +528,6 @@ async function main() {
     console.log(`\n${bold(sky('IDEARIUM'))} ${dim(`v${VERSION}`)}\n`);
     console.log(`  ${sky('idea')}   add | list | show | phase | link | tension | archive | search | tree`);
     console.log(`  ${sky('spec')}   new | show | list | check | export`);
-    console.log(`  ${sky('speceng')} list | show <uuid> | build <uuid> | chunk-agent <spec> <chunk> <agent>`);
-    console.log(`  ${sky('repo')}   list | show <uuid>`);
     console.log(`  ${sky('gap')}    list | show | open | resolve | ignore`);
     console.log(`  ${sky('push')}   [--message "..."] [--branch main]`);
     console.log(`  ${sky('log')}    [--n 20]`);

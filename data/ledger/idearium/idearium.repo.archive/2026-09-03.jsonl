@@ -1,0 +1,1 @@
+{"uuid":"bf821d3f-f4aa-4ca8-9d4b-4a755e699930","system":"idearium","component":"idearium.repo.archive","action":"registered","status":"ok","tags":["idearium"],"detail":"Archive a repo","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139449}

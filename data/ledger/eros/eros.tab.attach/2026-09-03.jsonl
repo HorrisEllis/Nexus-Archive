@@ -1,0 +1,1 @@
+{"uuid":"4398f893-adaf-4a65-b0cb-64ff4ae8cffa","system":"eros","component":"eros.tab.attach","action":"registered","status":"ok","tags":["eros","tab"],"detail":"Attach CDP session to existing tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139786}

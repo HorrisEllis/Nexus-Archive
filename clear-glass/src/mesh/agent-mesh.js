@@ -495,40 +495,6 @@ class AgentMesh {
     });
   }
 
-  /**
-   * _guardianProviders() — James: "newest version." (DA1 fix). Real,
-   * confirmed gap: route()'s Guardian-first gate below used to be a
-   * hardcoded `order[0] === 'claude' || order[0] === 'chatgpt'` check —
-   * stale against guardian's own real coverage. docs/guardian.spec and
-   * guardian/userscripts.yaml both independently confirm gemini and
-   * perplexity are real, first-class, non-deprecated providers too, with
-   * real userscripts and real NCP coverage — the hardcoded 2-name list
-   * was never updated when that coverage grew.
-   *
-   * Live GET /providers (guardian/server.js:1817-1822's real handler) is
-   * the actual source of truth for "which providers guardian can reach
-   * right now" — reused here instead of a second, static, driftable
-   * list. Same honest-degrade contract as _dispatchViaGuardian above:
-   * resolves null on unreachable/timeout/malformed, never throws, so
-   * route() falls through to this mesh's own DOM automation exactly as
-   * if guardian didn't exist.
-   */
-  _guardianProviders() {
-    return new Promise((resolve) => {
-      const http = require('http');
-      const req = http.request({
-        hostname: '127.0.0.1', port: parseInt(process.env.GUARDIAN_PORT || '7820', 10),
-        path: '/providers', method: 'GET', timeout: 800,
-      }, (res) => {
-        let body = ''; res.on('data', (c) => body += c);
-        res.on('end', () => { try { resolve(JSON.parse(body)); } catch (_) { resolve(null); } });
-      });
-      req.on('error', () => resolve(null));
-      req.on('timeout', () => { req.destroy(); resolve(null); });
-      req.end();
-    });
-  }
-
   // ── RAID-style routing — best healthy agent ───────────────────────────
   async route({ prompt, preferAgent, fallbackOrder }) {
     // §BUILD 2026-08-30 — James: "raid engine and agent mesh" (a real gap
@@ -594,15 +560,12 @@ class AgentMesh {
     // caller naming a specific order gets exactly that order, not a
     // silently-inserted extra hop).
     if (!fallbackOrder) {
-      // §FIXED — DA1: was a hardcoded `order[0] === 'claude' ||
-      // order[0] === 'chatgpt'` check, stale against guardian's own real
-      // provider coverage (gemini/perplexity are real too — see
-      // _guardianProviders()'s own header). Now a live read of guardian's
-      // actual /providers response, so newly-added real coverage is
-      // picked up automatically instead of needing a second hardcoded
-      // list kept in sync by hand.
-      const guardianProviders = await this._guardianProviders();
-      const guardianKey = guardianProviders?.providers?.[order[0]] === 'connected' ? order[0] : null;
+      // §BUGFIX — caught by MESH-006 before shipping: order.find(...)
+      // scanned the WHOLE fallback list, so preferAgent:'gemini' wrongly
+      // triggered Guardian because claude/chatgpt appear later in the
+      // same array as fallback candidates. Must check only the agent
+      // actually being attempted first (order[0]), not the full list.
+      const guardianKey = (order[0] === 'claude' || order[0] === 'chatgpt') ? order[0] : null;
       if (guardianKey) {
         const viaGuardian = await this._dispatchViaGuardian(prompt, guardianKey);
         if (viaGuardian) {

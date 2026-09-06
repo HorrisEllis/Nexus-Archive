@@ -1823,31 +1823,6 @@ function handleExtendedRoutes(req, res, url, method) {
     pRes(res, 200, { ok:true, providers:out, channels: connected }); return true;
   }
 
-  // §BUILT 2026-09-03 — James: "adding agent on canvas opens tab in clear
-  // glass... Guardian is the source of truth, control layer for
-  // clearglass agents." Real capability already existed on Clear Glass's
-  // own side (POST 127.0.0.1:7702/providers/:id/start, checked directly
-  // in clear-glass/src/ipc/bridge.js) but nothing in guardian could reach
-  // it — guardian and clear-glass only ever talked one direction before
-  // this (clear-glass's userscripts opening an EventSource INTO guardian,
-  // per clear-glass-bridge.js's own header). This is the missing link:
-  // a real guardian route that proxies to the real clear-glass call,
-  // using spawnProviderTab() (same file, same auto-spawn-via-autopilot
-  // gate every other real Guardian->Clear Glass call already goes
-  // through — not a second, parallel mechanism).
-  if (method==='POST' && url.pathname.startsWith('/providers/') && url.pathname.endsWith('/spawn')) {
-    const providerId = url.pathname.slice('/providers/'.length, -'/spawn'.length);
-    const { spawnProviderTab } = require('./clear-glass-bridge.js');
-    // §BUG CAUGHT BEFORE COMMIT — bodyJ is a function (bodyJ(req) => Promise),
-    // not pre-parsed data. Every other route in this file calls it that way;
-    // first draft here didn't. Matching the real convention (line 2972's
-    // exact shape) rather than inventing a different one.
-    bodyJ(req).then(body => spawnProviderTab(providerId, body || {}))
-      .then(result => pRes(res, result.ok ? 200 : 502, result))
-      .catch(e => pRes(res, 400, { ok:false, error: e.message }));
-    return true;
-  }
-
   // ── NCP channel endpoints (replace WSS) ─────────────────────────────────
   // ── CFR-Ω routes — kernel field debugger ──────────────────────────────
   if (url.pathname.startsWith('/cfr')) {

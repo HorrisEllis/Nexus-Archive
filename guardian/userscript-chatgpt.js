@@ -1226,12 +1226,6 @@ function buildUI() {
   injectStyles();
   const root = document.createElement('div'); root.id='__g10root__';
   document.body.appendChild(root);
-  // §FIXED 2026-09-03 — see the showHud OPTIONS entry above for the full
-  // reasoning. buildUI() still runs in full (every other function in this
-  // file that reaches into __g10* elements by id keeps working — nothing
-  // downstream needed to change), just not painted onto the real page by
-  // default.
-  if (!_settings.showHud) root.style.display = 'none';
 
   // Pill
   const pill  = document.createElement('div'); pill.id='__g10pill__';
@@ -1687,16 +1681,6 @@ const OPTIONS = [
   { key:'enableStreamCapture',    label:'Stream response to cortex',          default:true },
   { key:'enableSeamAutoInject',   label:'SEAM auto-inject mode',              default:false },
   { key:'verboseLog',             label:'Verbose logging',                    default:false },
-  // §FIXED 2026-09-03 — James: "remove headless flag and taskbar from the
-  // main. not supposed to broadcast that." The status HUD (__g10root__/
-  // __g10pill__ below) was built AND appended to document.body
-  // unconditionally — a visible "Guardian | chatgpt vX.X.X | ACTIVE | N"
-  // badge on the real page, defeating the whole point of the fingerprint/
-  // UA-spoofing work elsewhere in this same script (nothing else here
-  // tries to look automated; this one element gave it away outright).
-  // Default false — off unless deliberately turned on for local
-  // debugging via the options panel this array already drives.
-  { key:'showHud',                label:'Show status HUD on page (debug only)', default:false },
 ];
 function loadSettings() {
   for (const opt of OPTIONS) {

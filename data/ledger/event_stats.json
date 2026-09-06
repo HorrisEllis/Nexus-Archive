@@ -1,0 +1,463 @@
+{
+  "stats": {
+    "orchestrator.boot.started": {
+      "count": 1,
+      "lastTs": 1788459130256,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.phase.ok": {
+      "count": 7,
+      "lastTs": 1788459140141,
+      "intervals": [
+        0,
+        16,
+        12,
+        1,
+        0,
+        9849
+      ],
+      "totalMs": 9878
+    },
+    "bridge.booted": {
+      "count": 1,
+      "lastTs": 1788459130273,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.phase.ok": {
+      "count": 1,
+      "lastTs": 1788459130276,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "bridge.boot.complete": {
+      "count": 1,
+      "lastTs": 1788459130278,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "system.registered": {
+      "count": 44,
+      "lastTs": 1788459140948,
+      "intervals": [
+        2011,
+        1260,
+        10,
+        345,
+        2,
+        1,
+        215,
+        4,
+        203,
+        187,
+        1,
+        4,
+        2,
+        70,
+        5,
+        894,
+        61,
+        16,
+        154,
+        191,
+        1,
+        1,
+        167,
+        48,
+        1,
+        201,
+        187,
+        2,
+        0,
+        1,
+        75,
+        2,
+        906,
+        233,
+        234,
+        57,
+        9,
+        55,
+        1146,
+        5,
+        738,
+        59,
+        2
+      ],
+      "totalMs": 9766
+    },
+    "bridge.registered": {
+      "count": 1,
+      "lastTs": 1788459131185,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.seam.watchdog.started": {
+      "count": 1,
+      "lastTs": 1788459133141,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "gate.failed": {
+      "count": 11,
+      "lastTs": 1788459188356,
+      "intervals": [
+        7711,
+        3015,
+        381,
+        2738,
+        328,
+        3139,
+        25955,
+        1,
+        1524,
+        10422
+      ],
+      "totalMs": 55214
+    },
+    "guardian.boot.started": {
+      "count": 1,
+      "lastTs": 1788459133142,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.phase.ok": {
+      "count": 12,
+      "lastTs": 1788459134468,
+      "intervals": [
+        203,
+        1,
+        1,
+        0,
+        1,
+        1102,
+        1,
+        1,
+        0,
+        14,
+        2
+      ],
+      "totalMs": 1326
+    },
+    "guardian.registered": {
+      "count": 1,
+      "lastTs": 1788459134455,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.pulse": {
+      "count": 593,
+      "lastTs": 1788459669314,
+      "intervals": [
+        2,
+        1137,
+        4379,
+        327,
+        216,
+        378,
+        98,
+        44,
+        1616,
+        1720,
+        89,
+        1,
+        1137,
+        4386,
+        314,
+        221,
+        372,
+        106,
+        48,
+        1613,
+        1724,
+        79,
+        0,
+        1140,
+        4398,
+        300,
+        230,
+        370,
+        109,
+        47,
+        1609,
+        1731,
+        76,
+        2,
+        1136,
+        4397,
+        298,
+        233,
+        372,
+        107,
+        46,
+        1615,
+        1716,
+        78,
+        2,
+        1136,
+        4408,
+        296,
+        233,
+        375,
+        112,
+        46,
+        1610,
+        1711,
+        75,
+        2,
+        1135,
+        4416,
+        294,
+        235,
+        376,
+        105,
+        48,
+        1608,
+        1712,
+        76,
+        2,
+        1130,
+        4415,
+        295,
+        234,
+        388,
+        109,
+        42,
+        1601,
+        1716,
+        73,
+        1,
+        1140,
+        4401,
+        295,
+        237,
+        389,
+        109,
+        46,
+        1602,
+        1716,
+        71,
+        1,
+        1144,
+        4391,
+        295,
+        249,
+        377,
+        108,
+        47,
+        1635,
+        1690,
+        73,
+        2
+      ],
+      "totalMs": 534848
+    },
+    "guardian.boot": {
+      "count": 1,
+      "lastTs": 1788459134467,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "guardian.boot.complete": {
+      "count": 1,
+      "lastTs": 1788459134468,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.boot.started": {
+      "count": 1,
+      "lastTs": 1788459134759,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.phase.ok": {
+      "count": 8,
+      "lastTs": 1788459134813,
+      "intervals": [
+        18,
+        1,
+        29,
+        3,
+        1,
+        1,
+        0
+      ],
+      "totalMs": 53
+    },
+    "idearium.booted": {
+      "count": 1,
+      "lastTs": 1788459134812,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.boot.complete": {
+      "count": 1,
+      "lastTs": 1788459134814,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "provider.host.starting": {
+      "count": 4,
+      "lastTs": 1788459147669,
+      "intervals": [
+        2608,
+        2901,
+        3284
+      ],
+      "totalMs": 8793
+    },
+    "clear-glass.registered": {
+      "count": 1,
+      "lastTs": 1788459138896,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "clear-glass.window.opened": {
+      "count": 1,
+      "lastTs": 1788459138937,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "clear-glass.boot.complete": {
+      "count": 1,
+      "lastTs": 1788459138938,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.ui.opened": {
+      "count": 1,
+      "lastTs": 1788459139332,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.booted": {
+      "count": 1,
+      "lastTs": 1788459140107,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "orchestrator.boot.complete": {
+      "count": 1,
+      "lastTs": 1788459140143,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "ncp.client.connected": {
+      "count": 4,
+      "lastTs": 1788459150450,
+      "intervals": [
+        3395,
+        2739,
+        3465
+      ],
+      "totalMs": 9599
+    },
+    "guardian.provider.connected": {
+      "count": 4,
+      "lastTs": 1788459150452,
+      "intervals": [
+        3396,
+        2738,
+        3466
+      ],
+      "totalMs": 9600
+    },
+    "provider.host.wake-intro": {
+      "count": 2,
+      "lastTs": 1788459146093,
+      "intervals": [
+        3217
+      ],
+      "totalMs": 3217
+    },
+    "ncp.message.received": {
+      "count": 2,
+      "lastTs": 1788459147313,
+      "intervals": [
+        3447
+      ],
+      "totalMs": 3447
+    },
+    "guardian.tab.dom_map": {
+      "count": 2,
+      "lastTs": 1788459147314,
+      "intervals": [
+        3447
+      ],
+      "totalMs": 3447
+    },
+    "clear-glass.providers.booted": {
+      "count": 1,
+      "lastTs": 1788459151096,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "system.offline": {
+      "count": 1,
+      "lastTs": 1788459153765,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "ncp.client.stale": {
+      "count": 4,
+      "lastTs": 1788459188353,
+      "intervals": [
+        3,
+        1523,
+        10421
+      ],
+      "totalMs": 11947
+    },
+    "guardian.provider.disconnected": {
+      "count": 4,
+      "lastTs": 1788459188355,
+      "intervals": [
+        2,
+        1523,
+        10422
+      ],
+      "totalMs": 11947
+    },
+    "idearium.idea.created": {
+      "count": 1,
+      "lastTs": 1788459359945,
+      "intervals": [],
+      "totalMs": 0
+    }
+  },
+  "baseline": {
+    "guardian.phase.ok": {
+      "avgIntervalMs": 146,
+      "stddevMs": 344,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788459134453
+    },
+    "system.registered": {
+      "avgIntervalMs": 230,
+      "stddevMs": 425,
+      "consistency": 0,
+      "count": 40,
+      "sampleSize": 39,
+      "computedAt": 1788459140144
+    },
+    "orchestrator.pulse": {
+      "avgIntervalMs": 917,
+      "stddevMs": 1253,
+      "consistency": 0,
+      "count": 590,
+      "sampleSize": 100,
+      "computedAt": 1788459667549
+    },
+    "gate.failed": {
+      "avgIntervalMs": 4977,
+      "stddevMs": 7740,
+      "consistency": 0,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788459177934
+    }
+  }
+}

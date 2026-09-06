@@ -15,6 +15,10 @@ const express = require('express');
 const { ipcMain, session } = require('electron');
 const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
+// §BUILT 2026-09-06 — same erosmancer wire client macro.js and
+// guardian/clear-glass-bridge.js use (see that module's own header) —
+// reused here rather than a fourth copy of "how to reach erosmancer."
+const { _erosRequest } = require('../../../lib/agent-tools/tools/clear-glass/eros-wire-client');
 
 class IpcBridge {
   constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history }) {
@@ -932,6 +936,40 @@ class IpcBridge {
             if (result?.error) console.warn(`[ipc/bridge] registerCallto rejected: ${result.error}`);
           } catch (err) {
             console.warn(`[ipc/bridge] guardian.callto.added persist failed (live broadcast above is unaffected): ${err.message}`);
+          }
+          // §BUILT 2026-09-06 — the erosmancer-identity half of the same
+          // gap. guardian-picker.js's fingerprint() computes its own
+          // live selector/xpath/rect for the picked element — a real,
+          // separate identity mechanism from erosmancer's NodeRegistry
+          // UUID (sha256 fingerprint, persisted, resolvable by macro.js/
+          // Guardian's dispatchErosmancerCommand). Without this, a
+          // picked element could never become an erosmancer targetUuid.
+          // Routed through /bridge/driver's 'register' action (main/
+          // index.js) rather than calling erosmancer directly from here,
+          // because that action already does the real agentId→erosmancer
+          // tabId resolution (_resolveErosTab) — reusing it instead of a
+          // second, cache-less resolution attempt. That action's own
+          // POST /api/nodes call was, itself, hitting a route that never
+          // existed on erosmancer's server until this same pass — so
+          // this is two real gaps closing together, not one relying on
+          // the other silently still being broken. Fire-and-forget, same
+          // honesty as the write above: failure here (erosmancer not
+          // running, tab not resolvable) does not affect the callto
+          // persist that already happened synchronously above it.
+          if (d.callto.selector) {
+            _erosRequest('POST', '/bridge/driver', {
+              action: 'register',
+              agentId: d.callto.id,
+              currentUrl: d.callto.url,
+              tag: d.callto.fingerprint?.tag || 'div',
+              selector: d.callto.selector,
+            }).then((r) => {
+              const uuid = r?.body?.node?.uuid;
+              if (uuid) this.options?.registerCallto({ ...d.callto, erosUuid: uuid });
+              else if (r?.status >= 400) console.warn(`[ipc/bridge] erosmancer node registration for callto ${d.callto.id} did not resolve (status ${r.status}) — callto persisted without erosUuid, not blocked on this`);
+            }).catch((err) => {
+              console.warn(`[ipc/bridge] erosmancer node registration for callto ${d.callto.id} failed: ${err.message} — callto persisted without erosUuid, not blocked on this`);
+            });
           }
         } else if (d.type === 'guardian.agent.create' && d.agentName && d.input && d.output) {
           // §BUILT 2026-09-02 — AM8, James: "the guardian plugin maps to

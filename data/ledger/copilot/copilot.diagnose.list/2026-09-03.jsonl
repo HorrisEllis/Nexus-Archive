@@ -1,0 +1,1 @@
+{"uuid":"aee6a6f4-6cbe-4203-b660-b73a7d9d69a0","system":"copilot","component":"copilot.diagnose.list","action":"registered","status":"ok","tags":["copilot"],"detail":"List past diagnosis sessions","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139676}

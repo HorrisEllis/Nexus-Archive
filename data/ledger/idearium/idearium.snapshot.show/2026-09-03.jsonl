@@ -1,0 +1,1 @@
+{"uuid":"7b8f6a27-f335-46ad-8645-84e204a441fc","system":"idearium","component":"idearium.snapshot.show","action":"registered","status":"ok","tags":["idearium"],"detail":"Get a single snapshot by uuid","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1788459139439}

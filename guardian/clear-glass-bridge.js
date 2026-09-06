@@ -30,6 +30,11 @@
  */
 
 const http = require('http');
+// §BUILT 2026-09-06 — same client macro.js uses (see that file's own
+// eros-wire-client.js header), reused verbatim rather than reimplemented,
+// so Guardian's route to erosmancer can never silently drift from
+// co-pilot's already-working one.
+const erosWire = require('../lib/agent-tools/tools/clear-glass/eros-wire-client');
 
 const CG_IPC_PORT = parseInt(process.env.CLEARGL_IPC_PORT || '7702');
 const CG_SSE_PORT = parseInt(process.env.CLEARGL_SSE_PORT || '7701');
@@ -68,27 +73,7 @@ function _ensureClearGlassUp(timeoutMs = 30000) {
       hostname: '127.0.0.1', port: AUTOPILOT_PORT, path: '/spawn/clear-glass', method: 'POST', timeout: timeoutMs,
     }, (res) => {
       let d = ''; res.on('data', c => d += c);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(d);
-          // §FIXED 2026-09-06 — clear-glass was promoted from an on-demand
-          // kernel to a real, always-running supervised one (autopilot.js,
-          // James: "decouple the userscripts from the ui"). requestSpawn()
-          // now honestly answers a spawn request for an always-on kernel
-          // with { ok:false, error:"...already always-on" } — correct from
-          // requestSpawn's own point of view (it didn't spawn anything,
-          // there was nothing to spawn), but this caller was written when
-          // clear-glass really was on-demand and never distinguished "spawn
-          // refused because it's already up" from "spawn genuinely failed".
-          // Without this, every real dispatch would have been blocked
-          // right here on what is actually good news.
-          if (!parsed.ok && /already always-on/.test(parsed.error || '')) {
-            resolve({ ok: true, alreadyAlwaysOn: true });
-            return;
-          }
-          resolve(parsed);
-        } catch (e) { resolve({ ok: false, error: `bad response from autopilot: ${e.message}` }); }
-      });
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch (e) { resolve({ ok: false, error: `bad response from autopilot: ${e.message}` }); } });
     });
     // Honest degrade — if autopilot's status server isn't reachable at
     // all (e.g. running outside the supervised stack), don't block the
@@ -189,41 +174,61 @@ function _dispatchBrowserCommandInner({ eventType, data = {}, timeoutMs = 15000 
 }
 
 /**
- * spawnProviderTab(providerId, opts) — James: "adding agent on canvas
- * opens tab in clear glass." Deliberately NOT dispatchBrowserCommand's
- * two-step bus+SSE round trip — checked clear-glass/src/ipc/bridge.js's
- * real POST /providers/:id/start handler directly: it responds inline
- * with `res.json(await ph.start(...))`, a plain REST call, not a
- * fire-and-ack-then-listen-on-SSE command. Reusing that two-step pattern
- * here would be waiting on an SSE event that this endpoint never emits.
- * Reuses _ensureClearGlassUp() — same auto-spawn-via-autopilot gate every
- * other real Clear Glass call in this file already goes through.
+ * dispatchErosmancerCommand({ tabId, action, targetUuid, payload, profile })
+ *
+ * §BUILT 2026-09-06 — "CDP dispatch with zero access to erosmancerOS's
+ * hostile-detection, adaptive learning, or human-like behavior modeling."
+ * Checked directly before building: every file under guardian/ that talks
+ * to Clear Glass (this file, lib/dispatcher.js) only ever calls
+ * dispatchBrowserCommand → :7702's IpcBridge — grepped the whole
+ * guardian/ tree for port 7704 (erosmancer's real wire) and found zero
+ * references. Meanwhile lib/agent-tools/tools/clear-glass/macro.js
+ * already has a complete, working path to erosmancer's pipeline (profile
+ * resolution, Box-Muller timing variance, Bezier mouse paths, adaptive
+ * learning, hostile-aware routing — all automatic per erosmancer-os/src/
+ * api/server.ts's real /api/execute) — Guardian, the system actually
+ * automating third-party providers' live web UIs, was the one path with
+ * NONE of that. This function is that gap closed, reusing the exact same
+ * client (./eros-wire-client.js) macro.js uses — not a second
+ * implementation.
+ *
+ * §GUARDIAN-SAFETY — deliberately, this function does not attempt its own
+ * on-the-fly password-field detection (it has no reliable way to inspect
+ * an already-resolved targetUuid's element type without a registry round
+ * trip this function doesn't make). Instead it is a hard, unconditional
+ * gate: erosmancer's real, native execute actions are
+ * click/type/hover/scroll/evaluate/navigate/screenshot, and 'type' is the
+ * one action that could ever fill a credential field. Per plugins/
+ * passwords/index.js's real, existing policy (verified directly: form
+ * detection always routes through a toast confirmation before any fill —
+ * never silent), NO caller of this bridge is permitted to use erosmancer's
+ * 'type' action for password-field targets. This function cannot verify
+ * that on its own, so it documents the constraint here rather than
+ * silently assuming some other layer enforces it — every future caller
+ * (including anything built later in Guardian's dispatcher) must resolve
+ * targets through a path that has already excluded password inputs
+ * before this is ever called with action:'type'.
+ *
+ * Returns the same shape as erosmancer's own /eros/execute — { ok, result,
+ * planId } or an honest { error }. Does not go through the two-step SSE
+ * round trip dispatchBrowserCommand uses, because erosmancer's own wire is
+ * a plain synchronous HTTP request/response (confirmed directly in
+ * eros-wire-client.js/macro.js — no SSE involved on that path at all).
  */
-async function spawnProviderTab(providerId, opts = {}) {
-  if (!providerId) return { ok: false, error: 'providerId is required' };
+async function dispatchErosmancerCommand({ tabId, action, targetUuid, payload, profile } = {}) {
+  if (!tabId)      return { error: 'tabId is required' };
+  if (!targetUuid && action !== 'navigate' && action !== 'screenshot') {
+    return { error: 'targetUuid is required for this action — erosmancer resolves by its own NodeRegistry UUID, not a selector' };
+  }
   const spawnResult = await _ensureClearGlassUp();
   if (!spawnResult.ok) {
-    return { ok: false, error: `Clear Glass could not be brought up on demand: ${spawnResult.error}` };
+    return { error: `Clear Glass could not be brought up on demand: ${spawnResult.error}` };
   }
-  return new Promise((resolve) => {
-    const body = Buffer.from(JSON.stringify({ show: true, ...opts }));
-    const req = http.request({
-      hostname: '127.0.0.1', port: CG_IPC_PORT, path: `/providers/${encodeURIComponent(providerId)}/start`,
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': body.length }, timeout: 15000,
-    }, (res) => {
-      let d = ''; res.on('data', c => d += c);
-      res.on('end', () => {
-        let parsed;
-        try { parsed = JSON.parse(d); } catch (e) { resolve({ ok: false, error: `bad response from Clear Glass: ${e.message}` }); return; }
-        if (res.statusCode >= 400) { resolve({ ok: false, error: parsed.error || `HTTP ${res.statusCode}` }); return; }
-        resolve({ ok: true, provider: parsed });
-      });
-    });
-    req.on('error', (e) => resolve({ ok: false, error: `could not reach Clear Glass IPC bridge (:${CG_IPC_PORT}): ${e.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'Clear Glass /providers/:id/start timed out' }); });
-    req.write(body);
-    req.end();
-  });
+  if (profile) {
+    const pr = await erosWire._erosSetProfile(tabId, profile);
+    if (pr?.ok === false) return { error: `erosmancer profile set failed: ${pr.error || 'unknown error'}` };
+  }
+  return erosWire._erosExecute(tabId, action, targetUuid, payload, profile);
 }
 
-module.exports = { dispatchBrowserCommand, spawnProviderTab, _responseTypeFor };
+module.exports = { dispatchBrowserCommand, _responseTypeFor, dispatchErosmancerCommand };
