@@ -1112,9 +1112,20 @@ bus.emit = function(type, data) {
 //  found in this file to migrate safely. Flagged, not silently skipped.
 // ══════════════════════════════════════════════════════════════════════════════
 
-const CORTEX_STORE_DIR = config.CORTEX_STORE_DIR;
-const STORE_DIR = CORTEX_STORE_DIR; // kept as STORE_DIR — referenced elsewhere in this file
-const jaa = new JaaStore(STORE_DIR, { tablePrefix: 'guardian_' });
+// §FIX 2026-09-06 — DF1. STORE_DIR now points at guardian's own real,
+// sovereign folder (config.GUARDIAN_DATA_DIR), not CORTEX_STORE_DIR —
+// see config.js's own header for the full real migration record
+// (60 real ledger rows, 19 real settings rows, copied and verified
+// row-for-row before this line changed). tablePrefix removed: no
+// collision risk in an exclusive directory guardian alone owns.
+// §CORRECTED — my own first draft of this comment claimed guardian
+// "still legitimately reads cross-system memory from cortex elsewhere
+// in this file." Checked before leaving that claim in: zero real
+// matches for cortex/memory/jaa-db anywhere in server.js. Wrong,
+// removed rather than left standing — CORTEX_STORE_DIR is genuinely
+// unused now, deleted along with the claim.
+const STORE_DIR = config.GUARDIAN_DATA_DIR;
+const jaa = new JaaStore(STORE_DIR, {});
 // Ensure guardian-specific tables exist on first run
 ['seam_sessions','queue_compartments','pa_sessions','jobs','artifacts',
  'gaps','failures','ledger','downloads','sessions','timeline_events',

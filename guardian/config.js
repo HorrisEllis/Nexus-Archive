@@ -25,8 +25,22 @@ module.exports = {
   NEXUS_URL:     process.env.NEXUS_URL || 'http://127.0.0.1:3748',
 
   // ── Storage ────────────────────────────────────────────────────────────
-  CORTEX_STORE_DIR: process.env.MEMORY_STORE_DIR ||
-    require('path').join(__dirname, '..', 'data', 'cortex', 'memory'),
+  // §FIX 2026-09-06 — DF1, James: "solidify guardian... persistent data
+  // in the data folder." Real, confirmed production data (guardian_
+  // ledger.json: 60 rows, guardian_settings.json: 19 rows) was living
+  // inside a shared CORTEX_STORE_DIR with a 'guardian_' table prefix —
+  // sharing cortex's directory, not guardian's own. This is guardian's
+  // real, sovereign folder; its own JaaStore now points here, tablePrefix
+  // removed (no collision risk in an exclusive directory). The two real
+  // existing files were copied (not moved) to data/guardian/memory/
+  // ledger.json and settings.json before this config change shipped —
+  // the old, now-vestigial copies are left in place under cortex's
+  // directory, not deleted, per §0.3. CORTEX_STORE_DIR itself removed
+  // from this file entirely — checked first (grep across all of
+  // guardian/): zero remaining real consumers anywhere, genuinely dead,
+  // not left as clutter.
+  GUARDIAN_DATA_DIR: process.env.GUARDIAN_DATA_DIR ||
+    require('path').join(__dirname, '..', 'data', 'guardian', 'memory'),
 
   // ── In-memory buffer caps — real, distinct purposes, kept explicitly
   // separate and clearly named (the original code had both `_LOG_MAX`

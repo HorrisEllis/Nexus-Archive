@@ -9,7 +9,7 @@ spec:
   #
   # This is not a new theme. Every value below is read directly out of
   # ui/themes/nexus-dark.css — the real, already-established sovereign
-  # theme — and out of nexus/ui/brainos/*, the first real UI built
+  # theme — and out of ui/brainos/*, the first real UI built
   # against it this session. Nothing here is invented; this document
   # exists so an agent (co-pilot, or any other) generating new UI can
   # match real, existing convention without re-reading nexus-dark.css's
@@ -99,7 +99,7 @@ spec:
       --gap:  "16px — standard spacing unit"
 
   # ────────────────────────────────────────────────────────────────
-  §3_REAL_COMPONENT_PATTERNS — extracted from nexus/ui/brainos/brainos.css, the first real UI built to this philosophy:
+  §3_REAL_COMPONENT_PATTERNS — extracted from ui/brainos/brainos.css, the first real UI built to this philosophy:
   # ────────────────────────────────────────────────────────────────
     floating_panel: >
       position:fixed, background:var(--plate), border:1px solid
@@ -164,7 +164,7 @@ spec:
       to fix an invented color or a re-derived component shape. To
       actually DRIVE a mounted UI component (not just style a new one),
       use that component's own interaction-contract.json (e.g.
-      nexus/ui/brainos/brainos-interaction-contract.json) — this file is
+      ui/brainos/brainos-interaction-contract.json) — this file is
       the STYLE reference, that file is the ACTION reference. They are
       deliberately separate documents for two separate real questions
       ("how should this look" vs "what can I actually call").

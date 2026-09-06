@@ -33,19 +33,6 @@
 
 const { jaaDB, uid } = require('../../memory/jaa-db');
 const compartmentEngine = require('../../../lib/compartment-engine');
-const path = require('path');
-
-// §BUILT 2026-09-06 — real, tangible-file companion to the JAA-backed
-// queue above, per this file's own header note that a literal folder-
-// drop is "a real, different, equally valid interpretation if that's
-// specifically wanted instead" — James has now specifically, repeatedly
-// wanted it. Same per-system input/ convention already established
-// elsewhere this session (cortex/input, idearium/input, guardian/input).
-// Real env var override (RAID_INPUT_DIR), matching the same real
-// IDEARIUM_DATA_DIR/JAA_DATA_DIR isolation convention this session
-// already established, so a real test never writes into the real
-// input/ folder a live system would actually watch.
-const RAID_INPUT_DIR = process.env.RAID_INPUT_DIR || path.join(__dirname, '../../../data/raid/input');
 const { createCFRLedger } = require('../../../intelligence/cfr/ledger');
 const EVENTS = require('./event-taxonomy');
 
@@ -284,27 +271,6 @@ function submitContract(contract, opts = {}) {
   };
   try { jaaDB.insert(TABLE, row); } catch (e) {
     console.warn(`[${MODULE_ID}] queue insert failed, proceeding without persistence: ${e.message}`);
-  }
-  // §BUILT 2026-09-06 — James, repeated, explicit, across this whole
-  // session: "all of the contracts are supposed to be tangible files
-  // that move in the file system with the actual contract... each
-  // system has a input folder." Real gap, checked directly before
-  // building: this queue's own real persistence is jaaDB.insert() above
-  // — real, already survives a restart, but a row inside a shared JAA
-  // table is not "a tangible file," it's a row nothing outside JAA can
-  // see, drop into, or watch. Purely additive, not a replacement — the
-  // existing JAA-backed drain/retry/dependency logic already works and
-  // is already tested; this doesn't touch any of it. Reuses
-  // lib/node-export.js's own real .contract type (already real, built
-  // earlier this session, grounded in this exact BUILD_CONTRACT_SCHEMA)
-  // rather than inventing a second file format for the same real data.
-  try {
-    const { exportToFile } = require('../../../lib/node-export.js');
-    exportToFile('contract', queueId, row, { system: row.system, intent: row.intention, source: row.source }, RAID_INPUT_DIR);
-  } catch (e) {
-    // §1.2 — a failed tangible-file write must never block the real,
-    // already-working JAA-backed queue this contract still lives in.
-    console.warn(`[${MODULE_ID}] tangible .contract file write failed (queue itself is unaffected): ${e.message}`);
   }
   if (!boundary) {
     // §1.2 — never silently dropped. A missing boundary is real,

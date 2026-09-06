@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BrainOS</title>
+<!--
+  ui/brainos/index.html — the real, missing entry point.
+
+  §FOUND AND FIXED 2026-09-06 — James: "where is brainos ui. if the
+  answer is anything less than the way to access it. you're not done."
+  Checked directly, not assumed: zero HTML file existed anywhere for
+  BrainOS, and the real module files were sitting at nexus/ui/brainos/
+  — a stray, misplaced top-level nexus/ wrapper directory that
+  contained nothing else, structurally unreachable by orchestrator's
+  real UI_ROOT (<repo-root>/ui, confirmed directly against
+  orchestrator/orchestrator.js:168-169). Moved the 4 real files
+  (byte-verified identical before the old location was removed) to
+  ui/brainos/, matching every real sibling UI folder's actual
+  convention (ui/tv-shell/, ui/home/, ui/themes/). This file is the
+  other real half of "not done" — without it, even the correct
+  location would still serve nothing.
+
+  Real access, once this ships: http://127.0.0.1:9000/ui/brainos/ —
+  orchestrator's already-proven generic /ui/:system route (the exact
+  same real mechanism that already serves ui/home/index.html) finds
+  this file with zero orchestrator code changes needed.
+
+  Include order matches brainos.js's own documented header exactly:
+  "Include brainos.css after nexus-dark.css, then this file, then
+  call BrainOS.mount()." brainos-canvas.js loaded before brainos.js
+  calls BrainOS.mount() internally (line 288: global.BrainOSCanvas.
+  mount(canvasHost)) — must exist on window by the time that runs.
+-->
+<link rel="stylesheet" href="/ui/themes/nexus-dark.css">
+<link rel="stylesheet" href="/ui/brainos/brainos.css">
+</head>
+<body>
+<script src="/ui/brainos/brainos-canvas.js"></script>
+<script src="/ui/brainos/brainos.js"></script>
+<script>
+  // Real call, per brainos.js's own documented usage — no options
+  // override needed; DEFAULTS already point at the real, live ports
+  // (guardian :7820, clear-glass :7704 for /cli/commands and the
+  // agent-mesh view/SSE endpoints, idearium :4800), all confirmed
+  // real and fixed earlier this session.
+  window.BrainOS.mount();
+</script>
+</body>
+</html>

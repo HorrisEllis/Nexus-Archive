@@ -32,7 +32,7 @@ dom.window.fetch = global.fetch = (url) => {
   return Promise.resolve({ json: () => Promise.resolve({ systemId: 'clear-glass', port: 7702, commandCount: 68, commands: [] }) });
 };
 
-require('../../nexus/ui/brainos/brainos.js');
+require('../../ui/brainos/brainos.js');
 const BrainOS = dom.window.BrainOS;
 
 async function main() {

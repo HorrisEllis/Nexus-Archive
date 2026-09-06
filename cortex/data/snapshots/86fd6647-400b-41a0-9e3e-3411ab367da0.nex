@@ -1,0 +1,161 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "86fd6647-400b-41a0-9e3e-3411ab367da0",
+  "type": "post_promote",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [],
+    "event_log": [
+      {
+        "uuid": "35fd36e1-8630-4e57-a0dc-e8bafae04ba7",
+        "type": "ledger.nexus.post-promote-housekeeping",
+        "source": "self-build-loop",
+        "payload": {
+          "status": "info",
+          "tags": [],
+          "detail": {
+            "pipelineId": "p1",
+            "snapshot": {
+              "ok": true,
+              "snapId": "392b5421-25ed-4de8-94aa-789116034a08"
+            },
+            "mapDrift": {
+              "ok": true,
+              "scanned": 1278,
+              "knownComponents": 1805,
+              "possiblyUndeclared": 76,
+              "sample": [
+                "clear-glass/src/copilot/wake-relay.js",
+                "clear-glass/src/diagnostic/error-capture.js",
+                "clear-glass/src/providers/download-capture.js",
+                "clear-glass/src/userscripts/manager.js",
+                "copilot/lib/autonomy-router.js",
+                "copilot/lib/capabilities.js",
+                "copilot/lib/intent-learning.js",
+                "copilot/lib/lifeline-contracts.js",
+                "copilot/lib/nexus-awareness.js",
+                "guardian/lib/command-index-extract.js"
+              ],
+              "stats": {
+                "scanned": 1278,
+                "excluded": 0,
+                "withEdges": 589,
+                "totalEdges": 1856,
+                "dynamicRequiresNotCaptured": 481,
+                "unresolvedSpecifiers": 29,
+                "unreadable": 0
+              }
+            }
+          },
+          "causedBy": null,
+          "session": null
+        },
+        "causedBy": null,
+        "ts": 1788735173534,
+        "id": "c0d448d6-6310-42a6-a556-9fca8999a68a"
+      }
+    ],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "7b8fa860-fa49-4147-8b15-1dda9a3dc851",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1788735173326
+      },
+      {
+        "id": "585a4249-192d-48bc-81eb-d5986a942362",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "0d930811-0116-4f97-a98c-6be2b1019494",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "af403909-b3d1-4141-8d68-4f143db7c612",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "befd27ff-e3ef-4df3-86e2-7ef3cfd73149",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "bb836a69-16db-4e2a-9e57-9a286b03b4d4",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "3cd05187-7cfa-446a-96d1-43428ffd5f48",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "4b6441ab-bfce-420f-9be0-c9ccf50858b1",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "cd1a9dcb-eecf-4fbb-8cad-ec1066996b9a",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "92b80a4a-fba5-4831-bfa1-d4289769810d",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "0e120472-862c-4930-83e3-3f630d2f5ad5",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "5f5f68e5-bc9b-4bac-b85f-9aad8b99d165",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "a4f6e2e5-177e-4fee-90b6-01274141c84d",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1788735173327
+      },
+      {
+        "id": "7a64827a-c344-4248-a5ee-a4131591327a",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1788735173327
+      }
+    ],
+    "components": []
+  },
+  "hashVersion": 2,
+  "cortex_state_hash": "63684add0459d427a3788e2915db1c265499178ed7e2ecc121ea0eed0ddbed69",
+  "prev_snapshot_hash": "63684add0459d427a3788e2915db1c265499178ed7e2ecc121ea0eed0ddbed69",
+  "createdAt": 1788735173753
+}

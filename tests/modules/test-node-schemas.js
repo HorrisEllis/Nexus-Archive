@@ -118,9 +118,6 @@ async function main() {
     assert.strictEqual(r.ok, false);
     assert.ok(r.missing.includes('forAgent') && r.missing.includes('intention') && r.missing.includes('endState'));
 
-    const _raidInputIsolated2 = fs.mkdtempSync(path.join(os.tmpdir(), 'raid-input-node-schemas-'));
-    process.env.RAID_INPUT_DIR = _raidInputIsolated2;
-    process.on('exit', () => { try { fs.rmSync(_raidInputIsolated2, { recursive: true, force: true }); } catch (_) {} });
     const ci = require(path.join(ROOT, 'cortex/core/raid/contract-intake.js'));
     const synth = ci.synthesizeContract({ forAgent: 'ollama', intent: 'build', endState: 'a real end state for NS-010' });
     assert.ok(synth.ok, JSON.stringify(synth));

@@ -14,16 +14,23 @@ spec:
 
   meta:
     name:         brainos-live-control-panel
-    version:      0.1.0
+    version:      0.2.0
     uuid:         nexus-brainos-panel-v1-0000-2026-0903-001
     author:       james-brooks
     status:       specced
     description: >
       BrainOS rebuilt as the live visual + control layer for copilot,
-      guardian, ollama, bridge, userscripts, RAID, and clear-glass.
-      Every visual state change traces to a real system event. No
+      guardian, ollama, agent-mesh (AM1), userscripts, RAID, and clear-
+      glass. Every visual state change traces to a real system event. No
       decorative or idle animation. The canvas is a real-time reflection
       of the system, not an illustration of it.
+      §UPDATED 2026-09-06 — bridge removed from this spec entirely (the
+      system itself was fully retired this session, docs/AXIOMS-v3.1.md
+      §5.2/§9.1 pending amendment); agent-mesh/AM1 added as a real,
+      first-class data source (was missing entirely from the original
+      version despite being the exact routing layer "a focal point for
+      using the agents and copilot visually" describes); copilot's own
+      data source corrected to reflect its real, current dispatch path.
 
   # ────────────────────────────────────────────────────────────────
   axioms:
@@ -94,19 +101,47 @@ spec:
       transport: "GET /cli/commands (already returns the live index — this system's route_graph data is available TODAY, phase 5 already DONE)"
       macro_control: "lib/agent-tools/tools/clear-glass/macro.js — already the real execution path copilot uses; the panel's macro control surface should call the SAME tool, not a second implementation"
 
+    # §ADDED 2026-09-06 — was missing entirely from the original spec
+    # despite being real, live, and exactly the routing layer James's
+    # "a focal point for using the agents and copilot visually" idea
+    # describes. Real, this session: DA1 (guardian-coverage gate fixed,
+    # tested, shipped, live in v0.39.50) and the new direct test/control
+    # entry point, POST clear-glass:7704/agent-mesh/route.
+    - requirement: "agent-mesh (AM1) — real LLM-agent routing + live node liveness"
+      source: "clear-glass/src/mesh/agent-mesh.js — real dispatch (route(), Guardian-first via a live GET :7820/providers check, DOM-automation fallback) and real node liveness (listNodes()/listMeshView(), reading network/pulse-registry.js in-process, built this session per its own comment: \"James: convert brainos into the agent mesh\")"
+      real_events: "mesh.node.status_changed, mesh.nodes.snapshot — real SSE events, already emitted every 5s by _startNodePulse(). mesh.raid.decision / mesh.raid.unavailable — real events from the RAID-preference path in route(). Confirmed directly, not assumed — these are live emit() call sites, not proposed."
+      transport: "POST /agent-mesh/route (clear-glass's own WIRE_PORT :7704, added this session — direct dispatch entry point, bypasses the TV UI/copilot path entirely) plus the mesh.* SSE events above via clear-glass's own bus"
+      panel_role: >
+        This is the real "focal point for using the agents and copilot
+        visually" surface — listMeshView()'s unified view (real chat-
+        agent contexts + real external node liveness, exactly the two
+        halves BrainOS's original canvas drew as one mesh) renders
+        directly, no new aggregation needed. A click on an agent node
+        can dispatch through the same real POST /agent-mesh/route this
+        session already built and tested, not a separate mechanism.
+
     - requirement: "co-pilot"
       source: "copilot/server.js, copilot/adaptive-fulfillment.js (real automation path, confirmed prior session), copilot/intuition.js (confirmed live faculty, prior session)"
-      real_events: "not confirmed this pass whether copilot emits its own SSE/bus events distinct from guardian's — copilot dispatches THROUGH guardian's job system per prior findings (run-closed-loop.js talks to idearium :4800 directly; adaptive-fulfillment talks through RAID-routable agents) — likely surfaces AS guardian job.* events, not a separate stream. NEW WORK: confirm before assuming a dedicated copilot channel exists."
+      real_events: >
+        §CORRECTED 2026-09-06 — this entry previously assumed copilot
+        "dispatches THROUGH guardian's job system," surfacing as guardian
+        job.* events. No longer true: tv-shell's ask-box now calls
+        copilot directly (_copilotDispatch -> POST copilot:3750/bridge/
+        deliver, this session's bridge-removal work) — guardian is no
+        longer in that path at all for the primary UI. Whether copilot
+        emits its own distinct SSE/bus events for THIS path specifically
+        is still not confirmed — NEW WORK, same honest gap as before,
+        just correctly scoped to the real current architecture now.
 
     - requirement: "ollama"
       source: "ollama/routes/{system,uploads,stream,jobs,queue,models}.js"
       real_events: "not confirmed this pass — ollama/server.js's own event emission (if any) not read. NEW WORK."
       transport: "each routes/*.js file presumably serves its own GET/POST surface — becomes visible via command-index-per-system.spec phase 2, not before"
 
-    - requirement: "bridge"
-      source: "bridge/server.js, bridge/ledger.js, bridge/router.js"
-      real_events: "not confirmed this pass. NEW WORK."
-      transport: "becomes visible via command-index-per-system.spec phase 4, not before"
+    # §REMOVED 2026-09-06 — bridge was here as a data source
+    # ("bridge/server.js, bridge/ledger.js, bridge/router.js"). The
+    # entire system is retired this session (docs/AXIOMS-v3.1.md
+    # §5.2/§9.1 amendment still pending) — nothing left to show.
 
     - requirement: "all routes and connections / no cap"
       source: "the five command-index.json files from docs/command-index-per-system.spec, once phases 1-5 are built"

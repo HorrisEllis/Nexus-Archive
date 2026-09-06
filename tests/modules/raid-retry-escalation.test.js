@@ -18,12 +18,6 @@ process.env.JAA_DATA_DIR = require('path').join(__dirname, '..', '..', '.tmp-tes
 
 const assert = require('assert');
 const bus = require('../../nexus-bus.js');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const _raidInputIsolated7 = fs.mkdtempSync(path.join(os.tmpdir(), 'raid-input-retry-escalation-'));
-process.env.RAID_INPUT_DIR = _raidInputIsolated7;
-process.on('exit', () => { try { fs.rmSync(_raidInputIsolated7, { recursive: true, force: true }); } catch (_) {} });
 const intake = require('../../cortex/core/raid/contract-intake.js');
 
 let passed = 0, failed = 0;

@@ -40,7 +40,7 @@ module.exports = {
   // James, 2026-08-23: "now using huihui_ai/qwen2.5-coder-abliterate:3b for
   // ollama/co-pilot." Real tag, verified against ollama.com before it was
   // ever written down (1.9GB, Q4_K_M, real arch qwen2).
-  DEFAULT_MODEL:  process.env.OLLAMA_DEFAULT_MODEL  || 'huihui_ai/qwen2.5-coder-abliterate:3b',
+  DEFAULT_MODEL:  process.env.OLLAMA_DEFAULT_MODEL  || 'huihui_ai/qwen2.5-coder-abliterate',
   // §FIX 2026-09-03 — James, from a real screenshot of his own Ollama
   // model list: "no mistral." FALLBACK_MODEL was never updated in the
   // 2026-08-23 change above — DEFAULT_MODEL got the real, actually-pulled
@@ -53,7 +53,7 @@ module.exports = {
   // than DEFAULT_MODEL (a fallback that's identical to the primary isn't
   // a real fallback) — huihui_ai/qwen3-abliterated is the other real,
   // non-cloud model actually present in his install.
-  FALLBACK_MODEL: process.env.OLLAMA_FALLBACK_MODEL || 'huihui_ai/qwen3-abliterated',
+  FALLBACK_MODEL: process.env.OLLAMA_FALLBACK_MODEL || 'huihui_ai/qwen2.5-coder-abliterate',
 
   // ── Concurrency ────────────────────────────────────────────────────────
   // 1 is the honest default for a single-GPU/single-box install: it

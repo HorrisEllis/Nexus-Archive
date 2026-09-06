@@ -1,0 +1,70 @@
+{
+  "stats": {
+    "idearium.idea.phase": {
+      "count": 3,
+      "lastTs": 1788703385572,
+      "intervals": [
+        2408439,
+        93949
+      ],
+      "totalMs": 2502388
+    },
+    "idearium.idea.update": {
+      "count": 3,
+      "lastTs": 1788703385689,
+      "intervals": [
+        2408374,
+        94073
+      ],
+      "totalMs": 2502447
+    },
+    "idearium.spec.deleted": {
+      "count": 3,
+      "lastTs": 1788700964879,
+      "intervals": [
+        4686,
+        4773
+      ],
+      "totalMs": 9459
+    },
+    "idearium.idea.create": {
+      "count": 1,
+      "lastTs": 1788703273305,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.spec-engine.created": {
+      "count": 1,
+      "lastTs": 1788703291615,
+      "intervals": [],
+      "totalMs": 0
+    },
+    "idearium.spec-engine.chunk.agent_set": {
+      "count": 11,
+      "lastTs": 1788703333629,
+      "intervals": [
+        2305,
+        1838,
+        1818,
+        1830,
+        1650,
+        1858,
+        1463,
+        1191,
+        2051,
+        1481
+      ],
+      "totalMs": 17485
+    }
+  },
+  "baseline": {
+    "idearium.spec-engine.chunk.agent_set": {
+      "avgIntervalMs": 1778,
+      "stddevMs": 303,
+      "consistency": 0.8295578238327344,
+      "count": 10,
+      "sampleSize": 9,
+      "computedAt": 1788703332148
+    }
+  }
+}

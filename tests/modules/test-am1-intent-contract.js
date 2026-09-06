@@ -27,9 +27,6 @@ async function test(id, desc, fn) {
 const hatSeed = require(path.join(ROOT, 'lib/hat-seed.js'));
 hatSeed.seedHats();
 const { checkAgentIntentContract } = require(path.join(ROOT, 'lib/agent-intent-contract.js'));
-const _raidInputIsolated3 = fs.mkdtempSync(path.join(os.tmpdir(), 'raid-input-am1-'));
-process.env.RAID_INPUT_DIR = _raidInputIsolated3;
-process.on('exit', () => { try { fs.rmSync(_raidInputIsolated3, { recursive: true, force: true }); } catch (_) {} });
 const raidIntake = require(path.join(ROOT, 'cortex/core/raid/contract-intake.js'));
 
 (async () => {
