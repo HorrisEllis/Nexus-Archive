@@ -62,6 +62,13 @@ function handle(req, res, { method, url, body }) {
       return handled === true ? undefined /* already responded */ : null;
     }
 
+    // ── /network/pulse/* — node handshake/heartbeat/liveness. src/mesh/
+    // agent-mesh.js reads this directly in-process (same Electron main
+    // process) for its own node tracking; these HTTP routes exist for
+    // any other real process (guardian, a second clear-glass instance)
+    // that wants to hand-shake into the same registry from outside. ──────
+    if (first === 'pulse' && net.pulse) return net.pulse.bridgeRoute(parts.slice(1), method, body, req);
+
     if (first === 'crypto') {
       if (!net.engine) return { ok: false, error: 'crypto-engine not loaded' };
       if (parts[1] === 'health' || !parts[1]) return net.engine.health();
@@ -78,6 +85,7 @@ function handle(req, res, { method, url, body }) {
           ports:  net.ports  ? { ok: true, ...net.ports.stats() }                       : { ok: false },
           engine: net.engine ? { ok: true, ...net.engine.health() }                     : { ok: false },
           canvas: net.canvas ? { ok: true, ...net.canvas.watchdog() }                   : { ok: false },
+          pulse:  net.pulse  ? { ok: true, ...net.pulse.stats() }                        : { ok: false },
         },
       };
     }

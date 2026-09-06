@@ -608,6 +608,43 @@
     }
   });
 
+  // ── Agent mesh picker (rebuilt from BrainOS) ─────────────────────────
+  // §CONVERT 2026-09-06 — same real injection convention as pickerBtn
+  // above (fetch the content-script's source once, cache it, executeJavaScript
+  // into the live webview), for mesh-picker.js instead of guardian-picker.js.
+  // Shows AgentMesh's real listMeshView() (chat-agent contexts + pulse-
+  // tracked nodes) as a live HUD and can hand a selection off to the
+  // element picker as its target.
+  let meshPickerActive = false;
+  const meshPickerBtn = document.getElementById('mesh-picker-btn');
+  meshPickerBtn?.addEventListener('click', async () => {
+    meshPickerActive = !meshPickerActive;
+    meshPickerBtn.classList.toggle('active', meshPickerActive);
+
+    if (meshPickerActive) {
+      try {
+        if (!window.__meshPickerSrc) {
+          window.__meshPickerSrc = await fetch('./mesh-picker.js').then(r => r.text());
+        }
+        await wv.executeJavaScript(window.__meshPickerSrc);
+      } catch (err) {
+        console.error('[meshPickerBtn] mesh-picker.js load failed:', err);
+      }
+    } else {
+      await wv.executeJavaScript(`if (window.__meshPickerActive) window.__meshPickerActive.destroy();`).catch(() => {});
+    }
+  });
+
+  // A node/agent picked in the mesh HUD hands off to the element picker,
+  // pre-targeted — same real ipc-message channel convention as
+  // dom:pick-result below, distinct channel so this handler doesn't have
+  // to share dom:pick-result's payload shape.
+  wv.addEventListener('ipc-message', (e) => {
+    if (e.channel === 'mesh:node-selected') {
+      addMsg('assistant', `Mesh target set: <code>${e.args[0]?.label || e.args[0]?.id || 'unknown'}</code> (${e.args[0]?.kind || 'node'})`);
+    }
+  });
+
   // Listen for pick results from webview
   wv.addEventListener('ipc-message', (e) => {
     if (e.channel === 'dom:pick-result') {
