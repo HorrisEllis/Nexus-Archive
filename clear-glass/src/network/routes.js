@@ -54,13 +54,6 @@ function handle(req, res, { method, url, body }) {
     if (first === 'hosts' && net.hosts) return net.hosts.bridgeRoute(parts.slice(1), method, body, req);
     if (first === 'ports' && net.ports) return net.ports.bridgeRoute(parts.slice(1), method, body, req);
 
-    // ── /network/pulse/* — node handshake/heartbeat/liveness. src/mesh/
-    // agent-mesh.js reads this directly in-process (same Electron main
-    // process) for its own node tracking; these HTTP routes exist for
-    // any other real process (guardian, a second clear-glass instance)
-    // that wants to hand-shake into the same registry from outside. ──────
-    if (first === 'pulse' && net.pulse) return net.pulse.bridgeRoute(parts.slice(1), method, body, req);
-
     if (first === 'canvas' && net.canvas) {
       // Canvas persistence writes its own response — same real reason as
       // before the move: it needs raw res access for streaming reads/writes.
@@ -85,7 +78,6 @@ function handle(req, res, { method, url, body }) {
           ports:  net.ports  ? { ok: true, ...net.ports.stats() }                       : { ok: false },
           engine: net.engine ? { ok: true, ...net.engine.health() }                     : { ok: false },
           canvas: net.canvas ? { ok: true, ...net.canvas.watchdog() }                   : { ok: false },
-          pulse:  net.pulse  ? { ok: true, ...net.pulse.stats() }                        : { ok: false },
         },
       };
     }

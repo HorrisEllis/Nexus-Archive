@@ -110,9 +110,9 @@ test('T-006', 'friction_increased is emitted with the exact name liminal-space l
   assert.strictEqual(captured.payload.faultClass, 'timeout');
 });
 
-test('T-007', 'HEAL_REQUESTED for a fault already in FAILURE_MODE is refused, not silently allowed', () => {
+test('T-007', 'HEAL_REQUESTED for a fault freshly in FAILURE_MODE (within cooldown) is refused, not silently allowed', () => {
   reset();
-  _rows.stale_module = { faultClass: 'stale_module', friction: 1.0, count: 10 };
+  _rows.stale_module = { faultClass: 'stale_module', friction: 1.0, count: 10, lastSeen: Date.now() };
   const bus = makeBus();
   let refused = null;
   bus.on('escalation.failure_mode', (e) => { refused = e; });
@@ -120,6 +120,21 @@ test('T-007', 'HEAL_REQUESTED for a fault already in FAILURE_MODE is refused, no
   bus.emit('HEAL_REQUESTED', { gapType: 'stale_module', gapUuid: 'g1' });
   assert.ok(refused, 'expected escalation.failure_mode to fire on refusal');
   assert.strictEqual(refused.payload.faultClass, 'stale_module');
+  escalation.stop();
+});
+
+test('T-007b', 'HEAL_REQUESTED for a fault in FAILURE_MODE for longer than the real cooldown is allowed through, not refused forever', () => {
+  // §FIXED 2026-09-06 — James, from a real 5-hour boot log: memory_pressure
+  // refused 49 times over nearly 5 hours, never once re-attempted. The
+  // real fix: a real, bounded cooldown (5 min), not permanent silence.
+  reset();
+  _rows.stale_module = { faultClass: 'stale_module', friction: 1.0, count: 10, lastSeen: Date.now() - (6 * 60 * 1000) }; // 6 min ago — past the 5 min cooldown
+  const bus = makeBus();
+  let refused = false;
+  bus.on('escalation.failure_mode', () => { refused = true; });
+  escalation.init({ bus });
+  bus.emit('HEAL_REQUESTED', { gapType: 'stale_module', gapUuid: 'g1' });
+  assert.strictEqual(refused, false, 'a fault class stuck in FAILURE_MODE for longer than the real cooldown must get one real re-attempt, not be refused forever');
   escalation.stop();
 });
 

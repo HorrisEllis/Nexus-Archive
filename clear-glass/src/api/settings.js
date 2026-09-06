@@ -93,23 +93,12 @@ class ApiSettings {
   cortexUrl(path = '') {
     return `http://127.0.0.1:${this.data.cortexPort}${path}`;
   }
-  // Bridge-routed URLs — all traffic for copilot/guardian/ollama goes through :9999
-  bridgeUrl(path = '') {
-    return `http://127.0.0.1:${this.data.bridgePort}${path}`;
-  }
-  copilotUrl(path = '') {
-    // Route through bridge: POST /bridge/request { target:'copilot', payload:{ path, ... } }
-    // Kept for legacy call-sites — bridge.js overrides this with dispatch()
-    return this.bridgeUrl(path);
-  }
-  guardianUrl(path = '') {
-    return this.bridgeUrl(path);
-  }
-  ollamaUrl(path = '') {
-    return this.bridgeUrl(path);
-  }
-  getBridgeToken() { return this.data.bridgeToken || ''; }
-  async setBridgeToken(token) { return this.set({ bridgeToken: token }); }
+  // §RETIRED 2026-09-06 — bridgeUrl()/copilotUrl()/guardianUrl()/
+  // ollamaUrl()/getBridgeToken()/setBridgeToken() removed. James, live:
+  // "thought you took care of bridge man..." — these all aliased to
+  // bridge:9999, which is gone; clear-glass/src/copilot/bridge.js was
+  // the only real caller and now uses the *DirectUrl() methods below
+  // directly, which were already real and already correct.
 }
 
 module.exports = ApiSettings;

@@ -38,7 +38,7 @@ const { buildToolsPrompt } = require('./tools');
 class CoPilotBridge {
   constructor({ sse, apiSettings, postEvent }) {
     this.sse         = sse;
-    this.settings    = apiSettings; // ApiSettings instance — has .copilotUrl(), .guardianUrl() etc.
+    this.settings    = apiSettings; // ApiSettings instance — has .copilotDirectUrl(), .guardianDirectUrl() etc.
     this.postEvent   = postEvent || (() => {});
 
     this._busEmit    = null;  // injected by main
@@ -70,7 +70,23 @@ class CoPilotBridge {
 
     this._connectStream();
     this._bridgeBrowserEvents();
-    this._bridgeHandshake();  // establish trust token with Bridge :9999
+    // §FIXED 2026-09-06 — James, live, from his own real running system:
+    // "thought you took care of bridge man..." Real, serious miss on my
+    // part during the bridge removal — I read this file's own header
+    // comment ("primary, full consciousness stream" -> copilot :3750
+    // directly) and wrongly concluded the whole file bypasses bridge.
+    // It doesn't: _bridgeHandshake() below (removed) retried forever
+    // every 10s against bridge:9999, which is gone, and _bridgeDispatch()
+    // (rewritten below) was the real, live mechanism behind copilot
+    // prompts, guardian commands, and ollama generation — all of it
+    // routed through bridge's now-dead token handshake, meaning every
+    // one of those operations was silently broken, not just noisy.
+    // Fixed at the real root: clear-glass/src/api/settings.js already
+    // had real, working *DirectUrl() methods (copilotDirectUrl,
+    // guardianDirectUrl, ollamaDirectUrl — real distinct ports, already
+    // built, just unused by this file) sitting right next to the
+    // bridge-routed ones. _bridgeDispatch below now calls those
+    // directly instead of relaying through bridge.
   }
 
   // ── Primary: send message ────────────────────────────────────────────────
@@ -515,75 +531,79 @@ ${toolsPrompt}${domSection}`;
     });
   }
 
-  _httpPostBridgeAuthed(url, payload, token, timeoutMs = 30000) {
-    return this._httpPostBridge(url, payload, timeoutMs, { 'x-bridge-token': token });
+  // §FIXED 2026-09-06 — _bridgeHandshake and _httpPostBridgeAuthed both
+  // removed entirely (see wire()'s own comment above for the full
+  // finding). _httpPostBridgeAuthed only ever existed to attach the
+  // bridge-issued token to a request; with bridge gone and dispatch
+  // below calling each real target directly, nothing needs that token
+  // anymore.
+  // This GET helper is new — every real dispatch before this fix was
+  // POST-only
+  // (routed through bridge's own single /bridge/request shape), but a
+  // direct call to copilot's real /health needs a real GET.
+  _httpGetBridge(url, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+      const http = require('http');
+      const u = new URL(url);
+      const req = http.request({
+        hostname: u.hostname, port: u.port, path: u.pathname + u.search, method: 'GET',
+        timeout: timeoutMs,
+      }, r => {
+        let buf = ''; r.on('data', c => buf += c);
+        r.on('end', () => resolve({ status: r.statusCode, ok: r.statusCode >= 200 && r.statusCode < 300, body: buf }));
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('http.request timeout')); });
+      req.end();
+    });
   }
 
-  // ── Bridge handshake — establish trust token with Bridge :9999 ─────────
-  async _bridgeHandshake() {
-    const bridgeUrl = this.settings.bridgeUrl('/bridge/handshake');
-    const secret    = process.env.BRIDGE_SECRET_COPILOT || 'nexus-copilot-internal-v1';
-    const port      = this.settings.get().copilotPort || 3750;
+  // §FIXED 2026-09-06 — _bridgeHandshake removed entirely (see wire()'s
+  // own comment above for the full finding). It only ever existed to
+  // obtain a token _bridgeDispatch needed to talk to bridge — with
+  // bridge gone and dispatch now calling each real target directly,
+  // there is nothing left for a token to authorize.
 
-    try {
-      const res = await this._httpPostBridge(bridgeUrl, { systemId: 'copilot', secret, port }, 5000);
-      if (!res.ok) {
-        console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake HTTP ${res.status} — will retry`);
-        setTimeout(() => this._bridgeHandshake(), 10000);
-        return;
-      }
-      const { token } = JSON.parse(res.body);
-      this._bridgeToken = token;
-      await this.settings.setBridgeToken(token);
-      console.log(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Bridge handshake OK — token issued`);
-      this.sse.emit('copilot.bridge.connected', { ts: Date.now() });
-    } catch (err) {
-      console.error(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake error detail — code:${err.code} name:${err.name} message:"${err.message}"`);
-      if (this.sse) {
-        try {
-          this.sse.emit('error.captured', {
-            id: `err-${Date.now()}-bridge-handshake`, ts: Date.now(), isoTime: new Date().toISOString(),
-            source: 'main-process', type: 'bridgeHandshakeFailure',
-            message: err.message, stack: err.stack, code: err.code, name: err.name,
-          });
-        } catch (_) {}
-      }
-      const cause = err.code === 'ECONNREFUSED' ? 'bridge not listening yet'
-        : err.message === 'http.request timeout' ? 'no response within 5s'
-        : `connection error (${err.message})`;
-      console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot/Bridge] Handshake failed: ${cause} — retry in 10s`);
-      setTimeout(() => this._bridgeHandshake(), 10000);
-    }
+  // ── Direct dispatch — calls each real target directly, no bridge ─────
+  // Real endpoint map, checked directly against each system's own real
+  // routes rather than guessed: copilot's /api/prompt, /api/build,
+  // /api/diagnose, /health (all confirmed live in copilot/server.js);
+  // guardian's /command (confirmed live in guardian/server.js);
+  // ollama's /api/generate (Ollama's own real, standard REST API,
+  // independent of anything NEXUS-specific).
+  _directTargetFor(target, type) {
+    const map = {
+      'copilot:copilot.prompt':    { url: this.settings.copilotDirectUrl('/api/prompt'),   method: 'POST' },
+      'copilot:copilot.build':     { url: this.settings.copilotDirectUrl('/api/build'),    method: 'POST' },
+      'copilot:copilot.diagnose':  { url: this.settings.copilotDirectUrl('/api/diagnose'), method: 'POST' },
+      'copilot:copilot.health':    { url: this.settings.copilotDirectUrl('/health'),        method: 'GET'  },
+      'guardian:guardian.command': { url: this.settings.guardianDirectUrl('/command'),      method: 'POST' },
+      'ollama:ollama.generate':    { url: this.settings.ollamaDirectUrl('/api/generate'),   method: 'POST' },
+    };
+    return map[`${target}:${type}`] || null;
   }
 
-  // ── Bridge dispatch — route a request through Bridge :9999 ────────────
   async _bridgeDispatch(target, type, payload, timeout = 30000) {
-    const token = this._bridgeToken || this.settings.getBridgeToken();
-    if (!token) {
-      // Not handshaked yet — attempt handshake then retry once
-      await this._bridgeHandshake();
-      if (!this._bridgeToken) throw new Error('[CoPilot/Bridge] No bridge token — handshake pending');
+    if (target === 'guardian' && type === 'guardian.fetch') {
+      // guardian.fetch's own real path comes from payload.path, not a
+      // fixed map entry — same real guardianDirectUrl(), just a
+      // caller-supplied path instead of one baked into the map above.
+      const res = await this._httpGetBridge(this.settings.guardianDirectUrl(payload.path), timeout);
+      if (!res.ok) throw new Error(`[Guardian] ${payload.path} HTTP ${res.status}`);
+      return JSON.parse(res.body);
     }
-    // §BUG FIXED 2026-07-11 — same fetch()-against-bridge:9999 quirk as
-    // _bridgeHandshake above (see that function's comment for the full
-    // evidence trail). This call site hits the identical host, so it's
-    // the same root cause, not a separate bug — every co-pilot prompt and
-    // every guardian command routed through the bridge went through this
-    // path, which likely explains the NCP connect/disconnect cycling in
-    // the same boot log this fix is responding to.
-    const res = await this._httpPostBridgeAuthed(this.settings.bridgeUrl('/bridge/request'), {
-      type, source: 'clear-glass', target, payload, tags: ['clear-glass', target],
-    }, this._bridgeToken, timeout);
+    const dest = this._directTargetFor(target, type);
+    if (!dest) throw new Error(`[CoPilot] no known direct route for ${target}:${type}`);
+
+    const res = dest.method === 'GET'
+      ? await this._httpGetBridge(dest.url, timeout)
+      : await this._httpPostBridge(dest.url, payload, timeout);
     if (!res.ok) {
-      // §BUGFIX 2026-07-04 (preserved) — read Bridge's actual error body
-      // (validateRequest() puts a specific message there) rather than
-      // throwing a bare status code.
       let detail = '';
       try { const errBody = JSON.parse(res.body); detail = errBody?.errors?.join('; ') || errBody?.error || ''; } catch (_) {}
-      throw new Error(`[Bridge] ${target} dispatch HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
+      throw new Error(`[${target}] ${type} HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
     }
     const data = JSON.parse(res.body);
-    if (!data.ok) throw new Error(`[Bridge] ${target} error: ${data.error || 'unknown'}`);
     return data.result?.response ?? data.result ?? data;
   }
 
