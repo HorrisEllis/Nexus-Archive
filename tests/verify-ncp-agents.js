@@ -22,6 +22,8 @@ const path = require('path');
 const SUITES = [
   { file: 'tests/stale-sweep-socket-close.test.js',
     bug: 'guardian forgot stale NCP clients without closing their socket — a disconnected tab never recovered' },
+  { file: 'tests/dispatcher-stale-socket.test.js',
+    bug: 'guardian silently marked a job "delivered" when the real write reached zero clients — "routes to it, does nothing beyond that"' },
   { file: 'tests/spawn-provider-tab.test.js',
     bug: 'guardian could not tell Clear Glass to spawn/wake a provider tab' },
   { file: 'tests/spec-engine-yaml-import.test.js',

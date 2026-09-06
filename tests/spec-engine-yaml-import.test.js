@@ -12,24 +12,42 @@
 // change from 4.x. spec-engine/index.js used `import yaml from
 // 'js-yaml'` (a default import), which is why it broke.
 //
-// This session's own earlier testing never caught it because the only
-// js-yaml copy available in that sandbox was a borrowed 4.3.0, which
-// still had a default — so the bug was invisible until James's own real
-// npm install (which installs the actually-declared ^5.2.1) surfaced it.
+// §FIXED 2026-09-06, ROUND 2 — James: real, live report from his actual
+// Windows 11 machine: `FAIL: expected PASS ... got:` — empty. Traced two
+// real, separate Windows bugs in THIS TEST FILE, not the fix it checks:
+//   1. execSync(`node -e "${script...}"`) built a shell command string
+//      and relied on POSIX quoting (backslash-escaping embedded quotes).
+//      Windows' cmd.exe (what execSync spawns through by default, even
+//      when the caller's own shell is PowerShell) has different quoting
+//      rules entirely — the multi-line script string never survived
+//      intact, so node -e ran empty/garbled input and produced no real
+//      output at all. Fixed: write the child script to a real temp file
+//      and run `node <file>` via execFileSync with an argument ARRAY,
+//      not a single shell string — no shell quoting involved either way.
+//   2. `'file://' + SPEC_ENGINE` naively concatenated a Windows path
+//      (D:\Backups\...\index.js — backslashes, a drive letter) onto a
+//      URL prefix. That produces an invalid file:// URL on Windows
+//      (needs file:///D:/Backups/... — forward slashes, three slashes
+//      total). Likely the real, second reason nothing loaded. Fixed
+//      with the real, built-in url.pathToFileURL(), which handles this
+//      correctly on every OS instead of a manual string-concat guess.
 //
-// Runs spec-engine/index.js's real import in a clean child process
-// (execSync — not require()'d into this process's own module cache)
-// specifically so a prior successful load in the test runner itself
-// can't hide the exact failure mode James's log showed.
+// This session's own earlier testing never caught either bug because it
+// only ever ran on Linux — both are Windows-specific failure modes that
+// simply don't exist on the platform this was originally written and
+// tested on.
 
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
+const { pathToFileURL } = require('url');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
-const SPEC_ENGINE = path.join(__dirname, '..', 'idearium', 'spec-engine', 'index.js');
+const SPEC_ENGINE_URL = pathToFileURL(path.join(__dirname, '..', 'idearium', 'spec-engine', 'index.js')).href;
 
 function main() {
   const script = `
-    import('file://${SPEC_ENGINE}').then(se => {
+    import(${JSON.stringify(SPEC_ENGINE_URL)}).then(se => {
       if (!Array.isArray(se.SPEC_SECTIONS) || se.SPEC_SECTIONS.length !== 10) {
         console.error('FAIL: SPEC_SECTIONS did not load correctly — ' + JSON.stringify(se.SPEC_SECTIONS));
         process.exit(1);
@@ -47,14 +65,20 @@ function main() {
     });
   `;
 
+  // Real temp file, not an inline -e string — sidesteps shell quoting
+  // entirely, on every OS, not just the one this was first tested on.
+  const tmpFile = path.join(os.tmpdir(), `spec-engine-yaml-import-test-${process.pid}.mjs`);
+  fs.writeFileSync(tmpFile, script, 'utf8');
+
   let output;
   try {
-    output = execSync(`node --input-type=module -e "${script.replace(/"/g, '\\"')}"`, { encoding: 'utf8', timeout: 15000 });
+    output = execFileSync(process.execPath, [tmpFile], { encoding: 'utf8', timeout: 15000 });
   } catch (e) {
-    // execSync throws on non-zero exit — real stdout/stderr are on the error object
     const stderr = (e.stderr || '').toString();
     const stdout = (e.stdout || '').toString();
     throw new Error(`spec-engine/index.js failed to import in a clean process: ${stderr || stdout || e.message}`);
+  } finally {
+    fs.unlinkSync(tmpFile);
   }
 
   if (!output.includes('PASS')) {
