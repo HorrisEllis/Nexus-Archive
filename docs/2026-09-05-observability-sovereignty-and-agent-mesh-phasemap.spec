@@ -1042,7 +1042,44 @@ spec:
         happen" — corrected via §0.1 once the actual write path
         (versionium's own sovereign store) was traced directly.
 
-  gaps:
+  session_close_2026-09-06_ctx93pct: >
+    Context nearly exhausted — final summary before handoff, per James's
+    own repeated instruction to never lose work to the session boundary.
+    THIS SESSION'S REAL, VERIFIED WORK (33/33 assertions across 5 test
+    files, all re-verified together in one consolidated tree just before
+    this note): DA1 (agent-mesh guardian-coverage gate) — closed, shipped,
+    confirmed live in James's own v0.39.50. Bridge — removed from tv-shell,
+    diagnostic, autopilot; axiom §5.2/§9.1 amendment still NOT done, still
+    the single highest-priority open item since it's constitutional, not
+    code. Architect's Forge→Idearium export — built, verified end-to-end
+    against idearium's real reader. SYSTEM_REGISTRY — built, then
+    corrected (James caught "there is not 50 systems" — real bug, wrong
+    VERSION key, fixed, now 15 real entries). PULSE_ALL — architect,
+    eravos migrated and tested; emerge resolved by retiring its poller
+    entirely (compile() called directly by copilot now) rather than
+    working around pulse's port requirement; diagnostic and intelligence
+    still open. The NCP/gm-shim fix (this session's last major finding) —
+    GM_xmlhttpRequest now genuinely streams via a real ReadableStream
+    reader, verified against both the broken and fixed versions with a
+    real chunked HTTP server, not mocked.
+    STILL FULLY OPEN, NOT STARTED: idea→spec→projects/chunks physical
+    file layout (James wants /projects/<uuid>/chunks/*.md; real code
+    currently writes /specs/<uuid>/*.md flat — confirmed 0 specs ever
+    created in the live session data, so this path has never actually
+    run); "cortex the bookkeeper" (needs the read-vs-write-target
+    decision named earlier, never made); CP3 git-vs-versionium; BrainOS
+    controlling agents via commands; clear-glass plugins/* (confirmed,
+    still zero real events); guardian (not yet investigated this
+    session beyond what NCP's fix touched); full component map;
+    idearium-repo-per-system; event taxonomy expansion beyond the 3/36
+    clear-glass files already covered; autopilot's own SSE endpoint
+    (confirmed: does not exist at all — the literal prerequisite for
+    "fed into the SSE into autopilot," never built).
+    HANDED OFF AS: nexus-session-2026-09-06-patch.zip (16 files, real
+    paths, drop-in) for the incremental work, and now a FULL project
+    zip with git history intact per James's explicit "full zip, full
+    git" request — the complete tree, not a patch, so nothing depends
+    on a prior zip already being applied correctly.
     as_of: 2026-09-05
     entries:
       - id: SESSION1
