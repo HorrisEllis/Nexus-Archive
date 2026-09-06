@@ -39,6 +39,7 @@ let _hosts    = null;
 let _ports    = null;
 let _canvas   = null;
 let _engine   = null;
+let _pulse    = null;
 let _installed = false;
 let _bus      = () => {};
 
@@ -133,9 +134,26 @@ function install(bus, opts = {}) {
     _canvas = CanvasPersist;
   }
 
+  // ── Pulse Registry (node handshake/heartbeat/liveness — BrainOS's real
+  //    mesh mechanic, see network/pulse-registry.js) — the real, direct
+  //    consumer is src/mesh/agent-mesh.js's node-pulse tracking; it reads
+  //    this in-process (same Electron main process) rather than polling
+  //    over HTTP. ─────────────────────────────────────────────────────────────
+  const { PulseRegistry } = loadModule('pulse-registry', path.join(__dirname, 'pulse-registry.js')) || {};
+  if (PulseRegistry) {
+    _pulse = new PulseRegistry({ name: 'Network Pulse Registry' });
+    _pulse.connectBus(_bus);
+    // clear-glass registers itself as the first live node on its own
+    // registry, so /network/pulse/nodes is never empty on a healthy
+    // boot — matches BrainOS's "every node hand-shakes" model.
+    const selfId = `clearglass-${require('crypto').randomBytes(4).toString('hex')}`;
+    const { token } = _pulse.handshake({ instanceId: selfId, logicalId: 'clearglass', meta: { role: 'clearglass', pid: process.pid } });
+    setInterval(() => { try { _pulse.heartbeat({ instanceId: selfId, token }); } catch (_) {} }, 5000).unref?.();
+  }
+
   bus.emit(new Event('network.ready', {
     snr: !!_snr, keys: !!_keys, hosts: !!_hosts, ports: !!_ports,
-    canvas: !!_canvas, engine: !!_engine,
+    canvas: !!_canvas, engine: !!_engine, pulse: !!_pulse,
   }));
 
   return module.exports;
@@ -149,6 +167,7 @@ module.exports = {
   get ports()  { return _ports;  },
   get canvas() { return _canvas; },
   get engine() { return _engine; },
+  get pulse()  { return _pulse;  },
   get installed() { return _installed; },
   VERSION: '1.0.0',
   UUID:    'cg-network-install-v1-0000-2026-0903-001',

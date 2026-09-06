@@ -410,6 +410,16 @@
     </select>
     <input id="picker-api-url" type="text" placeholder="https://..." style="display:none;width:120px;font-size:10px;background:var(--bg-2,#111);color:var(--text-dim,#999);border:1px solid var(--border,#333);border-radius:4px;height:22px;padding:0 4px;">
   </span>
+  <!-- §CONVERT 2026-09-06 — James: "convert brainos into the agent mesh
+       ... also clearglass guardian picker." Sibling to tool-picker-group
+       above, same real toggle-button convention: injects a content
+       script (mesh-picker.js, same pattern as guardian-picker.js) that
+       shows AgentMesh's live node/agent pulse (src/mesh/agent-mesh.js's
+       listMeshView()) as a HUD, and can hand a selected node/agent off
+       to the element picker as its target — the actual real replacement
+       for BrainOS's old canvas (see network/install.js's header for what
+       from BrainOS did and didn't come across). -->
+  <button class="nav-btn" id="mesh-picker-btn" data-tool-id="mesh-picker" data-tool-label="Agent Mesh" data-tool-icon="◈" title="Agent Mesh">◈</button>
   <button class="nav-btn" id="btn-mesh" data-tool-id="mesh" data-tool-label="Agent Mesh" data-tool-icon="⬡" title="Agent Mesh">⬡</button>
   <button class="nav-btn" id="btn-diag" data-tool-id="diag" data-tool-label="Diagnostics" data-tool-icon="⚕" title="Diagnostics">⚕</button>
 </div>

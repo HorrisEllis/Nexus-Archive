@@ -133,6 +133,8 @@ class AgentMesh {
     this.agents  = new Map(); // agentKey → AgentState
     this.queue   = [];        // pending tasks
     this.processing = false;
+    this._nodeStatusCache = new Map(); // instanceId -> last-seen status, for change detection
+    this._nodePulseTimer  = null;
   }
 
   /**
@@ -154,6 +156,78 @@ class AgentMesh {
 
   async init() {
     console.log(`[AgentMesh] Registry: ${Object.keys(AGENT_REGISTRY).join(', ')}`);
+    this._startNodePulse();
+  }
+
+  // ── Node pulse (rebuilt from BrainOS) ──────────────────────────────────
+  // §CONVERT 2026-09-06 — James: "convert brainos into the agent mesh."
+  // BrainOS's own real value was never its standalone canvas or its
+  // duplicate agent/orchestration layer (neither got ported — see
+  // network/install.js's header for the full record of what didn't come
+  // across and why) — it was the one genuinely new idea: a live picture
+  // of which *processes* (guardian, clear-glass itself, any other real
+  // node) are actually reachable right now, via handshake+heartbeat, not
+  // just which chat-agent DOM contexts this mesh has spawned. That
+  // picture belongs here, in the real agent mesh, not in a second,
+  // parallel "mesh" concept — reading network/pulse-registry.js's live
+  // registry directly (same Electron main process, no HTTP round trip
+  // needed) is what actually converts it.
+  //
+  // listAgents() above already answers "which chat-agent DOM contexts are
+  // spawned and how healthy are they." listNodes()/listMeshView() below
+  // answer the other real half BrainOS's canvas asked: "which processes
+  // in this whole nexus deployment are alive right now."
+  _network() {
+    try { return require('../network/install.js'); }
+    catch (_) { return null; }
+  }
+
+  listNodes() {
+    const net = this._network();
+    if (!net?.installed || !net.pulse) return [];
+    return net.pulse.list();
+  }
+
+  // One unified view: real chat-agent contexts (this.agents, DOM-spawned,
+  // health-scored) plus real external nodes (network's pulse registry,
+  // handshake/heartbeat-tracked) — exactly the two things BrainOS's
+  // canvas used to draw as one mesh, now actually one real call.
+  listMeshView() {
+    return [
+      ...this.listAgents().map(a => ({ kind: 'agent', id: a.contextId, label: a.key, status: a.status, health: a.health, meta: a })),
+      ...this.listNodes().map(n => ({ kind: 'node', id: n.instanceId, label: n.logicalId, status: n.status, health: n.status === 'alive' ? 100 : n.status === 'idle' ? 40 : 0, meta: n })),
+    ];
+  }
+
+  // Polls the in-process pulse registry every 5s (matching BrainOS's own
+  // pulse cadence) — not real network polling, just reading a Map, since
+  // network/install.js lives in this same process. Emits a full snapshot
+  // every tick for late-joining listeners (e.g. mesh-picker.js on first
+  // connect) plus a targeted event for any node whose status actually
+  // changed since the last tick, so a listener doesn't have to diff
+  // snapshots itself to notice a node went idle/dead/came back.
+  _startNodePulse() {
+    if (this._nodePulseTimer) return;
+    this._nodePulseTimer = setInterval(() => {
+      const nodes = this.listNodes();
+      for (const n of nodes) {
+        const prev = this._nodeStatusCache.get(n.instanceId);
+        if (prev !== n.status) {
+          this._nodeStatusCache.set(n.instanceId, n.status);
+          this.sse.emit('mesh.node.status_changed', { instanceId: n.instanceId, logicalId: n.logicalId, from: prev || null, to: n.status, ts: Date.now() });
+        }
+      }
+      // Drop cache entries for nodes network/install.js has pruned (dead >5min)
+      const liveIds = new Set(nodes.map(n => n.instanceId));
+      for (const id of this._nodeStatusCache.keys()) if (!liveIds.has(id)) this._nodeStatusCache.delete(id);
+
+      this.sse.emit('mesh.nodes.snapshot', { nodes, ts: Date.now() });
+    }, 5000);
+    this._nodePulseTimer.unref?.();
+  }
+
+  stopNodePulse() {
+    if (this._nodePulseTimer) { clearInterval(this._nodePulseTimer); this._nodePulseTimer = null; }
   }
 
   // ── Spawn agent context ───────────────────────────────────────────────

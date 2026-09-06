@@ -201,24 +201,6 @@ function _attemptEmergencyGC(reasons) {
   }
 }
 
-// §FIXED 2026-09-06 — James, direct, from a real 5-hour-long log: "the
-// system needs to continue... persist through restarts, or crashes" and,
-// several turns earlier this same session: "needs to retry even when
-// logged in the failure_modes if the problem persists." Confirmed real
-// and ongoing from an actual boot log: memory_pressure refused 49 times
-// over nearly 5 hours (07:12-12:01), permanently latched, never once
-// re-attempted. FAILURE_MODE's original intent (docs/self-heal.spec
-// level 4, "no more auto-attempts") was a real, correct safety valve
-// against infinite instant retry loops — but "no more, ever" and "the
-// condition might have genuinely resolved by now" are different claims.
-// RETRY_COOLDOWN_MS gives a real, bounded periodic re-check instead of
-// either extreme: not instant re-spam (the original problem), not
-// permanent silence (this bug). Cooldown anchored on existing.lastSeen —
-// already a real field, already updated by every real raiseFriction()
-// call — so this needed no new state, just a real time check before the
-// refusal.
-const RETRY_COOLDOWN_MS = 5 * 60 * 1000; // 5 min — real, bounded, not instant, not never
-
 // ── HEAL_REQUESTED → refuse if already in FAILURE_MODE, otherwise no-op ────────
 // (this organ tracks friction; self-heal, Phase 3, is what actually attempts fixes)
 function _onHealRequested(event) {
@@ -227,25 +209,14 @@ function _onHealRequested(event) {
 
   const existing = faultTaxonomy.getFaultClass(faultClass);
   if (existing && faultTaxonomy.bandFor(existing.friction) === 'FAILURE_MODE') {
-    const sinceLastSeen = Date.now() - (existing.lastSeen || 0);
-    if (sinceLastSeen < RETRY_COOLDOWN_MS) {
-      if (_bus) _bus.emit('escalation.failure_mode', {
-        faultClass,
-        friction: existing.friction,
-        cause: 'HEAL_REQUESTED refused',
-        gapUuid: event.payload.gapUuid,
-        message: `'${faultClass}' is in FAILURE_MODE (friction ${existing.friction}) — no more auto-attempts (docs/self-heal.spec level 4)`,
-      });
-      console.warn(`[${MODULE_ID}] refused HEAL_REQUESTED for '${faultClass}' — already in FAILURE_MODE`);
-      return;
-    }
-    // Real cooldown has passed — let this one real attempt through. If the
-    // condition genuinely resolved, recordSuccess() (called elsewhere on
-    // a real successful outcome) decays friction below FAILURE_MODE and
-    // this fault class is truly clear again. If it hasn't, raiseFriction
-    // updates lastSeen and the same cooldown starts fresh — never a
-    // instant-retry storm, never a permanent silence.
-    console.warn(`[${MODULE_ID}] '${faultClass}' still in FAILURE_MODE but cooldown (${RETRY_COOLDOWN_MS}ms) elapsed since last real check (${sinceLastSeen}ms ago) — allowing one real re-attempt instead of refusing forever`);
+    if (_bus) _bus.emit('escalation.failure_mode', {
+      faultClass,
+      friction: existing.friction,
+      cause: 'HEAL_REQUESTED refused',
+      gapUuid: event.payload.gapUuid,
+      message: `'${faultClass}' is in FAILURE_MODE (friction ${existing.friction}) — no more auto-attempts (docs/self-heal.spec level 4)`,
+    });
+    console.warn(`[${MODULE_ID}] refused HEAL_REQUESTED for '${faultClass}' — already in FAILURE_MODE`);
   }
 }
 

@@ -976,24 +976,6 @@ function _startStatusServer() {
     }
     res.writeHead(404); res.end('not found — try /status, POST /spawn/:name, POST /touch/:name, GET /ledger, GET /warp');
   });
-  // §FIXED 2026-09-06 — James, from a real boot log: a second `npm run
-  // start:all` (after the first was Ctrl+C'd but hadn't fully released
-  // the port yet — common on Windows) hit EADDRINUSE here with zero
-  // 'error' handler on the server, which is Node's own real behavior
-  // for an unhandled EventEmitter error — crashes the entire process,
-  // taking guardian/cortex/every real system down with it over a status
-  // dashboard convenience endpoint. Real fix: this server is optional
-  // infrastructure (the status page, the spawn/touch triggers) — a real
-  // system boot (guardian, cortex, etc.) mattering far more than this
-  // one endpoint being reachable. Degrades instead of crashing: logs a
-  // clear, actionable warning and continues booting without it.
-  server.on('error', (e) => {
-    if (e.code === 'EADDRINUSE') {
-      _log(`⚠ autopilot status server could not bind :${STATUS_PORT} — already in use (another autopilot instance may still be running, or didn't fully release the port yet on a fast restart). Continuing boot WITHOUT the status server — guardian/cortex/etc. are unaffected, but /status, /spawn/:name, and /touch/:name won't be reachable until this is resolved (check for a zombie node process holding the port).`);
-      return;
-    }
-    _log(`⚠ autopilot status server error: ${e.message} — continuing boot without it`);
-  });
   server.listen(STATUS_PORT, () => _log(`autopilot status: http://127.0.0.1:${STATUS_PORT}/status`));
 }
 
