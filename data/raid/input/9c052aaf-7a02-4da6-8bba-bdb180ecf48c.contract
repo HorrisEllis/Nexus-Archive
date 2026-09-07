@@ -1,0 +1,72 @@
+envelope: 1
+uuid: nexus-export-contract-9c052aaf-7a02-4da6-8bba-bdb180ecf48c
+type: contract
+id: 9c052aaf-7a02-4da6-8bba-bdb180ecf48c
+context: null
+intent: build
+summary: null
+system: null
+tags: []
+exported_at: 1788779601294
+source: idearium
+payload:
+  uuid: 9c052aaf-7a02-4da6-8bba-bdb180ecf48c
+  status: queued
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: purpose
+  forAgent: ollama
+  contract:
+    content: |-
+      You are building the "Purpose & Intent" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: poller-test-1
+        Type: component
+        Description: (none provided)
+        UUID: 99ac4cc0-25d1-4d74-957f-ddbdfe615c18
+        Chunk: 2/10
+        Section: purpose
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:99ac4cc0:purpose
+        contract_id: spec-contract:99ac4cc0:purpose:8d54c95e
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+
+      **Open Gaps:** none
+
+      YOUR TASK:
+      Write the "Purpose & Intent" section for this spec.
+      What this component does, why it exists, what problem it solves
+      Requirements:
+      - Be specific to "poller-test-1" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: purpose
+    forAgent: ollama
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1788779601294
+  updatedAt: 1788779601294

@@ -64,6 +64,59 @@ export class RepoLayer {
     this.repos = this._load();
   }
 
+  // §BUILT 2026-09-06 — James: "files in the compartment/repo are
+  // physical in the /projects/repo name or uuid... make idearium
+  // solid. persistent. physical."
+  //
+  // §RESPECTS this file's own real architecture, stated in its header:
+  // "a repo no longer has its own content store at all... one source of
+  // truth, never a stale second copy." materialize() is deliberately a
+  // regenerated PROJECTION of the spec-engine manifest, not a second,
+  // independently-editable store — every real call rewrites the whole
+  // tree from the manifest's own current chunk content. Editing a file
+  // directly under /projects/<uuid>/ will be silently overwritten on
+  // the next materialize() call; that's intentional, not a bug — the
+  // manifest stays the one real source of truth, this is just where its
+  // content becomes real, physical, inspectable-by-anything-not-just-
+  // idearium files on disk, kept honestly in sync rather than a second
+  // place that could quietly drift.
+  materialize(repoUuid) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return { error: 'repo not found' };
+    if (!this.se) return { error: 'repo layer has no spec-engine — cannot read content to materialize' };
+
+    const outDir = path.join(this.dataDir, 'projects', repoUuid);
+    try {
+      fs.mkdirSync(outDir, { recursive: true });
+      // Real, existing files removed first — a chunk that was deleted
+      // (deleteFile()) or renamed must not leave a stale physical file
+      // behind after materialize() runs; the tree is always regenerated
+      // to genuinely match the manifest's current, real state, not
+      // merged with whatever happened to be there before.
+      for (const entry of fs.readdirSync(outDir)) {
+        fs.rmSync(path.join(outDir, entry), { recursive: true, force: true });
+      }
+
+      let written = 0;
+      const files = this.get(repoUuid).files || [];
+      for (const f of files) {
+        const content = this.readFile(repoUuid, f.path);
+        if (content.error) continue; // §1.2 — logged by readFile itself; a real, individual missing chunk must not abort the whole materialize
+        const dest = path.join(outDir, f.path);
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.writeFileSync(dest, content.content, 'utf8');
+        written++;
+      }
+      return { ok: true, dir: outDir, written, total: files.length };
+    } catch (e) {
+      // §1.2 loud, non-fatal — the real, authoritative manifest content
+      // is untouched by a materialize failure; only the physical
+      // projection failed to (re)generate.
+      console.error(`[idearium/repo] materialize(${repoUuid}) failed: ${e.message}`);
+      return { error: e.message };
+    }
+  }
+
   get se() { return this._seGetter(); }
 
   // §DB-MIGRATION 2026-07-14 — same move as idearium/index.js: repos.json
@@ -187,6 +240,18 @@ export class RepoLayer {
       if (p) { p.forks.push(repoUuid); }
     }
     this._save();
+    // §BUILT 2026-09-06 — James: "the moment a spec is made the
+    // compartment and repo are made... files in the compartment/repo
+    // are physical." Real, first materialization right at creation —
+    // even with 0 real chunk content yet (a fresh, all-pending spec),
+    // this creates the real, physical /projects/<repoUuid>/ directory
+    // immediately, so it exists the moment the repo does, not only
+    // once something happens to write into it later. A failed
+    // materialize here must never fail the repo creation itself — the
+    // repo record (just persisted, above) is the real, authoritative
+    // thing; the physical projection is additive.
+    const matResult = this.materialize(repoUuid);
+    if (matResult.error) console.warn(`[idearium/repo] initial materialize for ${repoUuid} failed, repo still created: ${matResult.error}`);
     return { repo, ideaUuid, specUuid: manifest.uuid };
   }
 
@@ -310,6 +375,7 @@ export class RepoLayer {
         // existing file — edit in place via the same completeChunk every
         // other content write goes through (disk-verified, rootHash recomputed)
         this.se.completeChunk(manifest.uuid, chunk.uuid, content);
+        this._materializeQuiet(repoUuid); // §BUILT 2026-09-06 — keep the real, physical projection honestly in sync, never stale
         return { ok: true, path: chunk.fileName, created: false };
       }
       // new file — no chunk for this path yet. sectionId must be a slug;
@@ -318,6 +384,7 @@ export class RepoLayer {
       const sectionId = clean.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() || `file-${Date.now()}`;
       const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content });
       const newChunk = fresh.chunks.find(c => c.sectionId === sectionId);
+      this._materializeQuiet(repoUuid);
       return { ok: true, path: newChunk?.fileName || clean, created: true };
     } catch (e) { return { error: e.message }; }
   }
@@ -327,8 +394,19 @@ export class RepoLayer {
       const { manifest, chunk } = this._resolveChunk(repoUuid, relPath);
       if (!chunk) return { error: `file not found in repo: ${relPath}` };
       this.se.removeChunk(manifest.uuid, chunk.uuid);
+      this._materializeQuiet(repoUuid); // real, physical file must actually disappear too, not just the manifest's record of it
       return { ok: true, path: chunk.fileName };
     } catch (e) { return { error: e.message }; }
+  }
+
+  // §BUILT 2026-09-06 — a real content change (write/delete) must never
+  // fail or be rolled back just because the physical /projects/ mirror
+  // couldn't be regenerated — the manifest write above already
+  // succeeded and IS the real, authoritative change; a materialize
+  // failure here is logged, never thrown back at the caller.
+  _materializeQuiet(repoUuid) {
+    const r = this.materialize(repoUuid);
+    if (r.error) console.warn(`[idearium/repo] materialize for ${repoUuid} failed after a real content change: ${r.error}`);
   }
 }
 

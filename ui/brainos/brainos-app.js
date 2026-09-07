@@ -55,6 +55,27 @@
     setTimeout(() => el.remove(), 10000);
   }
 
+  // §FOUND & FIXED 2026-09-06 — adversarial audit, James: "find every
+  // problem you can... hostile attacked and verified." Every render
+  // function below builds real HTML via innerHTML template literals,
+  // directly interpolating real, live data (chat log prompts, macro
+  // names, node labels/ids/status) with zero escaping. This UI has
+  // real, powerful local capabilities (window.ClearGlass.macros.run())
+  // — a chat log entry or agent-mesh node whose content ever contains
+  // an HTML special character would not just render oddly, it could
+  // inject and execute arbitrary markup/event handlers in this real
+  // page's own context. Confirmed the worst real case directly:
+  // `data-run="${m.name}"` at line ~211 was an ATTRIBUTE-context
+  // injection — a macro name containing a literal `"` could break out
+  // of the attribute and add a new one (onmouseover=..., etc.), not
+  // just malform the visible text. One real, shared escaper, applied
+  // everywhere a real, external value reaches innerHTML.
+  function _escapeHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
   // ── CANVAS — mount the real, existing dynamic mesh renderer ─────────────
   const canvasHost = document.getElementById('canvas-host');
   window.BrainOSCanvas.mount(canvasHost);
@@ -118,10 +139,10 @@
     if (!ids.length) { list.innerHTML = '<div class="empty-state">no real nodes yet</div>'; return; }
     list.innerHTML = ids.map((id) => {
       const n = _meshNodes[id];
-      return `<div class="node-item${_selectedNode?.id === id ? ' sel' : ''}" data-id="${id}">
+      return `<div class="node-item${_selectedNode?.id === id ? ' sel' : ''}" data-id="${_escapeHtml(id)}">
         <div class="nd-dot" style="background:${_statusColor(n.status)}"></div>
-        <div class="nd-label">${n.label || id}</div>
-        <div class="nd-kind">${n.kind || ''}</div>
+        <div class="nd-label">${_escapeHtml(n.label || id)}</div>
+        <div class="nd-kind">${_escapeHtml(n.kind || '')}</div>
       </div>`;
     }).join('');
     list.querySelectorAll('.node-item').forEach((el) => {
@@ -138,13 +159,13 @@
     if (!n) { el.innerHTML = '<div class="empty-state">click a node on the canvas</div>'; return; }
     el.innerHTML = `
       <div class="list-row">
-        <div class="lr-head"><span class="lr-name">${n.label || n.id}</span>
-          <span class="badge ${n.status === 'alive' || n.status === 'connected' ? 'ok' : n.status === 'idle' ? 'warn' : 'err'}">${n.status || 'unknown'}</span>
+        <div class="lr-head"><span class="lr-name">${_escapeHtml(n.label || n.id)}</span>
+          <span class="badge ${n.status === 'alive' || n.status === 'connected' ? 'ok' : n.status === 'idle' ? 'warn' : 'err'}">${_escapeHtml(n.status || 'unknown')}</span>
         </div>
-        <div class="lr-meta">id: ${n.id}</div>
-        <div class="lr-meta">kind: ${n.kind || '—'}</div>
-        ${n.health !== undefined ? `<div class="lr-meta">health: ${n.health}</div>` : ''}
-        ${n.meta ? `<div class="lr-meta">meta: ${JSON.stringify(n.meta)}</div>` : ''}
+        <div class="lr-meta">id: ${_escapeHtml(n.id)}</div>
+        <div class="lr-meta">kind: ${_escapeHtml(n.kind || '—')}</div>
+        ${n.health !== undefined ? `<div class="lr-meta">health: ${_escapeHtml(n.health)}</div>` : ''}
+        ${n.meta ? `<div class="lr-meta">meta: ${_escapeHtml(JSON.stringify(n.meta))}</div>` : ''}
       </div>`;
   }
 
@@ -157,8 +178,8 @@
         if (!data.ok || !data.entries?.length) { el.innerHTML = '<div class="empty-state">no real chat log entries</div>'; return; }
         el.innerHTML = data.entries.map((e) => `
           <div class="list-row">
-            <div class="lr-head"><span class="lr-name">${e.provider || e.agent || 'unknown'}</span><span class="lr-meta">${new Date(e.ts || e.createdAt || Date.now()).toLocaleTimeString()}</span></div>
-            <div class="lr-meta">${(e.prompt || e.text || e.message || JSON.stringify(e)).toString().slice(0, 140)}</div>
+            <div class="lr-head"><span class="lr-name">${_escapeHtml(e.provider || e.agent || 'unknown')}</span><span class="lr-meta">${_escapeHtml(new Date(e.ts || e.createdAt || Date.now()).toLocaleTimeString())}</span></div>
+            <div class="lr-meta">${_escapeHtml((e.prompt || e.text || e.message || JSON.stringify(e)).toString().slice(0, 140))}</div>
           </div>`).join('');
       })
       .catch((e) => { el.innerHTML = `<div class="empty-state">chat log fetch failed: ${e.message}</div>`; });
@@ -209,10 +230,10 @@
         if (!data.ok || !data.contracts?.length) { el.innerHTML = '<div class="empty-state">no real contracts in the queue</div>'; return; }
         el.innerHTML = data.contracts.map((c) => `
           <div class="list-row">
-            <div class="lr-head"><span class="lr-name">${c.intent || c.type || c.uuid || 'contract'}</span><span class="badge ${c.status === 'complete' ? 'ok' : c.status === 'failed' ? 'err' : 'idle'}">${c.status || 'pending'}</span></div>
-            <div class="lr-meta">uuid: ${c.uuid || '—'}</div>
-            ${c.dependsOn?.length ? `<div class="lr-meta">depends on: ${c.dependsOn.join(', ')}</div>` : ''}
-            ${c.onFail ? `<div class="lr-meta">onFail: ${JSON.stringify(c.onFail)}</div>` : ''}
+            <div class="lr-head"><span class="lr-name">${_escapeHtml(c.intent || c.type || c.uuid || 'contract')}</span><span class="badge ${c.status === 'complete' ? 'ok' : c.status === 'failed' ? 'err' : 'idle'}">${_escapeHtml(c.status || 'pending')}</span></div>
+            <div class="lr-meta">uuid: ${_escapeHtml(c.uuid || '—')}</div>
+            ${c.dependsOn?.length ? `<div class="lr-meta">depends on: ${_escapeHtml(c.dependsOn.join(', '))}</div>` : ''}
+            ${c.onFail ? `<div class="lr-meta">onFail: ${_escapeHtml(JSON.stringify(c.onFail))}</div>` : ''}
           </div>`).join('');
       })
       .catch((e) => { el.innerHTML = `<div class="empty-state">raid queue fetch failed: ${e.message}</div>`; });
@@ -231,10 +252,10 @@
         if (!macros.length) { el.innerHTML = '<div class="empty-state">no real macros stored</div>'; return; }
         el.innerHTML = macros.map((m) => `
           <div class="list-row">
-            <div class="lr-head"><span class="lr-name">${m.name}</span>
-              <button class="hbtn g" data-run="${m.name}">▶ RUN</button>
+            <div class="lr-head"><span class="lr-name">${_escapeHtml(m.name)}</span>
+              <button class="hbtn g" data-run="${_escapeHtml(m.name)}">▶ RUN</button>
             </div>
-            <div class="lr-meta">${m.description || m.steps?.length ? `${m.steps.length} steps` : ''}</div>
+            <div class="lr-meta">${_escapeHtml(m.description || (m.steps?.length ? `${m.steps.length} steps` : ''))}</div>
           </div>`).join('');
         el.querySelectorAll('[data-run]').forEach((btn) => {
           btn.addEventListener('click', () => {

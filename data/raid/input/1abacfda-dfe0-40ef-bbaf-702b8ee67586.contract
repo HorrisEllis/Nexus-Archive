@@ -1,0 +1,72 @@
+envelope: 1
+uuid: nexus-export-contract-1abacfda-dfe0-40ef-bbaf-702b8ee67586
+type: contract
+id: 1abacfda-dfe0-40ef-bbaf-702b8ee67586
+context: null
+intent: build
+summary: null
+system: null
+tags: []
+exported_at: 1788779717947
+source: idearium
+payload:
+  uuid: 1abacfda-dfe0-40ef-bbaf-702b8ee67586
+  status: queued
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: meta
+  forAgent: ollama
+  contract:
+    content: |-
+      You are building the "Meta & Identity" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: poller-test-2
+        Type: component
+        Description: (none provided)
+        UUID: 0c001ee7-684a-4574-8d9c-8d5094b32c10
+        Chunk: 1/10
+        Section: meta
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:0c001ee7:meta
+        contract_id: spec-contract:0c001ee7:meta:906660b7
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+
+      **Open Gaps:** none
+
+      YOUR TASK:
+      Write the "Meta & Identity" section for this spec.
+      UUID, version, phase, comp_id, seam_id, status, author, dependencies
+      Requirements:
+      - Be specific to "poller-test-2" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: meta
+    forAgent: ollama
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1788779717947
+  updatedAt: 1788779717947

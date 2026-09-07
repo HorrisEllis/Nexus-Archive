@@ -1618,6 +1618,44 @@ async function handle(req, res, route, query, body) {
         }
         os.emit('idearium.spec-engine.created', { specUuid: manifest.uuid, name, type, templateIds: manifest.templateIds, buildEngine: manifest.buildEngine, ideaUuid: manifest.ideaUuid });
 
+        // §FOUND & FIXED 2026-09-06 — James, direct, repeated: "the
+        // moment a spec is made the compartment and repo are made...
+        // specs build compartments, which are repositories. it is not
+        // creating repositories." Confirmed by reading createSpec()'s
+        // full body first: it never touched RepoLayer at all — a repo
+        // only ever got created later, through the separate, explicit
+        // promote path (idearium.spec.promote), gated on chunks being
+        // complete. That's backwards from what's wanted: a repo should
+        // exist the moment the spec does, chunks pending or not, so
+        // there's always a real, physical place for them to build into
+        // as they complete — not a repo that only appears once
+        // everything is already finished. Calling the same real
+        // getRepoLayer().ingest() the explicit promote path already
+        // uses, not a second mechanism — this repo starts as an empty
+        // shell (0 chunks complete yet) and the same writeFile()/
+        // completeChunk() path that already exists fills it in as
+        // chunks build, exactly like a promoted repo would.
+        let autoRepoUuid = null;
+        try {
+          const repoResult = getRepoLayer().ingest({
+            name: manifest.name,
+            specUuid: manifest.uuid,
+            source: 'spec.create.auto',
+            parent: manifest.ideaUuid || null,
+            promotedFromSpec: null,
+          });
+          if (repoResult.error) {
+            console.warn(`[speceng.create] auto-repo creation failed, spec still created: ${repoResult.error}`);
+          } else {
+            autoRepoUuid = repoResult.repo?.uuid || null;
+          }
+        } catch (e) {
+          // §1.2 — a failed auto-repo creation must never block the
+          // spec itself from being created; the spec is the real,
+          // already-persisted thing here, the repo is additive.
+          console.warn(`[speceng.create] auto-repo creation threw, spec still created: ${e.message}`);
+        }
+
         // §MERGED 2026-07-11 — same phase-linkage fix as the legacy
         // idea.spec path above, for spec-engine specs.
         if (ideaUuid) {
@@ -1629,7 +1667,7 @@ async function handle(req, res, route, query, body) {
             }
           }
         }
-        return ok(res, { manifest });
+        return ok(res, { manifest, repoUuid: autoRepoUuid });
       } catch(e) { return err(res, 500, e.message); }
     }
 
@@ -1981,6 +2019,60 @@ function specToMarkdown(spec) {
 
 // ─── Server ───────────────────────────────────────────────────────────────────
 
+// §BUILT 2026-09-06 — James: "it needs to start the queue each boot."
+// Real, self-contained periodic drainer, not a one-time boot kick — a
+// spec with 5 pending chunks needs 5 real build cycles, and nothing
+// else in this file auto-chains from one chunk's completion to the
+// next (checked, not assumed — see this function's real call site's
+// own comment). Calls the exact same real, already-tested HTTP route
+// (POST /api/spec-engine/specs/:uuid/build) a real client would —
+// self-request, not a second dispatch mechanism, so it goes through
+// dispatchChunkWithVerification's real retry ladder, WARP cache, and
+// RAID observability exactly like every other real build does.
+const BUILD_QUEUE_POLL_MS = 15000; // matches RAID's own real worker.js drain cadence
+const _buildingSpecs = new Set(); // real, in-memory guard — never trigger a second build for a spec that's already mid-build
+
+function _startBuildQueuePoller(port) {
+  async function tick() {
+    const se = getSpecEngine();
+    if (!se) return; // spec-engine not ready yet this tick — real, honest skip, not a crash
+    let specs;
+    try { specs = se.listSpecs(); }
+    catch (e) { console.warn(`[idearium/build-queue] listSpecs() failed, will retry next tick: ${e.message}`); return; }
+
+    for (const s of specs) {
+      if (s.deleted || s.status === 'archived') continue;
+      if (s.doneChunks >= s.totalChunks) continue; // real, genuine "nothing pending" — not guessed from a stale flag
+      if (_buildingSpecs.has(s.uuid)) continue; // already mid-build from a previous tick — avoid a real, racing double-dispatch
+
+      _buildingSpecs.add(s.uuid);
+      const body = JSON.stringify({});
+      const req = http.request({
+        hostname: '127.0.0.1', port, method: 'POST',
+        path: `/api/spec-engine/specs/${s.uuid}/build`,
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        timeout: 10000,
+      }, (res) => {
+        res.on('data', () => {});
+        res.on('end', () => { _buildingSpecs.delete(s.uuid); }); // real completion (or a real, honest "done:true") frees this spec for the next tick to check again
+      });
+      // §1.2 — a failed self-request must never crash the poller or
+      // silently wedge this spec out of future ticks forever.
+      req.on('error', (e) => { _buildingSpecs.delete(s.uuid); console.warn(`[idearium/build-queue] build trigger for ${s.uuid} failed: ${e.message}`); });
+      req.on('timeout', () => { req.destroy(); _buildingSpecs.delete(s.uuid); });
+      req.write(body);
+      req.end();
+    }
+  }
+  const timer = setInterval(tick, BUILD_QUEUE_POLL_MS);
+  if (timer.unref) timer.unref(); // never keeps the process alive on its own
+  tick(); // real, immediate first pass — don't wait a full interval before resuming work that was already pending when this boot started
+  console.log(`[idearium/build-queue] real, periodic queue drain started — every ${BUILD_QUEUE_POLL_MS}ms`);
+  return timer; // real handle — lets a caller (or a test) stop this poller; startAPI() itself never needs to
+}
+
+export { _startBuildQueuePoller, _buildingSpecs };
+
 export function startAPI() {
   const os = getIdeaOS();
 
@@ -2324,6 +2416,24 @@ export function startAPI() {
 
     await seq.run();
     // Idearium never hard-exits — degrades gracefully
+
+    // §BUILT 2026-09-06 — James: "it needs to start the queue each
+    // boot. So the chunks in the repo in idearium build." Checked
+    // first, not assumed: speceng.build's own real dispatch (above)
+    // starts exactly one chunk building and returns — nothing in this
+    // whole file auto-chains to the next pending chunk once one
+    // completes. Without a real, periodic drainer, a spec created
+    // (and, since the auto-repo-creation fix, its real repo) just sits
+    // with pending chunks forever unless a human manually triggers
+    // each one. This closes that loop: a real, self-contained poller,
+    // started once idearium's own boot sequence completes, checking
+    // every real spec for pending work and (re)triggering a build the
+    // exact same way a real client would — the same
+    // dispatchChunkWithVerification path, same WARP cache, same RAID
+    // observability contract, same Detector verification. Not a
+    // separate build mechanism; the same one, just self-triggered
+    // instead of waiting for someone to click a button.
+    _startBuildQueuePoller(PORT);
   });
 
   server.on('error', e => {
@@ -2338,4 +2448,17 @@ export function startAPI() {
 }
 
 // ── Auto-start when run directly ────────────────────────────────────────────
-startAPI();
+// §FOUND & FIXED 2026-09-06 — this comment already said "when run
+// directly," but the actual code below was unconditional: importing
+// this module for its exports (as a real test now needs to, to reach
+// _startBuildQueuePoller/_buildingSpecs) ALSO booted a real, live
+// idearium server on :4800 as an unavoidable side effect — including,
+// after this same session's own build-queue-poller fix, a REAL second
+// poller instance that found and tried to dispatch the SAME real specs
+// a test had just created, causing real, confusing cross-talk (a test
+// mock server seeing more hits than it triggered itself). Checked
+// first that nothing else in the codebase imports this file directly
+// (only the new test does) before adding this guard — safe.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startAPI();
+}

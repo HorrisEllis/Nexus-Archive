@@ -2700,11 +2700,30 @@ function handleExtendedRoutes(req, res, url, method) {
     bodyJ(req).then(async body => {
 
       // ── SEAM queue via .spec ────────────────────────────────────────────────
-      if (body.spec || body.specText || body.specFile) {
+      // §FOUND & FIXED 2026-09-06 — adversarial audit, James: "find
+      // every problem you can... hostile attacked and verified." A
+      // real, severe arbitrary-local-file-read: body.specFile went
+      // straight into fs.readFileSync() with zero path validation,
+      // BEFORE the RAID approval check below even ran — any caller
+      // could set specFile to any real path on disk (/etc/passwd,
+      // an SSH key, anything the guardian process could read) and
+      // have its content read into memory. Confirmed hostilely, not
+      // theorized: reproduced the exact real line, read a real test
+      // file outside any intended directory.
+      //
+      // Checked whether this was genuinely needed before removing it,
+      // not assumed: guardian/cli.js's own real sendSpec() — the one
+      // real, legitimate caller that ever deals with a spec FILE at
+      // all — already resolves and reads the file LOCALLY (a trusted,
+      // local CLI process reading its own filesystem) and sends the
+      // real CONTENT over HTTP via specText, never a raw path. Nothing
+      // real in this whole codebase ever sent specFile to this
+      // endpoint expecting the SERVER to read a path from HTTP input.
+      // Removed entirely — specText and spec (both real, actual
+      // content, never a path) remain exactly as they were.
+      if (body.spec || body.specText) {
         try {
-          const specText = body.specText
-            || (body.specFile ? require('fs').readFileSync(body.specFile, 'utf8') : null)
-            || body.spec;
+          const specText = body.specText || body.spec;
           if (!specText) throw new Error('spec content empty');
 
           const provider = body.provider || 'chatgpt';
