@@ -485,6 +485,31 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §NEW 2026-09-06 — James: "SESSIONS (we can use the chat logs.)"
+  // BrainOS-v2's original SESSIONS tab had no real nexus equivalent —
+  // removed. Real chat_log data exists (lib/chat-logger.js writes it,
+  // confirmed real rows in the live store) but had no query endpoint
+  // anywhere — same real gap class /api/events already closed for
+  // event_log, applied here for chat_log.
+  if (p === '/api/chat-log') {
+    const n = parseInt(url.searchParams.get('n') || url.searchParams.get('limit') || '50');
+    const rows = jaaDB.tail('chat_log', n);
+    json(res, 200, { ok: true, entries: rows, total: rows.length });
+    return;
+  }
+
+  // §NEW 2026-09-06 — James: PIPELINE tab, real mapping to RAID's real
+  // dependsOn/onFail contract queue (cortex/core/raid/contract-
+  // intake.js) — real data exists (raid_contract_queue table, confirmed
+  // real rows in the live store) but had no GET/list endpoint anywhere,
+  // same real gap class as chat-log above.
+  if (p === '/api/raid/queue') {
+    const n = parseInt(url.searchParams.get('n') || url.searchParams.get('limit') || '50');
+    const rows = jaaDB.tail('raid_contract_queue', n);
+    json(res, 200, { ok: true, contracts: rows, total: rows.length });
+    return;
+  }
+
   // ── Friction ─────────────────────────────────────────────────────────────
   if (p === '/api/friction') {
     json(res, 200, { ok: true, friction: _field.friction, regime: _field.regime });

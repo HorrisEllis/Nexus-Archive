@@ -69,7 +69,14 @@ const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
 // past it. This list must match ui/tv-shell/spotlight/spotlight.js's own
 // EL registry — canonical source is that file; kept in sync manually
 // since one's browser JS and one's Node, no shared import path today.
-const SPOTLIGHT_TARGETS = ['guardian','cortex','idearium','orchestrator','bridge',
+// §FIX 2026-09-06 — 'bridge' removed; the system itself is fully
+// retired this session. This list mixes real system names with
+// thematic keywords (forge/agent/blueprint aren't systems) — a full
+// swap to lib/system-registry.js's real, live list would also change
+// which keywords the spotlight UI recognizes, not just fix this one
+// dead entry. Worth doing as its own deliberate pass, not bundled
+// silently into this correctness-only fix.
+const SPOTLIGHT_TARGETS = ['guardian','cortex','idearium','orchestrator',
   'diagnostic','architect','emerge','forge','agent','blueprint'];
 
 async function _fetchCFRField() {

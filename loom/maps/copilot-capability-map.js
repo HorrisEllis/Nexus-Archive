@@ -178,6 +178,13 @@ const FILES = [
   ['lib/agent-tools/tools/clear-glass/userscripts.js', 'nexus.lib.agent-tools.tools.clear-glass-userscripts', []],
   ['lib/agent-tools/tools/clear-glass/tab-visibility.js', 'nexus.lib.agent-tools.tools.clear-glass-tab-visibility', []],
   ['lib/agent-tools/tools/clear-glass/provider-deploy.js', 'nexus.lib.agent-tools.tools.clear-glass-provider-deploy', []],
+  // §NEW 2026-09-06 — real, confirmed gaps found while mapping tool
+  // coverage for guardian/ncp/agent-mesh (clear-glass and macros
+  // already had real tools; erosmancer already reachable through
+  // macro.js's own /eros/* proxy).
+  ['lib/agent-tools/tools/guardian/dispatch.js', 'nexus.lib.agent-tools.tools.guardian-dispatch', ['nexus.guardian.server']],
+  ['lib/agent-tools/tools/ncp/status.js', 'nexus.lib.agent-tools.tools.ncp-status', ['nexus.guardian.server']],
+  ['lib/agent-tools/tools/agent-mesh/route.js', 'nexus.lib.agent-tools.tools.agent-mesh-route', ['nexus.clear-glass.main']],
   ['intelligence/server.js', 'nexus.intelligence.server', ['nexus.intelligence.index', 'nexus.intelligence.cfr', 'nexus.intelligence.framework-builder']],
   ['intelligence/registry-components.js', 'nexus.intelligence.registry', []],
   ['intelligence/consumer.js', 'nexus.intelligence.consumer', ['nexus.lib.contract-queue', 'nexus.intelligence.framework-builder']],

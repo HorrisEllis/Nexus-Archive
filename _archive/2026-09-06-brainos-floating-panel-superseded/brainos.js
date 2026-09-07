@@ -13,12 +13,14 @@
  * over a real connection. There is no setInterval-driven idle animation
  * anywhere in this file. If /events goes quiet, the panel goes still.
  *
- * §NO_CAP_ON_VISIBILITY / §honesty over completeness — only clear-glass
- * (phase 5 of docs/command-index-per-system.spec) has a real, live
- * command index today (confirmed directly: GET /cli/commands, real
- * response, checked this session). guardian, ollama, bridge, and
- * idearium render as "not yet indexed" — this file does not fabricate
- * placeholder route counts to fill that gap.
+ * §NO_CAP_ON_VISIBILITY / §honesty over completeness — checked docs/
+ * command-index-per-system.spec directly (2026-09-06, not assumed):
+ * only phase 1 (idearium) and phase 5 (clear-glass) are marked DONE.
+ * ollama and guardian remain SPECCED, not built. Phase 4 (bridge) is
+ * retired — bridge itself no longer exists. Two real, live command
+ * indexes render today; ollama/guardian render as "not yet indexed" —
+ * this file does not fabricate placeholder route counts to fill that
+ * gap.
  *
  * §REAL DATA SOURCES, each confirmed by reading the actual server code
  * before writing this, not assumed:
@@ -29,6 +31,10 @@
  *   - clear-glass/src/ipc/bridge.js's real GET /cli/commands — real,
  *     live Express route introspection, not a static file (confirmed:
  *     _buildCommandIndex() walks this.app._router.stack directly).
+ *   - clear-glass/src/sse/server.js's real GET /events (SSE_PORT 7701,
+ *     added 2026-09-06) — genuinely separate process/stream from
+ *     guardian's, subscribes to clear-glass's own core bus via
+ *     on('*', ...), carries agent-mesh's real mesh.* events.
  *
  * This is a self-contained, dependency-free widget: no framework, no
  * build step. Include brainos.css after nexus-dark.css, then this file,
@@ -45,24 +51,34 @@
   // intelligence/config.js), not hardcoded with no escape hatch.
   const DEFAULTS = {
     guardianUrl: (global.BRAINOS_GUARDIAN_URL || 'http://127.0.0.1:7820'),
-    clearGlassUrl: (global.BRAINOS_CLEAR_GLASS_URL || 'http://127.0.0.1:7702'),
+    // §FIX 2026-09-06 — this was 7702 (clear-glass's IPC port, not a real
+    // HTTP surface at all) instead of WIRE_PORT (7704, the real HTTP
+    // server with /cli/commands, /contract, /health etc. — confirmed
+    // directly against clear-glass/src/main/index.js). Every real fetch
+    // below using this URL would have been hitting the wrong port.
+    clearGlassUrl: (global.BRAINOS_CLEAR_GLASS_URL || 'http://127.0.0.1:7704'),
+    // §NEW 2026-09-06 — clear-glass's real, separate SSE broadcast
+    // server (src/sse/server.js, SSE_PORT env CLEARGL_SSE_PORT,
+    // confirmed real: subscribes to the core bus via on('*', ...) and
+    // broadcasts everything, including agent-mesh's real mesh.* events).
+    // Genuinely a different port/process than guardian's own /events —
+    // not the same stream this file already reads.
+    clearGlassSseUrl: (global.BRAINOS_CLEAR_GLASS_SSE_URL || 'http://127.0.0.1:7701'),
     ollamaUrl: (global.BRAINOS_OLLAMA_URL || 'http://127.0.0.1:3749'),
-    bridgeUrl: (global.BRAINOS_BRIDGE_URL || 'http://127.0.0.1:9999'),
     idariumUrl: (global.BRAINOS_IDEARIUM_URL || 'http://127.0.0.1:4800'),
     maxEventRows: 40,
   };
 
-  // All five real systems docs/command-index-per-system.spec names —
-  // ALL FIVE now real and live, checked this session: idearium (phase
-  // 1), ollama (phase 2), guardian (phase 3), bridge (phase 4),
-  // clear-glass (phase 5). Each has its own real endpoint/shape,
-  // fetched separately below — not one generic call forced onto five
-  // different real response shapes.
+  // §CORRECTED 2026-09-06 — this comment previously claimed "ALL FIVE
+  // now real and live, checked this session" for docs/command-index-
+  // per-system.spec's 5 phases. Checked that spec directly, not assumed:
+  // only phase 1 (idearium) and phase 5 (clear-glass) are marked DONE.
+  // Phase 2 (ollama) and phase 3 (guardian) remain SPECCED, not built.
+  // Phase 4 (bridge) is retired — bridge itself no longer exists. Two
+  // real endpoints below, not five; ollama/guardian correctly render as
+  // "not yet indexed" until their own phases are actually built.
   const REAL_INDEX_ENDPOINTS = {
     'idearium': { url: () => DEFAULTS.idariumUrl + '/api/contract/live', countField: 'endpointCount' },
-    'ollama': { url: () => DEFAULTS.ollamaUrl + '/commands', countField: 'commandCount' },
-    'guardian': { url: () => DEFAULTS.guardianUrl + '/commands', countField: 'commandCount' },
-    'bridge': { url: () => DEFAULTS.bridgeUrl + '/commands', countField: 'commandCount' },
     'clear-glass': { url: () => DEFAULTS.clearGlassUrl + '/cli/commands', countField: 'commandCount' },
   };
 
@@ -167,6 +183,37 @@
     };
   }
 
+  // §NEW 2026-09-06 — a genuinely justified exception to the single-
+  // stream principle above, not a casual second connection: agent-mesh
+  // (src/mesh/agent-mesh.js) lives in clear-glass's own process, a real,
+  // different process boundary than guardian's — its real mesh.* events
+  // (mesh.node.status_changed, mesh.nodes.snapshot, mesh.raid.decision,
+  // mesh.raid.unavailable) physically cannot reach guardian's /events;
+  // they land on clear-glass's own core bus, confirmed real and already
+  // broadcast by src/sse/server.js (subscribes via on('*', ...), already
+  // started at SSE_PORT 7701). This connects to that already-live real
+  // stream — not a second copy of guardian's, a genuinely separate real
+  // source, honestly named as such.
+  let _cgEs = null;
+  function _connectClearGlassEvents() {
+    try {
+      _cgEs = new EventSource(DEFAULTS.clearGlassSseUrl + '/events');
+    } catch (e) {
+      console.warn(`[${MODULE_ID}] could not open real clear-glass SSE connection: ${e.message}`);
+      return;
+    }
+    _cgEs.onmessage = (msg) => {
+      let data;
+      try { data = JSON.parse(msg.data); } catch (_) { return; }
+      // Real events only — mesh.* is the one real vocabulary this
+      // connection exists for; everything else clear-glass's bus
+      // carries (dom.*, driver.*, etc.) is out of scope for this panel
+      // today, not silently rendered as if it belonged here.
+      if (typeof data?.type !== 'string' || !data.type.startsWith('mesh.')) return;
+      if (global.BrainOSCanvas) global.BrainOSCanvas.onRealEvent(data);
+    };
+  }
+
   // ── Real, one-time fetch of each real system's real command index —
   // all five now real and live (see REAL_INDEX_ENDPOINTS above), a
   // real change from this file's original single-system (clear-glass
@@ -179,6 +226,27 @@
         .then((data) => { _state.commandIndexes[sys] = data; _render(); })
         .catch((e) => { console.warn(`[${MODULE_ID}] real command index fetch failed for ${sys}: ${e.message}`); _render(); });
     }
+  }
+
+  // §NEW 2026-09-06 — James: "brainos is important. do that next." A
+  // fresh mount has no dynamic mesh nodes until the first real
+  // mesh.nodes.snapshot SSE tick (every 5s) arrives — this one-time
+  // real fetch (GET /agent-mesh/view, built alongside this) gives the
+  // canvas its actual current state immediately, same real data the
+  // periodic snapshot event comes from, not a placeholder while
+  // waiting. Full, unscoped render — the ONE real source that includes
+  // both kind:'agent' and kind:'node' entries together; the periodic
+  // SSE snapshot after this only ever refreshes the kind:'node' half
+  // (see brainos-canvas.js's renderMeshView header for why).
+  function _fetchMeshView() {
+    fetch(DEFAULTS.clearGlassUrl + '/agent-mesh/view')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.ok && Array.isArray(data.nodes) && global.BrainOSCanvas) {
+          global.BrainOSCanvas.renderMeshView(data.nodes);
+        }
+      })
+      .catch((e) => console.warn(`[${MODULE_ID}] real mesh view fetch failed: ${e.message}`));
   }
 
   function mount(opts) {
@@ -227,12 +295,15 @@
     _panel = panel;
     _render();
     _connectEvents();
+    _connectClearGlassEvents();
     _fetchCommandIndex();
+    _fetchMeshView();
     return panel;
   }
 
   function unmount() {
     if (_es) { _es.close(); _es = null; }
+    if (_cgEs) { _cgEs.close(); _cgEs = null; }
     if (global.BrainOSCanvas) global.BrainOSCanvas.unmount();
     if (_panel) { _panel.remove(); _panel = null; }
     _state = { connected: false, events: [], commandIndexes: {}, providers: {} };

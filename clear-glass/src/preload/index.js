@@ -77,6 +77,19 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     commands: () => ipcRenderer.invoke('toolbar:commands'),
   },
 
+  // §NEW 2026-09-06 — James: BrainOS's real AUTOMATION tab needs this.
+  // Found the exact gap: clear-glass/src/ipc/bridge.js already has real
+  // macros:list/macros:get/macros:run handlers (built earlier this
+  // session's lineage, "real menu-triggered panel showing stored
+  // macros... a working Run button") — but nothing had ever bridged
+  // them through contextBridge, so no renderer could actually reach
+  // them. Same real IPC channel names, no new backend mechanism.
+  macros: {
+    list: () => ipcRenderer.invoke('macros:list'),
+    get:  (name) => ipcRenderer.invoke('macros:get', { name }),
+    run:  (name, opts = {}) => ipcRenderer.invoke('macros:run', { name, agentId: opts.agentId, params: opts.params, skipSnapshot: opts.skipSnapshot }),
+  },
+
   // ── Plugins — §NEW 2026-08-24, src/plugins/host.js ─────────────────────
   // invoke() is fire-and-forget by design (see bridge.js's own handler
   // comment) — a plugin's real response comes back as a separate event

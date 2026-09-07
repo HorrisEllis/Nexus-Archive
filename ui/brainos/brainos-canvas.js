@@ -23,13 +23,17 @@
  *      real bus.emit() in the guardian process reaches this stream.
  *   2. Events carrying a real `provider` field (confirmed: STREAM_TOKEN
  *      events include one) — the matching AGENT node pulses.
- * The other 13 real NEXUS systems (cortex, idearium, loom, ollama,
- * bridge, etc.) have NO confirmed live event source reaching this
- * stream today. Their nodes render as real, positioned, named nodes —
+ * The other real NEXUS systems (cortex, idearium, loom, ollama, etc.)
+ * have NO confirmed live event source reaching this stream today.
+ * Their nodes render as real, positioned, named nodes —
  * §NO_CAP_ON_VISIBILITY, they are not hidden — but with an honest
- * "unwired" visual state, never a fabricated pulse. Wiring a real
- * cross-system relay (each system's own bus -> guardian's /events, or
- * a new aggregator) is real, separate, not-yet-scoped future work.
+ * "unwired" visual state, never a fabricated pulse. agent-mesh is the
+ * one exception, added 2026-09-06 — its real mesh.* events arrive via
+ * a genuinely separate, second connection (see brainos.js's own
+ * header), not this guardian stream. Wiring a real cross-system relay
+ * for the rest of these systems (each system's own bus -> guardian's
+ * /events, or a new aggregator) is real, separate, not-yet-scoped
+ * future work.
  *
  * §CONNECTIONS ARE STATIC TOPOLOGY, NOT A LIVE CALL TRACE — docs/
  * brainos-live-control-panel.spec's own canvas_mechanics section
@@ -54,9 +58,13 @@
   // header) the real values are inlined with their real source named,
   // matching the same convention nexus-nerve-design-philosophy.spec
   // already uses for token values pulled from nexus-dark.css.
+  // §FIX 2026-09-06 — bridge removed entirely (the system itself is
+  // fully retired this session). agent-mesh added as a real system
+  // node — clear-glass/src/mesh/agent-mesh.js, real, live, WIRE_PORT
+  // 7704 (same port as clear-glass itself, since agent-mesh lives
+  // in-process there, not a separate listener).
   const REAL_SYSTEMS = [
     { id: 'orchestrator', port: 9000, sysVar: '--sys-orch' },
-    { id: 'bridge',       port: 9999, sysVar: '--sys-br' },
     { id: 'cortex',       port: 3748, sysVar: '--sys-cx' },
     { id: 'guardian',     port: 7820, sysVar: '--sys-gd' },
     { id: 'architect',    port: 3747, sysVar: '--sys-arch' },
@@ -69,6 +77,7 @@
     { id: 'ollama',       port: 3749, sysVar: '--sys-ol' },
     { id: 'versionium',   port: 3754, sysVar: null },
     { id: 'autopilot',    port: 7799, sysVar: null },
+    { id: 'agent-mesh',   port: 7704, sysVar: null },
   ];
 
   // Real agent/provider nodes — guardian/lib/provider-routing.js's own
@@ -87,12 +96,24 @@
     { from: 'orchestrator', to: 'cortex', source: 'cortex/boot.js real "registered with orchestrator :9000" — confirmed live in every real boot log this session' },
     { from: 'cortex', to: 'guardian', source: 'cortex/core/raid — RAID contracts spawn compartments that dispatch through guardian, confirmed this session while building the RAID retry/escalation fix' },
     { from: 'idearium', to: 'versionium', source: 'idearium/index.js snapshots()/snapshot() — fixed this session to call versionium directly (was hitting a stale cortex proxy)' },
-    { from: 'copilot', to: 'guardian', source: 'copilot/server.js real dispatch path through guardian job system' },
+    // §CORRECTED 2026-09-06 — this edge previously claimed "copilot/
+    // server.js real dispatch path through guardian job system." No
+    // longer true: tv-shell's ask-box now calls copilot directly
+    // (_copilotDispatch -> POST copilot:3750/bridge/deliver), bypassing
+    // guardian entirely for the primary UI path — this session's own
+    // bridge-removal work. Real edge now: agent-mesh's own Guardian-
+    // first dispatch gate (DA1) is the actual place these two connect.
+    { from: 'agent-mesh', to: 'guardian', source: 'clear-glass/src/mesh/agent-mesh.js route()\'s real Guardian-first dispatch gate (DA1) — a live GET :7820/providers check before falling through to DOM automation, built and tested this session' },
   ];
 
   let _mounted = false;
   let _svg = null;
-  let _nodeEls = {}; // id -> {circle, pulseTimer}
+  let _nodeEls = {}; // id -> {circle, pulseTimer} — fixed REAL_SYSTEMS/REAL_AGENTS nodes
+  let _meshLayer = null;
+  let _meshNodeEls = {}; // dynamic mesh node id -> {g, circle, label, kind}
+  let _meshNodeData = {}; // dynamic mesh node id -> the real last-known full data object
+  let _onNodeClick = null; // real callback, registered via onNodeClick()
+  const MESH_RADIUS = 280; // outer ring, beyond REAL_SYSTEMS' r=220 — no visual collision
 
   function _svgEl(tag, attrs) {
     const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -163,6 +184,16 @@
     }
     svg.appendChild(nodeGroup);
 
+    // §NEW 2026-09-06 — James: "brainos is important. do that next."
+    // Dynamic mesh layer — agent-mesh's real, live, CHANGING node list
+    // (listMeshView()), not the fixed REAL_SYSTEMS/REAL_AGENTS rings
+    // above. Empty at mount; populated by renderMeshView() below, once
+    // from the real initial GET /agent-mesh/view fetch (brainos.js's
+    // own job) and kept live by real mesh.nodes.snapshot/mesh.node.
+    // status_changed SSE events after that.
+    _meshLayer = _svgEl('g', { class: 'brainos-canvas-mesh-layer' });
+    svg.appendChild(_meshLayer);
+
     container.appendChild(svg);
     _svg = svg;
     _mounted = true;
@@ -183,12 +214,122 @@
     entry.circle.classList.add('brainos-pulse');
   }
 
+  function _meshPulse(id) {
+    const entry = _meshNodeEls[id];
+    if (!entry) return;
+    entry.circle.classList.remove('brainos-pulse');
+    void entry.circle.getBoundingClientRect();
+    entry.circle.classList.add('brainos-pulse');
+  }
+
+  function _meshColorFor(status) {
+    // Real, honest mapping — matches listMeshView()'s own real status
+    // vocabulary (agent-mesh.js: 'alive'/'idle'/'dead' for nodes, real
+    // agent health-derived status strings for agents), not invented.
+    if (status === 'alive' || status === 'connected' || status === 'ok') return 'var(--ok, #00ff88)';
+    if (status === 'idle') return 'var(--warn, #ffaa00)';
+    return 'var(--dim, #556)';
+  }
+
+  // §NEW 2026-09-06 — the real, live dynamic mesh render. Genuinely
+  // different from the fixed rings above: agent-mesh's real node list
+  // CHANGES (processes/contexts appear and disappear), so this does a
+  // real, keyed diff every call — create new, update existing, remove
+  // ones no longer present — rather than draw-once-and-pulse.
+  //
+  // §PRECISION — checked directly, not assumed: the real, periodic
+  // mesh.nodes.snapshot SSE event (agent-mesh.js's own _startNodePulse
+  // tick) only ever contains kind:'node' entries (its own real source
+  // is listNodes(), not the full listMeshView()) — the real chat-agent
+  // DOM contexts (kind:'agent') have no periodic snapshot event of
+  // their own today. A naive full-replace diff on every 5s node-only
+  // snapshot would wrongly erase every agent-kind entry populated by
+  // the one real initial GET /agent-mesh/view fetch. Scoped by kind:
+  // when `opts.onlyKind` is given, only that kind's entries are
+  // diffed/removed; entries of other kinds are left untouched.
+  function renderMeshView(nodes, opts = {}) {
+    if (!_meshLayer || !Array.isArray(nodes)) return;
+    const onlyKind = opts.onlyKind || null;
+    const incomingIds = new Set(nodes.map((n) => n.id));
+
+    // Remove entries within scope that are no longer present.
+    for (const id of Object.keys(_meshNodeEls)) {
+      const entry = _meshNodeEls[id];
+      if (onlyKind && entry.kind !== onlyKind) continue; // out of scope — leave alone
+      if (!incomingIds.has(id)) {
+        entry.g.remove();
+        delete _meshNodeEls[id];
+      }
+    }
+
+    // Add or update.
+    for (const n of nodes) {
+      let entry = _meshNodeEls[n.id];
+      if (!entry) {
+        const g = _svgEl('g', { class: 'brainos-canvas-mesh-node', 'data-node-id': n.id, 'data-kind': n.kind });
+        const circle = _svgEl('circle', { r: 8, class: 'brainos-canvas-mesh-dot' });
+        const label = _svgEl('text', { 'text-anchor': 'middle', class: 'brainos-canvas-mesh-label' });
+        g.appendChild(circle);
+        g.appendChild(label);
+        // §NEW 2026-09-06 — real click handling, for the new NODE
+        // detail right-panel tab. Reads the LATEST real data at click
+        // time from _meshNodeData, not a stale closure snapshot.
+        if (g.addEventListener) {
+          g.style && (g.style.cursor = 'pointer');
+          g.addEventListener('click', () => {
+            if (typeof _onNodeClick === 'function') _onNodeClick(_meshNodeData[n.id] || n);
+          });
+        }
+        _meshLayer.appendChild(g);
+        entry = _meshNodeEls[n.id] = { g, circle, label, kind: n.kind };
+      }
+      entry.circle.setAttribute('fill', _meshColorFor(n.status));
+      entry.circle.setAttribute('stroke', _meshColorFor(n.status));
+      entry.label.textContent = n.label || n.id;
+      _meshNodeData[n.id] = n; // real, current data — always overwritten, never stale by design
+    }
+
+    // Real, deterministic re-layout — every visible dynamic node, in a
+    // stable order (insertion order via Object.keys), spaced around the
+    // outer ring. §NO_CAP_ON_VISIBILITY — every real entry gets a slot,
+    // however many there are; no truncation to a top-N.
+    const ids = Object.keys(_meshNodeEls);
+    const laid = _layoutCircle(ids.map((id) => ({ id })), 320, 320, MESH_RADIUS);
+    laid.forEach((pos) => {
+      const entry = _meshNodeEls[pos.id];
+      entry.circle.setAttribute('cx', pos.x);
+      entry.circle.setAttribute('cy', pos.y);
+      entry.label.setAttribute('x', pos.x);
+      entry.label.setAttribute('y', pos.y + 18);
+    });
+  }
+
   // ── Real event router — called by brainos.js with every real SSE
   // message it already receives, so this file never opens its own
-  // second connection. ────────────────────────────────────────────────
+  // second connection (guardian's stream). §EXCEPTION 2026-09-06 —
+  // brainos.js now ALSO forwards clear-glass's own real mesh.* events
+  // here, from a genuinely separate, deliberate second connection
+  // (documented in brainos.js's own header) since agent-mesh lives in
+  // a different real process than guardian. ────────────────────────────
   function onRealEvent(ev) {
     if (!ev || typeof ev !== 'object') return;
-    // Every real event on this stream is guardian's own — its node
+    // Real agent-mesh events — mesh.node.status_changed, mesh.nodes.
+    // snapshot, mesh.raid.decision, mesh.raid.unavailable — all real,
+    // confirmed emit() call sites in agent-mesh.js, not invented names.
+    if (typeof ev.type === 'string' && ev.type.startsWith('mesh.')) {
+      pulse('agent-mesh'); // the fixed aggregate node still pulses on any real mesh activity
+      // §NEW 2026-09-06 — use the REAL event payload, not just a pulse.
+      if (ev.type === 'mesh.nodes.snapshot' && Array.isArray(ev.nodes)) {
+        // Real, confirmed scope: this event's nodes are kind:'node'
+        // only (see renderMeshView's own header) — scoped so agent-kind
+        // entries from the initial fetch are never wrongly erased.
+        renderMeshView(ev.nodes, { onlyKind: 'node' });
+      } else if (ev.type === 'mesh.node.status_changed' && ev.instanceId) {
+        _meshPulse(ev.instanceId);
+      }
+      return;
+    }
+    // Every real event on guardian's stream is guardian's own — its node
     // always pulses, honestly reflecting that this whole stream IS
     // guardian's real internal bus, not a claim any other system is live.
     pulse('guardian');
@@ -196,14 +337,19 @@
     if (ev.provider === 'ollama' || ev.provider === 'mistral') pulse('ollama');
   }
 
+  function onNodeClick(fn) { _onNodeClick = typeof fn === 'function' ? fn : null; }
+
   function unmount() {
     if (_svg) { _svg.remove(); _svg = null; }
     _nodeEls = {};
+    _meshLayer = null;
+    _meshNodeEls = {};
+    _meshNodeData = {};
     _mounted = false;
   }
 
   function getRealSystemIds() { return REAL_SYSTEMS.map((s) => s.id); }
   function getRealAgentIds() { return REAL_AGENTS.slice(); }
 
-  global.BrainOSCanvas = { mount, unmount, pulse, onRealEvent, getRealSystemIds, getRealAgentIds, MODULE_ID };
+  global.BrainOSCanvas = { mount, unmount, pulse, onRealEvent, renderMeshView, onNodeClick, getRealSystemIds, getRealAgentIds, MODULE_ID };
 })(typeof window !== 'undefined' ? window : globalThis);
