@@ -265,13 +265,13 @@ const ALL_KERNELS = [
   // phase 4 — reports to copilot:3750, so copilot (phase 3) must be up.
   // No healthUrl: emerge is a file-watcher with no HTTP server (confirmed
   // above) — process-alive is the only honest readiness signal it has.
-  // §RETIRED 2026-09-06 — PULSE_ALL_2026-09-06 / James: "its just a
-  // compiler thats it, the rest is trash." emerge/consumer.js (the
-  // standalone poller this spawned) is archived; copilot/module-
-  // builder.js now calls emerge/compiler/pipeline.js's real compile()
-  // directly, synchronously, no file-drop queue, no separate process.
-  // emerge/compiler/ itself is untouched and still the real, load-
-  // bearing thing — only the poller wrapper around it is gone.
+  // §RETIRED 2026-09-06 — PULSE_ALL_2026-09-06 / James (via a parallel
+  // session, reconciled in): "its just a compiler thats it, the rest is
+  // trash." emerge/consumer.js (the standalone poller this spawned) is
+  // archived; copilot/module-builder.js now calls emerge/compiler/
+  // pipeline.js's real compile() directly, synchronously, no file-drop
+  // queue, no separate process. emerge/compiler/ itself is untouched and
+  // still the real, load-bearing thing — only the poller wrapper is gone.
   { name: 'loom',         cmd: 'node', args: ['loom/server.js'],    optional: true,
     phase: 3, healthUrl: 'http://127.0.0.1:3752/health' },
   // Clear Glass sovereign browser — Electron + inline wire bridge.
@@ -337,6 +337,12 @@ const ALL_KERNELS = [
   { name: 'clear-glass',
     cmd: _ELECTRON_CMD,
     args: ['.'], cwd: 'clear-glass', optional: true,
+    // §FIXED 2026-09-06 (reconciled from a parallel session) — autopilot
+    // was polling SSE_PORT (7701), but clear-glass's own real /health
+    // route explicitly reports { module:'nexus-wire', port: WIRE_PORT }
+    // — confirmed directly in clear-glass/src/main/index.js before
+    // applying this. Health checks against the wrong port would have
+    // been silently failing or matching the wrong server this whole time.
     phase: 3, healthUrl: 'http://127.0.0.1:7704/health',
     // §PRIORITY 2026-07-31 — the heaviest single process in the stack
     // (Electron + four provider webviews) gets a HIGHER halt floor than the
@@ -1307,6 +1313,54 @@ function _handleFilesRead(req, res) {
 // One run at a time (overlapping runs corrupt each other's timing-sensitive
 // suites on one machine).
 let _testRunActive = false;
+// §BUILT 2026-09-06 — James: "i feel system should have tests each boot
+// to make sure the vitals parts function." Real, existing infrastructure
+// reused, not duplicated: _handleRunTests below already spawns a real
+// test process on demand (HTTP-triggered, tests/modules/run-all.js).
+// This is that same real spawn-and-parse discipline, applied
+// automatically once boot genuinely completes (wired into the one real
+// place that already knows: _bootPhases()'s own .then(), only when boot
+// did NOT halt) — never blocks or fails the boot itself if a vital
+// regresses; it surfaces it loudly instead, which is the actual point
+// (a silent regression is what caused every "keeps getting broken"
+// complaint this session traced back to a merge). Runs
+// tests/verify-ncp-agents.js specifically — the already-curated,
+// already-fast set of 8 real NCP/agent fixes (not the full test suite,
+// which would meaningfully delay every single boot for tests unrelated
+// to whether the system can actually dispatch to an agent).
+function _runVitalsCheck() {
+  const { spawn } = require('child_process');
+  const vitalsFile = path.join(ROOT, 'tests', 'verify-ncp-agents.js');
+  if (!fs.existsSync(vitalsFile)) {
+    _log('⚠ vitals check skipped — tests/verify-ncp-agents.js not found (moved or renamed?)');
+    return;
+  }
+  _log('running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...');
+  const proc = spawn(process.execPath, [vitalsFile], { cwd: ROOT });
+  let out = '';
+  const cap = (c) => { out += c.toString(); };
+  proc.stdout.on('data', cap); proc.stderr.on('data', cap);
+  const timer = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, 30000);
+  proc.on('exit', (code) => {
+    clearTimeout(timer);
+    const summaryLine = out.split('\n').find(l => l.includes('REAL FIXES VERIFIED') || l.includes('have REGRESSED')) || '(no summary line captured)';
+    if (code === 0) {
+      _log(`✓ vitals check passed — ${summaryLine}`);
+    } else {
+      // §1.2 — a silent regression is exactly the failure mode this
+      // whole check exists to catch. Loud on purpose: not just a log
+      // line, a real warp event too, so it shows up in /status, not
+      // only in whoever's terminal happens to be watching right now.
+      _log(`✗ VITALS CHECK FAILED — ${summaryLine}\n${out.split('\n').filter(l => l.includes('->')).join('\n')}`);
+    }
+    _warpEmit('autopilot.vitals.checked', { ok: code === 0, code, summary: summaryLine });
+  });
+  proc.on('error', (e) => {
+    clearTimeout(timer);
+    _log(`⚠ vitals check could not run: ${e.message}`);
+  });
+}
+
 function _handleRunTests(req, res) {
   const name = req.url.split('?')[0].split('/')[2] || '';
   if (!_segSafe(name)) return _ledgerJson(res, 400, { ok: false, error: 'invalid system name' });
@@ -1741,7 +1795,10 @@ function start() {
     }
   });
   _bootPhases()
-    .then(r => { _bootResult = r; })
+    .then(r => {
+      _bootResult = r;
+      if (!r.halted) _runVitalsCheck();
+    })
     .catch(e => {
       _bootResult = { halted: true, error: e.message };
       _log(`⚠ phased boot error: ${e.message} — kernels already spawned keep running under supervision`);
@@ -1778,4 +1835,4 @@ if (require.main === module && CLI_MODE && !statusArg) {
   }, 3000);
 }
 
-module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead, _handleContractProxy, _handleTablesRead, _handleFilesRead, _handleRunTests, _handleGraphRead, _bootPhases, _runDiagnosticOnStall, _getBootResult: () => _bootResult, _logInstanceSnapshot };
+module.exports = { start, _statusSnapshot, KERNELS, requestSpawn, touchActivity, _state, _spawnKernel, _phasePlan, _pollHealth, ALL_KERNELS, _startStatusServer, _handleLedgerRead, _handleContractProxy, _handleTablesRead, _handleFilesRead, _handleRunTests, _handleGraphRead, _bootPhases, _runDiagnosticOnStall, _runVitalsCheck, _getBootResult: () => _bootResult, _logInstanceSnapshot };

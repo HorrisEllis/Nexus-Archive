@@ -213,7 +213,6 @@ spec:
 
     - phase: 4
       system: bridge
-      status: "RETIRED 2026-09-06 — bridge itself is fully removed this session (docs/AXIOMS-v3.1.md §5.2/§9.1 amendment pending). This phase cannot run against a system that no longer exists."
       why_fourth: "same mechanism as phase 3, proven — this phase is replication, not invention"
       exit_criteria: "same as guardian, scaled to bridge's 16 real checks"
 

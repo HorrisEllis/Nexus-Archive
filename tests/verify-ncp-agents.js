@@ -36,6 +36,8 @@ const SUITES = [
     bug: 'Clear Glass copilot dispatch (prompts, guardian commands, ollama) was still fully routed through bridge\'s dead handshake — every operation silently threw' },
   { file: 'tests/modules/autopilot-status-server-eaddrinuse.test.js',
     bug: 'a port collision on autopilot\'s status server crashed the entire boot (guardian, cortex, everything) over a status-dashboard endpoint' },
+  { file: 'tests/modules/copilot-provider-toggle.test.js',
+    bug: 'the ollama/guardian provider toggle silently had no effect — copilot\'s /api/prompt never passed the caller\'s chosen provider through to lifeline.route()' },
 ];
 
 console.log(`Verifying ${SUITES.length} real NCP/agent fixes...`);

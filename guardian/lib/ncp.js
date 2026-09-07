@@ -87,8 +87,23 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   // below counted every attempt as a success regardless of whether this
   // returned true. Returns the real outcome now so callers can finally
   // tell the difference.
+  // §FOUND & FIXED 2026-09-06 — adversarial audit, James: "find every
+  // problem you can... hostile attacked and verified." Hostile test: a
+  // circular-reference payload passed to push() reported sent:0 —
+  // byte-identical to a genuinely dead client. JSON.stringify(data) was
+  // inside the SAME try/catch as res.write() itself, so a stringify
+  // failure (a real programming bug — bad payload shape somewhere
+  // upstream) was indistinguishable from a real broken pipe. Given
+  // dispatcher.js's own real fix treats sent:0 as "provider
+  // unreachable, requeue" (0.39.51), a bad payload would be silently
+  // misdiagnosed as "the provider is offline" and requeued forever —
+  // never surfacing the actual bug to anyone. Fixed by stringifying
+  // OUTSIDE the broken-pipe try/catch: a stringify failure now throws
+  // for real (a genuine caller bug should be loud), while res.write()
+  // itself still degrades honestly on a real dead socket.
   function _write(res, data) {
-    try { res.write(`data: ${JSON.stringify(data)}\n\n`); return true; } catch(_) { return false; }
+    const payload = `data: ${JSON.stringify(data)}\n\n`; // throws for real on bad data — never silently mistaken for a dead client
+    try { res.write(payload); return true; } catch(_) { return false; }
   }
 
   /**
@@ -304,12 +319,19 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     let sent = 0;
     for (const [key, client] of _clients) {
       if (client.provider === provider) {
-        // §FIXED 2026-09-06 — was `sent++` unconditionally (see _write's
-        // own comment above for the full trace). Now only counts a
-        // write that actually reached a live socket, so a caller can
-        // finally tell "I sent this to N real clients" from "I attempted
-        // N writes, and every single one silently failed."
-        if (_write(client.res, data)) sent++;
+        // §FOUND & FIXED 2026-09-06 — _write() now throws for real on a
+        // genuinely bad payload (see its own comment above) rather than
+        // silently reporting it as a dead client — but that means THIS
+        // caller must not let a real caller bug crash the whole process
+        // either. Caught here, reported loudly and distinctly (a real,
+        // separate event from a normal disconnect), never silently
+        // swallowed and never fatal.
+        try {
+          if (_write(client.res, data)) sent++;
+        } catch (e) {
+          busEmit?.('ncp.push.bad_payload', { provider, tabId: client.tabId, error: e.message }, 'ERROR');
+          console.error(`[ncp] push('${provider}', ...) — bad payload, not a dead client: ${e.message}`);
+        }
       }
     }
     return sent;
@@ -322,10 +344,15 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     const key = `${provider}:${tabId}`;
     const client = _clients.get(key);
     if (!client) return false;
-    // §FIXED 2026-09-06 — same real fix as push() above: was returning
-    // true unconditionally once a client was found, regardless of
-    // whether the write itself actually reached it.
-    return _write(client.res, data);
+    // §FOUND & FIXED 2026-09-06 — same real fix as push() above: a bad
+    // payload must be reported loudly, never crash the caller.
+    try {
+      return _write(client.res, data);
+    } catch (e) {
+      busEmit?.('ncp.push.bad_payload', { provider, tabId, error: e.message }, 'ERROR');
+      console.error(`[ncp] pushTab('${provider}', '${tabId}', ...) — bad payload, not a dead client: ${e.message}`);
+      return false;
+    }
   }
 
   /**
@@ -334,7 +361,14 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
    */
   function broadcast(data) {
     for (const client of _clients.values()) {
-      _write(client.res, data);
+      // §FOUND & FIXED 2026-09-06 — same real fix: one bad payload must
+      // never abort a broadcast partway through the client list, and
+      // must never crash the process.
+      try { _write(client.res, data); }
+      catch (e) {
+        busEmit?.('ncp.push.bad_payload', { provider: client.provider, tabId: client.tabId, error: e.message }, 'ERROR');
+        console.error(`[ncp] broadcast(...) — bad payload, not a dead client: ${e.message}`);
+      }
     }
     return _clients.size;
   }

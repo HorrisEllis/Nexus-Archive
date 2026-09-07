@@ -699,8 +699,21 @@ class AgentMesh {
         }
       }
 
-      // Spawn fresh if none healthy
-      if (!state) {
+      // §FOUND & FIXED 2026-09-06 — adversarial audit, James: "find
+      // every problem you can... hostile attacked and verified."
+      // Confirmed by direct, hostile test, not just reading: a real,
+      // existing agent state with health < 50 (and status !== 'error',
+      // so _getBestAgent's own filter didn't remove it) matched NEITHER
+      // branch here — not the "healthy, use it" branch above, and not
+      // this "spawn fresh" branch, which only ever checked `!state`.
+      // send()/spawn() were both confirmed never called; route() threw
+      // "All agents unavailable" even with a real, just-unhealthy agent
+      // sitting right there. The comment right here ("spawn fresh if
+      // none healthy") already stated the real intent — the condition
+      // just never actually implemented it. Fixed: a state that exists
+      // but is unhealthy or errored is treated the same as no state at
+      // all for this decision, not silently skipped.
+      if (!state || state.health < 50 || state.status === 'error') {
         try {
           const newState = await this.spawn(agentKey);
           return await this.send({ agentKey, prompt, contextId: newState.contextId });

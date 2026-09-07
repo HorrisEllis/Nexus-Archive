@@ -606,7 +606,12 @@
       <div id="cp-guide"></div>
       <div id="assistant-out"></div>
       <div id="assistant-row">
-        <input id="assistant-in" placeholder="Ask co-pilot via Bridge :9999 — sees DOM, can navigate, build, dispatch…" onkeydown="if(event.key==='Enter')asSend();if(event.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen'))toggleConsoleFullscreen()">
+        <select id="cp-provider" title="Which backend answers: ollama (local models) or guardian (4 real NCP agents)" onchange="_asProvider=this.value;_logToData('ui.copilot.provider',{provider:this.value})">
+          <option value="auto">auto</option>
+          <option value="ollama">ollama</option>
+          <option value="guardian">guardian</option>
+        </select>
+        <input id="assistant-in" placeholder="Ask co-pilot — sees DOM, can navigate, build, dispatch…" onkeydown="if(event.key==='Enter')asSend();if(event.key==='Escape'&&document.getElementById('bot-bar').classList.contains('fullscreen'))toggleConsoleFullscreen()">
         <button id="send-btn" onclick="asSend()">→</button>
       </div>
       <div id="ticker-line">NEXUS v0.6.3 · sovereign cognitive OS · waiting for systems...</div>
@@ -1493,47 +1498,34 @@ async function runDiagEngines(){
 }
 
 // ── Co-pilot mode toggle ───────────────────────────────────────────────────────
-// Two modes: 'system' (grammar engine → Guardian copilot) | 'copilot' (Bridge :9999)
 let _asMode = 'copilot'; // §2026-07-04: always co-pilot now, no more system-console toggle
-let _bridgeToken = null;
-
-async function _getBridgeToken() {
-  if (_bridgeToken) return _bridgeToken;
-  try {
-    const r = await fetch(`${B.br}/bridge/handshake`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ systemId: 'tv-shell', secret: 'nexus-tv-shell-internal-v1', port: 0 }),
-      signal: AbortSignal.timeout(4000),
-    });
-    const d = await r.json();
-    if (d.ok && d.token) { _bridgeToken = d.token; return _bridgeToken; }
-  } catch(_) {}
-  return null;
-}
-
-async function _bridgeDispatch(target, type, payload, timeout=30000) {
-  const token = await _getBridgeToken();
-  if (!token) throw new Error('Bridge handshake failed — is Bridge :9999 running?');
-  const r = await fetch(`${B.br}/bridge/request`, {
+let _asProvider = 'auto'; // §BUILT 2026-09-06 — 'auto' | 'ollama' | 'guardian', set by #cp-provider
+// §FIXED 2026-09-06 — James, live, from his own running system, this exact
+// error: "Co-pilot bridge error: Bridge handshake failed — is Bridge :9999
+// running?" This file's own comment predicted this: "same bug as Clear
+// Glass's copilot bridge.js — independently implemented here, fixed there,
+// never fixed here." It happened again with the actual bridge removal —
+// this was a second, completely separate implementation of the same
+// bridge-routed dispatch, missed the first time. Bridge is gone; this now
+// calls copilot's real, direct /api/prompt — same real endpoint clear-glass's
+// bridge.js was fixed to call, same real fix, just a second file that needed
+// it independently.
+async function _copilotDispatch(payload, timeout = 30000) {
+  const copilotPort = (window.NEXUS_PORTS && window.NEXUS_PORTS.copilot) || 3750;
+  const r = await fetch(`http://127.0.0.1:${copilotPort}/api/prompt`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-bridge-token': token },
-    body: JSON.stringify({ type, source: 'tv-shell', target, payload, tags: ['tv-shell', target] }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(timeout),
   });
   if (!r.ok) {
-    // §BUGFIX 2026-07-04: same bug as Clear Glass's copilot bridge.js —
-    // independently implemented here, fixed there, never fixed here.
-    // Bridge's validateRequest() puts the real reason in the response
-    // body (e.g. "unknown type: X"); this used to discard it and only
-    // report the bare status code.
     let detail = '';
     try { const errBody = await r.json(); detail = errBody?.errors?.join('; ') || errBody?.error || ''; } catch (_) {}
-    throw new Error(`Bridge ${target} HTTP ${r.status}${detail ? ' — ' + detail : ''}`);
+    throw new Error(`copilot HTTP ${r.status}${detail ? ' — ' + detail : ''}`);
   }
   const data = await r.json();
-  if (!data.ok) throw new Error(data.error || 'Bridge error');
-  return data.result?.response ?? data.result ?? data;
+  if (!data.ok) throw new Error(data.error || 'copilot error');
+  return data;
 }
 
 function toggleCopilotMode() {
@@ -1546,10 +1538,8 @@ function toggleCopilotMode() {
     btn.style.borderColor = 'var(--ac-border-hi)';
     btn.style.background = 'var(--ac-ghost)';
     if (lbl) lbl.textContent = '✦ CO-PILOT';
-    if (inp) inp.placeholder = 'Ask co-pilot via Bridge :9999 — sees DOM, can navigate, build, dispatch…';
+    if (inp) inp.placeholder = 'Ask co-pilot — sees DOM, can navigate, build, dispatch…';
     _logToData('ui.copilot-mode.enabled', { ts: Date.now() });
-    // Invalidate cached token so we always try a fresh handshake on first use
-    _bridgeToken = null;
   } else {
     btn.style.color = '';
     btn.style.borderColor = '';
@@ -2012,17 +2002,27 @@ async function asSend(){
   thinking.style.cssText='opacity:.4;font-style:italic';
   out.appendChild(thinking);
 
-  // ── Co-pilot mode: route through Bridge :9999 → copilot :3750 ──────────────
+  // ── Co-pilot mode: route directly to copilot :3750 ──────────────
   if (_asMode === 'copilot') {
     try {
       let uiSnapshot = null;
       try { uiSnapshot = JSON.parse(window.NEXUS_UI_STATE.snapshot()); } catch(_) {}
-      const result = await _bridgeDispatch('copilot', 'copilot.prompt', {
+      // §BUILT 2026-09-06 — James: "a toggle switch to switch between
+      // ollama and guardian." Real, existing support found before building
+      // anything new: copilot/lifeline.js's route() already accepts an
+      // explicit opts.provider override (checked directly — it already
+      // validates 'auto' and real guardian agent names against guardian's
+      // own live /providers), copilot's /api/prompt just never passed the
+      // caller's own choice through (always auto-decided: ollama first,
+      // guardian fallback). Fixed at that real gap, not by inventing a
+      // second dispatch path.
+      const result = await _copilotDispatch({
         prompt: q,
         channel: CH_META[curCh]?.id || 'ch-overview',
         channelName: CH_META[curCh]?.name || 'Overview',
         uiState: uiSnapshot,
         source: 'tv-shell',
+        provider: _asProvider === 'ollama' ? 'ollama' : 'auto', // 'guardian' and 'auto' both mean "let guardian's own real, connected agents compete" — lifeline.route()'s real, already-supported value
       }, 60000);
       out.textContent = '';
       // §BUG FIXED 2026-07-11 — the real bug was upstream (bridge/router.js's
@@ -2052,7 +2052,7 @@ async function asSend(){
       if (result?.modelUsed) {
         const m = document.createElement('div');
         m.style.cssText='font-size:10px;opacity:.35;margin-top:4px;font-family:monospace';
-        m.textContent = `✦ via ${result.modelUsed} (bridge)`;
+        m.textContent = `✦ via ${result.modelUsed}`;
         out.appendChild(m);
       }
       _logToData('ui.copilot.response', { promptLen: q.length, hasText: !!text });

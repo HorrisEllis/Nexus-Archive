@@ -69,14 +69,7 @@ const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
 // past it. This list must match ui/tv-shell/spotlight/spotlight.js's own
 // EL registry — canonical source is that file; kept in sync manually
 // since one's browser JS and one's Node, no shared import path today.
-// §FIX 2026-09-06 — 'bridge' removed; the system itself is fully
-// retired this session. This list mixes real system names with
-// thematic keywords (forge/agent/blueprint aren't systems) — a full
-// swap to lib/system-registry.js's real, live list would also change
-// which keywords the spotlight UI recognizes, not just fix this one
-// dead entry. Worth doing as its own deliberate pass, not bundled
-// silently into this correctness-only fix.
-const SPOTLIGHT_TARGETS = ['guardian','cortex','idearium','orchestrator',
+const SPOTLIGHT_TARGETS = ['guardian','cortex','idearium','orchestrator','bridge',
   'diagnostic','architect','emerge','forge','agent','blueprint'];
 
 async function _fetchCFRField() {
@@ -2070,9 +2063,18 @@ const server = http.createServer(async (req, res) => {
     // Dispatch through lifeline (lib/lifeline → Ollama first, Guardian fallback)
     let text = '', modelUsed = 'none', confidence = null, escalated = false, escalationReason = null;
     try {
+      // §BUILT 2026-09-06 — James: "a toggle switch to switch between
+      // ollama and guardian." lifeline.route() already accepts a real
+      // opts.provider override (checked directly before adding this —
+      // it already validates 'auto'/a real guardian agent name against
+      // guardian's own live /providers); this endpoint just never passed
+      // the caller's own choice through, always letting lifeline
+      // auto-decide. body.provider is optional — every existing caller
+      // that never sends it gets the exact same auto-decide behavior as
+      // before, unchanged.
       const life = await _lifeline.route(
         `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-        { requestId, sessionId, intent: 'ask', channel }
+        { requestId, sessionId, intent: 'ask', channel, provider: body.provider || undefined }
       );
       text      = life?.text || '';
       modelUsed = life?.provider_used || 'none';

@@ -1,11 +1,11 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_19b77fc7",
+  "uuid": "bpi_604ccfe8",
   "version": "1.0.0",
-  "builtAt": 1788710417319,
+  "builtAt": 1788411238108,
   "builtBy": "blueprint-index",
   "systemCount": 11,
-  "totalComponents": 178,
+  "totalComponents": 189,
   "systems": [
     {
       "systemId": "orchestrator",
@@ -3646,11 +3646,494 @@
       "systemId": "bridge",
       "label": "Bridge",
       "port": 9999,
-      "componentCount": 0,
-      "components": [],
-      "cliMap": [],
-      "seamHooks": [],
-      "copilotMap": []
+      "componentCount": 11,
+      "components": [
+        {
+          "id": "bridge.health",
+          "name": "health",
+          "description": "Bridge health + relay stats",
+          "route": {
+            "method": "GET",
+            "path": "/health"
+          },
+          "tags": [
+            "bridge"
+          ],
+          "grammar": [
+            "health"
+          ]
+        },
+        {
+          "id": "bridge.contract",
+          "name": "contract",
+          "description": "Bridge interaction contract",
+          "route": {
+            "method": "GET",
+            "path": "/api/contract"
+          },
+          "tags": [
+            "bridge"
+          ],
+          "grammar": [
+            "contract"
+          ]
+        },
+        {
+          "id": "bridge.events",
+          "name": "events",
+          "description": "SSE — all bridge events",
+          "route": {
+            "method": "GET",
+            "path": "/events"
+          },
+          "tags": [
+            "bridge",
+            "stream"
+          ],
+          "grammar": [
+            "events"
+          ]
+        },
+        {
+          "id": "bridge.relay.request",
+          "name": "relay.request",
+          "description": "Route request through P2P trust relay",
+          "route": {
+            "method": "POST",
+            "path": "/api/relay"
+          },
+          "tags": [
+            "bridge",
+            "relay"
+          ],
+          "grammar": [
+            "relay request"
+          ]
+        },
+        {
+          "id": "bridge.nodes.list",
+          "name": "nodes.list",
+          "description": "Connected relay nodes",
+          "route": {
+            "method": "GET",
+            "path": "/api/nodes"
+          },
+          "tags": [
+            "bridge"
+          ],
+          "grammar": [
+            "nodes list"
+          ]
+        },
+        {
+          "id": "bridge.node.register",
+          "name": "node.register",
+          "description": "Register a relay node",
+          "route": {
+            "method": "POST",
+            "path": "/api/nodes"
+          },
+          "tags": [
+            "bridge"
+          ],
+          "grammar": [
+            "node register"
+          ]
+        },
+        {
+          "id": "bridge.node.trust",
+          "name": "node.trust",
+          "description": "Set trust score for a node",
+          "route": {
+            "method": "POST",
+            "path": "/api/nodes/:id/trust"
+          },
+          "tags": [
+            "bridge",
+            "trust"
+          ],
+          "grammar": [
+            "node trust"
+          ]
+        },
+        {
+          "id": "bridge.requests.list",
+          "name": "requests.list",
+          "description": "Request log",
+          "route": {
+            "method": "GET",
+            "path": "/api/requests"
+          },
+          "tags": [
+            "bridge"
+          ],
+          "grammar": [
+            "requests list"
+          ]
+        },
+        {
+          "id": "bridge.circuit.status",
+          "name": "circuit.status",
+          "description": "Circuit breaker state per node",
+          "route": {
+            "method": "GET",
+            "path": "/api/circuit"
+          },
+          "tags": [
+            "bridge"
+          ],
+          "grammar": [
+            "circuit status"
+          ]
+        },
+        {
+          "id": "bridge.circuit.reset",
+          "name": "circuit.reset",
+          "description": "Reset circuit breaker for node",
+          "route": {
+            "method": "POST",
+            "path": "/api/circuit/:id/reset"
+          },
+          "tags": [
+            "bridge"
+          ],
+          "grammar": [
+            "circuit reset"
+          ]
+        },
+        {
+          "id": "bridge.identity.verify",
+          "name": "identity.verify",
+          "description": "Verify system identity token",
+          "route": {
+            "method": "POST",
+            "path": "/api/identity/verify"
+          },
+          "tags": [
+            "bridge",
+            "identity"
+          ],
+          "grammar": [
+            "identity verify"
+          ]
+        }
+      ],
+      "cliMap": [
+        {
+          "command": "health",
+          "aliases": [
+            "health"
+          ],
+          "usage": "health",
+          "method": "GET",
+          "path": "/health",
+          "description": "Bridge health + relay stats",
+          "componentId": "bridge.health",
+          "systemId": "bridge",
+          "tags": [
+            "bridge"
+          ]
+        },
+        {
+          "command": "contract",
+          "aliases": [
+            "contract"
+          ],
+          "usage": "contract",
+          "method": "GET",
+          "path": "/api/contract",
+          "description": "Bridge interaction contract",
+          "componentId": "bridge.contract",
+          "systemId": "bridge",
+          "tags": [
+            "bridge"
+          ]
+        },
+        {
+          "command": "events",
+          "aliases": [
+            "events"
+          ],
+          "usage": "events",
+          "method": "GET",
+          "path": "/events",
+          "description": "SSE — all bridge events",
+          "componentId": "bridge.events",
+          "systemId": "bridge",
+          "tags": [
+            "bridge",
+            "stream"
+          ]
+        },
+        {
+          "command": "relay-request",
+          "aliases": [
+            "relay request"
+          ],
+          "usage": "relay-request",
+          "method": "POST",
+          "path": "/api/relay",
+          "description": "Route request through P2P trust relay",
+          "componentId": "bridge.relay.request",
+          "systemId": "bridge",
+          "tags": [
+            "bridge",
+            "relay"
+          ]
+        },
+        {
+          "command": "nodes-list",
+          "aliases": [
+            "nodes list"
+          ],
+          "usage": "nodes-list",
+          "method": "GET",
+          "path": "/api/nodes",
+          "description": "Connected relay nodes",
+          "componentId": "bridge.nodes.list",
+          "systemId": "bridge",
+          "tags": [
+            "bridge"
+          ]
+        },
+        {
+          "command": "node-register",
+          "aliases": [
+            "node register"
+          ],
+          "usage": "node-register",
+          "method": "POST",
+          "path": "/api/nodes",
+          "description": "Register a relay node",
+          "componentId": "bridge.node.register",
+          "systemId": "bridge",
+          "tags": [
+            "bridge"
+          ]
+        },
+        {
+          "command": "node-trust",
+          "aliases": [
+            "node trust"
+          ],
+          "usage": "node-trust",
+          "method": "POST",
+          "path": "/api/nodes/:id/trust",
+          "description": "Set trust score for a node",
+          "componentId": "bridge.node.trust",
+          "systemId": "bridge",
+          "tags": [
+            "bridge",
+            "trust"
+          ]
+        },
+        {
+          "command": "requests-list",
+          "aliases": [
+            "requests list"
+          ],
+          "usage": "requests-list",
+          "method": "GET",
+          "path": "/api/requests",
+          "description": "Request log",
+          "componentId": "bridge.requests.list",
+          "systemId": "bridge",
+          "tags": [
+            "bridge"
+          ]
+        },
+        {
+          "command": "circuit-status",
+          "aliases": [
+            "circuit status"
+          ],
+          "usage": "circuit-status",
+          "method": "GET",
+          "path": "/api/circuit",
+          "description": "Circuit breaker state per node",
+          "componentId": "bridge.circuit.status",
+          "systemId": "bridge",
+          "tags": [
+            "bridge"
+          ]
+        },
+        {
+          "command": "circuit-reset",
+          "aliases": [
+            "circuit reset"
+          ],
+          "usage": "circuit-reset",
+          "method": "POST",
+          "path": "/api/circuit/:id/reset",
+          "description": "Reset circuit breaker for node",
+          "componentId": "bridge.circuit.reset",
+          "systemId": "bridge",
+          "tags": [
+            "bridge"
+          ]
+        },
+        {
+          "command": "identity-verify",
+          "aliases": [
+            "identity verify"
+          ],
+          "usage": "identity-verify",
+          "method": "POST",
+          "path": "/api/identity/verify",
+          "description": "Verify system identity token",
+          "componentId": "bridge.identity.verify",
+          "systemId": "bridge",
+          "tags": [
+            "bridge",
+            "identity"
+          ]
+        }
+      ],
+      "seamHooks": [
+        {
+          "componentId": "bridge.relay.request",
+          "in": [
+            {
+              "id": "bridge.relay.receive",
+              "intent": [
+                "relay",
+                "proxy",
+                "forward"
+              ],
+              "contract": "nexus-interaction-contract-v1::bridge",
+              "tags": [
+                "relay"
+              ]
+            }
+          ],
+          "out": [
+            {
+              "id": "bridge.relay.complete",
+              "wires_to": [
+                "cortex.cfr.graph"
+              ],
+              "tags": [
+                "relay"
+              ]
+            }
+          ]
+        }
+      ],
+      "copilotMap": [
+        {
+          "componentId": "bridge.health",
+          "label": "health",
+          "description": "Bridge health + relay stats",
+          "intents": [
+            "health"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.contract",
+          "label": "contract",
+          "description": "Bridge interaction contract",
+          "intents": [
+            "contract"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.events",
+          "label": "events",
+          "description": "SSE — all bridge events",
+          "intents": [
+            "events"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.relay.request",
+          "label": "relay.request",
+          "description": "Route request through P2P trust relay",
+          "intents": [
+            "relay",
+            "proxy",
+            "forward",
+            "relay request"
+          ],
+          "contract": "nexus-interaction-contract-v1::bridge",
+          "hookId": "bridge.relay.receive"
+        },
+        {
+          "componentId": "bridge.nodes.list",
+          "label": "nodes.list",
+          "description": "Connected relay nodes",
+          "intents": [
+            "nodes list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.node.register",
+          "label": "node.register",
+          "description": "Register a relay node",
+          "intents": [
+            "node register"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.node.trust",
+          "label": "node.trust",
+          "description": "Set trust score for a node",
+          "intents": [
+            "node trust"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.requests.list",
+          "label": "requests.list",
+          "description": "Request log",
+          "intents": [
+            "requests list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.circuit.status",
+          "label": "circuit.status",
+          "description": "Circuit breaker state per node",
+          "intents": [
+            "circuit status"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.circuit.reset",
+          "label": "circuit.reset",
+          "description": "Reset circuit breaker for node",
+          "intents": [
+            "circuit reset"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "bridge.identity.verify",
+          "label": "identity.verify",
+          "description": "Verify system identity token",
+          "intents": [
+            "identity verify"
+          ],
+          "contract": null,
+          "hookId": null
+        }
+      ]
     },
     {
       "systemId": "emerge",
@@ -9465,6 +9948,175 @@
     {
       "command": "health",
       "aliases": [
+        "health"
+      ],
+      "usage": "health",
+      "method": "GET",
+      "path": "/health",
+      "description": "Bridge health + relay stats",
+      "componentId": "bridge.health",
+      "systemId": "bridge",
+      "tags": [
+        "bridge"
+      ]
+    },
+    {
+      "command": "contract",
+      "aliases": [
+        "contract"
+      ],
+      "usage": "contract",
+      "method": "GET",
+      "path": "/api/contract",
+      "description": "Bridge interaction contract",
+      "componentId": "bridge.contract",
+      "systemId": "bridge",
+      "tags": [
+        "bridge"
+      ]
+    },
+    {
+      "command": "events",
+      "aliases": [
+        "events"
+      ],
+      "usage": "events",
+      "method": "GET",
+      "path": "/events",
+      "description": "SSE — all bridge events",
+      "componentId": "bridge.events",
+      "systemId": "bridge",
+      "tags": [
+        "bridge",
+        "stream"
+      ]
+    },
+    {
+      "command": "relay-request",
+      "aliases": [
+        "relay request"
+      ],
+      "usage": "relay-request",
+      "method": "POST",
+      "path": "/api/relay",
+      "description": "Route request through P2P trust relay",
+      "componentId": "bridge.relay.request",
+      "systemId": "bridge",
+      "tags": [
+        "bridge",
+        "relay"
+      ]
+    },
+    {
+      "command": "nodes-list",
+      "aliases": [
+        "nodes list"
+      ],
+      "usage": "nodes-list",
+      "method": "GET",
+      "path": "/api/nodes",
+      "description": "Connected relay nodes",
+      "componentId": "bridge.nodes.list",
+      "systemId": "bridge",
+      "tags": [
+        "bridge"
+      ]
+    },
+    {
+      "command": "node-register",
+      "aliases": [
+        "node register"
+      ],
+      "usage": "node-register",
+      "method": "POST",
+      "path": "/api/nodes",
+      "description": "Register a relay node",
+      "componentId": "bridge.node.register",
+      "systemId": "bridge",
+      "tags": [
+        "bridge"
+      ]
+    },
+    {
+      "command": "node-trust",
+      "aliases": [
+        "node trust"
+      ],
+      "usage": "node-trust",
+      "method": "POST",
+      "path": "/api/nodes/:id/trust",
+      "description": "Set trust score for a node",
+      "componentId": "bridge.node.trust",
+      "systemId": "bridge",
+      "tags": [
+        "bridge",
+        "trust"
+      ]
+    },
+    {
+      "command": "requests-list",
+      "aliases": [
+        "requests list"
+      ],
+      "usage": "requests-list",
+      "method": "GET",
+      "path": "/api/requests",
+      "description": "Request log",
+      "componentId": "bridge.requests.list",
+      "systemId": "bridge",
+      "tags": [
+        "bridge"
+      ]
+    },
+    {
+      "command": "circuit-status",
+      "aliases": [
+        "circuit status"
+      ],
+      "usage": "circuit-status",
+      "method": "GET",
+      "path": "/api/circuit",
+      "description": "Circuit breaker state per node",
+      "componentId": "bridge.circuit.status",
+      "systemId": "bridge",
+      "tags": [
+        "bridge"
+      ]
+    },
+    {
+      "command": "circuit-reset",
+      "aliases": [
+        "circuit reset"
+      ],
+      "usage": "circuit-reset",
+      "method": "POST",
+      "path": "/api/circuit/:id/reset",
+      "description": "Reset circuit breaker for node",
+      "componentId": "bridge.circuit.reset",
+      "systemId": "bridge",
+      "tags": [
+        "bridge"
+      ]
+    },
+    {
+      "command": "identity-verify",
+      "aliases": [
+        "identity verify"
+      ],
+      "usage": "identity-verify",
+      "method": "POST",
+      "path": "/api/identity/verify",
+      "description": "Verify system identity token",
+      "componentId": "bridge.identity.verify",
+      "systemId": "bridge",
+      "tags": [
+        "bridge",
+        "identity"
+      ]
+    },
+    {
+      "command": "health",
+      "aliases": [
         "health",
         "emerge health"
       ],
@@ -11476,6 +12128,34 @@
       ]
     },
     {
+      "componentId": "bridge.relay.request",
+      "in": [
+        {
+          "id": "bridge.relay.receive",
+          "intent": [
+            "relay",
+            "proxy",
+            "forward"
+          ],
+          "contract": "nexus-interaction-contract-v1::bridge",
+          "tags": [
+            "relay"
+          ]
+        }
+      ],
+      "out": [
+        {
+          "id": "bridge.relay.complete",
+          "wires_to": [
+            "cortex.cfr.graph"
+          ],
+          "tags": [
+            "relay"
+          ]
+        }
+      ]
+    },
+    {
       "componentId": "emerge.compile",
       "in": [
         {
@@ -12413,6 +13093,119 @@
       "description": "Ollama bridge health",
       "intents": [
         "ollama health"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.health",
+      "label": "health",
+      "description": "Bridge health + relay stats",
+      "intents": [
+        "health"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.contract",
+      "label": "contract",
+      "description": "Bridge interaction contract",
+      "intents": [
+        "contract"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.events",
+      "label": "events",
+      "description": "SSE — all bridge events",
+      "intents": [
+        "events"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.relay.request",
+      "label": "relay.request",
+      "description": "Route request through P2P trust relay",
+      "intents": [
+        "relay",
+        "proxy",
+        "forward",
+        "relay request"
+      ],
+      "contract": "nexus-interaction-contract-v1::bridge",
+      "hookId": "bridge.relay.receive"
+    },
+    {
+      "componentId": "bridge.nodes.list",
+      "label": "nodes.list",
+      "description": "Connected relay nodes",
+      "intents": [
+        "nodes list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.node.register",
+      "label": "node.register",
+      "description": "Register a relay node",
+      "intents": [
+        "node register"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.node.trust",
+      "label": "node.trust",
+      "description": "Set trust score for a node",
+      "intents": [
+        "node trust"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.requests.list",
+      "label": "requests.list",
+      "description": "Request log",
+      "intents": [
+        "requests list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.circuit.status",
+      "label": "circuit.status",
+      "description": "Circuit breaker state per node",
+      "intents": [
+        "circuit status"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.circuit.reset",
+      "label": "circuit.reset",
+      "description": "Reset circuit breaker for node",
+      "intents": [
+        "circuit reset"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "bridge.identity.verify",
+      "label": "identity.verify",
+      "description": "Verify system identity token",
+      "intents": [
+        "identity verify"
       ],
       "contract": null,
       "hookId": null
@@ -13526,6 +14319,11 @@
         "description": "Ollama bridge health"
       },
       {
+        "componentId": "bridge.health",
+        "systemId": "bridge",
+        "description": "Bridge health + relay stats"
+      },
+      {
         "componentId": "emerge.health",
         "systemId": "emerge",
         "description": "Emerge IDE health"
@@ -13561,6 +14359,11 @@
         "componentId": "copilot.contract",
         "systemId": "copilot",
         "description": "Co-pilot interaction contract"
+      },
+      {
+        "componentId": "bridge.contract",
+        "systemId": "bridge",
+        "description": "Bridge interaction contract"
       },
       {
         "componentId": "architect.contract",
@@ -13599,6 +14402,11 @@
         "description": "SSE — all guardian bus events"
       },
       {
+        "componentId": "bridge.events",
+        "systemId": "bridge",
+        "description": "SSE — all bridge events"
+      },
+      {
         "componentId": "cg.events",
         "systemId": "clear-glass",
         "description": "SSE — all SISO bus events"
@@ -13609,6 +14417,11 @@
         "componentId": "guardian.events",
         "systemId": "guardian",
         "description": "SSE — all guardian bus events"
+      },
+      {
+        "componentId": "bridge.events",
+        "systemId": "bridge",
+        "description": "SSE — all bridge events"
       },
       {
         "componentId": "cg.events",
@@ -13719,6 +14532,16 @@
         "componentId": "copilot.diagnose.list",
         "systemId": "copilot",
         "description": "List past diagnosis sessions"
+      },
+      {
+        "componentId": "bridge.nodes.list",
+        "systemId": "bridge",
+        "description": "Connected relay nodes"
+      },
+      {
+        "componentId": "bridge.requests.list",
+        "systemId": "bridge",
+        "description": "Request log"
       },
       {
         "componentId": "architect.hooks.list",
@@ -13957,6 +14780,11 @@
         "componentId": "guardian.queue.status",
         "systemId": "guardian",
         "description": "Physical queue status"
+      },
+      {
+        "componentId": "bridge.circuit.status",
+        "systemId": "bridge",
+        "description": "Circuit breaker state per node"
       },
       {
         "componentId": "cg.status",
@@ -14527,6 +15355,11 @@
         "componentId": "guardian.settings.reset",
         "systemId": "guardian",
         "description": "Reset settings to defaults"
+      },
+      {
+        "componentId": "bridge.circuit.reset",
+        "systemId": "bridge",
+        "description": "Reset circuit breaker for node"
       }
     ],
     "settings-reset": [
@@ -16120,6 +16953,210 @@
         "description": "Ollama bridge health"
       }
     ],
+    "relay request": [
+      {
+        "componentId": "bridge.relay.request",
+        "systemId": "bridge",
+        "description": "Route request through P2P trust relay"
+      }
+    ],
+    "relay": [
+      {
+        "componentId": "bridge.relay.request",
+        "systemId": "bridge",
+        "description": "Route request through P2P trust relay"
+      }
+    ],
+    "request": [
+      {
+        "componentId": "bridge.relay.request",
+        "systemId": "bridge",
+        "description": "Route request through P2P trust relay"
+      }
+    ],
+    "relay-request": [
+      {
+        "componentId": "bridge.relay.request",
+        "systemId": "bridge",
+        "description": "Route request through P2P trust relay"
+      }
+    ],
+    "nodes list": [
+      {
+        "componentId": "bridge.nodes.list",
+        "systemId": "bridge",
+        "description": "Connected relay nodes"
+      }
+    ],
+    "nodes": [
+      {
+        "componentId": "bridge.nodes.list",
+        "systemId": "bridge",
+        "description": "Connected relay nodes"
+      }
+    ],
+    "nodes-list": [
+      {
+        "componentId": "bridge.nodes.list",
+        "systemId": "bridge",
+        "description": "Connected relay nodes"
+      }
+    ],
+    "node register": [
+      {
+        "componentId": "bridge.node.register",
+        "systemId": "bridge",
+        "description": "Register a relay node"
+      }
+    ],
+    "node": [
+      {
+        "componentId": "bridge.node.register",
+        "systemId": "bridge",
+        "description": "Register a relay node"
+      },
+      {
+        "componentId": "bridge.node.trust",
+        "systemId": "bridge",
+        "description": "Set trust score for a node"
+      }
+    ],
+    "register": [
+      {
+        "componentId": "bridge.node.register",
+        "systemId": "bridge",
+        "description": "Register a relay node"
+      },
+      {
+        "componentId": "architect.hook.register",
+        "systemId": "architect",
+        "description": "Register a new hook"
+      }
+    ],
+    "node-register": [
+      {
+        "componentId": "bridge.node.register",
+        "systemId": "bridge",
+        "description": "Register a relay node"
+      }
+    ],
+    "node trust": [
+      {
+        "componentId": "bridge.node.trust",
+        "systemId": "bridge",
+        "description": "Set trust score for a node"
+      }
+    ],
+    "trust": [
+      {
+        "componentId": "bridge.node.trust",
+        "systemId": "bridge",
+        "description": "Set trust score for a node"
+      }
+    ],
+    "node-trust": [
+      {
+        "componentId": "bridge.node.trust",
+        "systemId": "bridge",
+        "description": "Set trust score for a node"
+      }
+    ],
+    "requests list": [
+      {
+        "componentId": "bridge.requests.list",
+        "systemId": "bridge",
+        "description": "Request log"
+      }
+    ],
+    "requests": [
+      {
+        "componentId": "bridge.requests.list",
+        "systemId": "bridge",
+        "description": "Request log"
+      }
+    ],
+    "requests-list": [
+      {
+        "componentId": "bridge.requests.list",
+        "systemId": "bridge",
+        "description": "Request log"
+      }
+    ],
+    "circuit status": [
+      {
+        "componentId": "bridge.circuit.status",
+        "systemId": "bridge",
+        "description": "Circuit breaker state per node"
+      }
+    ],
+    "circuit": [
+      {
+        "componentId": "bridge.circuit.status",
+        "systemId": "bridge",
+        "description": "Circuit breaker state per node"
+      },
+      {
+        "componentId": "bridge.circuit.reset",
+        "systemId": "bridge",
+        "description": "Reset circuit breaker for node"
+      }
+    ],
+    "circuit statu": [
+      {
+        "componentId": "bridge.circuit.status",
+        "systemId": "bridge",
+        "description": "Circuit breaker state per node"
+      }
+    ],
+    "circuit-status": [
+      {
+        "componentId": "bridge.circuit.status",
+        "systemId": "bridge",
+        "description": "Circuit breaker state per node"
+      }
+    ],
+    "circuit reset": [
+      {
+        "componentId": "bridge.circuit.reset",
+        "systemId": "bridge",
+        "description": "Reset circuit breaker for node"
+      }
+    ],
+    "circuit-reset": [
+      {
+        "componentId": "bridge.circuit.reset",
+        "systemId": "bridge",
+        "description": "Reset circuit breaker for node"
+      }
+    ],
+    "identity verify": [
+      {
+        "componentId": "bridge.identity.verify",
+        "systemId": "bridge",
+        "description": "Verify system identity token"
+      }
+    ],
+    "identity": [
+      {
+        "componentId": "bridge.identity.verify",
+        "systemId": "bridge",
+        "description": "Verify system identity token"
+      }
+    ],
+    "verify": [
+      {
+        "componentId": "bridge.identity.verify",
+        "systemId": "bridge",
+        "description": "Verify system identity token"
+      }
+    ],
+    "identity-verify": [
+      {
+        "componentId": "bridge.identity.verify",
+        "systemId": "bridge",
+        "description": "Verify system identity token"
+      }
+    ],
     "emerge health": [
       {
         "componentId": "emerge.health",
@@ -16409,13 +17446,6 @@
       }
     ],
     "hook register": [
-      {
-        "componentId": "architect.hook.register",
-        "systemId": "architect",
-        "description": "Register a new hook"
-      }
-    ],
-    "register": [
       {
         "componentId": "architect.hook.register",
         "systemId": "architect",
@@ -18549,11 +19579,6 @@
       }
     ]
   },
-  "errors": [
-    {
-      "systemId": "bridge",
-      "error": "registry not found: bridge/registry-components.js"
-    }
-  ],
-  "buildMs": 20
+  "errors": [],
+  "buildMs": 18
 }

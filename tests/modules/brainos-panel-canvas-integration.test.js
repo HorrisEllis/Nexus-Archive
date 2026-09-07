@@ -24,8 +24,8 @@ dom.window.fetch = global.fetch = () => Promise.resolve({ json: () => Promise.re
 // Load order matters — brainos.js checks `if (global.BrainOSCanvas)` at
 // mount time, so the real canvas module must exist first, exactly like
 // a real page would <script> tag them in order.
-require('../../ui/brainos/brainos-canvas.js');
-require('../../ui/brainos/brainos.js');
+require('../../nexus/ui/brainos/brainos-canvas.js');
+require('../../nexus/ui/brainos/brainos.js');
 const BrainOS = dom.window.BrainOS;
 const Canvas = dom.window.BrainOSCanvas;
 

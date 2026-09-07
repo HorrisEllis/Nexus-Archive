@@ -160,7 +160,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history, mesh;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -596,51 +596,6 @@ async function _startWire() {
         return res.end(JSON.stringify(result));
       }
 
-      // §NEW 2026-09-06 — James: "hook in the agent mesh in clearglass,
-      // and guardian... how can i test it? my normal entry point is
-      // worthless. the tv ui, cli." Real problem, confirmed before
-      // building this: the TV UI's ask-box calls copilot directly
-      // (_copilotDispatch), which never touches agent-mesh at all —
-      // grepped this whole file for mesh.route( and found zero real
-      // call sites outside wake-relay.js's own buried error-fallback
-      // path. There was no way to exercise DA1's real Guardian-first
-      // dispatch gate (the live GET /providers check in agent-mesh.js's
-      // route()) without deliberately breaking copilot first. This
-      // route is that direct entry point — calls mesh.route() exactly
-      // the same way wake-relay.js's fallback does, just reachable on
-      // demand instead of only after a copilot failure.
-      if (u === '/agent-mesh/route' && req.method === 'POST') {
-        const { prompt, preferAgent, fallbackOrder } = parsed;
-        if (!prompt) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'prompt required' })); }
-        try {
-          const result = await mesh.route({ prompt, preferAgent, fallbackOrder });
-          res.writeHead(200);
-          return res.end(JSON.stringify({ ok: true, ...result }));
-        } catch (e) {
-          res.writeHead(502);
-          return res.end(JSON.stringify({ ok: false, error: e.message }));
-        }
-      }
-
-      // §NEW 2026-09-06 — James: "brainos is important. do that next."
-      // Real gap for the full dynamic canvas: brainos-canvas.js can
-      // pulse a fixed 'agent-mesh' node on real mesh.* SSE events (built
-      // last turn), but has no way to get the INITIAL real state on
-      // mount — a fresh page load shows nothing until the first real
-      // 5s mesh.nodes.snapshot tick. This is that initial fetch: the
-      // same real listMeshView() the snapshot event's own data comes
-      // from, read once on mount, not a new mechanism.
-      if (u === '/agent-mesh/view' && req.method === 'GET') {
-        try {
-          const view = mesh.listMeshView ? mesh.listMeshView() : [];
-          res.writeHead(200);
-          return res.end(JSON.stringify({ ok: true, nodes: view }));
-        } catch (e) {
-          res.writeHead(502);
-          return res.end(JSON.stringify({ ok: false, error: e.message }));
-        }
-      }
-
       // §BL24 2026-08-23 — James: "a command/tool to disable and re-
       // enable them." Real, previously-missing HTTP surface for
       // UserscriptManager's already-real list()/toggle() — same real
@@ -845,11 +800,12 @@ async function bootstrap() {
   const bus = createBus('EVENTS');
   console.log('[ClearGlass] SISO bus →E→E→');
 
-  // 0.1 Network subsystem — §RETIRED 2026-09-06, James: "DNS/firewall/
-  // crypto/host-rotation is redundant and should be deleted." Only
-  // pulse-registry remains (src/mesh/agent-mesh.js's real node-pulse
-  // dependency) — everything else archived, see src/network/install.js's
-  // header for the full record.
+  // 0.1 Network subsystem — §RELOCATED 2026-09-03 from mesh/install.js
+  // (guardian-side). Same real modules (crypto, keys, host-rotation,
+  // port-registry, canvas-persistence, SNR filter), now wired to clear-
+  // glass's own bus since these are genuinely browser/network-adjacent
+  // concerns clear-glass actually has a surface for. See src/network/
+  // install.js's header for the full move rationale.
   try { require('../network/install.js').install(bus); }
   catch (err) { console.error('[ClearGlass] network/install.js failed:', err.message); }
 
@@ -1031,16 +987,7 @@ async function bootstrap() {
   // account uuid (auto-created on first use, persisted in
   // nexus-options.json). nexusOptions is already loaded by 8.5, well
   // before this line — real ordering, not assumed.
-  // §FIX 2026-09-06 — "hook in the agent mesh in clearglass, and
-  // guardian." Real gap found before touching anything: this was a
-  // local `const mesh`, inaccessible outside bootstrap()'s own scope —
-  // invisible to _startWire()'s HTTP server, same reason /dom/query
-  // etc. can reach providerHost (a shared module-level singleton, line
-  // 163) but nothing could reach mesh.route() directly. Assigned to
-  // the shared singleton instead of declared locally so a real,
-  // direct HTTP entry point (added below, POST /agent-mesh/route and
-  // GET /agent-mesh/view) can actually call it.
-  mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, sse: { emit: (t, d) => emit(t, d) } });
+  const mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, sse: { emit: (t, d) => emit(t, d) } });
   await mesh.init();
 
   // 11. Diagnostic engine — Playwright-equivalent on ClearDriver
@@ -1425,14 +1372,6 @@ function _rebuildTrayMenu(mesh) {
     { label: '⬡ Open Mistral Chat',  click: () => openAgentWindow({ agentId: randomUUID(), url: 'https://chat.mistral.ai' }) },
     { label: '⬡ Open ChatGPT',       click: () => openAgentWindow({ agentId: randomUUID(), url: 'https://chatgpt.com' }) },
     { label: '⬡ NEXUS Home UI',      click: () => openAgentWindow({ agentId: 'nexus-home', url: 'http://127.0.0.1:9000/ui/home/index.html' }) },
-    // §NEW 2026-09-06 — James: "where is brainos ui. if the answer is
-    // anything less than the way to access it. you're not done."
-    // Same real pattern as NEXUS Home UI above — ui/brainos/index.html
-    // (built this session; the module files existed but had no HTML
-    // entry point and were sitting in a misplaced nexus/ wrapper
-    // directory orchestrator's real UI_ROOT never reached) is now a
-    // real, servable page at this exact URL.
-    { label: '⬡ BrainOS',            click: () => openAgentWindow({ agentId: 'brainos', url: 'http://127.0.0.1:9000/ui/brainos/' }) },
     { type: 'separator' },
     { label: 'NEXUS UI Audit',        click: () => emit('diag.nexus', { agentId: 'default' }) },
     { label: 'API Settings',          click: openSettingsWindow },

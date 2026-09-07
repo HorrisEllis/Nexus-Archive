@@ -45,6 +45,9 @@ require.cache[require.resolve(path.join(ROOT, 'copilot/lifeline.js'))] = {
 const intake = require(path.join(ROOT, 'lib/intake.js'));
 const hatSeed = require(path.join(ROOT, 'lib/hat-seed.js'));
 hatSeed.seedHats();
+const _raidInputIsolated1 = fs.mkdtempSync(path.join(os.tmpdir(), 'raid-input-officiator-'));
+process.env.RAID_INPUT_DIR = _raidInputIsolated1;
+process.on('exit', () => { try { fs.rmSync(_raidInputIsolated1, { recursive: true, force: true }); } catch (_) {} });
 const officiator = require(path.join(ROOT, 'cortex/core/raid/officiator.js'));
 const raid = require(path.join(ROOT, 'cortex/core/raid/contract-intake.js'));
 

@@ -33,6 +33,9 @@ if (!fs.existsSync(path.join(TMP, 'b1_isolation_probe.json'))) {
   return;
 }
 
+const _raidInputIsolated4 = fs.mkdtempSync(path.join(os.tmpdir(), 'raid-input-b1-'));
+process.env.RAID_INPUT_DIR = _raidInputIsolated4;
+process.on('exit', () => { try { fs.rmSync(_raidInputIsolated4, { recursive: true, force: true }); } catch (_) {} });
 const ci = require(path.join(ROOT, 'cortex/core/raid/contract-intake.js'));
 
 async function main() {
