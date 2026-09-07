@@ -1000,6 +1000,31 @@ async function runAll() {
     process.exit(2);   // 2 = "ran, but no specific suite" — distinct from 1
   }
 
+  // §FOUND & FIXED 2026-09-06 — James: "diagnostic tool: idearium:
+  // ReferenceError: printGapReport is not defined." Real, live crash on
+  // every normal (non-fallback) diagnostic run for any target with a
+  // real suite — checked before fixing: this function was called but
+  // never defined anywhere in the codebase. The real display logic
+  // already existed, just inline inside a different function
+  // (diagAllSystems, further down) that also does gap escalation —
+  // reused the exact same real formatting here, not reinvented, and
+  // deliberately left escalation where it already correctly runs
+  // rather than duplicating it into this simpler, top-level call site.
+  function printGapReport() {
+    const allGaps = [..._cache.gaps.values()];
+    if (allGaps.length > 0) {
+      console.log('');
+      console.log(C.bold + C.red + '  Named gaps (' + allGaps.length + '):' + C.reset);
+      for (const g of allGaps) {
+        const col = g.severity === 'high' ? C.red : g.severity === 'medium' ? C.yellow : C.dim;
+        console.log(`    ${col}[${g.severity.toUpperCase()}]${C.reset} ${g.system} · ${g.faultId}`);
+        console.log(`       ${C.dim}${g.description}${C.reset}`);
+      }
+    } else {
+      console.log(ok('  No named gaps — system clean'));
+    }
+  }
+
   printGapReport();
 
   if (WATCH && (totalFail > 0 || totalWarn > 0)) {

@@ -78,18 +78,20 @@
   let es = null;
   let latestAgents = [];
 
+  function _eh(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
   function renderEmpty(msg) {
-    document.getElementById('__mp-list').innerHTML = `<div id="__mp-empty">${msg}</div>`;
+    document.getElementById('__mp-list').innerHTML = `<div id="__mp-empty">${_eh(msg)}</div>`;
   }
 
   function render(nodes) {
     const list = document.getElementById('__mp-list');
     if (!nodes.length) { renderEmpty('no live nodes yet'); return; }
     list.innerHTML = nodes.map((n, i) => `
-      <div class="__mp-row" data-idx="${i}" title="${n.label}">
-        <span class="__mp-dot ${n.status}"></span>
-        <span class="__mp-label">${n.label}</span>
-        <span class="__mp-kind">${n.kind}</span>
+      <div class="__mp-row" data-idx="${i}" title="${_eh(n.label)}">
+        <span class="__mp-dot ${_eh(n.status)}"></span>
+        <span class="__mp-label">${_eh(n.label)}</span>
+        <span class="__mp-kind">${_eh(n.kind)}</span>
       </div>
     `).join('');
     list.querySelectorAll('.__mp-row').forEach(row => {

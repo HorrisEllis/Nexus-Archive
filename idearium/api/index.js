@@ -54,26 +54,33 @@ import { getIdeaOS, VERSION } from '../core/index.js';
 // ── Spec Engine + Agent Suite (Phase 40) ──────────────────────────────────────
 let _specEngine = null;
 let _agentSuite = null;
+let _specEngineFailedAt = 0;
+const SPEC_ENGINE_RETRY_COOLDOWN_MS = 60000; // §FOUND & FIXED 2026-09-06 — James, live: "idearium still keeps crashing." getSpecEngine() retried a fresh dynamic import() on EVERY call while failing — the new build-queue poller calls this every 15s, forever, with zero cooldown once it started failing. A real, compounding resource drain, not just noisy logs.
 function getSpecEngine() {
-  if (!_specEngine) {
+  if (!_specEngine && (Date.now() - _specEngineFailedAt > SPEC_ENGINE_RETRY_COOLDOWN_MS)) {
     import('../spec-engine/index.js').then(m => { _specEngine = m.default || m; }).catch(e => {
+      _specEngineFailedAt = Date.now();
       console.warn('[idearium/api] spec-engine load failed:', e.message);
     });
   }
   return _specEngine;
 }
 let _copilotAdapter = null;
+let _copilotAdapterFailedAt = 0;
 function getCopilotAdapter() {
-  if (!_copilotAdapter) {
+  if (!_copilotAdapter && (Date.now() - _copilotAdapterFailedAt > SPEC_ENGINE_RETRY_COOLDOWN_MS)) {
     import('../copilot-adapter/index.js').then(m => { _copilotAdapter = m.default || m; }).catch(e => {
+      _copilotAdapterFailedAt = Date.now();
       console.warn('[idearium/api] copilot-adapter load failed:', e.message);
     });
   }
   return _copilotAdapter;
 }
+let _agentSuiteFailedAt = 0;
 function getAgentSuite() {
-  if (!_agentSuite) {
+  if (!_agentSuite && (Date.now() - _agentSuiteFailedAt > SPEC_ENGINE_RETRY_COOLDOWN_MS)) {
     import('../agent-suite/index.js').then(m => { _agentSuite = m.default || m; }).catch(e => {
+      _agentSuiteFailedAt = Date.now();
       console.warn('[idearium/api] agent-suite load failed:', e.message);
     });
   }
