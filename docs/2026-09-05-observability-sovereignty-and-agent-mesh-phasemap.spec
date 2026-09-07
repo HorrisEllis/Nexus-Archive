@@ -1159,6 +1159,41 @@ spec:
         from clobbering each other, verified against the real, confirmed
         shape of both real SSE events, not assumed.
 
+    SYSTEM_CHECK_EMERGE_STALE_ENTRY_2026-09-07:
+      status: >
+        CLOSED. James, from a live, recurring log: "[diagnostic]
+        Sending to ollama: emerge's real core layer not found under
+        its own conventions" — repeating every ~5 minutes, never
+        resolved. Traced precisely: lib/system-check.js's own
+        REAL_ENTRY_FILE.emerge still pointed at emerge/consumer.js —
+        legitimately retired earlier this session (EMERGE_DIRECT_
+        COMPILE, confirmed real: copilot/module-builder.js now calls
+        emerge/compiler/pipeline.js's compile() directly, no queue, no
+        separate process, consumer.js archived to _archive/2026-09-06-
+        emerge-consumer-retired/). This check was never updated after
+        that retirement, so it correctly, from its own logic, kept
+        reporting a real gap against a file deliberately removed — the
+        exact same class of stale-reference bug already found and
+        fixed for bridge in this same file's own SYSTEM_DIRS/REAL_
+        ENTRY_FILE maps, just missed for emerge specifically at the
+        time. Fixed: points at emerge/compiler/pipeline.js — the real,
+        current, deliberately-kept core, confirmed to exist on disk
+        before pointing at it. cli/api/events layers still honestly
+        report false for emerge and were left alone — emerge
+        genuinely has neither anymore, by design ("its just a
+        compiler thats it, the rest is trash"), not a gap to force-fit.
+        5/5 real tests (test-system-check-emerge-stale-entry.js),
+        including running the real check function directly and
+        confirming core:true, not just a string match against the
+        source. Full suite re-run: zero new failures, exactly +5
+        matching the new test file.
+      depends_on: []
+      does: >
+        Diagnostic stops reporting a false, recurring gap and sending
+        it to ollama every cycle — the check now reflects emerge's
+        real, current, intentionally-reduced footprint instead of a
+        retired file's old shape.
+
     IDEARIUM_QUEUE_AND_HOSTILE_AUDIT_2026-09-07:
       status: >
         CLOSED. A genuinely parallel thread (branched from the same real
