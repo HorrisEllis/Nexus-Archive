@@ -602,9 +602,10 @@
       <div id="bot-bar-head">
         <div id="bot-bar-left">
           <span id="bot-bar-label">✦ CO-PILOT</span>
-          <div id="cp-backend-toggle" title="Which backend answers: guardian (4 real NCP agents) or ollama (local models)">
-            <button id="cp-toggle-guardian" class="cp-toggle-btn cp-toggle-active" onclick="_setCoPilotBackend('guardian')">guardian</button>
+          <div id="cp-backend-toggle" title="Which backend answers: ollama (local models), copilot (whatever copilot/config.js's DEFAULT_PROVIDER says), or guardian (a specific real NCP agent)">
             <button id="cp-toggle-ollama" class="cp-toggle-btn" onclick="_setCoPilotBackend('ollama')">ollama</button>
+            <button id="cp-toggle-copilot" class="cp-toggle-btn cp-toggle-active" onclick="_setCoPilotBackend('copilot')">copilot</button>
+            <button id="cp-toggle-guardian" class="cp-toggle-btn" onclick="_setCoPilotBackend('guardian')">guardian</button>
           </div>
         </div>
         <button id="fullscreen-btn" onclick="toggleConsoleFullscreen()" title="Fullscreen console (Shift+Enter)">⛶</button>
@@ -1501,22 +1502,27 @@ async function runDiagEngines(){
 
 // ── Co-pilot mode toggle ───────────────────────────────────────────────────────
 let _asMode = 'copilot'; // §2026-07-04: always co-pilot now, no more system-console toggle
-// §BUILT 2026-09-06 — James: "a toggle button... a toggle ollama <->
-// guardian. then the drop down: the 4 ncp agents." Real, live NCP
-// coverage (guardian/userscripts.yaml, docs/guardian.spec — same 4
-// confirmed multiple times this session, not guessed): claude, chatgpt,
-// gemini, perplexity. lifeline.route()'s own opts.provider already
-// accepts a specific agent name directly (checked earlier this
-// session), so the dropdown's value IS the real provider sent, not an
-// indirect "guardian" label.
+// §BUILT 2026-09-06 — James: "copilot is the middie option for what
+// ever is enabled in the programmable configuration file. ollama routes
+// to the ollama module. guardian routes to guardian. drop down only
+// needs to route to each ncp tab and back." Real, live NCP coverage
+// (guardian/userscripts.yaml, docs/guardian.spec — same 4 confirmed
+// multiple times this session, not guessed): claude, chatgpt, gemini,
+// perplexity. lifeline.route()'s own opts.provider already accepts a
+// specific agent name directly (checked earlier this session), so the
+// dropdown's value IS the real provider sent, not an indirect label.
+// 'copilot' is a real, third, literal value now too — copilot/server.js
+// resolves it through copilot/config.js's own real DEFAULT_PROVIDER,
+// not a second default guessed at here.
 const CP_GUARDIAN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity'];
-let _cpBackend = 'guardian'; // 'guardian' | 'ollama'
-let _asProvider = CP_GUARDIAN_AGENTS[0]; // the real, current selection sent to /api/prompt
+let _cpBackend = 'copilot'; // 'ollama' | 'copilot' | 'guardian' — copilot is the real, middle, default option
+let _asProvider = 'copilot'; // the real, current value sent to /api/prompt
 
 function _setCoPilotBackend(mode) {
   _cpBackend = mode;
-  document.getElementById('cp-toggle-guardian').classList.toggle('cp-toggle-active', mode === 'guardian');
   document.getElementById('cp-toggle-ollama').classList.toggle('cp-toggle-active', mode === 'ollama');
+  document.getElementById('cp-toggle-copilot').classList.toggle('cp-toggle-active', mode === 'copilot');
+  document.getElementById('cp-toggle-guardian').classList.toggle('cp-toggle-active', mode === 'guardian');
   _renderCpProviderOptions();
   _logToData('ui.copilot.backend', { backend: mode });
 }
@@ -1524,10 +1530,23 @@ function _setCoPilotBackend(mode) {
 function _renderCpProviderOptions() {
   const sel = document.getElementById('cp-provider');
   if (!sel) return;
-  const options = _cpBackend === 'ollama' ? ['ollama'] : CP_GUARDIAN_AGENTS;
-  sel.innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
-  sel.disabled = (_cpBackend === 'ollama'); // one real option — nothing to actually choose
-  _asProvider = options[0];
+  // §BUILT 2026-09-06 — "drop down only needs to route to each ncp tab
+  // and back": the dropdown is real, meaningful choice ONLY for
+  // guardian (which of the 4 real agents/tabs answers) — ollama and
+  // copilot are each already one real, specific thing, no tab to pick
+  // between, so the dropdown gets out of the way entirely rather than
+  // showing a fake, single-option "choice."
+  if (_cpBackend === 'guardian') {
+    sel.style.display = '';
+    sel.disabled = false;
+    sel.innerHTML = CP_GUARDIAN_AGENTS.map(o => `<option value="${o}">${o}</option>`).join('');
+    _asProvider = CP_GUARDIAN_AGENTS[0];
+  } else {
+    sel.style.display = 'none';
+    sel.disabled = true;
+    sel.innerHTML = '';
+    _asProvider = _cpBackend; // 'ollama' or 'copilot' — the literal value itself, no tab to route to
+  }
 }
 // §FIXED — the <select id="cp-provider"> element is already parsed into
 // the DOM by this point (this script tag comes after it in document
@@ -2059,7 +2078,7 @@ async function asSend(){
         channelName: CH_META[curCh]?.name || 'Overview',
         uiState: uiSnapshot,
         source: 'tv-shell',
-        provider: _asProvider, // real, specific value now — a real agent name (claude/chatgpt/gemini/perplexity) or 'ollama', set directly by the toggle+dropdown, no translation needed
+        provider: _asProvider, // real, specific value: a real agent name (guardian mode), or the literal 'ollama'/'copilot' — set directly by the toggle+dropdown, no translation needed
       }, 60000);
       out.textContent = '';
       // §BUG FIXED 2026-07-11 — the real bug was upstream (bridge/router.js's

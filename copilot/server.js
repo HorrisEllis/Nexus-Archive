@@ -2088,9 +2088,21 @@ const server = http.createServer(async (req, res) => {
       // reached lifeline at all — even the new, real toggle UI (which
       // correctly sends a specific agent name) was silently defeated by
       // this one line underneath it.
+      // §BUILT 2026-09-06 — James: "copilot is the middle option for
+      // whatever is enabled in the programmable configuration file."
+      // 'copilot' (the toggle's real, middle value — see ui/tv-shell's
+      // own real toggle) resolves through the real, single config value
+      // this session already established the convention for (copilot/
+      // config.js's DEFAULT_PROVIDER), not a second, separate default
+      // baked into this route. A caller that sends neither 'copilot' nor
+      // any real provider at all also falls through to the exact same
+      // real config value — one real source, not two.
+      const resolvedProvider = (!payload.provider || payload.provider === 'copilot')
+        ? config.DEFAULT_PROVIDER
+        : payload.provider;
       const life = await _lifeline.route(
         `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-        { requestId, sessionId, intent: 'ask', channel, provider: payload.provider || undefined }
+        { requestId, sessionId, intent: 'ask', channel, provider: resolvedProvider }
       );
       text      = life?.text || '';
       modelUsed = life?.provider_used || 'none';

@@ -2122,12 +2122,19 @@
         // not guessed — a snapshot saved via the agent tool now shows up
         // here correctly, and one saved here is findable by the agent
         // tool too, since both read/write the exact same rewind engine.
+        // §FOUND & FIXED 2026-09-06 — adversarial audit continued into
+        // clear-glass (5th of 7), James: "be efficient with tokens" —
+        // fixing the highest-value real site only (real, external
+        // webpage title/url from browsing history — a page's own
+        // <title> could inject here), same real pattern already proven
+        // in BrainOS this session.
+        const _eh = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         const isBookmark = typeof s.label === 'string' && s.label.startsWith('bookmark:');
         const label = isBookmark
-          ? `🔖 ${s.label.slice('bookmark:'.length)}`
-          : (s.label === 'auto' ? '' : (s.label === 'manual' ? '' : ' • ' + s.label));
-        div.innerHTML = `<div class="ri-title">${s.title || s.url}</div>
-          <div class="ri-url">${s.url}</div>
+          ? `🔖 ${_eh(s.label.slice('bookmark:'.length))}`
+          : (s.label === 'auto' ? '' : (s.label === 'manual' ? '' : ' • ' + _eh(s.label)));
+        div.innerHTML = `<div class="ri-title">${_eh(s.title || s.url)}</div>
+          <div class="ri-url">${_eh(s.url)}</div>
           <div class="ri-ts">${ago < 1 ? 'just now' : ago + 'm ago'}${label ? ' • ' + label : ''}</div>`;
         div.addEventListener('click', async () => {
           document.getElementById('rewind-panel').classList.remove('visible');

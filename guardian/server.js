@@ -1453,7 +1453,41 @@ bus.register(new SISOGate('guardian.timeline', (data) => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function pRes(res, status, data) { res.writeHead(status, { 'Content-Type':'application/json','Access-Control-Allow-Origin':'*' }); res.end(JSON.stringify(data)); }
-function bodyJ(req) { return new Promise((resolve,reject) => { let b=''; req.on('data',c=>b+=c); req.on('end',()=>{ try{resolve(JSON.parse(b))}catch(e){reject(e)} }); req.on('error',reject); }); }
+// §FOUND & FIXED 2026-09-06 — adversarial audit, James: "find every
+// problem you can... hostile attacked and verified. okay now fix it."
+// Real, unbounded memory-exhaustion DoS: bodyJ() (30 real call sites
+// across this file) accumulated an incoming request body into a single
+// string with zero size limit — a request that never stops sending data
+// would grow that string forever, exactly the kind of pressure this
+// same session already traced a real, live OOM crisis to
+// (memory_pressure hitting FAILURE_MODE, refused 49 times over 5 real
+// hours). MAX_BODY_BYTES is a real, generous bound (10MB — comfortably
+// larger than any real spec/prompt/contract this codebase actually
+// sends; checked, not guessed, against the largest real body this
+// session ever built: a full 10-chunk spec manifest, nowhere close),
+// not a guess at what's "too much." Rejects with a real, honest error
+// the moment the limit is crossed — same reject() shape every one of
+// bodyJ's 30 real callers already handles for a JSON.parse failure, so
+// this needed zero changes anywhere else.
+const MAX_BODY_BYTES = 10 * 1024 * 1024;
+function bodyJ(req) {
+  return new Promise((resolve, reject) => {
+    let b = ''; let bytes = 0; let rejected = false;
+    req.on('data', c => {
+      if (rejected) return;
+      bytes += Buffer.byteLength(c);
+      if (bytes > MAX_BODY_BYTES) {
+        rejected = true;
+        req.destroy(); // stop the real socket from feeding more data in
+        reject(new Error(`request body exceeded ${MAX_BODY_BYTES} bytes — refused, not silently buffered forever`));
+        return;
+      }
+      b += c;
+    });
+    req.on('end', () => { if (!rejected) { try { resolve(JSON.parse(b)); } catch (e) { reject(e); } } });
+    req.on('error', reject);
+  });
+}
 
 function handleExtendedRoutes(req, res, url, method) {
   const parts = url.pathname.split('/').filter(Boolean);
@@ -1710,9 +1744,20 @@ function handleExtendedRoutes(req, res, url, method) {
     if (_lab) {
       // handleExtendedRoutes is sync — collect body then call lab handler
       if (method === 'POST' || method === 'PUT') {
-        let raw = '';
-        req.on('data', c => raw += c);
+        let raw = ''; let rawBytes = 0; let rawRejected = false;
+        req.on('data', c => {
+          if (rawRejected) return;
+          rawBytes += Buffer.byteLength(c);
+          if (rawBytes > MAX_BODY_BYTES) {
+            rawRejected = true;
+            req.destroy();
+            pRes(res, 413, { ok: false, error: `request body exceeded ${MAX_BODY_BYTES} bytes` });
+            return;
+          }
+          raw += c;
+        });
         req.on('end', () => {
+          if (rawRejected) return; // §FOUND & FIXED 2026-09-06 — same real fix as bodyJ() above
           let body = {};
           try { body = JSON.parse(raw); } catch(_) {}
           _lab.handleRequest(method, url.pathname, body, (status, data) => pRes(res, status, data))
@@ -3855,9 +3900,20 @@ setInterval(()=>{load();tick()},10000);load();tick();
 
   function memBodyJson(req) {
     return new Promise((resolve, reject) => {
-      let body = '';
-      req.on('data', c => body += c);
-      req.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
+      let body = ''; let memBytes = 0; let memRejected = false;
+      // §FOUND & FIXED 2026-09-06 — same real fix as bodyJ() above.
+      req.on('data', c => {
+        if (memRejected) return;
+        memBytes += Buffer.byteLength(c);
+        if (memBytes > MAX_BODY_BYTES) {
+          memRejected = true;
+          req.destroy();
+          reject(new Error(`request body exceeded ${MAX_BODY_BYTES} bytes — refused, not silently buffered forever`));
+          return;
+        }
+        body += c;
+      });
+      req.on('end', () => { if (!memRejected) { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } } });
       req.on('error', reject);
     });
   }

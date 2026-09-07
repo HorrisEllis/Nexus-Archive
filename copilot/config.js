@@ -42,4 +42,15 @@ module.exports = {
   // no longer than this before being swept (real, original reasoning
   // preserved) ─────────────────────────────────────────────────────────
   SESSION_STALE_MS: parseInt(process.env.COPILOT_SESSION_STALE_MS || String(30 * 60 * 1000), 10),
+
+  // ── Default provider — James: "copilot is the middle option for
+  // whatever is enabled in the programmable configuration file." The
+  // real, explicit, changeable-in-one-place value the TV UI's
+  // 3-position toggle (ollama | copilot | guardian) resolves to when
+  // its middle "copilot" option is selected — not the same as sending
+  // no provider at all (which already meant "let lifeline auto-decide,
+  // ollama first"), a real, named config value someone can point at
+  // 'auto', a specific real agent, or 'ollama' without touching any
+  // route-handling code.
+  DEFAULT_PROVIDER: process.env.COPILOT_DEFAULT_PROVIDER || 'auto',
 };

@@ -37,19 +37,21 @@ function test(id, desc, fn) {
 const ROOT = path.join(__dirname, '../..');
 const SRC = fs.readFileSync(path.join(ROOT, 'copilot/server.js'), 'utf8');
 const LIFELINE_SRC = fs.readFileSync(path.join(ROOT, 'copilot/lifeline.js'), 'utf8');
+const CONFIG_SRC = fs.readFileSync(path.join(ROOT, 'copilot/config.js'), 'utf8');
 
-test('T-001', '/bridge/deliver\'s real _lifeline.route() call passes payload.provider through — NOT body.provider, the raw wrapped object', () => {
+test('T-001', "the real _lifeline.route() call passes resolvedProvider through — a real variable computed from payload.provider, not body.provider (the raw wrapped object)", () => {
   const callSiteStart = SRC.indexOf("`${contextText}\\n\\nUSER: ${prompt}\\nNEXUS CO-PILOT: `");
   assert.ok(callSiteStart > -1, 'could not find the real route() call site at all — has it moved or been rewritten?');
   const optsSlice = SRC.slice(callSiteStart, callSiteStart + 400);
-  assert.ok(/provider:\s*payload\.provider/.test(optsSlice), `expected provider: payload.provider in the real opts object passed to route(), got: ${optsSlice}`);
+  assert.ok(/provider:\s*resolvedProvider/.test(optsSlice), `expected provider: resolvedProvider in the real opts object passed to route(), got: ${optsSlice}`);
   assert.ok(!/provider:\s*body\.provider/.test(optsSlice), 'the old, always-undefined body.provider read must be genuinely gone, not just shadowed');
 });
 
-test('T-002', 'an existing caller that never sends payload.provider gets undefined, not a crash or a forced value', () => {
+test('T-002', "resolvedProvider is genuinely computed FROM payload.provider (not body.provider), somewhere before the real route() call", () => {
   const callSiteStart = SRC.indexOf("`${contextText}\\n\\nUSER: ${prompt}\\nNEXUS CO-PILOT: `");
-  const optsSlice = SRC.slice(callSiteStart, callSiteStart + 400);
-  assert.ok(/payload\.provider\s*\|\|\s*undefined/.test(optsSlice), 'expected payload.provider || undefined — an absent provider must stay genuinely absent, not silently become a real value the caller never chose');
+  const before = SRC.slice(Math.max(0, callSiteStart - 600), callSiteStart);
+  assert.ok(/payload\.provider/.test(before), 'expected resolvedProvider\'s real computation to read payload.provider somewhere before the route() call');
+  assert.ok(!/const resolvedProvider[\s\S]{0,150}body\.provider/.test(before), 'resolvedProvider must never be computed from body.provider — the raw, still-wrapped object where provider is always undefined');
 });
 
 test('T-003', 'lifeline.route() genuinely already supports an explicit provider override (the real capability this fix reuses, not duplicates)', () => {
@@ -87,6 +89,27 @@ test('T-007', 'both explicit branches fail honestly (ok:false) rather than silen
   const ollamaIdx = LIFELINE_SRC.indexOf("if (opts.provider === 'ollama')");
   const ollamaBlock = LIFELINE_SRC.slice(ollamaIdx, ollamaIdx + 700);
   assert.ok(/ok: false, text: null/.test(ollamaBlock));
+});
+
+// §NEW 2026-09-06 — James: "copilot is the middie option for what ever
+// is enabled in the programmable configuration file." The real,
+// 3-position toggle's middle option resolves through a real, single,
+// named config value, not a second guess baked into this route.
+test('T-008', 'copilot/config.js has a real, exported DEFAULT_PROVIDER value', () => {
+  assert.ok(/DEFAULT_PROVIDER:\s*process\.env\.COPILOT_DEFAULT_PROVIDER/.test(CONFIG_SRC), 'expected a real, env-overridable DEFAULT_PROVIDER in copilot/config.js');
+});
+
+test('T-009', "a payload.provider of 'copilot' resolves through config.DEFAULT_PROVIDER, not a second, separate default", () => {
+  const callSiteStart = SRC.indexOf("`${contextText}\\n\\nUSER: ${prompt}\\nNEXUS CO-PILOT: `");
+  const before = SRC.slice(Math.max(0, callSiteStart - 600), callSiteStart);
+  assert.ok(/payload\.provider\s*===\s*'copilot'/.test(before), "expected a real check for payload.provider === 'copilot' right before the real route() call");
+  assert.ok(/config\.DEFAULT_PROVIDER/.test(before), "expected the real resolution to read config.DEFAULT_PROVIDER, not a hardcoded literal");
+});
+
+test('T-010', 'a genuinely absent provider also resolves through the same real config value, not a second, silently-different default', () => {
+  const callSiteStart = SRC.indexOf("`${contextText}\\n\\nUSER: ${prompt}\\nNEXUS CO-PILOT: `");
+  const before = SRC.slice(Math.max(0, callSiteStart - 600), callSiteStart);
+  assert.ok(/!payload\.provider\s*\|\|\s*payload\.provider\s*===\s*'copilot'/.test(before), 'expected one real condition covering both "no provider sent" and "copilot explicitly chosen" — not two, possibly-divergent defaults');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
