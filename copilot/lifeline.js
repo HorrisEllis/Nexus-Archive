@@ -443,6 +443,78 @@ async function _routeInner(prompt, opts = {}) {
     // Explicit request failed — fall through to the normal cascade.
   }
 
+  // §FIX 2026-09-07 (merge) — James's real toggle UI (ui/tv-shell's
+  // #cp-toggle-ollama / #cp-toggle-guardian) is a genuine, deliberate
+  // binary choice between two backends — not a hint the normal auto-
+  // cascade can still override. Two real, symmetric gaps found and
+  // closed together:
+  //
+  // (a) provider:'guardian' — this UI's own dropdown never actually
+  // sends this literal value (it sends a specific agent name instead,
+  // already handled correctly by the explicit-agent short-circuit
+  // above), but it's a real, valid value other real callers (API
+  // consumers, CLI, tests) can send meaning "let guardian's own
+  // connected agents compete, don't touch ollama at all" — kept
+  // separate from 'auto' (which still means "let the normal cascade
+  // decide, ollama-first") on purpose.
+  //
+  // (b) provider:'ollama' — this UI's own dropdown DOES send this
+  // literal value when the toggle is on the ollama side. Checked the
+  // cascade below directly: selecting it did NOT actually guarantee
+  // staying on ollama — explicitAgent's own check deliberately excludes
+  // 'ollama' from the explicit short-circuit (ollama has its own real
+  // path via _tryOllama below), so it fell through to the SAME cascade
+  // as no-preference-given — including auto-escalating to Guardian on
+  // low confidence, silently overriding the user's own explicit choice
+  // to stay on ollama. That's the same class of bug as the guardian
+  // side already fixed: a real, deliberate selection with no real
+  // effect on actual behavior.
+  if (opts.provider === 'guardian') {
+    console.log('[lifeline] explicit provider:guardian — skipping Ollama entirely');
+    const guardianResult = await _tryGuardian(prompt, { ...opts, provider: 'auto', requestId });
+    if (guardianResult?.ok) {
+      const result = {
+        ok: true, text: guardianResult.text,
+        confidence: guardianResult.confidence,
+        provider_used: guardianResult.provider,
+        escalated: false, requestId,
+      };
+      _persist({ ...opts, prompt, requestId }, result, 'explicit_guardian_request');
+      return result;
+    }
+    // Explicit guardian request failed — honest failure, not a silent
+    // fall-through to ollama (which would recreate the exact bug this
+    // fix closes: the UI would show "guardian" while ollama quietly
+    // answered instead).
+    const result = {
+      ok: false, text: null, confidence: 0,
+      provider_used: null, escalated: false,
+      error: guardianResult?.error || 'no guardian agent available or connected',
+      requestId,
+    };
+    _persist({ ...opts, prompt, requestId }, result, 'explicit_guardian_request_failed');
+    return result;
+  }
+
+  if (opts.provider === 'ollama') {
+    console.log('[lifeline] explicit provider:ollama — no auto-escalation to Guardian');
+    const ollamaOnlyResult = await _tryOllama(prompt, { ...opts, requestId });
+    const result = ollamaOnlyResult?.ok
+      ? {
+          ok: true, text: ollamaOnlyResult.text,
+          confidence: ollamaOnlyResult.confidence,
+          provider_used: 'ollama', escalated: false, requestId,
+        }
+      : {
+          ok: false, text: null, confidence: 0,
+          provider_used: null, escalated: false,
+          error: ollamaOnlyResult?.error || 'ollama unavailable',
+          requestId,
+        };
+    _persist({ ...opts, prompt, requestId }, result, ollamaOnlyResult?.ok ? 'explicit_ollama_request' : 'explicit_ollama_request_failed');
+    return result;
+  }
+
   // ── 1. Try Ollama ──────────────────────────────────────────────────────────
   const ollamaResult = await _tryOllama(prompt, { ...opts, requestId });
 

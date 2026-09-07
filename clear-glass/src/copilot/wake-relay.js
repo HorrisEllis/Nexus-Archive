@@ -16,8 +16,19 @@ const http = require('http');
 function startWakeRelay(providerHost, opts = {}) {
   const cortexHost = opts.cortexHost || '127.0.0.1';
   const cortexPort = opts.cortexPort || 3748;
-  const guardianHost = opts.guardianHost || '127.0.0.1';
-  const guardianPort = opts.guardianPort || 7820;
+  // §FIX 2026-09-07 — REGRESSION, caught from James's own live screenshots
+  // and log: "[wake-relay] no answer available for chatgpt (guardian and
+  // mesh both failed/unavailable)" — the exact old symptom, because this
+  // file still POSTed to guardianHost:guardianPort's '/copilot/prompt',
+  // a route that no longer exists (removed along with guardian's old
+  // dispatch path this session). Real, current, confirmed target is
+  // copilot's own POST /bridge/deliver (copilot/server.js:1620) — the
+  // same real endpoint tv-shell's _copilotDispatch already uses
+  // successfully. This fix was made once already earlier this session;
+  // it did not survive an intermediate merge — reapplied here, verified
+  // against copilot/server.js's actual current handler, not memory.
+  const copilotHost = opts.copilotHost || '127.0.0.1';
+  const copilotPort = opts.copilotPort || 3750;
   const log = opts.log || (() => {});
   // §HOOK 2026-08-29 — optional AgentMesh instance, wired in from
   // main/index.js. Real gap: this file's whole job is "a wake word said
@@ -62,9 +73,9 @@ function startWakeRelay(providerHost, opts = {}) {
     let text = null;
     try {
       const r = await new Promise((resolve, reject) => {
-        const body = JSON.stringify({ prompt: d.request, contextOpts: { intent: d.request } });
+        const body = JSON.stringify({ request: { uuid: require('crypto').randomUUID(), payload: { prompt: d.request, channel: 'wake-relay', sessionId: `wake-${d.agent}` } } });
         const req2 = http.request(
-          { hostname: guardianHost, port: guardianPort, path: '/copilot/prompt', method: 'POST',
+          { hostname: copilotHost, port: copilotPort, path: '/bridge/deliver', method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
           (res2) => { let b=''; res2.on('data',c=>b+=c); res2.on('end',()=>{ try{resolve(JSON.parse(b));}catch(e){reject(e);} }); }
         );
@@ -73,7 +84,7 @@ function startWakeRelay(providerHost, opts = {}) {
       });
       text = r.text || r.response || (r.toolResult ? JSON.stringify(r.toolResult.result || r.toolResult, null, 2) : null);
     } catch (e) {
-      log(`[wake-relay] guardian relay failed: ${e.message}${mesh ? ' — falling back to agent mesh' : ''}`);
+      log(`[wake-relay] copilot relay failed: ${e.message}${mesh ? ' — falling back to agent mesh' : ''}`);
     }
 
     // §HOOK 2026-08-29 — mesh fallback: only taken if Guardian's real

@@ -2076,12 +2076,21 @@ const server = http.createServer(async (req, res) => {
       // it already validates 'auto'/a real guardian agent name against
       // guardian's own live /providers); this endpoint just never passed
       // the caller's own choice through, always letting lifeline
-      // auto-decide. body.provider is optional — every existing caller
+      // auto-decide. payload.provider is optional — every existing caller
       // that never sends it gets the exact same auto-decide behavior as
       // before, unchanged.
+      // §FIX 2026-09-07 (merge) — found while merging a parallel thread's
+      // real toggle-UI work: this read body.provider, but body is the
+      // RAW, still-wrapped {request:{uuid,payload}} object — provider
+      // actually lives at payload.provider (this same handler's own top
+      // already does the real unwrap for exactly this reason).
+      // body.provider was always undefined, so no provider choice ever
+      // reached lifeline at all — even the new, real toggle UI (which
+      // correctly sends a specific agent name) was silently defeated by
+      // this one line underneath it.
       const life = await _lifeline.route(
         `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-        { requestId, sessionId, intent: 'ask', channel, provider: body.provider || undefined }
+        { requestId, sessionId, intent: 'ask', channel, provider: payload.provider || undefined }
       );
       text      = life?.text || '';
       modelUsed = life?.provider_used || 'none';

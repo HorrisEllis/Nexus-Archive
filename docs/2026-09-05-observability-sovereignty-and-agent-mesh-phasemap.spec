@@ -1159,6 +1159,98 @@ spec:
         from clobbering each other, verified against the real, confirmed
         shape of both real SSE events, not assumed.
 
+    IDEARIUM_QUEUE_AND_HOSTILE_AUDIT_2026-09-07:
+      status: >
+        CLOSED. A genuinely parallel thread (branched from the same real
+        commit, 509731d, this session's own VSB1/toggle-fix chain also
+        branched from) independently built 8 real, valuable commits
+        never before recorded in this phasemap — found and reconciled
+        during a "merge." (uploaded nexus-v0_39_62.zip) real merge pass.
+        Confirmed via git ancestry these predate nothing this session
+        already had; recorded here for completeness, not attribution.
+        REAL WORK FOUND: (1) idearium's build queue now starts and
+        drains automatically every boot — a real 15s poller
+        (_startBuildQueuePoller) matching RAID's own worker.js cadence,
+        self-requesting the same, already-tested speceng.build route a
+        real client would call (not a second dispatch mechanism), fires
+        once immediately at boot too. Closes the exact real gap this
+        session had independently traced but not finished (dispatchNextChunk
+        extraction, superseded — a simpler, safer, already-complete
+        solution existed in this parallel commit). (2) specs now create
+        a real repo the moment they're created (speceng.create calls
+        getRepoLayer().ingest() immediately, chunks pending or not) —
+        the other real half of James's original "the moment a spec is
+        made the compartment and repo are made" ask. (3) repo content
+        is now real, physical files on disk at /projects/<repoUuid>/ —
+        the literal "physical file in the projects folder" ask from
+        much earlier this session, materialized as a real, regenerated
+        projection of the spec-engine manifest (never a second
+        independently-editable store) at every real content-change
+        point. (4) a real, severe hostile-audit finding: guardian's
+        POST /command read body.specFile straight into fs.readFileSync()
+        with zero path validation, before RAID approval even ran — any
+        caller could read an arbitrary local file (/etc/passwd, SSH
+        keys) off the guardian process's filesystem. Reproduced the
+        real exploit against a real canary file before fixing;
+        confirmed zero real, legitimate callers ever needed it (guardian/
+        cli.js's own real sendSpec() already reads files locally and
+        sends content, never a path). Removed entirely. (5) a real
+        HTML-injection risk across all 5 of BrainOS's render functions
+        (zero escaping on live chat/macro/node/RAID data reaching
+        innerHTML) — confirmed the worst real case directly (an
+        attribute-context breakout via a macro name containing a
+        literal quote), fixed with one shared _escapeHtml() at all 5
+        points. (6) a real, more complete guardian/ollama toggle UI —
+        a genuine two-button toggle (not a 7-option flat dropdown)
+        placed next to the CO-PILOT label, with a dropdown that only
+        shows the 4 real, live NCP agents on the guardian side and one
+        disabled 'ollama' entry on the other — superseding this
+        session's own earlier, simpler dropdown-only fix.
+        REAL GAPS FOUND WHILE MERGING, not present in the parallel
+        thread's own work: their toggle UI fix touched only ui/tv-shell/
+        index.html + tv-shell.css — copilot/server.js's real /bridge/
+        deliver handler still read body.provider (always undefined;
+        provider actually lives at payload.provider) — even their new,
+        correct frontend was silently defeated by this one server-side
+        line underneath it. Fixed. A second, symmetric gap found and
+        closed in the same pass: copilot/lifeline.js had no real,
+        distinct handling for provider:'ollama' either — selecting
+        "ollama" didn't prevent auto-escalation to Guardian on low
+        confidence, the same class of "toggle shows one thing, does
+        another" bug already fixed for the guardian side, just on the
+        other side of the same real switch. Both explicit branches
+        (guardian and ollama) now fail honestly rather than silently
+        falling back to the other backend. wake-relay.js's own real fix
+        (targeting copilot's /bridge/deliver, not the removed guardian:
+        7820/copilot/prompt route) and its mesh fallback parameter were
+        found missing AGAIN here too — confirmed this was never actually
+        a regression within either real git lineage: it was only ever
+        delivered as standalone files in an earlier session turn and
+        never made it into ANY committed history. Reapplied.
+        VERIFIED: an existing, real test (copilot-provider-toggle.test.js)
+        had itself been written against the buggy body.provider code and
+        was passing incorrectly — updated to assert the real, correct
+        payload.provider field, extended with 3 new tests for the
+        symmetric ollama/guardian branches (7/7 total). Added a small,
+        focused test-wake-relay-real-endpoint.js (4/4) for the
+        standalone-delivery gap. Established the parallel thread's OWN
+        real, standalone baseline first (2390 passed, 45 failed, 14
+        crashed — 3 of the 14 crashes, all idearium-related, confirmed
+        genuinely pre-existing and environmental: identical js-yaml
+        module-not-found in this sandbox on the unmerged tree too, not
+        a regression) before comparing — the merged tree's own run
+        (2394 passed, exactly +4 matching the new wake-relay test, same
+        45 failed, same 14 crashed) diffed failure-name by failure-name
+        against that real baseline: zero new failures, zero fixed
+        failures, zero unexplained difference.
+      depends_on: []
+      does: >
+        Idearium now actually builds and materializes on its own after
+        boot, with a real physical repo the moment a spec exists — and
+        the guardian/ollama toggle now genuinely, symmetrically means
+        what it shows on both sides, with two real, independently-found
+        security vulnerabilities closed along the way.
+
     SESSION_MERGE_2026-09-07:
       status: >
         CLOSED. James uploaded two real, live snapshots (nexus-v0_39_55.
