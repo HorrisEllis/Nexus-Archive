@@ -100,6 +100,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
 }
 #bot-bar-head{display:flex;align-items:center;justify-content:space-between}
 #bot-bar-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.14em;color:rgba(255,255,255,.25);text-transform:uppercase}
+/* §BUILT 2026-09-06 — James: "a toggle button, right next to where it
+   says copilot... a toggle ollama <-> guardian." Wrapping the label and
+   the toggle together so justify-content:space-between (above) splits
+   [label+toggle] from the fullscreen button, keeping the toggle
+   genuinely adjacent to the label instead of floating in the middle. */
+#bot-bar-left{display:flex;align-items:center;gap:8px}
+#cp-backend-toggle{display:flex;border:1px solid rgba(255,255,255,.14);border-radius:6px;overflow:hidden}
+.cp-toggle-btn{
+  background:transparent;border:none;color:rgba(255,255,255,.35);
+  font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;cursor:pointer;transition:all .15s;
+}
+.cp-toggle-btn:hover{color:rgba(255,255,255,.6)}
+.cp-toggle-btn.cp-toggle-active{background:rgba(255,255,255,.12);color:#e0e8ff}
 #fullscreen-btn{
   background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;
   color:rgba(255,255,255,.4);font-size:13px;line-height:1;padding:4px 7px;cursor:pointer;
@@ -116,6 +130,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e0e8ff;f
 }
 #bot-bar.fullscreen #fullscreen-btn{color:var(--ac);border-color:var(--ac-border-hi)}
 #assistant-row{display:flex;gap:8px;align-items:center}
+/* §BUILT 2026-09-06 — James: "the drop down only should be as wide as
+   the agent names. the rest should be the input." #assistant-in already
+   has flex:1 below (fills whatever's left) — this just has to NOT also
+   claim flex space, and size to its own real content instead. */
+#cp-provider{
+  flex:0 0 auto;width:auto;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e0e8ff;
+  font-family:'Space Mono',monospace;font-size:11px;padding:8px 8px;outline:none;
+}
 #assistant-in{
   flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
   border-radius:8px;color:#e0e8ff;font-family:'Space Grotesk',sans-serif;font-size:13px;
