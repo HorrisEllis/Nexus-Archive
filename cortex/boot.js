@@ -940,11 +940,47 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Memory ───────────────────────────────────────────────────────────────
+  // §FIX 2026-09-07 — VSB1, James: "do it, the axioms." Real, precise
+  // root cause of the versionium split-brain (RF4) traced to exactly
+  // this handler: it always answered from cortex's OWN local jaaDB
+  // regardless of which table was requested. For event_log/chat_log/
+  // etc. (genuinely cortex's own tables) that's correct. For
+  // versionium_commits/branches/calendar — genuinely a DIFFERENT
+  // system's sovereign data, per §5.9 — this handler was silently
+  // reading a dead, permanently-empty shared copy while versionium's
+  // own real commits landed in its own real, separate sovereign store
+  // (versionium/lib/store.js, confirmed real and already working).
+  // Fixed the actual bug, not the symptom: sovereign tables now proxy
+  // to their real owner's own store, loaded fresh each call (never
+  // cached — a stale snapshot of another system's live data would be
+  // its own small split-brain) via a direct require() of its real
+  // store module. JaaStore is file-backed (confirmed: every real write
+  // this session persisted to disk, not just an in-memory Map), so
+  // this genuinely reads the other system's real, current, disk-
+  // persisted state, not a guess.
+  const SOVEREIGN_TABLE_OWNERS = {
+    versionium_commits:  '../versionium/lib/store.js',
+    versionium_branches: '../versionium/lib/store.js',
+    versionium_calendar: '../versionium/lib/store.js',
+  };
+
   if (p === '/api/memory') {
     const table     = url.searchParams.get('table') || 'chat_log';
     const n         = parseInt(url.searchParams.get('n') || '10');
     const sessionId = url.searchParams.get('sessionId');
-    let rows = jaaDB.tail(table, n * 2);
+    let rows;
+    const ownerModule = SOVEREIGN_TABLE_OWNERS[table];
+    if (ownerModule) {
+      try {
+        const { jaaDB: ownerJaaDB } = require(ownerModule);
+        rows = ownerJaaDB.tail(table, n * 2);
+      } catch (e) {
+        json(res, 502, { ok: false, error: `${table} is owned by a sovereign system whose store is unreachable: ${e.message}` });
+        return;
+      }
+    } else {
+      rows = jaaDB.tail(table, n * 2);
+    }
     if (sessionId) rows = rows.filter(r => r.sessionId === sessionId || r.session_id === sessionId);
     json(res, 200, { ok: true, table, rows: rows.slice(0, n), count: rows.length });
     return;

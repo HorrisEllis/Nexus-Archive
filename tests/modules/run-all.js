@@ -86,6 +86,7 @@ const SUITES = [
   'test-cookie-vault-ipc-roundtrip.js',
   'test-userscript-protocol-parity.js',
   'test-guardian-agent-registry.js',
+  'test-vsb1-versionium-split-brain-fix.js',
   'test-brainos-real-access-path.js',
   'test-brainos-dynamic-mesh-canvas.js',
   'test-agent-mesh-view-endpoint.js',

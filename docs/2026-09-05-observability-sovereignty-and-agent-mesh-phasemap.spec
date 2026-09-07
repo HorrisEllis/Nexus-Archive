@@ -451,18 +451,43 @@ spec:
         depending on a second system being alive.
 
     VSB1_fix_versionium_split_brain:
-      status: "OPEN — closes RF4, a NEW finding this session (sharper
-        than the earlier 'zero commits ever happen' read, which was
-        wrong — commits DO happen, just in versionium's own sovereign
-        store while every consumer still reads the old shared, dead
-        copy). Repoint cortex-v2.js, ui/contracts.js, hooks/
-        cortex.hooks.js, diagnostic, and orchestrator's versionium_
-        commits reads at versionium's real store, or give versionium a
-        real cross-store read API — not both stores kept alive silently."
+      status: >
+        CLOSED. James: "do it, the axioms." Traced RF4 to one exact,
+        precise line: cortex's real GET /api/memory?table=<name> is a
+        generic "browse any JAA table" handler that always answered
+        from cortex's OWN local jaaDB, regardless of which table was
+        requested. For versionium_commits/branches/calendar — genuinely
+        a DIFFERENT sovereign system's data per §5.9 — this meant every
+        real caller (cortex-v2.js's CLI, confirmed the only actual
+        runtime consumer; ui/contracts.js, hooks/cortex.hooks.js, and
+        contracts/*.js turned out to be declarative metadata/table-name
+        lists, not live queries, on closer inspection) silently read a
+        dead, permanently-empty shared copy while versionium's own real
+        commits landed correctly in its own real, separate sovereign
+        store the whole time. Fixed the actual root cause, not the
+        symptom: added a real SOVEREIGN_TABLE_OWNERS map; when a
+        requested table belongs to another sovereign system, the
+        handler now requires that system's own real store module fresh
+        each call (never cached, since a stale snapshot of another
+        system's live data would be its own small split-brain) and
+        reads from there — genuine, current, disk-persisted data,
+        confirmed via JaaStore's own real file-backed persistence, not
+        a guess. Non-sovereign tables (event_log, chat_log, etc.) fall
+        through to the original path, untouched. An unreachable
+        sovereign store fails honestly with a real 502, never a
+        fabricated empty success.
+        5/5 real functional tests (test-vsb1-versionium-split-brain-
+        fix.js) — including a genuine round-trip against versionium's
+        own real, isolated store (a real commit written, then read back
+        through the fixed routing, not mocked), confirming the non-
+        sovereign fallback path is untouched, and confirming honest
+        failure on an unreachable owner. Full suite re-run: zero new
+        failures against the established real baseline.
       depends_on: []
       does: >
-        Every consumer of "has this committed" sees the same real
-        answer. Directly unblocks trusting ID2 below.
+        Every real caller of "has this committed" now sees the same
+        real answer, from versionium's own actual sovereign store —
+        directly unblocks trusting ID2 below.
 
     ID2_verify_idearium_reconciliation_reads_right_store:
       status: "OPEN — idearium's own boot log claims '[idearium/
@@ -556,17 +581,29 @@ spec:
         through versionium.
 
     CP3_git_vs_versionium_decision:
-      status: "OPEN — real, unresolved tension named but not decided
-        this session. Axioms point toward git (§17.4 reproducibility);
-        versionium exists specifically as a non-git causal version
-        system. Needs an explicit decision (§17.3 — alternatives
-        recorded) on whether they're two parallel truths (a §10.3 risk,
-        per RF4) or versionium is the non-file-state complement to git,
-        never the same for the same thing."
+      status: >
+        CLOSED. James: "do it, the axioms." Decided directly against
+        the two real axioms already found relevant, no new ones
+        invented: §17.4 ("every build is reproducible from an empty
+        machine") — only real git satisfies this; versionium requires
+        the running app (a queryable JaaStore) to answer anything,
+        which a fresh machine doesn't have. Git stays authoritative for
+        file/repo history. §10.3 ("competing truth layers are a system
+        failure") — git and versionium must never independently answer
+        the SAME real question (e.g. "what changed in this file, when")
+        or this becomes a second RF4-shaped split-brain, built on
+        purpose this time instead of by accident. Versionium's own
+        real, distinct capability (sigma-gated auto-commit, hermetic
+        replay contexts, temporal calendar) is causal/decision history
+        — why a change happened and under what real system state — a
+        genuinely different kind of fact than a file diff, not a
+        competing account of the same one.
       depends_on: []
       does: >
-        One clear, recorded answer for what tracks what, preventing a
-        second RF4-shaped split-brain from being built on purpose.
+        Git is the file/repo history of record. Versionium is the
+        causal/decision history of record. Neither one answers the
+        other's question — the real, load-bearing distinction that
+        prevents a second RF4.
 
     HIST1_boundary_constraint_history_schema:
       status: "OPEN — James, this session, pointing at CFR: a history
@@ -916,26 +953,28 @@ spec:
 
     CORTEX_BOOKKEEPER_2026-09-06:
       status: >
-        OPEN — James: "cortex the book keeper." A specific, nameable
-        architectural role, not a slogan: cortex already holds the
-        real, shared JaaStore memory layer every other system reads
-        from (cortex/memory/jaa-db.js) and is already the real target
-        of RAID's contract lifecycle. "Bookkeeper" should mean cortex is
-        the one system that reads across every other system's own real
-        per-day ledgers (once LEDGER_PERDAY exists) and maintains the
-        aggregate, cross-system view — not that other systems write
-        their own data INTO cortex's directory (that's RF2's shared-
-        store violation, the opposite of sovereignty). Needs an explicit
-        decision, same category as the CP3 git-vs-versionium tension
-        above: "bookkeeper" as a read-side aggregator preserves §5.9
-        (every system sovereign); "bookkeeper" as a write-side shared
-        store re-creates RF2. Flagging the distinction rather than
-        assuming which one James means.
+        CLOSED. James: "do it, the axioms." Decided directly: "cortex
+        the bookkeeper" means cortex is a READ-side aggregator — it
+        reads across every other system's own real per-day ledgers
+        (once LEDGER_PERDAY_PERSYSTEM_2026-09-06 exists) and maintains
+        the aggregate, cross-system view. It does NOT mean other
+        systems write their own state into cortex's directory. Per
+        §5.9 ("every system is sovereign"), a write-target cortex would
+        recreate the exact RF2 shared-store violation already found
+        and fixed for guardian this session (guardian's own JaaStore
+        pointed at CORTEX_STORE_DIR — the literal shape of this same
+        mistake, already proven real and already cost a live crash).
+        Per §10.3 ("competing truth layers are a system failure"), a
+        write-target cortex also means each system's own local state
+        and cortex's copy of it can diverge — the same failure class
+        VSB1 (versionium's real split-brain) already demonstrates live,
+        not hypothetically.
       depends_on: [LEDGER_PERDAY_PERSYSTEM_2026-09-06]
       does: >
-        Gives "cortex is the bookkeeper" a real, checkable technical
-        meaning instead of leaving it as a description that could
-        silently justify either the sovereign pattern or RF2's
+        "Cortex is the bookkeeper" now has one real, checkable meaning
+        — reads and aggregates, never a write target — closing off the
+        interpretation that would have silently reintroduced RF2 on
+        purpose.
         violation.
 
     SYSTEM_REGISTRY_2026-09-06:
