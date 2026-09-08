@@ -324,7 +324,7 @@ function _seedMetaFromGenesis(seed, specName, templateId) {
 // wasn't. Fixed by moving the explicit override ahead of the table
 // default — the table is what fills in the GAP when no explicit choice
 // was made, not something an explicit choice has to fight past.
-function _buildManifest({ name, type = 'component', description = '', agent = null, sectionAgents = {}, warpPrimitives = [], author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto', ideaUuid = null }) {
+function _buildManifest({ name, type = 'component', description = '', agent = null, sectionAgents = {}, warpPrimitives = [], author = 'nexus', templateId = null, templateIds = null, sections = SPEC_SECTIONS, buildEngine = 'auto', ideaUuid = null, dependsOn = {} }) {
   _ensureRoot();
   if (!name) throw new Error('spec name required');
   // §BUILT 2026-09-03 — loud, not silent (§1.2): an unreal primitive name
@@ -396,6 +396,16 @@ function _buildManifest({ name, type = 'component', description = '', agent = nu
       fileName:    `${String(idx).padStart(2,'0')}-${section.id}.md`,
       // Contract state
       status:      CHUNK_STATES.PENDING,
+      // §BUILT 2026-09-07 — James: "each chunk would be one component and
+      // dependencies." Real infrastructure, same convention RAID's own
+      // contract-intake.js already uses (dependsOn: array of real ids
+      // this must wait on) — reused, not reinvented. Left empty by
+      // default: which standard sections actually depend on which is a
+      // real design decision, not guessed at here. opts.dependsOn lets
+      // a caller set real edges per section when building a spec whose
+      // sections genuinely need ordering (e.g. building something as
+      // interconnected as nexus itself).
+      dependsOn:   (dependsOn && dependsOn[section.id]) || [],
       // §BUILT 2026-09-03 — per-block routing. Most specific wins:
       // an explicit override for THIS section, then this section's own
       // blocks.yaml default, then a spec-wide forced agent, then ollama.
@@ -543,8 +553,8 @@ function _buildManifest({ name, type = 'component', description = '', agent = nu
 // every chunk to ollama exactly as before; omitting it now means "read each
 // block's own default from blocks.yaml" instead of silently meaning
 // ollama-for-everything. `sectionAgents` is new and additive.
-export function createSpec({ name, type = 'component', description = '', agent = null, sectionAgents = {}, warpPrimitives = [], author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto', ideaUuid = null }) {
-  return _buildManifest({ name, type, description, agent, sectionAgents, warpPrimitives, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine, ideaUuid });
+export function createSpec({ name, type = 'component', description = '', agent = null, sectionAgents = {}, warpPrimitives = [], author = 'nexus', templateId = null, templateIds = null, buildEngine = 'auto', ideaUuid = null, dependsOn = {} }) {
+  return _buildManifest({ name, type, description, agent, sectionAgents, warpPrimitives, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine, ideaUuid, dependsOn });
 }
 
 // §BUILT 2026-09-03 — edit a spec's declared WARP primitives after
@@ -668,9 +678,25 @@ export function listSpecs({ includeDeleted = false } = {}) {
 }
 
 // ── Get next pending chunk for an agent ──────────────────────────────────────
+// §BUILT 2026-09-07 — real dependency gate, same convention RAID's own
+// contract-intake.js already uses (dependsOn arrays are the edges, the
+// chunk list IS the graph — no separate structure invented).
+function _chunkDependenciesSatisfied(chunk, allChunks) {
+  if (!chunk.dependsOn || !chunk.dependsOn.length) return true;
+  return chunk.dependsOn.every((depSectionId) => {
+    const dep = allChunks.find((c) => c.sectionId === depSectionId);
+    return dep && dep.status === CHUNK_STATES.COMPLETE;
+  });
+}
+
 export function nextPendingChunk(specUuid) {
   const manifest = loadSpec(specUuid);
-  return manifest.chunks.find(c => c.status === CHUNK_STATES.PENDING) || null;
+  // §FOUND & WIRED 2026-09-07 — a pending chunk whose real dependencies
+  // haven't completed yet is skipped, not dispatched out of order. A
+  // chunk with no dependsOn (the default, unchanged for every existing
+  // spec) is always ready — this is purely additive, changes nothing
+  // for a spec that never sets dependsOn.
+  return manifest.chunks.find(c => c.status === CHUNK_STATES.PENDING && _chunkDependenciesSatisfied(c, manifest.chunks)) || null;
 }
 
 // ── Reassign a pending chunk's agent (UI per-chunk override, pre-dispatch) ────

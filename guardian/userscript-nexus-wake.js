@@ -190,6 +190,7 @@
             const answer = r.text || '(co-pilot returned an empty answer)';
             _render('answer', answer);
             ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ANSWER', msg: answer, meta: { provider, tabId } });
+            ackWakeJob(wakeJobId, ask, answer);
             // §NEW 2026-09-07 — James: "so close, just needs to send it
             // back as a job and ack to inject into the chat like its
             // user input." Real gap found before fixing: injectText/
@@ -283,6 +284,29 @@
           resolve({ ok: false, error: e.message });
         }
       });
+    }
+
+    // §BUILT 2026-09-08 — James: "wake word relay needs to send the
+    // wake word response as a guardian job ack just like any other
+    // input into a tab for agents chat input." Real, fire-and-forget —
+    // registers the already-completed exchange as a real job in
+    // guardian's own job registry (jobs Map + jaa 'jobs' table), same
+    // real pattern this codebase already uses elsewhere for exactly
+    // this ("dispatch via guardian job system — same path as regular
+    // jobs"). Never blocks or delays showing the real answer to the
+    // person — this is bookkeeping, not part of the real exchange.
+    function ackWakeJob(wakeJobId, ask, answer) {
+      if (typeof GM_xmlhttpRequest !== 'function') return;
+      try {
+        GM_xmlhttpRequest({
+          method: 'POST',
+          url: `${ncpUrl}/wake-job-ack`,
+          headers: { 'Content-Type': 'application/json' },
+          data: JSON.stringify({ jobId: wakeJobId, provider, prompt: ask, response: answer, tabId }),
+          timeout: 10000,
+          onload: () => {}, onerror: () => {}, ontimeout: () => {},
+        });
+      } catch (_) { /* §1.2 — a failed ack must never affect the real, already-delivered answer */ }
     }
 
     // One co-pilot session per chat tab: a follow-up like "and the second one?"
@@ -451,6 +475,7 @@
             const answer = r.text || '(co-pilot returned an empty answer)';
             _render('answer', answer);
             ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ANSWER', msg: answer, meta: { provider, tabId } });
+            ackWakeJob(wakeJobId, ask, answer);
             // §NEW 2026-09-07 — same real fix as the onKeyDown handler
             // above, applied here too: an agent-triggered wake (the
             // ASSISTANT's own text saying "hey nexus, ...") deserves

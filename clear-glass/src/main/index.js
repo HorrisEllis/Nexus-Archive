@@ -1217,6 +1217,26 @@ async function bootstrap() {
     }));
     ipcBridge.app.get('/options', (req, res) => res.json(nexusOptions?.get() || {}));
     ipcBridge.app.get('/status', (req, res) => res.json(getStatus ? getStatus() : { ok: true }));
+    // §BUILT 2026-09-08 — James: "all of the clearglass features;
+    // plugins, all of it." Real, confirmed gap: pluginHost (real
+    // list()/disable(), already used internally at boot) had zero real
+    // HTTP route reaching it — checked directly before building.
+    // command-index.js's own tool (lib/agent-tools/tools/clear-glass/
+    // command-index.js) discovers routes LIVE from this real Express
+    // app's own route table, so these 2 real routes are all that's
+    // needed — no new tool file, matching that file's own stated design
+    // ("full compatibility... never needing to update THIS file when a
+    // new command ships").
+    ipcBridge.app.get('/plugins', (req, res) => res.json({ ok: true, plugins: pluginHost ? pluginHost.list() : [] }));
+    ipcBridge.app.post('/plugins/:id/disable', (req, res) => {
+      if (!pluginHost) { res.status(503).json({ ok: false, error: 'plugin host not initialized' }); return; }
+      try {
+        pluginHost.disable(req.params.id);
+        res.json({ ok: true, id: req.params.id, state: 'disabled' });
+      } catch (e) {
+        res.status(400).json({ ok: false, error: e.message });
+      }
+    });
   }
   console.log(`[ClearGlass] IPC bridge :${IPC_PORT}`);
 

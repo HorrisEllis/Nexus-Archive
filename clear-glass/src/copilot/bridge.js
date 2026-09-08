@@ -412,7 +412,7 @@ ${toolsPrompt}${domSection}`;
     return { text: data.content?.[0]?.text || '', modelUsed: 'claude-fallback' };
   }
 
-  // ── Guardian — routed through Bridge :9999 ───────────────────────────
+  // ── Guardian — direct, not routed through Bridge (retired) ───────────
   async _guardianDispatch({ provider, prompt, sessionId }) {
     return this._bridgeDispatch('guardian', 'guardian.command', {
       provider, prompt,
@@ -476,7 +476,7 @@ ${toolsPrompt}${domSection}`;
     return this._guardianFetch('/health');
   }
 
-  // ── Ollama — routed through Bridge :9999 ──────────────────────────────
+  // ── Ollama — direct, not routed through Bridge (retired) ─────────────
   async ollamaGenerate({ model, prompt, sessionId }) {
     return this._bridgeDispatch('ollama', 'ollama.generate', {
       model: model || 'llama3', prompt, sessionId: sessionId || randomUUID(),

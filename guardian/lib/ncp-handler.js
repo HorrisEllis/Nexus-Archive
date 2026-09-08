@@ -200,6 +200,15 @@ function createNCPMessageHandler(deps) {
             // resolveJob has been reading since P4 shipped with nothing
             // ever writing it.
             job.tool_calls = extractToolCallsFromDOM(finalText);
+            // §BUILT 2026-09-08 — James: "the listener for the tools.
+            // like when an agent uses one in guardian, from the sse?"
+            // Real gap: job.tool_calls was written but nothing ever
+            // emitted a real, distinct event for it — only discovered
+            // later by /command/tools's own polling. This is the real,
+            // live moment a tool call is actually detected.
+            if (job.tool_calls && job.tool_calls.length) {
+              bus.emit('guardian.tool.called', { jobId, provider, calls: job.tool_calls, ts: Date.now() });
+            }
           }
 
           // Feed event to baseline monitor

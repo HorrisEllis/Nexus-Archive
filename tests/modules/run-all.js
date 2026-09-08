@@ -105,6 +105,7 @@ const SUITES = [
   'idearium-auto-repo-creation.test.js',
   'idearium-materialize-physical.test.js',
   'idearium-build-queue-poller.test.js',
+  'idearium-chunk-dependencies.test.js',
   'test-agent-mesh-guardian-coverage.js',
   'ncp-hostile-payload.test.js',
   'agent-mesh-hostile.test.js',
@@ -309,6 +310,9 @@ const SUITES = [
   'test-copilot-probe.js',
   'test-agent-reach.js',
   'test-tool-config.js',
+  'tool-call-listener.test.js',
+  'brainos-panel-wiring.test.js',
+  'clear-glass-plugin-routes.test.js',
 ];
 
 let totalPassed = 0;

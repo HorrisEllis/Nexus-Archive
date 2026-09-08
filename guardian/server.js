@@ -1153,6 +1153,19 @@ const _handleNCPMessage = createNCPMessageHandler({
   findActiveSeamCompartment: _findActiveSeamCompartment,
 });
 
+// §BUILT 2026-09-08 — James: "the listener for the tools... from the
+// sse?" Real, live: subscribes to guardian.tool.called, the event
+// _handleNCPMessage above now emits the moment a tool call is actually
+// detected in an agent's response. Persists to JAA (cortex's real
+// memory store — real vector embedding already happens for free on
+// insert via jaaDB's own _observeForEmbedding, nothing new needed for
+// that part) and makes real output reuse lookups possible.
+try {
+  require('../lib/agent-tools/tool-call-listener.js').install(bus, jaa);
+} catch (e) {
+  console.warn(`[guardian] tool-call-listener failed to install (tool calls still work, just not persisted/cached): ${e.message}`);
+}
+
 // ── Lab Manager — §LAB-01 every experiment has a UUID and a hypothesis ────
 let _lab = null;
 try {
@@ -2745,6 +2758,39 @@ function handleExtendedRoutes(req, res, url, method) {
       }
     }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
     return;
+  }
+
+  // §BUILT 2026-09-08 — James: "wake word relay needs to send the wake
+  // word response as a guardian job ack just like any other input into
+  // a tab for agents chat input." Real gap: askNexus() (guardian/
+  // userscript-nexus-wake.js) calls copilot's /api/prompt/tools
+  // directly, entirely bypassing guardian's real job registry — the
+  // GUARDIAN_LEDGER_WRITE fix (earlier this session) recorded the
+  // exchange, but no real job existed in `jobs`/jaa's 'jobs' table the
+  // way a normal dispatched job does. Reuses the exact real pattern
+  // already established elsewhere in this file (llm-lab's
+  // guardianDispatch, above: "Dispatch via guardian job system — same
+  // path as regular jobs") — jobs.set() + jaa.insert('jobs', ...),
+  // status already 'complete' since the real answer already happened
+  // by the time this is called (wake-word is synchronous from the
+  // userscript's own perspective; this registers the completed
+  // exchange as a real job, it doesn't dispatch a new one).
+  if (method === 'POST' && url.pathname === '/wake-job-ack') {
+    bodyJ(req).then(body => {
+      const { jobId, provider, prompt, response, tabId } = body || {};
+      if (!jobId || !provider) { pRes(res, 400, { ok: false, error: 'jobId and provider required' }); return; }
+      const job = {
+        id: jobId, provider, command: 'wake', prompt: prompt || '',
+        status: 'complete', responseText: response || '',
+        createdAt: Date.now(), completedAt: Date.now(),
+        _source: 'nexus-wake', tabId: tabId || null,
+      };
+      jobs.set(jobId, job);
+      try { jaa.insert('jobs', job); } catch (e) { console.warn(`[guardian] wake-job-ack: jaa insert failed (job still registered in memory): ${e.message}`); }
+      bus.emit('guardian.wake.job.acked', { jobId, provider, tabId, ts: Date.now() });
+      pRes(res, 200, { ok: true, jobId });
+    }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
+    return true;
   }
 
   if (method==='POST' && url.pathname==='/command') {

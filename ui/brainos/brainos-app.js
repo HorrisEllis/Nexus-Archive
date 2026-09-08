@@ -41,7 +41,17 @@
     document.querySelectorAll('.rptab').forEach((t) => t.classList.toggle('act', t.dataset.rtab === tab));
     document.querySelectorAll('.rp-body').forEach((b) => b.classList.remove('act'));
     document.getElementById('rt-' + tab).classList.add('act');
+    // §FOUND & FIXED 2026-09-08 — James: "BrainOS html file for all of
+    // this." Real, confirmed dead code found first: fetchPipeline()/
+    // fetchAutomation() already existed, fully real, but had zero
+    // matching HTML tabs/bodies anywhere and setRTab() never called
+    // them — a real ID mismatch too (pipeline-body/automation-body vs
+    // this file's own real rt-* convention). All fixed together, not
+    // guessed at separately.
     if (tab === 'chatlog') fetchChatLog();
+    if (tab === 'pipeline') fetchPipeline();
+    if (tab === 'automation') fetchAutomation();
+    if (tab === 'toolcalls') fetchToolCalls();
   }
   document.querySelectorAll('.rptab').forEach((t) => t.addEventListener('click', () => setRTab(t.dataset.rtab)));
 
@@ -222,8 +232,30 @@
   }
 
   // ── PIPELINE — real: GET cortex/api/raid/queue ──────────────────────────
+  // ── TOOL CALLS — real: /api/jaa/guardian_tool_calls (cortex's generic
+  // JAA table-query endpoint), reading this session's own real
+  // tool-call-listener.js persistence — covers guardian's flow AND
+  // copilot's separate tool-runtime.js (wake-word included, once
+  // executeTool() is the real, universal hook — confirmed earlier this
+  // session).
+  function fetchToolCalls() {
+    const el = document.getElementById('rt-toolcalls');
+    fetch(CORTEX_URL + '/api/jaa/guardian_tool_calls?limit=50')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok || !data.rows?.length) { el.innerHTML = '<div class="empty-state">no real tool calls yet</div>'; return; }
+        el.innerHTML = data.rows.slice().reverse().map((r) => `
+          <div class="list-row">
+            <div class="lr-head"><span class="lr-name">${_escapeHtml(r.toolName)}</span><span class="badge ${r.result ? 'ok' : 'idle'}">${r.result ? 'has result' : 'pending'}</span></div>
+            <div class="lr-meta">${_escapeHtml(r.provider || 'unknown')} · ${_escapeHtml(new Date(r.ts || Date.now()).toLocaleTimeString())}</div>
+            <div class="lr-meta">${_escapeHtml((r.arguments || '{}').toString().slice(0, 140))}</div>
+          </div>`).join('');
+      })
+      .catch((e) => { el.innerHTML = `<div class="empty-state">tool calls fetch failed: ${e.message}</div>`; });
+  }
+
   function fetchPipeline() {
-    const el = document.getElementById('pipeline-body');
+    const el = document.getElementById('rt-pipeline');
     fetch(CORTEX_URL + '/api/raid/queue?n=50')
       .then((r) => r.json())
       .then((data) => {
@@ -241,7 +273,7 @@
 
   // ── AUTOMATION — real: window.ClearGlass.macros (IPC, now bridged) ──────
   function fetchAutomation() {
-    const el = document.getElementById('automation-body');
+    const el = document.getElementById('rt-automation');
     if (!window.ClearGlass?.macros) {
       el.innerHTML = '<div class="empty-state">window.ClearGlass.macros unavailable — this page must be opened inside clear-glass, not a plain browser tab</div>';
       return;

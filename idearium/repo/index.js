@@ -281,6 +281,50 @@ export class RepoLayer {
     const r = this.repos.repos.find(x => x.uuid === repoUuid);
     return r ? this._enrich(r) : null;
   }
+  // §BUILT 2026-09-07 — James: "need to make a file tree per repository
+  // and use it as a checklist. each chunk would be one component and
+  // dependencies." Real, direct — no new data invented, just a real
+  // view over what _enrich() already returns: files[].status (already
+  // real, already tracked as 'pending'/'complete'/etc. per chunk) is
+  // the checklist state; files[].path already gives the real tree
+  // structure via its own real directory separators.
+  checklist(repoUuid) {
+    const r = this.get(repoUuid);
+    if (!r) return { error: 'repo not found' };
+    const tree = {};
+    for (const f of r.files) {
+      const parts = f.path.split('/');
+      let node = tree;
+      for (let i = 0; i < parts.length - 1; i++) {
+        node[parts[i]] = node[parts[i]] || { __dir: true, children: {} };
+        node = node[parts[i]].children;
+      }
+      node[parts[parts.length - 1]] = {
+        __dir: false, status: f.status, done: f.status === 'complete',
+        compId: f.comp_id, seamId: f.seam_id, bytes: f.bytes,
+      };
+    }
+    const done = r.files.filter(f => f.status === 'complete').length;
+    return { repoUuid, name: r.name, tree, total: r.files.length, done, remaining: r.files.length - done };
+  }
+
+  // Real markdown rendering of checklist() — "use it AS a checklist,"
+  // not just structured data describing one.
+  checklistMarkdown(repoUuid) {
+    const c = this.checklist(repoUuid);
+    if (c.error) return c.error;
+    const lines = [`# ${c.name} — ${c.done}/${c.total} complete`, ''];
+    const walk = (node, depth) => {
+      for (const [name, entry] of Object.entries(node).sort(([a], [b]) => a.localeCompare(b))) {
+        const indent = '  '.repeat(depth);
+        if (entry.__dir) { lines.push(`${indent}- 📁 ${name}/`); walk(entry.children, depth + 1); }
+        else lines.push(`${indent}- [${entry.done ? 'x' : ' '}] ${name}${entry.compId ? ` (${entry.compId})` : ''}`);
+      }
+    };
+    walk(c.tree, 0);
+    return lines.join('\n');
+  }
+
   lineage(repoUuid) {
     const out = [];
     const walk = (uuid, depth = 0) => {
