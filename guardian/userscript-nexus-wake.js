@@ -420,7 +420,20 @@
         _render('question', ask);
         _render('pending', 'asking nexus co-pilot…');
         askNexus(ask).then(r => {
-          if (r.ok) _render('answer', r.text || '(co-pilot returned an empty answer)');
+          if (r.ok) {
+            const answer = r.text || '(co-pilot returned an empty answer)';
+            _render('answer', answer);
+            // §NEW 2026-09-07 — same real fix as the onKeyDown handler
+            // above, applied here too: an agent-triggered wake (the
+            // ASSISTANT's own text saying "hey nexus, ...") deserves
+            // the same real injection into the composer, not just the
+            // floating box — injectText() only, never submit(), same
+            // real cost-safety reasoning as above.
+            if (typeof injectText === 'function') {
+              try { injectText(answer); }
+              catch (e) { log(`[nexus-wake] injectText failed (checkMessage): ${e.message}`); }
+            }
+          }
           else _render('error', `co-pilot unreachable — ${r.error}.`);
         }).catch(err => _render('error', `wake handler failed: ${err.message}`));
         return true;

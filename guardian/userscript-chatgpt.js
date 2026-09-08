@@ -1758,6 +1758,7 @@ const _nexus = {
   context:     '',
   ollamaOk:    null,
   pending:      false,
+  wakeHandledIndex: -1,   // §NEW 2026-09-07 — dedup guard for streaming-message wake detection, same real field claude's already-proven fix uses
 };
 
 // ── Extract all visible messages from the DOM ─────────────────────────────────
@@ -1892,10 +1893,38 @@ function _nexusStartObserver() {
   const target = document.querySelector('main') || document.body;
   _nexus.observer = new MutationObserver(() => {
     const msgs = _nexusGetMessages();
+    const newestIdx = msgs.length - 1;
+    const newest = msgs[newestIdx];
+
+    // §NEW 2026-09-07 — James: "you know it activates when the agents
+    // say it right?" Real, confirmed gap: this callback's own real
+    // wake-check (checkMessage) never existed here at all — chatgpt
+    // was one of 3 real provider files (with gemini/perplexity) that
+    // never got it wired, confirmed by checking every real file
+    // directly, not assumed. Ported the exact same fix already proven
+    // in userscript-claude.js (2026-08-22 — James, live test: "it
+    // doesn't detect when you say it but it does when i say it"):
+    // checking only inside the msgs.length-changed branch below meant
+    // a STREAMING assistant message (near-empty, then growing over
+    // many mutations at the same message count) only ever got checked
+    // once, while still empty. Runs on every mutation now, using the
+    // freshest text, independent of the count-gated block.
+    try {
+      if (newest && newest.text && typeof window !== 'undefined' && window.__nexusWakeInstance__
+          && _nexus.wakeHandledIndex !== newestIdx) {
+        const handled = window.__nexusWakeInstance__.checkMessage(newest.role, newest.text);
+        // Only mark handled on a real match — an unmatched check must
+        // stay re-checkable as more text streams in. Once handled,
+        // stop re-firing for this same message (dedup: without this,
+        // a wake phrase present for the rest of a streaming response
+        // would re-trigger askNexus() on every mutation).
+        if (handled) _nexus.wakeHandledIndex = newestIdx;
+      }
+    } catch (_) { /* §1.2 — a wake-check failure never blocks real message logging */ }
+
     if (msgs.length === _nexus.lastMsgCount) return;
     _nexus.lastMsgCount = msgs.length;
     // Process the newest message
-    const newest = msgs[msgs.length - 1];
     if (!newest) return;
     _nexusLogMessage(newest);
     // On user message: pull semantic context for what they're asking

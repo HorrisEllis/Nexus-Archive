@@ -226,6 +226,51 @@ test('NW-023', 'each of the 5 real provider files genuinely defines its own inje
   }
 });
 
+// ── Agent-echo wake detection — James: "you know it activates when the
+// agents say it right?" ─────────────────────────────────────────────────
+test('NW-024', 'chatgpt.js now has a real wakeHandledIndex dedup field on _nexus, matching claude.js\'s already-proven real fix', () => {
+  const chatgptSrc = fs.readFileSync(path.join(ROOT, 'guardian', 'userscript-chatgpt.js'), 'utf8');
+  assert.ok(/wakeHandledIndex:\s*-1/.test(chatgptSrc));
+});
+
+test('NW-025', 'chatgpt.js\'s observer callback checks for the wake phrase on EVERY mutation, not just when msgs.length changes — the exact real bug class claude.js already found and fixed for streaming messages', () => {
+  const chatgptSrc = fs.readFileSync(path.join(ROOT, 'guardian', 'userscript-chatgpt.js'), 'utf8');
+  const idx = chatgptSrc.indexOf('function _nexusStartObserver');
+  const block = chatgptSrc.slice(idx, idx + 2000);
+  const checkIdx = block.indexOf('window.__nexusWakeInstance__.checkMessage');
+  const shortCircuitIdx = block.indexOf('if (msgs.length === _nexus.lastMsgCount) return;');
+  assert.ok(checkIdx !== -1 && shortCircuitIdx !== -1, 'expected both the real wake-check and the count short-circuit to exist');
+  assert.ok(checkIdx < shortCircuitIdx, 'the wake-check must run BEFORE the count-gated short-circuit, or a streaming message is only ever checked once, while still empty');
+});
+
+test('NW-026', 'chatgpt.js\'s wake-check correctly dedups on wakeHandledIndex — will not re-fire askNexus() on every mutation of an already-handled message', () => {
+  const chatgptSrc = fs.readFileSync(path.join(ROOT, 'guardian', 'userscript-chatgpt.js'), 'utf8');
+  const idx = chatgptSrc.indexOf('function _nexusStartObserver');
+  const block = chatgptSrc.slice(idx, idx + 2000);
+  assert.ok(/_nexus\.wakeHandledIndex !== newestIdx/.test(block));
+  assert.ok(/if \(handled\) _nexus\.wakeHandledIndex = newestIdx;/.test(block));
+});
+
+test('NW-027', 'checkMessage() itself now also calls injectText on a real answer — consistent with the onKeyDown handler\'s own fix, not a second, different behavior for the agent-triggered path', () => {
+  const idx = SRC.indexOf('checkMessage(role, text)');
+  const block = SRC.slice(idx, idx + 900);
+  assert.ok(/if \(typeof injectText === 'function'\)/.test(block));
+  assert.ok(/injectText\(answer\)/.test(block));
+});
+
+test('NW-028', 'checkMessage() never calls submit() either — same real cost-safety principle as the onKeyDown path', () => {
+  const idx = SRC.indexOf('checkMessage(role, text)');
+  const block = SRC.slice(idx, idx + 900);
+  assert.ok(!/injectText\(answer\);[\s\S]{0,80}submit\(\)/.test(block));
+});
+
+test('NW-029', 'HONEST GAP, named not hidden — gemini.js and perplexity.js still have ZERO message-observing architecture at all (no _nexusStartObserver, no _nexusGetMessages), confirmed directly — this fix covers claude and chatgpt only (2 of 5 real providers); the other two need a genuinely new observer built, not this same porting fix', () => {
+  for (const f of ['userscript-gemini.js', 'userscript-perplexity.js']) {
+    const src = fs.readFileSync(path.join(ROOT, 'guardian', f), 'utf8');
+    assert.ok(!/function _nexusStartObserver/.test(src), `${f} confirmed to still lack this architecture — if this ever fails, update this test, don't just delete it`);
+  }
+});
+
 // ── minimal DOM so install() can run under node ─────────────────────────────
 function _installStub(ctx) {
   const listeners = [];

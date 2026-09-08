@@ -1,0 +1,139 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "2469df67-7904-45f4-9890-43c7ca217889",
+  "type": "pre_forge",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [],
+    "event_log": [
+      {
+        "uuid": "ab710beb-bb91-4166-9db7-de104267a02a",
+        "type": "compartment.fail",
+        "payload": {
+          "id": "75622d22-6f9f-4a1b-9aa4-7f78a74eb50f",
+          "intent_uuid": "7e24661e-5b6b-43ab-9b3b-ce93118f173c",
+          "reason": "QA/QC check failed",
+          "status": "REWOUND"
+        },
+        "source": "compartment-engine",
+        "ts": 1788830456031,
+        "id": "51f9ebfb-9e47-4042-990e-767e22b8770d"
+      },
+      {
+        "uuid": "36527472-2d03-4f47-a7eb-9f96ce6fde2a",
+        "type": "compartment.fail",
+        "payload": {
+          "id": "13f61c50-3d1f-4029-860f-a4dcbaec7862",
+          "intent_uuid": "cbe544ac-8817-4221-97fe-1adc56ab7641",
+          "reason": "QA/QC check failed",
+          "status": "REWOUND"
+        },
+        "source": "compartment-engine",
+        "ts": 1788830456033,
+        "id": "22af581b-4c8d-4f26-910d-458904644bf1"
+      }
+    ],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "c821ce52-6df0-487a-aef8-e9aceb13337f",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1788830456016
+      },
+      {
+        "id": "905ea14c-e46a-4c77-b899-dafe24711b6a",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1788830456016
+      },
+      {
+        "id": "dbb7c6cd-1144-47d8-a1ae-c6c9e1c9ff2b",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1788830456016
+      },
+      {
+        "id": "6c36e385-0aa4-459a-9aab-cdd5459ee7bc",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1788830456016
+      },
+      {
+        "id": "10128075-7187-4ac4-944a-d683552e9098",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1788830456016
+      },
+      {
+        "id": "f1311974-4c92-4676-bced-75be7eab3e26",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1788830456016
+      },
+      {
+        "id": "69f418eb-5c4d-472b-b2c2-05fe26a3613e",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1788830456016
+      },
+      {
+        "id": "2c827df9-5750-4052-b4c7-6811c012c64c",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1788830456017
+      },
+      {
+        "id": "b9945a1e-cf68-4070-8a7a-dc81d290e092",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1788830456017
+      },
+      {
+        "id": "0c24d549-aad1-4403-9f22-e9c4fc57a376",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1788830456017
+      },
+      {
+        "id": "a23a21c7-9dd9-4499-a819-05a32b76bff0",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1788830456017
+      },
+      {
+        "id": "74635279-02a0-4e5c-bf51-a1a57fd7b6d6",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1788830456017
+      },
+      {
+        "id": "1d85f181-93c1-47d4-a6ae-d69423f7312c",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1788830456017
+      },
+      {
+        "id": "a2d122aa-1c07-4b97-9cdc-88d36d4316ee",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1788830456017
+      }
+    ],
+    "components": []
+  },
+  "hashVersion": 2,
+  "cortex_state_hash": "9c64efa0c76555c14c6fb12cf702c66df3db6cf699730c474421683cf8f8e3c1",
+  "prev_snapshot_hash": "fd81eb291acceef5d692b1d56d151bbc5466830064dae5ce056061312b7185d1",
+  "createdAt": 1788830456034
+}

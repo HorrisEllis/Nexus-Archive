@@ -1194,6 +1194,61 @@ spec:
         real, current, intentionally-reduced footprint instead of a
         retired file's old shape.
 
+    NEXUS_WAKE_AGENT_ECHO_2026-09-07:
+      status: >
+        CLOSED (2 of 5 real providers). James: "you know it activates
+        when the agents say it right?" Confirmed precisely, not
+        guessed: checkMessage() — the real, already-built mechanism
+        for catching the wake phrase when the ASSISTANT's own text
+        says "hey nexus, ..." (not just when a human types it) — is
+        real and correctly wired in userscript-claude.js (and its
+        nexus-hey-claude.user.js twin), but was completely MISSING
+        from userscript-chatgpt.js, userscript-gemini.js, and
+        userscript-perplexity.js — checked all 5 real files directly.
+        chatgpt.js already had the full real observer architecture
+        (_nexus, _nexusGetMessages, _nexusStartObserver) — it just
+        never called checkMessage() at all, and its own observer
+        callback had the exact same real bug claude.js's own fix
+        already named (2026-08-22 — "it doesn't detect when you say it
+        but it does when i say it"): checking only inside the
+        msgs.length-changed branch means a STREAMING assistant message
+        (near-empty, then growing over many mutations at the same
+        message count) only ever gets checked once, while still empty.
+        Ported claude's exact, already-proven fix into chatgpt.js:
+        wake-check runs on every mutation using the freshest text,
+        independent of the count-gated block, with the same real
+        wakeHandledIndex dedup guard. Also extended checkMessage()
+        itself (shared core, guardian/userscript-nexus-wake.js) to
+        call the same real injectText(answer) this session's earlier
+        NEXUS_WAKE_REAL_CHAT_INJECTION fix added to the onKeyDown path
+        — an agent-triggered wake now lands in the real composer too,
+        not just the floating box, with the same explicit, deliberate
+        choice to never call submit() (same real cost-safety reasoning:
+        each provider's real submit() would dispatch nexus's own
+        answer as a brand-new turn to the real, costed model).
+        HONEST GAP, named explicitly rather than silently left
+        unaddressed: gemini.js and perplexity.js confirmed to have
+        ZERO message-observing architecture at all — no
+        _nexusStartObserver, no _nexusGetMessages. This is not the
+        same porting fix; it would need a genuinely new observer built
+        from scratch per site, requiring real, verified knowledge of
+        each platform's own DOM structure this session doesn't have
+        without directly inspecting a live tab. Not guessed at or
+        faked here.
+        29/29 real tests (test-nexus-wake.js, extended from 23 to 29),
+        including a test that explicitly asserts the gemini/perplexity
+        gap still exists — so a future fix updates this test
+        deliberately rather than it silently going stale. Full suite
+        re-run: zero new failures.
+      depends_on: []
+      does: >
+        "Hey nexus" now also fires when Claude or ChatGPT's own
+        response text says it — not just human-typed input — for 2 of
+        5 real providers, with the same real chat-composer injection
+        this session's earlier fix built. Gemini and perplexity remain
+        a real, separate, larger gap, named precisely rather than
+        assumed closed.
+
     NEXUS_WAKE_REAL_CHAT_INJECTION_2026-09-07:
       status: >
         CLOSED. James, from a live screenshot: "wake word is working to
