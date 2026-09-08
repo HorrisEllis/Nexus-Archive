@@ -1252,7 +1252,13 @@ function gaphunterAnalyze(text, opts = {}) {
 const cockpitClients = new Set();
 function cockpitBroadcast(data) {
   if (!cockpitClients.size) return;
-  const msg = `data: ${JSON.stringify(data)}\n\n`;
+  let msg;
+  try {
+    msg = `data: ${JSON.stringify(data)}\n\n`;
+  } catch (e) {
+    console.error(`[guardian] cockpitBroadcast: payload failed to serialize (${e.message}) — dropped, not crashing the process. type=${data?.type || "unknown"}`);
+    return;
+  }
   for (const r of cockpitClients) { try { r.write(msg); } catch(_) { cockpitClients.delete(r); } }
 }
 

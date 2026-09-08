@@ -435,11 +435,13 @@ function createNCPMessageHandler(deps) {
 
       case 'GUARDIAN_ARTIFACT':
       case 'NCP_ARTIFACT': {
+        // §FOUND & FIXED 2026-09-07 — non-string content crashed on .slice().
+        const safeContent = typeof content === 'string' ? content : JSON.stringify(content ?? '');
         if (jobId && content) {
           const artId = require('crypto').randomUUID();
           jaa.insert('artifacts', {
             uuid: artId, jobId, provider: provider || 'unknown',
-            content: content.slice(0, 4000), lang: lang || 'text',
+            content: safeContent.slice(0, 4000), lang: lang || 'text',
             hash, ts: Date.now(), chatUrl,
           });
           ncp.push(provider, { type: 'GUARDIAN_ARTIFACT_SAVED', jobId, artifactId: artId, ts: Date.now() });
@@ -447,7 +449,7 @@ function createNCPMessageHandler(deps) {
           // Write to cortex artifacts table
           _toCortex('guardian.artifact', {
             jobId, artifactId: artId, lang: lang || 'text', hash,
-            chars: (content || '').length, content: (content || '').slice(0, 4000), chatUrl,
+            chars: safeContent.length, content: safeContent.slice(0, 4000), chatUrl,
           });
         }
         break;
@@ -489,14 +491,22 @@ function createNCPMessageHandler(deps) {
       }
 
       case 'GUARDIAN_LEDGER_WRITE': {
-        // §LAW II — this is the ledger-as-source-of-truth write
-        // Comes BEFORE action in the userscript. Write to JAA immediately.
+        // §FOUND & FIXED 2026-09-07 — a circular msg.meta crashed this
+        // whole handler via uncaught JSON.stringify. Fails loud and
+        // specific (§1.2) instead, the real write still happens.
+        let metaJson;
+        try {
+          metaJson = JSON.stringify(msg.meta || {});
+        } catch (e) {
+          console.error(`[ncp-handler] GUARDIAN_LEDGER_WRITE from provider=${provider} tabId=${jobId || 'unknown'}: msg.meta failed to serialize (${e.message}) — writing without it, not crashing the process`);
+          metaJson = JSON.stringify({ _serializeError: e.message });
+        }
         const entry = {
           uuid:     require('crypto').randomUUID(),
           jobId:    jobId || null,
           category: msg.category || 'EVENT',
           msg:      msg.msg || '',
-          meta:     JSON.stringify(msg.meta || {}),
+          meta:     metaJson,
           provider: msg.meta?.provider || provider || 'unknown',
           chatUrl:  msg.meta?.chatUrl || chatUrl || '',
           ts:       msg.meta?.ts || Date.now(),
