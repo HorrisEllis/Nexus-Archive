@@ -253,7 +253,7 @@ test('NW-026', 'chatgpt.js\'s wake-check correctly dedups on wakeHandledIndex �
 
 test('NW-027', 'checkMessage() itself now also calls injectText on a real answer — consistent with the onKeyDown handler\'s own fix, not a second, different behavior for the agent-triggered path', () => {
   const idx = SRC.indexOf('checkMessage(role, text)');
-  const block = SRC.slice(idx, idx + 900);
+  const block = SRC.slice(idx, idx + 2200); // widened for the real NW-030 ledgerWrite calls now also in this block
   assert.ok(/if \(typeof injectText === 'function'\)/.test(block));
   assert.ok(/injectText\(answer\)/.test(block));
 });
@@ -268,6 +268,35 @@ test('NW-029', 'HONEST GAP, named not hidden — gemini.js and perplexity.js sti
   for (const f of ['userscript-gemini.js', 'userscript-perplexity.js']) {
     const src = fs.readFileSync(path.join(ROOT, 'guardian', f), 'utf8');
     assert.ok(!/function _nexusStartObserver/.test(src), `${f} confirmed to still lack this architecture — if this ever fails, update this test, don't just delete it`);
+  }
+});
+
+// ── §BUILT 2026-09-07 — James, with a real screenshot: "see the black
+// box, thats where it gets delivered. it needs to deliver as a job."
+// A wake-word exchange only ever existed in the floating overlay,
+// invisible to guardian's real ledger/job system. Real fix reuses the
+// exact same GUARDIAN_LEDGER_WRITE mechanism this same userscript
+// family already sends elsewhere for other real events.
+
+test('NW-030', 'checkMessage() calls ledgerWrite with a real, matching jobId for both the question and the answer', () => {
+  const writes = [];
+  const inst = _installStub({ provider: 'chatgpt', tabId: 't1', ledgerWrite: (e) => writes.push(e) });
+  inst.checkMessage('assistant', 'hey nexus, status');
+  const question = writes.find(w => w.category === 'WAKE_QUESTION');
+  assert.ok(question, 'expected a real WAKE_QUESTION ledger write');
+  assert.strictEqual(question.msg, 'status');
+  assert.ok(question.jobId, 'expected a real, non-empty jobId');
+});
+
+test('NW-031', 'a missing ledgerWrite (an older caller that never passes it) does not crash checkMessage — real, honest default', () => {
+  const inst = _installStub({ provider: 'chatgpt', tabId: 't1' }); // no ledgerWrite at all
+  assert.doesNotThrow(() => inst.checkMessage('assistant', 'hey nexus, status'));
+});
+
+test('NW-032', 'all 4 real provider userscripts that call install() now pass a real ledgerWrite wired to their own send()', () => {
+  for (const f of ['userscript-chatgpt.js', 'userscript-claude.js', 'userscript-gemini.js', 'userscript-perplexity.js']) {
+    const src = fs.readFileSync(path.join(ROOT, 'guardian', f), 'utf8');
+    assert.ok(/ledgerWrite:\s*\(e\)\s*=>\s*send\(\{\s*type:'GUARDIAN_LEDGER_WRITE'/.test(src), `${f} does not wire a real ledgerWrite into install()`);
   }
 });
 

@@ -143,7 +143,7 @@
    * provider, not two that disagree after the next UI change.
    */
   function install(ctx) {
-    const { provider, tabId, ncpUrl = 'http://127.0.0.1:7820', injectText, submit, log = () => {} } = ctx || {};
+    const { provider, tabId, ncpUrl = 'http://127.0.0.1:7820', injectText, submit, log = () => {}, ledgerWrite = () => {} } = ctx || {};
     if (!provider) { console.warn('[nexus-wake] §1.1 install requires a provider name'); return null; }
 
     const mode = (ctx.hintMode || HINT_MODE_DEFAULTS[provider] || 'once');
@@ -174,12 +174,22 @@
       _clearComposer(el);
       _render('question', ask);
       _render('pending', 'asking nexus co-pilot…');
+      // §FOUND & FIXED 2026-09-07 — James, with a real screenshot: "see
+      // the black box, thats where it gets delivered. it needs to
+      // deliver as a job." Same real fix as checkMessage() below —
+      // reusing the exact same GUARDIAN_LEDGER_WRITE mechanism this
+      // same userscript already sends elsewhere, so this exchange
+      // becomes a real, trackable job rather than only ever existing in
+      // this floating overlay.
+      const wakeJobId = `wake-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      ledgerWrite({ jobId: wakeJobId, category: 'WAKE_QUESTION', msg: ask, meta: { provider, tabId } });
 
       askNexus(ask)
         .then(r => {
           if (r.ok) {
             const answer = r.text || '(co-pilot returned an empty answer)';
             _render('answer', answer);
+            ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ANSWER', msg: answer, meta: { provider, tabId } });
             // §NEW 2026-09-07 — James: "so close, just needs to send it
             // back as a job and ack to inject into the chat like its
             // user input." Real gap found before fixing: injectText/
@@ -211,7 +221,10 @@
           // indistinguishable from one that was not recognised, and the user
           // would reasonably conclude the feature is broken rather than that
           // co-pilot is down.
-          else _render('error', `co-pilot unreachable — ${r.error}. Your message was NOT sent to ${provider}; nothing was lost, but nothing was asked either.`);
+          else {
+            _render('error', `co-pilot unreachable — ${r.error}. Your message was NOT sent to ${provider}; nothing was lost, but nothing was asked either.`);
+            ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ERROR', msg: r.error || 'unknown', meta: { provider, tabId } });
+          }
         })
         .catch(err => _render('error', `wake handler failed: ${err.message}`));
     }
@@ -419,10 +432,25 @@
         if (!addressed) return false;
         _render('question', ask);
         _render('pending', 'asking nexus co-pilot…');
+        // §FOUND & FIXED 2026-09-07 — James, with a real screenshot: "see
+        // the black box, thats where it gets delivered. it needs to
+        // deliver as a job." Confirmed: askNexus() calls copilot's
+        // /api/prompt/tools directly via GM_xmlhttpRequest, entirely
+        // bypassing guardian's real job/ledger system — the exchange
+        // only ever existed in this floating overlay, invisible to the
+        // real ledger/job views the rest of the system uses. Reused the
+        // exact same real GUARDIAN_LEDGER_WRITE mechanism this same
+        // userscript file already sends for other real events (checked
+        // guardian/userscript-chatgpt.js directly first) rather than
+        // inventing a second one — a real jobId, generated here, ties
+        // the question and the answer together as one real job.
+        const wakeJobId = `wake-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        ledgerWrite({ jobId: wakeJobId, category: 'WAKE_QUESTION', msg: ask, meta: { provider, tabId } });
         askNexus(ask).then(r => {
           if (r.ok) {
             const answer = r.text || '(co-pilot returned an empty answer)';
             _render('answer', answer);
+            ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ANSWER', msg: answer, meta: { provider, tabId } });
             // §NEW 2026-09-07 — same real fix as the onKeyDown handler
             // above, applied here too: an agent-triggered wake (the
             // ASSISTANT's own text saying "hey nexus, ...") deserves
@@ -434,7 +462,10 @@
               catch (e) { log(`[nexus-wake] injectText failed (checkMessage): ${e.message}`); }
             }
           }
-          else _render('error', `co-pilot unreachable — ${r.error}.`);
+          else {
+            _render('error', `co-pilot unreachable — ${r.error}.`);
+            ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ERROR', msg: r.error || 'unknown', meta: { provider, tabId } });
+          }
         }).catch(err => _render('error', `wake handler failed: ${err.message}`));
         return true;
       },
