@@ -784,7 +784,7 @@ function connect() {
     // script; absent under node/tests or if the prelude failed to load, so
     // NEXUS stays null and decorate() below is a no-op rather than a crash.
     NEXUS = (typeof window !== 'undefined' && window.NexusWake)
-      ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, log: (m) => console.log(m) })
+      ? window.NexusWake.install({ provider: PROVIDER, tabId: MY_TAB, injectText, submit, log: (m) => console.log(m) })
       : null;
     // §FIXED 2026-09-02 — found while checking protocol parity across
     // all 4 provider userscripts (James: "get the userscripts done"):

@@ -143,7 +143,7 @@
    * provider, not two that disagree after the next UI change.
    */
   function install(ctx) {
-    const { provider, tabId, ncpUrl = 'http://127.0.0.1:7820', log = () => {} } = ctx || {};
+    const { provider, tabId, ncpUrl = 'http://127.0.0.1:7820', injectText, submit, log = () => {} } = ctx || {};
     if (!provider) { console.warn('[nexus-wake] §1.1 install requires a provider name'); return null; }
 
     const mode = (ctx.hintMode || HINT_MODE_DEFAULTS[provider] || 'once');
@@ -177,7 +177,36 @@
 
       askNexus(ask)
         .then(r => {
-          if (r.ok) _render('answer', r.text || '(co-pilot returned an empty answer)');
+          if (r.ok) {
+            const answer = r.text || '(co-pilot returned an empty answer)';
+            _render('answer', answer);
+            // §NEW 2026-09-07 — James: "so close, just needs to send it
+            // back as a job and ack to inject into the chat like its
+            // user input." Real gap found before fixing: injectText/
+            // submit were DOCUMENTED in this function's own ctx
+            // comment but never actually passed by any of the 5 real
+            // provider userscripts that call install() — confirmed by
+            // checking every real call site, not assumed. Wired all 5.
+            // §DELIBERATE — injectText() only, NOT submit(). Checked
+            // each provider's own real submit() directly: it clicks
+            // the real send button, which would dispatch nexus's own
+            // answer text as a brand-new turn TO THE REAL MODEL —
+            // exactly the real API cost this whole feature exists to
+            // avoid (this file's own header: "Zero cost anywhere,
+            // because the model never sees the turn"). injectText()
+            // alone fills the real composer with the real answer,
+            // visible exactly where a genuine user turn would be
+            // typed — "like its user input" — without ever spending a
+            // real request on it. If genuinely submitting it as a real
+            // turn is what's wanted instead, that's a one-line change
+            // here (add submit() after injectText()) — named explicitly
+            // rather than guessed at silently, given the real cost
+            // difference between the two.
+            if (typeof injectText === 'function') {
+              try { injectText(answer); }
+              catch (e) { log(`[nexus-wake] injectText failed: ${e.message}`); }
+            }
+          }
           // §1.2 — a miss is STATED. A wake word that silently does nothing is
           // indistinguishable from one that was not recognised, and the user
           // would reasonably conclude the feature is broken rather than that

@@ -1194,6 +1194,68 @@ spec:
         real, current, intentionally-reduced footprint instead of a
         retired file's old shape.
 
+    NEXUS_WAKE_REAL_CHAT_INJECTION_2026-09-07:
+      status: >
+        CLOSED. James, from a live screenshot: "wake word is working to
+        a degree.. it sends back the data to a script. so close, just
+        needs to send it back as a job and ack to inject into the chat
+        like its user input." Real, live evidence: guardian/
+        userscript-nexus-wake.js's real "hey nexus" listener correctly
+        intercepts the turn, correctly gets a real, live co-pilot
+        answer back (confirmed in the screenshot — real component
+        counts, real test results), but only ever renders it into its
+        own small, separate floating "NEXUS CO-PILOT" overlay box —
+        never into the real chat itself. Traced precisely, not
+        guessed: this file's own documented ctx shape ("ctx: {
+        provider, tabId, ncpUrl, injectText, submit, log }") was never
+        actually honored by any real caller — checked all 5 real
+        provider userscripts (chatgpt/claude/gemini/perplexity/nexus-
+        hey-claude) directly: every single one only ever passed {
+        provider, tabId, log }, omitting injectText/submit entirely.
+        The documented capability was real but never wired to a single
+        real caller. clear-glass/src/copilot/wake-relay.js (fixed
+        twice earlier this session) turned out to be a completely
+        separate, parallel, NEVER-TRIGGERED real path — confirmed
+        directly: this userscript emits no nexus.wake.detected event,
+        so wake-relay.js's own real SSE listener never fires for this
+        flow at all. Both fixes were real and correct for the files
+        they touched; neither was the thing actually running.
+        FIXED: wired real injectText/submit from each of the 5
+        providers' own already-real, already-used composer-driver
+        functions into their install() call. install(ctx) now
+        destructures and uses them. A real, successful co-pilot answer
+        now calls injectText(answer) — the real answer lands in the
+        actual composer, visible exactly where genuine user input
+        would be typed.
+        A REAL, DELIBERATE DESIGN CHOICE, named explicitly rather than
+        guessed at silently: injectText() only, NEVER submit(). Checked
+        each provider's own real submit() directly — it clicks the
+        actual send button. Chaining it here would dispatch nexus's
+        own answer text as a brand-new turn TO THE REAL, COSTED MODEL —
+        exactly the real API cost this whole feature's own header
+        states it exists to avoid ("Zero cost anywhere, because the
+        model never sees the turn"). If genuinely submitting the
+        answer as a real turn is wanted instead of just filling the
+        composer, that's a real, one-line follow-up (add submit()
+        after injectText()) — not done here without an explicit call,
+        given the real cost difference between the two.
+        23/23 real tests (test-nexus-wake.js, extended — 18 pre-
+        existing + 5 new), matching this file's own established
+        structural-testing convention (real source-text assertions,
+        not a DOM/network simulation this test suite doesn't already
+        build). Confirms all 5 real provider files pass real,
+        genuinely-defined injectText/submit (not an undefined
+        identifier), the real success handler calls injectText(answer),
+        and explicitly confirms submit() is never chained after it.
+        Full suite re-run: zero new failures against 66's own real
+        baseline.
+      depends_on: []
+      does: >
+        "Hey nexus" answers now genuinely appear in the real chat
+        composer, in every one of the 5 real provider tabs — not just
+        a separate floating box — without spending a real request on
+        nexus's own answer text.
+
     IDEARIUM_QUEUE_AND_HOSTILE_AUDIT_2026-09-07:
       status: >
         CLOSED. A genuinely parallel thread (branched from the same real

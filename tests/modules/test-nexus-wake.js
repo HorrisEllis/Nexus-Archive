@@ -189,6 +189,43 @@ test('NW-018', 'health() reports what is armed \u2014 discoverable, not folklore
   assert.strictEqual(w.health().installed, false);
 });
 
+// ── Real answer injection — James: "so close, just needs to send it back
+// as a job and ack to inject into the chat like its user input" ───────────
+test('NW-019', 'install(ctx) destructures injectText/submit from ctx, not just provider/tabId/log', () => {
+  assert.ok(/const \{ provider, tabId, ncpUrl[^}]*injectText, submit/.test(SRC),
+    'expected injectText/submit to actually be pulled out of ctx, not just documented in a comment');
+});
+
+test('NW-020', 'a real, successful answer calls injectText(answer) — the actual fix, not just the render-to-a-floating-box path', () => {
+  const idx = SRC.indexOf('askNexus(ask)');
+  const block = SRC.slice(idx, idx + 2200);
+  assert.ok(/if \(typeof injectText === 'function'\)/.test(block));
+  assert.ok(/injectText\(answer\)/.test(block));
+});
+
+test('NW-021', 'the real fix deliberately never calls submit() after injectText() — confirmed real: each provider\'s own submit() clicks the actual send button, which would dispatch nexus\'s own answer AS A NEW TURN to the real, costed model — exactly what this whole feature exists to avoid', () => {
+  const idx = SRC.indexOf('askNexus(ask)');
+  const block = SRC.slice(idx, idx + 2200);
+  assert.ok(!/injectText\(answer\);[\s\S]{0,80}submit\(\)/.test(block),
+    'submit() must not be chained after injectText() — that would spend a real request on nexus\'s own answer text');
+});
+
+test('NW-022', 'all 5 real provider userscripts now actually pass injectText/submit into install() — confirmed missing from every real call site before this fix, not assumed present from the ctx docstring alone', () => {
+  for (const f of ['nexus-hey-claude.user.js', 'userscript-chatgpt.js', 'userscript-claude.js', 'userscript-gemini.js', 'userscript-perplexity.js']) {
+    const src = fs.readFileSync(path.join(ROOT, 'guardian', f), 'utf8');
+    assert.ok(/NexusWake\.install\(\{ provider: PROVIDER, tabId: MY_TAB, injectText, submit,/.test(src),
+      `${f} should pass its own real injectText/submit into install()`);
+  }
+});
+
+test('NW-023', 'each of the 5 real provider files genuinely defines its own injectText/submit functions being passed in — not passing an undefined identifier', () => {
+  for (const f of ['nexus-hey-claude.user.js', 'userscript-chatgpt.js', 'userscript-claude.js', 'userscript-gemini.js', 'userscript-perplexity.js']) {
+    const src = fs.readFileSync(path.join(ROOT, 'guardian', f), 'utf8');
+    assert.ok(/^function injectText\(/m.test(src), `${f} should define its own real injectText()`);
+    assert.ok(/^function submit\(/m.test(src), `${f} should define its own real submit()`);
+  }
+});
+
 // ── minimal DOM so install() can run under node ─────────────────────────────
 function _installStub(ctx) {
   const listeners = [];
