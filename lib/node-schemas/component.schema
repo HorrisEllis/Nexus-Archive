@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-schema-component
+type: schema
+id: component
+context: lib/node-schemas — shared node-type schema registry
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1789116323983
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: loom/schema/definitions.js — COMPONENT_SCHEMA (real, enforced by componentDeclareGate)
+  fields:
+    id:
+      type: string
+      required: true
+      description: string
+    namespace:
+      type: string
+      required: true
+      description: component namespace
+    name:
+      type: string
+      required: true
+      description: component display/file name
+    version:
+      type: string
+      required: true
+      description: semver-ish version string
+    dir:
+      type: string
+      required: false
+      description: optional real filesystem path, added by SB1
+    uuid:
+      type: string
+      required: true
+      description: enforced by the loom.uuid-present Axiom, not this schema
