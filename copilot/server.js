@@ -2300,6 +2300,37 @@ const server = http.createServer(async (req, res) => {
 
     if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
 
+    // §NEW 2026-09-11 — James, direct: "I don't want it to route through
+    // lifeline. Toggle needs to actually toggle copilot between guardian.
+    // Like switch between cli interfaces and server.js." Real, distinct
+    // from the existing provider/resolvedProvider logic below (which
+    // still goes through lifeline.route()'s own cascade — kept, unchanged,
+    // for callers that never set backend at all). This is a genuinely
+    // different real field: an explicit backend switch bypasses copilot's
+    // own intent routing AND lifeline's cascade entirely, calling the
+    // chosen system's own real dispatch function directly — 'guardian'
+    // uses copilot/lifeline.js's already-real, already-tested
+    // dispatchToNcpAgent (guardian's own /api/copilot/prompt path,
+    // exported as dispatchToNcpAgent since 2026-08-29); 'ollama' uses the
+    // newly-exported dispatchToOllama (ollama-bridge's real /api/jobs
+    // path) — same real functions lifeline.route()'s cascade already
+    // calls internally, just reached directly instead of through the
+    // confidence-check/auto-escalate logic around them.
+    if (body.backend === 'guardian' || body.backend === 'ollama') {
+      const dispatchFn = body.backend === 'guardian' ? _lifeline.dispatchToNcpAgent : _lifeline.dispatchToOllama;
+      try {
+        const result = await dispatchFn(prompt, { provider: body.agent || undefined, requestId, sessionId });
+        if (result?.ok || result?.text) {
+          json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', requestId });
+        } else {
+          json(res, 502, { ok: false, error: result?.error || `${body.backend} unavailable or returned no real response`, requestId });
+        }
+      } catch (e) {
+        json(res, 502, { ok: false, error: e.message, requestId });
+      }
+      return;
+    }
+
     // §GAP CLOSED 2026-07-07 — copilot's own hook registry declares seven
     // intents (ask|build|diagnose|navigate|note|tool|action); `ask` was
     // hardcoded at nine points in this file, and navigate/note/tool/action

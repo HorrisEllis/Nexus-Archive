@@ -128,14 +128,14 @@ test('T-011', "POST /api/prompt's handler computes a real resolvedProvider from 
 
 test('T-012', "/api/prompt's real lifeline.route() call actually passes resolvedProvider through, not the old, ignored body.provider", () => {
   const idx = SRC.indexOf("method === 'POST' && p === '/api/prompt'");
-  const block = SRC.slice(idx, idx + 10000);
+  const block = SRC.slice(idx, idx + 13000);
   assert.ok(/provider:\s*resolvedProvider/.test(block), "expected the real lifeline.route() call in this handler to use resolvedProvider");
 });
 
 test('T-013', "ui/tv-shell/menu.js sends the real, current toggle/dropdown state on every /api/prompt call, not a hardcoded or missing value", () => {
   const menuSrc = fs.readFileSync(path.join(ROOT, 'ui/tv-shell/menu.js'), 'utf8');
   const idx = menuSrc.indexOf('_copilotPrompt');
-  const block = menuSrc.slice(idx, idx + 800);
+  const block = menuSrc.slice(idx, idx + 1200);
   assert.ok(/const provider = _backend === 'guardian' \? _agent : _backend;/.test(block));
   const postIdx = block.indexOf('_post(');
   assert.ok(postIdx > -1 && /provider\s*[,}\s]/.test(block.slice(postIdx, postIdx + 220)), 'the computed provider must actually be sent in the real request body');
@@ -147,6 +147,51 @@ test('T-014', "menu.js's /backend and /agent are real, event-driven CLI commands
   assert.ok(/function setBackend/.test(menuSrc));
   assert.ok(/function setAgent/.test(menuSrc));
   assert.ok(/window\.NexusMenu = \{[^}]*setBackend[^}]*setAgent/.test(menuSrc), 'setBackend/setAgent must be genuinely exported, not just defined locally');
+});
+
+// ── Real backend bypass — James: "I don't want it to route through
+// lifeline. Toggle needs to actually toggle copilot between guardian." ────
+test('T-015', 'lifeline.js exports dispatchToOllama alongside the existing dispatchToNcpAgent — both real, direct dispatch functions the toggle can call without going through route()\'s cascade', () => {
+  const lifelineSrc = fs.readFileSync(path.join(ROOT, 'copilot/lifeline.js'), 'utf8');
+  assert.ok(/dispatchToNcpAgent:\s*_tryGuardian/.test(lifelineSrc));
+  assert.ok(/dispatchToOllama:\s*_tryOllama/.test(lifelineSrc));
+});
+
+test('T-016', "POST /api/prompt's real backend bypass exists, checked BEFORE copilot's own intent routing — a genuine bypass of copilot itself, not just lifeline", () => {
+  const idx = SRC.indexOf("body.backend === 'guardian' || body.backend === 'ollama'");
+  const intentsIdx = SRC.indexOf("require('./intents.js')");
+  assert.ok(idx > -1, 'expected the real backend bypass check to exist');
+  assert.ok(intentsIdx > -1 && idx < intentsIdx, 'the backend bypass must run before copilot\'s own intent routing, not after');
+});
+
+test('T-017', 'the real bypass calls dispatchToNcpAgent/dispatchToOllama directly — never lifeline.route()', () => {
+  const idx = SRC.indexOf("body.backend === 'guardian' || body.backend === 'ollama'");
+  const block = SRC.slice(idx, idx + 900);
+  assert.ok(/_lifeline\.dispatchToNcpAgent/.test(block));
+  assert.ok(/_lifeline\.dispatchToOllama/.test(block));
+  assert.ok(!/_lifeline\.route\(/.test(block), 'the bypass block itself must never call route() — that would defeat the whole point');
+});
+
+test('T-018', 'a failed direct dispatch fails honestly (502, real error) — never silently falls through to the lifeline-routed path, which would recreate the exact "toggle does something else" bug', () => {
+  const idx = SRC.indexOf("body.backend === 'guardian' || body.backend === 'ollama'");
+  const block = SRC.slice(idx, idx + 900);
+  assert.ok(/json\(res, 502,/.test(block));
+});
+
+test('T-019', 'menu.js sends backend and agent explicitly on every _copilotPrompt call, activating the real bypass when toggled away from copilot', () => {
+  const menuSrc = fs.readFileSync(path.join(ROOT, 'ui/tv-shell/menu.js'), 'utf8');
+  const idx = menuSrc.indexOf('_copilotPrompt');
+  const block = menuSrc.slice(idx, idx + 1200);
+  assert.ok(/backend:\s*_backend/.test(block));
+});
+
+test('T-020', "the real /tell command exists and deliberately sends provider WITHOUT backend — James: 'Tell <provider> prompt uses lifeline' — so it flows through the existing, unchanged lifeline-routed path, not the new bypass", () => {
+  const menuSrc = fs.readFileSync(path.join(ROOT, 'ui/tv-shell/menu.js'), 'utf8');
+  const idx = menuSrc.indexOf('tellMatch');
+  assert.ok(idx > -1, 'expected a real /tell command handler');
+  const block = menuSrc.slice(idx, idx + 700);
+  assert.ok(/provider:\s*targetAgent/.test(block));
+  assert.ok(!/backend:/.test(block), '/tell must NOT send backend — sending it would wrongly trigger the direct bypass instead of using lifeline');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

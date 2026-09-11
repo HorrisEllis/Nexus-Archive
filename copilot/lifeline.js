@@ -654,4 +654,4 @@ async function health() {
   };
 }
 
-module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD, extractExplicitAgent, dispatchToNcpAgent: _tryGuardian };
+module.exports = { route, health, MODULE_ID, VERSION, CONFIDENCE_THRESHOLD, extractExplicitAgent, dispatchToNcpAgent: _tryGuardian, dispatchToOllama: _tryOllama };

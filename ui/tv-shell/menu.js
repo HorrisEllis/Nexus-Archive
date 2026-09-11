@@ -85,8 +85,15 @@ async function _copilotPrompt(prompt, outputEl) {
   // the literal 'ollama' or 'copilot' string (server resolves
   // 'copilot' through config.DEFAULT_PROVIDER — not decided here).
   const provider = _backend === 'guardian' ? _agent : _backend;
+  // §NEW 2026-09-11 — James, direct: "I don't want it to route through
+  // lifeline. Toggle needs to actually toggle copilot between guardian."
+  // backend is a genuinely distinct real field from provider — the
+  // server only bypasses lifeline entirely when backend is 'guardian'
+  // or 'ollama'; 'copilot' (the third toggle position) falls through to
+  // the existing, unchanged, lifeline-routed resolvedProvider path.
   const result = await _post(`${COPILOT_URL}/api/prompt`, {
-    prompt, sessionId: SESSION_ID, channel: 'menu', channelName: 'Menu', provider
+    prompt, sessionId: SESSION_ID, channel: 'menu', channelName: 'Menu', provider,
+    backend: _backend, agent: _backend === 'guardian' ? _agent : undefined,
   });
   if (outputEl) {
     // §BUG FIXED 2026-07-11 — "co-pilot in the tv-ui is showing json
@@ -474,6 +481,28 @@ async function sendCLI() {
 
   input.value = '';
   out.style.display = 'block';
+
+  // §NEW 2026-09-11 — James, direct: "Routing / Agent switching / Tell
+  // <provider> prompt uses lifeline." A real, deliberate exception to
+  // the backend-bypass fix above: /tell explicitly wants lifeline's own
+  // real cascade (confidence check, auto-escalation) for a ONE-OFF
+  // named-agent request — independent of whatever the toggle is
+  // currently set to. Sends provider (the named agent) but genuinely
+  // omits backend, so the server's new bypass never triggers and this
+  // falls through to the existing, unchanged resolvedProvider +
+  // lifeline.route() path — the same real mechanism already proven for
+  // the guardian dropdown's individual agent names.
+  const tellMatch = prompt.match(/^\/tell\s+(\S+)\s+([\s\S]+)$/i);
+  if (tellMatch) {
+    const [, targetAgent, tellPrompt] = tellMatch;
+    out.textContent = '…';
+    const result = await _post(`${COPILOT_URL}/api/prompt`, {
+      prompt: tellPrompt, sessionId: SESSION_ID, channel: 'menu', channelName: 'Menu',
+      provider: targetAgent.toLowerCase(),
+    });
+    out.textContent = (result?.text || result?.error || '(no real response)');
+    return;
+  }
 
   // /backend and /agent are handled locally — everything else is a
   // normal co-pilot prompt, unchanged.
