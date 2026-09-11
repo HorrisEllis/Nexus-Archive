@@ -419,3 +419,60 @@ picture" fix the synthesis flags this file as needing — scoped here to only
 the two claims that were independently confirmed, not the full dependency
 graph. See `docs/2026-09-11-sovereign-node-architecture-phasemap.spec` P1
 for that fuller pass.
+
+## ADDENDUM 2026-09-11 — docs/ARCHITECTURE.md retired and deleted (exception to §A-4)
+
+`docs/ARCHITECTURE.md` ("NEXUS Architecture — v2.0", last real commit
+16502d7, 2026-07-20) was removed from the tree, not moved to `_archive/`.
+Every other retirement this session (bridge, 12 root docs, 7 NEXUS-overview
+docs) kept the file present-but-marked per §A-4 / §0.3. This one is a
+deliberate, James-confirmed exception: the file wasn't just superseded, it
+was actively wrong about files sitting next to it — claimed
+`jaa/schema-full.sql` is "cortex's full 28 table schema" (real count: 15,
+two of those rows are guardian's) and `jaa/schema.sql` is "guardian 15
+tables" (real count: 9). It also described a 7-system NEXUS
+(bridge/cortex/guardian/idearium/orchestrator/emerge/cockpit) under a root
+folder name (`nexus-final/`) that doesn't match this repo, with no mention
+of copilot, clear-glass, loom, versionium, diagnostic, intelligence,
+eravos, architect, sentinel, or nexus-healer.
+
+Nothing is actually lost — full content is recoverable via
+`git show 16502d7:docs/ARCHITECTURE.md` or `git log --all --full-history --
+docs/ARCHITECTURE.md`. This addendum is the real, permanent pointer to
+that history, since there's no `_archive/` entry to point to instead.
+
+## ADDENDUM 2026-09-11 (2) — guardian.sessions reconciled, one real gap left open
+
+Per-system schema work (`guardian/schemas/`) found `sessions` had three
+real, non-unified write sites in `guardian/server.js` — not just field-
+casing drift, but a confirmed duplicate-write bug: `POST
+/sessions/:chatId/name` performed its own direct insert/update AND then
+emitted `guardian.session.named`, which did a second, correctly-shaped
+write to the same row. Every call wrote the session twice, once malformed.
+
+Fixed directly in `guardian/server.js`, not just re-described:
+- removed the redundant direct write at `/sessions/:chatId/name` — it now
+  only emits the gate, the one canonical write path
+- `/api/account-identity` (a genuinely separate concern — account_uuid,
+  tab_id) kept its own logic, renamed its two drifted fields (`uuid`→`id`,
+  `tabId`→`tab_id`, `chatUrl`→`chat_url`) to match
+- `guardian/schemas/session.js` status moved from `REAL — DRIFT` to `REAL`
+
+One real semantic question was found and deliberately NOT resolved:
+`started_ts` (set by the naming gate's insert) and `created_ts` (set by
+account-identity's insert) may or may not represent the same real event —
+a session can be first-created by either path. Merging them without
+knowing which should count as "session existence" would be a behavior
+change, not a naming fix. Logged as a real `.gap` node —
+`data/nodes/ca30a433-1ac5-4be4-a3c1-78a59ceb1cf4.gap` — rather than left
+only in prose, per the same discipline the `.gap` schema already exists
+to enforce.
+
+Verification boundary, stated rather than implied: static inspection +
+`node --check` pass; both write sites confirmed reconciled by re-reading
+the file after editing. No route-level test exists for either
+`/sessions/:chatId/name` or `/api/account-identity` (checked `tests/` —
+nothing hits either route) and none was run here — there's no live
+guardian server in this environment to run it against. Status is
+reconciled and syntactically verified, not exercised. That gap in
+verification is itself part of the real state, not a footnote to hide.

@@ -1,1 +1,0 @@
-{"uuid":"636cc702-536b-4958-826d-fa818087b227","system":"liminal","component":"liminal.spaces.resolve","action":"registered","status":"ok","tags":[],"detail":"Close an interstitial item with decision","causedBy":"liminal","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:313","ts":1788671079087}

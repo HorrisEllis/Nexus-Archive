@@ -1,1 +1,0 @@
-{"uuid":"486e6aa9-1525-4e3f-ac5c-04a854dd19fc","system":"test","component":"test.event.check","action":"registered","status":"ok","tags":[],"detail":"Test event emission","causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:313","ts":1788671079085}

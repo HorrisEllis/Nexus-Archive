@@ -2132,18 +2132,16 @@ function handleExtendedRoutes(req, res, url, method) {
     const chatId = url.pathname.split('/')[2];
     bodyJ(req).then(body => {
       const { name, account, provider, chatUrl } = body;
-      // Update or insert session record
-      const existing = jaa.query('sessions', s => s.chatId === chatId, 1);
-      if (existing.length) {
-        jaa.update('sessions', existing[0].uuid, { name, updatedAt: Date.now() });
-      } else {
-        jaa.insert('sessions', {
-          uuid: require('crypto').randomUUID(),
-          chatId, name, account, provider, chatUrl,
-          createdAt: Date.now(),
-        });
-      }
-      bus.emit('guardian.session.named', { chatId, name });
+      // §FIXED 2026-09-11 — this used to insert/update its own row here
+      // (uuid/chatId/updatedAt/createdAt — three-way field-shape drift
+      // against the other two real session-write sites, confirmed while
+      // building guardian/schemas/session.js), then ALSO emit
+      // guardian.session.named right below, which did a SECOND, correctly
+      // -shaped write to the same row. Every call to this route wrote the
+      // session twice, once malformed. Real fix: this route owns no write
+      // logic of its own — it's the one, canonical guardian.session.named
+      // gate's job (see the gate below), same as every other caller.
+      bus.emit('guardian.session.named', { chatId, name, account, provider, chatUrl });
       // Also broadcast via NCP so Forge Brain updates
       ncp.broadcast({ type:'GUARDIAN_SESSION_NAMED', chatId, sessionName: name });
       pRes(res, 200, { ok:true, chatId, name });
@@ -3232,10 +3230,17 @@ function handleExtendedRoutes(req, res, url, method) {
       // across every chat, which is what retry/fallback routing needs.
       const accountIdx = require('../lib/account-identity-index.js').resolve(provider, account);
       const existing = jaa.get('sessions', { chat_id: sessionId });
-      if (existing) jaa.update('sessions', { chat_id: sessionId }, { account, chatUrl, account_uuid: accountIdx.uuid, updated_ts: ts || Date.now() });
+      // §FIXED 2026-09-11 — was `uuid`/`tabId`, the other two real drift
+      // fields found alongside site 2's duplicate-write bug. `id` matches
+      // every other guardian table (jobs, downloads, pa_sessions,
+      // timeline_events) and the primary write site (guardian.session.named,
+      // below); `tab_id` matches this same route's own chat_id/updated_ts/
+      // created_ts, which were already snake_case here — only these two
+      // fields had drifted.
+      if (existing) jaa.update('sessions', { chat_id: sessionId }, { account, chat_url: chatUrl, account_uuid: accountIdx.uuid, updated_ts: ts || Date.now() });
       else jaa.insert('sessions', {
-        uuid: require('crypto').randomUUID(), chat_id: sessionId || null,
-        provider, tabId: tabId || null, account, chatUrl: chatUrl || null,
+        id: randomUUID(), chat_id: sessionId || null,
+        provider, tab_id: tabId || null, account, chat_url: chatUrl || null,
         account_uuid: accountIdx.uuid,
         created_ts: ts || Date.now(), updated_ts: ts || Date.now(),
       });
