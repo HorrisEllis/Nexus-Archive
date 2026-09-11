@@ -613,6 +613,39 @@ const {
   bus, ncp, pendingQueue, cockpitBroadcast, NEXUS_URL, postEvent: _postEvent,
 });
 
+// §BUILT 2026-09-11 — James: "persistent and doesn't leave until it's
+// delivered." createJobStore() (guardian/lib/jobs.js, this same pass)
+// already recovers every real .job file from a prior process into this
+// `jobs` Map — but recovery alone isn't redelivery. A job that was
+// genuinely 'pending' (created, never dispatched) or 'dispatched'
+// (sent, no response ever recorded) when the process died is real,
+// recoverable work sitting in the Map right now with nobody driving it
+// forward. This is that drive: once per real boot, after dispatchJob
+// itself exists, walk the recovered jobs and re-dispatch exactly the
+// ones a fresh dispatch would be correct for. 'complete'/'error' jobs
+// are real history — read, never touched.
+//
+// A 'dispatched' job is requeued as 'pending' first, not re-dispatched
+// as-is: the original NCP tab that had it is provably gone (this is a
+// fresh guardian process), so its real status was already a lie the
+// moment this process started — same honesty discipline the idearium
+// chunk-recovery fix (this session, two turns earlier) already applied
+// to BUILDING chunks, applied here to DISPATCHED jobs.
+(function _redispatchRecoveredJobs() {
+  let requeued = 0, dispatched = 0;
+  for (const job of jobs.values()) {
+    if (job.status === 'dispatched') { updateJob(job.id, { status: 'pending' }); requeued++; }
+  }
+  for (const job of jobs.values()) {
+    if (job.status !== 'pending') continue;
+    dispatched++;
+    dispatchJob(job);
+  }
+  if (requeued || dispatched) {
+    console.log(`[guardian] boot recovery: ${requeued} in-flight job(s) requeued, ${dispatched} pending job(s) re-dispatched`);
+  }
+})();
+
 // ── Stream token accumulator ──────────────────────────────────────────────────
 // Registered as a SISOGate after bus is declared (see below — search STREAM_GATE).
 // NCP handleStream fires busEmit('ncp.stream.chunk', ...) on every token.

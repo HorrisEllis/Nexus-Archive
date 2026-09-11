@@ -30,8 +30,67 @@
  */
 
 const { randomUUID } = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const intentHatRouter = require('../../lib/intent-hat-router.js');
 const hatForge = require('../../lib/hat-forge.js');
+const nodeExport = require('../../lib/node-export.js');
+
+// §BUILT 2026-09-11 — James: "each job sent to guardian is a .job file
+// sent to the guardian queue... all payloads into guardian need to be
+// tangible, need to use the queue, need to be a .job... persistent and
+// doesn't leave until it's delivered." Real, confirmed gap (P23,
+// 2026-09-11): this whole module's `jobs` Map is the ONLY record of a
+// job while it's in flight. A guardian crash mid-job lost it, no file,
+// no journal, nothing on disk until completion. Every createJob/
+// updateJob call below now also writes a real .job file via node-
+// export.js's real envelope (job already added to KNOWN_TYPES) — same
+// discipline data/nodes/*.tool already uses for tool instances, applied
+// here for the first time. loadPersistedJobs() hydrates the in-memory
+// Map from these files at boot, so a restart recovers real, in-flight
+// jobs instead of only ever seeing them after they complete.
+const JOBS_DIR = path.join(__dirname, '..', '..', 'data', 'guardian', 'jobs');
+function _persistJob(job) {
+  try {
+    fs.mkdirSync(JOBS_DIR, { recursive: true });
+    const envelope = nodeExport.wrap('job', job.id, job, { context: 'guardian real-time job dispatch', system: 'guardian' });
+    fs.writeFileSync(path.join(JOBS_DIR, `${job.id}.job`), nodeExport.toYaml(envelope), 'utf8');
+  } catch (e) {
+    // §1.2 — a failed persist must never crash a real dispatch in
+    // progress; the in-memory job still exists and still gets a
+    // response. This only degrades the restart-recovery guarantee for
+    // this one job, not the job itself.
+    console.warn(`[guardian/jobs] failed to persist ${job.id}.job (non-fatal): ${e.message}`);
+  }
+}
+
+/**
+ * loadPersistedJobs() — real boot-time recovery. Reads every .job file
+ * left from a prior process, returns them keyed by id so createJobStore's
+ * caller can seed the fresh in-memory Map before anything else runs.
+ * Jobs already 'complete' or 'error' are still loaded (real history, not
+ * discarded) but callers should treat only 'pending'/'dispatched' ones as
+ * needing re-dispatch — that decision belongs to server.js's own boot
+ * sequence, not this module.
+ */
+function loadPersistedJobs() {
+  const out = new Map();
+  try {
+    if (!fs.existsSync(JOBS_DIR)) return out;
+    for (const f of fs.readdirSync(JOBS_DIR)) {
+      if (!f.endsWith('.job')) continue;
+      try {
+        const doc = nodeExport.importFromFile(path.join(JOBS_DIR, f));
+        out.set(doc.payload.id, doc.payload);
+      } catch (e) {
+        console.warn(`[guardian/jobs] skipping unreadable ${f} (non-fatal): ${e.message}`);
+      }
+    }
+  } catch (e) {
+    console.warn(`[guardian/jobs] loadPersistedJobs failed (non-fatal, starting empty): ${e.message}`);
+  }
+  return out;
+}
 
 /**
  * createJobStore() — one call per server.js process (matches the
@@ -42,7 +101,7 @@ const hatForge = require('../../lib/hat-forge.js');
  * bus/ncp/pendingQueue were.
  */
 function createJobStore() {
-  const jobs = new Map();
+  const jobs = loadPersistedJobs(); // §real boot recovery — seeded from disk, not always empty
 
   // §ACK-INJECTION-FIX 2026-09-02 — real, read-only hat lookup. Never
   // throws (suggestHat() itself is pure — classify + a map lookup, no
@@ -81,6 +140,7 @@ function createJobStore() {
       status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now(),
     };
     jobs.set(id, job);
+    _persistJob(job);
     console.log(`[guardian] job created: ${id} → ${provider} /${command}${hat ? ` [hat: ${hat.name}]` : ''}`);
     return job;
   }
@@ -89,6 +149,7 @@ function createJobStore() {
     const job = jobs.get(id);
     if (!job) return null;
     Object.assign(job, patch, { updatedAt: Date.now() });
+    _persistJob(job);
     return job;
   }
 
