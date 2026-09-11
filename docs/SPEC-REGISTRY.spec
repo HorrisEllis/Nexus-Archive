@@ -1501,3 +1501,38 @@ spec:
     is a superseded pre-canonical version, safe to remove pending a tree-wide
     reference check (not yet exhaustive).
     
+    ---
+    ## Doc cleanup 2026-09-10 (root + docs/ monolithic overviews)
+
+    Two passes, same session. First: 14 stale, session-dated docs that had
+    accumulated at project root (old handoffs, patch notes, one-off audits,
+    2026-06-27 through 2026-08-24 vintage) moved to
+    `_archive/root-docs-consolidated-2026-09-10/` — git-mv'd, full rationale
+    per file in that folder's own `README.md`.
+
+    Second: the "separate, more careful pass" the 2026-08-09 entry above
+    deferred — `docs/NEXUS-PHASE-MAP.md` (1287-1315 lines, phases 0-125) and
+    seven related docs (`NEXUS.md`, `NEXUS-SPEC.md`, `NEXUS-SYSTEM.md`,
+    `NEXUS-ENCYCLOPEDIA.md`, `NEXUS-PLAIN-ENGLISH.md`,
+    `NEXUS-PHASE-MAP-CROSSREF.md`, `phase-map.spec` — the last already named
+    "a dead, pre-v3.0-axiom ancestor" by `docs/META-SYSTEM-AND-SUBSYSTEM-SPECS.md`
+    itself) moved to `_archive/superseded-docs-2026-09-10/`. All predate the
+    per-system `*-phasemap.spec` convention this registry now indexes; none
+    of it was the *current* living picture even before this move, per their
+    own headers and per the 2026-09-10 architecture-brainstorm synthesis
+    (`docs/2026-09-11-sovereign-node-architecture-phasemap.spec`'s own P1).
+
+    One live functional reference found and fixed, not just a citation:
+    `cli/session.js` (the real `SESSION.md` renderer) told every user to
+    read `docs/NEXUS-SPEC.md` and `docs/AXIOMS-v1.0.md` — both stale.
+    Repointed at `CLAUDE.md`, `docs/nexus.spec`, `docs/AXIOMS-v3.1.md`.
+    `loom/data/registry.json`'s live entry for `docs/phase-map.spec` was
+    left to self-correct on the next real `loom/bootstrap.js` run (that file
+    is explicitly not git-tracked, regenerated fresh per environment).
+
+    Not touched this pass: the ~180 remaining `docs/*.spec`/`docs/*.md`
+    files, including every dated `*-phasemap.spec` (a genuinely still-
+    current, accumulating convention) and `AXIOMS-v1.0/2.0/3.0.md` (a real
+    version history — worth its own archive-or-keep decision, not rushed
+    here). Full rationale per file:
+    `_archive/superseded-docs-2026-09-10/README.md`.

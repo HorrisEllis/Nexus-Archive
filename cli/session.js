@@ -167,8 +167,9 @@ ${openGaps.length
 
 ## Current Build Phase
 
-> Read \`docs/NEXUS-SPEC.md\` for full system context.
-> Read \`docs/AXIOMS-v1.0.md\` for governing laws.
+> Read \`CLAUDE.md\` for full system context.
+> Read \`docs/nexus.spec\` for the current per-system spec.
+> Read \`docs/AXIOMS-v3.1.md\` for governing laws.
 > Read \`MANIFEST.json\` session_log for build history.
 
 ### What was last built (from orchestrator ledger)

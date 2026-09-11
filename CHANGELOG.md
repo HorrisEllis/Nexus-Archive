@@ -1,5 +1,16 @@
 # NEXUS Changelog
 
+> **Note, 2026-09-10:** this file's newest entry below is v0.39.49; `package.json`
+> is currently at v0.39.75 (26 versions ahead). That gap isn't backfilled in
+> this pass — reconstructing 26 versions of honest changelog entries from
+> `git log` alone would risk summarizing without having verified each change
+> the way every entry below was verified at the time. `git log --oneline` is
+> the accurate record for that range in the interim. Also: fourteen loose,
+> session-dated docs that had accumulated at project root (old handoffs,
+> patch notes, one-off audits) were consolidated to
+> `_archive/root-docs-consolidated-2026-09-10/` this same pass — see that
+> folder's `README.md` for the full mapping.
+
 ## 2026-09-06 — idearium spec-engine never loaded on a real npm install (v0.39.49)
 
 James's own real boot log on his actual machine showed this failing

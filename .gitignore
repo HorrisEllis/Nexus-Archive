@@ -62,3 +62,8 @@ build/
 # All runtime state — never committed (§2.2, CLAUDE.md rule)
 data/
 data/manifests/
+
+# Regenerated on every `node cli/session.js` run / commit hook —
+# a live projection of ledger state, not source (file's own header
+# says "DO NOT EDIT — regenerate")
+docs/SESSION.md

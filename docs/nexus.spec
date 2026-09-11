@@ -17,16 +17,18 @@ meta:
 systems:
 
   bridge:
-    port:    9999
+    port:    9999   # §RETIRED 2026-09-06 — kept per §A-4, see contracts/nexus-interaction-contract.js RETIRED_PORTS.bridge
     entry:   bridge/nexus-bridge.js
     role:    connective_tissue
-    boots:   first
+    boots:   first   # STALE — bridge no longer boots; see 2026-09-10 ADDENDUM below
     purpose: |
       Tag system, request queue, push/pull subscriptions, handshake protocol.
       All cross-system communication goes through here.
       No system calls another directly.
     provides: [tags, requests, subscriptions, handshake, broadcast, pull]
     depends:  []
+    retired:   true
+    retiredAt: '2026-09-06'
 
   cortex:
     port:    3748
@@ -387,3 +389,33 @@ repo suite), versionium, cortex/data persistence, forge, cfr, diagnostics; then 
   (./lib, ./cli resolve there); ui copy kept in sync this pass.
 - VERIFY stage samples guardian queue once; full SEAM verdict polling lives in
   FORGE dispatch path.
+
+## ADDENDUM 2026-09-10 — bridge retirement + a stale claim, per CLAUDE.md §12.5
+
+Two things in the `systems.bridge` entry above were stale, flagged by the
+2026-09-10 architecture-brainstorm synthesis and confirmed directly against
+`contracts/nexus-interaction-contract.js` before editing:
+
+1. `boots: first` was false. Bridge was retired 2026-09-06
+   (`§RETIRED 2026-09-06`, `RETIRED_PORTS.bridge`/`SYSTEMS.bridge.retired` in
+   the interaction contract; the real archived code is
+   `_archive/bridge-retired-2026-09-06/`). Marked `retired: true` /
+   `retiredAt: '2026-09-06'` above, matching the interaction contract's own
+   convention, rather than deleted — bridge's entry (routes, provides,
+   purpose) is kept as real historical record of what it did while live.
+
+2. "No system calls another directly" is this spec's own stated design
+   principle, not independently re-verified against current call sites in
+   this pass — left as-is rather than guessed at either way. Whether it's
+   still true with bridge gone (did its request-queue/handshake role get
+   redistributed to direct calls, or genuinely retired along with it?) is a
+   real, open question, not resolved here.
+
+Not touched in this pass, and still real per the 2026-09-10 synthesis:
+every other system's `depends: [bridge, ...]` entry still lists bridge as a
+live dependency. Whether those should drop bridge from `depends` or keep it
+as a historical/retired dependency edge is exactly the kind of "one coherent
+picture" fix the synthesis flags this file as needing — scoped here to only
+the two claims that were independently confirmed, not the full dependency
+graph. See `docs/2026-09-11-sovereign-node-architecture-phasemap.spec` P1
+for that fuller pass.

@@ -6,6 +6,8 @@
 > **Canonical, actively-maintained source of truth: `lib/version.js`** — current system version, per-phase build status, and per-module versions all live there. As of this note: system v0.7.8, Phase 12 (User Model) complete.
 >
 > The content below is preserved as historical record, not deleted, since it may describe a real prior design direction worth understanding — but treat every claim in it (file counts, ports, structure) as potentially describing a different system than the one on disk.
+>
+> **2026-09-10:** fourteen other stale, session-dated docs that had accumulated at project root (old handoffs, patch notes, one-off audits) were consolidated and moved to `_archive/root-docs-consolidated-2026-09-10/` — see that folder's `README.md` for the full mapping of what moved where. This file and `MANIFEST.json` were deliberately left at root, banner intact, since they're conventional filenames and already self-describe their own superseded status rather than needing archival.
 
 ## Complete Architecture in Emergence
 
