@@ -113,6 +113,11 @@
   let _meshNodeEls = {}; // dynamic mesh node id -> {g, circle, label, kind}
   let _meshNodeData = {}; // dynamic mesh node id -> the real last-known full data object
   let _onNodeClick = null; // real callback, registered via onNodeClick()
+  let _onNodeContextMenu = null; // real callback, registered via onNodeContextMenu()
+  let _onNodeConnect = null; // real callback, registered via onNodeConnect() — Phase 2 drag-to-connect
+  let _meshEdgeLayer = null;
+  let _dragFrom = null;
+  let _lastRoutes = [];
   const MESH_RADIUS = 280; // outer ring, beyond REAL_SYSTEMS' r=220 — no visual collision
 
   function _svgEl(tag, attrs) {
@@ -139,6 +144,17 @@
       viewBox: `0 0 ${width} ${height}`, width: '100%', height: '100%',
       class: 'brainos-canvas',
     });
+    // Arrowhead marker for real route/pipeline edges (renderRoutes below) —
+    // defined once, referenced by marker-end on each edge line.
+    const defs = _svgEl('defs', {});
+    const marker = _svgEl('marker', {
+      id: 'brainos-route-arrow', viewBox: '0 0 10 10', refX: '9', refY: '5',
+      markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse',
+    });
+    const arrowPath = _svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: 'var(--idle, #4fc3f7)' });
+    marker.appendChild(arrowPath);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
 
     const systems = _layoutCircle(REAL_SYSTEMS, width / 2, height / 2, 220);
     const agents = _layoutCircle(REAL_AGENTS.map((id) => ({ id, sysVar: null })), width / 2, height / 2, 90);
@@ -191,12 +207,20 @@
     // from the real initial GET /agent-mesh/view fetch (brainos.js's
     // own job) and kept live by real mesh.nodes.snapshot/mesh.node.
     // status_changed SSE events after that.
+    // §BUILT — Phase 2 real route/pipeline edges (docs/2026-09-11-brainos-
+    // agent-orchestration-phasemap.spec). Drawn BELOW the mesh node layer
+    // so node dots stay on top and clickable.
+    _meshEdgeLayer = _svgEl('g', { class: 'brainos-canvas-mesh-edges' });
+    svg.appendChild(_meshEdgeLayer);
     _meshLayer = _svgEl('g', { class: 'brainos-canvas-mesh-layer' });
     svg.appendChild(_meshLayer);
 
     container.appendChild(svg);
     _svg = svg;
     _mounted = true;
+    // Cancel a real in-progress drag-to-connect if dropped anywhere that
+    // isn't a node's own mouseup handler above (which stops propagation).
+    svg.addEventListener('mouseup', () => { _dragFrom = null; });
     return svg;
   }
 
@@ -279,6 +303,29 @@
           g.addEventListener('click', () => {
             if (typeof _onNodeClick === 'function') _onNodeClick(_meshNodeData[n.id] || n);
           });
+          // §BUILT — James: "right click nodes, with a context menu."
+          // Real data at open time (_meshNodeData[n.id]), same freshness
+          // guarantee the click handler above already gives — never a
+          // stale closure snapshot from whenever this <g> was first drawn.
+          g.addEventListener('contextmenu', (ev) => {
+            ev.preventDefault();
+            if (typeof _onNodeContextMenu === 'function') _onNodeContextMenu(_meshNodeData[n.id] || n, ev);
+          });
+          // §BUILT — Phase 2 drag-to-connect: mousedown here, mouseup on a
+          // DIFFERENT node fires onNodeConnect(fromId, toId). Same node
+          // start+end (a click, or a deliberate drop back on itself) is
+          // NOT treated as a feedback-loop edge here — that's ambiguous
+          // with a plain click; a feedback loop is created explicitly via
+          // the context menu instead (kept separate, not inferred from a
+          // possibly-accidental same-node drag).
+          g.addEventListener('mousedown', (ev) => { ev.stopPropagation(); _dragFrom = n.id; });
+          g.addEventListener('mouseup', (ev) => {
+            ev.stopPropagation();
+            if (_dragFrom && _dragFrom !== n.id && typeof _onNodeConnect === 'function') {
+              _onNodeConnect(_dragFrom, n.id);
+            }
+            _dragFrom = null;
+          });
         }
         _meshLayer.appendChild(g);
         entry = _meshNodeEls[n.id] = { g, circle, label, kind: n.kind };
@@ -302,6 +349,38 @@
       entry.label.setAttribute('x', pos.x);
       entry.label.setAttribute('y', pos.y + 18);
     });
+    // Node positions just changed — redraw any real routes against them
+    // so an edge never lags a node that just moved to a new slot.
+    renderRoutes(_lastRoutes);
+  }
+
+  /**
+   * renderRoutes(routes) — real, persisted node-to-node edges (Phase 2).
+   * `routes` is the exact array GET /agent-mesh/routes returns — each
+   * {id, from, to, kind}. An edge whose endpoint isn't currently a real,
+   * rendered node (agent not spawned / node not yet pulsed) is simply
+   * skipped, not drawn to a guessed position, same discipline the static
+   * REAL_TOPOLOGY lines already use in mount() above.
+   */
+  function renderRoutes(routes) {
+    if (!_meshEdgeLayer) return;
+    _lastRoutes = Array.isArray(routes) ? routes : [];
+    _meshEdgeLayer.textContent = ''; // real, full redraw — the list is small; no incremental-diff complexity earned yet
+    for (const r of _lastRoutes) {
+      const a = _meshNodeEls[r.from], b = _meshNodeEls[r.to];
+      if (!a || !b) continue;
+      const ax = a.circle.getAttribute('cx'), ay = a.circle.getAttribute('cy');
+      const bx = b.circle.getAttribute('cx'), by = b.circle.getAttribute('cy');
+      const line = _svgEl('line', {
+        x1: ax, y1: ay, x2: bx, y2: by,
+        class: `brainos-canvas-route-edge brainos-canvas-route-${r.kind || 'pipeline'}`,
+        'marker-end': 'url(#brainos-route-arrow)',
+      });
+      const title = _svgEl('title', {});
+      title.textContent = `${r.from} → ${r.to} (${r.kind || 'pipeline'})`;
+      line.appendChild(title);
+      _meshEdgeLayer.appendChild(line);
+    }
   }
 
   // ── Real event router — called by brainos.js with every real SSE
@@ -338,6 +417,8 @@
   }
 
   function onNodeClick(fn) { _onNodeClick = typeof fn === 'function' ? fn : null; }
+  function onNodeContextMenu(fn) { _onNodeContextMenu = typeof fn === 'function' ? fn : null; }
+  function onNodeConnect(fn) { _onNodeConnect = typeof fn === 'function' ? fn : null; }
 
   function unmount() {
     if (_svg) { _svg.remove(); _svg = null; }
@@ -351,5 +432,5 @@
   function getRealSystemIds() { return REAL_SYSTEMS.map((s) => s.id); }
   function getRealAgentIds() { return REAL_AGENTS.slice(); }
 
-  global.BrainOSCanvas = { mount, unmount, pulse, onRealEvent, renderMeshView, onNodeClick, getRealSystemIds, getRealAgentIds, MODULE_ID };
+  global.BrainOSCanvas = { mount, unmount, pulse, onRealEvent, renderMeshView, renderRoutes, onNodeClick, onNodeContextMenu, onNodeConnect, getRealSystemIds, getRealAgentIds, MODULE_ID };
 })(typeof window !== 'undefined' ? window : globalThis);

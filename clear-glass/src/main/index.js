@@ -630,6 +630,24 @@ async function _startWire() {
       // 5s mesh.nodes.snapshot tick. This is that initial fetch: the
       // same real listMeshView() the snapshot event's own data comes
       // from, read once on mount, not a new mechanism.
+      // §BUILT — James: "deploying nodes on the canvas spawn agents."
+      // Real, minimal gap: /agent-mesh/route dispatches a prompt (spawns
+      // as a side effect if needed) but there was no direct "spawn this
+      // agent" entry point of its own — BrainOS's context menu (below)
+      // needs exactly that without requiring a prompt to go with it.
+      if (u === '/agent-mesh/spawn' && req.method === 'POST') {
+        const { agentKey } = parsed;
+        if (!agentKey) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'agentKey required' })); }
+        try {
+          const state = await mesh.spawn(agentKey);
+          res.writeHead(200);
+          return res.end(JSON.stringify({ ok: true, agentKey, contextId: state.contextId }));
+        } catch (e) {
+          res.writeHead(502);
+          return res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      }
+
       if (u === '/agent-mesh/view' && req.method === 'GET') {
         try {
           const view = mesh.listMeshView ? mesh.listMeshView() : [];
@@ -639,6 +657,65 @@ async function _startWire() {
           res.writeHead(502);
           return res.end(JSON.stringify({ ok: false, error: e.message }));
         }
+      }
+
+      // §BUILT — Phase 2, James: "route data, create pipelines... maybe a
+      // feedback loop." Real, persisted node-to-node edges — see
+      // clear-glass/src/mesh/route-graph.js for the actual trigger logic.
+      if (u === '/agent-mesh/routes' && req.method === 'GET') {
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, routes: mesh.listRoutes() }));
+      }
+      if (u === '/agent-mesh/routes' && req.method === 'POST') {
+        const { from, to, kind, systemPrompt, transform } = parsed;
+        const result = mesh.addRoute({ from, to, kind, systemPrompt, transform });
+        res.writeHead(result.ok ? 200 : 400);
+        return res.end(JSON.stringify(result));
+      }
+      if (u.startsWith('/agent-mesh/routes/') && req.method === 'DELETE') {
+        const id = u.slice('/agent-mesh/routes/'.length);
+        const result = mesh.removeRoute(id);
+        res.writeHead(result.ok ? 200 : 404);
+        return res.end(JSON.stringify(result));
+      }
+
+      // §BUILT — Automation engine real HTTP surface, same thin-pass-
+      // through convention as the routes above.
+      if (u === '/automation/workflows' && req.method === 'GET') {
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, workflows: mesh.listWorkflows() }));
+      }
+      if (u === '/automation/workflows' && req.method === 'POST') {
+        const result = mesh.createWorkflow(parsed);
+        res.writeHead(result.ok ? 200 : 400);
+        return res.end(JSON.stringify(result));
+      }
+      if (u.match(/^\/automation\/workflows\/[^/]+$/) && req.method === 'PATCH') {
+        const id = u.split('/').pop();
+        const result = mesh.updateWorkflow(id, parsed);
+        res.writeHead(result.ok ? 200 : 404);
+        return res.end(JSON.stringify(result));
+      }
+      if (u.match(/^\/automation\/workflows\/[^/]+$/) && req.method === 'DELETE') {
+        const id = u.split('/').pop();
+        const result = mesh.removeWorkflow(id);
+        res.writeHead(result.ok ? 200 : 404);
+        return res.end(JSON.stringify(result));
+      }
+      if (u.match(/^\/automation\/workflows\/[^/]+\/run$/) && req.method === 'POST') {
+        const id = u.split('/')[3];
+        try {
+          const result = await mesh.runWorkflow(id, 'manual');
+          res.writeHead(result.ok ? 200 : 500);
+          return res.end(JSON.stringify(result));
+        } catch (e) {
+          res.writeHead(500);
+          return res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      }
+      if (u === '/automation/log' && req.method === 'GET') {
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, log: mesh.getAutomationLog() }));
       }
 
       // §BL24 2026-08-23 — James: "a command/tool to disable and re-
@@ -1048,6 +1125,18 @@ async function bootstrap() {
   // GET /agent-mesh/view) can actually call it.
   mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, sse: { emit: (t, d) => emit(t, d) } });
   await mesh.init();
+
+  // §BUILT — James: "deepseek as a ncp provider and open in the background
+  // in clearglass." Every other real provider only ever opens on-demand,
+  // inside spawn()'s own on-demand path (mesh.route()'s "spawn fresh if
+  // none healthy" branch) — no provider has ever been proactively opened at
+  // boot before. Real, minimal boot-time background spawn, deepseek only
+  // (not applied to the other 5 registry agents — not asked for, and
+  // opening every registered agent's tab on every boot would be a real,
+  // unwanted resource/behavior change to existing installs). Best-effort:
+  // never blocks or fails boot (§1.2) — a dead deepseek tab just falls back
+  // to on-demand spawn() the same as before this existed.
+  mesh.spawn('deepseek').catch((e) => emit('mesh.boot_spawn.error', { agentKey: 'deepseek', error: e.message }));
 
   // 11. Diagnostic engine — Playwright-equivalent on ClearDriver
   const diag = new DiagnosticEngine({ driver, dom, sse: { emit: (t, d) => emit(t, d) } });
@@ -1459,6 +1548,11 @@ function _rebuildTrayMenu(mesh) {
     // directory orchestrator's real UI_ROOT never reached) is now a
     // real, servable page at this exact URL.
     { label: '⬡ BrainOS',            click: () => openAgentWindow({ agentId: 'brainos', url: 'http://127.0.0.1:9000/ui/brainos/' }) },
+    // §BUILT — James: "I want that exact ui... floating above, not
+    // hardcoded or inline." Same real openAgentWindow() mechanism, a
+    // separate real host page (ui/brainos-float/), not a mode flag on
+    // the full-page BrainOS app above.
+    { label: '⬢ BrainOS Float',      click: () => openAgentWindow({ agentId: 'brainos-float', url: 'http://127.0.0.1:9000/ui/brainos-float/' }) },
     { type: 'separator' },
     { label: 'NEXUS UI Audit',        click: () => emit('diag.nexus', { agentId: 'default' }) },
     { label: 'API Settings',          click: openSettingsWindow },

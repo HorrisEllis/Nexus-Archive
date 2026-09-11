@@ -87,6 +87,22 @@ components:
       Perplexity's real distinctive surface — citations, web grounding,
       research.
 
+  deepseek:
+    id: guardian-deepseek
+    name: "Guardian — DeepSeek"
+    file: userscript-deepseek.js
+    version: "1.0.0"
+    matches: ["https://chat.deepseek.com/*"]
+    grants: [GM_xmlhttpRequest, GM_getValue, GM_setValue]
+    standalone: true
+    composed_into: []
+    description: >
+      NCP v10 protocol parity with Claude/ChatGPT/Gemini/Perplexity, cloned
+      per reuse-before-build with DeepSeek's own real, externally-verified
+      selectors (#chat-input, .ds-markdown, .ds-button--primary proximity
+      search). Was previously ollama-bridge-only (local model dispatch);
+      this is the real, separate browser/NCP path, same as the other 4.
+
   memory:
     id: guardian-memory
     name: "NEXUS — Cortex Memory Observer"

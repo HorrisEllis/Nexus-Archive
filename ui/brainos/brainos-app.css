@@ -153,3 +153,18 @@ body {
 .empty-state { color:var(--text3); font-size:9px; font-family:var(--mono); padding:20px 0; text-align:center; }
 .bar-track { height:6px; background:var(--panel2); border-radius:3px; overflow:hidden; margin-top:3px; }
 .bar-fill { height:100%; transition:width .4s; }
+
+/* §BUILT — right-click node context menu (real actions only, see brainos-app.js) */
+.brainos-ctx-menu {
+  background: var(--panel); border: 1px solid var(--border3);
+  border-radius: 3px; min-width: 180px; padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5); font-size: 12px;
+}
+.brainos-ctx-menu-item {
+  padding: 6px 12px; color: var(--text); cursor: pointer; white-space: nowrap;
+}
+.brainos-ctx-menu-item:hover { background: var(--border); color: var(--idle); }
+
+/* §BUILT — Phase 2 real route/pipeline edges */
+.brainos-canvas-route-edge { stroke: var(--idle); stroke-width: 1.5; opacity: 0.7; }
+.brainos-canvas-route-feedback { stroke-dasharray: 3 3; }

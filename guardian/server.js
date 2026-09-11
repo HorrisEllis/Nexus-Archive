@@ -595,48 +595,6 @@ const ncp = createNCPServer({
   onDisconnect: ({ provider, tabId }) => {
     console.log(`[guardian] NCP disconnected: provider=${provider} tab=${tabId}`);
     bus.emit('guardian.provider.disconnected', { provider, tabId });
-
-    // §FIX 2026-09-11 — traced a real orphaned job from this: dispatched,
-    // acked, tab disconnected mid-generation, nothing here ever looked at
-    // `jobs` at all. In-flight statuses only — never touch a job that's
-    // already 'complete'/'error'/'interrupted'.
-    const INFLIGHT = new Set(['delivered', 'acked', 'streaming']);
-    let orphan = null;
-    for (const job of jobs.values()) {
-      if (job.provider === provider && job.tabId === tabId && INFLIGHT.has(job.status)) {
-        orphan = job; break;
-      }
-    }
-    // No exact tabId match (e.g. the tab died before its dispatch ack ever
-    // arrived) — fall back to the provider-wide best-effort match. Its own
-    // header in lib/jobs.js is explicit that this is a heuristic, not a
-    // guarantee; that's an acceptable trade here since doing nothing (the
-    // prior behavior) is strictly worse.
-    if (!orphan) {
-      const fallbackId = _findActiveJobForProvider(provider);
-      if (fallbackId) {
-        const fallbackJob = jobs.get(fallbackId);
-        if (fallbackJob && INFLIGHT.has(fallbackJob.status)) orphan = fallbackJob;
-      }
-    }
-    if (!orphan) return;
-
-    if (orphan.response && orphan.response.length > 0) {
-      // Real output already streamed in (see lib/ncp-handler.js's
-      // GUARDIAN_CHUNK fix) — keep it, don't guess-retry into a second,
-      // conflicting generation on top of it.
-      updateJob(orphan.id, { status: 'interrupted', interruptedAt: Date.now(),
-        interruptReason: `${provider} tab ${tabId} disconnected mid-generation` });
-      console.log(`[guardian] ${orphan.id} interrupted — ${provider} disconnected with ${orphan.response.length} chars already streamed, kept`);
-      bus.emit('guardian.job.interrupted', { jobId: orphan.id, provider, tabId, chars: orphan.response.length });
-    } else {
-      // Nothing generated yet — safe to requeue for redelivery, same
-      // 'dispatched'→'pending' honesty discipline _redispatchRecoveredJobs
-      // already applies at boot, just live now instead of only at startup.
-      updateJob(orphan.id, { status: 'pending' });
-      console.log(`[guardian] ${orphan.id} requeued — ${provider} tab ${tabId} disconnected before any output`);
-      dispatchJob(orphan);
-    }
   },
   busEmit: (type, data) => bus.emit(type, data),
 });

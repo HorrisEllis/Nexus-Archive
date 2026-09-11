@@ -97,6 +97,23 @@ const AGENT_REGISTRY = {
     respSel:  '.message-content',
     color:    '#f97316',
   },
+  // §BUILT — real chat.deepseek.com selectors, externally verified against
+  // 2+ independent, currently-maintained live community userscripts (not
+  // guessed): #chat-input (input), .ds-markdown (response). Send button has
+  // no stable selector of its own (hashed class, rotates per build) — this
+  // registry entry's sendSel is a best-effort proximity fallback; guardian's
+  // own userscript-deepseek.js does the real proximity search and is
+  // preferred whenever guardian covers this provider (route()'s own
+  // guardian-first dispatch already handles that ordering).
+  deepseek: {
+    id:       'deepseek',
+    name:     'DeepSeek',
+    url:      'https://chat.deepseek.com',
+    inputSel: '#chat-input',
+    sendSel:  '.ds-button--primary',
+    respSel:  '.ds-markdown',
+    color:    '#4d6bfe',
+  },
   grok: {
     id:       'grok',
     name:     'Grok',
@@ -107,6 +124,36 @@ const AGENT_REGISTRY = {
     color:    '#1da1f2',
   },
 };
+
+// ── Drain strategies (§BUILT — James: "the queue needs a drainer, loops it
+// back into the queue with escalating retry and diagnostic strategies each
+// loop") ─────────────────────────────────────────────────────────────────
+// Deliberately mirrors lib/seam/queue.js's real, already-proven escalation
+// vocabulary (STRATEGY_ORDER + per-strategy retry cap + final gap escalate,
+// §LAW II) rather than inventing a second, competing retry taxonomy
+// (§10.3 — competing truth layers are a system failure). The four tiers
+// below are new judgment calls for THIS domain (agent-mesh dispatch, not
+// SEAM's content-verification pipeline) — not an existing convention being
+// copied verbatim, since a stale browser context and a failed text
+// generation are different failure shapes needing different diagnostics:
+//   RETRY      — assume transient (network blip, slow DOM); just try again.
+//   RESPAWN    — assume stale tab/DOM state; force a clean spawn() before retrying.
+//   FALLBACK   — assume this agent is genuinely bad right now; force a
+//                different one via an explicit fallbackOrder.
+//   DIAGNOSTIC — last resort: full mesh snapshot attached for the eventual
+//                gap, fresh spawn AND forced fallback together.
+const DRAIN_STRATEGY = Object.freeze({
+  RETRY:      'retry',
+  RESPAWN:    'respawn',
+  FALLBACK:   'fallback',
+  DIAGNOSTIC: 'diagnostic',
+});
+const DRAIN_STRATEGY_ORDER = [DRAIN_STRATEGY.RETRY, DRAIN_STRATEGY.RESPAWN, DRAIN_STRATEGY.FALLBACK, DRAIN_STRATEGY.DIAGNOSTIC];
+const MAX_RETRIES_PER_DRAIN_STRATEGY = 2; // 4 strategies × 2 = 8 retries before escalation (9 total dispatches counting the first, un-retried attempt — same convention as lib/seam/queue.js's own retries counter)
+// Escalating backoff per strategy tier, ms — never re-inject a failed task
+// synchronously (that's exactly the tight-retry-loop risk flagged in this
+// session's own DOM-sync design discussion). Index matches DRAIN_STRATEGY_ORDER.
+const DRAIN_BACKOFF_MS = [1000, 3000, 8000, 15000];
 
 class AgentMesh {
   // §PHASE-3 2026-08-23 — CLEAR-GLASS-EXPANSION-PLAN-2026-08-23.md item 6:
@@ -135,6 +182,19 @@ class AgentMesh {
     this.processing = false;
     this._nodeStatusCache = new Map(); // instanceId -> last-seen status, for change detection
     this._nodePulseTimer  = null;
+    // §BUILT — Phase 2 real route graph (see route-graph.js's own header).
+    // Constructed lazily/defensively: enqueueFn binds `this.enqueue` so a
+    // fired route re-enters this same mesh's own real drain/retry machinery,
+    // not a second dispatch path.
+    const { RouteGraph } = require('./route-graph.js');
+    this._routeGraph = new RouteGraph({ enqueueFn: (task) => this.enqueue(task), busEmit: (t, d) => this.sse.emit(t, d) });
+    // §BUILT — Phase 4/automation, the one genuine gap docs/2026-09-11-
+    // brainos-external-concept-mapping.spec named: a real trigger/
+    // schedule-driven workflow engine. Same enqueueFn/busEmit wiring as
+    // route-graph above — one real dispatch path, not two.
+    const { AutomationEngine } = require('./automation-engine.js');
+    this._automation = new AutomationEngine({ enqueueFn: (task) => this.enqueue(task), busEmit: (t, d) => this.sse.emit(t, d) });
+    this._automation.start();
   }
 
   /**
@@ -489,6 +549,12 @@ class AgentMesh {
         responseSnippet: response?.slice(0, 200), erosUsed, ts: Date.now(),
       });
 
+      // §BUILT — Phase 2, real pipeline/feedback-loop trigger. Best-effort:
+      // a routing failure must never turn this already-successful task
+      // into a reported error (§1.2) — routeGraph.onAgentComplete never
+      // throws on its own (see that file), this is belt-and-suspenders.
+      try { this._routeGraph?.onAgentComplete(state.key, response); } catch (_) {}
+
       // Fire NEXUS hook if registered
       await this.seam?.dispatch('mesh.response', {
         taskId, agentKey: state.key, contextId: state.contextId, response,
@@ -758,29 +824,227 @@ class AgentMesh {
 
   // ── Queue management ──────────────────────────────────────────────────
   enqueue(task) {
-    const queuedTask = { ...task, queuedAt: Date.now(), taskId: uuidv4() };
+    const queuedTask = {
+      ...task, queuedAt: Date.now(), taskId: uuidv4(),
+      // §BUILT — drain state, real from creation, not bolted on at first
+      // failure — so a task's retry history is always complete, not
+      // missing its own origin.
+      retries: 0, strategyIdx: 0, strategyRetries: 0,
+      failureLog: [], triedAgents: [],
+    };
     this.queue.push(queuedTask);
     this.sse.emit('mesh.queue.add', { taskId: queuedTask.taskId, depth: this.queue.length, ts: Date.now() });
-    this._processQueue();
+    this._drainQueue();
     return { taskId: queuedTask.taskId, position: this.queue.length };
   }
 
-  async _processQueue() {
+  /**
+   * _drainQueue() — the real drain loop. James: "the queue needs a
+   * drainer, loops it back into the queue with escalating retry and
+   * diagnostic strategies each loop." A failed task is never just
+   * dropped (the real, confirmed gap this replaces: the old
+   * _processQueue caught route()'s error, emitted mesh.queue.error, and
+   * moved on — the task's own work was gone for good on the very first
+   * failure). Renamed from _processQueue for the same reason loom
+   * registration insists on real names matching real behavior — this
+   * loop now does meaningfully more than "process," it drains with
+   * retry built in.
+   */
+  async _drainQueue() {
     if (this.processing || !this.queue.length) return;
     this.processing = true;
 
     while (this.queue.length) {
       const task = this.queue.shift();
-      this.sse.emit('mesh.queue.processing', { taskId: task.taskId, remaining: this.queue.length, ts: Date.now() });
+      this.sse.emit('mesh.queue.processing', {
+        taskId: task.taskId, remaining: this.queue.length,
+        attempt: task.retries + 1, strategy: DRAIN_STRATEGY_ORDER[task.strategyIdx],
+        ts: Date.now(),
+      });
 
       try {
-        await this.route(task);
+        const result = await this.route(task);
+        this.sse.emit('mesh.queue.complete', { taskId: task.taskId, attempts: task.retries + 1, ts: Date.now() });
+        void result; // route()'s own real result already went to whoever called route() directly; enqueue() is fire-and-forget by design (no per-task result channel exists yet — a real gap, not silently pretended away)
       } catch (err) {
-        this.sse.emit('mesh.queue.error', { taskId: task.taskId, error: err.message, ts: Date.now() });
+        // §1.2 — a failed task is never silently dropped; _handleTaskFailure
+        // owns the real decision (retry / escalate) and its own real
+        // requeue path, so this loop stays a plain drain, not the policy.
+        this._handleTaskFailure(task, err);
       }
     }
 
     this.processing = false;
+  }
+
+  /**
+   * _handleTaskFailure(task, err) — real escalating-retry decision point.
+   * §LAW II-equivalent for this process (clear-glass has no in-process
+   * jaa — it's a separate Electron process from cortex/guardian, same
+   * real boundary _raidDecide already crosses over HTTP — so escalation
+   * writes the gap via cortex's real POST /api/gaps instead of a direct
+   * jaa.insert; everything else about the decision is in-process and
+   * synchronous).
+   */
+  _handleTaskFailure(task, err) {
+    task.failureLog.push({ attempt: task.retries + 1, strategy: DRAIN_STRATEGY_ORDER[task.strategyIdx], error: err.message, ts: Date.now() });
+    task.retries++;
+    task.strategyRetries++;
+
+    this.sse.emit('mesh.queue.error', {
+      taskId: task.taskId, error: err.message, attempt: task.retries,
+      strategy: DRAIN_STRATEGY_ORDER[task.strategyIdx], ts: Date.now(),
+    });
+
+    if (task.strategyRetries >= MAX_RETRIES_PER_DRAIN_STRATEGY) {
+      task.strategyIdx++;
+      task.strategyRetries = 0;
+    }
+
+    if (task.strategyIdx >= DRAIN_STRATEGY_ORDER.length) {
+      this._escalateTask(task, err);
+      return;
+    }
+
+    const strategy = DRAIN_STRATEGY_ORDER[task.strategyIdx];
+    const backoffMs = DRAIN_BACKOFF_MS[task.strategyIdx] ?? DRAIN_BACKOFF_MS[DRAIN_BACKOFF_MS.length - 1];
+
+    // Diagnostic side effect happens now, BEFORE the delayed requeue —
+    // e.g. RESPAWN needs the stale agent state gone before the next
+    // route() call can possibly find it again.
+    this._applyDiagnostic(strategy, task);
+
+    this.sse.emit('mesh.queue.retry', {
+      taskId: task.taskId, strategy, attempt: task.retries,
+      backoffMs, ts: Date.now(),
+    });
+
+    // §BUILT — never re-inject synchronously. An immediate retry on a
+    // still-broken agent just re-fails in the same synchronous while()
+    // pass and burns through strategy tiers with zero real diagnostic
+    // value in between — the same "no delay between retransmits" trap
+    // this session already flagged for DOM Sync. setTimeout also means
+    // this task genuinely leaves the current drain pass; _drainQueue's
+    // own `processing` guard makes calling it again always safe, whether
+    // the loop is still running (queue not yet empty) or already exited.
+    setTimeout(() => {
+      this.queue.push(task);
+      this.sse.emit('mesh.queue.requeued', { taskId: task.taskId, depth: this.queue.length, strategy, ts: Date.now() });
+      this._drainQueue();
+    }, backoffMs);
+  }
+
+  /**
+   * _applyDiagnostic(strategy, task) — the real per-tier action, applied
+   * once per escalation, not per attempt within a tier (so two RESPAWN
+   * attempts in a row don't each wipe state the first one already fixed).
+   * Mutates task in place (fallbackOrder, preferAgent) so the next
+   * route() call picks it up naturally — no separate side-channel needed.
+   */
+  _applyDiagnostic(strategy, task) {
+    if (task.triedAgents.length === 0 && (task.preferAgent || task.agentKey)) {
+      task.triedAgents.push(task.preferAgent || task.agentKey);
+    }
+
+    if (strategy === DRAIN_STRATEGY.RETRY) {
+      return; // no side effect — a plain re-attempt is the diagnostic
+    }
+
+    if (strategy === DRAIN_STRATEGY.RESPAWN || strategy === DRAIN_STRATEGY.DIAGNOSTIC) {
+      // Force every real, tracked context for this task's agent(s) out of
+      // this.agents so route()'s own real "spawn fresh if none healthy"
+      // branch (agent-mesh.js's route()) has nothing stale left to find —
+      // reuses that existing branch rather than duplicating spawn logic here.
+      const targets = task.triedAgents.length ? task.triedAgents : Object.keys(AGENT_REGISTRY);
+      for (const [key, state] of this.agents) {
+        if (targets.includes(state.key)) this.agents.delete(key);
+      }
+      this.sse.emit('mesh.queue.diagnostic.respawn', { taskId: task.taskId, targets, ts: Date.now() });
+    }
+
+    if (strategy === DRAIN_STRATEGY.FALLBACK || strategy === DRAIN_STRATEGY.DIAGNOSTIC) {
+      // Force a real, different agent order, excluding whatever has
+      // already failed this task so far — route()'s own explicit-order
+      // param wins over its preferAgent/RAID inference (see route()'s
+      // own comment on that precedence), so this genuinely changes which
+      // agent gets tried next rather than re-deriving the same one.
+      const remaining = Object.keys(AGENT_REGISTRY).filter(k => !task.triedAgents.includes(k));
+      task.fallbackOrder = remaining.length ? remaining : Object.keys(AGENT_REGISTRY);
+      this.sse.emit('mesh.queue.diagnostic.fallback', { taskId: task.taskId, order: task.fallbackOrder, ts: Date.now() });
+    }
+
+    if (strategy === DRAIN_STRATEGY.DIAGNOSTIC) {
+      // Last-resort forensic snapshot — attached to the task now so it
+      // rides along into the gap report if this final tier still fails,
+      // instead of being re-derived (possibly differently) at escalation time.
+      task.diagnosticSnapshot = {
+        agents: this.listAgents(), queueDepthAtFailure: this.queue.length,
+        triedAgents: [...task.triedAgents], ts: Date.now(),
+      };
+      this.sse.emit('mesh.queue.diagnostic.snapshot', { taskId: task.taskId, ts: Date.now() });
+    }
+  }
+
+  /**
+   * _escalateTask(task, err) — every drain strategy exhausted (8 real
+   * attempts across 4 tiers). §0.3 / §1.2 — this is never a silent drop:
+   * a real gap row lands in cortex, same real table (POST /api/gaps →
+   * jaaDB.insert('gaps', ...), cortex/boot.js) every other subsystem's
+   * escalation uses, field names matching the canonical schema
+   * (lib/node-schemas/gap.schema: body/source/domain/severity) rather
+   * than lib/seam/queue.js's own slightly-drifted description/score
+   * shape — new code should match the schema of record, not propagate
+   * an existing drift.
+   */
+  _escalateTask(task, err) {
+    this.sse.emit('mesh.queue.escalated', {
+      taskId: task.taskId, attempts: task.retries,
+      triedAgents: task.triedAgents, error: err.message, ts: Date.now(),
+    });
+
+    this._reportGap({
+      type:     'mesh_task_escalated',
+      domain:   'agent-mesh',
+      source:   'agent-mesh-drainer',
+      severity: 'high',
+      body:     `Mesh task ${task.taskId} escalated after ${task.retries} attempts across all drain strategies (tried: ${task.triedAgents.join(', ') || 'none'}): ${err.message}`,
+      dedup_key: `agent-mesh::mesh_task_escalated::${task.agentKey || task.preferAgent || 'unrouted'}`,
+      resourceState: { taskId: task.taskId, prompt: (task.prompt || '').slice(0, 500), failureLog: task.failureLog, diagnosticSnapshot: task.diagnosticSnapshot || null },
+    }).catch((reportErr) => {
+      // §1.2 — a failed gap report must never be the silent end of the
+      // trail; if cortex itself is unreachable, at minimum this is real,
+      // visible on the SSE bus even though nothing persisted.
+      this.sse.emit('mesh.queue.escalation_report_failed', { taskId: task.taskId, error: reportErr.message, ts: Date.now() });
+    });
+  }
+
+  /**
+   * _reportGap(fields) — real POST to cortex's /api/gaps, same host/port
+   * convention as _raidDecide above (127.0.0.1:NEXUS_PORT, same 1200ms-
+   * class timeout discipline) since clear-glass has no in-process jaa to
+   * write to directly — this IS the real cross-process boundary, not a
+   * new one invented for this feature.
+   */
+  _reportGap(fields) {
+    return new Promise((resolve, reject) => {
+      const http = require('http');
+      const data = Buffer.from(JSON.stringify(fields));
+      const req = http.request({
+        hostname: '127.0.0.1', port: parseInt(process.env.NEXUS_PORT || '3748', 10),
+        path: '/api/gaps', method: 'POST', timeout: 2000,
+        headers: { 'Content-Type': 'application/json', 'Content-Length': data.length },
+      }, (res) => {
+        let body = '';
+        res.on('data', (c) => body += c);
+        res.on('end', () => {
+          try { resolve(JSON.parse(body)); } catch (e) { reject(new Error(`cortex /api/gaps returned an unparseable body: ${e.message}`)); }
+        });
+      });
+      req.on('error', (e) => reject(new Error(`cortex unreachable on :${process.env.NEXUS_PORT || '3748'}: ${e.code || e.message}`)));
+      req.on('timeout', () => { req.destroy(); reject(new Error('cortex /api/gaps timed out')); });
+      req.write(data);
+      req.end();
+    });
   }
 
   // §REMOVED 2026-08-30 — _waitForResponse (navigate/click/type/poll,
@@ -828,6 +1092,19 @@ class AgentMesh {
 
   getRegistry() { return Object.values(AGENT_REGISTRY); }
   getQueueDepth() { return this.queue.length; }
+  // §BUILT — Phase 2 real route-graph accessors, thin pass-through so HTTP
+  // callers (clear-glass/src/main/index.js) never reach into this._routeGraph directly.
+  listRoutes() { return this._routeGraph.list(); }
+  addRoute(edge) { return this._routeGraph.add(edge); }
+  removeRoute(id) { return this._routeGraph.remove(id); }
+  // §BUILT — automation accessors, same thin pass-through convention.
+  listWorkflows() { return this._automation.list(); }
+  getWorkflow(id) { return this._automation.get(id); }
+  createWorkflow(fields) { return this._automation.create(fields); }
+  updateWorkflow(id, patch) { return this._automation.update(id, patch); }
+  removeWorkflow(id) { return this._automation.remove(id); }
+  runWorkflow(id, reason) { return this._automation.run(id, reason); }
+  getAutomationLog(limit) { return this._automation.getLog(limit); }
 }
 
 module.exports = AgentMesh;

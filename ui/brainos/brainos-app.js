@@ -95,6 +95,78 @@
     setRTab('node');
   });
 
+  // §BUILT — James: "right click nodes, with a context menu, ... deploying
+  // nodes on the canvas spawn agents." Every action below calls a real,
+  // already-existing endpoint or function — nothing here is a stub action
+  // waiting for a backend (§1.1). Only offered for kind:'agent' nodes
+  // (spawn/dispatch are agent-mesh concepts); a kind:'node' (pulse-
+  // registry) entry still gets "View detail", never a spawn/dispatch
+  // action that has no real target for it.
+  let _ctxMenuEl = null;
+  function _closeContextMenu() {
+    if (_ctxMenuEl) { _ctxMenuEl.remove(); _ctxMenuEl = null; }
+    document.removeEventListener('click', _closeContextMenu);
+  }
+  function _openContextMenu(node, ev) {
+    _closeContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'brainos-ctx-menu';
+    menu.style.cssText = `position:fixed; left:${ev.clientX}px; top:${ev.clientY}px; z-index:9999;`;
+    const items = [
+      { label: `View detail`, run: () => { _selectedNode = node; renderNodeDetail(node); setRTab('node'); } },
+    ];
+    if (node.kind === 'agent') {
+      const agentKey = node.meta?.key || node.label;
+      items.push(
+        { label: `Spawn / respawn ${_escapeHtml(agentKey)}`, run: () => {
+            fetch(CLEARGLASS_URL + '/agent-mesh/spawn', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ agentKey }),
+            }).then((r) => r.json()).then((d) => log(d.ok ? `spawned ${agentKey} (${d.contextId})` : `spawn failed: ${d.error}`))
+              .catch((e) => log(`spawn failed: ${e.message}`));
+          } },
+        { label: `Dispatch prompt to ${_escapeHtml(agentKey)}…`, run: () => {
+            const prompt = window.prompt(`Prompt for ${agentKey}:`);
+            if (!prompt) return;
+            fetch(CLEARGLASS_URL + '/agent-mesh/route', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt, preferAgent: agentKey }),
+            }).then((r) => r.json()).then((d) => log(d.ok ? `${agentKey} → ${(d.text || d.response || '').slice(0, 200)}` : `dispatch failed: ${d.error}`))
+              .catch((e) => log(`dispatch failed: ${e.message}`));
+          } },
+      );
+    }
+    for (const it of items) {
+      const row = document.createElement('div');
+      row.className = 'brainos-ctx-menu-item';
+      row.textContent = it.label;
+      row.addEventListener('click', () => { it.run(); _closeContextMenu(); });
+      menu.appendChild(row);
+    }
+    document.body.appendChild(menu);
+    _ctxMenuEl = menu;
+    // Close on the next real click anywhere else — deferred one tick so
+    // the same contextmenu event that opened this doesn't also close it.
+    setTimeout(() => document.addEventListener('click', _closeContextMenu), 0);
+  }
+  window.BrainOSCanvas.onNodeContextMenu(_openContextMenu);
+
+  // §BUILT — Phase 2: drag-to-connect creates a real, persisted route.
+  window.BrainOSCanvas.onNodeConnect((fromId, toId) => {
+    fetch(CLEARGLASS_URL + '/agent-mesh/routes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: fromId, to: toId }),
+    }).then((r) => r.json()).then((d) => {
+      if (d.ok) {
+        log(`route added: ${fromId} → ${toId}`);
+        fetch(CLEARGLASS_URL + '/agent-mesh/routes').then((r) => r.json())
+          .then((rd) => { if (rd.ok) window.BrainOSCanvas.renderRoutes(rd.routes); });
+      } else {
+        log(`route failed: ${d.error}`);
+      }
+    }).catch((e) => log(`route failed: ${e.message}`));
+  });
+
   // Real, one-time initial fetch — same real endpoint built earlier this
   // session — gives the canvas AND the sidebar their actual current state
   // before the first live SSE tick.
@@ -108,6 +180,14 @@
       }
     })
     .catch((e) => log(`mesh view fetch failed: ${e.message}`));
+
+  // Real, one-time initial fetch of persisted routes (Phase 2) — same
+  // reasoning as the mesh-view fetch above: gives the canvas its actual
+  // current edges before anything is dragged this session.
+  fetch(CLEARGLASS_URL + '/agent-mesh/routes')
+    .then((r) => r.json())
+    .then((data) => { if (data?.ok) window.BrainOSCanvas.renderRoutes(data.routes); })
+    .catch((e) => log(`routes fetch failed: ${e.message}`));
 
   // Real SSE — guardian's own stream (every real guardian bus.emit()).
   try {

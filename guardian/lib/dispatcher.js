@@ -117,12 +117,19 @@ function createDispatcher(deps) {
       return true;
     }
 
-    // §RECONCILED 2026-09-02 — same-day deepseek addition in server.js,
-    // added here so wiring this module in doesn't regress it (see
-    // provider-routing.js's header for the same note).
-    if (job.provider === 'deepseek') {
+    // §BUILT — James: "deepseek as a ncp provider." §RECONCILED 2026-09-02's
+    // original branch always routed to ollama-bridge unconditionally, which
+    // meant a real, connected chat.deepseek.com NCP tab (userscript-
+    // deepseek.js, now real) could never be reached — this intercepted
+    // every deepseek job before the generic NCP path below ever saw it.
+    // Fixed with the same guardian-first-else-fallback precedent already
+    // proven in clear-glass/src/mesh/agent-mesh.js's route() (DA1): a real,
+    // connected browser tab wins; only fall back to the local ollama model
+    // when no tab is connected — never removed, still a real, legitimate
+    // option, just no longer unconditionally shadowing the browser path.
+    if (job.provider === 'deepseek' && !ncp.isConnected('deepseek')) {
       updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
-      console.log('[guardian] deepseek job → ollama-bridge :3749');
+      console.log('[guardian] deepseek job → ollama-bridge :3749 (no NCP tab connected)');
       dispatchToDeepseek(job).catch(e => {
         updateJob(job.id, { status: 'error', error: e.message });
         bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: 'deepseek' });
