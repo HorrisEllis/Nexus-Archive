@@ -71,10 +71,12 @@ function setCausalGraph(graph) { _cfrGraph = graph; }
 // provider=guardian-claude. 'guardian-claude' is a healthSnap lookup key,
 // never a valid dispatch target.
 const HEALTH_KEY = {
-  claude:  'guardian-claude',
-  chatgpt: 'guardian-chatgpt',
-  gemini:  'guardian-gemini',
-  ollama:  'ollama',
+  claude:     'guardian-claude',
+  chatgpt:    'guardian-chatgpt',
+  gemini:     'guardian-gemini',
+  perplexity: 'guardian-perplexity',
+  deepseek:   'guardian-deepseek',
+  ollama:     'ollama',
 };
 
 // ── _cluster — deterministic, zero-LLM intent bucketing ──────────────────────
@@ -210,7 +212,12 @@ function _decide(call, health, weights) {
   // person's stated preference and this function's own already-declared
   // law, not just the label. gemini added — was completely absent before,
   // confirmed by reading this array directly, not assumed present.
-  const chain = ['ollama', 'chatgpt', 'gemini', 'claude'];
+  // §NEW 2026-09-11 — James: "also deepseek... get raid solid, enterprise
+  // grade." perplexity/deepseek added at the END — real, available
+  // fallback candidates, but James never stated a preference for either
+  // relative to the four above, so they're not assumed to outrank an
+  // explicit, stated preference; last means "considered, not favored."
+  const chain = ['ollama', 'chatgpt', 'gemini', 'claude', 'perplexity', 'deepseek'];
   const survivors = chain.filter(name => _agentAvailable(name, health, { tightened }));
 
   if (survivors.length === 1) {
@@ -238,6 +245,8 @@ const _health = {
   'guardian-claude':  { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
   'guardian-chatgpt': { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
   'guardian-gemini':  { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
+  'guardian-perplexity': { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
+  'guardian-deepseek':   { online: false, consecutiveFails: 0, callCount: 0, successRate: 1 },
 };
 
 function _httpGetJson(url, timeoutMs = 2000) {
@@ -267,7 +276,23 @@ async function _pollHealth() {
 
   const gd = await _httpGetJson(`${GD_URL}/health`);
   const providers = gd?.connectedProviders || {};
-  for (const name of ['claude', 'chatgpt']) {
+  // §FIX 2026-09-11 — James: "get raid solid. enterprise grade." Real,
+  // severe bug found while adding deepseek: this loop only ever polled
+  // ['claude','chatgpt'] — gemini was in HEALTH_KEY/_health but its real
+  // online flag was NEVER updated after boot, permanently stuck at the
+  // honest-but-wrong default (false), regardless of whether it was
+  // actually connected. _agentAvailable() requires online===true, so
+  // RAID could never have dispatched to gemini at all, silently, the
+  // entire time this bug existed. Confirmed guardian's own real
+  // /health response is NOT the problem — connectedProviders is built
+  // dynamically from live NCP connections (guardian/server.js:1708-10),
+  // already includes whichever providers are genuinely connected. Fixed
+  // by iterating every real guardian-backed entry in HEALTH_KEY instead
+  // of a manually-maintained, silently-stale list — adding a new agent
+  // to HEALTH_KEY now automatically polls it too; this exact bug class
+  // cannot recur.
+  for (const name of Object.keys(HEALTH_KEY)) {
+    if (name === 'ollama') continue; // ollama has its own real poll above, not guardian-backed
     const key = HEALTH_KEY[name];
     const online = !!providers[name];
     _health[key].online = online;

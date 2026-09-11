@@ -272,18 +272,24 @@ function _emitFrictionChange(faultClass, result, meta = {}) {
 // ── Exported for Phase 3 (self-heal ladder) to call after each attempt ─────────
 // §3.4 — raw code, callable and tested independently of any bus or interface.
 function recordAttemptOutcome(faultClass, level, succeeded, meta = {}) {
+  let result;
   if (succeeded) {
-    const result = faultTaxonomy.recordSuccess(faultClass);
+    result = faultTaxonomy.recordSuccess(faultClass);
     if (_bus && result) {
       _bus.emit('escalation.friction.increased', {
         faultClass, newFric: result.friction, band: result.band,
         cause: 'attempt_succeeded', ...meta,
       });
     }
-    return result;
+  } else {
+    result = faultTaxonomy.raiseFriction(faultClass, level, meta);
+    _emitFrictionChange(faultClass, result, { cause: 'attempt_failed', level, ...meta });
   }
-  const result = faultTaxonomy.raiseFriction(faultClass, level, meta);
-  _emitFrictionChange(faultClass, result, { cause: 'attempt_failed', level, ...meta });
+  // §FIXED 2026-09-11 — after raiseFriction/recordSuccess, so the row is
+  // guaranteed to exist (recordAttempt() is a no-op against a missing row,
+  // and on a brand-new fault class's very first attempt there is no row
+  // until the call above creates one). See fault-taxonomy.js row-shape note.
+  faultTaxonomy.recordAttempt(faultClass);
   return result;
 }
 

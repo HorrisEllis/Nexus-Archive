@@ -129,5 +129,24 @@ test('T-012', 'GAP_TYPE_TO_FAULT_CLASS is exported and real — a mapped gap typ
   assert.ok(ft.KNOWN_FAULT_CLASSES.includes(ft.GAP_TYPE_TO_FAULT_CLASS['kernel_circuit_open']), 'the mapped target must itself be a real, known fault class');
 });
 
+// ── §BUILT 2026-09-11 — recordAttempt(), the missing half escalation.js's
+//    recordAttemptOutcome() needs to call after raiseFriction/recordSuccess
+//    so the row is guaranteed to exist by then ─────────────────────────────
+test('T-013', 'recordAttempt bumps a real, separate attempts field on an existing row, distinct from count', () => {
+  reset();
+  ft.raiseFriction('timeout', 1); // creates the row, count:1
+  const r1 = ft.recordAttempt('timeout');
+  assert.strictEqual(r1.attempts, 1);
+  const r2 = ft.recordAttempt('timeout');
+  assert.strictEqual(r2.attempts, 2, 'must accumulate, not reset each call');
+  assert.strictEqual(r2.count, 1, 'must never touch raiseFriction\'s own count field');
+});
+
+test('T-014', 'recordAttempt is a real no-op (not a throw) against a fault class with no row yet', () => {
+  reset();
+  assert.doesNotThrow(() => ft.recordAttempt('never_seen_fault_class'));
+  assert.strictEqual(ft.recordAttempt('never_seen_fault_class'), null, 'honest null — no row to fabricate one for');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
