@@ -403,6 +403,17 @@ const FILES = [
   ['ollama/lib/command-index.js', 'nexus.ollama.command-index', 'ollama/lib', []],
   ['guardian/lib/command-index-extract.js', 'nexus.guardian.command-index', 'guardian/lib', []],
   ['bridge/lib/command-index-extract.js', 'nexus.bridge.command-index', 'bridge/lib', []],
+
+  // §RAID-AGENT-NODES 2026-09-11 — James: "populate real .agent node
+  // instances from RAID's live health data... also deepseek... get
+  // raid solid. enterprise grade." Same family as generate-tool-nodes.js
+  // (lib/agent-tools/, exports {generate,checkDrift,startDriftListener},
+  // not a tool-registry file — see the run-closed-loop.js note above for
+  // why tool-shaped files register in lib/agent-tools/index.js instead
+  // and don't belong here). Depends on lib/node-export.js (exportToFile)
+  // and cortex/core/raid/index.js (its real _health/HEALTH_KEY source).
+  ['lib/agent-tools/generate-agent-nodes.js', 'nexus.lib.agent-tools.generate-agent-nodes', 'lib/agent-tools',
+    ['nexus.lib.node-export']],
 ];
 function mapSession20260814(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

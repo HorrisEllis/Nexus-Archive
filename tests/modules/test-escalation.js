@@ -12,6 +12,7 @@ function test(id, desc, fn) {
 let _rows = {};
 let _raiseCalls = [];
 let _successCalls = [];
+let _attemptCalls = [];
 require.cache[require.resolve('../../cortex/self-heal/fault-taxonomy')] = {
   id: '../self-heal/fault-taxonomy', filename: '../self-heal/fault-taxonomy', loaded: true,
   exports: {
@@ -33,6 +34,17 @@ require.cache[require.resolve('../../cortex/self-heal/fault-taxonomy')] = {
       if (!_rows[fc]) return null;
       _rows[fc].friction = Math.max(0, _rows[fc].friction * 0.5);
       return { friction: _rows[fc].friction, band: 'NOMINAL' };
+    },
+    // §BUILT 2026-09-11 — mirrors the real fault-taxonomy.js addition:
+    // no-op (not a throw) against a missing row, real bump against an
+    // existing one. This mock had gone stale the same way the real
+    // module's callers went stale before it was added — escalation.js's
+    // real recordAttemptOutcome() now calls this unconditionally.
+    recordAttempt: (fc) => {
+      _attemptCalls.push(fc);
+      if (!_rows[fc]) return null;
+      _rows[fc].attempts = (_rows[fc].attempts || 0) + 1;
+      return _rows[fc];
     },
   },
 };
