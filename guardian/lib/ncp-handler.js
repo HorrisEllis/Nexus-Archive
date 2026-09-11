@@ -153,7 +153,19 @@ function createNCPMessageHandler(deps) {
       case 'NCP_CHUNK': {
         if (jobId && text) {
           const full = msg.full || null;
-          updateJob(jobId, { status: 'streaming', lastChunk: Date.now() });
+          // §FIX 2026-09-11 — this used to only set status/lastChunk; the
+          // accumulating text itself never touched the job record, only
+          // cortex's separate (batched, lossy-by-design) stream events. A
+          // tab disconnect mid-generation left the job with zero real
+          // output even though most of the response had already streamed
+          // through this exact handler seconds earlier. `full` is the
+          // authoritative running total the userscript already tracks
+          // (see userscript-chatgpt.js's checkStable — `full:text`); fall
+          // back to appending `text` only if a caller ever sends deltas
+          // without it.
+          const priorJob = jobs.get(jobId);
+          const runningText = full != null ? full : ((priorJob?.response || '') + text);
+          updateJob(jobId, { status: 'streaming', lastChunk: Date.now(), response: runningText });
           bus.emit('guardian.job.chunk', { jobId, text, full, provider });
           cockpitBroadcast({ type: 'job.chunk', jobId, text, full, provider, ts: Date.now() });
 
@@ -689,7 +701,11 @@ function createNCPMessageHandler(deps) {
         // costly AI generation just to confirm NCP connectivity.
         const _ackJob = jobs.get(jobId);
         if (_ackJob && _ackJob.status !== 'complete' && _ackJob.status !== 'error') {
-          updateJob(jobId, { status: 'acked', ackedAt: Date.now() });
+          // §FIX 2026-09-11 — tabId is already destructured from every NCP
+          // message at the top of this handler; recording it here gives
+          // server.js's onDisconnect an exact match instead of the
+          // provider-wide best guess.
+          updateJob(jobId, { status: 'acked', ackedAt: Date.now(), tabId: tabId || _ackJob.tabId || null });
         }
         console.log(`[guardian] job.dispatched ack from ${provider}: ${jobId}`);
         break;

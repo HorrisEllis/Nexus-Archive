@@ -1114,7 +1114,7 @@ function connect() {
       });
     }
     if (_hb) clearInterval(_hb);
-    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
+    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed, jobActive:jobActive, jobId:currentJobId }), HB_MS);
     autoClaimIfFree();
     replayPending();
     setTimeout(() => sendDOMMap(), 2000);

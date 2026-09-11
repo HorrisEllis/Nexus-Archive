@@ -70,7 +70,23 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   // is a real, sane multiple that tolerates network jitter without
   // false-evicting a genuinely healthy connection.
   const STALE_MS = 30_000;
-  function _isStale(client) { return (Date.now() - client.lastHeartbeat) > STALE_MS; }
+  // §FIX 2026-09-11 — traced a real false-positive kill: job dispatched to a
+  // hidden, pre-warmed provider tab (ClearGlass pre-warms all provider tabs
+  // hidden — see providers/host.js), disconnected by this module's own stale
+  // sweep 27s later, mid-generation. Chromium throttles setInterval heavily in
+  // hidden/backgrounded tabs (worse under the memory pressure the same boot
+  // log was already flagging), so a real, healthy heartbeat can land past
+  // STALE_MS without the tab or the job actually being dead. A tab with an
+  // active job gets a longer grace window instead of the bare 30s — this
+  // does not remove the sweep (a tab can still genuinely die), it just stops
+  // guardian's own watchdog from being the thing that kills a tab that was
+  // still working. See lib/ncp-handler.js's GUARDIAN_HEARTBEAT handling for
+  // where client.jobActive gets set from the userscript's own heartbeat.
+  const STALE_MS_BUSY = STALE_MS * 4; // 120s
+  function _isStale(client) {
+    const limit = client.jobActive ? STALE_MS_BUSY : STALE_MS;
+    return (Date.now() - client.lastHeartbeat) > limit;
+  }
 
   // §1.2 — SSE write helper. try/catch: never crash on broken pipe.
   // §FIXED 2026-09-06 — James, live: "when switching agents to chatgpt,
@@ -283,7 +299,7 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     if (res.headersSent) return true;
     readBody(req).then(body => {
       if (res.headersSent) return;
-      const { provider, tabId, ts, usage, chatId, claimed } = body;
+      const { provider, tabId, ts, usage, chatId, claimed, jobActive, jobId } = body;
       const key = `${provider}:${tabId}`;
       const client = _clients.get(key);
       if (client) {
@@ -291,6 +307,10 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
         if (usage) client.usage = usage; // §US-GAP-01 — last-known usage/quota-limit state from the userscript
         if (chatId !== undefined) client.chatId = chatId;
         if (claimed !== undefined) client.claimed = claimed;
+        // §FIX 2026-09-11 — see _isStale's own comment: a busy tab gets a
+        // longer stale grace period instead of the bare 30s.
+        client.jobActive = !!jobActive;
+        client.jobId = jobId || null;
       }
 
       res.writeHead(200, {
@@ -459,9 +479,11 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     const key = `${provider}:${tabId}`;
     const client = _clients.get(key);
     if (!client) return false;
-    if (fields.claimed  !== undefined) client.claimed  = fields.claimed;
-    if (fields.chatId   !== undefined) client.chatId   = fields.chatId;
-    if (fields.usage    !== undefined) client.usage    = fields.usage;
+    if (fields.claimed   !== undefined) client.claimed   = fields.claimed;
+    if (fields.chatId    !== undefined) client.chatId    = fields.chatId;
+    if (fields.usage     !== undefined) client.usage     = fields.usage;
+    if (fields.jobActive !== undefined) client.jobActive = fields.jobActive;
+    if (fields.jobId     !== undefined) client.jobId     = fields.jobId;
     return true;
   }
 
