@@ -14,7 +14,7 @@
 //   here, not magic numbers at a call site.
 //
 // Row shape (confirmed against every existing reader):
-//   { uuid, faultClass, friction, ts, count, lastSeen, precursors, examples, successRate, attempts }
+//   { uuid, faultClass, friction, ts, count, lastSeen, precursors, examples, successRate }
 
 const { jaaDB, uid } = require('../memory/jaa-db');
 
@@ -119,28 +119,6 @@ function recordSuccess(faultClass, decayFactor = 0.5) {
   return { ...existing, ...values, band: bandFor(newFriction) };
 }
 
-// §BUILT 2026-09-11 — James: "get raid solid, enterprise grade." Real gap
-// found wiring escalation.js's recordAttemptOutcome(): `count` above is
-// raiseFriction's own occurrence counter — it's only ever bumped on a
-// FAILED attempt (recordSuccess doesn't touch it), so it was never a true
-// total-attempts tally despite successRate's own math treating it like
-// one. `attempts` is a separate, honest field: bumped once per real call
-// to recordAttemptOutcome, success or failure, after that call's own
-// raiseFriction()/recordSuccess() has already run (so a row exists for
-// any fault class that has ever failed at least once). No-op — not an
-// error — against a missing row: a fault class whose very first real
-// attempt succeeds has no row yet (recordSuccess() itself returns null
-// rather than fabricating one, same honesty rule as the rest of this
-// file), and recordAttempt() is only ever called after a row-creating
-// call, never before one.
-function recordAttempt(faultClass) {
-  const existing = getFaultClass(faultClass);
-  if (!existing) return null;
-  const values = { attempts: (existing.attempts || 0) + 1, ts: Date.now() };
-  jaaDB.update(TABLE, { faultClass }, values);
-  return { ...existing, ...values };
-}
-
 // §R7 2026-08-12 — the function service/nexus-diagnostic.js's /tension
 // route has always tried to call and never found (it required a directory,
 // cortex/healer, that never existed — cortex/self-heal is the real one, and
@@ -194,6 +172,5 @@ module.exports = {
   getFaultClass,
   raiseFriction,
   recordSuccess,
-  recordAttempt,
   scoreTension,
 };

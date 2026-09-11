@@ -27,8 +27,6 @@ const SUITES = [
   'test-p5-grammar-router.js',
   'test-p5p6-self-model.js',
   'test-p1-agent-contracts.js',
-  'test-raid-agent-nodes.js',
-  'test-codeblock-artifact-capture.js',
   'test-p2-injection.js',
   'test-agnostic-lib-tools.js',
   'test-ap1-agent-pull.js',

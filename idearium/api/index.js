@@ -164,7 +164,7 @@ setTimeout(() => { getWarpChunkDispatch().catch(() => {}); }, 100);  // pre-warm
 import { RepoLayer } from '../repo/index.js';
 import { compileIdeariumSpec } from '../compiler-bridge.js';
 import { extractModulesViaGuardian } from '../spec-engine/guardian-extract.js';
-import { fileURLToPath as _fileURLToPath, pathToFileURL as _pathToFileURL } from 'url';
+import { fileURLToPath as _fileURLToPath } from 'url';
 
 // §BUG CAUGHT 2026-07-15 — the legacy spec.build route (below) reads
 // `os.dataDir`, but IdeaOS (idearium/index.js) never sets `this.dataDir`
@@ -2491,21 +2491,6 @@ export function startAPI() {
 // mock server seeing more hits than it triggered itself). Checked
 // first that nothing else in the codebase imports this file directly
 // (only the new test does) before adding this guard — safe.
-//
-// §FOUND & FIXED 2026-09-11 — real Windows bug in the guard itself:
-// `file://${process.argv[1]}` hand-builds the URL by string-pasting a
-// raw OS path onto a scheme. On Windows process.argv[1] is a drive
-// path like `C:\Users\James\...\index.js` — backslashes, no leading
-// slash before the drive letter, unescaped. That produces
-// `file://C:\Users\James\...`, which is not a well-formed file: URL
-// and can never equal the real import.meta.url Node itself generates
-// for this same file (`file:///C:/Users/James/...`, forward slashes,
-// triple slash, percent-encoded). So on Windows this guard was always
-// false — `node idearium/api/index.js` directly would silently never
-// call startAPI(), no error, no log, just a process that loads and
-// exits having done nothing. Fixed by letting Node's own
-// pathToFileURL() build both sides the same way it built
-// import.meta.url, instead of reimplementing URL construction by hand.
-if (import.meta.url === _pathToFileURL(process.argv[1]).href) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   startAPI();
 }

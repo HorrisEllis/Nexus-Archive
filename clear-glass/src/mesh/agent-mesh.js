@@ -249,7 +249,35 @@ class AgentMesh {
     const def = AGENT_REGISTRY[agentKey];
     if (!def) throw new Error(`Unknown agent: ${agentKey}`);
 
-    const contextId = `mesh-${agentKey}-${uuidv4().slice(0, 8)}`;
+    // §CONNECT-GAP-A 2026-09-11 — real, confirmed duplication: when
+    // route()'s guardian-first dispatch (_dispatchViaGuardian) fails or
+    // is skipped, this spawn() used to always open a SECOND, unrelated
+    // session for agents ProviderHost already owns — partition
+    // `persist:mesh-<agentKey>-<accountId>` vs ProviderHost's own
+    // `persist:ncp-<agentKey>` (clear-glass/src/providers/host.js).
+    // Same site, two separate cookie jars, two separate logins.
+    // Fix is session-identity only, not a UI/window-handle reach-across:
+    // reuse _guardianProviders() (the same live, already-audited
+    // GET /providers call route() itself uses) to ask whether guardian
+    // considers this exact agentKey connected, and if so, adopt
+    // ProviderHost's own partition + a stable agentId so
+    // openBackgroundTab's existing bgTabs.has(agentId) dedup (already
+    // real, see that function) naturally reuses one tab instead of
+    // minting a new one per spawn. No headless-mode branch, no new
+    // window-visibility logic — this only changes which partition/id
+    // string gets used. Agents guardian doesn't cover (mistral/grok/
+    // meta) are completely unaffected — they keep their existing
+    // per-account mesh-* scheme, there being no ProviderHost session to
+    // share.
+    let guardianOwned = false;
+    try {
+      const guardianProviders = await this._guardianProviders();
+      guardianOwned = guardianProviders?.providers?.[agentKey] === 'connected';
+    } catch (_) { /* fail-soft, matches _guardianProviders' own contract */ }
+
+    const contextId = guardianOwned
+      ? `ncp-${agentKey}`
+      : `mesh-${agentKey}-${uuidv4().slice(0, 8)}`;
     const accountId = this._resolveAccountId(agentKey, options.accountId);
 
     // §FIX 2026-08-30 — James, directly: "The agent mesh needs to be
@@ -275,7 +303,9 @@ class AgentMesh {
     // approach provided — not traded away for this real fix.
     let windowId = null, cookiesRestored = 0, realSession = null;
     try {
-      const partition = `persist:mesh-${agentKey}-${accountId || 'default'}`;
+      const partition = guardianOwned
+        ? `persist:ncp-${agentKey}`
+        : `persist:mesh-${agentKey}-${accountId || 'default'}`;
       const opened = await require('../main/index.js').openBackgroundTab({ agentId: contextId, url: def.url, partition });
       windowId = opened.agentId;
       realSession = opened.session || null;
