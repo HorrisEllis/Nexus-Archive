@@ -2279,6 +2279,24 @@ const server = http.createServer(async (req, res) => {
     // silently dropped. Real, minimal fix: accept it here, default to the
     // existing 'ask' behavior unchanged for every other caller.
     const callerIntent = typeof body.intent === 'string' && body.intent.trim() ? body.intent.trim() : 'ask';
+    // §FIXED 2026-09-08 — James: floating menu's toggle/dropdown "aren't
+    // hooked into anything." Traced: this endpoint (unlike its sibling
+    // /api/prompt/fulfill, already fixed 2026-09-06/07 with the real
+    // ollama|copilot|guardian convention) never read body.provider at
+    // all, so the _lifeline.route() call below always ran with no
+    // opts.provider — every /api/prompt caller (menu.js's CLI included)
+    // fell through to lifeline's own default cascade regardless of what
+    // the toggle said. Same real resolution as the fulfill endpoint, not
+    // a second one invented here: 'copilot' (or nothing sent) resolves
+    // through config.DEFAULT_PROVIDER, a real agent name or 'ollama'
+    // passes straight through. This is also the actual cause of "blank
+    // responses with a confidence score" — lifeline's honest low-
+    // confidence fallback text is literally `[CONFIDENCE: N%] ${text}`;
+    // with no provider ever reaching it, a caller had no way to opt out
+    // of the cascade that produces that text.
+    const resolvedProvider = (!body.provider || body.provider === 'copilot')
+      ? config.DEFAULT_PROVIDER
+      : body.provider;
 
     if (!prompt) { json(res, 400, { ok:false, error:'prompt required' }); return; }
 
@@ -2414,7 +2432,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const lifeResult = await _lifeline.route(
         `${contextText}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
-        { requestId, sessionId: session.sessionId, intent: callerIntent, channel }
+        { requestId, sessionId: session.sessionId, intent: callerIntent, channel, provider: resolvedProvider }
       );
       text      = lifeResult?.text || '';
       modelUsed = lifeResult?.provider_used || 'none';

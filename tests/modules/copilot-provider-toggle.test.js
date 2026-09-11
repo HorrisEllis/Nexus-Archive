@@ -112,5 +112,42 @@ test('T-010', 'a genuinely absent provider also resolves through the same real c
   assert.ok(/!payload\.provider\s*\|\|\s*payload\.provider\s*===\s*'copilot'/.test(before), 'expected one real condition covering both "no provider sent" and "copilot explicitly chosen" — not two, possibly-divergent defaults');
 });
 
+// ── /api/prompt — the sibling endpoint, same real bug, fixed separately ────
+// James: "It's giving me blank responses with a confidence score. The
+// toggle, and drop menus aren't hooked into anything." Confirmed real:
+// this endpoint (ui/tv-shell/menu.js's only real target) never read
+// body.provider at all, unlike /bridge/deliver above — same bug class,
+// a genuinely separate real handler, fixed with the same real
+// resolvedProvider convention rather than a third, different one.
+test('T-011', "POST /api/prompt's handler computes a real resolvedProvider from body.provider, not the raw wrapped object", () => {
+  const idx = SRC.indexOf("method === 'POST' && p === '/api/prompt'");
+  assert.ok(idx > -1, "could not find the real POST /api/prompt route at all — has it moved?");
+  const block = SRC.slice(idx, idx + 2200);
+  assert.ok(/const resolvedProvider = \(!body\.provider \|\| body\.provider === 'copilot'\)/.test(block));
+});
+
+test('T-012', "/api/prompt's real lifeline.route() call actually passes resolvedProvider through, not the old, ignored body.provider", () => {
+  const idx = SRC.indexOf("method === 'POST' && p === '/api/prompt'");
+  const block = SRC.slice(idx, idx + 10000);
+  assert.ok(/provider:\s*resolvedProvider/.test(block), "expected the real lifeline.route() call in this handler to use resolvedProvider");
+});
+
+test('T-013', "ui/tv-shell/menu.js sends the real, current toggle/dropdown state on every /api/prompt call, not a hardcoded or missing value", () => {
+  const menuSrc = fs.readFileSync(path.join(ROOT, 'ui/tv-shell/menu.js'), 'utf8');
+  const idx = menuSrc.indexOf('_copilotPrompt');
+  const block = menuSrc.slice(idx, idx + 800);
+  assert.ok(/const provider = _backend === 'guardian' \? _agent : _backend;/.test(block));
+  const postIdx = block.indexOf('_post(');
+  assert.ok(postIdx > -1 && /provider\s*[,}\s]/.test(block.slice(postIdx, postIdx + 220)), 'the computed provider must actually be sent in the real request body');
+});
+
+test('T-014', "menu.js's /backend and /agent are real, event-driven CLI commands — James: 'make them event driven command line based, since they're commands'", () => {
+  const menuSrc = fs.readFileSync(path.join(ROOT, 'ui/tv-shell/menu.js'), 'utf8');
+  assert.ok(/\/backend\\s\+\(ollama\|copilot\|guardian\)/.test(menuSrc.replace(/\\\\/g, '\\')) || /\^\\\/backend/.test(menuSrc));
+  assert.ok(/function setBackend/.test(menuSrc));
+  assert.ok(/function setAgent/.test(menuSrc));
+  assert.ok(/window\.NexusMenu = \{[^}]*setBackend[^}]*setAgent/.test(menuSrc), 'setBackend/setAgent must be genuinely exported, not just defined locally');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
