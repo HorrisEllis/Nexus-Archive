@@ -29,6 +29,33 @@ function startWakeRelay(providerHost, opts = {}) {
   // against copilot/server.js's actual current handler, not memory.
   const copilotHost = opts.copilotHost || '127.0.0.1';
   const copilotPort = opts.copilotPort || 3750;
+  // §BUILT 2026-09-11 — James: "wake word needs to create a job using
+  // guardian to simulate input from user into the provider chat...
+  // copilot's response should use /guardian /ask and paste copilot's
+  // response and create a job in guardian so nexus can respond to the
+  // provider." Real gap: everything below this point already got a real
+  // answer out of copilot, but the only thing done with it was
+  // providerHost.injectAnswer() — and that call's own header says
+  // exactly what it does: renders a closeable overlay via the page's
+  // NexusWake.showAnswer(), and explicitly does NOT type into the real
+  // chat input (host.js:342-343), specifically so it can never interfere
+  // with something the person is actually typing. That's correct for the
+  // "new chat" intro banner it was built for, but wrong for this: an
+  // overlay only the person sees is not "nexus responding to the
+  // provider" — chatgpt (or whichever agent) never actually receives
+  // copilot's answer as a message, so there is no real back-and-forth.
+  // guardian/server.js's real POST /command already does exactly what's
+  // needed here — createJob + dispatchJob — the same real path
+  // guardian/ask.js's askSync() and /command/tools use to get a prompt
+  // typed into a provider's actual composer and submitted via that
+  // provider's own userscript (guardian/userscript-<agent>.js, real NCP
+  // round trip), not a second, parallel injection mechanism. source:
+  // 'copilot' (not 'wake-relay', which isn't a registered RAID contract
+  // and would 403 under _default's proof_required — checked in
+  // cortex/contract/index.js before choosing this) because this really
+  // is copilot's own answer being delivered, just from this process.
+  const guardianHost = opts.guardianHost || '127.0.0.1';
+  const guardianPort = opts.guardianPort || 7820;
   const log = opts.log || (() => {});
   // §HOOK 2026-08-29 — optional AgentMesh instance, wired in from
   // main/index.js. Real gap: this file's whole job is "a wake word said
@@ -108,12 +135,56 @@ function startWakeRelay(providerHost, opts = {}) {
     }
 
     if (!text) { log(`[wake-relay] no answer available for ${d.agent} (guardian and mesh both failed/unavailable)`); return; }
+
+    // Primary: create a real guardian job so the answer gets typed into
+    // d.agent's actual chat composer and submitted — a real message the
+    // provider itself receives and can respond to, not just something
+    // shown to the person watching.
+    const dispatched = await dispatchToGuardian(d.agent, text);
+    if (dispatched.ok) {
+      log(`[wake-relay] guardian job ${dispatched.jobId} → ${d.agent}: answer dispatched as real chat input`);
+      return;
+    }
+    log(`[wake-relay] guardian job dispatch failed for ${d.agent}: ${dispatched.error} — falling back to overlay`);
+
+    // Fallback only: the overlay is real feedback (the person can still
+    // see the answer) even when the real send-back-into-the-chat path is
+    // down, but it is not a substitute for it — see the header note above.
     try {
       const injected = await providerHost.injectAnswer(d.agent, text);
-      if (!injected.ok) log(`[wake-relay] injectAnswer failed for ${d.agent}: ${injected.reason}`);
+      if (!injected.ok) log(`[wake-relay] injectAnswer fallback also failed for ${d.agent}: ${injected.reason}`);
     } catch (e) {
-      log(`[wake-relay] inject failed: ${e.message}`);
+      log(`[wake-relay] injectAnswer fallback failed: ${e.message}`);
     }
+  }
+
+  // dispatchToGuardian(provider, text) — POST /command, the same real
+  // createJob+dispatchJob path guardian's own askSync()/'/command/tools'
+  // use. Fire-and-forget from this caller's point of view: the job's
+  // eventual reply comes back through guardian's normal NCP flow (visible
+  // via GET /jobs, cockpit, etc.), not through this function — this only
+  // needs to know the job was accepted for dispatch, not how it resolves.
+  function dispatchToGuardian(provider, text) {
+    return new Promise((resolve) => {
+      const body = JSON.stringify({ provider, command: 'wake-reply', prompt: text, source: 'copilot' });
+      const req = http.request(
+        { hostname: guardianHost, port: guardianPort, path: '/command', method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+        (res) => {
+          let b = '';
+          res.on('data', (c) => (b += c));
+          res.on('end', () => {
+            let parsed;
+            try { parsed = JSON.parse(b); } catch (e) { resolve({ ok: false, error: `bad JSON from guardian: ${e.message}` }); return; }
+            if (!parsed.ok) { resolve({ ok: false, error: parsed.error || `guardian returned ${res.statusCode}` }); return; }
+            resolve({ ok: true, jobId: parsed.jobId, status: parsed.status });
+          });
+        }
+      );
+      req.on('error', (e) => resolve({ ok: false, error: e.message }));
+      req.write(body);
+      req.end();
+    });
   }
 
   connect();

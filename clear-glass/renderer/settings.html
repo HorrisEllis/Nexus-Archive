@@ -2,6 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- §security 2026-09-11 — CSP for renderer process, same real gap and
+     same fix as browser.html's own (§security 2026-07-02): this file had
+     NO Content-Security-Policy meta tag at all, which is exactly what
+     Electron's "Insecure Content-Security-Policy" warning fires on.
+     unsafe-eval explicitly excluded: no eval()/Function() usage anywhere
+     in the inline script below. script-src keeps 'unsafe-inline' because
+     the ~190-line inline <script> block (all settings logic) has not yet
+     been extracted to an external file the way browser.html's was
+     (§TIGHTENED 2026-07-11) — that extraction is a real follow-up, not
+     done here so this fix stays a real, verifiable CSP addition and not
+     a behavior-risking refactor bundled into it. style-src needs
+     'unsafe-inline' too — inline style=" attributes are used throughout
+     this markup. connect-src allows 127.0.0.1 on any port: the one real
+     network call this page makes (line ~285) fetches
+     http://127.0.0.1:${port}/health for a caller-supplied, dynamic
+     service port, not a fixed one. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline';
+               style-src 'self' 'unsafe-inline';
+               connect-src 'self' http://127.0.0.1:*;
+               img-src 'self' data:;
+               frame-src 'none'">
 <title>Clear Glass — NEXUS Settings</title>
 <style>
   :root {

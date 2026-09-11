@@ -941,7 +941,13 @@ async function bootstrap() {
   // injects it into the corresponding agent chat using clearglass."
   // Real close of the loop — see src/copilot/wake-relay.js for the full
   // real chain this completes.
-  require('../copilot/wake-relay.js').startWakeRelay(providerHost, { mesh, log: (m) => console.log(m) });
+  require('../copilot/wake-relay.js').startWakeRelay(providerHost, {
+    mesh, log: (m) => console.log(m),
+    // §WIRED 2026-09-11 — reuse the same real NEXUS_PORTS.guardian this
+    // file already uses everywhere else, instead of letting wake-relay
+    // fall back to its own hardcoded default and silently drift from it.
+    guardianHost: '127.0.0.1', guardianPort: NEXUS_PORTS.guardian,
+  });
   // §P-CG-01 — NCP provider tabs (claude, chatgpt, gemini, perplexity),
   // each its own persistent session partition + Guardian userscript
   // injected via executeJavaScript, replacing Tampermonkey + manual tab

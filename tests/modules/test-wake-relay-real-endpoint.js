@@ -37,7 +37,26 @@ function run() {
   });
 
   test('WR-004', 'main/index.js passes mesh into startWakeRelay — the real fallback path is genuinely wired, not silently dropped', () => {
-    assert.ok(/startWakeRelay\(providerHost, \{ mesh, log:/.test(mainIndex));
+    assert.ok(/startWakeRelay\(providerHost, \{[\s\S]{0,40}mesh,/.test(mainIndex));
+  });
+
+  // §BUILT 2026-09-11 — James: "wake word needs to create a job using
+  // guardian to simulate input from user into the provider chat...
+  // create a job in guardian so nexus can respond to the provider."
+  test('WR-005', 'wake-relay.js dispatches the real answer to guardian\'s real /command job endpoint', () => {
+    assert.ok(/path: '\/command'/.test(wakeRelay));
+  });
+
+  test('WR-006', 'the guardian dispatch uses a registered RAID contract source (copilot), not an unregistered one that would 403', () => {
+    assert.ok(/source: 'copilot'/.test(wakeRelay));
+  });
+
+  test('WR-007', 'main/index.js wires the real, shared NEXUS_PORTS.guardian into wake-relay instead of a second hardcoded default', () => {
+    assert.ok(/guardianPort:\s*NEXUS_PORTS\.guardian/.test(mainIndex));
+  });
+
+  test('WR-008', 'the old overlay-only injectAnswer path is now a fallback, not the primary answer path', () => {
+    assert.ok(/dispatchToGuardian\(d\.agent, text\)/.test(wakeRelay) && /fallback/i.test(wakeRelay));
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);
