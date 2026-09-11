@@ -288,7 +288,17 @@ async function _tryGuardian(prompt, opts = {}) {
         const gapField = require('../lib/gap-field');
         gapField.report({ type: 'lifeline.provider-empty-response', body: `guardian/${ragProvider} returned no text`, source: ragProvider || 'guardian', domain: 'system', severity: 'medium', meta: { requestId: opts.requestId } });
       } catch (_) {}
-      return null;
+      // §FIXED 2026-09-11 — this used to `return null`, discarding
+      // result.jobId even though guardian/ask.js's askSync already
+      // returns a real jobId on every branch, including this exact
+      // failure case (checked directly: askSync's empty-response and
+      // timeout returns both carry `jobId: job.id`). That jobId is the
+      // one thing that makes GET /response/:jobId's real, already-built
+      // multi-layer fallback (in-memory job -> persisted JAA jobs table
+      // -> matching artifact) reachable at all. Returning null threw
+      // away the key to a real, working recovery path tool-runtime.js
+      // had no way to use.
+      return { ok: false, text: null, jobId: result?.jobId || null, provider: ragProvider };
     }
     const confidence = _estimateConfidence(result.text, prompt);
     // §BUG FIXED 2026-07-09 — this fell back to the literal string

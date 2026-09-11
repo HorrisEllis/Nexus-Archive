@@ -2040,9 +2040,34 @@ const BUILD_QUEUE_POLL_MS = 15000; // matches RAID's own real worker.js drain ca
 const _buildingSpecs = new Set(); // real, in-memory guard — never trigger a second build for a spec that's already mid-build
 
 function _startBuildQueuePoller(port) {
+  // §FIXED 2026-09-11 — James: "the problem is idearium doesn't retry,
+  // if nexus restarts it wont try to build the chunks again." Real root
+  // cause traced in spec-engine/index.js's recoverOrphanedChunks() own
+  // header: a chunk left BUILDING by a process that died mid-dispatch is
+  // invisible to nextPendingChunk() (not PENDING) AND to this poller's
+  // own doneChunks-vs-totalChunks skip (not COMPLETE either) —
+  // permanently stuck either way, not a retry-cadence problem at all.
+  //
+  // Recovery runs inside tick() itself, gated by _recoveryDone, rather
+  // than as a separate one-shot call before the poller starts: getSpecEngine()
+  // can still be mid-import at that exact moment (its own real, honest
+  // "not ready yet" case — checked, this is a real, live risk, not
+  // theoretical), which would have silently skipped recovery for the
+  // whole boot with nothing to retry it. tick() already runs every
+  // BUILD_QUEUE_POLL_MS and already has the same honest "if (!se) return"
+  // skip — riding that same, already-proven retry mechanism instead of
+  // building a second, less robust one.
+  let _recoveryDone = false;
   async function tick() {
     const se = getSpecEngine();
     if (!se) return; // spec-engine not ready yet this tick — real, honest skip, not a crash
+    if (!_recoveryDone) {
+      try {
+        const recovered = se.recoverOrphanedChunks();
+        if (recovered.length) console.log(`[idearium/build-queue] boot recovery: ${recovered.length} orphaned chunk(s) reset BUILDING -> PENDING`);
+      } catch (e) { console.warn(`[idearium/build-queue] orphaned-chunk recovery failed (non-fatal): ${e.message}`); }
+      _recoveryDone = true; // once per real process lifetime — recovering an already-recovered (or genuinely, currently building) chunk on tick 2 would be wrong
+    }
     let specs;
     try { specs = se.listSpecs(); }
     catch (e) { console.warn(`[idearium/build-queue] listSpecs() failed, will retry next tick: ${e.message}`); return; }

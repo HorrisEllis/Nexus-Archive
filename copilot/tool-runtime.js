@@ -20,6 +20,35 @@
  */
 
 const agentTools = require('../lib/agent-tools');
+const http = require('http');
+
+// §ADDED 2026-09-11 — the fallback lookup for makeNcpCallModel's failure
+// path below. GET /response/:jobId already exists on guardian's server
+// (server.js ~1875, built for Forge's GuardianClient) with real, already-
+// built multi-layer recovery: in-memory `jobs` Map -> persisted JAA jobs
+// table -> matching artifact content. Not new infrastructure — this just
+// reaches an endpoint that was already there and already more resilient
+// than the in-memory-only path that fails in the screenshot's exact
+// scenario (dispatch completes, response never reaches the caller).
+const GD_URL = process.env.GUARDIAN_URL || 'http://127.0.0.1:7820';
+function _fetchGuardianResponse(jobId, timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    if (!jobId) return resolve(null);
+    const req = http.get(`${GD_URL}/response/${jobId}`, { timeout: timeoutMs }, (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(body);
+          resolve(j?.ok && j.response ? j : null);
+        } catch (_) { resolve(null); }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+  });
+}
+
 
 /**
  * makeOllamaCallModel(dispatch, pollJob) — adapt copilot's job-based ollama
@@ -161,7 +190,26 @@ function makeNcpCallModel(dispatchToAgent, opts = {}) {
 
     const fullPrompt = [system, _toolInstructions(scoped), convo].filter(Boolean).join('\n\n');
     const result = await dispatchToAgent(fullPrompt, opts);
-    if (!result || !result.ok) return { text: (result && result.text) || '[NCP dispatch failed — no response]', toolCalls: null };
+    if (!result || !result.ok) {
+      // §FIXED 2026-09-11 — this used to always return the canned
+      // '[NCP dispatch failed — no response]' string, the exact string
+      // shown in the screenshot even though the provider had already
+      // answered correctly. Real cause traced to copilot/lifeline.js's
+      // _tryGuardian discarding result.jobId on this exact failure path
+      // (fixed there too, same pass) — without a jobId there was never
+      // anything to recover from. With it, guardian's own GET
+      // /response/:jobId (already real, already more resilient than the
+      // in-memory-only path that failed) can often still answer.
+      const jobId = result && result.jobId;
+      const recovered = jobId ? await _fetchGuardianResponse(jobId) : null;
+      if (recovered && recovered.response) {
+        // §HONEST, per "nothing pretends to work" — a recovered answer
+        // is not the same as a live round trip and must stay
+        // distinguishable downstream, not silently presented as identical.
+        return { text: recovered.response, toolCalls: null, viaLedgerFallback: true, recoveredJobId: jobId };
+      }
+      return { text: (result && result.text) || '[NCP dispatch failed — no response]', toolCalls: null };
+    }
 
     const toolCalls = _parseToolBlocks(result.text);
     // Strip the tool block out of the visible text if a call was made — the

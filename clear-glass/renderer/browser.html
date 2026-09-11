@@ -287,6 +287,37 @@
   <div id="us-list" style="flex:1;overflow-y:auto;"></div>
 </div>
 
+<!-- §BUILT 2026-09-11 — James: "a way to edit the userscript." list/
+     toggle/inject were already real (see loadUserscripts() in browser.js);
+     edit/create/delete were never called anywhere despite the backend
+     (UserscriptManager) having all three, real and working, since before
+     this session. This modal is the missing editor — a plain textarea
+     over cg.userscripts.source()/edit()/create(), gated by the same
+     readOnly flag the backend already enforces (Guardian scripts are
+     genuinely read-only, not just UI-hidden — edit()/delete() throw
+     server-side too, this modal just avoids offering a control that
+     would fail). -->
+<div id="us-editor-modal">
+  <div id="us-editor-panel">
+    <div id="us-editor-header">
+      <span id="us-editor-title">Edit Userscript</span>
+      <span id="us-editor-readonly-badge" style="display:none;">READ-ONLY (Guardian script)</span>
+      <button id="us-editor-close" title="Close">✕</button>
+    </div>
+    <div id="us-editor-fields">
+      <input id="us-editor-name" type="text" placeholder="Script name">
+      <input id="us-editor-matches" type="text" placeholder="Match pattern(s), comma-separated — e.g. *://*.example.com/*">
+    </div>
+    <textarea id="us-editor-source" spellcheck="false" placeholder="// userscript source"></textarea>
+    <div id="us-editor-footer">
+      <button id="us-editor-delete" style="display:none;">Delete</button>
+      <span style="flex:1;"></span>
+      <button id="us-editor-cancel">Cancel</button>
+      <button id="us-editor-save">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Context menu (right-click on toolbar/page) -->
 <div id="ctx-menu">
   <!-- §NEW 2026-08-30 — James: only shown when the right-click target is

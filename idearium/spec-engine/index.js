@@ -699,6 +699,55 @@ export function nextPendingChunk(specUuid) {
   return manifest.chunks.find(c => c.status === CHUNK_STATES.PENDING && _chunkDependenciesSatisfied(c, manifest.chunks)) || null;
 }
 
+// ── Boot-time orphaned-chunk recovery ──────────────────────────────────────
+// §FOUND & FIXED 2026-09-11 — James, live: "the problem is idearium
+// doesn't retry, if nexus restarts it wont try to build the chunks
+// again." Traced precisely, not guessed: nextPendingChunk() above only
+// ever matches status === PENDING. A chunk transitions PENDING ->
+// BUILDING the moment it's dispatched to an agent (line ~756) and stays
+// BUILDING until either completeChunk() or failChunk() runs. If this
+// process dies while a chunk is BUILDING — exactly the window any
+// restart can land in — that chunk's status is written to disk as
+// 'building' and stays there forever. Not PENDING (nextPendingChunk()
+// never finds it again), not COMPLETE (manifest.doneChunks stays short
+// of totalChunks forever too) — genuinely, permanently stuck either
+// way, invisible to the real build-queue poller (idearium/api/index.js's
+// _startBuildQueuePoller) regardless of how many times it ticks.
+//
+// This is the fix, not a guess at one: any chunk found BUILDING at the
+// moment this function runs is provably orphaned, because a chunk can
+// only legitimately be BUILDING while the process that dispatched it is
+// still alive and this function only ever runs once, at boot, in a
+// fresh process — there is no real in-flight dispatch this process
+// could be racing against. Reset to PENDING (not FAILED — it never
+// actually failed, its outcome is simply unknown, and PENDING is the
+// state that makes the real poller pick it back up on its very next
+// tick, same dispatch path, same WARP cache, no special-casing).
+export function recoverOrphanedChunks() {
+  const recovered = [];
+  for (const s of listSpecs()) {
+    if (s.deleted) continue;
+    let manifest;
+    try { manifest = loadSpec(s.uuid); } catch (e) { continue; } // §1.2 — a corrupt manifest is a real, separate problem; don't let it crash recovery for every other spec
+    let touched = false;
+    for (const chunk of manifest.chunks) {
+      if (chunk.status !== CHUNK_STATES.BUILDING) continue;
+      chunk.status      = CHUNK_STATES.PENDING;
+      chunk.updatedAt    = Date.now();
+      chunk.jobId        = null;   // §consistent with completeChunk's own convention — a stale in-flight jobId would lie about this chunk's real state
+      chunk.dispatchDir  = null;
+      touched = true;
+      recovered.push({ specUuid: s.uuid, chunkUuid: chunk.uuid, sectionId: chunk.sectionId });
+    }
+    if (touched) {
+      manifest.updatedAt = Date.now();
+      saveSpec(manifest);
+      console.log(`[${MODULE_ID}] recovered ${recovered.filter(r => r.specUuid === s.uuid).length} orphaned chunk(s) for spec ${s.uuid.slice(0,8)} "${manifest.name}" — reset BUILDING -> PENDING`);
+    }
+  }
+  return recovered;
+}
+
 // ── Reassign a pending chunk's agent (UI per-chunk override, pre-dispatch) ────
 // §BUILT 2026-09-03 — the per-chunk agent <select> in the UI writes through
 // this. Deliberately refuses on anything past PENDING: changing which agent
@@ -1013,6 +1062,7 @@ export default {
   findByDedupKey, findPriorSection, importSpec,
   createSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk, setChunkAgent, recordDispatchJob, setWarpPrimitives,
+  recoverOrphanedChunks,
   buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec,
   computeRootHash, findByRootHash, ingestFilesAsSpec, addChunk, removeChunk,
   reconstructSpecText,

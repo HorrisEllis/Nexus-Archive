@@ -371,6 +371,210 @@ spec:
         current-state comparison, not just static files).
       blocks: [P5_data_folder_completion, P19_dynamic_nodes_via_causal_graph]
 
+    P23_guardian_job_durability:
+      status: open
+      description: |
+        James/doc4: "needs to stop being implicit, needs to be a
+        tangible payload per job." Confirmed real, not hypothetical —
+        traced live: guardian/lib/ncp-handler.js's GUARDIAN_COMPLETE
+        handler does `job.responseText = finalText` on a `jobs.get(jobId)`
+        **in-memory Map**. That Map is the WHOLE record of an in-flight
+        job. If guardian's server process dies between dispatch and
+        completion, the job is gone — no queue file, no journal, nothing
+        on disk until completion itself triggers a write. GET
+        /response/:jobId (server.js ~1875) already has real, layered
+        fallback (memory -> persisted JAA jobs table -> matching
+        artifact) for a COMPLETED job's response, which is what made
+        P-none/the dispatch-fallback fix (2026-09-11, this session)
+        possible — but nothing persists a job's existence/state BEFORE
+        completion. This phase gives a job a real file/record from the
+        moment it's created (doc4's CREATED->QUEUED->DISPATCHED->
+        PROVIDER_ACK->AWAITING_RESPONSE->...->COMPLETED lifecycle,
+        adapted to guardian's real jobs Map + jaa 'jobs' table as the
+        two real anchors already in place, not invented fresh).
+      blocks: []
+
+    P24_response_queue_and_delivery_ack:
+      status: open
+      description: |
+        James/doc4: "a job can only complete if there is a response per
+        job... then the response needs to also queue until delivered to
+        the endpoint." Real invariant change: COMPLETE(job) currently =
+        sent===true (implicit, confirmed by P23's finding — nothing
+        tracks delivery, only dispatch). This phase makes it
+        response.exists && response.valid && endpoint.acknowledged
+        (doc4's model) — the response itself queues and retries until
+        confirmed delivered, not just fired at the console/UI and
+        forgotten. Depends on P23 (can't ACK a job that isn't itself a
+        durable record yet).
+      blocks: [P23_guardian_job_durability]
+
+    P25_universal_per_system_queue:
+      status: open
+      description: |
+        James: "clearglass can have a queue per provider. like every
+        system needs a queue, that's persistent, drainer that loops
+        back into the queue with escalating retry logic and diagnostic
+        strategies." Real precedent to generalize FROM, not invent:
+        lib/queue.js already has a real, working queue (input/logs dirs,
+        .pending/.processing/.complete file states, replay() for
+        crash-recovery — confirmed real, it's what backs
+        physQueue.logConversation/conversationTail, already used by
+        guardian). This phase is making that pattern (already proven for
+        guardian's own queue) the real per-system convention, with
+        escalating retry (doc4's FAILED -> retry -> QUEUED loop) and
+        diagnostic strategy hooks (reuse cortex/self-heal/fault-
+        taxonomy.js's real friction-band escalation, not a new one).
+        Depends on P23/P24 landing for guardian first — proving the
+        pattern once before generalizing it, same bottom-up discipline
+        P5 already committed to for data migration.
+      blocks: [P23_guardian_job_durability, P24_response_queue_and_delivery_ack]
+
+    P26_unify_conversation_logging:
+      status: open
+      description: |
+        James: "clearglass has a full listener for each provider and
+        logs each conversation fully into a ledger in real time." Found,
+        not assumed: this is currently split across TWO real, non-
+        unified mechanisms — response side (guardian/lib/ncp-handler.js,
+        physQueue.logConversation, explicit per-call sessionId, real
+        crash-safe file per session) and prompt side (guardian/lib/
+        chat-logger.js's cl.log(), used by guardian/api-dispatch.js).
+        Real complication, checked before assuming a simple merge: api-
+        dispatch.js is required by orchestrator.js, NOT guardian/
+        server.js — a genuinely different process than the browser-tab/
+        NCP path ncp-handler.js handles. Also, chat-logger.js's session
+        tracking is a SINGLE GLOBAL module-scope variable
+        (_currentSession), not per-conversation — a real concurrency bug
+        for multiple simultaneous tabs/dispatches, confirmed by direct
+        read, not the model to standardize on. Open question before any
+        write-side change: are orchestrator's direct-API-key dispatches
+        and guardian's browser-tab dispatches even the same
+        "conversation" concept, or two genuinely different things that
+        happen to both produce prompt/response pairs? Real decision
+        needed, not assumed either way.
+      blocks: []
+
+    P27_guardian_picker_userscript_manager:
+      status: partially_done
+      description: |
+        James: "hook guardian picker into the userscripts... a button
+        to show userscripts for the page, a way to edit the userscript."
+        §CORRECTED 2026-09-11 (second pass) — originally opened on a
+        wrong finding: "zero renderer calls anywhere" was based on
+        grepping for the literal string 'userscripts:list' (the raw IPC
+        channel name) instead of cg.userscripts.list (what the real code
+        calls through the exposed preload bridge). A pasted external
+        analysis made the identical mistake independently. Checked
+        properly: #btn-userscripts/#userscript-panel/loadUserscripts()
+        with real, working list()/toggle()/inject() already existed
+        before this phase was even opened. Built this pass: the real
+        editor modal (edit/create/delete), against window.ClearGlass.
+        userscripts (the correct trusted bridge — NOT guardian-picker.js's
+        own window.__cg.send, which is deliberately allowlisted to 3
+        channels for a real security reason: that script runs inside an
+        untrusted guest webpage, and a general IPC surface there would
+        let any page rewrite guardian's own userscripts). Remaining real
+        gap: guardian-picker.js itself (the in-page picker overlay) still
+        has no entry point into the userscript panel — the panel lives
+        in the trusted main-window chrome, reachable via the toolbar
+        button, not literally "hooked into" the picker overlay the way
+        James's phrasing suggests. Whether that's the intended final
+        shape or a real remaining wire is an open question, not decided
+        here.
+      blocks: []
+
+    P31_job_reference_command_syntax:
+      status: open
+      description: |
+        James: "/guardian /chatgpt /code efe37d5d-...job (file pasted
+        into the agent chat)." Checked the real, current grammar first
+        (guardian/lib/provider-routing.js's parseCommand,
+        regex-verified: /^\/(\w+)\s+(\w[\w.-]*)\s*([\s\S]*)$/) — most of
+        this already works today, just ordered /<command> <provider>
+        <prompt> (e.g. /code chatgpt review this), no leading /guardian
+        needed since that's implicit in guardian's own CLI. sendFile()
+        already does "file pasted into the agent chat" for an arbitrary
+        file path. The genuinely new piece is resolving a bare
+        <uuid>.job (or .contract) reference INSIDE the command string
+        into that job/contract's real content — parseCommand's regex
+        would currently just capture the literal string as prompt text,
+        not resolve it. Real, scoped addition: detect a trailing
+        <uuid>.<type> token in the parsed prompt, resolve it via
+        node-export.js's real importFromFile() against the matching
+        data/nodes/ (or data/<system>/) location, and substitute its
+        content the same way sendFile() substitutes a file's content
+        today — reusing that real precedent, not inventing a new
+        dispatch path.
+      blocks: []
+
+    P32_clearglass_enterprise_ui_scope:
+      status: open
+      description: |
+        James: "build all the ui for clearglass. expand the ui, full
+        enterprise grade, full pages." Deliberately NOT attempted as one
+        phase — genuinely unbounded as stated. This phase exists to hold
+        the scoping conversation, not to be executed directly: real
+        candidates already named across this session (job queue UI,
+        agent mesh canvas — mesh-picker.js/agent-mesh.js already real
+        and partially wired per btn-mesh/mesh-picker-btn, BrainOS canvas
+        per P29, the userscript panel per P27) need to be enumerated
+        against what's already real (checked this pass: far more of
+        ClearGlass's chrome already exists than either this session or
+        external analyses have assumed twice now — btn-userscripts,
+        btn-providers, btn-dom, tool-picker-group, mesh-picker-btn,
+        btn-mesh, btn-diag all already declared and at least partially
+        wired) before deciding what "full enterprise grade, full pages"
+        actually adds on top, rather than rebuilding chrome that's
+        already there a third time.
+      blocks: [P27_guardian_picker_userscript_manager, P28_dom_tool_and_command_flow, P29_clearglass_brainos_canvas]
+
+    P28_dom_tool_and_command_flow:
+      status: open
+      description: |
+        James: "click the element picker, select an element, then
+        select userscript, then a dropdown for inputs or outputs.
+        input is for the command line from guardian. output is for the
+        listener sse and chatledger." A real, new capability — a
+        programmable DOM tool (element -> command/API mapping),
+        building the .command node type's real creation flow: pick
+        element via guardian-picker -> bind input (guardian CLI command
+        into that element) or output (SSE listener -> P26's ledger) ->
+        .command record created from the shared .command schema (one of
+        the 30 real node-schema types already built) -> feeds a real
+        job into P23's durable job record. Genuinely new UI + new
+        binding logic, not a rewire of something existing like P27.
+        Depends on P25 (the job needs somewhere durable to land) and
+        P27 (the picker's userscript-selection half needs to exist
+        first, this phase adds the element/binding half on top of it).
+      blocks: [P25_universal_per_system_queue, P27_guardian_picker_userscript_manager]
+
+    P29_clearglass_brainos_canvas:
+      status: open
+      description: |
+        James: "clearglass ui expanded with the userscripts, agent
+        features, brainos ui for the entire agent orchestration node
+        canvas and control panel." Large, genuinely new UI surface —
+        not wiring, not a small extension. Depends on P27 (userscript
+        panel) and P28 (DOM tool/command flow) existing as real,
+        working pieces first — this phase is the unifying canvas that
+        surfaces them together, not a replacement for building them.
+      blocks: [P27_guardian_picker_userscript_manager, P28_dom_tool_and_command_flow]
+
+    P30_provider_ping_delta:
+      status: open
+      description: |
+        James: "each time clearglass opens, needs to send ping to each
+        provider, with a delta to measure performance." Real, small,
+        separable capability — on ClearGlass open, ping every connected
+        provider (reuse the real GUARDIAN_HEARTBEAT-adjacent connection
+        state already tracked per .guardian_listener) and record a
+        latency delta. No hard dependency on the rest of this batch —
+        could ship independently, listed last only because it's lowest
+        priority against everything else named this pass, not because
+        it's blocked.
+      blocks: []
+
   # ── Deliberately not decided here ────────────────────────────────────
   open_questions:
     - "P3's real schema-ownership model — shared base + per-system
@@ -384,3 +588,12 @@ spec:
        folders, per-system repos) — P19-P22 deliberately skip those
        numbers rather than collide. Real branch reconciliation still
        needed before both halves live in one phasemap."
+    - "P26: are orchestrator's api-dispatch.js conversations and
+       guardian's browser-tab NCP conversations the same real concept
+       for logging purposes, or two genuinely different things? Not
+       assumed either way — real decision needed before any unifying
+       write-side change."
+    - ".ledger fragmentation (guardian's bare 'ledger' table, THIRD
+       distinct shape from both .ledger and ledger_entries, flagged
+       2026-09-11) still unresolved — same class of decision P26 now
+       also needs, not yet unified."

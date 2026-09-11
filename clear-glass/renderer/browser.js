@@ -2261,6 +2261,7 @@
         div.innerHTML = `
           <span class="us-type">${s.type === 'guardian' ? '⟳' : '⚙'}</span>
           <span class="us-name" title="${s.matches?.join(', ')}">${s.name}</span>
+          <button class="us-edit-btn" data-id="${s.id}">${s.readOnly ? 'View' : 'Edit'}</button>
           <button class="us-inject-btn" data-id="${s.id}" ${s.readOnly ? '' : ''}>Inject</button>
           <button class="us-toggle ${s.enabled ? 'on' : ''}" data-id="${s.id}" title="${s.enabled ? 'Disable' : 'Enable'}"></button>`;
         div.querySelector('.us-inject-btn').addEventListener('click', async (e) => {
@@ -2274,10 +2275,88 @@
           await cg.userscripts.toggle(s.id, !s.enabled);
           loadUserscripts();
         });
+        div.querySelector('.us-edit-btn').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          openUserscriptEditor(s);
+        });
         list.appendChild(div);
       });
     } catch (_) {}
   }
+
+  // ── Userscript editor modal — real edit()/create()/delete(), built
+  // 2026-09-11. openUserscriptEditor(script) for editing/viewing an
+  // existing script (script.readOnly disables every field and hides
+  // Save/Delete — matches UserscriptManager's own server-side enforcement,
+  // this just avoids offering a control that would throw); called with
+  // no argument for the "+ New script" flow instead.
+  let _usEditingId = null;
+  let _usEditingReadOnly = false;
+
+  function openUserscriptEditor(script) {
+    _usEditingId = script ? script.id : null;
+    _usEditingReadOnly = !!(script && script.readOnly);
+
+    document.getElementById('us-editor-title').textContent = script ? (script.readOnly ? 'View Userscript' : 'Edit Userscript') : 'New Userscript';
+    document.getElementById('us-editor-readonly-badge').style.display = _usEditingReadOnly ? '' : 'none';
+    document.getElementById('us-editor-name').value = script ? script.name : '';
+    document.getElementById('us-editor-name').disabled = !!script; // name isn't editable post-creation — UserscriptManager.edit() only touches source/matches/enabled
+    document.getElementById('us-editor-matches').value = script ? (script.matches || []).join(', ') : '*';
+    document.getElementById('us-editor-matches').disabled = _usEditingReadOnly;
+    document.getElementById('us-editor-source').disabled = _usEditingReadOnly;
+    document.getElementById('us-editor-save').style.display = _usEditingReadOnly ? 'none' : '';
+    document.getElementById('us-editor-delete').style.display = (script && !script.readOnly) ? '' : 'none';
+
+    const srcEl = document.getElementById('us-editor-source');
+    srcEl.value = script ? '⟳ loading…' : '';
+    document.getElementById('us-editor-modal').classList.add('visible');
+
+    if (script) {
+      cg.userscripts.source(script.id).then(src => { srcEl.value = src || ''; })
+        .catch(err => { srcEl.value = `// failed to load source: ${err.message}`; });
+    }
+  }
+
+  function closeUserscriptEditor() {
+    document.getElementById('us-editor-modal').classList.remove('visible');
+    _usEditingId = null;
+  }
+
+  document.getElementById('us-editor-close').addEventListener('click', closeUserscriptEditor);
+  document.getElementById('us-editor-cancel').addEventListener('click', closeUserscriptEditor);
+  document.getElementById('us-editor-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'us-editor-modal') closeUserscriptEditor(); // click-outside-to-close, matches other modals in this file
+  });
+
+  document.getElementById('us-editor-save').addEventListener('click', async () => {
+    const name    = document.getElementById('us-editor-name').value.trim();
+    const matches = document.getElementById('us-editor-matches').value.split(',').map(m => m.trim()).filter(Boolean);
+    const source  = document.getElementById('us-editor-source').value;
+    try {
+      if (_usEditingId) {
+        await cg.userscripts.edit(_usEditingId, { source, matches });
+      } else {
+        if (!name) { addMsg('assistant', 'Script name is required.'); return; }
+        if (!source.trim()) { addMsg('assistant', 'Script source is required.'); return; }
+        await cg.userscripts.create({ name, source, matches: matches.length ? matches : ['*'], agentId });
+      }
+      closeUserscriptEditor();
+      loadUserscripts();
+    } catch (err) {
+      addMsg('assistant', `Save failed: ${err.message}`);
+    }
+  });
+
+  document.getElementById('us-editor-delete').addEventListener('click', async () => {
+    if (!_usEditingId) return;
+    try {
+      await cg.userscripts.delete(_usEditingId);
+      closeUserscriptEditor();
+      loadUserscripts();
+    } catch (err) {
+      addMsg('assistant', `Delete failed: ${err.message}`);
+    }
+  });
 
   document.getElementById('btn-userscripts')?.addEventListener('click', async () => {
     usVisible = !usVisible;
@@ -2289,12 +2368,11 @@
     document.getElementById('userscript-panel').classList.remove('visible');
   });
   document.getElementById('us-new-btn').addEventListener('click', () => {
-    addMsg('assistant', `To create a userscript, tell Co-pilot:
-"Create a userscript that [description]"
-
-It will write and install it for you.`);
-    usVisible = false;
-    document.getElementById('userscript-panel').classList.remove('visible');
+    // §CHANGED 2026-09-11 — this used to just tell the user to ask
+    // co-pilot in chat; cg.userscripts.create() was real and already
+    // worked, it just had no direct UI caller. Opens the same real
+    // editor modal, empty, instead.
+    openUserscriptEditor(null);
   });
 
   // ── Toolbar command registry ─────────────────────────────────────────

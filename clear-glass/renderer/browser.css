@@ -167,6 +167,52 @@
   .us-inject-btn { font-size:9px; padding:2px 6px; background:var(--glass); border:1px solid var(--border);
     border-radius:3px; color:var(--text-dim); cursor:pointer; }
   .us-inject-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .us-edit-btn { font-size:9px; padding:2px 6px; background:var(--glass); border:1px solid var(--border);
+    border-radius:3px; color:var(--text-dim); cursor:pointer; }
+  .us-edit-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── Userscript editor modal — built 2026-09-11 ────────────────────── */
+  #us-editor-modal {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    background: rgba(0,0,0,0.55); align-items: center; justify-content: center;
+  }
+  #us-editor-modal.visible { display: flex; }
+  #us-editor-panel {
+    width: 640px; max-width: 92vw; height: 520px; max-height: 88vh;
+    background: var(--bg-1); border: 1px solid var(--border); border-radius: 8px;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  #us-editor-header {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  #us-editor-title { flex:1; font-size:11px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; }
+  #us-editor-readonly-badge { font-size:9px; color:var(--text-dim); border:1px solid var(--border); border-radius:3px; padding:2px 6px; }
+  #us-editor-close { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px; }
+  #us-editor-close:hover { color:var(--text); }
+  #us-editor-fields { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid var(--border); }
+  #us-editor-fields input {
+    flex:1; background:var(--bg-2,#111); color:var(--text); border:1px solid var(--border);
+    border-radius:4px; padding:6px 8px; font-family:var(--mono); font-size:10px; outline:none;
+  }
+  #us-editor-fields input:focus { border-color:var(--accent); }
+  #us-editor-fields input:disabled { opacity:0.5; cursor:not-allowed; }
+  #us-editor-source {
+    flex:1; resize:none; background:var(--bg-2,#0b0b0b); color:var(--text);
+    border:none; padding:10px 12px; font-family:var(--mono); font-size:11px; line-height:1.5;
+    outline:none; tab-size:2;
+  }
+  #us-editor-source:disabled { opacity:0.7; cursor:not-allowed; }
+  #us-editor-footer { display:flex; align-items:center; gap:8px; padding:10px 12px; border-top:1px solid var(--border); }
+  #us-editor-footer button {
+    font-size:10px; padding:6px 12px; border-radius:4px; cursor:pointer;
+    background:var(--glass); border:1px solid var(--border); color:var(--text-dim);
+  }
+  #us-editor-footer button:hover { border-color:var(--accent); color:var(--accent); }
+  #us-editor-save { background:rgba(0,245,255,0.1); border-color:var(--accent); color:var(--accent); }
+  #us-editor-delete { color:#ff5577; border-color:#ff5577; }
+  #us-editor-delete:hover { background:rgba(255,85,119,0.1); }
 
   /* ── Right-click context menu ────────────────────────────────────────── */
   #ctx-menu {
