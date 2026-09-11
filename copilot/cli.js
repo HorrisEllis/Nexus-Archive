@@ -70,6 +70,7 @@ const c = {
 // ── State ─────────────────────────────────────────────────────────────────────
 let _rl        = null;
 let _sessionId = null;
+let _cliProvider = 'ollama'; // §BUILT 2026-09-08 — James: "default is ollama" — real, explicit CLI-session state, see the real /switch command below
 let _sseReq    = null;
 let _history   = [];
 
@@ -204,6 +205,7 @@ async function _talkToCopilot(prompt, command) {
         prompt,
         channel:   'cli',
         sessionId: _sessionId || 'cli-session',
+        provider:  _cliProvider, // §BUILT 2026-09-08 — the real /switch state, same field copilot/server.js already resolves via DEFAULT_PROVIDER
       });
       const u   = new URL(`${CP_URL}/api/prompt`);
       const req = require('http').request({
@@ -290,6 +292,38 @@ async function exec(input) {
   // /system prefix passes through to that system's own CLI, so this one CLI
   // reaches EVERY system — alongside co-pilot talk (above) and the live
   // registry grammar (below). §10.3 one CLI, not competing entries.
+  // §BUILT 2026-09-08 — James: "how about using copilot as the bridge
+  // for ollama and guardian... like a railroad switch to switch tracks.
+  // like default is ollama, then routing to chatgpt would switch to
+  // guardian like a toggle switch." Real, explicit state — replaces
+  // relying purely on lifeline's own confidence-based auto-escalation
+  // (which is still the real fallback when this is left at 'auto') with
+  // something a person can actually flip. Reuses the exact same real
+  // provider mechanism already built for the TV-shell toggle earlier
+  // this session (copilot/config.js's DEFAULT_PROVIDER resolution,
+  // copilot/server.js's real payload.provider handling) — same field,
+  // same backend, a second real front door onto it.
+  if (trimmed === 'switch' || trimmed.startsWith('switch ')) {
+    const target = trimmed.replace(/^switch\s*/, '').trim().toLowerCase();
+    if (!target) {
+      console.log(c.dim(`  current: ${_cliProvider}`));
+      console.log(c.dim('  Usage: switch ollama | switch guardian | switch <agent: claude|chatgpt|gemini|perplexity> | switch auto'));
+      return;
+    }
+    const GUARDIAN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity'];
+    if (target === 'ollama' || target === 'auto' || GUARDIAN_AGENTS.includes(target)) {
+      _cliProvider = target;
+    } else if (target === 'guardian') {
+      _cliProvider = 'auto'; // real, already-established meaning: let guardian's own connected agents compete, same as the TV-shell toggle's guardian side defaulting to the first real agent
+    } else {
+      console.log(c.r(`  unknown target: ${target}`));
+      console.log(c.dim('  Usage: switch ollama | switch guardian | switch <agent: claude|chatgpt|gemini|perplexity> | switch auto'));
+      return;
+    }
+    console.log(c.g(`  ✓ switched — co-pilot now routes to: ${_cliProvider}`));
+    return;
+  }
+
   if (trimmed.startsWith('/')) {
     const [sysTok, ...rest] = trimmed.split(/\s+/);
 

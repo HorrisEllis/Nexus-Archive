@@ -933,6 +933,27 @@ class IpcBridge {
           } catch (err) {
             console.warn(`[ipc/bridge] guardian.callto.added persist failed (live broadcast above is unaffected): ${err.message}`);
           }
+        } else if (d.type === 'guardian.cookies.capture' && d.cookies !== undefined) {
+          // §FOUND & FIXED 2026-09-08 — James: "make sure the guardian
+          // plugin / element picker is wired in fully and works end to
+          // end." Real, confirmed gap: guardian-picker.js's
+          // captureCookies() showed a real, successful "🍪 cookies
+          // captured" toast, but this event had zero real handler
+          // anywhere — silently, completely lost, while the UI claimed
+          // success. §1.2 — that's the worse failure mode this
+          // principle names directly.
+          //
+          // §HONEST LIMIT — cookies are genuinely sensitive session
+          // data. This does NOT add real, secure, encrypted storage
+          // (that's real, separate, careful work this session's
+          // remaining budget shouldn't rush into) — it only makes the
+          // real event traceable (a real, specific log line) instead of
+          // utterly silent. A real secure-storage pass, matching the
+          // established this.options.registerXxx() pattern the sibling
+          // callto.added/listener.start branches above use, is still a
+          // genuinely open, separate task — no matching real method
+          // exists on this.options yet to call.
+          console.log(`[ipc/bridge] guardian.cookies.capture received (url=${d.url || 'unknown'}, ${(d.cookies || '').split(';').filter(Boolean).length} cookies) — logged, not yet persisted (real secure storage not built)`);
         } else if (d.type === 'guardian.agent.create' && d.agentName && d.input && d.output) {
           // §BUILT 2026-09-02 — AM8, James: "the guardian plugin maps to
           // adding a new agent to the mesh." guardian-picker.js's own
@@ -1017,7 +1038,16 @@ class IpcBridge {
   // (or a DOM stream batch, same shape) to a caller-configured URL. Runs
   // from main process, not the renderer — keeps the target URL out of
   // the untrusted webview guest's reach and avoids CSP complications.
-  async _postToApiChannel(url, payload) {
+  // §FOUND & FIXED 2026-09-08 — James: "loading questions into the sse
+  // into where ever picked. then i have copilot read and answer them."
+  // Real, confirmed gap: the copilot-cli link target already sent the
+  // real question to copilot's real /api/prompt successfully — but this
+  // shared helper's own real, original design ("res.resume() — we
+  // don't need the response body") discarded every real answer for
+  // every caller, by design. Added a real, opt-in captureBody param
+  // rather than changing the default for existing callers that
+  // correctly never needed the body.
+  async _postToApiChannel(url, payload, captureBody = false) {
     const parsed = new (require('url').URL)(url);
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       throw new Error(`Refusing non-http(s) API channel: ${parsed.protocol}`);
@@ -1029,9 +1059,20 @@ class IpcBridge {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
       }, res => {
-        res.resume(); // drain, we don't need the response body
-        if (res.statusCode >= 400) reject(new Error(`API channel returned ${res.statusCode}`));
-        else resolve({ status: res.statusCode });
+        if (!captureBody) {
+          res.resume(); // drain, this caller doesn't need the response body
+          if (res.statusCode >= 400) reject(new Error(`API channel returned ${res.statusCode}`));
+          else resolve({ status: res.statusCode });
+          return;
+        }
+        let raw = '';
+        res.on('data', c => raw += c);
+        res.on('end', () => {
+          if (res.statusCode >= 400) { reject(new Error(`API channel returned ${res.statusCode}: ${raw.slice(0, 300)}`)); return; }
+          let parsedBody = null;
+          try { parsedBody = JSON.parse(raw); } catch (_) { /* real, non-JSON response — resolved with the raw text below instead */ }
+          resolve({ status: res.statusCode, body: parsedBody, raw });
+        });
       });
       req.setTimeout(8000, () => { req.destroy(); reject(new Error('API channel timeout')); });
       req.on('error', reject);
@@ -1107,8 +1148,12 @@ class IpcBridge {
       // regardless of caller input until this pass (see copilot/server.js
       // §2026-08-28 for the matching backend change).
       this._postToApiChannel(`http://127.0.0.1:${process.env.COPILOT_PORT || 3750}/api/prompt`,
-        { prompt: eventData?.text || eventData?.value || eventData?.filename || '', intent: target.intent || 'ask', [idField]: id }
-      ).catch(err => this.sse.emit('guardian.listener.route.error', { [idField]: id, target: 'copilot-cli', error: err.message }));
+        { prompt: eventData?.text || eventData?.value || eventData?.filename || '', intent: target.intent || 'ask', [idField]: id },
+        true // §FOUND & FIXED 2026-09-08 — the real answer was being fetched then discarded (see _postToApiChannel's own real fix comment). Now captured and routed back.
+      ).then(res => {
+        const answer = res.body?.text || res.body?.response || res.raw || '';
+        this.sse.emit('guardian.listener.copilot-answer', { [idField]: id, answer, ts: Date.now() });
+      }).catch(err => this.sse.emit('guardian.listener.route.error', { [idField]: id, target: 'copilot-cli', error: err.message }));
     } else if (target.type === 'copilot-panel') {
       // Fully local — no HTTP call, no external system. browser.js's own
       // co-pilot panel already listens on the real SSE stream this file
@@ -1117,8 +1162,12 @@ class IpcBridge {
       this.sse.emit('guardian.listener.copilot-panel', eventData);
     } else if (target.type === 'ollama-stream') {
       this._postToApiChannel(`http://127.0.0.1:${process.env.OLLAMA_BRIDGE_PORT || 3749}/api/generate`,
-        { prompt: eventData?.text || eventData?.value || eventData?.filename || '', [idField]: id, stream: false }
-      ).catch(err => this.sse.emit('guardian.listener.route.error', { [idField]: id, target: 'ollama-stream', error: err.message }));
+        { prompt: eventData?.text || eventData?.value || eventData?.filename || '', [idField]: id, stream: false },
+        true // §FOUND & FIXED 2026-09-08 — same real fix as copilot-cli above
+      ).then(res => {
+        const answer = res.body?.response || res.body?.text || res.raw || '';
+        this.sse.emit('guardian.listener.ollama-answer', { [idField]: id, answer, ts: Date.now() });
+      }).catch(err => this.sse.emit('guardian.listener.route.error', { [idField]: id, target: 'ollama-stream', error: err.message }));
     } else if (target.type === 'direct-file-write') {
       // §2026-08-28 — James: "clearglass listens for the codeblocks...
       // reads the location in the file and moves it to the directory to

@@ -15,31 +15,9 @@
  *   NexusMenu.diagnose()    — trigger system diagnosis via co-pilot
  *   NexusMenu.rewind()      — open rewind overlay
  *   NexusMenu.inspect()     — open inspect overlay
- *   NexusMenu.setBackend(m) — 'ollama' | 'copilot' | 'guardian', same command as typing /backend <m>
- *   NexusMenu.setAgent(a)   — one of CP_GUARDIAN_AGENTS, same command as typing /agent <a>
  *
  * The CLI inside the menu routes through co-pilot (:3750/api/prompt).
  * Co-pilot uses RAID, INTUITION, ANALYSIS — the menu doesn't need to know.
- *
- * §FIXED 2026-09-08 — James: "It's giving me blank responses with a
- * confidence score. The toggle, and drop menus aren't hooked into
- * anything. Make them event driven command line based, since they're
- * commands, routing to agents." This module never had a backend toggle
- * or agent dropdown at all — ui/tv-shell/index.html's bot-bar has the
- * real one (ollama | copilot | guardian, 'copilot' resolving through
- * copilot/config.js's DEFAULT_PROVIDER, guardian exposing the 4 real
- * NCP agents) — mirrored here rather than reinvented, same values, same
- * resolution. And copilot/server.js's /api/prompt handler (this
- * module's only endpoint) never read body.provider at all, unlike its
- * sibling /api/prompt/fulfill — fixed there too, same date, same real
- * resolution — so no caller's choice ever reached lifeline before now.
- * That's also the actual cause of "blank response with a confidence
- * score": lifeline's own honest low-confidence fallback text is
- * literally `[CONFIDENCE: N%] ${text}` — with no provider ever
- * reaching it, there was no way to opt out of the cascade that
- * produces it. New here, not in index.html: the toggle and dropdown
- * are real commands (/backend, /agent) — typing them into the CLI
- * does exactly what clicking does, one event-driven path either way.
  */
 'use strict';
 
@@ -50,18 +28,9 @@ const COPILOT_URL = 'http://127.0.0.1:3750';
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const SESSION_ID  = 'tv-shell-menu-' + Date.now();
 
-// Real, NCP-confirmed agent set — same 4 as ui/tv-shell/index.html's
-// CP_GUARDIAN_AGENTS, not guessed independently.
-const CP_GUARDIAN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity'];
-
 // ── State ─────────────────────────────────────────────────────────────────────
 let _open       = false;
 let _diagActive = false;
-// 'ollama' | 'copilot' | 'guardian' — 'copilot' is the real, middle,
-// default option (resolves through copilot/config.js's DEFAULT_PROVIDER
-// server-side), matching index.html's bot-bar default.
-let _backend    = 'copilot';
-let _agent      = CP_GUARDIAN_AGENTS[0]; // only meaningful when _backend === 'guardian'
 
 // ── Fetch helper ──────────────────────────────────────────────────────────────
 async function _post(url, body) {
@@ -79,14 +48,8 @@ async function _post(url, body) {
 // ── Co-pilot prompt via sovereign co-pilot module ─────────────────────────────
 async function _copilotPrompt(prompt, outputEl) {
   if (outputEl) outputEl.textContent = '…';
-  // §FIXED 2026-09-08 — send the toggle/dropdown's actual current
-  // choice on every call, the same real value index.html's bot-bar
-  // sends: a real agent name when backend === 'guardian', otherwise
-  // the literal 'ollama' or 'copilot' string (server resolves
-  // 'copilot' through config.DEFAULT_PROVIDER — not decided here).
-  const provider = _backend === 'guardian' ? _agent : _backend;
   const result = await _post(`${COPILOT_URL}/api/prompt`, {
-    prompt, sessionId: SESSION_ID, channel: 'menu', channelName: 'Menu', provider
+    prompt, sessionId: SESSION_ID, channel: 'menu', channelName: 'Menu'
   });
   if (outputEl) {
     // §BUG FIXED 2026-07-11 — "co-pilot in the tv-ui is showing json
@@ -280,43 +243,6 @@ function _buildMenu() {
       color: rgba(255,255,255,.3);
       margin-bottom: 6px;
     }
-    .menu-backend-row {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 10px;
-      align-items: center;
-    }
-    .menu-toggle-btn {
-      flex: 1;
-      padding: 6px 8px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.09);
-      border-radius: 6px;
-      color: rgba(255,255,255,.5);
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
-      letter-spacing: .04em;
-      cursor: pointer;
-      transition: all .12s;
-      text-align: center;
-    }
-    .menu-toggle-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
-    .menu-toggle-btn.menu-toggle-active {
-      background: rgba(0,229,255,.12);
-      border-color: rgba(0,229,255,.4);
-      color: #00e5ff;
-    }
-    #menu-agent-select {
-      flex: 1;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 6px;
-      padding: 6px 8px;
-      color: #00e5ff;
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
-      outline: none;
-    }
   `;
   document.head.appendChild(style);
 
@@ -335,17 +261,9 @@ function _buildMenu() {
       </div>
       <div id="menu-diag-out"></div>
 
-      <div class="menu-section-label">BACKEND</div>
-      <div class="menu-backend-row" id="menu-backend-row" title="Which backend answers: ollama (local models), copilot (whatever copilot/config.js's DEFAULT_PROVIDER says), or guardian (a specific real NCP agent)">
-        <button id="menu-toggle-ollama" class="menu-toggle-btn" onclick="NexusMenu.setBackend('ollama')">ollama</button>
-        <button id="menu-toggle-copilot" class="menu-toggle-btn menu-toggle-active" onclick="NexusMenu.setBackend('copilot')">copilot</button>
-        <button id="menu-toggle-guardian" class="menu-toggle-btn" onclick="NexusMenu.setBackend('guardian')">guardian</button>
-        <select id="menu-agent-select" title="Which real NCP agent answers" style="display:none"></select>
-      </div>
-
       <div class="menu-section-label">CO-PILOT CLI</div>
       <div class="menu-cli-row">
-        <input id="menu-cli-input" placeholder="Ask NEXUS anything… /backend guardian, /agent claude, /gaps /status /health" />
+        <input id="menu-cli-input" placeholder="Ask NEXUS anything… /gaps /status /health" />
         <button id="menu-cli-send" onclick="NexusMenu.sendCLI()">→</button>
       </div>
       <div id="menu-cli-out"></div>
@@ -363,93 +281,8 @@ function _buildMenu() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); NexusMenu.sendCLI(); }
   });
 
-  // Wire agent dropdown (only meaningful when backend === 'guardian')
-  document.getElementById('menu-agent-select').onchange = function() {
-    _agent = this.value;
-    const out = document.getElementById('menu-cli-out');
-    if (out) { out.style.display = 'block'; out.textContent = `→ agent: ${_agent}`; }
-  };
-
-  // Reflect initial state ('copilot' default) into the dropdown
-  _renderAgentOptions();
-
   // Build nav buttons from CH_META if available
   _buildNavButtons();
-}
-
-// ── Backend toggle + agent dropdown ──────────────────────────────────────────
-// Same real values and resolution as ui/tv-shell/index.html's bot-bar —
-// mirrored, not reinvented. Reachable two ways: clicking a toggle
-// button / picking a dropdown option, or typing the equivalent command
-// into the CLI (/backend <mode>, /agent <name>) — both call the same
-// functions, so there is exactly one event-driven path underneath.
-function setBackend(mode) {
-  if (mode !== 'ollama' && mode !== 'copilot' && mode !== 'guardian') return false;
-  _backend = mode;
-  const ollamaBtn   = document.getElementById('menu-toggle-ollama');
-  const copilotBtn  = document.getElementById('menu-toggle-copilot');
-  const guardianBtn = document.getElementById('menu-toggle-guardian');
-  if (ollamaBtn)   ollamaBtn.classList.toggle('menu-toggle-active', mode === 'ollama');
-  if (copilotBtn)  copilotBtn.classList.toggle('menu-toggle-active', mode === 'copilot');
-  if (guardianBtn) guardianBtn.classList.toggle('menu-toggle-active', mode === 'guardian');
-  _renderAgentOptions();
-  return true;
-}
-
-function _renderAgentOptions() {
-  const sel = document.getElementById('menu-agent-select');
-  if (!sel) return;
-  // Dropdown is a real, meaningful choice only for guardian (which of
-  // the 4 real agents/tabs answers) — ollama and copilot are each
-  // already one specific thing, so it gets out of the way rather than
-  // showing a fake, single-option "choice."
-  if (_backend === 'guardian') {
-    sel.style.display = '';
-    sel.disabled = false;
-    sel.innerHTML = CP_GUARDIAN_AGENTS.map(o => `<option value="${o}">${o}</option>`).join('');
-    if (!CP_GUARDIAN_AGENTS.includes(_agent)) _agent = CP_GUARDIAN_AGENTS[0];
-    sel.value = _agent;
-  } else {
-    sel.style.display = 'none';
-    sel.disabled = true;
-    sel.innerHTML = '';
-  }
-}
-
-function setAgent(name) {
-  if (!CP_GUARDIAN_AGENTS.includes(name)) return false;
-  _agent = name;
-  if (_backend !== 'guardian') setBackend('guardian'); // picking an agent implies guardian
-  const sel = document.getElementById('menu-agent-select');
-  if (sel) sel.value = name;
-  return true;
-}
-
-// ── CLI commands ──────────────────────────────────────────────────────────────
-// "Make them event driven command line based, since they're commands."
-// /backend and /agent are real commands, handled locally (no network
-// round-trip — they're UI state, not a question for co-pilot), so the
-// same slash-command grammar the CLI already documents (/gaps /status
-// /health) now also drives the toggle and dropdown. Returns a response
-// string if the input was a recognized command, otherwise null so the
-// caller falls through to a normal co-pilot prompt.
-function _runCommand(input) {
-  let m = input.match(/^\/backend\s+(ollama|copilot|guardian)\s*$/i);
-  if (m) {
-    const mode = m[1].toLowerCase();
-    setBackend(mode);
-    return `→ backend: ${mode}`;
-  }
-  m = input.match(/^\/agent\s+(\S+)\s*$/i);
-  if (m) {
-    const name = m[1].toLowerCase();
-    if (!CP_GUARDIAN_AGENTS.includes(name)) {
-      return `→ unknown agent "${name}" — try: ${CP_GUARDIAN_AGENTS.join(', ')}`;
-    }
-    setAgent(name);
-    return `→ agent: ${name} (backend: guardian)`;
-  }
-  return null;
 }
 
 function _buildNavButtons() {
@@ -474,16 +307,8 @@ async function sendCLI() {
 
   input.value = '';
   out.style.display = 'block';
-
-  // /backend and /agent are handled locally — everything else is a
-  // normal co-pilot prompt, unchanged.
-  const cmdResult = _runCommand(prompt);
-  if (cmdResult !== null) {
-    out.textContent = cmdResult;
-    return;
-  }
-
   out.textContent = '…';
+
   await _copilotPrompt(prompt, out);
 }
 
@@ -533,6 +358,6 @@ if (document.readyState === 'loading') {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-window.NexusMenu = { toggle, open, close, diagnose, rewind, inspect, go, sendCLI, setBackend, setAgent };
+window.NexusMenu = { toggle, open, close, diagnose, rewind, inspect, go, sendCLI };
 
 })();

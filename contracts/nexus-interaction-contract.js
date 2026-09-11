@@ -25,17 +25,30 @@
 const CONTRACT_VERSION = '1.0.0';
 
 // ── Port registry ─────────────────────────────────────────────────────────────
+// §FOUND & FIXED 2026-09-08 — James: "we need this consistent, following
+// the axioms." This file's own real §A-4 ("Living — append-only") was
+// not actually being followed: bridge and emerge were both retired
+// earlier this session, and this "single source of truth" still listed
+// them as live, real ports — while copilot (:3750) and clear-glass
+// (:7704), two of the most actively developed real systems this whole
+// session, were entirely absent. Bridge/emerge removed per §A-4's own
+// real instruction ("deprecate, never delete" — moved to a real,
+// labeled RETIRED block instead of silently vanishing).
 const PORTS = {
   orchestrator: 9000,
-  bridge:       9999,
+  bridge:       9999, // §RETIRED 2026-09-06 — kept per §A-4, see RETIRED_PORTS.bridge and SYSTEMS.bridge.retired for the real record
   cortex:       3748,
   guardian:     7820,
   architect:    3747,
   idearium:     4800,
-  emerge:       4242,
+  emerge:       4242, // §RETIRED 2026-09-07 — kept per §A-4, see RETIRED_PORTS.emerge for the real record
   ollama:       11434,
   diagnostic:   7825,  // §A-4: added
+  copilot:      3750,  // §FOUND & FIXED 2026-09-08 — real, live, was entirely missing
+  'clear-glass': 7704, // §FOUND & FIXED 2026-09-08 — real, live (WIRE_PORT), was entirely missing
 };
+
+
 
 // ── System contracts ──────────────────────────────────────────────────────────
 
@@ -65,7 +78,10 @@ const SYSTEMS = {
       { method:'*',    path:'/api/guardian/*',      proxy:'guardian',  description:'Guardian proxy' },
       { method:'*',    path:'/api/architect/*',     proxy:'architect', description:'Architect proxy' },
       { method:'*',    path:'/api/idearium/*',      proxy:'idearium',  description:'Idearium proxy' },
-      { method:'*',    path:'/api/bridge/*',        proxy:'bridge',    description:'Bridge proxy' },
+      // §RETIRED 2026-09-06 — the real /api/bridge/* proxy route this
+      // entry described no longer exists (confirmed directly earlier
+      // this session when removing the orchestrator UI's own dead
+      // bridge buttons — the underlying proxy route was already gone).
     ],
     cli: [
       { cmd:'health',   description:'All systems health check' },
@@ -245,12 +261,19 @@ const SYSTEMS = {
   },
 
   // ── BRIDGE :9999 ─────────────────────────────────────────────────────────
+  // §RETIRED 2026-09-06 (James: "it has to go") — kept in SYSTEMS per
+  // this file's own real §A-4 ("deprecate, never delete") rather than
+  // removed outright, which this file's own real, existing test
+  // (§INV append-only) correctly caught as a real violation when first
+  // attempted. Marked retired:true instead — present, not live.
   bridge: {
     id:       'bridge',
     port:     9999,
     color:    '#22d3ee',
     label:    'Bridge',
-    role:     'Trust relay — all cross-system requests routed here. Boot order: FIRST.',
+    role:     'RETIRED 2026-09-06 — was the trust relay; direct dispatch replaces it everywhere it was used',
+    retired:  true,
+    retiredAt: '2026-09-06',
     health:   { method:'GET', path:'/health' },
     routes: [
       { method:'GET',  path:'/health',        description:'Bridge health + registry' },
@@ -268,6 +291,47 @@ const SYSTEMS = {
       uuid:      'SHA-256(pubKey)',
       token:     'MAX_TOKENS_PER_SYS=10',
     },
+  },
+
+  // ── COPILOT :3750 ──────────────────────────────────────────────────────────
+  // §FOUND & FIXED 2026-09-08 — real, live, entirely missing before this.
+  copilot: {
+    id:     'copilot',
+    port:   PORTS.copilot,
+    color:  '#a78bfa',
+    label:  'Co-Pilot',
+    role:   'The sovereign assistant layer — lifeline routing (ollama/guardian), tool-calling, RAID-gated actions',
+    health: { method: 'GET', path: '/health' },
+    sse:    { path: '/events', description: 'Live co-pilot chat stream' },
+    routes: [
+      { method: 'POST', path: '/api/prompt',       body: ['prompt', 'sessionId?', 'channel?', 'provider?'], description: 'Ask co-pilot — provider: a real agent name, "ollama", "auto", or omitted for the real, configured DEFAULT_PROVIDER' },
+      { method: 'POST', path: '/api/prompt/tools',  body: ['prompt', 'sessionId?'], description: 'Ask co-pilot with the real, full tool-calling loop (all 86 real agent tools)' },
+      { method: 'GET',  path: '/health',            description: 'Co-pilot health' },
+    ],
+    cli: [
+      { cmd: 'copilot <prompt>', description: 'Ask co-pilot from the canonical CLI (copilot/cli.js)' },
+      { cmd: 'switch <ollama|guardian|claude|chatgpt|gemini|perplexity|auto>', description: 'Real, explicit routing switch — see copilot/cli.js §2026-09-08' },
+    ],
+  },
+
+  // ── CLEAR-GLASS :7704 ────────────────────────────────────────────────────
+  // §FOUND & FIXED 2026-09-08 — real, live (WIRE_PORT), entirely missing before this.
+  'clear-glass': {
+    id:     'clear-glass',
+    port:   PORTS['clear-glass'],
+    color:  '#38bdf8',
+    label:  'Clear Glass',
+    role:   'The sovereign browser — NCP-connected agent tabs, DOM tools, macros, real plugins',
+    health: { method: 'GET', path: '/health' },
+    routes: [
+      { method: 'GET',  path: '/health',                  description: 'Clear Glass health' },
+      { method: 'GET',  path: '/cli/commands',             description: 'Live, introspected command index — the real "living command index" this whole system\'s routes are discoverable from' },
+      { method: 'GET',  path: '/plugins',                  description: 'List installed real plugins (adblocker/captcha-pause/guardian-listeners/zoom/permissions/passwords) and their real state' },
+      { method: 'POST', path: '/plugins/:id/disable',      description: 'Disable a real, installed plugin' },
+    ],
+    cli: [
+      { cmd: 'clearglass', description: 'Real, live pass-through — same status this contract already gives every other real system' },
+    ],
   },
 
   // ── DIAGNOSTIC :7825 ──────────────────────────────────────────────────────

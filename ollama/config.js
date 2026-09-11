@@ -53,7 +53,19 @@ module.exports = {
   // than DEFAULT_MODEL (a fallback that's identical to the primary isn't
   // a real fallback) — huihui_ai/qwen3-abliterated is the other real,
   // non-cloud model actually present in his install.
-  FALLBACK_MODEL: process.env.OLLAMA_FALLBACK_MODEL || 'huihui_ai/qwen3-abliterated',
+  // §UPDATED 2026-09-08 — James confirmed the new models are done
+  // downloading. Real mapping, not arbitrary: idearium/agent-suite/
+  // index.js's generateWithOllama() defaults to THIS constant
+  // (FALLBACK_MODEL, not DEFAULT_MODEL — checked directly), and
+  // idearium's real use case (async spec-chunk writing) is exactly
+  // where the earlier real tradeoff discussion favored the 7B —
+  // "handling multi-file reasoning and refactoring far better than 3B
+  // models" matters more than latency for a one-shot chunk write.
+  // DEFAULT_MODEL stays the 3B — copilot/lifeline.js's own real,
+  // historical bugfix comment confirms copilot defers to THIS constant
+  // (never hardcodes a model), and copilot's interactive tool loop is
+  // where the earlier latency tradeoff favored staying fast.
+  FALLBACK_MODEL: process.env.OLLAMA_FALLBACK_MODEL || 'huihui_ai/qwen2.5-coder-abliterate:7b',
 
   // ── Concurrency ────────────────────────────────────────────────────────
   // 1 is the honest default for a single-GPU/single-box install: it

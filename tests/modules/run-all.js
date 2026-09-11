@@ -313,6 +313,10 @@ const SUITES = [
   'tool-call-listener.test.js',
   'brainos-panel-wiring.test.js',
   'clear-glass-plugin-routes.test.js',
+  'guardian-picker-cookies-wiring.test.js',
+  'guardian-picker-answer-roundtrip.test.js',
+  'nexus-cli-switch.test.js',
+  'node-index-watcher.test.js',
 ];
 
 let totalPassed = 0;

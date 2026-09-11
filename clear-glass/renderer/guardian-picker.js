@@ -1413,7 +1413,12 @@
   // ── Cookie capture ───────────────────────────────────────────
   function captureCookies() {
     try { window.__cg?.send('dom:event', { type: 'guardian.cookies.capture', cookies: document.cookie, url: window.location.href }); } catch (_) {}
-    showToast('🍪 cookies captured');
+    // §FOUND & FIXED 2026-09-08 — was "🍪 cookies captured," claiming
+    // full, real success. §1.2: the real receiving handler
+    // (ipc/bridge.js) only logs this right now — no real, secure
+    // storage exists yet — so the toast must not claim more than what
+    // actually happened.
+    showToast('🍪 cookies sent (logged — real storage not yet built)');
   }
 
 
