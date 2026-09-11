@@ -193,7 +193,11 @@ class AgentMesh {
     // schedule-driven workflow engine. Same enqueueFn/busEmit wiring as
     // route-graph above — one real dispatch path, not two.
     const { AutomationEngine } = require('./automation-engine.js');
-    this._automation = new AutomationEngine({ enqueueFn: (task) => this.enqueue(task), busEmit: (t, d) => this.sse.emit(t, d) });
+    this._automation = new AutomationEngine({
+      enqueueFn: (task) => this.enqueue(task),
+      busEmit: (t, d) => this.sse.emit(t, d),
+      meshViewFn: () => this.listMeshView(),
+    });
     this._automation.start();
   }
 
@@ -1105,6 +1109,10 @@ class AgentMesh {
   removeWorkflow(id) { return this._automation.remove(id); }
   runWorkflow(id, reason) { return this._automation.run(id, reason); }
   getAutomationLog(limit) { return this._automation.getLog(limit); }
+  addWorkflowStep(id, step) { return this._automation.addStep(id, step); }
+  updateWorkflowStep(id, stepId, patch) { return this._automation.updateStep(id, stepId, patch); }
+  removeWorkflowStep(id, stepId) { return this._automation.removeStep(id, stepId); }
+  moveWorkflowStep(id, stepId, dir) { return this._automation.moveStep(id, stepId, dir); }
 }
 
 module.exports = AgentMesh;

@@ -133,6 +133,18 @@
     });
   }
 
+  // §BUGFIX — a real, per-id-only position: same id always lands in the
+  // same spot, independent of how many other dynamic nodes exist right
+  // now or the order they arrived in (see call site's own comment for
+  // why _layoutCircle was wrong for this use).
+  function _hashPos(id, cx, cy, r) {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    const angle = (h % 3600) / 3600 * Math.PI * 2;
+    const rJitter = r - ((h >>> 8) % 40); // ±40px radius spread, still id-stable, reduces label overlap for near-hash ids
+    return { x: cx + rJitter * Math.cos(angle), y: cy + rJitter * Math.sin(angle) };
+  }
+
   function _colorFor(sysVar) {
     return sysVar ? `var(${sysVar})` : 'var(--dim)';
   }
@@ -336,19 +348,23 @@
       _meshNodeData[n.id] = n; // real, current data — always overwritten, never stale by design
     }
 
-    // Real, deterministic re-layout — every visible dynamic node, in a
-    // stable order (insertion order via Object.keys), spaced around the
-    // outer ring. §NO_CAP_ON_VISIBILITY — every real entry gets a slot,
-    // however many there are; no truncation to a top-N.
-    const ids = Object.keys(_meshNodeEls);
-    const laid = _layoutCircle(ids.map((id) => ({ id })), 320, 320, MESH_RADIUS);
-    laid.forEach((pos) => {
-      const entry = _meshNodeEls[pos.id];
+    // §BUGFIX — James, live screenshot: "nodes are free on the canvas...
+    // it's not fixed." Confirmed real: the previous _layoutCircle(ids...)
+    // call recomputes angle as i/items.length for EVERY node on EVERY
+    // render — despite this comment's own prior claim of "stable order,"
+    // adding or removing even one dynamic node changes items.length for
+    // every OTHER node too, reshuffling the whole ring. Replaced with a
+    // per-id hash angle: a node's position depends only on its own id,
+    // never on how many other nodes currently exist, so it never moves
+    // once assigned, regardless of arrivals/departures elsewhere.
+    for (const id of Object.keys(_meshNodeEls)) {
+      const entry = _meshNodeEls[id];
+      const pos = _hashPos(id, 320, 320, MESH_RADIUS);
       entry.circle.setAttribute('cx', pos.x);
       entry.circle.setAttribute('cy', pos.y);
       entry.label.setAttribute('x', pos.x);
       entry.label.setAttribute('y', pos.y + 18);
-    });
+    }
     // Node positions just changed — redraw any real routes against them
     // so an edge never lags a node that just moved to a new slot.
     renderRoutes(_lastRoutes);

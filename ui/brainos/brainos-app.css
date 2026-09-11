@@ -34,6 +34,14 @@
   --warn:    #ffd740;
   --danger:  #ff4060;
   --bridge:  #ff6b35;
+  /* §BUGFIX — James, live screenshot: canvas nodes render invisible
+     (near-black) until they pulse. Root cause confirmed directly:
+     brainos-canvas.js's static-node stroke and topology-edge stroke
+     both reference var(--rim), which was never declared anywhere in
+     this file or any other real stylesheet — an undefined custom
+     property resolves to nothing, so every node/edge lacking a
+     matched sysVar color rendered with no visible outline at all. */
+  --rim:     #2a2a55;
 
   --bar-h: 42px;
 }
@@ -168,3 +176,11 @@ body {
 /* §BUILT — Phase 2 real route/pipeline edges */
 .brainos-canvas-route-edge { stroke: var(--idle); stroke-width: 1.5; opacity: 0.7; }
 .brainos-canvas-route-feedback { stroke-dasharray: 3 3; }
+
+/* §BUGFIX — James, live screenshot: canvas text was invisible. Root
+   cause confirmed directly: brainos-canvas.js's <text> elements set no
+   fill attribute anywhere, and no CSS rule targeted these classes
+   either — SVG text with neither falls back to its initial value
+   (black), unreadable against this canvas's near-black background. */
+.brainos-canvas-label      { fill: var(--text2); }
+.brainos-canvas-mesh-label { fill: var(--text); }

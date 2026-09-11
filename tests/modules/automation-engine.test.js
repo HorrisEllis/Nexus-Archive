@@ -52,7 +52,7 @@ await test('AE-003', 'run() reports a real error for a not-yet-built step type, 
   const { AutomationEngine, WORKFLOWS_DIR } = fresh();
   cleanup(WORKFLOWS_DIR);
   const engine = new AutomationEngine({});
-  const { workflow } = engine.create({ name: 'Bad', status: 'active', steps: [{ type: 'condition', config: {} }] });
+  const { workflow } = engine.create({ name: 'Bad', status: 'active', steps: [{ type: 'branch', config: {} }] });
   const result = await engine.run(workflow.id);
   assert.strictEqual(result.ok, false);
   assert.ok(result.error.includes('not-yet-built'), 'error must name the step honestly, not pretend it ran');
@@ -109,6 +109,58 @@ await test('AE-007', "start()'s tick interval is unref'd — never keeps the pro
   assert.ok(engine._tickTimer, 'a real timer must exist after start()');
   assert.strictEqual(engine._tickTimer.hasRef(), false, 'the timer must be unref\'d');
   engine.stop();
+});
+
+await test('AE-008', 'a condition step evaluates against real, live mesh data and routes to onTrue/onFalse', async () => {
+  const { AutomationEngine, WORKFLOWS_DIR } = fresh();
+  cleanup(WORKFLOWS_DIR);
+  const enqueued = [];
+  const engine = new AutomationEngine({
+    enqueueFn: (t) => enqueued.push(t),
+    meshViewFn: () => [{ id: 'claude', status: 'online' }],
+  });
+  const { workflow } = engine.create({
+    name: 'Cond', status: 'active',
+    steps: [
+      { id: 'c1', type: 'condition', config: { var: 'claude.status', op: '==', value: 'online', onTrue: 'a1', onFalse: 'end' } },
+      { id: 'a1', type: 'agent', config: { agentKey: 'claude', prompt: 'hi' } },
+    ],
+  });
+  const result = await engine.run(workflow.id);
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(enqueued.length, 1, 'the onTrue branch must have actually run the agent step');
+  cleanup(WORKFLOWS_DIR);
+});
+
+await test('AE-009', 'a condition step with no matching mesh entry resolves undefined, not a thrown lookup error', async () => {
+  const { AutomationEngine, WORKFLOWS_DIR } = fresh();
+  cleanup(WORKFLOWS_DIR);
+  const engine = new AutomationEngine({ meshViewFn: () => [] });
+  const { workflow } = engine.create({
+    name: 'CondMiss', status: 'active',
+    steps: [{ id: 'c1', type: 'condition', config: { var: 'ghost.status', op: '==', value: 'online' } }],
+  });
+  const result = await engine.run(workflow.id);
+  assert.strictEqual(result.ok, true, 'a missing var must resolve to a real false comparison, not crash the run');
+  cleanup(WORKFLOWS_DIR);
+});
+
+await test('AE-010', 'per-step CRUD: add/update/move/remove all persist to the real workflow file', () => {
+  const { AutomationEngine, WORKFLOWS_DIR } = fresh();
+  cleanup(WORKFLOWS_DIR);
+  const engine = new AutomationEngine({});
+  const { workflow } = engine.create({ name: 'CRUD', steps: [] });
+  const added = engine.addStep(workflow.id, { type: 'delay', config: { ms: 5 } });
+  assert.strictEqual(added.ok, true);
+  const stepId = added.step.id;
+  engine.updateStep(workflow.id, stepId, { config: { ms: 50 } });
+  assert.strictEqual(engine.get(workflow.id).steps[0].config.ms, 50);
+  engine.addStep(workflow.id, { type: 'delay', config: { ms: 5 } });
+  engine.moveStep(workflow.id, stepId, 'down');
+  assert.strictEqual(engine.get(workflow.id).steps[1].id, stepId, 'move must actually reorder');
+  engine.removeStep(workflow.id, stepId);
+  assert.strictEqual(engine.get(workflow.id).steps.length, 1);
+  cleanup(WORKFLOWS_DIR);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

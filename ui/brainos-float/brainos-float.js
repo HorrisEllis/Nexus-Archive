@@ -278,38 +278,113 @@
       unmount() {},
     });
 
-    // AUTOMATION — real workflow CRUD + run + log (automation-engine.js)
+    // AUTOMATION — real workflow + per-step CRUD, Tasker-style editor
+    // (automation-engine.js: trigger/agent/delay/condition/command)
     registerTab({
       id: 'automation', label: 'AUTOMATION',
       mount(container, ctx) {
-        const list = _el('div', { class: 'bf-list' });
+        let selectedId = null;
+        const wfList = _el('div', { class: 'bf-list' });
         const nameIn = _el('input', { class: 'bf-input', placeholder: 'workflow name' });
-        function refresh() {
+        const stepsHost = _el('div', { class: 'bf-list', style: 'margin-top:8px' });
+        const editorHost = _el('div', {});
+
+        const STEP_FIELDS = {
+          trigger:   [['intervalMs', 'interval ms (blank = manual only)']],
+          agent:     [['agentKey', 'agent key'], ['prompt', 'prompt']],
+          delay:     [['ms', 'delay ms']],
+          condition: [['var', 'var (e.g. deepseek.status)'], ['op', 'op (== != > < >= <=)'], ['value', 'value'], ['onTrue', 'onTrue step id'], ['onFalse', 'onFalse step id']],
+          command:   [['system', 'system (guardian/ollama/copilot/clearglass)'], ['method', 'method (GET/POST)'], ['endpoint', 'endpoint (/health)'], ['body', 'body (JSON, optional)']],
+        };
+
+        function refreshWorkflows() {
           fetch(ctx.clearGlassUrl + '/automation/workflows').then(r => r.json()).then(d => {
             if (!d.ok) return;
-            list.innerHTML = '';
+            wfList.innerHTML = '';
             for (const wf of d.workflows) {
-              list.appendChild(_el('div', { class: 'bf-row' }, [
-                _el('span', { class: 'bf-row-label', text: `${wf.name} (${wf.status}) · ${wf.steps.length} steps · ${wf.runCount || 0} runs` }),
+              const row = _el('div', { class: `bf-row${wf.id === selectedId ? ' bf-tab-act' : ''}` }, [
+                _el('span', { class: 'bf-row-label', text: `${wf.name} (${wf.status}) · ${wf.steps.length} steps · ${wf.runCount || 0} runs`, onclick: () => { selectedId = wf.id; refreshSteps(); } }),
                 _el('button', { class: 'bf-btn bf-btn-g', text: '▶', onclick: () => fetch(ctx.clearGlassUrl + `/automation/workflows/${wf.id}/run`, { method: 'POST' }).then(r => r.json()).then(rd => ctx.toast(rd.ok ? 'ran' : rd.error, rd.ok ? 'g' : 'r')) }),
-                _el('button', { class: 'bf-btn bf-btn-danger', text: '✕', onclick: () => fetch(ctx.clearGlassUrl + `/automation/workflows/${wf.id}`, { method: 'DELETE' }).then(refresh) }),
-              ]));
+                _el('button', { class: 'bf-btn bf-btn-danger', text: '✕', onclick: () => fetch(ctx.clearGlassUrl + `/automation/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { if (selectedId === wf.id) selectedId = null; refreshWorkflows(); refreshSteps(); }) }),
+              ]);
+              wfList.appendChild(row);
             }
           }).catch(e => ctx.toast('workflows fetch failed: ' + e.message, 'r'));
         }
+
+        function refreshSteps() {
+          stepsHost.innerHTML = '';
+          editorHost.innerHTML = '';
+          if (!selectedId) return;
+          fetch(ctx.clearGlassUrl + '/automation/workflows').then(r => r.json()).then(d => {
+            const wf = d.workflows.find(w => w.id === selectedId);
+            if (!wf) return;
+            wf.steps.forEach((step, i) => {
+              stepsHost.appendChild(_el('div', { class: 'bf-row' }, [
+                _el('span', { class: 'bf-row-label', text: `${i + 1}. ${step.type.toUpperCase()}` }),
+                _el('button', { class: 'bf-btn', text: '↑', onclick: () => fetch(ctx.clearGlassUrl + `/automation/workflows/${wf.id}/steps/${step.id}/move`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dir: 'up' }) }).then(refreshSteps) }),
+                _el('button', { class: 'bf-btn', text: '↓', onclick: () => fetch(ctx.clearGlassUrl + `/automation/workflows/${wf.id}/steps/${step.id}/move`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dir: 'down' }) }).then(refreshSteps) }),
+                _el('button', { class: 'bf-btn', text: 'EDIT', onclick: () => _openStepEditor(wf.id, step) }),
+                _el('button', { class: 'bf-btn bf-btn-danger', text: '✕', onclick: () => fetch(ctx.clearGlassUrl + `/automation/workflows/${wf.id}/steps/${step.id}`, { method: 'DELETE' }).then(refreshSteps) }),
+              ]));
+            });
+          }).catch(e => ctx.toast('steps fetch failed: ' + e.message, 'r'));
+        }
+
+        function _openStepEditor(wfId, step) {
+          editorHost.innerHTML = '';
+          const typeSel = _el('select', { class: 'bf-input' },
+            Object.keys(STEP_FIELDS).map(t => _el('option', { value: t, text: t, ...(t === step.type ? { selected: 'selected' } : {}) })));
+          const fieldsHost = _el('div', {});
+          const inputs = {};
+          function renderFields(type) {
+            fieldsHost.innerHTML = '';
+            inputs[type] = inputs[type] || {};
+            for (const [key, placeholder] of (STEP_FIELDS[type] || [])) {
+              const input = _el('input', { class: 'bf-input', placeholder, value: step.config?.[key] ?? '' });
+              inputs[type][key] = input;
+              fieldsHost.appendChild(input);
+            }
+          }
+          typeSel.addEventListener('change', () => renderFields(typeSel.value));
+          renderFields(step.type);
+          editorHost.appendChild(_el('div', { class: 'bf-section-label', text: `EDIT STEP (${step.type})` }));
+          editorHost.appendChild(typeSel);
+          editorHost.appendChild(fieldsHost);
+          editorHost.appendChild(_el('button', {
+            class: 'bf-btn bf-btn-g', text: 'SAVE',
+            onclick: () => {
+              const type = typeSel.value;
+              const config = {};
+              for (const [key] of (STEP_FIELDS[type] || [])) config[key] = inputs[type][key].value;
+              fetch(ctx.clearGlassUrl + `/automation/workflows/${wfId}/steps/${step.id}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, config }),
+              }).then(r => r.json()).then(rd => { ctx.toast(rd.ok ? 'step saved' : rd.error, rd.ok ? 'g' : 'r'); editorHost.innerHTML = ''; refreshSteps(); });
+            },
+          }));
+        }
+
         container.appendChild(_el('div', {}, [
-          _el('div', { class: 'bf-section-label', text: 'WORKFLOWS (trigger/agent/delay steps)' }),
+          _el('div', { class: 'bf-section-label', text: 'WORKFLOWS' }),
           nameIn,
           _el('button', {
             class: 'bf-btn bf-btn-g', text: '+ NEW (draft)',
             onclick: () => fetch(ctx.clearGlassUrl + '/automation/workflows', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name: nameIn.value || 'Untitled', status: 'draft', steps: [] }),
-            }).then(refresh),
+            }).then(refreshWorkflows),
           }),
-          list,
+          wfList,
+          _el('div', { class: 'bf-section-label', text: 'STEPS (select a workflow above)', style: 'margin-top:8px' }),
+          _el('div', { class: 'bf-form-row' }, Object.keys(STEP_FIELDS).map(t => _el('button', {
+            class: 'bf-btn', text: '+ ' + t.toUpperCase(),
+            onclick: () => { if (!selectedId) return ctx.toast('select a workflow first', 'o'); fetch(ctx.clearGlassUrl + `/automation/workflows/${selectedId}/steps`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: t, config: {} }) }).then(refreshSteps); },
+          }))),
+          stepsHost,
+          editorHost,
         ]));
-        refresh();
+        refreshWorkflows();
       },
       unmount() {},
     });

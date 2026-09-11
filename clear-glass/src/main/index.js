@@ -717,6 +717,32 @@ async function _startWire() {
         res.writeHead(200);
         return res.end(JSON.stringify({ ok: true, log: mesh.getAutomationLog() }));
       }
+      // §BUILT — per-step CRUD, the real Tasker-style step editor's
+      // backend (James: "like tasker and automate").
+      if (u.match(/^\/automation\/workflows\/[^/]+\/steps$/) && req.method === 'POST') {
+        const id = u.split('/')[3];
+        const result = mesh.addWorkflowStep(id, parsed);
+        res.writeHead(result.ok ? 200 : 400);
+        return res.end(JSON.stringify(result));
+      }
+      if (u.match(/^\/automation\/workflows\/[^/]+\/steps\/[^/]+$/) && req.method === 'PATCH') {
+        const parts = u.split('/'); const id = parts[3], stepId = parts[5];
+        const result = mesh.updateWorkflowStep(id, stepId, parsed);
+        res.writeHead(result.ok ? 200 : 404);
+        return res.end(JSON.stringify(result));
+      }
+      if (u.match(/^\/automation\/workflows\/[^/]+\/steps\/[^/]+$/) && req.method === 'DELETE') {
+        const parts = u.split('/'); const id = parts[3], stepId = parts[5];
+        const result = mesh.removeWorkflowStep(id, stepId);
+        res.writeHead(result.ok ? 200 : 404);
+        return res.end(JSON.stringify(result));
+      }
+      if (u.match(/^\/automation\/workflows\/[^/]+\/steps\/[^/]+\/move$/) && req.method === 'POST') {
+        const parts = u.split('/'); const id = parts[3], stepId = parts[5];
+        const result = mesh.moveWorkflowStep(id, stepId, parsed?.dir);
+        res.writeHead(result.ok ? 200 : 404);
+        return res.end(JSON.stringify(result));
+      }
 
       // §BL24 2026-08-23 — James: "a command/tool to disable and re-
       // enable them." Real, previously-missing HTTP surface for
