@@ -144,6 +144,14 @@ export function createWarpChunkDispatch(as, { raid = null, axioms = [], pollTime
       seam_id: opts.chunkTitle || opts.sectionTitle || 'idearium-chunk',
       description: opts.chunkTitle || prompt.slice(0, 80),
       contract: { exports: [] }, // honest — idearium chunks are free-text, no fixed shape to check
+      // §FIX 2026-09-11 — the actual reason chunks assigned to claude/
+      // deepseek/gemini kept dying on ollama's own timeout: this record
+      // never carried the per-chunk agent this whole dispatch() function
+      // receives as opts.preferAgent (api/index.js:1744 computes it
+      // correctly; it just stopped being threaded through here). See
+      // lib/seam/adapters/warp-cascade.js's providersFor() for the other
+      // half of this same real fix — that's what actually reads this field.
+      preferredProvider: opts.preferAgent || null,
     };
     try {
       const result = await warpDispatch(record, opts.axioms || axioms);

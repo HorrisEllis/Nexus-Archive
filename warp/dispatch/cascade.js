@@ -14,7 +14,36 @@ async function runCascade({ providers, generate, validate, maxAttempts = 3 }) {
 
   for (let i = 0; i < maxAttempts; i++) {
     const provider = providers[Math.min(i, providers.length - 1)];
-    const output = await generate(provider, lastFailure); // lastFailure = context on retry
+    // §FIX 2026-09-11 — James, from a live manifest: nine chunks assigned
+    // to claude/deepseek/gemini all failed with the IDENTICAL error
+    // "ollama dispatch failed: huihui_ai/qwen2.5-coder-abliterate:7b
+    // timed out after 120000ms" — the exact ollama-path error text, on
+    // chunks that never should have touched ollama at all. Root cause:
+    // generate() (warp-build-dispatch.js's real implementation) THROWS
+    // on a real dispatch failure — that's real, documented behavior,
+    // its own header says so. This loop called it with no try/catch,
+    // so that throw propagated straight out of runCascade(), out of
+    // unifiedDispatch() (warp/dispatch/index.js:91 has the same bare
+    // `await cascade(...)`, no catch either), and landed in warp-build-
+    // dispatch.js's own outer catch — which returns { ok:false,
+    // error: e.message } verbatim. The cascade never reached provider
+    // 2 or 3: attempt 1's exception WAS the function exiting, not a
+    // recorded failure the loop could act on. providers[0] is always
+    // 'ollama' (LAW_I, see warp-cascade.js's providersFor — a separate,
+    // real bug fixed alongside this one), so EVERY cascade died on
+    // ollama's own 120s timeout before ever trying the chunk's actual
+    // requested agent, regardless of what that agent was.
+    let output, threw = null;
+    try {
+      output = await generate(provider, lastFailure); // lastFailure = context on retry
+    } catch (e) {
+      threw = e;
+    }
+    if (threw) {
+      attempts.push({ attempt: i + 1, provider, passed: false, failures: [], error: threw.message });
+      lastFailure = { ok: false, failures: [threw.message] };
+      continue;
+    }
     const result = validate(output);
     attempts.push({ attempt: i + 1, provider, passed: result.ok, failures: result.failures || [] });
 
