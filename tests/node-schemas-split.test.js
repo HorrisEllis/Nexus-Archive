@@ -27,6 +27,7 @@ const EXPECTED_TYPES = [
   'failure_mode', 'idea', 'framework', 'toolbox',
   'vector', 'artifact', 'resonance_crystal', 'interstitial_space',
   'lattice_edge', 'relationship_edge', 'guardian_listener',
+  'event', 'capability', 'hook_contract', 'fault',
 ];
 
 // known-good field counts, from the pre-split monolith, to catch a

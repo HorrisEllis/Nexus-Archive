@@ -292,6 +292,85 @@ spec:
         from naming alone.
       blocks: []
 
+    P19_dynamic_nodes_via_causal_graph:
+      status: open
+      description: |
+        James: "make nodes dynamic." Real, NOT new — intelligence/cfr/
+        graph.js's CausalGraph already does exactly this for ledger
+        rows, its own header states it outright: "Every ledger entry is
+        also a node in the causal graph." Edges from causedBy/sessionId/
+        jobId/temporal proximity are real and working, with real
+        root-cause traversal and sigma clustering. This phase is the
+        generalization: any real node-type instance (.gap, .contract,
+        .agent — the 26 real types from lib/node-schemas/) becomes a
+        CausalGraph node the same way a ledger row already does, not
+        just ledger entries specifically. This is the connective phase
+        the other three below build on — P20/P21/P22 all assume a node
+        can participate in a causal graph, not just describe itself
+        statically.
+      blocks: []
+
+    P20_intelligence_reflexive_cfr_field:
+      status: open
+      description: |
+        James: "a causal field for the intelligence system." Real,
+        confirmed gap — intelligence/cfr/field.js's createCFRField()
+        already computes coherence/friction/resonance/entropy for other
+        systems' event streams (guardian.job.*, etc. — real event-nudge
+        table, grep-confirmed), and meta/lattice/associative-lattice.js
+        already gives every SYSTEM PAIR its own field via this exact
+        mechanism. Checked directly: zero hits for a field describing
+        intelligence's own state, reflexively. This phase gives
+        intelligence one field instance on itself — same real
+        createCFRField() call, same real nudge-table pattern, no new
+        physics model invented.
+      blocks: []
+
+    P21_versionium_causal_field:
+      status: open
+      description: |
+        James: "a causal field for... versionium." Real, partial
+        already — versionium/lib/causality.js already uses CausalGraph
+        to trace a commit's causal ANCESTRY (structure: what led to
+        what), including across systems via cortex's shared event_log.
+        What it doesn't have is a causal FIELD (physics: coherence/
+        friction/resonance/entropy) the way relationship_edge gives
+        system pairs one. This phase adds that dimension to versionium's
+        commits/branches, directly reusing relationship_edge's own
+        pattern (schema built 2026-09-11, same session) rather than
+        inventing a new one — a commit or branch gets the same
+        createCFRField()-backed field a system pair already gets.
+        Depends on P19 (a versionium commit needs to be a real graph
+        node first, before it can carry a field the same way).
+      blocks: [P19_dynamic_nodes_via_causal_graph]
+
+    P22_ledger_data_integrity_checker:
+      status: open
+      description: |
+        James: "cortex has tools for checking data integrity, comparing
+        ledger to data folder to find gaps" — describing a real,
+        wanted capability, not an existing one; checked directly,
+        nothing in cortex/ or anywhere else compares ledger CONTENT
+        against actual data/ folder state. Two real, close precedents
+        exist to build FROM, not duplicate: lib/file-integrity.js
+        (hashes source files/registries/SEAM wires, drift -> sigma ->
+        gap, real and proven) and lib/integrity-revert.js (sigma-gated
+        guarded revert via replay-engine, also real). Both are scoped to
+        code/config, never to runtime data content — this phase is the
+        same real hash-diff-sigma-gap pattern, applied to: does the
+        ledger say a node was created/modified, and does data/<system>/
+        <type>/ actually contain the matching real file? This is
+        directly the validation mechanism the P5 gap-migration-manifest
+        (2026-09-11, 175 gaps classified, writes still frozen pending
+        the nesting-order + ownership decisions) will need once those
+        decisions land and real writes happen — proving the migration
+        didn't silently lose or duplicate anything, not just hoping it
+        didn't. Depends on P5 (data_folder_completion) having real
+        migrated data to check against, and P19 (nodes need to be real
+        graph-participating entities for a meaningful causedBy-vs-
+        current-state comparison, not just static files).
+      blocks: [P5_data_folder_completion, P19_dynamic_nodes_via_causal_graph]
+
   # ── Deliberately not decided here ────────────────────────────────────
   open_questions:
     - "P3's real schema-ownership model — shared base + per-system
@@ -300,3 +379,8 @@ spec:
        concretely? JAA table name? Vector-embedded or not? Which nodes
        even need memory-system metadata vs. which are just structural?"
     - "Order of P5's per-system data migration — which system first?"
+    - "P16-P18 exist with different content on the sibling
+       nexus-v0_39_76.zip branch (docs declutter, per-system phasemap
+       folders, per-system repos) — P19-P22 deliberately skip those
+       numbers rather than collide. Real branch reconciliation still
+       needed before both halves live in one phasemap."

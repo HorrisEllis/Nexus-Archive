@@ -1,0 +1,63 @@
+envelope: 1
+uuid: nexus-export-schema-capability
+type: schema
+id: capability
+context: lib/node-schemas — shared node-type schema registry
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1789117272247
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    guardian/registry-components.js — the real _c() helper's output shape, one real object per
+    registered route/capability
+  fields:
+    id:
+      type: string
+      required: true
+      description: real, namespaced id — '<namespace>.<name>', e.g. 'guardian.health'
+    namespace:
+      type: string
+      required: true
+      description: real system namespace, e.g. 'guardian'
+    name:
+      type: string
+      required: true
+      description: real capability name within the namespace
+    version:
+      type: string
+      required: true
+      description: real version string, e.g. '3.6.2' — sourced from the file's own version const
+    grammar:
+      type: array
+      required: true
+      description: >-
+        real natural-language trigger phrases for this capability, defaults to [name-with-spaces,
+        name-with-dashes] if not given explicitly
+    route:
+      type: object
+      required: true
+      description: real {method, path} — the actual HTTP route this capability maps to
+    description:
+      type: string
+      required: true
+      description: real, human-readable description of what this capability does
+    params:
+      type: array
+      required: false
+      description: real declared parameters, defaults to []
+    tags:
+      type: array
+      required: true
+      description: real tags, always includes the namespace itself plus any caller-supplied tags
+    permissions:
+      type: array
+      required: false
+      description: real required permissions, defaults to ['system']
+    hooks:
+      type: object
+      required: false
+      description: real associated hook references, defaults to {}

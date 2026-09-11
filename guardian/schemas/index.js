@@ -34,12 +34,38 @@
 //                         is system-agnostic; guardian is one caller
 //                         among many, not a guardian-exclusive shape)
 //   .gap               — lib/node-schemas/gap.schema (same reasoning as ledger)
+//   .event             — lib/node-schemas/event.schema (cortex's shared
+//                         event_log; guardian writes into it via bus.emit,
+//                         not its own separate table)
+//   .capability        — lib/node-schemas/capability.schema (guardian/
+//                         registry-components.js's real shape; every
+//                         system with its own registry-components.js
+//                         uses this same real convention, not guardian-
+//                         exclusive)
+//   .hook_contract     — lib/node-schemas/hook_contract.schema (hooks/
+//                         guardian.hooks.js's shape; every hooks/<s>.
+//                         hooks.js file follows this same real convention)
+//   .fault             — lib/node-schemas/fault.schema (cortex/self-heal/
+//                         fault-taxonomy.js is sole write authority per
+//                         its own §10.1 — guardian is a reader/subject,
+//                         never a writer of this table)
 //
 // Guardian-exclusive types, defined locally in this folder:
 //   guardian_job, guardian_download, guardian_pa_session,
 //   guardian_timeline_event, guardian_setting, guardian_session
 //   (session was status: 'REAL — DRIFT' until the 2026-09-11 session-fix
 //   pass reconciled it — see guardian_session.schema, now status: REAL)
+//   guardian_seam_session, guardian_queue_compartment, guardian_chat_log
+//   (added 2026-09-11, full-data-sweep pass — real, previously-uncovered
+//   tables: seam_sessions, queue_compartments, chat_log)
+//
+// §FLAGGED, NOT SCHEMA'D — guardian's bare `ledger` table (§LAW II CLI
+// logging, guardian/server.js ~2219/2379: {uuid, category, msg, meta, ts})
+// is a THIRD real, distinct ledger-shaped table — different from both
+// the shared .ledger (component-ledger.js) and jaa/schema.sql's
+// ledger_entries. Same class of fragmentation the guardian_session fix
+// found and reconciled — not silently schema'd as if it were settled;
+// needs the same kind of reconciliation decision before it gets a type.
 //
 // §NOT INCLUDED — gap_questions, chat_sessions, chat_messages,
 // chat_completions exist in jaa/schema-full.sql's table list but have
@@ -71,7 +97,7 @@ function loadLocal() {
 
 const LOCAL = loadLocal();
 
-const SHARED_TYPES = ['artifact', 'guardian_listener', 'ledger', 'gap'];
+const SHARED_TYPES = ['artifact', 'guardian_listener', 'ledger', 'gap', 'event', 'capability', 'hook_contract', 'fault'];
 
 function get(type) {
   if (LOCAL[type]) return LOCAL[type];
