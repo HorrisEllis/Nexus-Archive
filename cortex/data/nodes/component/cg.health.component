@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-cg.health
+type: component
+id: cg.health
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178014
+source: data/cortex/memory/components.json:cg.health
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.health
+  namespace: cg
+  name: health
+  version: 3.0.0
+  grammar:
+    - health
+    - health
+  route:
+    method: GET
+    path: /health
+  description: Clear Glass health, context count, bus stats
+  params: []
+  tags:
+    - cg
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 6e8668be-35a9-4c3b-8bee-3cd6882adab6
+  updatedAt: 1789179436778

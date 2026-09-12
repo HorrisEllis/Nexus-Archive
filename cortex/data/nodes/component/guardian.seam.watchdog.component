@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.seam.watchdog
+type: component
+id: guardian.seam.watchdog
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177955
+source: data/cortex/memory/components.json:guardian.seam.watchdog
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.seam.watchdog
+  namespace: guardian
+  name: seam.watchdog
+  version: 3.6.2
+  grammar:
+    - seam watchdog
+    - seam-watchdog
+  route:
+    method: GET
+    path: /seam/watchdog/status
+  description: SEAM watchdog + stall detection
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 30b1ac10-4799-4368-94db-f08265f2a3a2
+  updatedAt: 1789179436766

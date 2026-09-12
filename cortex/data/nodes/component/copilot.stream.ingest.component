@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-copilot.stream.ingest
+type: component
+id: copilot.stream.ingest
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178070
+source: data/cortex/memory/components.json:copilot.stream.ingest
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.stream.ingest
+  namespace: copilot
+  name: stream.ingest
+  version: 2.0.0
+  grammar:
+    - copilot stream ingest
+  route:
+    method: POST
+    path: /api/stream/ingest
+  description: Push events into co-pilot stream
+  params: []
+  tags:
+    - copilot
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: f5405377-614d-4af5-a139-41b140c8f102
+  updatedAt: 1789179436970

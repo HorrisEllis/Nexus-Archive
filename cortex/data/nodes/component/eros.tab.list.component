@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.tab.list
+type: component
+id: eros.tab.list
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178031
+source: data/cortex/memory/components.json:eros.tab.list
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.tab.list
+  namespace: eros
+  name: tab.list
+  version: 0.1.0
+  grammar:
+    - tab list
+    - tab-list
+  route:
+    method: GET
+    path: /api/tab/list
+  description: List open CDP tabs
+  params: []
+  tags:
+    - eros
+    - tab
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 8f4e5eea-400e-4dc9-836c-98fbea5e483b
+  updatedAt: 1789179436830

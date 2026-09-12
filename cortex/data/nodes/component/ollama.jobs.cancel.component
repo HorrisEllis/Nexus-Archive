@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-ollama.jobs.cancel
+type: component
+id: ollama.jobs.cancel
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178063
+source: data/cortex/memory/components.json:ollama.jobs.cancel
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: ollama.jobs.cancel
+  namespace: ollama
+  name: jobs.cancel
+  version: 1.0.0
+  grammar:
+    - ollama jobs cancel
+  route:
+    method: DELETE
+    path: /api/jobs/:id
+  description: Cancel a queued job
+  params: []
+  tags:
+    - ollama
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: ollama
+  registeredAt: 1789169838354
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 0b202512-fc47-48d6-895c-d616dc530f60
+  updatedAt: 1789179436911

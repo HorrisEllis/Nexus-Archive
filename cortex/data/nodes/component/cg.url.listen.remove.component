@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-cg.url.listen.remove
+type: component
+id: cg.url.listen.remove
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178026
+source: data/cortex/memory/components.json:cg.url.listen.remove
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.url.listen.remove
+  namespace: cg
+  name: url.listen.remove
+  version: 3.0.0
+  grammar:
+    - url listen remove
+    - url-listen-remove
+  route:
+    method: POST
+    path: /cmd
+  description: Remove URL pattern listener by ID
+  params: []
+  tags:
+    - cg
+    - listener
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 90bc71fd-097a-4ff9-b559-f109d6b015cf
+  updatedAt: 1789179436805

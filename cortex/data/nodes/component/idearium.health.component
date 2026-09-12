@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-idearium.health
+type: component
+id: idearium.health
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177974
+source: data/cortex/memory/components.json:idearium.health
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.health
+  namespace: idearium
+  name: health
+  version: 1.0.0
+  grammar:
+    - health
+  route:
+    method: GET
+    path: /
+  description: Service liveness check
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 510d4708-a001-409d-855c-320c20230182
+  updatedAt: 1789179436929

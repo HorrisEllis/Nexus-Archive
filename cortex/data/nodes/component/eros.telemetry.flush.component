@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.telemetry.flush
+type: component
+id: eros.telemetry.flush
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178052
+source: data/cortex/memory/components.json:eros.telemetry.flush
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.telemetry.flush
+  namespace: eros
+  name: telemetry.flush
+  version: 0.1.0
+  grammar:
+    - telemetry flush
+    - telemetry-flush
+  route:
+    method: POST
+    path: /api/telemetry/flush
+  description: Force flush telemetry to disk
+  params: []
+  tags:
+    - eros
+    - telemetry
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 8362660c-a4e4-449b-819d-a7a187a87583
+  updatedAt: 1789179436880

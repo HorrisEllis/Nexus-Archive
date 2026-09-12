@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-copilot.contract
+type: component
+id: copilot.contract
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178074
+source: data/cortex/memory/components.json:copilot.contract
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.contract
+  namespace: copilot
+  name: contract
+  version: 2.0.0
+  grammar:
+    - copilot contract
+  route:
+    method: GET
+    path: /contract
+  description: Co-pilot interaction contract
+  params: []
+  tags:
+    - copilot
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 3d021352-6823-4876-b8d0-a12dfe61bdaf
+  updatedAt: 1789179436982

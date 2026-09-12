@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.sessions.list
+type: component
+id: guardian.sessions.list
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177963
+source: data/cortex/memory/components.json:guardian.sessions.list
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.sessions.list
+  namespace: guardian
+  name: sessions.list
+  version: 3.6.2
+  grammar:
+    - sessions list
+    - sessions-list
+  route:
+    method: GET
+    path: /sessions
+  description: NCP session history
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: c8cb57cf-c7e4-4ab0-9d9a-a49e50c4d0ea
+  updatedAt: 1789179436774

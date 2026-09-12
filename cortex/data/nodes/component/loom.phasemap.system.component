@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-loom.phasemap.system
+type: component
+id: loom.phasemap.system
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178083
+source: data/cortex/memory/components.json:loom.phasemap.system
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: loom.phasemap.system
+  namespace: loom
+  name: phasemap.system
+  version: 1.5.0
+  grammar:
+    - phasemap system
+    - phasemap-system
+  route:
+    method: GET
+    path: /api/phasemap/:system
+  description: One system's roadmap — done/pending phase breakdown
+  params: []
+  tags:
+    - loom
+    - analysis
+  permissions:
+    - system
+  registeredBy: loom
+  registeredAt: 1789169838482
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: dee03e83-3476-4c3f-9cd1-4dee06d4e3c9
+  updatedAt: 1789179437017

@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-loom.gaps
+type: component
+id: loom.gaps
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178084
+source: data/cortex/memory/components.json:loom.gaps
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: loom.gaps
+  namespace: loom
+  name: gaps
+  version: 1.5.0
+  grammar:
+    - gaps
+    - gaps
+  route:
+    method: GET
+    path: /api/gaps
+  description: Every open gap, system + user-model domains, agnostic pipeline
+  params: []
+  tags:
+    - loom
+  permissions:
+    - system
+  registeredBy: loom
+  registeredAt: 1789169838482
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: a41046a9-514f-4b79-a9ae-158bf6679a94
+  updatedAt: 1789179437018

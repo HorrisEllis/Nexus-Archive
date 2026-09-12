@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-idearium.snr.history
+type: component
+id: idearium.snr.history
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177976
+source: data/cortex/memory/components.json:idearium.snr.history
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.snr.history
+  namespace: idearium
+  name: snr.history
+  version: 1.0.0
+  grammar:
+    - history snr
+    - snr history
+  route:
+    method: GET
+    path: /api/snr/history
+  description: Historical SNR score timeline
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: e0a0fa56-dd2a-4fe1-877d-e4cbb3070bf3
+  updatedAt: 1789179436935

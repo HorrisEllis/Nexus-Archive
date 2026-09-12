@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-loom.templates
+type: component
+id: loom.templates
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178081
+source: data/cortex/memory/components.json:loom.templates
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: loom.templates
+  namespace: loom
+  name: templates
+  version: 1.5.0
+  grammar:
+    - templates
+    - templates
+  route:
+    method: GET
+    path: /api/templates
+  description: Available scaffold templates
+  params: []
+  tags:
+    - loom
+  permissions:
+    - system
+  registeredBy: loom
+  registeredAt: 1789169838482
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: ce9713ff-16f2-4e1d-9349-9e3c9ce31767
+  updatedAt: 1789179437014

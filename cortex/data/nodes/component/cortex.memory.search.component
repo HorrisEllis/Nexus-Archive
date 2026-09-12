@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-cortex.memory.search
+type: component
+id: cortex.memory.search
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178089
+source: data/cortex/memory/components.json:cortex.memory.search
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cortex.memory.search
+  namespace: cortex
+  name: memory.search
+  version: 3.5.0
+  grammar:
+    - memory search
+  route:
+    method: POST
+    path: /api/memory/search
+  description: Semantic search across memory
+  params: []
+  tags:
+    - cortex
+    - memory
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: cortex
+  registeredAt: 1789169841586
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 223031b5-da09-4b77-9488-f6eae471b8ff
+  updatedAt: 1789179438442

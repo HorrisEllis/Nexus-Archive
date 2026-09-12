@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-architect.blueprint.diff
+type: component
+id: architect.blueprint.diff
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178088
+source: data/cortex/memory/components.json:architect.blueprint.diff
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: architect.blueprint.diff
+  namespace: architect
+  name: blueprint.diff
+  version: 1.0.0
+  grammar:
+    - blueprint diff
+  route:
+    method: POST
+    path: /api/blueprint/diff
+  description: Diff two blueprints
+  params: []
+  tags:
+    - architect
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: architect
+  registeredAt: 1789169839375
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: addcfbc2-e19e-472b-9dc5-1084a259e743
+  updatedAt: 1789179437525

@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-hypothesis-fbe8ae7c-bb8f-4944-94b2-2c9357adfc8c
+type: hypothesis
+id: fbe8ae7c-bb8f-4944-94b2-2c9357adfc8c
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/user_model_hypotheses.json — cortex's own
+  memory store, the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178101
+source: data/cortex/memory/user_model_hypotheses.json:fbe8ae7c-bb8f-4944-94b2-2c9357adfc8c
+payload:
+  uuid: 1fe5b512-cad2-465a-b7c0-2662118a17a6
+  claim: 'encounters error: specmissing: macrocompiler has code at v100 but no spec file'
+  claimType: error
+  category: error
+  confidence: 0.5
+  evidence_count: 1
+  firstSeen: 1789169840949
+  lastSeen: 1789169840949
+  last_seen: 1789169840949
+  lastEvidence:
+    channel: macro-compiler
+    severity: medium
+    sample: 'spec.missing: macro-compiler has code at v1.0.0 but no spec file'
+  status: active
+  decayRate: 0.1
+  source: observed
+  id: fbe8ae7c-bb8f-4944-94b2-2c9357adfc8c

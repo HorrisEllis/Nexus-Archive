@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-cg.window.list
+type: component
+id: cg.window.list
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178029
+source: data/cortex/memory/components.json:cg.window.list
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.window.list
+  namespace: cg
+  name: window.list
+  version: 3.0.0
+  grammar:
+    - window list
+    - window-list
+  route:
+    method: GET
+    path: /status
+  description: List open agent windows
+  params: []
+  tags:
+    - cg
+    - window
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 0742d671-ce2c-41c4-a579-b248e81d9f14
+  updatedAt: 1789179436817

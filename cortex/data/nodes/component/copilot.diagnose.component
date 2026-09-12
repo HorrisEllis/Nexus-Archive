@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-copilot.diagnose
+type: component
+id: copilot.diagnose
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178073
+source: data/cortex/memory/components.json:copilot.diagnose
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.diagnose
+  namespace: copilot
+  name: diagnose
+  version: 2.0.0
+  grammar:
+    - diagnose
+    - recursive diagnose
+  route:
+    method: POST
+    path: /api/diagnose
+  description: Start recursive fractal diagnosis
+  params: []
+  tags:
+    - copilot
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: c1d3fc37-0c8d-45c1-a169-5754cc5a2e3b
+  updatedAt: 1789179436978

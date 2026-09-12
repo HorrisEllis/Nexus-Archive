@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.events
+type: component
+id: eros.events
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178030
+source: data/cortex/memory/components.json:eros.events
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.events
+  namespace: eros
+  name: events
+  version: 0.1.0
+  grammar:
+    - events
+    - events
+  route:
+    method: GET
+    path: /api/events
+  description: WebSocket event stream
+  params: []
+  tags:
+    - eros
+    - stream
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 212ba77f-057a-429c-8f85-88fc4405725e
+  updatedAt: 1789179436820

@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-eros.os.start
+type: component
+id: eros.os.start
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178030
+source: data/cortex/memory/components.json:eros.os.start
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.os.start
+  namespace: eros
+  name: os.start
+  version: 0.1.0
+  grammar:
+    - os start
+    - os-start
+  route:
+    method: POST
+    path: /api/os/start
+  description: Start OS — connect CDP bridge, enable observer
+  params: []
+  tags:
+    - eros
+  permissions:
+    - system
+  hooks: {}
+  typecode: EROS-OS-001
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 271a5915-4443-4826-8659-7bb2cce7264d
+  updatedAt: 1789179436821

@@ -1,0 +1,66 @@
+envelope: 1
+uuid: nexus-export-component-copilot.prompt.stream
+type: component
+id: copilot.prompt.stream
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178073
+source: data/cortex/memory/components.json:copilot.prompt.stream
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.prompt.stream
+  namespace: copilot
+  name: prompt.stream
+  version: 2.0.0
+  grammar:
+    - stream ask
+    - cp stream
+  route:
+    method: POST
+    path: /api/prompt/stream
+  description: Streaming SSE prompt — token-by-token, no timeout (P112)
+  params: []
+  tags:
+    - copilot
+  permissions:
+    - system
+  hooks:
+    in:
+      - id: copilot.prompt.stream.receive
+        intent:
+          - ask
+        tags:
+          - streaming
+          - sse
+    out:
+      - id: copilot.prompt.stream.chunk
+        wires_to:
+          - ui.copilot.stream
+        tags:
+          - streaming
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: ce2ea153-93e7-49a1-92ff-499eaf9026b9
+  updatedAt: 1789179436980

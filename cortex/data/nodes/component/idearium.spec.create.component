@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-idearium.spec.create
+type: component
+id: idearium.spec.create
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177990
+source: data/cortex/memory/components.json:idearium.spec.create
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.spec.create
+  namespace: idearium
+  name: spec.create
+  version: 1.0.0
+  grammar:
+    - create spec
+    - spec create
+  route:
+    method: POST
+    path: /api/specs
+  description: Create a new spec from an idea
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 9bf71c21-1bd0-4d51-bcb1-20e78c803a73
+  updatedAt: 1789179436946

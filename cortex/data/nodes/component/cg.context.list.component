@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-cg.context.list
+type: component
+id: cg.context.list
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178019
+source: data/cortex/memory/components.json:cg.context.list
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.context.list
+  namespace: cg
+  name: context.list
+  version: 3.0.0
+  grammar:
+    - context list
+    - context-list
+  route:
+    method: GET
+    path: /contexts
+  description: List agent contexts with health scores
+  params: []
+  tags:
+    - cg
+    - context
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: e3151167-b753-4c90-b89c-e9663d1300e9
+  updatedAt: 1789179436791

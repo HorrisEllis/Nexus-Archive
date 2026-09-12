@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-eravos.pack.install
+type: component
+id: eravos.pack.install
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178056
+source: data/cortex/memory/components.json:eravos.pack.install
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eravos.pack.install
+  namespace: eravos
+  name: pack.install
+  version: 3.0.0
+  grammar:
+    - eravos install
+  route:
+    method: POST
+    path: /api/pack/install
+  description: Install a .zip organism pack
+  params: []
+  tags:
+    - eravos
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: eravos
+  registeredAt: 1789169838312
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 2035e4d4-4907-40b5-b296-93e59b8f1986
+  updatedAt: 1789179436895

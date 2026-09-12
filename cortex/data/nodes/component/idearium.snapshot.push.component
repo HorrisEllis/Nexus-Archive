@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-idearium.snapshot.push
+type: component
+id: idearium.snapshot.push
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178010
+source: data/cortex/memory/components.json:idearium.snapshot.push
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.snapshot.push
+  namespace: idearium
+  name: snapshot.push
+  version: 1.0.0
+  grammar:
+    - push snapshot
+    - snapshot push
+  route:
+    method: POST
+    path: /api/snapshots
+  description: Push a new snapshot of current state
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: ce733845-14d2-426f-bf7b-6fa506667a26
+  updatedAt: 1789179436957

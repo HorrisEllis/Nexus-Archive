@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-loom.contracts.create
+type: component
+id: loom.contracts.create
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178080
+source: data/cortex/memory/components.json:loom.contracts.create
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: loom.contracts.create
+  namespace: loom
+  name: contracts.create
+  version: 1.5.0
+  grammar:
+    - contracts create
+    - contracts-create
+  route:
+    method: POST
+    path: /api/contracts
+  description: Create an interaction contract
+  params: []
+  tags:
+    - loom
+    - write
+  permissions:
+    - system
+  registeredBy: loom
+  registeredAt: 1789169838482
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: fada7426-da9f-4baa-b882-aab45a6d6f59
+  updatedAt: 1789179437009

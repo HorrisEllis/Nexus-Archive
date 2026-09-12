@@ -1,0 +1,73 @@
+envelope: 1
+uuid: nexus-export-component-cg.copilot.message
+type: component
+id: cg.copilot.message
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178023
+source: data/cortex/memory/components.json:cg.copilot.message
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.copilot.message
+  namespace: cg
+  name: copilot.message
+  version: 3.0.0
+  grammar:
+    - copilot message
+    - copilot-message
+  route:
+    method: POST
+    path: /cmd
+  description: Route to Clear Glass co-pilot (Cortex-wired, DOM-aware)
+  params: []
+  tags:
+    - cg
+    - copilot
+  permissions:
+    - system
+  hooks:
+    in:
+      - id: clear-glass.copilot.receive
+        intent:
+          - ask
+          - build
+          - navigate
+          - diagnose
+          - pick
+        contract: nexus-interaction-contract-v1::clear-glass
+        tags:
+          - copilot
+    out:
+      - id: clear-glass.copilot.response.emit
+        wires_to:
+          - cortex.chat.log
+          - cortex.memory.insert
+        tags:
+          - copilot
+  typecode: CG-CPL-001
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: f67430c4-3c19-48e3-9e98-fc819d96b092
+  updatedAt: 1789179436796

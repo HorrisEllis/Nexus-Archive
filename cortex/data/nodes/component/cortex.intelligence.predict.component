@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-cortex.intelligence.predict
+type: component
+id: cortex.intelligence.predict
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178094
+source: data/cortex/memory/components.json:cortex.intelligence.predict
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cortex.intelligence.predict
+  namespace: cortex
+  name: intelligence.predict
+  version: 3.5.0
+  grammar:
+    - intelligence predict
+  route:
+    method: GET
+    path: /api/intelligence/predict
+  description: Predicted next gap from precursors
+  params: []
+  tags:
+    - cortex
+    - cognition
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: cortex
+  registeredAt: 1789169841586
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 90ed3d47-cab6-4875-af63-8c0e888ab799
+  updatedAt: 1789179438465

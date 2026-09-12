@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.bus.emit
+type: component
+id: guardian.bus.emit
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177946
+source: data/cortex/memory/components.json:guardian.bus.emit
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.bus.emit
+  namespace: guardian
+  name: bus.emit
+  version: 3.6.2
+  grammar:
+    - bus emit
+    - bus-emit
+  route:
+    method: POST
+    path: /bus/emit
+  description: Emit event onto bus
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 70500520-35da-4b26-9142-c686c746f623
+  updatedAt: 1789179436745

@@ -1,0 +1,56 @@
+envelope: 1
+uuid: nexus-export-component-cg.cookie.save
+type: component
+id: cg.cookie.save
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178020
+source: data/cortex/memory/components.json:cg.cookie.save
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.cookie.save
+  namespace: cg
+  name: cookie.save
+  version: 3.0.0
+  grammar:
+    - cookie save
+    - cookie-save
+  route:
+    method: POST
+    path: /cmd
+  description: Save per-account cookies — AES-256-GCM vault
+  params: []
+  tags:
+    - cg
+    - cookie
+    - vault
+  permissions:
+    - system
+  hooks: {}
+  typecode: CG-CKI-001
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 1d44a53a-9dc7-4682-be62-cc935293e5ce
+  updatedAt: 1789179436793

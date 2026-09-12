@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-copilot.health
+type: component
+id: copilot.health
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178074
+source: data/cortex/memory/components.json:copilot.health
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.health
+  namespace: copilot
+  name: health
+  version: 2.0.0
+  grammar:
+    - copilot health
+  route:
+    method: GET
+    path: /health
+  description: Co-pilot health
+  params: []
+  tags:
+    - copilot
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: b5b05e45-4fb2-45f0-a87a-323deef3b568
+  updatedAt: 1789179436980

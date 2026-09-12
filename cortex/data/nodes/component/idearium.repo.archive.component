@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-idearium.repo.archive
+type: component
+id: idearium.repo.archive
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178011
+source: data/cortex/memory/components.json:idearium.repo.archive
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.repo.archive
+  namespace: idearium
+  name: repo.archive
+  version: 1.0.0
+  grammar:
+    - archive repo
+    - repo archive
+  route:
+    method: DELETE
+    path: /api/repos/:uuid
+  description: Archive a repo
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 6574c182-611b-4e70-bf73-b751c92eb35a
+  updatedAt: 1789179436964

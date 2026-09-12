@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-component-cg.driver.exec
+type: component
+id: cg.driver.exec
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178017
+source: data/cortex/memory/components.json:cg.driver.exec
+payload:
+  blueprint_ns: null
+  capabilities:
+    - verb: execute
+      noun: browser-action
+      input: DriverPayload
+      output: DriverResult
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.driver.exec
+  namespace: cg
+  name: driver.exec
+  version: 3.0.0
+  grammar:
+    - driver exec
+    - driver-exec
+  route:
+    method: POST
+    path: /cmd
+  description: Execute ClearDriver browser action
+  params: []
+  tags:
+    - cg
+    - driver
+    - automation
+  permissions:
+    - system
+  hooks:
+    in:
+      - id: clear-glass.driver.exec.receive
+        intent:
+          - navigate
+          - click
+          - type
+          - eval
+          - screenshot
+        contract: nexus-interaction-contract-v1::clear-glass
+        tags:
+          - driver
+    out:
+      - id: clear-glass.driver.result.emit
+        wires_to:
+          - cortex.events.write
+          - guardian.artifacts.list
+        tags:
+          - result
+  typecode: CG-DRV-001
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: acc513e0-1fd0-4c91-ad3f-77a03d8302ce
+  updatedAt: 1789179436782

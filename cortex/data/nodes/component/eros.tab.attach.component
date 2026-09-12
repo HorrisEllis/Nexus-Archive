@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.tab.attach
+type: component
+id: eros.tab.attach
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178031
+source: data/cortex/memory/components.json:eros.tab.attach
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.tab.attach
+  namespace: eros
+  name: tab.attach
+  version: 0.1.0
+  grammar:
+    - tab attach
+    - tab-attach
+  route:
+    method: POST
+    path: /api/tab/attach
+  description: Attach CDP session to existing tab
+  params: []
+  tags:
+    - eros
+    - tab
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 31a664e4-7c84-4ba5-9134-0b3df0bcd941
+  updatedAt: 1789179436832

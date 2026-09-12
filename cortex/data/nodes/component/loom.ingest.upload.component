@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-loom.ingest.upload
+type: component
+id: loom.ingest.upload
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178080
+source: data/cortex/memory/components.json:loom.ingest.upload
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: loom.ingest.upload
+  namespace: loom
+  name: ingest.upload
+  version: 1.5.0
+  grammar:
+    - ingest upload
+    - ingest-upload
+  route:
+    method: POST
+    path: /api/ingest-upload
+  description: Ingest via file upload
+  params: []
+  tags:
+    - loom
+    - write
+  permissions:
+    - system
+  registeredBy: loom
+  registeredAt: 1789169838482
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: e1358e5c-6dd0-4bd1-a447-d11fcb3c624b
+  updatedAt: 1789179437007

@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.bus.log
+type: component
+id: guardian.bus.log
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177945
+source: data/cortex/memory/components.json:guardian.bus.log
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.bus.log
+  namespace: guardian
+  name: bus.log
+  version: 3.6.2
+  grammar:
+    - bus log
+    - bus-log
+  route:
+    method: GET
+    path: /bus
+  description: Recent SISO bus log
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: eac81c8c-651b-4ebb-961d-b3f88e3b1e4c
+  updatedAt: 1789179436743

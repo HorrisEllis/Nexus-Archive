@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.gaps.list
+type: component
+id: guardian.gaps.list
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177962
+source: data/cortex/memory/components.json:guardian.gaps.list
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.gaps.list
+  namespace: guardian
+  name: gaps.list
+  version: 3.6.2
+  grammar:
+    - gaps list
+    - gaps-list
+  route:
+    method: GET
+    path: /gaps
+  description: Open gaps detected by guardian
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 3e7a3496-0bf8-4821-88ad-153b25ecfb9d
+  updatedAt: 1789179436771

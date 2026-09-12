@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.replay.frames
+type: component
+id: eros.replay.frames
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178044
+source: data/cortex/memory/components.json:eros.replay.frames
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.replay.frames
+  namespace: eros
+  name: replay.frames
+  version: 0.1.0
+  grammar:
+    - replay frames
+    - replay-frames
+  route:
+    method: GET
+    path: /api/replay/frames
+  description: List recorded script frames
+  params: []
+  tags:
+    - eros
+    - replay
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: bc783c77-da84-4b06-9d03-bb76048a5a11
+  updatedAt: 1789179436863

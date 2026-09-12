@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-copilot.agent.calibrate
+type: component
+id: copilot.agent.calibrate
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178077
+source: data/cortex/memory/components.json:copilot.agent.calibrate
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.agent.calibrate
+  namespace: copilot
+  name: agent.calibrate
+  version: 2.0.0
+  grammar:
+    - calibrate agent
+    - find the limit
+  route:
+    method: POST
+    path: /api/agents/calibrate
+  description: Binary-search an agent’s real input limit from live probes
+  params: []
+  tags:
+    - copilot
+    - agents
+    - capability
+  permissions:
+    - user
+  hooks: {}
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 62b8ba7f-029e-45b8-bab4-53f1f6cca749
+  updatedAt: 1789179436997

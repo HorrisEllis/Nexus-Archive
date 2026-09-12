@@ -1,0 +1,64 @@
+envelope: 1
+uuid: nexus-export-component-cg.mesh.route
+type: component
+id: cg.mesh.route
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178025
+source: data/cortex/memory/components.json:cg.mesh.route
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.mesh.route
+  namespace: cg
+  name: mesh.route
+  version: 3.0.0
+  grammar:
+    - mesh route
+    - mesh-route
+  route:
+    method: POST
+    path: /cmd
+  description: RAID-route prompt to healthiest agent
+  params: []
+  tags:
+    - cg
+    - mesh
+    - raid
+  permissions:
+    - system
+  hooks:
+    out:
+      - id: clear-glass.mesh.result
+        wires_to:
+          - cortex.raid.decide
+          - guardian.job.dispatch.receive
+        tags:
+          - mesh
+          - routing
+  typecode: CG-MSH-003
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: ad1a8268-f369-4d0a-be11-49df3acc7ba0
+  updatedAt: 1789179436802

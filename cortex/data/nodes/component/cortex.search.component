@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-cortex.search
+type: component
+id: cortex.search
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178095
+source: data/cortex/memory/components.json:cortex.search
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cortex.search
+  namespace: cortex
+  name: search
+  version: 3.5.0
+  grammar:
+    - search
+  route:
+    method: GET
+    path: /api/search
+  description: Cross-table search
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: cortex
+  registeredAt: 1789169841586
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 0aa35253-a4df-4b9c-b102-011853574147
+  updatedAt: 1789179438476

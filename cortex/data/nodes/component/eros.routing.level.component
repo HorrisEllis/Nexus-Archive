@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.routing.level
+type: component
+id: eros.routing.level
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178041
+source: data/cortex/memory/components.json:eros.routing.level
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.routing.level
+  namespace: eros
+  name: routing.level
+  version: 0.1.0
+  grammar:
+    - routing level
+    - routing-level
+  route:
+    method: POST
+    path: /api/routing/level
+  description: 'Set route level: direct|parallel|redundant'
+  params: []
+  tags:
+    - eros
+    - routing
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 4ea53623-d0e4-41b0-a778-7d481fd31b44
+  updatedAt: 1789179436860

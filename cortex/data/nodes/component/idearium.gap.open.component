@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-idearium.gap.open
+type: component
+id: idearium.gap.open
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177992
+source: data/cortex/memory/components.json:idearium.gap.open
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.gap.open
+  namespace: idearium
+  name: gap.open
+  version: 1.0.0
+  grammar:
+    - open gap
+    - gap open
+  route:
+    method: POST
+    path: /api/gaps
+  description: Open a new gap
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 15fbe9fb-8b3c-4b4d-b846-faa9beee256c
+  updatedAt: 1789179436953

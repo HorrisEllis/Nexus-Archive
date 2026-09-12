@@ -1,0 +1,66 @@
+envelope: 1
+uuid: nexus-export-component-copilot.person_model.accept
+type: component
+id: copilot.person_model.accept
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178074
+source: data/cortex/memory/components.json:copilot.person_model.accept
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.person_model.accept
+  namespace: copilot
+  name: person_model.accept
+  version: 2.0.0
+  grammar:
+    - accept observation
+  route:
+    method: POST
+    path: /api/person-model/accept
+  description: USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)
+  params: []
+  tags:
+    - copilot
+    - person-model
+    - review
+  permissions:
+    - user
+  hooks:
+    in:
+      - id: copilot.person_model.accept
+        intent:
+          - action
+        tags:
+          - user-only
+    out:
+      - id: copilot.person_model.node.stated
+        wires_to:
+          - cortex.memory.insert
+        tags:
+          - identity
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 7898a6f8-7d8e-4ea6-849a-130d663fc37c
+  updatedAt: 1789179436984

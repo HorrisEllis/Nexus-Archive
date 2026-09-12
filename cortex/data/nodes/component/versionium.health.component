@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-versionium.health
+type: component
+id: versionium.health
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178069
+source: data/cortex/memory/components.json:versionium.health
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: versionium.health
+  namespace: versionium
+  name: health
+  version: 3.0.0
+  grammar:
+    - versionium health
+  route:
+    method: GET
+    path: /health
+  description: Versionium health
+  params: []
+  tags:
+    - versionium
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: versionium
+  registeredAt: 1789169838369
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 632dbd7f-2c21-4ceb-b6f4-716995234dc6
+  updatedAt: 1789179436927

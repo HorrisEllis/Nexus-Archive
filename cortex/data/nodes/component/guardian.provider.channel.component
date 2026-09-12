@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-guardian.provider.channel
+type: component
+id: guardian.provider.channel
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177947
+source: data/cortex/memory/components.json:guardian.provider.channel
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.provider.channel
+  namespace: guardian
+  name: provider.channel
+  version: 3.6.2
+  grammar:
+    - provider channel
+    - provider-channel
+  route:
+    method: GET
+    path: /channel
+  description: NCP SSE channel — browser tabs connect here
+  params: []
+  tags:
+    - guardian
+    - ncp
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 729ab418-cfef-4f9d-a6f6-b1de52ca2c69
+  updatedAt: 1789179436748

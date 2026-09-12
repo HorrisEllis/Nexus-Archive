@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-loom.graph
+type: component
+id: loom.graph
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178079
+source: data/cortex/memory/components.json:loom.graph
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: loom.graph
+  namespace: loom
+  name: graph
+  version: 1.5.0
+  grammar:
+    - graph
+    - graph
+  route:
+    method: GET
+    path: /api/graph
+  description: The wire graph — nodes and edges of NEXUS
+  params: []
+  tags:
+    - loom
+  permissions:
+    - system
+  registeredBy: loom
+  registeredAt: 1789169838482
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: e31c96ba-7953-422e-bef8-89098d156875
+  updatedAt: 1789179437004

@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.behavior.snapshot
+type: component
+id: eros.behavior.snapshot
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178041
+source: data/cortex/memory/components.json:eros.behavior.snapshot
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.behavior.snapshot
+  namespace: eros
+  name: behavior.snapshot
+  version: 0.1.0
+  grammar:
+    - behavior snapshot
+    - behavior-snapshot
+  route:
+    method: GET
+    path: /api/behavior/snapshot/:sessionId
+  description: Session fatigue + error rate snapshot
+  params: []
+  tags:
+    - eros
+    - behavior
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 86a5fbdc-6ea9-43a5-adb9-2b44236192c7
+  updatedAt: 1789179436859

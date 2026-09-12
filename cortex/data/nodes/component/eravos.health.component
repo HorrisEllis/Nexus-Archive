@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-eravos.health
+type: component
+id: eravos.health
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178056
+source: data/cortex/memory/components.json:eravos.health
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eravos.health
+  namespace: eravos
+  name: health
+  version: 3.0.0
+  grammar:
+    - eravos health
+  route:
+    method: GET
+    path: /health
+  description: ERAVOS health
+  params: []
+  tags:
+    - eravos
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: eravos
+  registeredAt: 1789169838312
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 39d88e23-d9b6-4f73-bd1d-025a1038b977
+  updatedAt: 1789179436900

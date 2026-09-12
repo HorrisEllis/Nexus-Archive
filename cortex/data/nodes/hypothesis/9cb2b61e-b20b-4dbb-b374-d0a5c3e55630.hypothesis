@@ -1,0 +1,28 @@
+envelope: 1
+uuid: nexus-export-hypothesis-9cb2b61e-b20b-4dbb-b374-d0a5c3e55630
+type: hypothesis
+id: 9cb2b61e-b20b-4dbb-b374-d0a5c3e55630
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/user_model_hypotheses.json — cortex's own
+  memory store, the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178101
+source: data/cortex/memory/user_model_hypotheses.json:9cb2b61e-b20b-4dbb-b374-d0a5c3e55630
+payload:
+  uuid: 32227e2b-d8ba-4758-ab12-645a21175b3e
+  claim: NEXUS is the system being built
+  category: invariant
+  claimType: invariant
+  confidence: 1
+  locked: true
+  status: active
+  decayRate: 0
+  firstSeen: 1789169840363
+  lastSeen: 1789169840363
+  last_seen: 1789169840363
+  source: system-boot
+  evidence_count: 1
+  id: 9cb2b61e-b20b-4dbb-b374-d0a5c3e55630

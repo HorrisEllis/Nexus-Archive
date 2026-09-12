@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-idearium.sse
+type: component
+id: idearium.sse
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177982
+source: data/cortex/memory/components.json:idearium.sse
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.sse
+  namespace: idearium
+  name: sse
+  version: 1.0.0
+  grammar:
+    - sse
+  route:
+    method: GET
+    path: /sse
+  description: Live SSE event stream
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+    - stream
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 2434bcc3-3a83-4deb-8125-b1c9868c4899
+  updatedAt: 1789179436936

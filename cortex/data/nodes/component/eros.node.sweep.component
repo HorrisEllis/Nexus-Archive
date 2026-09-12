@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.node.sweep
+type: component
+id: eros.node.sweep
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178038
+source: data/cortex/memory/components.json:eros.node.sweep
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.node.sweep
+  namespace: eros
+  name: node.sweep
+  version: 0.1.0
+  grammar:
+    - node sweep
+    - node-sweep
+  route:
+    method: POST
+    path: /api/node/sweep
+  description: Sweep stale nodes (last-seen > threshold)
+  params: []
+  tags:
+    - eros
+    - registry
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 6457976a-1c43-4557-b7c4-18120e64d848
+  updatedAt: 1789179436845

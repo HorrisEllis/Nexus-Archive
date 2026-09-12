@@ -1,0 +1,62 @@
+envelope: 1
+uuid: nexus-export-component-cg.context.create
+type: component
+id: cg.context.create
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178019
+source: data/cortex/memory/components.json:cg.context.create
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.context.create
+  namespace: cg
+  name: context.create
+  version: 3.0.0
+  grammar:
+    - context create
+    - context-create
+  route:
+    method: POST
+    path: /cmd
+  description: Create isolated Chromium partition for agent
+  params: []
+  tags:
+    - cg
+    - context
+    - agent
+  permissions:
+    - system
+  hooks:
+    out:
+      - id: clear-glass.context.created
+        wires_to:
+          - cortex.memory.insert
+        tags:
+          - lifecycle
+  typecode: CG-CTX-001
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: dda7fd20-fcc8-4c78-816a-02e26ba78b33
+  updatedAt: 1789179436789

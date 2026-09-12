@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.seam.queues
+type: component
+id: guardian.seam.queues
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177953
+source: data/cortex/memory/components.json:guardian.seam.queues
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.seam.queues
+  namespace: guardian
+  name: seam.queues
+  version: 3.6.2
+  grammar:
+    - seam queues
+    - seam-queues
+  route:
+    method: GET
+    path: /seam/queues
+  description: Active SEAM queues
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 828f099c-cd5a-4dd5-89d7-483ecb609c73
+  updatedAt: 1789179436762

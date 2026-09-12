@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-versionium.restore.read
+type: component
+id: versionium.restore.read
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178064
+source: data/cortex/memory/components.json:versionium.restore.read
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: versionium.restore.read
+  namespace: versionium
+  name: restore.read
+  version: 3.0.0
+  grammar:
+    - versionium restore
+  route:
+    method: GET
+    path: /api/versionium/restore/:commitId
+  description: Real temporal replay — read-only
+  params: []
+  tags:
+    - versionium
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: versionium
+  registeredAt: 1789169838369
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: e27643ea-7681-4739-9350-761bf7ebca10
+  updatedAt: 1789179436920

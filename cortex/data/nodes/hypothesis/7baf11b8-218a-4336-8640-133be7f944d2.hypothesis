@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-hypothesis-7baf11b8-218a-4336-8640-133be7f944d2
+type: hypothesis
+id: 7baf11b8-218a-4336-8640-133be7f944d2
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/user_model_hypotheses.json — cortex's own
+  memory store, the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178102
+source: data/cortex/memory/user_model_hypotheses.json:7baf11b8-218a-4336-8640-133be7f944d2
+payload:
+  uuid: e4ed2acc-328b-493f-9229-3b4ae6ea6a24
+  claim: uses greeting intent
+  claimType: intent
+  category: intent
+  confidence: 0.55
+  evidence_count: 2
+  firstSeen: 1789179099287
+  lastSeen: 1789179437075
+  last_seen: 1789179099287
+  lastEvidence:
+    prompt: hello
+    channel: ch-overview
+  status: active
+  decayRate: 0.1
+  source: observed
+  id: 7baf11b8-218a-4336-8640-133be7f944d2

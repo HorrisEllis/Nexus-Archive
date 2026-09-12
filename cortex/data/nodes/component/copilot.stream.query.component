@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-copilot.stream.query
+type: component
+id: copilot.stream.query
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178070
+source: data/cortex/memory/components.json:copilot.stream.query
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.stream.query
+  namespace: copilot
+  name: stream.query
+  version: 2.0.0
+  grammar:
+    - stream
+    - cs
+  route:
+    method: GET
+    path: /api/stream
+  description: Query the continuous event stream
+  params: []
+  tags:
+    - copilot
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 7d1c179b-5c65-4433-b8fe-372929337fb4
+  updatedAt: 1789179436969

@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-guardian.provider.result
+type: component
+id: guardian.provider.result
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177948
+source: data/cortex/memory/components.json:guardian.provider.result
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.provider.result
+  namespace: guardian
+  name: provider.result
+  version: 3.6.2
+  grammar:
+    - provider result
+    - provider-result
+  route:
+    method: POST
+    path: /result
+  description: NCP result from browser tab
+  params: []
+  tags:
+    - guardian
+    - ncp
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 488cac73-5b4e-4cab-a28a-f1d92adc30de
+  updatedAt: 1789179436750

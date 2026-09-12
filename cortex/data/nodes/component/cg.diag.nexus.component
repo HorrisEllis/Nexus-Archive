@@ -1,0 +1,63 @@
+envelope: 1
+uuid: nexus-export-component-cg.diag.nexus
+type: component
+id: cg.diag.nexus
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178027
+source: data/cortex/memory/components.json:cg.diag.nexus
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.diag.nexus
+  namespace: cg
+  name: diag.nexus
+  version: 3.0.0
+  grammar:
+    - diag nexus
+    - diag-nexus
+  route:
+    method: POST
+    path: /cmd
+  description: NEXUS home UI audit — navigate, assert, screenshot
+  params: []
+  tags:
+    - cg
+    - diagnostic
+    - audit
+  permissions:
+    - system
+  hooks:
+    out:
+      - id: clear-glass.diag.complete
+        wires_to:
+          - cortex.gaps.open
+          - cortex.events.write
+        tags:
+          - diagnostic
+  typecode: CG-DGN-002
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: b389765c-84c3-420c-bcfe-d41108f4832f
+  updatedAt: 1789179436807

@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-cortex.gaps.open
+type: component
+id: cortex.gaps.open
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178090
+source: data/cortex/memory/components.json:cortex.gaps.open
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cortex.gaps.open
+  namespace: cortex
+  name: gaps.open
+  version: 3.5.0
+  grammar:
+    - gaps open
+  route:
+    method: POST
+    path: /api/gaps
+  description: Open a new gap
+  params: []
+  tags:
+    - cortex
+    - gaps
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: cortex
+  registeredAt: 1789169841586
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: c2cefcfa-e723-4adb-a601-951a80c91ba0
+  updatedAt: 1789179438445

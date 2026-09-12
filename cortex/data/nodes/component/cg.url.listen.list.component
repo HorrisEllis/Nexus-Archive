@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-cg.url.listen.list
+type: component
+id: cg.url.listen.list
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178027
+source: data/cortex/memory/components.json:cg.url.listen.list
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.url.listen.list
+  namespace: cg
+  name: url.listen.list
+  version: 3.0.0
+  grammar:
+    - url listen list
+    - url-listen-list
+  route:
+    method: GET
+    path: /listeners
+  description: List active URL listeners
+  params: []
+  tags:
+    - cg
+    - listener
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 0ab06ac4-8970-4d63-a15f-b8192a942dc5
+  updatedAt: 1789179436806

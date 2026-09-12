@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-idearium.spec.export
+type: component
+id: idearium.spec.export
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177992
+source: data/cortex/memory/components.json:idearium.spec.export
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: idearium.spec.export
+  namespace: idearium
+  name: spec.export
+  version: 1.0.0
+  grammar:
+    - export spec
+    - spec export
+  route:
+    method: GET
+    path: /api/specs/:uuid/export
+  description: Export a spec as a portable document
+  params: []
+  returns:
+    type: object
+    render: json
+  tags:
+    - idearium
+  permissions:
+    - system
+  registeredBy: idearium
+  registeredAt: 1789169837495
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: fbc4636a-953e-4b95-b1f1-9b13598688fa
+  updatedAt: 1789179436950

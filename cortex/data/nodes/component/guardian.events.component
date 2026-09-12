@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-guardian.events
+type: component
+id: guardian.events
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177944
+source: data/cortex/memory/components.json:guardian.events
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.events
+  namespace: guardian
+  name: events
+  version: 3.6.2
+  grammar:
+    - events
+    - events
+  route:
+    method: GET
+    path: /events
+  description: SSE — all guardian bus events
+  params: []
+  tags:
+    - guardian
+    - stream
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: b8a0d3d4-f63c-4423-8c2a-60894b9f3a6b
+  updatedAt: 1789179436741

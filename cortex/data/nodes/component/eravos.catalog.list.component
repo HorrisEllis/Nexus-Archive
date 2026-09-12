@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-eravos.catalog.list
+type: component
+id: eravos.catalog.list
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178055
+source: data/cortex/memory/components.json:eravos.catalog.list
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eravos.catalog.list
+  namespace: eravos
+  name: catalog.list
+  version: 3.0.0
+  grammar:
+    - eravos catalog
+  route:
+    method: GET
+    path: /api/catalog
+  description: Available organisms from registry
+  params: []
+  tags:
+    - eravos
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: eravos
+  registeredAt: 1789169838312
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: e6b953db-2dac-4ed1-a3da-d99c77fb2fc7
+  updatedAt: 1789179436894

@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.cmd.wait
+type: component
+id: eros.cmd.wait
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178040
+source: data/cortex/memory/components.json:eros.cmd.wait
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.cmd.wait
+  namespace: eros
+  name: cmd.wait
+  version: 0.1.0
+  grammar:
+    - cmd wait
+    - cmd-wait
+  route:
+    method: POST
+    path: /api/os/wait
+  description: Wait for selector to appear
+  params: []
+  tags:
+    - eros
+    - driver
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 40751053-f498-4449-80ea-2924e4afa7c7
+  updatedAt: 1789179436855

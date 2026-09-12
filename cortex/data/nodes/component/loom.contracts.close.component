@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-loom.contracts.close
+type: component
+id: loom.contracts.close
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178080
+source: data/cortex/memory/components.json:loom.contracts.close
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: loom.contracts.close
+  namespace: loom
+  name: contracts.close
+  version: 1.5.0
+  grammar:
+    - contracts close
+    - contracts-close
+  route:
+    method: POST
+    path: /api/contracts/:id/close
+  description: Close a contract
+  params: []
+  tags:
+    - loom
+    - write
+  permissions:
+    - system
+  registeredBy: loom
+  registeredAt: 1789169838482
+  hooks: []
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: ec329444-7190-43d7-8332-88ff2fc8ca41
+  updatedAt: 1789179437010

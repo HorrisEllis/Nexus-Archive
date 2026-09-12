@@ -1,0 +1,64 @@
+envelope: 1
+uuid: nexus-export-component-eros.hostile.status
+type: component
+id: eros.hostile.status
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178043
+source: data/cortex/memory/components.json:eros.hostile.status
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.hostile.status
+  namespace: eros
+  name: hostile.status
+  version: 0.1.0
+  grammar:
+    - hostile status
+    - hostile-status
+  route:
+    method: GET
+    path: /api/hostile/status
+  description: Current threat level + active signals
+  params: []
+  tags:
+    - eros
+    - hostile
+    - security
+  permissions:
+    - system
+  hooks:
+    out:
+      - id: eros.hostile.detected
+        wires_to:
+          - clear-glass.context.fp.switch
+          - cortex.gaps.open
+          - wire.hook.hostile
+        tags:
+          - threat
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 820e0af4-b53b-4447-95bc-278e3c0b7a9f
+  updatedAt: 1789179436861

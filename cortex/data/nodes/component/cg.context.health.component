@@ -1,0 +1,56 @@
+envelope: 1
+uuid: nexus-export-component-cg.context.health
+type: component
+id: cg.context.health
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178019
+source: data/cortex/memory/components.json:cg.context.health
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.context.health
+  namespace: cg
+  name: context.health
+  version: 3.0.0
+  grammar:
+    - context health
+    - context-health
+  route:
+    method: GET
+    path: /contexts
+  description: Agent health — RAID routing weight
+  params: []
+  tags:
+    - cg
+    - context
+    - raid
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 00f8cbc8-e3f9-44d3-bf55-ca1e5d331a55
+  updatedAt: 1789179436793

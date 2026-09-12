@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.copilot.memory
+type: component
+id: guardian.copilot.memory
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177974
+source: data/cortex/memory/components.json:guardian.copilot.memory
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.copilot.memory
+  namespace: guardian
+  name: copilot.memory
+  version: 3.6.2
+  grammar:
+    - copilot memory
+    - copilot-memory
+  route:
+    method: POST
+    path: /api/copilot/memory
+  description: Co-pilot memory operations
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: a6f1741b-2198-46f3-8dc9-fc2496662915
+  updatedAt: 1789179436777

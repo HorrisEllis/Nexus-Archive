@@ -1,0 +1,52 @@
+envelope: 1
+uuid: nexus-export-component-architect.hook.update
+type: component
+id: architect.hook.update
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178086
+source: data/cortex/memory/components.json:architect.hook.update
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: architect.hook.update
+  namespace: architect
+  name: hook.update
+  version: 1.0.0
+  grammar:
+    - hook update
+  route:
+    method: PATCH
+    path: /api/hooks/:id
+  description: Update hook metadata
+  params: []
+  tags:
+    - architect
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: architect
+  registeredAt: 1789169839375
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: f72ac3dd-185f-4b74-bd30-f55c25cbf438
+  updatedAt: 1789179437510

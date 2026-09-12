@@ -1,0 +1,53 @@
+envelope: 1
+uuid: nexus-export-component-guardian.seam.sessions
+type: component
+id: guardian.seam.sessions
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252177954
+source: data/cortex/memory/components.json:guardian.seam.sessions
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: guardian.seam.sessions
+  namespace: guardian
+  name: seam.sessions
+  version: 3.6.2
+  grammar:
+    - seam sessions
+    - seam-sessions
+  route:
+    method: GET
+    path: /seam/sessions
+  description: SEAM session history
+  params: []
+  tags:
+    - guardian
+  permissions:
+    - system
+  hooks: {}
+  registeredBy: guardian
+  registeredAt: 1789169837076
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 0be53393-b87d-4685-b029-b7ef074a314b
+  updatedAt: 1789179436764

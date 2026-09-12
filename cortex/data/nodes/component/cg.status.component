@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-cg.status
+type: component
+id: cg.status
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178014
+source: data/cortex/memory/components.json:cg.status
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: cg.status
+  namespace: cg
+  name: status
+  version: 3.0.0
+  grammar:
+    - status
+    - status
+  route:
+    method: GET
+    path: /status
+  description: Full system status — bus sample, agents, listeners, TLS
+  params: []
+  tags:
+    - cg
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: clear-glass
+  registeredAt: 1789169837965
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 9ab81c42-de5e-4632-bf46-704d69ced548
+  updatedAt: 1789179436779

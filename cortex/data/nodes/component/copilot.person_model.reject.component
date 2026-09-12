@@ -1,0 +1,54 @@
+envelope: 1
+uuid: nexus-export-component-copilot.person_model.reject
+type: component
+id: copilot.person_model.reject
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178075
+source: data/cortex/memory/components.json:copilot.person_model.reject
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.person_model.reject
+  namespace: copilot
+  name: person_model.reject
+  version: 2.0.0
+  grammar:
+    - reject observation
+  route:
+    method: POST
+    path: /api/person-model/reject
+  description: Rejects a proposed observation. A reason is required (§IP-6)
+  params: []
+  tags:
+    - copilot
+    - person-model
+    - review
+  permissions:
+    - user
+  hooks: {}
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 895ecaed-6240-4b97-850d-8cf2c245c784
+  updatedAt: 1789179436985

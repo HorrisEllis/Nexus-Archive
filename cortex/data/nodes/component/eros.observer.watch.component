@@ -1,0 +1,55 @@
+envelope: 1
+uuid: nexus-export-component-eros.observer.watch
+type: component
+id: eros.observer.watch
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178049
+source: data/cortex/memory/components.json:eros.observer.watch
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T2
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: eros.observer.watch
+  namespace: eros
+  name: observer.watch
+  version: 0.1.0
+  grammar:
+    - observer watch
+    - observer-watch
+  route:
+    method: POST
+    path: /api/observer/watch
+  description: Start DOM observer on tab
+  params: []
+  tags:
+    - eros
+    - observer
+  permissions:
+    - system
+  hooks: {}
+  typecode: null
+  registeredBy: erosmancer-os
+  registeredAt: 1789169838068
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 6ac2f8d5-fc8c-421c-b94f-f6aa2a6d9cf7
+  updatedAt: 1789179436869

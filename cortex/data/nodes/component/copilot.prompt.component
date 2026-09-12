@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-component-copilot.prompt
+type: component
+id: copilot.prompt
+context: >-
+  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
+  the actual runtime table this node type's schema is grounded in
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252178070
+source: data/cortex/memory/components.json:copilot.prompt
+payload:
+  blueprint_ns: null
+  capabilities: []
+  tier: T1
+  resolution:
+    max_level: pattern
+  lifecycle: versioned
+  earned_roles: []
+  id: copilot.prompt
+  namespace: copilot
+  name: prompt
+  version: 2.0.0
+  grammar:
+    - ask
+    - copilot
+    - cp
+  route:
+    method: POST
+    path: /api/prompt
+  description: Primary entry — all co-pilot interactions
+  params: []
+  tags:
+    - copilot
+  permissions:
+    - system
+  hooks:
+    in:
+      - id: copilot.prompt.receive
+        intent:
+          - ask
+          - build
+          - diagnose
+          - navigate
+          - note
+          - tool
+          - action
+        contract: nexus-interaction-contract-v1::copilot
+        tags:
+          - entry-point
+    out:
+      - id: copilot.prompt.to-ollama
+        wires_to:
+          - ollama.jobs.dispatch.receive
+        tags:
+          - model
+      - id: copilot.prompt.reply
+        wires_to:
+          - ui.copilot.receive
+        tags:
+          - response
+  registeredBy: copilot
+  registeredAt: 1789169838394
+  examples: []
+  events:
+    emits: []
+    listensTo: []
+  returns:
+    type: object
+    render: json
+  comp_properties: {}
+  available: true
+  deprecated: false
+  deprecatedBy: null
+  uuid: 9492b892-8fe5-4b2d-9dbb-17a610cc8d3d
+  updatedAt: 1789179436968
