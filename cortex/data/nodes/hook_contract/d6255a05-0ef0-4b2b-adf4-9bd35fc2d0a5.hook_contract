@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-d6255a05-0ef0-4b2b-adf4-9bd35fc2d0a5
+type: hook_contract
+id: d6255a05-0ef0-4b2b-adf4-9bd35fc2d0a5
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822239
+source: data/cortex/memory/hooks.json:d6255a05-0ef0-4b2b-adf4-9bd35fc2d0a5
+payload:
+  uuid: d6255a05-0ef0-4b2b-adf4-9bd35fc2d0a5
+  id: d6255a05-0ef0-4b2b-adf4-9bd35fc2d0a5
+  name: cortex.memory.insert
+  intent: Insert row into any JAA table
+  version: 3.5.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cortex
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/memory/insert
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cortex.memory.insert
+    event: architect.hook.cortex.memory.insert
+    route: POST /api/memory/insert
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867491
+    updatedAt: 1789169867491
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cortex
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

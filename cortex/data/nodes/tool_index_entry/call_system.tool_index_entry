@@ -1,0 +1,25 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-call_system
+type: tool_index_entry
+id: call_system
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822122
+source: data/cortex/memory/tool_index.json:call_system
+payload:
+  id: call_system
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Call any registered NEXUS system. Give an `intent` (natural-language capability, resolved via
+    the registry) OR an explicit `system` + `path`. Returns the system's response. Use to reach a
+    capability you do not have a dedicated tool for.
+  updatedAt: 1789179646626
+  _key: call_system

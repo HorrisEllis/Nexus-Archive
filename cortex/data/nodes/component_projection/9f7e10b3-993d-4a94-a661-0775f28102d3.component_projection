@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-9f7e10b3-993d-4a94-a661-0775f28102d3
+type: component_projection
+id: 9f7e10b3-993d-4a94-a661-0775f28102d3
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821719
+source: data/cortex/memory/component_projections.json:9f7e10b3-993d-4a94-a661-0775f28102d3
+payload:
+  uuid: 850fdb10-ffd4-4c76-bf19-52ff62bfaaaf
+  componentId: idearium.spec.show
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.spec.show
+    componentId: idearium.spec.show
+    version: 1.0.0
+    namespace: idearium
+    name: spec.show
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.spec.show
+    command: show
+    aliases:
+      - show spec
+      - spec show
+    help: |-
+      spec.show
+        Get a single spec by uuid
+    route:
+      method: GET
+      path: /api/specs/:uuid
+    componentId: idearium.spec.show
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.spec.show
+    componentId: idearium.spec.show
+    entries:
+      - show spec
+      - spec show
+      - spec.show
+      - show
+    route:
+      method: GET
+      path: /api/specs/:uuid
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.spec.show
+    componentId: idearium.spec.show
+    label: SPEC.SHOW
+    icon: ◈
+    tooltip: Get a single spec by uuid
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/specs/:uuid
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.spec.show
+    componentId: idearium.spec.show
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.spec.show
+    componentId: idearium.spec.show
+    chunk1:
+      system: idearium
+      command: show
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.spec.show
+    componentId: idearium.spec.show
+    markdown: |-
+      # spec.show
+
+      **ID:** `idearium.spec.show` · **Tier:** T1 · **Version:** 1.0.0
+
+      Get a single spec by uuid
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839980
+  id: 9f7e10b3-993d-4a94-a661-0775f28102d3
+  updatedAt: 1789179436946

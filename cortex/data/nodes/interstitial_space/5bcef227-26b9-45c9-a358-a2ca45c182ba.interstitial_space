@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-5bcef227-26b9-45c9-a358-a2ca45c182ba
+type: interstitial_space
+id: 5bcef227-26b9-45c9-a358-a2ca45c182ba
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821554
+source: data/cortex/memory/interstitial_spaces.json:5bcef227-26b9-45c9-a358-a2ca45c182ba
+payload:
+  uuid: 455cd219-951a-4bc4-b5fa-28900ce46e4d
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "ledger.ollama.updated" and "ledger.ollama.updated"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: f49bc4d8-068b-46a0-8a1c-2f0f870ced45
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179444361
+  meta:
+    pattern:
+      uuid: f49bc4d8-068b-46a0-8a1c-2f0f870ced45
+      signature: ledger.ollama.updated::ledger.ollama.updated
+      patternType: co_occurrence
+      typeA: ledger.ollama.updated
+      typeB: ledger.ollama.updated
+      systemA: ollama-bridge
+      systemB: ollama-bridge
+      crossSystem: false
+      count: 21
+      confidence: 1
+      description: '"ledger.ollama.updated" and "ledger.ollama.updated" co-occur within 5s — 21 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179442919
+  id: 5bcef227-26b9-45c9-a358-a2ca45c182ba

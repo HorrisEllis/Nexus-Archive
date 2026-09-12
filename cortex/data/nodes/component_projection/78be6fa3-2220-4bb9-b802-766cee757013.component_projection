@@ -1,0 +1,112 @@
+envelope: 1
+uuid: nexus-export-component_projection-78be6fa3-2220-4bb9-b802-766cee757013
+type: component_projection
+id: 78be6fa3-2220-4bb9-b802-766cee757013
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821760
+source: data/cortex/memory/component_projections.json:78be6fa3-2220-4bb9-b802-766cee757013
+payload:
+  uuid: 5b883784-51a4-4608-b6dd-6e9b3b4ec8de
+  componentId: copilot.agent.capability
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.agent.capability
+    componentId: copilot.agent.capability
+    version: 2.0.0
+    namespace: copilot
+    name: agent.capability
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.agent.capability
+    command: capability
+    aliases:
+      - agent limits
+      - what can chatgpt take
+      - agent capability
+    help: |-
+      agent.capability
+        Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor figures are 
+    route:
+      method: GET
+      path: /api/agents/capability
+    componentId: copilot.agent.capability
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.agent.capability
+    componentId: copilot.agent.capability
+    entries:
+      - agent limits
+      - what can chatgpt take
+      - agent capability
+      - chunk size
+      - agent.capability
+      - capability
+    route:
+      method: GET
+      path: /api/agents/capability
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.agent.capability
+    componentId: copilot.agent.capability
+    label: AGENT.CAPABILITY
+    icon: ◈
+    tooltip: Per-agent limits MEASURED from real outcomes, with the basis attached — declared
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/agents/capability
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.agent.capability
+    componentId: copilot.agent.capability
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.agent.capability
+    componentId: copilot.agent.capability
+    chunk1:
+      system: copilot
+      command: capability
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.agent.capability
+    componentId: copilot.agent.capability
+    markdown: >-
+      # agent.capability
+
+
+      **ID:** `copilot.agent.capability` · **Tier:** T1 · **Version:** 2.0.0
+
+
+      Per-agent limits MEASURED from real outcomes, with the basis attached — declared vendor
+      figures are marked unverified
+
+
+
+
+      ## API
+
+      `[object Object]`
+  ts: 1789169840251
+  id: 78be6fa3-2220-4bb9-b802-766cee757013
+  updatedAt: 1789179436997

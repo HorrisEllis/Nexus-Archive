@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-1e48bce6-a51f-4a08-a7fb-7cfdec59dc4a
+type: bep_pattern
+id: 1e48bce6-a51f-4a08-a7fb-7cfdec59dc4a
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853816
+source: data/cortex/memory/bep_patterns.json:1e48bce6-a51f-4a08-a7fb-7cfdec59dc4a
+payload:
+  uuid: ac995b17-9088-4b2d-a8f6-c6a8b0b2f45d
+  signature: clear-glass.bgtab.opened::nexus.resource.pressure
+  patternType: cross_system_causal
+  typeA: clear-glass.bgtab.opened
+  typeB: nexus.resource.pressure
+  systemA: clear-glass
+  systemB: orchestrator
+  crossSystem: true
+  count: 4
+  confidence: 0.2
+  description: >-
+    "clear-glass.bgtab.opened" (clear-glass) and "nexus.resource.pressure" (orchestrator) co-occur
+    within 5s across two real systems — 4 observations
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179793095
+  id: 1e48bce6-a51f-4a08-a7fb-7cfdec59dc4a

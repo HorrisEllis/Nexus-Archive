@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-fe877c26-1d14-46cc-bd96-127a5cb88126
+type: component_projection
+id: fe877c26-1d14-46cc-bd96-127a5cb88126
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821736
+source: data/cortex/memory/component_projections.json:fe877c26-1d14-46cc-bd96-127a5cb88126
+payload:
+  uuid: bf3a68c5-b77d-4f94-9dae-d245679d59c7
+  componentId: cg.window.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.window.list
+    componentId: cg.window.list
+    version: 3.0.0
+    namespace: cg
+    name: window.list
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.window.list
+    command: list
+    aliases:
+      - window list
+      - window-list
+    help: |-
+      window.list
+        List open agent windows
+    route:
+      method: GET
+      path: /status
+    componentId: cg.window.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.window.list
+    componentId: cg.window.list
+    entries:
+      - window list
+      - window-list
+      - window.list
+      - list
+    route:
+      method: GET
+      path: /status
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.window.list
+    componentId: cg.window.list
+    label: WINDOW.LIST
+    icon: ⬢
+    tooltip: List open agent windows
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /status
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.window.list
+    componentId: cg.window.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.window.list
+    componentId: cg.window.list
+    chunk1:
+      system: cg
+      command: list
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.window.list
+    componentId: cg.window.list
+    markdown: |-
+      # window.list
+
+      **ID:** `cg.window.list` · **Tier:** T2 · **Version:** 3.0.0
+
+      List open agent windows
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840091
+  id: fe877c26-1d14-46cc-bd96-127a5cb88126
+  updatedAt: 1789179436817

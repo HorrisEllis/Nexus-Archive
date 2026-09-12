@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-8efcc604-cfaa-4efd-8847-b3fb10a4c936
+type: interstitial_space
+id: 8efcc604-cfaa-4efd-8847-b3fb10a4c936
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821533
+source: data/cortex/memory/interstitial_spaces.json:8efcc604-cfaa-4efd-8847-b3fb10a4c936
+payload:
+  uuid: 07a6e282-3313-4e04-b057-02408aeb80c5
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "intelligence.failure_scan" and "ui.boot"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 4c84c781-6e08-40c9-b5bf-79fd42a8fbaa
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.5
+  ts: 1789179101991
+  meta:
+    pattern:
+      uuid: 4c84c781-6e08-40c9-b5bf-79fd42a8fbaa
+      signature: intelligence.failure_scan::ui.boot
+      patternType: co_occurrence
+      typeA: intelligence.failure_scan
+      typeB: ui.boot
+      systemA: null
+      systemB: cortex
+      crossSystem: false
+      count: 20
+      confidence: 1
+      description: '"intelligence.failure_scan" and "ui.boot" co-occur within 5s — 20 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: 8efcc604-cfaa-4efd-8847-b3fb10a4c936

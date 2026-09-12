@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-fa15abcc-66ae-4f31-b95e-e79d335b9d05
+type: component_projection
+id: fa15abcc-66ae-4f31-b95e-e79d335b9d05
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821758
+source: data/cortex/memory/component_projections.json:fa15abcc-66ae-4f31-b95e-e79d335b9d05
+payload:
+  uuid: 1ac4bf1a-48b9-4cf7-ac08-e56fa91f7902
+  componentId: copilot.person_model.purge
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.person_model.purge
+    componentId: copilot.person_model.purge
+    version: 2.0.0
+    namespace: copilot
+    name: person_model.purge
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.person_model.purge
+    command: purge
+    aliases:
+      - copilot person_model purge
+    help: |-
+      person_model.purge
+        HARD DELETE of the whole model. Requires an explicit confirmation string
+    route:
+      method: POST
+      path: /api/person-model/purge
+    componentId: copilot.person_model.purge
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.person_model.purge
+    componentId: copilot.person_model.purge
+    entries:
+      - copilot person_model purge
+      - person_model.purge
+      - purge
+    route:
+      method: POST
+      path: /api/person-model/purge
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.person_model.purge
+    componentId: copilot.person_model.purge
+    label: PERSON_MODEL.PUR
+    icon: ◈
+    tooltip: HARD DELETE of the whole model. Requires an explicit confirmation string
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/person-model/purge
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.person_model.purge
+    componentId: copilot.person_model.purge
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.person_model.purge
+    componentId: copilot.person_model.purge
+    chunk1:
+      system: copilot
+      command: purge
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.person_model.purge
+    componentId: copilot.person_model.purge
+    markdown: |-
+      # person_model.purge
+
+      **ID:** `copilot.person_model.purge` · **Tier:** T1 · **Version:** 2.0.0
+
+      HARD DELETE of the whole model. Requires an explicit confirmation string
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840244
+  id: fa15abcc-66ae-4f31-b95e-e79d335b9d05
+  updatedAt: 1789179436991

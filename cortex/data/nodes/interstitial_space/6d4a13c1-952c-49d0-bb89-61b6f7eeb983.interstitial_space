@@ -1,0 +1,44 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-6d4a13c1-952c-49d0-bb89-61b6f7eeb983
+type: interstitial_space
+id: 6d4a13c1-952c-49d0-bb89-61b6f7eeb983
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821560
+source: data/cortex/memory/interstitial_spaces.json:6d4a13c1-952c-49d0-bb89-61b6f7eeb983
+payload:
+  uuid: 2c407388-eea0-4f1c-ac68-3ef4c2358681
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::adversarial.run.complete" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 8316041b-35c1-4613-a845-aeeca5ccf535
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.9999999999999999
+  ts: 1789179613163
+  meta:
+    pattern:
+      uuid: 8316041b-35c1-4613-a845-aeeca5ccf535
+      signature: precursor::adversarial.run.complete
+      patternType: failure_precursor
+      precursorType: adversarial.run.complete
+      failureTypes:
+        - intelligence.failure_scan
+      count: 10
+      confidence: 1
+      description: '"adversarial.run.complete" precedes failures 10 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179613085
+      id: de862f53-1746-4fb9-9498-5f4d44a74a84
+  id: 6d4a13c1-952c-49d0-bb89-61b6f7eeb983
+  crystallised: true
+  crystallisedAt: 1789179733131

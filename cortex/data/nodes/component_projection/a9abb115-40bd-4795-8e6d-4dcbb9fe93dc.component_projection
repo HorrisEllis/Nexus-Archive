@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-a9abb115-40bd-4795-8e6d-4dcbb9fe93dc
+type: component_projection
+id: a9abb115-40bd-4795-8e6d-4dcbb9fe93dc
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821719
+source: data/cortex/memory/component_projections.json:a9abb115-40bd-4795-8e6d-4dcbb9fe93dc
+payload:
+  uuid: b8d32c71-7756-4ad0-b76a-9de8ee20f210
+  componentId: idearium.spec.create
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.spec.create
+    componentId: idearium.spec.create
+    version: 1.0.0
+    namespace: idearium
+    name: spec.create
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.spec.create
+    command: create
+    aliases:
+      - create spec
+      - spec create
+    help: |-
+      spec.create
+        Create a new spec from an idea
+    route:
+      method: POST
+      path: /api/specs
+    componentId: idearium.spec.create
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.spec.create
+    componentId: idearium.spec.create
+    entries:
+      - create spec
+      - spec create
+      - spec.create
+      - create
+    route:
+      method: POST
+      path: /api/specs
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.spec.create
+    componentId: idearium.spec.create
+    label: SPEC.CREATE
+    icon: ◈
+    tooltip: Create a new spec from an idea
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/specs
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.spec.create
+    componentId: idearium.spec.create
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.spec.create
+    componentId: idearium.spec.create
+    chunk1:
+      system: idearium
+      command: create
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.spec.create
+    componentId: idearium.spec.create
+    markdown: |-
+      # spec.create
+
+      **ID:** `idearium.spec.create` · **Tier:** T1 · **Version:** 1.0.0
+
+      Create a new spec from an idea
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839979
+  id: a9abb115-40bd-4795-8e6d-4dcbb9fe93dc
+  updatedAt: 1789179436946

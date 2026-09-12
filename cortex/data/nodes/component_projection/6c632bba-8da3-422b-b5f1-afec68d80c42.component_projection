@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-6c632bba-8da3-422b-b5f1-afec68d80c42
+type: component_projection
+id: 6c632bba-8da3-422b-b5f1-afec68d80c42
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821727
+source: data/cortex/memory/component_projections.json:6c632bba-8da3-422b-b5f1-afec68d80c42
+payload:
+  uuid: 70050204-a786-49b5-8a2c-4eeb6cf5b793
+  componentId: cg.context.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.context.list
+    componentId: cg.context.list
+    version: 3.0.0
+    namespace: cg
+    name: context.list
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.context.list
+    command: list
+    aliases:
+      - context list
+      - context-list
+    help: |-
+      context.list
+        List agent contexts with health scores
+    route:
+      method: GET
+      path: /contexts
+    componentId: cg.context.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.context.list
+    componentId: cg.context.list
+    entries:
+      - context list
+      - context-list
+      - context.list
+      - list
+    route:
+      method: GET
+      path: /contexts
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.context.list
+    componentId: cg.context.list
+    label: CONTEXT.LIST
+    icon: ⬢
+    tooltip: List agent contexts with health scores
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /contexts
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.context.list
+    componentId: cg.context.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.context.list
+    componentId: cg.context.list
+    chunk1:
+      system: cg
+      command: list
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.context.list
+    componentId: cg.context.list
+    markdown: |-
+      # context.list
+
+      **ID:** `cg.context.list` · **Tier:** T2 · **Version:** 3.0.0
+
+      List agent contexts with health scores
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840049
+  id: 6c632bba-8da3-422b-b5f1-afec68d80c42
+  updatedAt: 1789179436791

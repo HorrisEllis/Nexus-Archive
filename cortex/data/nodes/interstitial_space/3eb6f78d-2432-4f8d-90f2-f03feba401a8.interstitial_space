@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-3eb6f78d-2432-4f8d-90f2-f03feba401a8
+type: interstitial_space
+id: 3eb6f78d-2432-4f8d-90f2-f03feba401a8
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821463
+source: data/cortex/memory/interstitial_spaces.json:3eb6f78d-2432-4f8d-90f2-f03feba401a8
+payload:
+  uuid: 241421d7-4b93-44f6-8312-55e4451e4676
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "ledger.cortex.registered" and "ledger.cortex.registered"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 24e8941b-3887-4419-a5fe-aa66ec7796d7
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789169846726
+  meta:
+    pattern:
+      uuid: 24e8941b-3887-4419-a5fe-aa66ec7796d7
+      signature: ledger.cortex.registered::ledger.cortex.registered
+      patternType: co_occurrence
+      typeA: ledger.cortex.registered
+      typeB: ledger.cortex.registered
+      systemA: cortex
+      systemB: cortex
+      crossSystem: false
+      count: 741
+      confidence: 1
+      description: >-
+        "ledger.cortex.registered" and "ledger.cortex.registered" co-occur within 5s — 741
+        observations
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789169846555
+  id: 3eb6f78d-2432-4f8d-90f2-f03feba401a8
+  crystallised: true
+  crystallisedAt: 1789169846726

@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-baae688f-8f72-4dd0-a49b-894c19ea737e
+type: component_projection
+id: baae688f-8f72-4dd0-a49b-894c19ea737e
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821761
+source: data/cortex/memory/component_projections.json:baae688f-8f72-4dd0-a49b-894c19ea737e
+payload:
+  uuid: ae9bf446-c6ab-4662-ba2a-12da1b27d2bd
+  componentId: loom.hooks.unwire
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.loom.hooks.unwire
+    componentId: loom.hooks.unwire
+    version: 1.5.0
+    namespace: loom
+    name: hooks.unwire
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.loom.hooks.unwire
+    command: unwire
+    aliases:
+      - hooks unwire
+      - hooks-unwire
+    help: |-
+      hooks.unwire
+        Remove a hook binding
+    route:
+      method: POST
+      path: /api/hooks/unwire
+    componentId: loom.hooks.unwire
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.loom.hooks.unwire
+    componentId: loom.hooks.unwire
+    entries:
+      - hooks unwire
+      - hooks-unwire
+      - hooks.unwire
+      - unwire
+    route:
+      method: POST
+      path: /api/hooks/unwire
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.loom.hooks.unwire
+    componentId: loom.hooks.unwire
+    label: HOOKS.UNWIRE
+    icon: ◈
+    tooltip: Remove a hook binding
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/hooks/unwire
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.loom.hooks.unwire
+    componentId: loom.hooks.unwire
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.loom.hooks.unwire
+    componentId: loom.hooks.unwire
+    chunk1:
+      system: loom
+      command: unwire
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.loom.hooks.unwire
+    componentId: loom.hooks.unwire
+    markdown: |-
+      # hooks.unwire
+
+      **ID:** `loom.hooks.unwire` · **Tier:** T1 · **Version:** 1.5.0
+
+      Remove a hook binding
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840262
+  id: baae688f-8f72-4dd0-a49b-894c19ea737e
+  updatedAt: 1789179437002

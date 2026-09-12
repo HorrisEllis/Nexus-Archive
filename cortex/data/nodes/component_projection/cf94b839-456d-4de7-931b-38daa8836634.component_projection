@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-cf94b839-456d-4de7-931b-38daa8836634
+type: component_projection
+id: cf94b839-456d-4de7-931b-38daa8836634
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821721
+source: data/cortex/memory/component_projections.json:cf94b839-456d-4de7-931b-38daa8836634
+payload:
+  uuid: 016f7495-5a92-44b9-87e5-84317f6df6ef
+  componentId: idearium.gap.resolve
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.gap.resolve
+    componentId: idearium.gap.resolve
+    version: 1.0.0
+    namespace: idearium
+    name: gap.resolve
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.gap.resolve
+    command: resolve
+    aliases:
+      - resolve gap
+      - gap resolve
+    help: |-
+      gap.resolve
+        Resolve an open gap
+    route:
+      method: POST
+      path: /api/gaps/:uuid/resolve
+    componentId: idearium.gap.resolve
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.gap.resolve
+    componentId: idearium.gap.resolve
+    entries:
+      - resolve gap
+      - gap resolve
+      - gap.resolve
+      - resolve
+    route:
+      method: POST
+      path: /api/gaps/:uuid/resolve
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.gap.resolve
+    componentId: idearium.gap.resolve
+    label: GAP.RESOLVE
+    icon: ◈
+    tooltip: Resolve an open gap
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/gaps/:uuid/resolve
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.gap.resolve
+    componentId: idearium.gap.resolve
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.gap.resolve
+    componentId: idearium.gap.resolve
+    chunk1:
+      system: idearium
+      command: resolve
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.gap.resolve
+    componentId: idearium.gap.resolve
+    markdown: |-
+      # gap.resolve
+
+      **ID:** `idearium.gap.resolve` · **Tier:** T1 · **Version:** 1.0.0
+
+      Resolve an open gap
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839995
+  id: cf94b839-456d-4de7-931b-38daa8836634
+  updatedAt: 1789179436955

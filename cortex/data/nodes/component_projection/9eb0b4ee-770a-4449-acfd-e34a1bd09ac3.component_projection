@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-9eb0b4ee-770a-4449-acfd-e34a1bd09ac3
+type: component_projection
+id: 9eb0b4ee-770a-4449-acfd-e34a1bd09ac3
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821768
+source: data/cortex/memory/component_projections.json:9eb0b4ee-770a-4449-acfd-e34a1bd09ac3
+payload:
+  uuid: 988bffa1-51f4-4b1a-8ca5-c2270ebec234
+  componentId: architect.hooks.check
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.architect.hooks.check
+    componentId: architect.hooks.check
+    version: 1.0.0
+    namespace: architect
+    name: hooks.check
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.architect.hooks.check
+    command: check
+    aliases:
+      - hooks check
+    help: |-
+      hooks.check
+        Check hook against constraints
+    route:
+      method: POST
+      path: /api/hooks/check
+    componentId: architect.hooks.check
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.architect.hooks.check
+    componentId: architect.hooks.check
+    entries:
+      - hooks check
+      - hooks.check
+      - check
+    route:
+      method: POST
+      path: /api/hooks/check
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.architect.hooks.check
+    componentId: architect.hooks.check
+    label: HOOKS.CHECK
+    icon: ◈
+    tooltip: Check hook against constraints
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/hooks/check
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.architect.hooks.check
+    componentId: architect.hooks.check
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.architect.hooks.check
+    componentId: architect.hooks.check
+    chunk1:
+      system: architect
+      command: check
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.architect.hooks.check
+    componentId: architect.hooks.check
+    markdown: |-
+      # hooks.check
+
+      **ID:** `architect.hooks.check` · **Tier:** T1 · **Version:** 1.0.0
+
+      Check hook against constraints
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840315
+  id: 9eb0b4ee-770a-4449-acfd-e34a1bd09ac3
+  updatedAt: 1789179437520

@@ -1,0 +1,28 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-fault_log
+type: tool_index_entry
+id: fault_log
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822126
+source: data/cortex/memory/tool_index.json:fault_log
+payload:
+  id: fault_log
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Real fault/failure precedent for a component — not a fabricated risk score. Every tool call that
+    errors already logs here automatically (no action needed for that). "check" (needs component,
+    optional intent) returns real past faults for it, most recent first, with the real CFR
+    conditions at the time — use this before a consequential action to see if this exact thing has
+    failed before. "log" manually records a fault outside the automatic tool-call path (e.g. from
+    your own reasoning about something that went wrong).
+  updatedAt: 1789179646668
+  _key: fault_log

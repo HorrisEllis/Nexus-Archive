@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-6b0357ad-0d89-4b9f-9c80-439aef384c0f
+type: bep_pattern
+id: 6b0357ad-0d89-4b9f-9c80-439aef384c0f
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853785
+source: data/cortex/memory/bep_patterns.json:6b0357ad-0d89-4b9f-9c80-439aef384c0f
+payload:
+  uuid: 2335dbb1-86a3-4b57-8d5e-9bf46dcd1d94
+  signature: adversarial.run.complete::intelligence.pattern_scan
+  patternType: cross_system_causal
+  typeA: adversarial.run.complete
+  typeB: intelligence.pattern_scan
+  systemA: copilot
+  systemB: cortex
+  crossSystem: true
+  count: 4
+  confidence: 0.2
+  description: >-
+    "adversarial.run.complete" (copilot) and "intelligence.pattern_scan" (cortex) co-occur within 5s
+    across two real systems — 4 observations
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179101844
+  id: 6b0357ad-0d89-4b9f-9c80-439aef384c0f

@@ -1,0 +1,107 @@
+envelope: 1
+uuid: nexus-export-component_projection-3b86d279-b252-4290-9545-0369a3bb63c1
+type: component_projection
+id: 3b86d279-b252-4290-9545-0369a3bb63c1
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821726
+source: data/cortex/memory/component_projections.json:3b86d279-b252-4290-9545-0369a3bb63c1
+payload:
+  uuid: e026625f-cc94-468c-bb4b-11d21016cede
+  componentId: cg.driver.exec
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.driver.exec
+    componentId: cg.driver.exec
+    version: 3.0.0
+    namespace: cg
+    name: driver.exec
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.driver.exec
+    command: exec
+    aliases:
+      - driver exec
+      - driver-exec
+    help: |-
+      driver.exec
+        execute browser-action — DriverPayload → DriverResult
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.driver.exec
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.driver.exec
+    componentId: cg.driver.exec
+    entries:
+      - driver exec
+      - driver-exec
+      - execute browser-action
+      - browser-action
+      - driver.exec
+      - exec
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.driver.exec
+    componentId: cg.driver.exec
+    label: DRIVER.EXEC
+    icon: ⬢
+    tooltip: Execute ClearDriver browser action
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.driver.exec
+    componentId: cg.driver.exec
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.driver.exec
+    componentId: cg.driver.exec
+    chunk1:
+      system: cg
+      command: exec
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.driver.exec
+    componentId: cg.driver.exec
+    markdown: |-
+      # driver.exec
+
+      **ID:** `cg.driver.exec` · **Tier:** T2 · **Version:** 3.0.0
+
+      Execute ClearDriver browser action
+
+      ## Capabilities
+      - **execute** browser-action: DriverPayload → DriverResult
+
+      ## API
+      `[object Object]`
+  ts: 1789169840037
+  id: 3b86d279-b252-4290-9545-0369a3bb63c1
+  updatedAt: 1789179436783

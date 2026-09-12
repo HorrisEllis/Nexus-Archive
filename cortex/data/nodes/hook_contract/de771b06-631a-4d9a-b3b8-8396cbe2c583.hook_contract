@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-hook_contract-de771b06-631a-4d9a-b3b8-8396cbe2c583
+type: hook_contract
+id: de771b06-631a-4d9a-b3b8-8396cbe2c583
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822181
+source: data/cortex/memory/hooks.json:de771b06-631a-4d9a-b3b8-8396cbe2c583
+payload:
+  uuid: de771b06-631a-4d9a-b3b8-8396cbe2c583
+  id: de771b06-631a-4d9a-b3b8-8396cbe2c583
+  name: architect-http-server
+  intent: Architect HTTP API surface at :3747
+  version: 1.0.0
+  type: webserver
+  direction: sink
+  from:
+    surface: '*'
+    layer: 0
+  to:
+    surface: architect
+    layer: 6
+  config:
+    port: 3747
+    method: GET
+    path: /*
+    cors:
+      origins:
+        - '*'
+      credentials: false
+    auth:
+      required: false
+      type: none
+  schema:
+    input: null
+    output:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    errors: []
+  contract:
+    axioms:
+      - §A-2
+      - §I-3
+    sideEffects: []
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect serve
+    event: architect.http.request
+  meta:
+    causedBy: seed
+    createdAt: 1789169837467
+    updatedAt: 1789169837467
+    status: active
+    tags:
+      - webserver
+      - core
+    notes: ''

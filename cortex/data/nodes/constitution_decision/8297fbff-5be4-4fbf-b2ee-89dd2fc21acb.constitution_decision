@@ -1,0 +1,23 @@
+envelope: 1
+uuid: nexus-export-constitution_decision-8297fbff-5be4-4fbf-b2ee-89dd2fc21acb
+type: constitution_decision
+id: 8297fbff-5be4-4fbf-b2ee-89dd2fc21acb
+context: real, live jaaDB row migrated from data/cortex/memory/constitution_decisions.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821922
+source: data/cortex/memory/constitution_decisions.json:8297fbff-5be4-4fbf-b2ee-89dd2fc21acb
+payload:
+  uuid: d7e1e02b-5333-46f3-8ac0-16f7467e7bb8
+  requestId: null
+  axiom: USER_AUTONOMY
+  pass: true
+  reason: User intent is respected by default.
+  severity: flag
+  blast_radius: none
+  cost: 0
+  alternatives: []
+  ts: 1789170979095
+  id: 8297fbff-5be4-4fbf-b2ee-89dd2fc21acb

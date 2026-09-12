@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-e73d972c-f7e6-4f1a-8305-a65d4eb2d79b
+type: interstitial_space
+id: e73d972c-f7e6-4f1a-8305-a65d4eb2d79b
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821455
+source: data/cortex/memory/interstitial_spaces.json:e73d972c-f7e6-4f1a-8305-a65d4eb2d79b
+payload:
+  uuid: 1806fc39-16cc-4885-981a-b2b1b5806c9f
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "intent.classified" and "ledger.eros.registered"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 3d1c4b90-4212-46d9-8351-097c06f19c37
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789169846716
+  meta:
+    pattern:
+      uuid: 3d1c4b90-4212-46d9-8351-097c06f19c37
+      signature: intent.classified::ledger.eros.registered
+      patternType: co_occurrence
+      typeA: intent.classified
+      typeB: ledger.eros.registered
+      systemA: null
+      systemB: eravos
+      crossSystem: false
+      count: 40
+      confidence: 1
+      description: '"intent.classified" and "ledger.eros.registered" co-occur within 5s — 40 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789169846555
+  id: e73d972c-f7e6-4f1a-8305-a65d4eb2d79b
+  crystallised: true
+  crystallisedAt: 1789169846717

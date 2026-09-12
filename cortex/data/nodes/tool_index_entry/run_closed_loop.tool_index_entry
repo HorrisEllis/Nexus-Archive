@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-run_closed_loop
+type: tool_index_entry
+id: run_closed_loop
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822121
+source: data/cortex/memory/tool_index.json:run_closed_loop
+payload:
+  id: run_closed_loop
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Import a spec and automatically build a repository from it: create the spec manifest, chunk it,
+    and populate every chunk via the WARP build spine, then create a repo. Params: name (required
+    unless repoUuid given), description (the spec intent), type (component|service|library, default
+    component), agent (ollama default), repoUuid (optional — build INTO an existing repo, e.g. one
+    just created by the Import Project screen, instead of starting from an empty spec). Returns the
+    spec id, populate progress, and repo id. Use run_pipeline afterward to build→verify→promote from
+    the spec path.
+  updatedAt: 1789179646624
+  _key: run_closed_loop

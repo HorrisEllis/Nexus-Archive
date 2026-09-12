@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-2a9c6ffd-2fb4-4efe-bdb5-45ed58c2b05d
+type: interstitial_space
+id: 2a9c6ffd-2fb4-4efe-bdb5-45ed58c2b05d
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821543
+source: data/cortex/memory/interstitial_spaces.json:2a9c6ffd-2fb4-4efe-bdb5-45ed58c2b05d
+payload:
+  uuid: 13fa7c74-e7cf-46d1-a9f7-5db6e0ea0d95
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "intent.classified" and "nexus.resource.pressure"'
+  type: co_occurrence
+  confidence: 0.9
+  count: 1
+  causedBy: 111238f5-7691-43f7-a4f5-07cfb7a9dafe
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179151951
+  meta:
+    pattern:
+      uuid: 111238f5-7691-43f7-a4f5-07cfb7a9dafe
+      signature: intent.classified::nexus.resource.pressure
+      patternType: co_occurrence
+      typeA: intent.classified
+      typeB: nexus.resource.pressure
+      systemA: null
+      systemB: orchestrator
+      crossSystem: false
+      count: 18
+      confidence: 0.9
+      description: '"intent.classified" and "nexus.resource.pressure" co-occur within 5s — 18 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179151849
+  id: 2a9c6ffd-2fb4-4efe-bdb5-45ed58c2b05d

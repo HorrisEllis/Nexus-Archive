@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-935b7cc4-4ca2-4926-a4a7-1db6457c3e5f
+type: component_projection
+id: 935b7cc4-4ca2-4926-a4a7-1db6457c3e5f
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821691
+source: data/cortex/memory/component_projections.json:935b7cc4-4ca2-4926-a4a7-1db6457c3e5f
+payload:
+  uuid: 0235ce1e-9e9e-4629-ac70-31ded1cc625d
+  componentId: guardian.provider.channel
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.provider.channel
+    componentId: guardian.provider.channel
+    version: 3.6.2
+    namespace: guardian
+    name: provider.channel
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.provider.channel
+    command: channel
+    aliases:
+      - provider channel
+      - provider-channel
+    help: |-
+      provider.channel
+        NCP SSE channel — browser tabs connect here
+    route:
+      method: GET
+      path: /channel
+    componentId: guardian.provider.channel
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.provider.channel
+    componentId: guardian.provider.channel
+    entries:
+      - provider channel
+      - provider-channel
+      - provider.channel
+      - channel
+    route:
+      method: GET
+      path: /channel
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.provider.channel
+    componentId: guardian.provider.channel
+    label: PROVIDER.CHANNEL
+    icon: ◈
+    tooltip: NCP SSE channel — browser tabs connect here
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /channel
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.provider.channel
+    componentId: guardian.provider.channel
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.provider.channel
+    componentId: guardian.provider.channel
+    chunk1:
+      system: guardian
+      command: channel
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.provider.channel
+    componentId: guardian.provider.channel
+    markdown: |-
+      # provider.channel
+
+      **ID:** `guardian.provider.channel` · **Tier:** T1 · **Version:** 3.6.2
+
+      NCP SSE channel — browser tabs connect here
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839910
+  id: 935b7cc4-4ca2-4926-a4a7-1db6457c3e5f
+  updatedAt: 1789179436749

@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-a1ee11e5-8da7-45d4-8165-27258f128222
+type: component_projection
+id: a1ee11e5-8da7-45d4-8165-27258f128222
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821726
+source: data/cortex/memory/component_projections.json:a1ee11e5-8da7-45d4-8165-27258f128222
+payload:
+  uuid: 08c19da7-35ec-4978-8d91-ceac245e0f0d
+  componentId: cg.dom.query
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.dom.query
+    componentId: cg.dom.query
+    version: 3.0.0
+    namespace: cg
+    name: dom.query
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.dom.query
+    command: query
+    aliases:
+      - dom query
+      - dom-query
+    help: |-
+      dom.query
+        Query live DOM tree by selector, cgId, or full tree
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.dom.query
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.dom.query
+    componentId: cg.dom.query
+    entries:
+      - dom query
+      - dom-query
+      - dom.query
+      - query
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.dom.query
+    componentId: cg.dom.query
+    label: DOM.QUERY
+    icon: ⬢
+    tooltip: Query live DOM tree by selector, cgId, or full tree
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.dom.query
+    componentId: cg.dom.query
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.dom.query
+    componentId: cg.dom.query
+    chunk1:
+      system: cg
+      command: query
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.dom.query
+    componentId: cg.dom.query
+    markdown: |-
+      # dom.query
+
+      **ID:** `cg.dom.query` · **Tier:** T2 · **Version:** 3.0.0
+
+      Query live DOM tree by selector, cgId, or full tree
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840039
+  id: a1ee11e5-8da7-45d4-8165-27258f128222
+  updatedAt: 1789179436785

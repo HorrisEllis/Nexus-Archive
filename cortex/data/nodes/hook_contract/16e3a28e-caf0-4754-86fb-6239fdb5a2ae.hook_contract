@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-16e3a28e-caf0-4754-86fb-6239fdb5a2ae
+type: hook_contract
+id: 16e3a28e-caf0-4754-86fb-6239fdb5a2ae
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822222
+source: data/cortex/memory/hooks.json:16e3a28e-caf0-4754-86fb-6239fdb5a2ae
+payload:
+  uuid: 16e3a28e-caf0-4754-86fb-6239fdb5a2ae
+  id: 16e3a28e-caf0-4754-86fb-6239fdb5a2ae
+  name: ollama.jobs.dispatch
+  intent: Queue a job for local model execution
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: ollama
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/jobs
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook ollama.jobs.dispatch
+    event: architect.hook.ollama.jobs.dispatch
+    route: POST /api/jobs
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867490
+    updatedAt: 1789169867490
+    status: active
+    tags:
+      - synced-from-component-registry
+      - ollama
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-871df128-0c7b-410e-aef3-54ecbaa66028
+type: hook_contract
+id: 871df128-0c7b-410e-aef3-54ecbaa66028
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822241
+source: data/cortex/memory/hooks.json:871df128-0c7b-410e-aef3-54ecbaa66028
+payload:
+  uuid: 871df128-0c7b-410e-aef3-54ecbaa66028
+  id: 871df128-0c7b-410e-aef3-54ecbaa66028
+  name: cortex.cfr.compounds
+  intent: Compound effect scan (ripple/wave/tidal)
+  version: 3.5.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cortex
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /cfr/compounds
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cortex.cfr.compounds
+    event: architect.hook.cortex.cfr.compounds
+    route: POST /cfr/compounds
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867492
+    updatedAt: 1789169867492
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cortex
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

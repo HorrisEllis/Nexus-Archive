@@ -1,0 +1,23 @@
+envelope: 1
+uuid: nexus-export-constitution_decision-dc05e372-8a7f-4371-9a08-7f50e7c9aa81
+type: constitution_decision
+id: dc05e372-8a7f-4371-9a08-7f50e7c9aa81
+context: real, live jaaDB row migrated from data/cortex/memory/constitution_decisions.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821996
+source: data/cortex/memory/constitution_decisions.json:dc05e372-8a7f-4371-9a08-7f50e7c9aa81
+payload:
+  uuid: 9d30a5ba-8b24-41f1-85bc-0fe1885d430c
+  requestId: null
+  axiom: EXPLAINABILITY
+  pass: true
+  reason: Outcome will be attributable and logged.
+  severity: flag
+  blast_radius: none
+  cost: 0
+  alternatives: []
+  ts: 1789171905413
+  id: dc05e372-8a7f-4371-9a08-7f50e7c9aa81

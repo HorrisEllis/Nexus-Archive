@@ -1,0 +1,44 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-1acf1171-d011-43a6-bd27-79ab55afec67
+type: interstitial_space
+id: 1acf1171-d011-43a6-bd27-79ab55afec67
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821516
+source: data/cortex/memory/interstitial_spaces.json:1acf1171-d011-43a6-bd27-79ab55afec67
+payload:
+  uuid: 73f005b8-b6c9-4aa1-adae-2433e6bd0fb3
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::intelligence.reuse_index_built" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 25444526-2e60-4836-9d50-1efd10c48e0c
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.95
+  ts: 1789170136679
+  meta:
+    pattern:
+      uuid: 25444526-2e60-4836-9d50-1efd10c48e0c
+      signature: precursor::intelligence.reuse_index_built
+      patternType: failure_precursor
+      precursorType: intelligence.reuse_index_built
+      failureTypes:
+        - intelligence.failure_scan
+      count: 13
+      confidence: 1
+      description: '"intelligence.reuse_index_built" precedes failures 13 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789170136671
+      id: 603ce2ea-fbfe-41e1-853d-3b8850aa0da9
+  id: 1acf1171-d011-43a6-bd27-79ab55afec67
+  crystallised: true
+  crystallisedAt: 1789170136679

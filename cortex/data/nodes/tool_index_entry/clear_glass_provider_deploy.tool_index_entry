@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-clear_glass_provider_deploy
+type: tool_index_entry
+id: clear_glass_provider_deploy
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822126
+source: data/cortex/memory/tool_index.json:clear_glass_provider_deploy
+payload:
+  id: clear_glass_provider_deploy
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Hot-push the current userscript file from disk into an already-running ClearGlass provider tab,
+    right now — without waiting for the real 60-second reload timer or restarting the tab. Needs
+    providerId (e.g. "claude", "chatgpt", "gemini", "perplexity"). Calls the real
+    ProviderHost.deploy(), the exact same injection path the existing background reload timer uses.
+    Honestly fails with a specific reason if ClearGlass is not running, the named provider has no
+    live window, or the injection itself throws — it never reports a successful deploy that did not
+    actually happen.
+  updatedAt: 1789179646664
+  _key: clear_glass_provider_deploy

@@ -1,0 +1,101 @@
+envelope: 1
+uuid: nexus-export-component_projection-ef530419-aad6-4a4a-bd1e-71b593fe7751
+type: component_projection
+id: ef530419-aad6-4a4a-bd1e-71b593fe7751
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821687
+source: data/cortex/memory/component_projections.json:ef530419-aad6-4a4a-bd1e-71b593fe7751
+payload:
+  uuid: b928e4b3-0540-4869-a0c5-1a6a398226c8
+  componentId: guardian.version
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.version
+    componentId: guardian.version
+    version: 3.6.2
+    namespace: guardian
+    name: version
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.version
+    command: version
+    aliases:
+      - version
+      - version
+    help: |-
+      version
+        Guardian + userscript versions
+    route:
+      method: GET
+      path: /version
+    componentId: guardian.version
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.version
+    componentId: guardian.version
+    entries:
+      - version
+    route:
+      method: GET
+      path: /version
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.version
+    componentId: guardian.version
+    label: VERSION
+    icon: ◈
+    tooltip: Guardian + userscript versions
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /version
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.version
+    componentId: guardian.version
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.version
+    componentId: guardian.version
+    chunk1:
+      system: guardian
+      command: version
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.version
+    componentId: guardian.version
+    markdown: |-
+      # version
+
+      **ID:** `guardian.version` · **Tier:** T1 · **Version:** 3.6.2
+
+      Guardian + userscript versions
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839895
+  id: ef530419-aad6-4a4a-bd1e-71b593fe7751
+  updatedAt: 1789179436735

@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-f3874ce1-d4a0-4650-b0c1-d3b7d0130907
+type: interstitial_space
+id: f3874ce1-d4a0-4650-b0c1-d3b7d0130907
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821542
+source: data/cortex/memory/interstitial_spaces.json:f3874ce1-d4a0-4650-b0c1-d3b7d0130907
+payload:
+  uuid: 15f40930-14af-4f3e-9dda-29463721af16
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.copilot.event" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 611ac202-a167-484d-b230-a57ec3dce520
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179102661
+  meta:
+    pattern:
+      uuid: 611ac202-a167-484d-b230-a57ec3dce520
+      signature: precursor::ledger.copilot.event
+      patternType: failure_precursor
+      precursorType: ledger.copilot.event
+      failureTypes:
+        - intelligence.failure_scan
+      count: 810
+      confidence: 1
+      description: '"ledger.copilot.event" precedes failures 810 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: f3874ce1-d4a0-4650-b0c1-d3b7d0130907
+  crystallised: true
+  crystallisedAt: 1789179102661

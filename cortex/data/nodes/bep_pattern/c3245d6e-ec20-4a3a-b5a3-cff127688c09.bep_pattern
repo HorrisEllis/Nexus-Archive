@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-c3245d6e-ec20-4a3a-b5a3-cff127688c09
+type: bep_pattern
+id: c3245d6e-ec20-4a3a-b5a3-cff127688c09
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853815
+source: data/cortex/memory/bep_patterns.json:c3245d6e-ec20-4a3a-b5a3-cff127688c09
+payload:
+  uuid: ec33ca4f-ec93-41d5-a845-8ab0df1826df
+  signature: agent.call.start::clear-glass.bgtab.opened
+  patternType: co_occurrence
+  typeA: agent.call.start
+  typeB: clear-glass.bgtab.opened
+  systemA: null
+  systemB: clear-glass
+  crossSystem: false
+  count: 4
+  confidence: 0.2
+  description: '"agent.call.start" and "clear-glass.bgtab.opened" co-occur within 5s — 4 observations'
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179793095
+  id: c3245d6e-ec20-4a3a-b5a3-cff127688c09

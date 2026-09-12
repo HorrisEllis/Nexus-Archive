@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-7f3655f6-ccec-4d84-9553-01cd166c668d
+type: interstitial_space
+id: 7f3655f6-ccec-4d84-9553-01cd166c668d
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821533
+source: data/cortex/memory/interstitial_spaces.json:7f3655f6-ccec-4d84-9553-01cd166c668d
+payload:
+  uuid: 13bf6ef4-228e-409a-b245-7bc74abec1ef
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "ledger.diagnostic.poll.complete" and "ui.boot"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 78881636-a489-4c9a-a238-21e1c0ac9705
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.6
+  ts: 1789179102000
+  meta:
+    pattern:
+      uuid: 78881636-a489-4c9a-a238-21e1c0ac9705
+      signature: ledger.diagnostic.poll.complete::ui.boot
+      patternType: co_occurrence
+      typeA: ledger.diagnostic.poll.complete
+      typeB: ui.boot
+      systemA: null
+      systemB: diagnostic
+      crossSystem: false
+      count: 20
+      confidence: 1
+      description: '"ledger.diagnostic.poll.complete" and "ui.boot" co-occur within 5s — 20 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: 7f3655f6-ccec-4d84-9553-01cd166c668d

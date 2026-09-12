@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-dfcd6457-7fd8-410d-99d2-f262e4be4b9d
+type: hook_contract
+id: dfcd6457-7fd8-410d-99d2-f262e4be4b9d
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822235
+source: data/cortex/memory/hooks.json:dfcd6457-7fd8-410d-99d2-f262e4be4b9d
+payload:
+  uuid: dfcd6457-7fd8-410d-99d2-f262e4be4b9d
+  id: dfcd6457-7fd8-410d-99d2-f262e4be4b9d
+  name: architect.contract
+  intent: Architect interaction contract
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: architect
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /api/contract
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook architect.contract
+    event: architect.hook.architect.contract
+    route: GET /api/contract
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867491
+    updatedAt: 1789169867491
+    status: active
+    tags:
+      - synced-from-component-registry
+      - architect
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

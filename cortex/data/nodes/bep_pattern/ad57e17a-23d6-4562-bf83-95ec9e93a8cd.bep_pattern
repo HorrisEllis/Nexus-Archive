@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-ad57e17a-23d6-4562-bf83-95ec9e93a8cd
+type: bep_pattern
+id: ad57e17a-23d6-4562-bf83-95ec9e93a8cd
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853748
+source: data/cortex/memory/bep_patterns.json:ad57e17a-23d6-4562-bf83-95ec9e93a8cd
+payload:
+  uuid: d0c00552-2b0b-4bfa-a0ed-d384a8c0e6f5
+  signature: intelligence.reuse_index_built::ledger.diagnostic.poll.complete
+  patternType: cross_system_causal
+  typeA: intelligence.reuse_index_built
+  typeB: ledger.diagnostic.poll.complete
+  systemA: diagnostic
+  systemB: cortex
+  crossSystem: true
+  count: 16
+  confidence: 0.8
+  description: >-
+    "intelligence.reuse_index_built" (diagnostic) and "ledger.diagnostic.poll.complete" (cortex)
+    co-occur within 5s across two real systems — 16 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789172754013
+  id: ad57e17a-23d6-4562-bf83-95ec9e93a8cd

@@ -1,0 +1,101 @@
+envelope: 1
+uuid: nexus-export-component_projection-3d1c0420-2bd7-4343-b435-1265772c65c8
+type: component_projection
+id: 3d1c0420-2bd7-4343-b435-1265772c65c8
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821685
+source: data/cortex/memory/component_projections.json:3d1c0420-2bd7-4343-b435-1265772c65c8
+payload:
+  uuid: e7391f68-b9e5-4124-9007-5de0c5915d86
+  componentId: guardian.health
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.health
+    componentId: guardian.health
+    version: 3.6.2
+    namespace: guardian
+    name: health
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.health
+    command: health
+    aliases:
+      - health
+      - health
+    help: |-
+      health
+        Guardian health, job counts, provider status
+    route:
+      method: GET
+      path: /health
+    componentId: guardian.health
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.health
+    componentId: guardian.health
+    entries:
+      - health
+    route:
+      method: GET
+      path: /health
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.health
+    componentId: guardian.health
+    label: HEALTH
+    icon: ◈
+    tooltip: Guardian health, job counts, provider status
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /health
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.health
+    componentId: guardian.health
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.health
+    componentId: guardian.health
+    chunk1:
+      system: guardian
+      command: health
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.health
+    componentId: guardian.health
+    markdown: |-
+      # health
+
+      **ID:** `guardian.health` · **Tier:** T1 · **Version:** 3.6.2
+
+      Guardian health, job counts, provider status
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839886
+  id: 3d1c0420-2bd7-4343-b435-1265772c65c8
+  updatedAt: 1789179436724

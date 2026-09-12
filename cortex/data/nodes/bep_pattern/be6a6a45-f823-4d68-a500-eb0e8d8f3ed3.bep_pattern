@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-be6a6a45-f823-4d68-a500-eb0e8d8f3ed3
+type: bep_pattern
+id: be6a6a45-f823-4d68-a500-eb0e8d8f3ed3
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853764
+source: data/cortex/memory/bep_patterns.json:be6a6a45-f823-4d68-a500-eb0e8d8f3ed3
+payload:
+  uuid: e911554e-1a36-4807-b4d9-6e5ae4e99fe8
+  signature: intelligence.command.invoked::intelligence.failure_scan
+  patternType: co_occurrence
+  typeA: intelligence.command.invoked
+  typeB: intelligence.failure_scan
+  systemA: null
+  systemB: cortex
+  crossSystem: false
+  count: 1062
+  confidence: 1
+  description: >-
+    "intelligence.command.invoked" and "intelligence.failure_scan" co-occur within 5s — 1062
+    observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179335768
+  id: be6a6a45-f823-4d68-a500-eb0e8d8f3ed3

@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-4fca564b-0696-40a7-b476-93cf5c26b4da
+type: hook_contract
+id: 4fca564b-0696-40a7-b476-93cf5c26b4da
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822241
+source: data/cortex/memory/hooks.json:4fca564b-0696-40a7-b476-93cf5c26b4da
+payload:
+  uuid: 4fca564b-0696-40a7-b476-93cf5c26b4da
+  id: 4fca564b-0696-40a7-b476-93cf5c26b4da
+  name: cortex.intelligence.status
+  intent: Intelligence core status
+  version: 3.5.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cortex
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /api/intelligence/status
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cortex.intelligence.status
+    event: architect.hook.cortex.intelligence.status
+    route: GET /api/intelligence/status
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867492
+    updatedAt: 1789169867492
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cortex
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

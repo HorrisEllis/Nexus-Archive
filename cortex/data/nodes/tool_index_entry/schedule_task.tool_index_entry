@@ -1,0 +1,26 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-schedule_task
+type: tool_index_entry
+id: schedule_task
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822123
+source: data/cortex/memory/tool_index.json:schedule_task
+payload:
+  id: schedule_task
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Schedule a task to fire once at a time or on a repeating interval, delivering a payload to an
+    agent, system, or command. Every fire is RAID-governed (a denied action logs, it does not run)
+    and persisted to cortex so it survives a restart. Actions: "schedule" (needs target + one of
+    at/inMs/everyMs), "cancel" (needs id), "list" (optionally filter by status), "get" (needs id).
+  updatedAt: 1789179646634
+  _key: schedule_task

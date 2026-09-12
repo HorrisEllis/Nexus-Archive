@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-37f7ebd6-8695-4fba-9534-cc6723fe9cee
+type: component_projection
+id: 37f7ebd6-8695-4fba-9534-cc6723fe9cee
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821748
+source: data/cortex/memory/component_projections.json:37f7ebd6-8695-4fba-9534-cc6723fe9cee
+payload:
+  uuid: 0f195155-3aa2-4f79-9c34-f5c0ae723afe
+  componentId: eravos.pack.install
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eravos.pack.install
+    componentId: eravos.pack.install
+    version: 3.0.0
+    namespace: eravos
+    name: pack.install
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eravos.pack.install
+    command: install
+    aliases:
+      - eravos install
+    help: |-
+      pack.install
+        Install a .zip organism pack
+    route:
+      method: POST
+      path: /api/pack/install
+    componentId: eravos.pack.install
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eravos.pack.install
+    componentId: eravos.pack.install
+    entries:
+      - eravos install
+      - pack.install
+      - install
+    route:
+      method: POST
+      path: /api/pack/install
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eravos.pack.install
+    componentId: eravos.pack.install
+    label: PACK.INSTALL
+    icon: ◈
+    tooltip: Install a .zip organism pack
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/pack/install
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eravos.pack.install
+    componentId: eravos.pack.install
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eravos.pack.install
+    componentId: eravos.pack.install
+    chunk1:
+      system: eravos
+      command: install
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eravos.pack.install
+    componentId: eravos.pack.install
+    markdown: |-
+      # pack.install
+
+      **ID:** `eravos.pack.install` · **Tier:** T1 · **Version:** 3.0.0
+
+      Install a .zip organism pack
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840175
+  id: 37f7ebd6-8695-4fba-9534-cc6723fe9cee
+  updatedAt: 1789179436895

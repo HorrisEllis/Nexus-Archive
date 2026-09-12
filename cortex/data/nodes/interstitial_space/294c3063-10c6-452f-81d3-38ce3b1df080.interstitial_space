@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-294c3063-10c6-452f-81d3-38ce3b1df080
+type: interstitial_space
+id: 294c3063-10c6-452f-81d3-38ce3b1df080
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821528
+source: data/cortex/memory/interstitial_spaces.json:294c3063-10c6-452f-81d3-38ce3b1df080
+payload:
+  uuid: 77b4dae1-a1fb-46d3-920c-303258b6868d
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "ledger.eravos.updated" and "ledger.eros.updated"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 41084eb5-152f-48c9-a9ed-f184ab5b054d
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789172753597
+  meta:
+    pattern:
+      uuid: 41084eb5-152f-48c9-a9ed-f184ab5b054d
+      signature: ledger.eravos.updated::ledger.eros.updated
+      patternType: co_occurrence
+      typeA: ledger.eravos.updated
+      typeB: ledger.eros.updated
+      systemA: eravos
+      systemB: eravos
+      crossSystem: false
+      count: 480
+      confidence: 1
+      description: '"ledger.eravos.updated" and "ledger.eros.updated" co-occur within 5s — 480 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789172753280
+  id: 294c3063-10c6-452f-81d3-38ce3b1df080
+  crystallised: true
+  crystallisedAt: 1789172753646

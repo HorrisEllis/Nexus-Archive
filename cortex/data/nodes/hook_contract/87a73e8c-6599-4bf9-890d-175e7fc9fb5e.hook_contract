@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-87a73e8c-6599-4bf9-890d-175e7fc9fb5e
+type: hook_contract
+id: 87a73e8c-6599-4bf9-890d-175e7fc9fb5e
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822239
+source: data/cortex/memory/hooks.json:87a73e8c-6599-4bf9-890d-175e7fc9fb5e
+payload:
+  uuid: 87a73e8c-6599-4bf9-890d-175e7fc9fb5e
+  id: 87a73e8c-6599-4bf9-890d-175e7fc9fb5e
+  name: cortex.gaps.open
+  intent: Open a new gap
+  version: 3.5.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cortex
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/gaps
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cortex.gaps.open
+    event: architect.hook.cortex.gaps.open
+    route: POST /api/gaps
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867491
+    updatedAt: 1789169867491
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cortex
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

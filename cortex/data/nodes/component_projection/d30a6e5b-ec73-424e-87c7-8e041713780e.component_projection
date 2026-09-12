@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-d30a6e5b-ec73-424e-87c7-8e041713780e
+type: component_projection
+id: d30a6e5b-ec73-424e-87c7-8e041713780e
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821728
+source: data/cortex/memory/component_projections.json:d30a6e5b-ec73-424e-87c7-8e041713780e
+payload:
+  uuid: 673a1a53-bf0b-41a1-9145-6b3492a6c44a
+  componentId: cg.context.fp.switch
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.context.fp.switch
+    componentId: cg.context.fp.switch
+    version: 3.0.0
+    namespace: cg
+    name: context.fp.switch
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.context.fp.switch
+    command: switch
+    aliases:
+      - context fp switch
+      - context-fp-switch
+    help: |-
+      context.fp.switch
+        Switch fingerprint mode (firefox|chrome|safari)
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.context.fp.switch
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.context.fp.switch
+    componentId: cg.context.fp.switch
+    entries:
+      - context fp switch
+      - context-fp-switch
+      - context.fp.switch
+      - switch
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.context.fp.switch
+    componentId: cg.context.fp.switch
+    label: CONTEXT.FP.SWITC
+    icon: ⬢
+    tooltip: Switch fingerprint mode (firefox|chrome|safari)
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.context.fp.switch
+    componentId: cg.context.fp.switch
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.context.fp.switch
+    componentId: cg.context.fp.switch
+    chunk1:
+      system: cg
+      command: switch
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.context.fp.switch
+    componentId: cg.context.fp.switch
+    markdown: |-
+      # context.fp.switch
+
+      **ID:** `cg.context.fp.switch` · **Tier:** T2 · **Version:** 3.0.0
+
+      Switch fingerprint mode (firefox|chrome|safari)
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840050
+  id: d30a6e5b-ec73-424e-87c7-8e041713780e
+  updatedAt: 1789179436792

@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-6510e263-0c6b-47b5-a44c-ab9c4ffcd78a
+type: component_projection
+id: 6510e263-0c6b-47b5-a44c-ab9c4ffcd78a
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821751
+source: data/cortex/memory/component_projections.json:6510e263-0c6b-47b5-a44c-ab9c4ffcd78a
+payload:
+  uuid: d3ce815f-848f-4019-8318-a59f6a48c6bc
+  componentId: versionium.restore.read
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.versionium.restore.read
+    componentId: versionium.restore.read
+    version: 3.0.0
+    namespace: versionium
+    name: restore.read
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.versionium.restore.read
+    command: read
+    aliases:
+      - versionium restore
+    help: |-
+      restore.read
+        Real temporal replay — read-only
+    route:
+      method: GET
+      path: /api/versionium/restore/:commitId
+    componentId: versionium.restore.read
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.versionium.restore.read
+    componentId: versionium.restore.read
+    entries:
+      - versionium restore
+      - restore.read
+      - read
+    route:
+      method: GET
+      path: /api/versionium/restore/:commitId
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.versionium.restore.read
+    componentId: versionium.restore.read
+    label: RESTORE.READ
+    icon: ◈
+    tooltip: Real temporal replay — read-only
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/versionium/restore/:commitId
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.versionium.restore.read
+    componentId: versionium.restore.read
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.versionium.restore.read
+    componentId: versionium.restore.read
+    chunk1:
+      system: versionium
+      command: read
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.versionium.restore.read
+    componentId: versionium.restore.read
+    markdown: |-
+      # restore.read
+
+      **ID:** `versionium.restore.read` · **Tier:** T1 · **Version:** 3.0.0
+
+      Real temporal replay — read-only
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840198
+  id: 6510e263-0c6b-47b5-a44c-ab9c4ffcd78a
+  updatedAt: 1789179436920

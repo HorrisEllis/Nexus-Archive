@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-fd7d6ea8-88b5-431b-890f-6483cb57379f
+type: interstitial_space
+id: fd7d6ea8-88b5-431b-890f-6483cb57379f
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821559
+source: data/cortex/memory/interstitial_spaces.json:fd7d6ea8-88b5-431b-890f-6483cb57379f
+payload:
+  uuid: 68420697-a890-48b5-a5e4-33e9637f4c2f
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.idearium.updated" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 90e86a15-9021-41a1-8ab4-648faa2f6261
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179493173
+  meta:
+    pattern:
+      uuid: 90e86a15-9021-41a1-8ab4-648faa2f6261
+      signature: precursor::ledger.idearium.updated
+      patternType: failure_precursor
+      precursorType: ledger.idearium.updated
+      failureTypes:
+        - intelligence.failure_scan
+      count: 172
+      confidence: 1
+      description: '"ledger.idearium.updated" precedes failures 172 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179492924
+  id: fd7d6ea8-88b5-431b-890f-6483cb57379f
+  crystallised: true
+  crystallisedAt: 1789179493173

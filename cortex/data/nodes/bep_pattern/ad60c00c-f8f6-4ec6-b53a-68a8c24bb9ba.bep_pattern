@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-ad60c00c-f8f6-4ec6-b53a-68a8c24bb9ba
+type: bep_pattern
+id: ad60c00c-f8f6-4ec6-b53a-68a8c24bb9ba
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853756
+source: data/cortex/memory/bep_patterns.json:ad60c00c-f8f6-4ec6-b53a-68a8c24bb9ba
+payload:
+  uuid: 453ab8f5-4ada-4e86-b160-d24a11b2adf5
+  signature: ledger.eros.updated::ledger.loom.updated
+  patternType: cross_system_causal
+  typeA: ledger.eros.updated
+  typeB: ledger.loom.updated
+  systemA: loom
+  systemB: eravos
+  crossSystem: true
+  count: 1000
+  confidence: 1
+  description: >-
+    "ledger.eros.updated" (loom) and "ledger.loom.updated" (eravos) co-occur within 5s across two
+    real systems — 1000 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789172753280
+  id: ad60c00c-f8f6-4ec6-b53a-68a8c24bb9ba

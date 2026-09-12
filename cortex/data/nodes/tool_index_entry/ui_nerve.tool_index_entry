@@ -1,0 +1,25 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-ui_nerve
+type: tool_index_entry
+id: ui_nerve
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822122
+source: data/cortex/memory/tool_index.json:ui_nerve
+payload:
+  id: ui_nerve
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Surface the live NEXUS "nervous system" field (the CFR sigma field) in the UI. action "on" shows
+    it, "off" hides it, "sigma" pushes a specific field value. Use to make the system's live state
+    visible to the user.
+  updatedAt: 1789179646626
+  _key: ui_nerve

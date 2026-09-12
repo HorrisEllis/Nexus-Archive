@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-cfbde7e1-2edc-4fd8-9138-f5d71ccff4aa
+type: hook_contract
+id: cfbde7e1-2edc-4fd8-9138-f5d71ccff4aa
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822186
+source: data/cortex/memory/hooks.json:cfbde7e1-2edc-4fd8-9138-f5d71ccff4aa
+payload:
+  uuid: cfbde7e1-2edc-4fd8-9138-f5d71ccff4aa
+  id: cfbde7e1-2edc-4fd8-9138-f5d71ccff4aa
+  name: guardian.seam.retry
+  intent: Retry a failed SEAM chunk
+  version: 3.6.2
+  type: api
+  direction: bidirectional
+  from:
+    surface: guardian
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /seam/retry
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook guardian.seam.retry
+    event: architect.hook.guardian.seam.retry
+    route: POST /seam/retry
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - guardian
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

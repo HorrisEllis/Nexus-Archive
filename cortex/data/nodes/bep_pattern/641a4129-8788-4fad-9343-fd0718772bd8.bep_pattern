@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-641a4129-8788-4fad-9343-fd0718772bd8
+type: bep_pattern
+id: 641a4129-8788-4fad-9343-fd0718772bd8
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853690
+source: data/cortex/memory/bep_patterns.json:641a4129-8788-4fad-9343-fd0718772bd8
+payload:
+  uuid: e68a88b5-1c45-409d-bc8b-3f608895f0ed
+  signature: component.registered::provider.host.wake-intro
+  patternType: co_occurrence
+  typeA: component.registered
+  typeB: provider.host.wake-intro
+  systemA: clear-glass
+  systemB: null
+  crossSystem: false
+  count: 211
+  confidence: 1
+  description: '"component.registered" and "provider.host.wake-intro" co-occur within 5s — 211 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169846555
+  id: 641a4129-8788-4fad-9343-fd0718772bd8

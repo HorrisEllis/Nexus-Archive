@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-1a5c84c4-1043-4b7d-b8d1-2d7259d3920b
+type: interstitial_space
+id: 1a5c84c4-1043-4b7d-b8d1-2d7259d3920b
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821554
+source: data/cortex/memory/interstitial_spaces.json:1a5c84c4-1043-4b7d-b8d1-2d7259d3920b
+payload:
+  uuid: 02d9475c-6752-4160-8d4b-90755a0b25ec
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "ledger.cg.updated" and "ledger.versionium.updated"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 78614b69-6b2e-4506-96eb-bb3fdac8365d
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179444348
+  meta:
+    pattern:
+      uuid: 78614b69-6b2e-4506-96eb-bb3fdac8365d
+      signature: ledger.cg.updated::ledger.versionium.updated
+      patternType: co_occurrence
+      typeA: ledger.cg.updated
+      typeB: ledger.versionium.updated
+      systemA: null
+      systemB: clear-glass
+      crossSystem: false
+      count: 162
+      confidence: 1
+      description: '"ledger.cg.updated" and "ledger.versionium.updated" co-occur within 5s — 162 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179442919
+  id: 1a5c84c4-1043-4b7d-b8d1-2d7259d3920b

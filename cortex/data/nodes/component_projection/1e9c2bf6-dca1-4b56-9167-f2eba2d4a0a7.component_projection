@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-1e9c2bf6-dca1-4b56-9167-f2eba2d4a0a7
+type: component_projection
+id: 1e9c2bf6-dca1-4b56-9167-f2eba2d4a0a7
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821720
+source: data/cortex/memory/component_projections.json:1e9c2bf6-dca1-4b56-9167-f2eba2d4a0a7
+payload:
+  uuid: d8c08176-cd09-4648-a4e4-1c362136dec1
+  componentId: idearium.spec.build
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.spec.build
+    componentId: idearium.spec.build
+    version: 1.0.0
+    namespace: idearium
+    name: spec.build
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.spec.build
+    command: build
+    aliases:
+      - build spec
+      - spec build
+    help: |-
+      spec.build
+        Compile a spec via the Tier 0/1 pipeline (compiler-bridge)
+    route:
+      method: POST
+      path: /api/specs/:uuid/build
+    componentId: idearium.spec.build
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.spec.build
+    componentId: idearium.spec.build
+    entries:
+      - build spec
+      - spec build
+      - spec.build
+      - build
+    route:
+      method: POST
+      path: /api/specs/:uuid/build
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.spec.build
+    componentId: idearium.spec.build
+    label: SPEC.BUILD
+    icon: ◈
+    tooltip: Compile a spec via the Tier 0/1 pipeline (compiler-bridge)
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/specs/:uuid/build
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.spec.build
+    componentId: idearium.spec.build
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.spec.build
+    componentId: idearium.spec.build
+    chunk1:
+      system: idearium
+      command: build
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.spec.build
+    componentId: idearium.spec.build
+    markdown: |-
+      # spec.build
+
+      **ID:** `idearium.spec.build` · **Tier:** T1 · **Version:** 1.0.0
+
+      Compile a spec via the Tier 0/1 pipeline (compiler-bridge)
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839988
+  id: 1e9c2bf6-dca1-4b56-9167-f2eba2d4a0a7
+  updatedAt: 1789179436949

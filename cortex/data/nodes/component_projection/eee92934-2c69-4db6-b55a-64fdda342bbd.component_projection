@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-eee92934-2c69-4db6-b55a-64fdda342bbd
+type: component_projection
+id: eee92934-2c69-4db6-b55a-64fdda342bbd
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821777
+source: data/cortex/memory/component_projections.json:eee92934-2c69-4db6-b55a-64fdda342bbd
+payload:
+  uuid: 9bdb4631-726f-4248-b916-f9303e648780
+  componentId: cortex.intelligence.patterns
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cortex.intelligence.patterns
+    componentId: cortex.intelligence.patterns
+    version: 3.5.0
+    namespace: cortex
+    name: intelligence.patterns
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cortex.intelligence.patterns
+    command: patterns
+    aliases:
+      - intelligence patterns
+    help: |-
+      intelligence.patterns
+        Crystallised BEP patterns
+    route:
+      method: GET
+      path: /api/intelligence/patterns
+    componentId: cortex.intelligence.patterns
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cortex.intelligence.patterns
+    componentId: cortex.intelligence.patterns
+    entries:
+      - intelligence patterns
+      - intelligence.patterns
+      - patterns
+    route:
+      method: GET
+      path: /api/intelligence/patterns
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cortex.intelligence.patterns
+    componentId: cortex.intelligence.patterns
+    label: INTELLIGENCE.PAT
+    icon: ◈
+    tooltip: Crystallised BEP patterns
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/intelligence/patterns
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cortex.intelligence.patterns
+    componentId: cortex.intelligence.patterns
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cortex.intelligence.patterns
+    componentId: cortex.intelligence.patterns
+    chunk1:
+      system: cortex
+      command: patterns
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cortex.intelligence.patterns
+    componentId: cortex.intelligence.patterns
+    markdown: |-
+      # intelligence.patterns
+
+      **ID:** `cortex.intelligence.patterns` · **Tier:** T1 · **Version:** 3.5.0
+
+      Crystallised BEP patterns
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169841602
+  id: eee92934-2c69-4db6-b55a-64fdda342bbd
+  updatedAt: 1789179438459

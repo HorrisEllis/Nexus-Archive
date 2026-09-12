@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-f0622bf2-1631-49f5-bbe6-f04ca53f6e7e
+type: bep_pattern
+id: f0622bf2-1631-49f5-bbe6-f04ca53f6e7e
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853608
+source: data/cortex/memory/bep_patterns.json:f0622bf2-1631-49f5-bbe6-f04ca53f6e7e
+payload:
+  uuid: 63fa81a5-f65b-4b3d-8f9a-91dd05a01f85
+  signature: intelligence.command.invoked::ledger.forge.registered
+  patternType: co_occurrence
+  typeA: intelligence.command.invoked
+  typeB: ledger.forge.registered
+  systemA: null
+  systemB: null
+  crossSystem: false
+  count: 160
+  confidence: 1
+  description: >-
+    "intelligence.command.invoked" and "ledger.forge.registered" co-occur within 5s — 160
+    observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169847317
+  id: f0622bf2-1631-49f5-bbe6-f04ca53f6e7e

@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-cos_simulate
+type: tool_index_entry
+id: cos_simulate
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822125
+source: data/cortex/memory/tool_index.json:cos_simulate
+payload:
+  id: cos_simulate
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Run a real LLM mental simulation before committing to a real action — a scenario against a real
+    provider, scored and tracked. Actions: "run" (needs type: "single" one-shot, "h2h" compare two
+    providers on the same prompt [providerB], "loop" feedback iterations [iterations], "chain"
+    multi-step, "stress" repeated stress test; needs prompt; provider defaults to claude; optional
+    hypothesis to record what you expect), "stop"/"get" (need sessionId), "list", "history". This
+    dispatches a REAL job to a real provider through guardian — it costs real time/tokens, it is not
+    free.
+  updatedAt: 1789179646647
+  _key: cos_simulate

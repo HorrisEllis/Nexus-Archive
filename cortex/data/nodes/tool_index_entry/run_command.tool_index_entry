@@ -1,0 +1,85 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-run_command
+type: tool_index_entry
+id: run_command
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822120
+source: data/cortex/memory/tool_index.json:run_command
+payload:
+  id: run_command
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Execute a NEXUS cockpit command. Commands follow cockpit's real interaction contract (v1.0.0).
+    Available commands:
+
+    forge pipeline list — List all pipelines
+
+    forge pipeline create <name> — Create a new pipeline
+
+    forge pipeline run <id> — Trigger a pipeline run
+
+    forge pipeline add-node <pipeline_id> <type> — Add a node to a pipeline
+
+    forge pipeline connect <pipeline_id> <from_id> <to_id> — Connect two nodes with an optional
+    condition
+
+    forge pipeline arm <id> — Enable pipeline scheduler
+
+    forge pipeline disarm <id> — Disable pipeline scheduler
+
+    forge pipeline delete <id> — Delete a pipeline
+
+    forge pipeline export <id> — Export pipeline as JSON
+
+    forge pipeline import <json> — Import pipeline from JSON
+
+    forge seam compile <source> — Compile SEAM source → constraint field + JS
+
+    forge seam validate <source> — Validate SEAM source (Pass 0 only)
+
+    forge seam chunk <source> — Chunk SEAM/spec source into delivery protocol chunks
+
+    forge idea list — List ideas from Idearium
+
+    forge idea create <title> — Create a new idea in Idearium
+
+    forge gap list — List gaps
+
+    forge gap create <title> — Create a gap
+
+    forge gap resolve <id> <resolution> — Resolve a gap
+
+    forge snapshot create — Create Idearium snapshot
+
+    forge trust list — List all trust scores (Beta distribution)
+
+    forge trust record <sourceId> — Record a trust event for a source
+
+    forge guardian dispatch <provider> <prompt> — Dispatch prompt to Guardian agent
+
+    forge guardian health — Check Guardian connection
+
+    forge idearium health — Check Idearium connection
+
+    forge bus emit <channel> — Emit a SISO bus event
+
+    forge bus history — Show recent SISO bus events
+
+    forge jaa stats — Show JAA store row counts by table
+
+    forge jaa query <table> — Query a JAA table
+
+    forge help — Show all available commands
+
+    Also: "forge help" lists commands.
+  updatedAt: 1789179646620
+  _key: run_command

@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-d0ed9fbc-50d7-4e21-a461-e896d4cb7def
+type: bep_pattern
+id: d0ed9fbc-50d7-4e21-a461-e896d4cb7def
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853799
+source: data/cortex/memory/bep_patterns.json:d0ed9fbc-50d7-4e21-a461-e896d4cb7def
+payload:
+  uuid: 43a793e0-6e3b-41a4-9245-2ae3a46f9140
+  signature: ledger.ollama.updated::provider.host.wake-intro
+  patternType: cross_system_causal
+  typeA: ledger.ollama.updated
+  typeB: provider.host.wake-intro
+  systemA: clear-glass
+  systemB: ollama-bridge
+  crossSystem: true
+  count: 7
+  confidence: 0.35
+  description: >-
+    "ledger.ollama.updated" (clear-glass) and "provider.host.wake-intro" (ollama-bridge) co-occur
+    within 5s across two real systems — 7 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: d0ed9fbc-50d7-4e21-a461-e896d4cb7def

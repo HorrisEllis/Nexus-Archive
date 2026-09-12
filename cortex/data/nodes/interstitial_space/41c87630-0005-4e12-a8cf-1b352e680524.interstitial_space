@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-41c87630-0005-4e12-a8cf-1b352e680524
+type: interstitial_space
+id: 41c87630-0005-4e12-a8cf-1b352e680524
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821542
+source: data/cortex/memory/interstitial_spaces.json:41c87630-0005-4e12-a8cf-1b352e680524
+payload:
+  uuid: 3ca7f883-fd81-4a3c-b568-8a7867e77fea
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.diagnostic.poll.complete" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 6d819e04-3661-4b5c-979a-f459b4fcccf5
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179102669
+  meta:
+    pattern:
+      uuid: 6d819e04-3661-4b5c-979a-f459b4fcccf5
+      signature: precursor::ledger.diagnostic.poll.complete
+      patternType: failure_precursor
+      precursorType: ledger.diagnostic.poll.complete
+      failureTypes:
+        - intelligence.failure_scan
+      count: 18
+      confidence: 1
+      description: '"ledger.diagnostic.poll.complete" precedes failures 18 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: 41c87630-0005-4e12-a8cf-1b352e680524
+  crystallised: true
+  crystallisedAt: 1789179332117

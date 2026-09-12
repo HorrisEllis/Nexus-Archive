@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-267ebdb9-c742-44db-8720-3b6c644096e3
+type: interstitial_space
+id: 267ebdb9-c742-44db-8720-3b6c644096e3
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821534
+source: data/cortex/memory/interstitial_spaces.json:267ebdb9-c742-44db-8720-3b6c644096e3
+payload:
+  uuid: dfc07caf-a065-4d2a-91ba-a51dcec8887e
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "autopilot.instance_snapshot" and "clear-glass.window.opened"'
+  type: co_occurrence
+  confidence: 0.15
+  count: 1
+  causedBy: 4a3b1790-6152-4dcb-a094-6cc89d3cb7cd
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179102136
+  meta:
+    pattern:
+      uuid: 4a3b1790-6152-4dcb-a094-6cc89d3cb7cd
+      signature: autopilot.instance_snapshot::clear-glass.window.opened
+      patternType: co_occurrence
+      typeA: autopilot.instance_snapshot
+      typeB: clear-glass.window.opened
+      systemA: clear-glass
+      systemB: null
+      crossSystem: false
+      count: 3
+      confidence: 0.15
+      description: >-
+        "autopilot.instance_snapshot" and "clear-glass.window.opened" co-occur within 5s — 3
+        observations
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: 267ebdb9-c742-44db-8720-3b6c644096e3

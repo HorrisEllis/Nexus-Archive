@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-52072908-3e6e-4ed2-98e6-38f035299afc
+type: component_projection
+id: 52072908-3e6e-4ed2-98e6-38f035299afc
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821689
+source: data/cortex/memory/component_projections.json:52072908-3e6e-4ed2-98e6-38f035299afc
+payload:
+  uuid: ed2967a0-d786-486d-9007-0e07115eeebb
+  componentId: guardian.bus.log
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.bus.log
+    componentId: guardian.bus.log
+    version: 3.6.2
+    namespace: guardian
+    name: bus.log
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.bus.log
+    command: log
+    aliases:
+      - bus log
+      - bus-log
+    help: |-
+      bus.log
+        Recent SISO bus log
+    route:
+      method: GET
+      path: /bus
+    componentId: guardian.bus.log
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.bus.log
+    componentId: guardian.bus.log
+    entries:
+      - bus log
+      - bus-log
+      - bus.log
+      - log
+    route:
+      method: GET
+      path: /bus
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.bus.log
+    componentId: guardian.bus.log
+    label: BUS.LOG
+    icon: ◈
+    tooltip: Recent SISO bus log
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /bus
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.bus.log
+    componentId: guardian.bus.log
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.bus.log
+    componentId: guardian.bus.log
+    chunk1:
+      system: guardian
+      command: log
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.bus.log
+    componentId: guardian.bus.log
+    markdown: |-
+      # bus.log
+
+      **ID:** `guardian.bus.log` · **Tier:** T1 · **Version:** 3.6.2
+
+      Recent SISO bus log
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839905
+  id: 52072908-3e6e-4ed2-98e6-38f035299afc
+  updatedAt: 1789179436743

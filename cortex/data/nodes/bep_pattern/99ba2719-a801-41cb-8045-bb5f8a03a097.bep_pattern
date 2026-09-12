@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-99ba2719-a801-41cb-8045-bb5f8a03a097
+type: bep_pattern
+id: 99ba2719-a801-41cb-8045-bb5f8a03a097
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853708
+source: data/cortex/memory/bep_patterns.json:99ba2719-a801-41cb-8045-bb5f8a03a097
+payload:
+  uuid: 219d724a-9e10-42a9-9209-af0af15589eb
+  signature: intent.classified::ledger.ollama.registered
+  patternType: co_occurrence
+  typeA: intent.classified
+  typeB: ledger.ollama.registered
+  systemA: null
+  systemB: ollama-bridge
+  crossSystem: false
+  count: 7
+  confidence: 0.35
+  description: '"intent.classified" and "ledger.ollama.registered" co-occur within 5s — 7 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169846555
+  id: 99ba2719-a801-41cb-8045-bb5f8a03a097

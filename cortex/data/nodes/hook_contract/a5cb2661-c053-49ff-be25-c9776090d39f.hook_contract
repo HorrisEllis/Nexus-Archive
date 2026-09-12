@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-a5cb2661-c053-49ff-be25-c9776090d39f
+type: hook_contract
+id: a5cb2661-c053-49ff-be25-c9776090d39f
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822183
+source: data/cortex/memory/hooks.json:a5cb2661-c053-49ff-be25-c9776090d39f
+payload:
+  uuid: a5cb2661-c053-49ff-be25-c9776090d39f
+  id: a5cb2661-c053-49ff-be25-c9776090d39f
+  name: guardian.provider.channel
+  intent: NCP SSE channel — browser tabs connect here
+  version: 3.6.2
+  type: api
+  direction: bidirectional
+  from:
+    surface: guardian
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /channel
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook guardian.provider.channel
+    event: architect.hook.guardian.provider.channel
+    route: GET /channel
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867486
+    updatedAt: 1789169867486
+    status: active
+    tags:
+      - synced-from-component-registry
+      - guardian
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

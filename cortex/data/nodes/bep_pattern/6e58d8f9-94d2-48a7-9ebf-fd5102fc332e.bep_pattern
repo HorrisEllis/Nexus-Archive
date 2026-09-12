@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-6e58d8f9-94d2-48a7-9ebf-fd5102fc332e
+type: bep_pattern
+id: 6e58d8f9-94d2-48a7-9ebf-fd5102fc332e
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853792
+source: data/cortex/memory/bep_patterns.json:6e58d8f9-94d2-48a7-9ebf-fd5102fc332e
+payload:
+  uuid: b4a32683-815c-41db-bf9a-786af2d2f36b
+  signature: adversarial.run.complete::autopilot.instance_snapshot
+  patternType: co_occurrence
+  typeA: adversarial.run.complete
+  typeB: autopilot.instance_snapshot
+  systemA: null
+  systemB: copilot
+  crossSystem: false
+  count: 3
+  confidence: 0.15
+  description: '"adversarial.run.complete" and "autopilot.instance_snapshot" co-occur within 5s — 3 observations'
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179444171
+  id: 6e58d8f9-94d2-48a7-9ebf-fd5102fc332e

@@ -1,0 +1,28 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-parse_lenses
+type: tool_index_entry
+id: parse_lenses
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822122
+source: data/cortex/memory/tool_index.json:parse_lenses
+payload:
+  id: parse_lenses
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Read one input through several independent lenses at once and contrast them: liminal (12 gap
+    detectors), axioms (constitutional check), edge-cases (known per-system failures), sigma
+    (deviation from field baseline), shape (structural markers like empty catch blocks). Each lens
+    returns FINDING, ABSTAIN, UNAVAILABLE or ERROR — a lens that could not run is never reported as
+    clean. Use action "list" to see the lenses, "parse" for the readings, "contrast" for the verdict
+    (recommended: it names where the lenses disagree and where one fired alone).
+  updatedAt: 1789179646631
+  _key: parse_lenses

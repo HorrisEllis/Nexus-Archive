@@ -1,0 +1,24 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-ollama_generate
+type: tool_index_entry
+id: ollama_generate
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822130
+source: data/cortex/memory/tool_index.json:ollama_generate
+payload:
+  id: ollama_generate
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Generate text using a local Ollama model, running on this machine — no external API call, no
+    cost. Use for fast, private, local reasoning when a full agent dispatch is not needed.
+  updatedAt: 1789179646687
+  _key: ollama_generate

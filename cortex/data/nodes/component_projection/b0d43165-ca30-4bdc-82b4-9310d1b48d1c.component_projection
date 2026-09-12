@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-b0d43165-ca30-4bdc-82b4-9310d1b48d1c
+type: component_projection
+id: b0d43165-ca30-4bdc-82b4-9310d1b48d1c
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821733
+source: data/cortex/memory/component_projections.json:b0d43165-ca30-4bdc-82b4-9310d1b48d1c
+payload:
+  uuid: 4c3cc455-e34b-4db1-885e-9df47017df65
+  componentId: cg.diag.nexus
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.diag.nexus
+    componentId: cg.diag.nexus
+    version: 3.0.0
+    namespace: cg
+    name: diag.nexus
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.diag.nexus
+    command: nexus
+    aliases:
+      - diag nexus
+      - diag-nexus
+    help: |-
+      diag.nexus
+        NEXUS home UI audit — navigate, assert, screenshot
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.diag.nexus
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.diag.nexus
+    componentId: cg.diag.nexus
+    entries:
+      - diag nexus
+      - diag-nexus
+      - diag.nexus
+      - nexus
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.diag.nexus
+    componentId: cg.diag.nexus
+    label: DIAG.NEXUS
+    icon: ⬢
+    tooltip: NEXUS home UI audit — navigate, assert, screenshot
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.diag.nexus
+    componentId: cg.diag.nexus
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.diag.nexus
+    componentId: cg.diag.nexus
+    chunk1:
+      system: cg
+      command: nexus
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.diag.nexus
+    componentId: cg.diag.nexus
+    markdown: |-
+      # diag.nexus
+
+      **ID:** `cg.diag.nexus` · **Tier:** T2 · **Version:** 3.0.0
+
+      NEXUS home UI audit — navigate, assert, screenshot
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840076
+  id: b0d43165-ca30-4bdc-82b4-9310d1b48d1c
+  updatedAt: 1789179436807

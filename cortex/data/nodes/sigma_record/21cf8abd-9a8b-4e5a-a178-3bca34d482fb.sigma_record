@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-sigma_record-21cf8abd-9a8b-4e5a-a178-3bca34d482fb
+type: sigma_record
+id: 21cf8abd-9a8b-4e5a-a178-3bca34d482fb
+context: real, live jaaDB row migrated from data/cortex/memory/sigma_records.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821612
+source: data/cortex/memory/sigma_records.json:21cf8abd-9a8b-4e5a-a178-3bca34d482fb
+payload:
+  uuid: 190818fe-1400-4602-87b2-13164aca8877
+  sigma: 0
+  type: nexus.gap.detected
+  axes:
+    structural: 0
+    temporal: 0
+    contextual: 0
+  reason: nominal
+  intervalMs: 1
+  cfrState:
+    coherence: 0.5
+    entropy: 0.5
+    friction: 0.5
+    resonance: 0.5
+  baselineSnap: null
+  source: sigma-writer
+  ts: 1789179138000
+  id: 21cf8abd-9a8b-4e5a-a178-3bca34d482fb

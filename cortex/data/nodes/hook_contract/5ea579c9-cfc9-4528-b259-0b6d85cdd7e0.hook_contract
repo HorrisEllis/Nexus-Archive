@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-5ea579c9-cfc9-4528-b259-0b6d85cdd7e0
+type: hook_contract
+id: 5ea579c9-cfc9-4528-b259-0b6d85cdd7e0
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822207
+source: data/cortex/memory/hooks.json:5ea579c9-cfc9-4528-b259-0b6d85cdd7e0
+payload:
+  uuid: 5ea579c9-cfc9-4528-b259-0b6d85cdd7e0
+  id: 5ea579c9-cfc9-4528-b259-0b6d85cdd7e0
+  name: cg.context.health
+  intent: Agent health — RAID routing weight
+  version: 3.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cg
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /contexts
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cg.context.health
+    event: architect.hook.cg.context.health
+    route: GET /contexts
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867488
+    updatedAt: 1789169867488
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cg
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

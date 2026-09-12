@@ -1,0 +1,26 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-move_data
+type: tool_index_entry
+id: move_data
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822121
+source: data/cortex/memory/tool_index.json:move_data
+payload:
+  id: move_data
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Move data in/out of Cortex (NEXUS's memory). Actions: "push" (store content with tags into a
+    memory tier: recent/session/long), "recall" (retrieve memories by intent/query), "read" (tail
+    the last N rows of a named table, e.g. chat_log, event_log, gaps), "insert" (write a raw row
+    into a named table). There is deliberately no delete — nothing is lost, ever.
+  updatedAt: 1789179646622
+  _key: move_data

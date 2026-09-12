@@ -1,0 +1,18 @@
+envelope: 1
+uuid: nexus-export-account_identity_index_entry-9fc3a180-7029-4262-8252-8e7c4c9f3549
+type: account_identity_index_entry
+id: 9fc3a180-7029-4262-8252-8e7c4c9f3549
+context: real, live jaaDB row migrated from data/cortex/memory/account_identity_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853819
+source: data/cortex/memory/account_identity_index.json:9fc3a180-7029-4262-8252-8e7c4c9f3549
+payload:
+  uuid: 42ff7361-d585-45c7-928c-d63a7de9e051
+  agentId: claude
+  account: JBJames·Pro
+  createdAt: 1789169841604
+  lastSeenAt: 1789169841604
+  id: 9fc3a180-7029-4262-8252-8e7c4c9f3549

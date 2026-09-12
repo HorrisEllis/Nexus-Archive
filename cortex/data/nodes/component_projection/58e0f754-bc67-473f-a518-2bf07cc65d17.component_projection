@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-58e0f754-bc67-473f-a518-2bf07cc65d17
+type: component_projection
+id: 58e0f754-bc67-473f-a518-2bf07cc65d17
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821767
+source: data/cortex/memory/component_projections.json:58e0f754-bc67-473f-a518-2bf07cc65d17
+payload:
+  uuid: 20cb90a8-4325-4bbc-a4b0-1c96066695e9
+  componentId: architect.hook.register
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.architect.hook.register
+    componentId: architect.hook.register
+    version: 1.0.0
+    namespace: architect
+    name: hook.register
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.architect.hook.register
+    command: register
+    aliases:
+      - hook register
+    help: |-
+      hook.register
+        Register a new hook
+    route:
+      method: POST
+      path: /api/hooks
+    componentId: architect.hook.register
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.architect.hook.register
+    componentId: architect.hook.register
+    entries:
+      - hook register
+      - hook.register
+      - register
+    route:
+      method: POST
+      path: /api/hooks
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.architect.hook.register
+    componentId: architect.hook.register
+    label: HOOK.REGISTER
+    icon: ◈
+    tooltip: Register a new hook
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/hooks
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.architect.hook.register
+    componentId: architect.hook.register
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.architect.hook.register
+    componentId: architect.hook.register
+    chunk1:
+      system: architect
+      command: register
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.architect.hook.register
+    componentId: architect.hook.register
+    markdown: |-
+      # hook.register
+
+      **ID:** `architect.hook.register` · **Tier:** T1 · **Version:** 1.0.0
+
+      Register a new hook
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840303
+  id: 58e0f754-bc67-473f-a518-2bf07cc65d17
+  updatedAt: 1789179437508

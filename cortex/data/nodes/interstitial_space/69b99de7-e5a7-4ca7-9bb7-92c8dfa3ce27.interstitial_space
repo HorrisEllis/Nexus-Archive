@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-69b99de7-e5a7-4ca7-9bb7-92c8dfa3ce27
+type: interstitial_space
+id: 69b99de7-e5a7-4ca7-9bb7-92c8dfa3ce27
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821530
+source: data/cortex/memory/interstitial_spaces.json:69b99de7-e5a7-4ca7-9bb7-92c8dfa3ce27
+payload:
+  uuid: de8e33c4-d4f6-4879-8ebc-35146a962a74
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.ollama.updated" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: a72e118b-0b91-4cf0-a2f1-707fea318dee
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789172803341
+  meta:
+    pattern:
+      uuid: a72e118b-0b91-4cf0-a2f1-707fea318dee
+      signature: precursor::ledger.ollama.updated
+      patternType: failure_precursor
+      precursorType: ledger.ollama.updated
+      failureTypes:
+        - intelligence.failure_scan
+      count: 28
+      confidence: 1
+      description: '"ledger.ollama.updated" precedes failures 28 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789172803279
+  id: 69b99de7-e5a7-4ca7-9bb7-92c8dfa3ce27
+  crystallised: true
+  crystallisedAt: 1789172923457

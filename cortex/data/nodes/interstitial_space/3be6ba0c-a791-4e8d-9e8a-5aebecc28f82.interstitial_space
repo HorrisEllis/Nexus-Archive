@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-3be6ba0c-a791-4e8d-9e8a-5aebecc28f82
+type: interstitial_space
+id: 3be6ba0c-a791-4e8d-9e8a-5aebecc28f82
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821533
+source: data/cortex/memory/interstitial_spaces.json:3be6ba0c-a791-4e8d-9e8a-5aebecc28f82
+payload:
+  uuid: 4e3b7d92-3b46-4f5d-8a99-7d6821fe67b2
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "intelligence.pattern_scan" and "ui.boot"'
+  type: co_occurrence
+  confidence: 0.2
+  count: 1
+  causedBy: c6073a9f-0e62-4cb1-a1bf-cb6eca6f2836
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.9999999999999999
+  ts: 1789179102040
+  meta:
+    pattern:
+      uuid: c6073a9f-0e62-4cb1-a1bf-cb6eca6f2836
+      signature: intelligence.pattern_scan::ui.boot
+      patternType: co_occurrence
+      typeA: intelligence.pattern_scan
+      typeB: ui.boot
+      systemA: null
+      systemB: cortex
+      crossSystem: false
+      count: 4
+      confidence: 0.2
+      description: '"intelligence.pattern_scan" and "ui.boot" co-occur within 5s — 4 observations'
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: 3be6ba0c-a791-4e8d-9e8a-5aebecc28f82

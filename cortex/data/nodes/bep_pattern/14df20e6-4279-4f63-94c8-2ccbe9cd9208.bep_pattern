@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-14df20e6-4279-4f63-94c8-2ccbe9cd9208
+type: bep_pattern
+id: 14df20e6-4279-4f63-94c8-2ccbe9cd9208
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853709
+source: data/cortex/memory/bep_patterns.json:14df20e6-4279-4f63-94c8-2ccbe9cd9208
+payload:
+  uuid: 0316d4f0-51ca-46c9-b9ce-da8772d9c1d8
+  signature: intent.classified::ledger.eravos.registered
+  patternType: co_occurrence
+  typeA: intent.classified
+  typeB: ledger.eravos.registered
+  systemA: null
+  systemB: eravos
+  crossSystem: false
+  count: 12
+  confidence: 0.6
+  description: '"intent.classified" and "ledger.eravos.registered" co-occur within 5s — 12 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169846555
+  id: 14df20e6-4279-4f63-94c8-2ccbe9cd9208

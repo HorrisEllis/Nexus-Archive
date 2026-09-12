@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-08e94830-5dda-439d-ae7a-58aa970d7167
+type: bep_pattern
+id: 08e94830-5dda-439d-ae7a-58aa970d7167
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853776
+source: data/cortex/memory/bep_patterns.json:08e94830-5dda-439d-ae7a-58aa970d7167
+payload:
+  uuid: 29e2ae92-46d7-405c-8930-7c9305d04a48
+  signature: ledger.copilot.event::provider.host.starting
+  patternType: cross_system_causal
+  typeA: ledger.copilot.event
+  typeB: provider.host.starting
+  systemA: clear-glass
+  systemB: copilot
+  crossSystem: true
+  count: 459
+  confidence: 1
+  description: >-
+    "ledger.copilot.event" (clear-glass) and "provider.host.starting" (copilot) co-occur within 5s
+    across two real systems — 459 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179101844
+  id: 08e94830-5dda-439d-ae7a-58aa970d7167

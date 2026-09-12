@@ -1,0 +1,107 @@
+envelope: 1
+uuid: nexus-export-component_projection-21a803a8-2ebd-471a-af1c-7f6f87643c02
+type: component_projection
+id: 21a803a8-2ebd-471a-af1c-7f6f87643c02
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821757
+source: data/cortex/memory/component_projections.json:21a803a8-2ebd-471a-af1c-7f6f87643c02
+payload:
+  uuid: 589ce316-820e-4505-960b-edb285cc1cb0
+  componentId: copilot.person_model.state
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.person_model.state
+    componentId: copilot.person_model.state
+    version: 2.0.0
+    namespace: copilot
+    name: person_model.state
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.person_model.state
+    command: state
+    aliases:
+      - remember about me
+      - i am
+      - my value
+    help: |-
+      person_model.state
+        The user states something about themselves — the ONLY route into trigger/sensitive/boundary
+    route:
+      method: POST
+      path: /api/person-model/state
+    componentId: copilot.person_model.state
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.person_model.state
+    componentId: copilot.person_model.state
+    entries:
+      - remember about me
+      - i am
+      - my value
+      - my goal
+      - person_model.state
+      - state
+    route:
+      method: POST
+      path: /api/person-model/state
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.person_model.state
+    componentId: copilot.person_model.state
+    label: PERSON_MODEL.STA
+    icon: ◈
+    tooltip: The user states something about themselves — the ONLY route into trigger/sensiti
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/person-model/state
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.person_model.state
+    componentId: copilot.person_model.state
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.person_model.state
+    componentId: copilot.person_model.state
+    chunk1:
+      system: copilot
+      command: state
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.person_model.state
+    componentId: copilot.person_model.state
+    markdown: |-
+      # person_model.state
+
+      **ID:** `copilot.person_model.state` · **Tier:** T1 · **Version:** 2.0.0
+
+      The user states something about themselves — the ONLY route into trigger/sensitive/boundary
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840235
+  id: 21a803a8-2ebd-471a-af1c-7f6f87643c02
+  updatedAt: 1789179436986

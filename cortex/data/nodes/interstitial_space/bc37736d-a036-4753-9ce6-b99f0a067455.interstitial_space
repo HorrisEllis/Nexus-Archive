@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-bc37736d-a036-4753-9ce6-b99f0a067455
+type: interstitial_space
+id: bc37736d-a036-4753-9ce6-b99f0a067455
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821561
+source: data/cortex/memory/interstitial_spaces.json:bc37736d-a036-4753-9ce6-b99f0a067455
+payload:
+  uuid: 99354038-87e2-432b-9a9a-14ea021a93b3
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "agent.call.start" and "ledger.copilot.event"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: c6b06c8c-0585-4206-9cc2-c2e320ef5e60
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179613222
+  meta:
+    pattern:
+      uuid: c6b06c8c-0585-4206-9cc2-c2e320ef5e60
+      signature: agent.call.start::ledger.copilot.event
+      patternType: co_occurrence
+      typeA: agent.call.start
+      typeB: ledger.copilot.event
+      systemA: copilot
+      systemB: null
+      crossSystem: false
+      count: 86
+      confidence: 1
+      description: '"agent.call.start" and "ledger.copilot.event" co-occur within 5s — 86 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179613085
+  id: bc37736d-a036-4753-9ce6-b99f0a067455

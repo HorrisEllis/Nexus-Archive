@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-be85bd6a-10c4-42cd-920a-c7cf9704b362
+type: bep_pattern
+id: be85bd6a-10c4-42cd-920a-c7cf9704b362
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853780
+source: data/cortex/memory/bep_patterns.json:be85bd6a-10c4-42cd-920a-c7cf9704b362
+payload:
+  uuid: f17331c8-7895-40b8-9ce5-829f210ad241
+  signature: intelligence.failure_scan::ledger.copilot.event
+  patternType: cross_system_causal
+  typeA: intelligence.failure_scan
+  typeB: ledger.copilot.event
+  systemA: copilot
+  systemB: cortex
+  crossSystem: true
+  count: 2802
+  confidence: 1
+  description: '"intelligence.failure_scan" and "ledger.copilot.event" co-occur within 5s — 2802 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179151849
+  id: be85bd6a-10c4-42cd-920a-c7cf9704b362

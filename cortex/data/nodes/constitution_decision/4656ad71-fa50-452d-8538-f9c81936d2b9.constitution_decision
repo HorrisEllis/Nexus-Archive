@@ -1,0 +1,23 @@
+envelope: 1
+uuid: nexus-export-constitution_decision-4656ad71-fa50-452d-8538-f9c81936d2b9
+type: constitution_decision
+id: 4656ad71-fa50-452d-8538-f9c81936d2b9
+context: real, live jaaDB row migrated from data/cortex/memory/constitution_decisions.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821971
+source: data/cortex/memory/constitution_decisions.json:4656ad71-fa50-452d-8538-f9c81936d2b9
+payload:
+  uuid: 50c9f976-9c63-40e4-905d-4248b447b8af
+  requestId: null
+  axiom: TRUTH_OVER_COHERENCE
+  pass: true
+  reason: No confidence signal available to evaluate — passing by default, not fabricating certainty.
+  severity: flag
+  blast_radius: none
+  cost: 0
+  alternatives: []
+  ts: 1789171589914
+  id: 4656ad71-fa50-452d-8538-f9c81936d2b9

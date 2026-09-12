@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-6c89b8fe-b896-4931-af6e-213be03855e0
+type: component_projection
+id: 6c89b8fe-b896-4931-af6e-213be03855e0
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821745
+source: data/cortex/memory/component_projections.json:6c89b8fe-b896-4931-af6e-213be03855e0
+payload:
+  uuid: b0a5fb5e-f7b8-423d-8604-306454d9c35f
+  componentId: eros.adaptive.stats
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eros.adaptive.stats
+    componentId: eros.adaptive.stats
+    version: 0.1.0
+    namespace: eros
+    name: adaptive.stats
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eros.adaptive.stats
+    command: stats
+    aliases:
+      - adaptive stats
+      - adaptive-stats
+    help: |-
+      adaptive.stats
+        PatternMemory + StrategyOptimizer statistics
+    route:
+      method: GET
+      path: /api/adaptive/stats
+    componentId: eros.adaptive.stats
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eros.adaptive.stats
+    componentId: eros.adaptive.stats
+    entries:
+      - adaptive stats
+      - adaptive-stats
+      - adaptive.stats
+      - stats
+    route:
+      method: GET
+      path: /api/adaptive/stats
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eros.adaptive.stats
+    componentId: eros.adaptive.stats
+    label: ADAPTIVE.STATS
+    icon: ⬢
+    tooltip: PatternMemory + StrategyOptimizer statistics
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/adaptive/stats
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eros.adaptive.stats
+    componentId: eros.adaptive.stats
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eros.adaptive.stats
+    componentId: eros.adaptive.stats
+    chunk1:
+      system: eros
+      command: stats
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eros.adaptive.stats
+    componentId: eros.adaptive.stats
+    markdown: |-
+      # adaptive.stats
+
+      **ID:** `eros.adaptive.stats` · **Tier:** T2 · **Version:** 0.1.0
+
+      PatternMemory + StrategyOptimizer statistics
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840150
+  id: 6c89b8fe-b896-4931-af6e-213be03855e0
+  updatedAt: 1789179436866

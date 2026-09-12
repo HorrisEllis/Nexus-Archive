@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-fa481b9f-737f-422e-804f-777c38dd7fdf
+type: hook_contract
+id: fa481b9f-737f-422e-804f-777c38dd7fdf
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822199
+source: data/cortex/memory/hooks.json:fa481b9f-737f-422e-804f-777c38dd7fdf
+payload:
+  uuid: fa481b9f-737f-422e-804f-777c38dd7fdf
+  id: fa481b9f-737f-422e-804f-777c38dd7fdf
+  name: idearium.idea.archive
+  intent: Archive (soft-delete) an idea
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: DELETE
+      path: /api/ideas/:uuid
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.idea.archive
+    event: architect.hook.idearium.idea.archive
+    route: DELETE /api/ideas/:uuid
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

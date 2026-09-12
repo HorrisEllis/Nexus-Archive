@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-0d7587ca-261d-4792-a722-c96dd32e4e3d
+type: component_projection
+id: 0d7587ca-261d-4792-a722-c96dd32e4e3d
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821751
+source: data/cortex/memory/component_projections.json:0d7587ca-261d-4792-a722-c96dd32e4e3d
+payload:
+  uuid: 1aecc46f-a544-4791-9a7e-61e970ba2d45
+  componentId: versionium.commit.create
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.versionium.commit.create
+    componentId: versionium.commit.create
+    version: 3.0.0
+    namespace: versionium
+    name: commit.create
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.versionium.commit.create
+    command: create
+    aliases:
+      - versionium commit
+      - vc
+    help: |-
+      commit.create
+        Real commit — manual or agent-mesh dispatched
+    route:
+      method: POST
+      path: /api/versionium/commit
+    componentId: versionium.commit.create
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.versionium.commit.create
+    componentId: versionium.commit.create
+    entries:
+      - versionium commit
+      - vc
+      - commit.create
+      - create
+    route:
+      method: POST
+      path: /api/versionium/commit
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.versionium.commit.create
+    componentId: versionium.commit.create
+    label: COMMIT.CREATE
+    icon: ◈
+    tooltip: Real commit — manual or agent-mesh dispatched
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/versionium/commit
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.versionium.commit.create
+    componentId: versionium.commit.create
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.versionium.commit.create
+    componentId: versionium.commit.create
+    chunk1:
+      system: versionium
+      command: create
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.versionium.commit.create
+    componentId: versionium.commit.create
+    markdown: |-
+      # commit.create
+
+      **ID:** `versionium.commit.create` · **Tier:** T1 · **Version:** 3.0.0
+
+      Real commit — manual or agent-mesh dispatched
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840193
+  id: 0d7587ca-261d-4792-a722-c96dd32e4e3d
+  updatedAt: 1789179436917

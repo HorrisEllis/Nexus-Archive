@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-5dde70e0-47aa-4151-80a2-6eab963e7bcd
+type: component_projection
+id: 5dde70e0-47aa-4151-80a2-6eab963e7bcd
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821731
+source: data/cortex/memory/component_projections.json:5dde70e0-47aa-4151-80a2-6eab963e7bcd
+payload:
+  uuid: f2cab362-64d1-43c2-a24d-4e99eba4f84d
+  componentId: cg.url.listen
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.url.listen
+    componentId: cg.url.listen
+    version: 3.0.0
+    namespace: cg
+    name: url.listen
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.url.listen
+    command: listen
+    aliases:
+      - url listen
+      - url-listen
+    help: |-
+      url.listen
+        Add URL pattern listener → fires NEXUS hook on match
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.url.listen
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.url.listen
+    componentId: cg.url.listen
+    entries:
+      - url listen
+      - url-listen
+      - url.listen
+      - listen
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.url.listen
+    componentId: cg.url.listen
+    label: URL.LISTEN
+    icon: ⬢
+    tooltip: Add URL pattern listener → fires NEXUS hook on match
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.url.listen
+    componentId: cg.url.listen
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.url.listen
+    componentId: cg.url.listen
+    chunk1:
+      system: cg
+      command: listen
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.url.listen
+    componentId: cg.url.listen
+    markdown: |-
+      # url.listen
+
+      **ID:** `cg.url.listen` · **Tier:** T2 · **Version:** 3.0.0
+
+      Add URL pattern listener → fires NEXUS hook on match
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840070
+  id: 5dde70e0-47aa-4151-80a2-6eab963e7bcd
+  updatedAt: 1789179436805

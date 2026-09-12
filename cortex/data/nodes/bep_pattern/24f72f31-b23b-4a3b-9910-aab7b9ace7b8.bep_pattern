@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-24f72f31-b23b-4a3b-9910-aab7b9ace7b8
+type: bep_pattern
+id: 24f72f31-b23b-4a3b-9910-aab7b9ace7b8
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853770
+source: data/cortex/memory/bep_patterns.json:24f72f31-b23b-4a3b-9910-aab7b9ace7b8
+payload:
+  uuid: f4c162b0-8ae9-48dc-9064-9fc3e32d615b
+  signature: adversarial.violation.detected::intelligence.pattern_scan
+  patternType: cross_system_causal
+  typeA: adversarial.violation.detected
+  typeB: intelligence.pattern_scan
+  systemA: copilot
+  systemB: cortex
+  crossSystem: true
+  count: 4
+  confidence: 0.2
+  description: >-
+    "adversarial.violation.detected" (copilot) and "intelligence.pattern_scan" (cortex) co-occur
+    within 5s across two real systems — 4 observations
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179105699
+  id: 24f72f31-b23b-4a3b-9910-aab7b9ace7b8

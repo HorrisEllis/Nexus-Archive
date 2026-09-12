@@ -1,0 +1,100 @@
+envelope: 1
+uuid: nexus-export-component_projection-fe08af92-193a-44e3-8462-d6e9c17738e1
+type: component_projection
+id: fe08af92-193a-44e3-8462-d6e9c17738e1
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821773
+source: data/cortex/memory/component_projections.json:fe08af92-193a-44e3-8462-d6e9c17738e1
+payload:
+  uuid: a691082d-55ff-41ad-a052-1ffe5ad62105
+  componentId: cortex.contract
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cortex.contract
+    componentId: cortex.contract
+    version: 3.5.0
+    namespace: cortex
+    name: contract
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cortex.contract
+    command: contract
+    aliases:
+      - contract
+    help: |-
+      contract
+        Cortex interaction contract
+    route:
+      method: GET
+      path: /contract
+    componentId: cortex.contract
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cortex.contract
+    componentId: cortex.contract
+    entries:
+      - contract
+    route:
+      method: GET
+      path: /contract
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cortex.contract
+    componentId: cortex.contract
+    label: CONTRACT
+    icon: ◈
+    tooltip: Cortex interaction contract
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /contract
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cortex.contract
+    componentId: cortex.contract
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cortex.contract
+    componentId: cortex.contract
+    chunk1:
+      system: cortex
+      command: contract
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cortex.contract
+    componentId: cortex.contract
+    markdown: |-
+      # contract
+
+      **ID:** `cortex.contract` · **Tier:** T1 · **Version:** 3.5.0
+
+      Cortex interaction contract
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169841587
+  id: fe08af92-193a-44e3-8462-d6e9c17738e1
+  updatedAt: 1789179438439

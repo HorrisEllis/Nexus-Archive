@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-2628754e-a04d-4cf1-91e1-56598031c269
+type: interstitial_space
+id: 2628754e-a04d-4cf1-91e1-56598031c269
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821559
+source: data/cortex/memory/interstitial_spaces.json:2628754e-a04d-4cf1-91e1-56598031c269
+payload:
+  uuid: a52fc259-0101-4136-a269-ba1e6c348ad0
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.copilot.updated" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: d910ba38-796b-4d89-9a2b-e83f8067e1b9
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179493156
+  meta:
+    pattern:
+      uuid: d910ba38-796b-4d89-9a2b-e83f8067e1b9
+      signature: precursor::ledger.copilot.updated
+      patternType: failure_precursor
+      precursorType: ledger.copilot.updated
+      failureTypes:
+        - intelligence.failure_scan
+      count: 132
+      confidence: 1
+      description: '"ledger.copilot.updated" precedes failures 132 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179492924
+  id: 2628754e-a04d-4cf1-91e1-56598031c269
+  crystallised: true
+  crystallisedAt: 1789179493173

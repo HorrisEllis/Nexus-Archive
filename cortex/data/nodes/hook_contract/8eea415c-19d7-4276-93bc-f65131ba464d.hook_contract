@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-8eea415c-19d7-4276-93bc-f65131ba464d
+type: hook_contract
+id: 8eea415c-19d7-4276-93bc-f65131ba464d
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822228
+source: data/cortex/memory/hooks.json:8eea415c-19d7-4276-93bc-f65131ba464d
+payload:
+  uuid: 8eea415c-19d7-4276-93bc-f65131ba464d
+  id: 8eea415c-19d7-4276-93bc-f65131ba464d
+  name: copilot.person_model.meaning
+  intent: Meaning-web lens — a projection over the lattice, not a nested graph
+  version: 2.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: copilot
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /api/person-model/meaning
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook copilot.person_model.meaning
+    event: architect.hook.copilot.person_model.meaning
+    route: GET /api/person-model/meaning
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867490
+    updatedAt: 1789169867490
+    status: active
+    tags:
+      - synced-from-component-registry
+      - copilot
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

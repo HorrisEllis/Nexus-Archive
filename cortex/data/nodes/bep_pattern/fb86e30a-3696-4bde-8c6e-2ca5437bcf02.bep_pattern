@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-fb86e30a-3696-4bde-8c6e-2ca5437bcf02
+type: bep_pattern
+id: fb86e30a-3696-4bde-8c6e-2ca5437bcf02
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853773
+source: data/cortex/memory/bep_patterns.json:fb86e30a-3696-4bde-8c6e-2ca5437bcf02
+payload:
+  uuid: bb4a93a3-f4f0-4d1a-8804-1a51ddf51c9c
+  signature: autopilot.instance_snapshot::clear-glass.boot.complete
+  patternType: co_occurrence
+  typeA: autopilot.instance_snapshot
+  typeB: clear-glass.boot.complete
+  systemA: clear-glass
+  systemB: null
+  crossSystem: false
+  count: 3
+  confidence: 0.15
+  description: >-
+    "autopilot.instance_snapshot" and "clear-glass.boot.complete" co-occur within 5s — 3
+    observations
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179101844
+  id: fb86e30a-3696-4bde-8c6e-2ca5437bcf02

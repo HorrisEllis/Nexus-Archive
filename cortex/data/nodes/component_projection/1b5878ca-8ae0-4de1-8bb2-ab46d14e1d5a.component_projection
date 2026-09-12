@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-1b5878ca-8ae0-4de1-8bb2-ab46d14e1d5a
+type: component_projection
+id: 1b5878ca-8ae0-4de1-8bb2-ab46d14e1d5a
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821689
+source: data/cortex/memory/component_projections.json:1b5878ca-8ae0-4de1-8bb2-ab46d14e1d5a
+payload:
+  uuid: 4788fe86-2761-4411-9ee9-9e71954b13fb
+  componentId: guardian.bus.emit
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.bus.emit
+    componentId: guardian.bus.emit
+    version: 3.6.2
+    namespace: guardian
+    name: bus.emit
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.bus.emit
+    command: emit
+    aliases:
+      - bus emit
+      - bus-emit
+    help: |-
+      bus.emit
+        Emit event onto bus
+    route:
+      method: POST
+      path: /bus/emit
+    componentId: guardian.bus.emit
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.bus.emit
+    componentId: guardian.bus.emit
+    entries:
+      - bus emit
+      - bus-emit
+      - bus.emit
+      - emit
+    route:
+      method: POST
+      path: /bus/emit
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.bus.emit
+    componentId: guardian.bus.emit
+    label: BUS.EMIT
+    icon: ◈
+    tooltip: Emit event onto bus
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /bus/emit
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.bus.emit
+    componentId: guardian.bus.emit
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.bus.emit
+    componentId: guardian.bus.emit
+    chunk1:
+      system: guardian
+      command: emit
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.bus.emit
+    componentId: guardian.bus.emit
+    markdown: |-
+      # bus.emit
+
+      **ID:** `guardian.bus.emit` · **Tier:** T1 · **Version:** 3.6.2
+
+      Emit event onto bus
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839907
+  id: 1b5878ca-8ae0-4de1-8bb2-ab46d14e1d5a
+  updatedAt: 1789179436745

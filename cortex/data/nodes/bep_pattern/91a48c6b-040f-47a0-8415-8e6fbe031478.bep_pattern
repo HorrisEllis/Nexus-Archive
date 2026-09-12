@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-91a48c6b-040f-47a0-8415-8e6fbe031478
+type: bep_pattern
+id: 91a48c6b-040f-47a0-8415-8e6fbe031478
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853771
+source: data/cortex/memory/bep_patterns.json:91a48c6b-040f-47a0-8415-8e6fbe031478
+payload:
+  uuid: 13452a49-8679-4521-8921-98dcc19ad265
+  signature: intelligence.failure_scan::provider.host.wake-intro
+  patternType: cross_system_causal
+  typeA: intelligence.failure_scan
+  typeB: provider.host.wake-intro
+  systemA: clear-glass
+  systemB: cortex
+  crossSystem: true
+  count: 10
+  confidence: 0.5
+  description: >-
+    "intelligence.failure_scan" (clear-glass) and "provider.host.wake-intro" (cortex) co-occur
+    within 5s across two real systems — 10 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179101844
+  id: 91a48c6b-040f-47a0-8415-8e6fbe031478

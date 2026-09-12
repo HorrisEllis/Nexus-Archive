@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-10114845-7f7c-4dda-bccb-750d5d73da33
+type: interstitial_space
+id: 10114845-7f7c-4dda-bccb-750d5d73da33
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821562
+source: data/cortex/memory/interstitial_spaces.json:10114845-7f7c-4dda-bccb-750d5d73da33
+payload:
+  uuid: 53b524df-0664-4fa0-86f6-996a3bc03d37
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "agent.call.start" and "intent.classified"'
+  type: co_occurrence
+  confidence: 0.2
+  count: 1
+  causedBy: 90d45736-3cc6-49a9-afa8-4d64ac85da84
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.9999999999999999
+  ts: 1789179793177
+  meta:
+    pattern:
+      uuid: 90d45736-3cc6-49a9-afa8-4d64ac85da84
+      signature: agent.call.start::intent.classified
+      patternType: co_occurrence
+      typeA: agent.call.start
+      typeB: intent.classified
+      systemA: null
+      systemB: null
+      crossSystem: false
+      count: 4
+      confidence: 0.2
+      description: '"agent.call.start" and "intent.classified" co-occur within 5s — 4 observations'
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179793095
+  id: 10114845-7f7c-4dda-bccb-750d5d73da33

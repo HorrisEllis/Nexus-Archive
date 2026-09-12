@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-1cba0be1-2624-4173-bef8-4b29db315f3b
+type: interstitial_space
+id: 1cba0be1-2624-4173-bef8-4b29db315f3b
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821552
+source: data/cortex/memory/interstitial_spaces.json:1cba0be1-2624-4173-bef8-4b29db315f3b
+payload:
+  uuid: bccef7fb-6730-4b00-b9ae-5d39b4edf27d
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "ledger.copilot.updated" and "ledger.copilot.updated"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: f1a8e51c-4d4a-446e-8e71-46b4163b44dd
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179444121
+  meta:
+    pattern:
+      uuid: f1a8e51c-4d4a-446e-8e71-46b4163b44dd
+      signature: ledger.copilot.updated::ledger.copilot.updated
+      patternType: co_occurrence
+      typeA: ledger.copilot.updated
+      typeB: ledger.copilot.updated
+      systemA: copilot
+      systemB: copilot
+      crossSystem: false
+      count: 528
+      confidence: 1
+      description: '"ledger.copilot.updated" and "ledger.copilot.updated" co-occur within 5s — 528 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179442919
+  id: 1cba0be1-2624-4173-bef8-4b29db315f3b

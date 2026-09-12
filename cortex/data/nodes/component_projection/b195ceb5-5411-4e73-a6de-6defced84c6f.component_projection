@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-b195ceb5-5411-4e73-a6de-6defced84c6f
+type: component_projection
+id: b195ceb5-5411-4e73-a6de-6defced84c6f
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821747
+source: data/cortex/memory/component_projections.json:b195ceb5-5411-4e73-a6de-6defced84c6f
+payload:
+  uuid: c9c0743b-3b40-4776-9535-c1ea9e462db4
+  componentId: eravos.organism.spawn
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eravos.organism.spawn
+    componentId: eravos.organism.spawn
+    version: 3.0.0
+    namespace: eravos
+    name: organism.spawn
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eravos.organism.spawn
+    command: spawn
+    aliases:
+      - eravos spawn
+      - spawn organism
+    help: |-
+      organism.spawn
+        Spawn an organism by id onto the canvas
+    route:
+      method: POST
+      path: /api/organisms
+    componentId: eravos.organism.spawn
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eravos.organism.spawn
+    componentId: eravos.organism.spawn
+    entries:
+      - eravos spawn
+      - spawn organism
+      - organism.spawn
+      - spawn
+    route:
+      method: POST
+      path: /api/organisms
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eravos.organism.spawn
+    componentId: eravos.organism.spawn
+    label: ORGANISM.SPAWN
+    icon: ◈
+    tooltip: Spawn an organism by id onto the canvas
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/organisms
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eravos.organism.spawn
+    componentId: eravos.organism.spawn
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eravos.organism.spawn
+    componentId: eravos.organism.spawn
+    chunk1:
+      system: eravos
+      command: spawn
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eravos.organism.spawn
+    componentId: eravos.organism.spawn
+    markdown: |-
+      # organism.spawn
+
+      **ID:** `eravos.organism.spawn` · **Tier:** T1 · **Version:** 3.0.0
+
+      Spawn an organism by id onto the canvas
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840167
+  id: b195ceb5-5411-4e73-a6de-6defced84c6f
+  updatedAt: 1789179436883

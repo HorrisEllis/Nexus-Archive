@@ -1,0 +1,42 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-adc5ebf3-bd25-464b-954c-329535cd6acd
+type: interstitial_space
+id: adc5ebf3-bd25-464b-954c-329535cd6acd
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821562
+source: data/cortex/memory/interstitial_spaces.json:adc5ebf3-bd25-464b-954c-329535cd6acd
+payload:
+  uuid: b1554a45-622f-4df6-99cf-af3c37cb7d12
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::nexus.resource.pressure" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: a5164595-b4e6-4fac-b150-486f8571be21
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.95
+  ts: 1789179793133
+  meta:
+    pattern:
+      uuid: a5164595-b4e6-4fac-b150-486f8571be21
+      signature: precursor::nexus.resource.pressure
+      patternType: failure_precursor
+      precursorType: nexus.resource.pressure
+      failureTypes:
+        - intelligence.failure_scan
+      count: 10
+      confidence: 1
+      description: '"nexus.resource.pressure" precedes failures 10 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179793095
+      id: 870c65ce-345c-46b5-8c13-7796a8d3101b
+  id: adc5ebf3-bd25-464b-954c-329535cd6acd

@@ -1,0 +1,26 @@
+envelope: 1
+uuid: nexus-export-chat_log-56d4f620-e868-4774-afc8-ad3b2ebd8ba3
+type: chat_log
+id: 56d4f620-e868-4774-afc8-ad3b2ebd8ba3
+context: real, live jaaDB row migrated from data/cortex/memory/chat_log.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822119
+source: data/cortex/memory/chat_log.json:56d4f620-e868-4774-afc8-ad3b2ebd8ba3
+payload:
+  id: 56d4f620-e868-4774-afc8-ad3b2ebd8ba3
+  uuid: 17082ac9-47a9-4e89-b29f-40488760ec0d
+  requestId: 87a81d00-a2bc-4fa2-ba5f-44490c51fdb6
+  sessionId: 58ff1d60-ec24-4c83-b5de-6b63905d5c8e
+  prompt: hello
+  response: Here. What are you working on?
+  modelUsed: data-only
+  intent: greeting
+  channel: ch-overview
+  componentId: copilot.prompt
+  hookId: copilot.prompt.reply
+  contextLayers: 1
+  fromStream: true
+  ts: 1789175030634

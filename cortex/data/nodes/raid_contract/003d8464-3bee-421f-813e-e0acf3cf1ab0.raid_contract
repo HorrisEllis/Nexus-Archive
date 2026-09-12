@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-raid_contract-003d8464-3bee-421f-813e-e0acf3cf1ab0
+type: raid_contract
+id: 003d8464-3bee-421f-813e-e0acf3cf1ab0
+context: real, live jaaDB row migrated from data/cortex/memory/raid_contract_queue.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822133
+source: data/cortex/memory/raid_contract_queue.json:003d8464-3bee-421f-813e-e0acf3cf1ab0
+payload:
+  uuid: 1ab6df9a-9695-4222-8a90-aa46e5bb96cf
+  status: fail
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: build_order
+  forAgent: ollama
+  contract:
+    content: |-
+      You are building the "Build Order" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: checklist-demo
+        Type: component
+        Description: (none provided)
+        UUID: 07c37e3e-76e8-41eb-aba3-fa02a9e92476
+        Chunk: 9/10
+        Section: build_order
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:07c37e3e:build_order
+        contract_id: spec-contract:07c37e3e:build_order:70849376
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 2min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real content for the first chunk
+
+      YOUR TASK:
+      Write the "Build Order" section for this spec.
+      Bottom-up build sequence (§3.1), what must exist first
+      Requirements:
+      - Be specific to "checklist-demo" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: build_order
+    forAgent: ollama
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169942635
+  updatedAt: 1789169942706
+  id: 003d8464-3bee-421f-813e-e0acf3cf1ab0

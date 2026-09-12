@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-3447aab8-2736-4cbb-bb25-d1a862301b1a
+type: interstitial_space
+id: 3447aab8-2736-4cbb-bb25-d1a862301b1a
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821540
+source: data/cortex/memory/interstitial_spaces.json:3447aab8-2736-4cbb-bb25-d1a862301b1a
+payload:
+  uuid: fb17b9f6-916e-4cef-8925-9bfa83ad8e4b
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "adversarial.violation.detected" and "autopilot.instance_snapshot"'
+  type: co_occurrence
+  confidence: 0.45
+  count: 1
+  causedBy: 7254035c-f56c-49a4-bb50-271f966836a1
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179102534
+  meta:
+    pattern:
+      uuid: 7254035c-f56c-49a4-bb50-271f966836a1
+      signature: adversarial.violation.detected::autopilot.instance_snapshot
+      patternType: co_occurrence
+      typeA: adversarial.violation.detected
+      typeB: autopilot.instance_snapshot
+      systemA: null
+      systemB: copilot
+      crossSystem: false
+      count: 9
+      confidence: 0.45
+      description: >-
+        "adversarial.violation.detected" and "autopilot.instance_snapshot" co-occur within 5s — 9
+        observations
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: 3447aab8-2736-4cbb-bb25-d1a862301b1a

@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-127ba7d3-f4fe-4c21-9ceb-1a55325db811
+type: component_projection
+id: 127ba7d3-f4fe-4c21-9ceb-1a55325db811
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821742
+source: data/cortex/memory/component_projections.json:127ba7d3-f4fe-4c21-9ceb-1a55325db811
+payload:
+  uuid: 3775c8c2-61bb-4ba0-8ce7-79c2f51c2146
+  componentId: eros.cmd.attribute
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eros.cmd.attribute
+    componentId: eros.cmd.attribute
+    version: 0.1.0
+    namespace: eros
+    name: cmd.attribute
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eros.cmd.attribute
+    command: attribute
+    aliases:
+      - cmd attribute
+      - cmd-attribute
+    help: |-
+      cmd.attribute
+        Get node attribute
+    route:
+      method: POST
+      path: /api/os/attribute
+    componentId: eros.cmd.attribute
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eros.cmd.attribute
+    componentId: eros.cmd.attribute
+    entries:
+      - cmd attribute
+      - cmd-attribute
+      - cmd.attribute
+      - attribute
+    route:
+      method: POST
+      path: /api/os/attribute
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eros.cmd.attribute
+    componentId: eros.cmd.attribute
+    label: CMD.ATTRIBUTE
+    icon: ⬢
+    tooltip: Get node attribute
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/os/attribute
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eros.cmd.attribute
+    componentId: eros.cmd.attribute
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eros.cmd.attribute
+    componentId: eros.cmd.attribute
+    chunk1:
+      system: eros
+      command: attribute
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eros.cmd.attribute
+    componentId: eros.cmd.attribute
+    markdown: |-
+      # cmd.attribute
+
+      **ID:** `eros.cmd.attribute` · **Tier:** T2 · **Version:** 0.1.0
+
+      Get node attribute
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840136
+  id: 127ba7d3-f4fe-4c21-9ceb-1a55325db811
+  updatedAt: 1789179436856

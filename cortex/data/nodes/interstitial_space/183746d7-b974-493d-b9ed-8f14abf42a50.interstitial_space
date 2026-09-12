@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-183746d7-b974-493d-b9ed-8f14abf42a50
+type: interstitial_space
+id: 183746d7-b974-493d-b9ed-8f14abf42a50
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821518
+source: data/cortex/memory/interstitial_spaces.json:183746d7-b974-493d-b9ed-8f14abf42a50
+payload:
+  uuid: 83f60be2-72bd-4a07-a4f4-3a51d8268824
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "component.updated" and "component.updated"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: c114e597-70ca-4b77-82ca-855db938d017
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.4
+  ts: 1789172753431
+  meta:
+    pattern:
+      uuid: c114e597-70ca-4b77-82ca-855db938d017
+      signature: component.updated::component.updated
+      patternType: co_occurrence
+      typeA: component.updated
+      typeB: component.updated
+      systemA: null
+      systemB: null
+      crossSystem: false
+      count: 31125
+      confidence: 1
+      description: '"component.updated" and "component.updated" co-occur within 5s — 31125 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789172753280
+  id: 183746d7-b974-493d-b9ed-8f14abf42a50
+  crystallised: true
+  crystallisedAt: 1789172753438

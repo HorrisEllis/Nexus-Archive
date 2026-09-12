@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-eba7a505-a08a-4918-8411-d80248860378
+type: bep_pattern
+id: eba7a505-a08a-4918-8411-d80248860378
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853767
+source: data/cortex/memory/bep_patterns.json:eba7a505-a08a-4918-8411-d80248860378
+payload:
+  uuid: 876e4081-f0d6-482d-a479-fd3cc8ce49ee
+  signature: ledger.copilot.event::ledger.diagnostic.service.start
+  patternType: cross_system_causal
+  typeA: ledger.copilot.event
+  typeB: ledger.diagnostic.service.start
+  systemA: diagnostic
+  systemB: copilot
+  crossSystem: true
+  count: 448
+  confidence: 1
+  description: >-
+    "ledger.copilot.event" (diagnostic) and "ledger.diagnostic.service.start" (copilot) co-occur
+    within 5s across two real systems — 448 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179105699
+  id: eba7a505-a08a-4918-8411-d80248860378

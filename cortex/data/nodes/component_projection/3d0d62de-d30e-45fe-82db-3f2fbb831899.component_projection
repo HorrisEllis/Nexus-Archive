@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-3d0d62de-d30e-45fe-82db-3f2fbb831899
+type: component_projection
+id: 3d0d62de-d30e-45fe-82db-3f2fbb831899
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821776
+source: data/cortex/memory/component_projections.json:3d0d62de-d30e-45fe-82db-3f2fbb831899
+payload:
+  uuid: 00fae82c-b6d4-4f2b-a488-beae9e343f17
+  componentId: cortex.cfr.field
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cortex.cfr.field
+    componentId: cortex.cfr.field
+    version: 3.5.0
+    namespace: cortex
+    name: cfr.field
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cortex.cfr.field
+    command: field
+    aliases:
+      - cfr field
+    help: |-
+      cfr.field
+        Live CFR field state
+    route:
+      method: GET
+      path: /cfr/field
+    componentId: cortex.cfr.field
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cortex.cfr.field
+    componentId: cortex.cfr.field
+    entries:
+      - cfr field
+      - cfr.field
+      - field
+    route:
+      method: GET
+      path: /cfr/field
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cortex.cfr.field
+    componentId: cortex.cfr.field
+    label: CFR.FIELD
+    icon: ◈
+    tooltip: Live CFR field state
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /cfr/field
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cortex.cfr.field
+    componentId: cortex.cfr.field
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cortex.cfr.field
+    componentId: cortex.cfr.field
+    chunk1:
+      system: cortex
+      command: field
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cortex.cfr.field
+    componentId: cortex.cfr.field
+    markdown: |-
+      # cfr.field
+
+      **ID:** `cortex.cfr.field` · **Tier:** T1 · **Version:** 3.5.0
+
+      Live CFR field state
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169841597
+  id: 3d0d62de-d30e-45fe-82db-3f2fbb831899
+  updatedAt: 1789179438451

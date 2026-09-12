@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-8a4db4bd-13ce-47f0-a71e-f1ab91ffc7e7
+type: bep_pattern
+id: 8a4db4bd-13ce-47f0-a71e-f1ab91ffc7e7
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853731
+source: data/cortex/memory/bep_patterns.json:8a4db4bd-13ce-47f0-a71e-f1ab91ffc7e7
+payload:
+  uuid: 819e353b-7363-4265-b197-211e426ae737
+  signature: intelligence.failure_scan::ledger.diagnostic.dangling-hook
+  patternType: cross_system_causal
+  typeA: intelligence.failure_scan
+  typeB: ledger.diagnostic.dangling-hook
+  systemA: cortex
+  systemB: diagnostic
+  crossSystem: true
+  count: 200
+  confidence: 1
+  description: >-
+    "intelligence.failure_scan" (cortex) and "ledger.diagnostic.dangling-hook" (diagnostic) co-occur
+    within 5s across two real systems — 200 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169956649
+  id: 8a4db4bd-13ce-47f0-a71e-f1ab91ffc7e7

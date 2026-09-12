@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-6b3e3745-bb23-4fed-b345-78334fe198fc
+type: bep_pattern
+id: 6b3e3745-bb23-4fed-b345-78334fe198fc
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853809
+source: data/cortex/memory/bep_patterns.json:6b3e3745-bb23-4fed-b345-78334fe198fc
+payload:
+  uuid: 9393b16d-8294-403b-9092-9e358498605f
+  signature: ledger.eros.updated::ledger.ollama.updated
+  patternType: cross_system_causal
+  typeA: ledger.eros.updated
+  typeB: ledger.ollama.updated
+  systemA: ollama-bridge
+  systemB: eravos
+  crossSystem: true
+  count: 280
+  confidence: 1
+  description: >-
+    "ledger.eros.updated" (ollama-bridge) and "ledger.ollama.updated" (eravos) co-occur within 5s
+    across two real systems — 280 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: 6b3e3745-bb23-4fed-b345-78334fe198fc

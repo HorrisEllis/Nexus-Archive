@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-6428e7fd-880c-46c5-9efd-4304afd55fc6
+type: component_projection
+id: 6428e7fd-880c-46c5-9efd-4304afd55fc6
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821769
+source: data/cortex/memory/component_projections.json:6428e7fd-880c-46c5-9efd-4304afd55fc6
+payload:
+  uuid: 759df338-d771-43b1-b538-69138b7028c8
+  componentId: architect.blueprint.scan
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.architect.blueprint.scan
+    componentId: architect.blueprint.scan
+    version: 1.0.0
+    namespace: architect
+    name: blueprint.scan
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.architect.blueprint.scan
+    command: scan
+    aliases:
+      - blueprint scan
+    help: |-
+      blueprint.scan
+        Scan path → generate blueprint
+    route:
+      method: POST
+      path: /api/blueprint/scan
+    componentId: architect.blueprint.scan
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.architect.blueprint.scan
+    componentId: architect.blueprint.scan
+    entries:
+      - blueprint scan
+      - blueprint.scan
+      - scan
+    route:
+      method: POST
+      path: /api/blueprint/scan
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.architect.blueprint.scan
+    componentId: architect.blueprint.scan
+    label: BLUEPRINT.SCAN
+    icon: ◈
+    tooltip: Scan path → generate blueprint
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/blueprint/scan
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.architect.blueprint.scan
+    componentId: architect.blueprint.scan
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.architect.blueprint.scan
+    componentId: architect.blueprint.scan
+    chunk1:
+      system: architect
+      command: scan
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.architect.blueprint.scan
+    componentId: architect.blueprint.scan
+    markdown: |-
+      # blueprint.scan
+
+      **ID:** `architect.blueprint.scan` · **Tier:** T1 · **Version:** 1.0.0
+
+      Scan path → generate blueprint
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840318
+  id: 6428e7fd-880c-46c5-9efd-4304afd55fc6
+  updatedAt: 1789179437524

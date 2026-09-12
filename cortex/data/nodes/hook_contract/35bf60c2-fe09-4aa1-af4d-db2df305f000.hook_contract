@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-35bf60c2-fe09-4aa1-af4d-db2df305f000
+type: hook_contract
+id: 35bf60c2-fe09-4aa1-af4d-db2df305f000
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822202
+source: data/cortex/memory/hooks.json:35bf60c2-fe09-4aa1-af4d-db2df305f000
+payload:
+  uuid: 35bf60c2-fe09-4aa1-af4d-db2df305f000
+  id: 35bf60c2-fe09-4aa1-af4d-db2df305f000
+  name: idearium.gap.resolve
+  intent: Resolve an open gap
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/gaps/:uuid/resolve
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.gap.resolve
+    event: architect.hook.idearium.gap.resolve
+    route: POST /api/gaps/:uuid/resolve
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

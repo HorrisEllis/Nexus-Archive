@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-3b92fd98-a361-4a93-9dcd-91e91b401946
+type: component_projection
+id: 3b92fd98-a361-4a93-9dcd-91e91b401946
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821755
+source: data/cortex/memory/component_projections.json:3b92fd98-a361-4a93-9dcd-91e91b401946
+payload:
+  uuid: 69364343-e92f-4f5f-b9aa-c7ab2ae5b045
+  componentId: copilot.prompt.stream
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.prompt.stream
+    componentId: copilot.prompt.stream
+    version: 2.0.0
+    namespace: copilot
+    name: prompt.stream
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.prompt.stream
+    command: stream
+    aliases:
+      - stream ask
+      - cp stream
+    help: |-
+      prompt.stream
+        Streaming SSE prompt — token-by-token, no timeout (P112)
+    route:
+      method: POST
+      path: /api/prompt/stream
+    componentId: copilot.prompt.stream
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.prompt.stream
+    componentId: copilot.prompt.stream
+    entries:
+      - stream ask
+      - cp stream
+      - prompt.stream
+      - stream
+    route:
+      method: POST
+      path: /api/prompt/stream
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.prompt.stream
+    componentId: copilot.prompt.stream
+    label: PROMPT.STREAM
+    icon: ◈
+    tooltip: Streaming SSE prompt — token-by-token, no timeout (P112)
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/prompt/stream
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.prompt.stream
+    componentId: copilot.prompt.stream
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.prompt.stream
+    componentId: copilot.prompt.stream
+    chunk1:
+      system: copilot
+      command: stream
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.prompt.stream
+    componentId: copilot.prompt.stream
+    markdown: |-
+      # prompt.stream
+
+      **ID:** `copilot.prompt.stream` · **Tier:** T1 · **Version:** 2.0.0
+
+      Streaming SSE prompt — token-by-token, no timeout (P112)
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840225
+  id: 3b92fd98-a361-4a93-9dcd-91e91b401946
+  updatedAt: 1789179436980

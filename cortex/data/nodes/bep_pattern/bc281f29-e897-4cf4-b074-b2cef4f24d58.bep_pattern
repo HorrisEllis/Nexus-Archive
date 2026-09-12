@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-bc281f29-e897-4cf4-b074-b2cef4f24d58
+type: bep_pattern
+id: bc281f29-e897-4cf4-b074-b2cef4f24d58
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853781
+source: data/cortex/memory/bep_patterns.json:bc281f29-e897-4cf4-b074-b2cef4f24d58
+payload:
+  uuid: 6f8a401c-f442-4466-8fc1-d52facab10be
+  signature: intelligence.reuse_index_built::ledger.copilot.event
+  patternType: cross_system_causal
+  typeA: intelligence.reuse_index_built
+  typeB: ledger.copilot.event
+  systemA: copilot
+  systemB: cortex
+  crossSystem: true
+  count: 352
+  confidence: 1
+  description: >-
+    "intelligence.reuse_index_built" (copilot) and "ledger.copilot.event" (cortex) co-occur within
+    5s across two real systems — 352 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179101844
+  id: bc281f29-e897-4cf4-b074-b2cef4f24d58

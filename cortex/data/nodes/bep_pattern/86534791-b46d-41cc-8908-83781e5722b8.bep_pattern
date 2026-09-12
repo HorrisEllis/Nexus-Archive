@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-86534791-b46d-41cc-8908-83781e5722b8
+type: bep_pattern
+id: 86534791-b46d-41cc-8908-83781e5722b8
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853810
+source: data/cortex/memory/bep_patterns.json:86534791-b46d-41cc-8908-83781e5722b8
+payload:
+  uuid: c785be1d-a4b2-4134-8e82-fd5afa5e5fe9
+  signature: ledger.copilot.event::nexus.resource.pressure
+  patternType: cross_system_causal
+  typeA: ledger.copilot.event
+  typeB: nexus.resource.pressure
+  systemA: copilot
+  systemB: orchestrator
+  crossSystem: true
+  count: 76
+  confidence: 1
+  description: >-
+    "ledger.copilot.event" (copilot) and "nexus.resource.pressure" (orchestrator) co-occur within 5s
+    across two real systems — 76 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179492924
+  id: 86534791-b46d-41cc-8908-83781e5722b8

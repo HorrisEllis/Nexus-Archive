@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-a0235017-3649-4fbc-b0a3-1592f64df36b
+type: component_projection
+id: a0235017-3649-4fbc-b0a3-1592f64df36b
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821752
+source: data/cortex/memory/component_projections.json:a0235017-3649-4fbc-b0a3-1592f64df36b
+payload:
+  uuid: fb8e9d67-f4d1-482d-9a37-7e9e1f18f679
+  componentId: versionium.calendar.read
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.versionium.calendar.read
+    componentId: versionium.calendar.read
+    version: 3.0.0
+    namespace: versionium
+    name: calendar.read
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.versionium.calendar.read
+    command: read
+    aliases:
+      - versionium calendar
+    help: |-
+      calendar.read
+        Real calendar playback for a given date
+    route:
+      method: GET
+      path: /api/versionium/calendar/:date
+    componentId: versionium.calendar.read
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.versionium.calendar.read
+    componentId: versionium.calendar.read
+    entries:
+      - versionium calendar
+      - calendar.read
+      - read
+    route:
+      method: GET
+      path: /api/versionium/calendar/:date
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.versionium.calendar.read
+    componentId: versionium.calendar.read
+    label: CALENDAR.READ
+    icon: ◈
+    tooltip: Real calendar playback for a given date
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/versionium/calendar/:date
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.versionium.calendar.read
+    componentId: versionium.calendar.read
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.versionium.calendar.read
+    componentId: versionium.calendar.read
+    chunk1:
+      system: versionium
+      command: read
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.versionium.calendar.read
+    componentId: versionium.calendar.read
+    markdown: |-
+      # calendar.read
+
+      **ID:** `versionium.calendar.read` · **Tier:** T1 · **Version:** 3.0.0
+
+      Real calendar playback for a given date
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840201
+  id: a0235017-3649-4fbc-b0a3-1592f64df36b
+  updatedAt: 1789179436925

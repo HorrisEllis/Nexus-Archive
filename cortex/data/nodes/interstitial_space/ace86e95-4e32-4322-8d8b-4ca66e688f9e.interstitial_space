@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-ace86e95-4e32-4322-8d8b-4ca66e688f9e
+type: interstitial_space
+id: ace86e95-4e32-4322-8d8b-4ca66e688f9e
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821496
+source: data/cortex/memory/interstitial_spaces.json:ace86e95-4e32-4322-8d8b-4ca66e688f9e
+payload:
+  uuid: ebf04edd-0f59-489a-a7fb-eaa37fbc29f8
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "intelligence.failure_scan" and "intelligence.failure_scan"'
+  type: co_occurrence
+  confidence: 0.3
+  count: 1
+  causedBy: 95f3d436-908b-4dde-85c1-a159ca767379
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789169896578
+  meta:
+    pattern:
+      uuid: 95f3d436-908b-4dde-85c1-a159ca767379
+      signature: intelligence.failure_scan::intelligence.failure_scan
+      patternType: co_occurrence
+      typeA: intelligence.failure_scan
+      typeB: intelligence.failure_scan
+      systemA: cortex
+      systemB: cortex
+      crossSystem: false
+      count: 6
+      confidence: 0.3
+      description: >-
+        "intelligence.failure_scan" and "intelligence.failure_scan" co-occur within 5s — 6
+        observations
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789169896557
+  id: ace86e95-4e32-4322-8d8b-4ca66e688f9e
+  crystallised: true
+  crystallisedAt: 1789172753438

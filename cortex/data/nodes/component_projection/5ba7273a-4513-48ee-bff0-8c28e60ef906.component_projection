@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-5ba7273a-4513-48ee-bff0-8c28e60ef906
+type: component_projection
+id: 5ba7273a-4513-48ee-bff0-8c28e60ef906
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821750
+source: data/cortex/memory/component_projections.json:5ba7273a-4513-48ee-bff0-8c28e60ef906
+payload:
+  uuid: 31e8db04-6d24-4624-aa05-be163ab1bed5
+  componentId: ollama.queue.status
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.ollama.queue.status
+    componentId: ollama.queue.status
+    version: 1.0.0
+    namespace: ollama
+    name: queue.status
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.ollama.queue.status
+    command: status
+    aliases:
+      - ollama queue
+      - oq
+    help: |-
+      queue.status
+        Queue depth and running count
+    route:
+      method: GET
+      path: /api/queue
+    componentId: ollama.queue.status
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.ollama.queue.status
+    componentId: ollama.queue.status
+    entries:
+      - ollama queue
+      - oq
+      - queue.status
+      - status
+    route:
+      method: GET
+      path: /api/queue
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.ollama.queue.status
+    componentId: ollama.queue.status
+    label: QUEUE.STATUS
+    icon: ◈
+    tooltip: Queue depth and running count
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/queue
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.ollama.queue.status
+    componentId: ollama.queue.status
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.ollama.queue.status
+    componentId: ollama.queue.status
+    chunk1:
+      system: ollama
+      command: status
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.ollama.queue.status
+    componentId: ollama.queue.status
+    markdown: |-
+      # queue.status
+
+      **ID:** `ollama.queue.status` · **Tier:** T1 · **Version:** 1.0.0
+
+      Queue depth and running count
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840189
+  id: 5ba7273a-4513-48ee-bff0-8c28e60ef906
+  updatedAt: 1789179436913

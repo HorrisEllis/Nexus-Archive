@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-219ed48c-4b57-44f7-9c7c-5d418a7646a8
+type: hook_contract
+id: 219ed48c-4b57-44f7-9c7c-5d418a7646a8
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822206
+source: data/cortex/memory/hooks.json:219ed48c-4b57-44f7-9c7c-5d418a7646a8
+payload:
+  uuid: 219ed48c-4b57-44f7-9c7c-5d418a7646a8
+  id: 219ed48c-4b57-44f7-9c7c-5d418a7646a8
+  name: cg.dom.tokens
+  intent: Token archaeology — detect LLM API patterns on page
+  version: 3.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cg
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /cmd
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cg.dom.tokens
+    event: architect.hook.cg.dom.tokens
+    route: POST /cmd
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867488
+    updatedAt: 1789169867488
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cg
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

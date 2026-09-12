@@ -1,0 +1,27 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-ambiguity_pull
+type: tool_index_entry
+id: ambiguity_pull
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822129
+source: data/cortex/memory/tool_index.json:ambiguity_pull
+payload:
+  id: ambiguity_pull
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Resolve something ambiguous by pulling in strict cheap-to-expensive order: cortex recall (incl.
+    chat history) → loom-map → [agent_model, honestly skipped — not built yet] → Perplexity → raw
+    browser search, only reaching each next step if the previous one came back empty or erroring.
+    Returns the full trace of what was tried, not just the final answer — use "resolve" (needs
+    query, optional session, optional allowBrowserFallback:false to stop before raw browsing).
+  updatedAt: 1789179646686
+  _key: ambiguity_pull

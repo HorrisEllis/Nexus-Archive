@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-3eb4dbd3-aa05-4af2-ab1e-4c58c15df6e7
+type: bep_pattern
+id: 3eb4dbd3-aa05-4af2-ab1e-4c58c15df6e7
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853803
+source: data/cortex/memory/bep_patterns.json:3eb4dbd3-aa05-4af2-ab1e-4c58c15df6e7
+payload:
+  uuid: 0e430d6d-8a80-4f07-92b4-f93e234d5f7c
+  signature: ledger.architect.updated::ledger.loom.updated
+  patternType: cross_system_causal
+  typeA: ledger.architect.updated
+  typeB: ledger.loom.updated
+  systemA: architect
+  systemB: loom
+  crossSystem: true
+  count: 425
+  confidence: 1
+  description: >-
+    "ledger.architect.updated" (architect) and "ledger.loom.updated" (loom) co-occur within 5s
+    across two real systems — 425 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: 3eb4dbd3-aa05-4af2-ab1e-4c58c15df6e7

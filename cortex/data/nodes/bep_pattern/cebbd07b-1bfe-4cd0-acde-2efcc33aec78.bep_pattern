@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-cebbd07b-1bfe-4cd0-acde-2efcc33aec78
+type: bep_pattern
+id: cebbd07b-1bfe-4cd0-acde-2efcc33aec78
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853690
+source: data/cortex/memory/bep_patterns.json:cebbd07b-1bfe-4cd0-acde-2efcc33aec78
+payload:
+  uuid: 604999df-155b-4202-8a07-eee6c6e90455
+  signature: ledger.cortex.registered::provider.host.wake-intro
+  patternType: cross_system_causal
+  typeA: ledger.cortex.registered
+  typeB: provider.host.wake-intro
+  systemA: clear-glass
+  systemB: cortex
+  crossSystem: true
+  count: 39
+  confidence: 1
+  description: >-
+    "ledger.cortex.registered" (clear-glass) and "provider.host.wake-intro" (cortex) co-occur within
+    5s across two real systems — 39 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169846555
+  id: cebbd07b-1bfe-4cd0-acde-2efcc33aec78

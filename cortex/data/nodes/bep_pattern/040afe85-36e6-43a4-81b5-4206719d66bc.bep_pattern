@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-040afe85-36e6-43a4-81b5-4206719d66bc
+type: bep_pattern
+id: 040afe85-36e6-43a4-81b5-4206719d66bc
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853816
+source: data/cortex/memory/bep_patterns.json:040afe85-36e6-43a4-81b5-4206719d66bc
+payload:
+  uuid: 0f38556b-36b4-45fe-8254-1e129c9712b2
+  signature: guardian.job.dispatched::nexus.resource.pressure
+  patternType: cross_system_causal
+  typeA: guardian.job.dispatched
+  typeB: nexus.resource.pressure
+  systemA: guardian
+  systemB: orchestrator
+  crossSystem: true
+  count: 4
+  confidence: 0.2
+  description: >-
+    "guardian.job.dispatched" (guardian) and "nexus.resource.pressure" (orchestrator) co-occur
+    within 5s across two real systems — 4 observations
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179793095
+  id: 040afe85-36e6-43a4-81b5-4206719d66bc

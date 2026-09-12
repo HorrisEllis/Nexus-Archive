@@ -1,0 +1,44 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-7e780d5b-3cc0-432b-a00c-d7f6a345ccfb
+type: interstitial_space
+id: 7e780d5b-3cc0-432b-a00c-d7f6a345ccfb
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821545
+source: data/cortex/memory/interstitial_spaces.json:7e780d5b-3cc0-432b-a00c-d7f6a345ccfb
+payload:
+  uuid: 640a40c9-06db-4531-9240-7c7d9f08d0f7
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::autopilot.instance_snapshot" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 794d4d2a-98c0-43e9-b2b6-f4bb507a1a59
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179332126
+  meta:
+    pattern:
+      uuid: 794d4d2a-98c0-43e9-b2b6-f4bb507a1a59
+      signature: precursor::autopilot.instance_snapshot
+      patternType: failure_precursor
+      precursorType: autopilot.instance_snapshot
+      failureTypes:
+        - intelligence.failure_scan
+      count: 10
+      confidence: 1
+      description: '"autopilot.instance_snapshot" precedes failures 10 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179332076
+      id: c28fc214-8857-473c-82a4-30166bbaf3ad
+  id: 7e780d5b-3cc0-432b-a00c-d7f6a345ccfb
+  crystallised: true
+  crystallisedAt: 1789179493012

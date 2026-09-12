@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-50d0c445-5642-480c-b049-04b4efd5abf8
+type: component_projection
+id: 50d0c445-5642-480c-b049-04b4efd5abf8
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821777
+source: data/cortex/memory/component_projections.json:50d0c445-5642-480c-b049-04b4efd5abf8
+payload:
+  uuid: 429e8172-4de0-4936-858b-842a0bd04db5
+  componentId: cortex.intelligence.failures
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cortex.intelligence.failures
+    componentId: cortex.intelligence.failures
+    version: 3.5.0
+    namespace: cortex
+    name: intelligence.failures
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cortex.intelligence.failures
+    command: failures
+    aliases:
+      - intelligence failures
+    help: |-
+      intelligence.failures
+        Failure mode taxonomy
+    route:
+      method: GET
+      path: /api/intelligence/failures
+    componentId: cortex.intelligence.failures
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cortex.intelligence.failures
+    componentId: cortex.intelligence.failures
+    entries:
+      - intelligence failures
+      - intelligence.failures
+      - failures
+    route:
+      method: GET
+      path: /api/intelligence/failures
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cortex.intelligence.failures
+    componentId: cortex.intelligence.failures
+    label: INTELLIGENCE.FAI
+    icon: ◈
+    tooltip: Failure mode taxonomy
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/intelligence/failures
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cortex.intelligence.failures
+    componentId: cortex.intelligence.failures
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cortex.intelligence.failures
+    componentId: cortex.intelligence.failures
+    chunk1:
+      system: cortex
+      command: failures
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cortex.intelligence.failures
+    componentId: cortex.intelligence.failures
+    markdown: |-
+      # intelligence.failures
+
+      **ID:** `cortex.intelligence.failures` · **Tier:** T1 · **Version:** 3.5.0
+
+      Failure mode taxonomy
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169841603
+  id: 50d0c445-5642-480c-b049-04b4efd5abf8
+  updatedAt: 1789179438460

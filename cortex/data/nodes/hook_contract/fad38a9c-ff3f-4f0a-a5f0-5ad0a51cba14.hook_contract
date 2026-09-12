@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-fad38a9c-ff3f-4f0a-a5f0-5ad0a51cba14
+type: hook_contract
+id: fad38a9c-ff3f-4f0a-a5f0-5ad0a51cba14
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822200
+source: data/cortex/memory/hooks.json:fad38a9c-ff3f-4f0a-a5f0-5ad0a51cba14
+payload:
+  uuid: fad38a9c-ff3f-4f0a-a5f0-5ad0a51cba14
+  id: fad38a9c-ff3f-4f0a-a5f0-5ad0a51cba14
+  name: idearium.idea.progress
+  intent: Record progress against an idea
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/ideas/:uuid/progress
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.idea.progress
+    event: architect.hook.idearium.idea.progress
+    route: POST /api/ideas/:uuid/progress
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-fe67524b-3b83-45a6-a493-2f56cb95d22c
+type: component_projection
+id: fe67524b-3b83-45a6-a493-2f56cb95d22c
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821708
+source: data/cortex/memory/component_projections.json:fe67524b-3b83-45a6-a493-2f56cb95d22c
+payload:
+  uuid: 1c41bd72-b594-4715-b33b-afb9baf32677
+  componentId: guardian.artifacts.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.artifacts.list
+    componentId: guardian.artifacts.list
+    version: 3.6.2
+    namespace: guardian
+    name: artifacts.list
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.artifacts.list
+    command: list
+    aliases:
+      - artifacts list
+      - artifacts-list
+    help: |-
+      artifacts.list
+        SHA-256 deduplicated code artifacts
+    route:
+      method: GET
+      path: /artifacts
+    componentId: guardian.artifacts.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.artifacts.list
+    componentId: guardian.artifacts.list
+    entries:
+      - artifacts list
+      - artifacts-list
+      - artifacts.list
+      - list
+    route:
+      method: GET
+      path: /artifacts
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.artifacts.list
+    componentId: guardian.artifacts.list
+    label: ARTIFACTS.LIST
+    icon: ◈
+    tooltip: SHA-256 deduplicated code artifacts
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /artifacts
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.artifacts.list
+    componentId: guardian.artifacts.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.artifacts.list
+    componentId: guardian.artifacts.list
+    chunk1:
+      system: guardian
+      command: list
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.artifacts.list
+    componentId: guardian.artifacts.list
+    markdown: |-
+      # artifacts.list
+
+      **ID:** `guardian.artifacts.list` · **Tier:** T1 · **Version:** 3.6.2
+
+      SHA-256 deduplicated code artifacts
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839937
+  id: fe67524b-3b83-45a6-a493-2f56cb95d22c
+  updatedAt: 1789179436770

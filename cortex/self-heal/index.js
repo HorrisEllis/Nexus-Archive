@@ -259,8 +259,9 @@ function _enterFailureMode(gapType, gapUuid, existing) {
   // right after, best-effort.
   (async () => {
     let content = `A real, automated self-heal remediation attempt has exhausted all 4 levels for a real fault. faultClass="${gapType}", gapUuid="${gapUuid}".`;
+    let ctx = null;
     try {
-      const ctx = await _gatherFailureContext(gapType, gapUuid);
+      ctx = await _gatherFailureContext(gapType, gapUuid);
       content += `\n\n${_formatFailureContext(ctx)}`;
       // §INTENT-AND-AGENT — forAgent stays unset: fault_taxonomy's real
       // row shape has no per-fault-class "which agent fixes this" field
@@ -277,6 +278,22 @@ function _enterFailureMode(gapType, gapUuid, existing) {
       }, { source: 'self-heal', intention: `heal:${gapType}`, onFail: { action: 'halt' } });
     } catch (e) {
       console.warn(`[${MODULE_ID}] could not submit level-4 fault as a real RAID contract (failure_modes row above is the real record either way): ${e.message}`);
+    }
+    // §ADDED 2026-09-12 — James: "each system needs .failure_mode nodes
+    // that uses the intelligence system to map the events leading up to
+    // a failure mode... delta and sigmas... make a .failure_mode and
+    // .macro to replicate the bug." Same real ctx already gathered above
+    // for the RAID contract text — reused, not re-derived — plus a real
+    // sigma delta and a real .debug_macro when the causal chain has real
+    // conditions to compose. Fire-and-forget, same §0.3 discipline as
+    // the RAID submission above: the synchronous failure_modes write
+    // already happened and is never delayed or risked by this.
+    try {
+      await require('./failure-mode-forensics.js').enrichFailureMode(
+        gapType, gapUuid, entry.uuid, _gatherFailureContext,
+      );
+    } catch (e) {
+      console.warn(`[${MODULE_ID}] failure-mode enrichment failed (failure_modes row above is the real record either way): ${e.message}`);
     }
   })();
   return { level: 4, outcome: 'failure_mode' };

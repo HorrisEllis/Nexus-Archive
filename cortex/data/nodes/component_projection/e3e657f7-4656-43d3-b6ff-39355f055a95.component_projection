@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-e3e657f7-4656-43d3-b6ff-39355f055a95
+type: component_projection
+id: e3e657f7-4656-43d3-b6ff-39355f055a95
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821746
+source: data/cortex/memory/component_projections.json:e3e657f7-4656-43d3-b6ff-39355f055a95
+payload:
+  uuid: 35a51f2e-e3c5-4a1b-ba21-f86b7413cdb6
+  componentId: eros.observer.unwatch
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eros.observer.unwatch
+    componentId: eros.observer.unwatch
+    version: 0.1.0
+    namespace: eros
+    name: observer.unwatch
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eros.observer.unwatch
+    command: unwatch
+    aliases:
+      - observer unwatch
+      - observer-unwatch
+    help: |-
+      observer.unwatch
+        Stop DOM observer on tab
+    route:
+      method: POST
+      path: /api/observer/unwatch
+    componentId: eros.observer.unwatch
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eros.observer.unwatch
+    componentId: eros.observer.unwatch
+    entries:
+      - observer unwatch
+      - observer-unwatch
+      - observer.unwatch
+      - unwatch
+    route:
+      method: POST
+      path: /api/observer/unwatch
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eros.observer.unwatch
+    componentId: eros.observer.unwatch
+    label: OBSERVER.UNWATCH
+    icon: ⬢
+    tooltip: Stop DOM observer on tab
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/observer/unwatch
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eros.observer.unwatch
+    componentId: eros.observer.unwatch
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eros.observer.unwatch
+    componentId: eros.observer.unwatch
+    chunk1:
+      system: eros
+      command: unwatch
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eros.observer.unwatch
+    componentId: eros.observer.unwatch
+    markdown: |-
+      # observer.unwatch
+
+      **ID:** `eros.observer.unwatch` · **Tier:** T2 · **Version:** 0.1.0
+
+      Stop DOM observer on tab
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840160
+  id: e3e657f7-4656-43d3-b6ff-39355f055a95
+  updatedAt: 1789179436875

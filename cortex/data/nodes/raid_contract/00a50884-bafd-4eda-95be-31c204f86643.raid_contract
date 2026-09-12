@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-raid_contract-00a50884-bafd-4eda-95be-31c204f86643
+type: raid_contract
+id: 00a50884-bafd-4eda-95be-31c204f86643
+context: real, live jaaDB row migrated from data/cortex/memory/raid_contract_queue.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822130
+source: data/cortex/memory/raid_contract_queue.json:00a50884-bafd-4eda-95be-31c204f86643
+payload:
+  uuid: c916d4f9-c580-4cea-aad2-8bc20cb7e390
+  status: fail
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: purpose
+  forAgent: ollama
+  contract:
+    content: |-
+      You are building the "Purpose & Intent" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: dep-test
+        Type: component
+        Description: (none provided)
+        UUID: 22c28fe5-6df0-4898-93db-1fee3fb79f3f
+        Chunk: 2/10
+        Section: purpose
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:22c28fe5:purpose
+        contract_id: spec-contract:22c28fe5:purpose:f01cc334
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 0min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real meta content
+
+      YOUR TASK:
+      Write the "Purpose & Intent" section for this spec.
+      What this component does, why it exists, what problem it solves
+      Requirements:
+      - Be specific to "dep-test" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: purpose
+    forAgent: ollama
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169837630
+  updatedAt: 1789169837727
+  id: 00a50884-bafd-4eda-95be-31c204f86643

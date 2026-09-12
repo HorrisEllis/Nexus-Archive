@@ -1,0 +1,23 @@
+envelope: 1
+uuid: nexus-export-constitution_decision-66f6dbfc-dcb4-4bfd-aa7e-98a52fe1f657
+type: constitution_decision
+id: 66f6dbfc-dcb4-4bfd-aa7e-98a52fe1f657
+context: real, live jaaDB row migrated from data/cortex/memory/constitution_decisions.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822102
+source: data/cortex/memory/constitution_decisions.json:66f6dbfc-dcb4-4bfd-aa7e-98a52fe1f657
+payload:
+  uuid: 89d03d7e-4250-470a-8837-57285be51f96
+  requestId: null
+  axiom: REVERSIBILITY
+  pass: true
+  reason: Action is reversible.
+  severity: flag
+  blast_radius: none
+  cost: 0
+  alternatives: []
+  ts: 1789179277741
+  id: 66f6dbfc-dcb4-4bfd-aa7e-98a52fe1f657

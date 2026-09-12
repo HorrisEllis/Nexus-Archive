@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-c654aec5-3063-4c77-ab1f-f3f41bcaece3
+type: hook_contract
+id: c654aec5-3063-4c77-ab1f-f3f41bcaece3
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822220
+source: data/cortex/memory/hooks.json:c654aec5-3063-4c77-ab1f-f3f41bcaece3
+payload:
+  uuid: c654aec5-3063-4c77-ab1f-f3f41bcaece3
+  id: c654aec5-3063-4c77-ab1f-f3f41bcaece3
+  name: eravos.organism.spawn
+  intent: Spawn an organism by id onto the canvas
+  version: 3.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: eravos
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/organisms
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook eravos.organism.spawn
+    event: architect.hook.eravos.organism.spawn
+    route: POST /api/organisms
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867489
+    updatedAt: 1789169867489
+    status: active
+    tags:
+      - synced-from-component-registry
+      - eravos
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

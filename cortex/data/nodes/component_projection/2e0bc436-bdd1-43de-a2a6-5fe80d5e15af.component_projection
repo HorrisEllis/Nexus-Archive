@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-2e0bc436-bdd1-43de-a2a6-5fe80d5e15af
+type: component_projection
+id: 2e0bc436-bdd1-43de-a2a6-5fe80d5e15af
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821708
+source: data/cortex/memory/component_projections.json:2e0bc436-bdd1-43de-a2a6-5fe80d5e15af
+payload:
+  uuid: 1470920b-f615-4cd0-8737-1e38109c30ed
+  componentId: guardian.gaps.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.gaps.list
+    componentId: guardian.gaps.list
+    version: 3.6.2
+    namespace: guardian
+    name: gaps.list
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.gaps.list
+    command: list
+    aliases:
+      - gaps list
+      - gaps-list
+    help: |-
+      gaps.list
+        Open gaps detected by guardian
+    route:
+      method: GET
+      path: /gaps
+    componentId: guardian.gaps.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.gaps.list
+    componentId: guardian.gaps.list
+    entries:
+      - gaps list
+      - gaps-list
+      - gaps.list
+      - list
+    route:
+      method: GET
+      path: /gaps
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.gaps.list
+    componentId: guardian.gaps.list
+    label: GAPS.LIST
+    icon: ◈
+    tooltip: Open gaps detected by guardian
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /gaps
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.gaps.list
+    componentId: guardian.gaps.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.gaps.list
+    componentId: guardian.gaps.list
+    chunk1:
+      system: guardian
+      command: list
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.gaps.list
+    componentId: guardian.gaps.list
+    markdown: |-
+      # gaps.list
+
+      **ID:** `guardian.gaps.list` · **Tier:** T1 · **Version:** 3.6.2
+
+      Open gaps detected by guardian
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839938
+  id: 2e0bc436-bdd1-43de-a2a6-5fe80d5e15af
+  updatedAt: 1789179436771

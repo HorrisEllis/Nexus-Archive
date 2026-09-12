@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-raid_contract-e742abf2-f2a8-4423-a9df-bd2037be71c8
+type: raid_contract
+id: e742abf2-f2a8-4423-a9df-bd2037be71c8
+context: real, live jaaDB row migrated from data/cortex/memory/raid_contract_queue.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822132
+source: data/cortex/memory/raid_contract_queue.json:e742abf2-f2a8-4423-a9df-bd2037be71c8
+payload:
+  uuid: e7dc78a7-31ff-45d2-8e7e-d05bc29057bc
+  status: fail
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: integration
+  forAgent: gemini
+  contract:
+    content: |-
+      You are building the "Integration Points" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: dep-test
+        Type: component
+        Description: (none provided)
+        UUID: 22c28fe5-6df0-4898-93db-1fee3fb79f3f
+        Chunk: 7/10
+        Section: integration
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:22c28fe5:integration
+        contract_id: spec-contract:22c28fe5:integration:2c221c80
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 1min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real meta content
+
+      YOUR TASK:
+      Write the "Integration Points" section for this spec.
+      What talks to this, what this talks to, seam contracts
+      Requirements:
+      - Be specific to "dep-test" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: integration
+    forAgent: gemini
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169912696
+  updatedAt: 1789169912727
+  id: e742abf2-f2a8-4423-a9df-bd2037be71c8

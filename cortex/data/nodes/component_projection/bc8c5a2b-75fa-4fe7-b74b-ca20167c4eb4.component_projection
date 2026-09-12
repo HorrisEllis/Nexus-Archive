@@ -1,0 +1,100 @@
+envelope: 1
+uuid: nexus-export-component_projection-bc8c5a2b-75fa-4fe7-b74b-ca20167c4eb4
+type: component_projection
+id: bc8c5a2b-75fa-4fe7-b74b-ca20167c4eb4
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821767
+source: data/cortex/memory/component_projections.json:bc8c5a2b-75fa-4fe7-b74b-ca20167c4eb4
+payload:
+  uuid: 14c5b135-0908-49c0-b650-fbb3c3ad0f6d
+  componentId: architect.contract
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.architect.contract
+    componentId: architect.contract
+    version: 1.0.0
+    namespace: architect
+    name: contract
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.architect.contract
+    command: contract
+    aliases:
+      - contract
+    help: |-
+      contract
+        Architect interaction contract
+    route:
+      method: GET
+      path: /api/contract
+    componentId: architect.contract
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.architect.contract
+    componentId: architect.contract
+    entries:
+      - contract
+    route:
+      method: GET
+      path: /api/contract
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.architect.contract
+    componentId: architect.contract
+    label: CONTRACT
+    icon: ◈
+    tooltip: Architect interaction contract
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/contract
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.architect.contract
+    componentId: architect.contract
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.architect.contract
+    componentId: architect.contract
+    chunk1:
+      system: architect
+      command: contract
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.architect.contract
+    componentId: architect.contract
+    markdown: |-
+      # contract
+
+      **ID:** `architect.contract` · **Tier:** T1 · **Version:** 1.0.0
+
+      Architect interaction contract
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840296
+  id: bc8c5a2b-75fa-4fe7-b74b-ca20167c4eb4
+  updatedAt: 1789179437502

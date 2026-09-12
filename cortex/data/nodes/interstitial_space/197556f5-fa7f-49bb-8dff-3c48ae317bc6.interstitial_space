@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-197556f5-fa7f-49bb-8dff-3c48ae317bc6
+type: interstitial_space
+id: 197556f5-fa7f-49bb-8dff-3c48ae317bc6
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821544
+source: data/cortex/memory/interstitial_spaces.json:197556f5-fa7f-49bb-8dff-3c48ae317bc6
+payload:
+  uuid: 397b99cc-7139-4911-86f6-d92c94351c59
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "intelligence.reuse_index_built" and "intent.classified"'
+  type: co_occurrence
+  confidence: 0.7
+  count: 1
+  causedBy: 97a744c6-019b-43b9-b0e5-6aca5b6c4ded
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.95
+  ts: 1789179212051
+  meta:
+    pattern:
+      uuid: 97a744c6-019b-43b9-b0e5-6aca5b6c4ded
+      signature: intelligence.reuse_index_built::intent.classified
+      patternType: co_occurrence
+      typeA: intelligence.reuse_index_built
+      typeB: intent.classified
+      systemA: cortex
+      systemB: null
+      crossSystem: false
+      count: 14
+      confidence: 0.7
+      description: >-
+        "intelligence.reuse_index_built" and "intent.classified" co-occur within 5s — 14
+        observations
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179212015
+  id: 197556f5-fa7f-49bb-8dff-3c48ae317bc6

@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-8e65a2b4-7326-4e2b-a667-c21ccdd0c763
+type: component_projection
+id: 8e65a2b4-7326-4e2b-a667-c21ccdd0c763
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821723
+source: data/cortex/memory/component_projections.json:8e65a2b4-7326-4e2b-a667-c21ccdd0c763
+payload:
+  uuid: e7464715-9f19-4717-982d-f868d3fcad0f
+  componentId: idearium.repo.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.repo.list
+    componentId: idearium.repo.list
+    version: 1.0.0
+    namespace: idearium
+    name: repo.list
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.repo.list
+    command: list
+    aliases:
+      - list repo
+      - repo list
+    help: |-
+      repo.list
+        List ingested repos
+    route:
+      method: GET
+      path: /api/repos
+    componentId: idearium.repo.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.repo.list
+    componentId: idearium.repo.list
+    entries:
+      - list repo
+      - repo list
+      - repo.list
+      - list
+    route:
+      method: GET
+      path: /api/repos
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.repo.list
+    componentId: idearium.repo.list
+    label: REPO.LIST
+    icon: ◈
+    tooltip: List ingested repos
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/repos
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.repo.list
+    componentId: idearium.repo.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.repo.list
+    componentId: idearium.repo.list
+    chunk1:
+      system: idearium
+      command: list
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.repo.list
+    componentId: idearium.repo.list
+    markdown: |-
+      # repo.list
+
+      **ID:** `idearium.repo.list` · **Tier:** T1 · **Version:** 1.0.0
+
+      List ingested repos
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840011
+  id: 8e65a2b4-7326-4e2b-a667-c21ccdd0c763
+  updatedAt: 1789179436961

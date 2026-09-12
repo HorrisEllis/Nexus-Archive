@@ -1,0 +1,25 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-file_tree
+type: tool_index_entry
+id: file_tree
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822127
+source: data/cortex/memory/tool_index.json:file_tree
+payload:
+  id: file_tree
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    List files and directories under a path in the project, relative to the project root,
+    recursively up to a max depth. Use this to discover what exists before calling read_file on a
+    specific path.
+  updatedAt: 1789179646673
+  _key: file_tree

@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-13d99cdb-91fd-44e3-b157-ba45f3bfae77
+type: component_projection
+id: 13d99cdb-91fd-44e3-b157-ba45f3bfae77
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821721
+source: data/cortex/memory/component_projections.json:13d99cdb-91fd-44e3-b157-ba45f3bfae77
+payload:
+  uuid: f5f45604-68a7-4d69-8a3c-cabcb13ff290
+  componentId: idearium.gap.show
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.gap.show
+    componentId: idearium.gap.show
+    version: 1.0.0
+    namespace: idearium
+    name: gap.show
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.gap.show
+    command: show
+    aliases:
+      - show gap
+      - gap show
+    help: |-
+      gap.show
+        Get a single gap by uuid
+    route:
+      method: GET
+      path: /api/gaps/:uuid
+    componentId: idearium.gap.show
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.gap.show
+    componentId: idearium.gap.show
+    entries:
+      - show gap
+      - gap show
+      - gap.show
+      - show
+    route:
+      method: GET
+      path: /api/gaps/:uuid
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.gap.show
+    componentId: idearium.gap.show
+    label: GAP.SHOW
+    icon: ◈
+    tooltip: Get a single gap by uuid
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/gaps/:uuid
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.gap.show
+    componentId: idearium.gap.show
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.gap.show
+    componentId: idearium.gap.show
+    chunk1:
+      system: idearium
+      command: show
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.gap.show
+    componentId: idearium.gap.show
+    markdown: |-
+      # gap.show
+
+      **ID:** `idearium.gap.show` · **Tier:** T1 · **Version:** 1.0.0
+
+      Get a single gap by uuid
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839994
+  id: 13d99cdb-91fd-44e3-b157-ba45f3bfae77
+  updatedAt: 1789179436955

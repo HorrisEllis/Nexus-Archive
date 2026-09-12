@@ -1,0 +1,27 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-synthesize
+type: tool_index_entry
+id: synthesize
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822122
+source: data/cortex/memory/tool_index.json:synthesize
+payload:
+  id: synthesize
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Synthesize a real, structured build contract (fileName, primitives, compartmentUuid, synthesized
+    context, endState, conditions, axioms, tools) from plain-text context — the same the_officiator
+    hat and B1 schema officiate() uses for staged artifacts, but callable directly by any agent for
+    its OWN reasoning. Does NOT queue a contract by default — pass submit:true to also submit one
+    via the real RAID contract-intake path.
+  updatedAt: 1789179646625
+  _key: synthesize

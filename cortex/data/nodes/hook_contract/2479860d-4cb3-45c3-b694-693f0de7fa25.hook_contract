@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-2479860d-4cb3-45c3-b694-693f0de7fa25
+type: hook_contract
+id: 2479860d-4cb3-45c3-b694-693f0de7fa25
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822215
+source: data/cortex/memory/hooks.json:2479860d-4cb3-45c3-b694-693f0de7fa25
+payload:
+  uuid: 2479860d-4cb3-45c3-b694-693f0de7fa25
+  id: 2479860d-4cb3-45c3-b694-693f0de7fa25
+  name: eros.node.sweep
+  intent: Sweep stale nodes (last-seen > threshold)
+  version: 0.1.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: eros
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/node/sweep
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook eros.node.sweep
+    event: architect.hook.eros.node.sweep
+    route: POST /api/node/sweep
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867489
+    updatedAt: 1789169867489
+    status: active
+    tags:
+      - synced-from-component-registry
+      - eros
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

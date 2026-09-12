@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-e9dabf2d-d931-4ca5-949b-08f5d86a6f13
+type: component_projection
+id: e9dabf2d-d931-4ca5-949b-08f5d86a6f13
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821735
+source: data/cortex/memory/component_projections.json:e9dabf2d-d931-4ca5-949b-08f5d86a6f13
+payload:
+  uuid: 68b9a3dd-b6df-4eab-922f-79a467a83fa6
+  componentId: cg.fingerprint.import
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.fingerprint.import
+    componentId: cg.fingerprint.import
+    version: 3.0.0
+    namespace: cg
+    name: fingerprint.import
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.fingerprint.import
+    command: import
+    aliases:
+      - fingerprint import
+      - fingerprint-import
+    help: |-
+      fingerprint.import
+        Import Firefox profile for agent
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.fingerprint.import
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.fingerprint.import
+    componentId: cg.fingerprint.import
+    entries:
+      - fingerprint import
+      - fingerprint-import
+      - fingerprint.import
+      - import
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.fingerprint.import
+    componentId: cg.fingerprint.import
+    label: FINGERPRINT.IMPO
+    icon: ⬢
+    tooltip: Import Firefox profile for agent
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.fingerprint.import
+    componentId: cg.fingerprint.import
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.fingerprint.import
+    componentId: cg.fingerprint.import
+    chunk1:
+      system: cg
+      command: import
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.fingerprint.import
+    componentId: cg.fingerprint.import
+    markdown: |-
+      # fingerprint.import
+
+      **ID:** `cg.fingerprint.import` · **Tier:** T2 · **Version:** 3.0.0
+
+      Import Firefox profile for agent
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840083
+  id: e9dabf2d-d931-4ca5-949b-08f5d86a6f13
+  updatedAt: 1789179436812

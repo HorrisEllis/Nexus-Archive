@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-loom_scan
+type: tool_index_entry
+id: loom_scan
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822123
+source: data/cortex/memory/tool_index.json:loom_scan
+payload:
+  id: loom_scan
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Scan the real NEXUS tree to expand/diagnose the map — the "what actually exists" layer under
+    nexus_status's summaries. Actions: "capabilities" (all declared routes across every
+    registry-components.js, with version-collision duplicates flagged), "dangling" (require()/import
+    paths pointing at nothing on disk, grouped by file), "specs" (parsed .spec files and where they
+    diverge from the registry; pass checkRegistry:true for full coverage check — slower), "source"
+    (raw source tree structure), "closed_door" (undeclared components — real code nobody
+    registered), "phasemap" (roadmap/phase state, optionally scoped to one system). Use before
+    nexus_heal's "propose" so a proposed fix is grounded in a real finding, not a guess.
+  updatedAt: 1789179646636
+  _key: loom_scan

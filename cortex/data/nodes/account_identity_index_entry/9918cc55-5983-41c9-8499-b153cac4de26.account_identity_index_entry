@@ -1,0 +1,20 @@
+envelope: 1
+uuid: nexus-export-account_identity_index_entry-9918cc55-5983-41c9-8499-b153cac4de26
+type: account_identity_index_entry
+id: 9918cc55-5983-41c9-8499-b153cac4de26
+context: real, live jaaDB row migrated from data/cortex/memory/account_identity_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853819
+source: data/cortex/memory/account_identity_index.json:9918cc55-5983-41c9-8499-b153cac4de26
+payload:
+  uuid: 0e21da3a-c6fd-4ee1-9e15-2b46e79bf164
+  agentId: gemini
+  account: |-
+    Google Account: James Brooks  
+    (jamesbrooks1234567891011@gmail.com)
+  createdAt: 1789169847440
+  lastSeenAt: 1789169847440
+  id: 9918cc55-5983-41c9-8499-b153cac4de26

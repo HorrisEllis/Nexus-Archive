@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-184983ec-356f-4d1a-aa83-f95fcb603502
+type: component_projection
+id: 184983ec-356f-4d1a-aa83-f95fcb603502
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821769
+source: data/cortex/memory/component_projections.json:184983ec-356f-4d1a-aa83-f95fcb603502
+payload:
+  uuid: f7bae81c-e5bc-4cd8-beea-ff0a82fde4c9
+  componentId: architect.blueprint.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.architect.blueprint.list
+    componentId: architect.blueprint.list
+    version: 1.0.0
+    namespace: architect
+    name: blueprint.list
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.architect.blueprint.list
+    command: list
+    aliases:
+      - blueprint list
+    help: |-
+      blueprint.list
+        Blueprint list
+    route:
+      method: GET
+      path: /api/blueprint
+    componentId: architect.blueprint.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.architect.blueprint.list
+    componentId: architect.blueprint.list
+    entries:
+      - blueprint list
+      - blueprint.list
+      - list
+    route:
+      method: GET
+      path: /api/blueprint
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.architect.blueprint.list
+    componentId: architect.blueprint.list
+    label: BLUEPRINT.LIST
+    icon: ◈
+    tooltip: Blueprint list
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/blueprint
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.architect.blueprint.list
+    componentId: architect.blueprint.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.architect.blueprint.list
+    componentId: architect.blueprint.list
+    chunk1:
+      system: architect
+      command: list
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.architect.blueprint.list
+    componentId: architect.blueprint.list
+    markdown: |-
+      # blueprint.list
+
+      **ID:** `architect.blueprint.list` · **Tier:** T1 · **Version:** 1.0.0
+
+      Blueprint list
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840317
+  id: 184983ec-356f-4d1a-aa83-f95fcb603502
+  updatedAt: 1789179437522

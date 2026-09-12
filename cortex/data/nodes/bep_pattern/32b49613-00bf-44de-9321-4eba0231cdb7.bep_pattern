@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-32b49613-00bf-44de-9321-4eba0231cdb7
+type: bep_pattern
+id: 32b49613-00bf-44de-9321-4eba0231cdb7
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853730
+source: data/cortex/memory/bep_patterns.json:32b49613-00bf-44de-9321-4eba0231cdb7
+payload:
+  uuid: 8445cefc-d9d1-4c66-8638-d723acfd17fa
+  signature: ledger.copilot.event::ledger.diagnostic.dangling-hook
+  patternType: cross_system_causal
+  typeA: ledger.copilot.event
+  typeB: ledger.diagnostic.dangling-hook
+  systemA: copilot
+  systemB: diagnostic
+  crossSystem: true
+  count: 100
+  confidence: 1
+  description: >-
+    "ledger.copilot.event" (copilot) and "ledger.diagnostic.dangling-hook" (diagnostic) co-occur
+    within 5s across two real systems — 100 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169956649
+  id: 32b49613-00bf-44de-9321-4eba0231cdb7

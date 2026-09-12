@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-edc0ad90-5f37-4c4e-b239-a77e20639315
+type: component_projection
+id: edc0ad90-5f37-4c4e-b239-a77e20639315
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821703
+source: data/cortex/memory/component_projections.json:edc0ad90-5f37-4c4e-b239-a77e20639315
+payload:
+  uuid: 68800cdb-f335-4c2f-a957-95b8eddb4407
+  componentId: guardian.seam.retry
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.seam.retry
+    componentId: guardian.seam.retry
+    version: 3.6.2
+    namespace: guardian
+    name: seam.retry
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.seam.retry
+    command: retry
+    aliases:
+      - seam retry
+      - seam-retry
+    help: |-
+      seam.retry
+        Retry a failed SEAM chunk
+    route:
+      method: POST
+      path: /seam/retry
+    componentId: guardian.seam.retry
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.seam.retry
+    componentId: guardian.seam.retry
+    entries:
+      - seam retry
+      - seam-retry
+      - seam.retry
+      - retry
+    route:
+      method: POST
+      path: /seam/retry
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.seam.retry
+    componentId: guardian.seam.retry
+    label: SEAM.RETRY
+    icon: ◈
+    tooltip: Retry a failed SEAM chunk
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /seam/retry
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.seam.retry
+    componentId: guardian.seam.retry
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.seam.retry
+    componentId: guardian.seam.retry
+    chunk1:
+      system: guardian
+      command: retry
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.seam.retry
+    componentId: guardian.seam.retry
+    markdown: |-
+      # seam.retry
+
+      **ID:** `guardian.seam.retry` · **Tier:** T1 · **Version:** 3.6.2
+
+      Retry a failed SEAM chunk
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839928
+  id: edc0ad90-5f37-4c4e-b239-a77e20639315
+  updatedAt: 1789179436765

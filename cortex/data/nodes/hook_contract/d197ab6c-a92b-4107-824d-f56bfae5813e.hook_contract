@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-d197ab6c-a92b-4107-824d-f56bfae5813e
+type: hook_contract
+id: d197ab6c-a92b-4107-824d-f56bfae5813e
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822230
+source: data/cortex/memory/hooks.json:d197ab6c-a92b-4107-824d-f56bfae5813e
+payload:
+  uuid: d197ab6c-a92b-4107-824d-f56bfae5813e
+  id: d197ab6c-a92b-4107-824d-f56bfae5813e
+  name: loom.hooks.list
+  intent: List hooks — the registry loom is write authority for
+  version: 1.5.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: loom
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /api/hooks
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook loom.hooks.list
+    event: architect.hook.loom.hooks.list
+    route: GET /api/hooks
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867490
+    updatedAt: 1789169867490
+    status: active
+    tags:
+      - synced-from-component-registry
+      - loom
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

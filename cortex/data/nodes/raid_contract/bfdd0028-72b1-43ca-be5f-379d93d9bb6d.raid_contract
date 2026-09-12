@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-raid_contract-bfdd0028-72b1-43ca-be5f-379d93d9bb6d
+type: raid_contract
+id: bfdd0028-72b1-43ca-be5f-379d93d9bb6d
+context: real, live jaaDB row migrated from data/cortex/memory/raid_contract_queue.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822131
+source: data/cortex/memory/raid_contract_queue.json:bfdd0028-72b1-43ca-be5f-379d93d9bb6d
+payload:
+  uuid: 7f32c36b-5609-4c79-921b-68eb66f6709f
+  status: fail
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: axioms
+  forAgent: claude
+  contract:
+    content: |-
+      You are building the "Axioms Enforced" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: dep-test
+        Type: component
+        Description: (none provided)
+        UUID: 22c28fe5-6df0-4898-93db-1fee3fb79f3f
+        Chunk: 3/10
+        Section: axioms
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:22c28fe5:axioms
+        contract_id: spec-contract:22c28fe5:axioms:da9b9469
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 0min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real meta content
+
+      YOUR TASK:
+      Write the "Axioms Enforced" section for this spec.
+      Which AXIOMS-v1.0 axioms this component satisfies, with evidence
+      Requirements:
+      - Be specific to "dep-test" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: axioms
+    forAgent: claude
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169852662
+  updatedAt: 1789169852691
+  id: bfdd0028-72b1-43ca-be5f-379d93d9bb6d

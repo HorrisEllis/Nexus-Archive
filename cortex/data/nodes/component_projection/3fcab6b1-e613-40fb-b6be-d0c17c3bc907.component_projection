@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-3fcab6b1-e613-40fb-b6be-d0c17c3bc907
+type: component_projection
+id: 3fcab6b1-e613-40fb-b6be-d0c17c3bc907
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821741
+source: data/cortex/memory/component_projections.json:3fcab6b1-e613-40fb-b6be-d0c17c3bc907
+payload:
+  uuid: d6c2c0aa-23e5-415e-9c85-c8dfd13001ad
+  componentId: eros.cmd.evaluate
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eros.cmd.evaluate
+    componentId: eros.cmd.evaluate
+    version: 0.1.0
+    namespace: eros
+    name: cmd.evaluate
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eros.cmd.evaluate
+    command: evaluate
+    aliases:
+      - cmd evaluate
+      - cmd-evaluate
+    help: |-
+      cmd.evaluate
+        CDP evaluate JS — no string interpolation
+    route:
+      method: POST
+      path: /api/os/evaluate
+    componentId: eros.cmd.evaluate
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eros.cmd.evaluate
+    componentId: eros.cmd.evaluate
+    entries:
+      - cmd evaluate
+      - cmd-evaluate
+      - cmd.evaluate
+      - evaluate
+    route:
+      method: POST
+      path: /api/os/evaluate
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eros.cmd.evaluate
+    componentId: eros.cmd.evaluate
+    label: CMD.EVALUATE
+    icon: ⬢
+    tooltip: CDP evaluate JS — no string interpolation
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/os/evaluate
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eros.cmd.evaluate
+    componentId: eros.cmd.evaluate
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eros.cmd.evaluate
+    componentId: eros.cmd.evaluate
+    chunk1:
+      system: eros
+      command: evaluate
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eros.cmd.evaluate
+    componentId: eros.cmd.evaluate
+    markdown: |-
+      # cmd.evaluate
+
+      **ID:** `eros.cmd.evaluate` · **Tier:** T2 · **Version:** 0.1.0
+
+      CDP evaluate JS — no string interpolation
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840131
+  id: 3fcab6b1-e613-40fb-b6be-d0c17c3bc907
+  updatedAt: 1789179436853

@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-raid_contract-0a5d7dca-42b9-4d78-96b4-36471f713c3d
+type: raid_contract
+id: 0a5d7dca-42b9-4d78-96b4-36471f713c3d
+context: real, live jaaDB row migrated from data/cortex/memory/raid_contract_queue.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822131
+source: data/cortex/memory/raid_contract_queue.json:0a5d7dca-42b9-4d78-96b4-36471f713c3d
+payload:
+  uuid: bd6be392-8d34-45da-bc9c-856301eda393
+  status: fail
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: schema
+  forAgent: deepseek
+  contract:
+    content: |-
+      You are building the "Data Schema" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: checklist-demo
+        Type: component
+        Description: (none provided)
+        UUID: 07c37e3e-76e8-41eb-aba3-fa02a9e92476
+        Chunk: 4/10
+        Section: schema
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:07c37e3e:schema
+        contract_id: spec-contract:07c37e3e:schema:9311efdb
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 1min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real content for the first chunk
+
+      YOUR TASK:
+      Write the "Data Schema" section for this spec.
+      JAA tables, field shapes, types, constraints, decay tier
+      Requirements:
+      - Be specific to "checklist-demo" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: schema
+    forAgent: deepseek
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169867680
+  updatedAt: 1789169867707
+  id: 0a5d7dca-42b9-4d78-96b4-36471f713c3d

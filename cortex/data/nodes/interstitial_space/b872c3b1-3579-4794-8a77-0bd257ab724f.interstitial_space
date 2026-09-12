@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-b872c3b1-3579-4794-8a77-0bd257ab724f
+type: interstitial_space
+id: b872c3b1-3579-4794-8a77-0bd257ab724f
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821562
+source: data/cortex/memory/interstitial_spaces.json:b872c3b1-3579-4794-8a77-0bd257ab724f
+payload:
+  uuid: bea331ba-554d-432b-a3d2-789183088af0
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "guardian.job.stream" and "intelligence.failure_scan"'
+  type: co_occurrence
+  confidence: 0.2
+  count: 1
+  causedBy: b63fee41-f61c-4cba-aca9-4183943f3698
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179673164
+  meta:
+    pattern:
+      uuid: b63fee41-f61c-4cba-aca9-4183943f3698
+      signature: guardian.job.stream::intelligence.failure_scan
+      patternType: co_occurrence
+      typeA: guardian.job.stream
+      typeB: intelligence.failure_scan
+      systemA: null
+      systemB: cortex
+      crossSystem: false
+      count: 4
+      confidence: 0.2
+      description: '"guardian.job.stream" and "intelligence.failure_scan" co-occur within 5s — 4 observations'
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179673084
+  id: b872c3b1-3579-4794-8a77-0bd257ab724f

@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-ec31f8a4-d383-4a62-8c58-6fb04c1914d9
+type: bep_pattern
+id: ec31f8a4-d383-4a62-8c58-6fb04c1914d9
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853742
+source: data/cortex/memory/bep_patterns.json:ec31f8a4-d383-4a62-8c58-6fb04c1914d9
+payload:
+  uuid: 13558a6d-ae68-47e8-b7c6-630d3cfa8275
+  signature: intent.classified::ledger.diagnostic.poll.complete
+  patternType: co_occurrence
+  typeA: intent.classified
+  typeB: ledger.diagnostic.poll.complete
+  systemA: null
+  systemB: diagnostic
+  crossSystem: false
+  count: 235
+  confidence: 1
+  description: '"intent.classified" and "ledger.diagnostic.poll.complete" co-occur within 5s — 235 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789172754013
+  id: ec31f8a4-d383-4a62-8c58-6fb04c1914d9

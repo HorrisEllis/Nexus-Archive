@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-b4ad7d47-7fe1-4bd3-83dc-775e3160b32f
+type: bep_pattern
+id: b4ad7d47-7fe1-4bd3-83dc-775e3160b32f
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853747
+source: data/cortex/memory/bep_patterns.json:b4ad7d47-7fe1-4bd3-83dc-775e3160b32f
+payload:
+  uuid: 84861553-8c90-46b9-8f6e-dec961cd7326
+  signature: adversarial.violation.detected::ledger.diagnostic.poll.complete
+  patternType: cross_system_causal
+  typeA: adversarial.violation.detected
+  typeB: ledger.diagnostic.poll.complete
+  systemA: diagnostic
+  systemB: copilot
+  crossSystem: true
+  count: 12
+  confidence: 0.6
+  description: >-
+    "adversarial.violation.detected" (diagnostic) and "ledger.diagnostic.poll.complete" (copilot)
+    co-occur within 5s across two real systems — 12 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789172754013
+  id: b4ad7d47-7fe1-4bd3-83dc-775e3160b32f

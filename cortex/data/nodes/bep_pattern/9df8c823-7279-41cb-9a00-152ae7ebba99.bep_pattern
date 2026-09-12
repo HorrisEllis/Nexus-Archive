@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-9df8c823-7279-41cb-9a00-152ae7ebba99
+type: bep_pattern
+id: 9df8c823-7279-41cb-9a00-152ae7ebba99
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853814
+source: data/cortex/memory/bep_patterns.json:9df8c823-7279-41cb-9a00-152ae7ebba99
+payload:
+  uuid: 2c121dfe-825a-40a5-861a-44d718125c1f
+  signature: guardian.job.dispatched::intelligence.reuse_index_built
+  patternType: cross_system_causal
+  typeA: guardian.job.dispatched
+  typeB: intelligence.reuse_index_built
+  systemA: cortex
+  systemB: guardian
+  crossSystem: true
+  count: 4
+  confidence: 0.2
+  description: >-
+    "guardian.job.dispatched" (cortex) and "intelligence.reuse_index_built" (guardian) co-occur
+    within 5s across two real systems — 4 observations
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179793095
+  id: 9df8c823-7279-41cb-9a00-152ae7ebba99

@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-37304233-7dc8-4d3c-a6b6-01ce5e4f1350
+type: hook_contract
+id: 37304233-7dc8-4d3c-a6b6-01ce5e4f1350
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822220
+source: data/cortex/memory/hooks.json:37304233-7dc8-4d3c-a6b6-01ce5e4f1350
+payload:
+  uuid: 37304233-7dc8-4d3c-a6b6-01ce5e4f1350
+  id: 37304233-7dc8-4d3c-a6b6-01ce5e4f1350
+  name: eravos.organism.remove
+  intent: Remove an organism
+  version: 3.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: eravos
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: DELETE
+      path: /api/organisms/:uuid
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook eravos.organism.remove
+    event: architect.hook.eravos.organism.remove
+    route: DELETE /api/organisms/:uuid
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867490
+    updatedAt: 1789169867490
+    status: active
+    tags:
+      - synced-from-component-registry
+      - eravos
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

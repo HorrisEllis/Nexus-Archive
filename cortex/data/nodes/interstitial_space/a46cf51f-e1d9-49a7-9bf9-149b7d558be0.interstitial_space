@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-a46cf51f-e1d9-49a7-9bf9-149b7d558be0
+type: interstitial_space
+id: a46cf51f-e1d9-49a7-9bf9-149b7d558be0
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821510
+source: data/cortex/memory/interstitial_spaces.json:a46cf51f-e1d9-49a7-9bf9-149b7d558be0
+payload:
+  uuid: 08e10409-b817-401d-8f81-582489ed3caa
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.versionium.registered" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 1a252680-74e8-4049-8d2d-492964773838
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.7
+  ts: 1789169896588
+  meta:
+    pattern:
+      uuid: 1a252680-74e8-4049-8d2d-492964773838
+      signature: precursor::ledger.versionium.registered
+      patternType: failure_precursor
+      precursorType: ledger.versionium.registered
+      failureTypes:
+        - intelligence.failure_scan
+      count: 24
+      confidence: 1
+      description: '"ledger.versionium.registered" precedes failures 24 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789169896557
+  id: a46cf51f-e1d9-49a7-9bf9-149b7d558be0
+  crystallised: true
+  crystallisedAt: 1789169896589

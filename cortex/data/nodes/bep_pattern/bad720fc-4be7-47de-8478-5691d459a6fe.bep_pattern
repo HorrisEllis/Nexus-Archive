@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-bad720fc-4be7-47de-8478-5691d459a6fe
+type: bep_pattern
+id: bad720fc-4be7-47de-8478-5691d459a6fe
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853782
+source: data/cortex/memory/bep_patterns.json:bad720fc-4be7-47de-8478-5691d459a6fe
+payload:
+  uuid: b1462534-dcfd-4337-b211-a8f58acc9c25
+  signature: adversarial.violation.detected::intelligence.failure_scan
+  patternType: cross_system_causal
+  typeA: adversarial.violation.detected
+  typeB: intelligence.failure_scan
+  systemA: cortex
+  systemB: copilot
+  crossSystem: true
+  count: 30
+  confidence: 1
+  description: >-
+    "adversarial.violation.detected" (cortex) and "intelligence.failure_scan" (copilot) co-occur
+    within 5s across two real systems — 30 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179101844
+  id: bad720fc-4be7-47de-8478-5691d459a6fe

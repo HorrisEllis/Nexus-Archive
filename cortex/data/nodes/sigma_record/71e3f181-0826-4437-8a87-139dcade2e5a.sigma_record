@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-sigma_record-71e3f181-0826-4437-8a87-139dcade2e5a
+type: sigma_record
+id: 71e3f181-0826-4437-8a87-139dcade2e5a
+context: real, live jaaDB row migrated from data/cortex/memory/sigma_records.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821632
+source: data/cortex/memory/sigma_records.json:71e3f181-0826-4437-8a87-139dcade2e5a
+payload:
+  uuid: 2a9753e8-2e1d-466f-a5ea-18a7167ef4e4
+  sigma: 0
+  type: ledger.write
+  axes:
+    structural: 0
+    temporal: 0
+    contextual: 0
+  reason: nominal
+  intervalMs: 2
+  cfrState:
+    coherence: 0.5
+    entropy: 0.5
+    friction: 0.5
+    resonance: 0.5
+  baselineSnap: null
+  source: sigma-writer
+  ts: 1789179437016
+  id: 71e3f181-0826-4437-8a87-139dcade2e5a

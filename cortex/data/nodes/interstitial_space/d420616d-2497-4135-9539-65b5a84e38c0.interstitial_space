@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-d420616d-2497-4135-9539-65b5a84e38c0
+type: interstitial_space
+id: d420616d-2497-4135-9539-65b5a84e38c0
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821518
+source: data/cortex/memory/interstitial_spaces.json:d420616d-2497-4135-9539-65b5a84e38c0
+payload:
+  uuid: 5db7e831-97c0-4216-83eb-156e46f90811
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "component.updated" and "ledger.loom.updated"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: f74b02f6-a14c-4a93-ad8b-25ab08e9c573
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.5
+  ts: 1789172753434
+  meta:
+    pattern:
+      uuid: f74b02f6-a14c-4a93-ad8b-25ab08e9c573
+      signature: component.updated::ledger.loom.updated
+      patternType: co_occurrence
+      typeA: component.updated
+      typeB: ledger.loom.updated
+      systemA: null
+      systemB: loom
+      crossSystem: false
+      count: 6250
+      confidence: 1
+      description: '"component.updated" and "ledger.loom.updated" co-occur within 5s — 6250 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789172753280
+  id: d420616d-2497-4135-9539-65b5a84e38c0
+  crystallised: true
+  crystallisedAt: 1789172753438

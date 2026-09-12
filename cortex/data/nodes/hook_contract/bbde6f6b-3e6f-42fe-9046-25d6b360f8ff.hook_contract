@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-bbde6f6b-3e6f-42fe-9046-25d6b360f8ff
+type: hook_contract
+id: bbde6f6b-3e6f-42fe-9046-25d6b360f8ff
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822239
+source: data/cortex/memory/hooks.json:bbde6f6b-3e6f-42fe-9046-25d6b360f8ff
+payload:
+  uuid: bbde6f6b-3e6f-42fe-9046-25d6b360f8ff
+  id: bbde6f6b-3e6f-42fe-9046-25d6b360f8ff
+  name: cortex.events.log
+  intent: Query event log
+  version: 3.5.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cortex
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /api/events
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cortex.events.log
+    event: architect.hook.cortex.events.log
+    route: GET /api/events
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867491
+    updatedAt: 1789169867491
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cortex
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

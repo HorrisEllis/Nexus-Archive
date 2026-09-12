@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-b9467bad-9945-4115-94a2-16d13a1310b6
+type: hook_contract
+id: b9467bad-9945-4115-94a2-16d13a1310b6
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822203
+source: data/cortex/memory/hooks.json:b9467bad-9945-4115-94a2-16d13a1310b6
+payload:
+  uuid: b9467bad-9945-4115-94a2-16d13a1310b6
+  id: b9467bad-9945-4115-94a2-16d13a1310b6
+  name: idearium.repo.list
+  intent: List ingested repos
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /api/repos
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.repo.list
+    event: architect.hook.idearium.repo.list
+    route: GET /api/repos
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-548b66b9-210a-4251-8921-8864252b2750
+type: hook_contract
+id: 548b66b9-210a-4251-8921-8864252b2750
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822203
+source: data/cortex/memory/hooks.json:548b66b9-210a-4251-8921-8864252b2750
+payload:
+  uuid: 548b66b9-210a-4251-8921-8864252b2750
+  id: 548b66b9-210a-4251-8921-8864252b2750
+  name: idearium.snapshot.restore
+  intent: Restore state from a snapshot
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/snapshots/:uuid/restore
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.snapshot.restore
+    event: architect.hook.idearium.snapshot.restore
+    route: POST /api/snapshots/:uuid/restore
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

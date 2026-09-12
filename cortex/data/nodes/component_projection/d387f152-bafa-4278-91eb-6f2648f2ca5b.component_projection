@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-d387f152-bafa-4278-91eb-6f2648f2ca5b
+type: component_projection
+id: d387f152-bafa-4278-91eb-6f2648f2ca5b
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821724
+source: data/cortex/memory/component_projections.json:d387f152-bafa-4278-91eb-6f2648f2ca5b
+payload:
+  uuid: c78d89f8-cd2d-4c94-b5f1-c45b35b093da
+  componentId: idearium.repo.lineage
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.repo.lineage
+    componentId: idearium.repo.lineage
+    version: 1.0.0
+    namespace: idearium
+    name: repo.lineage
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.repo.lineage
+    command: lineage
+    aliases:
+      - lineage repo
+      - repo lineage
+    help: |-
+      repo.lineage
+        Get a repo's fork lineage
+    route:
+      method: GET
+      path: /api/repos/:uuid/lineage
+    componentId: idearium.repo.lineage
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.repo.lineage
+    componentId: idearium.repo.lineage
+    entries:
+      - lineage repo
+      - repo lineage
+      - repo.lineage
+      - lineage
+    route:
+      method: GET
+      path: /api/repos/:uuid/lineage
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.repo.lineage
+    componentId: idearium.repo.lineage
+    label: REPO.LINEAGE
+    icon: ◈
+    tooltip: Get a repo's fork lineage
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/repos/:uuid/lineage
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.repo.lineage
+    componentId: idearium.repo.lineage
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.repo.lineage
+    componentId: idearium.repo.lineage
+    chunk1:
+      system: idearium
+      command: lineage
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.repo.lineage
+    componentId: idearium.repo.lineage
+    markdown: |-
+      # repo.lineage
+
+      **ID:** `idearium.repo.lineage` · **Tier:** T1 · **Version:** 1.0.0
+
+      Get a repo's fork lineage
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840021
+  id: d387f152-bafa-4278-91eb-6f2648f2ca5b
+  updatedAt: 1789179436965

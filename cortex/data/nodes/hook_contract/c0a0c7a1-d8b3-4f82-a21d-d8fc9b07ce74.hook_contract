@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-c0a0c7a1-d8b3-4f82-a21d-d8fc9b07ce74
+type: hook_contract
+id: c0a0c7a1-d8b3-4f82-a21d-d8fc9b07ce74
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822200
+source: data/cortex/memory/hooks.json:c0a0c7a1-d8b3-4f82-a21d-d8fc9b07ce74
+payload:
+  uuid: c0a0c7a1-d8b3-4f82-a21d-d8fc9b07ce74
+  id: c0a0c7a1-d8b3-4f82-a21d-d8fc9b07ce74
+  name: idearium.spec.create
+  intent: Create a new spec from an idea
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/specs
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.spec.create
+    event: architect.hook.idearium.spec.create
+    route: POST /api/specs
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

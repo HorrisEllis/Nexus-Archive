@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-434c71e5-8de9-4919-8096-3f1bfdfca11e
+type: interstitial_space
+id: 434c71e5-8de9-4919-8096-3f1bfdfca11e
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821498
+source: data/cortex/memory/interstitial_spaces.json:434c71e5-8de9-4919-8096-3f1bfdfca11e
+payload:
+  uuid: 41b07387-26f3-4fe1-9a6d-eb6b2201156d
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::component.registered" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: e0c64796-dec8-4c14-ae46-66d89b3fd19e
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.30000000000000004
+  ts: 1789169896585
+  meta:
+    pattern:
+      uuid: e0c64796-dec8-4c14-ae46-66d89b3fd19e
+      signature: precursor::component.registered
+      patternType: failure_precursor
+      precursorType: component.registered
+      failureTypes:
+        - intelligence.failure_scan
+      count: 648
+      confidence: 1
+      description: '"component.registered" precedes failures 648 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789169896557
+  id: 434c71e5-8de9-4919-8096-3f1bfdfca11e
+  crystallised: true
+  crystallisedAt: 1789169896586

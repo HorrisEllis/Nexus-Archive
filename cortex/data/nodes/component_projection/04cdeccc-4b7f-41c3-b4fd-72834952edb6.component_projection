@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-04cdeccc-4b7f-41c3-b4fd-72834952edb6
+type: component_projection
+id: 04cdeccc-4b7f-41c3-b4fd-72834952edb6
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821724
+source: data/cortex/memory/component_projections.json:04cdeccc-4b7f-41c3-b4fd-72834952edb6
+payload:
+  uuid: 389bb7ae-a705-421e-8fb5-cce82903339e
+  componentId: idearium.repo.archive
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.repo.archive
+    componentId: idearium.repo.archive
+    version: 1.0.0
+    namespace: idearium
+    name: repo.archive
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.repo.archive
+    command: archive
+    aliases:
+      - archive repo
+      - repo archive
+    help: |-
+      repo.archive
+        Archive a repo
+    route:
+      method: DELETE
+      path: /api/repos/:uuid
+    componentId: idearium.repo.archive
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.repo.archive
+    componentId: idearium.repo.archive
+    entries:
+      - archive repo
+      - repo archive
+      - repo.archive
+      - archive
+    route:
+      method: DELETE
+      path: /api/repos/:uuid
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.repo.archive
+    componentId: idearium.repo.archive
+    label: REPO.ARCHIVE
+    icon: ◈
+    tooltip: Archive a repo
+    action:
+      method: GET
+      path:
+        method: DELETE
+        path: /api/repos/:uuid
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.repo.archive
+    componentId: idearium.repo.archive
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.repo.archive
+    componentId: idearium.repo.archive
+    chunk1:
+      system: idearium
+      command: archive
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.repo.archive
+    componentId: idearium.repo.archive
+    markdown: |-
+      # repo.archive
+
+      **ID:** `idearium.repo.archive` · **Tier:** T1 · **Version:** 1.0.0
+
+      Archive a repo
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840018
+  id: 04cdeccc-4b7f-41c3-b4fd-72834952edb6
+  updatedAt: 1789179436964

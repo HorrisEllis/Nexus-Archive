@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-7e5c1c73-2999-4293-b97f-d4f74ec23567
+type: component_projection
+id: 7e5c1c73-2999-4293-b97f-d4f74ec23567
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821754
+source: data/cortex/memory/component_projections.json:7e5c1c73-2999-4293-b97f-d4f74ec23567
+payload:
+  uuid: f9adbbc0-f329-4a01-9dcf-d244fd60461d
+  componentId: copilot.axioms.add
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.axioms.add
+    componentId: copilot.axioms.add
+    version: 2.0.0
+    namespace: copilot
+    name: axioms.add
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.axioms.add
+    command: add
+    aliases:
+      - add axiom
+    help: |-
+      axioms.add
+        Add a runtime axiom
+    route:
+      method: POST
+      path: /api/axioms/add
+    componentId: copilot.axioms.add
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.axioms.add
+    componentId: copilot.axioms.add
+    entries:
+      - add axiom
+      - axioms.add
+      - add
+    route:
+      method: POST
+      path: /api/axioms/add
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.axioms.add
+    componentId: copilot.axioms.add
+    label: AXIOMS.ADD
+    icon: ◈
+    tooltip: Add a runtime axiom
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/axioms/add
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.axioms.add
+    componentId: copilot.axioms.add
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.axioms.add
+    componentId: copilot.axioms.add
+    chunk1:
+      system: copilot
+      command: add
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.axioms.add
+    componentId: copilot.axioms.add
+    markdown: |-
+      # axioms.add
+
+      **ID:** `copilot.axioms.add` · **Tier:** T1 · **Version:** 2.0.0
+
+      Add a runtime axiom
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840214
+  id: 7e5c1c73-2999-4293-b97f-d4f74ec23567
+  updatedAt: 1789179436975

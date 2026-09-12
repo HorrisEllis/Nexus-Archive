@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-76d7e96a-1826-48ac-97f2-15fe7dfe8120
+type: interstitial_space
+id: 76d7e96a-1826-48ac-97f2-15fe7dfe8120
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821445
+source: data/cortex/memory/interstitial_spaces.json:76d7e96a-1826-48ac-97f2-15fe7dfe8120
+payload:
+  uuid: 3fe79251-8a77-4e91-9c00-47289183cf15
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "component.registered" and "ledger.copilot.event"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 993a3556-07b5-45b0-a8ce-d6e125145a77
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.5
+  ts: 1789169846700
+  meta:
+    pattern:
+      uuid: 993a3556-07b5-45b0-a8ce-d6e125145a77
+      signature: component.registered::ledger.copilot.event
+      patternType: co_occurrence
+      typeA: component.registered
+      typeB: ledger.copilot.event
+      systemA: copilot
+      systemB: null
+      crossSystem: false
+      count: 15825
+      confidence: 1
+      description: '"component.registered" and "ledger.copilot.event" co-occur within 5s — 15825 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789169846555
+  id: 76d7e96a-1826-48ac-97f2-15fe7dfe8120
+  crystallised: true
+  crystallisedAt: 1789169846709

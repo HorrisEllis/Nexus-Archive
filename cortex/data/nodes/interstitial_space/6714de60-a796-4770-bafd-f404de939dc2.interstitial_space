@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-6714de60-a796-4770-bafd-f404de939dc2
+type: interstitial_space
+id: 6714de60-a796-4770-bafd-f404de939dc2
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821563
+source: data/cortex/memory/interstitial_spaces.json:6714de60-a796-4770-bafd-f404de939dc2
+payload:
+  uuid: f17f0d49-a49c-41d0-a92b-1800b3f38386
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "agent.call.start" and "nexus.resource.pressure"'
+  type: co_occurrence
+  confidence: 0.2
+  count: 1
+  causedBy: aff05d5a-0738-4c38-a151-c1fe92246a90
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179793239
+  meta:
+    pattern:
+      uuid: aff05d5a-0738-4c38-a151-c1fe92246a90
+      signature: agent.call.start::nexus.resource.pressure
+      patternType: co_occurrence
+      typeA: agent.call.start
+      typeB: nexus.resource.pressure
+      systemA: null
+      systemB: orchestrator
+      crossSystem: false
+      count: 4
+      confidence: 0.2
+      description: '"agent.call.start" and "nexus.resource.pressure" co-occur within 5s — 4 observations'
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179793095
+  id: 6714de60-a796-4770-bafd-f404de939dc2

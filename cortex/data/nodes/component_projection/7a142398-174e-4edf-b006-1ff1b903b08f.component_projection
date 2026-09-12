@@ -1,0 +1,101 @@
+envelope: 1
+uuid: nexus-export-component_projection-7a142398-174e-4edf-b006-1ff1b903b08f
+type: component_projection
+id: 7a142398-174e-4edf-b006-1ff1b903b08f
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821736
+source: data/cortex/memory/component_projections.json:7a142398-174e-4edf-b006-1ff1b903b08f
+payload:
+  uuid: 419aca31-b2e4-4363-aa11-9b12ec41d356
+  componentId: eros.status
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eros.status
+    componentId: eros.status
+    version: 0.1.0
+    namespace: eros
+    name: status
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eros.status
+    command: status
+    aliases:
+      - status
+      - status
+    help: |-
+      status
+        Full OS status — bridge, nodes, queue, routing
+    route:
+      method: GET
+      path: /api/os/status
+    componentId: eros.status
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eros.status
+    componentId: eros.status
+    entries:
+      - status
+    route:
+      method: GET
+      path: /api/os/status
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eros.status
+    componentId: eros.status
+    label: STATUS
+    icon: ⬢
+    tooltip: Full OS status — bridge, nodes, queue, routing
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/os/status
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eros.status
+    componentId: eros.status
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eros.status
+    componentId: eros.status
+    chunk1:
+      system: eros
+      command: status
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eros.status
+    componentId: eros.status
+    markdown: |-
+      # status
+
+      **ID:** `eros.status` · **Tier:** T2 · **Version:** 0.1.0
+
+      Full OS status — bridge, nodes, queue, routing
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840095
+  id: 7a142398-174e-4edf-b006-1ff1b903b08f
+  updatedAt: 1789179436819

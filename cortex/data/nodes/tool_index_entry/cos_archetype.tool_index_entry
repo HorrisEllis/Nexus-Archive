@@ -1,0 +1,28 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-cos_archetype
+type: tool_index_entry
+id: cos_archetype
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822127
+source: data/cortex/memory/tool_index.json:cos_archetype
+payload:
+  id: cos_archetype
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Read, assign, detect, or create COS compartment archetypes (templates a compartment can be based
+    on). Actions: "list", "show" (needs idOrName), "assign" (needs compartmentName +
+    archetypeIdOrName — attaches an archetype to an existing compartment), "detect" (needs
+    targetPath — inspects a real path and reports which archetype it matches, if any), "create"
+    (needs archetype — an inline definition object with at least a name; registered directly, no
+    file needed).
+  updatedAt: 1789179646674
+  _key: cos_archetype

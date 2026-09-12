@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-f9f72e2b-1834-4b3c-ba0f-ba330fcb5f80
+type: interstitial_space
+id: f9f72e2b-1834-4b3c-ba0f-ba330fcb5f80
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821532
+source: data/cortex/memory/interstitial_spaces.json:f9f72e2b-1834-4b3c-ba0f-ba330fcb5f80
+payload:
+  uuid: b78ebc18-9046-4ed2-93f8-07c0bb812bea
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "ledger.copilot.event" and "ui.boot"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: a271cc7b-cb94-410c-96f9-e140c30e4794
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.4
+  ts: 1789179101981
+  meta:
+    pattern:
+      uuid: a271cc7b-cb94-410c-96f9-e140c30e4794
+      signature: ledger.copilot.event::ui.boot
+      patternType: co_occurrence
+      typeA: ledger.copilot.event
+      typeB: ui.boot
+      systemA: null
+      systemB: copilot
+      crossSystem: false
+      count: 918
+      confidence: 1
+      description: '"ledger.copilot.event" and "ui.boot" co-occur within 5s — 918 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: f9f72e2b-1834-4b3c-ba0f-ba330fcb5f80

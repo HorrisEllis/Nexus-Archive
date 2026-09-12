@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-560e12b7-ff45-4244-ba5a-b2802404ff50
+type: component_projection
+id: 560e12b7-ff45-4244-ba5a-b2802404ff50
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821761
+source: data/cortex/memory/component_projections.json:560e12b7-ff45-4244-ba5a-b2802404ff50
+payload:
+  uuid: 3e9de9d1-96b2-465f-9176-3272c2968c72
+  componentId: loom.hooks.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.loom.hooks.list
+    componentId: loom.hooks.list
+    version: 1.5.0
+    namespace: loom
+    name: hooks.list
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.loom.hooks.list
+    command: list
+    aliases:
+      - hooks list
+      - hooks-list
+    help: |-
+      hooks.list
+        List hooks — the registry loom is write authority for
+    route:
+      method: GET
+      path: /api/hooks
+    componentId: loom.hooks.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.loom.hooks.list
+    componentId: loom.hooks.list
+    entries:
+      - hooks list
+      - hooks-list
+      - hooks.list
+      - list
+    route:
+      method: GET
+      path: /api/hooks
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.loom.hooks.list
+    componentId: loom.hooks.list
+    label: HOOKS.LIST
+    icon: ◈
+    tooltip: List hooks — the registry loom is write authority for
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/hooks
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.loom.hooks.list
+    componentId: loom.hooks.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.loom.hooks.list
+    componentId: loom.hooks.list
+    chunk1:
+      system: loom
+      command: list
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.loom.hooks.list
+    componentId: loom.hooks.list
+    markdown: |-
+      # hooks.list
+
+      **ID:** `loom.hooks.list` · **Tier:** T1 · **Version:** 1.5.0
+
+      List hooks — the registry loom is write authority for
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840258
+  id: 560e12b7-ff45-4244-ba5a-b2802404ff50
+  updatedAt: 1789179436999

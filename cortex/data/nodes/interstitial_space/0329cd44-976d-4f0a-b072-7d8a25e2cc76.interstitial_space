@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-0329cd44-976d-4f0a-b072-7d8a25e2cc76
+type: interstitial_space
+id: 0329cd44-976d-4f0a-b072-7d8a25e2cc76
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821559
+source: data/cortex/memory/interstitial_spaces.json:0329cd44-976d-4f0a-b072-7d8a25e2cc76
+payload:
+  uuid: 5e7ce785-5fa3-4600-b773-d693e337cc2d
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.loom.updated" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: da2a2d52-cfd4-43b4-9dab-aea2f51a137e
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179493144
+  meta:
+    pattern:
+      uuid: da2a2d52-cfd4-43b4-9dab-aea2f51a137e
+      signature: precursor::ledger.loom.updated
+      patternType: failure_precursor
+      precursorType: ledger.loom.updated
+      failureTypes:
+        - intelligence.failure_scan
+      count: 100
+      confidence: 1
+      description: '"ledger.loom.updated" precedes failures 100 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179492924
+  id: 0329cd44-976d-4f0a-b072-7d8a25e2cc76
+  crystallised: true
+  crystallisedAt: 1789179493173

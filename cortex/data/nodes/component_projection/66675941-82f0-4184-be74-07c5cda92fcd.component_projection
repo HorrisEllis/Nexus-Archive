@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-66675941-82f0-4184-be74-07c5cda92fcd
+type: component_projection
+id: 66675941-82f0-4184-be74-07c5cda92fcd
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821756
+source: data/cortex/memory/component_projections.json:66675941-82f0-4184-be74-07c5cda92fcd
+payload:
+  uuid: fa615006-cd5f-4ff5-8f39-620371542005
+  componentId: copilot.person_model.accept
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.person_model.accept
+    componentId: copilot.person_model.accept
+    version: 2.0.0
+    namespace: copilot
+    name: person_model.accept
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.person_model.accept
+    command: accept
+    aliases:
+      - accept observation
+    help: |-
+      person_model.accept
+        USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)
+    route:
+      method: POST
+      path: /api/person-model/accept
+    componentId: copilot.person_model.accept
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.person_model.accept
+    componentId: copilot.person_model.accept
+    entries:
+      - accept observation
+      - person_model.accept
+      - accept
+    route:
+      method: POST
+      path: /api/person-model/accept
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.person_model.accept
+    componentId: copilot.person_model.accept
+    label: PERSON_MODEL.ACC
+    icon: ◈
+    tooltip: USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/person-model/accept
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.person_model.accept
+    componentId: copilot.person_model.accept
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.person_model.accept
+    componentId: copilot.person_model.accept
+    chunk1:
+      system: copilot
+      command: accept
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.person_model.accept
+    componentId: copilot.person_model.accept
+    markdown: |-
+      # person_model.accept
+
+      **ID:** `copilot.person_model.accept` · **Tier:** T1 · **Version:** 2.0.0
+
+      USER-ONLY. Promotes an observation to a stated claim. No agent path exists (§IP-5)
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840233
+  id: 66675941-82f0-4184-be74-07c5cda92fcd
+  updatedAt: 1789179436984

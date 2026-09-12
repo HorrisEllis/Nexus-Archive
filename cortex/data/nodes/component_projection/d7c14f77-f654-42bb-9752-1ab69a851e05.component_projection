@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-d7c14f77-f654-42bb-9752-1ab69a851e05
+type: component_projection
+id: d7c14f77-f654-42bb-9752-1ab69a851e05
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821752
+source: data/cortex/memory/component_projections.json:d7c14f77-f654-42bb-9752-1ab69a851e05
+payload:
+  uuid: efd40b81-d9e2-4cbe-bd87-a58c12ac5589
+  componentId: versionium.state.read
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.versionium.state.read
+    componentId: versionium.state.read
+    version: 3.0.0
+    namespace: versionium
+    name: state.read
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.versionium.state.read
+    command: read
+    aliases:
+      - versionium state
+    help: |-
+      state.read
+        Direct-restore read of a commit's stored state
+    route:
+      method: GET
+      path: /api/versionium/state/:commitId
+    componentId: versionium.state.read
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.versionium.state.read
+    componentId: versionium.state.read
+    entries:
+      - versionium state
+      - state.read
+      - read
+    route:
+      method: GET
+      path: /api/versionium/state/:commitId
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.versionium.state.read
+    componentId: versionium.state.read
+    label: STATE.READ
+    icon: ◈
+    tooltip: Direct-restore read of a commit's stored state
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/versionium/state/:commitId
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.versionium.state.read
+    componentId: versionium.state.read
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.versionium.state.read
+    componentId: versionium.state.read
+    chunk1:
+      system: versionium
+      command: read
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.versionium.state.read
+    componentId: versionium.state.read
+    markdown: |-
+      # state.read
+
+      **ID:** `versionium.state.read` · **Tier:** T1 · **Version:** 3.0.0
+
+      Direct-restore read of a commit's stored state
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840199
+  id: d7c14f77-f654-42bb-9752-1ab69a851e05
+  updatedAt: 1789179436923

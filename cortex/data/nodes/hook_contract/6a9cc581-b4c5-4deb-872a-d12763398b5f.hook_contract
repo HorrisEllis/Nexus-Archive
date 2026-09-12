@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-6a9cc581-b4c5-4deb-872a-d12763398b5f
+type: hook_contract
+id: 6a9cc581-b4c5-4deb-872a-d12763398b5f
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822206
+source: data/cortex/memory/hooks.json:6a9cc581-b4c5-4deb-872a-d12763398b5f
+payload:
+  uuid: 6a9cc581-b4c5-4deb-872a-d12763398b5f
+  id: 6a9cc581-b4c5-4deb-872a-d12763398b5f
+  name: cg.context.create
+  intent: Create isolated Chromium partition for agent
+  version: 3.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cg
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /cmd
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cg.context.create
+    event: architect.hook.cg.context.create
+    route: POST /cmd
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867488
+    updatedAt: 1789169867488
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cg
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

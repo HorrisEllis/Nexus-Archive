@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-6d45378a-bdef-4464-81e1-3208b2afef71
+type: hook_contract
+id: 6d45378a-bdef-4464-81e1-3208b2afef71
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822229
+source: data/cortex/memory/hooks.json:6d45378a-bdef-4464-81e1-3208b2afef71
+payload:
+  uuid: 6d45378a-bdef-4464-81e1-3208b2afef71
+  id: 6d45378a-bdef-4464-81e1-3208b2afef71
+  name: copilot.introspect.retry
+  intent: Re-ask carrying the SPECIFIC finding that rejected the last answer, not "try again"
+  version: 2.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: copilot
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/introspect/retry
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook copilot.introspect.retry
+    event: architect.hook.copilot.introspect.retry
+    route: POST /api/introspect/retry
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867490
+    updatedAt: 1789169867490
+    status: active
+    tags:
+      - synced-from-component-registry
+      - copilot
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

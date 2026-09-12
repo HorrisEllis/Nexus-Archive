@@ -1,0 +1,27 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-axiom_manage
+type: tool_index_entry
+id: axiom_manage
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822128
+source: data/cortex/memory/tool_index.json:axiom_manage
+payload:
+  id: axiom_manage
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Add, remove, freeze, list, or summarize NEXUS axioms — the mutation half of axiom access (use
+    axiom_check to test something against them first). Actions: "list" (optional tier/status
+    filter), "add" (needs id, text, reason — every agent-added axiom is tagged source:"agent", never
+    blended with ones James added), "remove" (needs id, confirm:true), "freeze" (needs id — makes it
+    immutable, irreversible by this tool), "summary".
+  updatedAt: 1789179646679
+  _key: axiom_manage

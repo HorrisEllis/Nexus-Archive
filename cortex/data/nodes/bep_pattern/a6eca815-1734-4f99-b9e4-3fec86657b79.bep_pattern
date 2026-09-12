@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-a6eca815-1734-4f99-b9e4-3fec86657b79
+type: bep_pattern
+id: a6eca815-1734-4f99-b9e4-3fec86657b79
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853794
+source: data/cortex/memory/bep_patterns.json:a6eca815-1734-4f99-b9e4-3fec86657b79
+payload:
+  uuid: c3add848-14ec-4ff8-ae91-e945fe96e2c2
+  signature: intelligence.reuse_index_built::intent.classified
+  patternType: co_occurrence
+  typeA: intelligence.reuse_index_built
+  typeB: intent.classified
+  systemA: null
+  systemB: cortex
+  crossSystem: false
+  count: 8
+  confidence: 0.4
+  description: '"intelligence.reuse_index_built" and "intent.classified" co-occur within 5s — 8 observations'
+  actionable: true
+  crystallised: false
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179444171
+  id: a6eca815-1734-4f99-b9e4-3fec86657b79

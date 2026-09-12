@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-f97f5724-10bd-4b5e-9bcb-0a193c86edce
+type: bep_pattern
+id: f97f5724-10bd-4b5e-9bcb-0a193c86edce
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853797
+source: data/cortex/memory/bep_patterns.json:f97f5724-10bd-4b5e-9bcb-0a193c86edce
+payload:
+  uuid: ef840aa8-40ac-4608-8753-c98881049df0
+  signature: component.updated::provider.host.starting
+  patternType: co_occurrence
+  typeA: component.updated
+  typeB: provider.host.starting
+  systemA: clear-glass
+  systemB: null
+  crossSystem: false
+  count: 249
+  confidence: 1
+  description: '"component.updated" and "provider.host.starting" co-occur within 5s — 249 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: f97f5724-10bd-4b5e-9bcb-0a193c86edce

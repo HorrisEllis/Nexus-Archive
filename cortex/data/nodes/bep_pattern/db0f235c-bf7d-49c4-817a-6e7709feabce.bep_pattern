@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-db0f235c-bf7d-49c4-817a-6e7709feabce
+type: bep_pattern
+id: db0f235c-bf7d-49c4-817a-6e7709feabce
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853804
+source: data/cortex/memory/bep_patterns.json:db0f235c-bf7d-49c4-817a-6e7709feabce
+payload:
+  uuid: 038e44b2-9ae7-47ee-b97f-638ac49d8a72
+  signature: ledger.architect.updated::ledger.eravos.updated
+  patternType: cross_system_causal
+  typeA: ledger.architect.updated
+  typeB: ledger.eravos.updated
+  systemA: architect
+  systemB: eravos
+  crossSystem: true
+  count: 204
+  confidence: 1
+  description: >-
+    "ledger.architect.updated" (architect) and "ledger.eravos.updated" (eravos) co-occur within 5s
+    across two real systems — 204 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: db0f235c-bf7d-49c4-817a-6e7709feabce

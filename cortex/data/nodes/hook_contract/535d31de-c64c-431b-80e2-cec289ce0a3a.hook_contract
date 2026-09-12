@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-hook_contract-535d31de-c64c-431b-80e2-cec289ce0a3a
+type: hook_contract
+id: 535d31de-c64c-431b-80e2-cec289ce0a3a
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822199
+source: data/cortex/memory/hooks.json:535d31de-c64c-431b-80e2-cec289ce0a3a
+payload:
+  uuid: 535d31de-c64c-431b-80e2-cec289ce0a3a
+  id: 535d31de-c64c-431b-80e2-cec289ce0a3a
+  name: idearium.idea.create
+  intent: Create a new idea from free text
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/ideas
+  schema:
+    input:
+      type: object
+      properties:
+        text:
+          type: string
+        tags:
+          type: json
+        compartment:
+          type: string
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.idea.create
+    event: architect.hook.idearium.idea.create
+    route: POST /api/ideas
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

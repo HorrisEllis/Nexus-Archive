@@ -1,0 +1,100 @@
+envelope: 1
+uuid: nexus-export-component_projection-069e81fb-8b53-4313-88dc-5aa6463e6607
+type: component_projection
+id: 069e81fb-8b53-4313-88dc-5aa6463e6607
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821715
+source: data/cortex/memory/component_projections.json:069e81fb-8b53-4313-88dc-5aa6463e6607
+payload:
+  uuid: 07e327e6-a76c-4421-be4b-87e83f8dbaa2
+  componentId: idearium.sse
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.sse
+    componentId: idearium.sse
+    version: 1.0.0
+    namespace: idearium
+    name: sse
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.sse
+    command: sse
+    aliases:
+      - sse
+    help: |-
+      sse
+        Live SSE event stream
+    route:
+      method: GET
+      path: /sse
+    componentId: idearium.sse
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.sse
+    componentId: idearium.sse
+    entries:
+      - sse
+    route:
+      method: GET
+      path: /sse
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.sse
+    componentId: idearium.sse
+    label: SSE
+    icon: ◈
+    tooltip: Live SSE event stream
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /sse
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.sse
+    componentId: idearium.sse
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.sse
+    componentId: idearium.sse
+    chunk1:
+      system: idearium
+      command: sse
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.sse
+    componentId: idearium.sse
+    markdown: |-
+      # sse
+
+      **ID:** `idearium.sse` · **Tier:** T1 · **Version:** 1.0.0
+
+      Live SSE event stream
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839960
+  id: 069e81fb-8b53-4313-88dc-5aa6463e6607
+  updatedAt: 1789179436936

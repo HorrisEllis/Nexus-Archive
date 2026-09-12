@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-0bec7dfc-1e48-4e62-b9e0-190a080b1809
+type: hook_contract
+id: 0bec7dfc-1e48-4e62-b9e0-190a080b1809
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822219
+source: data/cortex/memory/hooks.json:0bec7dfc-1e48-4e62-b9e0-190a080b1809
+payload:
+  uuid: 0bec7dfc-1e48-4e62-b9e0-190a080b1809
+  id: 0bec7dfc-1e48-4e62-b9e0-190a080b1809
+  name: eros.adaptive.recommend
+  intent: Recommend (profile × variant) for intent
+  version: 0.1.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: eros
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/adaptive/recommend
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook eros.adaptive.recommend
+    event: architect.hook.eros.adaptive.recommend
+    route: POST /api/adaptive/recommend
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867489
+    updatedAt: 1789169867489
+    status: active
+    tags:
+      - synced-from-component-registry
+      - eros
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

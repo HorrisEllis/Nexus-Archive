@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-agent_chat_search
+type: tool_index_entry
+id: agent_chat_search
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822124
+source: data/cortex/memory/tool_index.json:agent_chat_search
+payload:
+  id: agent_chat_search
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    "Do you remember when we talked about X" or "do you remember when I talked to Y about X" — plain
+    keyword search across real conversation logs, newest first. Actions: "search" (needs query;
+    scope: "mine" for copilot's own conversations [chat_log], "agents" for other providers routed
+    through guardian [guardian_chat_log], "all" for both — default all; withAgent filters to one
+    provider name, e.g. "claude"/"ollama"/"chatgpt"), "providers" (lists which agent/provider names
+    actually appear in the real data, so you know what's valid for withAgent). Literal substring
+    match, not semantic — no scoring model, exactly what's there.
+  updatedAt: 1789179646644
+  _key: agent_chat_search

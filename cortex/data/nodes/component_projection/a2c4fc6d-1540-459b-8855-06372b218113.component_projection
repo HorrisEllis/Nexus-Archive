@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-a2c4fc6d-1540-459b-8855-06372b218113
+type: component_projection
+id: a2c4fc6d-1540-459b-8855-06372b218113
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821726
+source: data/cortex/memory/component_projections.json:a2c4fc6d-1540-459b-8855-06372b218113
+payload:
+  uuid: 56af87c6-cf57-43d4-9afa-280926e71885
+  componentId: cg.bus.log
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.bus.log
+    componentId: cg.bus.log
+    version: 3.0.0
+    namespace: cg
+    name: bus.log
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.bus.log
+    command: log
+    aliases:
+      - bus log
+      - bus-log
+    help: |-
+      bus.log
+        SISO StreamLog entries
+    route:
+      method: GET
+      path: /bus/log
+    componentId: cg.bus.log
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.bus.log
+    componentId: cg.bus.log
+    entries:
+      - bus log
+      - bus-log
+      - bus.log
+      - log
+    route:
+      method: GET
+      path: /bus/log
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.bus.log
+    componentId: cg.bus.log
+    label: BUS.LOG
+    icon: ⬢
+    tooltip: SISO StreamLog entries
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /bus/log
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.bus.log
+    componentId: cg.bus.log
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.bus.log
+    componentId: cg.bus.log
+    chunk1:
+      system: cg
+      command: log
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.bus.log
+    componentId: cg.bus.log
+    markdown: |-
+      # bus.log
+
+      **ID:** `cg.bus.log` · **Tier:** T2 · **Version:** 3.0.0
+
+      SISO StreamLog entries
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840034
+  id: a2c4fc6d-1540-459b-8855-06372b218113
+  updatedAt: 1789179436781

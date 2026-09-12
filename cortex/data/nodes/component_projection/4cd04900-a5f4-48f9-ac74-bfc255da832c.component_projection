@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-4cd04900-a5f4-48f9-ac74-bfc255da832c
+type: component_projection
+id: 4cd04900-a5f4-48f9-ac74-bfc255da832c
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821702
+source: data/cortex/memory/component_projections.json:4cd04900-a5f4-48f9-ac74-bfc255da832c
+payload:
+  uuid: bb41e372-c204-4905-857b-7365c672c69e
+  componentId: guardian.seam.sessions
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.seam.sessions
+    componentId: guardian.seam.sessions
+    version: 3.6.2
+    namespace: guardian
+    name: seam.sessions
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.seam.sessions
+    command: sessions
+    aliases:
+      - seam sessions
+      - seam-sessions
+    help: |-
+      seam.sessions
+        SEAM session history
+    route:
+      method: GET
+      path: /seam/sessions
+    componentId: guardian.seam.sessions
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.seam.sessions
+    componentId: guardian.seam.sessions
+    entries:
+      - seam sessions
+      - seam-sessions
+      - seam.sessions
+      - sessions
+    route:
+      method: GET
+      path: /seam/sessions
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.seam.sessions
+    componentId: guardian.seam.sessions
+    label: SEAM.SESSIONS
+    icon: ◈
+    tooltip: SEAM session history
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /seam/sessions
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.seam.sessions
+    componentId: guardian.seam.sessions
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.seam.sessions
+    componentId: guardian.seam.sessions
+    chunk1:
+      system: guardian
+      command: sessions
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.seam.sessions
+    componentId: guardian.seam.sessions
+    markdown: |-
+      # seam.sessions
+
+      **ID:** `guardian.seam.sessions` · **Tier:** T1 · **Version:** 3.6.2
+
+      SEAM session history
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839926
+  id: 4cd04900-a5f4-48f9-ac74-bfc255da832c
+  updatedAt: 1789179436764

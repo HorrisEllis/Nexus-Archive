@@ -1,0 +1,24 @@
+envelope: 1
+uuid: nexus-export-resonance_crystal-e6324d34-bd7f-403d-ae7c-b36ef11ee97d
+type: resonance_crystal
+id: e6324d34-bd7f-403d-ae7c-b36ef11ee97d
+context: real, live jaaDB row migrated from data/cortex/memory/crystals.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821434
+source: data/cortex/memory/crystals.json:e6324d34-bd7f-403d-ae7c-b36ef11ee97d
+payload:
+  uuid: c08d4091-9a86-4006-8719-f8d9aad5cb5d
+  focalPoint: L1/L3
+  type: failure_precursor
+  path: evidence_threshold
+  itemCount: 5
+  avgConfidence: 1
+  summary: >-
+    Pattern "precursor::component.updated" has causal path to failures | Pattern
+    "precursor::ledger.architect.updated" has causal path to failures | Pattern
+    "precursor::ledger.loom.updated" has causal path to failures
+  ts: 1789179493173
+  id: e6324d34-bd7f-403d-ae7c-b36ef11ee97d

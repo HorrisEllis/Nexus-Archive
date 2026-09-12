@@ -1,0 +1,25 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-notes_todo
+type: tool_index_entry
+id: notes_todo
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822129
+source: data/cortex/memory/tool_index.json:notes_todo
+payload:
+  id: notes_todo
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    A real, persistent notes and to-do list. Actions: "add" (needs text; kind: "note" or "todo",
+    default "note"; optional tags), "list" (optional kind/done filter), "complete" (needs uuid —
+    marks a todo done), "delete" (needs uuid).
+  updatedAt: 1789179646682
+  _key: notes_todo

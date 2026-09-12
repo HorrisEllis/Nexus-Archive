@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-43603b79-cb01-4ad0-ab91-b1db001fdf84
+type: component_projection
+id: 43603b79-cb01-4ad0-ab91-b1db001fdf84
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821717
+source: data/cortex/memory/component_projections.json:43603b79-cb01-4ad0-ab91-b1db001fdf84
+payload:
+  uuid: 8e890268-7309-4f0d-af12-63fdef263854
+  componentId: idearium.idea.archive
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.idea.archive
+    componentId: idearium.idea.archive
+    version: 1.0.0
+    namespace: idearium
+    name: idea.archive
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.idea.archive
+    command: archive
+    aliases:
+      - archive idea
+      - idea archive
+    help: |-
+      idea.archive
+        Archive (soft-delete) an idea
+    route:
+      method: DELETE
+      path: /api/ideas/:uuid
+    componentId: idearium.idea.archive
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.idea.archive
+    componentId: idearium.idea.archive
+    entries:
+      - archive idea
+      - idea archive
+      - idea.archive
+      - archive
+    route:
+      method: DELETE
+      path: /api/ideas/:uuid
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.idea.archive
+    componentId: idearium.idea.archive
+    label: IDEA.ARCHIVE
+    icon: ◈
+    tooltip: Archive (soft-delete) an idea
+    action:
+      method: GET
+      path:
+        method: DELETE
+        path: /api/ideas/:uuid
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.idea.archive
+    componentId: idearium.idea.archive
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.idea.archive
+    componentId: idearium.idea.archive
+    chunk1:
+      system: idearium
+      command: archive
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.idea.archive
+    componentId: idearium.idea.archive
+    markdown: |-
+      # idea.archive
+
+      **ID:** `idearium.idea.archive` · **Tier:** T1 · **Version:** 1.0.0
+
+      Archive (soft-delete) an idea
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839969
+  id: 43603b79-cb01-4ad0-ab91-b1db001fdf84
+  updatedAt: 1789179436940

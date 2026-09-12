@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-d387f5a9-18a2-481e-96a1-341e98fe4322
+type: component_projection
+id: d387f5a9-18a2-481e-96a1-341e98fe4322
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821750
+source: data/cortex/memory/component_projections.json:d387f5a9-18a2-481e-96a1-341e98fe4322
+payload:
+  uuid: 0d5a1a79-8012-4782-b1c9-fe52634ae9b4
+  componentId: ollama.jobs.get
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.ollama.jobs.get
+    componentId: ollama.jobs.get
+    version: 1.0.0
+    namespace: ollama
+    name: jobs.get
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.ollama.jobs.get
+    command: get
+    aliases:
+      - ollama jobs get
+    help: |-
+      jobs.get
+        Get single job by id
+    route:
+      method: GET
+      path: /api/jobs/:id
+    componentId: ollama.jobs.get
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.ollama.jobs.get
+    componentId: ollama.jobs.get
+    entries:
+      - ollama jobs get
+      - jobs.get
+      - get
+    route:
+      method: GET
+      path: /api/jobs/:id
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.ollama.jobs.get
+    componentId: ollama.jobs.get
+    label: JOBS.GET
+    icon: ◈
+    tooltip: Get single job by id
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/jobs/:id
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.ollama.jobs.get
+    componentId: ollama.jobs.get
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.ollama.jobs.get
+    componentId: ollama.jobs.get
+    chunk1:
+      system: ollama
+      command: get
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.ollama.jobs.get
+    componentId: ollama.jobs.get
+    markdown: |-
+      # jobs.get
+
+      **ID:** `ollama.jobs.get` · **Tier:** T1 · **Version:** 1.0.0
+
+      Get single job by id
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840186
+  id: d387f5a9-18a2-481e-96a1-341e98fe4322
+  updatedAt: 1789179436910

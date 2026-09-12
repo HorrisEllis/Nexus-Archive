@@ -1,0 +1,81 @@
+envelope: 1
+uuid: nexus-export-hook_contract-f2ecb4f4-3f48-4ebf-8949-30ca3504ae73
+type: hook_contract
+id: f2ecb4f4-3f48-4ebf-8949-30ca3504ae73
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822181
+source: data/cortex/memory/hooks.json:f2ecb4f4-3f48-4ebf-8949-30ca3504ae73
+payload:
+  uuid: f2ecb4f4-3f48-4ebf-8949-30ca3504ae73
+  id: f2ecb4f4-3f48-4ebf-8949-30ca3504ae73
+  name: architect-orchestrator-register
+  intent: Register architect service with NEXUS orchestrator on boot
+  version: 1.0.0
+  type: api
+  direction: unidirectional
+  from:
+    surface: architect
+    layer: 1
+  to:
+    surface: orchestrator
+    layer: 1
+  config:
+    method: POST
+    path: /api/register
+    timeout: 5000
+    retryPolicy:
+      maxAttempts: 3
+      backoff: exponential
+      baseMs: 1000
+  schema:
+    input:
+      type: object
+      properties:
+        systemId:
+          type: string
+        port:
+          type: number
+    output: null
+    errors:
+      - code: ORCH_OFFLINE
+        description: Orchestrator not reachable
+        recoverable: true
+  contract:
+    axioms:
+      - §A-2
+      - §5.2
+    sideEffects:
+      - orchestrator.registry.write
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: 5000
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook architect-orchestrator-register
+    event: architect.hook.architect.orchestrator.register
+  meta:
+    causedBy: seed
+    createdAt: 1789169837467
+    updatedAt: 1789169837467
+    status: active
+    tags:
+      - core
+      - registration
+    notes: ''

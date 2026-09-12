@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-e9b079a7-f049-4141-a502-6a58019c571d
+type: component_projection
+id: e9b079a7-f049-4141-a502-6a58019c571d
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821772
+source: data/cortex/memory/component_projections.json:e9b079a7-f049-4141-a502-6a58019c571d
+payload:
+  uuid: 757d0dff-5e80-4ead-9041-3fafd7aa6f26
+  componentId: architect.blueprint.history
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.architect.blueprint.history
+    componentId: architect.blueprint.history
+    version: 1.0.0
+    namespace: architect
+    name: blueprint.history
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.architect.blueprint.history
+    command: history
+    aliases:
+      - blueprint history
+    help: |-
+      blueprint.history
+        Blueprint change history
+    route:
+      method: GET
+      path: /api/blueprint/history
+    componentId: architect.blueprint.history
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.architect.blueprint.history
+    componentId: architect.blueprint.history
+    entries:
+      - blueprint history
+      - blueprint.history
+      - history
+    route:
+      method: GET
+      path: /api/blueprint/history
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.architect.blueprint.history
+    componentId: architect.blueprint.history
+    label: BLUEPRINT.HISTOR
+    icon: ◈
+    tooltip: Blueprint change history
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/blueprint/history
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.architect.blueprint.history
+    componentId: architect.blueprint.history
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.architect.blueprint.history
+    componentId: architect.blueprint.history
+    chunk1:
+      system: architect
+      command: history
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.architect.blueprint.history
+    componentId: architect.blueprint.history
+    markdown: |-
+      # blueprint.history
+
+      **ID:** `architect.blueprint.history` · **Tier:** T1 · **Version:** 1.0.0
+
+      Blueprint change history
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840321
+  id: e9b079a7-f049-4141-a502-6a58019c571d
+  updatedAt: 1789179437528

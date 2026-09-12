@@ -1,0 +1,28 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-loom_register
+type: tool_index_entry
+id: loom_register
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822128
+source: data/cortex/memory/tool_index.json:loom_register
+payload:
+  id: loom_register
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Register a real new component, hook+wire, or concern into loom's live registry. Actions:
+    "component" (needs component: {id, name?, dir?, consumes?, produces?}), "hook_with_wire" (needs
+    hook: {id, component_id, type, direction} AND consumerHookId — an already-real hook this one
+    wires into; REFUSED if consumerHookId doesn't already exist, so a hook can never be registered
+    without a real consumer), "concern" (needs concern: {id, ...} — a roadmap/gap entry, no consumer
+    required, this is the mechanism nexus_status's "concerns" action reads from).
+  updatedAt: 1789179646680
+  _key: loom_register

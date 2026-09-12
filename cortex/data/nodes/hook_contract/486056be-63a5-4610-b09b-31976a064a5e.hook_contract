@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-486056be-63a5-4610-b09b-31976a064a5e
+type: hook_contract
+id: 486056be-63a5-4610-b09b-31976a064a5e
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822231
+source: data/cortex/memory/hooks.json:486056be-63a5-4610-b09b-31976a064a5e
+payload:
+  uuid: 486056be-63a5-4610-b09b-31976a064a5e
+  id: 486056be-63a5-4610-b09b-31976a064a5e
+  name: loom.hooks.unwire
+  intent: Remove a hook binding
+  version: 1.5.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: loom
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/hooks/unwire
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook loom.hooks.unwire
+    event: architect.hook.loom.hooks.unwire
+    route: POST /api/hooks/unwire
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867490
+    updatedAt: 1789169867490
+    status: active
+    tags:
+      - synced-from-component-registry
+      - loom
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

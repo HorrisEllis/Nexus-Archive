@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-8c60f727-0c71-4975-a7bc-0993155caf32
+type: interstitial_space
+id: 8c60f727-0c71-4975-a7bc-0993155caf32
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821515
+source: data/cortex/memory/interstitial_spaces.json:8c60f727-0c71-4975-a7bc-0993155caf32
+payload:
+  uuid: 8a397844-796d-4bc1-8691-a87eff914c5a
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "intent.classified" and "ledger.diagnostic.dangling-hook"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 786a90f7-e97d-49dc-9a95-e933593265cb
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789169956667
+  meta:
+    pattern:
+      uuid: 786a90f7-e97d-49dc-9a95-e933593265cb
+      signature: intent.classified::ledger.diagnostic.dangling-hook
+      patternType: co_occurrence
+      typeA: intent.classified
+      typeB: ledger.diagnostic.dangling-hook
+      systemA: null
+      systemB: diagnostic
+      crossSystem: false
+      count: 100
+      confidence: 1
+      description: >-
+        "intent.classified" and "ledger.diagnostic.dangling-hook" co-occur within 5s — 100
+        observations
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789169956649
+  id: 8c60f727-0c71-4975-a7bc-0993155caf32
+  crystallised: true
+  crystallisedAt: 1789172753438

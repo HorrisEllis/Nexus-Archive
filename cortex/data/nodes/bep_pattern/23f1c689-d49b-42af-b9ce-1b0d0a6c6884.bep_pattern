@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-23f1c689-d49b-42af-b9ce-1b0d0a6c6884
+type: bep_pattern
+id: 23f1c689-d49b-42af-b9ce-1b0d0a6c6884
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853815
+source: data/cortex/memory/bep_patterns.json:23f1c689-d49b-42af-b9ce-1b0d0a6c6884
+payload:
+  uuid: aff05d5a-0738-4c38-a151-c1fe92246a90
+  signature: agent.call.start::nexus.resource.pressure
+  patternType: co_occurrence
+  typeA: agent.call.start
+  typeB: nexus.resource.pressure
+  systemA: null
+  systemB: orchestrator
+  crossSystem: false
+  count: 4
+  confidence: 0.2
+  description: '"agent.call.start" and "nexus.resource.pressure" co-occur within 5s — 4 observations'
+  actionable: false
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179793095
+  id: 23f1c689-d49b-42af-b9ce-1b0d0a6c6884

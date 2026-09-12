@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-nexus_map
+type: tool_index_entry
+id: nexus_map
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822128
+source: data/cortex/memory/tool_index.json:nexus_map
+payload:
+  id: nexus_map
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Walk NEXUS's real, already-computed system graph (loom's registry — components, hooks, wires) in
+    agent-sized chunks, instead of reading the file tree from scratch. Actions: "systems" (list
+    every system and its component count — start here to pick where to look), "graph" (optional
+    system filter, optional agentId to size the page to that agent's real token limit, optional
+    cursor/pageSize to page manually — returns a page of components plus the wires between them, and
+    a nextCursor to continue), "component" (needs id — full detail for one real component: its hooks
+    and every wire touching it).
+  updatedAt: 1789179646678
+  _key: nexus_map

@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-9dd4ac12-6e16-4729-9832-bec91c10bf18
+type: interstitial_space
+id: 9dd4ac12-6e16-4729-9832-bec91c10bf18
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821519
+source: data/cortex/memory/interstitial_spaces.json:9dd4ac12-6e16-4729-9832-bec91c10bf18
+payload:
+  uuid: 1b90290a-f97e-42af-9981-d868a1a0995c
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "component.updated" and "ledger.eravos.updated"'
+  type: co_occurrence
+  confidence: 1
+  count: 1
+  causedBy: 998ae182-6e6e-451c-a134-09493e651c50
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.8999999999999999
+  ts: 1789172753449
+  meta:
+    pattern:
+      uuid: 998ae182-6e6e-451c-a134-09493e651c50
+      signature: component.updated::ledger.eravos.updated
+      patternType: co_occurrence
+      typeA: component.updated
+      typeB: ledger.eravos.updated
+      systemA: null
+      systemB: eravos
+      crossSystem: false
+      count: 3000
+      confidence: 1
+      description: '"component.updated" and "ledger.eravos.updated" co-occur within 5s — 3000 observations'
+      actionable: true
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789172753280
+  id: 9dd4ac12-6e16-4729-9832-bec91c10bf18
+  crystallised: true
+  crystallisedAt: 1789172753458

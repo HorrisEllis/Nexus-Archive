@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-cb10abc6-d015-400d-95b2-3e7bb2afeaa8
+type: bep_pattern
+id: cb10abc6-d015-400d-95b2-3e7bb2afeaa8
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853813
+source: data/cortex/memory/bep_patterns.json:cb10abc6-d015-400d-95b2-3e7bb2afeaa8
+payload:
+  uuid: 1a6b3159-418c-4647-9a15-025899034428
+  signature: guardian.job.stream::ledger.diagnostic.poll.complete
+  patternType: co_occurrence
+  typeA: guardian.job.stream
+  typeB: ledger.diagnostic.poll.complete
+  systemA: null
+  systemB: diagnostic
+  crossSystem: false
+  count: 3
+  confidence: 0.15
+  description: '"guardian.job.stream" and "ledger.diagnostic.poll.complete" co-occur within 5s — 3 observations'
+  actionable: false
+  crystallised: false
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179673084
+  id: cb10abc6-d015-400d-95b2-3e7bb2afeaa8

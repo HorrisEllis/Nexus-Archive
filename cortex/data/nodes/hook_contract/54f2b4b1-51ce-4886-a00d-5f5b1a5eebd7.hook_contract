@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-hook_contract-54f2b4b1-51ce-4886-a00d-5f5b1a5eebd7
+type: hook_contract
+id: 54f2b4b1-51ce-4886-a00d-5f5b1a5eebd7
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822226
+source: data/cortex/memory/hooks.json:54f2b4b1-51ce-4886-a00d-5f5b1a5eebd7
+payload:
+  uuid: 54f2b4b1-51ce-4886-a00d-5f5b1a5eebd7
+  id: 54f2b4b1-51ce-4886-a00d-5f5b1a5eebd7
+  name: copilot.lifeline.health
+  intent: Lifeline provider health
+  version: 2.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: copilot
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: GET
+      path: /api/lifeline/health
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects: []
+    idempotent: true
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook copilot.lifeline.health
+    event: architect.hook.copilot.lifeline.health
+    route: GET /api/lifeline/health
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867490
+    updatedAt: 1789169867490
+    status: active
+    tags:
+      - synced-from-component-registry
+      - copilot
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

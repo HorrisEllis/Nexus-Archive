@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-631e1f68-dba9-447f-8b67-7d6f2d7a1b41
+type: component_projection
+id: 631e1f68-dba9-447f-8b67-7d6f2d7a1b41
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821781
+source: data/cortex/memory/component_projections.json:631e1f68-dba9-447f-8b67-7d6f2d7a1b41
+payload:
+  uuid: 5665b142-f46f-48bf-8ec3-109910de1ff3
+  componentId: cortex.search.context
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cortex.search.context
+    componentId: cortex.search.context
+    version: 3.5.0
+    namespace: cortex
+    name: search.context
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cortex.search.context
+    command: context
+    aliases:
+      - search context
+    help: |-
+      search.context
+        Context assembly for search query
+    route:
+      method: POST
+      path: /api/search/context
+    componentId: cortex.search.context
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cortex.search.context
+    componentId: cortex.search.context
+    entries:
+      - search context
+      - search.context
+      - context
+    route:
+      method: POST
+      path: /api/search/context
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cortex.search.context
+    componentId: cortex.search.context
+    label: SEARCH.CONTEXT
+    icon: ◈
+    tooltip: Context assembly for search query
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/search/context
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cortex.search.context
+    componentId: cortex.search.context
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cortex.search.context
+    componentId: cortex.search.context
+    chunk1:
+      system: cortex
+      command: context
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cortex.search.context
+    componentId: cortex.search.context
+    markdown: |-
+      # search.context
+
+      **ID:** `cortex.search.context` · **Tier:** T1 · **Version:** 3.5.0
+
+      Context assembly for search query
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169841617
+  id: 631e1f68-dba9-447f-8b67-7d6f2d7a1b41
+  updatedAt: 1789179438478

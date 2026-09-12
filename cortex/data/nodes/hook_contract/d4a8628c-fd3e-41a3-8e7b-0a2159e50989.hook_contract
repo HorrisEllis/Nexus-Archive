@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-d4a8628c-fd3e-41a3-8e7b-0a2159e50989
+type: hook_contract
+id: d4a8628c-fd3e-41a3-8e7b-0a2159e50989
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822207
+source: data/cortex/memory/hooks.json:d4a8628c-fd3e-41a3-8e7b-0a2159e50989
+payload:
+  uuid: d4a8628c-fd3e-41a3-8e7b-0a2159e50989
+  id: d4a8628c-fd3e-41a3-8e7b-0a2159e50989
+  name: cg.cookie.save
+  intent: Save per-account cookies — AES-256-GCM vault
+  version: 3.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: cg
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /cmd
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook cg.cookie.save
+    event: architect.hook.cg.cookie.save
+    route: POST /cmd
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867488
+    updatedAt: 1789169867488
+    status: active
+    tags:
+      - synced-from-component-registry
+      - cg
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

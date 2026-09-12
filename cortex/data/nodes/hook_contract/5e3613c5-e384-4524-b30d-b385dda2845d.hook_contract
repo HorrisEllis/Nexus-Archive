@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-5e3613c5-e384-4524-b30d-b385dda2845d
+type: hook_contract
+id: 5e3613c5-e384-4524-b30d-b385dda2845d
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822204
+source: data/cortex/memory/hooks.json:5e3613c5-e384-4524-b30d-b385dda2845d
+payload:
+  uuid: 5e3613c5-e384-4524-b30d-b385dda2845d
+  id: 5e3613c5-e384-4524-b30d-b385dda2845d
+  name: idearium.repo.fork
+  intent: Fork a repo into a new lineage
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/repos/:uuid/fork
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.repo.fork
+    event: architect.hook.idearium.repo.fork
+    route: POST /api/repos/:uuid/fork
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

@@ -1,0 +1,24 @@
+envelope: 1
+uuid: nexus-export-resonance_crystal-7f05baa8-0c71-43de-8778-22a480df06f8
+type: resonance_crystal
+id: 7f05baa8-0c71-43de-8778-22a480df06f8
+context: real, live jaaDB row migrated from data/cortex/memory/crystals.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821437
+source: data/cortex/memory/crystals.json:7f05baa8-0c71-43de-8778-22a480df06f8
+payload:
+  uuid: a22b5ca1-beb7-41da-a070-349350f433b2
+  focalPoint: L1/L3
+  type: failure_precursor
+  path: evidence_threshold
+  itemCount: 5
+  avgConfidence: 1
+  summary: >-
+    Pattern "precursor::adversarial.violation.detected" has causal path to failures | Pattern
+    "precursor::adversarial.run.complete" has causal path to failures | Pattern
+    "precursor::autopilot.instance_snapshot" has causal path to failures
+  ts: 1789179733131
+  id: 7f05baa8-0c71-43de-8778-22a480df06f8

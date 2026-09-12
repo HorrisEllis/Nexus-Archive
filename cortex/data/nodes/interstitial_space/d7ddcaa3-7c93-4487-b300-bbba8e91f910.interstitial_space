@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-d7ddcaa3-7c93-4487-b300-bbba8e91f910
+type: interstitial_space
+id: d7ddcaa3-7c93-4487-b300-bbba8e91f910
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821562
+source: data/cortex/memory/interstitial_spaces.json:d7ddcaa3-7c93-4487-b300-bbba8e91f910
+payload:
+  uuid: 8b90c8e0-dcc9-4d27-8c4a-1186acd76a38
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "agent.call.start" and "intelligence.reuse_index_built"'
+  type: co_occurrence
+  confidence: 0.2
+  count: 1
+  causedBy: 70f990f7-f0aa-4816-8e61-28583b07bcbf
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.8999999999999999
+  ts: 1789179793141
+  meta:
+    pattern:
+      uuid: 70f990f7-f0aa-4816-8e61-28583b07bcbf
+      signature: agent.call.start::intelligence.reuse_index_built
+      patternType: co_occurrence
+      typeA: agent.call.start
+      typeB: intelligence.reuse_index_built
+      systemA: cortex
+      systemB: null
+      crossSystem: false
+      count: 4
+      confidence: 0.2
+      description: '"agent.call.start" and "intelligence.reuse_index_built" co-occur within 5s — 4 observations'
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179793095
+  id: d7ddcaa3-7c93-4487-b300-bbba8e91f910

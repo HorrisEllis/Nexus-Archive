@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-7c848b4b-1197-4d84-8f23-3d5c54b0b5d3
+type: bep_pattern
+id: 7c848b4b-1197-4d84-8f23-3d5c54b0b5d3
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853810
+source: data/cortex/memory/bep_patterns.json:7c848b4b-1197-4d84-8f23-3d5c54b0b5d3
+payload:
+  uuid: 1764139c-62e1-44c0-8dc4-e4eb152a9405
+  signature: ledger.eros.updated::ledger.eros.updated
+  patternType: co_occurrence
+  typeA: ledger.eros.updated
+  typeB: ledger.eros.updated
+  systemA: eravos
+  systemB: eravos
+  crossSystem: false
+  count: 780
+  confidence: 1
+  description: '"ledger.eros.updated" and "ledger.eros.updated" co-occur within 5s — 780 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: 7c848b4b-1197-4d84-8f23-3d5c54b0b5d3

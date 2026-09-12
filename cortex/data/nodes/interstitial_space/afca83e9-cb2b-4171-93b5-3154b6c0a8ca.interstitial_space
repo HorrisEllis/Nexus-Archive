@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-afca83e9-cb2b-4171-93b5-3154b6c0a8ca
+type: interstitial_space
+id: afca83e9-cb2b-4171-93b5-3154b6c0a8ca
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821563
+source: data/cortex/memory/interstitial_spaces.json:afca83e9-cb2b-4171-93b5-3154b6c0a8ca
+payload:
+  uuid: f6b5e6cc-8920-4247-aece-0e258d66b9ad
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "agent.call.start" and "guardian.job.dispatched"'
+  type: co_occurrence
+  confidence: 0.2
+  count: 1
+  causedBy: 4a52a8a2-e5bc-4d25-b9d5-23b31109c1b4
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789179793218
+  meta:
+    pattern:
+      uuid: 4a52a8a2-e5bc-4d25-b9d5-23b31109c1b4
+      signature: agent.call.start::guardian.job.dispatched
+      patternType: co_occurrence
+      typeA: agent.call.start
+      typeB: guardian.job.dispatched
+      systemA: null
+      systemB: guardian
+      crossSystem: false
+      count: 4
+      confidence: 0.2
+      description: '"agent.call.start" and "guardian.job.dispatched" co-occur within 5s — 4 observations'
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179793095
+  id: afca83e9-cb2b-4171-93b5-3154b6c0a8ca

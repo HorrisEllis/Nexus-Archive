@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-1e615e90-9d38-4edd-813e-4879079a6586
+type: bep_pattern
+id: 1e615e90-9d38-4edd-813e-4879079a6586
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853800
+source: data/cortex/memory/bep_patterns.json:1e615e90-9d38-4edd-813e-4879079a6586
+payload:
+  uuid: 315d9d15-b6d0-4480-b99f-6f6a72f4ab7d
+  signature: ledger.cortex.updated::ledger.cortex.updated
+  patternType: co_occurrence
+  typeA: ledger.cortex.updated
+  typeB: ledger.cortex.updated
+  systemA: cortex
+  systemB: cortex
+  crossSystem: false
+  count: 741
+  confidence: 1
+  description: '"ledger.cortex.updated" and "ledger.cortex.updated" co-occur within 5s — 741 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: 1e615e90-9d38-4edd-813e-4879079a6586

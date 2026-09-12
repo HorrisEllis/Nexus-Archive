@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-61a3f56f-b2d8-4d4a-adbb-185db0b1e6df
+type: interstitial_space
+id: 61a3f56f-b2d8-4d4a-adbb-185db0b1e6df
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821529
+source: data/cortex/memory/interstitial_spaces.json:61a3f56f-b2d8-4d4a-adbb-185db0b1e6df
+payload:
+  uuid: a3a3ae7c-4b33-4fba-9dcb-c3ff834c3db8
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::component.updated" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 93690e44-825a-44e6-80a7-b027933a25a0
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.9999999999999999
+  ts: 1789172803325
+  meta:
+    pattern:
+      uuid: 93690e44-825a-44e6-80a7-b027933a25a0
+      signature: precursor::component.updated
+      patternType: failure_precursor
+      precursorType: component.updated
+      failureTypes:
+        - intelligence.failure_scan
+      count: 700
+      confidence: 1
+      description: '"component.updated" precedes failures 700 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789172803279
+  id: 61a3f56f-b2d8-4d4a-adbb-185db0b1e6df
+  crystallised: true
+  crystallisedAt: 1789172803337

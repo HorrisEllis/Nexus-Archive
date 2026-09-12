@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-260d3a3d-0600-4248-a5c4-c934b058326c
+type: component_projection
+id: 260d3a3d-0600-4248-a5c4-c934b058326c
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821730
+source: data/cortex/memory/component_projections.json:260d3a3d-0600-4248-a5c4-c934b058326c
+payload:
+  uuid: 30789f00-db3a-4dbf-9ff5-219ad81b71b7
+  componentId: cg.mesh.route
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.mesh.route
+    componentId: cg.mesh.route
+    version: 3.0.0
+    namespace: cg
+    name: mesh.route
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.mesh.route
+    command: route
+    aliases:
+      - mesh route
+      - mesh-route
+    help: |-
+      mesh.route
+        RAID-route prompt to healthiest agent
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.mesh.route
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.mesh.route
+    componentId: cg.mesh.route
+    entries:
+      - mesh route
+      - mesh-route
+      - mesh.route
+      - route
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.mesh.route
+    componentId: cg.mesh.route
+    label: MESH.ROUTE
+    icon: ⬢
+    tooltip: RAID-route prompt to healthiest agent
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.mesh.route
+    componentId: cg.mesh.route
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.mesh.route
+    componentId: cg.mesh.route
+    chunk1:
+      system: cg
+      command: route
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.mesh.route
+    componentId: cg.mesh.route
+    markdown: |-
+      # mesh.route
+
+      **ID:** `cg.mesh.route` · **Tier:** T2 · **Version:** 3.0.0
+
+      RAID-route prompt to healthiest agent
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840063
+  id: 260d3a3d-0600-4248-a5c4-c934b058326c
+  updatedAt: 1789179436802

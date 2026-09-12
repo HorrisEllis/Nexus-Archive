@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-a0991d66-bca0-483d-bdcd-09fb1c879315
+type: component_projection
+id: a0991d66-bca0-483d-bdcd-09fb1c879315
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821764
+source: data/cortex/memory/component_projections.json:a0991d66-bca0-483d-bdcd-09fb1c879315
+payload:
+  uuid: 165eef69-cb6a-4c7b-b34b-084ea6dbfe73
+  componentId: loom.contracts.close
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.loom.contracts.close
+    componentId: loom.contracts.close
+    version: 1.5.0
+    namespace: loom
+    name: contracts.close
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.loom.contracts.close
+    command: close
+    aliases:
+      - contracts close
+      - contracts-close
+    help: |-
+      contracts.close
+        Close a contract
+    route:
+      method: POST
+      path: /api/contracts/:id/close
+    componentId: loom.contracts.close
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.loom.contracts.close
+    componentId: loom.contracts.close
+    entries:
+      - contracts close
+      - contracts-close
+      - contracts.close
+      - close
+    route:
+      method: POST
+      path: /api/contracts/:id/close
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.loom.contracts.close
+    componentId: loom.contracts.close
+    label: CONTRACTS.CLOSE
+    icon: ◈
+    tooltip: Close a contract
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/contracts/:id/close
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.loom.contracts.close
+    componentId: loom.contracts.close
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.loom.contracts.close
+    componentId: loom.contracts.close
+    chunk1:
+      system: loom
+      command: close
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.loom.contracts.close
+    componentId: loom.contracts.close
+    markdown: |-
+      # contracts.close
+
+      **ID:** `loom.contracts.close` · **Tier:** T1 · **Version:** 1.5.0
+
+      Close a contract
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840279
+  id: a0991d66-bca0-483d-bdcd-09fb1c879315
+  updatedAt: 1789179437010

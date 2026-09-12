@@ -1,0 +1,24 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-delete_file
+type: tool_index_entry
+id: delete_file
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822129
+source: data/cortex/memory/tool_index.json:delete_file
+payload:
+  id: delete_file
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Delete a single file from the project by its path, relative to the project root. Requires
+    confirm:true. Refuses directories and any path resolving outside the project root.
+  updatedAt: 1789179646683
+  _key: delete_file

@@ -1,0 +1,24 @@
+envelope: 1
+uuid: nexus-export-resonance_crystal-62495c5e-b62f-408f-9f6c-8216b428da36
+type: resonance_crystal
+id: 62495c5e-b62f-408f-9f6c-8216b428da36
+context: real, live jaaDB row migrated from data/cortex/memory/crystals.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821432
+source: data/cortex/memory/crystals.json:62495c5e-b62f-408f-9f6c-8216b428da36
+payload:
+  uuid: 9fbe906a-82c5-430c-8050-906cbc315bb8
+  focalPoint: L1/L2
+  type: co_occurrence
+  path: evidence_threshold
+  itemCount: 5
+  avgConfidence: 1
+  summary: >-
+    Co-occurrence: "ledger.cg.updated" and "ledger.versionium.updated" | Co-occurrence:
+    "ledger.idearium.updated" and "ledger.versionium.updated" | Co-occurrence:
+    "ledger.cortex.updated" and "ledger.versionium.updated"
+  ts: 1789172753593
+  id: 62495c5e-b62f-408f-9f6c-8216b428da36

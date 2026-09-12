@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-964fa72d-fc7c-4187-85eb-258ed94e177b
+type: component_projection
+id: 964fa72d-fc7c-4187-85eb-258ed94e177b
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821758
+source: data/cortex/memory/component_projections.json:964fa72d-fc7c-4187-85eb-258ed94e177b
+payload:
+  uuid: 2977afb3-1232-47b4-98c4-95af28eef0d3
+  componentId: copilot.person_model.export
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.person_model.export
+    componentId: copilot.person_model.export
+    version: 2.0.0
+    namespace: copilot
+    name: person_model.export
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.person_model.export
+    command: export
+    aliases:
+      - export my model
+      - what do you have on me
+    help: |-
+      person_model.export
+        Everything held about the user, in one object
+    route:
+      method: GET
+      path: /api/person-model/export
+    componentId: copilot.person_model.export
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.person_model.export
+    componentId: copilot.person_model.export
+    entries:
+      - export my model
+      - what do you have on me
+      - person_model.export
+      - export
+    route:
+      method: GET
+      path: /api/person-model/export
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.person_model.export
+    componentId: copilot.person_model.export
+    label: PERSON_MODEL.EXP
+    icon: ◈
+    tooltip: Everything held about the user, in one object
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/person-model/export
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.person_model.export
+    componentId: copilot.person_model.export
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.person_model.export
+    componentId: copilot.person_model.export
+    chunk1:
+      system: copilot
+      command: export
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.person_model.export
+    componentId: copilot.person_model.export
+    markdown: |-
+      # person_model.export
+
+      **ID:** `copilot.person_model.export` · **Tier:** T1 · **Version:** 2.0.0
+
+      Everything held about the user, in one object
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840242
+  id: 964fa72d-fc7c-4187-85eb-258ed94e177b
+  updatedAt: 1789179436989

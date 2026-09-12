@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-662690d5-6782-460a-883d-823cc5c09d42
+type: interstitial_space
+id: 662690d5-6782-460a-883d-823cc5c09d42
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821544
+source: data/cortex/memory/interstitial_spaces.json:662690d5-6782-460a-883d-823cc5c09d42
+payload:
+  uuid: 733bdf6b-5058-4fb1-bc2a-03a5d69e18b4
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::intent.classified" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 18f56798-47cd-4a91-a9e8-1a06baf6955c
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.95
+  ts: 1789179212078
+  meta:
+    pattern:
+      uuid: 18f56798-47cd-4a91-a9e8-1a06baf6955c
+      signature: precursor::intent.classified
+      patternType: failure_precursor
+      precursorType: intent.classified
+      failureTypes:
+        - intelligence.failure_scan
+      count: 24
+      confidence: 1
+      description: '"intent.classified" precedes failures 24 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179212015
+  id: 662690d5-6782-460a-883d-823cc5c09d42
+  crystallised: true
+  crystallisedAt: 1789179332117

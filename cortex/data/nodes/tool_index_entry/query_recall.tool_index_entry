@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-query_recall
+type: tool_index_entry
+id: query_recall
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822122
+source: data/cortex/memory/tool_index.json:query_recall
+payload:
+  id: query_recall
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Search past conversations and stored memory for relevant context. Use when the user references
+    something from before ("what did we decide about X", "the thing we discussed") or when past
+    context would help. Params: query (required — what to search for), intent (optional:
+    general|session_resume|pattern_lookup|crystal_query|debug_failure|gap_fill|causal_trace, default
+    general). Returns ranked past exchanges. Recall uses lexical (word-overlap), recency,
+    failure-pattern, BEP-pattern, and causal-graph-connectivity ranking — 5 real lanes, weighted per
+    intent.
+  updatedAt: 1789179646627
+  _key: query_recall

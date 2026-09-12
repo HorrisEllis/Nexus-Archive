@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-fcdd1203-0f3d-4bce-a93d-1904d4c2e61b
+type: interstitial_space
+id: fcdd1203-0f3d-4bce-a93d-1904d4c2e61b
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821530
+source: data/cortex/memory/interstitial_spaces.json:fcdd1203-0f3d-4bce-a93d-1904d4c2e61b
+payload:
+  uuid: 8c41f52f-4a1b-409b-a834-fe2d8188e0a9
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::ledger.eravos.updated" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 51a94e5c-ed29-4f78-a5b5-84caf6bfc466
+  resolved: false
+  dissolvedAt: null
+  velocity: 1
+  ts: 1789172803346
+  meta:
+    pattern:
+      uuid: 51a94e5c-ed29-4f78-a5b5-84caf6bfc466
+      signature: precursor::ledger.eravos.updated
+      patternType: failure_precursor
+      precursorType: ledger.eravos.updated
+      failureTypes:
+        - intelligence.failure_scan
+      count: 48
+      confidence: 1
+      description: '"ledger.eravos.updated" precedes failures 48 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789172803279
+  id: fcdd1203-0f3d-4bce-a93d-1904d4c2e61b
+  crystallised: true
+  crystallisedAt: 1789172923457

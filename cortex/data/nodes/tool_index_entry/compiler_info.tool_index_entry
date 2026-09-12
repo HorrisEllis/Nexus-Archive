@@ -1,0 +1,25 @@
+envelope: 1
+uuid: nexus-export-tool_index_entry-compiler_info
+type: tool_index_entry
+id: compiler_info
+context: real, live jaaDB row migrated from data/cortex/memory/tool_index.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822128
+source: data/cortex/memory/tool_index.json:compiler_info
+payload:
+  id: compiler_info
+  consumers: []
+  intents: []
+  edgeCases: []
+  calls: 0
+  file: null
+  dir: null
+  provides: >-
+    Look up COS's known compilers/bundlers and the config file each is identified by. Actions:
+    "list" (all 18, with configFile), "get" (needs id — one compiler's detail). Read-only reference
+    data; does not run a build — no real "compile" execution gate exists anywhere in COS to call.
+  updatedAt: 1789179646678
+  _key: compiler_info

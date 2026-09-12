@@ -1,0 +1,106 @@
+envelope: 1
+uuid: nexus-export-component_projection-d2e0e3f5-0600-4949-9000-bed5d08cc49d
+type: component_projection
+id: d2e0e3f5-0600-4949-9000-bed5d08cc49d
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821756
+source: data/cortex/memory/component_projections.json:d2e0e3f5-0600-4949-9000-bed5d08cc49d
+payload:
+  uuid: 173416e6-a202-48b4-ac31-44aec4bd681b
+  componentId: copilot.person_model.review
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.copilot.person_model.review
+    componentId: copilot.person_model.review
+    version: 2.0.0
+    namespace: copilot
+    name: person_model.review
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.copilot.person_model.review
+    command: review
+    aliases:
+      - review queue
+      - what have you noticed
+      - pending observations
+    help: |-
+      person_model.review
+        Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)
+    route:
+      method: GET
+      path: /api/person-model/review
+    componentId: copilot.person_model.review
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.copilot.person_model.review
+    componentId: copilot.person_model.review
+    entries:
+      - review queue
+      - what have you noticed
+      - pending observations
+      - person_model.review
+      - review
+    route:
+      method: GET
+      path: /api/person-model/review
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.copilot.person_model.review
+    componentId: copilot.person_model.review
+    label: PERSON_MODEL.REV
+    icon: ◈
+    tooltip: Observations the co-pilot has proposed about the user — pending, never claims (§
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/person-model/review
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.copilot.person_model.review
+    componentId: copilot.person_model.review
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.copilot.person_model.review
+    componentId: copilot.person_model.review
+    chunk1:
+      system: copilot
+      command: review
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.copilot.person_model.review
+    componentId: copilot.person_model.review
+    markdown: |-
+      # person_model.review
+
+      **ID:** `copilot.person_model.review` · **Tier:** T1 · **Version:** 2.0.0
+
+      Observations the co-pilot has proposed about the user — pending, never claims (§IP-5)
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840231
+  id: d2e0e3f5-0600-4949-9000-bed5d08cc49d
+  updatedAt: 1789179436984

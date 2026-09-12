@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-e1146763-3490-4ced-a4b3-55d0be4f182c
+type: component_projection
+id: e1146763-3490-4ced-a4b3-55d0be4f182c
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821694
+source: data/cortex/memory/component_projections.json:e1146763-3490-4ced-a4b3-55d0be4f182c
+payload:
+  uuid: 116b4953-1574-46cd-836d-3822e7562cc1
+  componentId: guardian.job.build
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.guardian.job.build
+    componentId: guardian.job.build
+    version: 3.6.2
+    namespace: guardian
+    name: job.build
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.guardian.job.build
+    command: build
+    aliases:
+      - job build
+      - job-build
+    help: |-
+      job.build
+        Full T0→T1→T2 build pipeline from spec
+    route:
+      method: POST
+      path: /build
+    componentId: guardian.job.build
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.guardian.job.build
+    componentId: guardian.job.build
+    entries:
+      - job build
+      - job-build
+      - job.build
+      - build
+    route:
+      method: POST
+      path: /build
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.guardian.job.build
+    componentId: guardian.job.build
+    label: JOB.BUILD
+    icon: ◈
+    tooltip: Full T0→T1→T2 build pipeline from spec
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /build
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.guardian.job.build
+    componentId: guardian.job.build
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.guardian.job.build
+    componentId: guardian.job.build
+    chunk1:
+      system: guardian
+      command: build
+      provider: guardian
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.guardian.job.build
+    componentId: guardian.job.build
+    markdown: |-
+      # job.build
+
+      **ID:** `guardian.job.build` · **Tier:** T1 · **Version:** 3.6.2
+
+      Full T0→T1→T2 build pipeline from spec
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839918
+  id: e1146763-3490-4ced-a4b3-55d0be4f182c
+  updatedAt: 1789179436759

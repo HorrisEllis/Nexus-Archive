@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-0ab03605-ae17-442f-b912-0818f447584c
+type: component_projection
+id: 0ab03605-ae17-442f-b912-0818f447584c
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821728
+source: data/cortex/memory/component_projections.json:0ab03605-ae17-442f-b912-0818f447584c
+payload:
+  uuid: 7f02e484-a78a-4472-ba2f-4e5e7892df1b
+  componentId: cg.cookie.restore
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.cg.cookie.restore
+    componentId: cg.cookie.restore
+    version: 3.0.0
+    namespace: cg
+    name: cookie.restore
+    tier: T2
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.cg.cookie.restore
+    command: restore
+    aliases:
+      - cookie restore
+      - cookie-restore
+    help: |-
+      cookie.restore
+        Restore cookies from vault into session
+    route:
+      method: POST
+      path: /cmd
+    componentId: cg.cookie.restore
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.cg.cookie.restore
+    componentId: cg.cookie.restore
+    entries:
+      - cookie restore
+      - cookie-restore
+      - cookie.restore
+      - restore
+    route:
+      method: POST
+      path: /cmd
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.cg.cookie.restore
+    componentId: cg.cookie.restore
+    label: COOKIE.RESTORE
+    icon: ⬢
+    tooltip: Restore cookies from vault into session
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /cmd
+    tier: T2
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.cg.cookie.restore
+    componentId: cg.cookie.restore
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.cg.cookie.restore
+    componentId: cg.cookie.restore
+    chunk1:
+      system: cg
+      command: restore
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.cg.cookie.restore
+    componentId: cg.cookie.restore
+    markdown: |-
+      # cookie.restore
+
+      **ID:** `cg.cookie.restore` · **Tier:** T2 · **Version:** 3.0.0
+
+      Restore cookies from vault into session
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840053
+  id: 0ab03605-ae17-442f-b912-0818f447584c
+  updatedAt: 1789179436794

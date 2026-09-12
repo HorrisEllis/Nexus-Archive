@@ -1,0 +1,102 @@
+envelope: 1
+uuid: nexus-export-component_projection-0a5270ca-6401-465c-99f9-c6d0db6c422d
+type: component_projection
+id: 0a5270ca-6401-465c-99f9-c6d0db6c422d
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821748
+source: data/cortex/memory/component_projections.json:0a5270ca-6401-465c-99f9-c6d0db6c422d
+payload:
+  uuid: 3285852c-4eae-4671-a851-356a8f6b8e7e
+  componentId: eravos.wire.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.eravos.wire.list
+    componentId: eravos.wire.list
+    version: 3.0.0
+    namespace: eravos
+    name: wire.list
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.eravos.wire.list
+    command: list
+    aliases:
+      - eravos wire list
+    help: |-
+      wire.list
+        List all wires
+    route:
+      method: GET
+      path: /api/wires
+    componentId: eravos.wire.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.eravos.wire.list
+    componentId: eravos.wire.list
+    entries:
+      - eravos wire list
+      - wire.list
+      - list
+    route:
+      method: GET
+      path: /api/wires
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.eravos.wire.list
+    componentId: eravos.wire.list
+    label: WIRE.LIST
+    icon: ◈
+    tooltip: List all wires
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/wires
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.eravos.wire.list
+    componentId: eravos.wire.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.eravos.wire.list
+    componentId: eravos.wire.list
+    chunk1:
+      system: eravos
+      command: list
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.eravos.wire.list
+    componentId: eravos.wire.list
+    markdown: |-
+      # wire.list
+
+      **ID:** `eravos.wire.list` · **Tier:** T1 · **Version:** 3.0.0
+
+      List all wires
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169840172
+  id: 0a5270ca-6401-465c-99f9-c6d0db6c422d
+  updatedAt: 1789179436893

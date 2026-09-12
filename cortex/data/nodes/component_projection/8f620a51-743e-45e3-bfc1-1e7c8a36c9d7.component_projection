@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-8f620a51-743e-45e3-bfc1-1e7c8a36c9d7
+type: component_projection
+id: 8f620a51-743e-45e3-bfc1-1e7c8a36c9d7
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821719
+source: data/cortex/memory/component_projections.json:8f620a51-743e-45e3-bfc1-1e7c8a36c9d7
+payload:
+  uuid: 37a76462-9001-45f3-9d38-77c60472e4b0
+  componentId: idearium.spec.list
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.spec.list
+    componentId: idearium.spec.list
+    version: 1.0.0
+    namespace: idearium
+    name: spec.list
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.spec.list
+    command: list
+    aliases:
+      - list spec
+      - spec list
+    help: |-
+      spec.list
+        List all specs
+    route:
+      method: GET
+      path: /api/specs
+    componentId: idearium.spec.list
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.spec.list
+    componentId: idearium.spec.list
+    entries:
+      - list spec
+      - spec list
+      - spec.list
+      - list
+    route:
+      method: GET
+      path: /api/specs
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.spec.list
+    componentId: idearium.spec.list
+    label: SPEC.LIST
+    icon: ◈
+    tooltip: List all specs
+    action:
+      method: GET
+      path:
+        method: GET
+        path: /api/specs
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.spec.list
+    componentId: idearium.spec.list
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.spec.list
+    componentId: idearium.spec.list
+    chunk1:
+      system: idearium
+      command: list
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.spec.list
+    componentId: idearium.spec.list
+    markdown: |-
+      # spec.list
+
+      **ID:** `idearium.spec.list` · **Tier:** T1 · **Version:** 1.0.0
+
+      List all specs
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839977
+  id: 8f620a51-743e-45e3-bfc1-1e7c8a36c9d7
+  updatedAt: 1789179436944

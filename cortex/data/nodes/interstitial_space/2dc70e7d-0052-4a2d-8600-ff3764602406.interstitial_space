@@ -1,0 +1,43 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-2dc70e7d-0052-4a2d-8600-ff3764602406
+type: interstitial_space
+id: 2dc70e7d-0052-4a2d-8600-ff3764602406
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821533
+source: data/cortex/memory/interstitial_spaces.json:2dc70e7d-0052-4a2d-8600-ff3764602406
+payload:
+  uuid: 62082e1a-f905-49f2-8206-482271b0ead2
+  focalPoint: L1/L2
+  source: intelligence
+  text: 'Co-occurrence: "adversarial.run.complete" and "ui.boot"'
+  type: co_occurrence
+  confidence: 0.2
+  count: 1
+  causedBy: 6e8fb4ca-e887-4d41-8692-88263ed06f82
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.8999999999999999
+  ts: 1789179102029
+  meta:
+    pattern:
+      uuid: 6e8fb4ca-e887-4d41-8692-88263ed06f82
+      signature: adversarial.run.complete::ui.boot
+      patternType: co_occurrence
+      typeA: adversarial.run.complete
+      typeB: ui.boot
+      systemA: null
+      systemB: copilot
+      crossSystem: false
+      count: 4
+      confidence: 0.2
+      description: '"adversarial.run.complete" and "ui.boot" co-occur within 5s — 4 observations'
+      actionable: false
+      crystallised: true
+      noiseTainted: false
+      source: cortex/intelligence
+      ts: 1789179101844
+  id: 2dc70e7d-0052-4a2d-8600-ff3764602406

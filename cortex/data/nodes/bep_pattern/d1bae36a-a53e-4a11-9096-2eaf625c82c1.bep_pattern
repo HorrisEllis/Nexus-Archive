@@ -1,0 +1,31 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-d1bae36a-a53e-4a11-9096-2eaf625c82c1
+type: bep_pattern
+id: d1bae36a-a53e-4a11-9096-2eaf625c82c1
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853730
+source: data/cortex/memory/bep_patterns.json:d1bae36a-a53e-4a11-9096-2eaf625c82c1
+payload:
+  uuid: a3e78b9e-5b7c-45ab-b8b3-e307c23bd535
+  signature: intelligence.reuse_index_built::ledger.diagnostic.dangling-hook
+  patternType: cross_system_causal
+  typeA: intelligence.reuse_index_built
+  typeB: ledger.diagnostic.dangling-hook
+  systemA: cortex
+  systemB: diagnostic
+  crossSystem: true
+  count: 100
+  confidence: 1
+  description: >-
+    "intelligence.reuse_index_built" (cortex) and "ledger.diagnostic.dangling-hook" (diagnostic)
+    co-occur within 5s across two real systems — 100 observations
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789169956649
+  id: d1bae36a-a53e-4a11-9096-2eaf625c82c1

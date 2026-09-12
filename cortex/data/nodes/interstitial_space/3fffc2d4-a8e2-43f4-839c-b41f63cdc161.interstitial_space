@@ -1,0 +1,42 @@
+envelope: 1
+uuid: nexus-export-interstitial_space-3fffc2d4-a8e2-43f4-839c-b41f63cdc161
+type: interstitial_space
+id: 3fffc2d4-a8e2-43f4-839c-b41f63cdc161
+context: real, live jaaDB row migrated from data/cortex/memory/interstitial_spaces.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821564
+source: data/cortex/memory/interstitial_spaces.json:3fffc2d4-a8e2-43f4-839c-b41f63cdc161
+payload:
+  uuid: 351e0373-f8a6-46d7-b52a-70e7433b7aee
+  focalPoint: L1/L3
+  source: intelligence
+  text: Pattern "precursor::clear-glass.bgtab.opened" has causal path to failures
+  type: failure_precursor
+  confidence: 1
+  count: 1
+  causedBy: 5a1fce2b-b9eb-41b0-b127-c297f7a631a6
+  resolved: false
+  dissolvedAt: null
+  velocity: 0.8999999999999999
+  ts: 1789179913158
+  meta:
+    pattern:
+      uuid: 5a1fce2b-b9eb-41b0-b127-c297f7a631a6
+      signature: precursor::clear-glass.bgtab.opened
+      patternType: failure_precursor
+      precursorType: clear-glass.bgtab.opened
+      failureTypes:
+        - intelligence.failure_scan
+      count: 12
+      confidence: 1
+      description: '"clear-glass.bgtab.opened" precedes failures 12 times — watch this event type'
+      actionable: true
+      crystallised: true
+      topFailureType: intelligence.failure_scan
+      source: cortex/intelligence
+      ts: 1789179913121
+      id: b769946e-0db6-428c-b115-156f749ddf26
+  id: 3fffc2d4-a8e2-43f4-839c-b41f63cdc161

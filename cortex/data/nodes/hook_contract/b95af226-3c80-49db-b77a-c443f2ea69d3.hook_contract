@@ -1,0 +1,70 @@
+envelope: 1
+uuid: nexus-export-hook_contract-b95af226-3c80-49db-b77a-c443f2ea69d3
+type: hook_contract
+id: b95af226-3c80-49db-b77a-c443f2ea69d3
+context: >-
+  real, live loom HookRegistry row migrated from data/cortex/memory/hooks.json (unwrapped from its
+  real {op,data,causedBy,ts,id} envelope)
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822201
+source: data/cortex/memory/hooks.json:b95af226-3c80-49db-b77a-c443f2ea69d3
+payload:
+  uuid: b95af226-3c80-49db-b77a-c443f2ea69d3
+  id: b95af226-3c80-49db-b77a-c443f2ea69d3
+  name: idearium.spec.check
+  intent: Validate spec completeness before build
+  version: 1.0.0
+  type: api
+  direction: bidirectional
+  from:
+    surface: idearium
+    layer: 0
+  to:
+    surface: architect
+    layer: 0
+  config:
+    route:
+      method: POST
+      path: /api/specs/:uuid/check
+  schema:
+    input: null
+    output:
+      type: object
+    errors: []
+  contract:
+    axioms: []
+    sideEffects:
+      - mutates-state
+    idempotent: false
+    replayable: false
+    snrGated: false
+    timeout: null
+    retryPolicy: null
+  frictionScore:
+    latency: 0
+    failureRate: 0
+    semanticDistance: 0
+  routerPolicy:
+    blockIfFrictionGt: 0.85
+    requiresApproval: false
+    allowedSources:
+      - '*'
+    executionMode: async
+  bindings:
+    cli: architect hook idearium.spec.check
+    event: architect.hook.idearium.spec.check
+    route: POST /api/specs/:uuid/check
+  meta:
+    causedBy: component-registry.sync
+    createdAt: 1789169867487
+    updatedAt: 1789169867487
+    status: active
+    tags:
+      - synced-from-component-registry
+      - idearium
+    notes: >-
+      Synced from lib/component-registry.js — canonical source. Do not hand-edit; edit the component
+      in its owning system instead.

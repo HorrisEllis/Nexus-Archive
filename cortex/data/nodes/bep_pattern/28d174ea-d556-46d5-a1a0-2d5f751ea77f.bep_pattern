@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-bep_pattern-28d174ea-d556-46d5-a1a0-2d5f751ea77f
+type: bep_pattern
+id: 28d174ea-d556-46d5-a1a0-2d5f751ea77f
+context: real, live jaaDB row migrated from data/cortex/memory/bep_patterns.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252853804
+source: data/cortex/memory/bep_patterns.json:28d174ea-d556-46d5-a1a0-2d5f751ea77f
+payload:
+  uuid: 8c57d386-227b-419c-8dfb-0ae45774a714
+  signature: ledger.architect.updated::ledger.versionium.updated
+  patternType: co_occurrence
+  typeA: ledger.architect.updated
+  typeB: ledger.versionium.updated
+  systemA: architect
+  systemB: null
+  crossSystem: false
+  count: 102
+  confidence: 1
+  description: '"ledger.architect.updated" and "ledger.versionium.updated" co-occur within 5s — 102 observations'
+  actionable: true
+  crystallised: true
+  noiseTainted: false
+  source: cortex/intelligence
+  ts: 1789179442919
+  id: 28d174ea-d556-46d5-a1a0-2d5f751ea77f

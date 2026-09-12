@@ -1,0 +1,78 @@
+envelope: 1
+uuid: nexus-export-raid_contract-690a0bdf-83fd-4404-af9f-bbf639b39739
+type: raid_contract
+id: 690a0bdf-83fd-4404-af9f-bbf639b39739
+context: real, live jaaDB row migrated from data/cortex/memory/raid_contract_queue.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252822133
+source: data/cortex/memory/raid_contract_queue.json:690a0bdf-83fd-4404-af9f-bbf639b39739
+payload:
+  uuid: 7aa7c60f-0bbd-4126-ac76-5c1ceac21db5
+  status: fail
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: tests
+  forAgent: deepseek
+  contract:
+    content: |-
+      You are building the "Tests & Verification" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: checklist-demo
+        Type: component
+        Description: (none provided)
+        UUID: 07c37e3e-76e8-41eb-aba3-fa02a9e92476
+        Chunk: 10/10
+        Section: tests
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:07c37e3e:tests
+        contract_id: spec-contract:07c37e3e:tests:73641244
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 2min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real content for the first chunk
+
+      YOUR TASK:
+      Write the "Tests & Verification" section for this spec.
+      How each piece is proven (§1.1), test cases, invariants
+      Requirements:
+      - Be specific to "checklist-demo" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: tests
+    forAgent: deepseek
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169957695
+  updatedAt: 1789169957720
+  id: 690a0bdf-83fd-4404-af9f-bbf639b39739

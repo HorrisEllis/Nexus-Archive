@@ -1,0 +1,104 @@
+envelope: 1
+uuid: nexus-export-component_projection-53d8845f-0635-4b02-af2a-18f839136949
+type: component_projection
+id: 53d8845f-0635-4b02-af2a-18f839136949
+context: real, live jaaDB row migrated from data/cortex/memory/component_projections.json
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789252821721
+source: data/cortex/memory/component_projections.json:53d8845f-0635-4b02-af2a-18f839136949
+payload:
+  uuid: 410d58a5-2374-40cf-8c8d-98adb010d827
+  componentId: idearium.gap.ignore
+  comp:
+    proj_type: comp
+    bp_uuid: bp_000.comp.idearium.gap.ignore
+    componentId: idearium.gap.ignore
+    version: 1.0.0
+    namespace: idearium
+    name: gap.ignore
+    tier: T1
+    lifecycle: versioned
+    earned_roles: []
+  cli:
+    proj_type: cli
+    bp_uuid: bp_000.cli.idearium.gap.ignore
+    command: ignore
+    aliases:
+      - ignore gap
+      - gap ignore
+    help: |-
+      gap.ignore
+        Mark a gap as ignored
+    route:
+      method: POST
+      path: /api/gaps/:uuid/ignore
+    componentId: idearium.gap.ignore
+  grammar:
+    proj_type: grammar
+    bp_uuid: bp_000.grammar.idearium.gap.ignore
+    componentId: idearium.gap.ignore
+    entries:
+      - ignore gap
+      - gap ignore
+      - gap.ignore
+      - ignore
+    route:
+      method: POST
+      path: /api/gaps/:uuid/ignore
+    confidence: 1
+  ui:
+    proj_type: ui
+    bp_uuid: bp_000.ui.idearium.gap.ignore
+    componentId: idearium.gap.ignore
+    label: GAP.IGNORE
+    icon: ◈
+    tooltip: Mark a gap as ignored
+    action:
+      method: GET
+      path:
+        method: POST
+        path: /api/gaps/:uuid/ignore
+    tier: T1
+  config:
+    proj_type: config
+    bp_uuid: bp_000.config.idearium.gap.ignore
+    componentId: idearium.gap.ignore
+    defaults:
+      enabled: true
+      tier: pattern
+      lifecycle: versioned
+      pollMs: null
+      timeout: 30000
+    overrideable: true
+  seam:
+    proj_type: seam
+    bp_uuid: bp_000.seam.idearium.gap.ignore
+    componentId: idearium.gap.ignore
+    chunk1:
+      system: idearium
+      command: ignore
+      provider: orchestrator
+    chunk2: null
+    timeout_ms: 30000
+    hooks: []
+  doc:
+    proj_type: doc
+    bp_uuid: bp_000.doc.idearium.gap.ignore
+    componentId: idearium.gap.ignore
+    markdown: |-
+      # gap.ignore
+
+      **ID:** `idearium.gap.ignore` · **Tier:** T1 · **Version:** 1.0.0
+
+      Mark a gap as ignored
+
+
+
+      ## API
+      `[object Object]`
+  ts: 1789169839996
+  id: 53d8845f-0635-4b02-af2a-18f839136949
+  updatedAt: 1789179436956
