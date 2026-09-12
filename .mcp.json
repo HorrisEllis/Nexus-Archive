@@ -4,8 +4,7 @@
   "mcpServers": {
     "nexus": {
       "command": "node",
-      "args": ["lib/mcp-stdio.js"],
-      "cwd": "C:\\Users\\horri\\Desktop\\nexus-v0_9_9-complete"
+      "args": ["orchestrator/lib/mcp-stdio.js"]
     }
   }
 }

@@ -232,7 +232,31 @@ test('T-015', "level 'critical' raises at ladder level 3 — two criticals reach
   escalation.stop();
 });
 
-test('T-016', "level 'ok' (recovery) decays friction via recordSuccess, never raises", () => {
+// §BUILT 2026-09-12 — James: "using oscillations to balance resources."
+// The real, previously-named gap from docs/escalation.spec's own
+// addendum_2026_07_20 ("Oscillation damping... Named, not built.").
+test('T-016', 'a REGULAR oscillating pressure signal caps a critical reading at ladder level 1, not 3 — oscillation damping', () => {
+  reset();
+  escalation._pressureOsc.reset(); // real, persistent module state — see its export comment
+  const bus = makeBus();
+  escalation.init({ bus });
+  // A clear, regular critical/ok/critical/ok rhythm — enough cycles for
+  // OscillationEngine's own OSC_MIN_CYCLES (3) to resolve a real, regular
+  // rhythm rather than react to the first couple of data points, same
+  // real shape this session's own boot logs showed for over an hour.
+  for (let i = 0; i < 8; i++) {
+    bus.emit('nexus.resource.pressure', { level: i % 2 === 0 ? 'critical' : 'ok', reasons: ['osc-test'] });
+  }
+  _raiseCalls.length = 0; // only the NEXT reading, once the rhythm is established, is under test
+  bus.emit('nexus.resource.pressure', { level: 'critical', reasons: ['reading taken during an established, regular rhythm'] });
+  assert.strictEqual(_raiseCalls.length, 1);
+  assert.strictEqual(_raiseCalls[0].level, 1,
+    'a critical reading during an established, regular oscillation must be capped at ladder level 1, not escalate at full severity 3 — that is exactly what marches a purely rhythmic signal into FAILURE_MODE on rhythm alone');
+  escalation.stop();
+  escalation._pressureOsc.reset(); // leave clean state for any test after this one
+});
+
+test('T-017', "level 'ok' (recovery) decays friction via recordSuccess, never raises", () => {
   reset();
   _rows.memory_pressure = { faultClass: 'memory_pressure', friction: 0.4, count: 2 };
   const bus = makeBus();
@@ -243,7 +267,7 @@ test('T-016', "level 'ok' (recovery) decays friction via recordSuccess, never ra
   escalation.stop();
 });
 
-test('T-017', 'pressure event with no level is ignored, not thrown', () => {
+test('T-018', 'pressure event with no level is ignored, not thrown', () => {
   reset();
   const bus = makeBus();
   escalation.init({ bus });

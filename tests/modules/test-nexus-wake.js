@@ -199,8 +199,13 @@ test('NW-019', 'install(ctx) destructures injectText/submit from ctx, not just p
 test('NW-020', 'a real, successful answer calls injectText(answer) — the actual fix, not just the render-to-a-floating-box path', () => {
   const idx = SRC.indexOf('askNexus(ask)');
   const block = SRC.slice(idx, idx + 2200);
-  assert.ok(/if \(typeof injectText === 'function'\)/.test(block));
-  assert.ok(/injectText\(answer\)/.test(block));
+  // §UPDATED 2026-09-12 — both real call sites (onKeyDown here, and
+  // checkMessage below) now route through the one shared _injectAndTrack()
+  // helper instead of each having its own copy of the same guard+call, so
+  // there's one real mechanism instead of two that could drift (§10.3) —
+  // the actual injectText() guard+call this test cares about now lives in
+  // _injectAndTrack's own definition, checked directly in NW-033 below.
+  assert.ok(/_injectAndTrack\(answer\)/.test(block));
 });
 
 test('NW-021', 'the real fix deliberately never calls submit() after injectText() — confirmed real: each provider\'s own submit() clicks the actual send button, which would dispatch nexus\'s own answer AS A NEW TURN to the real, costed model — exactly what this whole feature exists to avoid', () => {
@@ -254,8 +259,10 @@ test('NW-026', 'chatgpt.js\'s wake-check correctly dedups on wakeHandledIndex �
 test('NW-027', 'checkMessage() itself now also calls injectText on a real answer — consistent with the onKeyDown handler\'s own fix, not a second, different behavior for the agent-triggered path', () => {
   const idx = SRC.indexOf('checkMessage(role, text)');
   const block = SRC.slice(idx, idx + 2200); // widened for the real NW-030 ledgerWrite calls now also in this block
-  assert.ok(/if \(typeof injectText === 'function'\)/.test(block));
-  assert.ok(/injectText\(answer\)/.test(block));
+  // §UPDATED 2026-09-12 — see NW-020's comment: both paths now share the
+  // one real _injectAndTrack() helper rather than each having their own
+  // copy of the guard+call.
+  assert.ok(/_injectAndTrack\(answer\)/.test(block));
 });
 
 test('NW-028', 'checkMessage() never calls submit() either — same real cost-safety principle as the onKeyDown path', () => {
@@ -300,6 +307,25 @@ test('NW-032', 'all 4 real provider userscripts that call install() now pass a r
   }
 });
 
+// ── §BUGFIX 2026-09-12 — James: "wake word needs to work more than once."
+// Root cause traced, not guessed: injectText(answer) (2026-09-07, correct
+// and deliberate on its own) leaves nexus's answer sitting in the real
+// composer. WAKE_RE is anchored ^\s* on purpose (this file's own header —
+// a greedy match anywhere would hijack ordinary prose), so a second wake
+// phrase typed after that leftover text no longer starts with "hey nexus"
+// and silently falls through unintercepted. Fix: _injectAndTrack() records
+// exactly what it injected; onKeyDown strips a leading exact match of that
+// before running parseWake. NW-033 checks the shared helper's own real
+// guard+tracking; NW-034 exercises the actual reported symptom end-to-end.
+test('NW-033', '_injectAndTrack() is the one real place with the injectText guard, and it tracks what it injected', () => {
+  const idx = SRC.indexOf('function _injectAndTrack');
+  assert.ok(idx >= 0, '_injectAndTrack must exist as the one shared real mechanism (§10.3), not duplicated per call site');
+  const block = SRC.slice(idx, idx + 300);
+  assert.ok(/if \(typeof injectText !== 'function'\) return;/.test(block) || /typeof injectText === 'function'/.test(block));
+  assert.ok(/injectText\(text\)/.test(block), '_injectAndTrack must call the real injectText()');
+  assert.ok(/_lastInjectedAnswer\s*=\s*text/.test(block), '_injectAndTrack must record what it injected, or the strip-on-next-wake fix below has nothing to strip');
+});
+
 // ── minimal DOM so install() can run under node ─────────────────────────────
 function _installStub(ctx) {
   const listeners = [];
@@ -318,5 +344,99 @@ function _installStub(ctx) {
   return WAKE.install(ctx);
 }
 
-console.log(`\n${passed} passed, ${failed} failed\n`);
-process.exit(failed ? 1 : 0);
+// ── NW-034 — real end-to-end async check, run in its own isolated tail
+// (deliberately NOT using the shared, synchronous test() helper above: this
+// test's assertions depend on askNexus()'s real Promise/.then() chain
+// actually settling, which takes one real microtask tick after the
+// synchronous keydown handler returns — making test() itself async would
+// have required every OTHER call site in this file to be awaited too, for
+// no benefit to 33 already-synchronous tests, and risked process.exit()
+// firing before their deferred output flushed). Same id/pass/fail
+// bookkeeping and console output shape as test(), just async. ─────────────
+async function testAsync(id, name, fn) {
+  try { await fn(); passed++; console.log(`  \u2713 ${id} ${name}`); }
+  catch (e) { failed++; console.log(`  \u2717 ${id} ${name}\n    ${e.message}`); }
+}
+
+(async () => {
+  await testAsync('NW-034', 'a second "hey nexus" typed right after the first answer was injected is still intercepted, not sent to the real model', async () => {
+    const listeners = [];
+    const fakeEl = { isContentEditable: true, textContent: '', closest: () => null };
+    global.document = {
+      addEventListener: (type, fn, capture) => listeners.push({ type, fn, capture }),
+      removeEventListener: () => {},
+      querySelector: () => null,
+      getElementById: () => null,
+      createElement: () => ({ style: {}, appendChild(){}, setAttribute(){}, remove(){}, querySelector(){ return null; }, get scrollHeight(){ return 0; } }),
+      body: { appendChild() {} },
+    };
+    global.location = { href: 'https://chatgpt.com/c/nw034', pathname: '/c/nw034' };
+
+    const injectedTexts = [];
+    const askedPrompts = [];
+    // Real GM_xmlhttpRequest is a browser-userscript global; mocked the
+    // same way the wake feature's own real onload/resolve() contract
+    // expects — not testing network behavior, only the composer-text-
+    // stripping fix.
+    global.GM_xmlhttpRequest = (opts) => {
+      const body = JSON.parse(opts.data);
+      // §FIX — this mock handles BOTH the real ask (askNexus, POST to
+      // .../api/prompt/tools) and ackWakeJob's own separate follow-up call
+      // (POST to .../wake-job-ack) — both real payloads happen to include
+      // a `.prompt` field, so only counting the genuine ask here, by URL,
+      // keeps askedPrompts an accurate count of real co-pilot asks.
+      if (opts.url.endsWith('/wake-job-ack')) { opts.onload({ status: 200, responseText: '{}' }); return; }
+      askedPrompts.push(body.prompt);
+      opts.onload({ status: 200, responseText: JSON.stringify({ text: 'the real answer' }) });
+    };
+
+    const inst = WAKE.install({
+      provider: 'chatgpt', tabId: 'tab-nw034',
+      injectText: (t) => { injectedTexts.push(t); fakeEl.textContent = t; },
+      submit: () => { throw new Error('submit() must never be called by this feature'); },
+    });
+
+    const kd = listeners.find(l => l.type === 'keydown');
+    assert.ok(kd, 'onKeyDown must be registered via document.addEventListener');
+
+    // §WHY THE FLUSH — askNexus() is itself an async function that
+    // additionally returns `new Promise(...)` internally: unwrapping an
+    // async function's own returned promise takes an extra microtask hop
+    // on top of the inner Promise's own .then() hop. A handful of
+    // Promise.resolve() ticks covers this reliably without depending on
+    // an exact count that could drift with a future Node/engine version.
+    async function flushMicrotasks(n = 6) { for (let i = 0; i < n; i++) await Promise.resolve(); }
+    function pressEnter() {
+      let defaultPrevented = false;
+      kd.fn({ key: 'Enter', shiftKey: false, isComposing: false, target: fakeEl,
+              preventDefault: () => { defaultPrevented = true; },
+              stopPropagation: () => {}, stopImmediatePropagation: () => {} });
+      return defaultPrevented;
+    }
+
+    // First wake — composer starts empty.
+    fakeEl.textContent = 'hey nexus, first question';
+    const firstIntercepted = pressEnter();
+    await flushMicrotasks();
+    assert.strictEqual(firstIntercepted, true, 'first wake phrase must be intercepted');
+    assert.strictEqual(askedPrompts.length, 1);
+    assert.strictEqual(injectedTexts.length, 1);
+
+    // Composer now holds the injected answer, exactly as injectText leaves
+    // it. A second wake phrase typed WITHOUT clearing it first — the real,
+    // reported scenario — appends after the leftover text.
+    fakeEl.textContent = injectedTexts[0] + 'hey nexus, second question';
+    const secondIntercepted = pressEnter();
+    await flushMicrotasks();
+    assert.strictEqual(secondIntercepted, true,
+      'second wake phrase must still be intercepted after leftover injected text — this is the exact reported bug');
+    assert.strictEqual(askedPrompts.length, 2, 'the second ask must actually reach co-pilot');
+    assert.strictEqual(askedPrompts[1], 'second question');
+
+    inst.uninstall();
+    delete global.GM_xmlhttpRequest;
+  });
+
+  console.log(`\n${passed} passed, ${failed} failed\n`);
+  process.exit(failed ? 1 : 0);
+})();

@@ -61,17 +61,54 @@ const TABLE_TIERS = Object.freeze({
   sigma_rollups:    'long',   // compacted hourly history of sigma_records — never decays (§0.3: compressed, not destroyed)
   meta_observations:'short',
   sigma_live:       'short',
+  // §ADDED 2026-09-12 — James: "we need decay for tables." Confirmed real,
+  // high-volume, append-only tables (49,440 and 23,062 rows respectively
+  // in this session's own boot logs), previously absent from this list
+  // entirely — meaning they were invisible even to decay.js's tombstone
+  // sweep, let alone real hard-delete. Wired to real compaction via
+  // cortex/memory/table-compactor.js at orchestrator boot (see that
+  // module's own header for why tombstone-only isn't enough for a table
+  // this size).
+  component_ledger:     'short',
+  cfr_tension_history:  'short',
+  // §ADDED 2026-09-12 — James's own live boot log named these directly.
+  // Checked each real writer before classifying, same discipline as
+  // every entry above:
+  constitution_decisions: 'short', // lib/constitutional-ai.js — real, append-only decision history, 2,256 rows and growing
+  chat_log:                'short', // guardian/lib/ncp-handler.js + lib/chat-logger.js — real conversation history
+  schema_drift:             'short', // cortex/memory/jaa-db.js — diagnostic log of past drift events, not current state
 
   // LONG-TERM — no decay, explicit graduation required
   crystals:         'long',
   bep_patterns:     'long',
   trust_scores:     'long',
   fix_map:          'long',
+  // §ADDED 2026-09-12 — checked each real writer, these are living/
+  // permanent structures, not historical logs — a time-decay would
+  // destroy current state, not history:
+  memory_unified:       'long', // cortex/boot.js's own comment: the unified push/recall store, "don't scatter" — this IS current memory, not a log of it
+  interstitial_spaces:  'long', // intelligence/liminal-space/index.js — inserted AND repeatedly updated in place (found/update calls), an evolving structure, not append-only
+  hooks:                'long', // hooks/*.hooks.js writers — component wiring registry, structural/config state
+  tool_index:           'long', // registry of real tool nodes, structural
+  raid_contract_queue:  'long', // active work queue — current pending work, not history
+  intake_drops:         'long', // pending drop-zone items awaiting real action, current state not history
+  fault_taxonomy:       'long', // cortex/self-heal/fault-taxonomy.js — per-CLASS aggregate state, not per-occurrence history
+  forge_patches:        'long', // structural — a patch that decayed away would be a silent, undiscoverable loss of a real forged artifact
+  raid_tunables:        'long', // live configuration, not a log
 
   // INFRASTRUCTURE — not memory, never decays
   decay_log:        'long',
   settings:         'long',
   components:       'long',
+  // §ADDED 2026-09-12 — table-compactor.js's own real audit trail (§0.3:
+  // the compressed summary written before every real hard-delete). Same
+  // treatment as decay_log above — the log of compaction must never
+  // itself decay, or a gap in it becomes indistinguishable from
+  // compaction genuinely not having run.
+  compaction_log:   'long',
+  // §ADDED 2026-09-12 — table-deduplicator.js's own audit trail, same
+  // never-decaying treatment as compaction_log/decay_log above.
+  dedup_log:        'long',
 });
 
 function tierFor(table) {

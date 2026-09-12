@@ -46,8 +46,8 @@ function main() {
   console.log(`PASS: all ${EXPECTED_TYPES.length} types present`);
 
   for (const t of EXPECTED_TYPES) {
-    const filePath = path.join(__dirname, '..', 'lib', 'node-schemas', `${t}.schema`);
-    if (!fs.existsSync(filePath)) throw new Error(`${t} has no real .schema file at ${filePath}`);
+    const filePath = path.join(__dirname, '..', 'lib', 'node-schemas', `schema.${t}`);
+    if (!fs.existsSync(filePath)) throw new Error(`${t} has no real schema.${t} file at ${filePath}`);
     const schema = nodeSchemas.get(t);
     if (schema.status !== 'REAL') throw new Error(`${t}: expected status REAL, got ${schema.status}`);
   }

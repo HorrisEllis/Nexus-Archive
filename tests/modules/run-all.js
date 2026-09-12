@@ -91,6 +91,8 @@ const SUITES = [
   'test-system-check-emerge-stale-entry.js',
   'test-wake-relay-real-endpoint.js',
   'test-warp-cascade-provider-fallback.js',
+  'test-tool-naming-convention.js',
+  'test-gap-tools.js',
   'test-vsb1-versionium-split-brain-fix.js',
   'test-brainos-real-access-path.js',
   'test-brainos-dynamic-mesh-canvas.js',

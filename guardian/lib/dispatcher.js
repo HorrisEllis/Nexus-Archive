@@ -169,6 +169,25 @@ function createDispatcher(deps) {
         bus.emit('guardian.tab.needed', { provider: job.provider, url, jobId: job.id });
         cockpitBroadcast({ type: 'GUARDIAN_TAB_NEEDED', provider: job.provider, url, jobId: job.id });
         console.log(`[guardian] tab needed: ${url} — job ${job.id} will flush when connected`);
+        // §WIRED 2026-09-12 — James: "only have chatgpt open. the other 3
+        // event driven." Real, confirmed gap: guardian.tab.needed has
+        // been emitted at exactly this point all along, but nothing ever
+        // listened for it — clear-glass's own providerHost.start() (real,
+        // already does everything needed: persistent session partition,
+        // GM shim, userscript injection) was never actually reachable
+        // from here. Fire-and-forget on purpose: the job above is
+        // already correctly queued regardless of whether this succeeds
+        // or clear-glass is even running right now — this is a nudge to
+        // spawn sooner, not the thing the job's delivery depends on.
+        try {
+          const http = require('http');
+          const req = http.request({
+            host: '127.0.0.1', port: parseInt(process.env.CLEARGL_IPC_PORT || '7702', 10),
+            path: `/providers/${encodeURIComponent(job.provider)}/start`, method: 'POST', timeout: 2000,
+          }, (r) => { r.resume(); });
+          req.on('error', (e) => console.warn(`[guardian] on-demand provider-start request failed (non-fatal, job still queued): ${e.message}`));
+          req.end();
+        } catch (e) { console.warn(`[guardian] could not send on-demand provider-start request: ${e.message}`); }
       }
       return false;
     }

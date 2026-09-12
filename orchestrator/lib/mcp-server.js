@@ -484,6 +484,12 @@ const TOOLS = [
   },
 ];
 
+// §WIRED 2026-09-12 — orchestrator/lib/mcp-tools-tokensave.js's own header
+// says to spread these in here; done, not left as a dead, unwired file
+// sitting next to the tools it describes.
+const { TOOLS: TOKENSAVE_TOOLS } = require('./mcp-tools-tokensave.js');
+TOOLS.push(...TOKENSAVE_TOOLS);
+
 // ── MCP Protocol implementation ────────────────────────────────────────────────
 // Implements MCP 2024-11-05 over HTTP with SSE transport
 

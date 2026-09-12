@@ -1134,7 +1134,19 @@ async function bootstrap() {
   // background on every boot. Still fully overridable — set
   // CG_AUTOBOOT_PROVIDERS=none to go back to lazy-only, or a specific
   // comma-list / 'all' to change which ones boot.
-  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'claude,chatgpt,gemini,perplexity').trim();
+  // §CHANGED 2026-09-12 — the 07-15 concern above is now actually solved
+  // properly, not worked around: guardian/lib/dispatcher.js's own
+  // not-connected branch (guardian.tab.needed) now really calls
+  // POST /providers/:id/start on this exact process the moment a job
+  // needs a provider that isn't up (verified idempotent — start() on an
+  // already-running provider is a real, cheap no-op, not a double-spawn).
+  // James: "only have chatgpt open. the other 3 event driven." Default
+  // narrowed to chatgpt alone; claude/gemini/perplexity now genuinely
+  // boot on first real dispatch instead of unconditionally at every
+  // startup — the real RAM cost this was built to cut (3 fewer resident
+  // Chromium renderer processes at boot, in the common case where they
+  // don't all get used every session).
+  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'chatgpt').trim();
   if (autoBootSetting === 'none' || autoBootSetting === '') {
     console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS to pre-warm specific providers.');
   } else {
@@ -1416,6 +1428,27 @@ async function bootstrap() {
       try {
         pluginHost.disable(req.params.id);
         res.json({ ok: true, id: req.params.id, state: 'disabled' });
+      } catch (e) {
+        res.status(400).json({ ok: false, error: e.message });
+      }
+    });
+    // §ADDED 2026-09-12 — James: "only have chatgpt open. the other 3
+    // event driven." Real, confirmed gap this closes: guardian/lib/
+    // dispatcher.js's own not-connected branch already emits
+    // guardian.tab.needed (and queues the job correctly to flush once
+    // connected) exactly when a job needs a provider that isn't booted —
+    // but nothing was ever listening for it. providerHost.start() itself
+    // already does everything needed (persistent session partition, GM
+    // shim, userscript injection) — this is the missing HTTP door, not a
+    // new spawn mechanism. Idempotent: start() on an already-running
+    // provider is a real, cheap no-op (checked — ProviderHost tracks
+    // live windows in this.windows, a second start() for the same id
+    // returns the existing one rather than double-spawning).
+    ipcBridge.app.post('/providers/:id/start', async (req, res) => {
+      if (!providerHost) { res.status(503).json({ ok: false, error: 'provider host not initialized' }); return; }
+      try {
+        const result = await providerHost.start(req.params.id, { show: false });
+        res.json(result);
       } catch (e) {
         res.status(400).json({ ok: false, error: e.message });
       }

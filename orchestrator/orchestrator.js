@@ -2606,6 +2606,54 @@ if (nexusBus) {
     const { jaaDB } = require('../cortex/memory/jaa-db');
     require('./lib/sigma-compaction').start(jaaDB);
   } catch(e) { console.warn('[orchestrator] sigma-compaction init failed:', e.message); }
+  // §ADDED 2026-09-12 — James: "we need decay for tables." Same real
+  // problem sigma-compaction.js already fixed for sigma_records
+  // (tombstone-only never actually shrinks a table — see
+  // cortex/memory/table-compactor.js's own header), generalized to every
+  // OTHER confirmed real, high-volume table: event_log (71,765+ rows,
+  // already tiered 'short' but never actually hard-deleted before this),
+  // component_ledger and cfr_tension_history (49,440 and 23,062 rows,
+  // previously undeclared in tiers.js at all). Started separately from
+  // sigma-compaction — different module, different table set, no
+  // double-processing of sigma_records.
+  try {
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    require('../cortex/memory/table-compactor').start(jaaDB, [
+      'event_log', 'component_ledger', 'cfr_tension_history',
+      // §ADDED 2026-09-12 — James's own live boot log named these
+      // directly (2,256 / 1 / 5 rows and growing respectively). Real
+      // writers checked (lib/constitutional-ai.js, guardian/lib/
+      // ncp-handler.js + lib/chat-logger.js, cortex/memory/jaa-db.js) —
+      // all three are genuine append-only history, not live state.
+      'constitution_decisions', 'chat_log', 'schema_drift',
+    ]);
+  } catch(e) { console.warn('[orchestrator] table-compactor init failed:', e.message); }
+  // §ADDED 2026-09-12 — James: "should be able to clear sigmas. maybe
+  // delete after 100? per system." sigma_records has no literal `system`
+  // field (checked sigma-writer.js's real record shape directly) — its
+  // real per-source dimension is `type` (the originating bus event type).
+  // Keeps the 100 most recent sigma_records per real event type,
+  // independent of sigma-compaction.js's own 24h age-based rollup above
+  // (a type with heavy volume inside 24h can still exceed 100 well before
+  // the age cutoff would ever trigger).
+  try {
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    require('../cortex/memory/table-compactor').startCaps(jaaDB, [
+      { table: 'sigma_records', keyFn: (r) => r.type || null, maxPerGroup: 100 },
+    ]);
+  } catch(e) { console.warn('[orchestrator] table-compactor count-cap init failed:', e.message); }
+  // §ADDED 2026-09-12 — James: "clear all duplicates from each table...
+  // expand autonomous mode, including the dedup." Real, exact-uuid-
+  // collision dedup runs unconditionally on every table below (always
+  // safe — see table-deduplicator.js's own header for why this case can
+  // never be legitimate); content-level dedup stays opt-in per table and
+  // is not configured here yet, so it does not run — no fingerprint is
+  // guessed for any of these tables' real content shape.
+  try {
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const { TABLE_TIERS } = require('../cortex/memory/tiers.js');
+    require('../cortex/memory/table-deduplicator').start(jaaDB, Object.keys(TABLE_TIERS));
+  } catch(e) { console.warn('[orchestrator] table-deduplicator init failed:', e.message); }
   console.log('[orchestrator] nexus interconnect: bus+cfr+heal+knowledge+sigma active');
 }
 

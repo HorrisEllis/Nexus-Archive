@@ -48,6 +48,16 @@
  */
 
 const faultTaxonomy = require('./fault-taxonomy');
+// §BUILT 2026-09-12 — James: "using oscillations to balance resources."
+// This is the exact, real, previously-named gap from docs/escalation.spec's
+// own addendum_2026_07_20 ("Oscillation damping... via telemetry-codec's
+// OscillationEngine before it can walk a fault class into FAILURE_MODE on
+// rhythm alone. Named, not built.") — a real, already-built, already-tested
+// engine (IS IT RHYTHMIC: period/regularity/amplitude, built for exactly
+// this class of signal — "retry storm oscillation" is named in its own
+// header), just never wired to the one consumer that was always meant to
+// use it.
+const { OscillationEngine } = require('../../intelligence/telemetry-codec/engines.js');
 
 const MODULE_ID = 'cortex/self-heal/escalation';
 const VERSION = '1.0.0';
@@ -88,6 +98,15 @@ function _onAnomalyDetected(event) {
   _emitFrictionChange(type, result, { cause: 'anomaly.detected', anomalyUuid, sessionId });
 }
 
+// §BUILT 2026-09-12 — see the require() comment above. One instance per
+// resource-pressure-driven fault class (currently just memory_pressure —
+// the only real caller of _onResourcePressure), window=60 samples at
+// resource-monitor's real 10s sampling cadence (orchestrator/orchestrator.js)
+// = ~10min of real history, plenty for OSC_MIN_CYCLES (3) to resolve a
+// genuine rhythm rather than reacting to the first two data points.
+const _pressureOsc = new OscillationEngine(60);
+const PRESSURE_LEVEL_NUM = Object.freeze({ ok: 0, pressure: 1, critical: 2 });
+
 // ── nexus.resource.pressure → memory_pressure friction ────────────────────────
 // §BUILT 2026-07-20, from a live crash log: guardian and orchestrator both
 // died with 0xC0000409 under 16.7% free memory, two minutes AFTER
@@ -103,11 +122,30 @@ function _onAnomalyDetected(event) {
 //   level 'critical' → raiseFriction level 3   (0.50 — two criticals = FAILURE_MODE)
 //   level 'ok'       → recordSuccess           (friction decays ×0.5, not amnesia)
 // Transitions only (resource-monitor's own contract), so sustained pressure
-// cannot march friction up on repetition alone — oscillation damping beyond
-// that is future work, named in docs/escalation.spec addendum, not built here.
+// cannot march friction up on repetition alone.
+//
+// §BUILT 2026-09-12 — oscillation damping, previously named as future work
+// above this same line (git blame: "not built here" until now). Every
+// reading (ok/pressure/critical, mapped to 0/1/2) feeds a real
+// OscillationEngine. A REGULAR, rhythmic flap (this exact session's own
+// boot logs show ok↔pressure↔critical cycling every 10-30s, sustained for
+// over an hour) caps a 'critical' reading's escalation at ladder level 1
+// instead of 3 — the condition is predictably going to self-resolve on its
+// own rhythm, so it shouldn't be allowed to walk memory_pressure into
+// FAILURE_MODE on rhythm alone (two full-severity criticals = FAILURE_MODE
+// per the table above). A NON-oscillating, or still-forming (<3 cycles),
+// critical reading is untouched — a genuinely worsening, non-rhythmic
+// crisis still escalates at full severity. Emergency GC (below) is
+// deliberately NOT damped — it is cheap, already rate-limited to once per
+// 30s, and a pure resource-saving action with no false-escalation risk, so
+// there's no reason to withhold it during a real oscillation.
 function _onResourcePressure(event) {
   const { level, reasons } = event?.payload || {};
   if (!level) return;
+
+  const osc = _pressureOsc.feed(PRESSURE_LEVEL_NUM[level] ?? 0);
+  const isDampedRhythm = osc.oscillating && osc.regularity > 0.5;
+
   if (level === 'ok') {
     const result = faultTaxonomy.recordSuccess('memory_pressure');
     if (result && _bus) {
@@ -136,10 +174,13 @@ function _onResourcePressure(event) {
   // into the actual ladder so a human-visible failure_modes record gets
   // written instead of the alarm firing into a room with nobody in it.
   if (level === 'critical') {
-    _attemptEmergencyGC(reasons);
+    _attemptEmergencyGC(reasons); // never damped — see header comment above
+    if (isDampedRhythm) {
+      console.warn(`[${MODULE_ID}] memory_pressure oscillating (period~${osc.period} samples, regularity ${osc.regularity}) — treating this 'critical' reading as ladder level 1, not escalating to FAILURE_MODE-track severity on rhythm alone`);
+    }
   }
 
-  const ladderLevel = level === 'critical' ? 3 : 1;
+  const ladderLevel = (level === 'critical' && !isDampedRhythm) ? 3 : 1;
   let result;
   try {
     result = faultTaxonomy.raiseFriction('memory_pressure', ladderLevel,
@@ -336,4 +377,5 @@ module.exports = {
   wireAnomalyTrigger,
   recordAttemptOutcome,
   SEVERITY_TO_LEVEL,
+  _pressureOsc, // exported for direct testing, §4.1 — real oscillation state, deliberately not reset by stop() (same convention as _lastGcAt/_GC_COOLDOWN_MS above: it tracks real elapsed rhythm, not a per-session fixture)
 };

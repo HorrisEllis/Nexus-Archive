@@ -1002,6 +1002,39 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §GAP CLOSED 2026-09-12 — /api/tags was declared in this file's own
+  // registry-components.js (tags.list / tags.add) and referenced in
+  // orchestrator.js's route comment, but had no real handler anywhere in
+  // this file — confirmed via repo-wide grep before writing this, not
+  // assumed missing. Shape matches orchestrator.js's own documented
+  // contract exactly: POST { entityId, entityType, system, tags[] }.
+  if (p === '/api/tags' && method === 'GET') {
+    try {
+      const entityId = url.searchParams.get('entityId');
+      const rows = entityId
+        ? jaaDB.query('tags', { entityId })
+        : jaaDB.query('tags', {});
+      json(res, 200, { ok: true, count: rows.length, tags: rows });
+    } catch (e) {
+      json(res, 500, { ok: false, error: `tags list failed: ${e.message}` });
+    }
+    return;
+  }
+
+  if (p === '/api/tags' && method === 'POST') {
+    const body = await readBody(req);
+    const { entityId, entityType, system, tags } = body || {};
+    if (!entityId) { json(res, 400, { ok: false, error: 'entityId is required' }); return; }
+    if (!Array.isArray(tags) || !tags.length) { json(res, 400, { ok: false, error: 'tags[] is required and must be non-empty' }); return; }
+    try {
+      const row = jaaDB.insert('tags', { id: uid(), entityId, entityType: entityType || null, system: system || null, tags, ts: Date.now() });
+      json(res, 200, { ok: true, tag: row });
+    } catch (e) {
+      json(res, 500, { ok: false, error: `tag add failed: ${e.message}` });
+    }
+    return;
+  }
+
   if (p === '/api/push') {
     const body = await readBody(req);
     const { content, tags, tier } = body;

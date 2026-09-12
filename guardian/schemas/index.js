@@ -84,7 +84,10 @@ const SCHEMAS_DIR = __dirname;
 
 function loadLocal() {
   const out = {};
-  const files = fs.readdirSync(SCHEMAS_DIR).filter(f => f.endsWith('.schema'));
+  // §CHANGED 2026-09-12 — same rename as lib/node-schemas.js's own files:
+  // guardian_job.schema -> schema.guardian_job, etc. Node type as the
+  // real file extension, last.
+  const files = fs.readdirSync(SCHEMAS_DIR).filter(f => f.startsWith('schema.'));
   for (const f of files) {
     const doc = nodeExport.importFromFile(path.join(SCHEMAS_DIR, f));
     if (doc.type !== 'schema') {
